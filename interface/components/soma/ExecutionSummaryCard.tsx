@@ -20,6 +20,7 @@ import {
     linkRunId,
     nextStepText,
     proofLinks,
+    searchSourceLines,
     trustVerdict,
     type TrustVerdictTone,
     understandingLines,
@@ -87,6 +88,7 @@ export default function ExecutionSummaryCard({
     const executionStatus = compactText(summary.execution?.status) ?? compactText(summary.execution_status);
     const executionSummary = compactText(summary.execution?.summary) ?? compactText(summary.execution_summary);
     const capabilities = capabilityGroups(summary.capability_use);
+    const searchSources = searchSourceLines(summary.capability_use);
     const intent = intentLines(summary.intent);
     const understanding = understandingLines(summary.understanding);
     const outputs = asItems(summary.outputs)
@@ -112,6 +114,7 @@ export default function ExecutionSummaryCard({
         || executionStatus
         || executionSummary
         || capabilities.length
+        || searchSources.length
         || allOutputs.length
         || proofs.length
         || summaryRunId
@@ -183,6 +186,13 @@ export default function ExecutionSummaryCard({
                                     <ChipList values={group.values} />
                                 </div>
                             ))}
+                        </div>
+                    </SummaryRow>
+                )}
+                {searchSources.length > 0 && (
+                    <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Source">
+                        <div className="space-y-1">
+                            {searchSources.map((line) => <div key={line}>{line}</div>)}
                         </div>
                     </SummaryRow>
                 )}

@@ -186,6 +186,8 @@ The object can include:
 - `understanding`: Soma's concise interpretation and assumptions
 - `execution`: shape, status, and summary such as `direct_soma`, `guided_proposal`, `tool_assisted_work`, or `team_execution`
 - `capability_use`: governed tools, teams, MCP capabilities, automations, or plugins used
+- `capability_use.reason`: operator-facing provenance detail when available, such as the active `web_search` source boundary
+- `metadata.semantic_fallback`: optional local-source search fallback marker, such as `text_search`, when semantic embeddings are unavailable but retained Mycelis context can still be searched safely
 - `outputs`: answer, proposal, artifact, tool result, retained team, or retained file/code output references
 - `proof`: `run_id`, `audit_event_id`, `intent_proof_id`, and verification state
 - `audit_recovery`: approval status, recovery state, blocker, retry posture, and optional `degradation`

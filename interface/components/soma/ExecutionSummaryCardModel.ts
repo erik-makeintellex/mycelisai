@@ -128,6 +128,15 @@ export function capabilityGroups(capabilityUse: ExecutionSummaryData["capability
     return groups;
 }
 
+export function searchSourceLines(capabilityUse: ExecutionSummaryData["capability_use"]): string[] {
+    if (!Array.isArray(capabilityUse)) return [];
+    return capabilityUse
+        .filter((item): item is ExecutionSummaryItem => typeof item !== "string")
+        .filter((item) => compactText(item.id) === "web_search" || compactText(item.label) === "web_search")
+        .map((item) => compactText(item.reason))
+        .filter((reason): reason is string => Boolean(reason?.startsWith("Search source:")));
+}
+
 export function auditText(value: ExecutionSummaryData["audit_recovery"]) {
     if (!value) return null;
     if (typeof value === "string") return compactText(value);

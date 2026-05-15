@@ -28,11 +28,11 @@ func (s *Service) Status() Status {
 	switch s.cfg.Provider {
 	case ProviderLocalSources:
 		status.Enabled = true
-		status.Configured = s.embedder != nil && s.mem != nil
+		status.Configured = s.mem != nil
 		status.SupportsLocalSources = true
 		status.NextActions = []string{"Ask Soma to search shared sources or uploaded organizational context."}
 		if !status.Configured {
-			status.Blocker = &Blocker{Code: "local_sources_unavailable", Message: "Local-source search needs the cognitive embedding engine and memory service.", NextAction: "Start Core with memory and an embedding-capable AI engine."}
+			status.Blocker = &Blocker{Code: "local_sources_unavailable", Message: "Local-source search needs the memory service.", NextAction: "Start Core with memory enabled."}
 			status.NextActions = []string{status.Blocker.NextAction}
 		}
 	case ProviderSearXNG:

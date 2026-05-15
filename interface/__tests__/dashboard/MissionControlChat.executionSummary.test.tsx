@@ -123,10 +123,12 @@ describe('MissionControlChat execution summary', () => {
                                 status: 'completed',
                                 summary: 'Soma used browser-visible search capability proof.',
                             },
-                            capability_use: {
-                                capabilities: ['web_search'],
-                                tools: ['web_search'],
-                            },
+                            capability_use: [{
+                                id: 'web_search',
+                                label: 'web_search',
+                                kind: 'tool',
+                                reason: 'Search source: Local Mycelis context',
+                            }],
                             proof: [{ label: 'Search proof', url: '/runs/search-proof', run_id: 'search-run-123' }],
                             next_step: 'Share the direct search result with the operator.',
                         },
@@ -148,6 +150,8 @@ describe('MissionControlChat execution summary', () => {
             expect(screen.getByRole('link', { name: /Run search-r/i }).getAttribute('href')).toBe('/runs/search-run-123');
             expect(screen.getByText('Tool-assisted work')).toBeDefined();
             expect(screen.getAllByText('web_search').length).toBeGreaterThan(0);
+            expect(screen.getByText('Source')).toBeDefined();
+            expect(screen.getByText('Search source: Local Mycelis context')).toBeDefined();
             expect(screen.getByText(/completed/i)).toBeDefined();
             expect(screen.getByRole('link', { name: /Search proof/i }).getAttribute('href')).toBe('/runs/search-proof');
         });

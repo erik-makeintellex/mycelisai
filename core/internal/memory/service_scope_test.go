@@ -41,3 +41,40 @@ func TestSemanticSearchWithOptions_TeamScoped(t *testing.T) {
 		t.Fatalf("team_id = %v, want alpha", results[0].Metadata["team_id"])
 	}
 }
+
+func TestTextSearchWithOptions_TeamScoped(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	svc := NewServiceWithDB(db)
+	now := time.Now()
+	rows := sqlmock.NewRows([]string{"id", "content", "metadata", "created_at"}).
+		AddRow("vec-1", "latest research memory", `{"team_id":"alpha","visibility":"team","type":"agent_memory"}`, now)
+
+	mock.ExpectQuery("SELECT id, content, metadata, created_at").
+		WithArgs("default", "agent_memory", "alpha", "%latest%", "%research%", 3).
+		WillReturnRows(rows)
+
+	results, err := svc.TextSearchWithOptions(context.Background(), "latest research", SemanticSearchOptions{
+		Limit:       3,
+		TenantID:    "default",
+		TeamID:      "alpha",
+		Types:       []string{"agent_memory"},
+		AllowGlobal: true,
+	})
+	if err != nil {
+		t.Fatalf("TextSearchWithOptions: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("results len = %d, want 1", len(results))
+	}
+	if results[0].Score <= 0 {
+		t.Fatalf("Score = %v, want positive fallback relevance", results[0].Score)
+	}
+	if results[0].Metadata["team_id"] != "alpha" {
+		t.Fatalf("team_id = %v, want alpha", results[0].Metadata["team_id"])
+	}
+}

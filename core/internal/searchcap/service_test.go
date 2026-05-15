@@ -2,15 +2,26 @@ package searchcap
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/mycelis/core/internal/memory"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+type failingEmbedder struct{}
+
+func (f failingEmbedder) Embed(context.Context, string, string) ([]float64, error) {
+	return nil, errors.New("embedding unavailable")
+}
 
 func TestServiceDisabledReturnsStructuredBlocker(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
@@ -223,5 +234,35 @@ func TestServiceLocalAPIMissingEndpointBlocks(t *testing.T) {
 	}
 	if resp.Blocker == nil || resp.Blocker.Code != "missing_local_api_endpoint" {
 		t.Fatalf("Blocker = %+v", resp.Blocker)
+	}
+}
+
+func TestServiceLocalSourcesFallsBackToTextSearchWhenEmbeddingFails(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	rows := sqlmock.NewRows([]string{"id", "content", "metadata", "created_at"}).
+		AddRow("vec-1", "latest research retained context", `{"title":"Research note","visibility":"global"}`, time.Now())
+	mock.ExpectQuery("SELECT id, content, metadata, created_at").
+		WithArgs("default", "%latest%", "%research%", 2).
+		WillReturnRows(rows)
+
+	svc := NewService(Config{Provider: ProviderLocalSources, MaxResults: 2}, failingEmbedder{}, memory.NewServiceWithDB(db))
+
+	resp, err := svc.Search(context.Background(), Request{Query: "latest research"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if resp.Status != "ok" || resp.Count != 1 {
+		t.Fatalf("resp = %+v", resp)
+	}
+	if resp.Metadata["semantic_fallback"] != "text_search" {
+		t.Fatalf("metadata = %+v, want text_search fallback", resp.Metadata)
+	}
+	if resp.Results[0].SourceKind != "local_source" || resp.Results[0].Title != "Research note" {
+		t.Fatalf("result = %+v", resp.Results[0])
 	}
 }

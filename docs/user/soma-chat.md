@@ -185,6 +185,8 @@ Web/research behavior:
 - if you ask Soma whether it can search or make web requests, Soma should answer from current Mycelis Search capability status instead of falling back to provider boilerplate
 - if you ask a freshness-oriented question such as latest news, current updates, or recent releases, Soma should call the configured Mycelis `web_search` capability directly before falling back to MCP-specific guidance
 - `local_sources` is the default token-free provider and lets Soma search governed user-shared and deployment context without hosted search tokens
+- if semantic embeddings are unavailable, `local_sources` should fall back to bounded text search over retained Mycelis context instead of blocking the request outright
+- when Soma uses `web_search`, the Operator trust package should show the search source boundary, such as `Search source: Local Mycelis context` for default retained Mycelis context
 - the supported Compose release path starts a self-hosted SearXNG service by default, so `MYCELIS_SEARCH_PROVIDER=searxng` and `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080` let Soma use public web search without Brave tokens
 - `searxng` can also point at another operator-owned endpoint when configured through `MYCELIS_SEARXNG_ENDPOINT`
 - `local_api` lets Soma use an operator-owned HTTP search endpoint when configured through `MYCELIS_SEARCH_PROVIDER=local_api` and `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`

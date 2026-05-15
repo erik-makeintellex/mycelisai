@@ -53,6 +53,9 @@ func TestRespondSearchChatPayload_DirectSearchIncludesCompletedExecutionSummary(
 	if payload.ExecutionSummary.Proof.RunClass != protocol.ExecutionRunClassNoRun || payload.ExecutionSummary.Proof.NoRunReason == "" {
 		t.Fatalf("execution_summary.proof = %+v", payload.ExecutionSummary.Proof)
 	}
+	if len(payload.ExecutionSummary.CapabilityUse) != 1 || !strings.Contains(payload.ExecutionSummary.CapabilityUse[0].Reason, "External or public web provider") {
+		t.Fatalf("capability reason = %+v, want external search source provenance", payload.ExecutionSummary.CapabilityUse)
+	}
 }
 
 func TestHandleChat_DirectSearchBlockerHasBlockedExecutionSummary(t *testing.T) {
@@ -111,6 +114,25 @@ func TestDirectSearchNoticeNamesLocalSourcesAsRetainedContext(t *testing.T) {
 	}
 	if strings.Contains(notice, "external results are leads") {
 		t.Fatalf("notice = %q, should not call local-source results external", notice)
+	}
+}
+
+func TestBuildSearchExecutionSummaryNamesLocalSourceProvenance(t *testing.T) {
+	summary := buildSearchExecutionSummary(
+		"what is your latest research",
+		"Notice: web_search via local_sources; no confirmation; governed local-source results come from retained Mycelis context, not the public web.",
+		"audit-123",
+		[]string{"web_search"},
+		protocol.ExecutionStatusCompleted,
+		"",
+		nil,
+	)
+
+	if summary == nil || len(summary.CapabilityUse) != 1 {
+		t.Fatalf("summary capability use = %+v", summary)
+	}
+	if summary.CapabilityUse[0].Reason != "Search source: Local Mycelis context" {
+		t.Fatalf("capability reason = %q, want local-source provenance", summary.CapabilityUse[0].Reason)
 	}
 }
 

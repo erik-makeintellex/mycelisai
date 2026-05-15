@@ -19,6 +19,8 @@ func buildSearchExecutionSummary(originalIntent, replyText, auditEventID string,
 		recoveryState = "blocked"
 		executionSummary = firstNonEmptyString(blocker, "Soma could not complete tool-assisted work.")
 	}
+	capabilityUse := capabilityUseFromTools(tools, "")
+	applySearchSourceReason(capabilityUse, replyText)
 	return &protocol.ExecutionSummary{
 		Intent: protocol.ExecutionIntent{
 			Original: strings.TrimSpace(originalIntent),
@@ -32,7 +34,7 @@ func buildSearchExecutionSummary(originalIntent, replyText, auditEventID string,
 			Status:  status,
 			Summary: executionSummary,
 		},
-		CapabilityUse: capabilityUseFromTools(tools, ""),
+		CapabilityUse: capabilityUse,
 		Outputs: []protocol.ExecutionOutput{{
 			Kind:           "answer",
 			Title:          "Soma answer",
@@ -59,6 +61,29 @@ func buildSearchExecutionSummary(originalIntent, replyText, auditEventID string,
 			Action: "chat",
 		},
 	}
+}
+
+func applySearchSourceReason(capabilityUse []protocol.CapabilityUse, replyText string) {
+	sourceReason := searchSourceReason(replyText)
+	if sourceReason == "" {
+		return
+	}
+	for i := range capabilityUse {
+		if capabilityUse[i].ID == "web_search" {
+			capabilityUse[i].Reason = sourceReason
+		}
+	}
+}
+
+func searchSourceReason(replyText string) string {
+	lower := strings.ToLower(replyText)
+	if strings.Contains(lower, "web_search via local_sources") {
+		return "Search source: Local Mycelis context"
+	}
+	if strings.Contains(lower, "web_search via") {
+		return "Search source: External or public web provider; verify before relying"
+	}
+	return ""
 }
 
 func searchBlockerDegradation(blocker *searchcap.Blocker) *protocol.ExecutionDegradation {

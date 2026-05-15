@@ -16,18 +16,12 @@ func (s *Service) searchLocalSources(ctx context.Context, req Request, resp Resp
 		resp.Blocker = &Blocker{Code: "web_provider_not_configured", Message: "Public web search is not configured. Local-source search is available only for governed Mycelis context.", NextAction: "Set MYCELIS_SEARCH_PROVIDER=searxng for self-hosted web search or configure the brave-search MCP server."}
 		return resp, nil
 	}
-	if s.embedder == nil || s.mem == nil {
+	if s.mem == nil {
 		resp.Status = "blocked"
-		resp.Blocker = &Blocker{Code: "local_sources_unavailable", Message: "Local-source search needs the cognitive embedding engine and memory service.", NextAction: "Start Core with memory and an embedding-capable AI engine."}
+		resp.Blocker = &Blocker{Code: "local_sources_unavailable", Message: "Local-source search needs the memory service.", NextAction: "Start Core with memory enabled."}
 		return resp, nil
 	}
-	vec, err := s.embedder.Embed(ctx, req.Query, "")
-	if err != nil {
-		resp.Status = "blocked"
-		resp.Blocker = &Blocker{Code: "embedding_unavailable", Message: "Local-source search could not embed the query.", NextAction: "Configure an embedding provider and retry."}
-		return resp, nil
-	}
-	results, err := s.mem.SemanticSearchWithOptions(ctx, vec, memory.SemanticSearchOptions{
+	opts := memory.SemanticSearchOptions{
 		Limit:               limitFor(req.MaxResults, s.cfg.MaxResults),
 		TenantID:            "default",
 		TeamID:              strings.TrimSpace(req.TeamID),
@@ -37,7 +31,22 @@ func (s *Service) searchLocalSources(ctx context.Context, req Request, resp Resp
 		Types:               req.Types,
 		AllowGlobal:         true,
 		AllowLegacyUnscoped: req.TeamID == "" && req.AgentID == "",
-	})
+	}
+	var vec []float64
+	var err error
+	if s.embedder != nil {
+		vec, err = s.embedder.Embed(ctx, req.Query, "")
+	} else {
+		err = fmt.Errorf("embedding engine not configured")
+	}
+	var results []memory.VectorResult
+	if err == nil {
+		results, err = s.mem.SemanticSearchWithOptions(ctx, vec, opts)
+	} else {
+		resp.Metadata["semantic_fallback"] = "text_search"
+		resp.Metadata["semantic_fallback_reason"] = "embedding_unavailable"
+		results, err = s.mem.TextSearchWithOptions(ctx, req.Query, opts)
+	}
 	if err != nil {
 		return resp, fmt.Errorf("local-source search failed: %w", err)
 	}
