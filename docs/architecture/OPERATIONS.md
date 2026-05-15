@@ -238,6 +238,7 @@ Local CI tasks:
 GitHub CI proves repo health without hosted agentry. Live service/browser proof is local, WSL, Compose, or target-cluster evidence.
 
 Invoke manages the Next.js server lifecycle for browser proof. Merge gates use the built production Interface server path, while CI also keeps a mocked Chromium homepage smoke. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; `--lane=release` is the recommended full runtime/operator gate. Guarded WSL tasks are `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`; add `--headed-browser` to `wsl.validate` or `wsl.cycle` when focused live-backend Playwright proof must open visible browser windows.
+`uv run inv interface.check` includes a small retry loop for transient Windows socket-reuse errors after heavy browser proof, but persistent route failures still fail the task.
 
 ## VII. Deployment Architecture
 
@@ -257,7 +258,7 @@ the compose Core image includes Node/npm/npx so manual curated stdio MCP install
 
 ### Persistent Storage Contract
 
-PostgreSQL plus pgvector owns durable memory/context. Output block storage is configured by `MYCELIS_OUTPUT_BLOCK_MODE` and `MYCELIS_OUTPUT_HOST_PATH` for local-hosted Compose, or PVC-backed cluster storage for Kubernetes. K8s live-browser proof that checks backend-written files should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` so the assertion targets the Core pod workspace/PVC rather than host-only paths.
+PostgreSQL plus pgvector owns durable memory/context. Output block storage is configured by `MYCELIS_OUTPUT_BLOCK_MODE` and `MYCELIS_OUTPUT_HOST_PATH` for local-hosted Compose, or PVC-backed cluster storage for Kubernetes. Native Core live-browser proof infers the host-visible workspace as `core/workspace` from `MYCELIS_WORKSPACE=./workspace`; K8s live-browser proof that checks backend-written files should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` so the assertion targets the Core pod workspace/PVC rather than host-only paths.
 
 ### Startup Sequence
 
@@ -282,7 +283,7 @@ Use task health checks rather than raw port checks when claiming product readine
 - Docker-in-WSL may require `MYCELIS_WSL_DISTRO`.
 - Compose may relay a Windows-hosted AI endpoint through WSL for bridge containers.
 - Do not share generated environments across Windows and WSL.
-- Browser proof that checks backend-written files may need `MYCELIS_BACKEND_WORKSPACE_ROOT`.
+- Browser proof that checks backend-written files infers `core/workspace` for repo-local native Core; Compose or split-checkout proof may still set `MYCELIS_BACKEND_WORKSPACE_ROOT`.
 - K8s/PVC browser proof should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`, `PLAYWRIGHT_K8S_NAMESPACE`, `PLAYWRIGHT_K8S_CORE_SELECTOR`, and `PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT`.
 
 ## IX. Monitoring & Observability

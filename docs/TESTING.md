@@ -33,7 +33,7 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 - Use `uv run inv ci.baseline --no-e2e` only for intentionally narrower debugging.
 - GitHub Actions are manual-only through `workflow_dispatch` during the current release-readiness push; when manually started, GitHub CI proves hosted codebase health while live AI/service acceptance remains local, Rancher K3s, WSL, Compose, or target-cluster evidence.
 - Windows is the edit/review/push surface; WSL is the guarded Compose release-style proof checkout, while Rancher Desktop K3s is the Windows local Kubernetes/commercial-parity proof lane.
-- `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required.
+- `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required; `interface.check` retries transient Windows socket-reuse failures after heavy browser proof before treating a route as failed.
 - Playwright starts/stops the managed Next.js app, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant.
 
 ## Thorough Release Testing Contract
@@ -193,7 +193,7 @@ uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/soma-gover
 uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/team-execution-live.spec.ts --live-backend --workers=1 --server-mode=external
 ```
 
-Use `team-execution-live.spec.ts` when team execution, retained file/code outputs, group visibility, run-conversation proof, or team NATS proposal subjects change. The proof asks Soma for explicit expected output criteria, creates a runtime team, approves governed execution, writes a small browser-game HTML file through the backend workspace, verifies the PVC-backed artifact with `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`, confirms retained `team` and `code` outputs with the exact workspace-viewer href, opens the generated game from the retained output link, verifies the page title and initial score, clicks it in a browser page, checks the final score, checks `/api/v1/runs/{id}/conversation`, and verifies the team appears in `/groups`.
+Use `team-execution-live.spec.ts` when team execution, retained file/code outputs, group visibility, run-conversation proof, or team NATS proposal subjects change. The native Core proof path now infers `MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace` from `MYCELIS_WORKSPACE=./workspace`; Compose or split-checkout proof can still set `MYCELIS_BACKEND_WORKSPACE_ROOT` or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT` explicitly, and PVC-backed K8s proof should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`. The proof asks Soma for explicit expected output criteria, creates a runtime team, approves governed execution, writes a small browser-game HTML file through the backend workspace, confirms retained `team` and `code` outputs with the exact workspace-viewer href, opens the generated game from the retained output link, verifies the page title and initial score, clicks it in a browser page, checks the final score, checks `/api/v1/runs/{id}/conversation`, and verifies the team appears in `/groups`.
 
 ## Product Delivery Proof
 

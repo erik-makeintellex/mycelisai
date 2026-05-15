@@ -742,46 +742,13 @@ def check(c, port=INTERFACE_PORT):
     Fetches key pages and checks for SSR errors, 404s, and dark-mode leaks.
     Requires: any repo-managed Interface server listening on --port (default 3000).
     """
-    import urllib.request
+    from .interface_check import probe_pages
 
     base = f"http://{INTERFACE_HOST}:{port}"
     pages = ["/", "/wiring", "/architect", "/dashboard", "/catalogue", "/teams", "/memory", "/settings/tools", "/approvals"]
-    errors = []
 
     print(f"Checking Interface at {base}...")
-
-    for page in pages:
-        url = f"{base}{page}"
-        try:
-            req = urllib.request.Request(url)
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                status = resp.status
-                body = resp.read().decode("utf-8", errors="replace")
-
-                issues = []
-                if "NEXT_REDIRECT" in body and "404" in body:
-                    issues.append("404 redirect detected")
-                if "Internal Server Error" in body:
-                    issues.append("500 Internal Server Error")
-                if "__next_error__" in body:
-                    issues.append("Next.js error boundary triggered")
-                if "Application error" in body or "Unhandled Runtime Error" in body:
-                    issues.append("React runtime error detected")
-                if "bg-white" in body and page in ("/wiring", "/architect"):
-                    issues.append("Light-mode bg-white leak detected")
-
-                ok = status == 200 and not issues
-                icon = "[OK]" if ok else "[FAIL]"
-                print(f"  {icon} {page} [{status}]", end="")
-                if issues:
-                    print(f"  WARN: {', '.join(issues)}")
-                    errors.extend([f"{page}: {i}" for i in issues])
-                else:
-                    print()
-
-        except Exception as e:
-            print(f"  [FAIL] {page} - {e}")
-            errors.append(f"{page}: {e}")
+    errors = probe_pages(base, pages)
 
     print()
     if errors:

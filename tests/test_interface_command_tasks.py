@@ -1,4 +1,5 @@
 from ops import interface_runtime as interface
+from ops import interface_check
 from tests.interface_task_support import FakeContext, FakeResult
 
 def test_test_uses_direct_shell_command(monkeypatch):
@@ -199,7 +200,7 @@ def test_check_does_not_treat_plain_html_words_as_hydration_failure(monkeypatch,
             return False
 
     monkeypatch.setattr(
-        interface.urllib.request,
+        interface_check.urllib.request,
         "urlopen",
         lambda req, timeout=10: FakeHTTPResponse("<html><body>hydration and error words in static docs text</body></html>"),
     )
@@ -208,3 +209,35 @@ def test_check_does_not_treat_plain_html_words_as_hydration_failure(monkeypatch,
 
     out = capsys.readouterr().out
     assert "ALL PAGES HEALTHY." in out
+
+
+def test_check_retries_transient_windows_socket_reuse(monkeypatch, capsys):
+    class FakeHTTPResponse:
+        status = 200
+
+        def read(self):
+            return b"<html><body>ok</body></html>"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    calls = {"count": 0}
+    sleeps: list[int | float] = []
+
+    def fake_urlopen(req, timeout=10):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise OSError("[WinError 10048] Only one usage of each socket address is normally permitted")
+        return FakeHTTPResponse()
+
+    monkeypatch.setattr(interface_check.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(interface_check.time, "sleep", lambda seconds: sleeps.append(seconds))
+
+    interface.check.body(FakeContext(), port=3000)
+
+    out = capsys.readouterr().out
+    assert "ALL PAGES HEALTHY." in out
+    assert sleeps[0] == 2

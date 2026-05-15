@@ -16,7 +16,7 @@ from .config import (
     is_windows,
     managed_cache_env,
 )
-
+from .interface_workspace import infer_native_backend_workspace_root
 INTERFACE_DIR = ROOT_DIR / "interface"
 
 
@@ -32,7 +32,6 @@ def _load_env():
     # Root .env owns the Go Core HTTP port; Next.js must use INTERFACE_PORT.
     os.environ.pop("PORT", None)
 
-
 def _task_env(extra=None):
     _load_env()
     ensure_managed_cache_dirs()
@@ -45,11 +44,9 @@ class CommandResult:
     stdout: str = ""
     stderr: str = ""
 
-
 def _is_next_build_lock_conflict(result: CommandResult) -> bool:
     text = _normalize_process_text(f"{result.stdout}\n{result.stderr}")
     return "unable to acquire lock at" in text and ".next/lock" in text
-
 
 def _is_incomplete_next_build_output(result: CommandResult) -> bool:
     text = _normalize_process_text(f"{result.stdout}\n{result.stderr}")
@@ -60,11 +57,9 @@ def _is_incomplete_next_build_output(result: CommandResult) -> bool:
         return True
     return ".next/types/" in text and "not found" in text
 
-
 def _is_next_standalone_cleanup_conflict(result: CommandResult) -> bool:
     text = _normalize_process_text(f"{result.stdout}\n{result.stderr}")
     return "ebusy" in text and "rmdir" in text and ".next/standalone" in text
-
 
 def _expected_next_build_artifacts() -> list[Path]:
     from . import interface_runtime as runtime
@@ -106,7 +101,6 @@ def _wait_for_complete_next_build_output(timeout_seconds: int = 20) -> None:
 
     missing_preview = ", ".join(str(path.relative_to(runtime.INTERFACE_DIR)) for path in missing[:6])
     raise RuntimeError(f"Incomplete Next.js build output after successful build command: {missing_preview}")
-
 
 def _playwright_last_run_path() -> Path:
     return INTERFACE_DIR / "test-results" / ".last-run.json"
@@ -240,7 +234,18 @@ def _build_playwright_env(*, live_backend: bool, port: int) -> dict[str, str]:
     }
     if live_backend:
         extra_env["PLAYWRIGHT_LIVE_BACKEND"] = "1"
-    return _task_env(extra_env)
+    env = _task_env(extra_env)
+    if live_backend:
+        playwright_root = os.environ.get("PLAYWRIGHT_BACKEND_WORKSPACE_ROOT", "").strip()
+        backend_root = os.environ.get("MYCELIS_BACKEND_WORKSPACE_ROOT", "").strip()
+        inferred_root = infer_native_backend_workspace_root()
+        if playwright_root:
+            env["PLAYWRIGHT_BACKEND_WORKSPACE_ROOT"] = playwright_root
+        elif backend_root:
+            env["MYCELIS_BACKEND_WORKSPACE_ROOT"] = backend_root
+        elif inferred_root:
+            env["MYCELIS_BACKEND_WORKSPACE_ROOT"] = inferred_root
+    return env
 
 
 def _reconcile_managed_server_endpoint(
