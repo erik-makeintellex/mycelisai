@@ -63,14 +63,14 @@ export default function LandingPage() {
     return (
         <main className="min-h-screen bg-cortex-bg text-cortex-text-main">
             <nav className="sticky top-0 z-50 border-b border-cortex-border bg-cortex-bg/95 backdrop-blur">
-                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-6">
-                    <Link href="/" className="flex items-center gap-3">
+                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
+                    <Link href="/" className="flex min-w-0 items-center gap-3">
                         <BrandMark logoUrl={config.brand.logo_url} productName={config.brand.product_name} />
-                        <span className="text-sm font-semibold uppercase tracking-[0.22em]">{config.brand.product_name}</span>
+                        <span className="hidden text-sm font-semibold uppercase tracking-[0.22em] sm:inline">{config.brand.product_name}</span>
                     </Link>
-                    <div className="flex items-center gap-2">
-                        <ActionLink cta={secondaryCTA} quiet icon={<BookOpen className="h-4 w-4" />} />
-                        <ActionLink cta={primaryCTA} icon={<ArrowRight className="h-4 w-4" />} />
+                    <div className="flex shrink-0 items-center gap-2">
+                        <ActionLink cta={secondaryCTA} quiet compactOnMobile icon={<BookOpen className="h-4 w-4" />} />
+                        <ActionLink cta={primaryCTA} compactOnMobile icon={<ArrowRight className="h-4 w-4" />} />
                     </div>
                 </div>
             </nav>
@@ -160,12 +160,15 @@ function BrandMark({ logoUrl, productName }: { logoUrl?: string; productName: st
     return <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cortex-primary text-cortex-bg"><Workflow className="h-4 w-4" /></span>;
 }
 
-function ActionLink({ cta, icon, quiet = false, large = false }: { cta: HomepageCTA; icon?: ReactNode; quiet?: boolean; large?: boolean }) {
+function ActionLink({ cta, icon, quiet = false, large = false, compactOnMobile = false }: { cta: HomepageCTA; icon?: ReactNode; quiet?: boolean; large?: boolean; compactOnMobile?: boolean }) {
+    const mobileShape = compactOnMobile ? "px-3 py-2 sm:px-4" : "";
+    const textClass = compactOnMobile ? "sr-only sm:not-sr-only" : "";
     const className = quiet
-        ? `inline-flex items-center justify-center gap-2 rounded-full border border-cortex-border bg-cortex-surface ${large ? "px-6 py-3 text-base" : "px-4 py-2 text-sm"} font-medium hover:border-cortex-primary/40`
-        : `inline-flex items-center justify-center gap-2 rounded-full bg-cortex-primary ${large ? "px-6 py-3 text-base" : "px-4 py-2 text-sm"} font-semibold text-cortex-bg hover:bg-cortex-primary/90`;
-    if (cta.external) return <a className={className} href={cta.href} target="_blank" rel="noopener noreferrer">{cta.label}{icon}</a>;
-    return <Link className={className} href={cta.href}>{cta.label}{icon}</Link>;
+        ? `inline-flex items-center justify-center gap-2 rounded-full border border-cortex-border bg-cortex-surface ${large ? "px-6 py-3 text-base" : `${mobileShape || "px-4 py-2"} text-sm`} font-medium hover:border-cortex-primary/40`
+        : `inline-flex items-center justify-center gap-2 rounded-full bg-cortex-primary ${large ? "px-6 py-3 text-base" : `${mobileShape || "px-4 py-2"} text-sm`} font-semibold text-cortex-bg hover:bg-cortex-primary/90`;
+    const content = <><span className={textClass}>{cta.label}</span>{icon}</>;
+    if (cta.external) return <a aria-label={compactOnMobile ? cta.label : undefined} className={className} href={cta.href} target="_blank" rel="noopener noreferrer">{content}</a>;
+    return <Link aria-label={compactOnMobile ? cta.label : undefined} className={className} href={cta.href}>{content}</Link>;
 }
 
 function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {

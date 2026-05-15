@@ -454,7 +454,7 @@ test.describe("Connected Tools MCP workflow", () => {
 
         await page.getByRole("button", { name: /filesystem.*2 tools/i }).click();
         await expect(page.getByText("Live Usage")).toBeVisible();
-        await expect(page.getByText("list_directory", { exact: true })).toBeVisible();
+        await expect(page.getByText("list_directory", { exact: true }).last()).toBeVisible();
         await expect(page.getByText("read_file", { exact: true }).last()).toBeVisible();
 
         await page.getByRole("button", { name: "BROWSE LIBRARY" }).click();
