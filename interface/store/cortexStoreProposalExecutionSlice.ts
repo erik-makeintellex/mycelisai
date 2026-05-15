@@ -7,6 +7,25 @@ import { buildMissionChatFailure } from '@/lib/missionChatFailure';
 import type { ChatMessage, ConfirmProposalResult } from '@/store/cortexStoreTypes';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 
+function recoveryTextFromExecutionSummary(summary: any) {
+    const degradation = summary?.audit_recovery?.degradation;
+    const whatFailed = trimToNonEmpty(degradation?.what_failed)
+        ?? trimToNonEmpty(summary?.audit_recovery?.blocker);
+    const safeContinuation = trimToNonEmpty(degradation?.safe_continuation);
+    const diagnostics = [
+        trimToNonEmpty(degradation?.code),
+        whatFailed,
+        trimToNonEmpty(degradation?.trusted_state),
+        trimToNonEmpty(degradation?.invalidated_proof),
+        safeContinuation,
+    ].filter(Boolean).join(' | ');
+    return {
+        whatFailed,
+        safeContinuation,
+        diagnostics: trimToNonEmpty(diagnostics),
+    };
+}
+
 export function createCortexProposalExecutionSlice(
     set: CortexSet,
     get: CortexGet,
@@ -72,18 +91,25 @@ export function createCortexProposalExecutionSlice(
                 }
                 const failureRunId = trimToNonEmpty(parsedBody?.data?.run_id);
                 const failureExecutionSummary = parsedBody?.data?.execution_summary;
+                const recovery = recoveryTextFromExecutionSummary(failureExecutionSummary);
                 const failure = buildMissionChatFailure({
                     assistantName: get().assistantName,
                     targetId: 'admin',
-                    message: errMsg,
+                    message: recovery.whatFailed ?? errMsg,
                     statusCode: res.status,
                 });
+                const failureWithRecovery = {
+                    ...failure,
+                    summary: recovery.whatFailed ?? failure.summary,
+                    recommendedAction: recovery.safeContinuation ?? failure.recommendedAction,
+                    diagnostics: recovery.diagnostics ?? failure.diagnostics,
+                };
                 console.error('[CE-1] Confirm action failed:', errMsg);
                 set((s) => ({
-                    missionChatError: failure.summary,
-                    missionChatFailure: failure,
+                    missionChatError: failureWithRecovery.summary,
+                    missionChatFailure: failureWithRecovery,
                     activeMode: 'blocker',
-                    activeRunId: null,
+                    activeRunId: failureRunId ?? null,
                     missionChat: [
                         ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'failed', {
                             mode: 'blocker',
@@ -91,7 +117,7 @@ export function createCortexProposalExecutionSlice(
                         }),
                         {
                             role: 'council',
-                            content: failure.summary,
+                            content: failureWithRecovery.summary,
                             source_node: 'admin',
                             mode: 'blocker',
                             run_id: failureRunId ?? undefined,
@@ -102,7 +128,7 @@ export function createCortexProposalExecutionSlice(
                     pendingProposal: null,
                     activeConfirmToken: null,
                 }));
-                return { ok: false, runId: null, error: failure.summary };
+                return { ok: false, runId: failureRunId ?? null, error: failureWithRecovery.summary };
             } catch (err) {
                 const errMsg = err instanceof Error ? err.message : 'Confirm action failed';
                 const failure = buildMissionChatFailure({

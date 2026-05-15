@@ -166,6 +166,14 @@ func buildConfirmActionFailureExecutionSummary(proofID, runID, auditID string, e
 		runClass = protocol.ExecutionRunClassLinked
 		noRunReason = ""
 	}
+	var nextStep *protocol.ExecutionNextStep
+	if strings.TrimSpace(runID) != "" {
+		nextStep = &protocol.ExecutionNextStep{
+			Label:  "Review failed run",
+			Action: "view_run",
+			Href:   "/api/v1/runs/" + runID,
+		}
+	}
 	return &protocol.ExecutionSummary{
 		Intent: protocol.ExecutionIntent{
 			Resolved: "chat-action",
@@ -201,11 +209,7 @@ func buildConfirmActionFailureExecutionSummary(proofID, runID, auditID string, e
 				RequiresAttention: true,
 			},
 		},
-		NextStep: &protocol.ExecutionNextStep{
-			Label:  "Review failed run",
-			Action: "view_run",
-			Href:   "/api/v1/runs/" + runID,
-		},
+		NextStep: nextStep,
 	}
 }
 

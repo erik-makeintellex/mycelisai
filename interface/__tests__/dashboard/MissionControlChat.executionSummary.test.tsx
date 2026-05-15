@@ -246,5 +246,9 @@ describe('MissionControlChat execution summary', () => {
         expect(screen.getByText('Still trusted: The failed run record remains trusted.')).toBeDefined();
         expect(screen.getByText('Invalid proof: No completed output should be trusted.')).toBeDefined();
         expect(screen.getByText('Safe next: Review the failed run and retry.')).toBeDefined();
+        expect(screen.getAllByRole('link', { name: /Run run-fail/i })
+            .some((link) => link.getAttribute('href') === '/runs/run-failed-123456')).toBe(true);
+        expect(screen.queryByText('Run proof + retained output')).toBeNull();
+        expect(screen.queryByText('Verified execution proof')).toBeNull();
     });
 });

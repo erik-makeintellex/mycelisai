@@ -76,14 +76,18 @@ describe('useCortexStore confirm proposal failure', () => {
 
         expect(result).toEqual({
             ok: false,
-            runId: null,
-            error: 'Soma hit a server-side failure while handling the request.',
+            runId: 'run-failed-1',
+            error: 'tool unavailable',
         });
         expect(useCortexStore.getState().activeMode).toBe('blocker');
-        expect(useCortexStore.getState().missionChatError).toBe('Soma hit a server-side failure while handling the request.');
+        expect(useCortexStore.getState().activeRunId).toBe('run-failed-1');
+        expect(useCortexStore.getState().missionChatError).toBe('tool unavailable');
         expect(useCortexStore.getState().missionChatFailure).toMatchObject({
             routeKind: 'workspace',
             type: 'server_error',
+            summary: 'tool unavailable',
+            recommendedAction: 'Review the failed run and retry.',
+            diagnostics: expect.stringContaining('approved_execution_failed'),
         });
         const lastMessage = useCortexStore.getState().missionChat.at(-1);
         expect(lastMessage).toMatchObject({

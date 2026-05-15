@@ -62,6 +62,20 @@ func TestBuildConfirmActionFailureExecutionSummary_DescribesDegradation(t *testi
 	if degradation.TrustedState == "" || degradation.InvalidatedProof == "" || degradation.SafeContinuation == "" {
 		t.Fatalf("degradation trust boundaries incomplete: %+v", degradation)
 	}
+	if summary.NextStep == nil || summary.NextStep.Href != "/api/v1/runs/run-1" {
+		t.Fatalf("next step = %+v", summary.NextStep)
+	}
+}
+
+func TestBuildConfirmActionFailureExecutionSummary_SkipsRunLinkWithoutRunID(t *testing.T) {
+	summary := buildConfirmActionFailureExecutionSummary("proof-1", "", "audit-1", errors.New("tool unavailable"))
+
+	if summary.Proof.RunClass != protocol.ExecutionRunClassNoRun || summary.Proof.NoRunReason == "" {
+		t.Fatalf("proof = %+v", summary.Proof)
+	}
+	if summary.NextStep != nil {
+		t.Fatalf("next step = %+v, want nil without run id", summary.NextStep)
+	}
 }
 
 func decodeChatPayloadFromAPIResponse(t *testing.T, rr *httptest.ResponseRecorder) protocol.ChatResponsePayload {
