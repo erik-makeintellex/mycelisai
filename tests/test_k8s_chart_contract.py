@@ -112,7 +112,7 @@ def test_chart_projects_search_provider_env_into_workload():
 
     required_value_snippets = [
         "search:",
-        "provider: disabled",
+        "provider: local_sources",
         'searxngEndpoint: ""',
         'localApiEndpoint: ""',
         "maxResults: 8",
@@ -125,7 +125,7 @@ def test_chart_projects_search_provider_env_into_workload():
         "MYCELIS_SEARXNG_ENDPOINT",
         "MYCELIS_SEARCH_LOCAL_API_ENDPOINT",
         "MYCELIS_SEARCH_MAX_RESULTS",
-        'value: {{ default "disabled" .provider | quote }}',
+        'value: {{ default "local_sources" .provider | quote }}',
         'value: {{ default "" .searxngEndpoint | quote }}',
         'value: {{ default "" .localApiEndpoint | quote }}',
         "value: {{ default 8 .maxResults | quote }}",

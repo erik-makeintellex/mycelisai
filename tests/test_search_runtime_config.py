@@ -30,7 +30,7 @@ def test_search_runtime_env_projects_through_compose_and_helm():
         ],
         "charts/mycelis-core/values.yaml": [
             "search:",
-            "provider: disabled",
+            "provider: local_sources",
             'searxngEndpoint: ""',
             'localApiEndpoint: ""',
             "maxResults: 8",
@@ -40,7 +40,7 @@ def test_search_runtime_env_projects_through_compose_and_helm():
             "MYCELIS_SEARXNG_ENDPOINT",
             "MYCELIS_SEARCH_LOCAL_API_ENDPOINT",
             "MYCELIS_SEARCH_MAX_RESULTS",
-            'value: {{ default "disabled" .provider | quote }}',
+            'value: {{ default "local_sources" .provider | quote }}',
             'value: {{ default "" .searxngEndpoint | quote }}',
             'value: {{ default "" .localApiEndpoint | quote }}',
             "value: {{ default 8 .maxResults | quote }}",

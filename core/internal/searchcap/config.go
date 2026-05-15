@@ -13,8 +13,12 @@ func ConfigFromEnv() Config {
 			maxResults = parsed
 		}
 	}
+	provider := normalizeProvider(os.Getenv("MYCELIS_SEARCH_PROVIDER"))
+	if strings.TrimSpace(os.Getenv("MYCELIS_SEARCH_PROVIDER")) == "" {
+		provider = ProviderLocalSources
+	}
 	return Config{
-		Provider:         normalizeProvider(os.Getenv("MYCELIS_SEARCH_PROVIDER")),
+		Provider:         provider,
 		SearXNGEndpoint:  strings.TrimRight(strings.TrimSpace(os.Getenv("MYCELIS_SEARXNG_ENDPOINT")), "/"),
 		LocalAPIEndpoint: strings.TrimSpace(os.Getenv("MYCELIS_SEARCH_LOCAL_API_ENDPOINT")),
 		MaxResults:       maxResults,

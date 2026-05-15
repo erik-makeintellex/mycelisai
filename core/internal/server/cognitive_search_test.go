@@ -96,6 +96,24 @@ func TestHandleChat_DirectSearchBlockerHasBlockedExecutionSummary(t *testing.T) 
 	}
 }
 
+func TestDirectSearchNoticeNamesLocalSourcesAsRetainedContext(t *testing.T) {
+	resp := searchcap.Response{
+		Provider: searchcap.ProviderLocalSources,
+		Metadata: map[string]any{
+			"approval_mode": "notify",
+		},
+	}
+
+	notice := directSearchNotice(resp)
+
+	if !strings.Contains(notice, "governed local-source results") {
+		t.Fatalf("notice = %q, want local-source trust boundary", notice)
+	}
+	if strings.Contains(notice, "external results are leads") {
+		t.Fatalf("notice = %q, should not call local-source results external", notice)
+	}
+}
+
 func TestSearchCapabilityQuestionDoesNotMatchResearchTeamPrompt(t *testing.T) {
 	prompt := "i need an indepth ai research team that can take on various aspects of current research to understand optimal agentry architecture"
 

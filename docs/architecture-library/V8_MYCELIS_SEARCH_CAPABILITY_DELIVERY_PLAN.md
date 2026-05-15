@@ -55,7 +55,7 @@ SearchResult
 ```
 
 Provider rules:
-- `local_sources` uses Mycelis-governed stores and never requires external tokens.
+- `local_sources` is the default native/Helm provider, uses Mycelis-governed stores, and never requires external tokens.
 - `searxng` calls an operator-owned SearXNG endpoint and requires JSON output to be enabled there.
 - `local_api` calls an operator-owned HTTP JSON search endpoint and never requires hosted search tokens from Mycelis.
 - `brave` uses the existing curated MCP/provider path and requires `BRAVE_API_KEY`.
@@ -81,7 +81,7 @@ MYCELIS_SEARCH_MAX_RESULTS=8
 
 Local development should support:
 - `disabled`: no public web search, but clear Soma blocker.
-- `local_sources`: no external service required.
+- `local_sources`: default native/Helm provider; no external service required.
 - `searxng`: default supported Compose release provider for self-hosted web metasearch, backed by the repo-owned SearXNG settings that enable JSON output.
 - `local_api`: optional operator-owned HTTP search endpoint.
 - `brave`: optional hosted-provider path requiring `BRAVE_API_KEY`.

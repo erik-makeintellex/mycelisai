@@ -126,9 +126,13 @@ func (s *AdminServer) respondDirectSearchAnswer(w http.ResponseWriter, r *http.R
 	if searchSvc == nil {
 		searchSvc = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil)
 	}
+	sourceScope := "web"
+	if searchSvc.Provider() == searchcap.ProviderLocalSources {
+		sourceScope = "local_sources"
+	}
 	resp, err := searchSvc.Search(r.Context(), searchcap.Request{
 		Query:       query,
-		SourceScope: "web",
+		SourceScope: sourceScope,
 		MaxResults:  5,
 		Visibility:  "visible_to_soma",
 	})
@@ -206,6 +210,9 @@ func directSearchNotice(resp searchcap.Response) string {
 	mode := "no confirmation"
 	if value, ok := resp.Metadata["approval_mode"].(string); ok && strings.TrimSpace(value) == "require_confirmation" {
 		mode = "confirmation required"
+	}
+	if provider == searchcap.ProviderLocalSources {
+		return fmt.Sprintf("Notice: web_search via %s; %s; governed local-source results come from retained Mycelis context, not the public web.", provider, mode)
 	}
 	return fmt.Sprintf("Notice: web_search via %s; %s; external results are leads, verify before relying.", provider, mode)
 }

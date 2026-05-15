@@ -143,6 +143,19 @@ func TestConfigFromEnvAcceptsSelfHostedLocalAPI(t *testing.T) {
 	}
 }
 
+func TestConfigFromEnvDefaultsToLocalSources(t *testing.T) {
+	t.Setenv("MYCELIS_SEARCH_PROVIDER", "")
+
+	cfg := ConfigFromEnv()
+
+	if cfg.Provider != ProviderLocalSources {
+		t.Fatalf("Provider = %q, want %q", cfg.Provider, ProviderLocalSources)
+	}
+	if !cfg.OnlineAllowed || !cfg.OnlineAllowedSet || cfg.ApprovalMode != "notify" || cfg.DisclosureMode != "notice_and_interpretation" {
+		t.Fatalf("search governance config = %+v", cfg)
+	}
+}
+
 func TestServiceLocalAPINormalizesJSONResults(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderLocalAPI, LocalAPIEndpoint: "http://search.local/api/search", MaxResults: 5}, nil, nil)
 	svc.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {

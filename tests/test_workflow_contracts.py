@@ -27,6 +27,7 @@ def test_ci_workflow_runs_token_free_codebase_gates():
         "--spec=e2e/specs/homepage.spec.ts",
         "uv run inv k8s.standards",
         "MYCELIS_SEARCH_PROVIDER: \"disabled\"",
+        "workflow_dispatch",
     ]:
         assert expected in workflow
 
@@ -133,10 +134,11 @@ def test_mycelis_search_delivery_plan_assigns_teams_and_testing_gates():
         assert team in plan
 
     for required in [
-            "Soma -> Mycelis Search API -> local_sources | searxng | local_api | brave | disabled",
+        "Soma -> Mycelis Search API -> local_sources | searxng | local_api | brave | disabled",
         "MYCELIS_SEARCH_PROVIDER=disabled|local_sources|searxng|local_api|brave",
         "MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080",
         "MYCELIS_SEARCH_LOCAL_API_ENDPOINT=http://search.local/api/search",
+        "`local_sources` is the default native/Helm provider, uses Mycelis-governed stores, and never requires external tokens.",
         "asking \"can you search the web?\" returns capability status, not a blanket no",
         "local-source search works without Brave or any hosted token",
     ]:
@@ -162,7 +164,7 @@ def test_release_binaries_workflow_uses_core_package_task():
     workflow = _read(".github/workflows/release-binaries.yaml")
 
     assert "workflow_dispatch" in workflow
-    assert 'tags: ["v*"]' in workflow
+    assert 'tags: ["v*"]' not in workflow
     assert 'id: release' in workflow
     assert "uv run inv core.package" in workflow
     assert "--version-tag=${{ steps.release.outputs.label }}" in workflow

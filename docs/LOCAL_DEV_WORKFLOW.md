@@ -91,7 +91,7 @@ Common runtime variables:
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
 - `MYCELIS_K8S_TEXT_MODEL_ID`: Kubernetes/Helm text model override
 - `MYCELIS_MEDIA_ENDPOINT`, `MYCELIS_MEDIA_MODEL_ID`: media provider overrides
-- `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, `MYCELIS_SEARCH_MAX_RESULTS`: governed search posture
+- `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, `MYCELIS_SEARCH_MAX_RESULTS`: governed search posture; default native Core search is `local_sources`, while Compose defaults to self-hosted `searxng`
 
 Provider override pattern:
 - `MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID`
