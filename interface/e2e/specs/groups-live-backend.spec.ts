@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { storeLiveArtifactWithRetry } from '../support/live-artifacts';
+import { createLiveMissionTeam } from '../support/live-teams';
 
 type APIEnvelope<T> = {
     ok?: boolean;
@@ -16,18 +18,6 @@ type GroupRecord = {
 type ArtifactRecord = {
     id: string;
     title: string;
-};
-
-type SeedResponse = {
-    mission_id?: string;
-};
-
-type MissionDetail = {
-    id?: string;
-    teams?: Array<{
-        id?: string;
-        name?: string;
-    }>;
 };
 
 async function parseJSONIfPossible<T>(response: { text(): Promise<string> }) {
@@ -101,43 +91,19 @@ async function waitForBrowserGroupList(page: Page, expectedGroupID: string) {
     ).toBeTruthy();
 }
 
-async function createLiveMissionTeam(page: Page) {
-    const seedResponse = await page.request.post('/api/v1/intent/seed/symbiotic');
-    const parsedSeed = await parseJSONIfPossible<SeedResponse>(seedResponse);
-    expect(seedResponse.ok(), parsedSeed.body ? JSON.stringify(parsedSeed.body) : parsedSeed.raw).toBeTruthy();
-    expect(parsedSeed.body?.mission_id).toBeTruthy();
-
-    const missionResponse = await page.request.get(`/api/v1/missions/${parsedSeed.body!.mission_id}`);
-    const parsedMission = await parseJSONIfPossible<MissionDetail>(missionResponse);
-    expect(missionResponse.ok(), parsedMission.body ? JSON.stringify(parsedMission.body) : parsedMission.raw).toBeTruthy();
-    const team = parsedMission.body?.teams?.find((candidate) => candidate.id);
-    expect(team?.id).toBeTruthy();
-    return {
-        missionID: parsedSeed.body!.mission_id!,
-        teamID: team!.id!,
-        teamName: team?.name ?? 'live mission team',
-    };
-}
-
 async function storeLiveArtifact(page: Page, teamID: string, title: string, agentID: string, content: string) {
-    const response = await page.request.post('/api/v1/artifacts', {
-        data: {
-            team_id: teamID,
-            agent_id: agentID,
-            artifact_type: 'document',
-            title,
-            content_type: 'text/markdown',
-            content,
-            metadata: {
-                source: 'groups-live-backend.spec.ts',
-            },
-            status: 'approved',
+    return await storeLiveArtifactWithRetry<ArtifactRecord>(page, {
+        team_id: teamID,
+        agent_id: agentID,
+        artifact_type: 'document',
+        title,
+        content_type: 'text/markdown',
+        content,
+        metadata: {
+            source: 'groups-live-backend.spec.ts',
         },
-    });
-    const parsed = await parseJSONIfPossible<ArtifactRecord>(response);
-    expect(response.ok(), parsed.body ? JSON.stringify(parsed.body) : parsed.raw).toBeTruthy();
-    expect(parsed.body?.id).toBeTruthy();
-    return parsed.body as ArtifactRecord;
+        status: 'approved',
+    }, 'groups live backend');
 }
 
 async function gotoWithColdStartRetry(page: Page, path: string) {

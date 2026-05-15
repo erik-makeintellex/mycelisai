@@ -171,7 +171,7 @@ uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/wor
 uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=e2e/specs/team-execution-live.spec.ts
 ```
-
+Use `uv run inv interface.e2e --project=chromium --workers=1 --server-mode=external --spec=e2e/specs/soma-proposal-mode.spec.ts` when proposal approval, confirm-action failure handling, degradation metadata, or failed-run recovery UI changes. The focused browser proof must show the failed run remains reviewable, the Operator trust package says operator attention is needed, recovery copy is visible, and success proof labels are absent.
 Rancher Desktop K3s live-backend proof uses the local Interface server against the K3s Core bridge; `k8s.bridge` forwards in-cluster Core `:8080` to `MYCELIS_API_PORT` or `8081` by default, and the Interface proxy/live proof must use that same local port. When the spec checks backend-written files, prove the PVC-backed workspace through `kubectl`:
 
 ```bash

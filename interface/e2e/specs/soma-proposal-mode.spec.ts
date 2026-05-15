@@ -28,4 +28,80 @@ test.describe("Soma proposal mode", () => {
         await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 20_000 });
         await expect.poll(() => workspace.cancelCalls()).toBe(1);
     });
+
+    test("keeps failed approved execution reviewable with run proof and recovery copy", async ({ page }) => {
+        await mockOrganizationWorkspace(page, () => proposalEnvelope());
+        const failedRunId = "run-failed-browser-123456";
+
+        await page.route("**/api/v1/intent/confirm-action", async (route) => {
+            await route.fulfill({
+                status: 500,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    ok: false,
+                    error: "confirmation denied",
+                    data: {
+                        run_id: failedRunId,
+                        execution_summary: {
+                            intent: {
+                                original: "Create a simple python file named hello_world.py in the workspace.",
+                                resolved: "chat-action",
+                            },
+                            understanding: {
+                                summary: "Soma understood the approved file-writing action, but execution failed.",
+                            },
+                            execution: {
+                                shape: "directed_execution",
+                                status: "failed",
+                                summary: "Approved execution failed before producing trusted output.",
+                            },
+                            capability_use: [{ id: "write_file", label: "write_file", status: "failed" }],
+                            outputs: [],
+                            proof: {
+                                run_id: failedRunId,
+                                proof_class: "failed_run",
+                                verified: false,
+                            },
+                            audit_recovery: {
+                                approval_status: "approved",
+                                recovery_state: "blocked",
+                                blocker: "tool unavailable",
+                                degradation: {
+                                    code: "approved_execution_failed",
+                                    what_failed: "tool unavailable",
+                                    trusted_state: "The failed run record remains trusted.",
+                                    invalidated_proof: "No completed output should be trusted.",
+                                    safe_continuation: "Review the failed run and retry.",
+                                    requires_attention: true,
+                                },
+                            },
+                            next_step: {
+                                label: "Review failed run",
+                                action: "view_run",
+                                href: `/api/v1/runs/${failedRunId}`,
+                            },
+                        },
+                    },
+                }),
+            });
+        });
+
+        await openOrganization(page);
+        await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
+
+        await expect(page.getByText("PROPOSED ACTION")).toBeVisible({ timeout: 20_000 });
+        await page.getByRole("button", { name: /^Execute$/i }).click();
+
+        await expect(page.getByText("Confirmation failed")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("tool unavailable").last()).toBeVisible();
+        await expect(page.getByText("Operator trust package").last()).toBeVisible();
+        await expect(page.getByText("Needs operator attention").last()).toBeVisible();
+        await expect(page.getByText("Failed: tool unavailable").last()).toBeVisible();
+        await expect(page.getByText("Still trusted: The failed run record remains trusted.").last()).toBeVisible();
+        await expect(page.getByText("Invalid proof: No completed output should be trusted.").last()).toBeVisible();
+        await expect(page.getByText("Safe next: Review the failed run and retry.").last()).toBeVisible();
+        await expect(page.getByRole("link", { name: `Run ${failedRunId}` })).toHaveAttribute("href", `/runs/${failedRunId}`);
+        await expect(page.getByText("Run proof + retained output")).toHaveCount(0);
+        await expect(page.getByText("Verified execution proof")).toHaveCount(0);
+    });
 });
