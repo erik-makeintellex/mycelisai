@@ -29,7 +29,8 @@ test.describe('Soma Dashboard (/dashboard)', () => {
 
     test('recent organization guidance renders', async ({ page }) => {
         await page.getByRole('button', { name: 'Create or open AI Organizations' }).click();
-        await expect(page.getByRole('heading', { name: 'Recent AI Organizations' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Create AI Organization' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Choose how to start' })).toBeVisible();
         await expect(
             page.getByText(/Create the AI Organization first so Mycelis opens with structure, not a one-off assistant session\./i),
         ).toBeVisible();
