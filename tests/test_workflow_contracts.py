@@ -115,6 +115,20 @@ def test_soma_web_capability_contract_uses_governed_mycelis_search_and_fetch():
     assert "MYCELIS_SEARCH_LOCAL_API_ENDPOINT" in soma_doc
 
 
+def test_search_fallback_and_provenance_docs_match_runtime_shape():
+    api_doc = _read("docs/API_REFERENCE.md")
+    resources_doc = _read("docs/user/resources.md")
+    soma_doc = _read("docs/user/soma-chat.md")
+
+    assert "data.metadata.semantic_fallback" in api_doc
+    assert "`metadata.semantic_fallback`" not in api_doc
+    assert "capability_use.reason" in api_doc
+    assert "Search source: Local Mycelis context" in resources_doc
+    assert "Search source: Local Mycelis context" in soma_doc
+    assert "falls back to bounded text search" in resources_doc
+    assert "fall back to bounded text search" in soma_doc
+
+
 def test_mycelis_search_delivery_plan_assigns_teams_and_testing_gates():
     plan = _read("docs/architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md")
     index = _read("docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md")

@@ -164,9 +164,9 @@ uv run inv logging.check-topics
 `wsl.validate --lane=release` runs `compose.health` before each live browser spec because those specs execute through separate WSL shell invocations. Use `--headed-browser` on that same task when acceptance evidence must include visible live Playwright windows.
 
 Focused live-backend examples:
-
 ```bash
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts
+uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/search-provenance-live.spec.ts
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=e2e/specs/team-execution-live.spec.ts

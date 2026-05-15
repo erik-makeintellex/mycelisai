@@ -49,7 +49,7 @@
 | **Memory & Search** | | |
 | `/api/v1/memory/search` | GET | Semantic vector search over durable memory, with optional team/agent/type scope filters across Soma-personal, team-shared, and governed memory lanes |
 | `/api/v1/search/status` | GET | Current Mycelis Search provider posture for UI/Soma capability answers, including provider, configured/enabled flags, direct `web_search` support, token requirements, online-allowed/no-confirm disclosure posture, and blocker/next-action copy |
-| `/api/v1/search` | POST | Governed Mycelis Search API. Native and Helm defaults use `local_sources` for retained Mycelis context without external tokens; Compose defaults to self-hosted `searxng` for public web search. Configured online search runs without a separate confirmation prompt when `MYCELIS_SEARCH_ONLINE_ALLOWED=true`, while responses disclose provider/path and treat external results as leads to verify. |
+| `/api/v1/search` | POST | Governed Mycelis Search API. Native and Helm defaults use `local_sources` for retained Mycelis context without external tokens; Compose defaults to self-hosted `searxng` for public web search. Configured online search runs without a separate confirmation prompt when `MYCELIS_SEARCH_ONLINE_ALLOWED=true`, while responses disclose provider/path and treat external results as leads to verify. Response `data.metadata.semantic_fallback` can report bounded local text fallback such as `text_search` when semantic embeddings are unavailable. |
 | **Runtime Capabilities** | | |
 | `/api/v1/capabilities` | GET | Return the canonical runtime Capability Manifest snapshot as `APIResponse<Snapshot>`, derived from exchange capabilities, installed/available MCP, Mycelis Search status, internal tools, and host-command allowlist; runtime team creation/delegation maps to the medium-risk `team_orchestration` capability |
 | `/api/v1/capabilities/{id}` | GET | Return one runtime capability manifest by ID (`404` when absent) |
@@ -187,7 +187,6 @@ The object can include:
 - `execution`: shape, status, and summary such as `direct_soma`, `guided_proposal`, `tool_assisted_work`, or `team_execution`
 - `capability_use`: governed tools, teams, MCP capabilities, automations, or plugins used
 - `capability_use.reason`: operator-facing provenance detail when available, such as the active `web_search` source boundary
-- `metadata.semantic_fallback`: optional local-source search fallback marker, such as `text_search`, when semantic embeddings are unavailable but retained Mycelis context can still be searched safely
 - `outputs`: answer, proposal, artifact, tool result, retained team, or retained file/code output references
 - `proof`: `run_id`, `audit_event_id`, `intent_proof_id`, and verification state
 - `audit_recovery`: approval status, recovery state, blocker, retry posture, and optional `degradation`

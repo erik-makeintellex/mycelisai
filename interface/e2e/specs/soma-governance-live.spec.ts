@@ -2,15 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
+import { openOrganizationWorkspace, organizationChatInput, waitForOrganizationWorkspaceReady } from '../support/live-organization-workspace';
 
 const repoRoot = path.resolve(__dirname, '../../..');
 const LIVE_GOVERNANCE_TIMEOUT_MS = 180_000;
 const LIVE_CHAT_RESPONSE_TIMEOUT_MS = 120_000;
 
 function resolveBackendWorkspaceRoots() {
-    // Live backend proof can run against either the repo-local Core workspace
-    // or the supported compose data root, so filesystem assertions need to
-    // probe the real backend workspace instead of assuming one layout.
     const configuredRoot =
         process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT;
     if (configuredRoot && configuredRoot.trim().length > 0) {
@@ -170,14 +168,11 @@ async function createOrganization(page: Page, name: string) {
 }
 
 async function openWorkspace(page: Page, organizationId: string) {
-    await page.goto(`/organizations/${organizationId}`, { waitUntil: 'domcontentloaded' });
-    await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({
-        timeout: 30_000,
-    });
+    await openOrganizationWorkspace(page, organizationId);
 }
 
 async function submitWorkspaceChat(page: Page, content: string) {
-    const input = page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i);
+    const input = organizationChatInput(page);
     await input.fill(content);
     const responsePromise = page.waitForResponse(
         (response) => response.url().includes('/api/v1/chat') && response.request().method() === 'POST',
@@ -274,7 +269,7 @@ test.describe('Soma governed mutation live contract', () => {
             expect(anyTargetExists(targetPaths)).toBeFalsy();
 
             await page.reload({ waitUntil: 'domcontentloaded' });
-            await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
+            await waitForOrganizationWorkspaceReady(page);
             await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 30_000 });
             expect(anyTargetExists(targetPaths)).toBeFalsy();
         } finally {
@@ -319,7 +314,7 @@ test.describe('Soma governed mutation live contract', () => {
             await expect(page.getByRole('link', { name: /Mission activated/i })).toBeVisible({ timeout: 30_000 });
 
             await page.reload({ waitUntil: 'domcontentloaded' });
-            await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
+            await waitForOrganizationWorkspaceReady(page);
             await expect(page.getByText(/Execution verified/i)).toBeVisible({ timeout: 30_000 });
             await expect(page.getByRole('link', { name: /Mission activated/i })).toBeVisible({ timeout: 30_000 });
         } finally {
