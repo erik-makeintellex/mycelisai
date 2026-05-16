@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -85,6 +86,56 @@ func TestExecutionOutputsFromToolResultsRetainsTeamAndCodeFile(t *testing.T) {
 	}
 	if outputs[1].RetentionClass != protocol.ExecutionRetentionClassRetained {
 		t.Fatalf("file retention = %q", outputs[1].RetentionClass)
+	}
+}
+
+func TestPersistConfirmedActionOutputArtifactsStoresSlugTeamWriteFile(t *testing.T) {
+	dbOpt, mock := withDB(t)
+	s := newTestServer(dbOpt, func(s *AdminServer) {
+		s.Artifacts = artifacts.NewService(s.DB, "")
+	})
+
+	mock.ExpectQuery("INSERT INTO artifacts").
+		WithArgs(
+			sqlmock.AnyArg(),
+			nil,
+			"qa-game-studio",
+			sqlmock.AnyArg(),
+			artifacts.TypeCode,
+			"workspace/logs/game.html",
+			"text/html",
+			"<!doctype html><h1>Dot Dodge</h1>",
+			"workspace/logs/game.html",
+			sqlmock.AnyArg(),
+			sqlmock.AnyArg(),
+			sqlmock.AnyArg(),
+			"approved",
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
+			AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", time.Now()))
+
+	err := s.persistConfirmedActionOutputArtifacts(
+		t.Context(),
+		"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+		[]plannedToolExecutionResult{
+			{
+				Name:      "create_team",
+				Arguments: map[string]any{"team_id": "qa-game-studio"},
+			},
+			{
+				Name: "write_file",
+				Arguments: map[string]any{
+					"path":    "workspace/logs/game.html",
+					"content": "<!doctype html><h1>Dot Dodge</h1>",
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("persist artifacts: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
 	}
 }
 

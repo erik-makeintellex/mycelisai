@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-05-14
+> Last Updated: 2026-05-16
 > Purpose: Maintain one precise, durable documentation surface for product target, runtime structure, UI contract, and delivery proof.
 
 ## TOC
@@ -31,7 +31,7 @@ This index is now intentionally narrower:
 - [V8.2 Full Production Architecture](../../architecture/v8-2.md) is the canonical full production architecture, full actuation target, and current B2+ delivery frame.
 - [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) is the strategic constraint that shifts work from doctrine expansion into visible, recoverable, trustworthy operation.
 - [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the foundation and compatibility baseline for the Soma-primary operator surface.
-- [V8 Development State](../../.state/V8_DEV_STATE.md) is the live implementation scoreboard.
+- [V8 Development State](../../.state/V8_DEV_STATE.md) is the live implementation scoreboard. Use its active snapshot and immediate next actions before reading dated historical boards.
 
 V8.2/B2+ work may proceed when it is modular and proof-producing. Keep each slice attached to one owning contract area, keep non-promoted capability out of the default Soma-primary operator surface, and update `.state/V8_DEV_STATE.md` when a module boundary changes status.
 
@@ -50,7 +50,7 @@ V8.2/B2+ work may proceed when it is modular and proof-producing. Keep each slic
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | planning configuration sources, templates, bootstrap behavior, or inheritance | V7-to-V8 bootstrap migration, template vs instantiated organization, and precedence rules |
 | [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) | changing first-run flow, AI Organization creation, Soma-primary workspace, or screen-to-API mapping | canonical V8 operator PRD, source-of-truth layering, and UI/API contracts |
 | [V8 Directed Execution UI And Runtime Alignment Directive](V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md) | reviewing whether the UI/runtime feels like directed execution instead of dashboard/admin/chat/tool registry | current-state mapping, gaps, recommendations, execution plan, and validation standard for Soma-centered directed execution |
-| [V8 Directed Execution Delivery Plan](V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md) | coordinating implementation teams for directed execution UI/runtime delivery | team roster, DE-1 through DE-7 work packages, waves, dependencies, validation matrix, and orchestration rules |
+| [V8 Directed Execution Delivery Plan](V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md) | coordinating implementation teams for directed execution UI/runtime delivery | team roster, active execution cell, DE-1 through DE-7 work packages, waves, dependencies, validation matrix, and orchestration rules |
 | [V8 Governed Execution Doctrine](V8_GOVERNED_EXECUTION_DOCTRINE.md) | checking the manifestation-phase doctrine before planning or expanding MVP work | accountable cognition, Event Spine truth, Workspace visibility, delivery compression, and manifestation pathway |
 | [V8 MVP Governed Execution Mission Plan](V8_MVP_GOVERNED_EXECUTION_MISSION_PLAN.md) | converting the governed-execution doctrine into executable MVP missions | mission scope, dependencies, governance implications, UI manifestation, Event Spine emissions, and proof requirements |
 | [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) | deciding whether new work should expand architecture or converge on the canonical MVP proof workflow | visible execution, durable outputs, recoverable runs, confidence provenance, operational degradation, and governed cognitive operating environment framing |
@@ -115,7 +115,7 @@ V8.2/B2+ work may proceed when it is modular and proof-producing. Keep each slic
 Execution governance reminder:
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md) and [Team Execution And Global State Protocol V7](TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) remain authoritative migration inputs for delivery discipline.
 - Apply the V8 bootstrap pipeline from [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) whenever configuration, templates, or runtime state are involved.
-- Update [.state/V8_DEV_STATE.md](../../.state/V8_DEV_STATE.md) whenever release posture or validation truth changes.
+- Update [.state/V8_DEV_STATE.md](../../.state/V8_DEV_STATE.md) whenever release posture or validation truth changes, keeping current truth in the active snapshot and dated boards as evidence.
 - For V8.2-aligned slices, name the module boundary being advanced before implementation begins: runtime/deployment, memory/learning, team/workflow, capability/MCP, advanced UI, or governance/trust.
 - For V8.2-aligned slices, use the Operational Embodiment directive to reject doctrine-only expansion unless it directly improves the canonical MVP workflow, visible proof, recoverability, deployment trust, or confidence provenance.
 - Product-standard slices that change the expected AI-agentry interface must review both the universal Soma PRD and the UI testing agentry contract, then record status and evidence in [.state/V8_DEV_STATE.md](../../.state/V8_DEV_STATE.md).

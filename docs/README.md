@@ -36,7 +36,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 
 - **Repository Entry Point**: `../README.md`
 - **Repository Standards**: `../AGENTS.md`
-- **Active Development State**: `../.state/V8_DEV_STATE.md`
+- **Active Development State**: `../.state/V8_DEV_STATE.md` for the active snapshot, immediate next actions, blockers, and accepted proof evidence
 - **Workflow Index**: `./WORKFLOWS.md` for routing from the retired monolithic workflow spec to current focused authority
 - **Architecture Library Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`

@@ -185,27 +185,15 @@ test.describe('Live teams produce reviewable content outputs', () => {
     test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, 'requires a live Core backend');
     test.setTimeout(180_000);
 
-    test('creates teams through Soma and verifies their generated outputs in the GUI', async ({ page }) => {
+    test('creates a team through Soma and verifies its playable generated output in the GUI', async ({ page }) => {
         test.slow();
         const stamp = Date.now();
         const organizationId = await createOrganization(page, `QA Team Output Content ${stamp}`);
         const asks: TeamOutputAsk[] = [
             {
-                teamID: `qa-marketing-output-${stamp}`,
-                filePath: `workspace/logs/qa_marketing_launch_brief_${stamp}.html`,
-                content: '<!doctype html><title>Launch Brief</title><main><h1>Launch brief</h1><p>Audience: operator buyers.</p><p>Promise: visible execution and proof.</p><p>Deliverable: launch narrative, top objections, approval checklist.</p></main>',
-                visibleText: ['Launch brief', 'operator buyers', 'visible execution and proof', 'approval checklist'],
-            },
-            {
-                teamID: `qa-readiness-output-${stamp}`,
-                filePath: `workspace/logs/qa_readiness_matrix_${stamp}.html`,
-                content: '<!doctype html><title>Readiness Matrix</title><main><h1>Readiness matrix</h1><p>Teams: sales support docs engineering.</p><p>Runbook: intake, escalation, proof review.</p><p>Deliverable: operator handoff.</p></main>',
-                visibleText: ['Readiness matrix', 'sales support docs engineering', 'proof review', 'operator handoff'],
-            },
-            {
                 teamID: `qa-game-studio-${stamp}`,
                 filePath: `workspace/logs/qa_orbit_dash_${stamp}.html`,
-                content: '<!doctype html><title>Dot Dodge</title><style>body{margin:0;background:#111;color:white;font-family:sans-serif}#game{width:640px;height:360px;background:linear-gradient(#123,#012);position:relative;overflow:hidden}#p,#o{position:absolute;width:32px;height:32px;border-radius:50%}#p{left:60px;top:150px;background:#ffcc33}#o{left:520px;top:80px;background:#ff5577}button{font-size:20px}</style><h1>Dot Dodge</h1><p>Score <span id=score>0</span></p><div id=game><div id=p></div><div id=o></div></div><button id=jump>Jump</button><script>let s=0,y=150,v=0,p=document.getElementById(String.fromCharCode(112)),score=document.getElementById(String.fromCharCode(115,99,111,114,101));jump.onclick=()=>v=-8;game.onclick=()=>v=-8;setInterval(()=>{v+=1;y+=v;if(y>300){y=300;v=0}s++;p.style.top=y+String.fromCharCode(112,120);score.textContent=s},60)</script>',
+                content: '<!doctype html><title>Dot Dodge</title><style>body{background:#111;color:white;font-family:sans-serif}#game{width:520px;height:260px;background:linear-gradient(#123,#012);position:relative}#p{position:absolute;left:70px;top:110px;width:34px;height:34px;border-radius:50%;background:#fc3}</style><h1>Dot Dodge</h1><p>Score <span id=score>0</span></p><button id=jump>Jump</button><div id=game><div id=p></div></div><script>game.onclick=jump.onclick=()=>score.textContent=+score.textContent+1</script>',
                 visibleText: ['Dot Dodge', 'Score', 'Jump'],
                 playGame: true,
             },

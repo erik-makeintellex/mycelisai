@@ -122,7 +122,7 @@ describe('DocsPage', () => {
 
         render(<DocsPage />);
 
-        const internalLink = await screen.findByRole('button', { name: 'Workflow variants' });
+        const internalLink = await screen.findByRole('link', { name: 'Workflow variants' });
         fireEvent.click(internalLink);
 
         expect(await screen.findByRole('heading', { name: 'Workflow Variants' })).toBeDefined();

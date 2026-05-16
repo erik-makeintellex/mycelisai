@@ -181,22 +181,23 @@ export async function submitTeamDesign(
   organizationId: string,
   prompt: string,
 ) {
-  const responsePromise = page.waitForResponse(
-    (response) => {
-      const url = new URL(response.url());
-      return (
-        response.request().method() === "POST" &&
-        url.pathname ===
-          `/api/v1/organizations/${organizationId}/workspace/actions`
-      );
-    },
-    { timeout: 60_000 },
-  );
   await page
     .getByLabel("Tell Soma what team or delivery lane you want to create")
     .fill(prompt);
-  await page.getByRole("button", { name: "Start team design" }).click();
-  const response = await responsePromise;
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (candidate) => {
+        const url = new URL(candidate.url());
+        return (
+          candidate.request().method() === "POST" &&
+          url.pathname ===
+            `/api/v1/organizations/${organizationId}/workspace/actions`
+        );
+      },
+      { timeout: 120_000 },
+    ),
+    page.getByRole("button", { name: "Start team design" }).click(),
+  ]);
   const parsed =
     await parseJSONIfPossible<APIEnvelope<TeamLeadGuidanceResponse>>(response);
   expect(

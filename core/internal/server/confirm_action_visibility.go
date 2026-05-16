@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -16,6 +17,9 @@ func (s *AdminServer) persistConfirmedActionVisibility(ctx context.Context, runI
 		errs = append(errs, err)
 	}
 	if err := s.ensureGroupsForCreatedTeams(ctx, auditID, auditUser, scope); err != nil {
+		errs = append(errs, err)
+	}
+	if err := s.persistConfirmedActionOutputArtifacts(ctx, runID, results); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
@@ -80,6 +84,96 @@ func (s *AdminServer) logConfirmedActionConversation(ctx context.Context, runID,
 		turnIndex++
 	}
 	return nil
+}
+
+func (s *AdminServer) persistConfirmedActionOutputArtifacts(ctx context.Context, runID string, results []plannedToolExecutionResult) error {
+	if s.Artifacts == nil {
+		return nil
+	}
+	missionID := uuidPtrFromString(runID)
+	defaultTeamRef := confirmedActionCreatedTeamID(results)
+	for _, result := range results {
+		toolName := strings.TrimSpace(result.Name)
+		if toolName != "write_file" {
+			continue
+		}
+		path := firstNonEmptyString(result.Arguments["path"], result.Arguments["file_path"], result.Arguments["target_path"])
+		if path == "" {
+			continue
+		}
+		teamRef := firstNonEmptyString(confirmedActionTeamID(result.Arguments), defaultTeamRef)
+		metadata, _ := json.Marshal(map[string]any{
+			"run_id":          runID,
+			"entrypoint":      path,
+			"retention_class": string(protocol.ExecutionRetentionClassRetained),
+			"source_kind":     string(protocol.SourceKindWebAPI),
+			"source_channel":  "api.intent.confirm-action",
+		})
+		_, err := s.Artifacts.Store(ctx, artifacts.Artifact{
+			MissionID:    missionID,
+			TeamID:       uuidPtrFromString(teamRef),
+			AgentID:      firstNonEmptyString(teamRef, "Soma"),
+			ArtifactType: artifactTypeForWrittenFile(path),
+			Title:        firstNonEmptyString(result.Arguments["title"], path),
+			ContentType:  contentTypeForWrittenFile(path),
+			Content:      firstNonEmptyString(result.Arguments["content"]),
+			FilePath:     path,
+			Metadata:     metadata,
+			TrustScore:   floatPtr(0.9),
+			Status:       "approved",
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func confirmedActionCreatedTeamID(results []plannedToolExecutionResult) string {
+	for _, result := range results {
+		if strings.TrimSpace(result.Name) == "create_team" {
+			if teamID := confirmedActionTeamID(result.Arguments); teamID != "" {
+				return teamID
+			}
+		}
+	}
+	return ""
+}
+
+func artifactTypeForWrittenFile(path string) artifacts.ArtifactType {
+	if outputKindForWrittenFile(path) == "code" {
+		return artifacts.TypeCode
+	}
+	return artifacts.TypeFile
+}
+
+func contentTypeForWrittenFile(path string) string {
+	switch filepathExt(path) {
+	case ".css":
+		return "text/css"
+	case ".html":
+		return "text/html"
+	case ".json":
+		return "application/json"
+	case ".md":
+		return "text/markdown"
+	case ".js", ".jsx", ".ts", ".tsx":
+		return "text/javascript"
+	default:
+		return "text/plain"
+	}
+}
+
+func uuidPtrFromString(raw string) *uuid.UUID {
+	parsed, err := uuid.Parse(strings.TrimSpace(raw))
+	if err != nil || parsed == uuid.Nil {
+		return nil
+	}
+	return &parsed
+}
+
+func floatPtr(value float64) *float64 {
+	return &value
 }
 
 func (s *AdminServer) ensureGroupsForCreatedTeams(ctx context.Context, auditID, auditUser string, scope *protocol.ScopeValidation) error {

@@ -83,7 +83,9 @@ async function assertOutputSummary(
   contributingLeads: number,
 ) {
   await expect(
-    page.getByText("Temporary group", { exact: true }),
+    page
+      .getByText(/^(Temporary group|Archived temporary group)$/)
+      .first(),
   ).toBeVisible();
   await expect(page.getByTestId("groups-output-summary")).toContainText(
     `${artifactTitles.length} outputs`,

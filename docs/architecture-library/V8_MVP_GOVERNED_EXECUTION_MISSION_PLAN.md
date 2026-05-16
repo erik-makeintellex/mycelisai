@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Library](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.2 Full Production Architecture](../../architecture/v8-2.md)
 
 > Status: Canonical
-> Last Updated: 2026-05-14
+> Last Updated: 2026-05-16
 > Purpose: Convert the governed-execution doctrine into executable MVP missions with scope, dependencies, governance implications, UI manifestation, emitted events, and proof requirements.
 
 ## Mission Authority
@@ -39,7 +39,7 @@ The operator must be able to issue intent, authorize execution, observe orchestr
 
 ### Mission 1: Minimum Deployable Governed Runtime
 
-Status: `NEXT`
+Status: `COMPLETE`
 
 Execution scope:
 - define the minimum runtime needed for a single-host governed execution path
@@ -76,9 +76,14 @@ Proof requirements:
 - Windows GUI probe returns `http://localhost:3000 [200]`
 - state file records the accepted commit and proof evidence
 
+Current state:
+- Rancher Desktop K3s is the accepted Windows local Kubernetes release-parity proof lane for the MVP RC.
+- WSL/Compose remains secondary deployment-mimic evidence when required.
+- New runtime work should preserve this proof posture instead of reopening Mission 1 as the active gate.
+
 ### Mission 2: Workspace Operational Surface
 
-Status: `NEXT`
+Status: `IN_REVIEW`
 
 Execution scope:
 - make Workspace the primary live operational surface for governed execution
@@ -115,7 +120,7 @@ Proof requirements:
 
 ### Mission 3: Event Spine As Canonical Truth
 
-Status: `NEXT`
+Status: `IN_REVIEW`
 
 Execution scope:
 - promote the Event Spine as the reconstruction and audit truth for MVP execution
@@ -156,7 +161,7 @@ Proof requirements:
 
 ### Mission 4: Capability Governance And Approval Enforcement
 
-Status: `NEXT`
+Status: `IN_REVIEW`
 
 Execution scope:
 - route all meaningful tool/API/script/MCP use through governed capability records
@@ -195,7 +200,7 @@ Proof requirements:
 
 ### Mission 5: Proof-Backed Mission Completion
 
-Status: `NEXT`
+Status: `ACTIVE`
 
 Execution scope:
 - define the MVP completion standard for direct Soma work, governed proposals, team/group outputs, and capability-backed actions
@@ -259,11 +264,11 @@ Keep:
 
 ## Initial Execution Sequence
 
-1. `NEXT` Mission 1: pass the committed-tree Rancher K3s RC proof, with WSL Compose proof retained as secondary deployment-mimic evidence.
-2. `NEXT` Mission 3: tighten the minimum event taxonomy and reconstruction checks for governed actions.
-3. `NEXT` Mission 2: make Workspace show active execution contract, governance state, capability use, and proof as one continuous operator surface.
-4. `NEXT` Mission 4: close capability invocation gaps where tool use is not visibly governed before execution.
-5. `NEXT` Mission 5: define and prove completion standards across direct Soma, team/group output, and capability-backed actions.
+1. `COMPLETE` Mission 1: keep the committed-tree Rancher K3s RC proof lane green, with WSL Compose retained as secondary deployment-mimic evidence.
+2. `IN_REVIEW` Mission 3: keep event/reconstruction checks attached to governed actions, capability use, retained outputs, and failed/degraded runs.
+3. `IN_REVIEW` Mission 2: keep Workspace, Soma, Runs, Groups, and retained-output surfaces aligned around one visible execution story.
+4. `IN_REVIEW` Mission 4: finish capability/MCP confirmation proof so explicit MCP tool refs are visibly governed and retained as proof-backed outputs.
+5. `ACTIVE` Mission 5: prove retained project-package output through the live Mycelis GUI path, including operator review, storage/open controls, and reconstruction after refresh.
 
 ## Acceptance Standard
 

@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-05-14
+> Last Updated: 2026-05-16
 > Module Boundary: advanced UI, runtime/deployment, capability/MCP, governance/trust, team/workflow
 > Purpose: Orchestrate the delivery teams that turn the directed-execution directive and capability-manifest standard into product behavior.
 
@@ -20,7 +20,7 @@ The release goal is not another panel. The release goal is one coherent executio
 
 | Team | Status | Owns | First Output |
 | --- | --- | --- | --- |
-| Orchestration Lead | ACTIVE | Plan, sequencing, dependency resolution, state/docs sync, acceptance decisions. | Keep this plan current and coordinate gates. |
+| Orchestration Lead | ACTIVE | Plan, sequencing, dependency resolution, state/docs sync, acceptance decisions. | Keep the current execution cell focused on proof-producing slices and clean state. |
 | Runtime/Run Spine | IN_REVIEW | Run attachment, execution identity, output references, recovery and degradation metadata. | Wave 1 trust-spine contract is proven; failed approved execution and search blockers now carry bounded degradation proof. |
 | Output/Exchange | ACTIVE | Durable output object mapping, retained artifacts, exchange normalization. | Run/Output hardening across chat, tools, teams, artifacts, proof links, and recovery metadata. |
 | Capability/MCP | ACTIVE | Capability manifest registry, MCP-to-capability mapping, health/fallback. | Capability list that answers "what Soma can use" with risk, schema, approval, output destinations. |
@@ -28,7 +28,7 @@ The release goal is not another panel. The release goal is one coherent executio
 | Interface/Soma UX | IN_REVIEW | Default Soma execution summary, proof links, output cards, next-step and degradation display. | Soma response surface showing intent, understanding, execution shape, capability/team use, outputs, proof, recovery, degradation, and next step. |
 | Interface/Advanced UX | ACTIVE | Connected Tools capability view, Runs proof view, System/Deployments trust view. | GUI directed-execution surfaces that reveal manifests, run traces, deployment roots, and recovery without polluting default UX. |
 | Validation | ACTIVE | Browser-visible proof, unit/API contract coverage, failure/recovery checks. | Keep Wave 1 final-review evidence green while proving the next capability/output/GUI lanes. |
-| Docs/In-App Docs | ACTIVE | Architecture/user/state/docs manifest alignment. | Keep canonical docs and in-app docs synced for each slice. |
+| Docs/State | ACTIVE | Architecture/user/state/docs manifest alignment plus state-file storage hygiene. | Keep canonical docs, active state, historical evidence, and in-app docs synced for each slice. |
 
 ## Active Embodiment Cell
 
@@ -37,12 +37,28 @@ This is the current cross-team operating cell. It is an execution overlay, not a
 | Lane | Active Team | Architecture Guidance | Execution Target | Proof Gate |
 | --- | --- | --- | --- | --- |
 | Soma experience | Interface/Soma UX + Governance/Trust | Keep Soma singular; compress default UX into intent, visible result, proof/recovery. | Verify Operator trust package, proposal lifecycle, recovery/degradation, and retained outputs in the default Soma path. | Focused Vitest plus headed browser proof for Soma governance. |
-| Runtime and capability | Runtime/Run Spine + Capability/MCP + Output/Exchange | Capabilities are governed runtime objects; outputs are durable product objects. | Redeploy current HEAD to Rancher K3s and prove run-linked execution, retained artifacts, search/capability posture, and degradation metadata. | `go test ./... -count=1 -p 1`, K3s deploy/wait/bridge, lifecycle health. |
+| Runtime and capability | Runtime/Run Spine + Capability/MCP + Output/Exchange | Capabilities are governed runtime objects; outputs are durable product objects. | Keep the green Rancher K3s proof lane stable while proving explicit MCP-backed confirmation and retained project-package outputs. | Focused Go proof, live API proof, then headed live Mycelis GUI proof. |
 | Governance and trust | Governance/Trust + Runtime/Run Spine | Proposal -> confirm -> execute is durable infrastructure, not UI decoration. | Prove successful and failed approved execution carry run/proof/audit/recovery boundaries. | API/server tests plus live proposal/confirm/run proof. |
-| Deployment and proof | Interface/Advanced UX + Validation | Deployment roots and runtime health must become understandable proof, not topology noise. | Prove current image/commit in Rancher K3s, Core bridge, storage/PVC root, AI/search posture, and workspace output review. | K3s status/deploy/wait/bridge plus workspace live-backend proof. |
+| Deployment and proof | Interface/Advanced UX + Validation | Deployment roots and runtime health must become understandable proof, not topology noise. | Keep Windows browser reachability, explicit AI endpoint posture, Core bridge, storage/PVC root, search posture, and workspace output review honest as proof surfaces grow. | K3s/Compose health when topology changes plus workspace live-backend proof. |
 | QA and embodiment | Validation + Orchestration Lead | Acceptance asks whether users can trust visible execution and recovery. | Run the canonical MVP path: Soma intent -> proposal -> approval -> run -> retained output -> proof/revisitability. | Headed Chromium live specs for governance, team execution, groups, and workspace. |
+| Docs and state | Docs/State + Orchestration Lead | Active truth belongs at the top of state; older boards are evidence, not instructions. | Keep `V8_DEV_STATE.md`, this delivery plan, MVP missions, task docs, and in-app docs manifest aligned when meaning changes. | Docs-link/layout proof plus explicit docs changed/reviewed close-out. |
 
-Immediate orchestration rule: the next broadening slice is deferred until current HEAD is live-proven on the Rancher K3s lane.
+Immediate orchestration rule: the Rancher K3s lane is green, so broadening is allowed only for the next proof-producing targets: retained project-package GUI proof, explicit MCP-backed confirmation proof, Windows operator reachability, bounded runtime-team usefulness, and no-regression source/docs hygiene.
+
+## Current Execution Cell
+
+This is the team assembly for the next delivery push.
+
+| Team | Status | Immediate Assignment | Acceptance Gate |
+| --- | --- | --- | --- |
+| Orchestration Lead | ACTIVE | Sequence the lanes below, keep commits/docs focused, and prevent dated state boards from overriding the active snapshot. | `git status --short`, state/doc diff review, and no mixed-scope close-out. |
+| Runtime/Capability | ACTIVE | Keep explicit `tool_ref` execution through MCP governed in confirm-action and preserve retained `mcp_tool_result` proof. | Focused Go proof plus live browser confirmation proof. |
+| Output/Exchange | ACTIVE | Carry `project_package` output metadata through execution summaries, retained output cards, Groups, storage/open controls, and reconstruction. | Live Mycelis GUI proof using `team-output-content-live.spec.ts` or `team-execution-live.spec.ts`. |
+| Governance/Trust | IN_REVIEW | Ensure successful, failed, blocked, and degraded outcomes state what happened, what remains trusted, and what can be retried. | Proposal/confirm/failure tests plus Operator trust package assertions. |
+| Deployment/Proof | ACTIVE | Keep Windows self-hosted operator reachability and explicit non-loopback AI endpoint posture honest while proof broadens. | Topology-specific health proof whenever deployment shape changes. |
+| Runtime Team Usefulness | BLOCKED | Do not present temporary runtime teams as Codex collaborators until one bounded team ask succeeds inside product timeout. | One role-specific live team output plus visible timeout/degradation handling. |
+| Validation | ACTIVE | Promote focused proof into live GUI proof without fanning out browser runs against the same server/workspace. | Headed Chromium live specs for the touched workflow. |
+| Docs/State | ACTIVE | Keep active truth at the top of `V8_DEV_STATE.md`; mark older boards as historical; update manifest only when surfaced docs change. | Docs-link/layout tests and close-out list of docs changed/reviewed. |
 
 ## Work Packages
 

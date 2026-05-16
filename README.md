@@ -11,7 +11,7 @@ Canonical ownership:
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` and `docs/architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md`: operator UX, screen/API truth, and directed-execution alignment
 - `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md`: capability manifest, run/output, MCP/custom integration, and proof truth
 - `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`: V7-to-V8 bootstrap migration truth
-- `.state/V8_DEV_STATE.md`: live implementation scoreboard
+- `.state/V8_DEV_STATE.md`: live implementation scoreboard; read the active snapshot and immediate next actions before dated historical boards
 ## README TOC
 
 - [Fresh Agent Start Here](#fresh-agent-start-here)
@@ -61,7 +61,7 @@ Review these before planning or editing:
 
 Fresh-agent rules:
 - V8 docs override V7 migration inputs when they conflict; V7 documents remain useful migration evidence, not current product authority.
-- `.state/V8_DEV_STATE.md` is the implementation truth for what is actually complete.
+- `.state/V8_DEV_STATE.md` is the implementation truth for what is actually complete; use its active snapshot first and treat dated boards as evidence unless reactivated.
 - Keep user-facing docs and engineering docs cross-linked but distinct.
 
 ## User Guidance
@@ -103,7 +103,7 @@ V8.1 remains the foundation and compatibility baseline. Actual implementation st
 
 ## Current Implementation State
 
-Use `.state/V8_DEV_STATE.md` for the active scoreboard and `.state/V7_DEV_STATE.md` only as historical migration evidence.
+Use `.state/V8_DEV_STATE.md` for the active scoreboard. Its active snapshot and immediate next actions are the current execution truth; older dated boards remain historical evidence unless explicitly referenced by the active snapshot. Use `.state/V7_DEV_STATE.md` only as historical migration evidence.
 
 Status changes in planning/state docs must use the canonical markers: `REQUIRED`, `NEXT`, `ACTIVE`, `IN_REVIEW`, `COMPLETE`, `BLOCKED`.
 

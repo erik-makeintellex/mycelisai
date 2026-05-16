@@ -35,11 +35,17 @@ func (s *AdminServer) listGroupOutputs(ctx context.Context, group *Collaboration
 
 	merged := make(map[uuid.UUID]artifacts.Artifact)
 	for _, rawTeamID := range group.TeamIDs {
-		teamID, err := uuid.Parse(strings.TrimSpace(rawTeamID))
-		if err != nil {
+		teamRef := strings.TrimSpace(rawTeamID)
+		if teamRef == "" {
 			continue
 		}
-		items, err := s.Artifacts.ListByTeam(ctx, teamID, limit)
+		var items []artifacts.Artifact
+		var err error
+		if teamID, parseErr := uuid.Parse(teamRef); parseErr == nil {
+			items, err = s.Artifacts.ListByTeam(ctx, teamID, limit)
+		} else {
+			items, err = s.Artifacts.ListByAgent(ctx, teamRef, limit)
+		}
 		if err != nil {
 			return nil, err
 		}

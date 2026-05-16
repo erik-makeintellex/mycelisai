@@ -97,13 +97,16 @@ export function MarkdownDocRenderer({
           const internalEntry = resolveDocLink(href, sections);
           if (internalEntry) {
             return (
-              <button
-                type="button"
-                onClick={() => onSelectDoc(internalEntry)}
+              <a
+                href={`/docs?doc=${internalEntry.slug}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onSelectDoc(internalEntry);
+                }}
                 className="text-cortex-primary hover:underline inline-flex items-center gap-0.5 cursor-pointer"
               >
                 {children}
-              </button>
+              </a>
             );
           }
           return (

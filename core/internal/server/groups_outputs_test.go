@@ -206,3 +206,81 @@ func TestHandleGroupOutputs_ReturnsArtifactsForArchivedGroup(t *testing.T) {
 		t.Fatalf("sql expectations: %v", err)
 	}
 }
+
+func TestHandleGroupOutputs_ReturnsArtifactsForSlugTeamIDs(t *testing.T) {
+	dbOpt, mock := withDB(t)
+	s := newTestServer(
+		dbOpt,
+		func(s *AdminServer) {
+			s.Artifacts = artifacts.NewService(s.DB, "")
+		},
+	)
+	mux := setupMux(t, "GET /api/v1/groups/{id}/outputs", s.HandleGroupOutputs)
+
+	now := time.Now().UTC()
+	artifactID := uuid.New()
+	mock.ExpectQuery("SELECT id::text, tenant_id, name, goal_statement, work_mode").
+		WithArgs("group-slug").
+		WillReturnRows(sqlmock.NewRows(collaborationGroupColumns()).
+			AddRow(
+				"group-slug",
+				"default",
+				"Game lane",
+				"produce a playable output",
+				"propose_only",
+				[]byte(`["write_file"]`),
+				[]byte(`[]`),
+				[]byte(`["qa-game-studio"]`),
+				"team lead",
+				"confirmed-chat-proposal",
+				groupStatusActive,
+				"test-user-001",
+				nil,
+				"",
+				"",
+				now,
+				now,
+			))
+
+	mock.ExpectQuery("SELECT .+ FROM artifacts\\s+WHERE agent_id = \\$1").
+		WithArgs("qa-game-studio", 5).
+		WillReturnRows(sqlmock.NewRows(artifactColumns()).
+			AddRow(
+				artifactID,
+				nil,
+				nil,
+				"qa-game-studio",
+				nil,
+				"code",
+				"workspace/logs/game.html",
+				"text/html",
+				"<h1>Dot Dodge</h1>",
+				"workspace/logs/game.html",
+				nil,
+				[]byte(`{"retention_class":"retained"}`),
+				0.9,
+				"approved",
+				now,
+			))
+
+	rr := doAuthenticatedRequest(t, mux, "GET", "/api/v1/groups/group-slug/outputs?limit=5", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var payload map[string]any
+	assertJSON(t, rr, &payload)
+	data, ok := payload["data"].([]any)
+	if !ok {
+		t.Fatalf("expected data array, got %T", payload["data"])
+	}
+	if len(data) != 1 {
+		t.Fatalf("expected 1 output, got %d", len(data))
+	}
+	first := data[0].(map[string]any)
+	if first["agent_id"] != "qa-game-studio" || first["title"] != "workspace/logs/game.html" {
+		t.Fatalf("unexpected slug-team artifact: %#v", first)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}

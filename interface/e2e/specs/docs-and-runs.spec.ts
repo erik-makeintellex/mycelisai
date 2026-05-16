@@ -59,11 +59,11 @@ test.describe('Docs and Runs Route Coverage', () => {
         await expect(page.locator('body')).toContainText('Documentation', { timeout: 20_000 });
         await expect(page.getByText('UI Test Doc').first()).toBeVisible();
         await expect(page.getByRole('heading', { name: 'UI Test Heading' })).toBeVisible();
-
-        await page.locator('.max-w-3xl').getByRole('button', { name: 'Workflow Variants' }).click();
+        const internalDocLink = page.locator('.max-w-3xl').getByRole('link', { name: 'Workflow Variants' });
+        await expect(internalDocLink).toHaveAttribute('href', '/docs?doc=workflow-variants-doc');
+        await internalDocLink.click({ noWaitAfter: true });
         await expect(page).toHaveURL(/\/docs\?doc=workflow-variants-doc$/);
         await expect(page.getByRole('heading', { name: 'Workflow Variants' })).toBeVisible();
-
         await page.getByPlaceholder('Filter docs...').fill('missing-doc');
         await expect(page.getByText('No docs match "missing-doc"')).toBeVisible();
     });
