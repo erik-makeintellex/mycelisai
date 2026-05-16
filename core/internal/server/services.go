@@ -118,6 +118,20 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 	}
 	services = append(services, reactiveStatus)
 
+	// ── Review Loop Scheduler ─────────────────────────────────────────────
+	schedulerStatus := ServiceStatus{Name: "scheduler"}
+	if s.LoopScheduler == nil {
+		schedulerStatus.Status = "offline"
+		schedulerStatus.Detail = "Review-loop scheduler not initialized"
+	} else if !s.LoopScheduler.isRunning() {
+		schedulerStatus.Status = "degraded"
+		schedulerStatus.Detail = "Review-loop scheduler initialized but not running"
+	} else {
+		schedulerStatus.Status = "online"
+		schedulerStatus.Detail = "Review-loop scheduler running"
+	}
+	services = append(services, schedulerStatus)
+
 	// ── Communications Gateway ────────────────────────────────────────────
 	commsStatus := ServiceStatus{Name: "comms"}
 	if s.Comms == nil {
@@ -126,8 +140,8 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 	} else {
 		providers := s.Comms.ListProviders()
 		if len(providers) == 0 {
-			commsStatus.Status = "degraded"
-			commsStatus.Detail = "No communication providers registered"
+			commsStatus.Status = "online"
+			commsStatus.Detail = "Gateway online; no optional communication providers registered"
 		} else {
 			configured := 0
 			for _, p := range providers {
@@ -136,8 +150,8 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 				}
 			}
 			if configured == 0 {
-				commsStatus.Status = "degraded"
-				commsStatus.Detail = "0/" + itoa(len(providers)) + " providers configured"
+				commsStatus.Status = "online"
+				commsStatus.Detail = "Gateway online; 0/" + itoa(len(providers)) + " optional providers configured"
 			} else {
 				commsStatus.Status = "online"
 				commsStatus.Detail = itoa(configured) + "/" + itoa(len(providers)) + " providers configured"

@@ -56,7 +56,7 @@ System Checks lets you run targeted validations:
 - Database reachable
 - SSE stream live
 - Trigger engine active
-- Scheduler state
+- Automation timing
 
 Each row supports:
 - `Run Check`
@@ -64,6 +64,10 @@ Each row supports:
 - last checked timestamp
 
 Use copied snippets in support/debug threads to share precise status context.
+
+Automation timing calls the backend scheduler quick-check endpoint directly. A healthy result means the review-loop scheduler is initialized and running; a degraded or failed result means scheduled review-loop execution needs operator attention.
+
+External Comms is optional in the self-hosted runtime. If the Comms gateway is online but no Slack/Telegram/WhatsApp-style provider secrets are configured, `/system` should show the gateway as online with provider readiness in the detail text instead of treating the whole service as degraded.
 
 ---
 

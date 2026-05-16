@@ -70,10 +70,12 @@ func (ls *LoopScheduler) Start(parent context.Context) {
 		ls.mu.Unlock()
 		return
 	}
-	ls.ctx, ls.cancel = context.WithCancel(parent)
+	ctx, cancel := context.WithCancel(parent)
+	ls.ctx = ctx
+	ls.cancel = cancel
 	ls.mu.Unlock()
 
-	go ls.run()
+	go ls.run(ctx)
 }
 
 func (ls *LoopScheduler) Stop() {
@@ -94,7 +96,7 @@ func (ls *LoopScheduler) isRunning() bool {
 	return ls.cancel != nil
 }
 
-func (ls *LoopScheduler) run() {
+func (ls *LoopScheduler) run(ctx context.Context) {
 	ticker := time.NewTicker(ls.tickInterval)
 	defer ticker.Stop()
 
@@ -103,7 +105,7 @@ func (ls *LoopScheduler) run() {
 
 	for {
 		select {
-		case <-ls.ctx.Done():
+		case <-ctx.Done():
 			log.Printf("[review-loop-scheduler] stopped")
 			return
 		case <-ticker.C:

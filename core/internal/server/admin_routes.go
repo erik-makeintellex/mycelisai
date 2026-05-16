@@ -183,6 +183,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/triggers/{id}/history", s.HandleTriggerHistory)
 
 	mux.HandleFunc("GET /api/v1/services/status", s.HandleServicesStatus)
+	mux.HandleFunc("GET /api/v1/system/quick-checks/{id}", s.HandleSystemQuickCheck)
 	mux.HandleFunc("GET /api/v1/host/status", s.HandleHostStatus)
 	mux.HandleFunc("GET /api/v1/host/actions", s.HandleHostActions)
 	mux.HandleFunc("POST /api/v1/host/actions/{id}/invoke", s.HandleInvokeHostAction)

@@ -13,6 +13,17 @@ interface CheckItem {
     checkedAt?: Date;
 }
 
+interface QuickCheckResponse {
+    ok?: boolean;
+    data?: {
+        id: string;
+        label?: string;
+        status: CheckStatus;
+        detail?: string;
+        checked_at?: string;
+    };
+}
+
 function statusBadge(status: CheckStatus): string {
     if (status === "healthy") return "text-cortex-success border-cortex-success/30 bg-cortex-success/10";
     if (status === "degraded") return "text-cortex-warning border-cortex-warning/30 bg-cortex-warning/10";
@@ -61,7 +72,7 @@ export default function SystemQuickChecks() {
                 checkedAt: checkedAt.sse,
             },
             { id: "triggers", label: "Trigger engine active", status: manualStatus.triggers ?? mapStatus("reactive"), checkedAt: checkedAt.triggers },
-            { id: "scheduler", label: "Automation timing", status: manualStatus.scheduler ?? "degraded", checkedAt: checkedAt.scheduler },
+            { id: "scheduler", label: "Automation timing", status: manualStatus.scheduler ?? mapStatus("scheduler"), checkedAt: checkedAt.scheduler },
         ];
     }, [statusByService, checkedAt, manualStatus, isStreamConnected, streamConnectionState]);
 
@@ -93,7 +104,21 @@ export default function SystemQuickChecks() {
                 return;
             }
 
-            if (id !== "scheduler") {
+            if (id === "scheduler") {
+                const res = await fetch("/api/v1/system/quick-checks/scheduler");
+                const payload = (await res.json().catch(() => ({}))) as QuickCheckResponse;
+                if (!res.ok || !payload.ok || !payload.data) {
+                    throw new Error("Scheduler quick check failed");
+                }
+                setManualStatus((prev) => ({ ...prev, scheduler: payload.data?.status ?? "failure" }));
+                setCheckedAt((prev) => ({
+                    ...prev,
+                    scheduler: payload.data?.checked_at ? new Date(payload.data.checked_at) : new Date(),
+                }));
+                return;
+            }
+
+            {
                 await fetchServicesStatus();
                 setManualStatus((prev) => ({ ...prev, [id]: undefined }));
             }
@@ -101,6 +126,8 @@ export default function SystemQuickChecks() {
         } catch {
             if (id === "sse") {
                 setManualStatus((prev) => ({ ...prev, sse: "failure" }));
+            } else if (id === "scheduler") {
+                setManualStatus((prev) => ({ ...prev, scheduler: "failure" }));
             }
             setCheckedAt((prev) => ({ ...prev, [id]: new Date() }));
         } finally {

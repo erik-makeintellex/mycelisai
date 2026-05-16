@@ -148,7 +148,8 @@
 | `/api/v1/context/snapshots` | GET | List 20 most recent snapshots (no messages payload) |
 | `/api/v1/context/snapshots/{id}` | GET | Full snapshot including messages array |
 | **Service Health** | | |
-| `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive, Reactive, Comms, Group Bus monitor |
+| `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive, Reactive, Scheduler, Comms, Group Bus monitor |
+| `/api/v1/system/quick-checks/{id}` | GET | Focused system quick check; currently supports `scheduler` for Automation timing |
 
 Memory/governance note:
 - `AGENT_MEMORY` is the canonical team-shared execution lane

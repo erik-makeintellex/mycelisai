@@ -256,6 +256,7 @@ const SERVICE_LABELS: Record<string, string> = {
     postgres: "PostgreSQL + pgvector",
     cognitive: "Cognitive Engine",
     reactive: "Reactive Engine",
+    ollama: "Local Ollama", scheduler: "Automation Timing", comms: "External Comms",
     groups_bus: "Group Collaboration Bus",
 };
 
@@ -347,9 +348,7 @@ function ServiceCard({ svc }: { svc: ServiceStatus }) {
             {svc.detail && (
                 <p className="text-xs text-cortex-text-muted">{svc.detail}</p>
             )}
-            {svc.latency_ms !== undefined && svc.latency_ms > 0 && (
-                <p className="text-[10px] text-cortex-text-muted font-mono">{svc.latency_ms}ms latency</p>
-            )}
+            {svc.latency_ms !== undefined && svc.latency_ms > 0 && <p className="text-[10px] text-cortex-text-muted font-mono">{svc.latency_ms}ms latency</p>}
 
             {/* Lifecycle commands */}
             {cmds && svc.status !== "online" && (

@@ -29,9 +29,9 @@ func TestHandleServicesStatus_AllOffline(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected data array, got %T", resp["data"])
 	}
-	// Should have 7 services: nats, postgres, cognitive, ollama, reactive, comms, groups_bus
-	if len(data) != 7 {
-		t.Fatalf("expected 7 services, got %d", len(data))
+	// Should have 8 services: nats, postgres, cognitive, ollama, reactive, scheduler, comms, groups_bus
+	if len(data) != 8 {
+		t.Fatalf("expected 8 services, got %d", len(data))
 	}
 
 	// All should be offline since nothing is wired
@@ -56,12 +56,41 @@ func TestHandleServicesStatus_AllOffline(t *testing.T) {
 	if statusMap["reactive"] != "offline" {
 		t.Errorf("expected reactive=offline, got %v", statusMap["reactive"])
 	}
+	if statusMap["scheduler"] != "offline" {
+		t.Errorf("expected scheduler=offline, got %v", statusMap["scheduler"])
+	}
 	if statusMap["comms"] != "offline" {
 		t.Errorf("expected comms=offline, got %v", statusMap["comms"])
 	}
 	if statusMap["groups_bus"] != "offline" {
 		t.Errorf("expected groups_bus=offline, got %v", statusMap["groups_bus"])
 	}
+}
+
+func TestHandleServicesStatus_SchedulerOnline(t *testing.T) {
+	s := newTestServer()
+	s.LoopScheduler = NewLoopScheduler(s)
+	s.LoopScheduler.Start(t.Context())
+	defer s.LoopScheduler.Stop()
+
+	mux := setupMux(t, "GET /api/v1/services/status", s.HandleServicesStatus)
+	rr := doRequest(t, mux, "GET", "/api/v1/services/status", "")
+
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	data := resp["data"].([]any)
+	for _, item := range data {
+		svc := item.(map[string]any)
+		if svc["name"] == "scheduler" {
+			if svc["status"] != "online" {
+				t.Errorf("expected scheduler=online, got %v", svc["status"])
+			}
+			return
+		}
+	}
+	t.Error("scheduler service entry not found")
 }
 
 func TestHandleServicesStatus_CognitiveDegraded(t *testing.T) {

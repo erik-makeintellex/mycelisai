@@ -28,6 +28,23 @@ describe("SystemQuickChecks", () => {
     beforeEach(() => {
         MockEventSource.reset();
         resetStore();
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                new Response(
+                    JSON.stringify({
+                        ok: true,
+                        data: {
+                            id: "scheduler",
+                            label: "Automation timing",
+                            status: "healthy",
+                            checked_at: "2026-05-16T20:00:00.000Z",
+                        },
+                    }),
+                    { status: 200, headers: { "Content-Type": "application/json" } },
+                ),
+            ),
+        );
         Object.defineProperty(navigator, "clipboard", {
             value: { writeText: vi.fn() },
             configurable: true,
@@ -68,6 +85,28 @@ describe("SystemQuickChecks", () => {
         });
     });
 
+    it("runs scheduler check through the backend quick-check endpoint", async () => {
+        useCortexStore.setState({
+            servicesStatus: [
+                { name: "nats", status: "online" },
+                { name: "postgres", status: "online" },
+                { name: "reactive", status: "online" },
+                { name: "scheduler", status: "degraded" },
+            ],
+        });
+        render(<SystemQuickChecks />);
+
+        const schedulerRow = screen.getByTestId("quick-check-scheduler");
+        expect(schedulerRow.className).toContain("text-cortex-warning");
+
+        fireEvent.click(screen.getByTestId("quick-check-scheduler-run"));
+
+        await waitFor(() => {
+            expect(fetch).toHaveBeenCalledWith("/api/v1/system/quick-checks/scheduler");
+            expect(schedulerRow.className).toContain("text-cortex-success");
+        });
+    });
+
     it("shows the SSE row as connecting while startup is still establishing the stream", () => {
         useCortexStore.setState({
             isStreamConnected: false,
@@ -91,6 +130,6 @@ describe("SystemQuickChecks", () => {
         const payload = JSON.parse(snippet);
         expect(payload.check).toBe("scheduler");
         expect(payload.label).toBe("Automation timing");
-        expect(payload.status).toBe("degraded");
+        expect(payload.status).toBe("unknown");
     });
 });
