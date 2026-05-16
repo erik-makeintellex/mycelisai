@@ -24,7 +24,7 @@ test.describe('Mobile Viewport', () => {
         await expect(errorOverlay).not.toBeVisible();
 
         await expect(page.locator('body')).toBeVisible();
-        await expect(page.getByRole('heading', { name: 'Operate AI Organizations through Soma' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Ask Soma. See the work. Trust the result.' })).toBeVisible();
 
         // Verify content is not clipped — the main content area should have
         // a height that extends beyond the viewport (scrollable) or fit within it

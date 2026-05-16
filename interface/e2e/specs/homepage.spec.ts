@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Templated homepage', () => {
     test('homepage loads and primary CTA enters the Soma workflow', async ({ page }) => {
         await page.goto('/');
-        await expect(page.getByRole('heading', { name: /Operate AI Organizations through Soma/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Ask Soma\. See the work\. Trust the result\./i })).toBeVisible();
         await expect(page.getByText('Example workspace preview')).toBeVisible();
 
         await page.getByRole('link', { name: /Start with Soma/i }).first().click();

@@ -516,7 +516,7 @@ test.describe("Connected Tools MCP workflow", () => {
         await openConnectedTools(page);
 
         await expect(page.getByText("Soma search needs configuration")).toBeVisible();
-        await expect(page.getByText("Mycelis Search is disabled.")).toBeVisible();
+        await expect(page.getByText("Mycelis Search is disabled.").first()).toBeVisible();
         await expect(page.getByText("No MCP servers installed.", { exact: true })).toBeVisible({ timeout: 20_000 });
         await expect(page.getByRole("button", { name: "OPEN LIBRARY" })).toBeVisible();
 
