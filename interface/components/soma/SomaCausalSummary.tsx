@@ -1,12 +1,11 @@
 "use client";
 
-import { Check, CheckCircle2, FileText, Gauge, Quote, RotateCcw, Route, ShieldCheck, Sparkles } from "lucide-react";
-import type React from "react";
+import { CheckCircle2, ChevronDown, ChevronUp, FileText, Gauge, RotateCcw, Route, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 import type { ChatArtifactRef, ChatMessage, ExecutionSummaryCapabilityUse, ExecutionSummaryData, ExecutionSummaryItem, ExecutionSummaryLink } from "@/store/useCortexStore";
+import { CompactFact, Fact, type FactModel } from "./SomaCausalSummaryFact";
 
 type SummaryValue = string | ExecutionSummaryItem;
-type FactModel = { label: string; value: string; icon: React.ReactNode; quoteValue?: string };
 
 function lastMessage(messages: ChatMessage[], role: ChatMessage["role"]) {
   return [...messages].reverse().find((message) => message.role === role);
@@ -144,6 +143,7 @@ export function SomaCausalSummary({
   updated?: string[];
 }) {
   const [copiedFact, setCopiedFact] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const latestUser = lastMessage(messages, "user");
   const latestSoma = lastSomaMessage(messages);
   const summary = latestSoma?.execution_summary;
@@ -209,6 +209,10 @@ export function SomaCausalSummary({
 
   const primaryFacts = facts.slice(0, 4);
   const secondaryFacts = facts.slice(4);
+  const outputFact = facts.find((fact) => fact.label === "Outputs");
+  const proofFact = facts.find((fact) => fact.label === "Proof");
+  const nextFact = facts.find((fact) => fact.label === "Next");
+  const outcome = executionSummary ?? latestSoma?.content ?? "Soma is ready for your next request.";
   const copyFactQuote = async (fact: FactModel) => {
     if (!fact.quoteValue) return;
     await navigator.clipboard.writeText(`> ${fact.quoteValue}`);
@@ -225,70 +229,37 @@ export function SomaCausalSummary({
         </div>
         <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Trust package</p>
       </div>
-      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-        {primaryFacts.map((fact) => (
-          <Fact key={fact.label} fact={fact} copied={copiedFact === fact.label} onQuote={() => void copyFactQuote(fact)} />
-        ))}
+      <p className="mt-2 text-sm leading-6 text-cortex-text-main">{outcome}</p>
+      <div className="mt-3 grid gap-2 md:grid-cols-3">
+        {outputFact ? (
+          <CompactFact fact={outputFact} copied={copiedFact === outputFact.label} onQuote={() => void copyFactQuote(outputFact)} />
+        ) : null}
+        {proofFact ? (
+          <CompactFact fact={proofFact} copied={copiedFact === proofFact.label} onQuote={() => void copyFactQuote(proofFact)} />
+        ) : null}
+        {nextFact ? (
+          <CompactFact fact={nextFact} copied={copiedFact === nextFact.label} onQuote={() => void copyFactQuote(nextFact)} />
+        ) : null}
       </div>
-      {secondaryFacts.length ? (
-        <div className="mt-2 grid gap-2 md:grid-cols-3">
+      <button
+        type="button"
+        onClick={() => setDetailsOpen((open) => !open)}
+        className="mt-3 inline-flex items-center gap-1.5 text-xs font-mono text-cortex-primary hover:text-cortex-primary/80 transition-colors"
+        aria-expanded={detailsOpen}
+      >
+        {detailsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        {detailsOpen ? "Hide trust details" : "Show trust details"}
+      </button>
+      {detailsOpen ? (
+        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+          {primaryFacts.map((fact) => (
+            <Fact key={fact.label} fact={fact} copied={copiedFact === fact.label} onQuote={() => void copyFactQuote(fact)} />
+          ))}
           {secondaryFacts.map((fact) => (
             <Fact key={fact.label} fact={fact} copied={copiedFact === fact.label} compact onQuote={() => void copyFactQuote(fact)} />
           ))}
         </div>
       ) : null}
     </section>
-  );
-}
-
-function QuoteFactButton({ fact, copied, onQuote }: { fact: FactModel; copied: boolean; onQuote: () => void }) {
-  if (!fact.quoteValue) return null;
-  return (
-    <button
-      type="button"
-      onClick={onQuote}
-      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
-      title={copied ? "Copied output quote" : "Copy output quote"}
-      aria-label={copied ? "Copied output quote" : `Copy output quote for ${fact.value}`}
-    >
-      {copied ? <Check className="h-3 w-3" /> : <Quote className="h-3 w-3" />}
-    </button>
-  );
-}
-
-function Fact({
-  fact,
-  copied,
-  onQuote,
-  compact = false,
-}: {
-  fact: FactModel;
-  copied: boolean;
-  onQuote: () => void;
-  compact?: boolean;
-}) {
-  const shellClass = compact
-    ? "min-w-0 rounded-lg border border-cortex-border bg-cortex-bg/80 px-3 py-2"
-    : "min-h-[82px] min-w-0 overflow-hidden rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2";
-  const textClass = compact
-    ? "mt-1 overflow-hidden text-xs leading-4 text-cortex-text-main [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:1]"
-    : "mt-2 overflow-hidden text-sm leading-5 text-cortex-text-main [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
-
-  return (
-    <div className={shellClass}>
-      <div className="flex items-center justify-between gap-2 text-cortex-primary">
-        <div className="flex min-w-0 items-center gap-1.5">
-          {fact.icon}
-          <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">{fact.label}</p>
-        </div>
-        <QuoteFactButton fact={fact} copied={copied} onQuote={onQuote} />
-      </div>
-      <p
-        className={textClass}
-        title={fact.value}
-      >
-        {fact.value}
-      </p>
-    </div>
   );
 }

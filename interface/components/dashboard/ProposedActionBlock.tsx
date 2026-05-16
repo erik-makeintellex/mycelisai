@@ -114,51 +114,11 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     : Shield;
     return (
         <div className="mt-3 rounded-lg border border-amber-400/30 bg-cortex-surface/80 overflow-hidden">
-            <div className="px-4 py-2 bg-amber-400/5 border-b border-amber-400/20 flex items-center gap-2">
-                <Shield className="w-4 h-4 text-amber-400" />
-                <span className="text-amber-400 font-mono text-xs font-bold tracking-wider">PROPOSED ACTION</span>
-            </div>
-
-            <div className="px-4 py-3 space-y-3">
-                <div className={`flex items-center gap-2 rounded border px-2.5 py-2 text-[10px] ${lifecycleTone}`}>
-                    <LifecycleIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span>{lifecycleLabel}</span>
+            <div className="px-4 py-2 bg-amber-400/5 border-b border-amber-400/20 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-amber-400" />
+                    <span className="text-amber-400 font-mono text-xs font-bold tracking-wider">PROPOSED ACTION</span>
                 </div>
-                <ProposalLifecycleProof lifecycle={renderedLifecycle} runId={message.run_id} />
-                <div className="space-y-1">
-                    <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Soma wants to</div>
-                    <p className="text-sm leading-6 text-cortex-text-main">{operatorSummary}</p>
-                </div>
-
-                <ProposalRunIntent proposal={proposal} />
-
-                <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">{approvalRequired ? "Why approval is needed" : "Execution posture"}</div>
-                        <p className="mt-1.5 text-sm leading-6 text-cortex-text-main">{approvalExplanation}</p>
-                    </div>
-                    <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Expected result</div>
-                        <p className="mt-1.5 text-sm leading-6 text-cortex-text-main">{expectedResult}</p>
-                    </div>
-                </div>
-
-                {visibleResources.length > 0 ? (
-                    <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">What will change</div>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                            {visibleResources.map((resource) => (
-                                <span
-                                    key={resource}
-                                    className="rounded border border-cortex-border bg-cortex-bg/70 px-2 py-1 text-xs text-cortex-text-main"
-                                >
-                                    {resource}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                ) : null}
-
                 <div className="flex flex-wrap gap-1.5">
                     <span className={`px-2 py-0.5 rounded border text-[10px] font-mono ${approvalRequired ? "text-amber-300 border-amber-400/30" : "text-cortex-success border-cortex-success/30"}`}>
                         {governanceSummary.toUpperCase()}
@@ -166,17 +126,54 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     <span className={`px-2 py-0.5 rounded border text-[10px] font-mono ${capabilityRisk === "high" ? "text-red-300 border-red-400/30" : capabilityRisk === "medium" ? "text-amber-300 border-amber-400/30" : "text-cortex-success border-cortex-success/30"}`}>
                         RISK {proposal.risk_level?.toUpperCase() || "LOW"}
                     </span>
-                    {proposal.external_data_use ? (
-                        <span className="px-2 py-0.5 rounded border text-[10px] font-mono text-cortex-primary border-cortex-primary/30">
-                            EXTERNAL DATA
-                        </span>
-                    ) : null}
                     {typeof proposal.estimated_cost === "number" ? (
                         <span className="px-2 py-0.5 rounded border text-[10px] font-mono text-cortex-text-main border-cortex-border">
                             EST. COST {proposal.estimated_cost.toFixed(2)}
                         </span>
                     ) : null}
                 </div>
+            </div>
+
+            <div className="px-4 py-3 space-y-3">
+                <div className={`inline-flex items-center gap-2 rounded border px-2.5 py-1.5 text-[10px] ${lifecycleTone}`}>
+                    <LifecycleIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span>{lifecycleLabel}</span>
+                </div>
+                <ProposalLifecycleProof lifecycle={renderedLifecycle} runId={message.run_id} />
+
+                <div className="space-y-2">
+                    <div>
+                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Soma wants to</div>
+                        <p className="mt-1 text-base leading-7 text-cortex-text-main">{operatorSummary}</p>
+                    </div>
+                    <p className="text-sm leading-6 text-cortex-text-muted">
+                        Result: <span className="text-cortex-text-main">{expectedResult}</span>
+                    </p>
+                    <p className="text-xs leading-5 text-cortex-text-muted">{approvalExplanation}</p>
+                </div>
+
+                {visibleResources.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Changes</span>
+                        {visibleResources.map((resource) => (
+                            <span
+                                key={resource}
+                                className="rounded border border-cortex-border bg-cortex-bg/70 px-2 py-1 text-xs text-cortex-text-main"
+                            >
+                                {resource}
+                            </span>
+                        ))}
+                        {proposal.external_data_use ? (
+                            <span className="rounded border border-cortex-primary/30 px-2 py-1 text-[10px] font-mono text-cortex-primary">
+                                EXTERNAL DATA
+                            </span>
+                        ) : null}
+                    </div>
+                ) : proposal.external_data_use ? (
+                    <span className="inline-flex rounded border border-cortex-primary/30 px-2 py-1 text-[10px] font-mono text-cortex-primary">
+                        EXTERNAL DATA
+                    </span>
+                ) : null}
 
                 <button
                     type="button"
@@ -190,6 +187,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
 
                 {detailsOpen ? (
                     <div className="space-y-2 rounded border border-cortex-border bg-cortex-bg/40 px-3 py-3 text-xs font-mono">
+                        <ProposalRunIntent proposal={proposal} />
                         <div className="flex items-center gap-4">
                             <span className="text-cortex-text-muted w-16">Role</span>
                             <span className="text-cortex-text-main">{sourceNodeLabel(message.source_node || "admin", assistantName)}</span>

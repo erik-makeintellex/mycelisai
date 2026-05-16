@@ -54,22 +54,27 @@ describe("SomaCausalSummary", () => {
 
         expect(screen.getByText("Soma just did this")).toBeDefined();
         expect(screen.getByText("Trust package")).toBeDefined();
-        expect(screen.getByText("Prepare a reviewed onboarding package")).toBeDefined();
-        expect(screen.getByText(/Package the request for the operations team/i)).toBeDefined();
-        expect(screen.getByText(/complete: directed_execution/i)).toBeDefined();
-        expect(screen.getByText(/Teams: Operations Team/i)).toBeDefined();
+        expect(screen.getByText(/Soma coordinated the operations lane and produced reviewable output/i)).toBeDefined();
         expect(screen.getByText(/Onboarding run package/i)).toBeDefined();
         expect(screen.getByText(/Onboarding brief/i)).toBeDefined();
         expect(screen.getByText(/Run run-abc-123/i)).toBeDefined();
         expect(screen.getByText(/Audit proof/i)).toBeDefined();
         expect(screen.getByText(/Recovery snapshot retained/i)).toBeDefined();
         expect(screen.getByText("Review the package with operators.")).toBeDefined();
+        expect(screen.queryByText("Prepare a reviewed onboarding package")).toBeNull();
 
-        fireEvent.click(screen.getByRole("button", { name: /Copy output quote for Onboarding run package, Onboarding brief/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Show trust details/i }));
+
+        expect(screen.getByText("Prepare a reviewed onboarding package")).toBeDefined();
+        expect(screen.getByText(/Package the request for the operations team/i)).toBeDefined();
+        expect(screen.getByText(/complete: directed_execution/i)).toBeDefined();
+        expect(screen.getByText(/Teams: Operations Team/i)).toBeDefined();
+
+        fireEvent.click(screen.getAllByRole("button", { name: /Copy output quote for Onboarding run package, Onboarding brief/i })[0]);
 
         return waitFor(() => {
             expect(writeText).toHaveBeenCalledWith("> Onboarding run package, Onboarding brief");
-            expect(screen.getByRole("button", { name: /Copied output quote/i })).toBeDefined();
+            expect(screen.getAllByRole("button", { name: /Copied output quote/i }).length).toBeGreaterThan(0);
         });
     });
 });

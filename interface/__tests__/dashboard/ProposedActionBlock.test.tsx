@@ -67,7 +67,7 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/this action will change your workspace, so soma needs your approval before running it\./i)).toBeDefined();
         expect(screen.getByText(/approval required/i)).toBeDefined();
         expect(screen.getByText(/risk medium/i)).toBeDefined();
-        expect(screen.getByText(/current team bus/i)).toBeDefined();
+        expect(screen.queryByText(/current team bus/i)).toBeNull();
         expect(screen.queryByText(/no bus connection/i)).toBeNull();
         expect(screen.queryByText(/unless you approve bus wiring/i)).toBeNull();
         expect(screen.getByRole('button', { name: /show details/i })).toBeDefined();
@@ -144,15 +144,14 @@ describe('ProposedActionBlock', () => {
         expect(screen.queryByRole('button', { name: /cancel/i })).toBeNull();
     });
 
-    it('renders approval-required governance details by default', () => {
+    it('renders approval-required governance summary by default', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        expect(screen.getByText(/why approval is needed/i)).toBeDefined();
         expect(screen.getByText(/this action will change your workspace/i)).toBeDefined();
         expect(screen.getByRole('button', { name: /approve & execute/i })).toBeDefined();
     });
 
-    it('shows scheduled or long-running task posture and bus scope before approval', () => {
+    it('shows scheduled or long-running task posture and bus scope after inspection', () => {
         render(<ProposedActionBlock message={buildMessage({
             proposal: {
                 ...buildMessage().proposal!,
@@ -162,6 +161,9 @@ describe('ProposedActionBlock', () => {
                 nats_subjects: ['swarm.team.ops.signal.status'],
             },
         })} />);
+
+        expect(screen.queryByText(/task lifecycle/i)).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /show details/i }));
 
         expect(screen.getByText(/task lifecycle/i)).toBeDefined();
         expect(screen.getByText(/keep running/i)).toBeDefined();
@@ -189,7 +191,6 @@ describe('ProposedActionBlock', () => {
             },
         })} />);
 
-        expect(screen.getByText(/execution posture/i)).toBeDefined();
         expect(screen.getByText(/within current policy thresholds and can run without a mandatory approval/i)).toBeDefined();
         expect(screen.getByText(/auto-approved/i)).toBeDefined();
         expect(screen.getByText(/risk low/i)).toBeDefined();
