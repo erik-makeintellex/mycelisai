@@ -9,9 +9,9 @@
 
 Open `/resources` after turning on Advanced mode.
 
-Current tabs:
+Current resource menu:
 
-| Tab | Purpose |
+| Resource Type | Purpose |
 |-----|---------|
 | Connected Tools | Installed MCP servers and tool capability visibility |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
@@ -19,6 +19,8 @@ Current tabs:
 | Workspace Files | Filesystem MCP-backed browsing and file operations inside workspace boundary |
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
+
+The Resources page keeps these resource types in a persistent menu and renders the selected type inside a bounded work window. Long tool lists, workspace folders, exchange records, and provider forms should scroll inside that selected panel rather than turning the whole page into one long operator path.
 
 ---
 

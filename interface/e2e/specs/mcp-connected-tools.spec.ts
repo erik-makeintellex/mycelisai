@@ -438,7 +438,7 @@ test.describe("Connected Tools MCP workflow", () => {
         await mockConnectedToolsApis(page);
         await openConnectedTools(page);
 
-        await expect(page.getByRole("button", { name: "Connected Tools" })).toBeVisible();
+        await expect(page.getByRole("button", { name: /Connected Tools/i })).toBeVisible();
         await expect(page.getByText("Connected Tools Workflow")).toBeVisible();
         await expect(page.getByText("Mycelis Search Capability")).toBeVisible();
         await expect(page.getByText("Soma search is ready")).toBeVisible();

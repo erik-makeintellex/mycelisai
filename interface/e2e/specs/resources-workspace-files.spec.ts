@@ -15,7 +15,7 @@ async function openWorkspaceFiles(page: Page) {
     await enableAdvancedMode(page);
     await page.goto("/resources?tab=workspace", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Advanced Resources" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: "Workspace Files" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Workspace Files/i })).toBeVisible();
 }
 
 async function mockWorkspaceMCP(page: Page) {

@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Brain, Wrench, BookOpen, FolderOpen, GitBranch, BookMarked } from "lucide-react";
+import { Brain, Wrench, BookOpen, FolderOpen, GitBranch, BookMarked, type LucideIcon } from "lucide-react";
 import BrainsPage from "@/components/settings/BrainsPage";
 import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
 import { useCortexStore } from "@/store/useCortexStore";
@@ -35,6 +35,58 @@ const DeploymentContextPanel = dynamic(() => import("@/components/resources/Depl
 
 type TabId = "engines" | "tools" | "workspace" | "roles" | "exchange" | "deployment-context";
 const VALID_TABS: TabId[] = ["engines", "tools", "workspace", "roles", "exchange", "deployment-context"];
+type ResourceTab = {
+    id: TabId;
+    label: string;
+    summary: string;
+    detail: string;
+    icon: LucideIcon;
+};
+
+const RESOURCE_TABS: ResourceTab[] = [
+    {
+        id: "tools",
+        label: "Connected Tools",
+        summary: "MCP servers, capability readiness, search posture, and recent tool use.",
+        detail: "What Soma can use",
+        icon: Wrench,
+    },
+    {
+        id: "workspace",
+        label: "Workspace Files",
+        summary: "Browse and write files through the governed filesystem MCP boundary.",
+        detail: "Mounted workspace",
+        icon: FolderOpen,
+    },
+    {
+        id: "exchange",
+        label: "Exchange",
+        summary: "Channels, threads, and normalized outputs crossing teams and tools.",
+        detail: "Managed output lanes",
+        icon: GitBranch,
+    },
+    {
+        id: "deployment-context",
+        label: "Deployment Context",
+        summary: "Governed intake for deployment knowledge and private context lanes.",
+        detail: "Context loading",
+        icon: BookMarked,
+    },
+    {
+        id: "engines",
+        label: "AI Engines",
+        summary: "Provider configuration, model routing, and health for advanced operators.",
+        detail: "Model providers",
+        icon: Brain,
+    },
+    {
+        id: "roles",
+        label: "Role Library",
+        summary: "Reusable specialist roles and templates for advanced workflow work.",
+        detail: "Reusable templates",
+        icon: BookOpen,
+    },
+];
 
 export default function ResourcesPage() {
     return (
@@ -62,62 +114,108 @@ function ResourcesContent() {
     }
 
     return (
-        <div className="h-full flex flex-col bg-cortex-bg">
-            <header className="px-6 pt-6 pb-0">
-                <div className="flex items-end justify-between mb-4">
-                    <div>
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-cortex-bg">
+            <header className="flex-shrink-0 border-b border-cortex-border px-6 py-5">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase text-cortex-text-muted">Operator support systems</p>
                         <h1 className="text-2xl font-bold text-cortex-text-main tracking-tight">
                             Advanced Resources
                         </h1>
-                        <p className="text-cortex-text-muted text-sm mt-1">
-                            Support systems for Soma: connected tools, MCP/search readiness, workspace files, exchange lanes, and AI engine setup
+                        <p className="mt-1 max-w-3xl text-sm leading-6 text-cortex-text-muted">
+                            Select one resource type, work inside the focused panel, and keep the rest of the support
+                            system out of the operator's scroll path.
                         </p>
                     </div>
-                </div>
-
-                <div className="flex gap-1 border-b border-cortex-border">
-                    <TabButton active={activeTab === "tools"} onClick={() => setActiveTab("tools")} icon={<Wrench size={14} />} label="Connected Tools" />
-                    <TabButton active={activeTab === "exchange"} onClick={() => setActiveTab("exchange")} icon={<GitBranch size={14} />} label="Exchange" />
-                    <TabButton active={activeTab === "deployment-context"} onClick={() => setActiveTab("deployment-context")} icon={<BookMarked size={14} />} label="Deployment Context" />
-                    <TabButton active={activeTab === "workspace"} onClick={() => setActiveTab("workspace")} icon={<FolderOpen size={14} />} label="Workspace Files" />
-                    <TabButton active={activeTab === "engines"} onClick={() => setActiveTab("engines")} icon={<Brain size={14} />} label="AI Engines" />
-                    <TabButton active={activeTab === "roles"} onClick={() => setActiveTab("roles")} icon={<BookOpen size={14} />} label="Role Library" />
+                    <div className="rounded border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-xs text-cortex-primary">
+                        {RESOURCE_TABS.length} resource types
+                    </div>
                 </div>
             </header>
 
-            <div className="flex-1 overflow-hidden">
-                {activeTab === "engines" && (
-                    <div className="h-full overflow-y-auto">
-                        <div className="max-w-5xl mx-auto w-full px-6 py-6">
-                            <BrainsPage />
-                        </div>
+            <div className="grid min-h-0 flex-1 gap-4 p-4 lg:grid-cols-[19rem_minmax(0,1fr)]">
+                <nav
+                    className="min-h-0 overflow-y-auto rounded-lg border border-cortex-border bg-cortex-surface/70 p-2"
+                    aria-label="Resource type menu"
+                >
+                    <div className="px-2 pb-2 pt-1 text-[10px] font-semibold uppercase text-cortex-text-muted">
+                        Resource types
                     </div>
-                )}
-                {activeTab === "tools" && <MCPToolRegistry />}
-                {activeTab === "exchange" && <ExchangeInspector />}
-                {activeTab === "deployment-context" && <DeploymentContextPanel />}
-                {activeTab === "workspace" && (
-                    <WorkspaceExplorer onOpenToolsTab={() => setActiveTab("tools")} />
-                )}
-                {activeTab === "roles" && <CataloguePage />}
+                    <div className="space-y-1">
+                        {RESOURCE_TABS.map((tab) => (
+                            <ResourceMenuButton
+                                key={tab.id}
+                                tab={tab}
+                                active={activeTab === tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                            />
+                        ))}
+                    </div>
+                </nav>
+
+                <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface/60">
+                    <ResourcePanelHeader tab={RESOURCE_TABS.find((tab) => tab.id === activeTab) ?? RESOURCE_TABS[0]} />
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                        {activeTab === "engines" && (
+                            <div className="mx-auto w-full max-w-5xl px-6 py-6">
+                                <BrainsPage />
+                            </div>
+                        )}
+                        {activeTab === "tools" && <MCPToolRegistry />}
+                        {activeTab === "exchange" && <ExchangeInspector />}
+                        {activeTab === "deployment-context" && <DeploymentContextPanel />}
+                        {activeTab === "workspace" && (
+                            <WorkspaceExplorer onOpenToolsTab={() => setActiveTab("tools")} />
+                        )}
+                        {activeTab === "roles" && <CataloguePage />}
+                    </div>
+                </section>
             </div>
         </div>
     );
 }
 
-function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+function ResourceMenuButton({ active, onClick, tab }: { active: boolean; onClick: () => void; tab: ResourceTab }) {
+    const Icon = tab.icon;
+
     return (
         <button
+            type="button"
             onClick={onClick}
-            className={`px-4 py-2.5 text-xs font-medium flex items-center gap-2 border-b-2 transition-colors -mb-px whitespace-nowrap ${
+            aria-current={active ? "page" : undefined}
+            className={`flex w-full items-start gap-3 rounded border px-3 py-2.5 text-left transition-colors ${
                 active
-                    ? "border-cortex-primary text-cortex-primary"
-                    : "border-transparent text-cortex-text-muted hover:text-cortex-text-main"
+                    ? "border-cortex-primary/50 bg-cortex-primary/10 text-cortex-text-main"
+                    : "border-transparent text-cortex-text-muted hover:border-cortex-border hover:bg-cortex-bg"
             }`}
         >
-            {icon}
-            {label}
+            <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-cortex-primary" aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">{tab.label}</span>
+                <span className="mt-0.5 block text-[11px] leading-4">{tab.detail}</span>
+            </span>
         </button>
+    );
+}
+
+function ResourcePanelHeader({ tab }: { tab: ResourceTab }) {
+    const Icon = tab.icon;
+
+    return (
+        <div className="flex flex-shrink-0 flex-col gap-2 border-b border-cortex-border bg-cortex-bg px-4 py-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+                <div className="rounded border border-cortex-border bg-cortex-surface p-2 text-cortex-primary">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                    <h2 className="text-sm font-semibold text-cortex-text-main">{tab.label}</h2>
+                    <p className="mt-1 max-w-3xl text-xs leading-5 text-cortex-text-muted">{tab.summary}</p>
+                </div>
+            </div>
+            <span className="rounded border border-cortex-border bg-cortex-surface px-2 py-1 text-[10px] uppercase text-cortex-text-muted">
+                Inner scroll
+            </span>
+        </div>
     );
 }
 
