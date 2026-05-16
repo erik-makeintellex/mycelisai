@@ -85,6 +85,7 @@ services:
       MYCELIS_SEARCH_DISCLOSURE_MODE: ${MYCELIS_SEARCH_DISCLOSURE_MODE:-notice_and_interpretation}
       DATA_DIR: ${DATA_DIR:-/data/artifacts}
       MYCELIS_WORKSPACE: ${MYCELIS_WORKSPACE:-/data/workspace}
+      MYCELIS_WORKSPACE_REVEAL_DRY_RUN: ${MYCELIS_WORKSPACE_REVEAL_DRY_RUN:-1}
     depends_on:
       postgres:
         condition: service_healthy

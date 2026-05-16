@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -118,6 +119,8 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 	}
 
 	ctx := r.Context()
+	serverName := serversNameOrFallback(s.MCP, ctx, serverID)
+	args = normalizeMCPToolCallArgumentsForServer(serverName, args)
 
 	result, err := s.MCPPool.CallTool(ctx, serverID, toolName, args)
 	if err != nil {
@@ -128,7 +131,6 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 	if text := strings.TrimSpace(extractMCPResultSummary(result)); text != "" {
 		summary = text
 	}
-	serverName := serversNameOrFallback(s.MCP, ctx, serverID)
 	var exchangeItemID string
 	if s.Exchange != nil {
 		item, _ := s.Exchange.PublishMCPResult(ctx, exchange.MCPNormalizationInput{
@@ -172,6 +174,59 @@ func decodeMCPToolCallArguments(reader io.Reader) (map[string]any, error) {
 		return args, nil
 	}
 	return body, nil
+}
+
+func normalizeMCPToolCallArgumentsForServer(serverName string, args map[string]any) map[string]any {
+	if !strings.EqualFold(strings.TrimSpace(serverName), "filesystem") || len(args) == 0 {
+		return args
+	}
+	for _, key := range []string{"path", "source", "destination"} {
+		if raw, ok := args[key].(string); ok {
+			args[key] = normalizeFilesystemMCPPath(raw)
+		}
+	}
+	if rawPaths, ok := args["paths"].([]any); ok {
+		paths := make([]any, 0, len(rawPaths))
+		for _, raw := range rawPaths {
+			if pathValue, ok := raw.(string); ok {
+				paths = append(paths, normalizeFilesystemMCPPath(pathValue))
+				continue
+			}
+			paths = append(paths, raw)
+		}
+		args["paths"] = paths
+	}
+	return args
+}
+
+func normalizeFilesystemMCPPath(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return raw
+	}
+	normalized := strings.ReplaceAll(trimmed, "\\", "/")
+	normalized = strings.TrimPrefix(normalized, "./")
+
+	var rel string
+	switch {
+	case normalized == "workspace" || normalized == "/workspace":
+		rel = ""
+	case strings.HasPrefix(normalized, "workspace/"):
+		rel = strings.TrimPrefix(normalized, "workspace/")
+	case strings.HasPrefix(normalized, "/workspace/"):
+		rel = strings.TrimPrefix(normalized, "/workspace/")
+	default:
+		return raw
+	}
+
+	root := strings.TrimSpace(mcp.ResolveFilesystemWorkspaceRoot())
+	if root == "" {
+		return raw
+	}
+	if rel == "" {
+		return root
+	}
+	return filepath.Join(root, filepath.FromSlash(rel))
 }
 
 func serversNameOrFallback(svc *mcp.Service, ctx context.Context, serverID uuid.UUID) string {

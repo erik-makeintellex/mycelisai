@@ -63,6 +63,7 @@ Important `.env.compose` defaults:
 - `MYCELIS_OUTPUT_HOST_PATH=./workspace/docker-compose/data`
 - `DATA_DIR=/data/artifacts`
 - `MYCELIS_WORKSPACE=/data/workspace`
+- `MYCELIS_WORKSPACE_REVEAL_DRY_RUN=1`
 
 Compose guardrail:
 - `MYCELIS_COMPOSE_OLLAMA_HOST` in `.env.compose` must be container-reachable. `localhost`, `127.0.0.1`, and `0.0.0.0` are invalid for the home-runtime Core container.
@@ -85,6 +86,13 @@ Compose persistence is split intentionally:
 That keeps:
 - database and bus state durable across restarts
 - generated artifacts and workspace files inspectable from the configured host output block
+
+Compose defaults workspace reveal to dry-run mode because Core runs inside a Linux
+container while the operator browser is on the host. The browser `Storage`
+control still proves the retained path and mounted output block, but it does
+not attempt to launch a desktop file explorer from inside the container. Native
+Core or a future host-action bridge can set `MYCELIS_WORKSPACE_REVEAL_DRY_RUN=0`
+when opening the host folder is actually supported.
 
 Output block modes:
 - `local_hosted`: the operator provides a real host directory in `MYCELIS_OUTPUT_HOST_PATH`. This is the Docker Compose and Pinokio/local-media handoff path.

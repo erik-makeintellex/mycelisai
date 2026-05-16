@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -77,6 +78,39 @@ func TestDecodeMCPToolCallArguments_RejectsNonObjectArguments(t *testing.T) {
 	_, err := decodeMCPToolCallArguments(strings.NewReader(`{"arguments":"README.md"}`))
 	if err == nil || !strings.Contains(err.Error(), "arguments must be an object") {
 		t.Fatalf("err = %v, want object validation", err)
+	}
+}
+
+func TestNormalizeMCPToolCallArgumentsForFilesystem_RebasesWorkspaceAlias(t *testing.T) {
+	workspace := t.TempDir()
+	t.Setenv("MYCELIS_WORKSPACE", workspace)
+
+	args := normalizeMCPToolCallArgumentsForServer("filesystem", map[string]any{
+		"path":        "workspace/logs/proof.md",
+		"source":      "workspace/input.md",
+		"destination": "/workspace/output.md",
+		"paths":       []any{"workspace/a.md", "README.md"},
+	})
+
+	if args["path"] != filepath.Join(workspace, "logs", "proof.md") {
+		t.Fatalf("path = %#v", args["path"])
+	}
+	if args["source"] != filepath.Join(workspace, "input.md") {
+		t.Fatalf("source = %#v", args["source"])
+	}
+	if args["destination"] != filepath.Join(workspace, "output.md") {
+		t.Fatalf("destination = %#v", args["destination"])
+	}
+	paths := args["paths"].([]any)
+	if paths[0] != filepath.Join(workspace, "a.md") || paths[1] != "README.md" {
+		t.Fatalf("paths = %#v", paths)
+	}
+}
+
+func TestNormalizeMCPToolCallArgumentsForNonFilesystem_LeavesPathsAlone(t *testing.T) {
+	args := normalizeMCPToolCallArgumentsForServer("fetch", map[string]any{"path": "workspace/proof.md"})
+	if args["path"] != "workspace/proof.md" {
+		t.Fatalf("path = %#v", args["path"])
 	}
 }
 
