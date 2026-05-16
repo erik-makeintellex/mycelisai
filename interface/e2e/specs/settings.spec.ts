@@ -80,17 +80,21 @@ test.describe('Settings Page (/settings)', () => {
         await expect(page.getByText(/Mission Profiles/i).first()).toBeVisible();
     });
 
-    test('Auth Providers scaffold is reachable from advanced settings', async ({ page }) => {
+    test('Auth Providers contract is reachable from advanced settings', async ({ page }) => {
         await page.evaluate(() => window.localStorage.setItem('mycelis-advanced-mode', 'true'));
         await page.reload({ waitUntil: 'domcontentloaded' });
         await expect(page.getByRole('button', { name: 'Open Auth Providers' })).toBeVisible();
         await page.getByRole('button', { name: 'Open Auth Providers' }).click();
         await expect(page.getByRole('tab', { name: 'Auth Providers' })).toHaveAttribute('aria-current', 'page');
         await expect(page.getByRole('heading', { name: 'Auth Providers' })).toBeVisible();
-        await expect(page.getByText('OIDC / OAuth')).toBeVisible();
+        await expect(page.getByRole('navigation', { name: 'Auth provider menu' })).toBeVisible();
+        await expect(page.getByRole('button', { name: /OIDC \/ OAuth/i })).toBeVisible();
+        await page.getByRole('button', { name: /SAML/i }).click();
         await expect(page.getByRole('heading', { name: 'SAML' })).toBeVisible();
+        await expect(page.getByText('MYCELIS_AUTH_SAML_CERT_REF')).toBeVisible();
+        await page.getByRole('button', { name: /SCIM/i }).click();
         await expect(page.getByRole('heading', { name: 'SCIM' })).toBeVisible();
-        await expect(page.getByText(/No provider changes are submitted from this scaffold/i)).toBeVisible();
+        await expect(page.getByText('Future provisioning path')).toBeVisible();
     });
 
     test('People & Access keeps enterprise user management out of the base release path', async ({ page }) => {

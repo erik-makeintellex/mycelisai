@@ -40,11 +40,11 @@ Mycelis authorization remains internal. External identity providers may later pr
 
 ## Auth Providers
 
-Auth Providers is the setup and inspection surface for local auth, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM posture. Use [Authentication Modes](auth-modes.md) for the full enablement checklist.
+Auth Providers is the setup and inspection surface for local auth, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM posture. The page uses a compact provider menu with one focused detail panel so operators can compare options without reading every provider contract at once. Use [Authentication Modes](auth-modes.md) for the full enablement checklist.
 
 Current expectations:
 
-- provider rows may show planned or configured posture before full adapter activation
+- provider menu entries may show planned or configured posture before full adapter activation
 - secrets are referenced, not displayed
 - raw client secrets, tokens, and SAML private material must stay in `.env` or the configured secret backend
 - provider changes should be audited when mutation support is enabled

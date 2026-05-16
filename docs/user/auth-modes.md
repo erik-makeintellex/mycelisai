@@ -12,7 +12,7 @@ Current self-hosted release authentication is deploy-owned:
 - `MYCELIS_LOCAL_ADMIN_USERNAME` and `MYCELIS_LOCAL_ADMIN_USER_ID` name that local principal
 - Settings shows access posture, but user chat cannot rewrite it
 
-Enterprise provider rows in Auth Providers are currently a review/setup scaffold unless the deployment explicitly enables the matching adapter. External providers may prove identity, but Mycelis still owns roles, organization membership, Soma access, approvals, capabilities, and audit visibility.
+Enterprise provider entries in Auth Providers are currently a read-only configuration contract unless the deployment explicitly enables the matching adapter. External providers may prove identity, but Mycelis still owns roles, organization membership, Soma access, approvals, capabilities, and audit visibility.
 
 ## Deployment Posture
 
