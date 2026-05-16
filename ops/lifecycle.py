@@ -29,6 +29,8 @@ from .config import (
     powershell,
 )
 from . import db as db_tasks
+from . import lifecycle_status
+from .lifecycle_processes import COMPILED_GO_PROCESS_HINTS, WINDOWS_COMPILED_GO_PROCESS_NAMES
 
 
 # ── Port / Service Definitions ───────────────────────────────────────
@@ -42,54 +44,6 @@ SERVICES = {
 }
 
 CORE_STARTUP_LOG = ROOT_DIR / "workspace" / "logs" / "core-startup.log"
-WINDOWS_COMPILED_GO_PROCESS_NAMES = (
-    "go.exe",
-    "server.exe",
-    "probe.exe",
-    "signal_gen.exe",
-    "smoke.exe",
-)
-COMPILED_GO_PROCESS_HINTS = tuple(
-    hint.lower()
-    for hint in {
-        "go run ./cmd/server",
-        "go run .\\cmd\\server",
-        "go run ./cmd/probe",
-        "go run .\\cmd\\probe",
-        "go run ./cmd/signal_gen",
-        "go run .\\cmd\\signal_gen",
-        "go run ./cmd/smoke/main.go",
-        "go run .\\cmd\\smoke\\main.go",
-        "cmd/server",
-        "cmd\\server",
-        "cmd/probe",
-        "cmd\\probe",
-        "cmd/signal_gen",
-        "cmd\\signal_gen",
-        "cmd/smoke",
-        "cmd\\smoke",
-        "bin/server",
-        "bin\\server",
-        "bin/probe",
-        "bin\\probe",
-        "bin/signal_gen",
-        "bin\\signal_gen",
-        "bin/smoke",
-        "bin\\smoke",
-        str((CORE_DIR / "bin" / "server").resolve()),
-        str((CORE_DIR / "bin" / "server.exe").resolve()),
-        str((CORE_DIR / "bin" / "probe").resolve()),
-        str((CORE_DIR / "bin" / "probe.exe").resolve()),
-        str((CORE_DIR / "bin" / "signal_gen").resolve()),
-        str((CORE_DIR / "bin" / "signal_gen.exe").resolve()),
-        str((CORE_DIR / "cmd" / "server").resolve()),
-        str((CORE_DIR / "cmd" / "probe").resolve()),
-        str((CORE_DIR / "cmd" / "signal_gen").resolve()),
-        str((CORE_DIR / "cmd" / "smoke").resolve()),
-    }
-)
-
-
 # ── Low-Level Probes ─────────────────────────────────────────────────
 
 def _port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:
@@ -131,6 +85,18 @@ def _interface_probe_urls(host: str = INTERFACE_HOST, port: int = INTERFACE_PORT
         seen.add(url)
         urls.append(url)
     return urls
+
+
+def _loopback_probe_urls(port: int, path: str, host: str = "localhost") -> list[str]:
+    return lifecycle_status.loopback_probe_urls(port, path, host)
+
+
+def _first_healthy_http_probe(urls: list[str], timeout: float = 2.0) -> tuple[int, str, str]:
+    return lifecycle_status.first_healthy_http_probe(urls, _http_get, timeout)
+
+
+def _status_service_alive(key: str, port: int) -> bool:
+    return lifecycle_status.status_service_alive(key, port, _http_get, _port_open, API_HOST)
 
 
 def _wait_for_port(port: int, label: str, timeout: int = 30, interval: float = 1.0) -> bool:
@@ -550,7 +516,7 @@ def status(c):
     for key, svc in SERVICES.items():
         port = svc["port"]
         label = svc["label"]
-        alive = _port_open(port)
+        alive = _status_service_alive(key, port)
         tag = "UP" if alive else "DOWN"
         pid_info = ""
         if alive:
@@ -561,18 +527,21 @@ def status(c):
 
     # Deep probe: Core API health
     print()
-    if _port_open(API_PORT):
-        _load_env()
-        api_key = os.environ.get("MYCELIS_API_KEY", "")
-        code, body = _http_get(f"http://{API_HOST}:{API_PORT}/api/v1/cognitive/status")
-        if code == 200:
-            print("  Core API probe  : HEALTHY")
-        elif code == 401:
-            print("  Core API probe  : UP (auth required - expected)")
-        else:
-            print(f"  Core API probe  : ERROR ({code})")
+    code, url, _body = _first_healthy_http_probe(_loopback_probe_urls(API_PORT, "/healthz", API_HOST))
+    if code == 200:
+        print(f"  Core API probe  : HEALTHY ({url})")
+    elif _port_open(API_PORT):
+        print(f"  Core API probe  : ERROR ({code})")
     else:
         print("  Core API probe  : OFFLINE")
+
+    ollama_code, ollama_url, _ollama_body = _first_healthy_http_probe(_loopback_probe_urls(11434, "/api/tags", "localhost"))
+    if ollama_code == 200:
+        print(f"  Ollama probe    : HEALTHY ({ollama_url})")
+    elif _port_open(11434):
+        print(f"  Ollama probe    : ERROR ({ollama_code})")
+    else:
+        print("  Ollama probe    : OFFLINE")
 
     try:
         compiled_go = _list_compiled_go_service_processes()

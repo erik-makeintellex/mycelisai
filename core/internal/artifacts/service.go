@@ -14,13 +14,14 @@ import (
 type ArtifactType string
 
 const (
-	TypeCode     ArtifactType = "code"
-	TypeDocument ArtifactType = "document"
-	TypeImage    ArtifactType = "image"
-	TypeAudio    ArtifactType = "audio"
-	TypeData     ArtifactType = "data"
-	TypeFile     ArtifactType = "file"
-	TypeChart    ArtifactType = "chart"
+	TypeCode           ArtifactType = "code"
+	TypeDocument       ArtifactType = "document"
+	TypeImage          ArtifactType = "image"
+	TypeAudio          ArtifactType = "audio"
+	TypeData           ArtifactType = "data"
+	TypeFile           ArtifactType = "file"
+	TypeChart          ArtifactType = "chart"
+	TypeProjectPackage ArtifactType = "project_package"
 )
 
 // Artifact represents a structured agent output stored in the ledger.

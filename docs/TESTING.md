@@ -40,7 +40,7 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 
 Use this sequence when a slice changes the delivered operator workflow, runtime topology, governance behavior, retained outputs, AI provider posture, or release proof lane:
 
-1. Source and contract proof from the Windows repo: `uv run inv core.test`, `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.build`, docs tests, and `uv run inv quality.max-lines --limit 300`.
+1. Source and contract proof from the Windows repo: `uv run inv core.test`, `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.build`, docs tests, and `uv run inv quality.max-lines --limit 300`; capped files in `ops/quality_legacy_caps.txt` must match current counts, only ratchet down, and retire at or below 300 lines.
 2. Deployment-mimic proof from the git-refreshed WSL checkout:
    - `uv run inv wsl.refresh`
    - `uv run inv wsl.validate --lane=release`
@@ -67,6 +67,7 @@ Every accepted user-interaction proof must verify:
 - Soma returns a direct `answer` for a non-mutating prompt
 - a mutating prompt enters `proposal` and can be approved or cancelled
 - guided team creation or a temporary workflow lane completes and remains reviewable
+- created teams start with the minimum viable roster, normally one accountable lead, and any UI/API expansion path explains the missing capability, owned task, proof expected, and removal point
 - retained outputs survive refresh/reload
 - AI-host failure produces a visible blocker and recovery restores the lane
 
@@ -89,7 +90,6 @@ Related migration inputs:
 ## Full GUI Coverage Matrix
 
 Current browser workflow details live in [V8 UI Team Browser Workflows](architecture-library/V8_UI_TEAM_BROWSER_WORKFLOWS.md). Keep this document as the validation policy entrypoint rather than a route-by-route duplicate.
-
 Minimum route families under active proof:
 - `/dashboard` and AI Organization re-entry
 - `/organizations/[id]` Soma-primary workspace
@@ -131,12 +131,12 @@ No backend/API review is complete without a mapped UI target and evidence result
 - For Compose rebuild proof, use `uv run inv compose.down --volumes`.
 - For Compose data-plane proof, use `uv run inv compose.infra-up`, `compose.infra-health`, and `compose.storage-health`.
 - Inspect service ports/processes before runtime proof when prior runs may have left residue.
+- Use `uv run inv lifecycle.status` for the fast process/endpoint snapshot; it checks Core through `/healthz` and Ollama through `/api/tags` across loopback fallbacks so transient TCP-only snapshots do not mark reachable services down.
 - Treat repo-local Interface workers as cleanup targets on Windows.
 - Run one managed Playwright invocation at a time for a workspace and port.
 - Start only the services required for the check.
 - Shut services down after the check unless a follow-on validation needs them alive.
 - Windows task loads prepend standard local tool bins, including Rancher Desktop and Chocolatey, and embedded NATS unit tests must bind package-unique low loopback ports outside the Windows dynamic client-port range instead of `Port: -1`.
-
 Compiled Go services started with `go build`, `go run`, or direct binaries can outlive tests. Runtime validation must account for repo-local binaries, containerized dependencies, and test-managed services.
 
 ## Quick Reference
@@ -170,31 +170,25 @@ uv run inv interface.e2e --live-backend --server-mode=external --project=chromiu
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=e2e/specs/team-execution-live.spec.ts
+uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=e2e/specs/team-output-content-live.spec.ts
 ```
+Use `uv run inv interface.e2e --headed --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-media-artifacts.spec.ts` when chat media rendering, saved-media downloads, or local storage-folder reveal controls change. The focused browser proof should show image previews, playable media or downloadable binary artifacts, saved paths, and an operator-visible control that opens the mounted storage location for generated content.
+Use `npm test -- WorkspaceExplorer MCPToolRegistry MCPLibraryBrowser MCPServerCard --maxWorkers=1` from `interface/` when Connected Tools, filesystem MCP, Workspace Files browsing, or MCP output generation contracts change. The focused component proof should verify the current filesystem MCP tool names (`list_directory`, `read_text_file`, `create_directory`, `write_file`), the MCP-safe `workspace` root, and the standard `{"arguments": {...}}` call envelope. Use `uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/resources-workspace-files.spec.ts` when the live browser must prove Resources -> Workspace Files can browse, write, reopen, and review a generated workspace output through filesystem MCP.
+Use `cd core; go test ./internal/server -run "Test(ParsePlannedToolCall|HandleConfirmAction|ExecutePlannedToolCalls)" -count=1` when governed proposal planning or confirm-action replay changes. The focused backend proof should verify explicit `tool_ref` MCP plans retain the `mcp:server/tool` identity, execute through the MCP executor after approval, and return retained `mcp_tool_result` outputs instead of silently falling back to same-named internal tools.
 Use `uv run inv interface.e2e --project=chromium --workers=1 --server-mode=external --spec=e2e/specs/soma-proposal-mode.spec.ts` when proposal approval, confirm-action failure handling, degradation metadata, or failed-run recovery UI changes. The focused browser proof must show the failed run remains reviewable, the Operator trust package says operator attention is needed, recovery copy is visible, and success proof labels are absent.
-Rancher Desktop K3s live-backend proof uses the local Interface server against the K3s Core bridge; `k8s.bridge` forwards in-cluster Core `:8080` to `MYCELIS_API_PORT` or `8081` by default, and the Interface proxy/live proof must use that same local port. When the spec checks backend-written files, prove the PVC-backed workspace through `kubectl`:
-
+Rancher Desktop K3s live-backend proof uses the local Interface server against the K3s Core bridge; `k8s.bridge` forwards in-cluster Core `:8080` to `MYCELIS_API_PORT` or `8081` by default, and the Interface proxy/live proof must use that same local port. When the spec checks backend-written files, prove the PVC-backed workspace through `kubectl`; see Operations for the full K3s env block.
 ```bash
-$env:MYCELIS_K8S_BACKEND="rancher"
-$env:MYCELIS_K8S_VALUES_FILE="charts/mycelis-core/values-k3d.yaml"
-$env:MYCELIS_K8S_TEXT_ENDPOINT="http://<windows-ai-host>:11434/v1"
-$env:MYCELIS_K8S_TEXT_MODEL_ID="qwen3:8b"
-$env:MYCELIS_K8S_SEARCH_PROVIDER="searxng"; $env:MYCELIS_K8S_SEARXNG_ENDPOINT="http://<windows-ai-host>:8088"
 uv run inv k8s.deploy
 uv run inv k8s.wait --timeout=300
 uv run inv k8s.bridge
 $env:MYCELIS_API_HOST="127.0.0.1"
 $env:MYCELIS_API_PORT="8081"
-$env:PLAYWRIGHT_BACKEND_WORKSPACE_PROBE="k8s"
-$env:PLAYWRIGHT_K8S_NAMESPACE="mycelis"
-$env:PLAYWRIGHT_K8S_CORE_SELECTOR="app=mycelis-core"
-$env:PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT="/data/workspace"
 uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts --live-backend --workers=1 --server-mode=dev
 uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/team-execution-live.spec.ts --live-backend --workers=1 --server-mode=external
 ```
+Use `team-execution-live.spec.ts` when team execution, retained file/code outputs, group visibility, run-conversation proof, or team NATS proposal subjects change. The native Core proof path now infers `MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace` from `MYCELIS_WORKSPACE=./workspace`; Compose or split-checkout proof can still set `MYCELIS_BACKEND_WORKSPACE_ROOT` or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT` explicitly, and PVC-backed K8s proof should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`. The proof asks Soma for explicit expected output criteria, creates a runtime team, approves governed execution, writes a small browser-game HTML file through the backend workspace, confirms retained `team` and `code` outputs with the exact workspace-viewer href, opens the generated game from the retained output link, verifies the page title and initial score, clicks it in a browser page, checks the final score, checks `/api/v1/runs/{id}/conversation`, and verifies the team appears in `/groups`. Use `team-output-content-live.spec.ts` when the question is whether teams are producing meaningful content as specified: it creates multiple teams through Soma, approves their work, opens each retained browser output and local folder control in headed Chromium, verifies deliverable content, play-tests a code-graphics game score, checks run-conversation tool proof, and confirms the teams are reviewable in Groups.
 
-Use `team-execution-live.spec.ts` when team execution, retained file/code outputs, group visibility, run-conversation proof, or team NATS proposal subjects change. The native Core proof path now infers `MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace` from `MYCELIS_WORKSPACE=./workspace`; Compose or split-checkout proof can still set `MYCELIS_BACKEND_WORKSPACE_ROOT` or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT` explicitly, and PVC-backed K8s proof should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`. The proof asks Soma for explicit expected output criteria, creates a runtime team, approves governed execution, writes a small browser-game HTML file through the backend workspace, confirms retained `team` and `code` outputs with the exact workspace-viewer href, opens the generated game from the retained output link, verifies the page title and initial score, clicks it in a browser page, checks the final score, checks `/api/v1/runs/{id}/conversation`, and verifies the team appears in `/groups`.
-
+When complex generated projects such as playable games are packaged as `project_package` outputs, focused proof should also verify the Operator trust package and Groups retained-output pane show the package title, entrypoint, folder, file list, validation/proof text, `Open Game`, and workspace `Storage` control. Unit/component proof can stay mocked with `npm test -- MissionControlChat.executionSummary GroupManagementPanel --maxWorkers=1`; backend proof should include confirmed `write_file` and `store_artifact` artifact-envelope paths with `go test ./internal/server ./internal/swarm ./internal/artifacts ./pkg/protocol -run "Test(BuildDirectChatExecutionSummary|ExtractToolOutputArtifacts|ArtifactType|ExecutionOutputsFromToolResults|ArtifactResultPayload|ExecutionOutputsFromArtifacts|ChatResponsePayload)" -count=1`; live proof should use the headed `team-output-content-live.spec.ts` or `team-execution-live.spec.ts` path to open and play the retained browser output.
 ## Product Delivery Proof
 
 For product-facing work, include relevant unit/component tests, focused browser proof for the user workflow, live-backend proof when Core/proxy/runtime contracts changed, docs review, and explicit pass/fail evidence in close-out.
@@ -241,6 +235,12 @@ Use `--server-mode=start` for production-start proof and `--live-backend` when t
 ## Tier 4: Integration Tests
 
 Use integration proof only when the slice depends on live external services, runtime orchestration, persistent storage, or provider behavior. Start the minimal stack, prove readiness, run the check, and shut down.
+
+Runtime-team proof should stay bounded. Use one named team for normal output/proof checks and at most three targeted teams when the test is explicitly about coordination. Do not use broad all-team broadcast as a default proof path; reserve it for broadcast/degradation tests. Clean up temporary runtime teams with:
+
+```bash
+curl -X DELETE http://127.0.0.1:8081/api/v1/teams/<team-id> -H "Authorization: Bearer $MYCELIS_API_KEY"
+```
 
 Common gates:
 

@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+const (
+	minimalTeamInitialMemberCount = 1
+	minimalTeamMemberLimit        = 3
+	broadTeamMemberLimit          = 3
+	continuityTeamMemberLimit     = 3
+)
+
 func firstDepartmentStep(home OrganizationHomePayload) string {
 	if home.DepartmentCount > 0 {
 		return fmt.Sprintf("Use %d Department%s as the first routing layer for work.", home.DepartmentCount, pluralSuffix(home.DepartmentCount))
@@ -65,13 +72,16 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 			OwnerLabel:                 "Soma and Council orchestration",
 			TeamName:                   teamName,
 			CoordinationModel:          "multi_team_orchestration",
-			RecommendedTeamShape:       "Several small teams coordinated by Soma and Council over NATS/exchange, with no single team exceeding the member cap.",
+			RecommendedTeamShape:       "Lead-only teams first; add temporary specialists only when a lane exposes a clear gap.",
 			RecommendedTeamCount:       3,
-			RecommendedTeamMemberLimit: 5,
-			Summary:                    fmt.Sprintf("This request is broad enough to split into several compact teams instead of one oversized group. Use Soma and Council to coordinate the lanes over NATS/exchange, keep each team small, and return one orchestration summary plus the team-level outputs for %s.", safeOrganizationName(home.Name)),
+			InitialMemberCount:         minimalTeamInitialMemberCount,
+			RecommendedTeamMemberLimit: broadTeamMemberLimit,
+			ExpansionPolicy:            minimalTeamExpansionPolicy(),
+			TemporaryAdditionGuidance:  minimalTeamTemporaryAdditionGuidance(),
+			Summary:                    fmt.Sprintf("This request is broad enough to split into a few lead-only teams instead of one oversized group. Use Soma and Council to coordinate the lanes over NATS/exchange, add temporary specialists only when a lead identifies a concrete gap, and return one orchestration summary plus the team-level outputs for %s.", safeOrganizationName(home.Name)),
 			TargetOutputs:              outputs,
 			Workstreams:                buildMultiTeamExecutionWorkstreams(outputs),
-			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"team.coordinate", "artifact.review", "broadcast"}, 5),
+			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"team.coordinate", "artifact.review", "broadcast"}, broadTeamMemberLimit),
 		}
 	}
 
@@ -86,13 +96,16 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 			OwnerLabel:                 "Native Mycelis team",
 			TeamName:                   teamName,
 			CoordinationModel:          "compact_team",
-			RecommendedTeamShape:       "One focused team with a small specialist roster.",
+			RecommendedTeamShape:       "One lead-only team at creation; temporary specialists are added only when the lead can name the gap.",
 			RecommendedTeamCount:       1,
-			RecommendedTeamMemberLimit: 6,
-			Summary:                    fmt.Sprintf("Use a bounded creative team inside %s so Soma can shape the work, route it through the right specialists, and return the generated image as a managed artifact.", safeOrganizationName(home.Name)),
+			InitialMemberCount:         minimalTeamInitialMemberCount,
+			RecommendedTeamMemberLimit: minimalTeamMemberLimit,
+			ExpansionPolicy:            minimalTeamExpansionPolicy(),
+			TemporaryAdditionGuidance:  minimalTeamTemporaryAdditionGuidance(),
+			Summary:                    fmt.Sprintf("Use a lead-only creative team inside %s so Soma can shape the work first, then add a temporary specialist only if the lead identifies a concrete missing capability before returning the generated image as a managed artifact.", safeOrganizationName(home.Name)),
 			TargetOutputs:              outputs,
 			Workstreams:                buildCreativeExecutionWorkstreams(teamName, outputs),
-			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"content.plan", "artifact.review"}, 6),
+			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"content.plan", "artifact.review"}, minimalTeamMemberLimit),
 		}
 	}
 
@@ -102,13 +115,16 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 			OwnerLabel:                 "Native Mycelis team",
 			TeamName:                   teamName,
 			CoordinationModel:          "compact_team",
-			RecommendedTeamShape:       "One focused team with a small specialist roster.",
+			RecommendedTeamShape:       "One lead-only team at creation; temporary specialists are added only when the lead can name the gap.",
 			RecommendedTeamCount:       1,
-			RecommendedTeamMemberLimit: 6,
-			Summary:                    fmt.Sprintf("Use a bounded %s lane inside %s so Soma can stand up a focused delivery group, coordinate the right specialists, and keep the resulting outputs reviewable in one place.", strings.ToLower(teamName), safeOrganizationName(home.Name)),
+			InitialMemberCount:         minimalTeamInitialMemberCount,
+			RecommendedTeamMemberLimit: minimalTeamMemberLimit,
+			ExpansionPolicy:            minimalTeamExpansionPolicy(),
+			TemporaryAdditionGuidance:  minimalTeamTemporaryAdditionGuidance(),
+			Summary:                    fmt.Sprintf("Use a lead-only %s lane inside %s so Soma can start with the smallest useful team, add a temporary specialist only if the lead exposes a concrete need, and keep the resulting outputs reviewable in one place.", strings.ToLower(teamName), safeOrganizationName(home.Name)),
 			TargetOutputs:              outputs,
 			Workstreams:                buildCompactExecutionWorkstreams(teamName, outputs),
-			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"team.coordinate", "artifact.review"}, 6),
+			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"team.coordinate", "artifact.review"}, minimalTeamMemberLimit),
 		}
 	}
 
@@ -136,7 +152,7 @@ func buildRetainedPackageContinuityContract(home OrganizationHomePayload, reques
 		ResumeCheckpoint:  "Continue from the last retained package after reload or reboot.",
 		TargetOutputs:     targetOutputs,
 		Workstreams:       buildContinuityExecutionWorkstreams(),
-		WorkflowGroup:     buildWorkflowGroupDraft(home, "Retained Package Continuity", resumeGoal, "resume_continuity", targetOutputs, []string{"artifact.review", "team.coordinate"}, 4),
+		WorkflowGroup:     buildWorkflowGroupDraft(home, "Retained Package Continuity", resumeGoal, "resume_continuity", targetOutputs, []string{"artifact.review", "team.coordinate"}, continuityTeamMemberLimit),
 	}
 }
 
@@ -210,13 +226,24 @@ func buildWorkflowGroupDraft(home OrganizationHomePayload, teamName, requestCont
 		goal = fmt.Sprintf("Coordinate a focused %s workflow inside %s.", strings.ToLower(teamName), organizationName)
 	}
 	return &TeamLeadWorkflowGroupDraft{
-		Name:                   fmt.Sprintf("%s temporary workflow", teamName),
-		GoalStatement:          goal,
-		WorkMode:               workMode,
-		CoordinatorProfile:     fmt.Sprintf("%s lead", teamName),
-		AllowedCapabilities:    normalizeExecutionCapabilityList(allowedCapabilities),
-		RecommendedMemberLimit: recommendedMemberLimit,
-		ExpiryHours:            72,
-		Summary:                fmt.Sprintf("Launch a temporary workflow group for %s, keep coordination bounded to at most %d members, and retain outputs like %s after the lane is archived.", teamName, recommendedMemberLimit, humanJoin(targetOutputs)),
+		Name:                      fmt.Sprintf("%s temporary workflow", teamName),
+		GoalStatement:             goal,
+		WorkMode:                  workMode,
+		CoordinatorProfile:        fmt.Sprintf("%s lead", teamName),
+		AllowedCapabilities:       normalizeExecutionCapabilityList(allowedCapabilities),
+		InitialMemberCount:        minimalTeamInitialMemberCount,
+		RecommendedMemberLimit:    recommendedMemberLimit,
+		ExpansionPolicy:           minimalTeamExpansionPolicy(),
+		TemporaryAdditionGuidance: minimalTeamTemporaryAdditionGuidance(),
+		ExpiryHours:               72,
+		Summary:                   fmt.Sprintf("Launch a temporary workflow group for %s with the lead only, keep any justified expansion bounded to at most %d members, and retain outputs like %s after the lane is archived.", teamName, recommendedMemberLimit, humanJoin(targetOutputs)),
 	}
+}
+
+func minimalTeamExpansionPolicy() string {
+	return "Start with the team lead only. The operator may add members deliberately, or a temporary team lead may request one temporary specialist after naming the capability gap and expected output."
+}
+
+func minimalTeamTemporaryAdditionGuidance() string {
+	return "Temporary additions must state the missing capability, the task they own, the proof they will return, and when they should be removed from the workflow."
 }

@@ -6,7 +6,7 @@ import { useCortexStore, type MCPServerWithTools } from "@/store/useCortexStore"
 import { extractApiError, formatMCPToolResult, type ResourceCallRequest } from "@/lib/apiContracts";
 
 type EntryType = "file" | "dir";
-
+const WORKSPACE_ROOT_PATH = "workspace";
 interface WorkspaceEntry {
     name: string;
     path: string;
@@ -90,7 +90,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
     const isFetchingMCPServers = useCortexStore((s) => s.isFetchingMCPServers);
     const fetchMCPServers = useCortexStore((s) => s.fetchMCPServers);
 
-    const [currentPath, setCurrentPath] = useState(".");
+    const [currentPath, setCurrentPath] = useState(WORKSPACE_ROOT_PATH);
     const [entries, setEntries] = useState<WorkspaceEntry[]>([]);
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [preview, setPreview] = useState("");
@@ -137,7 +137,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
         setBusy(true);
         setStatus(`Listing ${currentPath}...`);
         try {
-            const text = await callTool("list_dir", { path: currentPath });
+            const text = await callTool("list_directory", { path: currentPath });
             const parsed = parseListOutput(text, currentPath);
             parsed.sort((a, b) => {
                 if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
@@ -163,7 +163,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
         setBusy(true);
         setStatus(`Reading ${path}...`);
         try {
-            const text = await callTool("read_file", { path });
+            const text = await callTool("read_text_file", { path });
             setSelectedFile(path);
             setPreview(text);
             setStatus(`Opened ${path}`);
@@ -179,7 +179,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
         setBusy(true);
         try {
             const path = joinPath(currentPath, newDir.trim());
-            await callTool("create_dir", { path });
+            await callTool("create_directory", { path });
             setNewDir("");
             setStatus(`Created directory ${path}`);
             refreshList();
@@ -266,7 +266,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
                 </div>
                 <div className="flex gap-2 mb-3">
                     <button
-                        onClick={() => setCurrentPath(normalizePath(`${currentPath}/..`))}
+                        onClick={() => setCurrentPath(currentPath === WORKSPACE_ROOT_PATH ? WORKSPACE_ROOT_PATH : normalizePath(`${currentPath}/..`))}
                         className="px-2 py-1 rounded border border-cortex-border text-xs font-mono text-cortex-text-main hover:bg-cortex-border inline-flex items-center gap-1"
                     >
                         <ChevronUp className="w-3 h-3" />

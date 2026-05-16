@@ -159,9 +159,18 @@ describe('MissionControlChat execution summary', () => {
 
     it('renders confirmed generated file outputs as openable links on system run messages', async () => {
         const writeText = vi.fn().mockResolvedValue(undefined);
+        const openWindow = vi.spyOn(window, 'open').mockReturnValue(null);
         Object.defineProperty(navigator, 'clipboard', {
             value: { writeText },
             configurable: true,
+        });
+        mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+            const url = requestUrl(input);
+            if (url.includes('/api/v1/council/members')) return okJson({ ok: true, data: COUNCIL_MEMBERS });
+            if (url.includes('/api/v1/workspace/files/reveal')) {
+                return okJson({ ok: true, data: { workspace_path: 'logs/qa_team_click_game.html' } });
+            }
+            return errorText(404, 'not found');
         });
         const filePath = 'workspace/logs/qa_team_click_game.html';
         const href = '/api/v1/workspace/files/view?path=workspace%2Flogs%2Fqa_team_click_game.html';
@@ -200,10 +209,77 @@ describe('MissionControlChat execution summary', () => {
         expect(screen.getByText('Run proof + retained output')).toBeDefined();
         expect(screen.getByRole('link', { name: /Mission activated/i }).getAttribute('href')).toBe('/runs/run-game-123456');
 
+        fireEvent.click(screen.getByRole('button', { name: new RegExp(`Open ${filePath} in a new browser window`) }));
+        expect(openWindow).toHaveBeenCalledWith(href, '_blank', 'noopener,noreferrer');
+
+        fireEvent.click(screen.getByRole('button', { name: new RegExp(`Open local folder for ${filePath}`) }));
+        await waitFor(() => {
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/workspace/files/reveal?path=workspace%2Flogs%2Fqa_team_click_game.html', { method: 'POST' });
+        });
+
         fireEvent.click(screen.getByRole('button', { name: new RegExp(`Copy output quote for ${filePath}`) }));
 
         await waitFor(() => {
             expect(writeText).toHaveBeenCalledWith(`> ${filePath}\n${href}`);
+        });
+    });
+
+    it('renders generated project packages as deliverable review cards', async () => {
+        const openWindow = vi.spyOn(window, 'open').mockReturnValue(null);
+        mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+            const url = requestUrl(input);
+            if (url.includes('/api/v1/council/members')) return okJson({ ok: true, data: COUNCIL_MEMBERS });
+            if (url.includes('/api/v1/workspace/files/reveal')) {
+                return okJson({ ok: true, data: { workspace_path: 'workspace/generated/coin-runner' } });
+            }
+            return errorText(404, 'not found');
+        });
+        const href = '/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fcoin-runner%2Findex.html';
+
+        useCortexStore.setState({
+            missionChat: [{
+                role: 'system',
+                content: 'Game package generated',
+                mode: 'execution_result',
+                run_id: 'run-package-123456',
+                execution_summary: {
+                    execution: {
+                        shape: 'team_execution',
+                        status: 'verified',
+                        summary: 'Generated a playable browser game package.',
+                    },
+                    outputs: [{
+                        id: 'workspace/generated/coin-runner',
+                        kind: 'project_package',
+                        title: 'Coin Runner Game',
+                        href,
+                        entrypoint: 'workspace/generated/coin-runner/index.html',
+                        folder: 'workspace/generated/coin-runner',
+                        files: ['index.html', 'game.js', 'styles.css', 'README.md'],
+                        validation: 'Browser opened and score increased after click.',
+                        retained: true,
+                    }],
+                    proof: [{ run_id: 'run-package-123456' }],
+                },
+            }],
+            councilMembers: COUNCIL_MEMBERS,
+            councilTarget: 'admin',
+        });
+
+        render(<MissionControlChat simpleMode />);
+
+        expect(await screen.findByText('Coin Runner Game')).toBeDefined();
+        expect(screen.getByText('entry: workspace/generated/coin-runner/index.html')).toBeDefined();
+        expect(screen.getByText('folder: workspace/generated/coin-runner')).toBeDefined();
+        expect(screen.getByText('game.js')).toBeDefined();
+        expect(screen.getByText('Browser opened and score increased after click.')).toBeDefined();
+
+        fireEvent.click(screen.getByRole('button', { name: /Open Game Coin Runner Game in a new browser window/i }));
+        expect(openWindow).toHaveBeenCalledWith(href, '_blank', 'noopener,noreferrer');
+
+        fireEvent.click(screen.getByRole('button', { name: /Open local folder for Coin Runner Game/i }));
+        await waitFor(() => {
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/workspace/files/reveal?path=workspace%2Fgenerated%2Fcoin-runner', { method: 'POST' });
         });
     });
 

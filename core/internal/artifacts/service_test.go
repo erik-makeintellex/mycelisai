@@ -223,6 +223,7 @@ func TestArtifactType_Constants(t *testing.T) {
 		{"data", TypeData},
 		{"file", TypeFile},
 		{"chart", TypeChart},
+		{"project_package", TypeProjectPackage},
 	}
 
 	for _, tt := range types {

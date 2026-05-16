@@ -104,6 +104,8 @@ uv run inv lifecycle.down
 uv run inv lifecycle.memory-restart --frontend
 ```
 
+`lifecycle.status` is the fast local snapshot. It reports process/port state and confirms Core through `/healthz` plus Ollama through `/api/tags` over loopback fallbacks. Use `lifecycle.health` for the deeper endpoint proof gate before claiming service readiness.
+
 ### Compose Tasks (`ops/compose.py`)
 
 ```bash
@@ -295,5 +297,4 @@ Use:
 - structured Core logs
 - NATS and PostgreSQL health probes
 - activity/run timeline in the UI
-
 Operator-facing errors should be normalized and human-readable; raw backend noise belongs in logs, not the default UI.

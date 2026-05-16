@@ -163,5 +163,7 @@ func (t *Team) Stop() {
 	if t.scheduler != nil {
 		t.scheduler.Stop()
 	}
-	t.cancel()
+	if t.cancel != nil {
+		t.cancel()
+	}
 }

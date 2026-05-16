@@ -87,3 +87,87 @@ func TestExecutionOutputsFromToolResultsRetainsTeamAndCodeFile(t *testing.T) {
 		t.Fatalf("file retention = %q", outputs[1].RetentionClass)
 	}
 }
+
+func TestExecutionOutputsFromToolResultsRetainsProjectPackage(t *testing.T) {
+	outputs := executionOutputsFromToolResults([]plannedToolExecutionResult{
+		{
+			Name: "write_file",
+			Arguments: map[string]any{
+				"path":               "workspace/generated/coin-runner/index.html",
+				"package_kind":       "project_package",
+				"package_title":      "Coin Runner Game",
+				"package_folder":     "workspace/generated/coin-runner",
+				"package_entrypoint": "workspace/generated/coin-runner/index.html",
+				"package_files":      []any{"index.html", "game.js", "styles.css", "README.md"},
+				"validation_summary": "Browser opened and score increased after click.",
+			},
+			Output: "wrote playable game package",
+		},
+	})
+
+	if len(outputs) != 1 {
+		t.Fatalf("outputs = %#v, want 1", outputs)
+	}
+	output := outputs[0]
+	if output.Kind != "project_package" {
+		t.Fatalf("kind = %q, want project_package", output.Kind)
+	}
+	if output.Title != "Coin Runner Game" {
+		t.Fatalf("title = %q", output.Title)
+	}
+	if output.Href != "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fcoin-runner%2Findex.html" {
+		t.Fatalf("href = %q", output.Href)
+	}
+	if output.Entrypoint != "workspace/generated/coin-runner/index.html" || output.Folder != "workspace/generated/coin-runner" {
+		t.Fatalf("package paths = entry %q folder %q", output.Entrypoint, output.Folder)
+	}
+	if len(output.Files) != 4 || output.Files[1] != "game.js" {
+		t.Fatalf("files = %#v", output.Files)
+	}
+	if output.Validation != "Browser opened and score increased after click." {
+		t.Fatalf("validation = %q", output.Validation)
+	}
+	if output.Retained == nil || !*output.Retained {
+		t.Fatalf("retained = %#v", output.Retained)
+	}
+}
+
+func TestExecutionOutputsFromToolResultsRetainsStoredProjectPackageArtifact(t *testing.T) {
+	outputs := executionOutputsFromToolResults([]plannedToolExecutionResult{
+		{
+			Name: "store_artifact",
+			Arguments: map[string]any{
+				"type":          "project_package",
+				"title":         "Coin Runner Game",
+				"package_files": []any{"index.html", "game.js"},
+			},
+			Output: "Artifact stored.",
+			Artifacts: []protocol.ChatArtifactRef{{
+				ID:         "artifact-game",
+				Type:       "project_package",
+				Title:      "Coin Runner Game",
+				Entrypoint: "workspace/generated/coin-runner/index.html",
+				Folder:     "workspace/generated/coin-runner",
+				Files:      []string{"index.html", "game.js"},
+				Validation: "Browser opened and score increased after click.",
+			}},
+		},
+	})
+
+	if len(outputs) != 1 {
+		t.Fatalf("outputs = %#v, want 1", outputs)
+	}
+	output := outputs[0]
+	if output.ID != "artifact-game" || output.Kind != "project_package" {
+		t.Fatalf("output identity = %#v", output)
+	}
+	if output.Href != "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fcoin-runner%2Findex.html" {
+		t.Fatalf("href = %q", output.Href)
+	}
+	if output.Summary != "Artifact stored." {
+		t.Fatalf("summary = %q", output.Summary)
+	}
+	if output.Retained == nil || !*output.Retained || output.RetentionClass != protocol.ExecutionRetentionClassRetained {
+		t.Fatalf("retention = retained:%v class:%q", output.Retained, output.RetentionClass)
+	}
+}

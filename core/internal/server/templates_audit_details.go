@@ -10,6 +10,9 @@ import (
 // underlying structured ask without exposing raw command payloads by default.
 func buildExecutionAuditDetailsForTool(planned protocol.PlannedToolCall, resolvedToolName string) map[string]any {
 	details := map[string]any{"tool": resolvedToolName}
+	if ref := strings.TrimSpace(planned.ToolRef); ref != "" {
+		details["tool_ref"] = ref
+	}
 	if resolvedToolName != "delegate_task" {
 		return details
 	}

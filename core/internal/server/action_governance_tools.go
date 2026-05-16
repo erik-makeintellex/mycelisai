@@ -24,7 +24,11 @@ func maxRisk(left, right string) string {
 }
 
 func capabilityForPlannedTool(name string) string {
-	switch strings.TrimSpace(name) {
+	trimmed := strings.TrimSpace(name)
+	if strings.HasPrefix(trimmed, "mcp:") {
+		return "mcp_tool_execution"
+	}
+	switch trimmed {
 	case "write_file":
 		return "file_output"
 	case "generate_blueprint":
@@ -43,7 +47,11 @@ func capabilityForPlannedTool(name string) string {
 }
 
 func capabilityRiskForTool(name string, arguments map[string]any) string {
-	switch strings.TrimSpace(name) {
+	trimmed := strings.TrimSpace(name)
+	if strings.HasPrefix(trimmed, "mcp:") {
+		return "medium"
+	}
+	switch trimmed {
 	case "publish_signal", "broadcast", "promote_deployment_context":
 		return "high"
 	case "load_deployment_context":

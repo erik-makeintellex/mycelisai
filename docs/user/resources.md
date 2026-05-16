@@ -155,16 +155,19 @@ Operators should be able to answer "what governed context did we intentionally l
 ## Workspace Files
 
 Workspace Files uses the `filesystem` MCP server directly from Resources.
+The browser starts at the MCP-safe `workspace` root rather than the Core
+process working directory, so ordinary browse/read/write actions stay inside
+the configured mounted data boundary.
 
 Supported operator actions:
-- browse directories (`list_dir`)
-- read files (`read_file`)
-- create directories (`create_dir`)
+- browse directories (`list_directory`)
+- read files (`read_text_file`)
+- create directories (`create_directory`)
 - write files (`write_file`)
 
 Operational behavior:
 - if `filesystem` is not installed or not connected, explorer shows actionable recovery controls
-- all tool calls run through the same API request contract used by other resource channels
+- all tool calls run through the same API request contract used by other resource channels: `{"arguments": {...}}`
 - workspace boundaries still apply (sandboxed filesystem rules)
 
 ---

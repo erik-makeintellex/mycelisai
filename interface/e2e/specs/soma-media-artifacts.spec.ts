@@ -10,6 +10,8 @@ test.skip(({ browserName }) => browserName !== "chromium", "Deep UI testing cove
 
 test.describe("Soma media artifacts", () => {
     test("renders generated media artifacts and exposes saved download paths", async ({ page }) => {
+        const revealCalls: string[] = [];
+
         await page.route("**/api/v1/artifacts/media-hero-1/save", async (route) => {
             await route.fulfill({
                 status: 200,
@@ -22,6 +24,14 @@ test.describe("Soma media artifacts", () => {
                     },
                     file_path: "saved-media/launch-hero.png",
                 }),
+            });
+        });
+        await page.route("**/api/v1/workspace/files/reveal?*", async (route) => {
+            revealCalls.push(route.request().url());
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ ok: true, data: { workspace_path: "saved-media" } }),
             });
         });
 
@@ -56,10 +66,14 @@ test.describe("Soma media artifacts", () => {
         await expect(page.getByText(/Saved object:/i)).toBeVisible();
         const binaryLink = page.getByRole("link", { name: "saved-media/launch-voiceover.wav", exact: true });
         await expect(binaryLink).toHaveAttribute("href", "/api/v1/artifacts/media-voiceover-1/download");
+        await page.getByRole("button", { name: "Open local folder for saved-media/launch-voiceover.wav" }).click();
+        await expect.poll(() => revealCalls.some((url) => url.includes("saved-media%2Flaunch-voiceover.wav"))).toBe(true);
 
         await page.getByTitle("Save image to workspace/saved-media").click();
         await expect(page.getByText(/Saved to:/i)).toBeVisible({ timeout: 20_000 });
         const savedImageLink = page.getByRole("link", { name: "saved-media/launch-hero.png" });
         await expect(savedImageLink).toHaveAttribute("href", "/api/v1/artifacts/media-hero-1/download");
+        await page.getByRole("button", { name: "Open local folder for saved-media/launch-hero.png" }).click();
+        await expect.poll(() => revealCalls.some((url) => url.includes("saved-media%2Flaunch-hero.png"))).toBe(true);
     });
 });

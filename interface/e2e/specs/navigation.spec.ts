@@ -34,6 +34,25 @@ async function openDashboard(page: Page) {
     }
 }
 
+async function toggleAdvancedMode(page: Page, fromLabel: 'Advanced: Off' | 'Advanced: On', expectedValue: 'true' | 'false') {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        await page.getByRole('button', { name: fromLabel }).click();
+        const stored = await page
+            .waitForFunction(
+                (value) => window.localStorage.getItem('mycelis-advanced-mode') === value,
+                expectedValue,
+                { timeout: 1_000 },
+            )
+            .then(() => true)
+            .catch(() => false);
+        if (stored) {
+            return;
+        }
+        await page.waitForTimeout(500);
+    }
+    throw new Error(`Advanced mode did not persist ${expectedValue}`);
+}
+
 test.describe('V8.1 Soma-primary Navigation', () => {
     test.describe.configure({ mode: 'serial' });
 
@@ -88,16 +107,15 @@ test.describe('V8.1 Soma-primary Navigation', () => {
 
     test('Advanced mode persistence flips visible state labels', async ({ page }) => {
         await expect(page.getByTestId('nav-resources')).toHaveCount(0);
-        await page.evaluate(() => {
-            window.localStorage.setItem('mycelis-advanced-mode', 'true');
-        });
+        await toggleAdvancedMode(page, 'Advanced: Off', 'true');
+        await expect(page.getByTestId('nav-resources')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Advanced: On' })).toBeVisible();
         await openDashboard(page);
         await expect(page.getByTestId('nav-resources')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Advanced: On' })).toBeVisible();
-        await page.evaluate(() => {
-            window.localStorage.setItem('mycelis-advanced-mode', 'false');
-        });
+        await toggleAdvancedMode(page, 'Advanced: On', 'false');
         await openDashboard(page);
         await expect(page.getByTestId('nav-resources')).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Advanced: Off' })).toBeVisible();
     });
 });

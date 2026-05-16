@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -110,17 +111,15 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var body struct {
-		Arguments map[string]any `json:"arguments"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	args, err := decodeMCPToolCallArguments(r.Body)
+	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"invalid JSON body: %s"}`, err.Error()), http.StatusBadRequest)
 		return
 	}
 
 	ctx := r.Context()
 
-	result, err := s.MCPPool.CallTool(ctx, serverID, toolName, body.Arguments)
+	result, err := s.MCPPool.CallTool(ctx, serverID, toolName, args)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"tool call failed: %s"}`, err.Error()), http.StatusBadGateway)
 		return
@@ -140,7 +139,7 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 			ResultPreview:  summary,
 			TargetRole:     "soma",
 			Status:         "completed",
-			Result:         map[string]any{"arguments": body.Arguments, "result": result},
+			Result:         map[string]any{"arguments": args, "result": result},
 			RunClass:       string(protocol.ExecutionRunClassNoRun),
 			NoRunReason:    "Direct MCP tool call did not supply a run id.",
 			RetentionClass: string(protocol.ExecutionRetentionClassRetained),
@@ -152,6 +151,27 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 
 	executionSummary := buildMCPToolCallExecutionSummary(serverName, toolName, summary, exchangeItemID)
 	respondJSON(w, mcpToolCallResponse(result, executionSummary, exchangeItemID))
+}
+
+func decodeMCPToolCallArguments(reader io.Reader) (map[string]any, error) {
+	var body map[string]any
+	if err := json.NewDecoder(reader).Decode(&body); err != nil {
+		return nil, err
+	}
+	if body == nil {
+		return map[string]any{}, nil
+	}
+	if raw, exists := body["arguments"]; exists {
+		if raw == nil {
+			return map[string]any{}, nil
+		}
+		args, ok := raw.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("arguments must be an object")
+		}
+		return args, nil
+	}
+	return body, nil
 }
 
 func serversNameOrFallback(svc *mcp.Service, ctx context.Context, serverID uuid.UUID) string {

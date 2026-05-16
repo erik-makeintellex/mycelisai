@@ -10,6 +10,12 @@ func TestBuildRuntimeTeamManifest_DefaultsAskRoutingHints(t *testing.T) {
 	if manifest == nil {
 		t.Fatal("expected runtime manifest")
 	}
+	if len(manifest.Members) != 1 {
+		t.Fatalf("runtime team members = %d, want lead-only start", len(manifest.Members))
+	}
+	if manifest.Description == "" {
+		t.Fatal("expected lead-only team description")
+	}
 	if manifest.AskRouting["research"] != "researcher" {
 		t.Fatalf("research ask routing = %q", manifest.AskRouting["research"])
 	}

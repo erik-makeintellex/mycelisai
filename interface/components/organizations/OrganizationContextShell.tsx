@@ -702,110 +702,75 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                 };
 
     return (
-        <div className="h-full overflow-auto bg-cortex-bg px-6 py-8">
-            <div className="mx-auto max-w-6xl space-y-8">
-                <section className="rounded-2xl border border-cortex-border bg-cortex-surface px-5 py-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <nav aria-label="Organization breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-cortex-text-muted">
-                            <Link href="/dashboard" className="font-medium text-cortex-primary transition-colors hover:text-cortex-primary/80">
-                                AI Organizations
-                            </Link>
-                            <span>/</span>
-                            <span className="font-medium text-cortex-text-main">{organization.name}</span>
-                        </nav>
-                        <Link
-                            href="/dashboard"
-                            className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            Return to Organization list
-                        </Link>
-                    </div>
-                </section>
-
-                <section className="rounded-3xl border border-cortex-border bg-cortex-surface px-6 py-8 shadow-[0_18px_40px_rgba(148,163,184,0.16)]">
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                        <div className="space-y-3">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.22em] text-cortex-primary">
-                                <Blocks className="h-3.5 w-3.5" />
-                                AI Organization Home
+        <div className="h-full overflow-auto bg-cortex-bg px-4 py-5 md:px-6">
+            <div className="mx-auto max-w-7xl space-y-5">
+                <section className="rounded-2xl border border-cortex-border bg-cortex-surface p-4 shadow-sm">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 space-y-3">
+                            <nav aria-label="Organization breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-cortex-text-muted">
+                                <Link href="/dashboard" className="font-medium text-cortex-primary transition-colors hover:text-cortex-primary/80">
+                                    AI Organizations
+                                </Link>
+                                <span>/</span>
+                                <span className="truncate font-medium text-cortex-text-main">{organization.name}</span>
+                            </nav>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
+                                    <Blocks className="h-3.5 w-3.5" />
+                                    AI Organization Home
+                                </div>
+                                <span className="rounded-full border border-cortex-success/25 bg-cortex-success/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.14em] text-cortex-success">
+                                    Soma ready
+                                </span>
                             </div>
                             <div>
-                                <h1 className="text-4xl font-semibold tracking-tight text-cortex-text-main">{organization.name}</h1>
-                                <p className="mt-2 max-w-3xl text-base leading-7 text-cortex-text-muted">{organization.purpose}</p>
+                                <h1 className="text-2xl font-semibold tracking-tight text-cortex-text-main md:text-3xl">{organization.name}</h1>
+                                <p className="mt-1 max-w-3xl text-sm leading-6 text-cortex-text-muted">{organization.purpose}</p>
                             </div>
                         </div>
-                        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
-                            <p className="font-medium text-cortex-text-main">Soma ready</p>
-                            <p className="mt-1 leading-6">
-                                {somaName} is ready to guide planning, structure review, and organization setup decisions while coordinating the right teams when needed.
-                            </p>
+                        <div className="flex flex-wrap gap-2 lg:justify-end">
                             <a
                                 href="#soma-panel"
-                                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-2 font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/15"
+                                className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-2 text-sm font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/15"
                             >
                                 Start with Soma
                                 <Sparkles className="h-4 w-4" />
                             </a>
+                            <Link
+                                href="/dashboard"
+                                className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                Return to Organization list
+                            </Link>
+                        </div>
+                    </div>
+                    <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
+                        <div className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3">
+                            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Primary operating surface</p>
+                            <h2 className="mt-1 text-sm font-medium text-cortex-text-main">{somaName}</h2>
+                            <p className="mt-1 text-sm leading-6 text-cortex-text-muted">Ask Soma for the next action, then review output, proof, and recovery in the same flow.</p>
+                        </div>
+                        <div className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3">
+                            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Operational layer</p>
+                            <p className="mt-1 text-sm font-medium text-cortex-text-main">{teamLeadName}</p>
+                            <p className="mt-1 text-sm leading-6 text-cortex-text-muted">Coordinates follow-through when Soma needs teams, specialists, or setup review.</p>
+                        </div>
+                    </div>
+                    <div className="mt-4">
+                        <p className="text-sm font-medium text-cortex-text-main">Inspect the current organization</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            <ActionPill label="Review Advisors" isActive={activeDetailView === "advisors"} onClick={() => setActiveDetailView("advisors")} />
+                            <ActionPill label="Open Departments" isActive={activeDetailView === "departments"} onClick={() => setActiveDetailView("departments")} />
+                            <ActionPill label="Review Automations" isActive={activeDetailView === "automations"} onClick={() => setActiveDetailView("automations")} />
+                            <ActionPill label="Review AI Engine Settings" isActive={activeDetailView === "aiEngine"} onClick={() => setActiveDetailView("aiEngine")} />
+                            <ActionPill label="Review Response Style" isActive={activeDetailView === "responseContract"} onClick={() => setActiveDetailView("responseContract")} />
                         </div>
                     </div>
                 </section>
 
                 <section className="space-y-4">
                     <div className="space-y-4">
-                        <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                <div className="space-y-3">
-                                    <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/20 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
-                                        <Sparkles className="h-3.5 w-3.5" />
-                                        Soma
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl font-semibold text-cortex-text-main">{somaName}</h2>
-                                        <p className="mt-2 max-w-2xl text-sm leading-7 text-cortex-text-muted">
-                                            Soma is the primary counterpart for {organization.name}, coordinating the right teams, advisors, departments, and specialists around the organization purpose.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-xs">
-                                    <p className="font-medium text-cortex-text-main">Operational layer</p>
-                                    <p className="mt-1 leading-6">
-                                        {teamLeadName} leads day-to-day operational follow-through while Soma keeps the organization focused and surfaces the next best actions.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="mt-6">
-                                <p className="text-sm font-medium text-cortex-text-main">Inspect the current organization</p>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    <ActionPill
-                                        label="Review Advisors"
-                                        isActive={activeDetailView === "advisors"}
-                                        onClick={() => setActiveDetailView("advisors")}
-                                    />
-                                    <ActionPill
-                                        label="Open Departments"
-                                        isActive={activeDetailView === "departments"}
-                                        onClick={() => setActiveDetailView("departments")}
-                                    />
-                                    <ActionPill
-                                        label="Review Automations"
-                                        isActive={activeDetailView === "automations"}
-                                        onClick={() => setActiveDetailView("automations")}
-                                    />
-                                    <ActionPill
-                                        label="Review AI Engine Settings"
-                                        isActive={activeDetailView === "aiEngine"}
-                                        onClick={() => setActiveDetailView("aiEngine")}
-                                    />
-                                    <ActionPill
-                                        label="Review Response Style"
-                                        isActive={activeDetailView === "responseContract"}
-                                        onClick={() => setActiveDetailView("responseContract")}
-                                    />
-                                </div>
-                            </div>
-                        </div>
 
                         {activeDetailView && (
                             <WorkspaceDetailView
@@ -1074,34 +1039,31 @@ function InspectOnlySummary({
     statusLabel?: string;
 }) {
     return (
-        <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
-            <div className="flex items-start justify-between gap-4">
-                <div>
+        <div className="rounded-2xl border border-cortex-border bg-cortex-surface p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                     <div className="flex items-center gap-2 text-cortex-primary">
                         {icon}
-                        <h2 className="text-xl font-semibold text-cortex-text-main">{title}</h2>
+                        <h2 className="text-lg font-semibold text-cortex-text-main">{title}</h2>
                     </div>
-                    <p className="mt-1 text-sm text-cortex-text-muted">{summary}</p>
+                    <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{summary}</p>
                 </div>
-                <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                <div className="shrink-0 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">{countLabel}</p>
                     <p className="mt-1">{statusLabel}</p>
                 </div>
             </div>
-            <div className="mt-5">
-                <div className="grid gap-3 lg:grid-cols-3">
-                    <CausalFact label="What changed" value={changeSummary} />
-                    <CausalFact label="Why it changed" value={changeReason} />
-                    <CausalFact label="How Soma uses it" value={somaConnection} />
-                </div>
+            <div className="mt-3 rounded-xl border border-cortex-border/70 bg-cortex-bg px-3 py-2">
+                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Current signal</p>
+                <p className="mt-1 text-sm text-cortex-text-main">{changeSummary}</p>
             </div>
-            <div className="mt-5">
+            <div className="mt-3">
                 <p className="text-sm font-medium text-cortex-text-main">{supportLabel}</p>
-                <div className="mt-3 grid gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                     {items.map((item) => (
                         <div
                             key={typeof item === "string" ? item : `${item.label}-${item.detail ?? ""}`}
-                            className="rounded-2xl border border-cortex-border bg-cortex-bg px-3 py-3 text-sm text-cortex-text-main"
+                            className="rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main"
                         >
                             {typeof item === "string" ? (
                                 item
@@ -1115,8 +1077,15 @@ function InspectOnlySummary({
                     ))}
                 </div>
             </div>
+            <details className="mt-3 rounded-xl border border-cortex-border/70 bg-cortex-bg px-3 py-2 text-sm text-cortex-text-muted">
+                <summary className="cursor-pointer font-medium text-cortex-text-main">Why Soma cares</summary>
+                <div className="mt-2 grid gap-2 md:grid-cols-2">
+                    <CausalFact label="Why it changed" value={changeReason} />
+                    <CausalFact label="How Soma uses it" value={somaConnection} />
+                </div>
+            </details>
             {onInspect && inspectActionLabel && (
-                <div className="mt-5">
+                <div className="mt-3">
                     <button
                         type="button"
                         onClick={onInspect}

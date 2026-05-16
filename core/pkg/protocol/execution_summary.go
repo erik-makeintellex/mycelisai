@@ -97,6 +97,10 @@ type ExecutionOutput struct {
 	Title          string                  `json:"title"`
 	Summary        string                  `json:"summary,omitempty"`
 	Href           string                  `json:"href,omitempty"`
+	Entrypoint     string                  `json:"entrypoint,omitempty"`
+	Folder         string                  `json:"folder,omitempty"`
+	Files          []string                `json:"files,omitempty"`
+	Validation     string                  `json:"validation,omitempty"`
 	Retained       *bool                   `json:"retained,omitempty"`
 	RetentionClass ExecutionRetentionClass `json:"retention_class,omitempty"`
 }

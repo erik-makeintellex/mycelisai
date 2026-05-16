@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,6 +43,41 @@ func TestHandleMCPToolCall_InvalidUUID(t *testing.T) {
 	mux := setupMux(t, "POST /api/v1/mcp/servers/{id}/tools/{tool}/call", s.handleMCPToolCall)
 	rr := doRequest(t, mux, "POST", "/api/v1/mcp/servers/not-a-uuid/tools/test/call", `{"arguments":{}}`)
 	assertStatus(t, rr, http.StatusBadRequest)
+}
+
+func TestHandleMCPToolCall_UnavailableServerReturnsHelpfulError(t *testing.T) {
+	s := newTestServer(withMCPStubs())
+	mux := setupMux(t, "POST /api/v1/mcp/servers/{id}/tools/{tool}/call", s.handleMCPToolCall)
+	rr := doRequest(t, mux, "POST", "/api/v1/mcp/servers/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/tools/read_text_file/call", `{"arguments":{"path":"README.md"}}`)
+	assertStatus(t, rr, http.StatusBadGateway)
+	if body := rr.Body.String(); !strings.Contains(body, "tool call failed") || !strings.Contains(body, "not found in pool") {
+		t.Fatalf("error body = %q, want helpful tool call pool failure", body)
+	}
+}
+
+func TestDecodeMCPToolCallArguments_AcceptsWrapperAndDirectPayload(t *testing.T) {
+	wrapped, err := decodeMCPToolCallArguments(strings.NewReader(`{"arguments":{"path":"README.md"}}`))
+	if err != nil {
+		t.Fatalf("decode wrapped args: %v", err)
+	}
+	if wrapped["path"] != "README.md" {
+		t.Fatalf("wrapped args = %#v, want path", wrapped)
+	}
+
+	direct, err := decodeMCPToolCallArguments(strings.NewReader(`{"path":"README.md"}`))
+	if err != nil {
+		t.Fatalf("decode direct args: %v", err)
+	}
+	if direct["path"] != "README.md" {
+		t.Fatalf("direct args = %#v, want path", direct)
+	}
+}
+
+func TestDecodeMCPToolCallArguments_RejectsNonObjectArguments(t *testing.T) {
+	_, err := decodeMCPToolCallArguments(strings.NewReader(`{"arguments":"README.md"}`))
+	if err == nil || !strings.Contains(err.Error(), "arguments must be an object") {
+		t.Fatalf("err = %v, want object validation", err)
+	}
 }
 
 func TestHandleMCPToolsList_NilSubsystem(t *testing.T) {

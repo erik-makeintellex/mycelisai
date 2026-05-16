@@ -146,11 +146,9 @@ type ChatResponsePayload struct {
 }
 
 // ChatArtifactRef is an inline artifact reference embedded in a chat response.
-// It is the canonical operator-facing output contract for rich results produced
-// directly by Soma or by specialist/council paths Soma consulted on the user's
-// behalf. For small content (code snippets, chart specs, short documents) the
-// Content field carries the data directly. For large/binary content, ID
-// references an artifact in the artifacts table that can be fetched separately.
+// It is the operator-facing output contract for rich results produced by Soma
+// or consulted specialists. Small content is inline; large/binary content uses
+// ID or URL references that can be fetched separately.
 type ChatArtifactRef struct {
 	ID          string `json:"id,omitempty"` // artifact table ID (for stored artifacts)
 	Type        string `json:"type"`         // code | document | image | audio | data | chart | file
@@ -159,9 +157,13 @@ type ChatArtifactRef struct {
 	Content     string `json:"content,omitempty"`      // inline content (text, JSON, base64 for images)
 	URL         string `json:"url,omitempty"`          // external URL (for links, images)
 	// Optional image-cache lifecycle metadata.
-	Cached    bool   `json:"cached,omitempty"`
-	ExpiresAt string `json:"expires_at,omitempty"`
-	SavedPath string `json:"saved_path,omitempty"`
+	Cached     bool     `json:"cached,omitempty"`
+	ExpiresAt  string   `json:"expires_at,omitempty"`
+	SavedPath  string   `json:"saved_path,omitempty"`
+	Entrypoint string   `json:"entrypoint,omitempty"`
+	Folder     string   `json:"folder,omitempty"`
+	Files      []string `json:"files,omitempty"`
+	Validation string   `json:"validation,omitempty"`
 }
 
 // DelegationHint carries optional scoring metadata for task delegation.
@@ -184,7 +186,6 @@ type APIResponse struct {
 
 // SignalSourceKind identifies where a governed product signal originated.
 type SignalSourceKind string
-
 const (
 	SourceKindWorkspaceUI       SignalSourceKind = "workspace_ui"
 	SourceKindWebAPI            SignalSourceKind = "web_api"

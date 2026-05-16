@@ -16,8 +16,10 @@ import (
 
 type plannedToolExecutionResult struct {
 	Name      string
+	ToolRef   string
 	Arguments map[string]any
 	Output    string
+	Artifacts []protocol.ChatArtifactRef
 }
 
 func (s *AdminServer) loadIntentProofScopeTx(tx *sql.Tx, proofID string) (*protocol.ScopeValidation, error) {
@@ -152,7 +154,8 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 		DB:    s.getDB(),
 	})
 	registry.SetSoma(s.Soma)
-	executor := swarm.NewCompositeToolExecutor(registry, nil)
+	mcpExec := s.plannedMCPToolExecutor()
+	executor := swarm.NewCompositeToolExecutor(registry, mcpExec)
 	toolCtx := swarm.WithToolInvocationContext(ctx, swarm.ToolInvocationContext{
 		SourceKind:    protocol.SourceKindWebAPI,
 		SourceChannel: "api.intent.confirm-action",
@@ -164,11 +167,12 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 
 	results := make([]plannedToolExecutionResult, 0, len(scope.PlannedToolCalls))
 	for _, planned := range scope.PlannedToolCalls {
+		planned = normalizePlannedToolCall(planned)
 		toolName := strings.TrimSpace(planned.Name)
 		if toolName == "" {
 			return results, fmt.Errorf("approved execution plan contained an empty tool name")
 		}
-		serverID, resolvedToolName, err := executor.FindToolByName(toolCtx, toolName)
+		serverID, resolvedToolName, err := s.resolveApprovedToolCall(toolCtx, executor, mcpExec, planned)
 		if err != nil {
 			return results, err
 		}
@@ -176,10 +180,19 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 		if err != nil {
 			return results, err
 		}
+		artifacts := []protocol.ChatArtifactRef(nil)
+		if message, parsedArtifacts, ok := extractPlannedToolOutputArtifacts(output); ok {
+			if strings.TrimSpace(message) != "" {
+				output = message
+			}
+			artifacts = parsedArtifacts
+		}
 		results = append(results, plannedToolExecutionResult{
 			Name:      resolvedToolName,
+			ToolRef:   strings.TrimSpace(planned.ToolRef),
 			Arguments: planned.Arguments,
 			Output:    output,
+			Artifacts: artifacts,
 		})
 		s.auditExecutedPlannedTool(planned, resolvedToolName, auditUser)
 	}
@@ -189,7 +202,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 
 func (s *AdminServer) auditExecutedPlannedTool(planned protocol.PlannedToolCall, resolvedToolName, auditUser string) {
 	resource := firstNonEmptyString(planned.Arguments["path"], planned.Arguments["subject"], planned.Arguments["channel"])
-	capabilityID := capabilityForPlannedTool(resolvedToolName)
+	capabilityID := capabilityForPlannedTool(firstNonEmptyString(planned.ToolRef, resolvedToolName))
 	details := buildExecutionAuditDetailsForTool(planned, resolvedToolName)
 	_, _ = s.createAuditEvent(
 		protocol.TemplateChatToProposal, "confirm-action",

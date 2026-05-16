@@ -79,7 +79,7 @@ def test_cleanup_repo_local_interface_processes_suppresses_timeout_warnings(monk
 def test_list_repo_local_interface_processes_windows_queries_tasklist_then_cim(monkeypatch):
     commands: list[list[str]] = []
     timeouts: list[int] = []
-
+    interface_dir = interface.INTERFACE_DIR.resolve().as_posix()
     class Result:
         def __init__(self, stdout="", returncode=0, stderr=""):
             self.stdout = stdout
@@ -102,9 +102,9 @@ def test_list_repo_local_interface_processes_windows_queries_tasklist_then_cim(m
                 stdout='"cmd.exe","201","Console","1","12,000 K"',
             )
         return Result(
-            stdout='[{"ProcessId":101,"Name":"node.exe","CommandLine":"D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/dev/build/postcss.js"},'
-            '{"ProcessId":103,"Name":"node.exe","CommandLine":"D:/MakeIntellex/Projects/mycelisai/scratch/interface/scripts/playwright-webserver.mjs"},'
-            '{"ProcessId":104,"Name":"node.exe","CommandLine":"D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/standalone/server.js"},'
+            stdout=f'[{{"ProcessId":101,"Name":"node.exe","CommandLine":"{interface_dir}/.next/dev/build/postcss.js"}},'
+            f'{{"ProcessId":103,"Name":"node.exe","CommandLine":"{interface_dir}/scripts/playwright-webserver.mjs"}},'
+            f'{{"ProcessId":104,"Name":"node.exe","CommandLine":"{interface_dir}/.next/standalone/server.js"}},'
             '{"ProcessId":102,"Name":"node.exe","CommandLine":"C:/other-app/node_modules/vite/bin/vite.js"},'
             '{"ProcessId":201,"Name":"cmd.exe","CommandLine":"C:/Windows/System32/cmd.exe /d /c echo unrelated"}]',
         )
@@ -118,17 +118,17 @@ def test_list_repo_local_interface_processes_windows_queries_tasklist_then_cim(m
         {
             "pid": 101,
             "name": "node.exe",
-            "command": "D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/dev/build/postcss.js",
+            "command": f"{interface_dir}/.next/dev/build/postcss.js",
         },
         {
             "pid": 103,
             "name": "node.exe",
-            "command": "D:/MakeIntellex/Projects/mycelisai/scratch/interface/scripts/playwright-webserver.mjs",
+            "command": f"{interface_dir}/scripts/playwright-webserver.mjs",
         },
         {
             "pid": 104,
             "name": "node.exe",
-            "command": "D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/standalone/server.js",
+            "command": f"{interface_dir}/.next/standalone/server.js",
         },
     ]
     assert commands == [
@@ -456,7 +456,7 @@ def test_install_provisions_npm_and_playwright(monkeypatch):
     interface.install.body(FakeContext())
 
     assert commands == [
-        "npm install",
+        "npm ci",
         "npx playwright install chromium",
     ]
 

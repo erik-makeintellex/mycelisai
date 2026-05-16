@@ -122,6 +122,14 @@ export function installGroupsFetch({
       if (url === "/api/v1/groups/monitor")
         return jsonResponse({ ok: true, data: monitor });
       if (
+        url.startsWith("/api/v1/workspace/files/reveal") &&
+        init?.method === "POST"
+      )
+        return jsonResponse({
+          ok: true,
+          data: { workspace_path: "workspace/generated/coin-runner" },
+        });
+      if (
         url === "/api/v1/groups/group-temp/status" &&
         init?.method === "PATCH"
       ) {

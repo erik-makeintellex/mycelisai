@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -81,6 +82,27 @@ func (s *AdminServer) HandleTeams(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Soma Unavailable", http.StatusServiceUnavailable)
+}
+
+// HandleDeleteTeam stops and removes one active runtime team.
+func (s *AdminServer) HandleDeleteTeam(w http.ResponseWriter, r *http.Request) {
+	if s.Soma == nil {
+		http.Error(w, "Soma Unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	teamID := strings.TrimSpace(r.PathValue("id"))
+	if teamID == "" {
+		http.Error(w, "team id is required", http.StatusBadRequest)
+		return
+	}
+	if !s.Soma.StopTeam(teamID) {
+		http.Error(w, "team not found", http.StatusNotFound)
+		return
+	}
+	respondJSON(w, map[string]any{
+		"status":  "stopped",
+		"team_id": teamID,
+	})
 }
 
 // HandleUserSettings is the canonical settings contract.

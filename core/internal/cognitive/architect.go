@@ -14,7 +14,7 @@ import (
 type MCPServerCapability struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description,omitempty"`
-	Status      string   `json:"status"`                // "installed", "available" (in library)
+	Status      string   `json:"status"`                 // "installed", "available" (in library)
 	Tools       []string `json:"tools,omitempty"`        // discovered tool names (installed only)
 	RequiredEnv []string `json:"required_env,omitempty"` // env vars needed (e.g. GITHUB_TOKEN)
 }
@@ -94,8 +94,8 @@ RULES:
 3. If an MCP server is already installed, agents can use its tools directly — no requirement needed.
 4. For sensor/polling agents, set role to "sensory". For LLM-reasoning agents, use "cognitive".
 5. NATS topics follow the pattern: topic.<domain>.<action> (e.g., topic.weather.raw, topic.email.sent).
-6. Keep teams LEAN: 2-4 agents per team maximum. Each agent must have a distinct role.
-   Prefer fewer, more capable agents over many narrow specialists.
+6. Keep teams MINIMAL: start with one accountable lead/agent unless the operator explicitly asks for named specialists.
+   If the work later proves a gap, the lead may request one temporary specialist with the missing capability, owned task, expected proof, and removal point.
 7. Assign a "model" to each agent based on task complexity:
    - Heavy reasoning/architecture/code-gen: use the largest available model
    - Routine summarization/formatting/polling: use smaller, faster models

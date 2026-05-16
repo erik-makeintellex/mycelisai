@@ -188,6 +188,7 @@ Common commands:
 ```bash
 uv run inv install
 uv run inv lifecycle.up --frontend
+uv run inv lifecycle.status
 uv run inv lifecycle.health
 uv run inv lifecycle.down
 uv run inv compose.up --build --wait-timeout=240
@@ -199,6 +200,8 @@ uv run inv lifecycle.memory-restart
 uv run inv team.architecture-sync
 uv run inv quality.max-lines --limit 300
 ```
+
+`lifecycle.status` is the quick local snapshot and now confirms Core through `/healthz` plus Ollama through `/api/tags` across loopback fallbacks; use `lifecycle.health` for the deeper endpoint gate before claiming runtime proof.
 
 ## Development Contract
 
@@ -290,9 +293,7 @@ Release licensing separates the local self-hosted node from full enterprise mult
 
 ## Documentation Responsibilities
 
-Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, canonical terminology, task execution, or validation must include documentation review in the same slice.
-
-When adding, removing, or renaming major README sections, update this README TOC in the same change.
+Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, canonical terminology, task execution, or validation must include documentation review in the same slice. When adding, removing, or renaming major README sections, update this README TOC in the same change.
 
 ## Status
 

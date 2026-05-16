@@ -104,6 +104,7 @@ type ScopeValidation struct {
 // confirmed execution path can replay the approved mutation without re-planning.
 type PlannedToolCall struct {
 	Name      string         `json:"name"`
+	ToolRef   string         `json:"tool_ref,omitempty"`
 	Arguments map[string]any `json:"arguments,omitempty"`
 }
 

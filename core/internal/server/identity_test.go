@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mycelis/core/internal/swarm"
 )
 
 // ── GET /api/v1/user/me ────────────────────────────────────────────
@@ -136,6 +138,42 @@ func TestHandleTeams_POST_NilSoma(t *testing.T) {
 	s := newTestServer()
 	rr := doRequest(t, http.HandlerFunc(s.HandleTeams), "POST", "/api/v1/teams", `{"name":"test"}`)
 	assertStatus(t, rr, http.StatusServiceUnavailable)
+}
+
+func TestHandleDeleteTeam_RemovesRuntimeTeam(t *testing.T) {
+	s := newTestServer()
+	s.Soma = swarm.NewTestSoma([]*swarm.TeamManifest{
+		{ID: "temp-team", Name: "Temporary Team"},
+		{ID: "kept-team", Name: "Kept Team"},
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("DELETE /api/v1/teams/{id}", s.HandleDeleteTeam)
+
+	rr := doRequest(t, mux, http.MethodDelete, "/api/v1/teams/temp-team", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["status"] != "stopped" || resp["team_id"] != "temp-team" {
+		t.Fatalf("unexpected delete response: %+v", resp)
+	}
+
+	remaining := s.Soma.ListTeams()
+	if len(remaining) != 1 || remaining[0].ID != "kept-team" {
+		t.Fatalf("remaining teams = %+v, want kept-team only", remaining)
+	}
+}
+
+func TestHandleDeleteTeam_NotFound(t *testing.T) {
+	s := newTestServer()
+	s.Soma = swarm.NewTestSoma([]*swarm.TeamManifest{{ID: "kept-team", Name: "Kept Team"}})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("DELETE /api/v1/teams/{id}", s.HandleDeleteTeam)
+
+	rr := doRequest(t, mux, http.MethodDelete, "/api/v1/teams/missing-team", "")
+	assertStatus(t, rr, http.StatusNotFound)
 }
 
 // ── GET/PUT /api/v1/user/settings ──────────────────────────────────

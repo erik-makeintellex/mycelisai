@@ -145,54 +145,6 @@ func (s *AdminServer) ensureGroupForCreatedTeam(ctx context.Context, auditID, au
 	return s.insertGroupDB(ctx, &group)
 }
 
-func executionOutputsFromToolResults(results []plannedToolExecutionResult) []protocol.ExecutionOutput {
-	outputs := make([]protocol.ExecutionOutput, 0, len(results))
-	for _, result := range results {
-		toolName := strings.TrimSpace(result.Name)
-		if toolName == "" {
-			toolName = "tool"
-		}
-		id := confirmedActionTeamID(result.Arguments)
-		kind := "tool_result"
-		title := toolName
-		retained := false
-		href := ""
-		if toolName == "create_team" {
-			kind = "team"
-			title = firstNonEmptyString(mergedTeamArgs(result.Arguments)["name"], id, "Created team")
-			retained = true
-			href = "/groups"
-		}
-		if toolName == "write_file" {
-			path := firstNonEmptyString(result.Arguments["path"], result.Arguments["file_path"], result.Arguments["target_path"])
-			id = path
-			kind = outputKindForWrittenFile(path)
-			title = firstNonEmptyString(path, "Workspace file")
-			retained = true
-			href = workspaceFileOutputHref(path)
-		}
-		outputs = append(outputs, protocol.ExecutionOutput{
-			ID:             id,
-			Kind:           kind,
-			Title:          title,
-			Summary:        firstNonEmptyString(result.Output, toolName+" completed."),
-			Href:           href,
-			Retained:       boolPtr(retained),
-			RetentionClass: retentionClassForBool(retained),
-		})
-	}
-	return outputs
-}
-
-func outputKindForWrittenFile(path string) string {
-	switch filepathExt(path) {
-	case ".css", ".go", ".html", ".js", ".json", ".jsx", ".py", ".ts", ".tsx":
-		return "code"
-	default:
-		return "file"
-	}
-}
-
 func mergedTeamArgs(args map[string]any) map[string]any {
 	merged := map[string]any{}
 	for k, v := range args {

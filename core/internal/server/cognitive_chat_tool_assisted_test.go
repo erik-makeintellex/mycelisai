@@ -43,6 +43,48 @@ func TestBuildDirectChatExecutionSummary_MarksToolsAndArtifactsAssisted(t *testi
 	}
 }
 
+func TestBuildDirectChatExecutionSummary_RetainsProjectPackageArtifact(t *testing.T) {
+	summary := buildDirectChatExecutionSummary("Build a playable game", "Game ready.", "audit-game", chatAgentResult{
+		ToolsUsed: []string{"store_artifact"},
+		Artifacts: []protocol.ChatArtifactRef{{
+			ID:          "pkg-1",
+			Type:        "project_package",
+			Title:       "Coin Runner",
+			ContentType: "application/vnd.mycelis.project+json",
+			Entrypoint:  "workspace/generated/coin-runner/index.html",
+			Folder:      "workspace/generated/coin-runner",
+			Files:       []string{"index.html", "game.js", "styles.css"},
+			Validation:  "Opened in browser and score increased after click.",
+		}},
+	})
+
+	var pkg *protocol.ExecutionOutput
+	for i := range summary.Outputs {
+		if summary.Outputs[i].Kind == "project_package" {
+			pkg = &summary.Outputs[i]
+			break
+		}
+	}
+	if pkg == nil {
+		t.Fatalf("outputs = %+v, want project_package output", summary.Outputs)
+	}
+	if pkg.Href != "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fcoin-runner%2Findex.html" {
+		t.Fatalf("href = %q", pkg.Href)
+	}
+	if pkg.Retained == nil || !*pkg.Retained || pkg.RetentionClass != protocol.ExecutionRetentionClassRetained {
+		t.Fatalf("retention = retained:%v class:%q", pkg.Retained, pkg.RetentionClass)
+	}
+	if pkg.Entrypoint != "workspace/generated/coin-runner/index.html" || pkg.Folder != "workspace/generated/coin-runner" {
+		t.Fatalf("package paths = %+v", pkg)
+	}
+	if len(pkg.Files) != 3 || pkg.Files[2] != "styles.css" {
+		t.Fatalf("files = %+v", pkg.Files)
+	}
+	if pkg.Validation != "Opened in browser and score increased after click." {
+		t.Fatalf("validation = %q", pkg.Validation)
+	}
+}
+
 func TestBuildConfirmActionFailureExecutionSummary_DescribesDegradation(t *testing.T) {
 	summary := buildConfirmActionFailureExecutionSummary("proof-1", "run-1", "audit-1", errors.New("tool unavailable"))
 

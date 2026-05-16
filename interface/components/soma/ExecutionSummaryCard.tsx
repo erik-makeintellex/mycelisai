@@ -3,7 +3,9 @@
 import type React from "react";
 import { useState } from "react";
 import { Check, CheckCircle2, ExternalLink, FileText, Gauge, Quote, RotateCcw, Route, ShieldCheck, Sparkles } from "lucide-react";
-import type { ChatArtifactRef, ExecutionSummaryData } from "@/store/useCortexStore";
+import type { ChatArtifactRef, ExecutionSummaryData, ExecutionSummaryItem } from "@/store/useCortexStore";
+import ExecutionSummaryMediaPreview from "./ExecutionSummaryMediaPreview";
+import OutputAccessActions from "./OutputAccessActions";
 import {
     artifactOutputItems,
     asItems,
@@ -66,6 +68,12 @@ function quotedOutputText(output: { text: string; url: string | null }) {
     return output.url ? `> ${output.text}\n${output.url}` : `> ${output.text}`;
 }
 
+function projectPackageOutputs(outputs: ExecutionSummaryData["outputs"]) {
+    return asItems(outputs).filter((item): item is ExecutionSummaryItem => (
+        typeof item !== "string" && item.kind === "project_package"
+    ));
+}
+
 function trustToneClass(tone: TrustVerdictTone) {
     if (tone === "trusted") return "border-cortex-success/25 bg-cortex-success/10 text-cortex-success";
     if (tone === "attention") return "border-red-400/30 bg-red-400/10 text-red-300";
@@ -92,8 +100,10 @@ export default function ExecutionSummaryCard({
     const intent = intentLines(summary.intent);
     const understanding = understandingLines(summary.understanding);
     const outputs = asItems(summary.outputs)
+        .filter((item) => typeof item === "string" || item.kind !== "project_package")
         .map((item) => ({ text: itemText(item), url: itemUrl(item) }))
         .filter((item): item is { text: string; url: string | null } => Boolean(item.text));
+    const projectPackages = projectPackageOutputs(summary.outputs);
     const artifactOutputs = artifactOutputItems(artifacts);
     const proofs = proofLinks(summary.proof)
         .map((proof) => ({ text: linkLabel(proof), url: linkHref(proof) }))
@@ -116,6 +126,7 @@ export default function ExecutionSummaryCard({
         || capabilities.length
         || searchSources.length
         || allOutputs.length
+        || projectPackages.length
         || proofs.length
         || summaryRunId
         || audit
@@ -196,34 +207,80 @@ export default function ExecutionSummaryCard({
                         </div>
                     </SummaryRow>
                 )}
-                {allOutputs.length > 0 && (
+                {(allOutputs.length > 0 || projectPackages.length > 0) && (
                     <SummaryRow icon={<FileText className="h-3.5 w-3.5" />} label="Outputs">
-                        <div className="flex flex-wrap gap-x-3 gap-y-1">
-                            {allOutputs.map((output, index) => {
-                                const key = `${output.text}-${output.url ?? "text"}-${index}`;
-                                const copied = copiedOutputKey === key;
-                                return (
-                                    <span key={key} className="inline-flex max-w-full items-center gap-1">
-                                        {output.url ? (
-                                            <a href={output.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1 text-cortex-primary hover:underline">
-                                                <span className="truncate">{output.text}</span>
-                                                <ExternalLink className="h-3 w-3 shrink-0" />
-                                            </a>
-                                        ) : (
-                                            <span className="min-w-0 truncate">{output.text}</span>
-                                        )}
-                                        <button
-                                            type="button"
-                                            onClick={() => void copyOutputQuote(output, key)}
-                                            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
-                                            title={copied ? "Copied output quote" : "Copy output quote"}
-                                            aria-label={copied ? "Copied output quote" : `Copy output quote for ${output.text}`}
-                                        >
-                                            {copied ? <Check className="h-3 w-3" /> : <Quote className="h-3 w-3" />}
-                                        </button>
-                                    </span>
-                                );
-                            })}
+                        <div className="space-y-2">
+                            {projectPackages.length > 0 && (
+                                <div className="space-y-2">
+                                    {projectPackages.map((project, index) => {
+                                        const title = itemText(project) ?? "Project package";
+                                        const href = itemUrl(project);
+                                        const folder = project.folder ?? project.entrypoint ?? null;
+                                        const files = project.files ?? [];
+                                        return (
+                                            <div key={`${title}-${index}`} className="rounded border border-cortex-border/70 bg-cortex-surface/70 px-2 py-1.5">
+                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <div className="truncate text-[11px] font-semibold text-cortex-text-main">{title}</div>
+                                                        {project.summary && <div className="text-[10px] text-cortex-text-muted">{project.summary}</div>}
+                                                    </div>
+                                                    <OutputAccessActions label={title} url={href} storagePath={folder} openLabel="Open Game" />
+                                                </div>
+                                                {(project.entrypoint || folder) && (
+                                                    <div className="mt-1 flex flex-wrap gap-1.5 text-[9px] font-mono text-cortex-text-muted">
+                                                        {project.entrypoint && <span>entry: {project.entrypoint}</span>}
+                                                        {folder && <span>folder: {folder}</span>}
+                                                    </div>
+                                                )}
+                                                {files.length > 0 && (
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        {files.map((file) => (
+                                                            <span key={file} className="rounded border border-cortex-border/60 px-1.5 py-0.5 text-[9px] font-mono text-cortex-text-muted">
+                                                                {file}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {project.validation && (
+                                                    <div className="mt-1 inline-flex items-start gap-1 text-[10px] leading-4 text-cortex-success">
+                                                        <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0" />
+                                                        <span>{project.validation}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                {allOutputs.map((output, index) => {
+                                    const key = `${output.text}-${output.url ?? "text"}-${index}`;
+                                    const copied = copiedOutputKey === key;
+                                    return (
+                                        <span key={key} className="inline-flex max-w-full items-center gap-1">
+                                            {output.url ? (
+                                                <a href={output.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1 text-cortex-primary hover:underline">
+                                                    <span className="truncate">{output.text}</span>
+                                                    <ExternalLink className="h-3 w-3 shrink-0" />
+                                                </a>
+                                            ) : (
+                                                    <span className="min-w-0 truncate">{output.text}</span>
+                                            )}
+                                            <OutputAccessActions label={output.text} url={output.url} />
+                                            <button
+                                                type="button"
+                                                onClick={() => void copyOutputQuote(output, key)}
+                                                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
+                                                title={copied ? "Copied output quote" : "Copy output quote"}
+                                                aria-label={copied ? "Copied output quote" : `Copy output quote for ${output.text}`}
+                                            >
+                                                {copied ? <Check className="h-3 w-3" /> : <Quote className="h-3 w-3" />}
+                                            </button>
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                            <ExecutionSummaryMediaPreview outputs={allOutputs} />
                         </div>
                     </SummaryRow>
                 )}

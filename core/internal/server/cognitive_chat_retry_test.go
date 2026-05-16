@@ -56,7 +56,7 @@ func TestHandleChat_RetriesUnexpectedMutationForReadOnlyPrompt(t *testing.T) {
 		t.Fatalf("flush: %v", err)
 	}
 
-	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"Summarize the current Workspace V8 design objectives."}]}`)
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"Summarize the delivery strategy for this workspace."}]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
 	rr := httptest.NewRecorder()
 
@@ -134,7 +134,7 @@ func TestHandleChat_BlocksWeakRefusalTextAfterRetry(t *testing.T) {
 		t.Fatalf("flush: %v", err)
 	}
 
-	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"Summarize the current Workspace V8 design objectives."}]}`)
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"Summarize the delivery strategy for this workspace."}]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
 	rr := httptest.NewRecorder()
 

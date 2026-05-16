@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { ChartRenderer, type MycelisChartSpec } from "@/components/charts";
 import type { ChatArtifactRef } from "@/store/useCortexStore";
+import OutputAccessActions from "@/components/soma/OutputAccessActions";
 import {
     artifactDownloadHref,
     artifactIcon,
@@ -42,13 +43,14 @@ function ArtifactHeader({
 
 function SaveBadge({ path, href }: { path: string; href: string | null }) {
     return (
-        <span className="text-cortex-success">
-            Saved to:{" "}
+        <span className="inline-flex max-w-full flex-wrap items-center gap-1 text-cortex-success">
+            <span>Saved to:</span>
             {href ? (
                 <a href={href} download className="underline underline-offset-2 hover:text-cortex-success/80">
                     {path}
                 </a>
-            ) : path}
+            ) : <span>{path}</span>}
+            <OutputAccessActions label={path} url={href} storagePath={path} />
         </span>
     );
 }
@@ -86,7 +88,11 @@ function DownloadOnly({ artifact, label }: { artifact: ChatArtifactRef; label: s
     return (
         <div className="rounded border border-cortex-border bg-cortex-surface/40 px-3 py-2 text-[10px] font-mono">
             {artifact.saved_path && href ? (
-                <span className="text-cortex-success">Saved object: <a href={href} download target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-cortex-success/80">{artifact.saved_path}</a></span>
+                <span className="inline-flex max-w-full flex-wrap items-center gap-1 text-cortex-success">
+                    <span>Saved object:</span>
+                    <a href={href} download target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-cortex-success/80">{artifact.saved_path}</a>
+                    <OutputAccessActions label={artifact.saved_path} url={href} storagePath={artifact.saved_path} />
+                </span>
             ) : href ? (
                 <a href={href} download target="_blank" rel="noopener noreferrer" className="text-cortex-primary underline underline-offset-2">Download {binaryArtifactLabel(artifact)}</a>
             ) : (
@@ -117,7 +123,7 @@ export default function InlineArtifact({ artifact }: { artifact: ChatArtifactRef
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
-            setSavedPath(data?.file_path || "saved-media");
+            setSavedPath(data?.file_path || data?.data?.file_path || "saved-media");
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : "save failed");
         } finally {
@@ -150,6 +156,7 @@ export default function InlineArtifact({ artifact }: { artifact: ChatArtifactRef
                     {cached && !savedPath ? <span className="rounded border border-cortex-warning/30 bg-cortex-warning/10 px-1.5 py-0.5 text-[8px] font-mono text-cortex-warning">cached</span> : null}
                     {savedPath ? <span className="rounded border border-cortex-success/30 bg-cortex-success/10 px-1.5 py-0.5 text-[8px] font-mono text-cortex-success">saved</span> : null}
                     {artifact.id && !savedPath ? <button onClick={handleSave} disabled={saving} className="rounded border border-cortex-primary/30 bg-cortex-primary/10 px-1.5 py-0.5 text-[8px] font-mono text-cortex-primary hover:bg-cortex-primary/20 disabled:opacity-60" title="Save image to workspace/saved-media">{saving ? "Saving..." : "Save"}</button> : null}
+                    {!savedPath ? <OutputAccessActions label="saved-media" url={null} storagePath="saved-media" /> : null}
                     {artifact.url ? <a href={artifact.url} target="_blank" rel="noopener noreferrer" className="rounded p-0.5 text-cortex-text-muted hover:bg-cortex-border hover:text-cortex-primary"><ExternalLink className="h-3 w-3" /></a> : null}
                 </ArtifactHeader>
                 {src ? <img src={src} alt={artifact.title} className="max-h-80 w-full bg-cortex-bg object-contain p-2" /> : <div className="flex h-32 items-center justify-center text-cortex-text-muted/40"><ImageIcon className="h-8 w-8" /></div>}

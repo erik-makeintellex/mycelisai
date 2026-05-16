@@ -68,7 +68,7 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 	}
 	systemPrompt := pickFirstString(merged, "system_prompt")
 	if systemPrompt == "" {
-		systemPrompt = fmt.Sprintf("You are %s in team %s. Execute assigned tasks and report outcomes.", role, teamID)
+		systemPrompt = fmt.Sprintf("You are %s in team %s. Execute assigned tasks and report outcomes. Start as the only team member; request a temporary specialist only when you can name the missing capability, owned task, proof expected, and removal point.", role, teamID)
 	}
 
 	inputs := stringSlice(merged["inputs"])
@@ -93,7 +93,7 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 		ID:          teamID,
 		Name:        name,
 		Type:        teamType,
-		Description: "Runtime-created team",
+		Description: "Runtime-created lead-only team; expand only with operator action or justified temporary specialist request.",
 		AskRouting:  askRouting,
 		Members: []protocol.AgentManifest{{
 			ID:            agentID,

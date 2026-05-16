@@ -29,11 +29,15 @@ func (r *InternalToolRegistry) handleStoreArtifact(ctx context.Context, args map
 		return "", fmt.Errorf("database not available — cannot store artifact")
 	}
 
+	metadata := args["metadata"]
+	if packageKindFromMetadata(metadata) == "project_package" && (artType == "file" || artType == "data") {
+		artType = "project_package"
+	}
 	contentType, err := validateArtifactContent(artType, content)
 	if err != nil {
 		return "", err
 	}
-	artifactID, err := r.insertArtifact(ctx, artType, title, contentType, content, artifactMetadataJSON(args["metadata"]))
+	artifactID, err := r.insertArtifact(ctx, artType, title, contentType, content, artifactMetadataJSON(metadata))
 	if err != nil {
 		log.Printf("store_artifact: %v", err)
 		return fmt.Sprintf("Failed to store artifact: %v", err), nil
@@ -41,7 +45,7 @@ func (r *InternalToolRegistry) handleStoreArtifact(ctx context.Context, args map
 	if r.exchange != nil {
 		publishArtifactToExchange(ctx, r.exchange, artifactID, artType, title)
 	}
-	return mustJSON(artifactResultPayload(artifactID, artType, title, contentType, content)), nil
+	return mustJSON(artifactResultPayload(artifactID, artType, title, contentType, content, metadata)), nil
 }
 
 func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[string]any) (string, error) {

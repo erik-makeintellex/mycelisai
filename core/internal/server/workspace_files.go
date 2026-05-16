@@ -6,9 +6,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
+
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 const maxWorkspaceViewBytes = 2 << 20
@@ -123,6 +127,68 @@ func (s *AdminServer) HandleWorkspaceFileView(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Security-Policy", "sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'")
 	w.Header().Set("X-Mycelis-Workspace-Path", rel)
 	http.ServeFile(w, r, target)
+}
+
+// HandleWorkspaceFileReveal opens the containing workspace folder on the Core host.
+// It is bounded to the workspace root and intended for local/operator proof flows.
+func (s *AdminServer) HandleWorkspaceFileReveal(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, "host:invoke"); !ok {
+		return
+	}
+	if r.Method != http.MethodPost {
+		respondAPIError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	target, rel, err := resolveWorkspaceFilePath(r.URL.Query().Get("path"))
+	if err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	info, err := os.Stat(target)
+	if err != nil {
+		if os.IsNotExist(err) {
+			respondAPIError(w, "workspace path not found", http.StatusNotFound)
+			return
+		}
+		respondAPIError(w, "failed to inspect workspace path", http.StatusInternalServerError)
+		return
+	}
+	folder := target
+	if !info.IsDir() {
+		folder = filepath.Dir(target)
+	}
+	if err := openLocalFolder(folder, target, info.IsDir()); err != nil {
+		respondAPIError(w, "failed to open workspace folder: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]any{
+		"workspace_path": rel,
+		"folder_path":    folder,
+	}))
+}
+
+func openLocalFolder(folder, target string, isDir bool) error {
+	if strings.EqualFold(os.Getenv("MYCELIS_WORKSPACE_REVEAL_DRY_RUN"), "1") {
+		return nil
+	}
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		if isDir {
+			cmd = exec.Command("explorer.exe", folder)
+		} else {
+			cmd = exec.Command("explorer.exe", "/select,"+target)
+		}
+	case "darwin":
+		if isDir {
+			cmd = exec.Command("open", folder)
+		} else {
+			cmd = exec.Command("open", "-R", target)
+		}
+	default:
+		cmd = exec.Command("xdg-open", folder)
+	}
+	return cmd.Start()
 }
 
 func workspaceFileOutputHref(rawPath string) string {

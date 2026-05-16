@@ -186,7 +186,7 @@ Architect outputs must include:
 5. governance checkpoints and approval triggers
 6. rollback and degraded-mode fallback strategy
 
-Blueprints must avoid over-instantiation: prefer 2-4 agents per mission unless clear justification exists.
+Blueprints must avoid over-instantiation: start with the minimum viable accountable lead, then add temporary specialists only when the operator or lead can name the missing capability, owned task, expected proof, and removal point.
 
 ---
 

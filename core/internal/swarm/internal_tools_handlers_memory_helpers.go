@@ -31,6 +31,9 @@ type parsedConversationSummary struct {
 }
 
 func validateArtifactContent(artType, content string) (string, error) {
+	if artType == "project_package" {
+		return "application/vnd.mycelis.project+json", nil
+	}
 	if artType != "chart" {
 		return "text/plain", nil
 	}
@@ -71,12 +74,94 @@ func (r *InternalToolRegistry) insertArtifact(ctx context.Context, artType, titl
 	return artifactID, err
 }
 
-func artifactResultPayload(artifactID, artType, title, contentType, content string) map[string]any {
+func artifactResultPayload(artifactID, artType, title, contentType, content string, metadata any) map[string]any {
+	if packageKindFromMetadata(metadata) == "project_package" && (artType == "file" || artType == "data") {
+		artType = "project_package"
+	}
+	if artType == "project_package" && (strings.TrimSpace(contentType) == "" || contentType == "text/plain") {
+		contentType = "application/vnd.mycelis.project+json"
+	}
 	artifactRef := map[string]any{"id": artifactID, "type": artType, "title": title, "content_type": contentType}
 	if artType != "image" && artType != "audio" && len(content) < 500_000 {
 		artifactRef["content"] = content
 	}
+	if artType == "project_package" {
+		for key, value := range projectPackageMetadata(metadata) {
+			artifactRef[key] = value
+		}
+	}
 	return map[string]any{"message": fmt.Sprintf("Artifact '%s' stored (type: %s, id: %s).", title, artType, artifactID), "artifact": artifactRef}
+}
+
+func projectPackageMetadata(metadata any) map[string]any {
+	source, _ := metadata.(map[string]any)
+	if len(source) == 0 {
+		return map[string]any{}
+	}
+	out := map[string]any{}
+	if value := firstNonEmptyMetadataString(source, "entrypoint", "package_entrypoint", "path", "file_path", "target_path"); value != "" {
+		out["entrypoint"] = value
+	}
+	if value := firstNonEmptyMetadataString(source, "folder", "package_folder", "project_folder"); value != "" {
+		out["folder"] = value
+	}
+	if value := firstNonEmptyMetadataString(source, "validation", "validation_summary", "proof_summary"); value != "" {
+		out["validation"] = value
+	}
+	if files := firstMetadataStringSlice(source, "files", "package_files"); len(files) > 0 {
+		out["files"] = files
+	}
+	return out
+}
+
+func packageKindFromMetadata(metadata any) string {
+	source, _ := metadata.(map[string]any)
+	if len(source) == 0 {
+		return ""
+	}
+	return firstNonEmptyMetadataString(source, "package_kind", "output_kind", "kind")
+}
+
+func firstNonEmptyMetadataString(source map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value := strings.TrimSpace(stringValue(source[key])); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func firstMetadataStringSlice(source map[string]any, keys ...string) []string {
+	for _, key := range keys {
+		if values := stringSlice(source[key]); len(values) > 0 {
+			return values
+		}
+		if value := strings.TrimSpace(stringValue(source[key])); value != "" {
+			var decoded []string
+			if strings.HasPrefix(value, "[") && json.Unmarshal([]byte(value), &decoded) == nil {
+				return normalizeStringSlice(decoded)
+			}
+			return normalizeStringSlice(strings.Split(value, ","))
+		}
+	}
+	return nil
+}
+
+func normalizeStringSlice(items []string) []string {
+	out := make([]string, 0, len(items))
+	seen := map[string]struct{}{}
+	for _, item := range items {
+		trimmed := strings.TrimSpace(item)
+		if trimmed == "" {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		out = append(out, trimmed)
+	}
+	return out
 }
 
 func publishArtifactToExchange(ctx context.Context, svc *exchange.Service, artifactID, artType, title string) {

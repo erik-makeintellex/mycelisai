@@ -78,6 +78,56 @@ func TestHandleChat_ReturnsDeterministicRuntimeStateSummaryWithoutNATS(t *testin
 	}
 }
 
+func TestHandleChat_ReturnsDeterministicWorkspaceV8SummaryWithoutNATS(t *testing.T) {
+	s := newTestServer()
+	s.organizationStore().Save(OrganizationHomePayload{
+		OrganizationSummary: OrganizationSummary{
+			ID:      "org-v8",
+			Name:    "Workspace V8 QA",
+			Purpose: "Live workflow variant verification",
+		},
+	})
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"Summarize the current Workspace V8 design objectives."}],"organization_id":"org-v8"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp protocol.APIResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	data, _ := json.Marshal(resp.Data)
+	var envelope protocol.CTSEnvelope
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		t.Fatalf("decode envelope: %v", err)
+	}
+	var payload protocol.ChatResponsePayload
+	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.AskClass != protocol.AskClassDirectAnswer {
+		t.Fatalf("ask class = %q, want %q", payload.AskClass, protocol.AskClassDirectAnswer)
+	}
+	if !strings.Contains(payload.Text, "Current Mycelis runtime state:") {
+		t.Fatalf("text = %q, want runtime state summary", payload.Text)
+	}
+	if !strings.Contains(payload.Text, "Current organization focus: Workspace V8 QA.") {
+		t.Fatalf("text = %q, want organization focus", payload.Text)
+	}
+	if payload.ExecutionSummary == nil {
+		t.Fatal("expected execution_summary")
+	}
+	if payload.ExecutionSummary.Proof.RunClass != protocol.ExecutionRunClassNoRun {
+		t.Fatalf("proof run_class = %q", payload.ExecutionSummary.Proof.RunClass)
+	}
+}
+
 func TestHandleChat_ReturnsDeterministicTeamRosterSummary(t *testing.T) {
 	wireNATS := withNATS(t)
 	s := newTestServer(wireNATS)

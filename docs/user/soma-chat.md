@@ -94,8 +94,8 @@ Team workspaces are different from the root Soma workspace:
 - the `Teams` page is where admins review available teams, open focused lead workspaces, and define the reusable member templates Soma should apply when creating new team members
 - the dedicated guided team-creation workflow now lives at `/teams/create`, so detailed team creation is a step-by-step Soma lane instead of a dense roster-side form
 - when Soma returns a native execution path there, the same lane can now launch a temporary workflow group directly, hand you into `Groups`, and continue through archive/closure while keeping retained outputs reviewable
-- team defaults should start from 3 precise roles: Team Lead, Architect Prime, and the focused builder/developer role needed for the requested output
-- a single team should stay at 5 members or fewer; if more roles seem useful, Soma should split the work into several small teams or lanes coordinated by Soma and Council over NATS and managed exchange
+- team defaults should start with one accountable lead, not a prefilled specialist roster
+- a single team should stay lead-only at creation; if more roles seem useful, the operator can add a member deliberately or the temporary team lead can request one temporary specialist after naming the missing capability, owned task, expected proof, and removal point
 - entering a created team should center the team's focused lead entity first
 - that team lead can still coordinate back through Soma using scoped memory, RAG retrieval, and broader organization context when needed
 - the team's lead and specialists inherit the organization output-model policy unless an admin changes it
@@ -262,13 +262,12 @@ For multi-step execution:
 
 On success, a system message includes a run link (`/runs/{run_id}`).
 
-When crew creation is needed, Soma should start from a lean 3-role shape:
+When crew creation is needed, Soma should start lead-only:
 
 1. Team Lead: owns the operator-facing state, handoffs, and final output summary.
-2. Architect Prime: shapes the plan, dependencies, and acceptance criteria.
-3. Focused Builder: produces the requested artifact, implementation, media direction, website draft, data review, or delivery payload.
+2. Temporary Specialist, only if needed: owns one named missing capability and returns the expected proof before removal.
 
-Soma can add a 4th or 5th role only when the output needs a separate reviewer/tester, domain specialist, or second focused builder. If the work needs more than 5 people, Soma should split the request into multiple compact lanes and explain what each lane will produce.
+Soma can add a temporary specialist only when the operator or team lead names the missing capability, owned task, expected proof, and removal point. If the work needs multiple distinct roles, Soma should split the request into multiple lead-owned lanes and explain what each lane will produce.
 
 When specialized output is needed, Soma should prefer to:
 1. plan the need at the root workspace

@@ -76,6 +76,9 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForImageReque
 	if workflowGroup["work_mode"] != "propose_only" {
 		t.Fatalf("expected propose_only workflow group mode, got %+v", workflowGroup)
 	}
+	if executionContract["initial_member_count"] != float64(1) || workflowGroup["initial_member_count"] != float64(1) {
+		t.Fatalf("expected creative team to start lead-only, got contract=%+v workflow=%+v", executionContract, workflowGroup)
+	}
 }
 
 func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForMarketingRequests(t *testing.T) {
@@ -112,8 +115,14 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForMarketingR
 	if executionContract["coordination_model"] != "compact_team" {
 		t.Fatalf("expected compact team coordination, got %+v", executionContract)
 	}
-	if executionContract["recommended_team_member_limit"] != float64(6) {
+	if executionContract["initial_member_count"] != float64(1) {
+		t.Fatalf("expected compact team to start lead-only, got %+v", executionContract)
+	}
+	if executionContract["recommended_team_member_limit"] != float64(3) {
 		t.Fatalf("expected compact team member limit, got %+v", executionContract)
+	}
+	if executionContract["expansion_policy"] == "" || executionContract["temporary_addition_guidance"] == "" {
+		t.Fatalf("expected compact team expansion guidance, got %+v", executionContract)
 	}
 	outputs, ok := executionContract["target_outputs"].([]any)
 	if !ok || len(outputs) != 3 {
@@ -134,7 +143,10 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForMarketingR
 	if workflowGroup["coordinator_profile"] != "Marketing Launch Team lead" {
 		t.Fatalf("expected marketing workflow lead, got %+v", workflowGroup)
 	}
-	if workflowGroup["recommended_member_limit"] != float64(6) {
+	if workflowGroup["initial_member_count"] != float64(1) {
+		t.Fatalf("expected workflow group to start lead-only, got %+v", workflowGroup)
+	}
+	if workflowGroup["recommended_member_limit"] != float64(3) {
 		t.Fatalf("expected recommended member limit on workflow group, got %+v", workflowGroup)
 	}
 }
@@ -173,7 +185,10 @@ func TestHandleTeamLeadGuidedAction_SplitsBroadRequestsIntoSmallTeamOrchestratio
 	if executionContract["recommended_team_count"] != float64(3) {
 		t.Fatalf("expected several small teams, got %+v", executionContract)
 	}
-	if executionContract["recommended_team_member_limit"] != float64(5) {
+	if executionContract["initial_member_count"] != float64(1) {
+		t.Fatalf("expected broad teams to start lead-only, got %+v", executionContract)
+	}
+	if executionContract["recommended_team_member_limit"] != float64(3) {
 		t.Fatalf("expected compact per-team member limit, got %+v", executionContract)
 	}
 	if executionContract["recommended_team_shape"] == "" {
@@ -188,14 +203,17 @@ func TestHandleTeamLeadGuidedAction_SplitsBroadRequestsIntoSmallTeamOrchestratio
 		t.Fatalf("expected review lane handoff, got %+v", workstreams)
 	}
 	summary, _ := executionContract["summary"].(string)
-	if !strings.Contains(strings.ToLower(summary), "several compact teams") {
+	if !strings.Contains(strings.ToLower(summary), "lead-only teams") {
 		t.Fatalf("expected summary to describe small coordinated teams, got %q", summary)
 	}
 	workflowGroup, ok := executionContract["workflow_group"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected workflow group draft, got %+v", executionContract)
 	}
-	if workflowGroup["recommended_member_limit"] != float64(5) {
+	if workflowGroup["initial_member_count"] != float64(1) {
+		t.Fatalf("expected workflow group to start lead-only, got %+v", workflowGroup)
+	}
+	if workflowGroup["recommended_member_limit"] != float64(3) {
 		t.Fatalf("expected compact member cap in workflow group, got %+v", workflowGroup)
 	}
 	if workflowGroup["work_mode"] != "propose_only" {

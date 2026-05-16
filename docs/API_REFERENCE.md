@@ -17,7 +17,7 @@
 | `/api/v1/council/{member}/chat` | POST | Chat with any council member via NATS request-reply. Returns `APIResponse<CTSEnvelope>` with trust score + provenance |
 | `/api/v1/council/members` | GET | List all addressable council members from standing teams (admin-core, council-core) |
 | **Chat & Cognitive** | | |
-| `/api/v1/chat` | POST | Soma/Admin chat. Runtime-state and search-capability questions answer directly; freshness-oriented search prompts call configured Mycelis `web_search` before the NATS Admin-agent path only when the latest request is not a governed mutation/team-creation/delegation prompt. Proposal payloads include `bus_scope` and `nats_subjects`; explicit `create_team` proposals use only the requested team's command/status/result subjects, not a fallback admin-core bus. Explicit team requests can retain concrete output asks such as `write_file` in the same proposal. Chat responses may include `execution_summary` so the UI can show intent, Soma understanding, execution shape, capability use, outputs, proof, audit/recovery state, and next step. |
+| `/api/v1/chat` | POST | Soma/Admin chat. Runtime-state, Workspace V8 design-state, and search-capability questions answer directly; freshness-oriented search prompts call configured Mycelis `web_search` before the NATS Admin-agent path only when the latest request is not a governed mutation/team-creation/delegation prompt. Proposal payloads include `bus_scope` and `nats_subjects`; explicit `create_team` proposals use only the requested team's command/status/result subjects, not a fallback admin-core bus. Explicit team requests can retain concrete output asks such as `write_file` in the same proposal. Inferred `create_team` calls start lead-only with `initial_member_count=1`, a bounded `recommended_member_limit`, and explicit expansion guidance so operators or temporary team leads add specialists only after naming the capability gap and proof expected. Chat responses may include `execution_summary` so the UI can show intent, Soma understanding, execution shape, capability use, outputs, proof, audit/recovery state, and next step. |
 | `/api/v1/cognitive/infer` | POST | Direct cognitive inference (profile-routed) |
 | `/api/v1/cognitive/config` | GET | Read cognitive router configuration (providers, profiles, media) |
 | `/api/v1/cognitive/matrix` | GET | Alias for cognitive config (matrix view) |
@@ -35,6 +35,7 @@
 | `/api/v1/missions/{id}/agents/{name}` | DELETE | Remove agent from an active mission |
 | **Swarm & Teams** | | |
 | `/api/v1/teams` | GET | List active teams |
+| `/api/v1/teams/{id}` | DELETE | Stop and remove one active runtime team. Use this for temporary-team cleanup so delivery tests stay bounded to 1-3 targeted teams instead of accumulating stale runtime teams. |
 | `/api/v1/teams/detail` | GET | Team detail with agent rosters, delivery targets, and status |
 | `/api/swarm/teams` | POST | Create team via Soma |
 | `/api/swarm/command` | POST | Send command to specific team |
@@ -69,6 +70,7 @@
 | `/api/v1/proposals/{id}/reject` | POST | Reject proposal |
 | `/admin/approvals` | GET | List pending governance approvals |
 | `/admin/approvals/{id}` | POST | Approve/reject governance action |
+| `/api/v1/intent/confirm-action` | POST | Consume a chat proposal confirm token and replay the stored approved plan. Stored `planned_tool_calls` may carry `tool_ref` values such as `mcp:filesystem/read_text_file`; explicit MCP refs execute through the registered MCP executor instead of being shadowed by same-named internal tools, and retained outputs are returned as `mcp_tool_result` proof entries. |
 | **Agent Catalogue** | | |
 | `/api/v1/catalogue/agents` | GET/POST | List/create agent blueprints |
 | `/api/v1/catalogue/agents/{id}` | PUT/DELETE | Update/delete agent blueprint |
@@ -92,15 +94,16 @@
 | `/api/v1/artifacts/{id}` | GET | Artifact detail |
 | `/api/v1/artifacts/{id}/download` | GET | Download a stored or inline artifact as a file attachment for chat/operator review |
 | `/api/v1/artifacts/{id}/status` | PUT | Update artifact status |
-| `/api/v1/artifacts/{id}/save` | POST | Persist cached image artifact to workspace folder (`saved-media` default) |
+| `/api/v1/artifacts/{id}/save` | POST | Persist cached image artifact to workspace folder (`saved-media` default); returned `file_path` can be used by the UI to open the mounted storage folder through workspace reveal |
 | `/api/v1/workspace/files/view?path=...` | GET | Serve a bounded workspace file inline for retained chat outputs; paths are workspace-confined and HTML is sandboxed for generated game/code review |
+| `/api/v1/workspace/files/reveal?path=...` | POST | Open the containing mounted workspace folder on the local Core host for a generated output or saved media artifact; requires host invoke scope and keeps paths workspace-confined |
 | **MCP Ingress** | | |
 | `/api/v1/mcp/install` | POST | Raw MCP install endpoint — **disabled by Phase 0 security** (`403`), use library install |
 | `/api/v1/mcp/servers` | GET | List installed MCP servers |
 | `/api/v1/mcp/servers/{id}` | DELETE | Remove MCP server |
 | `/api/v1/mcp/tools` | GET | List all MCP tools across servers |
 | `/api/v1/mcp/activity` | GET | List recent persisted MCP activity from Managed Exchange, including server/tool/state visibility for operator review |
-| `/api/v1/mcp/servers/{id}/tools/{tool}/call` | POST | Invoke a specific MCP tool |
+| `/api/v1/mcp/servers/{id}/tools/{tool}/call` | POST | Invoke a specific MCP tool. Canonical request body is `{"arguments": {...}}`; direct top-level argument objects such as `{"path":"workspace/file.md"}` are also accepted for operator scripts and compatibility. |
 | `/api/v1/mcp/library` | GET | Browse curated MCP server library (categorized), including server.json-aligned metadata such as version, package transport, repository/homepage links when known, and typed environment-variable declarations |
 | `/api/v1/mcp/library/inspect` | POST | Policy inspection preview for a library candidate (`allow|require_approval|deny`) before install. MCP settings installs may send `governance_context` so owner-scoped current-group config can auto-allow without a second approval loop |
 | `/api/v1/mcp/library/install` | POST | Apply/install from library by name. Allowed installs are idempotent by server name: a repeated install updates/reconnects the existing server instead of failing on duplicate registry state. Curated `filesystem` installs are runtime-normalized to the configured workspace root before persistence/launch. Returns `202` with inspection details when the candidate still requires approval |
@@ -173,7 +176,7 @@ Conversation-template instantiation is non-executing by default. Protected Soma 
 | `/api/v1/organizations` | GET | List created AI Organization summaries for the entry flow |
 | `/api/v1/organizations` | POST | Create an AI Organization from template or empty start |
 | `/api/v1/organizations/{id}/home` | GET | Load the minimal AI Organization context shell |
-| `/api/v1/organizations/{id}/workspace/actions` | POST | Return Team Lead guidance, execution contract, and optional `execution_summary` for operator review without attaching a `run_id` until real execution exists |
+| `/api/v1/organizations/{id}/workspace/actions` | POST | Return Team Lead guidance, execution contract, and optional `execution_summary` for operator review without attaching a `run_id` until real execution exists. Native-team and temporary-workflow contracts now include `initial_member_count`, `recommended_team_member_limit`/`recommended_member_limit`, `expansion_policy`, and `temporary_addition_guidance` so the UI can show lead-only creation plus deliberate operator/team-lead expansion rules. |
 | `/api/v1/organizations/{id}/output-model-routing` | GET | Read admin-configurable output-model routing for the organization, including detected output-type bindings, locally installed models, and recommended self-hosted starting points |
 | `/api/v1/organizations/{id}/output-model-routing` | PATCH | Update the organization default model or detected output-type model bindings for team and specialist output delivery |
 
@@ -187,7 +190,8 @@ The object can include:
 - `execution`: shape, status, and summary such as `direct_soma`, `guided_proposal`, `tool_assisted_work`, or `team_execution`
 - `capability_use`: governed tools, teams, MCP capabilities, automations, or plugins used
 - `capability_use.reason`: operator-facing provenance detail when available, such as the active `web_search` source boundary
-- `outputs`: answer, proposal, artifact, tool result, retained team, or retained file/code output references
+- `outputs`: answer, proposal, artifact, media, tool result, retained team, retained file/code output references, or `project_package` deliverables. Browser clients may preview image/audio/video output URLs inline when the MIME type or file extension is recognizable, while durable file paths stay available through workspace reveal.
+- `outputs[].kind=project_package`: retained complex deliverable package for generated projects such as playable browser games. Package outputs may include `entrypoint`, `folder`, `files`, and `validation`; the UI should expose the entrypoint as the primary open action, the folder through workspace reveal, the file list as source context, and validation as proof context. Confirmed `write_file` and `store_artifact` executions can both produce this output shape; `store_artifact` should use artifact `type="project_package"` or metadata `package_kind/output_kind/kind="project_package"` with `entrypoint/package_entrypoint`, `folder/package_folder`, `files/package_files`, and `validation/validation_summary` metadata.
 - `proof`: `run_id`, `audit_event_id`, `intent_proof_id`, and verification state
 - `audit_recovery`: approval status, recovery state, blocker, retry posture, and optional `degradation`
 - `audit_recovery.degradation`: operational degradation metadata covering `code`, `what_failed`, `trusted_state`, `invalidated_proof`, `safe_continuation`, and `requires_attention`

@@ -6,12 +6,8 @@ import type {
     TeamLeadGuidedAction,
     TeamLeadWorkflowGroupDraft,
 } from "@/lib/organizations";
-import {
-    CompactTeamGuidanceCard,
-    ExecutionContractCard,
-    TemporaryWorkflowLaunchCard,
-    type LaunchedGroupState,
-} from "@/components/organizations/teamLeadExecutionCards";
+import { TeamEventLog } from "@/components/organizations/TeamEventLog";
+import { TemporaryWorkflowLaunchCard, type LaunchedGroupState } from "@/components/organizations/teamLeadExecutionCards";
 import ExecutionSummaryCard from "@/components/soma/ExecutionSummaryCard";
 
 type RequestState = "idle" | "loading" | "ready" | "error";
@@ -149,25 +145,13 @@ function ReadyState({
     onLaunchWorkflowGroup: (draft: TeamLeadWorkflowGroupDraft) => void;
 }) {
     return (
-        <div className="space-y-5">
-            {requestContext && (
-                <div>
-                    <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">You asked Soma to help with</p>
-                    <p className="mt-2 text-sm leading-6 text-cortex-text-main">{requestContext}</p>
-                </div>
-            )}
-            <CompactTeamGuidanceCard requestScope={requestScope} />
-            <div>
-                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Current request</p>
-                <p className="mt-2 text-base font-semibold text-cortex-text-main">{guidance.request_label}</p>
-            </div>
-            <div>
-                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Soma guidance</p>
-                <p className="mt-2 text-base font-semibold text-cortex-text-main">{guidance.headline}</p>
-                <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{guidance.summary}</p>
-            </div>
+        <div className="space-y-4">
+            <TeamEventLog
+                guidance={guidance}
+                requestContext={requestContext}
+                requestScope={requestScope}
+            />
             <div className="space-y-4">
-                {guidance.execution_contract && <ExecutionContractCard contract={guidance.execution_contract} />}
                 {guidance.execution_summary && <ExecutionSummaryCard summary={guidance.execution_summary} />}
                 {guidance.execution_contract?.workflow_group ? (
                     <TemporaryWorkflowLaunchCard
@@ -178,28 +162,6 @@ function ReadyState({
                         onLaunch={() => onLaunchWorkflowGroup(guidance.execution_contract!.workflow_group!)}
                     />
                 ) : null}
-            </div>
-            <GuidanceList title="Priority steps" items={guidance.priority_steps} />
-            <GuidanceList title="Keep moving with" items={guidance.suggested_follow_ups} pill />
-        </div>
-    );
-}
-
-function GuidanceList({ title, items, pill = false }: { title: string; items: string[]; pill?: boolean }) {
-    return (
-        <div>
-            <p className="text-sm font-medium text-cortex-text-main">{title}</p>
-            <div className={pill ? "mt-3 flex flex-wrap gap-2" : "mt-3 space-y-2"}>
-                {items.map((item) =>
-                    pill ? (
-                        <div key={item} className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-2 text-sm text-cortex-text-main">{item}</div>
-                    ) : (
-                        <div key={item} className="flex items-start gap-3 rounded-2xl border border-cortex-border bg-cortex-surface/60 px-3 py-3 text-sm text-cortex-text-muted">
-                            <span className="mt-1 h-2 w-2 rounded-full bg-cortex-primary" />
-                            <span className="leading-6">{item}</span>
-                        </div>
-                    ),
-                )}
             </div>
         </div>
     );

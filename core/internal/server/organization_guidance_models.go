@@ -21,7 +21,10 @@ type TeamLeadExecutionContract struct {
 	CoordinationModel          string                        `json:"coordination_model,omitempty"`
 	RecommendedTeamShape       string                        `json:"recommended_team_shape,omitempty"`
 	RecommendedTeamCount       int                           `json:"recommended_team_count,omitempty"`
+	InitialMemberCount         int                           `json:"initial_member_count,omitempty"`
 	RecommendedTeamMemberLimit int                           `json:"recommended_team_member_limit,omitempty"`
+	ExpansionPolicy            string                        `json:"expansion_policy,omitempty"`
+	TemporaryAdditionGuidance  string                        `json:"temporary_addition_guidance,omitempty"`
 	TargetOutputs              []string                      `json:"target_outputs"`
 	Workstreams                []TeamLeadExecutionWorkstream `json:"workstreams,omitempty"`
 	WorkflowGroup              *TeamLeadWorkflowGroupDraft   `json:"workflow_group,omitempty"`
@@ -37,13 +40,16 @@ type TeamLeadExecutionWorkstream struct {
 }
 
 type TeamLeadWorkflowGroupDraft struct {
-	GroupID                string   `json:"group_id,omitempty"`
-	Name                   string   `json:"name"`
-	GoalStatement          string   `json:"goal_statement"`
-	WorkMode               string   `json:"work_mode"`
-	CoordinatorProfile     string   `json:"coordinator_profile"`
-	AllowedCapabilities    []string `json:"allowed_capabilities,omitempty"`
-	RecommendedMemberLimit int      `json:"recommended_member_limit,omitempty"`
-	ExpiryHours            int      `json:"expiry_hours,omitempty"`
-	Summary                string   `json:"summary"`
+	GroupID                   string   `json:"group_id,omitempty"`
+	Name                      string   `json:"name"`
+	GoalStatement             string   `json:"goal_statement"`
+	WorkMode                  string   `json:"work_mode"`
+	CoordinatorProfile        string   `json:"coordinator_profile"`
+	AllowedCapabilities       []string `json:"allowed_capabilities,omitempty"`
+	InitialMemberCount        int      `json:"initial_member_count,omitempty"`
+	RecommendedMemberLimit    int      `json:"recommended_member_limit,omitempty"`
+	ExpansionPolicy           string   `json:"expansion_policy,omitempty"`
+	TemporaryAdditionGuidance string   `json:"temporary_addition_guidance,omitempty"`
+	ExpiryHours               int      `json:"expiry_hours,omitempty"`
+	Summary                   string   `json:"summary"`
 }

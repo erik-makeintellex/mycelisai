@@ -13,6 +13,10 @@ export interface ChatArtifactRef {
     cached?: boolean;
     expires_at?: string;
     saved_path?: string;
+    entrypoint?: string;
+    folder?: string;
+    files?: string[];
+    validation?: string;
 }
 
 export interface ExecutionSummaryLink {
@@ -48,6 +52,10 @@ export interface ExecutionSummaryItem {
     retained?: boolean;
     risk?: string;
     reason?: string;
+    entrypoint?: string;
+    folder?: string;
+    files?: string[];
+    validation?: string;
 }
 
 export interface ExecutionSummaryIntent {

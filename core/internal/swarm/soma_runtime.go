@@ -95,6 +95,20 @@ func (s *Soma) ListTeams() []*TeamManifest {
 	return list
 }
 
+// StopTeam stops and removes one active runtime team.
+func (s *Soma) StopTeam(teamID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	team, exists := s.teams[strings.TrimSpace(teamID)]
+	if !exists {
+		return false
+	}
+	team.Stop()
+	delete(s.teams, strings.TrimSpace(teamID))
+	log.Printf("Soma stopped Team: %s", strings.TrimSpace(teamID))
+	return true
+}
+
 // DeactivateMission stops and removes all teams belonging to a mission.
 func (s *Soma) DeactivateMission(missionID string) int {
 	s.mu.Lock()

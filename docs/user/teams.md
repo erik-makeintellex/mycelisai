@@ -1,7 +1,7 @@
 # Teams
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Soma-first team workflow: start with the smallest precise team, keep the lead visible, and split broad asks into several focused teams when needed.
+> Soma-first team workflow: start lead-only, keep the lead visible, and add temporary specialists only when the work proves a gap.
 
 ---
 
@@ -22,25 +22,24 @@ The Teams area is where you review existing teams, open a team lead workspace, a
 
 Default rule:
 - teams should be small, explicit, and focused on the output
-- the ideal launch team is 3 people: Team Lead, Architect Prime, and one focused builder/developer role
-- a single team should stay at 5 members or fewer
-- broad requests should become several small teams or lane bundles coordinated by Soma and Council, not one large roster
+- the ideal launch team is one accountable lead
+- a single team should stay lead-only at creation
+- broad requests should become a few lead-only teams or lane bundles, not one large roster
+- add temporary specialists only after the operator or team lead names the missing capability, owned task, expected proof, and removal point
 - the root Soma workspace remains the main place to ask for team creation and orchestration
 
 ## Default Launch Shape
 
-For most work, Soma should launch a team like this:
+For most work, Soma should launch one accountable lead first.
 
-1. Team Lead: the user-facing counterpart who keeps the mission, status, and outputs clear.
-2. Architect Prime: the planning role that shapes the approach, dependencies, and output contract.
-3. Focused Builder: the role that produces the needed artifact, implementation, analysis, media prompt pack, data review, or delivery payload.
+The lead is the user-facing counterpart who keeps the mission, status, and outputs clear. If the work truly needs more coverage, the operator can add a member deliberately or the temporary team lead can request one temporary specialist with:
 
-If the work truly needs more coverage, Soma can add up to two more targeted roles:
+- the missing capability
+- the owned task
+- the proof expected
+- the removal point
 
-- Reviewer / Tester: verifies output quality, acceptance criteria, and cleanup.
-- Domain Specialist: covers one distinct capability such as media direction, security, data analysis, or integration.
-
-Soma should not launch a broad standing pool just because the request sounds ambitious. If more than 5 people seem useful, Soma should split the work into smaller coordinated teams and explain the lanes.
+Soma should not launch a broad standing pool just because the request sounds ambitious. If multiple capabilities seem useful, Soma should split the work into smaller lead-owned lanes and explain the lane outputs.
 
 ## Choosing The Right Workflow
 
@@ -66,8 +65,8 @@ If Soma recommends tools that are not installed yet, it should walk you through 
 Use `Create Team` when you want a guided setup instead of filling raw fields:
 
 - describe the outcome
-- review Soma's recommended compact shape
-- confirm the lead, Architect Prime, and focused builder role
+- review Soma's recommended lead-only start
+- confirm whether any temporary specialist is justified yet
 - decide whether the work should stay as one team or split into lanes
 - confirm the visible output contract before launch
 
@@ -128,7 +127,7 @@ Tell Soma:
 - whether this is a temporary group whose logs can be reviewed and whose outputs should remain after closure
 
 If the request is broad, expect Soma to recommend:
-- several small teams
+- a few lead-only teams
 - a temporary workflow group
 - a coordination plan over NATS and managed exchange
 - target MCP/tool bindings for each lane, plus missing-tool setup steps when needed
@@ -142,9 +141,9 @@ Create the smallest useful team for this outcome: draft an investor-ready produc
 ## Useful Expectations For Testing
 
 When testing team workflows, verify:
-- compact team defaults are visible and ideally start at 3 members
-- any team with 4 or 5 members explains the extra role
-- no single team exceeds 5 members; broad work should split into several smaller lanes
+- compact team defaults are visible and start lead-only
+- any temporary specialist explains the missing capability, owned task, proof expected, and removal point
+- broad work splits into several smaller lead-owned lanes instead of starting a large roster
 - broad asks produce multiple small coordinated lanes instead of one huge team
 - the team lead is the first visible operational counterpart
 - retained outputs remain reviewable after a temporary team is closed

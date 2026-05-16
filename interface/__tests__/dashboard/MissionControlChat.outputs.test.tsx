@@ -200,6 +200,12 @@ describe('MissionControlChat output contracts', () => {
                     json: async () => ({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', file_path: 'saved-media/test.png' }),
                 } as any;
             }
+            if (url.includes('/api/v1/workspace/files/reveal')) {
+                return {
+                    ok: true,
+                    json: async () => ({ ok: true, data: { workspace_path: 'saved-media/test.png' } }),
+                } as any;
+            }
             return {
                 ok: true,
                 json: async () => ({ ok: true, data: COUNCIL_MEMBERS }),
@@ -217,6 +223,11 @@ describe('MissionControlChat output contracts', () => {
 
         const savedLink = screen.getByRole('link', { name: 'saved-media/test.png' });
         expect(savedLink.getAttribute('href')).toBe('/api/v1/artifacts/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/download');
+
+        fireEvent.click(screen.getByRole('button', { name: 'Open local folder for saved-media/test.png' }));
+        await waitFor(() => {
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/workspace/files/reveal?path=saved-media%2Ftest.png', { method: 'POST' });
+        });
     });
 
     it('shows a clickable saved path for binary file artifacts', async () => {
@@ -239,11 +250,30 @@ describe('MissionControlChat output contracts', () => {
             ],
         });
 
+        mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url.includes('/api/v1/workspace/files/reveal')) {
+                return {
+                    ok: true,
+                    json: async () => ({ ok: true, data: { workspace_path: 'saved-media/campaign-voiceover.wav' } }),
+                } as any;
+            }
+            return {
+                ok: true,
+                json: async () => ({ ok: true, data: COUNCIL_MEMBERS }),
+            } as any;
+        });
+
         render(<MissionControlChat />);
         await settleMissionControlChat();
 
         const savedObjectLink = screen.getByRole('link', { name: 'saved-media/campaign-voiceover.wav' });
         expect(savedObjectLink.getAttribute('href')).toBe('/api/v1/artifacts/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/download');
         expect(screen.getByText(/Saved object:/i)).toBeDefined();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Open local folder for saved-media/campaign-voiceover.wav' }));
+        await waitFor(() => {
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/workspace/files/reveal?path=saved-media%2Fcampaign-voiceover.wav', { method: 'POST' });
+        });
     });
 });

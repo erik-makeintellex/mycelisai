@@ -20,6 +20,26 @@ func TestParsePlannedToolCall_NormalizesWriteFileAliases(t *testing.T) {
 	}
 }
 
+func TestParsePlannedToolCall_PreservesMCPToolRef(t *testing.T) {
+	call, ok := parsePlannedToolCall(`{"tool_call":{"tool_ref":"mcp:filesystem/read_text_file","arguments":{"path":"workspace/logs/proof.md"}}}`)
+	if !ok {
+		t.Fatal("expected planned MCP tool call to parse")
+	}
+	if call.Name != "read_text_file" {
+		t.Fatalf("name = %q, want read_text_file", call.Name)
+	}
+	if call.ToolRef != "mcp:filesystem/read_text_file" {
+		t.Fatalf("tool_ref = %q", call.ToolRef)
+	}
+	if call.Arguments["path"] != "workspace/logs/proof.md" {
+		t.Fatalf("path = %#v", call.Arguments["path"])
+	}
+	tools := toolsForPlannedCalls([]protocol.PlannedToolCall{call}, nil)
+	if len(tools) != 1 || tools[0] != "mcp:filesystem/read_text_file" {
+		t.Fatalf("effective tools = %#v, want MCP ref", tools)
+	}
+}
+
 func TestBuildPlannedToolCalls_PrefersExplicitCreateTeamRequest(t *testing.T) {
 	calls := buildPlannedToolCalls(chatAgentResult{
 		Text: `{"tool_call":{"name":"generate_blueprint","arguments":{"topic":"wrong"}}}`,
@@ -39,6 +59,9 @@ func TestBuildPlannedToolCalls_PrefersExplicitCreateTeamRequest(t *testing.T) {
 	}
 	if calls[0].Arguments["role"] != "researcher" {
 		t.Fatalf("role = %#v", calls[0].Arguments["role"])
+	}
+	if calls[0].Arguments["staffing_mode"] != "lead_only_start" || calls[0].Arguments["initial_member_count"] != 1 {
+		t.Fatalf("staffing args = %#v, want lead-only start", calls[0].Arguments)
 	}
 	tools := toolsForPlannedCalls(calls, []string{"generate_blueprint", "delegate"})
 	if len(tools) != 1 || tools[0] != "create_team" {
@@ -63,6 +86,9 @@ func TestBuildPlannedToolCalls_KeepsTeamAndConcreteCodeOutput(t *testing.T) {
 	}
 	if calls[0].Arguments["name"] != "Qa Browser Game Team" {
 		t.Fatalf("name = %#v", calls[0].Arguments["name"])
+	}
+	if calls[0].Arguments["initial_member_count"] != 1 {
+		t.Fatalf("initial_member_count = %#v, want 1", calls[0].Arguments["initial_member_count"])
 	}
 	if calls[1].Name != "write_file" {
 		t.Fatalf("second call = %q, want write_file", calls[1].Name)
@@ -112,6 +138,9 @@ func TestInferCreateTeamPlanFromRequest_DefaultResearchTeam(t *testing.T) {
 	}
 	if call.Arguments["role"] != "researcher" {
 		t.Fatalf("role = %#v", call.Arguments["role"])
+	}
+	if call.Arguments["initial_member_count"] != 1 || call.Arguments["recommended_member_limit"] != 3 {
+		t.Fatalf("minimal staffing args = %#v, want lead-only start with bounded expansion", call.Arguments)
 	}
 }
 

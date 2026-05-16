@@ -15,8 +15,17 @@ export async function storeLiveArtifactWithRetry<T>(
     context: string,
 ): Promise<T> {
     let last: { status: number; raw: string; body: T | null } | null = null;
+    let lastError = '';
     for (let attempt = 1; attempt <= 3; attempt += 1) {
-        const response = await page.request.post('/api/v1/artifacts', { data: payload });
+        let response;
+        try {
+            response = await page.request.post('/api/v1/artifacts', { data: payload });
+        } catch (error) {
+            lastError = error instanceof Error ? error.message : String(error);
+            if (!isTransientRequestError(lastError) || attempt === 3) break;
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            continue;
+        }
         const parsed = await parseJSONIfPossible<T>(response);
         if (response.ok()) {
             expect((parsed.body as { id?: string } | null)?.id, parsed.body ? JSON.stringify(parsed.body) : parsed.raw)
@@ -33,9 +42,13 @@ export async function storeLiveArtifactWithRetry<T>(
     if (stored) return stored;
     expect(
         false,
-        `${context} artifact store failed after retries: ${last?.status} ${last?.body ? JSON.stringify(last.body) : last?.raw}`,
+        `${context} artifact store failed after retries: ${lastError || `${last?.status} ${last?.body ? JSON.stringify(last.body) : last?.raw}`}`,
     ).toBeTruthy();
     throw new Error(`${context} artifact store failed`);
+}
+
+function isTransientRequestError(message: string) {
+    return ['EADDRINUSE', 'ECONNRESET', 'ECONNREFUSED', 'ERR_CONNECTION_FAILED'].some((fragment) => message.includes(fragment));
 }
 
 async function findStoredArtifact<T>(page: Page, payload: Record<string, unknown>): Promise<T | null> {

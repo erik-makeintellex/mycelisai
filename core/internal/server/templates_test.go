@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -16,6 +17,22 @@ import (
 	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/pkg/protocol"
 )
+
+type fakeProposalMCPExecutor struct {
+	serverID uuid.UUID
+	calls    []string
+	args     []map[string]any
+}
+
+func (f *fakeProposalMCPExecutor) FindToolByName(_ context.Context, name string) (uuid.UUID, string, error) {
+	return f.serverID, name, nil
+}
+
+func (f *fakeProposalMCPExecutor) CallTool(_ context.Context, _ uuid.UUID, toolName string, args map[string]any) (string, error) {
+	f.calls = append(f.calls, toolName)
+	f.args = append(f.args, args)
+	return "mcp " + toolName + " completed", nil
+}
 
 func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *testing.T) {
 	workspace := t.TempDir()
@@ -185,6 +202,49 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet db expectations: %v", err)
+	}
+}
+
+func TestExecutePlannedToolCalls_UsesMCPToolRef(t *testing.T) {
+	fakeMCP := &fakeProposalMCPExecutor{serverID: uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")}
+	s := newTestServer(func(s *AdminServer) {
+		s.MCPToolExecutor = fakeMCP
+	})
+	scope := &protocol.ScopeValidation{
+		Tools: []string{"mcp:filesystem/read_text_file"},
+		PlannedToolCalls: []protocol.PlannedToolCall{
+			{
+				ToolRef: "mcp:filesystem/read_text_file",
+				Arguments: map[string]any{
+					"path": "workspace/logs/mcp_direct_payload_20260515030724.md",
+				},
+			},
+		},
+	}
+
+	results, err := s.executePlannedToolCalls(t.Context(), scope, "test-user")
+	if err != nil {
+		t.Fatalf("executePlannedToolCalls: %v", err)
+	}
+	if len(fakeMCP.calls) != 1 || fakeMCP.calls[0] != "read_text_file" {
+		t.Fatalf("mcp calls = %#v, want read_text_file", fakeMCP.calls)
+	}
+	if len(results) != 1 {
+		t.Fatalf("results = %#v, want one", results)
+	}
+	if results[0].Name != "read_text_file" || results[0].ToolRef != "mcp:filesystem/read_text_file" {
+		t.Fatalf("result = %#v, want retained MCP identity", results[0])
+	}
+
+	outputs := executionOutputsFromToolResults(results)
+	if len(outputs) != 1 {
+		t.Fatalf("outputs = %#v, want one", outputs)
+	}
+	if outputs[0].Kind != "mcp_tool_result" || outputs[0].ID != "mcp:filesystem/read_text_file" {
+		t.Fatalf("output = %#v, want retained MCP tool result", outputs[0])
+	}
+	if outputs[0].Retained == nil || !*outputs[0].Retained {
+		t.Fatalf("output retained = %#v, want true", outputs[0].Retained)
 	}
 }
 

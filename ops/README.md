@@ -151,6 +151,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **Memory Restart**: `uv run inv lifecycle.memory-restart --frontend`
 - `lifecycle.up` now ensures the `cortex` database exists before Core starts, so the bootstrap listener does not crash when a fresh bridge comes up after a reboot or cluster reset
 - `lifecycle.down` now treats repo-local Interface worker residue as part of the teardown contract, not just bound ports
+- `lifecycle.status` reports a quick service snapshot and validates Core through `/healthz` plus Ollama through `/api/tags` across accepted loopback hosts so endpoint-reachable services are not reported down from a single TCP miss
 - local tasking targets the bridged Core API port by default (`localhost:8081` unless `MYCELIS_API_PORT` overrides it)
 - local Interface tasking now binds the UI broadly by default (`[::]:3000`) while probing it through `127.0.0.1:3000`; override with `MYCELIS_INTERFACE_BIND_HOST`, `MYCELIS_INTERFACE_HOST`, and `MYCELIS_INTERFACE_PORT` when a host needs a different split
 - frontend teardown falls back to matching both `next dev` and `next start` command lines, so built UI servers do not survive outside the lifecycle contract

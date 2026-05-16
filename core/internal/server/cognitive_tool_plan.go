@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -12,13 +13,14 @@ func parsePlannedToolCall(text string) (protocol.PlannedToolCall, bool) {
 	var envelope struct {
 		ToolCall struct {
 			Name      string         `json:"name"`
+			ToolRef   string         `json:"tool_ref"`
 			Arguments map[string]any `json:"arguments"`
 		} `json:"tool_call"`
 	}
 	if err := json.Unmarshal([]byte(strings.TrimSpace(text)), &envelope); err != nil {
 		return protocol.PlannedToolCall{}, false
 	}
-	if strings.TrimSpace(envelope.ToolCall.Name) == "" {
+	if strings.TrimSpace(envelope.ToolCall.Name) == "" && strings.TrimSpace(envelope.ToolCall.ToolRef) == "" {
 		return protocol.PlannedToolCall{}, false
 	}
 	if envelope.ToolCall.Arguments == nil {
@@ -26,6 +28,7 @@ func parsePlannedToolCall(text string) (protocol.PlannedToolCall, bool) {
 	}
 	return normalizePlannedToolCall(protocol.PlannedToolCall{
 		Name:      strings.TrimSpace(envelope.ToolCall.Name),
+		ToolRef:   strings.TrimSpace(envelope.ToolCall.ToolRef),
 		Arguments: envelope.ToolCall.Arguments,
 	}), true
 }
@@ -33,6 +36,14 @@ func parsePlannedToolCall(text string) (protocol.PlannedToolCall, bool) {
 func normalizePlannedToolCall(call protocol.PlannedToolCall) protocol.PlannedToolCall {
 	if call.Arguments == nil {
 		call.Arguments = map[string]any{}
+	}
+	call.Name = strings.TrimSpace(call.Name)
+	call.ToolRef = strings.TrimSpace(call.ToolRef)
+	if call.ToolRef == "" && mcp.IsMCPRef(call.Name) {
+		call.ToolRef = call.Name
+	}
+	if ref := mcp.ParseToolRef(call.ToolRef); ref != nil && ref.ToolName != "*" {
+		call.Name = ref.ToolName
 	}
 
 	switch strings.TrimSpace(call.Name) {
@@ -184,6 +195,12 @@ func containsToolName(tools []string, want string) bool {
 func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []string {
 	var resources []string
 	for _, call := range planned {
+		if strings.TrimSpace(call.ToolRef) != "" {
+			if rawPath, ok := call.Arguments["path"].(string); ok && strings.TrimSpace(rawPath) != "" {
+				resources = append(resources, strings.TrimSpace(rawPath))
+				continue
+			}
+		}
 		switch strings.TrimSpace(call.Name) {
 		case "write_file":
 			if rawPath, ok := call.Arguments["path"].(string); ok && strings.TrimSpace(rawPath) != "" {
@@ -217,7 +234,7 @@ func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []stri
 func inferAdapterKindFromTool(tool string) string {
 	t := strings.ToLower(strings.TrimSpace(tool))
 	switch {
-	case strings.HasPrefix(t, "mcp_"), strings.Contains(t, "mcp"):
+	case strings.HasPrefix(t, "mcp:"), strings.HasPrefix(t, "mcp_"), strings.Contains(t, "mcp"):
 		return "mcp"
 	case strings.HasPrefix(t, "http_"), strings.Contains(t, "api"), strings.Contains(t, "webhook"):
 		return "openapi"

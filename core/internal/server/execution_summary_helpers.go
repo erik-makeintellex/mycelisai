@@ -36,12 +36,12 @@ func capabilityUseFromPlannedCalls(planned []protocol.PlannedToolCall, fallbackT
 	tools := make([]string, 0, len(planned)+len(fallbackTools))
 	risks := map[string]string{}
 	for _, call := range planned {
-		name := strings.TrimSpace(call.Name)
+		name := strings.TrimSpace(firstNonEmptyString(call.ToolRef, call.Name))
 		if name == "" {
 			continue
 		}
 		tools = append(tools, name)
-		risks[name] = capabilityRiskForTool(name, call.Arguments)
+		risks[name] = capabilityRiskForTool(call.Name, call.Arguments)
 	}
 	tools = append(tools, fallbackTools...)
 
@@ -91,11 +91,23 @@ func executionOutputsFromArtifacts(artifacts []protocol.ChatArtifactRef) []proto
 			title = "Artifact"
 		}
 		retained := artifact.ID != "" || artifact.Cached || artifact.SavedPath != ""
+		href := firstNonEmptyString(artifact.URL, artifact.SavedPath)
+		if artifact.Type == "project_package" {
+			retained = true
+			href = firstNonEmptyString(href, workspaceFileOutputHref(artifact.Entrypoint))
+			if artifact.Folder == "" {
+				artifact.Folder = parentWorkspacePath(artifact.Entrypoint)
+			}
+		}
 		outputs = append(outputs, protocol.ExecutionOutput{
 			ID:             artifact.ID,
 			Kind:           firstNonEmptyString(artifact.Type, "artifact"),
 			Title:          title,
-			Href:           firstNonEmptyString(artifact.URL, artifact.SavedPath),
+			Href:           href,
+			Entrypoint:     artifact.Entrypoint,
+			Folder:         artifact.Folder,
+			Files:          artifact.Files,
+			Validation:     artifact.Validation,
 			Retained:       boolPtr(retained),
 			RetentionClass: retentionClassForBool(retained),
 		})

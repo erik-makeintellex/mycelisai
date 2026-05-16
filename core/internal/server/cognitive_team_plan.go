@@ -45,10 +45,15 @@ func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool
 	return protocol.PlannedToolCall{
 		Name: "create_team",
 		Arguments: map[string]any{
-			"team_id": teamID,
-			"name":    name,
-			"role":    role,
-			"goal":    trimmed,
+			"team_id":                     teamID,
+			"name":                        name,
+			"role":                        role,
+			"goal":                        trimmed,
+			"staffing_mode":               "lead_only_start",
+			"initial_member_count":        1,
+			"recommended_member_limit":    3,
+			"expansion_policy":            "operator_adds_members_or_team_lead_requests_temp_specialist_with_reason",
+			"temporary_addition_guidance": "Add specialists only after the lead names the missing capability, owned task, proof expected, and removal point.",
 		},
 	}, true
 }
@@ -59,7 +64,7 @@ func toolsForPlannedCalls(planned []protocol.PlannedToolCall, fallback []string)
 	}
 	tools := make([]string, 0, len(planned))
 	for _, call := range planned {
-		if tool := strings.TrimSpace(call.Name); tool != "" {
+		if tool := strings.TrimSpace(firstNonEmptyString(call.ToolRef, call.Name)); tool != "" {
 			tools = append(tools, tool)
 		}
 	}

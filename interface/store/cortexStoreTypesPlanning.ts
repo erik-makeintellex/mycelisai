@@ -102,7 +102,7 @@ export interface CatalogueAgent {
     updated_at: string;
 }
 
-export type ArtifactType = 'code' | 'document' | 'image' | 'audio' | 'data' | 'file' | 'chart';
+export type ArtifactType = 'code' | 'document' | 'image' | 'audio' | 'data' | 'file' | 'chart' | 'project_package';
 export type ArtifactStatus = 'pending' | 'approved' | 'rejected' | 'archived';
 
 export interface Artifact {

@@ -55,6 +55,20 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 	}
 
 	if len(planned) > 0 {
+		if toolRef := strings.TrimSpace(planned[0].ToolRef); toolRef != "" {
+			path := firstStringArgument(planned[0].Arguments, "path")
+			if path != "" {
+				display.OperatorSummary = fmt.Sprintf("Use %s on %q through a governed MCP capability.", toolRef, path)
+				display.ExpectedResult = fmt.Sprintf("The MCP capability will run after approval and retain proof for %q.", path)
+				if len(display.AffectedResources) == 0 {
+					display.AffectedResources = []string{path}
+				}
+				return display
+			}
+			display.OperatorSummary = fmt.Sprintf("Use %s through a governed MCP capability.", toolRef)
+			display.ExpectedResult = "The MCP capability will run after approval and return durable execution proof."
+			return display
+		}
 		switch strings.TrimSpace(planned[0].Name) {
 		case "write_file":
 			path := firstStringArgument(planned[0].Arguments, "path")
@@ -175,7 +189,7 @@ func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID 
 func proposalBusWiring(planned []protocol.PlannedToolCall, mutTools []string, fallbackTeamID string) (string, []string) {
 	tools := append([]string{}, mutTools...)
 	for _, call := range planned {
-		tools = append(tools, call.Name)
+		tools = append(tools, firstNonEmptyString(call.ToolRef, call.Name))
 		if isTeamBusTool(call.Name) {
 			teamID := firstStringArgument(call.Arguments, "team_id")
 			if teamID == "" {

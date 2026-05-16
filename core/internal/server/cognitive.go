@@ -236,6 +236,8 @@ func isRuntimeStateQuestion(text string) bool {
 		"breakdown of org state",
 		"review current state",
 		"summarize current state",
+		"workspace v8 design objectives",
+		"current workspace v8 design objectives",
 		"what teams currently exist",
 		"what teams exist",
 		"which teams exist",

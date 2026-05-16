@@ -107,7 +107,10 @@ func TestHandleTeamLeadGuidedAction_AddsContinuityResumeContractForRetainedPacka
 	if workflowGroup["coordinator_profile"] != "Retained Package Continuity lead" {
 		t.Fatalf("expected continuity coordinator profile, got %+v", workflowGroup)
 	}
-	if workflowGroup["recommended_member_limit"] != float64(4) {
+	if workflowGroup["initial_member_count"] != float64(1) {
+		t.Fatalf("expected continuity workflow to start lead-only, got %+v", workflowGroup)
+	}
+	if workflowGroup["recommended_member_limit"] != float64(3) {
 		t.Fatalf("expected bounded member limit, got %+v", workflowGroup)
 	}
 }
@@ -256,6 +259,9 @@ func TestHandleTeamLeadGuidedAction_ResumeRetainedPackageUsesLatestGroupOutputs(
 	}
 	if workflowGroup["recommended_member_limit"] != float64(1) {
 		t.Fatalf("expected member limit from retained team count, got %+v", workflowGroup)
+	}
+	if workflowGroup["initial_member_count"] != float64(1) {
+		t.Fatalf("expected retained workflow to preserve lead-only restart, got %+v", workflowGroup)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {

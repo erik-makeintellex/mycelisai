@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { Download, ShieldCheck } from "lucide-react";
+import OutputAccessActions from "@/components/soma/OutputAccessActions";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import {
   compactButtonClassName,
@@ -163,6 +164,14 @@ function Badge({
 }
 
 function ArtifactRow({ artifact }: { artifact: Artifact }) {
+  const projectPackage = artifact.artifact_type === "project_package";
+  const entrypoint = stringMetadata(artifact.metadata, "entrypoint");
+  const folder = stringMetadata(artifact.metadata, "folder");
+  const files = stringArrayMetadata(artifact.metadata, "files");
+  const validation = stringMetadata(artifact.metadata, "validation");
+  const packageHref = projectPackage
+    ? workspaceFileHref(entrypoint || artifact.file_path || "")
+    : null;
   const readable =
     artifact.artifact_type === "code" ||
     artifact.artifact_type === "document" ||
@@ -189,7 +198,53 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
           Download
         </a>
       </div>
-      {readable && artifact.content ? (
+      {projectPackage ? (
+        <div className="mt-3 space-y-3 rounded-lg border border-cortex-border bg-cortex-bg p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cortex-text-muted">
+              Project package
+            </p>
+            <OutputAccessActions
+              label={artifact.title}
+              url={packageHref}
+              storagePath={folder || entrypoint || artifact.file_path}
+              openLabel="Open Game"
+            />
+          </div>
+          {entrypoint ? (
+            <p className="break-all text-xs leading-5 text-cortex-text-muted">
+              Entrypoint:{" "}
+              <span className="font-mono text-cortex-text-main">
+                {entrypoint}
+              </span>
+            </p>
+          ) : null}
+          {folder ? (
+            <p className="break-all text-xs leading-5 text-cortex-text-muted">
+              Storage:{" "}
+              <span className="font-mono text-cortex-text-main">{folder}</span>
+            </p>
+          ) : null}
+          {files.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {files.slice(0, 8).map((file) => (
+                <span
+                  key={file}
+                  className="rounded border border-cortex-border bg-cortex-surface px-2 py-1 font-mono text-[10px] text-cortex-text-muted"
+                >
+                  {file}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {validation ? (
+            <p className="flex gap-2 text-xs leading-5 text-cortex-text-muted">
+              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cortex-success" />
+              <span>{validation}</span>
+            </p>
+          ) : null}
+        </div>
+      ) : readable && artifact.content ? (
         <pre className="mt-3 max-h-48 overflow-auto rounded-xl border border-cortex-border bg-cortex-bg p-3 text-xs leading-6 text-cortex-text-muted">
           {artifact.content}
         </pre>
@@ -200,4 +255,29 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
       ) : null}
     </div>
   );
+}
+
+function stringMetadata(
+  metadata: Record<string, any> | undefined,
+  key: string,
+): string {
+  const value = metadata?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function stringArrayMetadata(
+  metadata: Record<string, any> | undefined,
+  key: string,
+): string[] {
+  const value = metadata?.[key];
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
+}
+
+function workspaceFileHref(path: string): string | null {
+  const trimmed = path.trim();
+  if (!trimmed) return null;
+  return `/api/v1/workspace/files/view?path=${encodeURIComponent(trimmed)}`;
 }
