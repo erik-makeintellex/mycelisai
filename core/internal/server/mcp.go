@@ -230,7 +230,7 @@ func normalizeFilesystemMCPPath(raw string) string {
 }
 
 func serversNameOrFallback(svc *mcp.Service, ctx context.Context, serverID uuid.UUID) string {
-	if svc == nil {
+	if svc == nil || svc.DB == nil {
 		return serverID.String()
 	}
 	server, err := svc.Get(ctx, serverID)

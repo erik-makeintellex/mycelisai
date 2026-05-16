@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
-vi.mock("@/components/automations/TeamInstantiationWizard", () => ({
+vi.mock("@/components/automations/MissionProfileWizard", () => ({
     __esModule: true,
-    default: () => <div data-testid="team-instantiation-wizard">Team Instantiation Wizard</div>,
+    default: () => <div data-testid="mission-profile-wizard">Mission Profile Wizard</div>,
 }));
 
 import AutomationHub from "@/components/automations/AutomationHub";
@@ -18,15 +18,15 @@ describe("AutomationHub", () => {
         expect(openTab).toHaveBeenCalledWith("triggers");
     });
 
-    it("toggles team instantiation wizard visibility", () => {
+    it("toggles mission profile wizard visibility", () => {
         render(<AutomationHub openTab={() => {}} advancedMode={false} />);
 
-        expect(screen.queryByTestId("team-instantiation-wizard")).toBeNull();
-        fireEvent.click(screen.getByTestId("open-instantiation-wizard"));
-        expect(screen.getByTestId("team-instantiation-wizard")).toBeDefined();
+        expect(screen.queryByTestId("mission-profile-wizard")).toBeNull();
+        fireEvent.click(screen.getByTestId("open-mission-profile-wizard"));
+        expect(screen.getByTestId("mission-profile-wizard")).toBeDefined();
 
-        fireEvent.click(screen.getByTestId("open-instantiation-wizard"));
-        expect(screen.queryByTestId("team-instantiation-wizard")).toBeNull();
+        fireEvent.click(screen.getByTestId("open-mission-profile-wizard"));
+        expect(screen.queryByTestId("mission-profile-wizard")).toBeNull();
     });
 
     it("only shows advanced workflow cards in advanced mode", () => {
@@ -34,10 +34,13 @@ describe("AutomationHub", () => {
         const { rerender } = render(<AutomationHub openTab={openTab} advancedMode={false} />);
         expect(screen.queryByText("Workflow Builder")).toBeNull();
         expect(screen.queryByText("Shared Teams")).toBeNull();
+        expect(screen.queryByText("Coming Soon")).toBeNull();
+        expect(screen.getByText("Team workstreams")).toBeDefined();
+        expect(screen.getByText("Review loop visibility")).toBeDefined();
 
         rerender(<AutomationHub openTab={openTab} advancedMode />);
         expect(screen.getByText("Workflow Builder")).toBeDefined();
-        expect(screen.getByText("Shared Teams")).toBeDefined();
+        expect(screen.queryByText("Shared Teams")).toBeNull();
 
         const createButtons = screen.getAllByRole("button", { name: "Create" });
         const create = createButtons[createButtons.length - 1];

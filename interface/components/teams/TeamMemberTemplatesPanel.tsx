@@ -49,7 +49,7 @@ export function TeamMemberTemplatesPanel({
                     <p className="text-sm font-semibold text-cortex-text-main">{agent.name}</p>
                     <span className="rounded-full border border-cortex-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">{agent.role}</span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{agent.system_prompt?.trim() || "Reusable specialist template for future team-member creation."}</p>
+                  <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{agent.system_prompt?.trim() || "Reusable specialist template for new team-member creation."}</p>
                 </div>
                 <Bot className="mt-0.5 h-4 w-4 text-cortex-text-muted" />
               </div>

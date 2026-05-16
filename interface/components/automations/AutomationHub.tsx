@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { ArrowRight, Cable, ShieldCheck, Users, Clock3, Sparkles } from "lucide-react";
-import TeamInstantiationWizard from "@/components/automations/TeamInstantiationWizard";
+import Link from "next/link";
+import { ArrowRight, CalendarClock, Cable, ShieldCheck, Users, Sparkles } from "lucide-react";
+import MissionProfileWizard from "@/components/automations/MissionProfileWizard";
 
 function ActionCard({
     title,
@@ -37,7 +38,7 @@ export default function AutomationHub({
     openTab,
     advancedMode,
 }: {
-    openTab: (tab: "triggers" | "approvals" | "teams" | "wiring") => void;
+    openTab: (tab: "triggers" | "approvals" | "wiring") => void;
     advancedMode: boolean;
 }) {
     const [showWizard, setShowWizard] = useState(false);
@@ -63,12 +64,6 @@ export default function AutomationHub({
                     {advancedMode && (
                         <>
                             <ActionCard
-                                title="Shared Teams"
-                                description="Inspect shared execution teams, online specialists, and current readiness."
-                                onCreate={() => openTab("teams")}
-                                onView={() => openTab("teams")}
-                            />
-                            <ActionCard
                                 title="Workflow Builder"
                                 description="Inspect and adjust advanced workflow structure when you need lower-level control."
                                 onCreate={() => openTab("wiring")}
@@ -76,6 +71,25 @@ export default function AutomationHub({
                             />
                         </>
                     )}
+                    <div className="rounded-xl border border-cortex-border bg-cortex-surface p-4 space-y-3">
+                        <div className="flex items-start gap-2">
+                            <Users className="mt-0.5 h-4 w-4 text-cortex-primary" />
+                            <div>
+                                <h3 className="text-sm font-semibold text-cortex-text-main">Team workstreams</h3>
+                                <p className="text-xs text-cortex-text-muted mt-1">
+                                    Manage active team leads, inspect outputs, and keep ongoing work visible from the dedicated Teams and Groups workspaces.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <Link href="/teams" className="px-2.5 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10">
+                                Open Teams
+                            </Link>
+                            <Link href="/groups" className="px-2.5 py-1.5 rounded border border-cortex-border text-cortex-text-main text-xs font-mono hover:bg-cortex-border">
+                                Review Outputs
+                            </Link>
+                        </div>
+                    </div>
                     <div className="rounded-xl border border-cortex-primary/25 bg-cortex-primary/10 p-4 space-y-3">
                         <div className="flex items-start justify-between gap-2">
                             <div>
@@ -89,24 +103,29 @@ export default function AutomationHub({
                             </div>
                             <button
                                 onClick={() => setShowWizard((s) => !s)}
-                                data-testid="open-instantiation-wizard"
+                                data-testid="open-mission-profile-wizard"
                                 className="px-2.5 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10"
                             >
                                 {showWizard ? "Hide Wizard" : "Open Wizard"}
                             </button>
                         </div>
-                        {showWizard ? <TeamInstantiationWizard openTab={openTab} /> : null}
+                        {showWizard ? <MissionProfileWizard openTab={openTab} /> : null}
                     </div>
                 </section>
 
                 <section className="space-y-4">
-                    <h2 className="text-sm font-mono font-bold uppercase tracking-wide text-cortex-text-main">Coming Soon</h2>
-                    <div className="rounded-xl border border-cortex-warning/30 bg-cortex-warning/10 p-4 space-y-2">
-                        <div className="flex items-center gap-2 text-cortex-warning">
-                            <Clock3 className="w-4 h-4" />
-                            <h3 className="text-sm font-semibold">Scheduler</h3>
+                    <h2 className="text-sm font-mono font-bold uppercase tracking-wide text-cortex-text-main">Actuation Paths</h2>
+                    <div className="rounded-xl border border-cortex-border bg-cortex-surface p-4 space-y-2">
+                        <div className="flex items-center gap-2 text-cortex-primary">
+                            <CalendarClock className="w-4 h-4" />
+                            <h3 className="text-sm font-semibold text-cortex-text-main">Review loop visibility</h3>
                         </div>
-                        <p className="text-xs text-cortex-text-muted">Recurring schedules are still being tightened for the current V8.1 release path.</p>
+                        <p className="text-xs text-cortex-text-muted">
+                            Organization workspaces expose real review-loop status. Use Trigger Rules here for mission, tool, artifact, and team events; cadence authoring belongs in the scheduler production lane.
+                        </p>
+                        <Link href="/dashboard" className="inline-flex px-2.5 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10">
+                            Open Soma workspace
+                        </Link>
                     </div>
 
                     <div className="rounded-xl border border-cortex-border bg-cortex-surface p-4">

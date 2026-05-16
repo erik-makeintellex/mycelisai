@@ -203,6 +203,40 @@ func TestGetRunTimeline_EmptyPayload(t *testing.T) {
 	}
 }
 
+func TestGetEvent(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+	s := NewStore(db, nil)
+	now := time.Now()
+
+	mock.ExpectQuery("SELECT .+ FROM mission_events").
+		WithArgs("ev-lookup").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "run_id", "tenant_id", "event_type", "severity",
+			"source_agent", "source_team", "payload", "audit_event_id", "emitted_at",
+		}).AddRow(
+			"ev-lookup", "run-1", "default", "tool.completed", "info",
+			"soma", "team-alpha", `{"tool":"write_file","status":"ready"}`, "", now,
+		))
+
+	ev, err := s.GetEvent(context.Background(), "ev-lookup")
+	if err != nil {
+		t.Fatalf("GetEvent error: %v", err)
+	}
+	if ev.ID != "ev-lookup" || ev.RunID != "run-1" {
+		t.Fatalf("unexpected event identity: %+v", ev)
+	}
+	if ev.Payload["tool"] != "write_file" {
+		t.Fatalf("expected payload tool write_file, got %v", ev.Payload["tool"])
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet DB expectations: %v", err)
+	}
+}
+
 func TestGetRunTimeline_NilDB(t *testing.T) {
 	s := &Store{db: nil, nc: nil}
 	_, err := s.GetRunTimeline(context.Background(), "run-1")

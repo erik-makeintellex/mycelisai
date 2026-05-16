@@ -169,14 +169,17 @@ describe("TeamsPage", () => {
         .getByRole("link", { name: /Manage MCP tools/i })
         .getAttribute("href"),
     ).toBe("/resources?tab=tools");
-    expect(
-      screen.getByText(/Groups are advanced operations now/i),
-    ).toBeDefined();
+    expect(screen.getByText(/Outputs and active collaboration/i)).toBeDefined();
     expect(
       screen
-        .getAllByRole("link", { name: /Open group operations/i })[0]
+        .getAllByRole("link", { name: /Review outputs|Review group outputs/i })[0]
         .getAttribute("href"),
     ).toBe("/groups");
+    expect(
+      screen
+        .getByRole("link", { name: /Configure event rules/i })
+        .getAttribute("href"),
+    ).toBe("/automations?tab=triggers");
     expect(
       screen
         .getByRole("link", { name: /Open Soma workspace/i })

@@ -21,9 +21,9 @@ export default function TeamsIntroPanel() {
           </div>
           <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
             Start new teams through a guided creation flow, then hand the
-            finished ask to Soma. Return here after launch to open the team
-            lead, review the current roster, and maintain the member templates
-            Soma should reuse on future team builds.
+            finished ask to Soma. Return here to work with active teams, open
+            retained outputs, configure governed event actuation, and maintain the
+            member templates Soma should reuse when a team needs specialists.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link href="/teams/create" className="inline-flex items-center justify-center rounded-2xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10">
@@ -33,21 +33,24 @@ export default function TeamsIntroPanel() {
               Open Soma workspace
             </Link>
             <Link href="/groups" className="inline-flex items-center justify-center rounded-2xl border border-cortex-border px-4 py-2 text-sm font-semibold text-cortex-text-main hover:bg-cortex-border">
-              Open group operations
+              Review outputs
+            </Link>
+            <Link href="/automations?tab=triggers" className="inline-flex items-center justify-center rounded-2xl border border-cortex-border px-4 py-2 text-sm font-semibold text-cortex-text-main hover:bg-cortex-border">
+              Configure event rules
             </Link>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <QuickFact
-              label="Guide the request"
-              value="Use the guided team-creation flow to define the lane, lead posture, and expected outputs before handoff."
+              label="Work while active"
+              value="Open the lead workspace from each team card and keep follow-up asks scoped to that team."
             />
             <QuickFact
-              label="Work through the lead"
-              value="Each team opens around one focused lead counterpart instead of another generic global chat."
+              label="Review outputs"
+              value="Use Groups for retained outputs, team packages, and archived collaboration records."
             />
             <QuickFact
-              label="Templates guide member choice"
-              value="Soma can reuse the configured team-member templates below when a lane needs specific agent behavior."
+              label="Event actuation"
+              value="Use Automations for governed rules that react to mission, tool, artifact, and team events."
             />
           </div>
         </div>

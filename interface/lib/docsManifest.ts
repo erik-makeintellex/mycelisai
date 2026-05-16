@@ -83,7 +83,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "automations-guide",
                 label: "Automations",
                 path: "docs/user/automations.md",
-                description: "Active automations, trigger rules, approvals, and advanced workflow tools",
+                description: "Event trigger rules, mission-profile setup, and approvals around automated work",
             },
             {
                 slug: "resources-guide",
@@ -95,7 +95,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "teams-guide",
                 label: "Teams",
                 path: "docs/user/teams.md",
-                description: "Compact team defaults, broad-ask splitting, and lead-centered team workflows",
+                description: "Active team work, compact defaults, broad-ask splitting, and lead-centered workflows",
             },
             {
                 slug: "memory-guide",

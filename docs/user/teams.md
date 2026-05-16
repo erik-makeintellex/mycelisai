@@ -1,7 +1,7 @@
 # Teams
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Soma-first team workflow: start lead-only, keep the lead visible, and add temporary specialists only when the work proves a gap.
+> Soma-first team workflow for active team work: start lead-only, keep the lead visible, and add temporary specialists only when the work proves a gap.
 
 ---
 
@@ -18,7 +18,12 @@
 
 ## Overview
 
-The Teams area is where you review existing teams, open a team lead workspace, and create new teams through Soma.
+The Teams area is where you review active teams, open a team lead workspace, and create new teams through Soma.
+
+Use the adjacent workstream surfaces deliberately:
+- `/teams` is for active team work, team lead workspaces, team shape, and current execution posture.
+- `/groups` is for retained outputs, archived collaboration records, and reviewable temporary-workflow history after the active collaboration is closed.
+- `/automations` is for trigger rules that react to events, plus approvals around automated actuation.
 
 Default rule:
 - teams should be small, explicit, and focused on the output
@@ -53,10 +58,14 @@ Use the root Soma chat when you want the simplest path:
 Use `Teams` when you want to inspect or manage existing teams:
 
 - open the team lead workspace
-- review retained outputs
+- review current outputs while the team is active
 - inspect member templates
 - review or edit template role, model, and MCP/internal tool references
 - check whether a team should be archived or kept
+
+Use `Groups` when you want to review retained outputs or collaboration records after a temporary workflow has been archived.
+
+Use `Automations` when you want event rules to actuate work, route proposals, or require approval before execution. Cadence authoring belongs to the scheduler production lane when that surface is available.
 
 Use `Settings -> Connected Tools` or `Resources -> Connected Tools` when you need to confirm which tool refs, direct web search posture, or MCP servers are available before assigning them to a reusable agent template. Installed server cards should show the MCP structure, and Library is the reapply/edit path for curated server config.
 
@@ -108,12 +117,14 @@ Each lane stays inspectable, and Soma coordinates handoffs over managed exchange
 
 When you open a team:
 - start with the team lead
-- inspect the current outputs and retained artifacts
+- inspect the current outputs and active artifacts
 - ask the lead to summarize what the team is doing
 - use the lead to reach specialists only when needed
 - ask for "what changed, what was produced, and what remains" when you need a fast state read
 
 The team lead is the user-facing counterpart for that team, not a hidden extra member list.
+
+After a temporary collaboration is archived, use `/groups` to review the retained output package and collaboration record.
 
 ## Team Creation
 
@@ -146,4 +157,5 @@ When testing team workflows, verify:
 - broad work splits into several smaller lead-owned lanes instead of starting a large roster
 - broad asks produce multiple small coordinated lanes instead of one huge team
 - the team lead is the first visible operational counterpart
-- retained outputs remain reviewable after a temporary team is closed
+- retained outputs remain reviewable in `/groups` after a temporary collaboration is closed
+- event-driven actuation is configured through `/automations` Trigger Rules, not through the team workspace itself

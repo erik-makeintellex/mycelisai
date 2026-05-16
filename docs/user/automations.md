@@ -1,7 +1,7 @@
 # Automations
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Workflow control surface for trigger rules, approvals, and advanced workflow tools.
+> Workflow control surface for event trigger rules and governance approvals.
 
 ---
 
@@ -9,26 +9,32 @@
 
 Open `/automations`.
 
+Current ownership:
+
+- `/teams` is for active team work and team lead workspaces.
+- `/groups` is for retained outputs, archived collaboration records, and reviewable temporary-workflow history.
+- `/automations` is for event trigger rules and approvals around automation behavior.
+
 Current tabs:
 
 | Tab | Purpose |
 |-----|---------|
-| Active Automations | Actionable hub (available now + coming soon scheduler state) |
-| Trigger Rules | Event-driven mission routing rules |
+| Active Automations | Actionable hub for current automation setup, trigger-rule entry, and governance review |
+| Trigger Rules | Event-driven actuation rules |
 | Approvals | Governance review queue and policy controls |
-| Shared Teams (Advanced) | Operational shared-team visibility |
 | Workflow Builder (Advanced) | Lower-level workflow structure editing |
 
 ---
 
 ## Active Automations (Automation Hub)
 
-This tab is intentionally non-empty, even when scheduler is not active.
+This tab is intentionally non-empty. It should orient operators toward the automation surfaces that exist now, rather than presenting scheduler capability as a future placeholder.
 
 Layout:
-- **Available Now** cards (Trigger Rules, Approvals, plus advanced Shared Teams and Workflow Builder when Advanced mode is on)
-- **Coming Soon** scheduler panel (roadmap state, not an error)
-- primary CTA: **Set Up Your First Automation Chain**
+- **Trigger Rules** for event-driven actuation setup
+- **Approvals** for governed automation decisions
+- **Workflow Builder** when Advanced mode is on
+- primary CTA for building a governed automation chain
 
 Default chain guidance:
 1. Create Trigger
@@ -37,7 +43,7 @@ Default chain guidance:
 4. Review Approval
 5. Execute
 
-### Team Instantiation Wizard
+### Mission Profile Wizard
 
 Use **Open Wizard** in Active Automations to launch a guided flow:
 1. Objective
@@ -45,13 +51,13 @@ Use **Open Wizard** in Active Automations to launch a guided flow:
 3. Readiness
 4. Launch
 
-The wizard is the fastest path when you want a new team scaffolded from intent instead of manual setup.
+The wizard is the fastest path when you want a governed mission profile scaffolded from intent instead of manual setup.
 
 ---
 
 ## Trigger Rules
 
-Trigger rules evaluate mission/event activity and decide whether to route new work.
+Trigger rules evaluate mission events and other supported signals, then decide whether to route new work or request approval before actuation.
 
 Typical fields:
 - name
@@ -63,6 +69,8 @@ Typical fields:
 Safety posture:
 - start in `propose`
 - move to automated execution only after validation
+- keep active team operation visible in `/teams`
+- keep retained output and collaboration records visible in `/groups`
 
 ---
 
@@ -82,24 +90,6 @@ Core actions:
 
 ---
 
-## Shared Teams (Advanced Mode)
-
-Shared Teams surfaces operational readiness:
-- online agent count
-- heartbeat recency
-- health indicators
-- quick actions (chat/runs/wiring/logs)
-
-Use this tab for fast diagnosis when execution paths degrade.
-
-Quick actions on each team card:
-- Open chat
-- View runs
-- View wiring
-- View logs
-
----
-
 ## Workflow Builder (Advanced Mode)
 
 Advanced Mode enables the Workflow Builder tab.
@@ -109,16 +99,17 @@ This is the graph-level authoring and editing surface for advanced workflow stru
 
 ## Scheduler Status
 
-Scheduler capabilities are represented as planned/coming-soon where applicable.
-This should appear as roadmap context, not a dead error state.
+Cadence authoring is a production scheduler lane, not a placeholder card in the default UI. When scheduled actuation is available for operator use, it should appear as a governed rule type with the same propose/execute, cooldown, audit, and proof expectations as event-driven actuation.
 
 ---
 
 ## What "Healthy" Looks Like
 
-For the current V7 UX baseline, `/automations` should show:
+For the current V8 UX baseline, `/automations` should show:
 - Active Automations tab content with the Automation Hub
-- **Set Up Your First Automation Chain** primary CTA
-- **Open Wizard** control in the Guided Setup panel
+- a clear path into Trigger Rules
+- a clear path into Approvals
+- no misplaced team-readiness tab
+- no roadmap placeholder copy for scheduler behavior
 
 If those are missing, verify you are on the current build and then refresh the app session.

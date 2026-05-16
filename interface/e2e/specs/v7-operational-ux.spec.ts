@@ -210,8 +210,8 @@ test.describe('V7 Operational UX Gate A', () => {
         await page.waitForLoadState('domcontentloaded');
 
         await expect(page.getByText('Available Now')).toBeVisible();
-        await expect(page.getByText('Coming Soon')).toBeVisible();
-        await expect(page.getByText('Scheduler')).toBeVisible();
+        await expect(page.getByText('Review loop visibility')).toBeVisible();
+        await expect(page.getByText('Trigger Rules')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Set Up Your First Automation Chain' })).toBeVisible();
     });
 

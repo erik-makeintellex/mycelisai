@@ -185,7 +185,7 @@ mission_run created → run_id returned
 mission.started event emitted → Run Timeline visible
 ```
 
-After activation, teams appear in **Automations → Teams** and agent heartbeats appear in the **System → NATS** waterfall (Advanced Mode).
+After activation, teams appear in **Teams**, retained collaboration/output records appear in **Groups**, and agent heartbeats appear in the **System → NATS** waterfall (Advanced Mode).
 
 ---
 

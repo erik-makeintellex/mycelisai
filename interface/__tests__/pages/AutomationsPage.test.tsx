@@ -51,10 +51,6 @@ vi.mock('@/components/workspace/Workspace', () => ({
     __esModule: true,
     default: () => <div data-testid="workspace">Workspace</div>,
 }));
-vi.mock('@/components/teams/TeamsPage', () => ({
-    __esModule: true,
-    default: () => <div data-testid="teams-page">TeamsPage</div>,
-}));
 vi.mock('@/components/automations/ApprovalsTab', () => ({
     __esModule: true,
     default: () => <div data-testid="approvals-tab">ApprovalsTab</div>,
@@ -111,13 +107,15 @@ describe('Automations Page (V7)', () => {
         mockAdvancedMode.mockReturnValue(true);
         await act(async () => { render(<AutomationsPage />); });
         expect(screen.getByRole('button', { name: 'Workflow Builder' })).toBeDefined();
-        expect(screen.getByRole('button', { name: 'Shared Teams' })).toBeDefined();
+        expect(screen.queryByRole('button', { name: 'Shared Teams' })).toBeNull();
     });
 
     it('defaults to Active Automations tab', async () => {
         await act(async () => { render(<AutomationsPage />); });
         expect(screen.getByTestId('automations-hub-baseline')).toBeDefined();
         expect(screen.getByText('Set Up Your First Automation Chain')).toBeDefined();
+        expect(screen.getByText('Team workstreams')).toBeDefined();
+        expect(screen.getByText('Review loop visibility')).toBeDefined();
     });
 
     it('deep-links to approvals tab via search param', async () => {

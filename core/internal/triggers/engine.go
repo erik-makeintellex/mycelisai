@@ -157,12 +157,16 @@ func (e *Engine) evaluateRule(ctx context.Context, rule *TriggerRule, eventID, s
 	}
 
 	// ── Guard 4: Condition match ─────────────────────────────────
-	// Condition matching is reserved for future implementation.
-	// For now, an empty or "{}" condition always passes.
-	if len(rule.Condition) > 2 { // more than just "{}"
-		// TODO: implement JSONPath or simple key=value condition matching
-		// For V7, non-empty conditions are logged and allowed through
-		log.Printf("[triggers] rule %s has condition — condition matching not yet implemented, allowing", ruleID)
+	if hasTriggerCondition(rule.Condition) {
+		matches, reason, err := e.evaluateCondition(ctx, rule.Condition, eventID, sourceRunID, eventType)
+		if err != nil {
+			e.logSkip(ctx, ruleID, eventID, "condition_invalid", "%s", err.Error())
+			return
+		}
+		if !matches {
+			e.logSkip(ctx, ruleID, eventID, "condition_mismatch", "%s", reason)
+			return
+		}
 	}
 
 	// ── All guards passed — determine action ─────────────────────
@@ -276,4 +280,3 @@ func (e *Engine) logSkip(ctx context.Context, ruleID, eventID, reason string, ms
 		SkipReason: detail,
 	})
 }
-

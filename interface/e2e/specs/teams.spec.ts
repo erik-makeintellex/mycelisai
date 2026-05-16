@@ -31,9 +31,10 @@ test.describe('Teams Workspace (/teams)', () => {
         await expect(filter).toHaveValue('all');
     });
 
-    test('groups guidance points to the dedicated workspace', async ({ page }) => {
+    test('output and actuation guidance points to dedicated workspaces', async ({ page }) => {
         await expect(page.getByText('Specialize new teams through Soma')).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Open group operations' }).last()).toHaveAttribute('href', '/groups');
+        await expect(page.getByRole('link', { name: 'Review group outputs' })).toHaveAttribute('href', '/groups');
+        await expect(page.getByRole('link', { name: 'Configure event rules' })).toHaveAttribute('href', '/automations?tab=triggers');
     });
 
     test('guided team creation is reachable from the teams workspace', async ({ page }) => {

@@ -6,6 +6,10 @@ vi.mock("reactflow", async () => {
     return mock;
 });
 
+vi.mock("next/navigation", () => ({
+    useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
+}));
+
 vi.mock("@/components/automations/CapabilityReadinessGateCard", async () => {
     const React = await import("react");
     return {
@@ -27,10 +31,10 @@ vi.mock("@/components/automations/CapabilityReadinessGateCard", async () => {
     };
 });
 
-import TeamInstantiationWizard from "@/components/automations/TeamInstantiationWizard";
+import MissionProfileWizard from "@/components/automations/MissionProfileWizard";
 import { useCortexStore } from "@/store/useCortexStore";
 
-describe("TeamInstantiationWizard", () => {
+describe("MissionProfileWizard", () => {
     const createMissionProfile = vi.fn();
     const activateMissionProfile = vi.fn();
     const fetchMissionProfiles = vi.fn();
@@ -52,11 +56,11 @@ describe("TeamInstantiationWizard", () => {
     });
 
     it("requires objective text before step progression", () => {
-        render(<TeamInstantiationWizard openTab={vi.fn()} />);
+        render(<MissionProfileWizard openTab={vi.fn()} />);
         const continueButton = screen.getByRole("button", { name: "Continue" });
         expect((continueButton as HTMLButtonElement).disabled).toBe(true);
 
-        fireEvent.change(screen.getByPlaceholderText("Describe the outcome you want this team to execute."), {
+        fireEvent.change(screen.getByPlaceholderText("Describe the outcome you want this mission profile to support."), {
             target: { value: "Build a governed delivery workflow for sprint zero." },
         });
 
@@ -65,9 +69,9 @@ describe("TeamInstantiationWizard", () => {
 
     it("reaches launch step and runs propose-only launch flow", async () => {
         const openTab = vi.fn();
-        render(<TeamInstantiationWizard openTab={openTab} />);
+        render(<MissionProfileWizard openTab={openTab} />);
 
-        fireEvent.change(screen.getByPlaceholderText("Describe the outcome you want this team to execute."), {
+        fireEvent.change(screen.getByPlaceholderText("Describe the outcome you want this mission profile to support."), {
             target: { value: "Build a governed delivery workflow for sprint zero." },
         });
 

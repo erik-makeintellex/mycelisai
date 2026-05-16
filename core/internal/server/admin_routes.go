@@ -52,7 +52,6 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/missions/{id}", s.handleDeleteMission)
 
 	mux.HandleFunc("/api/v1/provision/draft", s.HandleProvisionDraft)
-	mux.HandleFunc("/api/v1/provision/deploy", s.HandleProvisionDeploy)
 	mux.HandleFunc("/api/v1/registry/templates", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			s.handleListTemplates(w, r)

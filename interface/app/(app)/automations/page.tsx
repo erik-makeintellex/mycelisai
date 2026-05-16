@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ScrollText, Cable, Users, ShieldCheck, Clock } from "lucide-react";
+import { ScrollText, Cable, ShieldCheck, Clock } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import AutomationHub from "@/components/automations/AutomationHub";
 
@@ -17,18 +17,13 @@ const WiringContent = dynamic(() => import("@/components/workspace/Workspace"), 
     loading: () => <TabLoading label="neural wiring" />,
 });
 
-const TeamsContent = dynamic(() => import("@/components/teams/TeamsPage"), {
-    ssr: false,
-    loading: () => <TabLoading label="teams" />,
-});
-
 const TriggersContent = dynamic(() => import("@/components/automations/TriggerRulesTab"), {
     ssr: false,
     loading: () => <TabLoading label="trigger rules" />,
 });
 
-type TabId = "active" | "triggers" | "approvals" | "wiring" | "teams";
-const VALID_TABS: TabId[] = ["active", "triggers", "approvals", "wiring", "teams"];
+type TabId = "active" | "triggers" | "approvals" | "wiring";
+const VALID_TABS: TabId[] = ["active", "triggers", "approvals", "wiring"];
 
 export default function AutomationsPage() {
     return (
@@ -51,7 +46,7 @@ function AutomationsContent() {
     const [activeTab, setActiveTab] = useState<TabId>(initialTab);
 
     const effectiveTab =
-        !effectiveAdvancedMode && (activeTab === "wiring" || activeTab === "teams")
+        !effectiveAdvancedMode && activeTab === "wiring"
             ? "active"
             : activeTab;
 
@@ -64,7 +59,7 @@ function AutomationsContent() {
                             Automations
                         </h1>
                         <p className="text-cortex-text-muted text-sm mt-1">
-                            Review active automations, set rules, and handle approvals around the Team Lead workflow.
+                            Review active automations, configure event rules, and handle approvals around Soma/team workstreams.
                         </p>
                     </div>
                 </div>
@@ -74,10 +69,7 @@ function AutomationsContent() {
                     <TabButton active={effectiveTab === "triggers"} onClick={() => setActiveTab("triggers")} icon={<ScrollText size={14} />} label="Trigger Rules" />
                     <TabButton active={effectiveTab === "approvals"} onClick={() => setActiveTab("approvals")} icon={<ShieldCheck size={14} />} label="Approvals" />
                     {effectiveAdvancedMode && (
-                        <>
-                            <TabButton active={effectiveTab === "teams"} onClick={() => setActiveTab("teams")} icon={<Users size={14} />} label="Shared Teams" />
-                            <TabButton active={effectiveTab === "wiring"} onClick={() => setActiveTab("wiring")} icon={<Cable size={14} />} label="Workflow Builder" />
-                        </>
+                        <TabButton active={effectiveTab === "wiring"} onClick={() => setActiveTab("wiring")} icon={<Cable size={14} />} label="Workflow Builder" />
                     )}
                 </div>
             </header>
@@ -91,7 +83,6 @@ function AutomationsContent() {
                 )}
                 {effectiveTab === "triggers" && <TriggersContent />}
                 {effectiveTab === "approvals" && <ApprovalsContent />}
-                {effectiveTab === "teams" && <TeamsContent />}
                 {effectiveTab === "wiring" && <WiringContent />}
             </div>
         </div>

@@ -194,19 +194,19 @@ export default function TeamsPage() {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold text-cortex-text-main">
-                Groups are advanced operations now.
+                Outputs and active collaboration
               </p>
               <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
-                Keep this page focused on team leads. Open Group Operations when you want
-                temporary or standing collaboration lanes, output review, and
-                broadcast coordination.
+                Keep active team work here. Use Groups when a team has retained
+                outputs, archived collaboration records, or multi-team
+                coordination to review.
               </p>
             </div>
             <Link
               href="/groups"
               className="inline-flex items-center justify-center rounded-2xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10"
             >
-              Open group operations
+              Review group outputs
             </Link>
           </div>
         </div>

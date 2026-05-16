@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/mycelis/core/internal/events"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -132,6 +134,63 @@ func TestEvaluateRule_NoCooldown_FirstFire(t *testing.T) {
 	// Will reach proposeTrigger → UpdateLastFired (noop with nil db) + LogExecution (error, non-fatal).
 	e.evaluateRule(context.Background(), rule, "ev-1", "", "mission.completed")
 	// If it doesn't panic, the cooldown guard correctly passed.
+}
+
+func TestEvaluateCondition_MatchesPersistedPayload(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+	now := time.Now()
+	mock.ExpectQuery("SELECT .+ FROM mission_events").
+		WithArgs("ev-1").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "run_id", "tenant_id", "event_type", "severity",
+			"source_agent", "source_team", "payload", "audit_event_id", "emitted_at",
+		}).AddRow(
+			"ev-1", "run-1", "default", "mission.completed", "info",
+			"soma", "team-alpha", `{"status":"ready","tool":"write_file","nested":{"count":2}}`, "", now,
+		))
+	e := &Engine{events: events.NewStore(db, nil)}
+	condition := json.RawMessage(`{
+		"event_type": "mission.completed",
+		"source_agent": "soma",
+		"payload.status": "ready",
+		"tool": "write_file",
+		"nested.count": 2
+	}`)
+
+	matches, reason, err := e.evaluateCondition(context.Background(), condition, "ev-1", "run-1", "mission.completed")
+	if err != nil {
+		t.Fatalf("evaluateCondition error: %v", err)
+	}
+	if !matches {
+		t.Fatalf("expected condition to match, reason: %s", reason)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet DB expectations: %v", err)
+	}
+}
+
+func TestEvaluateCondition_ReportsMismatch(t *testing.T) {
+	e := &Engine{}
+	matches, reason, err := e.evaluateCondition(
+		context.Background(),
+		json.RawMessage(`{"event_type":"tool.completed"}`),
+		"ev-1",
+		"run-1",
+		"mission.completed",
+	)
+	if err != nil {
+		t.Fatalf("evaluateCondition error: %v", err)
+	}
+	if matches {
+		t.Fatal("expected condition mismatch")
+	}
+	if reason == "" {
+		t.Fatal("expected mismatch reason")
+	}
 }
 
 // ── NewEngine ─────────────────────────────────────────────────────

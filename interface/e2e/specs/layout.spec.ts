@@ -21,7 +21,7 @@ test.describe('Automations Layout Geometry', () => {
 
     test('automation hub baseline renders', async ({ page }) => {
         await expect(page.getByTestId('automations-hub-baseline')).toBeVisible();
-        await expect(page.getByTestId('open-instantiation-wizard')).toBeVisible();
+        await expect(page.getByTestId('open-mission-profile-wizard')).toBeVisible();
     });
 
     test('theme does not leak white utility classes', async ({ page }) => {

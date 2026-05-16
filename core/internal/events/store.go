@@ -151,3 +151,45 @@ func (s *Store) GetRunTimeline(ctx context.Context, runID string) ([]protocol.Mi
 	}
 	return events, nil
 }
+
+// GetEvent returns one persisted mission event by id for runtime consumers that
+// need the authoritative payload behind a lightweight CTS signal.
+func (s *Store) GetEvent(ctx context.Context, eventID string) (*protocol.MissionEventEnvelope, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("events: database not available")
+	}
+	if eventID == "" {
+		return nil, fmt.Errorf("events: event_id is required")
+	}
+
+	var ev protocol.MissionEventEnvelope
+	var payloadJSON []byte
+	var evType, severity string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, run_id, tenant_id, event_type, severity,
+		       COALESCE(source_agent, ''), COALESCE(source_team, ''),
+		       COALESCE(payload, '{}'), COALESCE(audit_event_id::text, ''), emitted_at
+		FROM mission_events
+		WHERE id = $1 AND tenant_id = 'default'
+	`, eventID).Scan(
+		&ev.ID, &ev.RunID, &ev.TenantID,
+		&evType, &severity,
+		&ev.SourceAgent, &ev.SourceTeam,
+		&payloadJSON, &ev.AuditEventID, &ev.EmittedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("events: get event failed: %w", err)
+	}
+
+	ev.EventType = protocol.EventType(evType)
+	ev.Severity = protocol.EventSeverity(severity)
+	if len(payloadJSON) > 2 {
+		if err := json.Unmarshal(payloadJSON, &ev.Payload); err != nil {
+			return nil, fmt.Errorf("events: payload decode failed: %w", err)
+		}
+	}
+	if ev.Payload == nil {
+		ev.Payload = map[string]interface{}{}
+	}
+	return &ev, nil
+}

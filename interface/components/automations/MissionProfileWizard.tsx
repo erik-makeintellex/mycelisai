@@ -1,21 +1,23 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Play, Save } from "lucide-react";
 import CapabilityReadinessGateCard from "@/components/automations/CapabilityReadinessGateCard";
 import RouteTemplatePicker from "@/components/automations/RouteTemplatePicker";
-import { ProfileCard, StepBadge } from "@/components/automations/TeamInstantiationWizardCards";
+import { ProfileCard, StepBadge } from "@/components/automations/MissionProfileWizardCards";
 import { TEAM_PROFILE_TEMPLATES, type BusExposureMode, type ReadinessSnapshot } from "@/lib/workflowContracts";
 import { useCortexStore, type MissionProfileCreate } from "@/store/useCortexStore";
 
 const STEPS = ["Objective", "Profile", "Readiness", "Launch"] as const;
 type StepIndex = 0 | 1 | 2 | 3;
 
-interface TeamInstantiationWizardProps {
-    openTab: (tab: "triggers" | "approvals" | "teams" | "wiring") => void;
+interface MissionProfileWizardProps {
+    openTab: (tab: "triggers" | "approvals" | "wiring") => void;
 }
 
-export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWizardProps) {
+export default function MissionProfileWizard({ openTab }: MissionProfileWizardProps) {
+    const router = useRouter();
     const createMissionProfile = useCortexStore((s) => s.createMissionProfile);
     const activateMissionProfile = useCortexStore((s) => s.activateMissionProfile);
     const fetchMissionProfiles = useCortexStore((s) => s.fetchMissionProfiles);
@@ -90,7 +92,7 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
         <div className="rounded-xl border border-cortex-border bg-cortex-surface p-4 space-y-4">
             <div className="flex items-center justify-between gap-2">
                 <div>
-                    <h3 className="text-sm font-semibold text-cortex-text-main">Team Instantiation Wizard</h3>
+                    <h3 className="text-sm font-semibold text-cortex-text-main">Mission Profile Wizard</h3>
                     <p className="text-[11px] text-cortex-text-muted mt-1">Guided objective, profile, readiness, and governed launch review.</p>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -106,7 +108,7 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
                     <textarea
                         value={objective}
                         onChange={(e) => setObjective(e.target.value)}
-                        placeholder="Describe the outcome you want this team to execute."
+                        placeholder="Describe the outcome you want this mission profile to support."
                         className="w-full min-h-[110px] rounded-lg border border-cortex-border bg-cortex-bg p-3 text-sm text-cortex-text-main focus:outline-none focus:border-cortex-primary"
                     />
                     <p className="text-[10px] text-cortex-text-muted">Tip: include desired output and any governance constraints.</p>
@@ -181,7 +183,7 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
                                 if (!profileRef) return;
                                 await activateMissionProfile(profileRef);
                                 setLastAction(`Launch-now profile activated (${profileRef}). Opening Teams.`);
-                                openTab("teams");
+                                router.push("/teams");
                             }}
                             className="px-3 py-2 rounded border border-cortex-success/30 text-cortex-success text-xs font-mono hover:bg-cortex-success/10 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1"
                         >

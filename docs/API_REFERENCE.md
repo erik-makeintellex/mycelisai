@@ -117,8 +117,7 @@
 | `/api/v1/governance/pending` | GET | List pending governance approvals |
 | `/api/v1/governance/resolve/{id}` | POST | Approve/reject a pending governance action |
 | **Provisioning & Registry** | | |
-| `/api/v1/provision/draft` | POST/GET | Draft provisioning plan |
-| `/api/v1/provision/deploy` | POST | Deploy provisioned resources |
+| `/api/v1/provision/draft` | POST | Draft a provisioning manifest; deployment still routes through governed Soma/team execution, not this draft endpoint |
 | `/api/v1/registry/templates` | GET/POST | List/register connector templates |
 | `/api/v1/teams/{id}/connectors` | POST | Install connector on team |
 | `/api/v1/teams/{id}/wiring` | GET | Get team wiring graph |
