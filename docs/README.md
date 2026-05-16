@@ -47,6 +47,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 Directed Execution Delivery Plan**: `./architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md`
 - **V8 Governed Execution Doctrine**: `./architecture-library/V8_GOVERNED_EXECUTION_DOCTRINE.md`
 - **V8 MVP Governed Execution Mission Plan**: `./architecture-library/V8_MVP_GOVERNED_EXECUTION_MISSION_PLAN.md`
+- **V8.2 Current State And Finalization PRD**: `./architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md`
 - **V8.1 Living Organization Baseline**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
 - **V8 Memory Layer + Reflection Contract**: `./architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md`
 - **V8 Trusted Memory Arbitration Contract**: `./architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
