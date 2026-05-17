@@ -90,7 +90,6 @@ func (s *AdminServer) persistConfirmedActionOutputArtifacts(ctx context.Context,
 	if s.Artifacts == nil {
 		return nil
 	}
-	missionID := uuidPtrFromString(runID)
 	defaultTeamRef := confirmedActionCreatedTeamID(results)
 	for _, result := range results {
 		toolName := strings.TrimSpace(result.Name)
@@ -101,20 +100,24 @@ func (s *AdminServer) persistConfirmedActionOutputArtifacts(ctx context.Context,
 		if path == "" {
 			continue
 		}
+		packageOutput := projectPackageOutputFromArgs(result.Arguments)
 		teamRef := firstNonEmptyString(confirmedActionTeamID(result.Arguments), defaultTeamRef)
 		metadata, _ := json.Marshal(map[string]any{
 			"run_id":          runID,
 			"entrypoint":      path,
+			"folder":          outputFolder(packageOutput),
+			"files":           outputFiles(packageOutput),
+			"validation":      outputValidation(packageOutput),
 			"retention_class": string(protocol.ExecutionRetentionClassRetained),
 			"source_kind":     string(protocol.SourceKindWebAPI),
 			"source_channel":  "api.intent.confirm-action",
 		})
 		_, err := s.Artifacts.Store(ctx, artifacts.Artifact{
-			MissionID:    missionID,
+			MissionID:    nil,
 			TeamID:       uuidPtrFromString(teamRef),
 			AgentID:      firstNonEmptyString(teamRef, "Soma"),
-			ArtifactType: artifactTypeForWrittenFile(path),
-			Title:        firstNonEmptyString(result.Arguments["title"], path),
+			ArtifactType: artifactTypeForConfirmedWrite(result.Arguments, path),
+			Title:        firstNonEmptyString(outputTitle(packageOutput), result.Arguments["title"], path),
 			ContentType:  contentTypeForWrittenFile(path),
 			Content:      firstNonEmptyString(result.Arguments["content"]),
 			FilePath:     path,
@@ -127,6 +130,13 @@ func (s *AdminServer) persistConfirmedActionOutputArtifacts(ctx context.Context,
 		}
 	}
 	return nil
+}
+
+func outputTitle(output *protocol.ExecutionOutput) string {
+	if output == nil {
+		return ""
+	}
+	return output.Title
 }
 
 func confirmedActionCreatedTeamID(results []plannedToolExecutionResult) string {
@@ -145,6 +155,13 @@ func artifactTypeForWrittenFile(path string) artifacts.ArtifactType {
 		return artifacts.TypeCode
 	}
 	return artifacts.TypeFile
+}
+
+func artifactTypeForConfirmedWrite(args map[string]any, path string) artifacts.ArtifactType {
+	if projectPackageOutputFromArgs(args) != nil {
+		return artifacts.TypeProjectPackage
+	}
+	return artifactTypeForWrittenFile(path)
 }
 
 func contentTypeForWrittenFile(path string) string {
@@ -201,7 +218,7 @@ func (s *AdminServer) ensureGroupForCreatedTeam(ctx context.Context, auditID, au
 	if existing, err := s.getGroupByNameDB(ctx, name); err != nil {
 		return err
 	} else if existing != nil {
-		return nil
+		return s.ensureExistingGroupIncludesTeam(ctx, auditID, existing, teamID)
 	}
 
 	workMode := firstNonEmptyString(merged["work_mode"], "propose_only")
@@ -237,6 +254,28 @@ func (s *AdminServer) ensureGroupForCreatedTeam(ctx context.Context, auditID, au
 		UpdatedAuditEventID: auditID,
 	}
 	return s.insertGroupDB(ctx, &group)
+}
+
+func (s *AdminServer) ensureExistingGroupIncludesTeam(ctx context.Context, auditID string, group *CollaborationGroup, teamID string) error {
+	if group == nil || strings.TrimSpace(teamID) == "" || containsToolName(group.TeamIDs, teamID) {
+		return nil
+	}
+	db := s.getDB()
+	if db == nil {
+		return nil
+	}
+	nextTeamIDs := normalizeStringSlice(append(append([]string{}, group.TeamIDs...), teamID))
+	_, err := db.ExecContext(ctx, `
+		UPDATE collaboration_groups
+		SET team_ids=$2,
+		    updated_audit_event_id=$3,
+		    updated_at=NOW()
+		WHERE id=$1 AND tenant_id='default'`,
+		group.ID,
+		marshalStringList(nextTeamIDs),
+		parseAuditUUID(auditID),
+	)
+	return err
 }
 
 func mergedTeamArgs(args map[string]any) map[string]any {

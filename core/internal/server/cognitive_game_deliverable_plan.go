@@ -35,10 +35,18 @@ func inferFirstTeamGameDeliverablePlanFromRequest(text string, teamCall protocol
 			"package_title":      title,
 			"package_folder":     folder,
 			"package_entrypoint": entrypoint,
-			"package_files":      []string{"index.html"},
+			"package_files":      firstTeamGamePackageFiles(trimmed),
 			"validation":         "Retained as a self-contained browser game output for operator review.",
 		},
 	}, true
+}
+
+func firstTeamGamePackageFiles(request string) []string {
+	files := []string{"index.html"}
+	if projectPackageTextRequestsReadme(request) {
+		files = append(files, "README.md")
+	}
+	return files
 }
 
 func firstTeamGameHTML(title, request string) string {

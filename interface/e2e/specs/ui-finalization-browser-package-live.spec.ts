@@ -7,6 +7,7 @@ import {
   expectProjectPackageMetadata,
   expectProjectPackageVisible,
   liveTimeoutMs,
+  liveAPIGet,
   openLiveWorkspace,
   parseJSONIfPossible,
   removeTarget,
@@ -82,7 +83,7 @@ test.describe("UI finalization exact browser package live proof", () => {
       await expect(outputPage.locator("canvas#game")).toBeVisible({ timeout: 30_000 });
       await outputPage.close();
 
-      const groupsResponse = await page.request.get("/api/v1/groups");
+      const groupsResponse = await liveAPIGet(page, "/api/v1/groups");
       const parsedGroups = await parseJSONIfPossible<APIEnvelope<GroupRecord[]>>(groupsResponse);
       expect(groupsResponse.ok(), parsedGroups.body ? JSON.stringify(parsedGroups.body) : parsedGroups.raw).toBeTruthy();
       const group = (parsedGroups.body?.data ?? []).find((candidate) => candidate.team_ids?.includes(teamID));

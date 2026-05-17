@@ -171,6 +171,65 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 	return planned
 }
 
+func deterministicGovernedMutationResult(latestRequest string, mutTools []string) (chatAgentResult, bool) {
+	planned := buildPlannedToolCalls(chatAgentResult{}, latestRequest, mutTools)
+	if len(planned) == 0 || !plannedCallsHaveWritableOutput(planned) || !plannedCallsAreDeterministicProposalSafe(planned) {
+		return chatAgentResult{}, false
+	}
+	tools := toolsForPlannedCalls(planned, mutTools)
+	target := firstPlannedOutputTarget(planned)
+	if target == "" {
+		return chatAgentResult{}, false
+	}
+	return chatAgentResult{
+		Text:      fmt.Sprintf("Soma can create `%s` through a governed proposal. Review the plan before execution.", target),
+		ToolsUsed: tools,
+	}, true
+}
+
+func plannedCallsHaveWritableOutput(planned []protocol.PlannedToolCall) bool {
+	for _, call := range planned {
+		if strings.EqualFold(strings.TrimSpace(call.Name), "write_file") {
+			return true
+		}
+	}
+	return false
+}
+
+func plannedCallsAreDeterministicProposalSafe(planned []protocol.PlannedToolCall) bool {
+	for _, call := range planned {
+		switch strings.TrimSpace(call.Name) {
+		case "create_team", "write_file":
+			continue
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func firstPlannedOutputTarget(planned []protocol.PlannedToolCall) string {
+	for _, call := range planned {
+		if !strings.EqualFold(strings.TrimSpace(call.Name), "write_file") {
+			continue
+		}
+		if target := firstNonEmptyString(call.Arguments["path"], call.Arguments["package_entrypoint"], call.Arguments["package_folder"]); target != "" {
+			return target
+		}
+	}
+	return ""
+}
+
+func countUserChatMessages(messages []chatRequestMessage) int {
+	count := 0
+	for _, message := range messages {
+		if strings.EqualFold(strings.TrimSpace(message.Role), "user") && strings.TrimSpace(message.Content) != "" {
+			count++
+		}
+	}
+	return count
+}
+
 func mergeMissingPlannedToolArguments(primary, fallback protocol.PlannedToolCall) protocol.PlannedToolCall {
 	if primary.Arguments == nil {
 		primary.Arguments = map[string]any{}

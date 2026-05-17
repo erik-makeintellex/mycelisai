@@ -83,7 +83,7 @@ export function GroupDetailPane({
                 title={`Open ${teamId} lead`}
                 className={linkClassName}
               >
-                Open lead workspace
+                Open lead workspace: {teamId}
               </Link>
             ))}
           </div>

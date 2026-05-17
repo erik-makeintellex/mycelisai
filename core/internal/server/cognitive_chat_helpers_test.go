@@ -140,6 +140,81 @@ func TestBuildPlannedToolCalls_StartsTeamGameDeliverable(t *testing.T) {
 	}
 }
 
+func TestBuildPlannedToolCalls_GameDeliverableIncludesReadmeWhenRequested(t *testing.T) {
+	request := strings.Join([]string{
+		"Create a team named First Demo Game Team and get them to build a playable browser game.",
+		"The package metadata must include files index.html and README.md plus validation notes from opening the browser game.",
+		"After approval, return a retained project_package output with entrypoint, folder, files, and validation.",
+	}, " ")
+	calls := buildPlannedToolCalls(chatAgentResult{
+		Text: `{"tool_call":{"name":"generate_blueprint","arguments":{"topic":"wrong"}}}`,
+	}, request, []string{"generate_blueprint", "delegate"})
+
+	if len(calls) != 2 || calls[1].Name != "write_file" {
+		t.Fatalf("planned calls = %#v, want create_team + write_file", calls)
+	}
+	files := confirmedActionStringSlice(calls[1].Arguments["package_files"])
+	if !containsString(files, "index.html") || !containsString(files, "README.md") {
+		t.Fatalf("package_files = %#v, want index.html and README.md", files)
+	}
+	if calls[1].Arguments["package_kind"] != "project_package" {
+		t.Fatalf("package_kind = %#v, want project_package", calls[1].Arguments["package_kind"])
+	}
+}
+
+func TestDeterministicGovernedMutationResult_BuildsWriteFileProposalWithoutAgent(t *testing.T) {
+	request := "Create a simple python file named workspace/logs/hello.py that prints hello world."
+	result, ok := deterministicGovernedMutationResult(request, []string{"write_file"})
+	if !ok {
+		t.Fatal("expected deterministic governed mutation result")
+	}
+	if !containsToolName(result.ToolsUsed, "write_file") {
+		t.Fatalf("tools_used = %#v, want write_file", result.ToolsUsed)
+	}
+	if !strings.Contains(result.Text, "workspace/logs/hello.py") {
+		t.Fatalf("text = %q, want target path", result.Text)
+	}
+
+	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	if len(calls) != 1 || calls[0].Name != "write_file" {
+		t.Fatalf("planned calls = %#v, want one write_file call", calls)
+	}
+	if calls[0].Arguments["path"] != "workspace/logs/hello.py" {
+		t.Fatalf("path = %#v, want workspace/logs/hello.py", calls[0].Arguments["path"])
+	}
+}
+
+func TestDeterministicGovernedMutationResult_BuildsFirstDemoTeamGameProposal(t *testing.T) {
+	request := strings.Join([]string{
+		"Create a team with team_id first-demo-game-team named First Demo Game Team.",
+		"Ask Soma for the exact first demo deliverable: a playable browser game project package.",
+		"Retain it at workspace/generated/first-demo-game-team-first-game with entrypoint workspace/generated/first-demo-game-team-first-game/index.html.",
+		"The package metadata must include files index.html and README.md plus validation notes from opening the browser game.",
+	}, " ")
+	result, ok := deterministicGovernedMutationResult(request, []string{"write_file", "generate_blueprint", "delegate"})
+	if !ok {
+		t.Fatal("expected deterministic governed mutation result")
+	}
+	if !containsToolName(result.ToolsUsed, "create_team") || !containsToolName(result.ToolsUsed, "write_file") {
+		t.Fatalf("tools_used = %#v, want create_team and write_file", result.ToolsUsed)
+	}
+
+	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	if len(calls) != 2 || calls[0].Name != "create_team" || calls[1].Name != "write_file" {
+		t.Fatalf("planned calls = %#v, want create_team + write_file", calls)
+	}
+	if calls[0].Arguments["name"] != "First Demo Game Team" {
+		t.Fatalf("team name = %#v, want First Demo Game Team", calls[0].Arguments["name"])
+	}
+	if calls[1].Arguments["package_title"] != "First Demo Game Team First Playable" {
+		t.Fatalf("package_title = %#v, want human team name title", calls[1].Arguments["package_title"])
+	}
+	files := confirmedActionStringSlice(calls[1].Arguments["package_files"])
+	if !containsString(files, "README.md") {
+		t.Fatalf("package_files = %#v, want README.md", files)
+	}
+}
+
 func TestBuildPlannedToolCalls_PreservesExplicitCreateTeamArguments(t *testing.T) {
 	request := "Create a compact team with team_id rich-team. Then have that team create a small note at path workspace/logs/rich_team_note.md containing 'ready'"
 	calls := buildPlannedToolCalls(chatAgentResult{

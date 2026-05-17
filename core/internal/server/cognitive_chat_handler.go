@@ -84,6 +84,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		req.Messages = applyConfirmedReferentialAction(req.Messages, referentialReview)
 		latestUserText = referentialReview.EffectiveRequest
 	}
+	visibleUserTurnCount := countUserChatMessages(req.Messages)
 
 	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
 
@@ -119,14 +120,22 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, "admin")
-	agentResult, err := s.requestChatAgent(r.Context(), subject, req.Messages)
-	if err != nil {
-		log.Printf("Chat via Admin agent failed: %v", err)
-		respondChatTransportBlocker(w, "Soma", err)
-		return
+	var agentResult chatAgentResult
+	deterministicProposal := false
+	if visibleUserTurnCount == 1 {
+		agentResult, deterministicProposal = deterministicGovernedMutationResult(latestUserText, requestMutationTools)
+	}
+	if !deterministicProposal {
+		var err error
+		agentResult, err = s.requestChatAgent(r.Context(), subject, req.Messages)
+		if err != nil {
+			log.Printf("Chat via Admin agent failed: %v", err)
+			respondChatTransportBlocker(w, "Soma", err)
+			return
+		}
 	}
 
-	if shouldRetryDirectAnswer(agentResult, requestMutationTools) {
+	if !deterministicProposal && shouldRetryDirectAnswer(agentResult, requestMutationTools) {
 		retryMessages := applyDirectAnswerRetryInstruction(req.Messages, latestUserText)
 		retryResult, retryErr := s.requestChatAgent(r.Context(), subject, retryMessages)
 		if retryErr == nil {

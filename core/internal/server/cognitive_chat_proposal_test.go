@@ -20,6 +20,7 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 		wantMode             protocol.ExecutionMode
 		wantProposalTool     string
 		wantRouteHintApplied bool
+		wantBypassAgent      bool
 	}{
 		{
 			name: "direct answer stays answer mode",
@@ -58,7 +59,8 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 			},
 			wantMode:             protocol.ModeProposal,
 			wantProposalTool:     "write_file",
-			wantRouteHintApplied: true,
+			wantRouteHintApplied: false,
+			wantBypassAgent:      true,
 		},
 	}
 

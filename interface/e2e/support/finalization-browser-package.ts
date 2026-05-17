@@ -3,6 +3,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { expect, type Page, type Route } from "@playwright/test";
 import type { RouteResponse } from "./soma-ui-testing";
+import { liveAPIHeaders, liveAPIURL } from "./live-api-auth";
 
 const repoRoot = path.resolve(__dirname, "../../..");
 export const liveTimeoutMs = 180_000;
@@ -67,12 +68,15 @@ export async function parseJSONIfPossible<T>(response: { text(): Promise<string>
   }
 }
 
-function backendWorkspaceRoot() {
+function backendWorkspaceRoots() {
   const configuredRoot = process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT;
   if (configuredRoot?.trim()) {
-    return path.isAbsolute(configuredRoot) ? configuredRoot : path.join(repoRoot, configuredRoot);
+    return [path.isAbsolute(configuredRoot) ? configuredRoot : path.join(repoRoot, configuredRoot)];
   }
-  return path.join(repoRoot, "workspace", "docker-compose", "data", "workspace");
+  return [
+    path.join(repoRoot, "core", "workspace"),
+    path.join(repoRoot, "workspace", "docker-compose", "data", "workspace"),
+  ];
 }
 
 let cachedK8sPodName: string | null = null;
@@ -99,7 +103,7 @@ function k8sCorePodName() {
 
 export function targetExists(relativePath: string) {
   const normalized = relativePath.replace(/^workspace[\\/]/, "").replace(/\\/g, "/");
-  if (fs.existsSync(path.join(backendWorkspaceRoot(), normalized))) return true;
+  if (backendWorkspaceRoots().some((workspaceRoot) => fs.existsSync(path.join(workspaceRoot, normalized)))) return true;
   if (!k8sWorkspaceProbeEnabled()) return false;
   const namespace = process.env.PLAYWRIGHT_K8S_NAMESPACE ?? "mycelis";
   const root = (process.env.PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT ?? "/data/workspace").replace(/\/$/, "");
@@ -117,7 +121,9 @@ export function targetExists(relativePath: string) {
 
 export function removeTarget(relativePath: string) {
   const normalized = relativePath.replace(/^workspace[\\/]/, "").replace(/\\/g, "/");
-  fs.rmSync(path.join(backendWorkspaceRoot(), normalized), { force: true });
+  for (const workspaceRoot of backendWorkspaceRoots()) {
+    fs.rmSync(path.join(workspaceRoot, normalized), { force: true });
+  }
   if (!k8sWorkspaceProbeEnabled()) return;
   const namespace = process.env.PLAYWRIGHT_K8S_NAMESPACE ?? "mycelis";
   const root = (process.env.PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT ?? "/data/workspace").replace(/\/$/, "");
@@ -133,13 +139,18 @@ export function removeTarget(relativePath: string) {
 }
 
 export async function createOrganization(page: Page, name: string) {
-  const response = await page.request.post("/api/v1/organizations", {
+  const response = await page.request.post(liveAPIURL("/api/v1/organizations"), {
+    headers: liveAPIHeaders(),
     data: { name, purpose: "Exact UI finalization browser package proof", start_mode: "empty" },
   });
   const parsed = await parseJSONIfPossible<OrganizationEnvelope>(response);
   expect(response.ok(), parsed.body ? JSON.stringify(parsed.body) : parsed.raw).toBeTruthy();
   expect(parsed.body?.data?.id).toBeTruthy();
   return parsed.body!.data!.id!;
+}
+
+export async function liveAPIGet(page: Page, url: string) {
+  return page.request.get(liveAPIURL(url), { headers: liveAPIHeaders() });
 }
 
 export async function openLiveWorkspace(page: Page, organizationId: string) {

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 import { openOrganizationWorkspace, organizationChatInput, waitForOrganizationWorkspaceReady } from '../support/live-organization-workspace';
+import { liveAPIHeaders, liveAPIURL } from '../support/live-api-auth';
 
 const repoRoot = path.resolve(__dirname, '../../..');
 const LIVE_GOVERNANCE_TIMEOUT_MS = 180_000;
@@ -153,7 +154,8 @@ async function parseJSONIfPossible<T>(response: { text(): Promise<string> }) {
 }
 
 async function createOrganization(page: Page, name: string) {
-    const response = await page.request.post('/api/v1/organizations', {
+    const response = await page.request.post(liveAPIURL('/api/v1/organizations'), {
+        headers: liveAPIHeaders(),
         data: {
             name,
             purpose: 'Live governance verification',

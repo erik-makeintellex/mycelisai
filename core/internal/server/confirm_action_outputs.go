@@ -26,6 +26,9 @@ func executionOutputsFromToolResults(results []plannedToolExecutionResult) []pro
 			if toolName == "store_artifact" {
 				continue
 			}
+			if projectPackageOutputFromArgs(result.Arguments) != nil {
+				continue
+			}
 		}
 		if toolName == "create_team" {
 			kind = "team"
@@ -86,11 +89,9 @@ func mergeArtifactRefsWithArgs(artifacts []protocol.ChatArtifactRef, args map[st
 			artifact.Type = "project_package"
 			artifact.Entrypoint = firstNonEmptyString(artifact.Entrypoint, packageOutput.Entrypoint)
 			artifact.Folder = firstNonEmptyString(artifact.Folder, packageOutput.Folder)
-			if len(artifact.Files) == 0 {
-				artifact.Files = packageOutput.Files
-			}
+			artifact.Files = mergeProjectPackageFiles(artifact.Files, packageOutput.Files)
 			artifact.Validation = firstNonEmptyString(artifact.Validation, packageOutput.Validation)
-			artifact.Title = firstNonEmptyString(artifact.Title, packageOutput.Title)
+			artifact.Title = firstNonEmptyString(packageOutput.Title, artifact.Title)
 		}
 		merged = append(merged, artifact)
 	}
@@ -107,7 +108,7 @@ func outputKindForWrittenFile(path string) string {
 }
 
 func projectPackageOutputFromArgs(args map[string]any) *protocol.ExecutionOutput {
-	kind := strings.TrimSpace(firstNonEmptyString(args["package_kind"], args["output_kind"], args["kind"]))
+	kind := strings.TrimSpace(firstNonEmptyString(args["package_kind"], args["output_kind"], args["kind"], args["type"], args["artifact_type"]))
 	if kind != "project_package" {
 		return nil
 	}
@@ -125,9 +126,64 @@ func projectPackageOutputFromArgs(args map[string]any) *protocol.ExecutionOutput
 		Href:       workspaceFileOutputHref(entrypoint),
 		Entrypoint: entrypoint,
 		Folder:     folder,
-		Files:      firstStringSliceArgument(args["files"], args["package_files"]),
+		Files:      projectPackageFilesFromArgs(args),
 		Validation: firstNonEmptyString(args["validation"], args["validation_summary"], args["proof_summary"]),
 	}
+}
+
+func projectPackageFilesFromArgs(args map[string]any) []string {
+	files := firstStringSliceArgument(args["files"], args["package_files"])
+	if projectPackageArgsRequireReadme(args) {
+		files = mergeProjectPackageFiles(files, []string{"README.md"})
+	}
+	return files
+}
+
+func mergeProjectPackageFiles(primary, secondary []string) []string {
+	out := make([]string, 0, len(primary)+len(secondary))
+	for _, file := range append(append([]string{}, primary...), secondary...) {
+		file = strings.TrimSpace(file)
+		if file == "" {
+			continue
+		}
+		seen := false
+		for _, existing := range out {
+			if strings.EqualFold(existing, file) {
+				seen = true
+				break
+			}
+		}
+		if seen {
+			continue
+		}
+		out = append(out, file)
+	}
+	return out
+}
+
+func projectPackageArgsRequireReadme(args map[string]any) bool {
+	for _, key := range []string{
+		"content",
+		"body",
+		"text",
+		"prompt",
+		"request",
+		"contract",
+		"package_contract",
+		"validation",
+		"validation_summary",
+		"proof_summary",
+	} {
+		if projectPackageTextRequestsReadme(firstNonEmptyString(args[key])) {
+			return true
+		}
+	}
+	return false
+}
+
+func projectPackageTextRequestsReadme(text string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(text))
+	return strings.Contains(normalized, "readme")
 }
 
 func firstStringSliceArgument(values ...any) []string {
