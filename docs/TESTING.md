@@ -31,17 +31,17 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 - Use `uv run inv ...` for real task execution.
 - `uv run inv ci.baseline` is the default branch-readiness gate.
 - Use `uv run inv ci.baseline --no-e2e` only for intentionally narrower debugging.
-- GitHub Actions are manual-only through `workflow_dispatch`; source-mode local gates are first, and Docker/Compose/K8s proof starts only after local run/build/test evidence is acceptable.
+- GitHub Actions are manual-only through `workflow_dispatch`; source-mode local gates are first, infra-only PostgreSQL/NATS may support live proof, and full Docker/Compose/K8s app proof starts only after local run/build/test evidence is acceptable.
 - Windows is the edit/review/push surface; WSL is the guarded Compose release-style proof checkout, while Rancher Desktop K3s is the Windows local Kubernetes/commercial-parity proof lane.
 - `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required; `interface.check` retries transient Windows socket-reuse failures after heavy browser proof before treating a route as failed.
 - Playwright starts/stops the managed Next.js app, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant.
 
 ## Thorough Release Testing Contract
 
-Use this local-first sequence when a slice changes the delivered operator workflow, runtime topology, governance behavior, retained outputs, AI provider posture, or release proof lane:
+Use this source-first sequence when a slice changes the delivered operator workflow, runtime topology, governance behavior, retained outputs, AI provider posture, or release proof lane:
 
 1. Source and contract proof from the Windows repo first: `uv run inv core.test`, `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.build`, docs tests, and `uv run inv quality.max-lines --limit 300`; capped files in `ops/quality_legacy_caps.txt` must match current counts.
-2. Only after source proof is acceptable, containerize for deployment-mimic proof from the git-refreshed WSL checkout:
+2. Keep PostgreSQL and NATS available as infra-only dependencies when the local source stack needs real persistence or bus proof; only after source proof is acceptable, containerize Core/Interface for deployment-mimic proof from the git-refreshed WSL checkout:
    - `uv run inv wsl.refresh`
    - `uv run inv wsl.validate --lane=release`
 3. Local Kubernetes proof when Helm/commercial-release parity is part of the risk: set `$env:MYCELIS_K8S_BACKEND="rancher"` on Windows Rancher Desktop K3s, use `$env:MYCELIS_K8S_VALUES_FILE="charts/mycelis-core/values-k3d.yaml"` as the shared local-Kubernetes preset for Rancher K3s and k3d, then run `uv run inv k8s.deploy`, `uv run inv k8s.wait --timeout=300`, `uv run inv k8s.bridge`, and a live backend GUI proof with `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`.
@@ -127,7 +127,7 @@ No backend/API review is complete without a mapped UI target and evidence result
 ## Clean Run Discipline
 
 - Stop prior local services before runtime or integration tests: `uv run inv lifecycle.down`.
-- Do not keep Docker/K8s stacks running during ordinary source work; use local run/build/test first, then intentionally bring up Compose/K8s for deployment proof.
+- Do not keep full Docker/K8s app stacks running during ordinary source work; use local run/build/test with infra-only PostgreSQL/NATS when needed, then intentionally bring up Compose/K8s for deployment proof.
 - For Compose data-plane proof, use `uv run inv compose.infra-up`, `compose.infra-health`, and `compose.storage-health`.
 - Inspect service ports/processes before runtime proof when prior runs may have left residue.
 - Use `uv run inv lifecycle.status` for the fast process/endpoint snapshot; it checks Core through `/healthz` and Ollama through `/api/tags` across loopback fallbacks so transient TCP-only snapshots do not mark reachable services down.

@@ -5,7 +5,7 @@ This manual owns task and runtime operations. It links to [Local Development Wor
 
 Implementation slices that change runtime, tasking, validation, API meaning, or operator behavior must review and update the owning docs in the same change rather than leaving docs drift for later cleanup.
 
-Current proof posture: workflows are manual-only, source-mode local run/build/test is first, and Compose/K8s are brought up only after local evidence is acceptable for container/deployment proof.
+Current proof posture: workflows are manual-only, source-mode local run/build/test plus infra-only PostgreSQL/NATS is first, and Core/Interface Compose/K8s app services are brought up only after local evidence is acceptable for container/deployment proof.
 
 ## TOC
 

@@ -21,7 +21,7 @@
 - App-tied management logic stays in Python task modules; PowerShell is wrapper-only when the host needs it.
 - Task, runtime, or validation changes are not complete until the matching docs are reviewed and updated in the same slice.
 - GitHub Actions workflows are manual-only through `workflow_dispatch` for the current release-readiness push; automatic push and pull-request hosted runs are paused.
-- Treat source-mode local run/build/test as the first acceptance lane. Bring up Compose, Rancher K3s, WSL/Compose, or target-cluster proof only after local evidence is acceptable.
+- Treat source-mode local run/build/test with infra-only PostgreSQL/NATS as the first acceptance lane. Bring up full Compose, Rancher K3s, WSL/Compose, or target-cluster app proof only after local evidence is acceptable.
 
 ## Components
 This directory contains the logic for the **Service Release Standard 1.0**.
@@ -43,7 +43,7 @@ WSL Compose proof-checkout contract:
 - `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, creates the configured Compose output-block host path when needed, sanitizes the Linux-side PATH so Windows Docker credential helpers cannot hijack Docker pulls, uses local Linux probes when the Ollama relay is prepared inside WSL, then runs Compose-safe release-preflight, Compose health/storage proof, a `compose.warm-cognitive` text-model warm-up, focused live-backend browser workflows against the Compose-delivered UI, and the Windows GUI probe; `--lane=service` and `--lane=release` keep the runtime preflight step and let this task own the Compose service/browser proof, and `--headed-browser` adds visible Playwright windows for those focused live specs when browser-visible release evidence is required
 
 Deployment selection rule:
-- local source-mode run/build/test is the default development and review lane
+- local source-mode run/build/test with infra-only PostgreSQL/NATS is the default development and review lane
 - Docker Compose is the rapid local development and same-machine proof runtime
 - Rancher Desktop K3s is the preferred Windows local Kubernetes validation lane for Helm behavior
 - `k3d` is the preferred WSL/Linux local Kubernetes validation lane for Helm behavior
