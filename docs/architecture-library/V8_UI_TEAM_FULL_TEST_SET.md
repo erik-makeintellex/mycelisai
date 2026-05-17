@@ -3,10 +3,7 @@
 
 Status: ACTIVE.
 
-This is the compact index for the full V8 browser/operator test set. Detailed workflow lists now live in:
-- [V8 UI Team Browser Workflows](V8_UI_TEAM_BROWSER_WORKFLOWS.md)
-- [V8 UI Team Live Proof](V8_UI_TEAM_LIVE_PROOF.md)
-- [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
+This is the compact contract for the full V8 browser/operator test set. The older browser-workflow and live-proof split notes were removed; keep durable browser proof expectations here and detailed commands in [Testing](../TESTING.md).
 
 ## 1. Test Goal
 
@@ -58,7 +55,12 @@ Record branch, commit SHA, date/time, runtime lane, browser, UI URL, live-backen
 
 For operator-facing certification, run critical Chromium proof in headed mode and do not fan out multiple managed Playwright invocations against the same workspace/port.
 
-Critical commands are listed in [V8 UI Team Browser Workflows](V8_UI_TEAM_BROWSER_WORKFLOWS.md). For the guarded WSL release lane, `uv run inv wsl.validate --lane=release --headed-browser` runs the focused live-backend Compose proof with visible Playwright windows after the standard release validation sequence.
+Critical command families:
+- `uv run inv interface.e2e --project=chromium --workers=1`
+- focused headed proof with `uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=<focused-live-spec>`
+- guarded WSL release proof with `uv run inv wsl.validate --lane=release --headed-browser`
+
+For the guarded WSL release lane, `uv run inv wsl.validate --lane=release --headed-browser` runs the focused live-backend Compose proof with visible Playwright windows after the standard release validation sequence.
 
 ## 4. Execution Order
 
@@ -78,11 +80,11 @@ Critical commands are listed in [V8 UI Team Browser Workflows](V8_UI_TEAM_BROWSE
 
 ## 5. Workflow Test Set
 
-Workflow details live in [V8 UI Team Browser Workflows](V8_UI_TEAM_BROWSER_WORKFLOWS.md). Keep this index stable for manifest/navigation references.
+Core workflows are listed in [Testing](../TESTING.md#full-gui-coverage-matrix). Keep this contract stable for manifest/navigation references.
 
 ## 6. Deployed Live-Backend Proof
 
-Live proof details live in [V8 UI Team Live Proof](V8_UI_TEAM_LIVE_PROOF.md).
+Live proof details live in [Testing](../TESTING.md#user-interaction-delivery-gate) and [Remote User Testing](../REMOTE_USER_TESTING.md).
 
 ## 7. Reporting Format
 

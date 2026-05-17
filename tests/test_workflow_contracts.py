@@ -129,40 +129,32 @@ def test_search_fallback_and_provenance_docs_match_runtime_shape():
     assert "fall back to bounded text search" in soma_doc
 
 
-def test_mycelis_search_delivery_plan_assigns_teams_and_testing_gates():
-    plan = _read("docs/architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md")
+def test_mycelis_search_contract_lives_in_user_api_and_capability_docs():
     index = _read("docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md")
     docs_home = _read("docs/README.md")
     manifest = _read("interface/lib/docsManifest.ts")
-    state = _read(".state/V8_DEV_STATE.md")
+    resources_doc = _read("docs/user/resources.md")
+    soma_doc = _read("docs/user/soma-chat.md")
+    api_doc = _read("docs/API_REFERENCE.md")
+    capability_doc = _read("docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md")
 
-    required_teams = [
-        "Architecture Lead",
-        "Runtime Development",
-        "Data/Memory Development",
-        "Interface Development",
-        "Ops/Runtime Delivery",
-        "Validation",
-    ]
-    for team in required_teams:
-        assert team in plan
+    assert "V8 Mycelis Search Capability Delivery Plan" not in index
+    assert "V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md" not in docs_home
+    assert "V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md" not in manifest
 
     for required in [
-        "Soma -> Mycelis Search API -> local_sources | searxng | local_api | brave | disabled",
-        "MYCELIS_SEARCH_PROVIDER=disabled|local_sources|searxng|local_api|brave",
+        "local_sources",
+        "searxng",
+        "local_api",
+        "brave",
+        "disabled",
         "MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080",
-        "MYCELIS_SEARCH_LOCAL_API_ENDPOINT=http://search.local/api/search",
-        "`local_sources` is the default native/Helm provider, uses Mycelis-governed stores, and never requires external tokens.",
-        "asking \"can you search the web?\" returns capability status, not a blanket no",
-        "local-source search works without Brave or any hosted token",
+        "MYCELIS_SEARCH_LOCAL_API_ENDPOINT",
+        "Current Mycelis Search provider posture",
+        "capability",
     ]:
-        assert required in plan
-
-    canonical_path = "docs/architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md"
-    assert "V8 Mycelis Search Capability Delivery Plan" in index
-    assert "V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md" in docs_home
-    assert canonical_path in manifest
-    assert canonical_path in state
+        combined = "\n".join([resources_doc, soma_doc, api_doc, capability_doc])
+        assert required in combined
 
 
 def test_active_capability_docs_use_current_governed_resource_contract():

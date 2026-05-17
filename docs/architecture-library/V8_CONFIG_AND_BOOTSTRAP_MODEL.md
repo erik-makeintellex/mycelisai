@@ -1,13 +1,9 @@
 # V8 Config and Bootstrap Model
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
-Status: canonical V7-to-V8 bootstrap migration contract.
+Status: canonical bootstrap and configuration contract.
 
-This index defines the bootstrap model and points durable detail to:
-- [V8 Config Bootstrap Resolution](V8_CONFIG_BOOTSTRAP_RESOLUTION.md)
-- [V8 Config Template Instantiation](V8_CONFIG_TEMPLATE_INSTANTIATION.md)
-- [V8 Config Migration Dehardening](V8_CONFIG_MIGRATION_DEHARDENING.md)
-- [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md)
+This document owns the complete active bootstrap model. Split detail notes from earlier V8 planning were removed from the active library; promote any still-needed requirement here instead of restoring small stale fragments.
 
 ## Purpose
 
@@ -45,8 +41,6 @@ High-level stages:
 7. Resolve identity, memory, and continuity defaults.
 8. Produce runtime-ready organization state.
 
-See [V8 Config Bootstrap Resolution](V8_CONFIG_BOOTSTRAP_RESOLUTION.md).
-
 ## Scope Inheritance
 
 Conceptual chain:
@@ -75,7 +69,7 @@ Entry paths:
 - create from config/API
 - clone and modify a template later
 
-Templates define reusable shape. Instantiation binds identity, source metadata, initial policy, and runtime state. See [V8 Config Template Instantiation](V8_CONFIG_TEMPLATE_INSTANTIATION.md).
+Templates define reusable shape. Instantiation binds identity, source metadata, initial policy, and runtime state.
 
 Template = reusable blueprint. Inception / AI Organization = actual instantiated organization. Templates are reusable organization blueprints, not just UI presets.
 
@@ -172,8 +166,6 @@ V8 replacement:
 
 V7 YAML and manifest assets remain valid migration inputs, but they must be translated into V8 template/config packages before use. Retired assumptions include Auto-hydrating standing-team rows at process start. and Treating last-run database state as the bootstrap plan. V8 keeps prior assets useful, but only after they conform to the explicit template + instantiation + inheritance + precedence pipeline.
 
-See [V8 Config Migration Dehardening](V8_CONFIG_MIGRATION_DEHARDENING.md).
-
 ## Migration Note
 
-Any slice touching startup, templates, runtime config, provider routing, team defaults, or operator creation flows must review this file and the relevant split doc.
+Any slice touching startup, templates, runtime config, provider routing, team defaults, or operator creation flows must review this file.

@@ -22,6 +22,7 @@
 - Task, runtime, or validation changes are not complete until the matching docs are reviewed and updated in the same slice.
 - GitHub Actions workflows are manual-only through `workflow_dispatch` for the current release-readiness push; automatic push and pull-request hosted runs are paused.
 - Treat source-mode local run/build/test with infra-only PostgreSQL/NATS as the first acceptance lane. Bring up full Compose, Rancher K3s, WSL/Compose, or target-cluster app proof only after local evidence is acceptable.
+- Scope tasks around needed tools and Mycelis services. Do not add repo tasks that manage whole host environments such as terminating WSL distros, resetting Rancher Desktop VMs, or repairing Docker Desktop itself.
 
 ## Components
 This directory contains the logic for the **Service Release Standard 1.0**.
@@ -38,9 +39,10 @@ WSL Compose proof-checkout contract:
 - after a Windows-side commit/push, refresh the WSL proof checkout from git before running WSL Compose evidence
 - keep destructive cleanup such as `git reset --hard` and source `git clean` scoped to the dedicated WSL proof checkout; `wsl.refresh` preserves generated `workspace/tool-cache`, `workspace/logs`, and `workspace/docker-compose` roots so permission-owned runtime/cache mounts do not block source refresh
 - when the runtime is hosted from WSL on the same Windows machine, the required operator-facing browser path is the Windows browser at `http://localhost:3000`
-- use `uv run inv wsl.status`, `uv run inv wsl.down`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle` when you want the guarded Windows-dev -> WSL-proof task path instead of a manual handoff
+- use `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle` when you want the guarded Windows-dev -> WSL-proof task path instead of a manual handoff
 - `uv run inv wsl.refresh` runs WSL git fetch noninteractively, tries a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, preserves generated WSL runtime/cache roots during source cleanup, and otherwise fails before reset/clean with SSH/HTTPS auth guidance; keep the boundary commit/push/fetch based instead of copying source trees
 - `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, creates the configured Compose output-block host path when needed, sanitizes the Linux-side PATH so Windows Docker credential helpers cannot hijack Docker pulls, uses local Linux probes when the Ollama relay is prepared inside WSL, then runs Compose-safe release-preflight, Compose health/storage proof, a `compose.warm-cognitive` text-model warm-up, focused live-backend browser workflows against the Compose-delivered UI, and the Windows GUI probe; `--lane=service` and `--lane=release` keep the runtime preflight step and let this task own the Compose service/browser proof, and `--headed-browser` adds visible Playwright windows for those focused live specs when browser-visible release evidence is required
+- WSL tasking is deliberately proof-checkout scoped. If the distro, Rancher Desktop, or Docker host is unhealthy, fix the host tool outside the repo task runner and then rerun the narrow validation task.
 
 Deployment selection rule:
 - local source-mode run/build/test with infra-only PostgreSQL/NATS is the default development and review lane

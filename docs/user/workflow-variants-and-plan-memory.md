@@ -136,4 +136,4 @@ Helpful related docs:
 - [Memory](memory.md)
 - [Run Timeline](run-timeline.md)
 - [Meta-Agent & Blueprints](meta-agent-blueprint.md)
-- [V8 Teamed Agentry Workflow Advantage](../architecture-library/V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md)
+- [V8.2 Soma Team Interaction Contract](../architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)

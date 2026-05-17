@@ -205,7 +205,7 @@ Important boundary:
 - **Use Deployment Context for larger briefs**: architecture docs, MCP constraints, web research summaries, customer requirements, and approved company rollout policies belong in the dedicated governed-context intake lane so provenance and security posture stay explicit
 - **Use reflection/synthesis for lessons, not transcripts**: capture the distilled change, contradiction, or pattern as a Managed Exchange learning candidate first, and keep the raw conversation in trace/continuity instead
 
-Architecture reference:
-- [V8 Memory Layer And Reflection Delivery Contract](../architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md)
-- [V8 Trusted Memory Arbitration And Team Vector Contract](../architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md)
+Related references:
 - [Workflow Variants And Plan Memory](workflow-variants-and-plan-memory.md)
+- [Governance & Trust](governance-trust.md)
+- [V8 Runtime Contracts](../architecture-library/V8_RUNTIME_CONTRACTS.md)

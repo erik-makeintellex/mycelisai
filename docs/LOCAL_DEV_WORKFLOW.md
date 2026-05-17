@@ -37,10 +37,7 @@ Install the toolchain needed for the runtime lane you will use:
 | psql 16+ | database setup and migration checks |
 | Ollama or compatible endpoint | local/self-hosted text inference |
 
-Task runner contract:
-- use `uv run inv ...` for real execution
-- use `uvx --from invoke inv -l` only as a compatibility probe
-- do not use bare `uvx inv ...`
+Task runner contract: use `uv run inv ...` for real execution; use `uvx --from invoke inv -l` only as a compatibility probe; do not use bare `uvx inv ...`. Tasks are scoped to Mycelis tools, app services, data-plane dependencies, and proof lanes; host runtime lifecycle for WSL, Rancher Desktop, Docker Desktop, and OS VM repair stays outside the repo task runner.
 
 ## Deployment Method Selection
 
@@ -137,6 +134,7 @@ Rules:
 - keep destructive source cleanup scoped to the dedicated WSL proof checkout
 - use the Windows browser at `http://localhost:3000` when proving a WSL-hosted stack on the same machine
 - use `uv run inv wsl.validate --lane=release --headed-browser` when release evidence needs visible live-window Playwright proof against the Compose-delivered UI
+- use platform tooling, not Invoke, when the WSL distro or desktop container runtime itself needs shutdown, reset, or repair
 
 ## Quick Start Paths
 

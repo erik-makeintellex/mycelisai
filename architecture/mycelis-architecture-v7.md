@@ -29,7 +29,7 @@ Start here:
 - [V8 Runtime Contracts](../docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
 - [V8 UI/API and Operator Experience Contract](../docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
 - [V8 Capability Manifest And Runtime Integration Standard](../docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
-- [V8 Directed Execution Delivery Plan](../docs/architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md)
+- [V8.2 Finalization Concretization Contract](../docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md)
 - [V8 Development State](../.state/V8_DEV_STATE.md)
 
 Supporting implementation references:

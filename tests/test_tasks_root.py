@@ -152,7 +152,6 @@ def test_root_collection_exports_expected_task_surface():
         "test.coverage",
         "test.e2e",
         "wsl.cycle",
-        "wsl.down",
         "wsl.refresh",
         "wsl.status",
         "wsl.validate",

@@ -1,5 +1,5 @@
 # V8.2 Operational Embodiment Directive
-> Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8 MVP Governed Execution Mission Plan](V8_MVP_GOVERNED_EXECUTION_MISSION_PLAN.md) | [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
+> Navigation: [Project README](../../README.md) | [Architecture Docs Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.2 Finalization Concretization Contract](V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md) | [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
 
 > Status: Canonical
 > Last Updated: 2026-05-14

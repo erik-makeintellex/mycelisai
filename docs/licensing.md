@@ -153,8 +153,9 @@ Rules:
 - external identities must still resolve into stable local Mycelis principals for audit and policy decisions
 - paid identity layers may automate lifecycle and administration; they must not bypass governance or make the hosted admin plane a hard runtime dependency
 
-Canonical module:
-- [V8.2 User Management And Enterprise Auth Module](architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md) defines the detailed provider abstraction, edition strategy, Mycelis-owned authorization model, approval-authority mapping, user context visibility, backend foundation, and validation plan for enterprise auth work.
+Canonical references:
+- [Authentication Modes](user/auth-modes.md) defines the current provider, OIDC/OAuth, SAML, Google Workspace, Entra ID, GitHub, and SCIM posture.
+- [Settings And Access](user/settings-access.md) defines the operator-facing access and auth-provider surface.
 
 ## Canonical Capability Matrix
 
@@ -275,5 +276,5 @@ Current documentation rule:
 Related references:
 - [Governance System](./governance.md)
 - [Governance & Trust](./user/governance-trust.md)
-- [V8 Multi-User Identity And Soma Tenancy](./architecture-library/V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md)
+- [Authentication Modes](./user/auth-modes.md)
 - [API Reference](./API_REFERENCE.md)

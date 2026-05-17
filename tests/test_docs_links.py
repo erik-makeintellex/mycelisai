@@ -11,10 +11,9 @@ LEGACY_V7_DEV_STATE = ROOT / ".state/V7_DEV_STATE.md"
 V8_DEV_STATE = ROOT / ".state/V8_DEV_STATE.md"
 V8_BOOTSTRAP_MODEL = ROOT / "docs" / "architecture-library" / "V8_CONFIG_AND_BOOTSTRAP_MODEL.md"
 V8_UI_API_CONTRACT = ROOT / "docs" / "architecture-library" / "V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md"
-V8_1_LIVING_ARCHITECTURE = ROOT / "docs" / "architecture-library" / "V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md"
 V8_2_FULL_ARCHITECTURE = ROOT / "architecture/v8-2.md"
 V8_2_CURRENT_STATE_PRD = ROOT / "docs" / "architecture-library" / "V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md"
-V8_DIRECTED_EXECUTION_PLAN = ROOT / "docs" / "architecture-library" / "V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md"
+V8_2_FINALIZATION_CONTRACT = ROOT / "docs" / "architecture-library" / "V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md"
 V8_CAPABILITY_MANIFEST = ROOT / "docs" / "architecture-library" / "V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md"
 CANONICAL_DOCS = [
     README,
@@ -84,7 +83,8 @@ def test_docs_manifest_exposes_required_canonical_docs():
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
         "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
         "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md",
-        "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
+        "docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md",
+        "docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md",
         "architecture/v8-2.md",
         "architecture/mycelis-architecture-v7.md",
     ]
@@ -186,6 +186,11 @@ def test_stale_archive_and_v7_topical_docs_are_not_retained_as_active_docs():
         "docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md",
         "docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md",
         "docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md",
+        "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
+        "docs/architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md",
+        "docs/architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md",
+        "docs/architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md",
+        "docs/architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md",
     ]
     present = [path for path in stale_paths if (ROOT / path).exists()]
     assert not present, "Superseded docs should be deleted instead of retained as stale authority: " + str(present)
@@ -262,7 +267,7 @@ def test_readme_exposes_layered_architecture_truth():
 
     required_sections = [
         "## Active Delivery Target (V8.2 B2+)",
-        "## V8.1 Foundation And Compatibility Baseline",
+        "## Compatibility Baseline",
         "## Current Implementation State",
     ]
     missing_sections = [section for section in required_sections if section not in text]
@@ -272,7 +277,7 @@ def test_readme_exposes_layered_architecture_truth():
         "architecture/v8-2.md",
         "full actuation architecture",
         "V8.2 B2+ is the active delivery target",
-        "V8.1 remains the foundation and compatibility baseline",
+        "The Soma-primary compatibility baseline is now held in current V8.2 docs",
         "Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).",
     ]
     missing_snippets = [snippet for snippet in required_snippets if snippet not in text]
@@ -284,11 +289,6 @@ def test_v8_docs_cover_managed_exchange_foundation():
         README: [
             "managed exchange foundation",
             "channels, threads, schemas, and normalized outputs",
-        ],
-        V8_1_LIVING_ARCHITECTURE: [
-            "### 5.8 Managed exchange foundation",
-            "named channels for work, review, learning, and normalized tool output",
-            "structured threads for planning, work, review, escalation, and learning",
         ],
         V8_UI_API_CONTRACT: [
             "managed exchange items and artifact schemas",
@@ -316,11 +316,6 @@ def test_v8_docs_cover_managed_exchange_security_foundation():
             "managed exchange is permissioned",
             "normalization into managed exchange does not imply unrestricted trust",
             "free-node release now includes foundational security boundaries",
-        ],
-        V8_1_LIVING_ARCHITECTURE: [
-            "channels, threads, and exchange items carry explicit readers, writers, reviewers, participants, sensitivity classes, and downstream allowed-consumer metadata",
-            "capability-producing outputs carry a capability id, risk class, trust class, and audit-ready publication metadata",
-            "normalization into exchange does not imply unrestricted trust",
         ],
         V8_UI_API_CONTRACT: [
             "inspect-only trust, sensitivity, and review labels for managed exchange items where they matter operationally",
@@ -893,13 +888,13 @@ def test_v8_bootstrap_model_defines_v7_to_v8_migration_contract():
 
 
 def test_execution_governance_docs_reference_v8_migration_contract():
-    governance_text = (ROOT / "docs" / "architecture-library" / "V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md").read_text(encoding="utf-8")
+    governance_text = V8_2_FINALIZATION_CONTRACT.read_text(encoding="utf-8")
     team_text = V8_2_CURRENT_STATE_PRD.read_text(encoding="utf-8")
 
     required = [
-        (governance_text, "## Active Embodiment Cell"),
-        (governance_text, "Proposal -> confirm -> execute is durable infrastructure"),
-        (governance_text, "Soma intent -> proposal -> approval -> run -> retained output -> proof/revisitability"),
+        (governance_text, "## First Demo Slice"),
+        (governance_text, "ExecutionContract"),
+        (governance_text, "ProofArtifact"),
         (team_text, "## Architecture Team Workstreams"),
         (team_text, "Soma Experience"),
         *[(team_text, snippet) for snippet in ("## Concretization Objects", "ExecutionContract", "ProofArtifact", "CapabilityManifestState", "UIResponseState", "System -> Deployments")],
@@ -1037,68 +1032,21 @@ def test_v8_runtime_contracts_cover_semantic_continuity_and_learning_layers():
     )
 
 
-def test_v8_1_living_architecture_is_indexed_exposed_and_complete():
+def test_older_version_architecture_docs_are_pruned_from_active_surface():
     index_text = (ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md").read_text(encoding="utf-8")
     manifest_text = DOCS_MANIFEST.read_text(encoding="utf-8")
-    architecture_text = V8_1_LIVING_ARCHITECTURE.read_text(encoding="utf-8")
 
-    required_index_refs = [
-        "V8.1 Living Organization Architecture",
+    removed = [
         "V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
+        "V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md",
+        "V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md",
+        "V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md",
+        "V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md",
     ]
-    missing_index_refs = [snippet for snippet in required_index_refs if snippet not in index_text]
-    assert not missing_index_refs, (
-        "Architecture library index is missing the V8.1 living architecture references: "
-        f"{missing_index_refs}"
-    )
-
-    required_manifest_refs = [
-        'slug: "v8-1-living-organization-architecture"',
-        'path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md"',
-    ]
-    missing_manifest_refs = [snippet for snippet in required_manifest_refs if snippet not in manifest_text]
-    assert not missing_manifest_refs, (
-        "docsManifest is missing the V8.1 living architecture entry: "
-        f"{missing_manifest_refs}"
-    )
-
-    required_architecture_snippets = [
-        "Loop Profiles as the bounded execution layer",
-        "Runtime Capabilities as the bounded action layer",
-        "Learning Loops as the bounded candidate-capture and promotion-review layer",
-        "Memory Promotion and Semantic Continuity as the pgvector-backed recall substrate",
-        "Procedure / Skill Sets as reviewed specialist memory bound to Agent Type Profiles",
-        "### 5.1 Loop Profiles",
-        "### 5.2 Runtime Capabilities",
-        "### 5.3 Response Contract",
-        "### 5.4 Agent Type Profiles",
-        "### 5.5 Memory Promotion and Semantic Continuity",
-        "### 5.6 Procedure / Skill Sets",
-        "### 5.7 Layering clarification",
-        "Learning Loop",
-        "pgvector",
-        "raw memory",
-        "reviewed memory",
-        "promoted memory",
-        "no silent self-rewrite",
-        "### 8.2 Automations surface",
-        "Automations",
-        "Watchers",
-        "Reviews",
-        "### 8.3 Advanced UI boundaries",
-        "organization defaults and inheritance visibility",
-        "deployment/env influence",
-        "### 11.2 First shippable state",
-        "loops exist as configuration and inspectable architecture, not broad execution",
-        "capabilities are defined but not fully exercised",
-        "learning continuity architecture is defined even when raw/reviewed/promoted memory promotion is not fully implemented yet",
-        "the system remains safe and inspectable",
-    ]
-    missing_architecture_snippets = [snippet for snippet in required_architecture_snippets if snippet not in architecture_text]
-    assert not missing_architecture_snippets, (
-        "V8.1 living architecture doc is missing required architecture or release-contract coverage: "
-        f"{missing_architecture_snippets}"
-    )
+    for name in removed:
+        assert name not in index_text
+        assert name not in manifest_text
+        assert not (ROOT / "docs" / "architecture-library" / name).exists()
 
 
 def test_v8_2_full_architecture_is_indexed_exposed_and_canonical():
@@ -1107,9 +1055,9 @@ def test_v8_2_full_architecture_is_indexed_exposed_and_canonical():
     architecture_text = V8_2_FULL_ARCHITECTURE.read_text(encoding="utf-8")
 
     required_index_refs = [
-        "V8.2 Full Production Architecture",
+        "architecture/v8-2.md",
         "../../architecture/v8-2.md",
-        "Full Production Architecture (Canonical Target)",
+        "full production architecture target",
     ]
     missing_index_refs = [snippet for snippet in required_index_refs if snippet not in index_text]
     assert not missing_index_refs, (
@@ -1135,7 +1083,7 @@ def test_v8_2_full_architecture_is_indexed_exposed_and_canonical():
         "learning, capability, and actuation target state",
         "Not all elements described here are implemented yet.",
         "V8.2/B2+ is the active delivery frame",
-        "V8.1 living organization architecture remains the Soma-primary compatibility baseline",
+        "Soma-primary compatibility baseline remains protected for default operator surfaces",
         "default operator experience remains Soma-primary, intent-first, and simple by default",
         "advanced architecture/runtime control exists as a separate non-default layer for deep users",
     ]
@@ -1157,11 +1105,6 @@ def test_layered_docs_align_on_advanced_surface_contract():
             "The product must keep these layers distinct:",
             "advanced UI may explain deployment/env influence, but it must not become a second source of runtime truth",
         ],
-        V8_1_LIVING_ARCHITECTURE: [
-            "### 8.3 Advanced UI boundaries",
-            "organization defaults and inheritance visibility",
-            "sensitive deployment secrets stay file/env/config driven",
-        ],
         V8_2_FULL_ARCHITECTURE: [
             "advanced architecture/runtime control exists as a separate non-default layer for deep users",
         ],
@@ -1180,14 +1123,14 @@ def test_layered_docs_align_on_advanced_surface_contract():
     assert not missing, "Layered docs are missing the advanced-surface contract:\n" + "\n".join(missing)
 
 
-def test_v8_docs_keep_v8_1_baseline_and_v8_2_b2_target_distinct():
+def test_v8_docs_keep_compatibility_baseline_and_v8_2_b2_target_distinct():
     index_text = (ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md").read_text(encoding="utf-8")
-    v8_1_text = V8_1_LIVING_ARCHITECTURE.read_text(encoding="utf-8")
+    readme_text = README.read_text(encoding="utf-8")
     state_text = V8_DEV_STATE.read_text(encoding="utf-8")
 
     required_index_snippets = [
-        "foundation and compatibility baseline",
-        "canonical full production architecture, full actuation target, and current B2+ delivery frame",
+        "The full production architecture target lives outside this folder",
+        "live implementation scoreboard",
     ]
     missing_index_snippets = [snippet for snippet in required_index_snippets if snippet not in index_text]
     assert not missing_index_snippets, (
@@ -1195,17 +1138,17 @@ def test_v8_docs_keep_v8_1_baseline_and_v8_2_b2_target_distinct():
         f"{missing_index_snippets}"
     )
 
-    required_v8_1_snippets = [
-        "This is the V8.1 foundation and compatibility baseline.",
-        "active V8.2/B2+ delivery frame, canonical full production architecture, and full actuation target",
+    required_readme_snippets = [
+        "The Soma-primary compatibility baseline is now held in current V8.2 docs",
+        "V8.2 B2+ is the active delivery target.",
     ]
-    missing_v8_1_snippets = [snippet for snippet in required_v8_1_snippets if snippet not in v8_1_text]
-    assert not missing_v8_1_snippets, (
-        "V8.1 living architecture doc is missing the current-release distinction: "
-        f"{missing_v8_1_snippets}"
+    missing_readme_snippets = [snippet for snippet in required_readme_snippets if snippet not in readme_text]
+    assert not missing_readme_snippets, (
+        "README is missing the compatibility-baseline/current-target distinction: "
+        f"{missing_readme_snippets}"
     )
 
-    required_state_snippets = ["Development is now operating in the V8.2/B2+ delivery frame while preserving the V8.1 Soma-primary compatibility baseline.", "V8.2/B2+ is the active delivery target.", "V8.1 remains the foundation and compatibility baseline for the default Soma-primary operator surface.", "## Parallel Execution Overlay (2026-04-27)", "Backend/Auth Architecture", "Frontend/Auth UX", "Workflow Testing", "Runtime/MCP/Web Capability"]
+    required_state_snippets = ["V8.2/B2+ is the active delivery target.", "Soma-primary compatibility baseline", "## Parallel Execution Overlay (2026-04-27)", "Backend/Auth Architecture", "Frontend/Auth UX", "Workflow Testing", "Runtime/MCP/Web Capability"]
     missing_state_snippets = [snippet for snippet in required_state_snippets if snippet not in state_text]
     assert not missing_state_snippets, (
         "V8 dev state is missing the current-release vs full-target distinction: "
@@ -1246,8 +1189,7 @@ def test_active_docs_require_docs_review_as_part_of_slice_completion():
             "`docs/API_REFERENCE.md` when API behavior, payload meaning, or endpoint contract changes",
         ],
         ROOT / "docs" / "TESTING.md": [
-            "feature work is also not done until the touched docs are reviewed and updated where meaning changed",
-            "end-of-slice reporting should name both the evidence commands run and the docs updated or reviewed unchanged for the touched scope",
+            "Feature work is not done until relevant tests run against the final branch state, touched docs are reviewed and updated where meaning changed, and close-out names evidence plus docs changed/reviewed.",
         ],
         ROOT / "docs" / "architecture" / "OPERATIONS.md": [
             "Implementation slices that change runtime, tasking, validation, API meaning, or operator behavior must review and update the owning docs in the same change rather than leaving docs drift for later cleanup.",
@@ -1277,7 +1219,7 @@ def test_v8_2_declares_development_alignment():
     required_snippets = [
         "## Development Alignment",
         "V8.2 is the full target.",
-        "Implementation progresses incrementally from the V8.1 compatibility baseline through bounded B2+ modules toward this architecture.",
+        "Implementation progresses incrementally from the Soma-primary compatibility baseline through bounded B2+ modules toward this architecture.",
         "Documentation must always reflect:",
         "- what is implemented",
         "- what is planned",

@@ -3,14 +3,7 @@
 
 Status: canonical V8 operator/UI contract.
 
-This index keeps the current UI/API contract stable and delegates durable detail to:
-- [V8 UI Operator Workspace Contract](V8_UI_OPERATOR_WORKSPACE_CONTRACT.md)
-- [V8 UI API Screen Contracts](V8_UI_API_SCREEN_CONTRACTS.md)
-- [V8 UI Delivery And Governance Contract](V8_UI_DELIVERY_AND_GOVERNANCE_CONTRACT.md)
-- [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md)
-- [V8.2 Soma UI Architecture Expression](V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md)
-
-Compatibility note: [V8 Universal Soma And Context Model PRD](V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md) defines the next product correction where Soma and Council are universal entities and AI Organizations are governed work contexts.
+This document owns the active UI/API contract. Earlier split screen, workspace, delivery, and universal-Soma planning docs were removed from the active library; keep durable UI meaning here, in [V8.2 Soma UI Architecture Expression](V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md), or in [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md).
 
 ## 1. Why this document exists
 
@@ -155,8 +148,6 @@ Current screen contract families:
 - memory and activity
 - settings and advanced boundaries
 
-See [V8 UI API Screen Contracts](V8_UI_API_SCREEN_CONTRACTS.md).
-
 managed exchange items and artifact schemas remain inspectable. The UI includes inspect-only managed exchange surfaces for Channels, Threads, and Recent Artifacts. It also shows inspect-only trust, sensitivity, and review labels for managed exchange items where they matter operationally. managed exchange security labels stay inspectable in advanced surfaces without leaking forbidden/internal-only security implementation detail into the default Soma-first UX.
 
 ## 5. API/UI contract mapping by screen and action
@@ -193,4 +184,4 @@ Minimum product proof covers:
 
 ## 7. Current boundary
 
-Do not expand this file into another route matrix. Add durable details to the split docs and update this index only when the contract set changes.
+Do not expand this file into another route matrix. Add route-level implementation details to `docs/architecture/FRONTEND.md`, API behavior to `docs/API_REFERENCE.md`, and user-facing behavior to `docs/user/*`.

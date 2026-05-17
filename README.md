@@ -7,8 +7,7 @@ This README is the development-swarm inception document. It points to current au
 Canonical ownership:
 - `README.md`: inception, navigation, and repo-wide working rules
 - `architecture/v8-2.md`, `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`, and `docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`: active V8.2/B2+ production target plus embodiment rule, exact first demo slice, runtime object schemas, degradation posture, and product-category framing
-- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`: V8.1 compatibility baseline
-- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` and `docs/architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md`: operator UX, screen/API truth, and directed-execution alignment
+- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` and `docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`: operator UX, screen/API truth, and directed-execution alignment
 - `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md`: capability manifest, run/output, MCP/custom integration, and proof truth
 - `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`: V7-to-V8 bootstrap migration truth
 - `.state/V8_DEV_STATE.md`: live implementation scoreboard; read the active snapshot and immediate next actions before dated historical boards
@@ -19,7 +18,7 @@ Canonical ownership:
 - [Agent Guidance](#agent-guidance)
 - [What Mycelis Is](#what-mycelis-is)
 - [Active Delivery Target (V8.2 B2+)](#active-delivery-target-v82-b2)
-- [V8.1 Foundation And Compatibility Baseline](#v81-foundation-and-compatibility-baseline)
+- [Compatibility Baseline](#compatibility-baseline)
 - [Current Implementation State](#current-implementation-state)
 - [Default And Advanced Surfaces](#default-and-advanced-surfaces)
 - [Architecture Terms To Operator Terms](#architecture-terms-to-operator-terms)
@@ -45,18 +44,17 @@ Review these before planning or editing:
 3. [V8 Development State](.state/V8_DEV_STATE.md)
 4. [V8.2 Production Architecture Target](architecture/v8-2.md)
 5. [V8.2 Operational Embodiment Directive](docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md)
-6. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
-7. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
-8. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
-9. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
-10. [Operations](docs/architecture/OPERATIONS.md)
-11. [Testing](docs/TESTING.md)
-12. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
-13. [V8.2 Current State And Finalization PRD](docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
-14. [V8.2 Finalization Concretization Contract](docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md) and [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
-15. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
-16. [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
-17. [Docs Manifest](interface/lib/docsManifest.ts)
+6. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
+7. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
+8. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+9. [Operations](docs/architecture/OPERATIONS.md)
+10. [Testing](docs/TESTING.md)
+11. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
+12. [V8.2 Current State And Finalization PRD](docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
+13. [V8.2 Finalization Concretization Contract](docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md) and [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
+14. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
+15. [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
+16. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
 - V8.2 docs are the active authority. Historical V7 state remains migration evidence only, not active product authority.
@@ -94,11 +92,9 @@ Delivery rule:
 - prefer operational embodiment over new doctrine: the canonical MVP workflow is intent -> Soma -> governed approval when needed -> execution -> run -> durable output -> proof/recovery
 - do not grow V8.1 docs with new B2+ target scope
 
-## V8.1 Foundation And Compatibility Baseline
+## Compatibility Baseline
 
-[V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) defines the Soma-primary compatibility baseline: AI Organizations, Team Leads, Advisors, Departments, Specialists, runtime capabilities, response contracts, continuity, and bounded automations.
-
-V8.1 remains the foundation and compatibility baseline. Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).
+The Soma-primary compatibility baseline is now held in current V8.2 docs instead of an older versioned architecture file. The baseline remains: AI Organizations as governed work contexts, Soma as the primary operating surface, bounded teams/capabilities, response contracts, continuity, and inspectable governance. Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).
 
 ## Current Implementation State
 
@@ -201,6 +197,8 @@ uv run inv team.architecture-sync
 uv run inv quality.max-lines --limit 300
 ```
 
+Task boundary: repo Invoke tasks manage Mycelis tools, app services, data-plane dependencies, and proof lanes. Host runtimes such as WSL distros, Rancher Desktop itself, Docker Desktop itself, and OS-level VM resets are operator/platform responsibilities outside the task registry; use repo tasks to probe, validate, and run Mycelis on those tools, not to manage the whole host environment.
+
 `lifecycle.status` is the quick local snapshot and now confirms Core through `/healthz` plus Ollama through `/api/tags` across loopback fallbacks; use `lifecycle.health` for deeper endpoint proof, `uv run inv api.delivery-proof` for API self-use, and `uv run inv ci.entrypoint-check` for runner matrix proof.
 
 ## Development Contract
@@ -224,7 +222,7 @@ Env override contract: `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PRO
 
 Deployment guidance by host architecture: Windows x86_64, Linux x86_64, Linux arm64, and Mixed-architecture deployments are supported through the lane-specific guidance in local dev and operations docs. The deployed Core image resolves runtime config from `/core/config`.
 
-Supported user access lanes: source-mode local development with infra-only PostgreSQL/NATS first, then Windows/Rancher Desktop Compose, Rancher Desktop K3s, WSL Compose, and Kubernetes / Helm when container proof is intentionally requested. Run/build/test Core and Interface locally before containerizing app services; for clustered proof, prove the real ingress/hostname/IP from the operator machine. Rancher Desktop K3s is the preferred Windows local commercial-release parity lane.
+Supported user access lanes: source-mode local development with infra-only PostgreSQL/NATS first, then Windows/Rancher Desktop Compose, Windows Docker Desktop Compose, Windows + WSL Docker Compose, Rancher Desktop K3s, WSL Compose, and Kubernetes / Helm clustered deployment when container proof is intentionally requested. Run/build/test Core and Interface locally before containerizing app services; open `http://localhost:3000` from the Windows browser for same-machine proof, and for clustered proof, prove the real ingress/hostname/IP from the operator machine. Rancher Desktop K3s is the preferred Windows local commercial-release parity lane.
 
 Deployment target contract: Kubernetes / Helm: target self-hosted and enterprise deployment contract using standard Kubernetes resources. Docker Compose: rapid local development, demo, and same-machine proof runtime; it is not the target clustered deployment contract. Run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` and cover Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. Local Windows K3s proof uses `MYCELIS_K8S_BACKEND=rancher` against Rancher Desktop.
 
@@ -234,7 +232,7 @@ Kubernetes values contract: prefer Rancher Desktop K3s on Windows and `k3d` on W
 
 Runtime packaging contract: the supported Core container image includes Node/npm/npx for curated stdio MCP servers, and manual `filesystem` library install must be able to launch and bind to the configured `/data/workspace` output block.
 
-Release proof contract: start with local source gates (`core.test`, `interface.test`, `interface.typecheck`, `interface.build`, focused Playwright) against infra-only PostgreSQL/NATS when live data or bus proof is required. Only after those pass, containerize Core/Interface for Compose/K8s proof. Use guarded WSL tasks when WSL Compose deployment-mimic proof matters, and Rancher Desktop K3s with `MYCELIS_K8S_BACKEND=rancher` when the release slice needs local Kubernetes parity proof.
+Release proof contract: start with local source gates (`core.test`, `interface.test`, `interface.typecheck`, `interface.build`, focused Playwright) against infra-only PostgreSQL/NATS when live data or bus proof is required. Only after those pass, containerize Core/Interface for Compose/K8s proof. Use `uv run inv ci.release-preflight --lane=release` for the full local release gate, guarded WSL tasks when WSL Compose deployment-mimic proof matters, and Rancher Desktop K3s with `MYCELIS_K8S_BACKEND=rancher` when the release slice needs local Kubernetes parity proof.
 
 ## Playwright Contract
 
@@ -277,7 +275,9 @@ uv run inv wsl.refresh
 uv run inv wsl.validate --lane=release
 ```
 
-Refresh WSL from git; do not copy source trees across the host boundary. Use `uv run inv wsl.down` before a fresh-state review when the WSL proof distro is hosting localhost-forwarded runtime ports, and use `uv run inv wsl.validate --lane=release --headed-browser` for visible live-window Playwright proof on the same WSL-hosted Compose UI.
+Refresh WSL from git; do not copy source trees across the host boundary. WSL tasks are proof-checkout tasks (`status`, `refresh`, `validate`, `cycle`), not host lifecycle controls; shut down or repair the WSL/Rancher/Desktop runtime with platform tools when the host itself is unhealthy. Use `uv run inv wsl.validate --lane=release --headed-browser` for visible live-window Playwright proof on the same WSL-hosted Compose UI.
+
+Guarded WSL proof commands are `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle`.
 
 ## Development Workflow
 

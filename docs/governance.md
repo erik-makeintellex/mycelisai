@@ -113,8 +113,6 @@ not only as a raw allow/deny/intercept subsystem.
 Related references:
 - `docs/user/governance-trust.md`
 - `docs/licensing.md`
-- `docs/architecture-library/V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md`
-- `docs/architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 - `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`
-- `docs/architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md`
+- `docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`

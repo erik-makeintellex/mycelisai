@@ -1,7 +1,6 @@
 # Verification & Testing Protocol
 > Navigation: [Project README](../README.md) | [Docs Home](README.md)
 Mycelis uses a five-tier validation model: backend unit tests, frontend component tests, browser workflows, integration tests, and governance/system smoke tests.
-
 ## TOC
 
 - [Current Validation Contract](#current-validation-contract)
@@ -23,14 +22,13 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 - [Adding New Tests](#adding-new-tests)
 ## Current Validation Contract
 
-- Feature work is not done until relevant tests run against the final branch state.
-- feature work is also not done until the touched docs are reviewed and updated where meaning changed
-- end-of-slice reporting should name both the evidence commands run and the docs updated or reviewed unchanged for the touched scope
+- Feature work is not done until relevant tests run against the final branch state, touched docs are reviewed and updated where meaning changed, and close-out names evidence plus docs changed/reviewed.
 - Use `uv run inv ...` for real task execution.
 - `uv run inv ci.baseline` is the default branch-readiness gate.
 - Use `uv run inv ci.baseline --no-e2e` only for intentionally narrower debugging.
 - GitHub Actions are manual-only through `workflow_dispatch`; source-mode local gates are first, infra-only PostgreSQL/NATS may support live proof, and full Docker/Compose/K8s app proof starts only after local run/build/test evidence is acceptable.
 - Windows is the edit/review/push surface; WSL is the guarded Compose release-style proof checkout, while Rancher Desktop K3s is the Windows local Kubernetes/commercial-parity proof lane.
+- Repo tasks manage Mycelis tools, services, and proof checkouts, not WSL/Rancher/Docker host lifecycle or VM resets.
 - `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required; `interface.check` retries transient Windows socket-reuse failures after heavy browser proof before treating a route as failed.
 - Playwright starts/stops the managed Next.js app, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant.
 
@@ -47,7 +45,7 @@ Use this source-first sequence when a slice changes the delivered operator workf
    - `uv run inv wsl.validate --lane=release --headed-browser`
    - or, when Compose is already up and should stay running, `uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=<focused-live-spec>`
 5. Broader headed Chromium MVP certification after the clean release lane:
-   - run the critical matrix in [V8 UI Team Browser Workflows](architecture-library/V8_UI_TEAM_BROWSER_WORKFLOWS.md) sequentially
+   - run the critical matrix in [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) sequentially
 
 ## User Interaction Delivery Gate
 Do not claim thorough release readiness from unit, type, or headless-only proof when the slice changes what the operator sees or approves.
@@ -83,10 +81,10 @@ Every finalization slice must prove the concrete runtime contract it touches, no
 | TeamWorkItem UI state | component/browser proof that Soma Active Work Lane prefers durable `/api/v1/teams/{id}/work` rows, renders projection fallback only as degraded/inspectable, and feeds retained `TeamOutputRef` records into the Output Workbench | `IN_REVIEW` |
 | CapabilityManifestState | durable Go/SQL/API proof for capability id, health, probe status, risk, approval posture, allowed roles, input/output schemas, failure/recovery posture, audit/secret policy, owner, updated time, and manifest version; `db.migrate` compatibility now requires the V8.2 capability/proof/team-work tables; UI proof remains the next Connected Tools/Resources gate | `IN_REVIEW` for persistence/API, `REQUIRED` for UI proof |
 | Deployment trust | `System -> Deployments` proof for deployment/execution/workspace roots, current commit, endpoint posture, runtime posture, proof lane, recovery state | `IN_REVIEW`; backend/API and mocked browser proof are available, local-source live proof uses already-running Core/Interface with infra-only PostgreSQL/NATS and skips honestly when that lane is not available |
-Related active contracts: [V8 UI/API and Operator Experience Contract](architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md), [V8 Directed Execution Delivery Plan](architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md), [V8 UI Testing Agentry Product Contract](architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md), and [V8.2 Current State And Finalization PRD](architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md). Current GUI proof status: live Soma governance, team execution, and playable-output flows are green through `soma-governance-live.spec.ts`, `team-execution-live.spec.ts`, and `team-output-content-live.spec.ts`. The exact first demo slice now has focused browser specs: `ui-finalization-browser-package-live.spec.ts` proves package metadata, proof opening, reload, and Groups output against a live backend, while `ui-finalization-browser-package-retry.spec.ts` proves the degraded/retry UI path with mocked failure.
+Related active contracts: [V8 UI/API and Operator Experience Contract](architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md), [V8.2 Finalization Concretization Contract](architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md), [V8 UI Testing Agentry Product Contract](architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md), and [V8.2 Current State And Finalization PRD](architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md). Current GUI proof status: live Soma governance, team execution, and playable-output flows are green through `soma-governance-live.spec.ts`, `team-execution-live.spec.ts`, and `team-output-content-live.spec.ts`. The exact first demo slice now has focused browser specs: `ui-finalization-browser-package-live.spec.ts` proves package metadata, proof opening, reload, and Groups output against a live backend, while `ui-finalization-browser-package-retry.spec.ts` proves the degraded/retry UI path with mocked failure.
 ## Full GUI Coverage Matrix
 
-Current browser workflow details live in [V8 UI Team Browser Workflows](architecture-library/V8_UI_TEAM_BROWSER_WORKFLOWS.md). Keep this document as the validation policy entrypoint rather than a route-by-route duplicate.
+Current browser workflow requirements live in [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md). Keep this document as the validation policy entrypoint rather than a route-by-route duplicate.
 Minimum route families under active proof:
 - `/dashboard` and AI Organization re-entry
 - `/organizations/[id]` Soma-primary workspace
@@ -124,6 +122,7 @@ No backend/API review is complete without a mapped UI target and evidence result
 - Stop prior local services before runtime or integration tests: `uv run inv lifecycle.down`.
 - Do not keep full Docker/K8s app stacks running during ordinary source work; use local run/build/test with infra-only PostgreSQL/NATS when needed, then intentionally bring up Compose/K8s for deployment proof.
 - For Compose data-plane proof, use `uv run inv compose.infra-up`, `compose.infra-health`, and `compose.storage-health`.
+- If the host runtime itself is broken, repair it outside Invoke, then rerun the narrow Mycelis readiness task.
 - Inspect service ports/processes before runtime proof when prior runs may have left residue.
 - Use `uv run inv lifecycle.status` for the fast process/endpoint snapshot; it checks Core through `/healthz` and Ollama through `/api/tags` across loopback fallbacks so transient TCP-only snapshots do not mark reachable services down.
 - Treat repo-local Interface workers as cleanup targets on Windows.
@@ -303,8 +302,9 @@ Deployment proof contracts:
 - use `MYCELIS_K8S_TEXT_ENDPOINT` and optional `MYCELIS_K8S_MEDIA_ENDPOINT`; optional `MYCELIS_K8S_TEXT_MODEL_ID` selects the installed model. Use an explicit reachable AI host instead of a chart-baked or localhost default, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`; Compose may relay `MYCELIS_COMPOSE_OLLAMA_HOST` through the WSL host.
 - `MYCELIS_K8S_VALUES_FILE` may select `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`; `values-k3d.yaml` is the shared local-Kubernetes preset for Rancher Desktop K3s on Windows and k3d on WSL/Linux.
 - prove the deployed Core image can launch the curated `filesystem` stdio MCP server through `npx` and runtime workspace normalization for filesystem installs.
+Guarded WSL tasks: `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, `uv run inv wsl.cycle`.
 
-Guarded WSL tasks: `uv run inv wsl.status`, `uv run inv wsl.down`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, `uv run inv wsl.cycle`.
+These WSL tasks own proof-checkout synchronization and validation only; use platform tooling for host runtime recovery.
 
 Release-proof sequencing rule: validate WSL git auth repair/report behavior for `wsl.refresh`; run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence; that task intentionally runs `ci.release-preflight --lane=runtime --no-e2e` first, then Compose health/storage and `compose.warm-cognitive` before live browser proof; keep the newly closed focused browser proof gaps green: `/runs` workflow depth and guided Soma retry/recovery both have focused Chromium proof in production `start` mode; rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL.
 

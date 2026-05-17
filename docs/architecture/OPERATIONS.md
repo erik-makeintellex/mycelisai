@@ -1,6 +1,5 @@
 # Mycelis Cortex - Operations Manual
 > Navigation: [Project README](../../README.md) | [Overview](OVERVIEW.md) | [Backend](BACKEND.md) | [Frontend](FRONTEND.md) | [Testing](../TESTING.md)
-
 This manual owns task and runtime operations. It links to [Local Development Workflow](../LOCAL_DEV_WORKFLOW.md) for setup details and [Testing](../TESTING.md) for evidence gates.
 
 Implementation slices that change runtime, tasking, validation, API meaning, or operator behavior must review and update the owning docs in the same change rather than leaving docs drift for later cleanup.
@@ -18,7 +17,6 @@ Current proof posture: workflows are manual-only, source-mode local run/build/te
 - [VII. Deployment Architecture](#vii-deployment-architecture)
 - [VIII. Environment Gotchas](#viii-environment-gotchas)
 - [IX. Monitoring & Observability](#ix-monitoring--observability)
-
 ## I. Prerequisites
 
 Operational lanes use:
@@ -33,6 +31,8 @@ Use `uv run inv ...` for real tasks. Use `uvx --from invoke inv -l` only as a co
 ## II. Task Automation
 
 Task modules live under `ops/*.py` and are registered through `tasks.py`. App-tied management logic belongs in Python; `uv run inv api.delivery-proof` exercises the live Mycelis API as a source-mode delivery lane, while `uv run inv ci.entrypoint-check` proves runner registration.
+
+Task ownership boundary: Invoke tasks manage repo tools, Mycelis app services, data-plane dependencies, and proof lanes; WSL/Rancher/Docker host lifecycle and VM repair stay outside repo tasking.
 
 ### Master Registry
 
@@ -239,7 +239,7 @@ Local CI tasks:
 
 GitHub CI proves repo health without hosted agentry. Live service/browser proof is local, WSL, Compose, or target-cluster evidence.
 
-Invoke manages the Next.js server lifecycle for browser proof. Merge gates use the built production Interface server path, while CI also keeps a mocked Chromium homepage smoke. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; `--lane=release` is the recommended full runtime/operator gate. Guarded WSL tasks are `wsl.status`, `wsl.down`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`; add `--headed-browser` to `wsl.validate` or `wsl.cycle` when focused live-backend Playwright proof must open visible browser windows.
+Invoke manages the Next.js server lifecycle for browser proof. Merge gates use the built production Interface server path, while CI also keeps a mocked Chromium homepage smoke. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; `--lane=release` is the recommended full runtime/operator gate. Guarded WSL proof-checkout tasks are `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`; add `--headed-browser` to `wsl.validate` or `wsl.cycle` when focused live-backend Playwright proof must open visible browser windows.
 `uv run inv interface.check` includes a small retry loop for transient Windows socket-reuse errors after heavy browser proof, but persistent route failures still fail the task.
 
 ## VII. Deployment Architecture

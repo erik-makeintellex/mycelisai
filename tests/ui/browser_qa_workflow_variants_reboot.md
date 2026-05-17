@@ -17,7 +17,7 @@ This manual pass proves one shared user objective across three workflow shapes:
 It also proves that an important plan can survive a full environment reboot through retained outputs, continuity, and trace surfaces instead of living only in one chat thread.
 
 Use this together with:
-- `docs/architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md`
+- `docs/user/workflow-variants-and-plan-memory.md`
 - `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - `interface/e2e/specs/workflow-output.direct.spec.ts`
 - `interface/e2e/specs/workflow-output.compact-team.spec.ts`

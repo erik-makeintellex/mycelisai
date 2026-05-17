@@ -1,13 +1,9 @@
 # V8 Runtime Contracts
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
-Status: canonical V8 runtime contract index.
+Status: canonical V8 runtime contract.
 
-This file defines the active runtime contract set and points detail to smaller indexed docs:
-- [V8 Runtime Inception And Kernel](V8_RUNTIME_INCEPTION_AND_KERNEL.md)
-- [V8 Runtime Provider And Continuity](V8_RUNTIME_PROVIDER_AND_CONTINUITY.md)
-- [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
-- [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
+This document owns the active runtime contract set. Earlier split runtime and V8.1 baseline detail docs have been removed from the active library; preserve still-needed requirements here, in [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md), or in [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md).
 
 ## Purpose
 
@@ -100,4 +96,4 @@ Template/config sources
 
 ## Migration Note
 
-V7 content remains migration evidence. Promote active requirements into this index, the split runtime docs, bootstrap docs, UI/API docs, and `.state/V8_DEV_STATE.md`.
+Historical content remains migration evidence only. Promote active requirements into this document, bootstrap docs, UI/API docs, and `.state/V8_DEV_STATE.md`.
