@@ -31,6 +31,7 @@ This index is intentionally narrow:
 - [V8.2 Full Production Architecture](../../architecture/v8-2.md) is the canonical full production architecture, full actuation target, and current B2+ delivery frame.
 - [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md) is the architecture-team map of current implementation truth, concretization objects, finalization gaps, workstreams, risks, and exit gates.
 - [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) constrains work away from doctrine expansion and toward visible, recoverable, trustworthy operation.
+- [V8.2 Soma Team Interaction Contract](V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md) defines how Soma, Council, operators, and runtime teams inspect, steer, recover, and archive active work without exposing raw orchestration topology as the default experience.
 - [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the foundation and compatibility baseline for the Soma-primary operator surface.
 - [V8 Development State](../../.state/V8_DEV_STATE.md) is the live implementation scoreboard. Use its active snapshot and immediate next actions before reading dated historical boards.
 
@@ -45,6 +46,7 @@ This index is intentionally narrow:
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | planning configuration sources, templates, bootstrap behavior, or inheritance | template vs instantiated organization, precedence rules, and V7-to-V8 migration truth |
 | [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) | changing first-run flow, Soma workspace, advanced-mode boundaries, or screen/API mapping | canonical V8 operator PRD, source-of-truth layering, and UI/API contracts |
 | [V8.2 Soma UI Architecture Expression](V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md) | aligning Soma UI concept, component domains, active work, outputs, proof, teams, and scheduled work | ideal Soma operating loop, UI architecture domains, team execution lanes, and acceptance gates |
+| [V8.2 Soma Team Interaction Contract](V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md) | implementing or reviewing active team work, team steering, Council review, or team-output proof | canonical verbs, TeamInteraction, TeamWorkItem, TeamStatusEvent, TeamOutputRef, UI surfaces, recovery, and release gates |
 | [V8 Directed Execution UI And Runtime Alignment Directive](V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md) | reviewing whether UI/runtime feels like directed execution | current-state mapping, gaps, recommendations, execution plan, and validation standard |
 | [V8 Directed Execution Delivery Plan](V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md) | assigning directed-execution implementation work | team roster, work packages, waves, dependencies, validation matrix, and orchestration rules |
 | [V8 Governed Execution Doctrine](V8_GOVERNED_EXECUTION_DOCTRINE.md) | checking governed-execution principles before implementation | accountable cognition, Event Spine truth, workspace visibility, and delivery compression |

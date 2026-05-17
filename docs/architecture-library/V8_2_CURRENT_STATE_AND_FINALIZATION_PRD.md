@@ -98,6 +98,7 @@ User asks Soma to create or review meaningful work
 | ProofArtifact | `REQUIRED` | `proof_id`, `run_id`, execution status, evidence refs, output refs, validation source, proof quality, degradation state, recovery options, confidence provenance fields, audit refs, timestamps |
 | CapabilityManifestState | `REQUIRED` | capability id, health, probe status, trust/risk class, approval posture, allowed roles, output schemas, failure posture, recovery posture, manifest version |
 | UIResponseState | `REQUIRED` | direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, partial completion |
+| TeamInteractionSurface | `NEXT` | `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` ids, team/run/work linkage, source, verb, objective, state, expected outputs/proof, operator need, degradation, recovery, output refs, proof refs, audit refs, version |
 
 These are runtime trust objects, not presentation conveniences. They should be durable, versioned where applicable, inspectable in advanced surfaces, and summarized in Soma-facing operator language.
 
@@ -154,6 +155,7 @@ Minimal confidence provenance starts here through validation source, evidence st
 ### P1 - Teams, Groups, And Active Work
 
 - Teams and groups must be smooth to create, inspect, steer, and review while active.
+- Soma, Council, operators, and teams must use the [V8.2 Soma Team Interaction Contract](V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md) for active-team verbs, work-item state, output refs, and recovery semantics.
 - Team output must be visible as retained product state, not just chat transcript.
 - Operators must be able to work with active teams, inspect team run state, review output, and cleanly stop temporary teams.
 - Runtime-team delivery collaborator claims remain blocked until bounded role-specific team asks reliably return within product timeout and expose degradation clearly.
@@ -201,6 +203,7 @@ Minimal confidence provenance starts here through validation source, evidence st
 ### Phase 2 - Active Team And Output Workflows
 
 - Make active teams easier to inspect, steer, and clean up.
+- Implement `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API/UI projections from the Soma Team Interaction Contract.
 - Add stronger output views for team deliverables and retained packages.
 - Show team communication state without exposing raw NATS as the main workflow.
 - Keep broad team creation deliberate and compact by default.
@@ -256,6 +259,7 @@ Required proof per slice:
 | UI density | Active cleanup lane | Continue menu/detail and disclosure compression for lengthy advanced surfaces. |
 | Capability manifest persistence | `NEXT` | Persist refreshed manifests and reconcile long-lived health/probe state. |
 | Execution/proof schemas | `REQUIRED` | Promote ExecutionContract and ProofArtifact from implied concepts into durable runtime-visible objects. |
+| Active team interaction contract | `NEXT` | Promote TeamInteraction, TeamWorkItem, TeamStatusEvent, and TeamOutputRef into durable runtime-visible APIs and Soma Active Work Lane projections. |
 | Enterprise auth overclaim | Active product risk | Keep provider setup review-only until adapters, policy, audit, and recovery are runtime-enabled. |
 | Source size pressure | Active hygiene lane | Keep `quality.max-lines` green and ratchet legacy caps down through modularization. |
 
@@ -272,7 +276,7 @@ Required proof per slice:
 
 1. What exact persistence owner should store long-lived capability manifest refresh state?
 2. What is the minimum useful confidence provenance schema before scoring appears?
-3. How should active team communication be exposed so it is inspectable but not a raw NATS console?
+3. What is the first minimal persistence/API implementation for the normalized TeamInteraction and TeamWorkItem surface?
 4. What is the first production scheduler rule shape that covers real cadence without overbuilding an automation suite?
 5. Which project-package output fields are required for reconstruction across Compose and Kubernetes proof lanes?
 
