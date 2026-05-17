@@ -24,6 +24,7 @@ The active architecture library keeps only documents that are directly used for 
 | Document | Use For |
 | --- | --- |
 | [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md) | current implementation truth, target finalization state, workstreams, blockers, exit gates |
+| [V8.2 Finalization Delivery Plan](V8_2_FINALIZATION_DELIVERY_PLAN.md) | team sequence, GUI matrix, runtime gates, and orchestration rules |
 | [V8.2 Finalization Concretization Contract](V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md) | first demo slice, ExecutionContract, ProofArtifact, UI states, degraded lifecycle, close-out template |
 | [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) | visible execution, durable outputs, proof, recovery, deployment trust |
 | [V8.2 Soma UI Architecture Expression](V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md) | ideal Soma interaction model, one-window UI architecture, active work, outputs, proof, teams |

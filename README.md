@@ -51,7 +51,7 @@ Review these before planning or editing:
 10. [Testing](docs/TESTING.md)
 11. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
 12. [V8.2 Current State And Finalization PRD](docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
-13. [V8.2 Finalization Concretization Contract](docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md) and [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
+13. [V8.2 Finalization Delivery Plan](docs/architecture-library/V8_2_FINALIZATION_DELIVERY_PLAN.md), [V8.2 Finalization Concretization Contract](docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md), and [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
 14. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
 15. [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
 16. [Docs Manifest](interface/lib/docsManifest.ts)

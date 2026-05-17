@@ -1,0 +1,171 @@
+name: Source API Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      proof_mode:
+        description: "Use read-only API proof or create a bounded TeamWorkItem"
+        required: true
+        default: "read-only"
+        type: choice
+        options:
+          - read-only
+          - mutable
+      run_active_work_api_spec:
+        description: "Also run the Playwright active-work API contract"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-api-proof-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+  MYCELIS_API_KEY: "ci-local-only"
+  MYCELIS_BREAK_GLASS_API_KEY: "ci-break-glass-only"
+  MYCELIS_API_BASE_URL: "http://localhost:8081"
+  MYCELIS_API_HOST: "localhost"
+  MYCELIS_API_PORT: "8081"
+  PORT: "8081"
+  CORS_ORIGIN: "http://localhost:3000"
+  DB_HOST: "127.0.0.1"
+  DB_PORT: "5432"
+  DB_USER: "mycelis"
+  DB_PASSWORD: "password"
+  DB_NAME: "cortex"
+  NATS_URL: "nats://127.0.0.1:4222"
+  MYCELIS_SEARCH_PROVIDER: "disabled"
+  MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED: "false"
+  MYCELIS_DEPLOYMENT_LANE: "github-actions-source-api-proof"
+  MYCELIS_PROOF_LANE: "manual-workflow-dispatch"
+
+jobs:
+  source-api-proof:
+    name: Hosted Source API Proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mycelis
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: cortex
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mycelis -d cortex"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      nats:
+        image: nats:2-alpine
+        ports:
+          - 4222:4222
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set Up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+
+      - name: Set Up Node.js
+        if: ${{ inputs.run_active_work_api_spec == true }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Install Python Tooling
+        run: uv sync --all-packages --dev
+
+      - name: Install Interface Dependencies
+        if: ${{ inputs.run_active_work_api_spec == true }}
+        working-directory: interface
+        run: npm ci
+
+      - name: Apply Database Migrations
+        run: uv run inv db.migrate
+
+      - name: Compile Core
+        run: uv run inv core.compile
+
+      - name: Start Core API
+        shell: bash
+        run: |
+          mkdir -p workspace/logs
+          core/bin/server > workspace/logs/github-source-core.log 2>&1 &
+          echo "$!" > workspace/logs/github-source-core.pid
+
+      - name: Wait For Core Health
+        shell: bash
+        run: |
+          for attempt in {1..45}; do
+            if curl -fsS http://localhost:8081/healthz; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat workspace/logs/github-source-core.log
+          exit 1
+
+      - name: Run Mycelis API Delivery Proof
+        shell: bash
+        run: |
+          if [ "${{ inputs.proof_mode }}" = "read-only" ]; then
+            uv run inv api.delivery-proof --read-only
+          else
+            uv run inv api.delivery-proof
+          fi
+
+      - name: Run Active Work API Browser Contract
+        if: ${{ inputs.run_active_work_api_spec == true }}
+        working-directory: interface
+        env:
+          PLAYWRIGHT_ACTIVE_WORK_API_LIVE: "1"
+          PLAYWRIGHT_LIVE_BACKEND: "1"
+          PLAYWRIGHT_SKIP_WEBSERVER: "1"
+          PLAYWRIGHT_PORT: "3000"
+        run: npx playwright test e2e/specs/active-work-api.spec.ts --project=chromium --workers=1
+
+      - name: Stop Core API
+        if: always()
+        shell: bash
+        run: |
+          if [ -f workspace/logs/github-source-core.pid ]; then
+            kill "$(cat workspace/logs/github-source-core.pid)" || true
+          fi
+
+      - name: Upload Source Proof Logs On Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-api-proof-logs
+          path: |
+            workspace/logs/
+            interface/test-results/
+            interface/playwright-report/
+          retention-days: 7

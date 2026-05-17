@@ -52,6 +52,7 @@ The active architecture library is intentionally small. It is not a holding area
 - **Architecture Docs Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **V8.2 Production Architecture Target / B2+ Delivery Frame**: `../architecture/v8-2.md`
 - **V8.2 Current State And Finalization PRD**: `./architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md`
+- **V8.2 Finalization Delivery Plan**: `./architecture-library/V8_2_FINALIZATION_DELIVERY_PLAN.md`
 - **V8.2 Finalization Concretization Contract**: `./architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`
 - **V8.2 Operational Embodiment Directive**: `./architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`
 - **V8.2 Soma UI Architecture Expression**: `./architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`

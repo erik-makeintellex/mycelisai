@@ -12,10 +12,23 @@ on:
         required: false
         default: false
         type: boolean
+      package_profile:
+        description: "Packaging profile to verify"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - enterprise
+          - enterprise-windows-ai
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+
+concurrency:
+  group: release-packaging-${{ github.ref }}-${{ inputs.release_label || github.run_number }}
+  cancel-in-progress: false
 
 jobs:
   verify-enterprise-packaging:
@@ -54,6 +67,7 @@ jobs:
         run: uv sync --all-packages --dev
 
       - name: Verify Enterprise Helm Package
+        if: ${{ inputs.package_profile == 'both' || inputs.package_profile == 'enterprise' }}
         run: >
           uv run inv k8s.deploy
           --verify-package
@@ -62,6 +76,7 @@ jobs:
           --release-label=${{ steps.release.outputs.label }}
 
       - name: Verify Enterprise Windows AI Helm Package
+        if: ${{ inputs.package_profile == 'both' || inputs.package_profile == 'enterprise-windows-ai' }}
         run: >
           uv run inv k8s.deploy
           --verify-package

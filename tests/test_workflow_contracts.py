@@ -24,7 +24,8 @@ def test_ci_workflow_runs_token_free_codebase_gates():
         "uv run inv interface.build",
         "uv run inv interface.typecheck",
         "uv run inv interface.e2e",
-        "--spec=e2e/specs/homepage.spec.ts",
+        "browser_spec",
+        "e2e/specs/homepage.spec.ts",
         "uv run inv k8s.standards",
         "MYCELIS_SEARCH_PROVIDER: \"disabled\"",
         "workflow_dispatch",
@@ -196,6 +197,8 @@ def test_release_binaries_workflow_uses_core_package_task():
     workflow = _read(".github/workflows/release-binaries.yaml")
 
     assert "workflow_dispatch" in workflow
+    assert "target:" in workflow
+    assert "publish_release_assets" in workflow
     assert 'tags: ["v*"]' not in workflow
     assert 'id: release' in workflow
     assert "uv run inv core.package" in workflow
@@ -207,6 +210,7 @@ def test_release_workflow_verifies_enterprise_packaging_before_optional_image_pu
     workflow = _read(".github/workflows/release.yaml")
 
     assert "verify-enterprise-packaging" in workflow
+    assert "package_profile" in workflow
     assert "azure/setup-helm@v4" in workflow
     assert "uv run inv k8s.deploy" in workflow
     assert "--verify-package" in workflow
@@ -214,3 +218,26 @@ def test_release_workflow_verifies_enterprise_packaging_before_optional_image_pu
     assert "values-enterprise-windows-ai.yaml" in workflow
     assert "actions/upload-artifact@v4" in workflow
     assert "if: inputs.publish_images == true" in workflow
+
+
+def test_manual_source_api_proof_workflow_uses_hosted_infra_and_mycelis_api():
+    workflow = _read(".github/workflows/source-api-proof.yaml")
+    testing = _read("docs/TESTING.md")
+
+    for expected in [
+        "workflow_dispatch",
+        "proof_mode",
+        "postgres:16",
+        "nats:2-alpine",
+        "uv run inv db.migrate",
+        "uv run inv core.compile",
+        "core/bin/server",
+        "uv run inv api.delivery-proof --read-only",
+        "uv run inv api.delivery-proof",
+        "PLAYWRIGHT_ACTIVE_WORK_API_LIVE",
+        "active-work-api.spec.ts",
+    ]:
+        assert expected in workflow
+
+    assert "Source API Proof" in testing
+    assert "hosted PostgreSQL/NATS" in testing

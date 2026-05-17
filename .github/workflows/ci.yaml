@@ -2,6 +2,24 @@ name: CI
 
 on:
   workflow_dispatch:
+    inputs:
+      lane:
+        description: "Manual validation lane to run"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - repo-hygiene
+          - core
+          - interface
+          - browser-smoke
+          - helm-standards
+      browser_spec:
+        description: "Browser smoke spec path when lane is all or browser-smoke"
+        required: false
+        default: "e2e/specs/homepage.spec.ts"
+        type: string
 
 permissions:
   contents: read
@@ -22,6 +40,7 @@ env:
 jobs:
   repo-hygiene:
     name: Repo Hygiene, Docs, And Ops Tests
+    if: ${{ inputs.lane == 'all' || inputs.lane == 'repo-hygiene' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -54,6 +73,7 @@ jobs:
 
   core:
     name: Go Core
+    if: ${{ inputs.lane == 'all' || inputs.lane == 'core' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -89,6 +109,7 @@ jobs:
 
   interface:
     name: Interface Unit And Build
+    if: ${{ inputs.lane == 'all' || inputs.lane == 'interface' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -127,7 +148,7 @@ jobs:
 
   browser-smoke:
     name: Browser Smoke Without Live Agentry
-    needs: interface
+    if: ${{ inputs.lane == 'all' || inputs.lane == 'browser-smoke' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -165,7 +186,7 @@ jobs:
           --project=chromium
           --workers=1
           --server-mode=start
-          --spec=e2e/specs/homepage.spec.ts
+          --spec=${{ inputs.browser_spec }}
 
       - name: Upload Browser Artifacts On Failure
         if: failure()
@@ -180,6 +201,7 @@ jobs:
 
   helm-standards:
     name: Helm And Kubernetes Standards
+    if: ${{ inputs.lane == 'all' || inputs.lane == 'helm-standards' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

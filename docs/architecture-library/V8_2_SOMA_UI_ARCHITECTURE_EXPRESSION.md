@@ -85,13 +85,7 @@ The output type should determine the visible UI state, available controls, and r
 
 ## Research Calibration
 
-External interaction patterns reinforce this direction:
-
-- [VIKTOR App Builder](https://docs.viktor.ai/docs/app-builder/) starts from the user's desired application, expected inputs, outputs, preview, code/development surface, revisions, deployment, and persistence rather than asking the user to operate deployment internals first.
-- [OpenClaw getting started](https://docs.openclaw.ai/start/getting-started) emphasizes quick onboarding, a running gateway/dashboard, first message, channel connection, and explicit safety/pairing. The useful lesson for Mycelis is not to mimic a messaging bot, but to keep the first action concrete and make controls, safety, and connected tools understandable after the first useful work path exists.
-- [Microsoft Research human-AI interaction guidance](https://www.microsoft.com/en-us/research/articles/guidelines-for-human-ai-interaction-eighteen-best-practices-for-human-centered-ai-design/) emphasizes early capability/limit setting, user control, easy correction, explanations of system behavior, consequences of actions, and global controls. In Mycelis terms, those become response states, proof, recovery, approval friction, and inspectable controls.
-
-Research calibration is input to the product expression, not a reason to add more default surfaces.
+VIKTOR-style app building, OpenClaw onboarding, and Microsoft human-AI guidance all reinforce the same UI lesson: start with concrete user value, show capability and limits early, keep correction/control easy, and explain consequences through proof and recovery instead of topology. Research calibration informs the product expression; it does not justify more default surfaces.
 
 ## Operator Journey
 
@@ -171,13 +165,6 @@ The default card shows outcome, outputs, proof, and next step. Full lineage belo
 
 Owns input, starter prompts, response-state rendering, active execution, current output summary, trust summary, and follow-up steering.
 
-Current anchors:
-
-- `SomaOperatingSurface`
-- `MissionControlChat`
-- `SomaCausalSummary`
-- `SomaEvidencePanel`
-
 Target expression: one reusable Soma operating model across dashboard and organization workspaces.
 
 ### Output Workbench
@@ -220,15 +207,7 @@ Target expression: self-hosted operators can trust the installation without read
 
 ## State Architecture
 
-| State family | Default view | Inspect view |
-| --- | --- | --- |
-| Intent | user ask and Soma summary | original request, resolved intent, assumptions |
-| Proposal | decision, risk, approve/cancel | contract, resources, capabilities, policy |
-| Running | active work lane | events, team/capability details, elapsed time |
-| Output | output card/workbench | files, storage path, schemas, reconstruction |
-| Proof | run/proof link and trust label | audit refs, evidence refs, validation source |
-| Degradation | what failed and safe next step | invalid proof, retryability, uncertainty |
-| Schedule | next run and cadence | rule, cooldown, history, proof |
+Default state views show the operator ask, Soma summary, decision, risk, active work, output card, proof link, degradation next step, and schedule next run. Inspect views reveal original request, assumptions, contracts, resources, policies, events, team/capability details, storage paths, schemas, evidence, audit refs, validation source, retryability, uncertainty, cooldowns, and history.
 
 Security rule: UI may show secret reference names, redacted readiness, and rotation guidance, never raw secret values.
 
@@ -260,32 +239,13 @@ Stop/archive
 
 Scheduled work must be governed execution, not a calendar label.
 
-Minimum production shape:
-
-- rule name
-- owner
-- cadence or trigger
-- next run
-- cooldown
-- approval posture
-- capability/team scope
-- proof expectations
-- last result
-- recovery behavior
+Minimum production shape: rule name, owner, cadence or trigger, next run, cooldown, approval posture, capability/team scope, proof expectations, last result, and recovery behavior.
 
 Schedule language stays out of default UX until these fields exist.
 
 ## Execution Teams
 
-| Team | Goal | First production tasks |
-| --- | --- | --- |
-| Soma Experience | compress the default UI into the operating loop | replace false cold-start action copy, make prompts outcome-specific, add queued/running/blocked/done states |
-| UI Architecture | keep component boundaries reusable | isolate response-state rendering, define `ActiveWorkLane`, define output workbench contracts |
-| Governance And Trust | make proof understandable without leaking runtime complexity | normalize "what happened / what is trusted / what next", prepare confidence provenance fields |
-| Runtime And Capability | make UI states true runtime states | persist execution contracts, proof artifacts, active team work items, and capability state |
-| QA And Embodiment | prove the first-time operator loop end to end | add cold-start, active-team, output-proof, recovery, mobile, and scheduled-work tests |
-
-Enterprise role paths should become explicit over time: owner/admin configuration, operator execution, reviewer approval/audit, platform deployment proof, and security capability/secret posture.
+Soma Experience, UI Architecture, Governance And Trust, Runtime And Capability, and QA And Embodiment own the first production path together: compress default UX, isolate response-state rendering, make proof understandable, persist runtime state, and prove cold-start, active-team, output-proof, recovery, mobile, and scheduled-work behavior. Enterprise role paths should become explicit over time: owner/admin configuration, operator execution, reviewer approval/audit, platform deployment proof, and security capability/secret posture.
 
 ## Acceptance Gates
 

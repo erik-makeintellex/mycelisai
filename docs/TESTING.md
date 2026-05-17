@@ -1,6 +1,5 @@
 # Verification & Testing Protocol
 > Navigation: [Project README](../README.md) | [Docs Home](README.md)
-Mycelis uses a five-tier validation model: backend unit tests, frontend component tests, browser workflows, integration tests, and governance/system smoke tests.
 ## TOC
 
 - [Current Validation Contract](#current-validation-contract)
@@ -275,6 +274,7 @@ uv run inv compose.storage-health
 ```
 
 ## CI Pipelines
+GitHub Actions remain manual-only through `workflow_dispatch` and are hosted corroboration after local source proof, not the first place to find ordinary development failures. Manual hosted lanes: `CI` has selectable repo/core/interface/browser/Helm lanes plus `browser_spec`; `Source API Proof` runs hosted PostgreSQL/NATS against `api.delivery-proof` in read-only or mutable mode; `Dev Build`, `Release Packaging`, and `Release Core Binaries` require explicit tags/profiles/publish inputs before producing pushed images or release assets.
 
 Primary local gates:
 - `uv run inv ci.test`

@@ -107,14 +107,7 @@ Minimal confidence provenance starts here through validation source, evidence st
 
 ## Primary Personas
 
-| Persona | Needs |
-| --- | --- |
-| Owner/operator | Ask Soma for work, approve actions, inspect proof, recover from failure, trust local deployment. |
-| Architecture team | Keep target, runtime contracts, UI contracts, capability posture, and proof gates aligned without doctrine creep. |
-| Runtime engineer | Preserve run/output/capability/audit contracts across chat, teams, tools, automations, and deployments. |
-| UX engineer | Compress operator complexity while keeping inspectable proof and advanced surfaces reachable. |
-| Validation/release engineer | Prove the canonical workflow in browser and deployment lanes with repeatable evidence. |
-| Enterprise reviewer | See identity, auth, deployment, audit, capability, and governance readiness without false claims that planned adapters are shipped. |
+Finalization serves owner/operators, architecture/runtime/UX engineers, validation engineers, and enterprise reviewers. Each persona needs the same core truth in different depth: visible work, bounded authority, durable outputs, proof, recovery, deployment posture, and no false claim that planned adapters or autonomy are already shipped.
 
 ## Product Requirements
 
@@ -188,138 +181,42 @@ Minimal confidence provenance starts here through validation source, evidence st
 | QA And Embodiment | `ACTIVE` | Keep focused live browser proof for Soma, teams, groups, Resources, Runs, System, and recovery. | One repeatable proof set demonstrates create/review work -> approval -> run -> output -> proof -> revisit. |
 | Docs And State | `ACTIVE` | Keep canonical docs compressed and state operational. | Architecture docs, user docs, API docs, state, and in-app manifest agree after every slice. |
 
-## Orchestrated Delivery Plan
+## Delivery Control
 
-This is the expected delivery control plan for the next execution push. It is intentionally team-owned and proof-gated. No team should close a slice with "implemented" unless the owning tests and GUI proof run or the blocker is explicitly recorded.
+The detailed execution board now lives in [V8.2 Finalization Delivery Plan](V8_2_FINALIZATION_DELIVERY_PLAN.md). This PRD owns product truth, requirements, blockers, and acceptance gates; the delivery plan owns team sequence, GUI matrix, runtime gates, and orchestration rules.
 
-### Delivery Sequence
+The current execution order is:
 
-| Order | Slice | Primary teams | Expected delivered behavior | Must not ship until |
-| --- | --- | --- | --- | --- |
-| 1 | Refresh local live proof lane | Deployment And Proof, QA And Embodiment | Source-run Core/Interface plus infra-only Postgres/NATS are current, not stale five-hour runtimes. | `ui-finalization-browser-package-live.spec.ts` passes against refreshed local services or records a precise runtime defect. |
-| 2 | First demo package proof | Soma Experience, Runtime And Capability, Governance And Trust, QA And Embodiment | User asks Soma for a playable browser game package; Soma frames output/proof, proposes if needed, executes, returns retained `project_package` with `index.html`, `README.md`, validation notes, run/proof link, reload safety, and Groups output. | Both success and degraded/retry GUI specs are green. |
-| 3 | Durable trust object spine | Runtime And Capability, Governance And Trust | `ExecutionContract`, `ProofArtifact`, and `CapabilityManifestState` become persisted runtime-visible objects linked to runs, outputs, audit, recovery, and confidence-provenance fields. | Confirm-action success and failure create inspectable contract/proof records; capabilities persist refresh state. |
-| 4 | Active team work truth | Runtime And Capability, Soma Experience, Governance And Trust | `TeamWorkItem`, `TeamInteraction`, `TeamStatusEvent`, and `TeamOutputRef` become durable API-backed objects; team creation plus deliverable request starts or queues work instead of ending at a shell. | Active work survives refresh/restart and control verbs are audited. |
-| 5 | Single-window Soma workspace | Soma Experience, QA And Embodiment | Dashboard/workspace shows expression input, active work lane, output workbench, compact trust package, and scoped context in one coherent browser window. | New-user desktop and mobile GUI review shows no practical work-surface collapse. |
-| 6 | Heavy-surface compression | Soma Experience, Deployment And Proof, QA And Embodiment | Teams, Resources, Runs, System, and Settings use menu/detail or list/detail panes with bounded scrolling; raw topology stays behind Inspect/Advanced. | Browser proof covers desktop and mobile, and normal workflow does not require long topology reading. |
-| 7 | Scheduler/cadence productionization | Runtime And Capability, Governance And Trust, Soma Experience | Scheduled work is a governed scheduler rule with next-run, cooldown, approval posture, audit, proof, recovery, and last result. | Default schedule language returns only after live proof of actuation and recovery. |
-| 8 | Release-candidate embodiment pass | All teams | One replayable proof package demonstrates ask -> proposal -> approval -> run -> output -> proof -> recovery/revisit across local source lane, then deployment lane when local proof is clean. | No P0 GUI, proof, degraded, or stale-runtime blockers remain. |
-
-### Team Execution Assignments
-
-| Team | Immediate work | Files/surfaces to own first | Required tests and evidence |
-| --- | --- | --- | --- |
-| Soma Experience | Implement the single-window Soma target and reduce new-user complexity. Expression framing must show outcome, output shape, agentry posture, proof expectation, and next action before raw topology. | `interface/app/(app)/dashboard/page.tsx`, `interface/components/soma/SomaOperatingSurface.tsx`, `interface/components/dashboard/MissionControlChat.tsx`, `interface/components/dashboard/ProposedActionBlock.tsx`, `interface/components/soma/SomaCausalSummary.tsx`, `interface/components/soma/ExecutionSummaryCard.tsx`, `interface/components/teams/ActiveWorkLane.tsx` | Focused Vitest for response states and trust cards; headed Chromium for dashboard cold start, proposal, execution result, degraded result, and mobile viewport. |
-| Runtime And Capability | Persist the runtime truth objects instead of deriving them only into response payloads. Preserve the existing additive `execution_summary` contract while introducing durable IDs. | `core/pkg/protocol/execution_summary.go`, `core/internal/server/templates_execution.go`, `core/internal/server/confirm_action_outputs.go`, `core/internal/server/execution_summary.go`, `core/internal/capabilities/service.go`, `core/internal/capabilities/types.go`, new migrations for contracts/proofs/team work items | Go tests proving proposal creates contract, confirm success/failure creates proof, project package records output refs, capability refresh persists, and team work items survive reload. |
-| Governance And Trust | Normalize success, failure, blocker, and degraded language across execution summaries, proof artifacts, proposals, and UI trust packages. | `core/internal/server/templates_proof_status.go`, `core/internal/server/templates_audit_details.go`, `core/internal/server/team_group_execution_summaries.go`, `interface/components/soma/SomaEvidencePanel.tsx`, `interface/components/shared/DegradedState.tsx` | Failure/degraded tests must answer what succeeded, what failed, what proof is invalid, what remains trusted, what can retry, and what needs operator attention. |
-| Deployment And Proof | Keep the local source proof lane repeatable and make `System -> Deployments` the detailed trust home for roots, endpoint posture, current commit, runtime posture, proof lane, and recovery. | `interface/app/(app)/system/page.tsx`, `interface/components/system/SystemQuickChecks.tsx`, service/status handlers, operations docs | Local source health proof before GUI; deployment/root visibility proof only when topology changes. |
-| QA And Embodiment | Own GUI acceptance as product proof, not route smoke testing. Test like a new user who wants work done and proof retained. | `interface/e2e/specs/ui-finalization-browser-package-live.spec.ts`, `ui-finalization-browser-package-retry.spec.ts`, `soma-governance-live.spec.ts`, `team-execution-live.spec.ts`, `team-output-content-live.spec.ts`, `teams.spec.ts`, `resources-workspace-files.spec.ts`, `settings.spec.ts`, `docs-and-runs.spec.ts` | Produce a browser evidence matrix: screenshots or traces for cold start, expression framing, proposal, approve, active work, output open, proof open, reload, degraded retry, team steering, heavy surface compression, desktop/mobile. |
-| Docs And State | Keep docs compressed and executable. Update docs in the same slice as behavior, and archive/delete stale docs instead of letting old language compete. | `README.md`, `.state/V8_DEV_STATE.md`, `docs/TESTING.md`, `docs/API_REFERENCE.md`, this PRD, UI/user docs, `interface/lib/docsManifest.ts` when surfaced docs change | Docs-link proof, diff review, and close-out list of docs changed/reviewed unchanged. |
-
-### Architecture Execution Cell - 2026-05-17
-
-The current architecture team cell is organized as one collaborative delivery unit, not five independent advisory tracks. The cell owns the next production-state handoff from proven first-demo output into durable runtime truth, visible team work, and a single Soma operating window.
-
-| Lane | Current finding | First production commitment | Handoff dependency |
-| --- | --- | --- | --- |
-| Runtime And Capability | `ExecutionSummary` is useful, but `ExecutionContract` and `ProofArtifact` are still reconstructed from intent proofs, runs, events, artifacts, audit, and response payloads. Capability manifests have a migration, but refresh is not yet a persisted trust object. | Implement durable trust objects for confirm-action first: `execution_contracts`, `proof_artifacts`, additive `contract_id`/`proof_id`, and persisted `CapabilityManifestState`. | Feeds Soma Experience, Governance/Trust, Team Work, Deployment/Proof, and QA with stable IDs instead of inferred proof. |
-| Governance And Trust | Success and failure language is visible, but degraded proof is not durable enough to answer what failed, what remains trusted, what proof is invalid, what can retry, and what requires operator attention after reload. | Bind success, partial, failed, retryable, blocked-by-provider, blocked-by-capability, and needs-operator-attention states to `ProofArtifact` and UI response states. | Depends on Runtime trust objects; feeds QA degraded/retry proof and Soma trust-package rendering. |
-| Team Work And Council | Active Work Lane is currently projected from team details, agents, deliveries, and heartbeats. `TeamWorkItem`, `TeamInteraction`, `TeamStatusEvent`, and `TeamOutputRef` are canonical but not durable/API-backed. | Implement durable team-work spine and minimal APIs, then wire Active Work Lane to API-backed state with projection as degraded fallback. | Starts after durable contract/proof IDs exist, but can design migrations/API shape in parallel. |
-| Soma Experience | The default workspace still stacks expression, transcript trust, compact trust, evidence, and activity vertically. Output workbench and active work are not yet one bounded operating window. | Create a reusable Soma workspace frame with expression lane, active work lane, output workbench, compact trust package, and advanced inspect boundaries. | Uses team-work APIs and durable proof IDs when available; can prototype against existing projection/output metadata. |
-| Deployment And Proof | `System -> Deployments` is named as the trust owner, but deployment roots, execution roots, workspace/artifact roots, commit/image/chart identity, endpoint posture, proof lane, and recovery posture are not yet one operator-visible trust snapshot. | Add `GET /api/v1/system/deployments/trust` and a `System -> Deployments` panel; keep Resources deployment context as knowledge intake, not deployment truth. | Can proceed in parallel, but QA acceptance depends on source-lane health proof and runtime status accuracy. |
-| QA And Embodiment | First-demo live proof exists, while degraded/retry is still mocked and active work is not API-backed. Heavy-surface compression has focused specs but lacks a full desktop/mobile evidence matrix. | Run proof in order: refreshed local source lane, first-demo live proof, degraded/retry live injection, retained output spine, API-backed active work, desktop/mobile compression matrix, then deployment-lane replay. | May block release recommendation even when unit/API proof is green if the browser experience remains dense or non-recoverable. |
-| Docs And State | Canonical docs are compressed enough, but state must keep implementation order and blockers sharper than historical boards. | Keep this PRD and `.state/V8_DEV_STATE.md` as the active execution board; update API/user/testing docs only when implementation changes meaning. | Receives close-out from every lane and rejects stale holder-doc drift. |
-
-Working agreement:
-
-- Runtime and Governance lead the next code slice because Soma, Team Work, and QA need durable contract/proof identifiers before they can stop inferring truth from response cards.
-- Team Work designs in parallel, but it must not claim "team is working" from a created team shell. `create_team` alone means `new` or `briefed`; deliverable or delegated execution creates queued/running/output-ready/degraded work.
-- Soma Experience can build the workspace frame against current projections only as an interim compatibility path; release acceptance requires API-backed active work and durable proof links.
-- Deployment And Proof proceeds independently on `System -> Deployments`, but it must not move deployment context intake out of Resources or show topology before roots, endpoint posture, proof lane, and recovery are understandable.
-- QA serializes browser proof and keeps live specs ahead of release claims. Mocked degraded/retry proof remains useful but is not final degraded-execution acceptance.
-
-### GUI Test Matrix
-
-The GUI pass must be run as a product acceptance gate, not as optional polish.
-
-| Scenario | Required proof | Primary spec or action |
-| --- | --- | --- |
-| New-user cold start | No false "Soma just did this"; clear expression input and starter outcomes. | `soma-governance-live.spec.ts`, dashboard screenshot desktop/mobile |
-| Expression framing | UI shows output/proof/agentry/next action before topology. | Add/extend Soma component tests and Playwright assertion in package workflow |
-| First demo success | Retained game package includes `index.html`, `README.md`, validation/proof, open action, storage/action, Groups output, reload safety. | `ui-finalization-browser-package-live.spec.ts` |
-| First demo degraded/retry | Failure names trusted remainder, invalid proof, retry scope, operator attention, and safe next action. | `ui-finalization-browser-package-retry.spec.ts`, `soma-proposal-mode.spec.ts` |
-| Active team work | Team created vs work queued/running/output-ready/degraded are distinct; control verbs are visible. | `teams.spec.ts`, `team-execution-live.spec.ts`, new active-work API-backed spec |
-| Output workbench | Retained outputs are stronger than chat transcript; package opens and remains reviewable. | `team-output-content-live.spec.ts`, `resources-workspace-files.spec.ts` |
-| Heavy surfaces | Teams, Resources, Runs, System, Settings use bounded panes and do not force long topology reading. | `teams.spec.ts`, `docs-and-runs.spec.ts`, `settings.spec.ts`, resources/system screenshots |
-| Mobile expression | Mobile keeps input/current state usable; rail/cards do not consume the work surface. | `mobile-chromium` project plus screenshot review |
-| Deployment trust | `System -> Deployments` owns roots, current commit, endpoint posture, proof lane, and recovery. | System focused Playwright once the surface changes |
-| Re-entry | Refresh/reopen preserves retained output, proof links, and active/degraded state. | package live spec plus workflow reload specs |
-
-### Runtime Acceptance Gates
-
-The runtime delivery cannot be considered production-ready while trust objects are only reconstructed from scattered state. The next runtime gate is:
-
-1. Empty and existing database migrations apply cleanly.
-2. Proposal creation persists an `execution_contracts` row and exposes `contract_id` in `execution_summary`.
-3. Confirmed success persists a run, output refs, mission events, and a `proof_artifacts` row with validation source, proof quality, audit refs, recovery options, and confidence-provenance fields.
-4. Confirmed failure or partial execution persists a degraded proof artifact with trusted remainder, invalid evidence, retryability, and operator-attention fields.
-5. Capability refresh upserts long-lived `CapabilityManifestState` rows and APIs prefer persisted state, with explicit degraded fallback when storage is unavailable.
-6. Team work items and interactions persist, survive restart, and drive the Active Work Lane instead of being UI-only projections.
-7. All new runtime IDs remain additive so existing `execution_summary` consumers do not break during transition.
-
-Suggested backend proof:
-
-```powershell
-cd core
-go test ./internal/server ./internal/capabilities ./internal/runs ./internal/artifacts ./internal/swarm ./pkg/protocol -run "ExecutionContract|ProofArtifact|CapabilityManifest|TeamWorkItem|ConfirmAction|ExecutionSummary|ProjectPackage|Degradation" -count=1
-```
-
-### Orchestration Rules For Teams
-
-- Do not start broad team/autonomy work until the first demo package proof is green.
-- Do not call a team deliverable complete when only a team shell was created.
-- Do not add a new UI surface if an existing Soma, Teams, Resources, Runs, System, or Settings surface can carry the contract.
-- Do not expose MCP, NATS, provider, or deployment topology before the operator can understand output, proof, recovery, and next action.
-- Every slice must record owning lane, touched API/UI/runtime surfaces, emitted events, output object shape, proof artifact shape, recovery behavior, validation run, docs changed, docs reviewed unchanged, and remaining blocker.
-- QA may fail a release recommendation for practical browser usability even when no horizontal overflow exists.
+1. Refresh the local source proof lane.
+2. Prove the first demo package flow.
+3. Persist the durable trust object spine.
+4. Make active team work API-backed.
+5. Compress Soma into a single operating window.
+6. Compress heavy surfaces behind list/detail or advanced inspection.
+7. Productionize governed scheduler cadence.
+8. Run the release-candidate embodiment pass.
 
 ## Finalization Roadmap
 
 ### Phase 1 - Close The MVP Trust Loop
 
-- Define and persist the initial ExecutionContract shape.
-- Define and persist the initial ProofArtifact shape.
-- Prove project-package output through live Mycelis GUI.
-- Prove explicit MCP-backed confirmation path end to end.
-- Ensure retained outputs open, reveal storage, and link to proof.
-- Ensure failed execution returns actionable degradation metadata.
+Persist initial `ExecutionContract` and `ProofArtifact`, prove project-package output through the live GUI, retain output/proof links, and make failed execution degradation actionable.
 
 ### Phase 2 - Active Team And Output Workflows
 
-- Make active teams easier to inspect, steer, and clean up through the Active Work Lane before raw topology is opened.
-- Implement `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API/UI projections from the Soma Team Interaction Contract.
-- Add stronger output views for team deliverables and retained packages.
-- Show team communication state without exposing raw NATS as the main workflow.
-- Keep broad team creation deliberate and compact by default.
+Make active teams inspectable and steerable through API-backed `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` state before raw topology.
 
 ### Phase 3 - Scheduler/Cadence Productionization
 
-- Add governed schedule rule authoring.
-- Add next-run state, cooldown, audit, recovery, and proof.
-- Add browser proof for scheduled actuation.
-- Remove any remaining schedule-copy that implies unshipped behavior.
+Ship governed schedule rule authoring with next-run, cooldown, audit, recovery, proof, and browser actuation proof before schedule copy returns to default UX.
 
 ### Phase 4 - Deployment Trust And Recovery
 
-- Add `System -> Deployments` trust visibility for root paths, commit, image/chart, workspace/artifact roots, health, endpoint posture, and proof lane.
-- Clarify Compose vs Kubernetes proof claims.
-- Add recovery actions for AI endpoint, search provider, filesystem MCP, scheduler, comms, NATS, Postgres, and workspace root issues.
+Make `System -> Deployments` own roots, commit/image/chart identity, health, endpoint posture, proof lane, and recovery actions across source, Compose, and Kubernetes lanes.
 
 ### Phase 5 - Confidence Provenance Preparation
 
-- Add schema room for validation source, evidence strength, proof quality, review lineage, and cross-model/tool agreement.
-- Surface confidence provenance only where it helps operator trust.
-- Avoid scores without evidence semantics.
+Add schema room for validation source, evidence strength, proof quality, review lineage, and cross-check agreement, but avoid scoring without evidence semantics.
 
 ## Acceptance Gates
 

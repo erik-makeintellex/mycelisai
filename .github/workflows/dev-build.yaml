@@ -2,10 +2,25 @@ name: Dev Build
 
 on:
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Manual image tag to build"
+        required: true
+        default: "dev"
+        type: string
+      push_images:
+        description: "Push images to GHCR after build"
+        required: true
+        default: true
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+
+concurrency:
+  group: dev-build-${{ github.ref }}-${{ inputs.image_tag }}
+  cancel-in-progress: false
 
 jobs:
   build-and-push-dev:
@@ -34,24 +49,24 @@ jobs:
             ${{ env.REGISTRY }}/mycelis/interface
           tags: type=raw,value=dev
 
-      - name: Build and push Core (Dev)
+      - name: Build Core Image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: core/Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/mycelis/core:dev
+          push: ${{ inputs.push_images }}
+          tags: ${{ env.REGISTRY }}/mycelis/core:${{ inputs.image_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             BUILD_MODE=dev
 
-      - name: Build and push Interface (Dev)
+      - name: Build Interface Image
         uses: docker/build-push-action@v5
         with:
           context: ./interface
           file: ./interface/Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/mycelis/interface:dev
+          push: ${{ inputs.push_images }}
+          tags: ${{ env.REGISTRY }}/mycelis/interface:${{ inputs.image_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             NODE_ENV=development
