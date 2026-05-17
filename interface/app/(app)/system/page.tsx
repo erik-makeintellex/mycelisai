@@ -24,7 +24,6 @@ export default function SystemPage() {
         </Suspense>
     );
 }
-
 function SystemContent() {
     const searchParams = useSearchParams();
     const advancedMode = useCortexStore((s) => s.advancedMode);

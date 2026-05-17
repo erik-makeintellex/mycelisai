@@ -105,6 +105,24 @@ func TestServiceDerivesCapabilityManifestSnapshot(t *testing.T) {
 	if mcpTool.Metadata["input_schema"] == nil {
 		t.Fatal("MCP tool input_schema metadata missing")
 	}
+	if mcpTool.CapabilityID != mcpTool.ID {
+		t.Fatalf("capability_id = %q, want %q", mcpTool.CapabilityID, mcpTool.ID)
+	}
+	if mcpTool.ManifestVersion != ManifestVersion {
+		t.Fatalf("manifest_version = %q, want %q", mcpTool.ManifestVersion, ManifestVersion)
+	}
+	if mcpTool.Health != "healthy" {
+		t.Fatalf("health = %q, want healthy", mcpTool.Health)
+	}
+	if mcpTool.ApprovalPosture != "not_required" {
+		t.Fatalf("approval_posture = %q, want not_required", mcpTool.ApprovalPosture)
+	}
+	if mcpTool.OutputSchemaRef == "" {
+		t.Fatal("output_schema_ref missing")
+	}
+	if mcpTool.FailurePosture == "" || mcpTool.RecoveryPosture == "" {
+		t.Fatalf("failure/recovery posture missing: %+v", mcpTool)
+	}
 }
 
 func TestServiceGetUsesCachedSnapshot(t *testing.T) {

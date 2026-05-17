@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -69,7 +70,16 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 
 	auditID := s.auditConfirmedAction(proofID, runID, scope, auditUser)
 	proofArtifactID := s.persistConfirmActionSuccessProof(r.Context(), proofID, contractID, runID, auditID, scope, results)
-	if err := s.persistConfirmedActionVisibility(r.Context(), runID, auditID, auditUser, scope, results); err != nil {
+	link := confirmedActionTeamWorkLink{
+		ProofID:         proofID,
+		ContractID:      contractID,
+		ProofArtifactID: proofArtifactID,
+		RunID:           runID,
+		AuditID:         auditID,
+		AuditUser:       auditUser,
+		Scope:           scope,
+	}
+	if err := s.persistConfirmedActionVisibility(r.Context(), link, results); err != nil {
 		log.Printf("CE-1: confirm-action visibility persistence failed: %v", err)
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID, scope, results)))
@@ -131,12 +141,44 @@ func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, r *http
 		},
 	)
 	proofArtifactID := s.persistConfirmActionFailureProof(r.Context(), proofID, contractID, runID, auditID, err)
+	link := confirmedActionTeamWorkLink{
+		ProofID:         proofID,
+		ContractID:      contractID,
+		ProofArtifactID: proofArtifactID,
+		RunID:           runID,
+		AuditID:         auditID,
+		AuditUser:       auditUser,
+	}
+	if scope, scopeErr := s.loadIntentProofScopeForFailure(r.Context(), proofID); scopeErr == nil {
+		link.Scope = scope
+		if teamWorkErr := s.persistFailedConfirmedActionTeamWork(r.Context(), link, err); teamWorkErr != nil {
+			log.Printf("CE-1: failed confirm-action team-work persistence failed: %v", teamWorkErr)
+		}
+	}
 	message := fmt.Sprintf("approved execution failed: %v", err)
 	respondAPIJSON(w, http.StatusInternalServerError, protocol.APIResponse{
 		OK:    false,
 		Error: message,
 		Data:  confirmActionFailureResponseData(proofID, contractID, proofArtifactID, runID, auditID, err),
 	})
+}
+
+func (s *AdminServer) loadIntentProofScopeForFailure(ctx context.Context, proofID string) (*protocol.ScopeValidation, error) {
+	db := s.getDB()
+	if db == nil {
+		return nil, errDBUnavailable
+	}
+	var scopeJSON []byte
+	if err := db.QueryRowContext(ctx, `SELECT scope_validation FROM intent_proofs WHERE id = $1`, proofID).Scan(&scopeJSON); err != nil {
+		return nil, err
+	}
+	scope := &protocol.ScopeValidation{}
+	if len(scopeJSON) > 0 {
+		if err := json.Unmarshal(scopeJSON, scope); err != nil {
+			return nil, err
+		}
+	}
+	return scope, nil
 }
 
 func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protocol.ScopeValidation, auditUser string) string {

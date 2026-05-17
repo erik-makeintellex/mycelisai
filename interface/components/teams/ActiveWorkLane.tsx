@@ -19,8 +19,10 @@ import {
 
 const stateStyles: Record<TeamWorkItemState, string> = {
   new: "border-cortex-primary/25 bg-cortex-primary/10 text-cortex-primary",
+  briefed: "border-cortex-primary/25 bg-cortex-primary/10 text-cortex-primary",
   queued: "border-cortex-border bg-cortex-bg text-cortex-text-muted",
   running: "border-cortex-success/25 bg-cortex-success/10 text-cortex-success",
+  reviewing: "border-cortex-info/25 bg-cortex-info/10 text-cortex-info",
   paused: "border-cortex-border bg-cortex-bg text-cortex-text-muted",
   output_ready:
     "border-cortex-primary/30 bg-cortex-primary/10 text-cortex-primary",
@@ -42,16 +44,25 @@ export function ActiveWorkLane({
   title = "Active work lane",
   items,
   emptyMessage = "No active work found yet.",
+  statusLabel,
+  degradedMessage,
+  frame = true,
   onAction,
 }: {
   title?: string;
   items: TeamWorkItem[];
   emptyMessage?: string;
+  statusLabel?: string;
+  degradedMessage?: string | null;
+  frame?: boolean;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
 }) {
+  const className = frame
+    ? "rounded-2xl border border-cortex-border bg-cortex-surface p-4"
+    : "min-w-0";
   return (
     <section
-      className="rounded-2xl border border-cortex-border bg-cortex-surface p-4"
+      className={className}
       data-testid="active-work-lane"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -65,6 +76,12 @@ export function ActiveWorkLane({
           {items.length} item{items.length === 1 ? "" : "s"}
         </span>
       </div>
+      {statusLabel || degradedMessage ? (
+        <div className="mt-3 rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-xs leading-5 text-cortex-text-muted">
+          {statusLabel ? <span className="font-semibold text-cortex-text-main">{statusLabel}</span> : null}
+          {degradedMessage ? <span>{statusLabel ? " " : ""}{degradedMessage}</span> : null}
+        </div>
+      ) : null}
       <div className="mt-3 space-y-2">
         {items.length === 0 ? (
           <p className="rounded-xl border border-cortex-border bg-cortex-bg p-3 text-sm text-cortex-text-muted">
@@ -97,6 +114,11 @@ function WorkItemRow({
             >
               {item.state.replace("_", " ")}
             </span>
+            {item.sourceLabel ? (
+              <span className="rounded-full border border-cortex-border bg-cortex-surface px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-text-muted">
+                {item.sourceLabel}
+              </span>
+            ) : null}
             <span className="font-mono text-[11px] text-cortex-text-muted">
               {item.scopeLabel}
             </span>
@@ -115,6 +137,16 @@ function WorkItemRow({
               ? ` | ${item.outputCount} output${item.outputCount === 1 ? "" : "s"}`
               : ""}
           </p>
+          {item.nextAction ? (
+            <p className="mt-2 text-xs leading-5 text-cortex-text-main">
+              Next: {item.nextAction}
+            </p>
+          ) : null}
+          {item.fallbackReason ? (
+            <p className="mt-2 text-xs leading-5 text-amber-300">
+              {item.fallbackReason}
+            </p>
+          ) : null}
         </div>
         <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:justify-end">
           {item.interactions.map((action) => (
@@ -180,6 +212,9 @@ function AdvancedProjection({ item }: { item: TeamWorkItem }) {
     ["Models", advanced.modelIds],
     ["Tools", advanced.toolIds],
     ["Capabilities", advanced.capabilityIds],
+    ["Expected outputs", advanced.expectedOutputs],
+    ["Expected proof", advanced.expectedProof],
+    ["Execution shape", advanced.executionShape],
     ["Policy", advanced.policyRef ? [advanced.policyRef] : []],
   ].filter(([, values]) => Array.isArray(values) && values.length > 0) as Array<
     [string, string[]]

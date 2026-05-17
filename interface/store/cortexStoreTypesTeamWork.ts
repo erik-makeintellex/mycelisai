@@ -1,7 +1,9 @@
 export type TeamWorkItemState =
     | 'new'
+    | 'briefed'
     | 'queued'
     | 'running'
+    | 'reviewing'
     | 'paused'
     | 'output_ready'
     | 'degraded'
@@ -25,6 +27,23 @@ export interface TeamInteraction {
     audited?: boolean;
 }
 
+export interface TeamOutputRef {
+    output_id: string;
+    team_id: string;
+    work_item_id: string;
+    run_id?: string;
+    kind: string;
+    label: string;
+    storage_ref?: string;
+    entrypoint?: string;
+    validation_ref?: string;
+    proof_ref?: string;
+    contract_id?: string;
+    proof_id?: string;
+    audit_refs?: string[];
+    created_at?: string;
+}
+
 export interface TeamWorkItem {
     id: string;
     title: string;
@@ -36,6 +55,16 @@ export interface TeamWorkItem {
     outputCount?: number;
     teamIds: string[];
     interactions: TeamInteraction[];
+    source?: 'durable' | 'projection';
+    sourceLabel?: string;
+    fallbackReason?: string;
+    runId?: string;
+    outputRefs?: TeamOutputRef[];
+    proofRefs?: string[];
+    auditRefs?: string[];
+    needsOperator?: boolean;
+    nextAction?: string;
+    recoveryOptions?: string[];
     advanced?: {
         inputs?: string[];
         deliveries?: string[];
@@ -44,5 +73,8 @@ export interface TeamWorkItem {
         promptCount?: number;
         policyRef?: string;
         capabilityIds?: string[];
+        expectedOutputs?: string[];
+        expectedProof?: string[];
+        executionShape?: string[];
     };
 }

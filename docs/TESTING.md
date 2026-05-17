@@ -1,6 +1,5 @@
 # Verification & Testing Protocol
 > Navigation: [Project README](../README.md) | [Docs Home](README.md)
-
 Mycelis uses a five-tier validation model: backend unit tests, frontend component tests, browser workflows, integration tests, and governance/system smoke tests.
 
 ## TOC
@@ -22,7 +21,6 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 - [Memory Restart Validation](#memory-restart-validation)
 - [CI Pipelines](#ci-pipelines)
 - [Adding New Tests](#adding-new-tests)
-
 ## Current Validation Contract
 
 - Feature work is not done until relevant tests run against the final branch state.
@@ -51,9 +49,8 @@ Use this source-first sequence when a slice changes the delivered operator workf
 5. Broader headed Chromium MVP certification after the clean release lane:
    - run the critical matrix in [V8 UI Team Browser Workflows](architecture-library/V8_UI_TEAM_BROWSER_WORKFLOWS.md) sequentially
 
-Do not claim thorough release readiness from unit, type, or headless-only proof when the slice changes what the operator sees or approves.
-
 ## User Interaction Delivery Gate
+Do not claim thorough release readiness from unit, type, or headless-only proof when the slice changes what the operator sees or approves.
 
 Supported user proof lanes:
 - Windows Docker-compatible Compose through Rancher Desktop or Windows Docker Desktop Compose with Windows browser at `http://localhost:3000`
@@ -81,9 +78,11 @@ Every finalization slice must prove the concrete runtime contract it touches, no
 | Canonical MVP workflow | headed/live proof for Soma request -> proposal when required -> approval -> run -> output -> proof/audit -> revisit | `ACTIVE` |
 | ExecutionContract | API/unit proof for contract id, execution shape, governance posture, required capabilities, expected output/proof, recovery/degradation, run linkage, version/timestamps | `IN_REVIEW` for confirm-action |
 | ProofArtifact | API/UI proof for proof id, run id, status, evidence/output/audit refs, validation source, proof quality, degradation state, recovery options, confidence provenance | `IN_REVIEW` for confirm-action |
+| TeamWorkItem/TeamInteraction/TeamStatusEvent | Go/API proof that team creation remains non-active (`new`/`briefed`), delegated work queues real work, retained deliverables move through queued/running/output-ready or degraded states, and run/contract/proof/output refs persist where available | `IN_REVIEW` for confirm-action wiring |
 | UI response states | component/browser proof for direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, partial completion | `REQUIRED` |
-| CapabilityManifestState | persistence/API/UI proof for capability id, health, probe status, risk, approval posture, allowed roles, output schemas, failure/recovery posture, manifest version | `REQUIRED` |
-| Deployment trust | `System -> Deployments` proof for deployment/execution/workspace roots, current commit, endpoint posture, runtime posture, proof lane, recovery state | `IN_REVIEW`; backend/API and mocked browser proof are available, live proof depends on refreshed source services |
+| TeamWorkItem UI state | component/browser proof that Soma Active Work Lane prefers durable `/api/v1/teams/{id}/work` rows, renders projection fallback only as degraded/inspectable, and feeds retained `TeamOutputRef` records into the Output Workbench | `IN_REVIEW` |
+| CapabilityManifestState | durable Go/SQL/API proof for capability id, health, probe status, risk, approval posture, allowed roles, input/output schemas, failure/recovery posture, audit/secret policy, owner, updated time, and manifest version; UI proof remains the next Connected Tools/Resources gate | `IN_REVIEW` for persistence/API, `REQUIRED` for UI proof |
+| Deployment trust | `System -> Deployments` proof for deployment/execution/workspace roots, current commit, endpoint posture, runtime posture, proof lane, recovery state | `IN_REVIEW`; backend/API and mocked browser proof are available, local-source live proof uses already-running Core/Interface with infra-only PostgreSQL/NATS and skips honestly when that lane is not available |
 Related active contracts: [V8 UI/API and Operator Experience Contract](architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md), [V8 Directed Execution Delivery Plan](architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md), [V8 UI Testing Agentry Product Contract](architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md), and [V8.2 Current State And Finalization PRD](architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md). Current GUI proof status: live Soma governance, team execution, and playable-output flows are green through `soma-governance-live.spec.ts`, `team-execution-live.spec.ts`, and `team-output-content-live.spec.ts`. The exact first demo slice now has focused browser specs: `ui-finalization-browser-package-live.spec.ts` proves package metadata, proof opening, reload, and Groups output against a live backend, while `ui-finalization-browser-package-retry.spec.ts` proves the degraded/retry UI path with mocked failure.
 ## Full GUI Coverage Matrix
 
@@ -164,17 +163,18 @@ uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/som
 uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/search-provenance-live.spec.ts
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts
-uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=e2e/specs/team-execution-live.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=e2e/specs/team-output-content-live.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/ui-finalization-browser-package-live.spec.ts
 ```
 Finalization proof order after integration:
 1. Run the mocked browser harness serially with `--project=chromium --workers=1`: `first-demo-success.spec.ts`, `ui-finalization-browser-package-retry.spec.ts`, `desktop-mobile-compression.spec.ts`, `system-deployments.spec.ts`, and `active-work-api.spec.ts`.
 2. Run source gates: `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.build`, docs tests, and focused backend tests for changed APIs.
-3. Run live first-demo proof after Core/Interface are integrated: `ui-finalization-browser-package-live.spec.ts` with headed live backend; enable `PLAYWRIGHT_TEAM_WORK_API=1` only when migrated team-work tables and a team id are available.
+3. Run live first-demo proof after Core/Interface are integrated: `ui-finalization-browser-package-live.spec.ts` with headed live backend.
+4. Run local-source deployment/active-work proof only after Core and Interface are already running from source against the needed infra-only PostgreSQL/NATS services; do not start full Core/Interface Docker app stacks for this lane. `system-deployments.spec.ts` uses the live endpoint when `--live-backend`, `PLAYWRIGHT_LIVE_BACKEND=1`, or `PLAYWRIGHT_SYSTEM_DEPLOYMENTS_LIVE=1` is set. `active-work-api.spec.ts` writes one durable proof work item and reads it back only when `PLAYWRIGHT_TEAM_WORK_API=1` or `PLAYWRIGHT_ACTIVE_WORK_API_LIVE=1` is set, and it fails migrated-table regressions while skipping when Core/auth/PostgreSQL are unavailable.
+Use `npm test -- teamWorkProjection OutputWorkbench useDurableTeamWork TeamsPage --maxWorkers=1` when Soma Active Work Lane, durable team-work projection, or retained team-output workbench mapping changes.
 Use `uv run inv interface.e2e --headed --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-media-artifacts.spec.ts` when chat media rendering, saved-media downloads, or local storage-folder reveal controls change. The focused browser proof should show image previews, playable media or downloadable binary artifacts, saved paths, and an operator-visible control that opens the mounted storage location for generated content.
-Use `npm test -- WorkspaceExplorer MCPToolRegistry MCPLibraryBrowser MCPServerCard --maxWorkers=1` from `interface/` when Connected Tools, filesystem MCP, Workspace Files browsing, or MCP output generation contracts change. The focused component proof should verify the current filesystem MCP tool names (`list_directory`, `read_text_file`, `create_directory`, `write_file`), the MCP-safe `workspace` root, and the standard `{"arguments": {...}}` call envelope. Use `uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/resources-workspace-files.spec.ts` when the live browser must prove Resources -> Workspace Files can browse, write, reopen, and review a generated workspace output through filesystem MCP.
-Use `cd core; go test ./internal/server -run "Test(ParsePlannedToolCall|HandleConfirmAction|ExecutePlannedToolCalls)" -count=1` when governed proposal planning or confirm-action replay changes. The focused backend proof should verify explicit `tool_ref` MCP plans retain the `mcp:server/tool` identity, execute through the MCP executor after approval, and return retained `mcp_tool_result` outputs instead of silently falling back to same-named internal tools.
+Use `npm test -- WorkspaceExplorer MCPToolRegistry MCPLibraryBrowser MCPServerCard --maxWorkers=1` from `interface/` when Connected Tools, filesystem MCP, Workspace Files browsing, or MCP output generation contracts change. Use `npm test -- DeploymentContextPanel ResourcesPage --maxWorkers=1` when Resources -> Deployment Context intake compression changes; proof should verify the content/classification/scope tabs, bounded loaded-context list, and unchanged POST payloads.
+Use `cd core; go test ./internal/server -run "Test(ParsePlannedToolCall|HandleConfirmAction|ExecutePlannedToolCalls)" -count=1` when governed proposal planning or confirm-action replay changes. The focused backend proof should verify explicit `tool_ref` MCP plans retain the `mcp:server/tool` identity, execute through the MCP executor after approval, and return retained `mcp_tool_result` outputs instead of silently falling back to same-named internal tools. Add `TeamWork` to the focused `-run` filter when the confirmed action path changes team creation, delegation, retained output refs, or durable active-work state.
 Use `uv run inv interface.e2e --project=chromium --workers=1 --server-mode=external --spec=e2e/specs/soma-proposal-mode.spec.ts` when proposal approval, confirm-action failure handling, degradation metadata, or failed-run recovery UI changes. The focused browser proof must show the failed run remains reviewable, the Operator trust package says operator attention is needed, recovery copy is visible, and success proof labels are absent.
 Rancher Desktop K3s live-backend proof uses the local Interface server against the K3s Core bridge; `k8s.bridge` forwards in-cluster Core `:8080` to `MYCELIS_API_PORT` or `8081` by default, and the Interface proxy/live proof must use that same local port. When the spec checks backend-written files, prove the PVC-backed workspace through `kubectl`; see Operations for the full K3s env block.
 ```bash

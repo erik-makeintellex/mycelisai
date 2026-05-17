@@ -3,14 +3,23 @@
 import type React from "react";
 import { Activity, CheckSquare, ListChecks, Wrench } from "lucide-react";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
+import { ActiveWorkLane } from "@/components/teams/ActiveWorkLane";
 import type { ChatMessage } from "@/store/useCortexStore";
 import { useCortexStore } from "@/store/useCortexStore";
-import { OutputWorkbench, outputWorkbenchItems, projectPackageOutputs } from "./OutputWorkbench";
+import {
+  mergeOutputWorkbenchItems,
+  OutputWorkbench,
+  outputWorkbenchItems,
+  projectPackageOutputs,
+  teamOutputProjectPackages,
+  teamOutputWorkbenchItems,
+} from "./OutputWorkbench";
 import { SomaCausalSummary } from "./SomaCausalSummary";
 import { SomaEvidencePanel, type SomaEvidenceItem } from "./SomaEvidencePanel";
 import { SomaHeader } from "./SomaHeader";
 import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "./SomaSuggestionBar";
 import { SomaWorkspaceFrame } from "./SomaWorkspaceFrame";
+import { useDurableTeamWork } from "./useDurableTeamWork";
 
 function lastSomaMessage(messages: ChatMessage[]) {
   return [...messages]
@@ -22,6 +31,7 @@ export function SomaOperatingSurface({
   organizationId,
   organizationName,
   activeMode,
+  focusedTeamId,
   governancePosture,
   evidenceItems,
   activeWorkSlot,
@@ -33,6 +43,7 @@ export function SomaOperatingSurface({
   organizationId?: string;
   organizationName?: string | null;
   activeMode?: string | null;
+  focusedTeamId?: string | null;
   governancePosture?: string;
   evidenceItems?: SomaEvidenceItem[];
   activeWorkSlot?: React.ReactNode;
@@ -42,10 +53,16 @@ export function SomaOperatingSurface({
   suggestions?: readonly SomaSuggestion[];
 }) {
   const missionChat = useCortexStore((state) => state.missionChat);
+  const teamsDetail = useCortexStore((state) => state.teamsDetail);
   const evidence = evidenceItems ?? defaultEvidence;
   const latestSoma = lastSomaMessage(missionChat);
   const outputItems = outputWorkbenchItems(latestSoma?.execution_summary, latestSoma?.artifacts);
   const projectPackages = projectPackageOutputs(latestSoma?.execution_summary?.outputs);
+  const teamWork = useDurableTeamWork({ teams: teamsDetail, focusedTeamId });
+  const teamOutputItems = teamOutputWorkbenchItems(teamWork.outputRefs);
+  const teamProjectPackages = teamOutputProjectPackages(teamWork.outputRefs);
+  const mergedOutputItems = mergeOutputWorkbenchItems(outputItems, teamOutputItems);
+  const mergedProjectPackages = [...projectPackages, ...teamProjectPackages];
 
   return (
     <section
@@ -72,29 +89,32 @@ export function SomaOperatingSurface({
               />
             </div>
           )}
-          activeWork={activeWorkSlot ?? <ActiveWorkFallback activeMode={activeMode} />}
+          activeWork={activeWorkSlot ?? (
+            <ActiveWorkLane
+              title="Active work"
+              items={teamWork.items}
+              emptyMessage={activeMode && teamWork.items.length === 0
+                ? `${activeMode} is the current workspace lane. ${teamWork.emptyMessage}`
+                : teamWork.emptyMessage}
+              statusLabel={teamWork.statusLabel}
+              degradedMessage={teamWork.degradedMessage}
+              frame={false}
+            />
+          )}
           trust={trustSlot ?? <SomaCausalSummary messages={missionChat} />}
           output={outputSlot ?? (
             <OutputWorkbench
-              outputs={outputItems}
-              projectPackages={projectPackages}
-              emptyMessage="Soma has not returned a retained output package yet."
+              outputs={mergedOutputItems}
+              projectPackages={mergedProjectPackages}
+              emptyMessage={teamWork.status === "loading"
+                ? "Checking for retained Soma and team outputs."
+                : "Soma has not returned a retained output package yet."}
             />
           )}
           context={contextSlot ?? <SomaEvidencePanel items={evidence} />}
         />
       </div>
     </section>
-  );
-}
-
-function ActiveWorkFallback({ activeMode }: { activeMode?: string | null }) {
-  return (
-    <div className="rounded-lg border border-cortex-border bg-cortex-surface/70 p-3 text-sm leading-6 text-cortex-text-muted">
-      {activeMode
-        ? `${activeMode} is the current workspace lane. No active team work is attached to this view yet.`
-        : "No active team work is attached to this view yet."}
-    </div>
   );
 }
 

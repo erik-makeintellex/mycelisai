@@ -172,8 +172,9 @@ describe("TeamsPage", () => {
     expect(screen.getByText(/Outputs and active collaboration/i)).toBeDefined();
     expect(screen.getByTestId("active-work-lane")).toBeDefined();
     expect(screen.getByText("Active work lane")).toBeDefined();
-    expect(screen.getByText("output ready")).toBeDefined();
-    expect(screen.getByText("running")).toBeDefined();
+    expect(screen.getAllByText("degraded").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Projection fallback").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Durable TeamWorkItem records were unavailable/i).length).toBeGreaterThan(0);
     expect(
       screen
         .getAllByRole("link", { name: /Review outputs|Review group outputs/i })[0]

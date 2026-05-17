@@ -2,10 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
   OutputWorkbench,
+  mergeOutputWorkbenchItems,
   outputWorkbenchItems,
   projectPackageOutputs,
+  teamOutputProjectPackages,
+  teamOutputWorkbenchItems,
 } from "@/components/soma/OutputWorkbench";
-import type { ExecutionSummaryData } from "@/store/useCortexStore";
+import type { ExecutionSummaryData, TeamOutputRef } from "@/store/useCortexStore";
 
 describe("OutputWorkbench", () => {
   it("extracts project packages separately from retained outputs and artifacts", () => {
@@ -30,6 +33,47 @@ describe("OutputWorkbench", () => {
       { text: "Launch brief", url: "/runs/run-1" },
       { text: "Operator notes", url: "/notes/1" },
     ]);
+  });
+
+  it("projects durable team outputs into the workbench without duplicating chat outputs", () => {
+    const teamOutputs: TeamOutputRef[] = [
+      {
+        output_id: "out-1",
+        team_id: "team-alpha",
+        work_item_id: "work-1",
+        kind: "file",
+        label: "Launch brief",
+        storage_ref: "generated/launch/brief.md",
+      },
+      {
+        output_id: "out-2",
+        team_id: "team-alpha",
+        work_item_id: "work-1",
+        kind: "project_package",
+        label: "Launch package",
+        storage_ref: "generated/launch",
+        entrypoint: "index.html",
+        proof_ref: "proof-1",
+      },
+    ];
+
+    const durableItems = teamOutputWorkbenchItems(teamOutputs);
+    expect(durableItems).toEqual([
+      {
+        text: "Launch brief",
+        url: "/api/v1/workspace/files/view?path=generated%2Flaunch%2Fbrief.md",
+      },
+    ]);
+    expect(teamOutputProjectPackages(teamOutputs)).toEqual([
+      expect.objectContaining({
+        kind: "project_package",
+        title: "Launch package",
+        folder: "generated/launch",
+        entrypoint: "index.html",
+        validation: "Linked proof or validation record",
+      }),
+    ]);
+    expect(mergeOutputWorkbenchItems([{ text: "Launch brief", url: durableItems[0].url }], durableItems)).toHaveLength(1);
   });
 
   it("renders package actions and copyable output quotes", async () => {

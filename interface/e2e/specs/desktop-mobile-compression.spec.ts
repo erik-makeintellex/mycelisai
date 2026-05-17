@@ -22,7 +22,8 @@ test.describe("Desktop/mobile compression proof", () => {
     const firstDemoRow = activeLane.locator("article").filter({ hasText: "First Demo Game Team" });
     await expect(activeLane).toBeVisible();
     await expect(page.getByText("First Demo Game Team").first()).toBeVisible();
-    await expect(firstDemoRow.getByText("running")).toBeVisible();
+    await expect(firstDemoRow.getByText("degraded")).toBeVisible();
+    await expect(firstDemoRow.getByText("Projection fallback").first()).toBeVisible();
     await expect(firstDemoRow.getByRole("link", { name: /Steer/i })).toHaveAttribute("href", /\/dashboard\?team_id=active-demo-team/);
     await expectNoHorizontalOverflow(page);
   });

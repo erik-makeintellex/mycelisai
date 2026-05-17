@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -79,6 +78,73 @@ func (s *AdminServer) insertTeamWorkItemDB(ctx context.Context, item *protocol.T
 	).Scan(&item.CreatedAt, &item.UpdatedAt)
 }
 
+func (s *AdminServer) insertTeamStatusEventDB(ctx context.Context, event *protocol.TeamStatusEvent) error {
+	db := s.getDB()
+	if db == nil {
+		return errors.New("database not available")
+	}
+	if strings.TrimSpace(event.EventID) == "" {
+		event.EventID = uuid.NewString()
+	}
+	if err := validateTeamStatusEventUUIDLinks(*event); err != nil {
+		return err
+	}
+	if strings.TrimSpace(event.Version) == "" {
+		event.Version = "v1"
+	}
+	return db.QueryRowContext(ctx, `
+		INSERT INTO team_status_events (
+			id, tenant_id, team_id, work_item_id, run_id, intent_proof_id, contract_id, proof_id,
+			state, headline, details, confidence_posture, blocked_by, next_action,
+			source_kind, source_channel, payload_kind, audit_refs, version
+		) VALUES (
+			$1, 'default', $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),
+			$8, $9, $10, $11, $12, $13,
+			$14, $15, $16, $17, $18
+		)
+		RETURNING timestamp`,
+		event.EventID, event.TeamID, event.WorkItemID, nullableUUID(event.RunID),
+		nullableUUID(event.IntentProofID), event.ContractID, event.ProofID,
+		string(event.State), event.Headline, event.Details, event.ConfidencePosture,
+		jsonArray(event.BlockedBy), event.NextAction, event.SourceKind, event.SourceChannel,
+		event.PayloadKind, jsonArray(event.AuditRefs), event.Version,
+	).Scan(&event.Timestamp)
+}
+
+func (s *AdminServer) updateTeamWorkItemLastEventDB(ctx context.Context, item *protocol.TeamWorkItem, event protocol.TeamStatusEvent) error {
+	db := s.getDB()
+	if db == nil {
+		return errors.New("database not available")
+	}
+	if item == nil {
+		return errors.New("team work item is required")
+	}
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+	_, err = db.ExecContext(ctx, `
+		UPDATE team_work_items
+		SET state=$2,
+		    last_event=$3,
+		    needs_operator=$4,
+		    degradation_state=$5,
+		    recovery_options=$6,
+		    output_refs=$7,
+		    proof_refs=$8,
+		    audit_refs=$9,
+		    updated_at=NOW()
+		WHERE id=$1 AND tenant_id='default'`,
+		item.WorkItemID, string(item.State), eventJSON, item.NeedsOperator,
+		item.DegradationState, jsonArray(item.RecoveryOptions), jsonArray(item.OutputRefs),
+		jsonArray(item.ProofRefs), jsonArray(item.AuditRefs),
+	)
+	if err == nil {
+		item.LastEvent = &event
+	}
+	return err
+}
+
 func (s *AdminServer) listTeamInteractionsDB(ctx context.Context, teamID, workItemID string, limit int) ([]protocol.TeamInteraction, error) {
 	db := s.getDB()
 	if db == nil {
@@ -139,121 +205,4 @@ func (s *AdminServer) insertTeamInteractionDB(ctx context.Context, item *protoco
 		item.SourceChannel, item.ActorRef, item.Verb, item.Summary, item.PayloadKind,
 		item.PayloadRef, jsonObjectOrNil(item.Payload), item.ApprovalRef, jsonArray(item.AuditRefs), item.Version,
 	).Scan(&item.Timestamp)
-}
-
-func scanTeamWorkItem(scanner interface{ Scan(dest ...any) error }) (protocol.TeamWorkItem, error) {
-	var item protocol.TeamWorkItem
-	var executionShape, governancePosture, state string
-	var scope, outputs, proof, caps, lastEvent, recovery, outputRefs, proofRefs, auditRefs []byte
-	if err := scanner.Scan(
-		&item.WorkItemID, &item.TeamID, &item.RunID, &item.IntentProofID, &item.ContractID, &item.ProofID,
-		&item.Objective, &scope, &item.Owner, &executionShape, &outputs, &proof, &caps,
-		&governancePosture, &state, &lastEvent, &item.NeedsOperator, &item.DegradationState,
-		&recovery, &outputRefs, &proofRefs, &auditRefs, &item.CreatedAt, &item.UpdatedAt, &item.Version,
-	); err != nil {
-		return item, err
-	}
-	item.ExecutionShape = protocol.TeamExecutionShape(executionShape)
-	item.GovernancePosture = protocol.ApprovalPosture(governancePosture)
-	item.State = protocol.TeamWorkState(state)
-	item.Scope = decodeStringList(scope)
-	item.ExpectedOutputs = decodeStringList(outputs)
-	item.ExpectedProof = decodeStringList(proof)
-	item.CapabilityRequirements = decodeStringList(caps)
-	item.RecoveryOptions = decodeStringList(recovery)
-	item.ProofRefs = decodeStringList(proofRefs)
-	item.AuditRefs = decodeStringList(auditRefs)
-	_ = json.Unmarshal(outputRefs, &item.OutputRefs)
-	if len(lastEvent) > 0 && string(lastEvent) != "null" {
-		var event protocol.TeamStatusEvent
-		if err := json.Unmarshal(lastEvent, &event); err == nil {
-			item.LastEvent = &event
-		}
-	}
-	return item, nil
-}
-
-func scanTeamInteraction(scanner interface{ Scan(dest ...any) error }) (protocol.TeamInteraction, error) {
-	var item protocol.TeamInteraction
-	var payload, auditRefs []byte
-	if err := scanner.Scan(
-		&item.InteractionID, &item.TeamID, &item.WorkItemID, &item.RunID, &item.IntentProofID,
-		&item.ContractID, &item.ProofID, &item.SourceKind, &item.SourceChannel, &item.ActorRef,
-		&item.Verb, &item.Summary, &item.PayloadKind, &item.PayloadRef, &payload, &item.ApprovalRef,
-		&auditRefs, &item.Timestamp, &item.Version,
-	); err != nil {
-		return item, err
-	}
-	item.AuditRefs = decodeStringList(auditRefs)
-	if len(payload) > 0 && string(payload) != "null" {
-		_ = json.Unmarshal(payload, &item.Payload)
-	}
-	return item, nil
-}
-
-func validateTeamWorkUUIDLinks(item protocol.TeamWorkItem) error {
-	if err := validateOptionalUUID("work_item_id", item.WorkItemID); err != nil {
-		return err
-	}
-	if err := validateOptionalUUID("run_id", item.RunID); err != nil {
-		return err
-	}
-	return validateOptionalUUID("intent_proof_id", item.IntentProofID)
-}
-
-func validateTeamInteractionUUIDLinks(item protocol.TeamInteraction) error {
-	if err := validateOptionalUUID("interaction_id", item.InteractionID); err != nil {
-		return err
-	}
-	if err := validateOptionalUUID("work_item_id", item.WorkItemID); err != nil {
-		return err
-	}
-	if err := validateOptionalUUID("run_id", item.RunID); err != nil {
-		return err
-	}
-	return validateOptionalUUID("intent_proof_id", item.IntentProofID)
-}
-
-func validateOptionalUUID(label, value string) error {
-	if strings.TrimSpace(value) == "" {
-		return nil
-	}
-	if _, err := uuid.Parse(value); err != nil {
-		return fmt.Errorf("%s must be a UUID", label)
-	}
-	return nil
-}
-
-func nullableUUID(value string) any {
-	if strings.TrimSpace(value) == "" {
-		return nil
-	}
-	return strings.TrimSpace(value)
-}
-
-func jsonArray(value any) []byte {
-	raw, _ := json.Marshal(value)
-	if len(raw) == 0 || string(raw) == "null" {
-		return []byte("[]")
-	}
-	return raw
-}
-
-func jsonObjectOrNil(value map[string]any) any {
-	if len(value) == 0 {
-		return nil
-	}
-	raw, _ := json.Marshal(value)
-	return raw
-}
-
-func decodeStringList(raw []byte) []string {
-	if len(raw) == 0 {
-		return []string{}
-	}
-	items, err := unmarshalStringList(raw)
-	if err != nil {
-		return []string{}
-	}
-	return items
 }

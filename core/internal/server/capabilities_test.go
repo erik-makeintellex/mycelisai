@@ -34,8 +34,10 @@ func TestHandleListCapabilities(t *testing.T) {
 		Data struct {
 			Count     int `json:"count"`
 			Manifests []struct {
-				ID   string `json:"id"`
-				Kind string `json:"kind"`
+				ID              string `json:"id"`
+				Kind            string `json:"kind"`
+				Health          string `json:"health"`
+				OutputSchemaRef string `json:"output_schema_ref"`
 			} `json:"manifests"`
 		} `json:"data"`
 	}
@@ -50,6 +52,9 @@ func TestHandleListCapabilities(t *testing.T) {
 	for _, manifest := range resp.Data.Manifests {
 		if manifest.ID == "planning" {
 			foundPlanning = true
+			if manifest.Health != "healthy" || manifest.OutputSchemaRef == "" {
+				t.Fatalf("planning manifest state incomplete: %#v", manifest)
+			}
 		}
 	}
 	if !foundPlanning {

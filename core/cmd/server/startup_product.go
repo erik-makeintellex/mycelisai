@@ -71,6 +71,7 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 		MCPLibrary:    mcpLibrary,
 		InternalTools: services.InternalTools,
 		Search:        services.Search,
+		DB:            core.SharedDB,
 	})
 	if services.MetaArchitect != nil {
 		caps := buildSystemCapabilities(ctx, services.InternalTools, services.MCP, mcpLibrary)

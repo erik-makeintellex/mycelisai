@@ -30,6 +30,15 @@ type LoadResponse = {
     vector_count: number;
 };
 
+type SelectOption = { value: string; label: string };
+type IntakeTab = "content" | "classification" | "scope";
+
+const INTAKE_TABS: Array<{ id: IntakeTab; label: string; summary: string }> = [
+    { id: "content", label: "Content", summary: "Title, source, upload, and text body" },
+    { id: "classification", label: "Classification", summary: "Knowledge lane and origin type" },
+    { id: "scope", label: "Scope", summary: "Visibility, trust, goals, and tags" },
+];
+
 const KNOWLEDGE_CLASS_OPTIONS = [
     { value: "user_private_context", label: "Private user content" },
     { value: "customer_context", label: "Customer context" },
@@ -90,6 +99,7 @@ export default function DeploymentContextPanel() {
     const [entries, setEntries] = useState<DeploymentContextEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [activeTab, setActiveTab] = useState<IntakeTab>("content");
     const [status, setStatus] = useState("Ready");
     const [error, setError] = useState<string | null>(null);
     const [form, setForm] = useState({
@@ -228,152 +238,133 @@ export default function DeploymentContextPanel() {
         }));
     };
 
+    const activeTabLabel = INTAKE_TABS.find((tab) => tab.id === activeTab)?.label ?? "Content";
+
     return (
-        <div className="h-full overflow-y-auto bg-cortex-bg">
-            <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6">
-                <section className="rounded-2xl border border-cortex-border bg-cortex-surface p-5">
+        <div className="h-full min-h-0 overflow-hidden bg-cortex-bg">
+            <div className="mx-auto grid h-full min-h-0 max-w-7xl grid-cols-1 gap-4 p-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(20rem,0.92fr)]">
+                <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface">
                     <div className="flex items-start justify-between gap-4">
-                        <div>
+                        <div className="min-w-0 px-5 pt-5">
                             <div className="flex items-center gap-2">
                                 <BookOpenText className="w-4 h-4 text-cortex-primary" />
                                 <h2 className="text-sm font-semibold text-cortex-text-main">Deployment Context Intake</h2>
                             </div>
                             <p className="text-xs text-cortex-text-muted mt-2 max-w-2xl">
-                                Load governed knowledge into the separate context store Soma uses for RAG. Private records, diary notes, finance references, customer context, company guidance, admin-shaped Soma context, and reflection/synthesis observations stay in distinct lanes with explicit visibility and goal-set scope.
+                                Start with the material Soma should remember, then refine classification and scope only when the defaults are not enough.
                             </p>
                         </div>
                         <button
                             onClick={loadEntries}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-cortex-border text-xs font-mono text-cortex-text-main hover:bg-cortex-bg"
+                            className="mr-5 mt-5 inline-flex items-center gap-1.5 rounded-lg border border-cortex-border px-3 py-1.5 text-xs font-mono text-cortex-text-main hover:bg-cortex-bg"
                         >
                             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
                             Refresh
                         </button>
                     </div>
 
-                    <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <Field label="Title">
-                            <input
-                                value={form.title}
-                                onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))}
-                                placeholder="Deployment architecture brief"
-                                className={INPUT_CLASS}
-                            />
-                        </Field>
-                        <Field label="Source Label">
-                            <input
-                                value={form.source_label}
-                                onChange={(e) => setForm((current) => ({ ...current, source_label: e.target.value }))}
-                                placeholder="customer handoff doc"
-                                className={INPUT_CLASS}
-                            />
-                        </Field>
-                        <Field label="Knowledge Class">
-                            <select
-                                value={form.knowledge_class}
-                                onChange={(e) => applyKnowledgeClass(e.target.value)}
-                                className={INPUT_CLASS}
-                            >
-                                {KNOWLEDGE_CLASS_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </Field>
-                        <Field label="Source Kind">
-                            <select
-                                value={form.source_kind}
-                                onChange={(e) => setForm((current) => ({ ...current, source_kind: e.target.value }))}
-                                className={INPUT_CLASS}
-                            >
-                                {SOURCE_KIND_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </Field>
-                        <Field label="Content Domain">
-                            <select
-                                value={form.content_domain}
-                                onChange={(e) => setForm((current) => ({ ...current, content_domain: e.target.value }))}
-                                className={INPUT_CLASS}
-                            >
-                                {CONTENT_DOMAIN_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </Field>
-                        <Field label="Visibility">
-                            <select
-                                value={form.visibility}
-                                onChange={(e) => setForm((current) => ({ ...current, visibility: e.target.value }))}
-                                className={INPUT_CLASS}
-                            >
-                                {VISIBILITY_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </Field>
-                        <Field label="Sensitivity">
-                            <select
-                                value={form.sensitivity_class}
-                                onChange={(e) => setForm((current) => ({ ...current, sensitivity_class: e.target.value }))}
-                                className={INPUT_CLASS}
-                            >
-                                {SENSITIVITY_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </Field>
-                        <Field label="Trust Class">
-                            <select
-                                value={form.trust_class}
-                                onChange={(e) => setForm((current) => ({ ...current, trust_class: e.target.value }))}
-                                className={INPUT_CLASS}
-                            >
-                                {TRUST_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </Field>
+                    <div className="mt-4 border-y border-cortex-border bg-cortex-bg/50 px-3 py-2" role="tablist" aria-label="Deployment context intake steps">
+                        <div className="grid gap-2 sm:grid-cols-3">
+                            {INTAKE_TABS.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={activeTab === tab.id}
+                                    aria-controls={`deployment-context-${tab.id}`}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`rounded border px-3 py-2 text-left transition-colors ${
+                                        activeTab === tab.id
+                                            ? "border-cortex-primary/50 bg-cortex-primary/10 text-cortex-text-main"
+                                            : "border-cortex-border/60 bg-cortex-surface/70 text-cortex-text-muted hover:bg-cortex-bg"
+                                    }`}
+                                >
+                                    <span className="block text-xs font-semibold">{tab.label}</span>
+                                    <span className="mt-0.5 block text-[10px] leading-4">{tab.summary}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <Field label="Target Goal Sets">
-                            <input
-                                value={form.target_goal_sets}
-                                onChange={(e) => setForm((current) => ({ ...current, target_goal_sets: e.target.value }))}
-                                placeholder="tax planning, investor prep, household budget"
-                                className={INPUT_CLASS}
-                            />
-                        </Field>
-                        <Field label="Tags">
-                            <input
-                                value={form.tags}
-                                onChange={(e) => setForm((current) => ({ ...current, tags: e.target.value }))}
-                                placeholder="finance,records,planning"
-                                className={INPUT_CLASS}
-                            />
-                        </Field>
+                    <div
+                        id={`deployment-context-${activeTab}`}
+                        role="tabpanel"
+                        aria-label={`${activeTabLabel} fields`}
+                        className="min-h-0 flex-1 overflow-y-auto px-5 py-4"
+                    >
+                        {activeTab === "content" ? (
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    <Field label="Title">
+                                        <input
+                                            value={form.title}
+                                            onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))}
+                                            placeholder="Deployment architecture brief"
+                                            className={INPUT_CLASS}
+                                        />
+                                    </Field>
+                                    <Field label="Source Label">
+                                        <input
+                                            value={form.source_label}
+                                            onChange={(e) => setForm((current) => ({ ...current, source_label: e.target.value }))}
+                                            placeholder="customer handoff doc"
+                                            className={INPUT_CLASS}
+                                        />
+                                    </Field>
+                                </div>
+                                <Field label="Upload Text File">
+                                    <input
+                                        type="file"
+                                        accept=".txt,.md,.markdown,.csv,.json,text/*,application/json"
+                                        onChange={(e) => void loadFile(e.target.files?.[0])}
+                                        className={INPUT_CLASS}
+                                    />
+                                </Field>
+                                <Field label="Content">
+                                    <textarea
+                                        value={form.content}
+                                        onChange={(e) => setForm((current) => ({ ...current, content: e.target.value }))}
+                                        placeholder="Paste private records, diary notes, finance references, customer docs, approved company guidance, reflection/synthesis observations, security requirements, provider constraints, or other governed context here."
+                                        className={`${INPUT_CLASS} min-h-[260px] resize-y`}
+                                    />
+                                </Field>
+                            </div>
+                        ) : null}
+
+                        {activeTab === "classification" ? (
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                <SelectField label="Knowledge Class" value={form.knowledge_class} options={KNOWLEDGE_CLASS_OPTIONS} onChange={applyKnowledgeClass} />
+                                <SelectField label="Source Kind" value={form.source_kind} options={SOURCE_KIND_OPTIONS} onChange={(value) => setForm((current) => ({ ...current, source_kind: value }))} />
+                                <SelectField label="Content Domain" value={form.content_domain} options={CONTENT_DOMAIN_OPTIONS} onChange={(value) => setForm((current) => ({ ...current, content_domain: value }))} />
+                            </div>
+                        ) : null}
+
+                        {activeTab === "scope" ? (
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                <SelectField label="Visibility" value={form.visibility} options={VISIBILITY_OPTIONS} onChange={(value) => setForm((current) => ({ ...current, visibility: value }))} />
+                                <SelectField label="Sensitivity" value={form.sensitivity_class} options={SENSITIVITY_OPTIONS} onChange={(value) => setForm((current) => ({ ...current, sensitivity_class: value }))} />
+                                <SelectField label="Trust Class" value={form.trust_class} options={TRUST_OPTIONS} onChange={(value) => setForm((current) => ({ ...current, trust_class: value }))} />
+                                <Field label="Target Goal Sets">
+                                    <input
+                                        value={form.target_goal_sets}
+                                        onChange={(e) => setForm((current) => ({ ...current, target_goal_sets: e.target.value }))}
+                                        placeholder="tax planning, investor prep, household budget"
+                                        className={INPUT_CLASS}
+                                    />
+                                </Field>
+                                <Field label="Tags">
+                                    <input
+                                        value={form.tags}
+                                        onChange={(e) => setForm((current) => ({ ...current, tags: e.target.value }))}
+                                        placeholder="finance,records,planning"
+                                        className={INPUT_CLASS}
+                                    />
+                                </Field>
+                            </div>
+                        ) : null}
                     </div>
 
-                    <Field label="Upload Text File" className="mt-3">
-                        <input
-                            type="file"
-                            accept=".txt,.md,.markdown,.csv,.json,text/*,application/json"
-                            onChange={(e) => void loadFile(e.target.files?.[0])}
-                            className={INPUT_CLASS}
-                        />
-                    </Field>
-
-                    <Field label="Content" className="mt-3">
-                        <textarea
-                            value={form.content}
-                            onChange={(e) => setForm((current) => ({ ...current, content: e.target.value }))}
-                            placeholder="Paste private records, diary notes, finance references, customer docs, approved company guidance, reflection/synthesis observations, security requirements, provider constraints, or other governed context here."
-                            className={`${INPUT_CLASS} min-h-[240px] resize-y`}
-                        />
-                    </Field>
-
-                    <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-cortex-border/70 bg-cortex-bg/70 px-4 py-3">
+                    <div className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-cortex-border bg-cortex-bg/70 px-5 py-4">
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 text-cortex-text-main">
                                 <ShieldCheck className="w-4 h-4 text-cortex-success" />
@@ -402,8 +393,8 @@ export default function DeploymentContextPanel() {
                     ) : null}
                 </section>
 
-                <section className="rounded-2xl border border-cortex-border bg-cortex-surface p-5">
-                    <div className="flex items-center justify-between gap-3">
+                <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface">
+                    <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-cortex-border px-5 py-4">
                         <div>
                             <h2 className="text-sm font-semibold text-cortex-text-main">Loaded Governed Context</h2>
                             <p className="text-xs text-cortex-text-muted mt-1">
@@ -413,7 +404,7 @@ export default function DeploymentContextPanel() {
                         <span className="text-[11px] font-mono text-cortex-text-muted">{entries.length} entries</span>
                     </div>
 
-                    <div className="mt-4 space-y-3">
+                    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5" role="region" aria-label="Loaded governed context list">
                         {loading ? (
                             <p className="text-xs font-mono text-cortex-text-muted animate-pulse">Loading deployment context…</p>
                         ) : entries.length === 0 ? (
@@ -496,10 +487,16 @@ function Field({ label, children, className = "" }: { label: string; children: R
     );
 }
 
-function Badge({ children }: { children: ReactNode }) {
+function SelectField({ label, value, options, onChange }: { label: string; value: string; options: SelectOption[]; onChange: (value: string) => void }) {
     return (
-        <span className="px-2 py-1 rounded border border-cortex-border bg-cortex-surface/70">
-            {children}
-        </span>
+        <Field label={label}>
+            <select value={value} onChange={(e) => onChange(e.target.value)} className={INPUT_CLASS}>
+                {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+        </Field>
     );
+}
+
+function Badge({ children }: { children: ReactNode }) {
+    return <span className="px-2 py-1 rounded border border-cortex-border bg-cortex-surface/70">{children}</span>;
 }

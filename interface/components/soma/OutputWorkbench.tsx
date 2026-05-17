@@ -2,7 +2,7 @@
 
 import { Check, ExternalLink, Quote, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import type { ChatArtifactRef, ExecutionSummaryData, ExecutionSummaryItem } from "@/store/useCortexStore";
+import type { ChatArtifactRef, ExecutionSummaryData, ExecutionSummaryItem, TeamOutputRef } from "@/store/useCortexStore";
 import ExecutionSummaryMediaPreview from "./ExecutionSummaryMediaPreview";
 import {
   artifactOutputItems,
@@ -34,6 +34,49 @@ export function outputWorkbenchItems(summary?: ExecutionSummaryData, artifacts?:
     ...directOutputs,
     ...artifactOutputs.filter((artifact) => !directOutputs.some((output) => output.text === artifact.text)),
   ];
+}
+
+export function teamOutputWorkbenchItems(outputRefs: TeamOutputRef[]): OutputWorkbenchItem[] {
+  return outputRefs
+    .filter((output) => output.kind !== "project_package" && !output.entrypoint)
+    .map((output) => ({
+      text: output.label?.trim() || "Team output",
+      url: outputUrl(output.storage_ref),
+    }))
+    .filter((item): item is OutputWorkbenchItem => Boolean(item.text));
+}
+
+export function teamOutputProjectPackages(outputRefs: TeamOutputRef[]): ExecutionSummaryItem[] {
+  return outputRefs
+    .filter((output) => output.kind === "project_package" || Boolean(output.entrypoint))
+    .map((output) => ({
+      kind: "project_package",
+      title: output.label?.trim() || "Team output package",
+      summary: output.proof_ref || output.validation_ref ? "Proof and validation links are available in the retained team-work record." : undefined,
+      folder: output.storage_ref || undefined,
+      entrypoint: output.entrypoint || undefined,
+      validation: output.validation_ref || output.proof_ref ? "Linked proof or validation record" : undefined,
+    }));
+}
+
+export function mergeOutputWorkbenchItems(...groups: OutputWorkbenchItem[][]): OutputWorkbenchItem[] {
+  const seen = new Set<string>();
+  return groups.flat().filter((item) => {
+    const key = `${item.text}-${item.url ?? ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function outputUrl(storageRef?: string | null): string | null {
+  const value = storageRef?.trim();
+  if (!value) return null;
+  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/")) return value;
+  if (value.includes("/") || value.includes(".")) {
+    return `/api/v1/workspace/files/view?path=${encodeURIComponent(value)}`;
+  }
+  return null;
 }
 
 function quotedOutputText(output: OutputWorkbenchItem) {

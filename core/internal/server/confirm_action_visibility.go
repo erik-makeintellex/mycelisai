@@ -11,15 +11,18 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func (s *AdminServer) persistConfirmedActionVisibility(ctx context.Context, runID, auditID, auditUser string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult) error {
+func (s *AdminServer) persistConfirmedActionVisibility(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) error {
 	var errs []error
-	if err := s.logConfirmedActionConversation(ctx, runID, auditUser, results); err != nil {
+	if err := s.logConfirmedActionConversation(ctx, link.RunID, link.AuditUser, results); err != nil {
 		errs = append(errs, err)
 	}
-	if err := s.ensureGroupsForCreatedTeams(ctx, auditID, auditUser, scope); err != nil {
+	if err := s.ensureGroupsForCreatedTeams(ctx, link.AuditID, link.AuditUser, link.Scope); err != nil {
 		errs = append(errs, err)
 	}
-	if err := s.persistConfirmedActionOutputArtifacts(ctx, runID, results); err != nil {
+	if err := s.persistConfirmedActionOutputArtifacts(ctx, link.RunID, results); err != nil {
+		errs = append(errs, err)
+	}
+	if err := s.persistConfirmedActionTeamWork(ctx, link, results); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
@@ -132,13 +135,6 @@ func (s *AdminServer) persistConfirmedActionOutputArtifacts(ctx context.Context,
 	return nil
 }
 
-func outputTitle(output *protocol.ExecutionOutput) string {
-	if output == nil {
-		return ""
-	}
-	return output.Title
-}
-
 func confirmedActionCreatedTeamID(results []plannedToolExecutionResult) string {
 	for _, result := range results {
 		if strings.TrimSpace(result.Name) == "create_team" {
@@ -148,49 +144,6 @@ func confirmedActionCreatedTeamID(results []plannedToolExecutionResult) string {
 		}
 	}
 	return ""
-}
-
-func artifactTypeForWrittenFile(path string) artifacts.ArtifactType {
-	if outputKindForWrittenFile(path) == "code" {
-		return artifacts.TypeCode
-	}
-	return artifacts.TypeFile
-}
-
-func artifactTypeForConfirmedWrite(args map[string]any, path string) artifacts.ArtifactType {
-	if projectPackageOutputFromArgs(args) != nil {
-		return artifacts.TypeProjectPackage
-	}
-	return artifactTypeForWrittenFile(path)
-}
-
-func contentTypeForWrittenFile(path string) string {
-	switch filepathExt(path) {
-	case ".css":
-		return "text/css"
-	case ".html":
-		return "text/html"
-	case ".json":
-		return "application/json"
-	case ".md":
-		return "text/markdown"
-	case ".js", ".jsx", ".ts", ".tsx":
-		return "text/javascript"
-	default:
-		return "text/plain"
-	}
-}
-
-func uuidPtrFromString(raw string) *uuid.UUID {
-	parsed, err := uuid.Parse(strings.TrimSpace(raw))
-	if err != nil || parsed == uuid.Nil {
-		return nil
-	}
-	return &parsed
-}
-
-func floatPtr(value float64) *float64 {
-	return &value
 }
 
 func (s *AdminServer) ensureGroupsForCreatedTeams(ctx context.Context, auditID, auditUser string, scope *protocol.ScopeValidation) error {

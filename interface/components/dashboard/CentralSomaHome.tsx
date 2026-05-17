@@ -37,11 +37,10 @@ export default function CentralSomaHome({
     }, []);
 
     useEffect(() => {
-        if (!requestedTeamId) {
-            return;
-        }
         void fetchTeamsDetail().finally(() => {
-            selectTeam(requestedTeamId);
+            if (requestedTeamId) {
+                selectTeam(requestedTeamId);
+            }
         });
     }, [fetchTeamsDetail, requestedTeamId, selectTeam]);
 
@@ -91,6 +90,7 @@ export default function CentralSomaHome({
             <SomaOperatingSurface
                 organizationName={lastOrganization?.name}
                 activeMode={focusedTeam ? `Focused team: ${focusedTeam.name}` : null}
+                focusedTeamId={requestedTeamId || null}
             />
 
             <CentralActivityStream />

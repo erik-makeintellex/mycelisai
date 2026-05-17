@@ -2,6 +2,7 @@ package capabilities
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"sort"
 	"strings"
@@ -35,12 +36,14 @@ type Dependencies struct {
 	Search               SearchStatusProvider
 	HostCommands         func() []string
 	Now                  func() time.Time
+	DB                   *sql.DB
 }
 
 type Service struct {
-	mu   sync.RWMutex
-	deps Dependencies
-	snap Snapshot
+	mu    sync.RWMutex
+	deps  Dependencies
+	store *Store
+	snap  Snapshot
 }
 
 func NewService(deps Dependencies) *Service {
@@ -53,7 +56,11 @@ func NewService(deps Dependencies) *Service {
 	if deps.Now == nil {
 		deps.Now = func() time.Time { return time.Now().UTC() }
 	}
-	return &Service{deps: deps}
+	var store *Store
+	if deps.DB != nil {
+		store = NewStore(deps.DB)
+	}
+	return &Service{deps: deps, store: store}
 }
 
 func (s *Service) List(ctx context.Context) (Snapshot, error) {
@@ -67,6 +74,16 @@ func (s *Service) List(ctx context.Context) (Snapshot, error) {
 		return snap, nil
 	}
 	s.mu.RUnlock()
+	if s.store != nil {
+		snap, err := s.store.List(ctx)
+		if err != nil {
+			return Snapshot{}, err
+		}
+		if snap.Count > 0 {
+			s.cache(snap)
+			return cloneSnapshot(snap), nil
+		}
+	}
 	return s.Refresh(ctx)
 }
 
@@ -105,9 +122,12 @@ func (s *Service) Refresh(ctx context.Context) (Snapshot, error) {
 		Count:       len(manifests),
 		Manifests:   manifests,
 	}
-	s.mu.Lock()
-	s.snap = cloneSnapshot(snap)
-	s.mu.Unlock()
+	if s.store != nil {
+		if err := s.store.ReplaceSnapshot(ctx, snap); err != nil {
+			return Snapshot{}, err
+		}
+	}
+	s.cache(snap)
 	return snap, nil
 }
 
@@ -139,6 +159,8 @@ func (s *Service) derive(ctx context.Context, derivedAt time.Time) []Manifest {
 			m.Metadata = map[string]any{}
 		}
 		m.DerivedAt = derivedAt
+		m.UpdatedAt = derivedAt
+		completeManifestState(&m)
 		out = append(out, m)
 	}
 
@@ -234,6 +256,14 @@ func cloneSnapshot(snap Snapshot) Snapshot {
 		Count:       snap.Count,
 		Manifests:   make([]Manifest, len(snap.Manifests)),
 	}
-	copy(out.Manifests, snap.Manifests)
+	for i := range snap.Manifests {
+		out.Manifests[i] = cloneManifest(snap.Manifests[i])
+	}
 	return out
+}
+
+func (s *Service) cache(snap Snapshot) {
+	s.mu.Lock()
+	s.snap = cloneSnapshot(snap)
+	s.mu.Unlock()
 }
