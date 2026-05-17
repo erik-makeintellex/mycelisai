@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Users, Radio, Cpu, Eye, BookOpen, Activity, MessageSquare, Route, Network, ScrollText } from 'lucide-react';
+import { Users, Cpu, Eye, BookOpen, Activity, MessageSquare, Route } from 'lucide-react';
 import type { TeamDetailEntry } from '@/store/useCortexStore';
 
 const roleConfig: Record<string, { color: string; icon: typeof Cpu }> = {
@@ -33,8 +33,8 @@ function statusBadge(status: 'online' | 'busy' | 'offline' | 'error'): string {
 
 function statusLabel(status: 'online' | 'busy' | 'offline' | 'error'): string {
     if (status === 'online') return 'Healthy';
-    if (status === 'busy') return 'Degraded';
-    if (status === 'error') return 'Offline';
+    if (status === 'busy') return 'Working';
+    if (status === 'error') return 'Degraded';
     return 'Offline';
 }
 
@@ -125,22 +125,13 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
 
             <p className="text-[10px] text-cortex-text-main/80 line-clamp-1 mb-2">{summary}</p>
 
-            {/* Delivery topics (max 2) */}
+            {/* Output summary */}
             {team.deliveries.length > 0 && (
-                <div className="space-y-0.5 mb-2">
-                    {team.deliveries.slice(0, 2).map((d) => (
-                        <div key={d} className="flex items-center gap-1">
-                            <Radio className="w-2.5 h-2.5 text-cortex-text-muted/60" />
-                            <span className="text-[9px] font-mono text-cortex-text-muted/80 truncate">
-                                {d}
-                            </span>
-                        </div>
-                    ))}
-                    {team.deliveries.length > 2 && (
-                        <span className="text-[9px] font-mono text-cortex-text-muted/50">
-                            +{team.deliveries.length - 2} more
-                        </span>
-                    )}
+                <div className="mb-2 rounded-lg border border-cortex-border bg-cortex-bg px-2 py-1.5">
+                    <span className="text-[9px] font-mono text-cortex-text-muted/80">
+                        {team.deliveries.length} retained output lane
+                        {team.deliveries.length === 1 ? '' : 's'}
+                    </span>
                 </div>
             )}
 
@@ -161,14 +152,6 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
                 <a href="/runs" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-runs`}>
                     <Route className="w-3 h-3" />
                     View runs
-                </a>
-                <a href="/automations?tab=wiring" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-wiring`}>
-                    <Network className="w-3 h-3" />
-                    View wiring
-                </a>
-                <a href="/system?tab=services" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-logs`}>
-                    <ScrollText className="w-3 h-3" />
-                    View system
                 </a>
             </div>
         </div>

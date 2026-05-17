@@ -91,7 +91,7 @@ Team workspaces are different from the root Soma workspace:
 - the root Soma home also carries a live interaction stream so an admin can review active team output without leaving the main chat surface
 - the root Soma chat should stay in a bounded panel and scroll message history internally, so long conversations do not push the live stream and review panels farther down the page
 - that stream can be filtered by multiple teams and by available output aspects such as status, results, artifacts, tools, governance, and errors
-- the `Teams` page is where admins review available teams, open focused lead workspaces, and define the reusable member templates Soma should apply when creating new team members
+- the `Teams` page is where admins review active work state, open focused lead workspaces, and define the reusable member templates Soma should apply when creating new team members
 - the dedicated guided team-creation workflow now lives at `/teams/create`, so detailed team creation is a step-by-step Soma lane instead of a dense roster-side form
 - when Soma returns a native execution path there, the same lane can now launch a temporary workflow group directly, hand you into `Groups`, and continue through archive/closure while keeping retained outputs reviewable
 - team defaults should start with one accountable lead, not a prefilled specialist roster
@@ -153,7 +153,7 @@ Soma responses can include:
 - compact cards showing which council members were consulted
 
 4. **Proposal block (mutation paths)**
-- explicit action preview with confirm/cancel, including whether the task runs once, is scheduled, remains active as monitoring, or connects to a current-team/multi-team NATS lane
+- explicit action preview with confirm/cancel, including whether the task answers directly, proposes action, executes, blocks, degrades, awaits approval, requires retry, or connects to an active team work lane
 
 No mutation executes until you confirm.
 

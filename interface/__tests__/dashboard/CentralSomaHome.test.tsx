@@ -12,7 +12,7 @@ vi.mock("@/components/soma/SomaOperatingSurface", () => ({
     SomaOperatingSurface: ({ organizationName }: { organizationName?: string | null }) => (
         <div data-testid="soma-operating-surface">
             <h2>What do you want Soma to do?</h2>
-            <p>Soma just did this</p>
+            <p>Ready for your first request</p>
             <p>Evidence of Soma's work</p>
             <p>{organizationName ?? "No organization"}</p>
         </div>
@@ -38,7 +38,8 @@ describe("CentralSomaHome", () => {
 
         expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
         expect(screen.getByText("What do you want Soma to do?")).toBeDefined();
-        expect(screen.getByText("Soma just did this")).toBeDefined();
+        expect(screen.getByText("Ready for your first request")).toBeDefined();
+        expect(screen.queryByText("Soma just did this")).toBeNull();
         expect(screen.getByText("Evidence of Soma's work")).toBeDefined();
         expect(screen.getByText("Live team interaction stream")).toBeDefined();
         expect(screen.getByRole("link", { name: /Return to Northstar Labs/i }).getAttribute("href")).toBe("/organizations/org-1");

@@ -41,6 +41,8 @@ describe('TeamDetailDrawer', () => {
         expect(screen.getByText('Operator controls')).toBeDefined();
         expect(screen.getByRole('link', { name: 'Open lead workspace' }).getAttribute('href')).toBe('/dashboard?team_id=marketing-team');
         expect(screen.getByRole('link', { name: 'View runs' }).getAttribute('href')).toBe('/runs');
+        expect(screen.getByRole('link', { name: 'View outputs' }).getAttribute('href')).toBe('/groups');
+        expect(screen.getByText('Advanced coordination topics')).toBeDefined();
         expect(screen.getByRole('link', { name: 'View wiring' }).getAttribute('href')).toBe('/automations?tab=wiring');
         expect(screen.getByRole('link', { name: 'View system' }).getAttribute('href')).toBe('/system?tab=services');
     });

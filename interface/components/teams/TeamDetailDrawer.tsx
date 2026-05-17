@@ -25,7 +25,6 @@ interface TeamDetailDrawerProps {
     team: TeamDetailEntry;
     onClose: () => void;
 }
-
 export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProps) {
     const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
     const leadLabel = `${team.name} lead`;
@@ -78,7 +77,7 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                             Operator controls
                         </div>
                         <div className="text-xs text-cortex-text-muted leading-5 mt-1">
-                            Jump from the inspector into the lead workspace, review runs, or inspect the wiring and system surface tied to this team.
+                            Jump from the inspector into the lead workspace, review retained work, or open deeper runtime surfaces when the operator asks for them.
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -95,20 +94,13 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                             View runs
                         </Link>
                         <Link
-                            href="/automations?tab=wiring"
+                            href="/groups"
                             className="inline-flex items-center justify-center gap-1 rounded border border-cortex-border px-2.5 py-2 text-[10px] font-mono text-cortex-text-main hover:bg-cortex-surface"
                         >
-                            View wiring
-                        </Link>
-                        <Link
-                            href="/system?tab=services"
-                            className="inline-flex items-center justify-center gap-1 rounded border border-cortex-border px-2.5 py-2 text-[10px] font-mono text-cortex-text-main hover:bg-cortex-surface"
-                        >
-                            View system
+                            View outputs
                         </Link>
                     </div>
                 </div>
-
                 {team.type === 'mission' && team.mission_id && (
                     <div className="rounded-lg bg-cortex-bg border border-cortex-border p-3 space-y-1">
                         <div className="text-[10px] font-mono uppercase text-cortex-text-muted">
@@ -124,45 +116,31 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                         )}
                     </div>
                 )}
-
-                {team.inputs.length > 0 && (
-                    <div>
-                        <div className="text-[10px] font-mono uppercase text-cortex-text-muted mb-1.5">
-                            Input Topics
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                            {team.inputs.map((t) => (
-                                <span
-                                    key={t}
-                                    className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-cortex-bg border border-cortex-border text-cortex-text-muted"
+                {(team.inputs.length > 0 || team.deliveries.length > 0) && (
+                    <details className="rounded-lg bg-cortex-bg border border-cortex-border p-3">
+                        <summary className="cursor-pointer text-[10px] font-mono uppercase text-cortex-text-muted">
+                            Advanced coordination topics
+                        </summary>
+                        <div className="mt-3 space-y-3">
+                            <TopicList title="Input topics" values={team.inputs} tone="muted" />
+                            <TopicList title="Delivery topics" values={team.deliveries} tone="success" />
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                                <Link
+                                    href="/automations?tab=wiring"
+                                    className="inline-flex items-center justify-center rounded border border-cortex-border px-2.5 py-2 text-[10px] font-mono text-cortex-text-main hover:bg-cortex-surface"
                                 >
-                                    <Radio className="w-2.5 h-2.5" />
-                                    {t}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {team.deliveries.length > 0 && (
-                    <div>
-                        <div className="text-[10px] font-mono uppercase text-cortex-text-muted mb-1.5">
-                            Delivery Topics
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                            {team.deliveries.map((t) => (
-                                <span
-                                    key={t}
-                                    className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-cortex-success/10 border border-cortex-success/20 text-cortex-success"
+                                    View wiring
+                                </Link>
+                                <Link
+                                    href="/system?tab=services"
+                                    className="inline-flex items-center justify-center rounded border border-cortex-border px-2.5 py-2 text-[10px] font-mono text-cortex-text-main hover:bg-cortex-surface"
                                 >
-                                    <Radio className="w-2.5 h-2.5" />
-                                    {t}
-                                </span>
-                            ))}
+                                    View system
+                                </Link>
+                            </div>
                         </div>
-                    </div>
+                    </details>
                 )}
-
                 <div>
                     <div className="text-[10px] font-mono uppercase text-cortex-text-muted mb-2">
                         Agent Roster ({team.agents.length})
@@ -178,7 +156,7 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                                 }
                             />
                         ))}
-                        {team.agents.length === 0 && (
+                {team.agents.length === 0 && (
                             <div className="text-xs font-mono text-cortex-text-muted/50 py-4 text-center">
                                 No agents in this team
                             </div>
@@ -189,18 +167,43 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
         </div>
     );
 }
-
-function AgentRow({
-    agent,
-    isExpanded,
-    onToggle,
+function TopicList({
+    title, values, tone,
 }: {
+    title: string;
+    values: string[];
+    tone: 'muted' | 'success';
+}) {
+    if (values.length === 0) return null;
+    const chipClass =
+        tone === 'success'
+            ? 'bg-cortex-success/10 border-cortex-success/20 text-cortex-success'
+            : 'bg-cortex-surface border-cortex-border text-cortex-text-muted';
+    return (
+        <div>
+            <div className="text-[10px] font-mono uppercase text-cortex-text-muted mb-1.5">
+                {title}
+            </div>
+            <div className="flex flex-wrap gap-1">
+                {values.map((topic) => (
+                    <span
+                        key={topic}
+                        className={`inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border break-all ${chipClass}`}
+                    >
+                        <Radio className="w-2.5 h-2.5" />
+                        {topic}
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+}
+function AgentRow({ agent, isExpanded, onToggle }: {
     agent: TeamDetailAgentEntry;
     isExpanded: boolean;
     onToggle: () => void;
 }) {
     const st = statusLabel[agent.status] ?? statusLabel[0];
-
     return (
         <div className="rounded-lg border border-cortex-border bg-cortex-bg overflow-hidden">
             <button

@@ -4,6 +4,16 @@ import { SomaCausalSummary } from "@/components/soma/SomaCausalSummary";
 import type { ChatMessage } from "@/store/useCortexStore";
 
 describe("SomaCausalSummary", () => {
+    it("uses a neutral first-request state before Soma activity exists", () => {
+        render(<SomaCausalSummary messages={[]} />);
+
+        expect(screen.getByText("Ready for your first request")).toBeDefined();
+        expect(screen.getByText("First request")).toBeDefined();
+        expect(screen.queryByText("Soma just did this")).toBeNull();
+        expect(screen.queryByText("Trust package")).toBeNull();
+        expect(screen.queryByText("Proof")).toBeNull();
+    });
+
     it("summarizes the latest directed execution as one causal package", () => {
         const writeText = vi.fn().mockResolvedValue(undefined);
         Object.defineProperty(navigator, "clipboard", {
@@ -17,6 +27,11 @@ describe("SomaCausalSummary", () => {
                 role: "council",
                 content: "Onboarding package is ready.",
                 run_id: "run-abc-123",
+                ui_response_state: {
+                    kind: "execution_result",
+                    label: "Output ready",
+                    tone: "success",
+                },
                 artifacts: [
                     {
                         id: "artifact-1",
@@ -54,6 +69,7 @@ describe("SomaCausalSummary", () => {
 
         expect(screen.getByText("Soma just did this")).toBeDefined();
         expect(screen.getByText("Trust package")).toBeDefined();
+        expect(screen.getByText("Output ready")).toBeDefined();
         expect(screen.getByText(/Soma coordinated the operations lane and produced reviewable output/i)).toBeDefined();
         expect(screen.getByText(/Onboarding run package/i)).toBeDefined();
         expect(screen.getByText(/Onboarding brief/i)).toBeDefined();

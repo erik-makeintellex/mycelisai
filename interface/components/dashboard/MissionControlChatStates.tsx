@@ -30,18 +30,18 @@ export function SomaOfflineGuide({ onRetry, assistantName }: { onRetry: () => vo
                 </div>
 
                 <p className="text-sm font-mono text-cortex-text-main leading-relaxed">
-                    Your neural organism isn&apos;t running yet. Start it to talk with {assistantName}, advisor support, and your crews.
+                    Your Mycelis runtime isn&apos;t running yet. Start it to talk with {assistantName}, advisor support, and your crews.
                 </p>
 
                 <div>
                     <p className="text-[9px] font-mono uppercase tracking-widest text-cortex-text-muted mb-1.5">
-                        Start the organism
+                        Start the runtime
                     </p>
                     <div className="bg-cortex-bg border border-cortex-border rounded-lg px-3 py-2 font-mono text-sm text-cortex-primary select-all">
-                        inv lifecycle.up
+                        uv run inv lifecycle.up
                     </div>
                     <p className="text-[9px] font-mono text-cortex-text-muted/60 mt-1.5">
-                        Then verify: <span className="text-cortex-text-muted">inv lifecycle.health</span>
+                        Then verify: <span className="text-cortex-text-muted">uv run inv lifecycle.health</span>
                     </p>
                 </div>
 

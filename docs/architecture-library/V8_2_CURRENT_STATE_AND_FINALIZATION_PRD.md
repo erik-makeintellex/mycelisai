@@ -42,7 +42,7 @@ The current implementation state is recorded in `.state/V8_DEV_STATE.md`. As of 
 | Managed Exchange | `ACTIVE` | Channels, threads, schemas, items, learning candidates, MCP activity, and normalized output lanes are implemented as inspectable advanced surfaces. |
 | Search | `IN_REVIEW` | Mycelis-owned search supports local sources, local API, SearXNG, optional Brave, disclosure metadata, and search-source provenance in Soma results. |
 | Memory and context | `ACTIVE` / `IN_REVIEW` | Semantic memory, governed deployment context, user-private context, company knowledge, Soma operating context, reflection/synthesis lanes, and candidate-first learning contracts exist. |
-| Teams and groups | `ACTIVE` / `IN_REVIEW` | Runtime teams, groups, team outputs, create-team proposals, group mirroring, and retained team/file outputs exist; temporary runtime teams remain bounded and not yet useful as Codex delivery collaborators. |
+| Teams and groups | `ACTIVE` / `IN_REVIEW` | Runtime teams, groups, team outputs, create-team proposals, group mirroring, retained team/file outputs, and an Active Work Lane projection exist; raw topology is inspectable on demand instead of default UX. |
 | Automations and scheduler | `ACTIVE` / `IN_REVIEW` | Event trigger rules and review-loop scheduler health are visible; operator cadence authoring is not finalized and must ship as governed scheduler rules before schedule language returns to default UX. |
 | UI compression | `IN_REVIEW` | Soma proposal/trust UI, Auth Providers, and Resources have been compressed into focused operator surfaces with details behind disclosure or menu selections. |
 | Identity and auth | `ACTIVE` / `IN_REVIEW` | Local owner and deploy-owned access posture are surfaced read-only; identity/auth schema foundation exists; enterprise provider setup remains a review-only configuration contract until adapters are enabled. |
@@ -92,8 +92,8 @@ opens proof, and shows retry/degraded trust behavior when execution fails.
 | ExecutionContract | `REQUIRED` | `contract_id`, intent summary, execution shape, capability requirements, governance posture, approval requirements, expected outputs, expected proof, recovery posture, degradation behavior, run linkage, timestamps, version |
 | ProofArtifact | `REQUIRED` | `proof_id`, `run_id`, execution status, evidence refs, output refs, validation source, proof quality, degradation state, recovery options, confidence provenance fields, audit refs, timestamps |
 | CapabilityManifestState | `REQUIRED` | capability id, health, probe status, trust/risk class, approval posture, allowed roles, output schemas, failure posture, recovery posture, manifest version |
-| UIResponseState | `REQUIRED` | direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, partial completion |
-| TeamInteractionSurface | `NEXT` | `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` ids, team/run/work linkage, source, verb, objective, state, expected outputs/proof, operator need, degradation, recovery, output refs, proof refs, audit refs, version |
+| UIResponseState | `IN_REVIEW` | direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, partial completion |
+| TeamInteractionSurface | `ACTIVE` | `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` ids, team/run/work linkage, source, verb, objective, state, expected outputs/proof, operator need, degradation, recovery, output refs, proof refs, audit refs, version |
 
 These are runtime trust objects, not presentation conveniences. Exact schema fields, UI states, degraded lifecycle states, deployment-trust ownership, and the required slice close-out template are canonicalized in the [V8.2 Finalization Concretization Contract](V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md).
 
@@ -197,7 +197,7 @@ Minimal confidence provenance starts here through validation source, evidence st
 
 ### Phase 2 - Active Team And Output Workflows
 
-- Make active teams easier to inspect, steer, and clean up.
+- Make active teams easier to inspect, steer, and clean up through the Active Work Lane before raw topology is opened.
 - Implement `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API/UI projections from the Soma Team Interaction Contract.
 - Add stronger output views for team deliverables and retained packages.
 - Show team communication state without exposing raw NATS as the main workflow.

@@ -4,6 +4,7 @@ import { CheckCircle2, ChevronDown, ChevronUp, FileText, Gauge, RotateCcw, Route
 import { useState } from "react";
 import type { ChatArtifactRef, ChatMessage, ExecutionSummaryCapabilityUse, ExecutionSummaryData, ExecutionSummaryItem, ExecutionSummaryLink } from "@/store/useCortexStore";
 import { CompactFact, Fact, type FactModel } from "./SomaCausalSummaryFact";
+import { defaultResponseState, responseStateToneClass } from "./SomaCausalSummaryState";
 
 type SummaryValue = string | ExecutionSummaryItem;
 
@@ -147,6 +148,7 @@ export function SomaCausalSummary({
   const latestUser = lastMessage(messages, "user");
   const latestSoma = lastSomaMessage(messages);
   const summary = latestSoma?.execution_summary;
+  const responseState = defaultResponseState(latestSoma);
   const action = latestUser?.content?.replace(/^\[BROADCAST\]\s*/i, "").trim();
   const executionShape = compactText(summary?.execution?.shape) ?? compactText(summary?.execution_shape);
   const executionStatus = compactText(summary?.execution?.status) ?? compactText(summary?.execution_status);
@@ -220,6 +222,23 @@ export function SomaCausalSummary({
     window.setTimeout(() => setCopiedFact((current) => current === fact.label ? null : current), 1200);
   };
 
+  if (!latestSoma) {
+    return (
+      <section className="rounded-lg border border-cortex-border bg-cortex-surface/70 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-cortex-primary" />
+            <p className="text-sm font-semibold text-cortex-text-main">Ready for your first request</p>
+          </div>
+          <span className={`rounded border px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${responseStateToneClass(responseState.tone)}`}>
+            {responseState.label}
+          </span>
+        </div>
+        <p className="mt-2 text-sm leading-6 text-cortex-text-main">Tell Soma what you want to plan, review, create, or execute.</p>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-lg border border-cortex-primary/25 bg-cortex-primary/10 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -227,7 +246,12 @@ export function SomaCausalSummary({
           <Sparkles className="h-4 w-4 text-cortex-primary" />
           <p className="text-sm font-semibold text-cortex-text-main">Soma just did this</p>
         </div>
-        <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Trust package</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={`rounded border px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${responseStateToneClass(responseState.tone)}`}>
+            {responseState.label ?? responseState.kind.replace(/_/g, " ")}
+          </span>
+          <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Trust package</p>
+        </div>
       </div>
       <p className="mt-2 text-sm leading-6 text-cortex-text-main">{outcome}</p>
       <div className="mt-3 grid gap-2 md:grid-cols-3">

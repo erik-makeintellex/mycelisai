@@ -8,6 +8,7 @@ vi.mock('reactflow', async () => {
 });
 
 import MissionControlChat from '@/components/dashboard/MissionControlChat';
+import { SomaOfflineGuide } from '@/components/dashboard/MissionControlChatStates';
 import { useCortexStore } from '@/store/useCortexStore';
 import {
     COUNCIL_MEMBERS,
@@ -35,6 +36,17 @@ describe('MissionControlChat UI states', () => {
         await settleMissionControlChat();
 
         expect(screen.getByPlaceholderText(/Ask Soma/i)).toBeDefined();
+    });
+
+    it('uses Mycelis runtime and uv task commands in the offline guide', () => {
+        render(<SomaOfflineGuide assistantName="Soma" onRetry={vi.fn()} />);
+
+        expect(screen.getByText(/Your Mycelis runtime isn't running yet/i)).toBeDefined();
+        expect(screen.getByText('Start the runtime')).toBeDefined();
+        expect(screen.getByText('uv run inv lifecycle.up')).toBeDefined();
+        expect(screen.getByText('uv run inv lifecycle.health')).toBeDefined();
+        expect(screen.queryByText(/neural organism/i)).toBeNull();
+        expect(screen.queryByText('inv lifecycle.up')).toBeNull();
     });
 
     it('keeps the message history in the bounded scroll region', async () => {

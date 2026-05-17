@@ -47,8 +47,6 @@ test.describe('Teams Workspace (/teams)', () => {
             .filter({ hasText: 'View runs' });
         const openChatLinks = page.locator('a[data-testid$="-open-chat"]');
         const viewRunsLinks = page.locator('a[data-testid$="-view-runs"]');
-        const viewWiringLinks = page.locator('a[data-testid$="-view-wiring"]');
-        const viewSystemLinks = page.locator('a[data-testid$="-view-logs"]');
         const emptyState = page.getByText('No teams found', { exact: true });
         await expect
             .poll(async () => {
@@ -64,13 +62,11 @@ test.describe('Teams Workspace (/teams)', () => {
 
         await expect(openChatLinks).toHaveCount(count);
         await expect(viewRunsLinks).toHaveCount(count);
-        await expect(viewWiringLinks).toHaveCount(count);
-        await expect(viewSystemLinks).toHaveCount(count);
+        await expect(page.locator('a[data-testid$="-view-wiring"]')).toHaveCount(0);
+        await expect(page.locator('a[data-testid$="-view-logs"]')).toHaveCount(0);
 
         await expect(openChatLinks.first()).toHaveAttribute('href', /\/dashboard\?team_id=/);
         await expect(viewRunsLinks.first()).toHaveAttribute('href', '/runs');
-        await expect(viewWiringLinks.first()).toHaveAttribute('href', '/automations?tab=wiring');
-        await expect(viewSystemLinks.first()).toHaveAttribute('href', '/system?tab=services');
     });
 
     test('clicking a team card opens and closes the detail drawer', async ({ page }) => {
@@ -100,6 +96,8 @@ test.describe('Teams Workspace (/teams)', () => {
         await expect(drawer.getByText('Operator controls')).toBeVisible();
         await expect(drawer.getByRole('link', { name: 'Open lead workspace' })).toHaveAttribute('href', /\/dashboard\?team_id=/);
         await expect(drawer.getByRole('link', { name: 'View runs' })).toHaveAttribute('href', '/runs');
+        await expect(drawer.getByRole('link', { name: 'View outputs' })).toHaveAttribute('href', '/groups');
+        await expect(drawer.getByText('Advanced coordination topics')).toBeVisible();
         await expect(drawer.getByRole('link', { name: 'View wiring' })).toHaveAttribute('href', '/automations?tab=wiring');
         await expect(drawer.getByRole('link', { name: 'View system' })).toHaveAttribute('href', '/system?tab=services');
         await expect(firstCard).toHaveClass(/ring-1/);

@@ -143,8 +143,8 @@ describe("TeamsPage", () => {
 
     render(<TeamsPage />);
 
-    expect(screen.getByText("Alpha Squad")).toBeDefined();
-    expect(screen.getByText("Bravo Ops")).toBeDefined();
+    expect(screen.getAllByText("Alpha Squad").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Bravo Ops").length).toBeGreaterThan(0);
     expect(screen.getByText("Team Lead Workspaces")).toBeDefined();
     expect(screen.getByText(/Review live teams here/i)).toBeDefined();
     expect(
@@ -170,6 +170,10 @@ describe("TeamsPage", () => {
         .getAttribute("href"),
     ).toBe("/resources?tab=tools");
     expect(screen.getByText(/Outputs and active collaboration/i)).toBeDefined();
+    expect(screen.getByTestId("active-work-lane")).toBeDefined();
+    expect(screen.getByText("Active work lane")).toBeDefined();
+    expect(screen.getByText("output ready")).toBeDefined();
+    expect(screen.getByText("running")).toBeDefined();
     expect(
       screen
         .getAllByRole("link", { name: /Review outputs|Review group outputs/i })[0]
@@ -202,14 +206,14 @@ describe("TeamsPage", () => {
 
     render(<TeamsPage />);
 
-    expect(screen.getByText("Alpha Squad")).toBeDefined();
-    expect(screen.getByText("Bravo Ops")).toBeDefined();
+    expect(screen.getAllByText("Alpha Squad").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Bravo Ops").length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByDisplayValue("All Teams"), {
       target: { value: "standing" },
     });
 
-    expect(screen.getByText("Alpha Squad")).toBeDefined();
+    expect(screen.getAllByText("Alpha Squad").length).toBeGreaterThan(0);
     expect(screen.queryByText("Bravo Ops")).toBeNull();
   });
 
@@ -244,8 +248,9 @@ describe("TeamsPage", () => {
       screen.getByTestId("team-team-alpha-open-chat").getAttribute("href"),
     ).toBe("/dashboard?team_id=team-alpha");
     expect(screen.getByTestId("team-team-alpha-view-runs")).toBeDefined();
-    expect(screen.getByTestId("team-team-alpha-view-wiring")).toBeDefined();
-    expect(screen.getByTestId("team-team-alpha-view-logs")).toBeDefined();
+    expect(screen.queryByTestId("team-team-alpha-view-wiring")).toBeNull();
+    expect(screen.queryByTestId("team-team-alpha-view-logs")).toBeNull();
+    expect(screen.queryByText("nats.output.alpha")).toBeNull();
   });
 
   it("opens the team-member template drawer from the teams page", () => {

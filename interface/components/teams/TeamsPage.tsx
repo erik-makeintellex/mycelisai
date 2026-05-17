@@ -10,10 +10,12 @@ import {
   type TeamDetailEntry,
 } from "@/store/useCortexStore";
 import AgentEditorDrawer from "@/components/catalogue/AgentEditorDrawer";
+import { ActiveWorkLane } from "./ActiveWorkLane";
 import TeamCard from "./TeamCard";
 import TeamDetailDrawer from "./TeamDetailDrawer";
 import TeamsIntroPanel from "./TeamsIntroPanel";
 import { TeamMemberTemplatesPanel } from "./TeamMemberTemplatesPanel";
+import { projectTeamWorkItem } from "./teamWorkProjection";
 
 const FILTERS: { value: TeamsFilter; label: string }[] = [
   { value: "all", label: "All Teams" },
@@ -99,6 +101,10 @@ export default function TeamsPage() {
     });
     return Array.from(coverage.entries()).slice(0, 6);
   }, [sortedTemplates]);
+  const activeWorkItems = useMemo(
+    () => filteredTeams.map(projectTeamWorkItem),
+    [filteredTeams],
+  );
 
   const openTemplateDrawer = useCallback((agent: CatalogueAgent | null) => {
     setEditingTemplate(agent);
@@ -210,6 +216,14 @@ export default function TeamsPage() {
             </Link>
           </div>
         </div>
+        <ActiveWorkLane
+          items={activeWorkItems}
+          onAction={(item, action) => {
+            if (action.action === "inspect") {
+              selectTeam(item.id);
+            }
+          }}
+        />
         {filteredTeams.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredTeams.map((team) => (
