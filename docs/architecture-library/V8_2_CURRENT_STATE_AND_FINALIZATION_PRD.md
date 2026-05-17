@@ -252,6 +252,8 @@ Required proof per slice:
 | Scheduler/cadence authoring | `NEXT` | Ship governed scheduler rules before exposing cadence authoring as product behavior. |
 | Deployment env footguns | Active operational risk | Keep Compose/Kubernetes endpoint posture explicit; avoid loopback assumptions and document container-safe overrides. |
 | UI density | Active cleanup lane | Continue menu/detail and disclosure compression for lengthy advanced surfaces. |
+| Cold-start Soma trust copy | `NEXT` | Default dashboard must not show "Soma just did this" or proof/trust package language before real Soma activity. |
+| Exact first demo GUI proof | `NEXT` | Extend live browser proof from playable file output to project-package output with README, validation, proof-link opening, and degraded retry. |
 | Capability manifest persistence | `REQUIRED` | Persist refreshed manifests and reconcile long-lived health/probe state as P0 runtime trust infrastructure. |
 | Execution/proof schemas | `REQUIRED` | Promote ExecutionContract and ProofArtifact from implied concepts into durable runtime-visible objects. |
 | Active team interaction contract | `NEXT` | Promote TeamInteraction, TeamWorkItem, TeamStatusEvent, and TeamOutputRef into durable runtime-visible APIs and Soma Active Work Lane projections. |

@@ -6,7 +6,7 @@ This README is the development-swarm inception document. It points to current au
 
 Canonical ownership:
 - `README.md`: inception, navigation, and repo-wide working rules
-- `architecture/v8-2.md` and `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`: active V8.2/B2+ production target plus embodiment rule, canonical MVP workflow, degradation posture, and product-category framing
+- `architecture/v8-2.md`, `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`, and `docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`: active V8.2/B2+ production target plus embodiment rule, exact first demo slice, runtime object schemas, degradation posture, and product-category framing
 - `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`: V8.1 compatibility baseline
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` and `docs/architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md`: operator UX, screen/API truth, and directed-execution alignment
 - `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md`: capability manifest, run/output, MCP/custom integration, and proof truth
@@ -53,9 +53,10 @@ Review these before planning or editing:
 11. [Testing](docs/TESTING.md)
 12. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
 13. [V8.2 Current State And Finalization PRD](docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
-14. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
-15. [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
-16. [Docs Manifest](interface/lib/docsManifest.ts)
+14. [V8.2 Finalization Concretization Contract](docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md) and [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
+15. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
+16. [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
+17. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
 - V8.2 docs are the active authority. Historical V7 state remains migration evidence only, not active product authority.
@@ -136,6 +137,7 @@ source-of-truth layers remain separate:
 managed exchange foundation: channels, threads, schemas, and normalized outputs remain the governed substrate. managed exchange is permissioned; normalization into managed exchange does not imply unrestricted trust. The free-node release now includes foundational security boundaries.
 capability manifest foundation: MCP tools, custom connectors, local scripts, external APIs, generated artifacts, and future plugins/modules must register as governed capabilities before Soma, teams, groups, or automations use them. Meaningful executions attach to runs; meaningful outputs normalize into exchange, artifacts, audit, or learning candidates instead of remaining raw tool side effects.
 directed execution foundation: default UX must show intent, Soma understanding, execution shape, capability/team use, outputs, proof, and next step. Runs, outputs, governance, capabilities, and deployment trust are product surfaces, not hidden diagnostics.
+finalization GUI posture: live Soma governance, team execution, and playable-output proof are green, but the exact first demo slice still needs package-level proof for README/validation metadata, visible proof-link opening, and degraded retry. Cold-start Soma must not imply prior work, and active team work needs durable work-item state before runtime teams are presented as production collaborators.
 
 ## Architecture Terms To Operator Terms
 

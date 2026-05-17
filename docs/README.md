@@ -39,6 +39,8 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **Active Development State**: `../.state/V8_DEV_STATE.md`
 - **Architecture Library Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **V8.2 Current State And Finalization PRD**: `./architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md`
+- **V8.2 Finalization Concretization Contract**: `./architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`
+- **V8.2 Soma Team Interaction Contract**: `./architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md`
 - **V8.2 Production Architecture Target / B2+ Delivery Frame**: `../architecture/v8-2.md`
 - **V8.2 Operational Embodiment Directive**: `./architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`
 - **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`
@@ -73,6 +75,7 @@ Use these when the goal is verification, release proof, or workflow-complete val
 - **Release Handoff**: `./RELEASE_HANDOFF.md`
 - **Testing Guide**: `./TESTING.md`
 - **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
+- **V8.2 Finalization Concretization Contract**: `./architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`
 - **V8 Compose Personal Owner Deployment Test Plan**: `./architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md`
 - **V8 UI Testing Agentry Product Contract**: `./architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - **V8 UI Team Full Test Set**: `./architecture-library/V8_UI_TEAM_FULL_TEST_SET.md`
