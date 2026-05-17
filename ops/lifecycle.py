@@ -878,7 +878,7 @@ def restart(c, build=False, frontend=False):
 )
 def memory_restart(c, build=False, frontend=False):
     """
-    Fresh memory restart workflow:
+    Reset memory state, restart the stack, and run health probes.
     down -> db.reset -> up -> health -> memory endpoint probes.
     """
     print("=== Mycelis Memory Fresh Restart ===\n")

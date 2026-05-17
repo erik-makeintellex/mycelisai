@@ -240,7 +240,7 @@ def _start_port_forward_detached(service: str, forward: str):
 @task
 def init(c):
     """
-    Initialize Infrastructure Layer.
+    Initialize the local Kubernetes infrastructure layer.
     Creates the preferred local Kubernetes cluster and applies persistent infra (NATS, DBs).
     """
     backend = _k8s_backend()
@@ -294,7 +294,7 @@ def init(c):
 )
 def deploy(c, values_file="", verify_package=False, release_label="", package_output_dir=""):
     """
-    Deploys the core using Helm (Hardened Security).
+    Deploy Mycelis Core to the selected local Kubernetes backend.
     Uses Immutable Identity Tagging.
     """
     resolved_values_file = _resolve_k8s_values_file(values_file)
@@ -451,7 +451,7 @@ def up(c, timeout=180):
 @task
 def bridge(c):
     """
-    Open Development Bridge.
+    Open local port-forwards to the Kubernetes runtime.
     Forwards cluster ports (NATS:4222, HTTP:API_PORT, PG:5432) to localhost.
     """
     print(f"Starting Port-Forward Proxy (NATS:4222, HTTP:{API_PORT}, PG:5432)...")
@@ -490,7 +490,7 @@ def bridge(c):
 
 @task
 def status(c):
-    """Check the health of the entire stack."""
+    """Check local Kubernetes, pod, and persistence posture."""
     print(f"Checking Infrastructure Status for {CLUSTER_NAME}...")
     try:
         c.run("docker info", hide=True)
@@ -531,7 +531,7 @@ def status(c):
 
 @task(help={"timeout": "Seconds to wait for recovered rollouts to become ready (default: 180)."})
 def recover(c, timeout=180):
-    """Attempt to heal the cluster."""
+    """Recover reachable local Kubernetes rollouts."""
     print("Attempting Recovery...")
     cluster_ready = c.run("kubectl cluster-info", hide=True, warn=True)
     if not cluster_ready.ok:

@@ -596,8 +596,8 @@ def test_coverage(c):
 )
 def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="dev"):
     """
-    The Invoke wrapper starts a managed local Next.js server and clears any stale
-    Interface listener before and after the run because Next.js dev servers can
+    Run Playwright browser proof and clean managed UI listeners.
+    Next.js dev servers can
     linger on Windows after Playwright exits. Use external for a running Compose UI.
     Stable mocked browser proof defaults to a managed dev server; use
     --server-mode=start when the run should refresh and serve the built bundle.

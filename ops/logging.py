@@ -149,7 +149,7 @@ def _collect_topic_literal_violations(files: list[Path], allowed_files: set[str]
 @task(help={"paths": "Comma-separated roots to scan for schema checks."})
 def check_schema(_c, paths=DEFAULT_SCHEMA_PATHS):
     """
-    Validate logging schema usage:
+    Validate logging event schema and topic usage.
     - event literals in runtime code must map to declared EventType constants
     - docs/logging.md must mention each EventType constant
     """

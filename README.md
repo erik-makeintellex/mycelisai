@@ -277,7 +277,7 @@ uv run inv wsl.refresh
 uv run inv wsl.validate --lane=release
 ```
 
-Refresh WSL from git; do not copy source trees across the host boundary. Use `uv run inv wsl.validate --lane=release --headed-browser` for visible live-window Playwright proof on the same WSL-hosted Compose UI.
+Refresh WSL from git; do not copy source trees across the host boundary. Use `uv run inv wsl.down` before a fresh-state review when the WSL proof distro is hosting localhost-forwarded runtime ports, and use `uv run inv wsl.validate --lane=release --headed-browser` for visible live-window Playwright proof on the same WSL-hosted Compose UI.
 
 ## Development Workflow
 
