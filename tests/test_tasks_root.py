@@ -34,6 +34,7 @@ class FakeContext(Context):
 
 def test_root_collection_registers_expected_namespaces():
     assert sorted(tasks.ns.collections.keys()) == [
+        "api",
         "auth",
         "cache",
         "ci",
@@ -58,6 +59,7 @@ def test_root_collection_registers_expected_namespaces():
 
 def test_root_collection_exports_expected_task_surface():
     assert sorted(tasks.ns.task_names.keys()) == [
+        "api.delivery-proof",
         "auth.break-glass-key",
         "auth.dev-key",
         "auth.posture",

@@ -13,6 +13,7 @@ from ops import k8s
 from ops import lifecycle
 from ops import logging as logging_tasks
 from ops import misc
+from ops import mycelis_api
 from ops import proto_relay
 from ops import quality
 from ops import test
@@ -69,6 +70,7 @@ ns.add_collection(proto_relay.ns_proto)
 ns.add_collection(proto_relay.ns_relay)
 ns.add_collection(misc.ns_clean)
 ns.add_collection(misc.ns_team)
+ns.add_collection(mycelis_api.ns)
 ns.add_collection(interface.ns)
 ns.add_collection(auth.ns)
 ns.add_collection(logging_tasks.ns)

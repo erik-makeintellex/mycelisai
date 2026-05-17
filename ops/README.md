@@ -126,6 +126,12 @@ Keeps local API-key development access aligned.
 - **Break-Glass Key**: `uv run inv auth.break-glass-key`
 - **Posture**: `uv run inv auth.posture`
 
+### `mycelis_api.py` (Self-Use API Proof)
+Uses the live Core API as a delivery tool instead of only testing it from the outside.
+- **Delivery Proof**: `uv run inv api.delivery-proof`
+- The task refreshes capabilities, reads System -> Deployments trust, creates a bounded `TeamWorkItem`, attaches a `TeamInteraction`, and reads the work item back.
+- It defaults to `MYCELIS_API_BASE_URL` or `MYCELIS_API_HOST`/`MYCELIS_API_PORT` from the shell or repo `.env`, and uses `MYCELIS_API_KEY` from the same sources.
+
 ### `cache.py` (Cache Hygiene)
 Keeps project and user-level tool caches off the system drive hot path and easy to prune.
 - **Status**: `uv run inv cache.status`

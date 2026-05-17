@@ -194,14 +194,14 @@ uv run inv lifecycle.down
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.health
 uv run inv ci.baseline
-uv run inv ci.entrypoint-check
+uv run inv api.delivery-proof
 uv run inv ci.service-check
 uv run inv lifecycle.memory-restart
 uv run inv team.architecture-sync
 uv run inv quality.max-lines --limit 300
 ```
 
-`lifecycle.status` is the quick local snapshot and now confirms Core through `/healthz` plus Ollama through `/api/tags` across loopback fallbacks; use `lifecycle.health` for the deeper endpoint gate before claiming runtime proof.
+`lifecycle.status` is the quick local snapshot and now confirms Core through `/healthz` plus Ollama through `/api/tags` across loopback fallbacks; use `lifecycle.health` for deeper endpoint proof, `uv run inv api.delivery-proof` for API self-use, and `uv run inv ci.entrypoint-check` for runner matrix proof.
 
 ## Development Contract
 

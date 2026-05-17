@@ -38,7 +38,7 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 
 Use this source-first sequence when a slice changes the delivered operator workflow, runtime topology, governance behavior, retained outputs, AI provider posture, or release proof lane:
 
-1. Source and contract proof from the Windows repo first: `uv run inv core.test`, `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.build`, docs tests, and `uv run inv quality.max-lines --limit 300`; capped files in `ops/quality_legacy_caps.txt` must match current counts.
+1. Source and contract proof from the Windows repo first: `uv run inv core.test`, Interface gates, docs tests, `api.delivery-proof` when Core is live, and `uv run inv quality.max-lines --limit 300`; capped files in `ops/quality_legacy_caps.txt` must match current counts.
 2. Keep PostgreSQL and NATS available as infra-only dependencies when the local source stack needs real persistence or bus proof; only after source proof is acceptable, containerize Core/Interface for deployment-mimic proof from the git-refreshed WSL checkout:
    - `uv run inv wsl.refresh`
    - `uv run inv wsl.validate --lane=release`
@@ -150,7 +150,7 @@ uv run inv compose.health
 uv run inv compose.warm-cognitive
 uv run inv compose.storage-health
 uv run inv lifecycle.health
-uv run inv quality.max-lines --limit 300
+uv run inv api.delivery-proof
 uv run inv logging.check-schema
 uv run inv logging.check-topics
 ```

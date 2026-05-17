@@ -32,7 +32,7 @@ Use `uv run inv ...` for real tasks. Use `uvx --from invoke inv -l` only as a co
 
 ## II. Task Automation
 
-Task modules live under `ops/*.py` and are registered through `tasks.py`. App-tied management logic belongs in Python; PowerShell may only wrap host-specific calls.
+Task modules live under `ops/*.py` and are registered through `tasks.py`. App-tied management logic belongs in Python; `uv run inv api.delivery-proof` exercises the live Mycelis API as a source-mode delivery lane, while `uv run inv ci.entrypoint-check` proves runner registration.
 
 ### Master Registry
 
@@ -156,7 +156,7 @@ uv run inv ci.test
 uv run inv ci.baseline
 uv run inv ci.service-check
 uv run inv ci.release-preflight --lane=release
-uv run inv ci.entrypoint-check
+uv run inv api.delivery-proof
 uv run inv team.architecture-sync
 ```
 
