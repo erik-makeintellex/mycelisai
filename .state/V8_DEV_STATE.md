@@ -25,6 +25,7 @@ Use `.state/V7_DEV_STATE.md` only as historical migration evidence. Active plann
 This is the current source of truth for active execution. Older dated boards below remain evidence and historical coordination context unless this snapshot or `## Immediate Next Actions` explicitly references them.
 
 - `ACTIVE` current coordination is the operational embodiment close-out cell: Orchestration, Soma Experience, Runtime/Capability, Governance/Trust, Deployment/Proof, QA/Embodiment, and Docs/State are aligned around visible execution, durable outputs, recoverable runs, deployment trust, and proof-backed retained outputs.
+- `ACTIVE` the architecture execution cell is now organized around a concrete handoff order in `docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md`: Runtime/Capability and Governance/Trust lead durable confirm-action `ExecutionContract`, `ProofArtifact`, and persisted `CapabilityManifestState`; Team Work/Council follows with durable `TeamWorkItem`, `TeamInteraction`, `TeamStatusEvent`, and `TeamOutputRef`; Soma Experience composes the single-window workspace around those objects; Deployment/Proof builds `System -> Deployments`; QA/Embodiment gates the sequence with refreshed live GUI proof, degraded/retry proof, active-work proof, and desktop/mobile compression evidence.
 - `COMPLETE` the committed-tree Rancher Desktop K3s RC proof lane is green for the current MVP proof standard; follow-on work should not keep Mission 1 framed as an unstarted proof gate.
 - `IN_REVIEW` the directed-execution trust spine, capability/MCP visibility, failure/degradation proof, search-source provenance, and retained-output rendering are implemented with focused proof. The next acceptance gate is live Mycelis GUI proof for project-package output and explicit MCP-backed confirmation paths, not another doctrine pass.
 - `BLOCKED` temporary runtime teams are spawnable but not yet useful as Codex delivery collaborators until at least one bounded, role-specific team ask returns within the product timeout and the UI exposes timeout/degradation clearly.
@@ -1059,30 +1060,38 @@ Evidence:
 
 ## Immediate Next Actions
 
-1. `COMPLETE` finish Windows-side validation for the `qwen3:14b` default-model slice.
-   - `go test ./... -count=1 -p 1`
-   - `uv run inv interface.typecheck`
-   - `uv run inv interface.build`
-   - `uv run pytest tests/test_docs_links.py tests/test_documentation_layout_contract.py -q`
-   - `uv run inv quality.max-lines --limit 300`
-2. `COMPLETE` commit and push the default-model/state/doc slice from the Windows repo.
-   - keep the handoff git-backed
-   - do not copy source or generated artifacts into WSL manually
-3. `COMPLETE` commit the Rancher K3s proof-lane slice, excluding status-only `interface/playwright.config.ts`, then run the committed-tree regression bundle and record the SHA.
-4. `COMPLETE` run the Rancher Desktop K3s RC proof lane from committed state.
-   - `MYCELIS_K8S_BACKEND=rancher`
-   - `MYCELIS_K8S_VALUES_FILE=charts/mycelis-core/values-k3d.yaml`
-   - `uv run inv k8s.deploy`, `uv run inv k8s.wait --timeout=300`, `uv run inv k8s.bridge`, `uv run inv lifecycle.health`
-   - run headed Chromium Soma/team/groups/workspace live specs with `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`
-5. `COMPLETE` package the MVP release candidate and prepare release-note/handoff evidence.
-   - name Rancher Desktop K3s as the local RC proof lane
-   - use `docs/RELEASE_HANDOFF.md` as the operator-facing RC handoff packet
-   - generated `v0.6.0-98f83b8` binary archives/checksums/manifests plus enterprise and enterprise Windows-AI Helm verification bundles under `dist/`
+1. `ACTIVE` refresh the local source proof lane and keep it source-first.
+   - keep PostgreSQL and NATS available as required infra
+   - start Core/Interface locally, not through full app containers, until local proof is clean
+   - rerun `ui-finalization-browser-package-live.spec.ts` against refreshed services and record any precise runtime defect
+2. `NEXT` implement the durable trust object spine for confirm-action.
+   - persist `ExecutionContract` and `ProofArtifact`
+   - expose additive `contract_id` and `proof_id` through `execution_summary`
+   - upsert persisted `CapabilityManifestState` on capability refresh
+   - prove success and degraded/failure paths with Go tests
+3. `NEXT` implement durable team-work truth.
+   - add `TeamWorkItem`, `TeamInteraction`, `TeamStatusEvent`, and `TeamOutputRef` storage/API
+   - wire create-team, delegate-task, confirm-action success/failure, status/result signals, and retained outputs
+   - keep existing projection as degraded fallback only
+4. `NEXT` compose the single-window Soma workspace.
+   - expression input, active work, output workbench, compact trust package, and context indicator must fit in one practical work window
+   - raw NATS/MCP/deployment topology remains behind Advanced/Inspect
+   - desktop and mobile GUI review must show no practical work-surface collapse
+5. `NEXT` build `System -> Deployments` as the detailed deployment-trust home.
+   - expose roots, current commit/image/chart identity, endpoint posture, runtime health, proof lane, and recovery posture
+   - keep Resources deployment context as governed knowledge intake rather than deployment truth
+6. `NEXT` run the QA/Embodiment proof order from the PRD.
+   - first-demo live success
+   - degraded/retry live injection
+   - retained output spine
+   - API-backed active work
+   - heavy-surface desktop/mobile compression matrix
+   - deployment-lane replay only after local source proof is clean
    - keep WSL Compose as optional secondary deployment-mimic evidence
-6. `NEXT` keep the Windows self-hosted operator lane honest while the MVP proof surface grows.
+7. `NEXT` keep the Windows self-hosted operator lane honest while the MVP proof surface grows.
    - verify the Windows browser can still reach the active proof UI, whether Rancher K3s with local Interface or WSL/Compose
    - keep explicit non-loopback AI endpoint posture intact as docs/tests/runtime evolve
-7. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
+8. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
    - `README.md`
    - `docs/TESTING.md`
    - `docs/LOCAL_DEV_WORKFLOW.md`
