@@ -221,9 +221,11 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var proofID string
+		var contractID string
 		var token string
 		if proof != nil {
 			proofID = proof.ID
+			contractID = proof.ContractID
 		}
 		if confirmToken != nil {
 			token = confirmToken.Token
@@ -231,7 +233,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, effectiveTools)
 		chatPayload.ToolsUsed = chatResponseTools(isMutation, agentResult.ToolsUsed, effectiveTools)
 		chatPayload.Proposal = buildMutationChatProposal(effectiveTools, proofID, token, "admin-core", []string{"admin"}, approval, profile.snapshot(), display)
-		chatPayload.ExecutionSummary = buildProposalExecutionSummary(latestUserText, plannedToolCalls, effectiveTools, display, proofID, auditEventID, approval)
+		chatPayload.ExecutionSummary = buildProposalExecutionSummary(latestUserText, plannedToolCalls, effectiveTools, display, proofID, contractID, auditEventID, approval)
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",

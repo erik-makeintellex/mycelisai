@@ -39,7 +39,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 	}
 	defer tx.Rollback()
 
-	proofID, scope, runID, ok := s.prepareConfirmedAction(w, r, tx, req.ConfirmToken)
+	proofID, contractID, scope, runID, ok := s.prepareConfirmedAction(w, r, tx, req.ConfirmToken)
 	if !ok {
 		return
 	}
@@ -47,7 +47,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 	auditUser := auditUserLabelFromRequest(r)
 	results, err := s.executePlannedToolCalls(r.Context(), scope, auditUser)
 	if err != nil {
-		s.respondConfirmActionFailure(w, tx, proofID, runID, auditUser, err)
+		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, auditUser, err)
 		return
 	}
 
@@ -68,37 +68,45 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 	}
 
 	auditID := s.auditConfirmedAction(proofID, runID, scope, auditUser)
+	proofArtifactID := s.persistConfirmActionSuccessProof(r.Context(), proofID, contractID, runID, auditID, scope, results)
 	if err := s.persistConfirmedActionVisibility(r.Context(), runID, auditID, auditUser, scope, results); err != nil {
 		log.Printf("CE-1: confirm-action visibility persistence failed: %v", err)
 	}
-	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseData(proofID, runID, auditID, scope, results)))
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID, scope, results)))
 }
 
-func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, *protocol.ScopeValidation, string, bool) {
+func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, string, *protocol.ScopeValidation, string, bool) {
 	proofID, err := s.consumeConfirmTokenTx(tx, token)
 	if err != nil {
 		respondAPIError(w, err.Error(), http.StatusBadRequest)
-		return "", nil, "", false
+		return "", "", nil, "", false
 	}
 
 	scope, err := s.loadIntentProofScopeTx(tx, proofID)
 	if err != nil {
 		log.Printf("CE-1: confirm-action scope load failed: %v", err)
 		respondAPIError(w, "failed to load approved execution plan", http.StatusInternalServerError)
-		return "", nil, "", false
+		return "", "", nil, "", false
 	}
 
 	runID, err := s.createExecutionRunTx(tx, proofID)
 	if err != nil {
 		log.Printf("CE-1: confirm-action run creation failed: %v", err)
 		respondAPIError(w, "failed to create execution record", http.StatusInternalServerError)
-		return "", nil, "", false
+		return "", "", nil, "", false
 	}
 
-	return proofID, scope, runID, true
+	contractID, err := s.ensureExecutionContractTx(r.Context(), tx, proofID, runID)
+	if err != nil {
+		log.Printf("CE-1: confirm-action contract persistence failed: %v", err)
+		respondAPIError(w, "failed to create execution contract", http.StatusInternalServerError)
+		return "", "", nil, "", false
+	}
+
+	return proofID, contractID, scope, runID, true
 }
 
-func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, tx *sql.Tx, proofID, runID, auditUser string, err error) {
+func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, r *http.Request, tx *sql.Tx, proofID, contractID, runID, auditUser string, err error) {
 	if failErr := s.failChatProofTx(tx, proofID); failErr != nil {
 		log.Printf("CE-1: confirm-action proof failure update failed: %v", failErr)
 	}
@@ -122,11 +130,12 @@ func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, tx *sql
 			"approval_reason": err.Error(),
 		},
 	)
+	proofArtifactID := s.persistConfirmActionFailureProof(r.Context(), proofID, contractID, runID, auditID, err)
 	message := fmt.Sprintf("approved execution failed: %v", err)
 	respondAPIJSON(w, http.StatusInternalServerError, protocol.APIResponse{
 		OK:    false,
 		Error: message,
-		Data:  confirmActionFailureResponseData(proofID, runID, auditID, err),
+		Data:  confirmActionFailureResponseData(proofID, contractID, proofArtifactID, runID, auditID, err),
 	})
 }
 

@@ -117,6 +117,8 @@ func TestHandleCreateGroup_HighImpact_RequiresApproval(t *testing.T) {
 
 	mock.ExpectExec("INSERT INTO log_entries").WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectExec("INSERT INTO intent_proofs").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectQuery("INSERT INTO execution_contracts").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
 	mock.ExpectExec("INSERT INTO confirm_tokens").WillReturnResult(sqlmock.NewResult(1, 1))
 
 	body := `{

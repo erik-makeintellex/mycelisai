@@ -40,6 +40,8 @@ func TestCreateIntentProof(t *testing.T) {
 
 	mock.ExpectExec("INSERT INTO intent_proofs").
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("INSERT INTO execution_contracts").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
 
 	scope := &protocol.ScopeValidation{
 		Tools:             []string{"research_for_blueprint"},
@@ -59,6 +61,9 @@ func TestCreateIntentProof(t *testing.T) {
 	}
 	if proof.Status != "pending" {
 		t.Errorf("Expected status 'pending', got %q", proof.Status)
+	}
+	if proof.ContractID != "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" {
+		t.Errorf("Expected contract_id to be persisted, got %q", proof.ContractID)
 	}
 	if proof.ResolvedIntent != "Build a dashboard" {
 		t.Errorf("Expected intent 'Build a dashboard', got %q", proof.ResolvedIntent)

@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, Server, Database, Loader2, LayoutGrid, CheckCircle, XCircle, AlertTriangle, RefreshCw, Copy, Check } from "lucide-react";
+import { Activity, Server, Database, Loader2, LayoutGrid, CheckCircle, XCircle, AlertTriangle, RefreshCw, Copy, Check, ShieldCheck } from "lucide-react";
+import SystemDeploymentsPanel from "@/components/system/SystemDeploymentsPanel";
 import SystemQuickChecks from "@/components/system/SystemQuickChecks";
 import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
 import { useCortexStore } from "@/store/useCortexStore";
 
-type TabId = "health" | "nats" | "database" | "services";
-const VALID_TABS: TabId[] = ["health", "nats", "database", "services"];
-
+type TabId = "health" | "nats" | "database" | "services" | "deployments";
+const VALID_TABS: TabId[] = ["health", "nats", "database", "services", "deployments"];
 interface HealthStatus {
     goroutines: number;
     heap_alloc_mb: number;
@@ -17,7 +17,6 @@ interface HealthStatus {
     llm_tokens_sec: number;
     timestamp: string;
 }
-
 export default function SystemPage() {
     return (
         <Suspense fallback={<div className="h-full bg-cortex-bg" />}>
@@ -65,6 +64,7 @@ function SystemContent() {
                     <TabButton active={activeTab === "nats"} onClick={() => setActiveTab("nats")} icon={<Server size={14} />} label="Event Bus" />
                     <TabButton active={activeTab === "database"} onClick={() => setActiveTab("database")} icon={<Database size={14} />} label="Storage" />
                     <TabButton active={activeTab === "services"} onClick={() => setActiveTab("services")} icon={<LayoutGrid size={14} />} label="Services" />
+                    <TabButton active={activeTab === "deployments"} onClick={() => setActiveTab("deployments")} icon={<ShieldCheck size={14} />} label="Deployments" />
                 </div>
             </header>
 
@@ -73,6 +73,7 @@ function SystemContent() {
                 {activeTab === "nats" && <NatsStatusTab />}
                 {activeTab === "database" && <DatabaseTab />}
                 {activeTab === "services" && <ServicesTab />}
+                {activeTab === "deployments" && <SystemDeploymentsPanel />}
             </div>
         </div>
     );

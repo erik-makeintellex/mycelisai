@@ -61,7 +61,7 @@ func buildDirectChatExecutionSummary(originalIntent, replyText, auditEventID str
 	}
 }
 
-func buildProposalExecutionSummary(originalIntent string, planned []protocol.PlannedToolCall, mutTools []string, display proposalDisplayContract, proofID, auditEventID string, approval *protocol.ApprovalPolicy) *protocol.ExecutionSummary {
+func buildProposalExecutionSummary(originalIntent string, planned []protocol.PlannedToolCall, mutTools []string, display proposalDisplayContract, proofID, contractID, auditEventID string, approval *protocol.ApprovalPolicy) *protocol.ExecutionSummary {
 	approvalStatus := approvalStatusValue(approval)
 	recoveryState := "awaiting_confirmation"
 	if approvalStatus == "approval_required" {
@@ -70,6 +70,7 @@ func buildProposalExecutionSummary(originalIntent string, planned []protocol.Pla
 	blocker := approvalReasonValue(approval)
 
 	return &protocol.ExecutionSummary{
+		ContractID: contractID,
 		Intent: protocol.ExecutionIntent{
 			Original: strings.TrimSpace(originalIntent),
 			Resolved: "chat-action",
@@ -92,6 +93,7 @@ func buildProposalExecutionSummary(originalIntent string, planned []protocol.Pla
 			RetentionClass: protocol.ExecutionRetentionClassRetained,
 		}},
 		Proof: protocol.ExecutionProof{
+			ContractID:    contractID,
 			RunClass:      protocol.ExecutionRunClassNoRun,
 			NoRunReason:   "Guided proposals create intent proof first; no execution run exists until confirmation.",
 			ProofClass:    protocol.ExecutionProofClassIntentOnly,
@@ -113,7 +115,7 @@ func buildProposalExecutionSummary(originalIntent string, planned []protocol.Pla
 	}
 }
 
-func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult) *protocol.ExecutionSummary {
+func buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult) *protocol.ExecutionSummary {
 	capabilities := []protocol.CapabilityUse{}
 	if scope != nil {
 		capabilities = capabilityUseFromPlannedCalls(scope.PlannedToolCalls, scope.Tools, scope.RiskLevel)
@@ -145,6 +147,8 @@ func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *p
 	}
 
 	return &protocol.ExecutionSummary{
+		ContractID: contractID,
+		ProofID:    proofArtifactID,
 		Intent: protocol.ExecutionIntent{
 			Resolved: "chat-action",
 		},
@@ -159,6 +163,8 @@ func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *p
 		CapabilityUse: capabilities,
 		Outputs:       outputs,
 		Proof: protocol.ExecutionProof{
+			ContractID:    contractID,
+			ProofID:       proofArtifactID,
 			RunID:         runID,
 			RunClass:      protocol.ExecutionRunClassLinked,
 			ProofClass:    protocol.ExecutionProofClassRunAudit,
@@ -184,7 +190,7 @@ func toolResultExists(results []plannedToolExecutionResult, name string) bool {
 	return false
 }
 
-func buildConfirmActionFailureExecutionSummary(proofID, runID, auditID string, err error) *protocol.ExecutionSummary {
+func buildConfirmActionFailureExecutionSummary(proofID, contractID, proofArtifactID, runID, auditID string, err error) *protocol.ExecutionSummary {
 	blocker := "The approved execution failed."
 	if err != nil {
 		blocker = firstNonEmptyString(strings.TrimSpace(err.Error()), blocker)
@@ -204,6 +210,8 @@ func buildConfirmActionFailureExecutionSummary(proofID, runID, auditID string, e
 		}
 	}
 	return &protocol.ExecutionSummary{
+		ContractID: contractID,
+		ProofID:    proofArtifactID,
 		Intent: protocol.ExecutionIntent{
 			Resolved: "chat-action",
 		},
@@ -216,6 +224,8 @@ func buildConfirmActionFailureExecutionSummary(proofID, runID, auditID string, e
 			Summary: "Soma could not complete the approved proposal.",
 		},
 		Proof: protocol.ExecutionProof{
+			ContractID:    contractID,
+			ProofID:       proofArtifactID,
 			RunID:         runID,
 			RunClass:      runClass,
 			NoRunReason:   noRunReason,
@@ -239,59 +249,5 @@ func buildConfirmActionFailureExecutionSummary(proofID, runID, auditID string, e
 			},
 		},
 		NextStep: nextStep,
-	}
-}
-
-func buildMCPToolCallExecutionSummary(serverName, toolName, summary, exchangeItemID string) *protocol.ExecutionSummary {
-	retained := strings.TrimSpace(exchangeItemID) != ""
-	capabilityLabel := strings.TrimSpace(toolName)
-	if server := strings.TrimSpace(serverName); server != "" && capabilityLabel != "" {
-		capabilityLabel = server + ":" + capabilityLabel
-	}
-	return &protocol.ExecutionSummary{
-		Intent: protocol.ExecutionIntent{
-			Resolved: "mcp_tool_call",
-		},
-		Understanding: protocol.ExecutionUnderstanding{
-			Summary: firstNonEmptyString(summary, "MCP tool call completed."),
-			Assumptions: []string{
-				"Direct MCP tool calls are operator-triggered tool invocations.",
-				"No execution run is created unless a run id is supplied by an enclosing runtime path.",
-			},
-		},
-		Execution: protocol.ExecutionState{
-			Shape:   protocol.ExecutionShapeToolAssistedWork,
-			Status:  protocol.ExecutionStatusCompleted,
-			Summary: firstNonEmptyString(summary, "MCP tool call completed."),
-		},
-		CapabilityUse: []protocol.CapabilityUse{{
-			ID:     strings.TrimSpace(toolName),
-			Label:  capabilityLabel,
-			Kind:   protocol.CapabilityUseMCP,
-			Reason: "Direct MCP tool call requested through the admin runtime.",
-		}},
-		Outputs: []protocol.ExecutionOutput{{
-			ID:             exchangeItemID,
-			Kind:           "mcp_tool_result",
-			Title:          firstNonEmptyString(strings.TrimSpace(toolName), "MCP tool result"),
-			Summary:        firstNonEmptyString(summary, "MCP tool call completed."),
-			Retained:       boolPtr(retained),
-			RetentionClass: retentionClassForBool(retained),
-		}},
-		Proof: protocol.ExecutionProof{
-			RunClass:       protocol.ExecutionRunClassNoRun,
-			NoRunReason:    "Direct MCP tool calls are audit/exchange proof only unless invoked inside a run.",
-			ProofClass:     protocol.ExecutionProofClassAuditOnly,
-			ExchangeItemID: exchangeItemID,
-			Verified:       boolPtr(retained),
-		},
-		AuditRecovery: protocol.AuditRecovery{
-			ApprovalStatus: "allow",
-			RecoveryState:  "exchange_recorded",
-			Retryable:      boolPtr(true),
-		},
-		NextStep: &protocol.ExecutionNextStep{
-			Label: "Review MCP result",
-		},
 	}
 }

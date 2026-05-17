@@ -35,6 +35,10 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
 	mux.HandleFunc("DELETE /api/v1/teams/{id}", s.HandleDeleteTeam)
 	mux.HandleFunc("GET /api/v1/teams/detail", s.HandleTeamsDetail)
+	mux.HandleFunc("GET /api/v1/teams/{id}/work", s.HandleListTeamWork)
+	mux.HandleFunc("POST /api/v1/teams/{id}/work", s.HandleCreateTeamWork)
+	mux.HandleFunc("GET /api/v1/teams/{id}/work/{workItemId}/interactions", s.HandleListTeamInteractions)
+	mux.HandleFunc("POST /api/v1/teams/{id}/work/{workItemId}/interactions", s.HandleCreateTeamInteraction)
 	mux.HandleFunc("/api/v1/user/settings", s.HandleUserSettings)
 	mux.HandleFunc("/api/v1/settings/user", s.HandleUserSettings)
 	mux.HandleFunc("GET /api/v1/groups", s.HandleListGroups)
@@ -184,6 +188,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /api/v1/services/status", s.HandleServicesStatus)
 	mux.HandleFunc("GET /api/v1/system/quick-checks/{id}", s.HandleSystemQuickCheck)
+	mux.HandleFunc("GET /api/v1/system/deployments/trust", s.HandleDeploymentTrust)
 	mux.HandleFunc("GET /api/v1/host/status", s.HandleHostStatus)
 	mux.HandleFunc("GET /api/v1/host/actions", s.HandleHostActions)
 	mux.HandleFunc("POST /api/v1/host/actions/{id}/invoke", s.HandleInvokeHostAction)

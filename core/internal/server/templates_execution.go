@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/internal/swarm"
+	"github.com/mycelis/core/internal/trust"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -73,6 +74,37 @@ func (s *AdminServer) createExecutionRunTx(tx *sql.Tx, proofID string) (string, 
 	}
 
 	return runID, nil
+}
+
+func (s *AdminServer) ensureExecutionContractTx(ctx context.Context, tx *sql.Tx, proofID, runID string) (string, error) {
+	if tx == nil {
+		return "", errDBUnavailable
+	}
+	if proofID == "" {
+		return "", fmt.Errorf("proof_id is required")
+	}
+	proofUUID, err := uuid.Parse(proofID)
+	if err != nil {
+		return "", err
+	}
+
+	var templateID string
+	var resolvedIntent string
+	var auditEventID string
+	if err := tx.QueryRowContext(ctx,
+		`SELECT template_id, resolved_intent, COALESCE(audit_event_id::text, '') FROM intent_proofs WHERE id = $1`,
+		proofUUID,
+	).Scan(&templateID, &resolvedIntent, &auditEventID); err != nil {
+		return "", err
+	}
+
+	return trust.UpsertContract(ctx, tx, trust.ContractInput{
+		IntentProofID:  proofID,
+		RunID:          runID,
+		TemplateID:     protocol.TemplateID(templateID),
+		ResolvedIntent: resolvedIntent,
+		AuditEventID:   auditEventID,
+	})
 }
 
 func (s *AdminServer) markRunCompletedTx(tx *sql.Tx, runID, proofID string) error {

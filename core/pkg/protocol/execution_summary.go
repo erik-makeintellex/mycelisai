@@ -38,6 +38,46 @@ const (
 	ExecutionProofClassGuidance   ExecutionProofClass = "guidance_only"
 )
 
+type ExecutionContractStatus string
+
+const (
+	ExecutionContractStatusProposed  ExecutionContractStatus = "proposed"
+	ExecutionContractStatusConfirmed ExecutionContractStatus = "confirmed"
+	ExecutionContractStatusCompleted ExecutionContractStatus = "completed"
+	ExecutionContractStatusFailed    ExecutionContractStatus = "failed"
+)
+
+type ProofArtifactStatus string
+
+const (
+	ProofArtifactStatusSuccess  ProofArtifactStatus = "success"
+	ProofArtifactStatusFailure  ProofArtifactStatus = "failure"
+	ProofArtifactStatusDegraded ProofArtifactStatus = "degraded"
+)
+
+type TrustValidationSource string
+
+const (
+	TrustValidationSourceIntentProof   TrustValidationSource = "intent_proof"
+	TrustValidationSourceConfirmAction TrustValidationSource = "confirm_action"
+)
+
+type TrustEvidenceStrength string
+
+const (
+	TrustEvidenceStrengthIntentOnly TrustEvidenceStrength = "intent_only"
+	TrustEvidenceStrengthRunAudit   TrustEvidenceStrength = "run_audit"
+	TrustEvidenceStrengthDegraded   TrustEvidenceStrength = "degraded"
+)
+
+type TrustProofQuality string
+
+const (
+	TrustProofQualityProposed TrustProofQuality = "proposed"
+	TrustProofQualityVerified TrustProofQuality = "verified"
+	TrustProofQualityFailed   TrustProofQuality = "failed"
+)
+
 type ExecutionRetentionClass string
 
 const (
@@ -57,6 +97,8 @@ const (
 )
 
 type ExecutionSummary struct {
+	ContractID    string                 `json:"contract_id,omitempty"`
+	ProofID       string                 `json:"proof_id,omitempty"`
 	Intent        ExecutionIntent        `json:"intent"`
 	Understanding ExecutionUnderstanding `json:"understanding"`
 	Execution     ExecutionState         `json:"execution"`
@@ -106,6 +148,8 @@ type ExecutionOutput struct {
 }
 
 type ExecutionProof struct {
+	ContractID     string              `json:"contract_id,omitempty"`
+	ProofID        string              `json:"proof_id,omitempty"`
 	RunID          string              `json:"run_id,omitempty"`
 	RunClass       ExecutionRunClass   `json:"run_class,omitempty"`
 	NoRunReason    string              `json:"no_run_reason,omitempty"`

@@ -86,7 +86,7 @@ func TestBuildDirectChatExecutionSummary_RetainsProjectPackageArtifact(t *testin
 }
 
 func TestBuildConfirmActionFailureExecutionSummary_DescribesDegradation(t *testing.T) {
-	summary := buildConfirmActionFailureExecutionSummary("proof-1", "run-1", "audit-1", errors.New("tool unavailable"))
+	summary := buildConfirmActionFailureExecutionSummary("proof-1", "contract-1", "artifact-1", "run-1", "audit-1", errors.New("tool unavailable"))
 
 	if summary.Execution.Status != protocol.ExecutionStatusFailed {
 		t.Fatalf("execution.status = %q", summary.Execution.Status)
@@ -110,7 +110,7 @@ func TestBuildConfirmActionFailureExecutionSummary_DescribesDegradation(t *testi
 }
 
 func TestBuildConfirmActionFailureExecutionSummary_SkipsRunLinkWithoutRunID(t *testing.T) {
-	summary := buildConfirmActionFailureExecutionSummary("proof-1", "", "audit-1", errors.New("tool unavailable"))
+	summary := buildConfirmActionFailureExecutionSummary("proof-1", "contract-1", "artifact-1", "", "audit-1", errors.New("tool unavailable"))
 
 	if summary.Proof.RunClass != protocol.ExecutionRunClassNoRun || summary.Proof.NoRunReason == "" {
 		t.Fatalf("proof = %+v", summary.Proof)

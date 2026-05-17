@@ -17,6 +17,11 @@ type ServiceStatus struct {
 
 // GET /api/v1/services/status — health snapshot of all system services.
 func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Request) {
+	services := s.buildServiceStatuses(r.Context())
+	respondJSON(w, map[string]any{"ok": true, "data": services})
+}
+
+func (s *AdminServer) buildServiceStatuses(ctx context.Context) []ServiceStatus {
 	var services []ServiceStatus
 
 	// ── NATS ─────────────────────────────────────────────────────────────
@@ -34,7 +39,7 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 	dbStatus := ServiceStatus{Name: "postgres"}
 	if s.DB != nil {
 		start := time.Now()
-		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		err := s.DB.PingContext(ctx)
 		cancel()
 		dbStatus.LatencyMs = time.Since(start).Milliseconds()
@@ -189,7 +194,7 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 	}
 	services = append(services, groupBusStatus)
 
-	respondJSON(w, map[string]any{"ok": true, "data": services})
+	return services
 }
 
 // itoa converts an int to a string without importing strconv at top-level.

@@ -37,6 +37,8 @@
 | `/api/v1/teams` | GET | List active teams |
 | `/api/v1/teams/{id}` | DELETE | Stop and remove one active runtime team. Use this for temporary-team cleanup so delivery tests stay bounded to 1-3 targeted teams instead of accumulating stale runtime teams. |
 | `/api/v1/teams/detail` | GET | Team detail with agent rosters, delivery targets, and status |
+| `/api/v1/teams/{id}/work` | GET/POST | Durable team-work items for Soma/Council/operator management. `create_team` items may only be `new` or `briefed`; delegated or deliverable work may be `queued`, `running`, `needs_operator`, `reviewing`, `output_ready`, `degraded`, `paused`, or `archived`. Items link optional `run_id`, `intent_proof_id`, additive Runtime trust `contract_id`/`proof_id`, `audit_refs`, and retained `output_refs`. |
+| `/api/v1/teams/{id}/work/{workItemId}/interactions` | GET/POST | Durable `TeamInteraction` records for a work item, including `source_kind`, `source_channel`, `actor_ref`, verb, summary, `payload_kind`, optional bounded payload/ref, approval ref, audit refs, and optional run/proof links. |
 | `/api/swarm/teams` | POST | Create team via Soma |
 | `/api/swarm/command` | POST | Send command to specific team |
 | `/api/v1/swarm/broadcast` | POST | Fan out directive to ALL active teams |
@@ -150,6 +152,7 @@
 | **Service Health** | | |
 | `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive, Reactive, Scheduler, Comms, Group Bus monitor |
 | `/api/v1/system/quick-checks/{id}` | GET | Focused system quick check; currently supports `scheduler` for Automation timing |
+| `/api/v1/system/deployments/trust` | GET | Deployment trust snapshot for System -> Deployments: deployment/execution/workspace/artifact roots, current commit, image tag, chart version, deployment/proof lanes, endpoint and recovery posture, and runtime health summary. Unknown or unavailable values are returned as `unknown`; secrets are never exposed. |
 
 Memory/governance note:
 - `AGENT_MEMORY` is the canonical team-shared execution lane

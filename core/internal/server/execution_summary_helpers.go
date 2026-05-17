@@ -1,9 +1,13 @@
 package server
 
 import (
+	"context"
+	"log"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/runs"
+	"github.com/mycelis/core/internal/trust"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -122,28 +126,89 @@ func retentionClassForBool(retained bool) protocol.ExecutionRetentionClass {
 	return protocol.ExecutionRetentionClassNonRetained
 }
 
-func confirmActionResponseData(proofID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult) map[string]any {
+func confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult) map[string]any {
 	return map[string]any{
 		"confirmed":         true,
 		"verified":          true,
 		"execution_state":   "verified",
 		"proof_id":          proofID,
+		"intent_proof_id":   proofID,
+		"contract_id":       contractID,
+		"proof_artifact_id": proofArtifactID,
 		"audit_event_id":    auditID,
 		"run_id":            runID,
 		"run_status":        runs.StatusCompleted,
-		"execution_summary": buildConfirmActionExecutionSummary(proofID, runID, auditID, scope, results),
+		"execution_summary": buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, runID, auditID, scope, results),
 	}
 }
 
-func confirmActionFailureResponseData(proofID, runID, auditID string, err error) map[string]any {
+func confirmActionFailureResponseData(proofID, contractID, proofArtifactID, runID, auditID string, err error) map[string]any {
 	return map[string]any{
 		"confirmed":         false,
 		"verified":          false,
 		"execution_state":   "failed",
 		"proof_id":          proofID,
+		"intent_proof_id":   proofID,
+		"contract_id":       contractID,
+		"proof_artifact_id": proofArtifactID,
 		"audit_event_id":    auditID,
 		"run_id":            runID,
 		"run_status":        runs.StatusFailed,
-		"execution_summary": buildConfirmActionFailureExecutionSummary(proofID, runID, auditID, err),
+		"execution_summary": buildConfirmActionFailureExecutionSummary(proofID, contractID, proofArtifactID, runID, auditID, err),
 	}
+}
+
+func (s *AdminServer) persistConfirmActionSuccessProof(ctx context.Context, proofID, contractID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult) string {
+	artifactID := uuid.NewString()
+	summary := buildConfirmActionExecutionSummary(proofID, contractID, artifactID, runID, auditID, scope, results)
+	return s.recordConfirmActionProofArtifact(ctx, artifactID, proofID, contractID, runID, auditID, protocol.ProofArtifactStatusSuccess, summary, summary.Outputs, nil)
+}
+
+func (s *AdminServer) persistConfirmActionFailureProof(ctx context.Context, proofID, contractID, runID, auditID string, err error) string {
+	artifactID := uuid.NewString()
+	summary := buildConfirmActionFailureExecutionSummary(proofID, contractID, artifactID, runID, auditID, err)
+	var degradation any
+	if summary.AuditRecovery.Degradation != nil {
+		degradation = summary.AuditRecovery.Degradation
+	}
+	return s.recordConfirmActionProofArtifact(ctx, artifactID, proofID, contractID, runID, auditID, protocol.ProofArtifactStatusFailure, summary, summary.Outputs, degradation)
+}
+
+func (s *AdminServer) recordConfirmActionProofArtifact(ctx context.Context, artifactID, proofID, contractID, runID, auditID string, status protocol.ProofArtifactStatus, summary *protocol.ExecutionSummary, outputs []protocol.ExecutionOutput, degradation any) string {
+	db := s.getDB()
+	if db == nil {
+		return ""
+	}
+	evidenceStrength := protocol.TrustEvidenceStrengthRunAudit
+	proofQuality := protocol.TrustProofQualityVerified
+	if status == protocol.ProofArtifactStatusFailure || status == protocol.ProofArtifactStatusDegraded {
+		evidenceStrength = protocol.TrustEvidenceStrengthDegraded
+		proofQuality = protocol.TrustProofQualityFailed
+	}
+	recordedID, err := trust.NewStore(db).RecordProofArtifact(ctx, trust.ProofArtifactInput{
+		ID:               artifactID,
+		ContractID:       contractID,
+		IntentProofID:    proofID,
+		RunID:            runID,
+		AuditEventID:     auditID,
+		Status:           status,
+		ProofClass:       protocol.ExecutionProofClassRunAudit,
+		ValidationSource: protocol.TrustValidationSourceConfirmAction,
+		EvidenceStrength: evidenceStrength,
+		ProofQuality:     proofQuality,
+		OutputRefs:       outputs,
+		AuditRefs:        []map[string]string{{"audit_event_id": auditID, "source": "log_entries"}},
+		ReviewLineage: []map[string]string{{
+			"event":  "confirm_action_" + string(status),
+			"source": string(protocol.TrustValidationSourceConfirmAction),
+		}},
+		Degradation: degradation,
+		Recovery:    summary.AuditRecovery,
+		Payload:     summary,
+	})
+	if err != nil {
+		log.Printf("CE-1: confirm-action proof artifact persistence failed: %v", err)
+		return ""
+	}
+	return recordedID
 }

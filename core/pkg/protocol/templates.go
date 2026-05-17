@@ -74,6 +74,7 @@ type ConfirmToken struct {
 // Generated BEFORE execution. No proof = no commit.
 type IntentProof struct {
 	ID               string           `json:"id"`
+	ContractID       string           `json:"contract_id,omitempty"`
 	TemplateID       TemplateID       `json:"template_id"`
 	ResolvedIntent   string           `json:"resolved_intent"`
 	UserConfirmToken string           `json:"user_confirmation_token,omitempty"`

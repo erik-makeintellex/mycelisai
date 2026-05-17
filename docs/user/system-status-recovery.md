@@ -69,6 +69,8 @@ Automation timing calls the backend scheduler quick-check endpoint directly. A h
 
 External Comms is optional in the self-hosted runtime. If the Comms gateway is online but no Slack/Telegram/WhatsApp-style provider secrets are configured, `/system` should show the gateway as online with provider readiness in the detail text instead of treating the whole service as degraded.
 
+The Deployments tab shows the deployment trust snapshot from `/api/v1/system/deployments/trust`: deployment root, execution root, workspace root, artifact root, current commit, image tag, chart version, deployment lane, endpoint posture, runtime health, proof lane, and recovery posture. Rows are copyable for support/debug threads. Missing values are shown as `unknown` instead of guessed, and secret material is not exposed.
+
 ---
 
 ## Recommended Recovery Sequence

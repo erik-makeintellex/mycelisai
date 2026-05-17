@@ -39,6 +39,8 @@ Supported user access lanes:
 - Windows + WSL Docker: run the rapid local Compose stack from WSL, then use the Windows browser as the first operator proof path through `http://localhost:3000`
 - Kubernetes / Helm clustered deployment: run the verified chart on the target cluster and open the UI through the same ingress, hostname, or IP operators will really use remotely
 
+After bring-up, Advanced mode -> System -> Deployments should show the trust snapshot for the active lane. Treat `unknown` values as missing deployment metadata to fix in the runtime environment rather than as proof of a healthy release posture.
+
 ## Docker Compose Single Host
 
 Choose Docker Compose when you want rapid local development, same-machine proof, or a quick demo loop.

@@ -17,6 +17,8 @@ func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 			AuditEventID:    "audit-1",
 		},
 		ExecutionSummary: &ExecutionSummary{
+			ContractID: "contract-1",
+			ProofID:    "proof-artifact-1",
 			Intent: ExecutionIntent{
 				Original: "Explain the brief",
 				Resolved: "answer",
@@ -35,6 +37,8 @@ func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 				RetentionClass: ExecutionRetentionClassRetained,
 			}},
 			Proof: ExecutionProof{
+				ContractID:   "contract-1",
+				ProofID:      "proof-artifact-1",
 				RunClass:     ExecutionRunClassNoRun,
 				NoRunReason:  "direct answer",
 				ProofClass:   ExecutionProofClassAuditOnly,
@@ -81,6 +85,9 @@ func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 	proof := summary["proof"].(map[string]any)
 	if proof["run_class"] != string(ExecutionRunClassNoRun) || proof["proof_class"] != string(ExecutionProofClassAuditOnly) {
 		t.Fatalf("proof classification = %+v", proof)
+	}
+	if summary["contract_id"] != "contract-1" || summary["proof_id"] != "proof-artifact-1" || proof["contract_id"] != "contract-1" || proof["proof_id"] != "proof-artifact-1" {
+		t.Fatalf("trust object ids missing from summary/proof: summary=%+v proof=%+v", summary, proof)
 	}
 	outputs := summary["outputs"].([]any)
 	output := outputs[0].(map[string]any)

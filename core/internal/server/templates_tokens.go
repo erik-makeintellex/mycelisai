@@ -1,12 +1,14 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"log"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mycelis/core/internal/trust"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -48,9 +50,21 @@ func (s *AdminServer) createIntentProof(templateID protocol.TemplateID, intent s
 		return nil, err
 	}
 
+	contractID, err := trust.NewStore(db).UpsertContract(context.Background(), trust.ContractInput{
+		IntentProofID:  id.String(),
+		TemplateID:     templateID,
+		ResolvedIntent: intent,
+		AuditEventID:   auditEventID,
+	})
+	if err != nil {
+		log.Printf("CE-1: execution contract upsert failed: %v", err)
+		return nil, err
+	}
+
 	now := time.Now()
 	return &protocol.IntentProof{
 		ID:              id.String(),
+		ContractID:      contractID,
 		TemplateID:      templateID,
 		ResolvedIntent:  intent,
 		PermissionCheck: "pass",

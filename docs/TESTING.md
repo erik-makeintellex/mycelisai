@@ -74,19 +74,17 @@ Every accepted user-interaction proof must verify:
 Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof and [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for the full browser matrix.
 
 ## Finalization Concretization Gate
-
 Every finalization slice must prove the concrete runtime contract it touches, not only that screens render or APIs return `200`.
 
 | Contract | Required proof | Status |
 | --- | --- | --- |
 | Canonical MVP workflow | headed/live proof for Soma request -> proposal when required -> approval -> run -> output -> proof/audit -> revisit | `ACTIVE` |
-| ExecutionContract | API/unit proof for contract id, execution shape, governance posture, required capabilities, expected output/proof, recovery/degradation, run linkage, version/timestamps | `REQUIRED` |
-| ProofArtifact | API/UI proof for proof id, run id, status, evidence/output/audit refs, validation source, proof quality, degradation state, recovery options, confidence provenance | `REQUIRED` |
+| ExecutionContract | API/unit proof for contract id, execution shape, governance posture, required capabilities, expected output/proof, recovery/degradation, run linkage, version/timestamps | `IN_REVIEW` for confirm-action |
+| ProofArtifact | API/UI proof for proof id, run id, status, evidence/output/audit refs, validation source, proof quality, degradation state, recovery options, confidence provenance | `IN_REVIEW` for confirm-action |
 | UI response states | component/browser proof for direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, partial completion | `REQUIRED` |
 | CapabilityManifestState | persistence/API/UI proof for capability id, health, probe status, risk, approval posture, allowed roles, output schemas, failure/recovery posture, manifest version | `REQUIRED` |
-| Deployment trust | `System -> Deployments` proof for deployment/execution/workspace roots, current commit, endpoint posture, runtime posture, proof lane, recovery state | `NEXT` |
+| Deployment trust | `System -> Deployments` proof for deployment/execution/workspace roots, current commit, endpoint posture, runtime posture, proof lane, recovery state | `IN_REVIEW`; backend/API and mocked browser proof are available, live proof depends on refreshed source services |
 Related active contracts: [V8 UI/API and Operator Experience Contract](architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md), [V8 Directed Execution Delivery Plan](architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md), [V8 UI Testing Agentry Product Contract](architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md), and [V8.2 Current State And Finalization PRD](architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md). Current GUI proof status: live Soma governance, team execution, and playable-output flows are green through `soma-governance-live.spec.ts`, `team-execution-live.spec.ts`, and `team-output-content-live.spec.ts`. The exact first demo slice now has focused browser specs: `ui-finalization-browser-package-live.spec.ts` proves package metadata, proof opening, reload, and Groups output against a live backend, while `ui-finalization-browser-package-retry.spec.ts` proves the degraded/retry UI path with mocked failure.
-
 ## Full GUI Coverage Matrix
 
 Current browser workflow details live in [V8 UI Team Browser Workflows](architecture-library/V8_UI_TEAM_BROWSER_WORKFLOWS.md). Keep this document as the validation policy entrypoint rather than a route-by-route duplicate.
@@ -101,7 +99,6 @@ Minimum route families under active proof:
 - legacy redirect routes
 
 ## Backend/API -> UI Target Plan
-
 When backend/API behavior changes, attach this block before review:
 
 ```md
@@ -123,7 +120,6 @@ Backend/API -> UI Target Plan
 ```
 
 No backend/API review is complete without a mapped UI target and evidence result.
-
 ## Clean Run Discipline
 
 - Stop prior local services before runtime or integration tests: `uv run inv lifecycle.down`.
@@ -172,6 +168,10 @@ uv run inv interface.e2e --headed --live-backend --server-mode=external --projec
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=e2e/specs/team-output-content-live.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/ui-finalization-browser-package-live.spec.ts
 ```
+Finalization proof order after integration:
+1. Run the mocked browser harness serially with `--project=chromium --workers=1`: `first-demo-success.spec.ts`, `ui-finalization-browser-package-retry.spec.ts`, `desktop-mobile-compression.spec.ts`, `system-deployments.spec.ts`, and `active-work-api.spec.ts`.
+2. Run source gates: `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.build`, docs tests, and focused backend tests for changed APIs.
+3. Run live first-demo proof after Core/Interface are integrated: `ui-finalization-browser-package-live.spec.ts` with headed live backend; enable `PLAYWRIGHT_TEAM_WORK_API=1` only when migrated team-work tables and a team id are available.
 Use `uv run inv interface.e2e --headed --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-media-artifacts.spec.ts` when chat media rendering, saved-media downloads, or local storage-folder reveal controls change. The focused browser proof should show image previews, playable media or downloadable binary artifacts, saved paths, and an operator-visible control that opens the mounted storage location for generated content.
 Use `npm test -- WorkspaceExplorer MCPToolRegistry MCPLibraryBrowser MCPServerCard --maxWorkers=1` from `interface/` when Connected Tools, filesystem MCP, Workspace Files browsing, or MCP output generation contracts change. The focused component proof should verify the current filesystem MCP tool names (`list_directory`, `read_text_file`, `create_directory`, `write_file`), the MCP-safe `workspace` root, and the standard `{"arguments": {...}}` call envelope. Use `uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/resources-workspace-files.spec.ts` when the live browser must prove Resources -> Workspace Files can browse, write, reopen, and review a generated workspace output through filesystem MCP.
 Use `cd core; go test ./internal/server -run "Test(ParsePlannedToolCall|HandleConfirmAction|ExecutePlannedToolCalls)" -count=1` when governed proposal planning or confirm-action replay changes. The focused backend proof should verify explicit `tool_ref` MCP plans retain the `mcp:server/tool` identity, execute through the MCP executor after approval, and return retained `mcp_tool_result` outputs instead of silently falling back to same-named internal tools.
