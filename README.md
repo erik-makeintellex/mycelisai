@@ -111,11 +111,11 @@ Status changes in planning/state docs must use the canonical markers: `REQUIRED`
 Default surfaces should read as product workflows, not raw system internals:
 - Soma is the primary counterpart.
 - Dashboard and organization workspaces share the same Soma operating surface.
-- Intent suggestions live inside Soma, not as competing panels or separate front doors.
+- Intent suggestions live inside Soma, not as competing panels or separate front doors; they should frame outcome, output shape, proof, and next action rather than raw prompts.
 - Meaningful actions must show a causal summary: understood intent, coordination, outputs, state changes, and next step.
 - AI Organizations are governed work contexts.
 - Teams and groups are visible when they help the operator review or steer work.
-- Advanced controls expose runtime depth, MCP/resources, deep memory, groups, runs, settings, auth, and docs without polluting first-run or default use.
+- Advanced controls expose runtime depth, MCP/resources, deep memory, groups, runs, settings, auth, and docs without polluting first-run or default use; long topology surfaces should use focused menu/detail or list/detail panes rather than primary-page sprawl.
 
 Use [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) for screen/API expectations and [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for browser proof.
 

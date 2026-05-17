@@ -24,8 +24,11 @@ The UI testing agentry must cover these operator-visible actions.
 | Surface | Required operator action | Required proof |
 | --- | --- | --- |
 | AI Organization entry | Open an existing AI Organization and land in the Soma-first workspace | Soma is clearly primary and the organization frame stays visible |
+| Expression framing | Ask Soma for a meaningful output | UI shows outcome, output shape, audience/use or assumption, agentry posture, proof expectation, and next action before exposing raw topology |
 | Direct Soma answer | Ask a non-mutating question in the main Soma conversation | Response lands in `answer` state with readable content |
 | Governed mutation | Ask for a file or other mutating action | Response lands in `proposal` state with approval context and capability risk |
+| Active work lane | Start or resume execution that is not instantly complete | Queued, running, blocked, degraded, output-ready, and proof-retained states are visible as work state, not buried in the transcript |
+| Output workbench | Open a retained file, package, review, or media result | Output preview/open/reveal/reconstruct controls are visible with run/proof linkage |
 | ExecutionContract | Approve or inspect governed work | Contract id, execution shape, governance posture, expected outputs/proof, recovery posture, degradation behavior, run linkage, and version/timestamps are visible or API-proven |
 | ProofArtifact | Revisit an executed or failed run | Proof id, run id, status, evidence/output/audit refs, validation source, proof quality, degradation state, recovery options, and confidence provenance fields are visible or API-proven |
 | UI response states | Exercise all terminal and in-progress states | Direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, and partial completion render as operator-readable states |
@@ -38,6 +41,7 @@ The UI testing agentry must cover these operator-visible actions.
 | Continuity | Refresh or re-enter the same AI Organization | Prior Soma context remains legible and scoped to that organization |
 | Audit visibility | Open Automations -> Approvals -> Audit | Inspect-only `Activity Log` shows recent governance and execution events |
 | Large content resilience | Ask for oversized markdown or code output | Content stays inside a bounded reading surface with horizontal overflow handling |
+| Single-window browser expression | Review Dashboard, Teams, Resources, Runs, System, and Settings at desktop and mobile widths | Primary work uses bounded list/detail or menu/detail panes; route-level and inner-window scroll do not hide input, active work, output, or trust controls |
 | Wording hygiene | Review workspace and support surfaces | No developer-only or architecture-leaking language appears in the normal path |
 
 ## Evidence Model
@@ -129,5 +133,7 @@ The UI testing agentry must fail the release recommendation if any of the follow
 - the operator cannot refresh or re-enter with confidence
 - audit visibility is missing or only exposes raw backend noise
 - default-path UI copy leaks developer-facing architecture terms
+- browser layout technically avoids overflow but still leaves too little practical work surface for a new user
+- Teams, Resources, Runs, System, or Settings require long-scroll topology reading before a normal operator can continue work
 
 Passing this contract means the product behavior is believable, governed, and explainable from the operator's point of view.

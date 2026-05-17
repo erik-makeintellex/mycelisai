@@ -8,14 +8,15 @@ This index keeps the current UI/API contract stable and delegates durable detail
 - [V8 UI API Screen Contracts](V8_UI_API_SCREEN_CONTRACTS.md)
 - [V8 UI Delivery And Governance Contract](V8_UI_DELIVERY_AND_GOVERNANCE_CONTRACT.md)
 - [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md)
+- [V8.2 Soma UI Architecture Expression](V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md)
 
 Compatibility note: [V8 Universal Soma And Context Model PRD](V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md) defines the next product correction where Soma and Council are universal entities and AI Organizations are governed work contexts.
 
 ## 1. Why this document exists
 
-V8 UI must feel like creating and operating an AI Organization, not a generic chat app with architecture labels. This contract protects terminology, source-of-truth layering, screen state, and proof expectations.
+V8 UI must feel like asking Soma for governed work and operating the resulting outputs, not a generic chat app with architecture labels. This contract protects terminology, source-of-truth layering, screen state, and proof expectations.
 
-The default product experience must feel like creating and operating an AI Organization.
+The default product experience must feel like creating and operating an AI Organization. In the V8.2 target expression, that means one Soma work surface with scoped contexts for organizations, teams, outputs, runs, resources, and deployments.
 
 ## 2. Canonical terminology
 
@@ -33,7 +34,7 @@ UI copy should use these terms directly unless a screen is explicitly compatibil
 
 ### 3.1 Anti-generic-chat rule
 
-The product must not open as a raw assistant shell. First-run creates or explores AI Organizations; re-entry opens the last or selected organization and leads to Soma.
+The product must not open as a raw assistant shell. First-run should make clear what Soma can do, how expression becomes work, where output/proof appears, and when an AI Organization is the right scoped context. Re-entry opens the last or selected work context and leads to Soma.
 
 ### 3.2 Progressive disclosure rule
 
@@ -44,7 +45,10 @@ Default UI shows organization identity, Soma, purpose, starter path, Team Lead s
 Default operator surface:
 - create/re-enter AI Organization
 - Soma workspace
-- intent-driven interaction
+- expression-framed interaction
+- active work lane
+- output workbench
+- proof/recovery trust package
 - guided teams/groups
 - activity, memory, resources, and settings
 
@@ -121,7 +125,9 @@ The header keeps organization identity, status, and navigation legible.
 
 Soma owns answers, proposals, execution results, blockers, and recovery.
 
-The dashboard Soma surface and the AI Organization Soma surface use one shared operating model. Intent suggestions live inside Soma. After meaningful actions, the interface shows an Operator trust package that connects what Soma understood, what teams/tools were coordinated, what outputs were produced, what proof exists, what state changed, and what the user can do next.
+The dashboard Soma surface and the AI Organization Soma surface use one shared operating model. Intent suggestions live inside Soma and should be phrased as concrete outcomes. The workspace frames user expression as outcome, output shape, audience/use, constraints, agentry posture, proof, and continuation before showing internal topology. After meaningful actions, the interface shows an Operator trust package that connects what Soma understood, what teams/tools were coordinated, what outputs were produced, what proof exists, what state changed, and what the user can do next.
+
+The target workspace keeps expression, active work, output preview, and trust summary together. Teams, Resources, Runs, System, and Settings use focused list/detail or menu/detail panes so primary browser work does not become a long scrolling topology page.
 
 When execution degrades, the same package must expose:
 - what failed
@@ -172,8 +178,11 @@ Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) for full browser pro
 
 Minimum product proof covers:
 - organization entry/re-entry
+- expression framing into output/proof expectations
 - Soma direct answer
 - governed proposal cancel/execute
+- active work lane state for running, blocked, degraded, and output-ready work
+- durable output review from the output workbench
 - team/group creation and retained output review
 - inspectable escalation rationale, source/tool use, and produced output
 - deployment/execution-root visibility when release proof or recovery depends on it
