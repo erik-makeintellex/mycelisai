@@ -1,83 +1,71 @@
-# Mycelis V7 PRD Index
+# Mycelis PRD Compatibility Index
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Status: Canonical compatibility entrypoint
-> Last Updated: 2026-03-07
-> Purpose: Preserve the stable root PRD path while moving detailed planning authority into the modular architecture library.
+> Status: Compatibility entrypoint
+> Last Updated: 2026-05-16
+> Purpose: Preserve the stable historical PRD path while pointing active work to the current V8.2 architecture and finalization surfaces.
 
 ## TOC
 
-- [Why This File Changed](#why-this-file-changed)
-- [Canonical Planning Surface](#canonical-planning-surface)
-- [Core Product Position](#core-product-position)
-- [Supporting Detailed Authorities](#supporting-detailed-authorities)
-- [Current Delivery Framing](#current-delivery-framing)
+- [Why This File Exists](#why-this-file-exists)
+- [Current Authority](#current-authority)
+- [Compatibility Boundary](#compatibility-boundary)
+- [Current Product Position](#current-product-position)
+- [Delivery Framing](#delivery-framing)
 
-## Why This File Changed
+## Why This File Exists
 
-`architecture/mycelis-architecture-v7.md` previously acted as a massive all-in-one planning file.
+`architecture/mycelis-architecture-v7.md` is a retained path for older references and agent onboarding. It is not the place to grow new doctrine, topology language, or detailed product plans.
 
-That made it difficult to:
-- keep target state current
-- update UI concepts without creating more information swarm
-- separate architecture from delivery proof
-- maintain recurring-plan concepts without restating the whole platform
+The prior monolithic V7 documents have been removed from active documentation because they were superseded by V8.2 operational-embodiment contracts. New work should enter through the current modular library.
 
-The detailed authority is now split into the modular library under `docs/architecture-library/`.
-
-## Canonical Planning Surface
+## Current Authority
 
 Start here:
 - [Architecture Library Index](../docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
-
-Primary detailed documents:
-- [Target Deliverable V7](../docs/architecture-library/TARGET_DELIVERABLE_V7.md)
-- [System Architecture V7](../docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md)
-- [Execution And Manifest Library V7](../docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+- [V8.2 Full Production Architecture](v8-2.md)
+- [V8.2 Current State And Finalization PRD](../docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
 - [V8.2 Operational Embodiment Directive](../docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md)
-- [UI And Operator Experience V7](../docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
-- [Delivery Governance And Testing V7](../docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
-- [Team Execution And Global State Protocol V7](../docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
+- [V8 Runtime Contracts](../docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
+- [V8 UI/API and Operator Experience Contract](../docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+- [V8 Capability Manifest And Runtime Integration Standard](../docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
+- [V8 Directed Execution Delivery Plan](../docs/architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md)
+- [V8 Development State](../.state/V8_DEV_STATE.md)
 
-## Core Product Position
-
-Mycelis is targeting a governed execution system where:
-- direct intent can return an answer
-- governed intent can return a proposal
-- executable intent can return a visible result
-- blocked intent returns a concrete recovery path
-
-Current V8.2 positioning frames Mycelis as a governed cognitive operating environment. New target work should prioritize operational embodiment: visible execution, durable outputs, recoverable runs, deployment trust, and repeatable proof before adding more doctrine.
-
-The platform must support plans that are:
-- `one_shot`
-- `scheduled`
-- `persistent_active`
-- `event_driven`
-
-The UI must help operators accomplish those outcomes without degenerating into a raw information swarm.
-
-## Supporting Detailed Authorities
-
-Use these specialized references alongside the modular library:
+Supporting implementation references:
 - [Overview](../docs/architecture/OVERVIEW.md)
 - [Backend](../docs/architecture/BACKEND.md)
 - [Frontend](../docs/architecture/FRONTEND.md)
 - [Operations](../docs/architecture/OPERATIONS.md)
-- [NATS Signal Standard V7](../docs/architecture/NATS_SIGNAL_STANDARD_V7.md)
-- [UI Target And Transaction Contract V7](../docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
-- [Workflow Composer Delivery V7](../docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md)
-- [Team Execution And Global State Protocol V7](../docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
+- [Testing](../docs/TESTING.md)
 
-## Current Delivery Framing
+## Compatibility Boundary
 
-The canonical phase order remains:
-- `P0` operational foundation
-- `P1` logging, error handling, and cleanup
-- `P2` meta-agent-owned manifest pipeline
-- `P3` workflow-composer onboarding and execution-facing UI
-- `P4` release hardening
+Historical V7 development state remains in [.state/V7_DEV_STATE.md](../.state/V7_DEV_STATE.md) as migration evidence only. It should not be used as product authority when it conflicts with current V8.2 docs.
 
-The detailed target and acceptance language now lives in:
-- [Target Deliverable V7](../docs/architecture-library/TARGET_DELIVERABLE_V7.md)
-- [Delivery Governance And Testing V7](../docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
+Superseded archive drafts and old V7 topical documents are intentionally deleted rather than retained as stale reference material. If a missing concept is still needed, promote it into the appropriate current V8.2 contract instead of restoring an old document.
+
+## Current Product Position
+
+Mycelis is a Soma-centered governed cognitive operating environment.
+
+The operator experience should collapse into:
+- I tell Soma what I want.
+- Soma directs the work safely.
+- I can see what happened.
+- I can trust the result.
+
+Current V8.2 work prioritizes operational embodiment: visible runs, durable outputs, inspectable proof, recovery, deployment trust, and confidence provenance preparation.
+
+## Delivery Framing
+
+Every implementation slice should answer:
+- Does this improve embodiment?
+- Does this improve operator trust?
+- Does this improve visible execution?
+- Does this improve recoverability?
+- Does this improve deployment reality?
+- Does this reduce conceptual density?
+- Does this strengthen Soma as the singular operating surface?
+
+The active finalization roadmap lives in [V8.2 Current State And Finalization PRD](../docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md).

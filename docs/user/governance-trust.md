@@ -130,4 +130,5 @@ Related references:
 - `docs/architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md`
 - `docs/architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
 - `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
-- `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
+- `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`
+- `docs/architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md`

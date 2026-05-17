@@ -13,8 +13,9 @@ V8_BOOTSTRAP_MODEL = ROOT / "docs" / "architecture-library" / "V8_CONFIG_AND_BOO
 V8_UI_API_CONTRACT = ROOT / "docs" / "architecture-library" / "V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md"
 V8_1_LIVING_ARCHITECTURE = ROOT / "docs" / "architecture-library" / "V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md"
 V8_2_FULL_ARCHITECTURE = ROOT / "architecture/v8-2.md"
-SOMA_COUNCIL_PROTOCOL = ROOT / "docs" / "architecture" / "SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md"
-UI_OPERATOR_EXPERIENCE = ROOT / "docs" / "architecture-library" / "UI_AND_OPERATOR_EXPERIENCE_V7.md"
+V8_2_CURRENT_STATE_PRD = ROOT / "docs" / "architecture-library" / "V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md"
+V8_DIRECTED_EXECUTION_PLAN = ROOT / "docs" / "architecture-library" / "V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md"
+V8_CAPABILITY_MANIFEST = ROOT / "docs" / "architecture-library" / "V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md"
 CANONICAL_DOCS = [
     README,
     PRD_INDEX,
@@ -22,7 +23,8 @@ CANONICAL_DOCS = [
     ROOT / "docs" / "architecture" / "OPERATIONS.md",
     ROOT / "ops" / "README.md",
     ROOT / "docs" / "user" / "system-status-recovery.md",
-    ROOT / "docs" / "architecture" / "WORKFLOW_COMPOSER_DELIVERY_V7.md",
+    V8_2_CURRENT_STATE_PRD,
+    V8_CAPABILITY_MANIFEST,
 ]
 
 
@@ -76,15 +78,12 @@ def test_docs_manifest_exposes_required_canonical_docs():
     text = DOCS_MANIFEST.read_text(encoding="utf-8")
     required_paths = [
         "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
-        "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
-        "docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md",
-        "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
-        "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
-        "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
-        "docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md",
+        "docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md",
+        "docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md",
         "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
         "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
+        "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md",
         "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
         "architecture/v8-2.md",
         "architecture/mycelis-architecture-v7.md",
@@ -94,21 +93,12 @@ def test_docs_manifest_exposes_required_canonical_docs():
     assert not missing, f"docsManifest is missing required canonical docs: {missing}"
 
 
-def test_superseded_root_v8_1_draft_is_archived_not_loose():
+def test_superseded_root_v8_1_draft_is_deleted_not_loose_or_archived():
     root_draft = ROOT / "v8-1.md"
     archived_draft = ROOT / "docs" / "archive" / "drafts" / "v8-1.md"
 
     assert not root_draft.exists(), "Superseded v8-1.md must not remain loose at repo root"
-    assert archived_draft.exists(), "Superseded v8-1.md must be archived under docs/archive/drafts/"
-
-    archived_text = archived_draft.read_text(encoding="utf-8")
-    required_snippets = [
-        "# Superseded Draft: V8.1 PRD",
-        "Superseded By: `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`",
-        "This file is preserved only as historical drafting context. It is not active implementation authority.",
-    ]
-    missing = [snippet for snippet in required_snippets if snippet not in archived_text]
-    assert not missing, f"Archived v8-1 draft is missing superseded markers: {missing}"
+    assert not archived_draft.exists(), "Superseded v8-1.md must not be retained as stale archive material"
 
 
 def _slugify_heading(heading: str) -> str:
@@ -141,7 +131,6 @@ def test_readme_style_pages_expose_tocs():
         README: "## README TOC",
         ROOT / "docs" / "README.md": "## Docs TOC",
         ROOT / "ops" / "README.md": "## TOC",
-        ROOT / "docs" / "archive" / "README.md": "## TOC",
         ROOT / "core" / "README.md": "## TOC",
         ROOT / "interface" / "README.md": "## TOC",
         ROOT / "cli" / "README.md": "## TOC",
@@ -163,7 +152,6 @@ def test_repo_readmes_expose_project_navigation():
     readmes = [
         ROOT / "docs" / "README.md",
         ROOT / "ops" / "README.md",
-        ROOT / "docs" / "archive" / "README.md",
         ROOT / "core" / "README.md",
         ROOT / "interface" / "README.md",
         ROOT / "cli" / "README.md",
@@ -182,28 +170,25 @@ def test_repo_readmes_expose_project_navigation():
     assert not missing, "README-style pages are missing project navigation:\n" + "\n".join(missing)
 
 
-def test_archive_readme_keeps_v7_material_as_migration_input_not_active_authority():
-    text = (ROOT / "docs" / "archive" / "README.md").read_text(encoding="utf-8")
-    active_section_match = re.search(
-        r"## Active Implementation Sources\s*\n(.*?)(?=^## )",
-        text,
-        flags=re.MULTILINE | re.DOTALL,
-    )
-    assert active_section_match, "Archive README must keep an explicit active-source pointer section"
-
-    active_section = active_section_match.group(1)
-    assert ".state/V8_DEV_STATE.md" in active_section
-    assert "V8_RUNTIME_CONTRACTS.md" in active_section
-    assert "_V7.md" not in active_section and ".state/V7_DEV_STATE.md" not in active_section, (
-        "docs/archive/README.md must not elevate V7 docs as active implementation sources"
-    )
-
-    required_migration_input_snippets = [
-        "## Migration Inputs",
-        "V7-labeled architecture-library docs are historical migration inputs, not active implementation authorities",
+def test_stale_archive_and_v7_topical_docs_are_not_retained_as_active_docs():
+    stale_paths = [
+        "docs/archive/README.md",
+        "docs/archive/drafts/v8-1.md",
+        "docs/WORKFLOWS.md",
+        "docs/SWARM_OPERATIONS.md",
+        "docs/QA_COUNCIL_CHAT_API.md",
+        "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
+        "docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md",
+        "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
+        "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
+        "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
+        "docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md",
+        "docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md",
+        "docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md",
+        "docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md",
     ]
-    missing = [snippet for snippet in required_migration_input_snippets if snippet not in text]
-    assert not missing, "Archive README is missing V7 migration-input framing:\n" + "\n".join(missing)
+    present = [path for path in stale_paths if (ROOT / path).exists()]
+    assert not present, "Superseded docs should be deleted instead of retained as stale authority: " + str(present)
 
 
 def test_interface_readme_names_aero_light_as_default_theme_not_midnight():
@@ -231,13 +216,13 @@ def test_readme_has_fresh_agent_review_sequence():
     required_refs = [
         "AGENTS.md",
         "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
-        "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
-        "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
-        "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
-        "docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md",
+        "docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md",
+        "docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md",
+        "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
+        "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md",
         "docs/architecture/OPERATIONS.md",
         "docs/TESTING.md",
-        ".state/V7_DEV_STATE.md",
+        ".state/V8_DEV_STATE.md",
         "interface/lib/docsManifest.ts",
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
     ]
@@ -258,8 +243,9 @@ def test_docs_readme_promotes_v8_navigation_before_legacy_v7_inputs():
     missing = [ref for ref in required_v8_refs if ref not in text]
     assert not missing, f"docs/README is missing required V8 navigation references: {missing}"
 
-    assert "Migration inputs and historical references:" in text
-    assert text.index("**Active Development State**: `../.state/V8_DEV_STATE.md`") < text.index("**Legacy V7 Development State**: `../.state/V7_DEV_STATE.md`")
+    assert "## Compatibility Boundary" in text
+    assert "**Legacy V7 Development State**: `../.state/V7_DEV_STATE.md`" in text
+    assert text.index("**Active Development State**: `../.state/V8_DEV_STATE.md`") < text.index("## Compatibility Boundary")
 
 
 def test_readme_has_feature_status_standard():
@@ -659,12 +645,11 @@ def test_prd_index_points_to_modular_architecture_library():
     text = PRD_INDEX.read_text(encoding="utf-8")
     required_links = [
         "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
-        "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
-        "docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md",
-        "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
-        "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
-        "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
-        "docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md",
+        "docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md",
+        "docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md",
+        "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
+        "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
+        "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md",
     ]
 
     missing = [link for link in required_links if link not in text]
@@ -706,33 +691,33 @@ def test_legacy_v7_dev_state_uses_delivery_program_snapshot():
 
 
 def test_ui_operator_experience_covers_direct_first_and_theme_simplification_contract():
-    text = UI_OPERATOR_EXPERIENCE.read_text(encoding="utf-8")
+    text = V8_UI_API_CONTRACT.read_text(encoding="utf-8")
     required_snippets = [
-        "### 3.5 Soma-First conversation economy rule",
-        "Workspace chat should default to Soma-only execution for normal interaction.",
-        "### 3.6 Theme simplification rule",
-        "diagnostics are progressive-disclosure, not always-on density",
+        "### 3.2 Progressive disclosure rule",
+        "Default UI shows organization identity, Soma, purpose",
+        "### 3.5 Primary orchestration flow",
+        "The UI must make agency inspectable without making the default operator path noisy.",
     ]
 
     missing = [snippet for snippet in required_snippets if snippet not in text]
     assert not missing, (
-        "UI/operator experience doc is missing direct-first or theme-simplification contract snippets: "
+        "V8 UI/API contract is missing progressive-disclosure or Soma orchestration snippets: "
         f"{missing}"
     )
 
 
 def test_soma_council_protocol_defines_consultation_trigger_modes():
-    text = SOMA_COUNCIL_PROTOCOL.read_text(encoding="utf-8")
+    text = (ROOT / "docs" / "architecture-library" / "V8_RUNTIME_CONTRACTS.md").read_text(encoding="utf-8")
     required_snippets = [
-        "### 2.1 Consultation trigger policy (token economy)",
-        "Council consultation is required only when at least one condition is true:",
-        "- `none`: no council call, Soma responds directly",
-        "- `targeted`: one specialist selected by need",
-        "- `full_council`: only for explicitly broad architectural/program decisions",
+        "## Soma Kernel",
+        "answer directly when safe",
+        "route to council/team/specialist paths when needed",
+        "propose protected or mutating actions",
+        "Central Council is the advisory/governance support layer beneath Soma.",
     ]
 
     missing = [snippet for snippet in required_snippets if snippet not in text]
-    assert not missing, f"Soma-council protocol is missing consultation trigger contract snippets: {missing}"
+    assert not missing, f"V8 runtime contracts are missing Soma/Council routing snippets: {missing}"
 
 
 def test_legacy_v7_dev_state_tracks_active_slice2_theme_and_routing_priorities():
@@ -857,12 +842,12 @@ def test_v8_dev_state_tracks_bootstrap_completion_and_validation_pass():
 
 def test_v8_bootstrap_model_keeps_template_contract_linked_to_target_delivery():
     bootstrap_text = V8_BOOTSTRAP_MODEL.read_text(encoding="utf-8")
-    target_text = (ROOT / "docs" / "architecture-library" / "TARGET_DELIVERABLE_V7.md").read_text(encoding="utf-8")
+    target_text = V8_UI_API_CONTRACT.read_text(encoding="utf-8")
 
-    required_target_outcomes = ["`answer`", "`proposal`", "`execution_result`", "`blocker`"]
+    required_target_outcomes = ["direct answer", "proposal", "execution result", "blocker"]
     missing_target_outcomes = [marker for marker in required_target_outcomes if marker not in target_text]
     assert not missing_target_outcomes, (
-        "Target deliverable doc is missing required product-outcome markers: "
+        "V8 UI/API contract is missing required product-outcome markers: "
         f"{missing_target_outcomes}"
     )
 
@@ -908,15 +893,15 @@ def test_v8_bootstrap_model_defines_v7_to_v8_migration_contract():
 
 
 def test_execution_governance_docs_reference_v8_migration_contract():
-    governance_text = (ROOT / "docs" / "architecture-library" / "DELIVERY_GOVERNANCE_AND_TESTING_V7.md").read_text(encoding="utf-8")
-    team_text = (ROOT / "docs" / "architecture-library" / "TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md").read_text(encoding="utf-8")
+    governance_text = (ROOT / "docs" / "architecture-library" / "V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md").read_text(encoding="utf-8")
+    team_text = V8_2_CURRENT_STATE_PRD.read_text(encoding="utf-8")
 
     required = [
-        (governance_text, "## V8 Migration Alignment"),
-        (governance_text, "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md"),
-        (governance_text, "Template ≠ instantiated organization"),
-        (team_text, "V8 Migration Workstreams"),
-        (team_text, "template -> instantiation -> inheritance -> precedence"),
+        (governance_text, "## Active Embodiment Cell"),
+        (governance_text, "Proposal -> confirm -> execute is durable infrastructure"),
+        (governance_text, "Soma intent -> proposal -> approval -> run -> retained output -> proof/revisitability"),
+        (team_text, "## Architecture Team Workstreams"),
+        (team_text, "Soma Experience"),
         (team_text, ".state/V8_DEV_STATE.md"),
     ]
 

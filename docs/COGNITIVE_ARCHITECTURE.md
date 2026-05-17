@@ -1,7 +1,7 @@
 # Cognitive Architecture
 > Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
-> Back to [README](../README.md) | See also: [Swarm Operations](SWARM_OPERATIONS.md) | [API Reference](API_REFERENCE.md) | [Agent Source Instantiation Template](architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md)
+> Back to [README](../README.md) | See also: [Architecture Overview](architecture/OVERVIEW.md) | [API Reference](API_REFERENCE.md) | [V8 Capability Manifest](architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
 
 ## TOC
 

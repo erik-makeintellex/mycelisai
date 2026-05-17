@@ -52,15 +52,13 @@ Review these before planning or editing:
 10. [Operations](docs/architecture/OPERATIONS.md)
 11. [Testing](docs/TESTING.md)
 12. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
-13. [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md)
-14. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
-15. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
-16. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
-17. [V7 Development State](.state/V7_DEV_STATE.md)
-18. [Docs Manifest](interface/lib/docsManifest.ts)
+13. [V8.2 Current State And Finalization PRD](docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
+14. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
+15. [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
+16. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
-- V8 docs override V7 migration inputs when they conflict; V7 documents remain useful migration evidence, not current product authority.
+- V8.2 docs are the active authority. Historical V7 state remains migration evidence only, not active product authority.
 - `.state/V8_DEV_STATE.md` is the implementation truth for what is actually complete; use its active snapshot first and treat dated boards as evidence unless reactivated.
 - Keep user-facing docs and engineering docs cross-linked but distinct.
 

@@ -34,7 +34,7 @@ Use index pages instead of monoliths:
 - repo orientation: `README.md`
 - architecture authority: `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - live implementation state: `.state/V8_DEV_STATE.md`
-- historical material: `docs/archive/README.md`
+- retained compatibility material: `architecture/mycelis-architecture-v7.md` and `.state/V7_DEV_STATE.md`
 
 Docs meant for user-facing `/docs` must also be registered in `interface/lib/docsManifest.ts`.
 
@@ -48,7 +48,7 @@ The largest active over-300 files found in this review are:
 - `tests/test_docs_links.py`
 - `.state/V7_DEV_STATE.md`
 - `.state/V8_DEV_STATE.md`
-- `docs/WORKFLOWS.md`
+- `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - `docs/architecture/OPERATIONS.md`
 - `README.md`
 

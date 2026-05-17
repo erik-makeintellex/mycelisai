@@ -7,7 +7,7 @@
 > [Overview](OVERVIEW.md) |
 > [Backend](BACKEND.md) |
 > [Operations](OPERATIONS.md) |
-> [UI Target + Transaction Contract](UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
+> [V8 UI/API and Operator Experience Contract](../architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
 
 > Baseline source of truth for this document:
 > code-audited against `interface/app/**`, `interface/components/**`, `interface/store/useCortexStore.ts`,
@@ -204,7 +204,7 @@ Rules:
 1. execution-facing flows must classify terminal states as `answer`, `proposal`, `execution_result`, or `blocker`
 2. Workspace defaults to Soma (`/api/v1/chat`) and only routes to direct council endpoint when user targeting demands it
 3. stream and service health must feed shared status/failure models used by banner, drawer, and chat blockers
-4. new UI flows must map API effects and failure affordances in `UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
+4. new UI flows must map API effects and failure affordances in `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 5. shared store helpers that carry graph/proposal/persistence behavior live in focused modules such as `interface/store/cortexStoreUtils.ts` and require direct test coverage (`interface/__tests__/store/cortexStoreUtils.test.ts`)
 
 ---

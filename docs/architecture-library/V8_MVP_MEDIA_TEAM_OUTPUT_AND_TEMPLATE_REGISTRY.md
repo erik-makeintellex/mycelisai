@@ -4,7 +4,7 @@
 > Status: ACTIVE
 > Last Updated: 2026-04-11
 > Purpose: Define the MVP path for user-output-first Soma work, media/team-managed output proof, Ollama model-role routing, and DB-registered conversation templates.
-> Supporting Docs: `V8_UI_TEAM_FULL_TEST_SET.md`, `V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`, `V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`, `docs/WORKFLOWS.md`, `docs/COGNITIVE_ARCHITECTURE.md`
+> Supporting Docs: `V8_UI_TEAM_FULL_TEST_SET.md`, `V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`, `V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`, `docs/user/soma-chat.md`, `docs/COGNITIVE_ARCHITECTURE.md`
 
 ## TOC
 
@@ -84,7 +84,7 @@ Current repo contract:
 - image generation: `generate_image` calls `media.endpoint + /images/generations` and stores an `image` artifact
 - image save: `save_cached_image` writes the cached image to the governed workspace path and records the saved file path
 - website generation: code/web models can generate HTML/CSS/TypeScript artifacts that return as document/code/file outputs
-- voice and audio: `docs/WORKFLOWS.md` treats voice input and TTS output as a future rendering concern; no current hosted Ollama voice-generation path is proven in this repo
+- voice and audio: `docs/user/soma-chat.md` treats voice input and TTS output as a future rendering concern; no current hosted Ollama voice-generation path is proven in this repo
 - ComfyUI or comparable external media graph: treat as an external workflow contract until a native connector is implemented and tested
 
 This gives Soma a clean answer when a user asks for media:

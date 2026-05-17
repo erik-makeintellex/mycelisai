@@ -165,13 +165,19 @@ def test_mycelis_search_delivery_plan_assigns_teams_and_testing_gates():
     assert canonical_path in state
 
 
-def test_active_architecture_docs_use_managed_interface_build_command():
-    mcp_doc = _read("docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md")
-    action_doc = _read("docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md")
+def test_active_capability_docs_use_current_governed_resource_contract():
+    capability_doc = _read("docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md")
+    resources_doc = _read("docs/user/resources.md")
 
-    for text in (mcp_doc, action_doc):
-        assert "uv run inv interface.build" in text
-        assert "cd interface && npm run build" not in text
+    required = [
+        (capability_doc, "Every execution path in Mycelis must be manageable, inspectable, governed, and reusable."),
+        (capability_doc, "manifest"),
+        (capability_doc, "approval"),
+        (resources_doc, "Connected Tools"),
+        (resources_doc, "MCP"),
+    ]
+    missing = [snippet for text, snippet in required if snippet not in text]
+    assert not missing, "Active capability/resource docs are missing governed-resource contract snippets: " + str(missing)
 
 
 def test_release_binaries_workflow_uses_core_package_task():

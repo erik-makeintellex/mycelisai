@@ -82,10 +82,10 @@ Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof an
 | Scheduler recurring execution | schedule CRUD/tick tests, restart persistence, recurring-state UI tests | `NEXT` |
 | Causal chain operator UI | `/runs/[id]/chain` page/API/error coverage and focused browser lineage proof | `IN_REVIEW` |
 
-Related migration inputs:
-- [Intent To Manifestation And Team Interaction V7](architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
-- [Team Execution And Global State Protocol V7](architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
-- [UI Target And Transaction Contract V7](architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
+Related active contracts:
+- [V8 UI/API and Operator Experience Contract](architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+- [V8 Directed Execution Delivery Plan](architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md)
+- [V8 UI Testing Agentry Product Contract](architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
 
 ## Full GUI Coverage Matrix
 

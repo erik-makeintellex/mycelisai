@@ -14,7 +14,7 @@ test.describe('Docs and Runs Route Coverage', () => {
                                 {
                                     slug: 'ui-test-doc',
                                     label: 'UI Test Doc',
-                                    path: 'docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md',
+                                    path: 'docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md',
                                     description: 'test doc',
                                 },
                                 {
