@@ -39,6 +39,21 @@ SCHEMA_COMPATIBILITY_CHECKS = (
         "SELECT 1 FROM information_schema.tables "
         "WHERE table_schema = 'public' AND table_name = 'collaboration_groups';",
     ),
+    (
+        "capability_manifests table",
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = 'capability_manifests';",
+    ),
+    (
+        "capability_manifests health column",
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_schema = 'public' AND table_name = 'capability_manifests' AND column_name = 'health';",
+    ),
+    ("execution_contracts table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'execution_contracts';"),
+    ("proof_artifacts table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'proof_artifacts';"),
+    ("team_work_items table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_work_items';"),
+    ("team_interactions table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_interactions';"),
+    ("team_status_events table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_status_events';"),
 )
 
 

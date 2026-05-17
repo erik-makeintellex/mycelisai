@@ -216,7 +216,7 @@ end-of-slice reporting must explicitly state which tests ran, which docs changed
 
 every implementation slice must include a docs review for the touched surface, even when the result is "reviewed, no content change required". Review `docs/API_REFERENCE.md` when API behavior, payload meaning, or endpoint contract changes.
 
-Go owns runtime, orchestration, API, NATS, and backend persistence-facing logic. TypeScript owns the interface and in-app docs browser. Python owns repo management, operator automation, CI orchestration, and local test harnesses. SQL owns migrations. PowerShell may only be a thin host wrapper when the platform requires it.
+Go owns runtime, orchestration, API, NATS, and backend persistence-facing logic. TypeScript owns the interface and in-app docs browser. Python owns repo management, operator automation, CI orchestration, and local test harnesses. SQL owns migrations, and `db.migrate` compatibility gates include the V8.2 capability, proof, and team-work tables. PowerShell may only be a thin host wrapper when the platform requires it.
 
 Keep secrets in `.env`. Use `.env.compose` for Compose topology and non-secret runtime shape.
 

@@ -75,7 +75,7 @@ uv run inv db.reset
 uv run inv db.status
 ```
 
-`db.migrate` is forward-bootstrap aware: compatible schemas are not replayed as a cleanup mechanism. Use `db.reset` when you intentionally need a fresh rebuild.
+`db.migrate` is forward-bootstrap aware: compatible schemas are not replayed as a cleanup mechanism, and compatibility now includes V8.2 capability manifests, execution/proof artifacts, and team-work tables. Use `db.reset` when you intentionally need a fresh rebuild.
 
 ### Auth Tasks (`ops/auth.py`)
 
