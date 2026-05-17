@@ -19,7 +19,7 @@ I can see what happened.
 I can trust the result later.
 ```
 
-The architecture team's job is to make that workflow coherent, repeatable, recoverable, deployable, and easy to understand by concretizing schemas, UI states, recovery semantics, and proofable workflows without widening doctrine or exposing internal topology as the default experience.
+The architecture team's job is to make that workflow coherent, repeatable, recoverable, deployable, and easy to understand by implementing the [V8.2 Finalization Concretization Contract](V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md) without widening doctrine or exposing internal topology as the default experience.
 
 ## Product Definition
 
@@ -76,18 +76,13 @@ The target user should be able to:
 
 ## Canonical MVP Workflow
 
-This workflow is the first finalization slice. Other work is secondary until it is smooth, replayable, and trustworthy:
+This workflow is the first finalization slice. Other work is secondary until it is smooth, replayable, and trustworthy.
 
 ```text
-User asks Soma to create or review meaningful work
--> Soma evaluates the request
--> governed proposal appears when required
--> operator approves
--> capability/team execution occurs
--> run is created
--> output/artifact appears
--> proof/audit is visible
--> user revisits and trusts the result later
+Operator asks Soma to create a playable browser game package with a README.
+Soma creates an ExecutionContract, requests approval when mutation is needed,
+executes the file/artifact capability, returns a retained project-package output,
+opens proof, and shows retry/degraded trust behavior when execution fails.
 ```
 
 ## Concretization Objects
@@ -100,7 +95,7 @@ User asks Soma to create or review meaningful work
 | UIResponseState | `REQUIRED` | direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, partial completion |
 | TeamInteractionSurface | `NEXT` | `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` ids, team/run/work linkage, source, verb, objective, state, expected outputs/proof, operator need, degradation, recovery, output refs, proof refs, audit refs, version |
 
-These are runtime trust objects, not presentation conveniences. They should be durable, versioned where applicable, inspectable in advanced surfaces, and summarized in Soma-facing operator language.
+These are runtime trust objects, not presentation conveniences. Exact schema fields, UI states, degraded lifecycle states, deployment-trust ownership, and the required slice close-out template are canonicalized in the [V8.2 Finalization Concretization Contract](V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md).
 
 ## Degraded Execution Semantics
 
@@ -183,7 +178,7 @@ Minimal confidence provenance starts here through validation source, evidence st
 | Team | Status | Finalization Assignment | Exit Gate |
 | --- | --- | --- | --- |
 | Soma Experience | `ACTIVE` | Continue compressing default UX into intent, visible result, proof, and recovery. | Canonical MVP workflow passes headed browser proof and first-run review without conceptual overload. |
-| Runtime And Capability | `ACTIVE` | Persist capability manifest refresh state, harden MCP-backed confirmation proof, normalize project-package output. | Capabilities, tools, teams, automations, and direct retained outputs all share run/output/proof contracts. |
+| Runtime And Capability | `ACTIVE` | Persist capability manifest refresh state as P0 trust infrastructure, harden MCP-backed confirmation proof, normalize project-package output. | Capabilities, tools, teams, automations, and direct retained outputs all share run/output/proof contracts. |
 | Governance And Trust | `IN_REVIEW` | Normalize success, failure, blocker, and degraded-proof language across all execution paths. | Users can answer what happened, what is trusted, what failed, and what can be retried from the UI. |
 | Deployment And Proof | `ACTIVE` | Promote deployment trust visibility for roots, current commit, endpoint posture, workspace storage, proof lane, and recovery. | System/Deployments trust surface proves self-hosted reality without default topology noise. |
 | QA And Embodiment | `ACTIVE` | Keep focused live browser proof for Soma, teams, groups, Resources, Runs, System, and recovery. | One repeatable proof set demonstrates create/review work -> approval -> run -> output -> proof -> revisit. |
@@ -257,7 +252,7 @@ Required proof per slice:
 | Scheduler/cadence authoring | `NEXT` | Ship governed scheduler rules before exposing cadence authoring as product behavior. |
 | Deployment env footguns | Active operational risk | Keep Compose/Kubernetes endpoint posture explicit; avoid loopback assumptions and document container-safe overrides. |
 | UI density | Active cleanup lane | Continue menu/detail and disclosure compression for lengthy advanced surfaces. |
-| Capability manifest persistence | `NEXT` | Persist refreshed manifests and reconcile long-lived health/probe state. |
+| Capability manifest persistence | `REQUIRED` | Persist refreshed manifests and reconcile long-lived health/probe state as P0 runtime trust infrastructure. |
 | Execution/proof schemas | `REQUIRED` | Promote ExecutionContract and ProofArtifact from implied concepts into durable runtime-visible objects. |
 | Active team interaction contract | `NEXT` | Promote TeamInteraction, TeamWorkItem, TeamStatusEvent, and TeamOutputRef into durable runtime-visible APIs and Soma Active Work Lane projections. |
 | Enterprise auth overclaim | Active product risk | Keep provider setup review-only until adapters, policy, audit, and recovery are runtime-enabled. |
@@ -274,11 +269,9 @@ Required proof per slice:
 
 ## Open Architecture Decisions
 
-1. What exact persistence owner should store long-lived capability manifest refresh state?
-2. What is the minimum useful confidence provenance schema before scoring appears?
-3. What is the first minimal persistence/API implementation for the normalized TeamInteraction and TeamWorkItem surface?
-4. What is the first production scheduler rule shape that covers real cadence without overbuilding an automation suite?
-5. Which project-package output fields are required for reconstruction across Compose and Kubernetes proof lanes?
+1. What is the first minimal persistence/API implementation for the normalized TeamInteraction and TeamWorkItem surface?
+2. What is the first production scheduler rule shape that covers real cadence without overbuilding an automation suite?
+3. Which project-package output fields are required for reconstruction across Compose and Kubernetes proof lanes?
 
 ## Architecture Team Close-Out Contract
 
