@@ -224,7 +224,7 @@ Env override contract: `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PRO
 
 Deployment guidance by host architecture: Windows x86_64, Linux x86_64, Linux arm64, and Mixed-architecture deployments are supported through the lane-specific guidance in local dev and operations docs. The deployed Core image resolves runtime config from `/core/config`.
 
-Supported user access lanes: Windows Docker Desktop Compose when explicitly used, Windows/Rancher Desktop Docker-compatible Compose, Rancher Desktop K3s, Windows + WSL Docker Compose, and Kubernetes / Helm clustered deployment. For local proof, open `http://localhost:3000` from the Windows browser; for clustered proof, prove the real ingress/hostname/IP from the operator machine. Rancher Desktop K3s is the preferred Windows local commercial-release parity lane; Compose remains the faster inner-loop lane.
+Supported user access lanes: source-mode local development first, then Windows/Rancher Desktop Compose, Rancher Desktop K3s, WSL Compose, and Kubernetes / Helm when container proof is intentionally requested. Run/build/test locally before containerizing; for clustered proof, prove the real ingress/hostname/IP from the operator machine. Rancher Desktop K3s is the preferred Windows local commercial-release parity lane.
 
 Deployment target contract: Kubernetes / Helm: target self-hosted and enterprise deployment contract using standard Kubernetes resources. Docker Compose: rapid local development, demo, and same-machine proof runtime; it is not the target clustered deployment contract. Run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` and cover Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. Local Windows K3s proof uses `MYCELIS_K8S_BACKEND=rancher` against Rancher Desktop.
 
@@ -234,7 +234,7 @@ Kubernetes values contract: prefer Rancher Desktop K3s on Windows and `k3d` on W
 
 Runtime packaging contract: the supported Core container image includes Node/npm/npx for curated stdio MCP servers, and manual `filesystem` library install must be able to launch and bind to the configured `/data/workspace` output block.
 
-Release proof contract: run `uv run inv ci.release-preflight --lane=release`, then use guarded WSL tasks `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle` when WSL Compose deployment-mimic proof matters. Use Rancher Desktop K3s with `MYCELIS_K8S_BACKEND=rancher` and `MYCELIS_K8S_VALUES_FILE=charts/mycelis-core/values-k3d.yaml` when the release slice needs local Kubernetes/commercial parity proof. Add `--headed-browser` to `wsl.validate` or `wsl.cycle` when the release slice needs visible live Playwright browser windows against the Compose-delivered UI.
+Release proof contract: start with local source gates (`core.test`, `interface.test`, `interface.typecheck`, `interface.build`, focused Playwright). Only after those pass, containerize for Compose/K8s proof. Use guarded WSL tasks when WSL Compose deployment-mimic proof matters, and Rancher Desktop K3s with `MYCELIS_K8S_BACKEND=rancher` when the release slice needs local Kubernetes parity proof.
 
 ## Playwright Contract
 
