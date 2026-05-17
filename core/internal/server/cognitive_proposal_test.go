@@ -176,3 +176,31 @@ func TestBuildProposalDisplayContractDefaultsCreateTeamToTeamBus(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildProposalDisplayContractExplainsTeamDeliverable(t *testing.T) {
+	display := buildProposalDisplayContract([]protocol.PlannedToolCall{
+		{
+			Name: "create_team",
+			Arguments: map[string]any{
+				"team_id": "game-team",
+				"name":    "Game Team",
+			},
+		},
+		{
+			Name: "write_file",
+			Arguments: map[string]any{
+				"path": "workspace/generated/game-team-first-game/index.html",
+			},
+		},
+	}, "", []string{"create_team", "write_file"})
+
+	if display.OperatorSummary != "Create Game Team and start its first retained deliverable." {
+		t.Fatalf("operator summary = %q", display.OperatorSummary)
+	}
+	if !strings.Contains(display.ExpectedResult, "workspace/generated/game-team-first-game/index.html") {
+		t.Fatalf("expected_result = %q, want retained output path", display.ExpectedResult)
+	}
+	if len(display.AffectedResources) != 2 {
+		t.Fatalf("affected_resources = %#v, want team and file path", display.AffectedResources)
+	}
+}

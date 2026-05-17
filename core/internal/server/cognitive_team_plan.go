@@ -99,7 +99,7 @@ func extractNamedTeam(text string) string {
 	if rest == "" {
 		return ""
 	}
-	for _, marker := range []string{".", " role ", " with ", " no web", " return "} {
+	for _, marker := range []string{".", " and get ", " then ", " role ", " with ", " no web", " return "} {
 		if cut := strings.Index(strings.ToLower(rest), marker); cut >= 0 {
 			rest = strings.TrimSpace(rest[:cut])
 		}

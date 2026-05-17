@@ -89,6 +89,57 @@ func TestExecutionOutputsFromToolResultsRetainsTeamAndCodeFile(t *testing.T) {
 	}
 }
 
+func TestBuildConfirmActionExecutionSummaryNamesTeamDeliverable(t *testing.T) {
+	summary := buildConfirmActionExecutionSummary(
+		"proof-123",
+		"run-123",
+		"audit-123",
+		&protocol.ScopeValidation{
+			Tools: []string{"create_team", "write_file"},
+			PlannedToolCalls: []protocol.PlannedToolCall{
+				{Name: "create_team"},
+				{Name: "write_file"},
+			},
+		},
+		[]plannedToolExecutionResult{
+			{Name: "create_team", Arguments: map[string]any{"team_id": "game-team", "name": "Game Team"}},
+			{Name: "write_file", Arguments: map[string]any{"path": "workspace/generated/game/index.html"}},
+		},
+	)
+
+	if summary.Understanding.Summary != "Team created and its first retained deliverable completed." {
+		t.Fatalf("understanding = %q", summary.Understanding.Summary)
+	}
+	if summary.NextStep == nil || summary.NextStep.Action != "chat" {
+		t.Fatalf("next_step = %+v, want chat continuation", summary.NextStep)
+	}
+	if len(summary.Outputs) != 2 || summary.Outputs[1].Kind != "code" {
+		t.Fatalf("outputs = %+v, want retained file output", summary.Outputs)
+	}
+}
+
+func TestBuildConfirmActionExecutionSummaryNamesTeamOnlyAsNotStarted(t *testing.T) {
+	summary := buildConfirmActionExecutionSummary(
+		"proof-123",
+		"run-123",
+		"audit-123",
+		&protocol.ScopeValidation{
+			Tools:            []string{"create_team"},
+			PlannedToolCalls: []protocol.PlannedToolCall{{Name: "create_team"}},
+		},
+		[]plannedToolExecutionResult{
+			{Name: "create_team", Arguments: map[string]any{"team_id": "game-team", "name": "Game Team"}},
+		},
+	)
+
+	if summary.Understanding.Summary != "Team created. No work item has started yet." {
+		t.Fatalf("understanding = %q", summary.Understanding.Summary)
+	}
+	if summary.NextStep == nil || summary.NextStep.Action != "chat" {
+		t.Fatalf("next_step = %+v, want chat continuation", summary.NextStep)
+	}
+}
+
 func TestPersistConfirmedActionOutputArtifactsStoresSlugTeamWriteFile(t *testing.T) {
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt, func(s *AdminServer) {

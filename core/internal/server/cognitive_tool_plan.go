@@ -149,10 +149,10 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 		} else {
 			planned = append(planned, normalizePlannedToolCall(inferredTeamCall))
 		}
-		if containsToolName(mutTools, "write_file") {
-			if fileCall, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
-				planned = append(planned, normalizePlannedToolCall(fileCall))
-			}
+		if fileCall, ok := inferWriteFilePlanFromRequest(latestRequest); ok && containsToolName(mutTools, "write_file") {
+			planned = append(planned, normalizePlannedToolCall(fileCall))
+		} else if fileCall, ok := inferFirstTeamGameDeliverablePlanFromRequest(latestRequest, planned[0]); ok {
+			planned = append(planned, normalizePlannedToolCall(fileCall))
 		}
 		return planned
 	}

@@ -21,6 +21,7 @@ import {
 } from "./MissionControlChatChrome";
 import MissionControlMessageBubble from "./MissionControlMessageBubble";
 import { MissionControlAdvancedInput } from "./MissionControlAdvancedInput";
+import MissionControlTeamContinuationPrompt from "./MissionControlTeamContinuationPrompt";
 import OrchestrationInspector from "./OrchestrationInspector";
 import { somaPlaceholder, teamSuggestions } from "./missionControlChatUi";
 
@@ -210,6 +211,11 @@ export default function MissionControlChat({
             </SomaConversationThread>
 
             <div className="px-3 py-2 border-t border-cortex-border flex-shrink-0">
+                <MissionControlTeamContinuationPrompt
+                    messages={missionChat}
+                    disabled={isLoading}
+                    onStarterPrompt={applyStarterPrompt}
+                />
                 {simpleMode ? (
                     <SomaIntentInput
                         value={input}

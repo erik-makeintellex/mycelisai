@@ -171,11 +171,13 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 
 	if isMutation {
 		plannedToolCalls := buildPlannedToolCalls(agentResult, latestUserText, mutTools)
-		approval := buildApprovalPolicy(profile, plannedToolCalls, mutTools)
+		effectiveTools := toolsForPlannedCalls(plannedToolCalls, mutTools)
+		chatPayload.ToolsUsed = effectiveTools
+		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
 		scope := &protocol.ScopeValidation{
-			Tools:             mutTools,
+			Tools:             effectiveTools,
 			AffectedResources: affectedResourcesForPlannedCalls(plannedToolCalls),
-			RiskLevel:         chatToolRisk(mutTools),
+			RiskLevel:         chatToolRisk(effectiveTools),
 			PlannedToolCalls:  plannedToolCalls,
 			Approval:          approval,
 			GovernanceProfile: profile.snapshot(),
@@ -190,7 +192,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 			protocol.TemplateChatToProposal, memberID,
 			fmt.Sprintf("Council chat mutation detected from %s", memberID),
 			map[string]any{
-				"tools":           mutTools,
+				"tools":           effectiveTools,
 				"agent_tools":     agentResult.ToolsUsed,
 				"requested_tools": requestMutationTools,
 				"member":          memberID,
@@ -220,8 +222,8 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		if confirmToken != nil {
 			token = confirmToken.Token
 		}
-		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, mutTools)
-		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, teamID, []string{memberID}, approval, profile.snapshot(), display)
+		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, effectiveTools)
+		chatPayload.Proposal = buildMutationChatProposal(effectiveTools, proofID, token, teamID, []string{memberID}, approval, profile.snapshot(), display)
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",

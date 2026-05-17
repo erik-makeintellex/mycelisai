@@ -105,6 +105,41 @@ func TestBuildPlannedToolCalls_KeepsTeamAndConcreteCodeOutput(t *testing.T) {
 	}
 }
 
+func TestBuildPlannedToolCalls_StartsTeamGameDeliverable(t *testing.T) {
+	request := "Create a team named SNES-Style Browser Game Team and get them to work on developing a detailed game"
+	calls := buildPlannedToolCalls(chatAgentResult{
+		Text: `{"tool_call":{"name":"generate_blueprint","arguments":{"topic":"wrong"}}}`,
+	}, request, []string{"generate_blueprint", "delegate"})
+
+	if len(calls) != 2 {
+		t.Fatalf("planned calls = %#v, want create_team + write_file", calls)
+	}
+	if calls[0].Name != "create_team" {
+		t.Fatalf("first call = %q, want create_team", calls[0].Name)
+	}
+	if calls[0].Arguments["name"] != "SNES-Style Browser Game Team" {
+		t.Fatalf("name = %#v", calls[0].Arguments["name"])
+	}
+	if calls[1].Name != "write_file" {
+		t.Fatalf("second call = %q, want write_file", calls[1].Name)
+	}
+	path, _ := calls[1].Arguments["path"].(string)
+	if !strings.HasPrefix(path, "workspace/generated/") || !strings.HasSuffix(path, "/index.html") {
+		t.Fatalf("path = %q, want generated browser-game entrypoint", path)
+	}
+	content, _ := calls[1].Arguments["content"].(string)
+	if !strings.Contains(content, "<canvas id=\"game\"") || !strings.Contains(content, "requestAnimationFrame(loop)") {
+		t.Fatalf("content does not look like a playable browser game: %.120q", content)
+	}
+	if calls[1].Arguments["package_kind"] != "project_package" {
+		t.Fatalf("package_kind = %#v, want project_package", calls[1].Arguments["package_kind"])
+	}
+	tools := toolsForPlannedCalls(calls, []string{"generate_blueprint", "delegate"})
+	if len(tools) != 2 || tools[0] != "create_team" || tools[1] != "write_file" {
+		t.Fatalf("effective tools = %#v, want create_team + write_file", tools)
+	}
+}
+
 func TestBuildPlannedToolCalls_PreservesExplicitCreateTeamArguments(t *testing.T) {
 	request := "Create a compact team with team_id rich-team. Then have that team create a small note at path workspace/logs/rich_team_note.md containing 'ready'"
 	calls := buildPlannedToolCalls(chatAgentResult{

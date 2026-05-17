@@ -55,6 +55,16 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 	}
 
 	if len(planned) > 0 {
+		if strings.TrimSpace(planned[0].Name) == "create_team" {
+			if path := plannedWriteFilePath(planned); path != "" {
+				teamID := firstStringArgument(planned[0].Arguments, "team_id")
+				name := firstStringArgument(planned[0].Arguments, "name")
+				label := firstNonEmptyString(name, teamID, "the requested team")
+				display.OperatorSummary = fmt.Sprintf("Create %s and start its first retained deliverable.", label)
+				display.ExpectedResult = fmt.Sprintf("%s will be created, then Soma will produce a reviewable output at %q with run proof.", label, path)
+				return display
+			}
+		}
 		if toolRef := strings.TrimSpace(planned[0].ToolRef); toolRef != "" {
 			path := firstStringArgument(planned[0].Arguments, "path")
 			if path != "" {
@@ -165,6 +175,18 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 	}
 
 	return display
+}
+
+func plannedWriteFilePath(planned []protocol.PlannedToolCall) string {
+	for _, call := range planned {
+		if strings.TrimSpace(call.Name) != "write_file" {
+			continue
+		}
+		if path := firstStringArgument(call.Arguments, "path"); path != "" {
+			return path
+		}
+	}
+	return ""
 }
 
 func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID string, rolePlan []string, approval *protocol.ApprovalPolicy, profile *protocol.GovernanceProfileSnapshot, display proposalDisplayContract) *protocol.ChatProposal {

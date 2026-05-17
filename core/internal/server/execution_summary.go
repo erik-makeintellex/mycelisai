@@ -119,18 +119,42 @@ func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *p
 		capabilities = capabilityUseFromPlannedCalls(scope.PlannedToolCalls, scope.Tools, scope.RiskLevel)
 	}
 	outputs := executionOutputsFromToolResults(results)
+	understandingSummary := "Confirmed proposal execution completed."
+	executionStateSummary := "Soma executed the confirmed proposal and recorded durable proof."
+	nextStep := &protocol.ExecutionNextStep{
+		Label:  "Review run",
+		Action: "view_run",
+		Href:   "/api/v1/runs/" + runID,
+	}
+	if toolResultExists(results, "create_team") && toolResultExists(results, "write_file") {
+		understandingSummary = "Team created and its first retained deliverable completed."
+		executionStateSummary = "Soma created the governed team, produced the first reviewable output, and recorded durable proof."
+		nextStep = &protocol.ExecutionNextStep{
+			Label:  "Open the output, then ask Soma for the next team task.",
+			Action: "chat",
+			Href:   "/api/v1/runs/" + runID,
+		}
+	} else if toolResultExists(results, "create_team") {
+		understandingSummary = "Team created. No work item has started yet."
+		executionStateSummary = "Soma created the governed team and recorded proof. Ask Soma for the team's first task to begin visible work."
+		nextStep = &protocol.ExecutionNextStep{
+			Label:  "Ask Soma to start the team's first work item.",
+			Action: "chat",
+			Href:   "/api/v1/runs/" + runID,
+		}
+	}
 
 	return &protocol.ExecutionSummary{
 		Intent: protocol.ExecutionIntent{
 			Resolved: "chat-action",
 		},
 		Understanding: protocol.ExecutionUnderstanding{
-			Summary: "Confirmed proposal execution completed.",
+			Summary: understandingSummary,
 		},
 		Execution: protocol.ExecutionState{
 			Shape:   protocol.ExecutionShapeGuidedProposal,
 			Status:  protocol.ExecutionStatusCompleted,
-			Summary: "Soma executed the confirmed proposal and recorded durable proof.",
+			Summary: executionStateSummary,
 		},
 		CapabilityUse: capabilities,
 		Outputs:       outputs,
@@ -147,12 +171,17 @@ func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *p
 			RecoveryState:  "verified",
 			Retryable:      boolPtr(false),
 		},
-		NextStep: &protocol.ExecutionNextStep{
-			Label:  "Review run",
-			Action: "view_run",
-			Href:   "/api/v1/runs/" + runID,
-		},
+		NextStep: nextStep,
 	}
+}
+
+func toolResultExists(results []plannedToolExecutionResult, name string) bool {
+	for _, result := range results {
+		if strings.TrimSpace(result.Name) == name {
+			return true
+		}
+	}
+	return false
 }
 
 func buildConfirmActionFailureExecutionSummary(proofID, runID, auditID string, err error) *protocol.ExecutionSummary {
