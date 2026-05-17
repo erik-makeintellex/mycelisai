@@ -337,14 +337,14 @@ def test_compose_schema_bootstrapped_requires_all_runtime_objects(monkeypatch):
     monkeypatch.setattr(compose.db_tasks, "SCHEMA_COMPATIBILITY_CHECKS", [("a", "sql"), ("b", "sql"), ("c", "sql")])
     monkeypatch.setattr(compose, "_compose_check_results", lambda checks, env_values: [("a", True), ("b", True), ("c", False)])
 
-    assert compose._compose_schema_bootstrapped({}) is False
+    assert compose._compose_schema_bootstrapped({"TEST_ENV": "1"}) is False
 
 
 def test_compose_schema_bootstrapped_accepts_current_runtime_schema(monkeypatch):
     monkeypatch.setattr(compose.db_tasks, "SCHEMA_COMPATIBILITY_CHECKS", [("a", "sql"), ("b", "sql")])
     monkeypatch.setattr(compose, "_compose_check_results", lambda checks, env_values: [("a", True), ("b", True)])
 
-    assert compose._compose_schema_bootstrapped({}) is True
+    assert compose._compose_schema_bootstrapped({"TEST_ENV": "1"}) is True
 
 
 def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):
