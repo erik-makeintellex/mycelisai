@@ -42,6 +42,57 @@ I ask Soma for work, I see whether it is answering, proposing, running, blocked,
 
 If a screen cannot support that promise, it belongs in a secondary or advanced surface.
 
+## Operator Expression Model
+
+An operator expression is not a database query, search string, or chat prompt to be answered and forgotten. It is a request to evoke governed work: a desired future output, its purpose, the constraints around producing it, the agentry needed to make it real, and the proof required to trust it later.
+
+The UI should help Soma convert expression into a compact expression frame before topology appears:
+
+| Field | User-facing meaning |
+| --- | --- |
+| Outcome | What should exist when work is done. |
+| Output shape | File, project package, review, plan, media, report, scheduled rule, deployment proof, or team deliverable. |
+| Audience and use | Who the output is for and how it will be used. |
+| Constraints | Must-have scope, exclusions, risk boundaries, deadline, style, data, and permissions. |
+| Agentry posture | Direct Soma, capability-backed work, compact team, Council review, scheduler, or blocker. |
+| Acceptance proof | How the user will know the result is complete, valid, and recoverable. |
+| Continuation | Whether this is one-time work, active team work, review/retry, or scheduled recurrence. |
+
+Soma should reflect the frame in operator language:
+
+```text
+Output: playable browser game package
+Use: reviewable project starter
+Agentry: compact game team plus file-writing capability
+Proof: README, playable entrypoint, validation status, retained run link
+Next: approve, revise scope, or start work
+```
+
+This is the interaction contract that prevents Mycelis from feeling like a prompt box over hidden machinery. The operator should see the work being shaped before they are asked to understand the machinery.
+
+## Output Conscription
+
+Outputs are not passive attachments. The requested output conscripts the right execution posture:
+
+- A direct answer conscripts Soma reasoning and optional source/proof disclosure.
+- A project package conscripts file/artifact capabilities, validation, preview/open controls, and retained proof.
+- A review conscripts evidence, criteria, findings, and change recommendations.
+- A team deliverable conscripts a `TeamWorkItem`, active work state, team status events, outputs, and recovery.
+- A scheduled result conscripts cadence, approval posture, next-run state, cooldown, proof, and failure recovery.
+- A deployment proof conscripts roots, endpoint posture, current commit/image/chart, health checks, and recovery actions.
+
+The output type should determine the visible UI state, available controls, and required proof. Users should not have to say "create a run, call this capability, make a proof artifact"; they should say the work they want, and Soma should present the governed output contract.
+
+## Research Calibration
+
+External interaction patterns reinforce this direction:
+
+- [VIKTOR App Builder](https://docs.viktor.ai/docs/app-builder/) starts from the user's desired application, expected inputs, outputs, preview, code/development surface, revisions, deployment, and persistence rather than asking the user to operate deployment internals first.
+- [OpenClaw getting started](https://docs.openclaw.ai/start/getting-started) emphasizes quick onboarding, a running gateway/dashboard, first message, channel connection, and explicit safety/pairing. The useful lesson for Mycelis is not to mimic a messaging bot, but to keep the first action concrete and make controls, safety, and connected tools understandable after the first useful work path exists.
+- [Microsoft Research human-AI interaction guidance](https://www.microsoft.com/en-us/research/articles/guidelines-for-human-ai-interaction-eighteen-best-practices-for-human-centered-ai-design/) emphasizes early capability/limit setting, user control, easy correction, explanations of system behavior, consequences of actions, and global controls. In Mycelis terms, those become response states, proof, recovery, approval friction, and inspectable controls.
+
+Research calibration is input to the product expression, not a reason to add more default surfaces.
+
 ## Operator Journey
 
 ### 1. Start

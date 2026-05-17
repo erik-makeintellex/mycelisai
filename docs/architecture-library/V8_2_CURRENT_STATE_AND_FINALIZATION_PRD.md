@@ -27,6 +27,8 @@ Mycelis is a Soma-centered governed cognitive operating environment.
 
 It is not a chatbot, agent console, MCP registry, dashboard pile, or orchestration demo. Runs, teams, groups, memory, exchange, capabilities, MCP, automations, proof, logs, deployment roots, and health checks are scoped operational contexts that support Soma-directed work.
 
+Operator expression is therefore not treated as a plain user query. It is treated as a request to shape governed work: desired output, audience/use, constraints, agentry posture, acceptance proof, and continuation. Soma owns the translation from expression into an ExecutionContract, active work state, durable output, and proof. Internal topology appears only when it helps the operator understand authority, trust, recovery, or deployment reality.
+
 ## Current State
 
 The current implementation state is recorded in `.state/V8_DEV_STATE.md`. As of 2026-05-16, the active state is:
@@ -119,10 +121,12 @@ Minimal confidence provenance starts here through validation source, evidence st
 ### P0 - Soma Operating Loop
 
 - One dominant Soma operating surface across dashboard and organization workspace.
+- Soma must translate operator expression into an output contract before exposing raw topology. The default UI should frame outcome, output shape, audience/use, constraints, agentry posture, proof, and next action in operator language.
 - Every meaningful response classifies as direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, or partial completion.
 - Proposal cards must summarize the decision first, then expose lifecycle, risk, capability, team, bus, and proof details behind disclosure.
 - The Operator trust package must show outcome, outputs, proof, next step, and degradation state without requiring raw runtime vocabulary.
 - Broad asks should default to compact team shaping and deliberate expansion guidance, not automatic large-team sprawl.
+- The primary work window should keep expression, active work, output preview, and trust summary together. Teams, Resources, Runs, and System details should use focused list/detail or menu/detail panes instead of long scrolling topology pages.
 
 ### P0 - Runs, Outputs, And Proof
 
@@ -252,6 +256,8 @@ Required proof per slice:
 | Scheduler/cadence authoring | `NEXT` | Ship governed scheduler rules before exposing cadence authoring as product behavior. |
 | Deployment env footguns | Active operational risk | Keep Compose/Kubernetes endpoint posture explicit; avoid loopback assumptions and document container-safe overrides. |
 | UI density | Active cleanup lane | Continue menu/detail and disclosure compression for lengthy advanced surfaces. |
+| Expression collapse into query/chat | Active product risk | Treat the input as output/agentry evocation: capture outcome, output shape, use context, constraints, proof, and continuation before runtime topology. |
+| Browser workspace scroll sprawl | Active UX risk | Replace long inner-scroll surfaces with single-window list/detail or workbench panes, and collapse mobile chrome so the input, active work, output, and trust summary remain usable. |
 | Cold-start Soma trust copy | `NEXT` | Default dashboard must not show "Soma just did this" or proof/trust package language before real Soma activity. |
 | Exact first demo GUI proof | `NEXT` | Extend live browser proof from playable file output to project-package output with README, validation, proof-link opening, and degraded retry. |
 | Capability manifest persistence | `REQUIRED` | Persist refreshed manifests and reconcile long-lived health/probe state as P0 runtime trust infrastructure. |
