@@ -29,7 +29,7 @@ This index is intentionally narrow:
 
 - [README](../../README.md) is the primary inception document for active development.
 - [V8.2 Full Production Architecture](../../architecture/v8-2.md) is the canonical full production architecture, full actuation target, and current B2+ delivery frame.
-- [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md) is the architecture-team map of current implementation truth, finalization gaps, workstreams, risks, and exit gates.
+- [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md) is the architecture-team map of current implementation truth, concretization objects, finalization gaps, workstreams, risks, and exit gates.
 - [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) constrains work away from doctrine expansion and toward visible, recoverable, trustworthy operation.
 - [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the foundation and compatibility baseline for the Soma-primary operator surface.
 - [V8 Development State](../../.state/V8_DEV_STATE.md) is the live implementation scoreboard. Use its active snapshot and immediate next actions before reading dated historical boards.
@@ -38,7 +38,7 @@ This index is intentionally narrow:
 
 | Document | Load When | Focus |
 | --- | --- | --- |
-| [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md) | aligning architecture, product, and implementation teams | current state, finalization target, blockers, workstreams, risks, and exit gates |
+| [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md) | aligning architecture, product, and implementation teams | current state, ExecutionContract, ProofArtifact, UI response states, finalization target, blockers, workstreams, risks, and exit gates |
 | [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) | deciding whether work should converge on visible operation rather than new doctrine | runs, outputs, proof, recovery, deployment trust, and confidence provenance preparation |
 | [V8.2 Full Production Architecture](../../architecture/v8-2.md) | checking full B2+ target scope | Full Production Architecture (Canonical Target) for distributed execution, governed learning, deployment topology, and actuation scope |
 | [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) | shaping runtime contracts | inception, kernel, council, provider policy, response classes, and continuity contracts |

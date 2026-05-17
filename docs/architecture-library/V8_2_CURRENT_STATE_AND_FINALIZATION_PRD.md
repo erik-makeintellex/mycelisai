@@ -4,11 +4,11 @@
 > Status: Canonical working PRD
 > Last Updated: 2026-05-16
 > Module Boundary: Soma experience, runtime/capability, governance/trust, deployment/proof, QA/embodiment, docs/state
-> Purpose: Give the architecture team one product-ready view of where Mycelis is now, what finalization means, and which architecture lanes must close before broader expansion.
+> Purpose: Give the architecture team one product-ready view of where Mycelis is now, what finalization means, and which concrete runtime objects, UI states, recovery semantics, and proof workflows must close before broader expansion.
 
 ## PRD Summary
 
-Mycelis V8.2 is no longer primarily blocked by architecture definition. The system now has enough product, runtime, governance, capability, deployment, and testing structure to enter finalization around operational embodiment.
+Mycelis V8.2 is no longer primarily blocked by architecture definition. The system now has enough product, runtime, governance, capability, deployment, and testing structure to enter finalization around concretization and operational embodiment.
 
 Finalization means:
 
@@ -19,7 +19,7 @@ I can see what happened.
 I can trust the result later.
 ```
 
-The architecture team's job is to make that workflow coherent, repeatable, recoverable, deployable, and easy to understand without widening doctrine or exposing internal topology as the default experience.
+The architecture team's job is to make that workflow coherent, repeatable, recoverable, deployable, and easy to understand by concretizing schemas, UI states, recovery semantics, and proofable workflows without widening doctrine or exposing internal topology as the default experience.
 
 ## Product Definition
 
@@ -74,6 +74,39 @@ The target user should be able to:
 7. Retry, recover, or review without reading logs first.
 8. Trust the deployment and capability boundary.
 
+## Canonical MVP Workflow
+
+This workflow is the first finalization slice. Other work is secondary until it is smooth, replayable, and trustworthy:
+
+```text
+User asks Soma to create or review meaningful work
+-> Soma evaluates the request
+-> governed proposal appears when required
+-> operator approves
+-> capability/team execution occurs
+-> run is created
+-> output/artifact appears
+-> proof/audit is visible
+-> user revisits and trusts the result later
+```
+
+## Concretization Objects
+
+| Object | Status | Required concrete fields |
+| --- | --- | --- |
+| ExecutionContract | `REQUIRED` | `contract_id`, intent summary, execution shape, capability requirements, governance posture, approval requirements, expected outputs, expected proof, recovery posture, degradation behavior, run linkage, timestamps, version |
+| ProofArtifact | `REQUIRED` | `proof_id`, `run_id`, execution status, evidence refs, output refs, validation source, proof quality, degradation state, recovery options, confidence provenance fields, audit refs, timestamps |
+| CapabilityManifestState | `REQUIRED` | capability id, health, probe status, trust/risk class, approval posture, allowed roles, output schemas, failure posture, recovery posture, manifest version |
+| UIResponseState | `REQUIRED` | direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, partial completion |
+
+These are runtime trust objects, not presentation conveniences. They should be durable, versioned where applicable, inspectable in advanced surfaces, and summarized in Soma-facing operator language.
+
+## Degraded Execution Semantics
+
+Degraded execution is a first-class state. Every degraded result must identify what succeeded, what failed, what proof is invalid or incomplete, what remains trusted, what can continue safely, and what requires rerun, retry, or operator attention.
+
+Minimal confidence provenance starts here through validation source, evidence strength, cross-check status, proof quality, review lineage, and disagreement markers. Do not add scoring until these fields have evidence semantics.
+
 ## Primary Personas
 
 | Persona | Needs |
@@ -90,7 +123,7 @@ The target user should be able to:
 ### P0 - Soma Operating Loop
 
 - One dominant Soma operating surface across dashboard and organization workspace.
-- Every meaningful response classifies as direct answer, proposal, execution result, blocker, or recovery state.
+- Every meaningful response classifies as direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, or partial completion.
 - Proposal cards must summarize the decision first, then expose lifecycle, risk, capability, team, bus, and proof details behind disclosure.
 - The Operator trust package must show outcome, outputs, proof, next step, and degradation state without requiring raw runtime vocabulary.
 - Broad asks should default to compact team shaping and deliberate expansion guidance, not automatic large-team sprawl.
@@ -116,7 +149,7 @@ The target user should be able to:
 - Compose remains rapid local proof; Kubernetes/Helm remains scale-up and enterprise-aligned deployment proof.
 - External AI engines must be explicit reachable endpoints, not container-local loopback assumptions.
 - System surfaces must show service health, scheduler state, comms state, search posture, workspace root behavior, and recovery actions.
-- Deployment root, execution root, workspace/artifact root, current commit, proof lane, and recovery posture should become inspectable without turning the default UX into topology.
+- `System -> Deployments` owns deployment root, execution root, workspace/artifact root, current commit, endpoint posture, runtime posture, proof lane, and recovery posture. Summary state may appear elsewhere, but detailed deployment trust and recovery belongs there.
 
 ### P1 - Teams, Groups, And Active Work
 
@@ -158,6 +191,8 @@ The target user should be able to:
 
 ### Phase 1 - Close The MVP Trust Loop
 
+- Define and persist the initial ExecutionContract shape.
+- Define and persist the initial ProofArtifact shape.
 - Prove project-package output through live Mycelis GUI.
 - Prove explicit MCP-backed confirmation path end to end.
 - Ensure retained outputs open, reveal storage, and link to proof.
@@ -179,7 +214,7 @@ The target user should be able to:
 
 ### Phase 4 - Deployment Trust And Recovery
 
-- Add deployment trust visibility for root paths, commit, image/chart, workspace/artifact roots, health, and proof lane.
+- Add `System -> Deployments` trust visibility for root paths, commit, image/chart, workspace/artifact roots, health, endpoint posture, and proof lane.
 - Clarify Compose vs Kubernetes proof claims.
 - Add recovery actions for AI endpoint, search provider, filesystem MCP, scheduler, comms, NATS, Postgres, and workspace root issues.
 
@@ -220,6 +255,7 @@ Required proof per slice:
 | Deployment env footguns | Active operational risk | Keep Compose/Kubernetes endpoint posture explicit; avoid loopback assumptions and document container-safe overrides. |
 | UI density | Active cleanup lane | Continue menu/detail and disclosure compression for lengthy advanced surfaces. |
 | Capability manifest persistence | `NEXT` | Persist refreshed manifests and reconcile long-lived health/probe state. |
+| Execution/proof schemas | `REQUIRED` | Promote ExecutionContract and ProofArtifact from implied concepts into durable runtime-visible objects. |
 | Enterprise auth overclaim | Active product risk | Keep provider setup review-only until adapters, policy, audit, and recovery are runtime-enabled. |
 | Source size pressure | Active hygiene lane | Keep `quality.max-lines` green and ratchet legacy caps down through modularization. |
 
@@ -235,11 +271,10 @@ Required proof per slice:
 ## Open Architecture Decisions
 
 1. What exact persistence owner should store long-lived capability manifest refresh state?
-2. Which UI surface should own deployment root/current commit/proof lane visibility: `/system`, a new Deployments panel inside System, or Resources?
-3. What is the minimum useful confidence provenance schema before scoring appears?
-4. How should active team communication be exposed so it is inspectable but not a raw NATS console?
-5. What is the first production scheduler rule shape that covers real cadence without overbuilding an automation suite?
-6. Which project-package output fields are required for reconstruction across Compose and Kubernetes proof lanes?
+2. What is the minimum useful confidence provenance schema before scoring appears?
+3. How should active team communication be exposed so it is inspectable but not a raw NATS console?
+4. What is the first production scheduler rule shape that covers real cadence without overbuilding an automation suite?
+5. Which project-package output fields are required for reconstruction across Compose and Kubernetes proof lanes?
 
 ## Architecture Team Close-Out Contract
 
@@ -248,10 +283,14 @@ For every finalization slice, the architecture team must record:
 - owning lane
 - current status marker
 - touched runtime/UI/API surfaces
-- required proof
+- emitted events
+- output object shape
+- proof artifact shape
+- UI proof
+- recovery behavior
+- validation run
 - docs changed
 - docs reviewed and left unchanged
-- acceptance statement
-- follow-up blocker, if any
+- remaining blocker, if any
 
 The next threshold is not whether Mycelis can describe the architecture. The threshold is whether an operator can trust the organism through visible execution, proof, and recovery.

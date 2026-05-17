@@ -902,13 +902,11 @@ def test_execution_governance_docs_reference_v8_migration_contract():
         (governance_text, "Soma intent -> proposal -> approval -> run -> retained output -> proof/revisitability"),
         (team_text, "## Architecture Team Workstreams"),
         (team_text, "Soma Experience"),
+        *[(team_text, snippet) for snippet in ("## Concretization Objects", "ExecutionContract", "ProofArtifact", "CapabilityManifestState", "UIResponseState", "System -> Deployments")],
         (team_text, ".state/V8_DEV_STATE.md"),
     ]
 
-    missing = []
-    for text, snippet in required:
-        if snippet not in text:
-            missing.append(snippet)
+    missing = [snippet for text, snippet in required if snippet not in text]
 
     assert not missing, (
         "Execution/governance docs are missing V8 migration references: "
