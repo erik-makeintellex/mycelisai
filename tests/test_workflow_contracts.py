@@ -180,6 +180,26 @@ def test_active_capability_docs_use_current_governed_resource_contract():
     assert not missing, "Active capability/resource docs are missing governed-resource contract snippets: " + str(missing)
 
 
+def test_testing_docs_cover_finalization_concretization_contracts():
+    testing = _read("docs/TESTING.md")
+    ui_contract = _read("docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md")
+    full_set = _read("docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md")
+
+    required = [
+        (testing, "## Finalization Concretization Gate"),
+        (testing, "ExecutionContract"),
+        (testing, "ProofArtifact"),
+        (testing, "CapabilityManifestState"),
+        (testing, "UI response states"),
+        (testing, "System -> Deployments"),
+        (ui_contract, "Evidence for degraded execution must state what succeeded"),
+        (ui_contract, "ExecutionContract, ProofArtifact, or UI response-state fields are absent"),
+        (full_set, "runtime objects verified: ExecutionContract, ProofArtifact, CapabilityManifestState, UIResponseState"),
+    ]
+    missing = [snippet for text, snippet in required if snippet not in text]
+    assert not missing, "Testing docs are missing concretization proof requirements: " + str(missing)
+
+
 def test_release_binaries_workflow_uses_core_package_task():
     workflow = _read(".github/workflows/release-binaries.yaml")
 

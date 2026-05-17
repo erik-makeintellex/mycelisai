@@ -68,12 +68,13 @@ Critical commands are listed in [V8 UI Team Browser Workflows](V8_UI_TEAM_BROWSE
 4. organization workspace bootstrap proof
 5. direct-answer and content-delivery proof
 6. governed mutation and artifact proof
-7. continuity and refresh proof
-8. settings persistence proof
-9. advanced-surface boundary proof
-10. audit/activity visibility proof
-11. disruption and recovery proof
-12. deployed live-backend proof
+7. ExecutionContract, ProofArtifact, and UI response-state proof
+8. continuity and refresh proof
+9. settings persistence proof
+10. advanced-surface boundary proof
+11. audit/activity visibility proof
+12. disruption, degradation, retry, and partial-completion proof
+13. deployed live-backend proof, including `System -> Deployments` when deployment trust changed
 
 ## 5. Workflow Test Set
 
@@ -90,6 +91,8 @@ Report:
 - branch/SHA
 - commands run
 - pass/fail results
+- runtime objects verified: ExecutionContract, ProofArtifact, CapabilityManifestState, UIResponseState
+- recovery/degradation result
 - screenshots or recording locations
 - blockers
 - docs reviewed/updated

@@ -8,7 +8,7 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 - [Current Validation Contract](#current-validation-contract)
 - [Thorough Release Testing Contract](#thorough-release-testing-contract)
 - [User Interaction Delivery Gate](#user-interaction-delivery-gate)
-- [Target-Action Testing Matrix](#target-action-testing-matrix)
+- [Finalization Concretization Gate](#finalization-concretization-gate)
 - [Full GUI Coverage Matrix](#full-gui-coverage-matrix)
 - [Backend/API -> UI Target Plan](#backendapi---ui-target-plan)
 - [Clean Run Discipline](#clean-run-discipline)
@@ -73,19 +73,20 @@ Every accepted user-interaction proof must verify:
 
 Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof and [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for the full browser matrix.
 
-## Target-Action Testing Matrix
+## Finalization Concretization Gate
 
-| Target action | Required proof | Status |
+Every finalization slice must prove the concrete runtime contract it touches, not only that screens render or APIs return `200`.
+
+| Contract | Required proof | Status |
 | --- | --- | --- |
-| Soma-first Team Expression and module binding | component/store coverage, adapter integration, product-flow proof | `ACTIVE` |
-| Created-team workspace and channel inspector | selected-team inspector, command/status/result integration, browser proof | `ACTIVE` |
-| Scheduler recurring execution | schedule CRUD/tick tests, restart persistence, recurring-state UI tests | `NEXT` |
-| Causal chain operator UI | `/runs/[id]/chain` page/API/error coverage and focused browser lineage proof | `IN_REVIEW` |
+| Canonical MVP workflow | headed/live proof for Soma request -> proposal when required -> approval -> run -> output -> proof/audit -> revisit | `ACTIVE` |
+| ExecutionContract | API/unit proof for contract id, execution shape, governance posture, required capabilities, expected output/proof, recovery/degradation, run linkage, version/timestamps | `REQUIRED` |
+| ProofArtifact | API/UI proof for proof id, run id, status, evidence/output/audit refs, validation source, proof quality, degradation state, recovery options, confidence provenance | `REQUIRED` |
+| UI response states | component/browser proof for direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, partial completion | `REQUIRED` |
+| CapabilityManifestState | persistence/API/UI proof for capability id, health, probe status, risk, approval posture, allowed roles, output schemas, failure/recovery posture, manifest version | `REQUIRED` |
+| Deployment trust | `System -> Deployments` proof for deployment/execution/workspace roots, current commit, endpoint posture, runtime posture, proof lane, recovery state | `NEXT` |
 
-Related active contracts:
-- [V8 UI/API and Operator Experience Contract](architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
-- [V8 Directed Execution Delivery Plan](architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md)
-- [V8 UI Testing Agentry Product Contract](architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
+Related active contracts: [V8 UI/API and Operator Experience Contract](architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md), [V8 Directed Execution Delivery Plan](architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md), [V8 UI Testing Agentry Product Contract](architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md), and [V8.2 Current State And Finalization PRD](architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md).
 
 ## Full GUI Coverage Matrix
 
@@ -111,16 +112,15 @@ Backend/API -> UI Target Plan
 - UI surfaces impacted:
   - <page/component/store paths>
 - Expected terminal state(s):
-  - <answer|proposal|execution_result|blocker>
-- Failure/recovery expectation:
-  - <timeout/degraded/rejection behavior shown to operator>
+  - <direct answer|proposal|execution result|blocker|recovery state|degraded execution|awaiting approval|retry required|partial completion>
+- Runtime contract:
+  - <ExecutionContract/ProofArtifact/CapabilityManifestState fields touched>
+- Output/proof/event shape:
+  - <output refs, proof refs, audit refs, emitted events>
+- Recovery/degradation expectation:
+  - <what succeeded, what failed, what remains trusted, what requires retry/operator attention>
 - Evidence commands:
-  - uv run inv core.test
-  - uv run inv interface.test
-  - uv run inv interface.typecheck
-  - uv run inv interface.build
-  - <focused playwright command(s)>
-  - <live-backend playwright command when proxy/core contract changed>
+  - <unit/component/type/build/focused browser/live-backend/deployment docs gates>
 ```
 
 No backend/API review is complete without a mapped UI target and evidence result.
