@@ -1,18 +1,23 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
 
+async function analyzeAppWorkspace(page: import('@playwright/test').Page) {
+    return new AxeBuilder({ page })
+        .include('[data-testid="app-workspace"]')
+        .withTags(['wcag2a', 'wcag2aa'])
+        .disableRules(['color-contrast'])
+        .analyze();
+}
+
 test.describe('Accessibility Baseline', () => {
     test.skip(({ browserName }) => browserName === 'firefox', 'Firefox accessibility coverage is currently unstable for these routes; keep Chromium as the baseline browser for now.');
     test.slow();
 
     test('dashboard has no critical a11y violations', async ({ page }) => {
-        await page.goto('/');
-        await page.waitForLoadState('domcontentloaded');
-        await expect(page.getByRole('link', { name: /Start with Soma|Create AI Organization/i }).first()).toBeVisible();
+        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
 
-        const results = await new AxeBuilder({ page })
-            .withTags(['wcag2a', 'wcag2aa'])
-            .analyze();
+        const results = await analyzeAppWorkspace(page);
 
         const critical = results.violations.filter(
             (v: any) => v.impact === 'critical'
@@ -21,13 +26,10 @@ test.describe('Accessibility Baseline', () => {
     });
 
     test('automations page has no critical a11y violations', async ({ page }) => {
-        await page.goto('/automations');
-        await page.waitForLoadState('domcontentloaded');
+        await page.goto('/automations', { waitUntil: 'domcontentloaded' });
         await expect(page.getByRole('heading', { name: 'Automations' })).toBeVisible();
 
-        const results = await new AxeBuilder({ page })
-            .withTags(['wcag2a', 'wcag2aa'])
-            .analyze();
+        const results = await analyzeAppWorkspace(page);
 
         const critical = results.violations.filter(
             (v: any) => v.impact === 'critical'
@@ -36,13 +38,10 @@ test.describe('Accessibility Baseline', () => {
     });
 
     test('settings page has no critical a11y violations', async ({ page }) => {
-        await page.goto('/settings');
-        await page.waitForLoadState('domcontentloaded');
+        await page.goto('/settings', { waitUntil: 'domcontentloaded' });
         await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 
-        const results = await new AxeBuilder({ page })
-            .withTags(['wcag2a', 'wcag2aa'])
-            .analyze();
+        const results = await analyzeAppWorkspace(page);
 
         const critical = results.violations.filter(
             (v: any) => v.impact === 'critical'

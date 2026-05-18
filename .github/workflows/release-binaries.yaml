@@ -24,6 +24,22 @@ on:
         required: true
         default: false
         type: boolean
+  workflow_call:
+    inputs:
+      version_tag:
+        description: "Optional version label override for the release artifacts"
+        required: false
+        type: string
+      target:
+        description: "Target binary set to build"
+        required: true
+        default: "all"
+        type: string
+      publish_release_assets:
+        description: "Publish artifacts to the GitHub Release when running from a tag"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build-release-binaries:

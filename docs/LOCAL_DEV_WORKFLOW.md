@@ -1,14 +1,13 @@
 # Local Development Workflow
 > Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
-Use this file for local setup and day-to-day runtime choices. Use [Operations](architecture/OPERATIONS.md) for task ownership and [Testing](TESTING.md) for evidence gates.
+Use this file for local setup and runtime choices; use [Operations](architecture/OPERATIONS.md) for task ownership and [Testing](TESTING.md) for evidence gates.
 
 ## TOC
 
 - [Prerequisites](#prerequisites)
 - [Deployment Method Selection](#deployment-method-selection)
 - [Configuration Reference](#configuration-reference)
-- [Recommended Host Paths](#recommended-host-paths)
 - [WSL/Linux Proof Checkout Handoff](#wsllinux-proof-checkout-handoff)
 - [Quick Start Paths](#quick-start-paths)
 - [First-Time Setup](#first-time-setup)
@@ -34,7 +33,7 @@ Install the toolchain needed for the runtime lane you will use:
 | Go 1.26 | Core build/test |
 | Node.js 20+ | Interface build/test |
 | uv | Python environment and Invoke task runner |
-| psql 16+ | database setup and migration checks |
+| psql 16+ and nats-server | native database and event-bus proof |
 | Ollama or compatible endpoint | local/self-hosted text inference |
 
 Task runner contract: use `uv run inv ...` for real execution; use `uvx --from invoke inv -l` only as a compatibility probe; do not use bare `uvx inv ...`. Tasks are scoped to Mycelis tools, app services, data-plane dependencies, and proof lanes; host runtime lifecycle for WSL, Rancher Desktop, Docker Desktop, and OS VM repair stays outside the repo task runner.
@@ -48,21 +47,13 @@ Task runner contract: use `uv run inv ...` for real execution; use `uvx --from i
 | Local Kubernetes proof on WSL/Linux | `k3d` | preferred chart validation lane |
 | Enterprise/self-hosted cluster | Helm | use real ingress, secrets, storage, and policy controls |
 | Small control node | packaged binary | keep AI on a reachable remote service |
-| Source development | lifecycle tasks | best for implementation, not the operator deployment story |
+| Source development | `native-infra.*` + lifecycle tasks | best for implementation, not the operator deployment story |
 
-Promoted chart presets:
-- `charts/mycelis-core/values-k3d.yaml`
-- `charts/mycelis-core/values-enterprise.yaml`
-- `charts/mycelis-core/values-enterprise-windows-ai.yaml`
-
-Set `MYCELIS_K8S_VALUES_FILE` before `uv run inv k8s.deploy` or `uv run inv k8s.up` to apply a preset.
+Promoted chart presets are `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, and `charts/mycelis-core/values-enterprise-windows-ai.yaml`; set `MYCELIS_K8S_VALUES_FILE` before `uv run inv k8s.deploy` or `uv run inv k8s.up`.
 
 ## Deployment Guidance By Host Architecture
 
-- Windows x86_64: use Windows editing plus Rancher Desktop Docker-compatible Compose, Rancher Desktop K3s proof, WSL Compose proof, or self-hosted Kubernetes.
-- Linux x86_64: use Compose for home-runtime proof and k3d/Helm for cluster proof.
-- Linux arm64: prefer Compose or binary/control-node lanes with remote AI where local model capacity is limited.
-- Mixed-architecture deployments: keep the control plane, runtime, and AI endpoint addresses explicit instead of relying on localhost assumptions.
+Windows x86_64, Linux x86_64, Linux arm64, and Mixed-architecture deployments must keep runtime, control-plane, and AI endpoint addresses explicit; use [Deployment Method Selection](user/deployment-methods.md) for lane selection.
 
 ## Configuration Reference
 
@@ -72,7 +63,7 @@ Important files:
 - `.env.example`: starting point for local secret/runtime values
 - `.env.compose.example`: starting point for Compose topology
 - `core/config/cognitive.yaml`: provider profiles and default routing
-- `core/config/homepage.yaml`: deployer-editable portal copy/links
+- `core/config/homepage.yaml`: deployer-editable branding/portal copy for authenticated entry surfaces
 - `core/config/policy.yaml`: governance rules
 - `core/config/templates/*.yaml`: bootstrap/template bundles
 - `core/config/teams/*.yaml`: standing teams and legacy migration inputs
@@ -82,7 +73,9 @@ Common runtime variables:
 - `MYCELIS_API_KEY`: primary local-admin credential
 - `MYCELIS_BREAK_GLASS_API_KEY`: optional recovery credential
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: local Core database connection
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`: native PostgreSQL bootstrap user for creating/updating the app role/database
 - `NATS_URL`: Core NATS connection
+- `MYCELIS_DEV_INFRA_MODE`: `native` for Windows/source-mode PostgreSQL/NATS; `k8s` only for explicit port-forward bridge proof
 - `MYCELIS_WORKSPACE`: workspace sandbox root
 - `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
@@ -109,13 +102,11 @@ The deployed Core image resolves those files from `/core/config`; the Helm chart
 
 ## Recommended Host Paths
 
-Use separate generated dependency/runtime roots per host:
-- Windows editing checkout: source, review, commits, pushes
-- WSL proof checkout: release-style install/build/test/runtime proof
-- Compose data/output roots: `workspace/docker-compose/...`
-- repo-local tool/cache roots: inspect with `uv run inv cache.status`
+Use separate generated dependency/runtime roots per host: Windows editing checkout for source/review/git, WSL proof checkout for release-style validation, Compose data/output under `workspace/docker-compose/...`, and repo-local tool/cache roots visible through `uv run inv cache.status`. Do not share `.venv`, `interface/node_modules`, `.next`, or generated runtime state across Windows and WSL.
 
-Do not share `.venv`, `interface/node_modules`, `.next`, or generated runtime state across Windows and WSL.
+## Native Source-Mode Infrastructure
+
+Default development runs Core and Interface from source against host-local PostgreSQL and NATS: `uv run inv native-infra.install-nats`, `uv run inv native-infra.up`, `uv run inv native-infra.status`, `uv run inv db.migrate`, then `uv run inv lifecycle.up --frontend`. `native-infra.up` creates/updates the PostgreSQL app role/database from `.env` and starts local NATS; Docker/Rancher/WSL remain separate proof lanes.
 
 ## WSL/Linux Proof Checkout Handoff
 
@@ -143,6 +134,10 @@ Source-mode development:
 ```bash
 uv run inv install
 uv run inv auth.dev-key
+uv run inv native-infra.install-nats
+uv run inv native-infra.up
+uv run inv native-infra.status
+uv run inv db.migrate
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
 ```
@@ -198,6 +193,8 @@ Startup now instantiates the runtime organization only through a selected bundle
 Source-mode:
 
 ```bash
+uv run inv native-infra.status
+uv run inv db.migrate
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.status
 uv run inv lifecycle.health

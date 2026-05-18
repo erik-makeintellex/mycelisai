@@ -83,26 +83,54 @@ The Deployments tab shows the deployment trust snapshot from `/api/v1/system/dep
 
 ---
 
-## Full Local Reset (Fresh Deployment)
+## Source-Mode Recovery
 
-If runtime state is stale and normal retries do not recover:
+For the default development lane, recover the local source stack without resetting host runtimes:
 
 ```bash
 uv run inv lifecycle.down
-uv run inv k8s.reset
-uv run inv lifecycle.up --build --frontend
+uv run inv native-infra.status
+uv run inv db.migrate
+uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
 ```
 
-For normal startup without deleting the cluster, use the canonical cluster sequence first:
+If PostgreSQL or NATS is not ready, start only the native data plane and then bring the app back:
 
 ```bash
-uv run inv k8s.up
-uv run inv lifecycle.up --frontend
+uv run inv native-infra.up
+uv run inv native-infra.status
 uv run inv db.migrate
+uv run inv lifecycle.up --frontend
 uv run inv lifecycle.status
 uv run inv lifecycle.health
 ```
+
+`lifecycle.down` stops Mycelis app services. It intentionally leaves native PostgreSQL and NATS running so local state and bus proof remain available.
+
+## Compose Or Cluster Recovery
+
+Use Compose recovery only when the active runtime is the packaged single-host lane:
+
+```bash
+uv run inv compose.status
+uv run inv compose.health
+uv run inv compose.up --build --wait-timeout=240
+uv run inv compose.health
+```
+
+For Rancher Desktop K3s or another local cluster, recover the app workload and bridge without asking repo tasks to repair Rancher, Docker, WSL, or the VM itself:
+
+```bash
+uv run inv k8s.up
+uv run inv k8s.status
+uv run inv k8s.wait
+uv run inv k8s.bridge
+uv run inv lifecycle.up --frontend
+uv run inv lifecycle.health
+```
+
+`k8s.reset` is only for supported repo-owned local Kubernetes backends. It is not the Rancher Desktop repair path. If Rancher Desktop, Docker Desktop, or WSL is unhealthy, fix that host tool through platform controls first, then rerun the narrow Mycelis validation task.
 
 Then reload `/dashboard` and re-check:
 - degraded banner state

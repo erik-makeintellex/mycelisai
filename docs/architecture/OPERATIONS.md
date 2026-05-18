@@ -4,7 +4,7 @@ This manual owns task and runtime operations. It links to [Local Development Wor
 
 Implementation slices that change runtime, tasking, validation, API meaning, or operator behavior must review and update the owning docs in the same change rather than leaving docs drift for later cleanup.
 
-Current proof posture: workflows are manual-only, source-mode local run/build/test plus infra-only PostgreSQL/NATS is first, and Core/Interface Compose/K8s app services are brought up only after local evidence is acceptable for container/deployment proof.
+Current proof posture: workflows are manual-only, source-mode local run/build/test plus native PostgreSQL/NATS is first, and Core/Interface Compose/K8s app services are brought up only after local evidence is acceptable for container/deployment proof.
 
 ## TOC
 
@@ -14,9 +14,6 @@ Current proof posture: workflows are manual-only, source-mode local run/build/te
 - [IV. Configuration System](#iv-configuration-system)
 - [V. Testing Strategy](#v-testing-strategy)
 - [VI. CI/CD](#vi-cicd)
-- [VII. Deployment Architecture](#vii-deployment-architecture)
-- [VIII. Environment Gotchas](#viii-environment-gotchas)
-- [IX. Monitoring & Observability](#ix-monitoring--observability)
 ## I. Prerequisites
 
 Operational lanes use:
@@ -33,6 +30,8 @@ Use `uv run inv ...` for real tasks. Use `uvx --from invoke inv -l` only as a co
 Task modules live under `ops/*.py` and are registered through `tasks.py`. App-tied management logic belongs in Python; `uv run inv api.delivery-proof` exercises the live Mycelis API as a source-mode delivery lane, while `uv run inv ci.entrypoint-check` proves runner registration.
 
 Task ownership boundary: Invoke tasks manage repo tools, Mycelis app services, data-plane dependencies, and proof lanes; WSL/Rancher/Docker host lifecycle and VM repair stay outside repo tasking.
+
+Native infrastructure is the default source-mode data plane: `native-infra.install-nats`, `native-infra.up`, `native-infra.status`, `native-infra.bootstrap-postgres`, and `native-infra.start-nats` manage only Windows/source-mode PostgreSQL app bootstrap and local NATS. Use `MYCELIS_DEV_INFRA_MODE=k8s` only for explicit clustered proof.
 
 ### Master Registry
 
@@ -105,6 +104,7 @@ uv run inv lifecycle.memory-restart --frontend
 ```
 
 `lifecycle.status` is the fast local snapshot. It reports process/port state and confirms Core through `/healthz` plus Ollama through `/api/tags` over loopback fallbacks. Use `lifecycle.health` for the deeper endpoint proof gate before claiming service readiness.
+`lifecycle.up` defaults to the native infrastructure lane and only starts Core/Interface after PostgreSQL and NATS are reachable. It does not repair Docker/Rancher/WSL.
 
 ### Compose Tasks (`ops/compose.py`)
 
@@ -131,10 +131,10 @@ uv run inv k8s.status
 uv run inv k8s.wait
 uv run inv k8s.deploy
 uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml
-uv run inv k8s.reset
 ```
 
 Prefer Rancher Desktop K3s on Windows and `k3d` on WSL/Linux; use `MYCELIS_K8S_BACKEND=kind` only for the explicit legacy path. `MYCELIS_K8S_BACKEND=rancher` targets the existing Rancher Desktop cluster and does not create or reset it.
+Do not use `k8s.reset` as Rancher Desktop, Docker Desktop, WSL, or VM repair. That task is valid only for supported repo-owned local Kubernetes backends; Rancher host repair belongs to platform tooling before rerunning `k8s.status`, `k8s.wait`, and the relevant proof lane.
 
 ### Cognitive Tasks (`ops/cognitive.py`)
 
@@ -203,7 +203,7 @@ Configuration sources:
 - `.env`: secrets and host-local runtime values
 - `.env.compose`: Compose topology
 - `core/config/cognitive.yaml`: provider profiles/routing
-- `core/config/homepage.yaml`: portal copy/links
+- `core/config/homepage.yaml`: deployer branding/portal copy retained for authenticated entry surfaces
 - `core/config/policy.yaml`: governance
 - `core/config/templates/*.yaml`: bootstrap bundles/templates
 - `core/config/teams/*.yaml`: standing team and legacy migration inputs
@@ -239,7 +239,7 @@ Local CI tasks:
 
 GitHub CI proves repo health without hosted agentry. Live service/browser proof is local, WSL, Compose, or target-cluster evidence.
 
-Invoke manages the Next.js server lifecycle for browser proof. Merge gates use the built production Interface server path, while CI also keeps a mocked Chromium homepage smoke. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; `--lane=release` is the recommended full runtime/operator gate. Guarded WSL proof-checkout tasks are `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`; add `--headed-browser` to `wsl.validate` or `wsl.cycle` when focused live-backend Playwright proof must open visible browser windows.
+Invoke manages the Next.js server lifecycle for browser proof. Merge gates use the built production Interface server path, while CI also keeps a Chromium authenticated-front-door smoke. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; `--lane=release` is the recommended full runtime/operator gate. Guarded WSL proof-checkout tasks are `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`; add `--headed-browser` to `wsl.validate` or `wsl.cycle` when focused live-backend Playwright proof must open visible browser windows.
 `uv run inv interface.check` includes a small retry loop for transient Windows socket-reuse errors after heavy browser proof, but persistent route failures still fail the task.
 
 ## VII. Deployment Architecture

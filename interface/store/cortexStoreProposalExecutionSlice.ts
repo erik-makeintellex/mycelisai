@@ -6,6 +6,7 @@ import {
 import { buildMissionChatFailure } from '@/lib/missionChatFailure';
 import type { ChatMessage, ConfirmProposalResult } from '@/store/cortexStoreTypes';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
+import type { ProposalData } from '@/store/cortexStoreTypesChat';
 
 function recoveryTextFromExecutionSummary(summary: any) {
     const degradation = summary?.audit_recovery?.degradation;
@@ -30,10 +31,25 @@ export function createCortexProposalExecutionSlice(
     set: CortexSet,
     get: CortexGet,
 ): CortexSlice<'confirmProposal' | 'cancelProposal'> {
+    function latestActiveProposal(): ProposalData | null {
+        const messages = get().missionChat;
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+            const message = messages[index];
+            if (message.proposal && (message.proposal_status ?? 'active') === 'active') {
+                return message.proposal;
+            }
+        }
+        return null;
+    }
+
     return {
-        confirmProposal: async (): Promise<ConfirmProposalResult> => {
+        confirmProposal: async (proposalOverride?: ProposalData): Promise<ConfirmProposalResult> => {
             const { activeConfirmToken, pendingProposal } = get();
-            if (!activeConfirmToken || !pendingProposal) {
+            const proposal = pendingProposal ?? proposalOverride ?? latestActiveProposal();
+            const confirmToken = trimToNonEmpty(activeConfirmToken)
+                ?? trimToNonEmpty(proposalOverride?.confirm_token)
+                ?? trimToNonEmpty(proposal?.confirm_token);
+            if (!confirmToken || !proposal) {
                 return {
                     ok: false,
                     runId: null,
@@ -44,7 +60,7 @@ export function createCortexProposalExecutionSlice(
                 const res = await fetch('/api/v1/intent/confirm-action', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ confirm_token: activeConfirmToken }),
+                    body: JSON.stringify({ confirm_token: confirmToken }),
                 });
                 if (res.ok) {
                     const body = await res.json();
@@ -67,8 +83,9 @@ export function createCortexProposalExecutionSlice(
                         activeMode: runId ? 'execution_result' : 'proposal',
                         missionChatError: null,
                         missionChatFailure: null,
+                        durableWorkRefreshVersion: s.durableWorkRefreshVersion + 1,
                         missionChat: [
-                            ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, lifecycle, {
+                            ...updateProposalLifecycle(s.missionChat, proposal.intent_proof_id, lifecycle, {
                                 mode: runId ? 'execution_result' : 'proposal',
                                 run_id: runId ?? undefined,
                             }),
@@ -77,6 +94,7 @@ export function createCortexProposalExecutionSlice(
                         pendingProposal: null,
                         activeConfirmToken: null,
                     }));
+                    void get().fetchTeamsDetail();
                     return { ok: true, runId };
                 }
 
@@ -111,7 +129,7 @@ export function createCortexProposalExecutionSlice(
                     activeMode: 'blocker',
                     activeRunId: failureRunId ?? null,
                     missionChat: [
-                        ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'failed', {
+                        ...updateProposalLifecycle(s.missionChat, proposal.intent_proof_id, 'failed', {
                             mode: 'blocker',
                             run_id: failureRunId ?? undefined,
                         }),
@@ -143,7 +161,7 @@ export function createCortexProposalExecutionSlice(
                     activeMode: 'blocker',
                     activeRunId: null,
                     missionChat: [
-                        ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'failed', {
+                        ...updateProposalLifecycle(s.missionChat, proposal.intent_proof_id, 'failed', {
                             mode: 'blocker',
                         }),
                         { role: 'council', content: failure.summary, source_node: 'admin', mode: 'blocker' },

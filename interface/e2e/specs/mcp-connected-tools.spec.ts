@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-
+import { clickVisibleControl } from "../support/click-visible-control";
 type RouteLike = {
     fulfill: (options: { status: number; contentType: string; body: string }) => Promise<void>;
     request: () => { method: () => string };
@@ -452,17 +452,17 @@ test.describe("Connected Tools MCP workflow", () => {
         await expect(page.getByText("filesystem").first()).toBeVisible();
         await expect(page.getByText("2 tools")).toBeVisible();
 
-        await page.getByRole("button", { name: /filesystem.*2 tools/i }).click();
+        await clickVisibleControl(page, page.getByRole("button", { name: /filesystem.*2 tools/i }));
         await expect(page.getByText("Live Usage")).toBeVisible();
         await expect(page.getByText("list_directory", { exact: true }).last()).toBeVisible();
         await expect(page.getByText("read_file", { exact: true }).last()).toBeVisible();
 
-        await page.getByRole("button", { name: "BROWSE LIBRARY" }).click();
+        await clickVisibleControl(page, page.getByRole("button", { name: "BROWSE LIBRARY" }));
         await expect(page.getByText("Current Group MCP Config")).toBeVisible();
         await expect(page.getByText("Fetch", { exact: true })).toBeVisible();
         await expect(page.getByText("Fetch web pages for research-backed agent work.")).toBeVisible();
 
-        await page.getByRole("button", { name: "INSTALL", exact: true }).click();
+        await clickVisibleControl(page, page.getByRole("button", { name: "INSTALL", exact: true }));
         await expect(page.getByText("Installed fetch. Check the connected server card and live MCP activity below.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText("fetch").first()).toBeVisible();
         await expect(page.getByText("Fetch MCP server installed for the current user-owned group.").first()).toBeVisible();
@@ -520,7 +520,7 @@ test.describe("Connected Tools MCP workflow", () => {
         await expect(page.getByText("No MCP servers installed.", { exact: true })).toBeVisible({ timeout: 20_000 });
         await expect(page.getByRole("button", { name: "OPEN LIBRARY" })).toBeVisible();
 
-        await page.getByRole("button", { name: "OPEN LIBRARY" }).click();
+        await clickVisibleControl(page, page.getByRole("button", { name: "OPEN LIBRARY" }));
         await expect(page.getByText("Current Group MCP Config")).toBeVisible();
         await expect(page.getByText("Fetch", { exact: true })).toBeVisible();
     });

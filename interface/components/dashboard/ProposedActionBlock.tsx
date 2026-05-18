@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useState } from "react";
 import { Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Clock3, XCircle } from "lucide-react";
 import { useCortexStore, type ChatMessage, type ProposalData } from "@/store/useCortexStore";
 import { brainBadge, toolLabel, sourceNodeLabel } from "@/lib/labels";
@@ -16,24 +16,16 @@ function humanizeLabel(value: string): string {
 function fallbackOperatorSummary(proposal: ProposalData): string {
     if (proposal.tools.includes("write_file")) return "create or update files in your workspace.";
     if (proposal.tools.includes("generate_blueprint")) return "prepare a durable blueprint artifact.";
-    if (proposal.tools.includes("publish_signal") || proposal.tools.includes("broadcast")) {
-        return "send a governed signal through the platform.";
-    }
-    if (proposal.tools.includes("delegate") || proposal.tools.includes("delegate_task")) {
-        return "coordinate work through governed team execution.";
-    }
+    if (proposal.tools.includes("publish_signal") || proposal.tools.includes("broadcast")) return "send a governed signal through the platform.";
+    if (proposal.tools.includes("delegate") || proposal.tools.includes("delegate_task")) return "coordinate work through governed team execution.";
     return "carry out a governed action.";
 }
 
 function fallbackExpectedResult(proposal: ProposalData): string {
     if (proposal.tools.includes("write_file")) return "The requested file change will be created after approval.";
     if (proposal.tools.includes("generate_blueprint")) return "A saved blueprint artifact will be returned in this conversation.";
-    if (proposal.tools.includes("publish_signal") || proposal.tools.includes("broadcast")) {
-        return "The governed signal will be sent and the outcome will be returned here.";
-    }
-    if (proposal.tools.includes("delegate") || proposal.tools.includes("delegate_task")) {
-        return "Soma will return the execution result in this conversation.";
-    }
+    if (proposal.tools.includes("publish_signal") || proposal.tools.includes("broadcast")) return "The governed signal will be sent and the outcome will be returned here.";
+    if (proposal.tools.includes("delegate") || proposal.tools.includes("delegate_task")) return "Soma will return the execution result in this conversation.";
     return "A governed execution result will be returned in this conversation.";
 }
 
@@ -62,7 +54,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const confirmProposal = useCortexStore((s) => s.confirmProposal);
     const cancelProposal = useCortexStore((s) => s.cancelProposal);
     const assistantName = useCortexStore((s) => s.assistantName);
-    const [detailsOpen, setDetailsOpen] = React.useState(false);
+    const [detailsOpen, setDetailsOpen] = useState(false);
 
     const proposal = message.proposal;
     if (!proposal) return null;
@@ -72,6 +64,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const expressions = proposal.team_expressions ?? [];
     const bindingCount = expressions.reduce((sum, expr) => sum + (expr.module_bindings?.length ?? 0), 0);
     const isActionable = renderedLifecycle === "active";
+    const hasConfirmToken = Boolean(proposal.confirm_token?.trim());
     const approvalRequired = proposal.approval_required ?? true;
     const approvalMode = proposal.approval_mode ?? (approvalRequired ? "required" : "auto_allowed");
     const capabilityRisk = proposal.capability_risk ?? proposal.risk_level ?? "low";
@@ -278,11 +271,12 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
             {isActionable ? (
                 <div className="px-4 py-3 border-t border-cortex-border flex items-center gap-2">
                     <button
-                        onClick={() => confirmProposal()}
-                        className="px-3 py-1.5 rounded bg-cortex-success/20 border border-cortex-success/40 text-cortex-success text-xs font-mono hover:bg-cortex-success/30 transition-colors flex items-center gap-1.5"
+                        onClick={() => confirmProposal(proposal)}
+                        disabled={!hasConfirmToken}
+                        className="px-3 py-1.5 rounded bg-cortex-success/20 border border-cortex-success/40 text-cortex-success text-xs font-mono hover:bg-cortex-success/30 transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed disabled:border-cortex-border disabled:bg-cortex-bg/40 disabled:text-cortex-text-muted"
                     >
                         <CheckCircle className="w-3 h-3" />
-                        {actionLabel}
+                        {hasConfirmToken ? actionLabel : "Execution unavailable"}
                     </button>
                     <button
                         onClick={() => cancelProposal()}
@@ -291,6 +285,11 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                         <XCircle className="w-3 h-3" />
                         Cancel
                     </button>
+                    {!hasConfirmToken ? (
+                        <span className="text-[11px] text-cortex-text-muted">
+                            This proposal is missing executable approval proof. Ask Soma to regenerate it.
+                        </span>
+                    ) : null}
                 </div>
             ) : null}
         </div>

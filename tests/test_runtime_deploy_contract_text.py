@@ -161,7 +161,7 @@ def test_user_docs_explain_deployment_method_selection_by_target_environment():
         "Enterprise Self-Hosted Kubernetes",
         "Edge Or Small Node Deployments",
         "Developer source mode is not a deployment method",
-        "Docker Compose when you want rapid local development, same-machine proof, or a quick demo loop",
+        "Docker Compose when you want same-machine packaged-service proof or a quick demo loop",
         "not as the target clustered deployment contract",
         "MYCELIS_COMPOSE_OLLAMA_HOST=http://<windows-ai-host>:11434",
         "MYCELIS_K8S_TEXT_ENDPOINT=http://<windows-ai-host>:11434/v1",

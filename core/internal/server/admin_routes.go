@@ -37,6 +37,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/teams/detail", s.HandleTeamsDetail)
 	mux.HandleFunc("GET /api/v1/teams/{id}/work", s.HandleListTeamWork)
 	mux.HandleFunc("POST /api/v1/teams/{id}/work", s.HandleCreateTeamWork)
+	mux.HandleFunc("GET /api/v1/teams/{id}/work/{workItemId}/status-events", s.HandleListTeamStatusEvents)
 	mux.HandleFunc("GET /api/v1/teams/{id}/work/{workItemId}/interactions", s.HandleListTeamInteractions)
 	mux.HandleFunc("POST /api/v1/teams/{id}/work/{workItemId}/interactions", s.HandleCreateTeamInteraction)
 	mux.HandleFunc("/api/v1/user/settings", s.HandleUserSettings)
@@ -97,6 +98,10 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/internal/organizations/{id}/loops/results", s.handleListLoopResults)
 	mux.HandleFunc("GET /api/v1/intent/proof/{id}", s.handleGetIntentProof)
 	mux.HandleFunc("POST /api/v1/intent/seed/symbiotic", s.handleSymbioticSeed)
+	mux.HandleFunc("GET /api/v1/trust/execution-contracts", s.HandleListExecutionContracts)
+	mux.HandleFunc("GET /api/v1/trust/execution-contracts/{id}", s.HandleGetExecutionContract)
+	mux.HandleFunc("GET /api/v1/trust/proof-artifacts", s.HandleListProofArtifacts)
+	mux.HandleFunc("GET /api/v1/trust/proof-artifacts/{id}", s.HandleGetProofArtifact)
 
 	mux.HandleFunc("GET /api/v1/telemetry/compute", s.HandleTelemetry)
 	mux.HandleFunc("/api/v1/trust/threshold", s.HandleTrustThreshold)

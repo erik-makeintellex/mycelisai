@@ -8,6 +8,7 @@ Use this guide when you need to understand profile, access, auth-provider, and c
 Settings is the administrative surface for account posture and operator preferences. It should help an owner answer:
 
 - who is operating this node
+- whether the current web session is admin or standard
 - which edition/access posture is active
 - whether external auth is configured or only planned
 - which AI engine and MCP/tool surfaces are available
@@ -31,10 +32,11 @@ Current expectations:
 
 In the free/self-hosted node release this is deliberately simple:
 
+- the Interface still requires login; local owner login is the default free-node path
 - the local owner or bootstrap principal remains the primary operator
 - access-management tier, product edition, identity mode, and shared-Soma ownership are deployment-owned
 - role and status fields are visibility surfaces unless the current edition enables management actions
-- enterprise directory, SSO, SAML/OIDC, and SCIM flows remain gated by edition and provider readiness
+- Google Workspace OIDC can create standard/admin web sessions when configured; broader directory, SAML/OIDC, and SCIM flows remain gated by edition and provider readiness
 
 Mycelis authorization remains internal. External identity providers may later prove who a user is, but they do not become the source of runtime authority for Soma, groups, approvals, capabilities, or audit visibility.
 
@@ -49,15 +51,15 @@ Current expectations:
 - raw client secrets, tokens, and SAML private material must stay in `.env` or the configured secret backend
 - provider changes should be audited when mutation support is enabled
 
-For the current release, treat Enterprise SSO configuration as a target contract unless the deployment explicitly enables the corresponding provider flow.
+For the current release, Google Workspace is the enabled enterprise SSO path. Other Enterprise SSO entries remain target contracts unless the deployment explicitly enables the matching provider flow.
 
 Mode summary:
 
-- local owner mode: set `MYCELIS_API_KEY`, local admin name/id, and `MYCELIS_IDENTITY_MODE=local_only`
+- local owner mode: set `MYCELIS_API_KEY`, `MYCELIS_WEB_SESSION_SECRET`, local admin name/id, optional local login password/hash, and `MYCELIS_IDENTITY_MODE=local_only`
 - break-glass recovery: set a separate `MYCELIS_BREAK_GLASS_API_KEY`, username, and user id for hybrid/federated recovery
 - OIDC/OAuth: configure issuer, client id, redirect URI, scopes, and secret reference; validate issuer/audience/email/domain
 - Entra ID: use OIDC first, add tenant id and group/app-role claims, then map them to internal Mycelis roles
-- Google Workspace: use OIDC/OAuth with domain restrictions and verified email mapping
+- Google Workspace: use OIDC/OAuth with domain restrictions, verified email mapping, and `MYCELIS_AUTH_ADMIN_EMAILS` for admin assignment
 - GitHub: use OAuth/App identity for login proof only; keep GitHub tool/MCP credentials separate
 - SAML: configure metadata, entity ID, ACS URL, certificate/signature validation, NameID/email, and group claims
 - SCIM: future enterprise-only provisioning/deprovisioning, not required for Free Node or base self-hosted release

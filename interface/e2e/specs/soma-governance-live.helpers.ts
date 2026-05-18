@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { expect, type Page } from '@playwright/test';
 import { organizationChatInput } from '../support/live-organization-workspace';
 import { liveAPIHeaders, liveAPIURL } from '../support/live-api-auth';
+import { clickVisibleControl } from '../support/click-visible-control';
 
 const repoRoot = path.resolve(__dirname, '../../..');
 export const LIVE_CHAT_RESPONSE_TIMEOUT_MS = 120_000;
@@ -189,7 +190,8 @@ export async function waitForConfirmAction(page: Page) {
         (response) => response.url().includes('/api/v1/intent/confirm-action') && response.request().method() === 'POST',
         { timeout: LIVE_CHAT_RESPONSE_TIMEOUT_MS },
     );
-    await page.getByRole('button', { name: /Approve & Execute|Execute/i }).click();
+    const executeButton = page.getByRole('button', { name: /Approve & Execute|Execute/i }).last();
+    await clickVisibleControl(page, executeButton, { timeout: 20_000 });
     const response = await responsePromise;
     const parsed = await parseJSONIfPossible<ConfirmEnvelope>(response);
     return {

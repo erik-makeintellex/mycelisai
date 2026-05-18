@@ -35,6 +35,7 @@ export function SomaIntentInput({
       />
       <button
         type="button"
+        aria-label={loading ? "Submitting Soma request" : "Submit Soma request"}
         onClick={onSubmit}
         disabled={disabled || !value.trim()}
         className="flex h-10 min-w-10 items-center justify-center rounded-lg bg-cortex-primary px-3 text-white transition-colors hover:bg-cortex-primary/80 disabled:bg-cortex-border disabled:text-cortex-text-muted"

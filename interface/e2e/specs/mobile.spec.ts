@@ -4,19 +4,19 @@ test.use({ ...devices['Pixel 5'] });
 
 test.describe('Mobile Viewport', () => {
     test('navigation is accessible on mobile', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/dashboard');
         await page.waitForLoadState('domcontentloaded');
 
         // Next.js error overlay must not appear
         const errorOverlay = page.locator('nextjs-portal');
         await expect(errorOverlay).not.toBeVisible();
 
-        await expect(page.getByRole('link', { name: 'Start with Soma' }).first()).toBeVisible();
-        await expect(page.getByRole('link', { name: 'View Documentation' }).first()).toBeVisible();
+        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Docs' })).toBeVisible();
     });
 
     test('hero content renders correctly on mobile', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/dashboard');
         await page.waitForLoadState('domcontentloaded');
 
         // Page should render without crashing
@@ -24,7 +24,7 @@ test.describe('Mobile Viewport', () => {
         await expect(errorOverlay).not.toBeVisible();
 
         await expect(page.locator('body')).toBeVisible();
-        await expect(page.getByRole('heading', { name: 'Ask Soma. See the work. Trust the result.' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
 
         // Verify content is not clipped — the main content area should have
         // a height that extends beyond the viewport (scrollable) or fit within it
@@ -40,7 +40,7 @@ test.describe('Mobile Viewport', () => {
     });
 
     test('no horizontal overflow on mobile', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/dashboard');
         await page.waitForLoadState('domcontentloaded');
 
         // Next.js error overlay must not appear

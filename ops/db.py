@@ -198,6 +198,15 @@ def _apply_migrations(strict=False):
     db = os.getenv("DB_NAME", "cortex")
 
     _ensure_database_exists()
+    try:
+        from . import native_postgres
+        extensions_ready = native_postgres.ensure_extensions(db)
+    except Exception:
+        if strict:
+            raise
+        extensions_ready = True
+    if strict and not extensions_ready:
+        raise SystemExit("Failed preparing native PostgreSQL extensions.")
 
     if not strict and schema_bootstrapped():
         print(

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users, Radio } from 'lucide-react';
+import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users, Radio, LogOut } from 'lucide-react';
 import { readLastOrganization, subscribeLastOrganizationChange } from '@/lib/lastOrganization';
 import { useCortexStore } from '@/store/useCortexStore';
 
@@ -15,6 +15,7 @@ export function ZoneA() {
     const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
     const [isHydrated, setIsHydrated] = useState(false);
     const [lastOrganization, setLastOrganization] = useState<{ id: string; name: string } | null>(null);
+    const [webRole, setWebRole] = useState<'admin' | 'standard'>('admin');
 
     useEffect(() => {
         const syncLastOrganization = () => {
@@ -27,8 +28,24 @@ export function ZoneA() {
             setLastOrganization(organization);
         });
     }, [pathname]);
+    useEffect(() => {
+        let cancelled = false;
+        const request = fetch('/auth/session', { cache: 'no-store' });
+        if (!request?.then) return () => {
+            cancelled = true;
+        };
+        request.then((res) => (res.ok ? res.json() : null))
+            .then((body) => {
+                if (!cancelled && body?.data?.user?.role) setWebRole(body.data.user.role === 'admin' ? 'admin' : 'standard');
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
-    const effectiveAdvancedMode = isHydrated ? advancedMode : false;
+    const isAdmin = webRole === 'admin';
+    const effectiveAdvancedMode = isHydrated && isAdmin ? advancedMode : false;
     const currentOrganizationHref = lastOrganization ? `/organizations/${lastOrganization.id}` : null;
     const isCurrentOrganizationRoute =
         !!currentOrganizationHref &&
@@ -93,20 +110,22 @@ export function ZoneA() {
 
             {/* 3. Footer: Advanced Toggle + Settings */}
             <div className="p-2 border-t border-cortex-border space-y-1">
-                <button
-                    onClick={toggleAdvancedMode}
-                    className="flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg"
-                    title={effectiveAdvancedMode ? 'Hide advanced panels' : 'Show advanced panels'}
-                >
-                    {effectiveAdvancedMode ? (
-                        <EyeOff className="w-5 h-5 flex-shrink-0" />
-                    ) : (
-                        <Eye className="w-5 h-5 flex-shrink-0" />
-                    )}
-                    <span className="hidden md:block ml-3 text-sm font-medium">
-                        {effectiveAdvancedMode ? 'Advanced: On' : 'Advanced: Off'}
-                    </span>
-                </button>
+                {isAdmin && (
+                    <button
+                        onClick={toggleAdvancedMode}
+                        className="flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg"
+                        title={effectiveAdvancedMode ? 'Hide advanced panels' : 'Show advanced panels'}
+                    >
+                        {effectiveAdvancedMode ? (
+                            <EyeOff className="w-5 h-5 flex-shrink-0" />
+                        ) : (
+                            <Eye className="w-5 h-5 flex-shrink-0" />
+                        )}
+                        <span className="hidden md:block ml-3 text-sm font-medium">
+                            {effectiveAdvancedMode ? 'Advanced: On' : 'Advanced: Off'}
+                        </span>
+                    </button>
+                )}
                 <button
                     type="button"
                     onClick={() => setStatusDrawerOpen(true)}
@@ -117,6 +136,16 @@ export function ZoneA() {
                     <span className="hidden md:block ml-3 text-sm font-medium">Status</span>
                 </button>
                 <NavItem href="/settings" icon={Settings} label="Settings" testId="nav-settings" />
+                <form action="/auth/logout" method="post">
+                    <button
+                        type="submit"
+                        className="flex w-full items-center justify-center rounded-lg p-2.5 text-cortex-text-muted transition-all duration-200 hover:bg-cortex-bg hover:text-cortex-text-main md:justify-start"
+                        title="Sign out"
+                    >
+                        <LogOut className="h-5 w-5 flex-shrink-0" />
+                        <span className="ml-3 hidden text-sm font-medium md:block">Sign out</span>
+                    </button>
+                </form>
             </div>
         </div>
     );

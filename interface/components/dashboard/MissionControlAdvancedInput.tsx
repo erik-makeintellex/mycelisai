@@ -39,6 +39,7 @@ export function MissionControlAdvancedInput({
       />
       <button
         type="button"
+        aria-label={isLoading ? "Submitting Soma message" : "Submit Soma message"}
         onClick={onSubmit}
         disabled={isLoading || !value.trim()}
         className={`flex h-10 min-w-10 items-center justify-center rounded-lg px-3 text-white transition-colors disabled:bg-cortex-border disabled:text-cortex-text-muted ${

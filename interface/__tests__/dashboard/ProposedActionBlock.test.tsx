@@ -98,6 +98,10 @@ describe('ProposedActionBlock', () => {
         fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
         expect(confirmProposal).toHaveBeenCalledTimes(1);
+        expect(confirmProposal).toHaveBeenCalledWith(expect.objectContaining({
+            confirm_token: 'ct-123',
+            intent_proof_id: 'ip-123',
+        }));
         expect(cancelProposal).toHaveBeenCalledTimes(1);
     });
 
@@ -201,5 +205,18 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/auto approve/i)).toBeDefined();
         expect(screen.getByText(/planning/i)).toBeDefined();
         expect(screen.getByRole('button', { name: /^execute$/i })).toBeDefined();
+    });
+
+    it('keeps a proposal visible but blocks execution when executable proof is missing', () => {
+        render(<ProposedActionBlock message={buildMessage({
+            proposal: {
+                ...buildMessage().proposal!,
+                confirm_token: '',
+                intent_proof_id: '',
+            },
+        })} />);
+
+        expect(screen.getByRole('button', { name: /execution unavailable/i }).hasAttribute('disabled')).toBe(true);
+        expect(screen.getByText(/missing executable approval proof/i)).toBeDefined();
     });
 });

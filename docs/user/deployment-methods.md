@@ -20,15 +20,16 @@ Choose the runtime by deployment target, not by whichever tool is already open.
 
 | Target environment | Recommended path | Best fit |
 | :-- | :-- | :-- |
-| One machine, rapid iteration, founder demo, personal proof | Docker Compose | Fastest local full-stack development/proof runtime |
+| One machine, founder demo, personal proof, packaged-service review | Docker Compose | Fastest local full-stack proof runtime after source behavior is acceptable |
 | Local Helm and Kubernetes validation on Windows | Rancher Desktop K3s | Best local proof for commercial-release Kubernetes behavior on the current Windows dev host |
 | Local Helm and Kubernetes validation in WSL/Linux | `k3d` | Best WSL/Linux proof for chart behavior before a real cluster |
 | Customer-managed, enterprise-managed, or release target cluster | Enterprise self-hosted Kubernetes | Best fit for real cluster policy, ingress, registry, storage, and secret management |
 | Edge node, Raspberry Pi style control node, small Linux box | Packaged binary or node-attached service | Lightweight host footprint with remote AI service support |
-| Active code changes and UI/backend iteration | WSL worktree + Docker Compose first, source-mode fallback when needed | Best fit for implementation work, not for production-style deployment |
+| Active code changes and UI/backend iteration | Windows source mode with `native-infra.*` plus local Core/Interface | Best fit for implementation work; containerize only after local source proof is acceptable |
 
 Quick rule:
-- if the question is "how do I iterate quickly or prove the stack on one host?" use Docker Compose
+- if the question is "how do I change code and test the product locally?" use source mode with native PostgreSQL/NATS
+- if the question is "how do I prove packaged services on one host?" use Docker Compose
 - if the question is "how do I prove the Helm chart or cluster behavior locally?" use Rancher Desktop K3s on Windows or `k3d` in WSL/Linux
 - if the question is "how will this be deployed for release or a customer-owned environment?" use the Helm chart for enterprise self-hosted Kubernetes
 - if the question is "how do I place a lightweight node on small hardware?" use the packaged binary path and keep AI remote
@@ -43,7 +44,7 @@ After bring-up, Advanced mode -> System -> Deployments should show the trust sna
 
 ## Docker Compose Single Host
 
-Choose Docker Compose when you want rapid local development, same-machine proof, or a quick demo loop.
+Choose Docker Compose when you want same-machine packaged-service proof or a quick demo loop after source behavior is acceptable.
 
 Typical fit:
 - home-lab or personal owner proof
@@ -89,7 +90,7 @@ uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.health
 ```
 
-Use this path first for rapid iteration, not as the target clustered deployment contract.
+Use this path for packaged single-host proof, not as the default inner loop for code changes and not as the target clustered deployment contract.
 Use the same operator-facing address you will really support after delivery:
 - Windows Rancher Desktop or Docker Desktop on the same machine: `http://localhost:3000`
 - Windows browser against a WSL-hosted stack: start with `http://localhost:3000`, then prove the host/IP path for second-machine access
@@ -208,24 +209,28 @@ Guidance:
 
 ## Developer Source Mode
 
-Use the source-run lifecycle path when you are changing code, debugging, or iterating on UI/backend behavior and specifically need repo-local source or Kubernetes validation.
+Use the source-run lifecycle path when you are changing code, debugging, or iterating on UI/backend behavior. This is the default development lane on the Windows host. It runs Core and Interface from source against host-local PostgreSQL and NATS, while Docker, WSL, Rancher, Compose, and Kubernetes remain proof/deployment lanes.
 
 Recommended path:
 
 ```bash
 cp .env.example .env
 uv run inv install
-uv run inv k8s.up
+uv run inv native-infra.install-nats
+uv run inv native-infra.up
+uv run inv native-infra.status
+uv run inv db.migrate
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
 ```
 
-Developer source mode is not a deployment method. It is the implementation lane for changing the product when Compose-backed development proof is not the right slice.
+Developer source mode is not a deployment method. It is the implementation lane for changing the product before Compose, WSL, Rancher, or Helm proof.
 
 Windows host note:
-- if the machine is Windows, prefer a WSL worktree plus Docker Compose for day-to-day code changes
-- use the Windows browser against `http://localhost:3000` as the first operator-facing check for that WSL-hosted stack
-- keep the Windows-native source path for explicit host-local Kubernetes validation or host-specific troubleshooting
+- edit, review, test, and push from the Windows checkout
+- use the Windows browser against `http://127.0.0.1:3000` for same-machine source proof
+- keep WSL as a guarded Compose proof checkout after commit/push, not as the default source-edit surface
+- use Rancher Desktop K3s only when Helm/Kubernetes parity is the current risk
 
 ## AI Endpoint Rules
 
@@ -245,7 +250,8 @@ Rules:
 
 Before user testing or UI testing, prove the lane you picked:
 
-- Docker Compose rapid development/proof: `uv run inv compose.status` and `uv run inv compose.health`
+- source development: `uv run inv native-infra.status`, `uv run inv db.migrate`, `uv run inv lifecycle.status`, and `uv run inv lifecycle.health`
+- Docker Compose packaged-service proof: `uv run inv compose.status` and `uv run inv compose.health`
 - local Kubernetes: `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-k3d.yaml`, `uv run inv k8s.status`, and `uv run inv lifecycle.health`
 - enterprise self-hosted Kubernetes: run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`, render/package the Helm chart with the real values, then prove ingress, readiness, storage, and the explicit AI endpoint on the target cluster
 - Windows Rancher Desktop or Docker Desktop Compose: open the UI from the Windows browser on the same machine through `http://localhost:3000`, then confirm the runtime reaches the explicit Windows AI host instead of a loopback-only deployment assumption

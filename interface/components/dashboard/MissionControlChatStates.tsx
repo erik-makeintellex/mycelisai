@@ -35,13 +35,16 @@ export function SomaOfflineGuide({ onRetry, assistantName }: { onRetry: () => vo
 
                 <div>
                     <p className="text-[9px] font-mono uppercase tracking-widest text-cortex-text-muted mb-1.5">
-                        Start the runtime
+                        Source-mode recovery
                     </p>
-                    <div className="bg-cortex-bg border border-cortex-border rounded-lg px-3 py-2 font-mono text-sm text-cortex-primary select-all">
-                        uv run inv lifecycle.up
+                    <div className="space-y-1 bg-cortex-bg border border-cortex-border rounded-lg px-3 py-2 font-mono text-xs text-cortex-primary">
+                        <div className="select-all">uv run inv native-infra.status</div>
+                        <div className="select-all">uv run inv native-infra.up</div>
+                        <div className="select-all">uv run inv db.migrate</div>
+                        <div className="select-all">uv run inv lifecycle.up --frontend</div>
                     </div>
                     <p className="text-[9px] font-mono text-cortex-text-muted/60 mt-1.5">
-                        Then verify: <span className="text-cortex-text-muted">uv run inv lifecycle.health</span>
+                        Use the first line to inspect, then start missing services and the frontend.
                     </p>
                 </div>
 

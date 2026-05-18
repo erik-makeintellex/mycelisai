@@ -106,6 +106,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         for (const key of [...mockSearchParams.keys()]) {
             mockSearchParams.delete(key);
         }
+        window.history.pushState({}, '', '/settings');
         mockAdvancedMode.mockReturnValue(true);
     });
 
@@ -182,9 +183,10 @@ describe('Settings Page (app/settings/page.tsx)', () => {
     it('explains advanced deep links without mounting connected tools until advanced mode is active', async () => {
         mockAdvancedMode.mockReturnValue(false);
         mockSearchParams.set('tab', 'tools');
+        window.history.pushState({}, '', '/settings?tab=tools');
         const view = render(<SettingsPage />);
 
-        expect(screen.getByText('Connected Tools lives in Advanced mode')).toBeDefined();
+        expect(await screen.findByText('Connected Tools lives in Advanced mode')).toBeDefined();
         expect(screen.queryByTestId('mcp-tool-registry')).toBeNull();
 
         await act(async () => {

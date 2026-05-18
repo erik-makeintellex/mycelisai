@@ -34,7 +34,7 @@ function structuredTransportUnavailable(targetLabel: string) {
     };
 }
 
-export async function proxyChatRequest(req: Request, target: ProxyTarget): Promise<Response> {
+export async function proxyBackendPostRequest(req: Request, target: ProxyTarget): Promise<Response> {
     const body = await req.text();
 
     try {
@@ -60,4 +60,8 @@ export async function proxyChatRequest(req: Request, target: ProxyTarget): Promi
             status: 503,
         });
     }
+}
+
+export async function proxyChatRequest(req: Request, target: ProxyTarget): Promise<Response> {
+    return proxyBackendPostRequest(req, target);
 }

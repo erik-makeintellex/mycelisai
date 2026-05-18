@@ -1,58 +1,36 @@
 import { expect, test } from '@playwright/test';
 
-test.describe('Templated homepage', () => {
-    test('homepage loads and primary CTA enters the Soma workflow', async ({ page }) => {
+test.describe('Authenticated front door', () => {
+    test('front page requires login for a fresh browser', async ({ browser }, testInfo) => {
+        const context = await browser.newContext({
+            baseURL: String(testInfo.project.use.baseURL),
+            storageState: { cookies: [], origins: [] },
+        });
+        const page = await context.newPage();
         await page.goto('/');
-        await expect(page.getByRole('heading', { name: /Ask Soma\. See the work\. Trust the result\./i })).toBeVisible();
-        await expect(page.getByText('Example workspace preview')).toBeVisible();
+        await expect(page).toHaveURL(/\/login\?next=%2F$/);
+        await expect(page.getByRole('heading', { name: /Sign in to operate Mycelis/i })).toBeVisible();
+        await context.close();
+    });
 
-        await page.getByRole('link', { name: /Start with Soma/i }).first().click();
+    test('local owner login enters the Soma workflow', async ({ browser }, testInfo) => {
+        const context = await browser.newContext({
+            baseURL: String(testInfo.project.use.baseURL),
+            storageState: { cookies: [], origins: [] },
+        });
+        const page = await context.newPage();
+        await page.goto('/login');
+        await page.getByLabel(/Local admin username/i).fill(process.env.MYCELIS_LOCAL_ADMIN_USERNAME || 'admin');
+        await page.getByLabel(/Password or local API key/i).fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || 'playwright-admin');
+        await page.getByRole('button', { name: /Sign in as local admin/i }).click();
         await expect(page).toHaveURL(/\/dashboard$/);
         await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        await context.close();
     });
 
-    test('custom homepage links render without breaking routing', async ({ page }) => {
-        await page.route('**/api/v1/homepage', async (route) => {
-            await route.fulfill({
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    ok: true,
-                    data: {
-                        enabled: true,
-                        brand: { product_name: 'Acme AI', tagline: 'Internal orchestration' },
-                        hero: {
-                            headline: 'Coordinate work through Soma',
-                            subheadline: 'Run governed execution with connected tools.',
-                            primary_cta: { label: 'Open Soma', href: '/dashboard' },
-                            secondary_cta: { label: 'Docs', href: '/docs' },
-                        },
-                        sections: [{ title: 'Express intent', body: 'Tell Soma what needs to happen.' }],
-                        links: [{ label: 'Support', href: 'https://support.example.com', description: 'Contact the platform team.', external: true }],
-                    },
-                }),
-            });
-        });
-
+    test('authenticated root redirects into Soma instead of public marketing', async ({ page }) => {
         await page.goto('/');
-        await expect(page.getByRole('heading', { name: 'Coordinate work through Soma' })).toBeVisible();
-        await expect(page.getByRole('link', { name: /Support/i })).toHaveAttribute('href', 'https://support.example.com');
-    });
-
-    test('front page uses the same saved UI theme as the app shell', async ({ page }) => {
-        await page.route('**/api/v1/user/settings', async (route) => {
-            await route.fulfill({
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    ok: true,
-                    data: { theme: 'midnight-cortex' },
-                }),
-            });
-        });
-
-        await page.goto('/');
-        await expect(page.locator('html')).toHaveAttribute('data-theme', 'midnight-cortex');
-
-        await page.goto('/dashboard');
-        await expect(page.locator('html')).toHaveAttribute('data-theme', 'midnight-cortex');
+        await expect(page).toHaveURL(/\/dashboard$/);
+        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
     });
 });

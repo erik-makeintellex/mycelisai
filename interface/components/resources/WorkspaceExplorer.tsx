@@ -5,13 +5,8 @@ import { AlertTriangle, ChevronUp, File, Folder, FolderPlus, RefreshCw, Save } f
 import { useCortexStore, type MCPServerWithTools } from "@/store/useCortexStore";
 import { extractApiError, formatMCPToolResult, type ResourceCallRequest } from "@/lib/apiContracts";
 
-type EntryType = "file" | "dir";
 const WORKSPACE_ROOT_PATH = "workspace";
-interface WorkspaceEntry {
-    name: string;
-    path: string;
-    type: EntryType;
-}
+type WorkspaceEntry = { name: string; path: string; type: "file" | "dir" };
 
 function normalizePath(path: string): string {
     const raw = (path || ".").replaceAll("\\", "/").trim();
@@ -78,7 +73,7 @@ function parseListOutput(raw: string, currentPath: string): WorkspaceEntry[] {
                 .replace(/^\[FILE\]\s*/, "")
                 .replace(/\s+\(directory\)$/i, "")
                 .trim();
-            const type: EntryType = dirTagged || cleaned.endsWith("/") ? "dir" : fileTagged ? "file" : "file";
+            const type: WorkspaceEntry["type"] = dirTagged || cleaned.endsWith("/") ? "dir" : fileTagged ? "file" : "file";
             const name = cleaned.endsWith("/") ? cleaned.slice(0, -1) : cleaned;
             return { name, path: joinPath(currentPath, name), type } satisfies WorkspaceEntry;
         })
@@ -266,6 +261,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
                 </div>
                 <div className="flex gap-2 mb-3">
                     <button
+                        type="button"
                         onClick={() => setCurrentPath(currentPath === WORKSPACE_ROOT_PATH ? WORKSPACE_ROOT_PATH : normalizePath(`${currentPath}/..`))}
                         className="px-2 py-1 rounded border border-cortex-border text-xs font-mono text-cortex-text-main hover:bg-cortex-border inline-flex items-center gap-1"
                     >
@@ -273,6 +269,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
                         Up
                     </button>
                     <button
+                        type="button"
                         onClick={refreshList}
                         disabled={busy || isFetchingMCPServers}
                         className="px-2 py-1 rounded border border-cortex-border text-xs font-mono text-cortex-text-main hover:bg-cortex-border inline-flex items-center gap-1"
@@ -288,7 +285,9 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
                     ) : (
                         entries.map((entry) => (
                             <button
+                                type="button"
                                 key={`${entry.type}:${entry.path}`}
+                                aria-label={entry.type === "dir" ? `Open folder ${entry.name}` : `Open file ${entry.name}`}
                                 onClick={() => (entry.type === "dir" ? setCurrentPath(entry.path) : openFile(entry.path))}
                                 className="w-full px-3 py-2 text-left border-b last:border-b-0 border-cortex-border/40 hover:bg-cortex-surface/70 transition-colors flex items-center gap-2"
                             >
@@ -307,7 +306,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
                             placeholder="new directory name"
                             className="flex-1 bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-xs font-mono text-cortex-text-main"
                         />
-                        <button onClick={createDirectory} className="px-2 py-1 rounded border border-cortex-border text-xs font-mono text-cortex-text-main hover:bg-cortex-border inline-flex items-center gap-1">
+                        <button type="button" onClick={createDirectory} className="px-2 py-1 rounded border border-cortex-border text-xs font-mono text-cortex-text-main hover:bg-cortex-border inline-flex items-center gap-1">
                             <FolderPlus className="w-3 h-3" />
                             Create Dir
                         </button>
@@ -319,7 +318,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
                             placeholder="new file name"
                             className="flex-1 bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-xs font-mono text-cortex-text-main"
                         />
-                        <button onClick={createFile} className="px-2 py-1 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10 inline-flex items-center gap-1">
+                        <button type="button" onClick={createFile} className="px-2 py-1 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10 inline-flex items-center gap-1">
                             <Save className="w-3 h-3" />
                             Write File
                         </button>

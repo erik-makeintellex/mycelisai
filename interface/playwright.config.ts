@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { STORAGE_STATE } from './e2e/global-setup';
 
 const configDir = typeof __dirname === 'string' ? __dirname : process.cwd();
 const interfaceHost = process.env.INTERFACE_HOST ?? process.env.MYCELIS_INTERFACE_HOST ?? '127.0.0.1';
@@ -8,6 +9,9 @@ const baseURL = `http://${baseUrlHost}:${interfacePort}`;
 const shouldManageWebServer = !process.env.PLAYWRIGHT_SKIP_WEBSERVER;
 const defaultWebServerCommand = `node ./scripts/playwright-webserver.mjs`;
 const webServerCommand = process.env.PLAYWRIGHT_UI_SERVER_COMMAND ?? defaultWebServerCommand;
+process.env.MYCELIS_WEB_SESSION_SECRET ||= 'playwright-web-session-secret';
+process.env.MYCELIS_LOCAL_ADMIN_USERNAME ||= 'admin';
+process.env.MYCELIS_LOCAL_ADMIN_PASSWORD ||= process.env.MYCELIS_API_KEY || 'playwright-admin';
 
 /**
  * Playwright E2E configuration for Mycelis Interface.
@@ -25,9 +29,11 @@ export default defineConfig({
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 1 : 4,
     reporter: process.env.CI ? 'github' : 'list',
+    globalSetup: './e2e/global-setup.ts',
 
     use: {
         baseURL,
+        storageState: STORAGE_STATE,
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',

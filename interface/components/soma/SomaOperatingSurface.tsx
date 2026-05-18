@@ -54,11 +54,12 @@ export function SomaOperatingSurface({
 }) {
   const missionChat = useCortexStore((state) => state.missionChat);
   const teamsDetail = useCortexStore((state) => state.teamsDetail);
+  const durableWorkRefreshVersion = useCortexStore((state) => state.durableWorkRefreshVersion);
   const evidence = evidenceItems ?? defaultEvidence;
   const latestSoma = lastSomaMessage(missionChat);
   const outputItems = outputWorkbenchItems(latestSoma?.execution_summary, latestSoma?.artifacts);
   const projectPackages = projectPackageOutputs(latestSoma?.execution_summary?.outputs);
-  const teamWork = useDurableTeamWork({ teams: teamsDetail, focusedTeamId });
+  const teamWork = useDurableTeamWork({ teams: teamsDetail, focusedTeamId, refreshVersion: durableWorkRefreshVersion });
   const teamOutputItems = teamOutputWorkbenchItems(teamWork.outputRefs);
   const teamProjectPackages = teamOutputProjectPackages(teamWork.outputRefs);
   const mergedOutputItems = mergeOutputWorkbenchItems(outputItems, teamOutputItems);

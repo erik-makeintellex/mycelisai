@@ -70,6 +70,26 @@ func (s *AdminServer) HandleListTeamInteractions(w http.ResponseWriter, r *http.
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(items))
 }
 
+// HandleListTeamStatusEvents returns the durable operator-readable status timeline for one work item.
+// GET /api/v1/teams/{id}/work/{workItemId}/status-events
+func (s *AdminServer) HandleListTeamStatusEvents(w http.ResponseWriter, r *http.Request) {
+	teamID, workItemID := teamWorkPathIDs(r)
+	if teamID == "" || workItemID == "" {
+		respondAPIError(w, "team_id and work_item_id are required", http.StatusBadRequest)
+		return
+	}
+	if err := validateOptionalUUID("work_item_id", workItemID); err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	items, err := s.listTeamStatusEventsDB(r.Context(), teamID, workItemID, parseLimit(r.URL.Query().Get("limit"), 50))
+	if err != nil {
+		respondAPIError(w, "Failed to list team status events: "+err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(items))
+}
+
 // HandleCreateTeamInteraction appends a durable Soma/Council/operator/team-lead exchange.
 // POST /api/v1/teams/{id}/work/{workItemId}/interactions
 func (s *AdminServer) HandleCreateTeamInteraction(w http.ResponseWriter, r *http.Request) {

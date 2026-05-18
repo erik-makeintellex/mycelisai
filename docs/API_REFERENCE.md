@@ -13,6 +13,12 @@
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
+| **Interface Auth** | | |
+| `/auth/local` | POST | Interface-local owner login. Accepts form fields `username` and `password`, verifies against deployment env, and writes a signed `mycelis_web_session` cookie. |
+| `/auth/google/start` | GET | Starts Google Workspace OIDC login when `MYCELIS_AUTH_GOOGLE_*` env is configured. |
+| `/auth/google/callback` | GET | Completes Google OIDC login, validates allowed Workspace domain, maps `MYCELIS_AUTH_ADMIN_EMAILS` to admin role, and writes a signed web session. |
+| `/auth/session` | GET | Returns current Interface session posture: authenticated user, role, provider, and enabled login providers. |
+| `/auth/logout` | POST | Clears the Interface web session and redirects to `/login`. |
 | **Council Chat** | | |
 | `/api/v1/council/{member}/chat` | POST | Chat with any council member via NATS request-reply. Returns `APIResponse<CTSEnvelope>` with trust score + provenance |
 | `/api/v1/council/members` | GET | List all addressable council members from standing teams (admin-core, council-core) |
@@ -39,6 +45,7 @@
 | `/api/v1/teams/detail` | GET | Team detail with agent rosters, delivery targets, and status |
 | `/api/v1/teams/{id}/work` | GET/POST | Durable team-work items for Soma/Council/operator management. `create_team` items may only be `new` or `briefed`; delegated or deliverable work may be `queued`, `running`, `needs_operator`, `reviewing`, `output_ready`, `degraded`, `paused`, or `archived`. Confirmed `create_team` actions now persist a non-active team-shell item, while confirmed delegated work queues a real item and confirmed retained deliverables persist output-ready items with `run_id`, `intent_proof_id`, `contract_id`, `proof_id`, `audit_refs`, and retained `output_refs` where available. |
 | `/api/v1/teams/{id}/work/{workItemId}/interactions` | GET/POST | Durable `TeamInteraction` records for a work item, including `source_kind`, `source_channel`, `actor_ref`, verb, summary, `payload_kind`, optional bounded payload/ref, approval ref, audit refs, and optional run/proof links. |
+| `/api/v1/teams/{id}/work/{workItemId}/status-events` | GET | Durable `TeamStatusEvent` timeline for a work item. Returns operator-readable state history for queued/running/output-ready/degraded/control transitions; `limit` is bounded and capped at `100`. |
 | `/api/swarm/teams` | POST | Create team via Soma |
 | `/api/swarm/command` | POST | Send command to specific team |
 | `/api/v1/swarm/broadcast` | POST | Fan out directive to ALL active teams |
@@ -47,8 +54,12 @@
 | `/api/v1/stream` | GET (SSE) | Real-time NATS signal stream |
 | `/api/v1/telemetry/compute` | GET | Goroutines, heap, system memory, LLM tokens/sec |
 | `/api/v1/trust/threshold` | GET/PUT | Read/write autonomy threshold |
+| `/api/v1/trust/execution-contracts` | GET | List durable `ExecutionContract` records for confirmed/proposed execution handshakes. Supports bounded `limit` plus `run_id`, `intent_proof_id`, and `status` filters; `limit` is capped at `100`. |
+| `/api/v1/trust/execution-contracts/{id}` | GET | Read one durable `ExecutionContract` by UUID, including execution shape/status, validation source, evidence strength, proof quality, output/audit refs, degradation/recovery payloads, and latest proof artifact link. |
+| `/api/v1/trust/proof-artifacts` | GET | List durable `ProofArtifact` records. Supports bounded `limit` plus `contract_id`, `run_id`, `intent_proof_id`, and `status` filters; `limit` is capped at `100`. |
+| `/api/v1/trust/proof-artifacts/{id}` | GET | Read one durable `ProofArtifact` by UUID, including run/contract links, proof class, validation source, evidence strength, proof quality, output/audit refs, degradation/recovery payloads, and proof payload. |
 | `/api/v1/sensors` | GET | Sensor library (static + dynamic) |
-| `/api/v1/homepage` | GET | Return the sanitized deployer-editable homepage template from `core/config/homepage.yaml` or `MYCELIS_HOMEPAGE_CONFIG_PATH`, falling back to Soma orchestration defaults when missing or invalid |
+| `/api/v1/homepage` | GET | Return the sanitized deployer-editable branding/portal template from `core/config/homepage.yaml` or `MYCELIS_HOMEPAGE_CONFIG_PATH`, falling back to Soma orchestration defaults when missing or invalid. The root UI still requires login before any operator surface. |
 | **Memory & Search** | | |
 | `/api/v1/memory/search` | GET | Semantic vector search over durable memory, with optional team/agent/type scope filters across Soma-personal, team-shared, and governed memory lanes |
 | `/api/v1/search/status` | GET | Current Mycelis Search provider posture for UI/Soma capability answers, including provider, configured/enabled flags, direct `web_search` support, token requirements, online-allowed/no-confirm disclosure posture, and blocker/next-action copy |

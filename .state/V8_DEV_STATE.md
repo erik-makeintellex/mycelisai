@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-05-17
+> Updated: 2026-05-18
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `architecture/v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `.state/V7_DEV_STATE.md` (legacy migration input)
 
@@ -25,6 +25,12 @@ Use `.state/V7_DEV_STATE.md` only as historical migration evidence. Active plann
 This is the current source of truth for active execution. Older dated boards below remain evidence and historical coordination context unless this snapshot or `## Immediate Next Actions` explicitly references them.
 
 - `ACTIVE` current coordination is the operational embodiment close-out cell: Orchestration, Soma Experience, Runtime/Capability, Governance/Trust, Deployment/Proof, QA/Embodiment, and Docs/State are aligned around visible execution, durable outputs, recoverable runs, deployment trust, and proof-backed retained outputs.
+- `ACTIVE` delivery-team orchestration review on 2026-05-18 split ownership across Soma UX, Runtime/API, QA/GUI, Docs/State, Infra/Auth, and Release/Orchestration. Shared sequence is source-first: native PostgreSQL/NATS plus Core/Interface source health, Mycelis API self-use, focused live GUI proof, then Compose/WSL/Rancher/K8s proof only when the slice risk requires packaged or clustered evidence.
+- `IN_REVIEW` coordinated delivery-team execution on 2026-05-18 landed the first source-first batch: Soma proposal confirmation now refreshes durable team work/output refs, unwired Active Work controls are disabled instead of theatrical, GUI recovery copy points to native-source recovery, Core exposes read/list APIs for `ExecutionContract` and `ProofArtifact`, and team work items expose durable status-event timelines. Mycelis API self-use created bounded work items for `soma-ux-delivery`, `runtime-trust-delivery`, and `qa-gui-delivery`; these are coordination/proof records, not a claim that runtime teams can replace implementation workers yet.
+- `IN_REVIEW` GUI certification review on 2026-05-18 engaged Soma UX, Team/Outputs, and System/Resources/Mobile review teams, then ran headed local-source browser proof against native PostgreSQL/NATS/Core/Interface. Green proof now includes homepage (`3`), navigation (`7`), layout (`4`), first-demo project package (`1`), team-output content (`1`), team execution (`1`), Groups live backend (`1`), System Deployments (`2`), mobile (`3`), desktop/mobile compression (`3`), Resources Workspace Files (`2`), Connected Tools (`3`), Settings (`7`), Soma governance live (`4`), and Accessibility baseline (`3`). Follow-up work remains tracked as Mycelis API work items: `gui-actionability-delivery / 26d7d31a-d31b-42d4-a961-1653f33ecc20`, `settings-auth-nav-delivery / 0edeff09-99b5-4ad3-8d2f-4c47d2b56510`, and `gui-accessibility-certification / 831ae7ea-8831-4266-9570-560b91546974`.
+- `IN_REVIEW` complex-panel actionability is stabilized for the current proof lane. A Playwright/Chromium stability deadlock was reproduced where visible hit-testable controls would not pass locator-click stability gates, so browser proof now uses a bounded `clickVisibleControl` helper that verifies visible/enabled state, browser bounding box, and center hit target before issuing a real mouse click. This cleared Soma governance confirm, Resources Workspace Files, and Connected Tools library proof without force-clicking hidden or covered controls.
+- `IN_REVIEW` Settings/Auth Providers and Automations route visibility are fixed after the enterprise auth/menu compression work. Settings and Automations no longer depend on a route-level Suspense/search-param path that rendered content into hidden segments in headed dev mode; both now read query params client-side. Auth Providers remains reachable through Advanced Settings, Resources remains the connected-tools home, and Settings browser proof is green.
+- `NEXT` coordinated execution order from the delivery teams is now: run combined source/API/UI proof for the landed batch; run the live first-demo package/retry/active-work/mobile GUI matrix; harden auth identity propagation from web session to Core audit; keep docs and state synchronized with native-source-first recovery.
 - `ACTIVE` the architecture execution cell is now organized around a concrete handoff order in `docs/architecture-library/V8_2_FINALIZATION_DELIVERY_PLAN.md`: Runtime/Capability and Governance/Trust lead durable confirm-action `ExecutionContract`, `ProofArtifact`, and persisted `CapabilityManifestState`; Team Work/Council follows with durable `TeamWorkItem`, `TeamInteraction`, `TeamStatusEvent`, and `TeamOutputRef`; Soma Experience composes the single-window workspace around those objects; Deployment/Proof builds `System -> Deployments`; QA/Embodiment gates the sequence with refreshed live GUI proof, degraded/retry proof, active-work proof, and desktop/mobile compression evidence.
 - `IN_REVIEW` the confirm-action durable trust spine has landed for integration: migration `041_execution_trust_spine` adds `execution_contracts` and `proof_artifacts`, proposal creation returns additive `contract_id`, confirmation links the contract to the run, and success/failure proof artifacts carry validation source, evidence strength, proof quality, review lineage, output refs, audit refs, degradation, and recovery payloads. Backward-compatible response `proof_id` remains the intent proof id while `proof_artifact_id` names the durable proof object.
 - `IN_REVIEW` durable `CapabilityManifestState` persistence has landed for Runtime/Capability: migration `043_capability_manifest_state` extends `capability_manifests` with capability id, manifest version, health, last probe status/time, risk, approval posture, allowed roles, input/output schema refs, failure/recovery posture, audit policy, secret-ref policy, owner, and updated time. `POST /api/v1/capabilities/refresh` now upserts refreshed rows and removes stale rows when PostgreSQL is available; `GET /api/v1/capabilities` and `GET /api/v1/capabilities/{id}` prefer persisted runtime-visible state and retain in-memory derivation for no-DB test/runtime contexts. Evidence: `go test ./internal/capabilities -count=1`, `go test ./internal/server -run Capability -count=1`, and `go test ./cmd/server -count=1` passed.
@@ -32,17 +38,20 @@ This is the current source of truth for active execution. Older dated boards bel
 - `IN_REVIEW` `System -> Deployments` is now a concrete trust surface: `GET /api/v1/system/deployments/trust` returns roots, commit/image/chart identity, endpoint posture, runtime health summary, proof lane, recovery posture, and unknown/unavailable values without exposing secrets; the System page has a Deployments panel for operator review.
 - `IN_REVIEW` the finalization GUI proof harness now covers first-demo package success, degraded/retry, desktop/mobile compression, System Deployments, and active-work API proof. System Deployments has a mocked browser proof plus a live local-source lane that reads `GET /api/v1/system/deployments/trust` through running Core/Interface when `PLAYWRIGHT_LIVE_BACKEND=1` or `PLAYWRIGHT_SYSTEM_DEPLOYMENTS_LIVE=1` is set. Active-work live proof is intentionally opt-in with `PLAYWRIGHT_TEAM_WORK_API=1` or `PLAYWRIGHT_ACTIVE_WORK_API_LIVE=1`; it creates and reads one durable `TeamWorkItem` against migrated local Core/PostgreSQL and skips only when Core/auth/PostgreSQL are not available.
 - `IN_REVIEW` Mycelis API self-use is now a delivery expectation, not just an API reference. `uv run inv api.delivery-proof` uses the live Core API to refresh capability manifests, read `System -> Deployments` trust, create a bounded target-delivery `TeamWorkItem`, attach a `TeamInteraction`, and read the work back. Use it after local Core/PostgreSQL/NATS are available when target delivery should prove the organism can operate through its own governed API surface.
-- `IN_REVIEW` source-mode recovery proof on 2026-05-17 found Rancher Docker still down while `mycelis-root` supplied PostgreSQL/NATS. Core/Interface recovered locally, missing V8.2 late migrations 040-043 were applied without reset, `db.migrate` compatibility now checks capability/proof/team-work tables, and `uv run inv api.delivery-proof` created durable work item `f25c2750-eeaa-400f-8fbc-62fbaf855620`.
+- `IN_REVIEW` earlier source-mode recovery proof on 2026-05-17 is now superseded by the native-local development lane. Rancher/WSL evidence remains useful historical proof, but the active source lane uses Windows PostgreSQL/NATS through `native-infra.*`, `db.migrate`, and source Core/Interface before any Compose or cluster proof.
 - `IN_REVIEW` task-surface cleanup on 2026-05-17 removed repo-owned WSL distro teardown from Invoke. The task runner now manages Mycelis tools, app services, data-plane dependencies, and proof-checkout validation; host-level repair or shutdown for WSL, Rancher Desktop, Docker Desktop, and VM/runtime resets remains a platform/operator action outside the repo task registry.
+- `ACTIVE` development runtime posture is now native-local first. Windows PostgreSQL plus local NATS are the standing development data plane, managed through `uv run inv native-infra.*`; `lifecycle.up` defaults to `MYCELIS_DEV_INFRA_MODE=native` and starts Core/Interface from source against those services, while `lifecycle.down` leaves PostgreSQL/NATS running instead of killing them as temporary bridges. Compose, Rancher/K8s, WSL, and Docker are now deployment/proof lanes after local source results are acceptable.
+- `IN_REVIEW` native PostgreSQL 18 is now usable for the local source lane after pgvector `0.8.2` was built from source with Visual Studio Build Tools and installed into PostgreSQL. `db.migrate`/`db.reset` now pre-create native PostgreSQL extensions through the configured bootstrap user before app migrations, so `vector` and `pg_trgm` are available while Core still runs as the `mycelis` app role. Evidence: `uv run inv native-infra.status` shows PostgreSQL/NATS ready, `uv run inv db.migrate` reports compatible schema, `uv run inv lifecycle.up --frontend` started Core/Interface, `uv run inv lifecycle.health` passed all endpoints, docs/workflow pytest passed (`58`), and `uv run inv quality.max-lines --limit 300` passed.
 - `IN_REVIEW` documentation cleanup on 2026-05-17 pruned stale architecture-library documents from the active docs surface. The UI manifest and docs home now expose a compact canonical set only; older V8/V8.1 plan, doctrine, split-detail, and temporary delivery docs were deleted instead of retained as stale authority. Current requirements were kept in README, V8.2 full architecture, V8.2 finalization/embodiment contracts, runtime/config/UI/capability contracts, user docs, repo operations docs, and this state file.
-- `IN_REVIEW` finalization team execution began on 2026-05-17 with quality-gate cleanup and delivery-plan separation. The oversized current-state PRD and Soma UI expression docs were compressed under the 300-line gate, detailed team sequencing moved to `docs/architecture-library/V8_2_FINALIZATION_DELIVERY_PLAN.md`, `soma-governance-live.spec.ts` was split into a focused spec plus helper module, core cognitive planning helpers/tests were split into smaller files, and `ops/quality_legacy_caps.txt` was ratcheted down. Evidence: `uv run inv quality.max-lines --limit 300`, focused Go server tests, docs/workflow/task pytest suite, TypeScript check, and `git diff --check` passed. Live Mycelis API self-use was attempted with `uv run inv api.delivery-proof --read-only` and is currently blocked by a down source lane: Docker, PostgreSQL, NATS, Core API, and Frontend are down; Ollama is healthy.
+- `IN_REVIEW` finalization team execution began on 2026-05-17 with quality-gate cleanup and delivery-plan separation. The oversized current-state PRD and Soma UI expression docs were compressed under the 300-line gate, detailed team sequencing moved to `docs/architecture-library/V8_2_FINALIZATION_DELIVERY_PLAN.md`, `soma-governance-live.spec.ts` was split into a focused spec plus helper module, core cognitive planning helpers/tests were split into smaller files, and `ops/quality_legacy_caps.txt` was ratcheted down. Follow-up on 2026-05-18 re-engaged delivery teams against the now-running native source lane; Mycelis API self-use and GUI proof are the next coordinated acceptance gates, not another doctrine pass.
 - `IN_REVIEW` GitHub pipeline orchestration now matches the manual, source-first delivery posture. `CI` has dispatch inputs for targeted repo/core/interface/browser/Helm lanes, `Source API Proof` provides an explicit hosted PostgreSQL/NATS lane for `api.delivery-proof`, `Dev Build` accepts explicit image tags and build-only mode, `Release Packaging` can verify selected Helm packaging profiles with optional image publishing, and `Release Core Binaries` can build one or all binary targets with release asset publication gated behind a tag plus explicit approval. These workflows remain manual-only; local source proof remains the first acceptance path.
+- `IN_REVIEW` release and auth finalization now adds a manual `Full Release Candidate` workflow that chains source gates, authenticated browser proof, optional hosted source API proof, Helm packaging, optional images, and binary packaging. The Interface root now requires a signed web session for every edition: local owner login covers free/self-hosted nodes, Google Workspace OIDC is the first enabled enterprise SSO path, admins retain provider/system configuration surfaces, and standard users stay focused on Soma work, teams, outputs, runs, and proof.
 - `COMPLETE` the committed-tree Rancher Desktop K3s RC proof lane is green for the current MVP proof standard; follow-on work should not keep Mission 1 framed as an unstarted proof gate.
 - `IN_REVIEW` the directed-execution trust spine, capability/MCP visibility, failure/degradation proof, search-source provenance, and retained-output rendering are implemented with focused proof. The next acceptance gate is live Mycelis GUI proof for project-package output and explicit MCP-backed confirmation paths, not another doctrine pass.
 - `BLOCKED` temporary runtime teams are spawnable but not yet useful as Codex delivery collaborators until at least one bounded, role-specific team ask returns within the product timeout and the UI exposes timeout/degradation clearly.
 - `ACTIVE` runtime-team testing stays bounded to 1-3 targeted teams and must clean up temporary teams after use.
 - `ACTIVE` source hygiene continues as a no-regression lane: keep the `quality.max-lines` gate green and lower legacy caps rather than growing them.
-- `ACTIVE` runtime posture reset on 2026-05-16: stale Compose services were stopped with `docker compose down`, Mycelis Rancher/K8s workloads were scaled to zero while preserving cluster/PVC state, and no repo-local Node/Playwright/uv/inv/docker-compose processes remained. Going forward, default development proof is source-mode local run/build/test with infra-only PostgreSQL/NATS allowed for real persistence and bus proof; Core/Interface containers and full Compose/K8s app stacks are brought up only after local results are acceptable for container/deployment proof. Current infra correction: `uv run inv compose.infra-up` and `uv run inv compose.infra-health` hung in the local task runner, so only `postgres` and `nats` were started with `docker compose up -d postgres nats`; `pg_isready` and `http://127.0.0.1:8222/healthz` passed, while Core/Interface and Mycelis K8s workloads remain down.
+- `ACTIVE` runtime posture reset on 2026-05-16: stale Compose services were stopped with `docker compose down`, Mycelis Rancher/K8s workloads were scaled to zero while preserving cluster/PVC state, and no repo-local Node/Playwright/uv/inv/docker-compose processes remained. Going forward, default development proof is source-mode local run/build/test with native PostgreSQL/NATS for real persistence and bus proof; Core/Interface containers and full Compose/K8s app stacks are brought up only after local results are acceptable for container/deployment proof.
 - `IN_REVIEW` thorough managed UI validation is green for the stable Windows proof lane after stale homepage/search assertions were corrected to match current product copy and duplicated search-status rendering. Evidence: `uv run inv interface.test` passed (`117` files, `521` tests), `uv run inv interface.typecheck` passed, `uv run inv interface.build` passed, managed Chromium E2E passed (`85` passed, `26` skipped), mobile Chromium passed (`3`), focused homepage passed (`3`), focused Connected Tools passed (`2`, `1` live-gated skip), `uv run inv quality.max-lines --limit 300` passed, and `git diff --check` passed. Live backend proof was not run because `uv run inv lifecycle.status` showed PostgreSQL, NATS, Core API, and Frontend down while Ollama was healthy; this pass certifies stable managed UI behavior, not live Core/runtime behavior.
 - `IN_REVIEW` direct headed Compose UI proof is green after bringing up Rancher/Docker resources and testing the live product in visible Chromium. The proof repaired two operational gaps: Compose Core now dry-runs workspace-folder reveal because a Linux container cannot open the Windows file explorer directly, and direct filesystem MCP calls normalize the friendly `workspace/...` alias to the configured `/data/workspace` root before invoking the curated filesystem server. Evidence: `rdctl start` succeeded; `uv run inv compose.up --build --wait-timeout=240` built Core/Interface and started PostgreSQL/NATS/Core/Frontend; filesystem MCP was installed through `/api/v1/mcp/library/install`; headed live Chromium passed `soma-governance-live.spec.ts` (`4`), `team-execution-live.spec.ts` (`1`), `team-output-content-live.spec.ts` (`1`), `resources-workspace-files.spec.ts` (`2`), `groups-live-backend.spec.ts` (`1`), `workflow-variants-live-backend.spec.ts` (`1`), `mcp-connected-tools.spec.ts` (`3`), `workspace-live-backend.spec.ts` (`1`), `search-provenance-live.spec.ts` (`1` with `MYCELIS_SEARCH_PROVIDER=local_sources`), and mobile Chromium (`3`). Focused backend proof `go test ./internal/server -run "TestNormalizeMCPToolCallArguments" -count=1 -v -timeout 60s` passed. This Rancher Desktop Compose session required a non-loopback container-reachable Ollama endpoint (`http://100.92.38.10:11434`) because `host.docker.internal:11434` was not reachable from Core.
 - `IN_REVIEW` the default Soma proposal/trust UI has been compressed after operator review found the live screen too dense. Proposal cards now lead with one decision summary, compact lifecycle/proof and governance chips, result text, changed resources, and primary action controls; task lifecycle, Team/NATS mechanics, capability IDs, role/brain, and expression bindings stay behind `Show details`. The `Soma just did this` trust package now defaults to outcome plus compact Outputs/Proof/Next rows, with full intent/understanding/execution/capability facts behind `Show trust details`. Docs reviewed in this slice: `README.md`, `docs/TESTING.md`, `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`, `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`, and `interface/lib/docsManifest.ts`; no canonical doc copy changed because the existing contract already requires Soma UX compression with inspectable proof. Evidence: `npm test -- ProposedActionBlock SomaCausalSummary --maxWorkers=1` passed (`12`), `npx tsc --noEmit` passed, `npm run build` passed, `docker compose build interface` passed, Compose Core/Interface were restored with explicit container-safe runtime values, headed Chromium `soma-proposal-mode.spec.ts` passed (`2`), and `uv run inv quality.max-lines --limit 300` passed.
@@ -1075,38 +1084,49 @@ Evidence:
 
 ## Immediate Next Actions
 
-1. `ACTIVE` refresh the local source proof lane and keep it source-first.
-   - keep PostgreSQL and NATS available as required infra
-   - start Core/Interface locally, not through full app containers, until local proof is clean
-   - rerun `ui-finalization-browser-package-live.spec.ts` against refreshed services and record any precise runtime defect
-   - rerun `system-deployments.spec.ts` and the opt-in `active-work-api.spec.ts` local-source lanes against the same running Core/Interface; do not start Docker app services for this proof
-2. `NEXT` implement the durable trust object spine for confirm-action.
-   - persist `ExecutionContract` and `ProofArtifact`
-   - expose additive `contract_id` and `proof_id` through `execution_summary`
-   - prove success and degraded/failure paths with Go tests
-3. `NEXT` implement durable team-work truth.
-   - add `TeamWorkItem`, `TeamInteraction`, `TeamStatusEvent`, and `TeamOutputRef` storage/API
-   - wire create-team, delegate-task, confirm-action success/failure, status/result signals, and retained outputs
-   - keep existing projection as degraded fallback only
-4. `NEXT` compose the single-window Soma workspace.
-   - expression input, active work, output workbench, compact trust package, and context indicator must fit in one practical work window
-   - raw NATS/MCP/deployment topology remains behind Advanced/Inspect
-   - desktop and mobile GUI review must show no practical work-surface collapse
-5. `IN_REVIEW` keep `System -> Deployments` as the detailed deployment-trust home and refresh its local-source proof.
+1. `ACTIVE` run delivery through one coordinated board, not disconnected team findings.
+   - Soma UX owns operator simplicity, post-confirm refresh, active-work actions, and first-use routing
+   - Runtime/API owns trust-object read/query APIs, team status timelines, transition APIs, and Core audit identity propagation
+   - QA/GUI owns the live browser matrix and records skipped gates as blockers, not quiet omissions
+   - Docs/State owns native-source-first recovery language and stale WSL/K8s cleanup
+   - Infra/Auth owns local-only service posture, OAuth/session configuration, and enterprise SSO readiness
+   - Release/Orchestration owns source-first gates, manual GitHub corroboration, and packaging/deployment proof order
+2. `ACTIVE` keep the local source proof lane green before any container/deployment proof.
+   - `uv run inv native-infra.status`
+   - `uv run inv db.migrate`
+   - `uv run inv lifecycle.status`
+   - `uv run inv lifecycle.health`
+   - `uv run inv api.delivery-proof`
+3. `NEXT` execute the Soma UX fix batch found by the team audit.
+   - confirm refresh of teams, durable work, and output refs after proposal confirmation
+   - keep `ActiveWorkLane` verbs disabled or hidden unless they call a real API
+   - keep GUI recovery copy aligned to native/source-first recovery
+   - promote capability manifest health/risk/approval/recovery/version fields in Resources or Soma readiness
+   - consolidate first-use routing around dashboard Soma plus explicit persisted-work context
+4. `IN_REVIEW` execute the Runtime/API trust-object batch.
+   - read/list endpoints for `ExecutionContract` and `ProofArtifact` are landed locally
+   - `TeamStatusEvent` timeline read access is landed locally
+   - add an explicit team-work transition/append-event API
+   - decide whether `team_work_items.contract_id` and `proof_id` become UUID/FK-backed release-integrity links
+   - map Interface web user/session identity into Core audit identity or document the proxy-admin boundary as a temporary release limitation
+5. `NEXT` run the QA/Embodiment GUI order against the running source lane.
+   - smoke/auth/navigation/layout/workspace-live
+   - Soma direct/proposal/cancel/confirm/reload
+   - first-demo project package, proof link, reload, Groups output
+   - degraded/retry for the same package flow
+   - durable active work, team execution, team output, and Groups retained output
+   - Resources, Connected Tools, search provenance, System Deployments, Settings, docs/runs
+   - mobile Soma workflow and desktop/mobile compression
+   - current 2026-05-18 GUI blockers: complex-panel actionability/stability, Settings/Auth Providers navigation contract, and long-running accessibility certification
+6. `IN_REVIEW` keep `System -> Deployments` as the detailed deployment-trust home and refresh its local-source proof.
    - expose roots, current commit/image/chart identity, endpoint posture, runtime health, proof lane, and recovery posture
-   - prove the live endpoint/UI when local source Core/Interface are available
+   - prove the live endpoint/UI through running Core/Interface when source lane is available
    - keep Resources deployment context as governed knowledge intake rather than deployment truth
-6. `NEXT` run the QA/Embodiment proof order from the PRD.
-   - first-demo live success
-   - degraded/retry live injection
-   - retained output spine
-   - API-backed active work
-   - heavy-surface desktop/mobile compression matrix
-   - deployment-lane replay only after local source proof is clean
-   - keep WSL Compose as optional secondary deployment-mimic evidence
-7. `NEXT` keep the Windows self-hosted operator lane honest while the MVP proof surface grows.
-   - verify the Windows browser can still reach the active proof UI, whether Rancher K3s with local Interface or WSL/Compose
-   - keep explicit non-loopback AI endpoint posture intact as docs/tests/runtime evolve
+7. `NEXT` harden local auth and service exposure before external review.
+   - keep same-machine OAuth aligned to `http://127.0.0.1:3000`
+   - avoid public firewall exposure for Core, PostgreSQL, NATS, and NATS monitor during local development
+   - add/verify break-glass credential posture before hybrid or external review
+   - keep `.env.example` aligned with port/auth/native-infra expectations without committing secrets
 8. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
    - `README.md`
    - `docs/TESTING.md`
@@ -1114,15 +1134,8 @@ Evidence:
    - `docs/architecture/OPERATIONS.md`
    - `ops/README.md`
    - `interface/lib/docsManifest.ts` whenever the in-app docs surface changes
-8. `REQUIRED` keep all new validation checkpoints, blocker transitions, and accepted proof results recorded here in `V8_DEV_STATE.md` in the same delivery window.
-9. `IN_REVIEW` continue the workflow-complete verification lane from the current durable workflow/testing contracts.
-   - managed production-start Chromium proof is green for the mocked/full GUI lane at `82` passed and `23` intentionally skipped
-   - keep mapping primary user workflows to explicit automated proof
-   - next acceptance broadening is live Mycelis GUI proof for retained project-package output and explicit MCP-backed confirmation paths
-   - tighten any slice that proves only immediate interaction instead of user-visible outcome
-10. `NEXT` keep the current MCP/team/media/output-value lanes outcome-shaped.
-   - extend direct-vs-team/media/browser proof into more live configured provider/runtime checks
-   - keep retained outputs, previews, downloads, and operator-readable recent activity as the visible success contract
+9. `REQUIRED` keep all new validation checkpoints, blocker transitions, and accepted proof results recorded here in `V8_DEV_STATE.md` in the same delivery window.
+10. `NEXT` use Compose, WSL, Rancher/K8s, manual GitHub workflows, and release packaging as corroboration after local source proof is clean, not as the first place to discover app defects.
 
 11. `BLOCKED` temporary Mycelis runtime teams are spawnable through the live API but not yet useful as Codex delivery collaborators in the current Windows lane.
    - `POST /api/v1/teams` via the authenticated local API successfully spawned `temp-mvp-truth-*`, `temp-gui-audit-*`, and `temp-runtime-usefulness-*` runtime teams.

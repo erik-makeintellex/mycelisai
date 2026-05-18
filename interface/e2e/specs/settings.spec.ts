@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clickVisibleControl } from '../support/click-visible-control';
 
 test.describe('Settings Page (/settings)', () => {
     test.skip(({ browserName }) => browserName === 'webkit', 'WebKit currently crashes on this settings surface; keep Chromium/Firefox coverage stable for now.');
@@ -75,7 +76,7 @@ test.describe('Settings Page (/settings)', () => {
     });
 
     test('guided workflow controls can switch visible sections', async ({ page }) => {
-        await page.getByRole('button', { name: 'Open Mission Profiles' }).click();
+        await clickVisibleControl(page, page.getByRole('button', { name: 'Open Mission Profiles' }));
         await expect(page.getByRole('tab', { name: 'Mission Profiles' })).toHaveAttribute('aria-current', 'page');
         await expect(page.getByText(/Mission Profiles/i).first()).toBeVisible();
     });
@@ -84,21 +85,21 @@ test.describe('Settings Page (/settings)', () => {
         await page.evaluate(() => window.localStorage.setItem('mycelis-advanced-mode', 'true'));
         await page.reload({ waitUntil: 'domcontentloaded' });
         await expect(page.getByRole('button', { name: 'Open Auth Providers' })).toBeVisible();
-        await page.getByRole('button', { name: 'Open Auth Providers' }).click();
+        await clickVisibleControl(page, page.getByRole('button', { name: 'Open Auth Providers' }));
         await expect(page.getByRole('tab', { name: 'Auth Providers' })).toHaveAttribute('aria-current', 'page');
         await expect(page.getByRole('heading', { name: 'Auth Providers' })).toBeVisible();
         await expect(page.getByRole('navigation', { name: 'Auth provider menu' })).toBeVisible();
         await expect(page.getByRole('button', { name: /OIDC \/ OAuth/i })).toBeVisible();
-        await page.getByRole('button', { name: /SAML/i }).click();
+        await clickVisibleControl(page, page.getByRole('button', { name: /SAML/i }));
         await expect(page.getByRole('heading', { name: 'SAML' })).toBeVisible();
         await expect(page.getByText('MYCELIS_AUTH_SAML_CERT_REF')).toBeVisible();
-        await page.getByRole('button', { name: /SCIM/i }).click();
+        await clickVisibleControl(page, page.getByRole('button', { name: /SCIM/i }));
         await expect(page.getByRole('heading', { name: 'SCIM' })).toBeVisible();
         await expect(page.getByText('Future provisioning path')).toBeVisible();
     });
 
     test('People & Access keeps enterprise user management out of the base release path', async ({ page }) => {
-        await page.getByRole('button', { name: 'Open People & Access' }).click();
+        await clickVisibleControl(page, page.getByRole('button', { name: 'Open People & Access' }));
         await expect(page.getByRole('tab', { name: 'People & Access' })).toHaveAttribute('aria-current', 'page');
         await expect(page.getByText('Base release layer')).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Organization Access' })).toBeVisible();
@@ -127,7 +128,7 @@ test.describe('Settings Page (/settings)', () => {
         const updatedAssistantName = originalAssistantName === 'Atlas' ? 'Soma Prime' : 'Atlas';
 
         await assistantInput.fill(updatedAssistantName);
-        await saveButtons.nth(0).click();
+        await clickVisibleControl(page, saveButtons.nth(0));
         await expect(page.getByText('Saved').first()).toBeVisible();
 
         const themeCandidates = ['aero-light', 'midnight-cortex', 'system'] as const;
@@ -141,7 +142,7 @@ test.describe('Settings Page (/settings)', () => {
         }
         expect(updatedTheme).not.toBe('');
 
-        await themeSaveButton.click();
+        await clickVisibleControl(page, themeSaveButton);
         await expect(page.locator('html')).toHaveAttribute('data-theme', updatedTheme);
 
         await page.reload({ waitUntil: 'domcontentloaded' });
@@ -150,10 +151,10 @@ test.describe('Settings Page (/settings)', () => {
         await expect(page.locator('html')).toHaveAttribute('data-theme', updatedTheme);
 
         await page.getByLabel('Assistant Name').fill(originalAssistantName);
-        await saveButtons.nth(0).click();
+        await clickVisibleControl(page, saveButtons.nth(0));
         await page.getByLabel('Theme').selectOption(originalTheme);
         if (await themeSaveButton.isEnabled()) {
-            await themeSaveButton.click();
+            await clickVisibleControl(page, themeSaveButton);
         }
     });
 

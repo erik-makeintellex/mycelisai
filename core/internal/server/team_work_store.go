@@ -145,6 +145,39 @@ func (s *AdminServer) updateTeamWorkItemLastEventDB(ctx context.Context, item *p
 	return err
 }
 
+func (s *AdminServer) listTeamStatusEventsDB(ctx context.Context, teamID, workItemID string, limit int) ([]protocol.TeamStatusEvent, error) {
+	db := s.getDB()
+	if db == nil {
+		return nil, errors.New("database not available")
+	}
+	rows, err := db.QueryContext(ctx, `
+		SELECT id::text, team_id, work_item_id::text, COALESCE(run_id::text,''),
+		       COALESCE(intent_proof_id::text,''), COALESCE(contract_id,''), COALESCE(proof_id,''),
+		       state, headline, details, confidence_posture, blocked_by, next_action,
+		       source_kind, source_channel, payload_kind, audit_refs, timestamp, version
+		FROM team_status_events
+		WHERE tenant_id='default' AND team_id=$1 AND work_item_id=$2
+		ORDER BY timestamp ASC
+		LIMIT $3`, strings.TrimSpace(teamID), workItemID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]protocol.TeamStatusEvent, 0)
+	for rows.Next() {
+		item, scanErr := scanTeamStatusEvent(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (s *AdminServer) listTeamInteractionsDB(ctx context.Context, teamID, workItemID string, limit int) ([]protocol.TeamInteraction, error) {
 	db := s.getDB()
 	if db == nil {

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { clickVisibleControl } from "../support/click-visible-control";
 
 type ToolCallRecord = {
     tool: string;
@@ -120,22 +121,22 @@ test.describe("Resources workspace files", () => {
         await expect(page.getByText("proof.md")).toBeVisible({ timeout: 15_000 });
         expect(calls[0]).toEqual({ tool: "list_directory", arguments: { path: "workspace" } });
 
-        await page.getByText("proof.md").click();
+        await clickVisibleControl(page, page.getByRole("button", { name: "Open file proof.md" }));
         await expect(page.locator("textarea").first()).toHaveValue(/Readable through filesystem MCP/i);
         expect(calls.some((call) => call.tool === "read_text_file" && call.arguments.path === "workspace/proof.md")).toBeTruthy();
 
         await page.getByPlaceholder("new directory name").fill("generated");
-        await page.getByRole("button", { name: /Create Dir/i }).click();
+        await clickVisibleControl(page, page.getByRole("button", { name: /Create Dir/i }));
         await waitForToolCall(page, calls, (call) => call.tool === "create_directory" && call.arguments.path === "workspace/generated");
         await expect(page.getByText("generated")).toBeVisible();
 
         await page.getByPlaceholder("new file name").fill("generated-proof.md");
         await page.getByPlaceholder("Optional content for new file").fill("# Generated Proof\nCreated from the Workspace Files GUI.");
-        await page.getByRole("button", { name: /Write File/i }).click();
+        await clickVisibleControl(page, page.getByRole("button", { name: /Write File/i }));
         await waitForToolCall(page, calls, (call) => call.tool === "write_file" && call.arguments.path === "workspace/generated-proof.md");
         await expect(page.getByText("generated-proof.md")).toBeVisible();
 
-        await page.getByText("generated-proof.md").click();
+        await clickVisibleControl(page, page.getByRole("button", { name: "Open file generated-proof.md" }));
         await expect(page.locator("textarea").first()).toHaveValue(/Created from the Workspace Files GUI/i);
     });
 
@@ -153,10 +154,10 @@ test.describe("Resources workspace files", () => {
         await expect(page.getByPlaceholder("new file name")).toBeVisible({ timeout: 20_000 });
         await page.getByPlaceholder("new file name").fill(filename);
         await page.getByPlaceholder("Optional content for new file").fill(`# ${marker}\n\nCreated through Resources Workspace Files using filesystem MCP.`);
-        await page.getByRole("button", { name: /Write File/i }).click();
+        await clickVisibleControl(page, page.getByRole("button", { name: /Write File/i }));
 
         await expect(page.getByText(filename)).toBeVisible({ timeout: 30_000 });
-        await page.getByText(filename).click();
+        await clickVisibleControl(page, page.getByRole("button", { name: `Open file ${filename}` }));
         await expect(page.locator("textarea").first()).toHaveValue(new RegExp(marker), { timeout: 20_000 });
 
         const viewResponse = await page.request.get(`/api/v1/workspace/files/view?path=${encodeURIComponent(`workspace/${filename}`)}`);

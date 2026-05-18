@@ -183,3 +183,48 @@ type ExecutionNextStep struct {
 	Action string `json:"action,omitempty"`
 	Href   string `json:"href,omitempty"`
 }
+
+type ExecutionContractRecord struct {
+	ID                    string                  `json:"id"`
+	IntentProofID         string                  `json:"intent_proof_id,omitempty"`
+	RunID                 string                  `json:"run_id,omitempty"`
+	TemplateID            TemplateID              `json:"template_id"`
+	ResolvedIntent        string                  `json:"resolved_intent,omitempty"`
+	ExecutionShape        ExecutionShape          `json:"execution_shape"`
+	Status                ExecutionContractStatus `json:"status"`
+	ExecutionStatus       ExecutionStatus         `json:"execution_status"`
+	ValidationSource      TrustValidationSource   `json:"validation_source"`
+	EvidenceStrength      TrustEvidenceStrength   `json:"evidence_strength"`
+	ProofQuality          TrustProofQuality       `json:"proof_quality"`
+	LatestProofArtifactID string                  `json:"latest_proof_artifact_id,omitempty"`
+	AuditEventID          string                  `json:"audit_event_id,omitempty"`
+	OutputRefs            []ExecutionOutput       `json:"output_refs,omitempty"`
+	AuditRefs             []map[string]string     `json:"audit_refs,omitempty"`
+	ReviewLineage         []map[string]string     `json:"review_lineage,omitempty"`
+	Degradation           map[string]any          `json:"degradation,omitempty"`
+	Recovery              map[string]any          `json:"recovery,omitempty"`
+	CreatedAt             string                  `json:"created_at,omitempty"`
+	ConfirmedAt           string                  `json:"confirmed_at,omitempty"`
+	CompletedAt           string                  `json:"completed_at,omitempty"`
+	UpdatedAt             string                  `json:"updated_at,omitempty"`
+}
+
+type ProofArtifactRecord struct {
+	ID               string                `json:"id"`
+	ContractID       string                `json:"contract_id,omitempty"`
+	IntentProofID    string                `json:"intent_proof_id,omitempty"`
+	RunID            string                `json:"run_id,omitempty"`
+	ArtifactKind     string                `json:"artifact_kind"`
+	Status           ProofArtifactStatus   `json:"status"`
+	ProofClass       ExecutionProofClass   `json:"proof_class"`
+	ValidationSource TrustValidationSource `json:"validation_source"`
+	EvidenceStrength TrustEvidenceStrength `json:"evidence_strength"`
+	ProofQuality     TrustProofQuality     `json:"proof_quality"`
+	OutputRefs       []ExecutionOutput     `json:"output_refs,omitempty"`
+	AuditRefs        []map[string]string   `json:"audit_refs,omitempty"`
+	ReviewLineage    []map[string]string   `json:"review_lineage,omitempty"`
+	Degradation      map[string]any        `json:"degradation,omitempty"`
+	Recovery         map[string]any        `json:"recovery,omitempty"`
+	Payload          map[string]any        `json:"payload,omitempty"`
+	CreatedAt        string                `json:"created_at,omitempty"`
+}

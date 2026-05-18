@@ -2,7 +2,7 @@
 Lifecycle management for the Mycelis development stack.
 
 Provides unified start/stop/status/health commands that handle the full
-dependency graph: port-forwards -> core server -> frontend.
+dependency graph: native infra or explicit port-forwards -> core server -> frontend.
 
 All probes are Python-native (socket/urllib) — no shell wrappers.
 """
@@ -139,6 +139,13 @@ def _wait_for_http_ok(
     return False
 
 
+def _dev_infra_mode() -> str:
+    mode = os.environ.get("MYCELIS_DEV_INFRA_MODE", "native").strip().lower()
+    if mode not in {"", "native", "k8s"}:
+        raise SystemExit("Invalid MYCELIS_DEV_INFRA_MODE. Use native or k8s.")
+    return mode
+
+
 def _core_council_ready(timeout: int = 10, interval: float = 1.0) -> bool:
     """Return True when council membership is reachable through the Core API."""
     api_key = os.environ.get("MYCELIS_API_KEY", "")
@@ -230,10 +237,12 @@ def _run_best_effort(cmd: list[str], timeout: int = 5):
 
 def _remaining_managed_services() -> list[str]:
     """Return managed service labels that still have listening ports."""
+    infra_mode = _dev_infra_mode()
+    keys = ("core", "frontend") if infra_mode in {"", "native"} else ("postgres", "nats", "core", "frontend")
     return [
         svc["label"]
         for key, svc in SERVICES.items()
-        if key in ("postgres", "nats", "core", "frontend") and _port_open(svc["port"])
+        if key in keys and _port_open(svc["port"])
     ]
 
 
@@ -364,9 +373,11 @@ def _kill_compiled_go_services() -> list[dict[str, str | int]]:
 
 
 def _service_keys_by_label(labels: list[str]) -> list[str]:
+    infra_mode = _dev_infra_mode()
+    allowed = ("core", "frontend") if infra_mode in {"", "native"} else ("postgres", "nats", "core", "frontend")
     keys: list[str] = []
     for key, svc in SERVICES.items():
-        if key in ("postgres", "nats", "core", "frontend") and svc["label"] in labels:
+        if key in allowed and svc["label"] in labels:
             keys.append(key)
     return keys
 
@@ -404,7 +415,15 @@ def _start_port_forward(svc: str, forward: str):
 
 
 def _ensure_bridge():
-    """Ensure port-forwards for PG and NATS are running. Idempotent."""
+    """Ensure PostgreSQL and NATS are reachable for source-mode Core."""
+    infra_mode = _dev_infra_mode()
+    if infra_mode in {"", "native"}:
+        from . import native_infra
+
+        native_infra.ensure_for_lifecycle(timeout=30)
+        return
+
+    # Kubernetes bridge mode remains available for explicit clustered proof.
     for key in ("postgres", "nats"):
         svc = SERVICES[key]
         port = svc["port"]
@@ -485,32 +504,11 @@ def _start_core_background():
 
 @task
 def status(c):
-    """
-    Show health of every service in the dev stack.
-    Checks: Docker, Kind cluster, port-forwards, core, frontend, Ollama.
-    """
+    """Show health of every service in the dev stack."""
     print("=== Mycelis Stack Status ===\n")
 
-    # Docker / Kind — use invoke's c.run() which resolves PATH correctly
-    try:
-        docker_result = c.run("docker version --format {{.Server.Version}}", hide=True, warn=True)
-        if getattr(docker_result, "ok", None) is True or getattr(docker_result, "exited", 1) == 0:
-            print("  Docker          : UP")
-        else:
-            print("  Docker          : DOWN")
-    except Exception:
-        print("  Docker          : DOWN")
-
-    try:
-        result = c.run("kind get clusters", hide=True, warn=True)
-        if result and "mycelis-cluster" in result.stdout:
-            print("  Kind Cluster    : UP")
-        else:
-            print("  Kind Cluster    : NOT FOUND")
-    except Exception:
-        print("  Kind Cluster    : ERROR")
-
-    print()
+    print(f"  Dev infra mode  : {_dev_infra_mode() or 'native'}")
+    print("  Docker/K8s      : proof lane; inspect with compose.* or k8s.*")
 
     # Service ports
     for key, svc in SERVICES.items():
@@ -568,7 +566,7 @@ def status(c):
 def up(c, frontend=False, build=False):
     """
     Bring up the full dev stack (idempotent).
-    Order: port-forwards -> core server -> (optional) frontend.
+    Order: native infra or explicit port-forwards -> core server -> (optional) frontend.
     """
     print("=== Mycelis Stack Up ===\n")
 
@@ -588,13 +586,10 @@ def up(c, frontend=False, build=False):
             print("ERROR: No binary found. Run with --build or 'uv run inv core.compile' first.")
             return
 
-    # 1. Port-forwards
-    print("[1/4] Ensuring port-forwards...")
+    print("[1/4] Ensuring local infrastructure...")
     _ensure_bridge()
     print()
 
-    # 2. Wait for dependencies — Core will also retry internally (up to 90s each),
-    #    so these timeouts are just for the console status message, not hard gates.
     print("[2/4] Waiting for dependencies...")
     pg_ok = _wait_for_port(5432, "PostgreSQL", timeout=30)
     nats_ok = _wait_for_port(4222, "NATS", timeout=30)
@@ -687,7 +682,7 @@ def up(c, frontend=False, build=False):
 def down(c):
     """
     Stop all dev stack services cleanly.
-    Order: core -> frontend -> compiled Go cleanup -> port-forwards.
+    Order: core -> frontend -> compiled Go cleanup -> infra bridge cleanup when enabled.
     """
     print("=== Mycelis Stack Down ===\n")
 
@@ -746,18 +741,22 @@ def down(c):
     print("[3/4] Cleaning compiled Go services...")
     remaining_compiled = _kill_compiled_go_services()
 
-    # 4. Port-forwards
-    print("[4/4] Stopping port-forwards...")
-    _kill_bridges()
+    # 4. Infra bridge cleanup
+    if _dev_infra_mode() == "k8s":
+        print("[4/4] Stopping Kubernetes port-forwards...")
+        _kill_bridges()
 
-    # Also kill any remaining kubectl port-forward processes
-    if is_windows():
-        _run_best_effort(
-            ["powershell", "-NoProfile", "-Command",
-             "Get-Process kubectl -ErrorAction SilentlyContinue | Stop-Process -Force"],
-        )
+        # Also kill any remaining kubectl port-forward processes
+        if is_windows():
+            _run_best_effort(
+                ["powershell", "-NoProfile", "-Command",
+                 "Get-Process kubectl -ErrorAction SilentlyContinue | Stop-Process -Force"],
+            )
+        else:
+            _run_best_effort(["pkill", "-f", "kubectl port-forward"])
     else:
-        _run_best_effort(["pkill", "-f", "kubectl port-forward"])
+        print("[4/4] Native infrastructure: left running")
+        print("  PostgreSQL and NATS are development dependencies; inspect them with native-infra.status.")
 
     remaining = []
     deadline = time.time() + 8

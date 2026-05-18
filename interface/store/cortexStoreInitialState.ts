@@ -116,6 +116,7 @@ const initialGovernanceOpsState: StripActions<CortexGovernanceOpsContract> = {
     servicesStatusUpdatedAt: null,
     teamsDetail: [],
     isFetchingTeamsDetail: false,
+    durableWorkRefreshVersion: 0,
     selectedTeamId: null,
     isTeamDrawerOpen: false,
     teamsFilter: 'all',

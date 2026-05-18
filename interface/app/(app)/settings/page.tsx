@@ -1,8 +1,7 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { User, Settings, Shield, Wrench, Brain, Layers, KeyRound, type LucideIcon } from "lucide-react";
 import AuthProvidersPage from "@/components/settings/auth-providers/AuthProvidersPage";
 import BrainsPage from "@/components/settings/BrainsPage";
@@ -16,25 +15,51 @@ import {
 import { useCortexStore } from "@/store/useCortexStore";
 
 export default function SettingsPage() {
-    return (
-        <Suspense fallback={<div className="h-full bg-cortex-bg" />}>
-            <SettingsContent />
-        </Suspense>
-    );
+    return <SettingsContent />;
 }
 
 function SettingsContent() {
-    const searchParams = useSearchParams();
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
     const validTabs: TabId[] = ["profile", "profiles", "users", "engines", "auth", "tools"];
-    const requestedTab = (searchParams?.get("tab") as TabId | null) ?? null;
+    const [requestedTab, setRequestedTab] = useState<TabId | null>(null);
     const requestedAdvancedTab = requestedTab && ["engines", "auth", "tools"].includes(requestedTab) ? requestedTab : null;
-    const initialTab =
-        requestedTab && validTabs.includes(requestedTab) && (advancedMode || !["engines", "auth", "tools"].includes(requestedTab))
-            ? requestedTab
-            : "profile";
-    const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+    const [activeTab, setActiveTab] = useState<TabId>("profile");
+    const [webRole, setWebRole] = useState<"admin" | "standard">("admin");
+    const isAdmin = webRole === "admin";
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get("tab") as TabId | null;
+        setRequestedTab(tab && validTabs.includes(tab) ? tab : null);
+    }, []);
+
+    useEffect(() => {
+        if (!requestedTab) return;
+        const requiresAdvanced = ["engines", "auth", "tools"].includes(requestedTab);
+        if (!requiresAdvanced || advancedMode) {
+            setActiveTab(requestedTab);
+        }
+    }, [advancedMode, requestedTab]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const request = fetch("/auth/session", { cache: "no-store" });
+        if (!request?.then) return () => {
+            cancelled = true;
+        };
+        request.then((res) => (res.ok ? res.json() : null))
+            .then((body) => {
+                if (!cancelled && body?.data?.user?.role) setWebRole(body.data.user.role === "admin" ? "admin" : "standard");
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+    useEffect(() => {
+        if (!isAdmin && activeTab !== "profile" && activeTab !== "profiles") setActiveTab("profile");
+    }, [activeTab, isAdmin]);
     const openRequestedAdvancedTab = () => {
         if (!requestedAdvancedTab) return;
         if (!advancedMode) {
@@ -66,8 +91,8 @@ function SettingsContent() {
                 <div role="tablist" aria-label="Settings sections" className="flex items-center gap-1 border-b border-cortex-border">
                     <Tab label="Profile" icon={User} active={activeTab === "profile"} onClick={() => setActiveTab("profile")} />
                     <Tab label="Mission Profiles" icon={Layers} active={activeTab === "profiles"} onClick={() => setActiveTab("profiles")} />
-                    <Tab label="People & Access" icon={Shield} active={activeTab === "users"} onClick={() => setActiveTab("users")} />
-                    {advancedMode && (
+                    {isAdmin && <Tab label="People & Access" icon={Shield} active={activeTab === "users"} onClick={() => setActiveTab("users")} />}
+                    {advancedMode && isAdmin && (
                         <>
                             <Tab label="AI Engines" icon={Brain} active={activeTab === "engines"} onClick={() => setActiveTab("engines")} />
                             <Tab label="Auth Providers" icon={KeyRound} active={activeTab === "auth"} onClick={() => setActiveTab("auth")} />

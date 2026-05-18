@@ -20,8 +20,8 @@
 - Do not use bare `uvx inv ...`.
 - App-tied management logic stays in Python task modules; PowerShell is wrapper-only when the host needs it.
 - Task, runtime, or validation changes are not complete until the matching docs are reviewed and updated in the same slice.
-- GitHub Actions workflows are manual-only through `workflow_dispatch` for the current release-readiness push; automatic push and pull-request hosted runs are paused.
-- Treat source-mode local run/build/test with infra-only PostgreSQL/NATS as the first acceptance lane. Bring up full Compose, Rancher K3s, WSL/Compose, or target-cluster app proof only after local evidence is acceptable.
+- GitHub Actions workflows are manual-only through `workflow_dispatch` for the current release-readiness push; `Full Release Candidate` is the umbrella hosted release lane, while CI/source/API/build/package workflows remain narrower manual proofs.
+- Treat source-mode local run/build/test with native PostgreSQL/NATS as the first acceptance lane. Bring up full Compose, Rancher K3s, WSL/Compose, or target-cluster app proof only after local evidence is acceptable.
 - Scope tasks around needed tools and Mycelis services. Do not add repo tasks that manage whole host environments such as terminating WSL distros, resetting Rancher Desktop VMs, or repairing Docker Desktop itself.
 
 ## Components
@@ -30,7 +30,7 @@ This directory contains the logic for the **Service Release Standard 1.0**.
 Recommended host posture:
 - Windows repo: canonical editing, review, and git-push surface for active development
 - WSL `mycelis-root` deployment checkout: guarded WSL Compose proof checkout for install, build, API/UI test, Compose runtime, and deployment-mimic validation
-- Windows native: keep the runtime story anchored to rapid Compose proof or self-hosted Kubernetes validation; when Windows no longer has a native `docker` binary, `compose.*` can route through Docker inside WSL
+- Windows native: run Core/Interface from source against Windows PostgreSQL and a local NATS server first; use Compose or Kubernetes only after local evidence is acceptable
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
 
@@ -45,7 +45,7 @@ WSL Compose proof-checkout contract:
 - WSL tasking is deliberately proof-checkout scoped. If the distro, Rancher Desktop, or Docker host is unhealthy, fix the host tool outside the repo task runner and then rerun the narrow validation task.
 
 Deployment selection rule:
-- local source-mode run/build/test with infra-only PostgreSQL/NATS is the default development and review lane
+- local source-mode run/build/test with native PostgreSQL/NATS is the default development and review lane
 - Docker Compose is the rapid local development and same-machine proof runtime
 - Rancher Desktop K3s is the preferred Windows local Kubernetes validation lane for Helm behavior
 - `k3d` is the preferred WSL/Linux local Kubernetes validation lane for Helm behavior
@@ -115,6 +115,15 @@ Handles the rapid Docker Compose single-host runtime for development, same-machi
 - `compose.health` is a usable-product gate for the home runtime, so it fails when text inference is offline even if the API still responds.
 - The compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; default npm-backed MCP auto-bootstrap still stays disabled by default to keep startup logs honest.
 - Manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root, which is `/data/workspace` in the supported Compose output block.
+
+### `native_infra.py` (Source-Mode Data Plane)
+Owns the narrow Windows/source-mode dependency path for development and testing without Docker.
+- **Install NATS**: `uv run inv native-infra.install-nats` installs `nats-server` with Go into the local Go bin directory. The pinned default is `v2.14.0`.
+- **Up**: `uv run inv native-infra.up` bootstraps the configured PostgreSQL app role/database and starts local NATS with JetStream plus the HTTP monitor.
+- **Status**: `uv run inv native-infra.status` checks PostgreSQL port/query readiness, NATS port readiness, and the NATS monitor endpoint.
+- **Bootstrap PostgreSQL**: `uv run inv native-infra.bootstrap-postgres` uses `POSTGRES_USER` / `POSTGRES_PASSWORD` from `.env` to create or update `DB_USER`, `DB_PASSWORD`, and `DB_NAME`.
+- **Start NATS**: `uv run inv native-infra.start-nats` starts only NATS when PostgreSQL is already ready.
+- `lifecycle.up` defaults to `MYCELIS_DEV_INFRA_MODE=native`, so it no longer tries Kubernetes port-forwards during ordinary source-mode development. Set `MYCELIS_DEV_INFRA_MODE=k8s` only for explicit clustered bridge proof.
 
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.
@@ -238,7 +247,7 @@ Delivery-focused validation, runner checks, and release preflight.
 - **Runtime Posture Gate**: `--runtime-posture` adds a 12 GiB disk-headroom check, reads explicit AI endpoints from process env plus `.env.compose` / `.env`, fails closed when no supported non-loopback endpoint contract is configured before baseline proof runs, and mirrors `host.docker.internal` through WSL localhost when the probe itself is running inside WSL before Compose relay startup.
 - Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path
 - GitHub validation workflows should keep dependency/bootstrap steps workflow-native (`actions/setup-*`, `npm ci`, Playwright browser install), then hand real build/test execution back to the same `uv run inv ...` task surfaces so local and CI validation stay aligned
-- GitHub CI now runs on PRs and `main` / `develop` pushes with token-free checks for repo hygiene, Core, Interface, mocked Chromium browser smoke, and Helm standards; live agentry/runtime proof remains in local/WSL release lanes.
+- GitHub CI is manual-only and offers targeted repo hygiene, Core, Interface, authenticated browser smoke, and Helm standards lanes; live agentry/runtime proof remains in local/WSL release lanes unless the manual Source API Proof or Full Release Candidate workflow is explicitly dispatched.
 - Delivery reporting should include the commands run plus the docs changed and the touched docs reviewed unchanged.
 
 ### `misc.py` (Team Coordination)

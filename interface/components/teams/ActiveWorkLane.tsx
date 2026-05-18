@@ -174,13 +174,17 @@ function ActionControl({
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
 }) {
   const Icon = actionIcons[action.action] ?? Search;
+  const hasExecutableTarget = Boolean(action.href) || Boolean(onAction);
+  const isDisabled = Boolean(action.disabled) || !hasExecutableTarget;
   const className =
     "inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-lg border border-cortex-border px-2 text-[11px] font-semibold text-cortex-text-main hover:border-cortex-primary/30 disabled:cursor-not-allowed disabled:opacity-50";
   const title =
     action.disabled && action.disabledReason
       ? `${action.label}: ${action.disabledReason}`
+      : !hasExecutableTarget
+      ? `${action.label}: action API is not connected yet.`
       : action.label;
-  if (action.href && !action.disabled) {
+  if (action.href && !isDisabled) {
     return (
       <Link href={action.href} className={className} title={title}>
         <Icon className="h-3.5 w-3.5" />
@@ -192,7 +196,7 @@ function ActionControl({
     <button
       type="button"
       className={className}
-      disabled={action.disabled}
+      disabled={isDisabled}
       title={title}
       onClick={() => onAction?.(item, action)}
     >

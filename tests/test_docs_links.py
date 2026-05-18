@@ -618,7 +618,7 @@ def test_playwright_docs_reflect_owned_server_and_browser_matrix():
         ROOT / "docs" / "architecture" / "OPERATIONS.md": [
             "Invoke manages the Next.js server lifecycle",
             "built production Interface server path",
-            "mocked Chromium homepage smoke",
+            "Chromium authenticated-front-door smoke",
             "uv run inv ci.service-check",
         ],
     }

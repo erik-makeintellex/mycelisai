@@ -23,10 +23,12 @@ type DurableTeamWorkState = {
 export function useDurableTeamWork({
   teams,
   focusedTeamId,
+  refreshVersion = 0,
   maxTeams = 8,
 }: {
   teams: TeamDetailEntry[];
   focusedTeamId?: string | null;
+  refreshVersion?: number;
   maxTeams?: number;
 }): DurableTeamWorkState {
   const [isLoading, setIsLoading] = useState(false);
@@ -85,7 +87,7 @@ export function useDurableTeamWork({
     return () => {
       cancelled = true;
     };
-  }, [selectedTeamKey]);
+  }, [refreshVersion, selectedTeamKey]);
 
   const fallbackItems = useMemo(() => (
     failedTeamIds.length > 0 && durableItems.length === 0

@@ -38,14 +38,17 @@ describe('MissionControlChat UI states', () => {
         expect(screen.getByPlaceholderText(/Ask Soma/i)).toBeDefined();
     });
 
-    it('uses Mycelis runtime and uv task commands in the offline guide', () => {
+    it('uses source-mode recovery commands in the offline guide', () => {
         render(<SomaOfflineGuide assistantName="Soma" onRetry={vi.fn()} />);
 
         expect(screen.getByText(/Your Mycelis runtime isn't running yet/i)).toBeDefined();
-        expect(screen.getByText('Start the runtime')).toBeDefined();
-        expect(screen.getByText('uv run inv lifecycle.up')).toBeDefined();
-        expect(screen.getByText('uv run inv lifecycle.health')).toBeDefined();
+        expect(screen.getByText('Source-mode recovery')).toBeDefined();
+        expect(screen.getByText('uv run inv native-infra.status')).toBeDefined();
+        expect(screen.getByText('uv run inv native-infra.up')).toBeDefined();
+        expect(screen.getByText('uv run inv db.migrate')).toBeDefined();
+        expect(screen.getByText('uv run inv lifecycle.up --frontend')).toBeDefined();
         expect(screen.queryByText(/neural organism/i)).toBeNull();
+        expect(screen.queryByText('uv run inv lifecycle.up')).toBeNull();
         expect(screen.queryByText('inv lifecycle.up')).toBeNull();
     });
 

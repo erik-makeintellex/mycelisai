@@ -1,7 +1,7 @@
 # Authentication Modes
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [User Docs Home](README.md)
 
-Use this guide when enabling or reviewing local auth, break-glass recovery, or enterprise authentication posture.
+Use this guide when enabling or reviewing login, local auth, break-glass recovery, or enterprise authentication posture.
 
 ## Current Boundary
 
@@ -9,10 +9,16 @@ Current self-hosted release authentication is deploy-owned:
 
 - `.env` is the local secret store
 - `MYCELIS_API_KEY` is the normal local admin credential
+- `MYCELIS_WEB_SESSION_SECRET` signs browser sessions for the Interface login boundary
 - `MYCELIS_LOCAL_ADMIN_USERNAME` and `MYCELIS_LOCAL_ADMIN_USER_ID` name that local principal
 - Settings shows access posture, but user chat cannot rewrite it
 
-Enterprise provider entries in Auth Providers are currently a read-only configuration contract unless the deployment explicitly enables the matching adapter. External providers may prove identity, but Mycelis still owns roles, organization membership, Soma access, approvals, capabilities, and audit visibility.
+The Interface always requires login, including Free Node deployments. Enterprise provider entries in Auth Providers are configuration contracts unless the deployment enables the matching adapter. Google Workspace OIDC is the first enabled SSO path: Google proves identity, while Mycelis still owns roles, organization membership, Soma access, approvals, capabilities, and audit visibility.
+
+Role boundary:
+
+- `admin`: configures identity, providers, people/access, AI engines, advanced system surfaces, deployment trust, and recovery.
+- `standard`: works with Soma, teams, outputs, runs, proof, docs, and assigned organization workflows without changing provider or system configuration.
 
 ## Deployment Posture
 
@@ -41,11 +47,14 @@ Use `federated` only when normal users are expected to authenticate through an e
 Use this for Free Node and simple self-hosted release.
 
 1. Generate or set `MYCELIS_API_KEY`.
-2. Set `MYCELIS_LOCAL_ADMIN_USERNAME`.
-3. Set `MYCELIS_LOCAL_ADMIN_USER_ID`.
-4. Keep `MYCELIS_IDENTITY_MODE=local_only`.
-5. Run `uv run inv auth.posture` or `uv run inv auth.posture --compose`.
-6. Verify Settings -> People & Access shows local-only/self-hosted release posture.
+2. Set `MYCELIS_WEB_SESSION_SECRET`.
+3. Set `MYCELIS_LOCAL_ADMIN_USERNAME`.
+4. Set either `MYCELIS_LOCAL_ADMIN_PASSWORD` or `MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256`; if neither is set, the local login falls back to `MYCELIS_API_KEY`.
+5. Set `MYCELIS_LOCAL_ADMIN_USER_ID`.
+6. Keep `MYCELIS_IDENTITY_MODE=local_only`.
+7. Set `MYCELIS_PUBLIC_ORIGIN=https://...` or `MYCELIS_WEB_COOKIE_SECURE=true` for HTTPS production deployments; local HTTP proof leaves both unset.
+8. Run `uv run inv auth.posture` or `uv run inv auth.posture --compose`.
+9. Verify `/login` accepts the local owner and Settings -> People & Access shows local-only/self-hosted release posture.
 
 Do not reuse the same value for local admin and break-glass credentials.
 
@@ -93,13 +102,13 @@ Use Entra ID through OIDC first.
 
 ## Google Workspace
 
-Use Google Workspace through OIDC/OAuth.
+Use Google Workspace through OIDC/OAuth for enterprise SSO.
 
 1. Create an OAuth client in Google Cloud.
-2. Restrict allowed domains where required.
-3. Store the client secret outside committed config.
-4. Configure issuer, client id, scopes, and domain restrictions.
-5. Map verified email/domain to a Mycelis user and tenant.
+2. Register the Mycelis redirect URI as `MYCELIS_AUTH_GOOGLE_REDIRECT_URI`.
+3. Store `MYCELIS_AUTH_GOOGLE_CLIENT_ID` and `MYCELIS_AUTH_GOOGLE_CLIENT_SECRET` in the deployment secret layer.
+4. Set `MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN` and/or `MYCELIS_AUTH_ALLOWED_DOMAINS`.
+5. Set `MYCELIS_AUTH_ADMIN_EMAILS` for Mycelis admins; other allowed-domain users enter as standard users.
 6. Keep organization access and approval rights in Mycelis roles.
 
 ## GitHub

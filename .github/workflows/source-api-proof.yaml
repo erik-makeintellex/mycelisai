@@ -16,6 +16,18 @@ on:
         required: true
         default: false
         type: boolean
+  workflow_call:
+    inputs:
+      proof_mode:
+        description: "Use read-only API proof or create a bounded TeamWorkItem"
+        required: true
+        default: "read-only"
+        type: string
+      run_active_work_api_spec:
+        description: "Also run the Playwright active-work API contract"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read

@@ -76,4 +76,52 @@ describe("useDurableTeamWork", () => {
     });
     expect(result.current.degradedMessage).toContain("durable TeamWorkItem API was unavailable");
   });
+
+  it("refetches durable rows when the refresh version changes", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [
+            {
+              work_item_id: "work-1",
+              team_id: "team-alpha",
+              objective: "Draft the package",
+              state: "running",
+              updated_at: "2026-05-17T18:00:00Z",
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [
+            {
+              work_item_id: "work-2",
+              team_id: "team-alpha",
+              objective: "Retain the package",
+              state: "output_ready",
+              updated_at: "2026-05-17T18:01:00Z",
+            },
+          ],
+        }),
+      });
+
+    const { result, rerender } = renderHook(
+      ({ refreshVersion }) => useDurableTeamWork({ teams: [team], refreshVersion }),
+      { initialProps: { refreshVersion: 0 } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.items[0]?.title).toBe("Draft the package");
+    });
+
+    rerender({ refreshVersion: 1 });
+
+    await waitFor(() => {
+      expect(result.current.items[0]?.title).toBe("Retain the package");
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
 });

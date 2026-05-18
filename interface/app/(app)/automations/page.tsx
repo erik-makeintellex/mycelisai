@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { ScrollText, Cable, ShieldCheck, Clock } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
@@ -26,24 +25,25 @@ type TabId = "active" | "triggers" | "approvals" | "wiring";
 const VALID_TABS: TabId[] = ["active", "triggers", "approvals", "wiring"];
 
 export default function AutomationsPage() {
-    return (
-        <Suspense fallback={<div className="h-full bg-cortex-bg" />}>
-            <AutomationsContent />
-        </Suspense>
-    );
+    return <AutomationsContent />;
 }
 
 function AutomationsContent() {
-    const searchParams = useSearchParams();
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const [isHydrated, setIsHydrated] = useState(false);
+    const [requestedTab, setRequestedTab] = useState<TabId | null>(null);
     useEffect(() => {
         setIsHydrated(true);
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get("tab") as TabId | null;
+        setRequestedTab(tab && VALID_TABS.includes(tab) ? tab : null);
     }, []);
     const effectiveAdvancedMode = isHydrated ? advancedMode : false;
-    const tabParam = (searchParams?.get("tab") as TabId | null) ?? null;
-    const initialTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "active";
-    const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+    const [activeTab, setActiveTab] = useState<TabId>("active");
+
+    useEffect(() => {
+        if (requestedTab) setActiveTab(requestedTab);
+    }, [requestedTab]);
 
     const effectiveTab =
         !effectiveAdvancedMode && activeTab === "wiring"
@@ -92,6 +92,7 @@ function AutomationsContent() {
 function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
     return (
         <button
+            type="button"
             onClick={onClick}
             className={`px-4 py-2.5 text-xs font-medium flex items-center gap-2 border-b-2 transition-colors -mb-px whitespace-nowrap ${
                 active

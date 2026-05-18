@@ -59,6 +59,24 @@ func scanTeamInteraction(scanner interface{ Scan(dest ...any) error }) (protocol
 	return item, nil
 }
 
+func scanTeamStatusEvent(scanner interface{ Scan(dest ...any) error }) (protocol.TeamStatusEvent, error) {
+	var item protocol.TeamStatusEvent
+	var state string
+	var blockedBy, auditRefs []byte
+	if err := scanner.Scan(
+		&item.EventID, &item.TeamID, &item.WorkItemID, &item.RunID, &item.IntentProofID,
+		&item.ContractID, &item.ProofID, &state, &item.Headline, &item.Details,
+		&item.ConfidencePosture, &blockedBy, &item.NextAction, &item.SourceKind,
+		&item.SourceChannel, &item.PayloadKind, &auditRefs, &item.Timestamp, &item.Version,
+	); err != nil {
+		return item, err
+	}
+	item.State = protocol.TeamWorkState(state)
+	item.BlockedBy = decodeStringList(blockedBy)
+	item.AuditRefs = decodeStringList(auditRefs)
+	return item, nil
+}
+
 func validateTeamWorkUUIDLinks(item protocol.TeamWorkItem) error {
 	if err := validateOptionalUUID("work_item_id", item.WorkItemID); err != nil {
 		return err
