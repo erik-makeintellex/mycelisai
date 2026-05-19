@@ -82,6 +82,12 @@ jobs:
       - name: Install Invoke Dependencies
         run: uv sync --all-packages --dev
 
+      - name: Add Helm Dependency Repositories
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+          helm repo update
+
       - name: Verify Enterprise Helm Package
         if: ${{ inputs.package_profile == 'both' || inputs.package_profile == 'enterprise' }}
         run: >

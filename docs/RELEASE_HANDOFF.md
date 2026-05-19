@@ -119,6 +119,7 @@ Generated artifact set:
 Helm verification prerequisites:
 - `bitnami` repo: `https://charts.bitnami.com/bitnami`
 - `nats` repo: `https://nats-io.github.io/k8s/helm/charts/`
+- The hosted `Release Packaging` and `Full Release Candidate` workflows add and update these Helm repos before verification so a clean GitHub runner can package without prior Helm repo state.
 
 ## Optional WSL Compose Proof
 

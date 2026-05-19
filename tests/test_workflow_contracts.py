@@ -212,6 +212,9 @@ def test_release_workflow_verifies_enterprise_packaging_before_optional_image_pu
     assert "verify-enterprise-packaging" in workflow
     assert "package_profile" in workflow
     assert "azure/setup-helm@v4" in workflow
+    assert "helm repo add bitnami https://charts.bitnami.com/bitnami" in workflow
+    assert "helm repo add nats https://nats-io.github.io/k8s/helm/charts/" in workflow
+    assert "helm repo update" in workflow
     assert "uv run inv k8s.deploy" in workflow
     assert "--verify-package" in workflow
     assert "values-enterprise.yaml" in workflow
