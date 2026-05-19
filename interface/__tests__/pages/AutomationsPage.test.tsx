@@ -82,6 +82,7 @@ describe('Automations Page (V7)', () => {
         for (const key of [...mockSearchParams.keys()]) {
             mockSearchParams.delete(key);
         }
+        window.history.pushState({}, '', '/automations');
     });
 
     it('renders page title', async () => {
@@ -119,7 +120,7 @@ describe('Automations Page (V7)', () => {
     });
 
     it('deep-links to approvals tab via search param', async () => {
-        mockSearchParams.set('tab', 'approvals');
+        window.history.pushState({}, '', '/automations?tab=approvals');
         await act(async () => { render(<AutomationsPage />); });
         expect(await screen.findByTestId('approvals-tab')).toBeDefined();
         expect(screen.getByRole('button', { name: 'Approvals' })).toBeDefined();

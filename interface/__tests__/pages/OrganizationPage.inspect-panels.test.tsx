@@ -82,7 +82,7 @@ describe("OrganizationPage inspect panel slices", () => {
         expect(screen.getByText("Decision support")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
-        expect(screen.getByText("Soma just did this")).toBeDefined();
+        expect(screen.getByText("Evidence of Soma's work")).toBeDefined();
     });
 
     it("opens Department details from the support column and preserves organization context", async () => {

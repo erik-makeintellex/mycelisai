@@ -129,7 +129,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p workspace/logs
-          core/bin/server > workspace/logs/github-source-core.log 2>&1 &
+          (
+            cd core
+            ./bin/server
+          ) > workspace/logs/github-source-core.log 2>&1 &
           echo "$!" > workspace/logs/github-source-core.pid
 
       - name: Wait For Core Health

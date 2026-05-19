@@ -231,7 +231,7 @@ def test_manual_source_api_proof_workflow_uses_hosted_infra_and_mycelis_api():
         "nats:2-alpine",
         "uv run inv db.migrate",
         "uv run inv core.compile",
-        "core/bin/server",
+        "./bin/server",
         "uv run inv api.delivery-proof --read-only",
         "uv run inv api.delivery-proof",
         "PLAYWRIGHT_ACTIVE_WORK_API_LIVE",
