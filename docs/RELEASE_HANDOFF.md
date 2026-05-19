@@ -2,22 +2,20 @@
 > Navigation: [Project README](../README.md) | [Docs Home](README.md) | [Testing](TESTING.md)
 
 > Status: IN_REVIEW
-> Last Updated: 2026-05-13
+> Last Updated: 2026-05-19
 > Purpose: Current release-candidate handoff packet for operator proof, packaging, and follow-on validation.
 
 ## Current RC Result
 
-- RC proof date: 2026-05-14
-- Runtime proof commit: `5c7bf6a` (`Harden governed team execution proof`)
-- State/evidence commit: this proof-evidence handoff update
-- Handoff/package label: `v0.6.0-5c7bf6a`
-- Result: Rancher Desktop K3s local Kubernetes RC proof is green.
-- Proven image: `mycelis/core:v0.6.0-5c7bf6a`
-- Proven Core bridge: `127.0.0.1:8081` local API port forwarding to in-cluster Core `:8080`
-- Proven AI endpoint: explicit reachable Windows host endpoint, not pod-local `localhost`
-- Proven text model: `qwen3:8b`
-- Proven search posture: `searxng`, `online_allowed=true`, `approval_mode=notify`, `disclosure_mode=notice_and_interpretation`
-- Local package result: binary archives and enterprise Helm verification bundles generated under `dist/`.
+- RC proof date: 2026-05-19
+- Runtime proof commit: `4c821cfb` (`Hydrate Helm repos for release packaging`)
+- Handoff/package label: `rc-v8.2-2026-05-19-final`
+- Result: hosted `Full Release Candidate` is green with image publishing disabled.
+- Proven source gates: repo hygiene/Python tests, Core tests/vet, Interface tests/build/typecheck, and Helm standards.
+- Proven browser gate: authenticated Chromium homepage proof.
+- Proven source API gate: hosted pgvector PostgreSQL/NATS, migrations, Core health, and `uv run inv api.delivery-proof --read-only`.
+- Proven release artifacts: enterprise and enterprise Windows-AI Helm verification bundles plus Core binary archives for linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, and windows/amd64.
+- Known non-blocking warning: GitHub-hosted Actions reports Node.js 20 action deprecation; schedule Node 24 workflow maintenance before the runner default changes.
 
 ## Deployment Lanes
 
