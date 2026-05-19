@@ -162,9 +162,13 @@ jobs:
         env:
           PLAYWRIGHT_ACTIVE_WORK_API_LIVE: "1"
           PLAYWRIGHT_LIVE_BACKEND: "1"
+          PLAYWRIGHT_SKIP_AUTH_SETUP: "1"
           PLAYWRIGHT_SKIP_WEBSERVER: "1"
           PLAYWRIGHT_PORT: "3000"
-        run: npx playwright test e2e/specs/active-work-api.spec.ts --project=chromium --workers=1
+        run: |
+          mkdir -p .playwright/.auth
+          printf '{}' > .playwright/.auth/admin.json
+          npx playwright test e2e/specs/active-work-api.spec.ts --project=chromium --workers=1
 
       - name: Stop Core API
         if: always()

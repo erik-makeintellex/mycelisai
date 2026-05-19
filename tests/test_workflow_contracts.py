@@ -235,6 +235,7 @@ def test_manual_source_api_proof_workflow_uses_hosted_infra_and_mycelis_api():
         "uv run inv api.delivery-proof --read-only",
         "uv run inv api.delivery-proof",
         "PLAYWRIGHT_ACTIVE_WORK_API_LIVE",
+        "PLAYWRIGHT_SKIP_AUTH_SETUP",
         "active-work-api.spec.ts",
     ]:
         assert expected in workflow
