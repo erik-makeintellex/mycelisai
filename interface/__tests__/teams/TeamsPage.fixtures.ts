@@ -144,6 +144,17 @@ export function mockTeamWorkFetch(mockFetch: ReturnType<typeof vi.fn>) {
               state: "running",
               updated_at: "2026-05-19T12:01:00Z",
             },
+            {
+              work_item_id: "work-bravo-recover",
+              team_id: "team-bravo",
+              objective: "Recover failed release notes",
+              execution_shape: "deliverable",
+              state: "degraded",
+              needs_operator: true,
+              degradation_state: "provider_timeout",
+              recovery_options: ["retry with retained proof"],
+              updated_at: "2026-05-19T12:02:00Z",
+            },
           ],
         }),
       };

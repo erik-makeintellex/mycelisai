@@ -16,6 +16,7 @@ export type TeamInteractionAction =
     | 'start_work'
     | 'pause'
     | 'resume'
+    | 'recover'
     | 'archive';
 
 export interface TeamInteraction {

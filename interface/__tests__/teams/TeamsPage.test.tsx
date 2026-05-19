@@ -159,6 +159,44 @@ describe("TeamsPage", () => {
     ).toBeGreaterThan(1);
   });
 
+  it("posts recover and steer actions as durable team-work evidence", async () => {
+    useCortexStore.setState({
+      teamsDetail: mockTeams,
+      catalogueAgents: mockTemplates,
+    });
+
+    render(<TeamsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Recover failed release notes")).toBeDefined();
+    });
+    const recover = screen
+      .getAllByRole("button", { name: /recover/i })
+      .find((button) => !(button as HTMLButtonElement).disabled);
+    expect(recover).toBeDefined();
+    fireEvent.click(recover as HTMLElement);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/teams/team-bravo/work/work-bravo-recover/actions",
+        expect.objectContaining({
+          method: "POST",
+          body: expect.stringContaining('"action":"recover"'),
+        }),
+      );
+    });
+    fireEvent.click(screen.getAllByRole("button", { name: /steer|respond/i })[0]);
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/actions"),
+        expect.objectContaining({
+          method: "POST",
+          body: expect.stringContaining('"action":"steer"'),
+        }),
+      );
+    });
+  });
+
   it("filter dropdown filters teams by type", () => {
     useCortexStore.setState({
       teamsDetail: mockTeams,

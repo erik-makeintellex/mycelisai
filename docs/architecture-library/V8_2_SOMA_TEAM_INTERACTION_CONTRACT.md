@@ -85,7 +85,7 @@ The current production-safe action API is:
 POST /api/v1/teams/{team_id}/work/{work_item_id}/actions
 ```
 
-Supported actions are `start_work`, `pause`, `resume`, and `archive`. Each accepted action must create a durable `TeamStatusEvent`, create a durable `TeamInteraction`, update the `TeamWorkItem` state and `last_event`, and return the updated work item. `create_team` shell records are intentionally rejected by this endpoint until the product creates a delegated or deliverable work item for the team.
+Supported actions are `start_work`, `pause`, `resume`, `archive`, `steer`, and `recover`. Each accepted action must create a durable `TeamStatusEvent`, create a durable `TeamInteraction`, update the `TeamWorkItem` state and `last_event`, and return the updated work item. `steer` and `recover` require a summary or bounded payload so the audit trail contains real operator guidance. `create_team` shell records are intentionally rejected by this endpoint until the product creates a delegated or deliverable work item for the team.
 
 | Action | Allowed source states | Target state | Operator meaning |
 | --- | --- | --- | --- |
@@ -93,6 +93,8 @@ Supported actions are `start_work`, `pause`, `resume`, and `archive`. Each accep
 | `pause` | `queued`, `running`, `needs_operator`, `reviewing`, `degraded` | `paused` | Operator intentionally stops active progress without losing retained context. |
 | `resume` | `paused` | `queued` | Operator asks Soma/team to continue from retained state; the system does not fabricate output. |
 | `archive` | any non-archived delegated/deliverable work | `archived` | Work leaves the active lane while retained outputs, proof, audit, and history remain inspectable. |
+| `steer` | any non-archived delegated/deliverable work | unchanged | Operator guidance is recorded as durable status and interaction evidence without pretending execution completed. |
+| `recover` | `degraded`, `needs_operator` | `queued` | Operator requests safe continuation from retained context, output, proof, and audit state. |
 
 ## Runtime Objects
 
@@ -264,6 +266,6 @@ This contract is releasable only when the product proves:
 
 `IN_REVIEW`: The architectural concept now exists as a canonical contract, and the current API/UI proof paths use durable team-work state instead of treating teams as only roster projections.
 
-`IN_REVIEW`: `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API projection are landed for current proof paths. The Active Work Lane now calls the durable action API for production-safe `start_work`, `pause`, `resume`, and `archive` controls, with each accepted action recording both status and interaction evidence. Manual/self-use work items can record coordination and proof, but that does not yet mean runtime teams can replace implementation collaborators.
+`IN_REVIEW`: `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API projection are landed for current proof paths. The Active Work Lane now calls the durable action API for production-safe `start_work`, `pause`, `resume`, `archive`, `steer`, and `recover` controls, with each accepted action recording both status and interaction evidence. Manual/self-use work items can record coordination and proof, but that does not yet mean runtime teams can replace implementation collaborators.
 
 `BLOCKED`: Do not claim runtime teams are useful delivery collaborators until a bounded role-specific team ask returns within product timeout and the UI exposes visible output or degradation.

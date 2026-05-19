@@ -8,6 +8,7 @@ type TeamWorkActionResponse = {
 export async function postTeamWorkAction(
   item: TeamWorkItem,
   action: TeamInteractionAction,
+  summary?: string,
 ): Promise<void> {
   const teamId = item.teamIds[0];
   if (!teamId) {
@@ -25,6 +26,7 @@ export async function postTeamWorkAction(
         source_channel: "teams.active_work",
         actor_ref: "operator",
         payload_kind: "team_work_action",
+        summary,
       }),
     },
   );

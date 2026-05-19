@@ -16,12 +16,9 @@ export function useTeamWorkActionHandler(
         selectTeam(item.teamIds[0] ?? item.id);
         return;
       }
-      if (action.action === "steer") {
-        return;
-      }
       setActiveWorkActionError(null);
       try {
-        await postTeamWorkAction(item, action.action);
+        await postTeamWorkAction(item, action.action, actionSummary(item, action));
         setActiveWorkRefreshVersion((version) => version + 1);
       } catch (error) {
         setActiveWorkActionError(
@@ -37,4 +34,14 @@ export function useTeamWorkActionHandler(
     activeWorkActionError,
     handleActiveWorkAction,
   };
+}
+
+function actionSummary(item: TeamWorkItem, action: TeamInteraction) {
+  if (action.action === "steer") {
+    return `Operator requested steering for "${item.title}". Continue from the current objective and ask Soma for clarified guidance if needed.`;
+  }
+  if (action.action === "recover") {
+    return `Operator requested recovery for "${item.title}" using retained context, outputs, proof, and audit refs.`;
+  }
+  return undefined;
 }

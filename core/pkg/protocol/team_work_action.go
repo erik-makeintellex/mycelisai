@@ -12,6 +12,8 @@ const (
 	TeamWorkActionPause     TeamWorkAction = "pause"
 	TeamWorkActionResume    TeamWorkAction = "resume"
 	TeamWorkActionArchive   TeamWorkAction = "archive"
+	TeamWorkActionSteer     TeamWorkAction = "steer"
+	TeamWorkActionRecover   TeamWorkAction = "recover"
 )
 
 func NormalizeTeamWorkAction(raw TeamWorkAction) TeamWorkAction {
@@ -36,6 +38,10 @@ func ApplyTeamWorkAction(item TeamWorkItem, action TeamWorkAction) (TeamWorkStat
 		return resumeTeamWork(item)
 	case TeamWorkActionArchive:
 		return TeamWorkStateArchived, nil
+	case TeamWorkActionSteer:
+		return item.State, nil
+	case TeamWorkActionRecover:
+		return recoverTeamWork(item)
 	default:
 		return item.State, fmt.Errorf("invalid team work action")
 	}
@@ -64,4 +70,13 @@ func resumeTeamWork(item TeamWorkItem) (TeamWorkState, error) {
 		return TeamWorkStateQueued, nil
 	}
 	return item.State, fmt.Errorf("resume is only available for paused work")
+}
+
+func recoverTeamWork(item TeamWorkItem) (TeamWorkState, error) {
+	switch item.State {
+	case TeamWorkStateDegraded, TeamWorkStateNeedsOperator:
+		return TeamWorkStateQueued, nil
+	default:
+		return item.State, fmt.Errorf("recover is only available for degraded or operator-needed work")
+	}
 }

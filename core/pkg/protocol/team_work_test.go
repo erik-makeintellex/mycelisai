@@ -116,6 +116,8 @@ func TestApplyTeamWorkAction_AllowsProductionControlTransitions(t *testing.T) {
 		{"pause running work", TeamWorkStateRunning, TeamWorkActionPause, TeamWorkStatePaused},
 		{"resume paused work", TeamWorkStatePaused, TeamWorkActionResume, TeamWorkStateQueued},
 		{"archive output ready work", TeamWorkStateOutputReady, TeamWorkActionArchive, TeamWorkStateArchived},
+		{"steer running work", TeamWorkStateRunning, TeamWorkActionSteer, TeamWorkStateRunning},
+		{"recover degraded work", TeamWorkStateDegraded, TeamWorkActionRecover, TeamWorkStateQueued},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -155,5 +157,9 @@ func TestApplyTeamWorkAction_RejectsInvalidTransitions(t *testing.T) {
 	})
 	if _, err := ApplyTeamWorkAction(createTeam, TeamWorkActionArchive); err == nil {
 		t.Fatal("expected create_team archive to be rejected")
+	}
+
+	if _, err := ApplyTeamWorkAction(item, TeamWorkActionRecover); err == nil {
+		t.Fatal("expected output_ready recover to be rejected")
 	}
 }

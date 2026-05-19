@@ -8,6 +8,7 @@ import {
   Pause,
   Play,
   Radio,
+  RefreshCw,
   Search,
   Send,
 } from "lucide-react";
@@ -38,6 +39,7 @@ const actionIcons = {
   start_work: Play,
   pause: Pause,
   resume: Play,
+  recover: RefreshCw,
   archive: Archive,
 };
 

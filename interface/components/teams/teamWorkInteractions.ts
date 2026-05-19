@@ -18,16 +18,23 @@ export function durableInteractions({
   needsOperator?: boolean;
   executionShape?: string | null;
 }): TeamInteraction[] {
-  const leadHref = `/dashboard?team_id=${encodeURIComponent(teamId)}`;
   const inspectHref = runId ? `/runs/${encodeURIComponent(runId)}` : "/teams";
   const isActive = state === "running" || state === "reviewing";
+  const canSteer = state !== "archived";
+  const canRecover = state === "degraded" || state === "needs_operator";
   const isTeamSetup = executionShape === "create_team";
   const canStart =
     !isTeamSetup && (state === "briefed" || state === "queued" || state === "new");
   const canResume = state === "paused";
   return [
     { action: "inspect", label: "Inspect", href: inspectHref, audited: true },
-    { action: "steer", label: needsOperator ? "Respond" : "Steer", href: leadHref, audited: true },
+    {
+      action: "steer",
+      label: needsOperator ? "Respond" : "Steer",
+      disabled: !canSteer,
+      disabledReason: canSteer ? undefined : "Archived work cannot be steered.",
+      audited: true,
+    },
     {
       action: "start_work",
       label: "Start",
@@ -47,6 +54,15 @@ export function durableInteractions({
       label: "Resume",
       disabled: !canResume,
       disabledReason: canResume ? undefined : "Resume is available for paused work.",
+      audited: true,
+    },
+    {
+      action: "recover",
+      label: "Recover",
+      disabled: !canRecover,
+      disabledReason: canRecover
+        ? undefined
+        : "Recovery is available for degraded or operator-needed work.",
       audited: true,
     },
     {
