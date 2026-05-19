@@ -90,6 +90,7 @@ uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.health
 ```
 
+Use this path first for rapid iteration, not as the target clustered deployment contract.
 Use this path for packaged single-host proof, not as the default inner loop for code changes and not as the target clustered deployment contract.
 Use the same operator-facing address you will really support after delivery:
 - Windows Rancher Desktop or Docker Desktop on the same machine: `http://localhost:3000`

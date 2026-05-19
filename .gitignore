@@ -69,6 +69,7 @@ seeds.sql
 .claude/settings.local.json
 interface/test-results/
 interface/playwright-report/
+interface/.playwright/
 workspace/tool-cache/
 workspace/logs/
 workspace/docker-compose/

@@ -18,7 +18,7 @@ async function openWorkspace(page: Page, organizationId: string) {
 
 test.describe('Soma governed mutation live contract', () => {
     test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, 'requires a live Core backend');
-    test.describe.configure({ timeout: LIVE_GOVERNANCE_TIMEOUT_MS });
+    test.describe.configure({ timeout: LIVE_GOVERNANCE_TIMEOUT_MS, mode: 'serial' });
 
     test('Scenario A: direct Soma answer works in a fresh organization', async ({ page }) => {
         test.slow();

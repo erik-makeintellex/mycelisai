@@ -152,6 +152,7 @@ def test_down_uses_best_effort_cleanup_without_hanging(monkeypatch):
 
     from ops import interface as interface_tasks
 
+    monkeypatch.setenv("MYCELIS_DEV_INFRA_MODE", "k8s")
     monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: False)
     monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: commands.append(["bridges"]))
     monkeypatch.setattr(lifecycle, "_kill_compiled_go_services", lambda: [])
@@ -299,7 +300,7 @@ def test_status_reports_unknown_when_compiled_go_inspection_fails(monkeypatch, c
     assert "Compiled Go svc : UNKNOWN" in output
 
 
-def test_status_reports_docker_down_when_docker_version_fails(monkeypatch, capsys):
+def test_status_reports_native_mode_with_docker_as_proof_lane(monkeypatch, capsys):
     class Result:
         def __init__(self, stdout="", exited=0, ok=True):
             self.stdout = stdout
@@ -321,7 +322,8 @@ def test_status_reports_docker_down_when_docker_version_fails(monkeypatch, capsy
     lifecycle.status.body(DummyContext())
 
     output = capsys.readouterr().out
-    assert "Docker          : DOWN" in output
+    assert "Dev infra mode  : native" in output
+    assert "Docker/K8s      : proof lane; inspect with compose.* or k8s.*" in output
 
 
 def test_status_uses_core_healthz_when_tcp_snapshot_misses(monkeypatch, capsys):

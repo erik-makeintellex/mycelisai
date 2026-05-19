@@ -128,7 +128,11 @@ test.describe('Settings Page (/settings)', () => {
         const updatedAssistantName = originalAssistantName === 'Atlas' ? 'Soma Prime' : 'Atlas';
 
         await assistantInput.fill(updatedAssistantName);
+        const assistantSave = page.waitForResponse((response) =>
+            response.url().includes('/api/v1/user/settings') && response.request().method() === 'PUT'
+        );
         await clickVisibleControl(page, saveButtons.nth(0));
+        await assistantSave;
         await expect(page.getByText('Saved').first()).toBeVisible();
 
         const themeCandidates = ['aero-light', 'midnight-cortex', 'system'] as const;
@@ -142,7 +146,11 @@ test.describe('Settings Page (/settings)', () => {
         }
         expect(updatedTheme).not.toBe('');
 
+        const themeSave = page.waitForResponse((response) =>
+            response.url().includes('/api/v1/user/settings') && response.request().method() === 'PUT'
+        );
         await clickVisibleControl(page, themeSaveButton);
+        await themeSave;
         await expect(page.locator('html')).toHaveAttribute('data-theme', updatedTheme);
 
         await page.reload({ waitUntil: 'domcontentloaded' });

@@ -15,7 +15,7 @@ test.describe('Governance Page (/automations?tab=approvals)', () => {
     });
 
     test('policy tab renders governance rules', async ({ page }) => {
-        const content = page.locator('main, body');
+        const content = page.locator('main').first();
         await expect(content).toContainText(/approval|governance|policy|degraded/i);
     });
 

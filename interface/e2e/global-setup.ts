@@ -2,7 +2,7 @@ import { request, type FullConfig } from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-export const STORAGE_STATE = path.join(process.cwd(), 'test-results', '.auth', 'admin.json');
+export const STORAGE_STATE = path.join(process.cwd(), '.playwright', '.auth', 'admin.json');
 
 export default async function globalSetup(config: FullConfig) {
     if (process.env.PLAYWRIGHT_SKIP_AUTH_SETUP === '1') return;
@@ -11,12 +11,13 @@ export default async function globalSetup(config: FullConfig) {
     await fs.mkdir(path.dirname(STORAGE_STATE), { recursive: true });
     const context = await request.newContext({ baseURL: String(baseURL) });
     const response = await context.post('/auth/local?next=/dashboard', {
+        maxRedirects: 0,
         form: {
             username: process.env.MYCELIS_LOCAL_ADMIN_USERNAME || 'admin',
             password: process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || 'playwright-admin',
         },
     });
-    if (!response.ok()) throw new Error(`Playwright auth setup failed with ${response.status()}`);
+    if (!response.ok() && response.status() !== 303) throw new Error(`Playwright auth setup failed with ${response.status()}`);
     await context.storageState({ path: STORAGE_STATE });
     await context.dispose();
 }

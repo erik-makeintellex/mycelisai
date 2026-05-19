@@ -1,7 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
 import { STORAGE_STATE } from './e2e/global-setup';
 
 const configDir = typeof __dirname === 'string' ? __dirname : process.cwd();
+loadRepoEnv(path.resolve(configDir, '..', '.env'));
 const interfaceHost = process.env.INTERFACE_HOST ?? process.env.MYCELIS_INTERFACE_HOST ?? '127.0.0.1';
 const interfacePort = process.env.PLAYWRIGHT_PORT ?? process.env.INTERFACE_PORT ?? '3100';
 const baseUrlHost = interfaceHost.includes(':') && !interfaceHost.startsWith('[') ? `[${interfaceHost}]` : interfaceHost;
@@ -12,6 +15,24 @@ const webServerCommand = process.env.PLAYWRIGHT_UI_SERVER_COMMAND ?? defaultWebS
 process.env.MYCELIS_WEB_SESSION_SECRET ||= 'playwright-web-session-secret';
 process.env.MYCELIS_LOCAL_ADMIN_USERNAME ||= 'admin';
 process.env.MYCELIS_LOCAL_ADMIN_PASSWORD ||= process.env.MYCELIS_API_KEY || 'playwright-admin';
+
+function loadRepoEnv(envPath: string) {
+    if (!fs.existsSync(envPath)) return;
+    const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const equals = trimmed.indexOf('=');
+        if (equals <= 0) continue;
+        const key = trimmed.slice(0, equals).trim();
+        if (!key || process.env[key] !== undefined) continue;
+        let value = trimmed.slice(equals + 1).trim();
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+        }
+        process.env[key] = value;
+    }
+}
 
 /**
  * Playwright E2E configuration for Mycelis Interface.
