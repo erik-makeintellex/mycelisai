@@ -104,3 +104,56 @@ func TestValidateTeamInteraction_RequiresDurableSourceFields(t *testing.T) {
 		t.Fatalf("version = %q, want v1", interaction.Version)
 	}
 }
+
+func TestApplyTeamWorkAction_AllowsProductionControlTransitions(t *testing.T) {
+	cases := []struct {
+		name   string
+		state  TeamWorkState
+		action TeamWorkAction
+		want   TeamWorkState
+	}{
+		{"start queued work", TeamWorkStateQueued, TeamWorkActionStartWork, TeamWorkStateRunning},
+		{"pause running work", TeamWorkStateRunning, TeamWorkActionPause, TeamWorkStatePaused},
+		{"resume paused work", TeamWorkStatePaused, TeamWorkActionResume, TeamWorkStateQueued},
+		{"archive output ready work", TeamWorkStateOutputReady, TeamWorkActionArchive, TeamWorkStateArchived},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			item := NormalizeTeamWorkItem(TeamWorkItem{
+				TeamID:         "delivery-team",
+				Objective:      "Produce the release package",
+				ExecutionShape: TeamExecutionShapeDeliverable,
+				State:          tc.state,
+			})
+			got, err := ApplyTeamWorkAction(item, tc.action)
+			if err != nil {
+				t.Fatalf("ApplyTeamWorkAction: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("state = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestApplyTeamWorkAction_RejectsInvalidTransitions(t *testing.T) {
+	item := NormalizeTeamWorkItem(TeamWorkItem{
+		TeamID:         "delivery-team",
+		Objective:      "Produce the release package",
+		ExecutionShape: TeamExecutionShapeDeliverable,
+		State:          TeamWorkStateOutputReady,
+	})
+	if _, err := ApplyTeamWorkAction(item, TeamWorkActionStartWork); err == nil {
+		t.Fatal("expected output_ready start_work to be rejected")
+	}
+
+	createTeam := NormalizeTeamWorkItem(TeamWorkItem{
+		TeamID:         "delivery-team",
+		Objective:      "Create the team shell",
+		ExecutionShape: TeamExecutionShapeCreateTeam,
+		State:          TeamWorkStateNew,
+	})
+	if _, err := ApplyTeamWorkAction(createTeam, TeamWorkActionArchive); err == nil {
+		t.Fatal("expected create_team archive to be rejected")
+	}
+}

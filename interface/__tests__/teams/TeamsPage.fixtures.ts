@@ -85,7 +85,21 @@ export const mockTemplates = [
 ];
 
 export function mockTeamWorkFetch(mockFetch: ReturnType<typeof vi.fn>) {
-  mockFetch.mockImplementation(async (url: string) => {
+  mockFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url.includes("/actions") && init?.method === "POST") {
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            work_item_id: "work-bravo",
+            team_id: "team-bravo",
+            objective: "Review deployment proof",
+            execution_shape: "delegated_work",
+            state: "paused",
+          },
+        }),
+      };
+    }
     if (url.includes("/api/v1/teams/team-alpha/work")) {
       return {
         ok: true,

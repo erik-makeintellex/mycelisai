@@ -125,6 +125,40 @@ describe("TeamsPage", () => {
     expect(screen.getByText("2/3 agents online")).toBeDefined();
   });
 
+  it("posts durable active-work actions and refreshes the lane", async () => {
+    useCortexStore.setState({
+      teamsDetail: mockTeams,
+      catalogueAgents: mockTemplates,
+    });
+
+    render(<TeamsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Review deployment proof")).toBeDefined();
+    });
+    const pause = screen
+      .getAllByRole("button", { name: /pause/i })
+      .find((button) => !(button as HTMLButtonElement).disabled);
+    expect(pause).toBeDefined();
+
+    fireEvent.click(pause as HTMLElement);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/teams/team-bravo/work/work-bravo/actions",
+        expect.objectContaining({
+          method: "POST",
+          body: expect.stringContaining('"action":"pause"'),
+        }),
+      );
+    });
+    expect(
+      mockFetch.mock.calls.filter(([url]) =>
+        String(url).includes("/api/v1/teams/team-bravo/work?limit=8"),
+      ).length,
+    ).toBeGreaterThan(1);
+  });
+
   it("filter dropdown filters teams by type", () => {
     useCortexStore.setState({
       teamsDetail: mockTeams,

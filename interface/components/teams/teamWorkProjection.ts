@@ -5,6 +5,7 @@ import {
   type TeamWorkItem,
   type TeamWorkItemState,
 } from "@/store/useCortexStore";
+import { durableInteractions } from "./teamWorkInteractions";
 
 type TeamWorkAPIRecord = {
   work_item_id?: unknown;
@@ -148,7 +149,14 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
     updatedAt: stringValue(raw.updated_at) ?? stringValue(raw.created_at),
     outputCount: outputRefs.length || undefined,
     teamIds: [teamId],
-    interactions: durableInteractions(teamId, workItemId, state, runId, raw.needs_operator === true),
+    interactions: durableInteractions({
+      teamId,
+      workItemId,
+      state,
+      runId,
+      needsOperator: raw.needs_operator === true,
+      executionShape: stringValue(raw.execution_shape),
+    }),
     source: "durable",
     sourceLabel: "Durable team work",
     runId: runId ?? undefined,
@@ -184,54 +192,6 @@ export function teamOutputRefsFromItems(items: TeamWorkItem[]): TeamOutputRef[] 
 export function parseTeamWorkAPIItems(payload: unknown): TeamWorkAPIRecord[] {
   const data = objectValue<{ data?: unknown }>(payload)?.data ?? payload;
   return Array.isArray(data) ? data.filter(isRecord) : [];
-}
-
-function durableInteractions(
-  teamId: string,
-  workItemId: string,
-  state: TeamWorkItemState,
-  runId?: string | null,
-  needsOperator = false,
-): TeamInteraction[] {
-  const leadHref = `/dashboard?team_id=${encodeURIComponent(teamId)}`;
-  const inspectHref = runId ? `/runs/${encodeURIComponent(runId)}` : "/teams";
-  const isActive = state === "running" || state === "reviewing";
-  const canStart = state === "briefed" || state === "queued" || state === "new";
-  const canResume = state === "paused";
-  return [
-    { action: "inspect", label: "Inspect", href: inspectHref, audited: true },
-    { action: "steer", label: needsOperator ? "Respond" : "Steer", href: leadHref, audited: true },
-    {
-      action: "start_work",
-      label: "Start",
-      href: canStart ? leadHref : undefined,
-      disabled: !canStart,
-      disabledReason: canStart ? undefined : `Work item ${workItemId} is already ${state.replace("_", " ")}.`,
-      audited: true,
-    },
-    {
-      action: "pause",
-      label: "Pause",
-      disabled: !isActive,
-      disabledReason: isActive ? undefined : "Pause is available after work is running.",
-      audited: true,
-    },
-    {
-      action: "resume",
-      label: "Resume",
-      href: canResume ? leadHref : undefined,
-      disabled: !canResume,
-      disabledReason: canResume ? undefined : "Resume is available for paused work.",
-      audited: true,
-    },
-    {
-      action: "archive",
-      label: "Archive",
-      disabled: state === "archived",
-      disabledReason: state === "archived" ? "This work item is already archived." : undefined,
-      audited: true,
-    },
-  ];
 }
 
 function teamWorkState(value: unknown): TeamWorkItemState {

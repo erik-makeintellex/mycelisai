@@ -45,6 +45,24 @@ func (s *AdminServer) listTeamWorkItemsDB(ctx context.Context, teamID string, li
 	return items, nil
 }
 
+func (s *AdminServer) getTeamWorkItemDB(ctx context.Context, teamID, workItemID string) (protocol.TeamWorkItem, error) {
+	db := s.getDB()
+	if db == nil {
+		return protocol.TeamWorkItem{}, errors.New("database not available")
+	}
+	return scanTeamWorkItem(db.QueryRowContext(ctx, `
+		SELECT id::text, team_id, COALESCE(run_id::text,''), COALESCE(intent_proof_id::text,''),
+		       COALESCE(contract_id,''), COALESCE(proof_id,''), objective, scope, owner,
+		       execution_shape, expected_outputs, expected_proof, capability_requirements,
+		       governance_posture, state, COALESCE(last_event, 'null'::jsonb), needs_operator,
+		       degradation_state, recovery_options, output_refs, proof_refs, audit_refs,
+		       created_at, updated_at, version
+		FROM team_work_items
+		WHERE tenant_id='default' AND team_id=$1 AND id=$2`,
+		strings.TrimSpace(teamID), workItemID,
+	))
+}
+
 func (s *AdminServer) insertTeamWorkItemDB(ctx context.Context, item *protocol.TeamWorkItem) error {
 	db := s.getDB()
 	if db == nil {

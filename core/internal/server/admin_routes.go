@@ -40,6 +40,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/teams/{id}/work/{workItemId}/status-events", s.HandleListTeamStatusEvents)
 	mux.HandleFunc("GET /api/v1/teams/{id}/work/{workItemId}/interactions", s.HandleListTeamInteractions)
 	mux.HandleFunc("POST /api/v1/teams/{id}/work/{workItemId}/interactions", s.HandleCreateTeamInteraction)
+	mux.HandleFunc("POST /api/v1/teams/{id}/work/{workItemId}/actions", s.HandleTeamWorkAction)
 	mux.HandleFunc("/api/v1/user/settings", s.HandleUserSettings)
 	mux.HandleFunc("/api/v1/settings/user", s.HandleUserSettings)
 	mux.HandleFunc("GET /api/v1/groups", s.HandleListGroups)

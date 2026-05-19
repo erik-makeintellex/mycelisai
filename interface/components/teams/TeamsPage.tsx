@@ -16,6 +16,7 @@ import TeamDetailDrawer from "./TeamDetailDrawer";
 import TeamsIntroPanel from "./TeamsIntroPanel";
 import { TeamMemberTemplatesPanel } from "./TeamMemberTemplatesPanel";
 import { useDurableTeamWork } from "@/components/soma/useDurableTeamWork";
+import { useTeamWorkActionHandler } from "./useTeamWorkActionHandler";
 
 const FILTERS: { value: TeamsFilter; label: string }[] = [
   { value: "all", label: "All Teams" },
@@ -44,6 +45,7 @@ export default function TeamsPage() {
   const [editingTemplate, setEditingTemplate] = useState<CatalogueAgent | null>(
     null,
   );
+  const activeWorkActions = useTeamWorkActionHandler(selectTeam);
 
   useEffect(() => {
     fetchTeamsDetail();
@@ -106,7 +108,7 @@ export default function TeamsPage() {
   }, [sortedTemplates]);
   const activeTeamWork = useDurableTeamWork({
     teams: filteredTeams,
-    refreshVersion: durableWorkRefreshVersion,
+    refreshVersion: durableWorkRefreshVersion + activeWorkActions.activeWorkRefreshVersion,
     maxTeams: 12,
   });
 
@@ -224,12 +226,10 @@ export default function TeamsPage() {
           items={activeTeamWork.items}
           emptyMessage={activeTeamWork.emptyMessage}
           statusLabel={activeTeamWork.statusLabel}
-          degradedMessage={activeTeamWork.degradedMessage}
-          onAction={(item, action) => {
-            if (action.action === "inspect") {
-              selectTeam(item.teamIds[0] ?? item.id);
-            }
-          }}
+          degradedMessage={
+            activeWorkActions.activeWorkActionError ?? activeTeamWork.degradedMessage
+          }
+          onAction={activeWorkActions.handleActiveWorkAction}
         />
         {filteredTeams.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
