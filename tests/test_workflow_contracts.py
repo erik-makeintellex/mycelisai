@@ -227,7 +227,7 @@ def test_manual_source_api_proof_workflow_uses_hosted_infra_and_mycelis_api():
     for expected in [
         "workflow_dispatch",
         "proof_mode",
-        "postgres:16",
+        "pgvector/pgvector:pg16",
         "nats:2-alpine",
         "uv run inv db.migrate",
         "uv run inv core.compile",
@@ -240,4 +240,4 @@ def test_manual_source_api_proof_workflow_uses_hosted_infra_and_mycelis_api():
         assert expected in workflow
 
     assert "Source API Proof" in testing
-    assert "hosted PostgreSQL/NATS" in testing
+    assert "hosted pgvector PostgreSQL/NATS" in testing

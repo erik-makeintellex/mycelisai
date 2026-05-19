@@ -273,7 +273,7 @@ uv run inv compose.storage-health
 ```
 
 ## CI Pipelines
-GitHub Actions remain manual-only through `workflow_dispatch` and are hosted corroboration after local source proof, not the first place to find ordinary development failures. Manual hosted lanes: `CI` has selectable repo/core/interface/browser/Helm lanes plus `browser_spec`; `Source API Proof` runs hosted PostgreSQL/NATS against `api.delivery-proof`; `Full Release Candidate` chains source gates, authenticated browser proof, optional source API proof, Helm packaging, optional images, and binaries; `Dev Build`, `Release Packaging`, and `Release Core Binaries` remain narrower explicit lanes.
+GitHub Actions remain manual-only through `workflow_dispatch` and are hosted corroboration after local source proof, not the first place to find ordinary development failures. Manual hosted lanes: `CI` has selectable repo/core/interface/browser/Helm lanes plus `browser_spec`; `Source API Proof` runs hosted pgvector PostgreSQL/NATS against `api.delivery-proof`; `Full Release Candidate` chains source gates, authenticated browser proof, optional source API proof, Helm packaging, optional images, and binaries; `Dev Build`, `Release Packaging`, and `Release Core Binaries` remain narrower explicit lanes.
 
 Primary local gates:
 - `uv run inv ci.test`

@@ -216,6 +216,8 @@ profiles:
 }
 
 func TestNewRouter_NoEmergencyLoopbackFallbackWithoutConfiguredProviders(t *testing.T) {
+	t.Setenv("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED", "")
+
 	router, err := NewRouter(filepath.Join(t.TempDir(), "missing-cognitive.yaml"), nil)
 	if err != nil {
 		t.Fatalf("NewRouter: %v", err)

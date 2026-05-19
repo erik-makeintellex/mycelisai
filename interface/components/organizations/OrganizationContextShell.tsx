@@ -86,16 +86,6 @@ async function readJson(response: Response) {
     }
 }
 
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = 20_000) {
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-    try {
-        return await fetch(input, { ...init, signal: controller.signal });
-    } finally {
-        window.clearTimeout(timeout);
-    }
-}
-
 export default function OrganizationContextShell({ organizationId }: { organizationId: string }) {
     const [organization, setOrganization] = useState<OrganizationHomePayload | null>(null);
     const [loading, setLoading] = useState(true);
@@ -153,7 +143,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             setLoading(true);
             setError(null);
             try {
-                const response = await fetchWithTimeout(`/api/v1/organizations/${organizationId}/home`, { cache: "no-store" });
+                const response = await fetch(`/api/v1/organizations/${organizationId}/home`, { cache: "no-store", signal: AbortSignal.timeout(20_000) });
                 const payload = await readJson(response);
                 if (!response.ok) {
                     throw new Error(extractApiError(payload) || "Unable to load AI Organization.");

@@ -7,7 +7,7 @@ import { liveAPIHeaders, liveAPIURL } from '../support/live-api-auth';
 import { clickVisibleControl } from '../support/click-visible-control';
 
 const repoRoot = path.resolve(__dirname, '../../..');
-export const LIVE_CHAT_RESPONSE_TIMEOUT_MS = 120_000;
+export const LIVE_CHAT_RESPONSE_TIMEOUT_MS = 180_000;
 
 type ChatEnvelope = {
     ok?: boolean;

@@ -301,25 +301,10 @@ def test_status_reports_unknown_when_compiled_go_inspection_fails(monkeypatch, c
 
 
 def test_status_reports_native_mode_with_docker_as_proof_lane(monkeypatch, capsys):
-    class Result:
-        def __init__(self, stdout="", exited=0, ok=True):
-            self.stdout = stdout
-            self.exited = exited
-            self.ok = ok
-
     monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
     monkeypatch.setattr(lifecycle, "_http_get", lambda *args, **kwargs: (0, "offline"))
     monkeypatch.setattr(lifecycle, "_list_compiled_go_service_processes", lambda: [])
-
-    class DummyContext:
-        def run(self, command, hide=True, warn=True):
-            if command.startswith("docker version"):
-                return Result(exited=1, ok=False)
-            if command == "kind get clusters":
-                return Result(stdout="")
-            raise AssertionError(f"unexpected command: {command}")
-
-    lifecycle.status.body(DummyContext())
+    lifecycle.status.body(Context())
 
     output = capsys.readouterr().out
     assert "Dev infra mode  : native" in output

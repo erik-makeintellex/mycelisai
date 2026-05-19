@@ -117,7 +117,7 @@ describe("GroupManagementPanel", () => {
     ).toBe("/api/v1/artifacts/artifact-1/download");
     expect(
       screen
-        .getByRole("link", { name: "Open lead workspace" })
+        .getByRole("link", { name: "Open lead workspace: team-marketing" })
         .getAttribute("href"),
     ).toBe("/dashboard?team_id=team-marketing");
     await waitFor(() =>

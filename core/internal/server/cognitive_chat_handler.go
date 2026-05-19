@@ -84,8 +84,6 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		req.Messages = applyConfirmedReferentialAction(req.Messages, referentialReview)
 		latestUserText = referentialReview.EffectiveRequest
 	}
-	visibleUserTurnCount := countUserChatMessages(req.Messages)
-
 	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
 
 	req.Messages = prependReferentialReviewContext(req.Messages, referentialReview)
@@ -122,9 +120,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	subject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, "admin")
 	var agentResult chatAgentResult
 	deterministicProposal := false
-	if visibleUserTurnCount == 1 {
-		agentResult, deterministicProposal = deterministicGovernedMutationResult(latestUserText, requestMutationTools)
-	}
+	agentResult, deterministicProposal = deterministicGovernedMutationResult(latestUserText, requestMutationTools)
 	if !deterministicProposal {
 		var err error
 		agentResult, err = s.requestChatAgent(r.Context(), subject, req.Messages)

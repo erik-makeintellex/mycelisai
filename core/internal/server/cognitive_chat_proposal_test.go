@@ -39,7 +39,8 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 			},
 			wantMode:             protocol.ModeProposal,
 			wantProposalTool:     "write_file",
-			wantRouteHintApplied: true,
+			wantRouteHintApplied: false,
+			wantBypassAgent:      true,
 		},
 		{
 			name: "rephrased mutation after answer still routes to proposal",
@@ -50,7 +51,8 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 			},
 			wantMode:             protocol.ModeProposal,
 			wantProposalTool:     "write_file",
-			wantRouteHintApplied: true,
+			wantRouteHintApplied: false,
+			wantBypassAgent:      true,
 		},
 		{
 			name: "clean first turn mutation routes to proposal",
@@ -183,6 +185,9 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 
 			select {
 			case turns := <-forwarded:
+				if tc.wantBypassAgent {
+					t.Fatalf("expected deterministic proposal to bypass agent, forwarded turns=%+v", turns)
+				}
 				if tc.wantRouteHintApplied {
 					if len(turns) == 0 {
 						t.Fatal("expected forwarded messages")
