@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.2 Full Production Architecture](../../architecture/v8-2.md) | [V8 Development State](../../.state/V8_DEV_STATE.md)
 
 > Status: Canonical working PRD
-> Last Updated: 2026-05-17
+> Last Updated: 2026-05-19
 > Module Boundary: Soma experience, runtime/capability, governance/trust, deployment/proof, QA/embodiment, docs/state
 > Purpose: Give the architecture team one product-ready view of where Mycelis is now, what finalization means, and which concrete runtime objects, UI states, recovery semantics, and proof workflows must close before broader expansion.
 
@@ -31,20 +31,20 @@ Operator expression is therefore not treated as a plain user query. It is treate
 
 ## Current State
 
-The current implementation state is recorded in `.state/V8_DEV_STATE.md`. As of 2026-05-16, the active state is:
+The current implementation state is recorded in `.state/V8_DEV_STATE.md`. As of 2026-05-19, the active state is:
 
 | Area | State | What exists now |
 | --- | --- | --- |
 | V8.2 architecture | `ACTIVE` | Canonical full production target, operational embodiment directive, runtime contracts, UI contracts, capability manifest standard, and directed-execution delivery plan. |
-| Deployment proof | `COMPLETE` / `IN_REVIEW` | Rancher Desktop K3s RC proof lane is green; Compose remains the fast local proof lane; live Compose is healthy with explicit external AI endpoint posture. |
+| Deployment proof | `COMPLETE` / `IN_REVIEW` | Hosted Full Release Candidate is green at `4c821cfb` with label `rc-v8.2-2026-05-19-final`; Rancher/K3s and Compose remain corroborating local proof lanes. |
 | Soma directed execution | `IN_REVIEW` | Soma can return direct answers, governed proposals, confirmed execution summaries, retained outputs, proof links, audit/recovery metadata, and degraded-state summaries. |
 | Governance | `IN_REVIEW` | Proposal -> confirm -> execute is implemented for meaningful mutations; failed approved execution can return run/proof/audit/degradation evidence. |
 | Outputs | `IN_REVIEW` | Retained output cards, workspace-backed files, media previews, generated project-package shape, proof/open/folder controls, and run conversation traces exist. |
-| Capabilities and MCP | `ACTIVE` / `IN_REVIEW` | Connected Tools exposes MCP/library/search posture and derived capability manifests; direct MCP tool refs can execute through confirmed plans. |
+| Capabilities and MCP | `ACTIVE` / `IN_REVIEW` | Connected Tools exposes MCP/library/search posture, durable `CapabilityManifestState` persistence/API is in review, and direct MCP tool refs can execute through confirmed plans. |
 | Managed Exchange | `ACTIVE` | Channels, threads, schemas, items, learning candidates, MCP activity, and normalized output lanes are implemented as inspectable advanced surfaces. |
 | Search | `IN_REVIEW` | Mycelis-owned search supports local sources, local API, SearXNG, optional Brave, disclosure metadata, and search-source provenance in Soma results. |
 | Memory and context | `ACTIVE` / `IN_REVIEW` | Semantic memory, governed deployment context, user-private context, company knowledge, Soma operating context, reflection/synthesis lanes, and candidate-first learning contracts exist. |
-| Teams and groups | `ACTIVE` / `IN_REVIEW` | Runtime teams, groups, team outputs, create-team proposals, group mirroring, retained team/file outputs, and an Active Work Lane projection exist; raw topology is inspectable on demand instead of default UX. |
+| Teams and groups | `ACTIVE` / `IN_REVIEW` | Runtime teams, groups, team outputs, create-team proposals, group mirroring, retained team/file outputs, durable team-work APIs, and API-backed Active Work Lane projection exist; raw topology is inspectable on demand instead of default UX. |
 | Automations and scheduler | `ACTIVE` / `IN_REVIEW` | Event trigger rules and review-loop scheduler health are visible; operator cadence authoring is not finalized and must ship as governed scheduler rules before schedule language returns to default UX. |
 | UI compression | `IN_REVIEW` | Soma proposal/trust UI, Auth Providers, and Resources have been compressed into focused operator surfaces with details behind disclosure or menu selections. |
 | Identity and auth | `ACTIVE` / `IN_REVIEW` | Local owner and deploy-owned access posture are surfaced read-only; identity/auth schema foundation exists; enterprise provider setup remains a review-only configuration contract until adapters are enabled. |
@@ -91,11 +91,11 @@ opens proof, and shows retry/degraded trust behavior when execution fails.
 
 | Object | Status | Required concrete fields |
 | --- | --- | --- |
-| ExecutionContract | `REQUIRED` | `contract_id`, intent summary, execution shape, capability requirements, governance posture, approval requirements, expected outputs, expected proof, recovery posture, degradation behavior, run linkage, timestamps, version |
-| ProofArtifact | `REQUIRED` | `proof_id`, `run_id`, execution status, evidence refs, output refs, validation source, proof quality, degradation state, recovery options, confidence provenance fields, audit refs, timestamps |
-| CapabilityManifestState | `REQUIRED` | capability id, health, probe status, trust/risk class, approval posture, allowed roles, output schemas, failure posture, recovery posture, manifest version |
+| ExecutionContract | `IN_REVIEW` | `contract_id`, intent summary, execution shape, capability requirements, governance posture, approval requirements, expected outputs, expected proof, recovery posture, degradation behavior, run linkage, timestamps, version |
+| ProofArtifact | `IN_REVIEW` | `proof_id`, `run_id`, execution status, evidence refs, output refs, validation source, proof quality, degradation state, recovery options, confidence provenance fields, audit refs, timestamps |
+| CapabilityManifestState | `IN_REVIEW` | capability id, health, probe status, trust/risk class, approval posture, allowed roles, output schemas, failure posture, recovery posture, manifest version |
 | UIResponseState | `IN_REVIEW` | direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, partial completion |
-| TeamInteractionSurface | `ACTIVE` | `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` ids, team/run/work linkage, source, verb, objective, state, expected outputs/proof, operator need, degradation, recovery, output refs, proof refs, audit refs, version |
+| TeamInteractionSurface | `IN_REVIEW` | `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` ids, team/run/work linkage, source, verb, objective, state, expected outputs/proof, operator need, degradation, recovery, output refs, proof refs, audit refs, version |
 
 These are runtime trust objects, not presentation conveniences. Exact schema fields, UI states, degraded lifecycle states, deployment-trust ownership, and the required slice close-out template are canonicalized in the [V8.2 Finalization Concretization Contract](V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md).
 
@@ -188,9 +188,9 @@ The detailed execution board now lives in [V8.2 Finalization Delivery Plan](V8_2
 The current execution order is:
 
 1. Refresh the local source proof lane.
-2. Prove the first demo package flow.
-3. Persist the durable trust object spine.
-4. Make active team work API-backed.
+2. Keep the first demo package flow repeatable across local and hosted proof.
+3. Harden the durable trust object spine across more execution paths.
+4. Make active team work controls production-actionable beyond read/projection.
 5. Compress Soma into a single operating window.
 6. Compress heavy surfaces behind list/detail or advanced inspection.
 7. Productionize governed scheduler cadence.
@@ -251,10 +251,10 @@ Required proof per slice:
 | Expression collapse into query/chat | Active product risk | Treat the input as output/agentry evocation: capture outcome, output shape, use context, constraints, proof, and continuation before runtime topology. |
 | Browser workspace scroll sprawl | Active UX risk | Replace long inner-scroll surfaces with single-window list/detail or workbench panes, and collapse mobile chrome so the input, active work, output, and trust summary remain usable. |
 | Cold-start Soma trust copy | `NEXT` | Default dashboard must not show "Soma just did this" or proof/trust package language before real Soma activity. |
-| Exact first demo GUI proof | `NEXT` | Extend live browser proof from playable file output to project-package output with README, validation, proof-link opening, and degraded retry. |
-| Capability manifest persistence | `REQUIRED` | Persist refreshed manifests and reconcile long-lived health/probe state as P0 runtime trust infrastructure. |
-| Execution/proof schemas | `REQUIRED` | Promote ExecutionContract and ProofArtifact from implied concepts into durable runtime-visible objects. |
-| Active team interaction contract | `NEXT` | Promote TeamInteraction, TeamWorkItem, TeamStatusEvent, and TeamOutputRef into durable runtime-visible APIs and Soma Active Work Lane projections. |
+| Exact first demo GUI proof | `IN_REVIEW` | Project-package output, README/validation metadata, proof-link opening, reload/revisit behavior, Groups output, and degraded retry have focused browser proof. |
+| Capability manifest persistence | `IN_REVIEW` | Refreshed manifests persist and reconcile long-lived health/probe state as P0 runtime trust infrastructure; universal adapter enforcement remains next. |
+| Execution/proof schemas | `IN_REVIEW` | ExecutionContract and ProofArtifact are durable runtime-visible objects with read/list APIs and confirm-action linkage. |
+| Active team interaction contract | `IN_REVIEW` | TeamInteraction, TeamWorkItem, TeamStatusEvent, and TeamOutputRef have durable APIs and Active Work Lane projection; runtime-team usefulness remains blocked until bounded asks return reliably. |
 | Enterprise auth overclaim | Active product risk | Keep provider setup review-only until adapters, policy, audit, and recovery are runtime-enabled. |
 | Source size pressure | Active hygiene lane | Keep `quality.max-lines` green and ratchet legacy caps down through modularization. |
 
@@ -269,7 +269,7 @@ Required proof per slice:
 
 ## Open Architecture Decisions
 
-1. What is the first minimal persistence/API implementation for the normalized TeamInteraction and TeamWorkItem surface?
+1. What are the first production-safe action semantics for steering, pausing, resuming, archiving, and recovering active TeamWorkItems?
 2. What is the first production scheduler rule shape that covers real cadence without overbuilding an automation suite?
 3. Which project-package output fields are required for reconstruction across Compose and Kubernetes proof lanes?
 

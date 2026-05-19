@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { mockFetch } from "../setup";
 
 vi.mock("@/components/teams/TeamDetailDrawer", () => ({
   __esModule: true,
@@ -23,90 +24,7 @@ vi.mock("@/components/catalogue/AgentEditorDrawer", () => ({
 
 import TeamsPage from "@/components/teams/TeamsPage";
 import { useCortexStore } from "@/store/useCortexStore";
-
-const mockTeams = [
-  {
-    id: "team-alpha",
-    name: "Alpha Squad",
-    role: "action",
-    type: "standing" as const,
-    mission_id: null,
-    mission_intent: null,
-    inputs: ["nats.input.alpha"],
-    deliveries: ["nats.output.alpha"],
-    agents: [
-      {
-        id: "agent-1",
-        role: "cognitive",
-        status: 1,
-        last_heartbeat: new Date().toISOString(),
-        tools: [],
-        model: "qwen",
-      },
-      {
-        id: "agent-2",
-        role: "sensory",
-        status: 0,
-        last_heartbeat: new Date().toISOString(),
-        tools: [],
-        model: "qwen",
-      },
-    ],
-  },
-  {
-    id: "team-bravo",
-    name: "Bravo Ops",
-    role: "expression",
-    type: "mission" as const,
-    mission_id: "mission-001",
-    mission_intent: "Deploy sentinel network",
-    inputs: [],
-    deliveries: [],
-    agents: [
-      {
-        id: "agent-3",
-        role: "actuation",
-        status: 2,
-        last_heartbeat: new Date().toISOString(),
-        tools: ["exec"],
-        model: "llama",
-      },
-    ],
-  },
-];
-
-const mockTemplates = [
-  {
-    id: "template-marketing-writer",
-    name: "Marketing Writer",
-    role: "cognitive",
-    system_prompt: "Write and refine launch copy.",
-    model: "qwen3:8b",
-    tools: ["recall"],
-    inputs: ["briefs"],
-    outputs: ["campaign copy", "launch messaging"],
-    verification_strategy: "semantic",
-    verification_rubric: ["clear", "on-brand"],
-    validation_command: "",
-    created_at: new Date("2026-04-07T10:00:00Z").toISOString(),
-    updated_at: new Date("2026-04-07T12:00:00Z").toISOString(),
-  },
-  {
-    id: "template-researcher",
-    name: "Audience Researcher",
-    role: "cognitive",
-    system_prompt: "Research campaigns and audience insight.",
-    model: "llama3.1:8b",
-    tools: ["fetch"],
-    inputs: ["requests"],
-    outputs: ["research briefs"],
-    verification_strategy: "semantic",
-    verification_rubric: ["grounded"],
-    validation_command: "",
-    created_at: new Date("2026-04-07T09:00:00Z").toISOString(),
-    updated_at: new Date("2026-04-07T11:00:00Z").toISOString(),
-  },
-];
+import { mockTeamWorkFetch, mockTeams, mockTemplates } from "./TeamsPage.fixtures";
 
 describe("TeamsPage", () => {
   const originalSetInterval = global.setInterval;
@@ -128,6 +46,7 @@ describe("TeamsPage", () => {
       createCatalogueAgent: vi.fn(),
       updateCatalogueAgent: vi.fn(),
     });
+    mockTeamWorkFetch(mockFetch);
   });
 
   afterEach(() => {
@@ -135,7 +54,7 @@ describe("TeamsPage", () => {
     global.clearInterval = originalClearInterval;
   });
 
-  it("renders the team roster plus Soma team-specialization controls", () => {
+  it("renders the team roster plus durable active-work controls", async () => {
     useCortexStore.setState({
       teamsDetail: mockTeams,
       catalogueAgents: mockTemplates,
@@ -172,9 +91,16 @@ describe("TeamsPage", () => {
     expect(screen.getByText(/Outputs and active collaboration/i)).toBeDefined();
     expect(screen.getByTestId("active-work-lane")).toBeDefined();
     expect(screen.getByText("Active work lane")).toBeDefined();
-    expect(screen.getAllByText("degraded").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Projection fallback").length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Durable TeamWorkItem records were unavailable/i).length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getByText("Draft launch package")).toBeDefined();
+    });
+    expect(screen.getByText("Durable team-work state loaded.")).toBeDefined();
+    expect(screen.getAllByText("output ready").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Durable team work").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Projection fallback")).toBeNull();
+    expect(screen.queryByText(/Durable TeamWorkItem records were unavailable/i)).toBeNull();
+    expect(screen.getByRole("link", { name: /Run proof/i }).getAttribute("href")).toBe("/runs/run-alpha");
+    expect(screen.getByRole("link", { name: /Launch brief/i }).getAttribute("href")).toBe("/api/v1/workspace/files/view?path=generated%2Falpha%2Fbrief.md");
     expect(
       screen
         .getAllByRole("link", { name: /Review outputs|Review group outputs/i })[0]

@@ -16,6 +16,7 @@ import {
   type TeamWorkItem,
   type TeamWorkItemState,
 } from "@/store/useCortexStore";
+import { ActiveWorkEvidence } from "./ActiveWorkEvidence";
 
 const stateStyles: Record<TeamWorkItemState, string> = {
   new: "border-cortex-primary/25 bg-cortex-primary/10 text-cortex-primary",
@@ -147,6 +148,7 @@ function WorkItemRow({
               {item.fallbackReason}
             </p>
           ) : null}
+          <ActiveWorkEvidence item={item} />
         </div>
         <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:justify-end">
           {item.interactions.map((action) => (

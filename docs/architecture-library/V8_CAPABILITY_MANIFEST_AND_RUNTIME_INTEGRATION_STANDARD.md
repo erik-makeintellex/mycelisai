@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-05-09
+> Last Updated: 2026-05-19
 > Module Boundary: capability/MCP, runtime/deployment, governance/trust, advanced UI
 > Purpose: Define the mandatory bridge between Soma actions, team/group execution, MCP tools, custom additions, outputs, runs, exchange normalization, artifacts, governance, and UI proof.
 
@@ -280,15 +280,15 @@ No integration is release-ready unless it is:
 | Team | Status | Ownership | Next Deliverable |
 | --- | --- | --- | --- |
 | Architecture Lead | ACTIVE | Own `CapabilityManifest`, execution/output shape, and promotion rule across MCP/custom/local/API/plugin paths. | Keep this standard and the architecture index authoritative. |
-| Runtime / Backend | NEXT | Implement typed manifest registry, run attachment rules, output object mapping, and adapter enforcement. | Go types/API/storage path for capability manifests and normalized capability invocation. |
-| Capability / MCP | NEXT | Map MCP library/server/tool records into capability manifests and preserve MCP registry metadata without flattening Mycelis governance fields. | MCP-to-capability adapter and install/update/probe validation. |
+| Runtime / Backend | IN_REVIEW | Typed manifest persistence/API exists; run attachment, output object mapping, and universal adapter enforcement continue. | Extend normalized capability invocation across every promoted execution path. |
+| Capability / MCP | IN_REVIEW | MCP library/server/tool records map into visible capability posture while preserving MCP registry metadata. | Complete MCP-to-capability adapter enforcement and install/update/probe validation. |
 | Exchange / Artifacts | NEXT | Ensure every tool/custom output lands in Managed Exchange and durable artifacts when meaningful. | Output normalization contract with retained object references. |
 | Governance / Trust | NEXT | Resolve risk, role permission, approval, audit, and retention policy from manifest plus org/user policy. | Policy resolver test matrix for low/medium/high and local/remote/custom additions. |
-| Interface / Operator UX | NEXT | Convert Connected Tools from server inventory into capability visibility and run/output routing. | Resources capability registry view and Soma proof links. |
+| Interface / Operator UX | IN_REVIEW | Connected Tools now emphasizes what Soma can use and exposes capability posture. | Broaden run/output proof routing across all capability families. |
 | Automation / Persistent Work | REQUIRED | Align recurring work with run-per-cycle and retained blocker/output semantics. | Automation run cycle proof with next-run visibility. |
 | Validation | REQUIRED | Add registration, health, schema, approval, audit, output, run proof, and recovery tests for each promoted capability family. | Capability integration validation suite. |
 | Docs / In-App Docs | ACTIVE | Keep state, architecture, user Resources, and docs manifest aligned. | In-app docs entry and user-facing Resources wording. |
 
 ## Current Adoption Posture
 
-Existing managed exchange, capability-risk, MCP library, audit, artifacts, and run-timeline work provides much of the foundation. The missing promotion is enforcement: every tool/custom execution path must declare a manifest and every meaningful result must attach to run/output proof before it is considered product-complete.
+Existing managed exchange, capability-risk, MCP library, persisted capability state, audit, artifacts, and run-timeline work provides much of the foundation. Persistence/API and operator visibility are in review; the remaining promotion is universal enforcement: every tool/custom execution path must declare a manifest and every meaningful result must attach to run/output proof before it is considered product-complete.

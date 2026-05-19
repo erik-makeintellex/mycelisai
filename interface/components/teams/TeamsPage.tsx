@@ -15,7 +15,7 @@ import TeamCard from "./TeamCard";
 import TeamDetailDrawer from "./TeamDetailDrawer";
 import TeamsIntroPanel from "./TeamsIntroPanel";
 import { TeamMemberTemplatesPanel } from "./TeamMemberTemplatesPanel";
-import { projectTeamWorkItem } from "./teamWorkProjection";
+import { useDurableTeamWork } from "@/components/soma/useDurableTeamWork";
 
 const FILTERS: { value: TeamsFilter; label: string }[] = [
   { value: "all", label: "All Teams" },
@@ -37,6 +37,9 @@ export default function TeamsPage() {
   const updateCatalogueAgent = useCortexStore((s) => s.updateCatalogueAgent);
   const selectTeam = useCortexStore((s) => s.selectTeam);
   const setTeamsFilter = useCortexStore((s) => s.setTeamsFilter);
+  const durableWorkRefreshVersion = useCortexStore(
+    (s) => s.durableWorkRefreshVersion,
+  );
   const [isTemplateDrawerOpen, setIsTemplateDrawerOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<CatalogueAgent | null>(
     null,
@@ -101,10 +104,11 @@ export default function TeamsPage() {
     });
     return Array.from(coverage.entries()).slice(0, 6);
   }, [sortedTemplates]);
-  const activeWorkItems = useMemo(
-    () => filteredTeams.map(projectTeamWorkItem),
-    [filteredTeams],
-  );
+  const activeTeamWork = useDurableTeamWork({
+    teams: filteredTeams,
+    refreshVersion: durableWorkRefreshVersion,
+    maxTeams: 12,
+  });
 
   const openTemplateDrawer = useCallback((agent: CatalogueAgent | null) => {
     setEditingTemplate(agent);
@@ -217,10 +221,13 @@ export default function TeamsPage() {
           </div>
         </div>
         <ActiveWorkLane
-          items={activeWorkItems}
+          items={activeTeamWork.items}
+          emptyMessage={activeTeamWork.emptyMessage}
+          statusLabel={activeTeamWork.statusLabel}
+          degradedMessage={activeTeamWork.degradedMessage}
           onAction={(item, action) => {
             if (action.action === "inspect") {
-              selectTeam(item.id);
+              selectTeam(item.teamIds[0] ?? item.id);
             }
           }}
         />

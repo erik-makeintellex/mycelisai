@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
 
 > Status: Canonical working contract
-> Last Updated: 2026-05-16
+> Last Updated: 2026-05-19
 > Module Boundary: Soma experience, team/workflow, governance/trust, runtime/capability, QA/embodiment
 > Purpose: Define how Soma, Council, operators, and runtime teams talk about new or active work without exposing raw orchestration topology as the main product experience.
 
@@ -245,8 +245,8 @@ This contract is releasable only when the product proves:
 
 ## Current Release Posture
 
-`IN_REVIEW`: The architectural concept now exists as a canonical contract.
+`IN_REVIEW`: The architectural concept now exists as a canonical contract, and the current API/UI proof paths use durable team-work state instead of treating teams as only roster projections.
 
-`NEXT`: Persist `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` through backend APIs and project them into the Soma Active Work Lane.
+`IN_REVIEW`: `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API projection are landed for current proof paths. Manual/self-use work items can record coordination and proof, but that does not yet mean runtime teams can replace implementation collaborators.
 
 `BLOCKED`: Do not claim runtime teams are useful delivery collaborators until a bounded role-specific team ask returns within product timeout and the UI exposes visible output or degradation.

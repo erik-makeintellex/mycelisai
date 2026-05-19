@@ -57,4 +57,35 @@ describe("ActiveWorkLane", () => {
       expect.objectContaining({ action: "pause" }),
     );
   });
+
+  it("shows durable run proof and retained output links", () => {
+    render(
+      <ActiveWorkLane
+        items={[
+          {
+            ...baseItem,
+            runId: "run-1",
+            outputRefs: [
+              {
+                output_id: "out-1",
+                team_id: "team-alpha",
+                work_item_id: "work-1",
+                kind: "file",
+                label: "Launch brief",
+                storage_ref: "generated/launch/brief.md",
+              },
+            ],
+            proofRefs: ["proof-1"],
+            auditRefs: ["audit-1"],
+            interactions: [],
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: /Run proof/i }).getAttribute("href")).toBe("/runs/run-1");
+    expect(screen.getByRole("link", { name: /Launch brief/i }).getAttribute("href")).toBe("/api/v1/workspace/files/view?path=generated%2Flaunch%2Fbrief.md");
+    expect(screen.getByRole("link", { name: /Proof proof-1/i }).getAttribute("href")).toBe("/runs/run-1");
+    expect(screen.getByText(/Audit audit-1/i)).toBeDefined();
+  });
 });

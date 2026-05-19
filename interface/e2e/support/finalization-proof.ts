@@ -73,13 +73,61 @@ export async function mockTeamsWorkspace(
 ) {
   await mockOperatorShell(page);
 
-  await page.route("**/api/v1/teams/detail", async (route) => {
-    await fulfillJSON(route, 200, teams);
+  await page.route("**/api/v1/teams/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/teams/detail") {
+      await fulfillJSON(route, 200, teams);
+      return;
+    }
+    if (url.pathname.includes("/work")) {
+      const parts = url.pathname.split("/");
+      const teamID = decodeURIComponent(parts[4] ?? "");
+      await fulfillJSON(route, 200, { ok: true, data: defaultTeamWorkItems(teamID) });
+      return;
+    }
+    await route.continue();
   });
 
   await page.route("**/api/v1/catalogue/agents", async (route) => {
     await fulfillJSON(route, 200, catalogueAgents);
   });
+}
+
+function defaultTeamWorkItems(teamID: string) {
+  if (teamID === "active-demo-team") {
+    return [
+      {
+        work_item_id: "work-first-demo",
+        team_id: "active-demo-team",
+        run_id: "run-first-demo",
+        objective: "First Demo Game Team",
+        execution_shape: "deliverable",
+        state: "output_ready",
+        last_event: {
+          headline: "Playable package retained",
+          details: "README, browser entrypoint, and validation proof are attached.",
+          next_action: "Review retained output and steer follow-on polish from Soma.",
+        },
+        output_refs: [
+          {
+            output_id: "out-first-demo",
+            team_id: "active-demo-team",
+            work_item_id: "work-first-demo",
+            run_id: "run-first-demo",
+            kind: "project_package",
+            label: "Coin Runner package",
+            storage_ref: "generated/coin-runner",
+            entrypoint: "generated/coin-runner/index.html",
+            proof_ref: "proof-first-demo",
+          },
+        ],
+        proof_refs: ["proof-first-demo"],
+        audit_refs: ["audit-first-demo"],
+        updated_at: "2026-05-17T12:05:00Z",
+      },
+    ];
+  }
+  return [];
 }
 
 export async function expectNoHorizontalOverflow(page: Page) {
