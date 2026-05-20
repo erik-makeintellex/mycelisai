@@ -96,6 +96,16 @@ Supported actions are `start_work`, `pause`, `resume`, `archive`, `steer`, and `
 | `steer` | any non-archived delegated/deliverable work | unchanged | Operator guidance is recorded as durable status and interaction evidence without pretending execution completed. |
 | `recover` | `degraded`, `needs_operator` | `queued` | Operator requests safe continuation from retained context, output, proof, and audit state. |
 
+### Bounded Team Ask Semantics
+
+The current runtime usefulness proof API is:
+
+```text
+POST /api/v1/teams/{team_id}/work/ask
+```
+
+The endpoint accepts a `message` or structured `TeamAsk`, creates a delegated `TeamWorkItem`, records a queued `TeamStatusEvent` plus ask `TeamInteraction`, and then waits for a bounded team response. A response moves the item to `output_ready` and records the reply as a result interaction. NATS offline or team timeout moves the item to `degraded`, sets `needs_operator=true`, records `degradation_state`, and returns recovery options. This endpoint is the product-safe alternative to broad raw broadcast tests because it always leaves durable operator truth behind.
+
 ## Runtime Objects
 
 ### TeamInteraction
@@ -266,6 +276,6 @@ This contract is releasable only when the product proves:
 
 `IN_REVIEW`: The architectural concept now exists as a canonical contract, and the current API/UI proof paths use durable team-work state instead of treating teams as only roster projections.
 
-`IN_REVIEW`: `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API projection are landed for current proof paths. The Active Work Lane now calls the durable action API for production-safe `start_work`, `pause`, `resume`, `archive`, `steer`, and `recover` controls, with each accepted action recording both status and interaction evidence. Manual/self-use work items can record coordination and proof, but that does not yet mean runtime teams can replace implementation collaborators.
+`IN_REVIEW`: `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API projection are landed for current proof paths. The Active Work Lane now calls the durable action API for production-safe `start_work`, `pause`, `resume`, `archive`, `steer`, and `recover` controls, with each accepted action recording both status and interaction evidence. The bounded team ask API now records either visible `output_ready` replies or `degraded` timeout/offline proof, which closes the API honesty gap before claiming broader runtime-team usefulness.
 
-`BLOCKED`: Do not claim runtime teams are useful delivery collaborators until a bounded role-specific team ask returns within product timeout and the UI exposes visible output or degradation.
+`NEXT`: Prove the bounded ask path through the live GUI with a real local model/team response and through timeout/degradation UI. Until that proof is green, do not claim runtime teams can replace implementation collaborators.

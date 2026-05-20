@@ -44,7 +44,7 @@ The current implementation state is recorded in `.state/V8_DEV_STATE.md`. As of 
 | Managed Exchange | `ACTIVE` | Channels, threads, schemas, items, learning candidates, MCP activity, and normalized output lanes are implemented as inspectable advanced surfaces. |
 | Search | `IN_REVIEW` | Mycelis-owned search supports local sources, local API, SearXNG, optional Brave, disclosure metadata, and search-source provenance in Soma results. |
 | Memory and context | `ACTIVE` / `IN_REVIEW` | Semantic memory, governed deployment context, user-private context, company knowledge, Soma operating context, reflection/synthesis lanes, and candidate-first learning contracts exist. |
-| Teams and groups | `ACTIVE` / `IN_REVIEW` | Runtime teams, groups, team outputs, create-team proposals, group mirroring, retained team/file outputs, durable team-work APIs, API-backed Active Work Lane projection, and production-safe lifecycle/steering/recovery controls exist; raw topology is inspectable on demand instead of default UX. |
+| Teams and groups | `ACTIVE` / `IN_REVIEW` | Runtime teams, groups, team outputs, create-team proposals, group mirroring, retained team/file outputs, durable team-work APIs, bounded team asks with output/degradation persistence, API-backed Active Work Lane projection, and production-safe lifecycle/steering/recovery controls exist; raw topology is inspectable on demand instead of default UX. |
 | Automations and scheduler | `ACTIVE` / `IN_REVIEW` | Event trigger rules and review-loop scheduler health are visible; operator cadence authoring is not finalized and must ship as governed scheduler rules before schedule language returns to default UX. |
 | UI compression | `IN_REVIEW` | Soma proposal/trust UI, Auth Providers, and Resources have been compressed into focused operator surfaces with details behind disclosure or menu selections. |
 | Identity and auth | `ACTIVE` / `IN_REVIEW` | Local owner and deploy-owned access posture are surfaced read-only; identity/auth schema foundation exists; enterprise provider setup remains a review-only configuration contract until adapters are enabled. |
@@ -204,7 +204,7 @@ Persist initial `ExecutionContract` and `ProofArtifact`, prove project-package o
 
 ### Phase 2 - Active Team And Output Workflows
 
-Make active teams inspectable and steerable through API-backed `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` state before raw topology. The action endpoint covers `start_work`, `pause`, `resume`, `archive`, `steer`, and `recover`; next work should prove a bounded team ask returns visible output or degradation within product timeout.
+Make active teams inspectable and steerable through API-backed `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` state before raw topology. The action endpoint covers `start_work`, `pause`, `resume`, `archive`, `steer`, and `recover`; the bounded ask endpoint records either `output_ready` team replies or `degraded` timeout/offline proof. Next work should prove this through the live GUI and a real local model/team response.
 
 ### Phase 3 - Scheduler/Cadence Productionization
 
@@ -244,7 +244,7 @@ Required proof per slice:
 | Risk | Current posture | Required action |
 | --- | --- | --- |
 | Doctrine expansion | Active risk | Reject architecture-only expansion unless it improves embodiment, recovery, proof, deployment trust, or confidence provenance. |
-| Runtime-team usefulness | `BLOCKED` | Do not claim runtime teams are useful delivery collaborators until one bounded role-specific ask completes within timeout with visible degradation handling. |
+| Runtime-team usefulness | `IN_REVIEW` | Bounded ask API now persists output/degradation truth; do not claim runtime teams are useful delivery collaborators until live GUI proof shows one role-specific ask completes within timeout or degrades visibly. |
 | Scheduler/cadence authoring | `NEXT` | Ship governed scheduler rules before exposing cadence authoring as product behavior. |
 | Deployment env footguns | Active operational risk | Keep Compose/Kubernetes endpoint posture explicit; avoid loopback assumptions and document container-safe overrides. |
 | UI density | Active cleanup lane | Continue menu/detail and disclosure compression for lengthy advanced surfaces. |
@@ -254,7 +254,7 @@ Required proof per slice:
 | Exact first demo GUI proof | `IN_REVIEW` | Project-package output, README/validation metadata, proof-link opening, reload/revisit behavior, Groups output, and degraded retry have focused browser proof. |
 | Capability manifest persistence | `IN_REVIEW` | Refreshed manifests persist and reconcile long-lived health/probe state as P0 runtime trust infrastructure; universal adapter enforcement remains next. |
 | Execution/proof schemas | `IN_REVIEW` | ExecutionContract and ProofArtifact are durable runtime-visible objects with read/list APIs and confirm-action linkage. |
-| Active team interaction contract | `IN_REVIEW` | TeamInteraction, TeamWorkItem, TeamStatusEvent, and TeamOutputRef have durable APIs and Active Work Lane projection; runtime-team usefulness remains blocked until bounded asks return reliably. |
+| Active team interaction contract | `IN_REVIEW` | TeamInteraction, TeamWorkItem, TeamStatusEvent, and TeamOutputRef have durable APIs and Active Work Lane projection; bounded asks persist replies or degradation, with live GUI proof still required before runtime-team usefulness is accepted. |
 | Enterprise auth overclaim | Active product risk | Keep provider setup review-only until adapters, policy, audit, and recovery are runtime-enabled. |
 | Source size pressure | Active hygiene lane | Keep `quality.max-lines` green and ratchet legacy caps down through modularization. |
 
@@ -269,7 +269,7 @@ Required proof per slice:
 
 ## Open Architecture Decisions
 
-1. What are the first production-safe action semantics for steering, pausing, resuming, archiving, and recovering active TeamWorkItems?
+1. How should the live GUI expose bounded team asks so operators can ask, steer, recover, and review team replies without seeing raw bus topology?
 2. What is the first production scheduler rule shape that covers real cadence without overbuilding an automation suite?
 3. Which project-package output fields are required for reconstruction across Compose and Kubernetes proof lanes?
 
