@@ -30,7 +30,7 @@ func stripToolCallJSON(text string) string {
 	if cleaned := strings.TrimSpace(text[:start]); cleaned != "" {
 		return cleaned
 	}
-	return text
+	return ""
 }
 
 func (a *Agent) publishToolBusSignal(payloadKind protocol.SignalPayloadKind, sourceKind protocol.SignalSourceKind, payload map[string]any) {

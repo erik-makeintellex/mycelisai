@@ -52,6 +52,55 @@ func TestHandleTeamWorkAsk_RecordsOutputReadyResponse(t *testing.T) {
 	if data["reply"] != "validated output package" {
 		t.Fatalf("reply = %v", data["reply"])
 	}
+	event := data["event"].(map[string]any)
+	if event["details"] != "Reply: validated output package" {
+		t.Fatalf("event.details = %v", event["details"])
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestHandleTeamWorkAsk_RecordsDegradedForUnreadableTeamResponse(t *testing.T) {
+	dbOpt, mock := withDB(t)
+	s := newTestServer(dbOpt, withNATS(t))
+	now := time.Now().UTC()
+	mock.MatchExpectationsInOrder(true)
+	expectTeamWorkAskInsert(mock, "qa-team", protocol.TeamWorkStateQueued, false, "", now)
+	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
+	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
+	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateDegraded, now)
+	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateDegraded, true, "team_response_unreadable")
+	expectTeamWorkAskInteraction(mock, "qa-team", "degraded", string(protocol.PayloadKindError), now)
+
+	subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, "qa-team")
+	if _, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
+		_ = msg.Respond([]byte(`{"tool_call":{"name":"write_file","arguments":{"path":"output.txt"}}}`))
+	}); err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if err := s.NC.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+
+	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
+	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
+		"message":"Validate the browser package.",
+		"timeout_seconds":2
+	}`)
+
+	assertStatus(t, rr, http.StatusAccepted)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	data := resp["data"].(map[string]any)
+	work := data["work_item"].(map[string]any)
+	if work["state"] != string(protocol.TeamWorkStateDegraded) {
+		t.Fatalf("state = %v", work["state"])
+	}
+	if work["degradation_state"] != "team_response_unreadable" {
+		t.Fatalf("degradation_state = %v", work["degradation_state"])
+	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
 	}

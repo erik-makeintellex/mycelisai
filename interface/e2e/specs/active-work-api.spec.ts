@@ -171,7 +171,7 @@ test.describe("Active work TeamWorkItem API contract", () => {
     if (askResponse.status() === 202) {
       expect(item.state).toBe("degraded");
       expect(item.needs_operator).toBe(true);
-      expect(item.degradation_state).toMatch(/^(nats_offline|team_response_timeout)$/);
+      expect(item.degradation_state).toMatch(/^(nats_offline|team_response_timeout|team_response_unreadable)$/);
     }
 
     const listResponse = await getTeamWork(request, teamId);

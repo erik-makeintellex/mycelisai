@@ -84,7 +84,12 @@ func (s *AdminServer) HandleTeamWorkAsk(w http.ResponseWriter, r *http.Request) 
 		s.respondTeamWorkAskDegraded(w, r.Context(), item, subject, "team_response_timeout", "The team did not return a response within "+timeout.String()+": "+err.Error(), http.StatusAccepted)
 		return
 	}
-	s.respondTeamWorkAskOutput(w, r.Context(), item, subject, string(msg.Data))
+	reply := string(msg.Data)
+	if !teamWorkAskReplyReadable(reply) {
+		s.respondTeamWorkAskDegraded(w, r.Context(), item, subject, "team_response_unreadable", "The team returned a response, but it was not suitable as operator-visible output.", http.StatusAccepted)
+		return
+	}
+	s.respondTeamWorkAskOutput(w, r.Context(), item, subject, reply)
 }
 
 func newTeamWorkAskItem(teamID string, req teamWorkAskRequest) protocol.TeamWorkItem {
@@ -210,7 +215,7 @@ func (s *AdminServer) respondTeamWorkAskOutput(w http.ResponseWriter, ctx contex
 	item.State = protocol.TeamWorkStateOutputReady
 	item.NeedsOperator = false
 	item.DegradationState = ""
-	event := teamWorkAskStatusEvent(item, protocol.TeamWorkStateOutputReady, "Team response ready", "The team returned a bounded response for this ask.", "team_response", "Review the response and decide whether to retain, steer, or ask for follow-up.", nil)
+	event := teamWorkAskStatusEvent(item, protocol.TeamWorkStateOutputReady, "Team response ready", teamAskReplyDetails(reply), "team_response", "Review the response and decide whether to retain, steer, or ask for follow-up.", nil)
 	if err := s.insertTeamStatusEventDB(ctx, &event); err != nil {
 		respondAPIError(w, "Failed to record team response: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -237,6 +242,38 @@ func (s *AdminServer) respondTeamWorkAskOutput(w http.ResponseWriter, ctx contex
 		return
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(teamWorkAskResult{WorkItem: item, Event: event, Reply: reply, Subject: subject}))
+}
+
+func teamAskReplyDetails(reply string) string {
+	trimmed := strings.Join(strings.Fields(reply), " ")
+	if trimmed == "" {
+		return "The team returned an empty bounded response for this ask."
+	}
+	const maxDetailRunes = 180
+	runes := []rune(trimmed)
+	if len(runes) > maxDetailRunes {
+		trimmed = string(runes[:maxDetailRunes]) + "..."
+	}
+	return "Reply: " + trimmed
+}
+
+func teamWorkAskReplyReadable(reply string) bool {
+	trimmed := strings.TrimSpace(reply)
+	if trimmed == "" {
+		return false
+	}
+	if strings.Contains(trimmed, "No response — LLM may be unavailable") ||
+		strings.Contains(trimmed, "No response - LLM may be unavailable") {
+		return false
+	}
+	normalized := strings.Trim(trimmed, "` \t\r\n")
+	if strings.HasPrefix(normalized, "json") {
+		normalized = strings.TrimSpace(strings.TrimPrefix(normalized, "json"))
+	}
+	if strings.HasPrefix(normalized, "{") && strings.Contains(normalized, `"tool_call"`) {
+		return false
+	}
+	return true
 }
 
 func defaultStringSlice(items []string, fallback string) []string {

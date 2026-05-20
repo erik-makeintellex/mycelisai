@@ -104,7 +104,7 @@ The current runtime usefulness proof API is:
 POST /api/v1/teams/{team_id}/work/ask
 ```
 
-The endpoint accepts a `message` or structured `TeamAsk`, creates a delegated `TeamWorkItem`, records a queued `TeamStatusEvent` plus ask `TeamInteraction`, and then waits for a bounded team response. A response moves the item to `output_ready` and records the reply as a result interaction. NATS offline or team timeout moves the item to `degraded`, sets `needs_operator=true`, records `degradation_state`, and returns recovery options. `/teams` exposes this as a compact Ask Team or Respond form on durable active-work rows; broad raw broadcast tests remain reserved for explicit broadcast/degradation proof.
+The endpoint accepts a `message` or structured `TeamAsk`, creates a delegated `TeamWorkItem`, records a queued `TeamStatusEvent` plus ask `TeamInteraction`, and then waits for a bounded team response. A readable response moves the item to `output_ready`, records the reply as a result interaction, and writes a short reply excerpt into the visible status details. NATS offline, team timeout, or unreadable raw tool-call/no-response output moves the item to `degraded`, sets `needs_operator=true`, records `degradation_state`, and returns recovery options. `/teams` exposes this as a compact Ask Team or Respond form on durable active-work rows; broad raw broadcast tests remain reserved for explicit broadcast/degradation proof.
 
 ## Runtime Objects
 
@@ -280,4 +280,4 @@ This contract is releasable only when the product proves:
 
 `IN_REVIEW`: Local-source proof now shows the bounded ask path creating durable degraded timeout state with status events, interactions, recovery options, and Active Work visibility. This proves honest degradation, not autonomous delivery usefulness.
 
-`NEXT`: Prove the bounded ask path with a real local model/team response returning `output_ready` within timeout. Until that proof is green and repeatable, do not claim runtime teams can replace implementation collaborators.
+`IN_REVIEW`: The first live `/teams` GUI proof is green for a real local `prime-development` ask returning `output_ready` within the browser path and showing reply proof text in Active Work. This proves the interaction path, not broad team delivery usefulness; the next gate is repeatable role-specific delivery output plus async/polling handling for slow local models.

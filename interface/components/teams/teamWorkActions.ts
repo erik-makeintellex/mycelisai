@@ -54,7 +54,7 @@ export async function postTeamWorkAsk(
         message,
         summary: `Operator asked ${teamId} to continue work on "${item.title}".`,
         actor_ref: "operator",
-        timeout_seconds: 30,
+        timeout_seconds: 60,
         expected_outputs: ["Team response or retained output"],
         expected_proof: ["Team response event or degraded timeout proof"],
         payload: {
