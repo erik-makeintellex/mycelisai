@@ -185,7 +185,7 @@ describe("TeamsPage", () => {
         }),
       );
     });
-    fireEvent.click(screen.getAllByRole("button", { name: /steer|respond/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /steer/i })[0]);
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining("/actions"),

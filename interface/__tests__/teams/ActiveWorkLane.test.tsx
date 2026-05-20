@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ActiveWorkLane } from "@/components/teams/ActiveWorkLane";
 import type { TeamWorkItem } from "@/store/useCortexStore";
 
@@ -87,5 +87,36 @@ describe("ActiveWorkLane", () => {
     expect(screen.getByRole("link", { name: /Launch brief/i }).getAttribute("href")).toBe("/api/v1/workspace/files/view?path=generated%2Flaunch%2Fbrief.md");
     expect(screen.getByRole("link", { name: /Proof proof-1/i }).getAttribute("href")).toBe("/runs/run-1");
     expect(screen.getByText(/Audit audit-1/i)).toBeDefined();
+  });
+
+  it("submits a bounded ask for durable active work", async () => {
+    const onTeamAsk = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ActiveWorkLane
+        items={[
+          {
+            ...baseItem,
+            source: "durable",
+            interactions: [],
+          },
+        ]}
+        onTeamAsk={onTeamAsk}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /ask team/i }));
+    const input = screen.getByLabelText(/Ask Draft launch brief/i) as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { value: "Create the next validation note" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send/i }));
+
+    await waitFor(() => {
+      expect(onTeamAsk).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "work-1" }),
+        "Create the next validation note",
+      );
+    });
+    expect(screen.queryByLabelText(/Ask Draft launch brief/i)).toBeNull();
   });
 });

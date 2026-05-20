@@ -35,3 +35,37 @@ export async function postTeamWorkAction(
     throw new Error(payload.error || `Could not ${action.replace("_", " ")} team work.`);
   }
 }
+
+export async function postTeamWorkAsk(
+  item: TeamWorkItem,
+  message: string,
+): Promise<void> {
+  const teamId = item.teamIds[0];
+  if (!teamId) {
+    throw new Error("Team work item is missing its team id.");
+  }
+
+  const response = await fetch(
+    `/api/v1/teams/${encodeURIComponent(teamId)}/work/ask`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message,
+        summary: `Operator asked ${teamId} to continue work on "${item.title}".`,
+        actor_ref: "operator",
+        timeout_seconds: 30,
+        expected_outputs: ["Team response or retained output"],
+        expected_proof: ["Team response event or degraded timeout proof"],
+        payload: {
+          source_work_item_id: item.id,
+          source_work_state: item.state,
+        },
+      }),
+    },
+  );
+  const payload = await response.json().catch(() => ({})) as TeamWorkActionResponse;
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not ask the team for more work.");
+  }
+}

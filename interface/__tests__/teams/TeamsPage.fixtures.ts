@@ -100,6 +100,22 @@ export function mockTeamWorkFetch(mockFetch: ReturnType<typeof vi.fn>) {
         }),
       };
     }
+    if (url.includes("/work/ask") && init?.method === "POST") {
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            work_item: {
+              work_item_id: "work-alpha-ask",
+              team_id: "team-alpha",
+              objective: "Create the next validation note",
+              execution_shape: "delegated_work",
+              state: "output_ready",
+            },
+          },
+        }),
+      };
+    }
     if (url.includes("/api/v1/teams/team-alpha/work")) {
       return {
         ok: true,

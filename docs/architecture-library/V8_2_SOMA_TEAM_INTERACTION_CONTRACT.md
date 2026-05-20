@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
 
 > Status: Canonical working contract
-> Last Updated: 2026-05-19
+> Last Updated: 2026-05-20
 > Module Boundary: Soma experience, team/workflow, governance/trust, runtime/capability, QA/embodiment
 > Purpose: Define how Soma, Council, operators, and runtime teams talk about new or active work without exposing raw orchestration topology as the main product experience.
 
@@ -104,7 +104,7 @@ The current runtime usefulness proof API is:
 POST /api/v1/teams/{team_id}/work/ask
 ```
 
-The endpoint accepts a `message` or structured `TeamAsk`, creates a delegated `TeamWorkItem`, records a queued `TeamStatusEvent` plus ask `TeamInteraction`, and then waits for a bounded team response. A response moves the item to `output_ready` and records the reply as a result interaction. NATS offline or team timeout moves the item to `degraded`, sets `needs_operator=true`, records `degradation_state`, and returns recovery options. This endpoint is the product-safe alternative to broad raw broadcast tests because it always leaves durable operator truth behind.
+The endpoint accepts a `message` or structured `TeamAsk`, creates a delegated `TeamWorkItem`, records a queued `TeamStatusEvent` plus ask `TeamInteraction`, and then waits for a bounded team response. A response moves the item to `output_ready` and records the reply as a result interaction. NATS offline or team timeout moves the item to `degraded`, sets `needs_operator=true`, records `degradation_state`, and returns recovery options. `/teams` exposes this as a compact Ask Team or Respond form on durable active-work rows; broad raw broadcast tests remain reserved for explicit broadcast/degradation proof.
 
 ## Runtime Objects
 
@@ -210,7 +210,7 @@ Required fields:
 The default Soma workspace should expose team work through these surfaces:
 
 - Active Work Lane: compact list of queued, running, blocked, degraded, and output-ready work.
-- Team Control Bar: `inspect`, `steer`, `pause`, `resume`, `archive`, and `start work` actions.
+- Team Control Bar: `inspect`, `steer`, `pause`, `resume`, `archive`, `start work`, and bounded Ask Team or Respond actions.
 - Team Event Log: readable status/result/recovery events, not raw NATS subjects.
 - Output Workbench: retained team deliverables with open, storage, proof, and validation controls.
 - Trust Package: run, output, capability/team use, proof, audit, degradation, and next step.
@@ -276,6 +276,6 @@ This contract is releasable only when the product proves:
 
 `IN_REVIEW`: The architectural concept now exists as a canonical contract, and the current API/UI proof paths use durable team-work state instead of treating teams as only roster projections.
 
-`IN_REVIEW`: `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API projection are landed for current proof paths. The Active Work Lane now calls the durable action API for production-safe `start_work`, `pause`, `resume`, `archive`, `steer`, and `recover` controls, with each accepted action recording both status and interaction evidence. The bounded team ask API now records either visible `output_ready` replies or `degraded` timeout/offline proof, which closes the API honesty gap before claiming broader runtime-team usefulness.
+`IN_REVIEW`: `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API projection are landed for current proof paths. The Active Work Lane now calls the durable action API for production-safe `start_work`, `pause`, `resume`, `archive`, `steer`, and `recover` controls, and `/teams` now posts bounded Ask Team or Respond requests to the durable ask API before refreshing active work.
 
-`NEXT`: Prove the bounded ask path through the live GUI with a real local model/team response and through timeout/degradation UI. Until that proof is green, do not claim runtime teams can replace implementation collaborators.
+`NEXT`: Prove the bounded ask path with a real local model/team response and through timeout/degradation UI. Until that proof is green, do not claim runtime teams can replace implementation collaborators.

@@ -60,6 +60,7 @@ Use `Teams` when you want to inspect or manage existing teams:
 - review the Active Work Lane to see whether a team is new, queued, running, output-ready, degraded, paused, or waiting on the operator
 - open the team lead workspace
 - review current outputs while the team is active
+- use Ask Team or Respond on a durable active-work row to request a bounded follow-on output or supply missing input without opening raw bus details
 - use Inspect, Steer, Start, Pause, Resume, or Archive controls when they are enabled for the current team state
 - inspect member templates
 - review or edit template role, model, and MCP/internal tool references
@@ -158,6 +159,7 @@ When testing team workflows, verify:
 - broad work splits into several smaller lead-owned lanes instead of starting a large roster
 - broad asks produce multiple small coordinated lanes instead of one huge team
 - the team lead is the first visible operational counterpart
+- Ask Team or Respond creates a durable follow-on work item, then visibly returns output-ready or degraded state
 - raw input/delivery subjects, models, prompts, and tool ids stay behind Advanced/Inspect instead of default team cards
 - retained outputs remain reviewable in `/groups` after a temporary collaboration is closed
 - event-driven actuation is configured through `/automations` Trigger Rules, not through the team workspace itself

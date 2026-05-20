@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { TeamInteraction, TeamWorkItem } from "@/store/useCortexStore";
-import { postTeamWorkAction } from "./teamWorkActions";
+import { postTeamWorkAction, postTeamWorkAsk } from "./teamWorkActions";
 
 export function useTeamWorkActionHandler(
   selectTeam: (teamId: string | null) => void,
@@ -29,10 +29,23 @@ export function useTeamWorkActionHandler(
     [selectTeam],
   );
 
+  const handleTeamAsk = useCallback(async (item: TeamWorkItem, message: string) => {
+    setActiveWorkActionError(null);
+    try {
+      await postTeamWorkAsk(item, message);
+      setActiveWorkRefreshVersion((version) => version + 1);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Team ask failed.";
+      setActiveWorkActionError(message);
+      throw new Error(message);
+    }
+  }, []);
+
   return {
     activeWorkRefreshVersion,
     activeWorkActionError,
     handleActiveWorkAction,
+    handleTeamAsk,
   };
 }
 

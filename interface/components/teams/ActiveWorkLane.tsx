@@ -18,6 +18,7 @@ import {
   type TeamWorkItemState,
 } from "@/store/useCortexStore";
 import { ActiveWorkEvidence } from "./ActiveWorkEvidence";
+import { TeamAskForm } from "./TeamAskForm";
 
 const stateStyles: Record<TeamWorkItemState, string> = {
   new: "border-cortex-primary/25 bg-cortex-primary/10 text-cortex-primary",
@@ -51,6 +52,7 @@ export function ActiveWorkLane({
   degradedMessage,
   frame = true,
   onAction,
+  onTeamAsk,
 }: {
   title?: string;
   items: TeamWorkItem[];
@@ -59,6 +61,7 @@ export function ActiveWorkLane({
   degradedMessage?: string | null;
   frame?: boolean;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
+  onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
   const className = frame
     ? "rounded-2xl border border-cortex-border bg-cortex-surface p-4"
@@ -92,7 +95,12 @@ export function ActiveWorkLane({
           </p>
         ) : (
           items.map((item) => (
-            <WorkItemRow key={item.id} item={item} onAction={onAction} />
+            <WorkItemRow
+              key={item.id}
+              item={item}
+              onAction={onAction}
+              onTeamAsk={onTeamAsk}
+            />
           ))
         )}
       </div>
@@ -103,9 +111,11 @@ export function ActiveWorkLane({
 function WorkItemRow({
   item,
   onAction,
+  onTeamAsk,
 }: {
   item: TeamWorkItem;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
+  onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
   return (
     <article className="rounded-xl border border-cortex-border bg-cortex-bg p-3">
@@ -151,6 +161,7 @@ function WorkItemRow({
             </p>
           ) : null}
           <ActiveWorkEvidence item={item} />
+          <TeamAskForm item={item} onTeamAsk={onTeamAsk} />
         </div>
         <div className="grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:justify-end">
           {item.interactions.map((action) => (
