@@ -278,4 +278,6 @@ This contract is releasable only when the product proves:
 
 `IN_REVIEW`: `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` persistence/API projection are landed for current proof paths. The Active Work Lane now calls the durable action API for production-safe `start_work`, `pause`, `resume`, `archive`, `steer`, and `recover` controls, and `/teams` now posts bounded Ask Team or Respond requests to the durable ask API before refreshing active work.
 
-`NEXT`: Prove the bounded ask path with a real local model/team response and through timeout/degradation UI. Until that proof is green, do not claim runtime teams can replace implementation collaborators.
+`IN_REVIEW`: Local-source proof now shows the bounded ask path creating durable degraded timeout state with status events, interactions, recovery options, and Active Work visibility. This proves honest degradation, not autonomous delivery usefulness.
+
+`NEXT`: Prove the bounded ask path with a real local model/team response returning `output_ready` within timeout. Until that proof is green and repeatable, do not claim runtime teams can replace implementation collaborators.

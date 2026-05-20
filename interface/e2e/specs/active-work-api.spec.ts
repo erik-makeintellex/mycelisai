@@ -12,7 +12,21 @@ type TeamWorkItem = {
   execution_shape: string;
   expected_outputs: string[];
   expected_proof: string[];
+  needs_operator?: boolean;
+  degradation_state?: string;
   version: string;
+};
+
+type TeamStatusEvent = {
+  state: string;
+  headline: string;
+  source_channel: string;
+};
+
+type TeamInteraction = {
+  verb: string;
+  payload_kind: string;
+  source_channel: string;
 };
 
 function liveTeamWorkProofRequested() {
@@ -61,6 +75,24 @@ function expectTeamWorkContract(item: TeamWorkItem, teamId: string) {
   }));
 }
 
+async function getTeamWorkEvents(
+  request: APIRequestContext,
+  teamId: string,
+  workItemId: string,
+  suffix: "status-events" | "interactions",
+) {
+  const response = await request.get(
+    liveAPIURL(`/api/v1/teams/${encodeURIComponent(teamId)}/work/${encodeURIComponent(workItemId)}/${suffix}`),
+    {
+      headers: liveAPIHeaders(),
+      timeout: 5_000,
+    },
+  );
+  const body = await response.text();
+  expect(response.ok(), body).toBeTruthy();
+  return JSON.parse(body).data as unknown[];
+}
+
 test.describe("Active work TeamWorkItem API contract", () => {
   test("live API creates and reads a durable TeamWorkItem for the active work lane", async ({ request }) => {
     test.skip(
@@ -107,5 +139,60 @@ test.describe("Active work TeamWorkItem API contract", () => {
     const persisted = items.find((item) => item.work_item_id === workItemId);
     expect(persisted, listBody).toBeTruthy();
     expectTeamWorkContract(persisted as TeamWorkItem, teamId);
+  });
+
+  test("live API records bounded ask output or degradation as durable active work", async ({ request }) => {
+    test.skip(
+      !liveTeamWorkProofRequested(),
+      "BLOCKED: active-work ask proof needs PLAYWRIGHT_TEAM_WORK_API=1 or PLAYWRIGHT_ACTIVE_WORK_API_LIVE=1 with local Core and migrated team-work tables.",
+    );
+
+    const teamId = process.env.PLAYWRIGHT_TEAM_WORK_API_TEAM_ID ?? "admin-core";
+    const askMessage = `Playwright bounded team ask proof ${crypto.randomUUID()}`;
+    const askResponse = await request.post(liveAPIURL(`/api/v1/teams/${encodeURIComponent(teamId)}/work/ask`), {
+      headers: liveAPIHeaders(),
+      timeout: 10_000,
+      data: {
+        message: askMessage,
+        actor_ref: "operator",
+        timeout_seconds: 2,
+        expected_outputs: ["Team response or retained output"],
+        expected_proof: ["Team response event or degraded timeout proof"],
+      },
+    });
+    const askBody = await askResponse.text();
+    await skipWhenLivePrerequisiteMissing(askResponse, askBody);
+    expect([200, 202], askBody).toContain(askResponse.status());
+
+    const item = JSON.parse(askBody).data.work_item as TeamWorkItem;
+    expectTeamWorkContract(item, teamId);
+    expect(item.objective).toBe(askMessage);
+    expect(item.state).toMatch(/^(output_ready|degraded)$/);
+    if (askResponse.status() === 202) {
+      expect(item.state).toBe("degraded");
+      expect(item.needs_operator).toBe(true);
+      expect(item.degradation_state).toMatch(/^(nats_offline|team_response_timeout)$/);
+    }
+
+    const listResponse = await getTeamWork(request, teamId);
+    const listBody = await listResponse.text();
+    expect(listResponse.ok(), listBody).toBeTruthy();
+    const persisted = unpackItems(JSON.parse(listBody)).find(
+      (candidate) => candidate.work_item_id === item.work_item_id,
+    );
+    expect(persisted, listBody).toBeTruthy();
+    expect((persisted as TeamWorkItem).state).toBe(item.state);
+
+    const events = await getTeamWorkEvents(request, teamId, item.work_item_id, "status-events") as TeamStatusEvent[];
+    expect(events.map((event) => event.state)).toContain("queued");
+    expect(events.map((event) => event.state)).toContain(item.state);
+    expect(events.every((event) => event.source_channel === "api.teams.work.ask")).toBe(true);
+
+    const interactions = await getTeamWorkEvents(request, teamId, item.work_item_id, "interactions") as TeamInteraction[];
+    expect(interactions.map((interaction) => interaction.verb)).toContain("ask");
+    expect(interactions.map((interaction) => interaction.verb)).toContain(
+      item.state === "output_ready" ? "response" : "degraded",
+    );
+    expect(interactions.every((interaction) => interaction.source_channel === "api.teams.work.ask")).toBe(true);
   });
 });
