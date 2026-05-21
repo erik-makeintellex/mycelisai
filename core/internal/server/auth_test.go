@@ -1,9 +1,13 @@
 package server
 
 import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestAuthMiddleware_MissingToken(t *testing.T) {
@@ -116,6 +120,110 @@ func TestAuthMiddleware_CustomLocalAdminIdentityFromEnvironment(t *testing.T) {
 	assertStatus(t, rr, http.StatusOK)
 }
 
+func TestAuthMiddleware_UsesSignedForwardedWebIdentity(t *testing.T) {
+	t.Setenv("MYCELIS_WEB_SESSION_SECRET", "forward-secret")
+	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		identity := IdentityFromContext(r.Context())
+		if identity == nil {
+			t.Fatal("Expected identity in context")
+		}
+		if identity.Username != "erik@mycelis.link" {
+			t.Fatalf("Expected forwarded web username, got %q", identity.Username)
+		}
+		if identity.AuthSource != "web_google" {
+			t.Fatalf("Expected web_google auth source, got %q", identity.AuthSource)
+		}
+		if identity.PrincipalType != "google_workspace_user" {
+			t.Fatalf("Expected google workspace principal, got %q", identity.PrincipalType)
+		}
+		if identity.EffectiveRole != "owner" {
+			t.Fatalf("Expected owner effective role, got %q", identity.EffectiveRole)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	payload := encodeForwardedWebIdentityForTest(t, forwardedWebIdentityPayload{
+		Sub:      "google-123",
+		Email:    "erik@mycelis.link",
+		Name:     "Erik",
+		Role:     "admin",
+		Provider: "google",
+		HD:       "mycelis.link",
+		IAT:      time.Now().Unix(),
+	})
+	req, _ := http.NewRequest("GET", "/api/v1/user/me", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	req.Header.Set(forwardedWebIdentityHeader, payload)
+	req.Header.Set(forwardedWebIdentitySignatureHeader, signForwardedWebIdentity(payload, "forward-secret"))
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assertStatus(t, rr, http.StatusOK)
+}
+
+func TestAuthMiddleware_RejectsStaleForwardedWebIdentity(t *testing.T) {
+	t.Setenv("MYCELIS_WEB_SESSION_SECRET", "forward-secret")
+	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("handler should not receive stale forwarded identity")
+	}))
+
+	payload := encodeForwardedWebIdentityForTest(t, forwardedWebIdentityPayload{
+		Sub:      "google-123",
+		Email:    "erik@mycelis.link",
+		Role:     "admin",
+		Provider: "google",
+		IAT:      time.Now().Add(-30 * time.Minute).Unix(),
+	})
+	req, _ := http.NewRequest("GET", "/api/v1/user/me", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	req.Header.Set(forwardedWebIdentityHeader, payload)
+	req.Header.Set(forwardedWebIdentitySignatureHeader, signForwardedWebIdentity(payload, "forward-secret"))
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assertStatus(t, rr, http.StatusUnauthorized)
+}
+
+func TestAuthMiddleware_RejectsInvalidForwardedWebIdentity(t *testing.T) {
+	t.Setenv("MYCELIS_WEB_SESSION_SECRET", "forward-secret")
+	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("handler should not receive invalid forwarded identity")
+	}))
+
+	payload := encodeForwardedWebIdentityForTest(t, forwardedWebIdentityPayload{
+		Sub:      "google-123",
+		Email:    "erik@mycelis.link",
+		Role:     "admin",
+		Provider: "google",
+	})
+	req, _ := http.NewRequest("GET", "/api/v1/user/me", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	req.Header.Set(forwardedWebIdentityHeader, payload)
+	req.Header.Set(forwardedWebIdentitySignatureHeader, "bad-signature")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assertStatus(t, rr, http.StatusUnauthorized)
+}
+
+func TestActorIdentitySnapshotFromRequest(t *testing.T) {
+	req, _ := http.NewRequest("POST", "/api/v1/chat", nil)
+	req = req.WithContext(context.WithValue(req.Context(), ctxKeyIdentity, &RequestIdentity{
+		UserID:        "google-123",
+		Username:      "erik@mycelis.link",
+		Role:          "admin",
+		EffectiveRole: "owner",
+		PrincipalType: "google_workspace_user",
+		AuthSource:    "web_google",
+	}))
+
+	snapshot := actorIdentitySnapshotFromRequest(req)
+
+	if snapshot["user_label"] != "erik@mycelis.link" {
+		t.Fatalf("expected user label from forwarded identity, got %+v", snapshot)
+	}
+	if snapshot["auth_source"] != "web_google" {
+		t.Fatalf("expected auth source in actor snapshot, got %+v", snapshot)
+	}
+}
+
 func TestAuthMiddleware_QueryTokenFallback(t *testing.T) {
 	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		identity := IdentityFromContext(r.Context())
@@ -129,6 +237,15 @@ func TestAuthMiddleware_QueryTokenFallback(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	assertStatus(t, rr, http.StatusOK)
+}
+
+func encodeForwardedWebIdentityForTest(t *testing.T, payload forwardedWebIdentityPayload) string {
+	t.Helper()
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal forwarded web identity: %v", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(raw)
 }
 
 func TestAuthMiddleware_FailsClosedWhenDeploymentContractRequiresBreakGlass(t *testing.T) {

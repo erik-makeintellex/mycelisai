@@ -31,6 +31,7 @@ type AuditRecord struct {
 	TemplateID     string         `json:"template_id,omitempty"`
 	Actor          string         `json:"actor"`
 	User           string         `json:"user"`
+	ActorIdentity  map[string]any `json:"actor_identity,omitempty"`
 	Action         string         `json:"action"`
 	Timestamp      string         `json:"timestamp"`
 	CapabilityUsed string         `json:"capability_used,omitempty"`

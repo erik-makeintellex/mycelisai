@@ -65,4 +65,16 @@ describe("signal normalization", () => {
         expect(detail.agent_id).toBe("beta-agent");
         expect(detail.source_channel).toBe("swarm.team.beta.signal.status");
     });
+
+    it("uses operator summaries before raw payload fallback", () => {
+        const signal = normalizeIncomingSignal({
+            payload: {
+                summary: "Human-readable signal summary.",
+                raw_tool_payload: "diagnostic body",
+            },
+        });
+
+        expect(signal.message).toBe("Human-readable signal summary.");
+        expect(streamSignalToDetail(signal).message).toBe("Human-readable signal summary.");
+    });
 });

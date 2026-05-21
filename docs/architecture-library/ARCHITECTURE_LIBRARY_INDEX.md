@@ -28,6 +28,7 @@ The active architecture library keeps only documents that are directly used for 
 | [V8.2 Finalization Concretization Contract](V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md) | first demo slice, ExecutionContract, ProofArtifact, UI states, degraded lifecycle, close-out template |
 | [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) | visible execution, durable outputs, proof, recovery, deployment trust |
 | [V8.2 Soma UI Architecture Expression](V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md) | ideal Soma interaction model, one-window UI architecture, active work, outputs, proof, teams |
+| [V8.2 UI Research And Target Experience Review](V8_2_UI_RESEARCH_AND_TARGET_EXPERIENCE_REVIEW.md) | research-backed target UX, expression-to-output workbench architecture, default/Inspect rules, delivery plan |
 | [V8.2 Soma Team Interaction Contract](V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md) | talking with new or running teams, TeamWorkItem, TeamInteraction, TeamStatusEvent, recovery |
 | [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) | instantiated organization runtime truth, Soma, Council, provider policy, continuity |
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | bootstrap bundles, templates, inheritance, precedence, startup truth |

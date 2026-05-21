@@ -19,6 +19,8 @@
 | `/auth/google/callback` | GET | Completes Google OIDC login, validates allowed Workspace domain, maps `MYCELIS_AUTH_ADMIN_EMAILS` to admin role, and writes a signed web session. |
 | `/auth/session` | GET | Returns current Interface session posture: authenticated user, role, provider, and enabled login providers. |
 | `/auth/logout` | POST | Clears the Interface web session and redirects to `/login`. |
+
+Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity` and `X-Mycelis-Web-Identity-Signature` when calling Core with the deployment API key. Core verifies the HMAC with `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` or `MYCELIS_WEB_SESSION_SECRET` before using that principal for governance/audit context and `actor_identity` metadata. Invalid forwarded identity headers fail closed; missing headers retain the local API-key identity.
 | **Council Chat** | | |
 | `/api/v1/council/{member}/chat` | POST | Chat with any council member via NATS request-reply. Returns `APIResponse<CTSEnvelope>` with trust score + provenance |
 | `/api/v1/council/members` | GET | List all addressable council members from standing teams (admin-core, council-core) |
@@ -55,6 +57,7 @@
 | **Telemetry & Trust** | | |
 | `/api/v1/stream` | GET (SSE) | Real-time NATS signal stream |
 | `/api/v1/telemetry/compute` | GET | Goroutines, heap, system memory, LLM tokens/sec |
+| `/api/v1/audit` | GET | Inspect normalized audit records. Confirmed governed actions include `actor_identity` when the request arrived through a signed Interface web session, so proof review can distinguish local API-key execution from local web or Google Workspace SSO execution. |
 | `/api/v1/trust/threshold` | GET/PUT | Read/write autonomy threshold |
 | `/api/v1/trust/execution-contracts` | GET | List durable `ExecutionContract` records for confirmed/proposed execution handshakes. Supports bounded `limit` plus `run_id`, `intent_proof_id`, and `status` filters; `limit` is capped at `100`. |
 | `/api/v1/trust/execution-contracts/{id}` | GET | Read one durable `ExecutionContract` by UUID, including execution shape/status, validation source, evidence strength, proof quality, output/audit refs, degradation/recovery payloads, and latest proof artifact link. |

@@ -195,7 +195,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		auditEventID, _ := s.createAuditEvent(
 			protocol.TemplateChatToProposal, "admin",
 			"Chat mutation detected",
-			map[string]any{
+			attachActorIdentity(map[string]any{
 				"tools":           effectiveTools,
 				"agent_tools":     agentResult.ToolsUsed,
 				"requested_tools": requestMutationTools,
@@ -207,7 +207,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 				"approval_status": approvalStatusValue(approval),
 				"approval_reason": approvalReasonValue(approval),
 				"capability_used": strings.Join(scope.CapabilityIDs, ","),
-			},
+			}, r),
 		)
 
 		proof, _ := s.createIntentProof(protocol.TemplateChatToProposal, "chat-action", scope, auditEventID)
@@ -241,14 +241,14 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		auditEventID, _ := s.createAuditEvent(
 			protocol.TemplateChatToAnswer, "admin",
 			"Admin chat",
-			map[string]any{
+			attachActorIdentity(map[string]any{
 				"tools":         agentResult.ToolsUsed,
 				"actor":         "Soma",
 				"user":          auditUserLabelFromRequest(r),
 				"ask_class":     string(askContract.AskClass),
 				"action":        "answer_delivered",
 				"result_status": "completed",
-			},
+			}, r),
 		)
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "answer",
@@ -262,7 +262,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 				_, _ = s.createAuditEvent(
 					protocol.TemplateChatToAnswer, "admin",
 					"Chat artifact created",
-					map[string]any{
+					attachActorIdentity(map[string]any{
 						"actor":           "Soma",
 						"user":            auditUserLabelFromRequest(r),
 						"action":          "artifact_created",
@@ -270,7 +270,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 						"capability_used": "artifact_output",
 						"resource":        strings.TrimSpace(artifact.Title),
 						"details":         map[string]any{"artifact_type": artifact.Type},
-					},
+					}, r),
 				)
 			}
 		}

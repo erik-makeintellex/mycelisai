@@ -10,6 +10,7 @@ test.describe('Authenticated front door', () => {
         await page.goto('/');
         await expect(page).toHaveURL(/\/login\?next=%2F$/);
         await expect(page.getByRole('heading', { name: /Sign in to operate Mycelis/i })).toBeVisible();
+        await expect(page.getByText(/Personal Gmail accounts are rejected/i)).toBeVisible();
         await context.close();
     });
 
@@ -25,6 +26,9 @@ test.describe('Authenticated front door', () => {
         await page.getByRole('button', { name: /Sign in as local admin/i }).click();
         await expect(page).toHaveURL(/\/dashboard$/);
         await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        await expect(page.getByTestId('soma-environment-entry')).toBeVisible();
+        await expect(page.getByText('Signed in').first()).toBeVisible();
+        await expect(page.getByText('Soma operating environment').first()).toBeVisible();
         await context.close();
     });
 
@@ -32,5 +36,6 @@ test.describe('Authenticated front door', () => {
         await page.goto('/');
         await expect(page).toHaveURL(/\/dashboard$/);
         await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        await expect(page.getByTestId('soma-environment-entry')).toBeVisible();
     });
 });

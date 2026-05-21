@@ -26,6 +26,16 @@ export interface WebAuthConfig {
     adminEmails: string[];
 }
 
+export interface ForwardedWebIdentity {
+    sub: string;
+    email: string;
+    name: string;
+    role: WebUserRole;
+    provider: WebAuthProvider;
+    hd?: string;
+    iat: number;
+}
+
 export const WEB_SESSION_COOKIE = "mycelis_web_session";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -57,6 +67,24 @@ export async function createSessionToken(session: WebSession, secret: string): P
     const payload = base64UrlEncodeString(JSON.stringify(session));
     const signature = await sign(payload, secret);
     return `${payload}.${signature}`;
+}
+
+export async function createForwardedWebIdentityHeaders(session: WebSession, secret: string): Promise<Record<string, string>> {
+    if (!secret) return {};
+    const payload: ForwardedWebIdentity = {
+        sub: session.sub,
+        email: session.email,
+        name: session.name,
+        role: session.role,
+        provider: session.provider,
+        hd: session.hd,
+        iat: Math.floor(Date.now() / 1000),
+    };
+    const encodedPayload = base64UrlEncodeString(JSON.stringify(payload));
+    return {
+        "x-mycelis-web-identity": encodedPayload,
+        "x-mycelis-web-identity-signature": await sign(encodedPayload, secret),
+    };
 }
 
 export async function verifySessionToken(token: string | undefined, secret: string): Promise<WebSession | null> {

@@ -143,6 +143,40 @@ func auditUserLabelFromRequest(r *http.Request) string {
 	return "local-user"
 }
 
+func actorIdentitySnapshotFromRequest(r *http.Request) map[string]any {
+	identity := IdentityFromContext(r.Context())
+	if identity == nil {
+		return nil
+	}
+	snapshot := map[string]any{
+		"user_id":        strings.TrimSpace(identity.UserID),
+		"user_label":     auditUserLabelFromRequest(r),
+		"role":           strings.TrimSpace(identity.Role),
+		"effective_role": strings.TrimSpace(identity.EffectiveRole),
+		"principal_type": strings.TrimSpace(identity.PrincipalType),
+		"auth_source":    strings.TrimSpace(identity.AuthSource),
+	}
+	for key, value := range snapshot {
+		if strings.TrimSpace(fmt.Sprint(value)) == "" {
+			delete(snapshot, key)
+		}
+	}
+	if len(snapshot) == 0 {
+		return nil
+	}
+	return snapshot
+}
+
+func attachActorIdentity(ctx map[string]any, r *http.Request) map[string]any {
+	if ctx == nil {
+		ctx = map[string]any{}
+	}
+	if actorIdentity := actorIdentitySnapshotFromRequest(r); len(actorIdentity) > 0 {
+		ctx["actor_identity"] = actorIdentity
+	}
+	return ctx
+}
+
 func governanceProfileDirective(profile userGovernanceProfile) string {
 	return strings.TrimSpace(fmt.Sprintf(
 		"[USER GOVERNANCE PROFILE]\nRole: %s\nCost sensitivity: %s\nReview strictness: %s\nAutomation tolerance: %s\nEscalation preference: %s\nUse this profile when planning actions, choosing execution paths, and deciding whether approval is required.\n",

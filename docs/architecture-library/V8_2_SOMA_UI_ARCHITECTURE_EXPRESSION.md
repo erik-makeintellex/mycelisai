@@ -5,6 +5,8 @@ Status: canonical target-expression document.
 
 Purpose: define the ideal operator experience and UI architecture posture for Soma as Mycelis moves from architecture description into operational embodiment.
 
+This document owns the expression model. The research-backed target UX, external calibration, information architecture, and delivery order are now captured in [V8.2 UI Research And Target Experience Review](V8_2_UI_RESEARCH_AND_TARGET_EXPERIENCE_REVIEW.md).
+
 ## Core Idea
 
 The UI is not a dashboard around an AI system. The UI is the operator's working relationship with Soma:
@@ -85,7 +87,7 @@ The output type should determine the visible UI state, available controls, and r
 
 ## Research Calibration
 
-VIKTOR-style app building, OpenClaw onboarding, and Microsoft human-AI guidance all reinforce the same UI lesson: start with concrete user value, show capability and limits early, keep correction/control easy, and explain consequences through proof and recovery instead of topology. Research calibration informs the product expression; it does not justify more default surfaces.
+Microsoft HAX, Google PAIR, IBM Carbon for AI, IBM explainability guidance, and VIKTOR-style app building all reinforce the same UI lesson: start with concrete user value, show capability and limits early, keep correction/control easy, and explain consequences through proof and recovery instead of topology. The detailed research synthesis lives in the UI research review. Research calibration informs the product expression; it does not justify more default surfaces.
 
 ## Operator Journey
 
@@ -175,7 +177,7 @@ Target expression: outputs are first-class review surfaces, not attachments buri
 
 ### Active Work Lane
 
-Owns queued/running/blocked/done state, team or capability work-item identity, progress events, timeout/degradation state, and operator-needed prompts.
+Owns queued/running/blocked/done state, team or capability work-item identity, progress events, timeout/degradation state, and operator-needed prompts. Soma home shows an attention-first recent slice; Teams owns full durable backlog management and inspection.
 
 Target expression: users can work with teams while they are still active.
 
@@ -207,7 +209,7 @@ Target expression: self-hosted operators can trust the installation without read
 
 ## State Architecture
 
-Default state views show the operator ask, Soma summary, decision, risk, active work, output card, proof link, degradation next step, and schedule next run. Inspect views reveal original request, assumptions, contracts, resources, policies, events, team/capability details, storage paths, schemas, evidence, audit refs, validation source, retryability, uncertainty, cooldowns, and history.
+Default state views show the operator ask, Soma summary, decision, risk, active work, output card, proof link, degradation next step, and schedule next run. Default activity and team surfaces summarize recent evidence instead of streaming raw logs or rosters. Inspect views reveal original request, assumptions, contracts, resources, policies, events, team/capability details, storage paths, schemas, evidence, audit refs, validation source, retryability, uncertainty, cooldowns, and history.
 
 Security rule: UI may show secret reference names, redacted readiness, and rotation guidance, never raw secret values.
 

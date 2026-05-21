@@ -81,8 +81,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        // Header should show registry title
-        expect(screen.getByText('MCP Tool Registry')).toBeDefined();
+        expect(screen.getByText('Connected Tools')).toBeDefined();
 
         // Both server cards should be rendered
         expect(screen.getByTestId('server-card-srv-001')).toBeDefined();
@@ -122,7 +121,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getByText('BROWSE LIBRARY'));
+        fireEvent.click(screen.getByText('ADD MCP SERVER'));
 
         expect(screen.getByTestId('library-browser')).toBeDefined();
     });
@@ -229,7 +228,7 @@ describe('MCPToolRegistry', () => {
     it('returns to installed view with guidance after library install', () => {
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getByText('BROWSE LIBRARY'));
+        fireEvent.click(screen.getByText('ADD MCP SERVER'));
         fireEvent.click(screen.getByText('Mock Install'));
 
         expect(screen.getByText(/Installed filesystem/i)).toBeDefined();

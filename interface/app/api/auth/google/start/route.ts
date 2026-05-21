@@ -6,6 +6,8 @@ const STATE_COOKIE = "mycelis_google_state";
 export async function GET(request: NextRequest) {
     const config = getWebAuthConfig();
     if (!config.sessionSecret || !googleConfigured(config)) return redirectToLogin(request, "config");
+    const canonical = canonicalGoogleStartURL(request, config.googleRedirectUri);
+    if (canonical) return NextResponse.redirect(canonical);
 
     const state = crypto.randomUUID();
     const authURL = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -37,4 +39,18 @@ function redirectToLogin(request: NextRequest, error: string) {
 
 function safeNext(value: string | null): string {
     return value && value.startsWith("/") && !value.startsWith("//") ? value : "";
+}
+
+function canonicalGoogleStartURL(request: NextRequest, redirectUri: string): URL | null {
+    const redirectOrigin = new URL(redirectUri).origin;
+    if (currentRequestOrigin(request) === redirectOrigin) return null;
+    const url = new URL(request.nextUrl.pathname + request.nextUrl.search, redirectOrigin);
+    return url;
+}
+
+function currentRequestOrigin(request: NextRequest): string {
+    const host = request.headers.get("host");
+    if (!host) return request.nextUrl.origin;
+    const proto = request.headers.get("x-forwarded-proto") || request.nextUrl.protocol.replace(/:$/, "") || "http";
+    return `${proto}://${host}`;
 }

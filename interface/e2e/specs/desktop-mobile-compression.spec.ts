@@ -27,7 +27,7 @@ test.describe("Desktop/mobile compression proof", () => {
     await expect(firstDemoRow.getByText("Projection fallback")).toHaveCount(0);
     await expect(firstDemoRow.getByRole("link", { name: /Run proof/i })).toHaveAttribute("href", /\/runs\/run-first-demo/);
     await expect(firstDemoRow.getByText("Coin Runner package")).toBeVisible();
-    await expect(firstDemoRow.getByRole("link", { name: /Steer/i })).toHaveAttribute("href", /\/dashboard\?team_id=active-demo-team/);
+    await expect(firstDemoRow.getByRole("button", { name: /Ask team/i })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 
@@ -38,7 +38,7 @@ test.describe("Desktop/mobile compression proof", () => {
     await expect(page.getByRole("heading", { name: "Team Lead Workspaces" })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("active-work-lane")).toBeVisible();
     await expect(page.getByText("First Demo Game Team").first()).toBeVisible();
-    await expect(page.getByTitle("Steer").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /Ask team/i }).first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 

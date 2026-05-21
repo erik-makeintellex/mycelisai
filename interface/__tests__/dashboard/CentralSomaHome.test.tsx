@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useCortexStore } from "@/store/useCortexStore";
+import { mockFetch } from "../setup";
 
 vi.mock("@/lib/lastOrganization", () => ({
     readLastOrganization: () => ({ id: "org-1", name: "Northstar Labs" }),
@@ -23,6 +24,22 @@ import CentralSomaHome from "@/components/dashboard/CentralSomaHome";
 
 describe("CentralSomaHome", () => {
     beforeEach(() => {
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                ok: true,
+                data: {
+                    authenticated: true,
+                    user: {
+                        email: "erik@mycelis.link",
+                        name: "Erik",
+                        role: "admin",
+                        provider: "google",
+                        hd: "mycelis.link",
+                    },
+                },
+            }),
+        });
         useCortexStore.setState({
             assistantName: "Soma",
             teamsDetail: [],
@@ -33,12 +50,16 @@ describe("CentralSomaHome", () => {
         });
     });
 
-    it("renders the central Soma chat and the live interaction stream on the front page", () => {
+    it("renders the central Soma chat and signed-in operating environment on the front page", async () => {
         render(<CentralSomaHome />);
 
         expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
         expect(screen.getByText("What do you want Soma to do?")).toBeDefined();
         expect(screen.getByText("Ready for your first request")).toBeDefined();
+        expect(screen.getByTestId("soma-environment-entry")).toBeDefined();
+        expect(await screen.findByText("erik@mycelis.link")).toBeDefined();
+        expect(screen.getByText("Google Workspace")).toBeDefined();
+        expect(screen.getByText("mycelis.link")).toBeDefined();
         expect(screen.queryByText("Soma just did this")).toBeNull();
         expect(screen.getByText("Evidence of Soma's work")).toBeDefined();
         expect(screen.getByText("Live team interaction stream")).toBeDefined();
@@ -46,13 +67,14 @@ describe("CentralSomaHome", () => {
         expect(screen.queryByRole("link", { name: /Review Soma context model/i })).toBeNull();
     }, 15000);
 
-    it("opens the AI Organization setup details from the quick action", () => {
+    it("opens the AI Organization setup details from the quick action", async () => {
         const details = document.createElement("details");
         details.id = "dashboard-organization-setup";
         document.body.appendChild(details);
 
         try {
             render(<CentralSomaHome />);
+            await screen.findByText("erik@mycelis.link");
 
             const trigger = screen.getByRole("button", { name: "Create or open AI Organizations" });
             fireEvent.click(trigger);

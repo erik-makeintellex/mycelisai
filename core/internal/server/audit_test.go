@@ -181,6 +181,24 @@ func TestBuildAuditRecord(t *testing.T) {
 	}
 }
 
+func TestBuildAuditRecord_ExposesActorIdentityProof(t *testing.T) {
+	record := buildAuditRecord(
+		"audit-actor-1",
+		string(protocol.TemplateChatToProposal),
+		"confirm-action",
+		"Chat proposal confirmed",
+		time.Now(),
+		[]byte(`{"actor":"Soma","user":"erik","action":"proposal_confirmed","actor_identity":{"user_label":"erik","auth_source":"web_local","principal_type":"local_web_user","effective_role":"owner"}}`),
+	)
+
+	if record.ActorIdentity["auth_source"] != "web_local" {
+		t.Fatalf("expected auth source proof, got %+v", record.ActorIdentity)
+	}
+	if record.ActorIdentity["effective_role"] != "owner" {
+		t.Fatalf("expected effective role proof, got %+v", record.ActorIdentity)
+	}
+}
+
 func TestHandleCancelAction(t *testing.T) {
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt)

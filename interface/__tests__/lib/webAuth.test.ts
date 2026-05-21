@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSessionToken, roleForEmail, sha256Hex, splitList, verifySessionToken, webAuthRedirectURL, type WebSession } from "@/lib/webAuth";
+import { createForwardedWebIdentityHeaders, createSessionToken, roleForEmail, sha256Hex, splitList, verifySessionToken, webAuthRedirectURL, type WebSession } from "@/lib/webAuth";
 
 describe("webAuth", () => {
     it("signs and verifies web sessions", async () => {
@@ -37,6 +37,26 @@ describe("webAuth", () => {
 
     it("supports hashed local admin password comparison material", async () => {
         await expect(sha256Hex("correct horse battery staple")).resolves.toMatch(/^[a-f0-9]{64}$/);
+    });
+
+    it("creates signed forwarded identity headers for Core audit propagation", async () => {
+        const now = Math.floor(Date.now() / 1000);
+        const session: WebSession = {
+            sub: "google-123",
+            email: "erik@mycelis.link",
+            name: "Erik",
+            role: "admin",
+            provider: "google",
+            hd: "mycelis.link",
+            iat: now,
+            exp: now + 60,
+        };
+
+        const headers = await createForwardedWebIdentityHeaders(session, "forward-secret");
+
+        expect(headers["x-mycelis-web-identity"]).toMatch(/^[A-Za-z0-9_-]+$/);
+        expect(headers["x-mycelis-web-identity-signature"]).toMatch(/^[A-Za-z0-9_-]+$/);
+        expect(headers["x-mycelis-web-identity-signature"]).not.toBe(headers["x-mycelis-web-identity"]);
     });
 
     it("keeps auth redirects on the public origin instead of the bind host", () => {

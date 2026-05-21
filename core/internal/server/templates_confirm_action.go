@@ -46,9 +46,10 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 	}
 
 	auditUser := auditUserLabelFromRequest(r)
+	actorIdentity := actorIdentitySnapshotFromRequest(r)
 	results, err := s.executePlannedToolCalls(r.Context(), scope, auditUser)
 	if err != nil {
-		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, auditUser, err)
+		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, auditUser, actorIdentity, err)
 		return
 	}
 
@@ -68,7 +69,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	auditID := s.auditConfirmedAction(proofID, runID, scope, auditUser)
+	auditID := s.auditConfirmedAction(proofID, runID, scope, auditUser, actorIdentity)
 	proofArtifactID := s.persistConfirmActionSuccessProof(r.Context(), proofID, contractID, runID, auditID, scope, results)
 	link := confirmedActionTeamWorkLink{
 		ProofID:         proofID,
@@ -116,7 +117,7 @@ func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Requ
 	return proofID, contractID, scope, runID, true
 }
 
-func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, r *http.Request, tx *sql.Tx, proofID, contractID, runID, auditUser string, err error) {
+func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, r *http.Request, tx *sql.Tx, proofID, contractID, runID, auditUser string, actorIdentity map[string]any, err error) {
 	if failErr := s.failChatProofTx(tx, proofID); failErr != nil {
 		log.Printf("CE-1: confirm-action proof failure update failed: %v", failErr)
 	}
@@ -129,7 +130,7 @@ func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, r *http
 	auditID, _ := s.createAuditEvent(
 		protocol.TemplateChatToProposal, "confirm-action",
 		"Chat proposal confirmation failed",
-		map[string]any{
+		withActorIdentity(map[string]any{
 			"actor":           "Soma",
 			"user":            auditUser,
 			"action":          "proposal_confirmed",
@@ -138,7 +139,7 @@ func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, r *http
 			"intent_proof_id": proofID,
 			"approval_status": "failed",
 			"approval_reason": err.Error(),
-		},
+		}, actorIdentity),
 	)
 	proofArtifactID := s.persistConfirmActionFailureProof(r.Context(), proofID, contractID, runID, auditID, err)
 	link := confirmedActionTeamWorkLink{
@@ -181,11 +182,11 @@ func (s *AdminServer) loadIntentProofScopeForFailure(ctx context.Context, proofI
 	return scope, nil
 }
 
-func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protocol.ScopeValidation, auditUser string) string {
+func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protocol.ScopeValidation, auditUser string, actorIdentity map[string]any) string {
 	auditID, _ := s.createAuditEvent(
 		protocol.TemplateChatToProposal, "confirm-action",
 		"Chat proposal confirmed and verified execution record created",
-		map[string]any{
+		withActorIdentity(map[string]any{
 			"proof_id":        proofID,
 			"run_id":          runID,
 			"execution_state": "verified",
@@ -196,12 +197,12 @@ func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protoco
 			"approval_status": "confirmed",
 			"intent_proof_id": proofID,
 			"capability_used": strings.Join(scope.CapabilityIDs, ","),
-		},
+		}, actorIdentity),
 	)
 	_, _ = s.createAuditEvent(
 		protocol.TemplateChatToProposal, "confirm-action",
 		"Execution run completed for confirmed chat proposal",
-		map[string]any{
+		withActorIdentity(map[string]any{
 			"actor":           "Soma",
 			"user":            auditUser,
 			"action":          "execution_run",
@@ -209,7 +210,17 @@ func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protoco
 			"run_id":          runID,
 			"intent_proof_id": proofID,
 			"capability_used": strings.Join(scope.CapabilityIDs, ","),
-		},
+		}, actorIdentity),
 	)
 	return auditID
+}
+
+func withActorIdentity(ctx map[string]any, actorIdentity map[string]any) map[string]any {
+	if ctx == nil {
+		ctx = map[string]any{}
+	}
+	if len(actorIdentity) > 0 {
+		ctx["actor_identity"] = actorIdentity
+	}
+	return ctx
 }

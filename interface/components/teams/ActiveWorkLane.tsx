@@ -51,6 +51,9 @@ export function ActiveWorkLane({
   statusLabel,
   degradedMessage,
   frame = true,
+  maxVisibleItems,
+  totalItemCount,
+  moreItemsHref = "/teams",
   onAction,
   onTeamAsk,
 }: {
@@ -60,17 +63,24 @@ export function ActiveWorkLane({
   statusLabel?: string;
   degradedMessage?: string | null;
   frame?: boolean;
+  maxVisibleItems?: number;
+  totalItemCount?: number;
+  moreItemsHref?: string;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
   onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
+  const visibleItems =
+    typeof maxVisibleItems === "number" && maxVisibleItems > 0
+      ? items.slice(0, maxVisibleItems)
+      : items;
+  const shownCount = visibleItems.length;
+  const count = totalItemCount ?? items.length;
+  const hiddenCount = Math.max(count - shownCount, 0);
   const className = frame
     ? "rounded-2xl border border-cortex-border bg-cortex-surface p-4"
     : "min-w-0";
   return (
-    <section
-      className={className}
-      data-testid="active-work-lane"
-    >
+    <section className={className} data-testid="active-work-lane">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Radio className="h-4 w-4 text-cortex-primary" />
@@ -79,7 +89,7 @@ export function ActiveWorkLane({
           </h2>
         </div>
         <span className="font-mono text-[11px] text-cortex-text-muted">
-          {items.length} item{items.length === 1 ? "" : "s"}
+          {count} item{count === 1 ? "" : "s"}
         </span>
       </div>
       {statusLabel || degradedMessage ? (
@@ -94,15 +104,21 @@ export function ActiveWorkLane({
             {emptyMessage}
           </p>
         ) : (
-          items.map((item) => (
-            <WorkItemRow
-              key={item.id}
-              item={item}
-              onAction={onAction}
-              onTeamAsk={onTeamAsk}
-            />
+          visibleItems.map((item) => (
+            <WorkItemRow key={item.id} item={item} onAction={onAction} onTeamAsk={onTeamAsk} />
           ))
         )}
+        {hiddenCount > 0 ? (
+          <Link
+            href={moreItemsHref}
+            className="flex items-center justify-between rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-muted hover:border-cortex-primary/35 hover:text-cortex-text-main"
+          >
+            <span>{hiddenCount} more work item{hiddenCount === 1 ? "" : "s"} in Teams</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em]">
+              Open backlog
+            </span>
+          </Link>
+        ) : null}
       </div>
     </section>
   );

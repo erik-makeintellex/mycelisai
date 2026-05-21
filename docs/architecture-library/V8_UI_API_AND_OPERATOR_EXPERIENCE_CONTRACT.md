@@ -86,6 +86,7 @@ Default surfaces show:
 - why Soma stayed direct or escalated
 - what team, tool, source, model, or deployment context mattered
 - what output, artifact, retained result, or audit event was produced
+- concise activity/event/team summaries, visible evidence counts, and the next operator action before any raw log or topology detail
 
 Advanced surfaces show:
 - plan/action/source/result details
@@ -93,6 +94,7 @@ Advanced surfaces show:
 - run, group, artifact, log, checkout, deployment-root, and execution-root evidence
 - memory versus deployment-context boundaries
 - capability manifests for MCP tools, custom connectors, local scripts, external APIs, and plugins when they affect execution
+- raw event payloads, bus topics, long log bodies, prompt/agentry detail, tool-call/source channels, and full audit context
 
 Hidden autonomy is not acceptable for mutating work, external calls, private context use, artifact creation, or team/group execution.
 
@@ -101,6 +103,8 @@ Hidden autonomy is not acceptable for mutating work, external calls, private con
 ### 4.1 First-run flow
 
 The product must not open into a raw assistant conversation as its primary identity.
+
+Every edition enters through `/login`; a valid session lands on `/dashboard`, where the first visible product state is the signed-in Soma operating environment. The post-login page must confirm the identity boundary, role, provider, and scope in a compact status strip, then keep Soma as the primary work surface. Organization setup, teams, resources, runs, and system details remain scoped contexts, not the first post-login destination.
 
 ### 4.2 Create AI Organization flow
 
@@ -120,7 +124,7 @@ Soma owns answers, proposals, execution results, blockers, and recovery.
 
 The dashboard Soma surface and the AI Organization Soma surface use one shared operating model. Intent suggestions live inside Soma and should be phrased as concrete outcomes. The workspace frames user expression as outcome, output shape, audience/use, constraints, agentry posture, proof, and continuation before showing internal topology. After meaningful actions, the interface shows an Operator trust package that connects what Soma understood, what teams/tools were coordinated, what outputs were produced, what proof exists, what state changed, and what the user can do next.
 
-The target workspace keeps expression, active work, output preview, and trust summary together. Teams, Resources, Runs, System, and Settings use focused list/detail or menu/detail panes so primary browser work does not become a long scrolling topology page.
+The target workspace keeps expression, recent active work, output preview, and trust summary together. The Soma home active-work lane is a readable recent slice, while full backlog management belongs in Teams. Teams, Resources, Runs, System, and Settings use focused list/detail or menu/detail panes so primary browser work does not become a long scrolling topology page.
 
 When execution degrades, the same package must expose:
 - what failed

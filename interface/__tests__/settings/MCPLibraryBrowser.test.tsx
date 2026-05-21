@@ -46,7 +46,7 @@ describe('MCPLibraryBrowser', () => {
     it('explains the current-group auto-install posture', () => {
         render(<MCPLibraryBrowser />);
 
-        expect(screen.getByText(/Current Group MCP Config/i)).toBeDefined();
+        expect(screen.getByText(/Add MCP Server/i)).toBeDefined();
         expect(screen.getByText(/Local-first curated entries install directly without another approval step/i)).toBeDefined();
         expect(screen.getByText(/@modelcontextprotocol\/server-filesystem/i)).toBeDefined();
         expect(screen.getByText(/Version policy: latest \(curated upstream tracking\)/i)).toBeDefined();

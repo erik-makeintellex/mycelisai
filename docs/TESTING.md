@@ -59,6 +59,7 @@ Every accepted user-interaction proof must verify:
 - guided team creation or a temporary workflow lane completes and remains reviewable
 - created teams start with the minimum viable roster, normally one accountable lead, and any UI/API expansion path explains the missing capability, owned task, proof expected, and removal point
 - retained outputs survive refresh/reload
+- activity, run events, live stream, and team/agentry panels show compact summaries by default, cap long lists, avoid raw JSON/log dumps in the default path, and keep raw payloads, topics, prompts, and full evidence behind explicit Inspect/Advanced controls
 - AI-host failure produces a visible blocker and recovery restores the lane
 
 Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof and [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for the full browser matrix.
@@ -81,7 +82,7 @@ Related active contracts: [V8 UI/API and Operator Experience Contract](architect
 
 Current browser workflow requirements live in [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md). Keep this document as the validation policy entrypoint rather than a route-by-route duplicate.
 Minimum route families under active proof:
-- `/dashboard` and AI Organization re-entry
+- `/login` -> `/dashboard` signed-in Soma environment entry, plus `/dashboard` and AI Organization re-entry
 - `/organizations/[id]` Soma-primary workspace
 - `/groups` temporary and standing collaboration
 - `/teams` and `/teams/create`
@@ -187,8 +188,7 @@ uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/team-execu
 Use `team-execution-live.spec.ts` when team execution, retained file/code outputs, group visibility, run-conversation proof, or team NATS proposal subjects change. The native Core proof path now infers `MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace` from `MYCELIS_WORKSPACE=./workspace`; Compose or split-checkout proof can still set `MYCELIS_BACKEND_WORKSPACE_ROOT` or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT` explicitly, and PVC-backed K8s proof should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`. The proof asks Soma for explicit expected output criteria, creates a runtime team, approves governed execution, writes a small browser-game HTML file through the backend workspace, confirms retained `team` and `code` outputs with the exact workspace-viewer href, opens the generated game from the retained output link, verifies the page title and initial score, clicks it in a browser page, checks the final score, checks `/api/v1/runs/{id}/conversation`, and verifies the team appears in `/groups`. Use `team-output-content-live.spec.ts` when the question is whether teams are producing meaningful content as specified: it creates multiple teams through Soma, approves their work, opens each retained browser output and local folder control in headed Chromium, verifies deliverable content, play-tests a code-graphics game score, checks run-conversation tool proof, and confirms the teams are reviewable in Groups.
 When complex generated projects such as playable games are packaged as `project_package` outputs, focused proof should also verify the Operator trust package and Groups retained-output pane show the package title, entrypoint, folder, file list, validation/proof text, `Open Game`, and workspace `Storage` control. Compose live proof defaults `MYCELIS_WORKSPACE_REVEAL_DRY_RUN=1`, so `Storage` proves the retained mounted path without launching a host file explorer from the Core container. Unit/component proof can stay mocked with `npm test -- MissionControlChat.executionSummary GroupManagementPanel --maxWorkers=1`; backend proof should include confirmed `write_file` and `store_artifact` artifact-envelope paths with `go test ./internal/server ./internal/swarm ./internal/artifacts ./pkg/protocol -run "Test(BuildDirectChatExecutionSummary|ExtractToolOutputArtifacts|ArtifactType|ExecutionOutputsFromToolResults|ArtifactResultPayload|ExecutionOutputsFromArtifacts|ChatResponsePayload)" -count=1`; live proof should use the headed `team-output-content-live.spec.ts` or `team-execution-live.spec.ts` path to open and play the retained browser output.
 ## Product Delivery Proof
-
-For product-facing work, include relevant unit/component tests, focused browser proof for the user workflow, live-backend proof when Core/proxy/runtime contracts changed, docs review, and explicit pass/fail evidence in close-out.
+For product-facing work, include relevant unit/component tests, focused browser proof for the user workflow, live-backend proof when Core/proxy/runtime contracts changed, docs review, explicit pass/fail evidence, and one hands-on browser review against `http://127.0.0.1:3000` when Soma entry, teams, outputs, proof, recovery, resources, auth, or heavy surfaces change. Log in as the intended role, confirm the signed-in Soma operating environment, ask for direct and governed work, inspect Active Work, open outputs/proof, try degraded/retry when available, and record whether the page feels like one operating environment rather than a long topology console.
 
 For output block, media readiness, and team-managed review, use:
 - `uv run inv compose.up --build --wait-timeout=240`

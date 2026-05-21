@@ -70,7 +70,7 @@ Important files:
 - `charts/mycelis-core/values*.yaml`: Helm deployment shape
 
 Common runtime variables:
-- `MYCELIS_API_KEY`: primary local-admin credential
+- `MYCELIS_API_KEY`, `MYCELIS_WEB_SESSION_SECRET`, `MYCELIS_WEB_IDENTITY_FORWARD_SECRET`, `MYCELIS_PUBLIC_ORIGIN`: local API credential, browser-session signing, optional Interface-to-Core identity HMAC separation, and auth redirect origin
 - `MYCELIS_BREAK_GLASS_API_KEY`: optional recovery credential
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: local Core database connection
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`: native PostgreSQL bootstrap user for creating/updating the app role/database
@@ -80,7 +80,7 @@ Common runtime variables:
 - `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
 - `MYCELIS_K8S_TEXT_MODEL_ID`: Kubernetes/Helm text model override
-- `MYCELIS_MEDIA_ENDPOINT`, `MYCELIS_MEDIA_MODEL_ID`: media provider overrides
+- `MYCELIS_MEDIA_ENDPOINT`, `MYCELIS_MEDIA_MODEL_ID`, `OPENAI_API_KEY`: media overrides and optional hosted OpenAI proof credential
 - `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, `MYCELIS_SEARCH_MAX_RESULTS`: governed search posture; default native Core search is `local_sources`, while Compose defaults to self-hosted `searxng`
 
 Provider override pattern:

@@ -85,7 +85,7 @@ providers:
     production_gpt4:
         type: openai
         endpoint: https://api.openai.com/v1
-        model_id: gpt-4-turbo
+        model_id: gpt-4.1-nano
         api_key: ""
         api_key_env: OPENAI_API_KEY
         location: remote

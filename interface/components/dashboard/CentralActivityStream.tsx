@@ -195,7 +195,7 @@ export default function CentralActivityStream() {
                                                 {signal.source ?? signal.source_kind ?? "system"}
                                             </span>
                                         </div>
-                                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-cortex-text-muted">
                                             {signal.message?.trim() || "No message body"}
                                         </p>
                                     </div>

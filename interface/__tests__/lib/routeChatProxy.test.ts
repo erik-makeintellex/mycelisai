@@ -88,4 +88,26 @@ describe('chat proxy routes', () => {
         expect(response.status).toBe(200);
         await expect(response.json()).resolves.toMatchObject({ ok: true });
     });
+
+    it('forwards signed web identity headers to Core for audit context', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true, data: { ok: true } }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+        })));
+
+        await postWorkspaceChat(new Request('http://localhost/api/v1/chat', {
+            method: 'POST',
+            body: JSON.stringify({ messages: [{ role: 'user', content: 'hello' }] }),
+            headers: {
+                'Content-Type': 'application/json',
+                'x-mycelis-web-identity': 'signed-payload',
+                'x-mycelis-web-identity-signature': 'signed-proof',
+            },
+        }));
+
+        const init = vi.mocked(fetch).mock.calls[0]?.[1] as RequestInit;
+        const headers = init.headers as Headers;
+        expect(headers.get('X-Mycelis-Web-Identity')).toBe('signed-payload');
+        expect(headers.get('X-Mycelis-Web-Identity-Signature')).toBe('signed-proof');
+    });
 });

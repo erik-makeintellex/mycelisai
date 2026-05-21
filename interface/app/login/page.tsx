@@ -22,7 +22,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     const next = safeNext(params?.next) || "/dashboard";
     const localReady = Boolean(config.sessionSecret && config.localPassword);
     const googleReady = Boolean(config.sessionSecret && googleConfigured(config));
-    const errorText = errorMessage(params?.error);
+    const allowedDomains = config.allowedDomains;
+    const errorText = errorMessage(params?.error, allowedDomains);
 
     return (
         <main className="min-h-screen bg-cortex-bg text-cortex-text-main">
@@ -77,10 +78,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                         <span className="h-px flex-1 bg-cortex-border" />
                     </div>
                     {googleReady ? (
-                        <Link href={`/auth/google/start?next=${encodeURIComponent(next)}`} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 font-semibold hover:border-cortex-primary/40">
-                            <KeyRound className="h-4 w-4" />
-                            Sign in with Google Workspace
-                        </Link>
+                        <div className="space-y-3">
+                            <Link href={`/auth/google/start?next=${encodeURIComponent(next)}`} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 font-semibold hover:border-cortex-primary/40">
+                                <KeyRound className="h-4 w-4" />
+                                Sign in with Google Workspace
+                            </Link>
+                            {allowedDomains.length ? (
+                                <p className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 text-xs leading-5 text-cortex-text-muted">
+                                    Use a Google account from: <span className="font-mono text-cortex-text-main">{allowedDomains.join(", ")}</span>.
+                                    Personal Gmail accounts are rejected for this deployment.
+                                </p>
+                            ) : null}
+                        </div>
                     ) : (
                         <p className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm leading-6 text-cortex-text-muted">
                             Google Workspace login appears after `MYCELIS_AUTH_GOOGLE_CLIENT_ID`, `MYCELIS_AUTH_GOOGLE_CLIENT_SECRET`, and `MYCELIS_AUTH_GOOGLE_REDIRECT_URI` are configured.
@@ -106,10 +115,18 @@ function safeNext(value?: string): string {
     return value && value.startsWith("/") && !value.startsWith("//") ? value : "";
 }
 
-function errorMessage(code?: string): string {
+function errorMessage(code: string | undefined, allowedDomains: string[]): string {
     if (code === "invalid") return "The local username or password was not accepted.";
     if (code === "google") return "Google Workspace could not complete sign-in for this deployment.";
-    if (code === "domain") return "That Google account is outside the allowed Workspace domain.";
+    if (code === "google_state") return "Google sign-in state expired or did not match. Start Google sign-in again from this browser tab.";
+    if (code === "google_token") return "Google rejected the OAuth token exchange. Verify the client ID, client secret, and authorized redirect URI for this deployment.";
+    if (code === "google_tokeninfo") return "Google returned a token, but Mycelis could not verify the Google identity token.";
+    if (code === "google_identity") return "Google sign-in returned an identity token without a verified email for this deployment.";
+    if (code === "google_exception") return "Google sign-in could not complete because the callback request failed. Check Interface logs for the sanitized auth phase.";
+    if (code === "domain") {
+        const domains = allowedDomains.length ? ` Use ${allowedDomains.join(", ")}.` : "";
+        return `That Google account is outside the allowed Workspace domain.${domains}`;
+    }
     if (code === "config") return "Authentication is not fully configured for this deployment.";
     return "";
 }

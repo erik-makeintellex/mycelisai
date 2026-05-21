@@ -12,6 +12,20 @@ import {
 
 const LIVE_GOVERNANCE_TIMEOUT_MS = 180_000;
 
+type AuditEnvelope = {
+    ok?: boolean;
+    data?: Array<{
+        action?: string;
+        run_id?: string;
+        actor_identity?: {
+            auth_source?: string;
+            effective_role?: string;
+            principal_type?: string;
+            user_label?: string;
+        };
+    }>;
+};
+
 async function openWorkspace(page: Page, organizationId: string) {
     await openOrganizationWorkspace(page, organizationId);
 }
@@ -111,6 +125,17 @@ test.describe('Soma governed mutation live contract', () => {
             expect((confirmed.body?.data?.run_id ?? '').trim().length).toBeGreaterThan(0);
             expect(confirmed.body?.data?.verified).toBeTruthy();
             expect(confirmed.body?.data?.execution_state).toBe('verified');
+            const runID = confirmed.body?.data?.run_id ?? '';
+
+            const auditResponse = await page.request.get('/api/v1/audit?limit=20');
+            const auditBody = (await auditResponse.json()) as AuditEnvelope;
+            expect(auditResponse.ok(), JSON.stringify(auditBody)).toBeTruthy();
+            const auditRecord = (auditBody.data ?? []).find(
+                (record) => record.action === 'proposal_confirmed' && record.run_id === runID,
+            );
+            expect(auditRecord, JSON.stringify(auditBody.data ?? [])).toBeTruthy();
+            expect(auditRecord?.actor_identity?.auth_source).toBeTruthy();
+            expect(auditRecord?.actor_identity?.effective_role).toBe('owner');
 
             await expect
                 .poll(() => anyTargetExists(targetPaths), {

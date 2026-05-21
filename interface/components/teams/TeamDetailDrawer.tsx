@@ -27,8 +27,11 @@ interface TeamDetailDrawerProps {
 }
 export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProps) {
     const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+    const [showAllAgents, setShowAllAgents] = useState(false);
     const leadLabel = `${team.name} lead`;
     const leadWorkspaceHref = `/dashboard?team_id=${encodeURIComponent(team.id)}`;
+    const visibleAgents = showAllAgents ? team.agents : team.agents.slice(0, 6);
+    const hiddenAgents = team.agents.length - visibleAgents.length;
 
     return (
         <div className="absolute right-0 top-0 bottom-0 w-[480px] z-40 bg-cortex-surface border-l border-cortex-border shadow-2xl flex flex-col">
@@ -67,7 +70,7 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                         {leadLabel}
                     </div>
                     <div className="text-xs text-cortex-text-muted leading-5">
-                        This team opens around a focused lead entity first. That lead can work from team context and coordinate back through Soma when broader organization memory, RAG context, or cross-team direction is needed.
+                        Work starts with the lead. Deeper agents stay summarized until inspection is needed.
                     </div>
                 </div>
 
@@ -76,9 +79,7 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                         <div className="text-[10px] font-mono uppercase text-cortex-text-muted">
                             Operator controls
                         </div>
-                        <div className="text-xs text-cortex-text-muted leading-5 mt-1">
-                            Jump from the inspector into the lead workspace, review retained work, or open deeper runtime surfaces when the operator asks for them.
-                        </div>
+                        <div className="text-xs text-cortex-text-muted leading-5 mt-1">Open work, outputs, or proof without expanding team topology.</div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         <Link
@@ -143,10 +144,10 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                 )}
                 <div>
                     <div className="text-[10px] font-mono uppercase text-cortex-text-muted mb-2">
-                        Agent Roster ({team.agents.length})
+                        Team members ({team.agents.length}) | Agent Roster
                     </div>
                     <div className="space-y-1">
-                        {team.agents.map((agent) => (
+                        {visibleAgents.map((agent) => (
                             <AgentRow
                                 key={agent.id}
                                 agent={agent}
@@ -156,7 +157,15 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                                 }
                             />
                         ))}
-                {team.agents.length === 0 && (
+                        {hiddenAgents > 0 && (
+                            <button
+                                onClick={() => setShowAllAgents(true)}
+                                className="w-full rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-left text-[10px] font-mono uppercase text-cortex-primary hover:bg-cortex-primary/10"
+                            >
+                                Show {hiddenAgents} more members
+                            </button>
+                        )}
+                        {team.agents.length === 0 && (
                             <div className="text-xs font-mono text-cortex-text-muted/50 py-4 text-center">
                                 No agents in this team
                             </div>
@@ -167,9 +176,7 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
         </div>
     );
 }
-function TopicList({
-    title, values, tone,
-}: {
+function TopicList({ title, values, tone }: {
     title: string;
     values: string[];
     tone: 'muted' | 'success';
@@ -210,11 +217,7 @@ function AgentRow({ agent, isExpanded, onToggle }: {
                 onClick={onToggle}
                 className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-cortex-surface/50 transition-colors"
             >
-                {isExpanded ? (
-                    <ChevronDown className="w-3 h-3 text-cortex-text-muted flex-shrink-0" />
-                ) : (
-                    <ChevronRight className="w-3 h-3 text-cortex-text-muted flex-shrink-0" />
-                )}
+                {isExpanded ? <ChevronDown className="w-3 h-3 text-cortex-text-muted flex-shrink-0" /> : <ChevronRight className="w-3 h-3 text-cortex-text-muted flex-shrink-0" />}
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${st.color}`} />
                 <span className="text-xs font-mono font-bold text-cortex-text-main truncate flex-1">
                     {agent.id}

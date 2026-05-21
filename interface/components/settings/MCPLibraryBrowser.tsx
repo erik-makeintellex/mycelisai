@@ -72,7 +72,7 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
         <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">
             <div className="rounded-xl border border-cortex-success/25 bg-cortex-success/10 px-4 py-3">
                 <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-success">
-                    Current Group MCP Config
+                    Add MCP Server
                 </p>
                 <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
                     Installs from this page are treated as MCP configuration for your current user-owned group.
@@ -92,7 +92,7 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by name, description, or tag..."
+                    placeholder="Search MCP servers by name, description, or tag..."
                     className="w-full bg-cortex-surface border border-cortex-border rounded-lg pl-9 pr-3 py-2 text-xs font-mono text-cortex-text-main placeholder:text-cortex-text-muted/40 focus:outline-none focus:ring-1 focus:ring-cortex-primary/50"
                 />
             </div>

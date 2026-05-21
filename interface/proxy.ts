@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { WEB_SESSION_COOKIE, getWebAuthConfig, verifySessionToken } from '@/lib/webAuth';
+import { WEB_SESSION_COOKIE, createForwardedWebIdentityHeaders, getWebAuthConfig, verifySessionToken } from '@/lib/webAuth';
 
 const PUBLIC_PATH_PREFIXES = [
     '/login',
@@ -12,9 +12,10 @@ const PUBLIC_PATH_PREFIXES = [
 ];
 
 export async function proxy(request: NextRequest) {
+    const config = getWebAuthConfig();
     const session = await verifySessionToken(
         request.cookies.get(WEB_SESSION_COOKIE)?.value,
-        getWebAuthConfig().sessionSecret,
+        config.sessionSecret,
     );
     if (!session && !isPublicPath(request.nextUrl.pathname)) {
         if (request.nextUrl.pathname.startsWith('/api/')) {
@@ -33,6 +34,15 @@ export async function proxy(request: NextRequest) {
 
     const headers = new Headers(request.headers);
     headers.set('Authorization', `Bearer ${apiKey}`);
+    if (session) {
+        const identityHeaders = await createForwardedWebIdentityHeaders(
+            session,
+            process.env.MYCELIS_WEB_IDENTITY_FORWARD_SECRET || config.sessionSecret,
+        );
+        for (const [key, value] of Object.entries(identityHeaders)) {
+            headers.set(key, value);
+        }
+    }
     return NextResponse.next({ request: { headers } });
 }
 
@@ -41,6 +51,7 @@ function isPublicPath(pathname: string): boolean {
 }
 
 function isBackendProxyPath(pathname: string): boolean {
+    if (pathname === '/api/auth' || pathname.startsWith('/api/auth/')) return false;
     return pathname.startsWith('/api/') || pathname.startsWith('/admin/') || pathname === '/agents' || pathname === '/healthz';
 }
 

@@ -17,6 +17,12 @@ function upstreamHeaders(req: Request): Headers {
     if (auth) {
         headers.set('Authorization', auth.startsWith('Bearer ') ? auth : `Bearer ${auth}`);
     }
+    const forwardedIdentity = req.headers.get('x-mycelis-web-identity');
+    const forwardedIdentitySignature = req.headers.get('x-mycelis-web-identity-signature');
+    if (forwardedIdentity && forwardedIdentitySignature) {
+        headers.set('X-Mycelis-Web-Identity', forwardedIdentity);
+        headers.set('X-Mycelis-Web-Identity-Signature', forwardedIdentitySignature);
+    }
     headers.set('Content-Type', req.headers.get('content-type') || 'application/json');
     return headers;
 }

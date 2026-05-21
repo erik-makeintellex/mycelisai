@@ -31,7 +31,7 @@ Operator expression is therefore not treated as a plain user query. It is treate
 
 ## Current State
 
-The current implementation state is recorded in `.state/V8_DEV_STATE.md`. As of 2026-05-19, the active state is:
+The current implementation state is recorded in `.state/V8_DEV_STATE.md`. As of 2026-05-20, the active state is:
 
 | Area | State | What exists now |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ The current implementation state is recorded in `.state/V8_DEV_STATE.md`. As of 
 | Memory and context | `ACTIVE` / `IN_REVIEW` | Semantic memory, governed deployment context, user-private context, company knowledge, Soma operating context, reflection/synthesis lanes, and candidate-first learning contracts exist. |
 | Teams and groups | `ACTIVE` / `IN_REVIEW` | Runtime teams, groups, team outputs, create-team proposals, group mirroring, retained team/file outputs, durable team-work APIs, bounded team asks with live degraded and `output_ready` GUI proof, `/teams` Ask Team/Respond controls, API-backed Active Work Lane projection, and production-safe lifecycle/steering/recovery controls exist; raw topology is inspectable on demand instead of default UX. |
 | Automations and scheduler | `ACTIVE` / `IN_REVIEW` | Event trigger rules and review-loop scheduler health are visible; operator cadence authoring is not finalized and must ship as governed scheduler rules before schedule language returns to default UX. |
-| UI compression | `IN_REVIEW` | Soma proposal/trust UI, Auth Providers, and Resources have been compressed into focused operator surfaces with details behind disclosure or menu selections. |
+| UI compression | `IN_REVIEW` | Soma proposal/trust UI, Auth Providers, Resources, Activity, run-event inspect, live stream, and team-member surfaces have been compressed into focused operator views. The research-backed target UX is now captured in [V8.2 UI Research And Target Experience Review](V8_2_UI_RESEARCH_AND_TARGET_EXPERIENCE_REVIEW.md). Raw payloads, bus topics, long logs, prompt/agentry detail, and retained evidence overflows remain inspectable on demand instead of default UX. |
 | Identity and auth | `ACTIVE` / `IN_REVIEW` | Local owner and deploy-owned access posture are surfaced read-only; identity/auth schema foundation exists; enterprise provider setup remains a review-only configuration contract until adapters are enabled. |
 | System health | `IN_REVIEW` | `/system` distinguishes scheduler health, services status, comms optional-provider posture, group bus, NATS, Postgres, cognitive, and runtime checks. |
 | QA and proof | `ACTIVE` | Focused unit, typecheck, build, docs, max-lines, Playwright, live backend, headed GUI, K3s, and Compose proof lanes exist. |
@@ -91,11 +91,13 @@ opens proof, and shows retry/degraded trust behavior when execution fails.
 
 | Object | Status | Required concrete fields |
 | --- | --- | --- |
+| ExpressionFrame | `REQUIRED` | outcome, output shape, audience/use, constraints, agentry posture, capability/governance boundary, acceptance proof, continuation mode, risk posture |
 | ExecutionContract | `IN_REVIEW` | `contract_id`, intent summary, execution shape, capability requirements, governance posture, approval requirements, expected outputs, expected proof, recovery posture, degradation behavior, run linkage, timestamps, version |
 | ProofArtifact | `IN_REVIEW` | `proof_id`, `run_id`, execution status, evidence refs, output refs, validation source, proof quality, degradation state, recovery options, confidence provenance fields, audit refs, timestamps |
 | CapabilityManifestState | `IN_REVIEW` | capability id, health, probe status, trust/risk class, approval posture, allowed roles, output schemas, failure posture, recovery posture, manifest version |
 | UIResponseState | `IN_REVIEW` | direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, partial completion |
 | TeamInteractionSurface | `IN_REVIEW` | `TeamInteraction`, `TeamWorkItem`, `TeamStatusEvent`, and `TeamOutputRef` ids, team/run/work linkage, source, verb, objective, state, expected outputs/proof, operator need, degradation, recovery, output refs, proof refs, audit refs, version |
+| TrustPackageReadModel | `REQUIRED` | contract refs, run refs, output refs, proof refs, audit refs, degradation, confidence provenance, recovery actions, next operator action |
 
 These are runtime trust objects, not presentation conveniences. Exact schema fields, UI states, degraded lifecycle states, deployment-trust ownership, and the required slice close-out template are canonicalized in the [V8.2 Finalization Concretization Contract](V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md).
 
@@ -114,12 +116,14 @@ Finalization serves owner/operators, architecture/runtime/UX engineers, validati
 ### P0 - Soma Operating Loop
 
 - One dominant Soma operating surface across dashboard and organization workspace.
+- The target workbench should keep Expression, Active Work, Output Workbench, and Trust Package visible as the primary mental model.
 - Soma must translate operator expression into an output contract before exposing raw topology. The default UI should frame outcome, output shape, audience/use, constraints, agentry posture, proof, and next action in operator language.
+- Architecture-first UI work must define or reuse `ExpressionFrame`, `SomaStateCard`, `OutputRef`, `ActiveWorkItem`, `TrustPackage`, and `RecoveryAction` contracts before visual component edits.
 - Every meaningful response classifies as direct answer, proposal, execution result, blocker, recovery state, degraded execution, awaiting approval, retry required, or partial completion.
 - Proposal cards must summarize the decision first, then expose lifecycle, risk, capability, team, bus, and proof details behind disclosure.
 - The Operator trust package must show outcome, outputs, proof, next step, and degradation state without requiring raw runtime vocabulary.
 - Broad asks should default to compact team shaping and deliberate expansion guidance, not automatic large-team sprawl.
-- The primary work window should keep expression, active work, output preview, and trust summary together. Teams, Resources, Runs, and System details should use focused list/detail or menu/detail panes instead of long scrolling topology pages.
+- The primary work window should keep expression, an attention-first active-work slice, output preview, and trust summary together. Teams owns full durable backlog management; Resources, Runs, and System details should use focused list/detail or menu/detail panes instead of long scrolling topology pages.
 
 ### P0 - Runs, Outputs, And Proof
 
@@ -247,9 +251,9 @@ Required proof per slice:
 | Runtime-team usefulness | `IN_REVIEW` | Bounded ask API and `/teams` Ask Team/Respond UI now persist output/degradation truth, live local-source proof shows timeout degradation visibly in durable state, and one `prime-development` browser ask completed with `output_ready` plus visible reply proof. Do not claim runtime teams are broadly useful delivery collaborators until the path is repeatable across real delivery asks, handles slow-model latency through async/polling or faster routing, and proves output quality beyond token echo. |
 | Scheduler/cadence authoring | `NEXT` | Ship governed scheduler rules before exposing cadence authoring as product behavior. |
 | Deployment env footguns | Active operational risk | Keep Compose/Kubernetes endpoint posture explicit; avoid loopback assumptions and document container-safe overrides. |
-| UI density | Active cleanup lane | Continue menu/detail and disclosure compression for lengthy advanced surfaces. |
+| UI density | Active cleanup lane | Default Activity, team, live-stream, and run surfaces must summarize what happened, what changed, proof/output/recovery, and next action first. Raw payloads, long logs, bus topics, prompt detail, and full agentry topology stay behind Inspect/Advanced. |
 | Expression collapse into query/chat | Active product risk | Treat the input as output/agentry evocation: capture outcome, output shape, use context, constraints, proof, and continuation before runtime topology. |
-| Browser workspace scroll sprawl | Active UX risk | Replace long inner-scroll surfaces with single-window list/detail or workbench panes, and collapse mobile chrome so the input, active work, output, and trust summary remain usable. |
+| Browser workspace scroll sprawl | Active UX risk | Replace long page-scroll surfaces with single-window list/detail or workbench panes, cap default streams/rosters, and collapse mobile chrome so the input, active work, output, and trust summary remain usable. |
 | Cold-start Soma trust copy | `NEXT` | Default dashboard must not show "Soma just did this" or proof/trust package language before real Soma activity. |
 | Exact first demo GUI proof | `IN_REVIEW` | Project-package output, README/validation metadata, proof-link opening, reload/revisit behavior, Groups output, and degraded retry have focused browser proof. |
 | Capability manifest persistence | `IN_REVIEW` | Refreshed manifests persist and reconcile long-lived health/probe state as P0 runtime trust infrastructure; universal adapter enforcement remains next. |

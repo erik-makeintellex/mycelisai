@@ -89,6 +89,51 @@ describe("ActiveWorkLane", () => {
     expect(screen.getByText(/Audit audit-1/i)).toBeDefined();
   });
 
+  it("keeps the default lane compact when a visible item cap is provided", () => {
+    const items = Array.from({ length: 5 }, (_, index) => ({
+      ...baseItem,
+      id: `work-${index + 1}`,
+      title: `Work item ${index + 1}`,
+    }));
+
+    render(
+      <ActiveWorkLane
+        items={items}
+        maxVisibleItems={2}
+        totalItemCount={5}
+        moreItemsHref="/teams"
+      />,
+    );
+
+    expect(screen.getByText("5 items")).toBeDefined();
+    expect(screen.getByText("Work item 1")).toBeDefined();
+    expect(screen.getByText("Work item 2")).toBeDefined();
+    expect(screen.queryByText("Work item 3")).toBeNull();
+    expect(screen.getByRole("link", { name: /3 more work items in Teams/i }).getAttribute("href")).toBe("/teams");
+  });
+
+  it("makes hidden evidence count visible when refs are capped", () => {
+    render(
+      <ActiveWorkLane
+        items={[{
+          ...baseItem,
+          outputRefs: Array.from({ length: 4 }, (_, index) => ({
+            output_id: `out-${index + 1}`,
+            team_id: "team-alpha",
+            work_item_id: "work-1",
+            kind: "file",
+            label: `Output ${index + 1}`,
+            storage_ref: `generated/output-${index + 1}.md`,
+          })),
+          proofRefs: ["proof-1", "proof-2", "proof-3", "proof-4"],
+          auditRefs: ["audit-1", "audit-2", "audit-3"],
+        }]}
+      />,
+    );
+
+    expect(screen.getByText("+3 more in inspect")).toBeDefined();
+  });
+
   it("submits a bounded ask for durable active work", async () => {
     const onTeamAsk = vi.fn().mockResolvedValue(undefined);
     render(

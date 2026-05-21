@@ -1,13 +1,15 @@
 import type { StreamSignal, SignalDetail, LogEntry } from '@/store/useCortexStore';
 
-function stringifySignalPayload(payload: unknown): string {
+function payloadText(payload: unknown): string {
     if (payload == null) return '';
     if (typeof payload === 'string') return payload;
-    try {
-        return JSON.stringify(payload);
-    } catch {
-        return String(payload);
+    if (typeof payload !== 'object') return String(payload);
+    const record = payload as Record<string, unknown>;
+    for (const key of ['headline', 'operator_summary', 'summary', 'details', 'message', 'result', 'status', 'next_action']) {
+        const value = record[key];
+        if (typeof value === 'string' && value.trim().length > 0) return value.trim();
     }
+    return 'Signal retained for inspect.';
 }
 
 type RawSignalEnvelope = {
@@ -48,7 +50,7 @@ export function normalizeIncomingSignal(raw: RawSignalEnvelope): StreamSignal {
     const message =
         raw.message
         ?? raw.text
-        ?? stringifySignalPayload(payload)
+        ?? payloadText(payload)
         ?? '';
 
     return {
@@ -74,7 +76,7 @@ export function streamSignalToDetail(signal: StreamSignal): SignalDetail {
         type: signal.type ?? 'unknown',
         source: signal.source ?? 'system',
         level: signal.level,
-        message: signal.message ?? JSON.stringify(signal.payload ?? {}),
+        message: signal.message ?? payloadText(signal.payload),
         timestamp: signal.timestamp ?? new Date().toISOString(),
         topic: signal.topic,
         payload: signal.payload,

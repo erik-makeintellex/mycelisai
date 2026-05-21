@@ -5,6 +5,8 @@ import Link from "next/link";
 import { FileJson, RefreshCw } from "lucide-react";
 import type { MissionEvent, MissionRun } from "@/store/useCortexStore";
 
+const EVENT_LIMIT = 12;
+
 function timeAgo(iso?: string) {
   if (!iso) return "now";
   const diff = Date.now() - new Date(iso).getTime();
@@ -24,6 +26,47 @@ function payloadPreview(payload?: Record<string, unknown>) {
   }
 }
 
+function payloadText(payload: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" || typeof value === "boolean")
+      return `${key}: ${value}`;
+  }
+  return null;
+}
+
+function payloadRefSummary(payload: Record<string, unknown>) {
+  const refs = ["output_id", "artifact_id", "proof_id", "team_id", "run_id"]
+    .map((key) => {
+      const value = payload[key];
+      return typeof value === "string" && value.trim()
+        ? `${key.replace("_id", "")} ${value.slice(0, 12)}`
+        : null;
+    })
+    .filter(Boolean);
+  return refs.length > 0 ? refs.join(" | ") : null;
+}
+
+function operatorEventSummary(payload?: Record<string, unknown>) {
+  if (!payload || Object.keys(payload).length === 0) {
+    return "No retained payload for this event.";
+  }
+  return (
+    payloadText(payload, [
+      "operator_summary",
+      "summary",
+      "message",
+      "result",
+      "status",
+      "error",
+      "next_action",
+    ]) ??
+    payloadRefSummary(payload) ??
+    "Raw payload retained for inspect."
+  );
+}
+
 function eventTitle(event: MissionEvent) {
   return event.event_type?.trim() || "run.event";
 }
@@ -40,6 +83,7 @@ export function RunEventInspector({
   const scopedEvents = run
     ? events.filter((event) => event.run_id === run.id)
     : [];
+  const visibleEvents = scopedEvents.slice(0, EVENT_LIMIT);
 
   return (
     <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-5">
@@ -54,6 +98,11 @@ export function RunEventInspector({
           {run ? (
             <p className="mt-1 text-xs font-mono uppercase text-cortex-text-muted">
               {run.status} | mission {run.mission_id}
+            </p>
+          ) : null}
+          {run && scopedEvents.length > 0 ? (
+            <p className="mt-2 text-[11px] font-mono text-cortex-text-muted">
+              Showing latest {visibleEvents.length} of {scopedEvents.length}
             </p>
           ) : null}
         </div>
@@ -82,7 +131,7 @@ export function RunEventInspector({
             No events recorded for this run yet.
           </p>
         ) : (
-          scopedEvents.map((event) => (
+          visibleEvents.map((event) => (
             <InlineEvent key={event.id} event={event} />
           ))
         )}
@@ -94,6 +143,7 @@ export function RunEventInspector({
 function InlineEvent({ event }: { event: MissionEvent }) {
   const [expanded, setExpanded] = useState(false);
   const preview = payloadPreview(event.payload);
+  const summary = operatorEventSummary(event.payload);
   return (
     <article className="border-b border-cortex-border/60 px-4 py-3 last:border-b-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -115,11 +165,11 @@ function InlineEvent({ event }: { event: MissionEvent }) {
           className="inline-flex items-center gap-1 rounded-lg border border-cortex-border px-2 py-1 text-[11px] font-mono text-cortex-primary hover:bg-cortex-primary/10"
         >
           <FileJson className="h-3.5 w-3.5" />
-          {expanded ? "Hide payload" : "Payload"}
+          {expanded ? "Hide inspect" : "Inspect payload"}
         </button>
       </div>
       <p className="mt-2 line-clamp-2 text-xs leading-5 text-cortex-text-muted">
-        {preview}
+        {summary}
       </p>
       {expanded ? (
         <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2 text-[11px] leading-5 text-cortex-text-muted">

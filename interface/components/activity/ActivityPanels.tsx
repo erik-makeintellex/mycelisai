@@ -5,6 +5,8 @@ import Link from "next/link";
 import { RefreshCw, type LucideIcon } from "lucide-react";
 import type { MissionRun, StreamSignal } from "@/store/useCortexStore";
 
+const SIGNAL_LIMIT = 12;
+
 export function timeAgo(iso?: string) {
   if (!iso) return "now";
   const diff = Date.now() - new Date(iso).getTime();
@@ -159,6 +161,7 @@ export function BusActivityPanel({
   natsStatus?: string;
   groupsStatus?: string;
 }) {
+  const visibleSignals = signals.slice(0, SIGNAL_LIMIT);
   return (
     <div
       id="message-bus"
@@ -167,9 +170,14 @@ export function BusActivityPanel({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">
-            Message bus activity
+            Operational activity
           </p>
-          <h2 className="mt-2 text-lg font-semibold">Readable event stream</h2>
+          <h2 className="mt-2 text-lg font-semibold">Recent signals</h2>
+          {signals.length > 0 ? (
+            <p className="mt-1 text-[11px] font-mono text-cortex-text-muted">
+              Showing latest {visibleSignals.length} of {signals.length}
+            </p>
+          ) : null}
         </div>
         <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-3 py-2 text-[11px] font-mono text-cortex-text-muted">
           NATS {natsStatus ?? "unknown"} | Groups {groupsStatus ?? "unknown"}
@@ -194,14 +202,12 @@ export function BusActivityPanel({
             Waiting for live stream entries.
           </p>
         ) : (
-          signals
-            .slice(0, 24)
-            .map((signal, index) => (
-              <SignalRow
-                key={`${signal.timestamp ?? "ts"}-${index}`}
-                signal={signal}
-              />
-            ))
+          visibleSignals.map((signal, index) => (
+            <SignalRow
+              key={`${signal.timestamp ?? "ts"}-${index}`}
+              signal={signal}
+            />
+          ))
         )}
       </div>
     </div>
@@ -212,6 +218,11 @@ function SignalRow({ signal }: { signal: StreamSignal }) {
   const [expanded, setExpanded] = useState(false);
   const category = signalCategory(signal);
   const message = signal.message?.trim() || signal.topic || "Event received";
+  const scope = signal.run_id
+    ? `run ${signal.run_id.slice(0, 12)}`
+    : signal.team_id
+      ? `team ${signal.team_id}`
+      : signal.source_channel || signal.payload_kind || "system signal";
   return (
     <article className="border-b border-cortex-border/60 px-4 py-3 last:border-b-0">
       <button
@@ -231,11 +242,9 @@ function SignalRow({ signal }: { signal: StreamSignal }) {
           <p className="mt-1 truncate text-sm text-cortex-text-muted">
             {message}
           </p>
-          {signal.topic ? (
-            <p className="mt-1 truncate text-[10px] font-mono text-cortex-text-muted/70">
-              {signal.topic}
-            </p>
-          ) : null}
+          <p className="mt-1 truncate text-[10px] font-mono text-cortex-text-muted/70">
+            {scope}
+          </p>
         </div>
         <span className="shrink-0 text-[11px] font-mono text-cortex-text-muted">
           {timeAgo(signal.timestamp)}
@@ -250,14 +259,25 @@ function SignalRow({ signal }: { signal: StreamSignal }) {
             Open run
           </Link>
         ) : null}
-        <span className="rounded-lg border border-cortex-border px-2 py-1 text-[11px] font-mono text-cortex-text-muted">
-          {expanded ? "Hide details" : "Show details"}
-        </span>
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="rounded-lg border border-cortex-border px-2 py-1 text-[11px] font-mono text-cortex-text-muted hover:bg-cortex-surface"
+        >
+          {expanded ? "Hide inspect" : "Inspect signal"}
+        </button>
       </div>
       {expanded ? (
-        <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-xl border border-cortex-border bg-cortex-surface p-3 text-[11px] leading-5 text-cortex-text-muted">
-          {JSON.stringify(signal, null, 2)}
-        </pre>
+        <div className="mt-3 space-y-2">
+          {signal.topic ? (
+            <p className="truncate rounded-xl border border-cortex-border bg-cortex-surface p-2 text-[10px] font-mono text-cortex-text-muted">
+              {signal.topic}
+            </p>
+          ) : null}
+          <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-xl border border-cortex-border bg-cortex-surface p-3 text-[11px] leading-5 text-cortex-text-muted">
+            {JSON.stringify(signal, null, 2)}
+          </pre>
+        </div>
       ) : null}
     </article>
   );

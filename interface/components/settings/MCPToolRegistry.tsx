@@ -81,7 +81,7 @@ export default function MCPToolRegistry() {
                     <div className="flex items-center gap-2.5">
                         <Wrench className="w-4 h-4 text-cortex-success" />
                         <span className="text-xs font-mono font-bold text-cortex-text-muted uppercase tracking-wider">
-                            MCP Tool Registry
+                            Connected Tools
                         </span>
                     </div>
                     <div className="flex items-center gap-1 bg-cortex-bg rounded-lg p-0.5 border border-cortex-border">
@@ -109,7 +109,7 @@ export default function MCPToolRegistry() {
                             }`}
                         >
                             <BookOpen className="w-3 h-3" />
-                            Library
+                            Add MCP
                         </button>
                     </div>
                 </div>
@@ -120,7 +120,7 @@ export default function MCPToolRegistry() {
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cortex-primary/10 border border-cortex-primary/30 text-xs font-mono font-bold text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
                     >
                         <BookOpen className="w-3.5 h-3.5" />
-                        BROWSE LIBRARY
+                        ADD MCP SERVER
                     </button>
                 )}
             </div>
@@ -149,7 +149,7 @@ export default function MCPToolRegistry() {
                                     No MCP servers installed yet
                                 </p>
                                 <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
-                                    Default bootstrap is disabled in the compose home runtime, so Library is the first activation step for connected tools.
+                                    Default bootstrap is disabled in the compose home runtime, so Add MCP Server is the first activation step for connected tools.
                                 </p>
                                 <p className="mt-2 text-[10px] font-mono leading-5 text-cortex-text-muted">
                                     Install a curated server such as filesystem or fetch, then return here to confirm the server card and recent activity appear.
@@ -234,13 +234,13 @@ export default function MCPToolRegistry() {
                                 <Wrench className="w-12 h-12 mb-3 opacity-20" />
                                 <p className="text-sm font-mono">No MCP servers installed.</p>
                                 <p className="text-[10px] font-mono mt-1 opacity-50">
-                                    Browse the Library tab to add the first approved tool server for this group.
+                                    Use Add MCP Server to install the first approved tool server for this group.
                                 </p>
                                 <button
                                     onClick={() => setActiveTab("library")}
                                     className="mt-4 rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1.5 text-[10px] font-mono font-bold text-cortex-primary transition-colors hover:bg-cortex-primary/20"
                                 >
-                                    OPEN LIBRARY
+                                    ADD FIRST MCP SERVER
                                 </button>
                             </div>
                         )}

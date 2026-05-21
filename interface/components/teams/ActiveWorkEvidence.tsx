@@ -8,6 +8,7 @@ export function ActiveWorkEvidence({ item }: { item: TeamWorkItem }) {
   const outputRefs = item.outputRefs ?? [];
   const proofRefs = item.proofRefs ?? [];
   const auditRefs = item.auditRefs ?? [];
+  const hiddenRefs = Math.max(outputRefs.length - 3, 0) + Math.max(proofRefs.length - 3, 0) + Math.max(auditRefs.length - 2, 0);
   if (!item.runId && outputRefs.length === 0 && proofRefs.length === 0 && auditRefs.length === 0) {
     return null;
   }
@@ -48,6 +49,11 @@ export function ActiveWorkEvidence({ item }: { item: TeamWorkItem }) {
           Audit {compactID(audit)}
         </span>
       ))}
+      {hiddenRefs > 0 ? (
+        <span className="inline-flex items-center rounded border border-cortex-border bg-cortex-surface px-2 py-1 font-mono text-cortex-text-muted">
+          +{hiddenRefs} more in inspect
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -66,7 +66,7 @@ Review/edit expectation:
 - the installed server card should expand into an MCP structure view with transport, status, command or endpoint, arguments, env/header references, discovered tools, and recent use
 - the capability view should show manifest identity, input/output schema posture, risk, approval, availability, fallback, allowed roles, and output destinations
 - secrets should appear only as references or redacted values; set or rotate values in `.env` or the configured secret backend
-- use Library to install, reapply, or edit the curated server shape instead of pasting raw MCP config into the UI
+- use **Add MCP Server** to install, reapply, or edit the curated server shape instead of pasting raw MCP config into the UI
 - after changing structure or secrets, return to Installed and confirm the server card, tool list, and recent MCP activity match the expected shape
 
 Current posture:
@@ -80,7 +80,7 @@ Current posture:
 - `Mycelis Search Capability` shows the active Soma search posture directly in Connected Tools: the selected provider, whether Soma can call `web_search`, whether local shared sources or public web are supported, and whether the current path needs hosted Brave credentials
 - Soma's Operator trust package also names the active search source boundary for `web_search` results, such as `Search source: Local Mycelis context`, so operators can distinguish retained Mycelis context from public-web providers
 - self-hosted search does not have to depend on Brave tokens: `local_sources` is the default token-free provider for governed Mycelis context and falls back to bounded text search when embeddings are unavailable, `local_api` can call an operator-owned HTTP search endpoint, and the supported Compose release path starts SearXNG for public web search through an operator-owned endpoint
-- the same Connected Tools surface should make the workflow legible end to end: add from the curated library, confirm the server is connected, and inspect recent persisted MCP activity plus live in-session usage showing which server/tool agents are using, including team, agent, and run labels when the runtime supplies them
+- the same Connected Tools surface should make the workflow legible end to end: choose **Add MCP Server**, confirm the server is connected, and inspect recent persisted MCP activity plus live in-session usage showing which server/tool agents are using, including team, agent, and run labels when the runtime supplies them
 - the curated MCP library is now being standardized around the MCP registry `server.json` concepts so future registrations stay recognizable outside Mycelis too: each entry should carry a canonical server name, version, published package + transport metadata, repository/homepage metadata when known, and typed environment-variable declarations instead of only a local command block
 - curated MCP install is repeat-safe by server name; reapplying an allowed entry updates and reconnects the existing server instead of creating duplicate registry state
 - Connected Tools should also make package-version policy visible instead of hiding it in install internals; the current library now also carries deployment-boundary and bundle-posture metadata, while the next interoperability slice should preserve enough metadata to round-trip against published `server.json` records without flattening Mycelis governance-specific fields

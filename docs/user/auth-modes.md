@@ -10,6 +10,7 @@ Current self-hosted release authentication is deploy-owned:
 - `.env` is the local secret store
 - `MYCELIS_API_KEY` is the normal local admin credential
 - `MYCELIS_WEB_SESSION_SECRET` signs browser sessions for the Interface login boundary
+- `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` optionally separates Interface-to-Core identity forwarding from the browser session secret
 - `MYCELIS_LOCAL_ADMIN_USERNAME` and `MYCELIS_LOCAL_ADMIN_USER_ID` name that local principal
 - Settings shows access posture, but user chat cannot rewrite it
 
@@ -53,8 +54,9 @@ Use this for Free Node and simple self-hosted release.
 5. Set `MYCELIS_LOCAL_ADMIN_USER_ID`.
 6. Keep `MYCELIS_IDENTITY_MODE=local_only`.
 7. Set `MYCELIS_PUBLIC_ORIGIN=https://...` or `MYCELIS_WEB_COOKIE_SECURE=true` for HTTPS production deployments; local HTTP proof leaves both unset.
-8. Run `uv run inv auth.posture` or `uv run inv auth.posture --compose`.
-9. Verify `/login` accepts the local owner and Settings -> People & Access shows local-only/self-hosted release posture.
+8. Optionally set `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` when Core and Interface should use a dedicated HMAC secret for audit identity propagation; otherwise both use `MYCELIS_WEB_SESSION_SECRET`.
+9. Run `uv run inv auth.posture` or `uv run inv auth.posture --compose`.
+10. Verify `/login` accepts the local owner and Settings -> People & Access shows local-only/self-hosted release posture.
 
 Do not reuse the same value for local admin and break-glass credentials.
 
@@ -110,6 +112,9 @@ Use Google Workspace through OIDC/OAuth for enterprise SSO.
 4. Set `MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN` and/or `MYCELIS_AUTH_ALLOWED_DOMAINS`.
 5. Set `MYCELIS_AUTH_ADMIN_EMAILS` for Mycelis admins; other allowed-domain users enter as standard users.
 6. Keep organization access and approval rights in Mycelis roles.
+7. Confirm `/dashboard` shows the signed-in Soma operating environment and Core audit/proof records use the signed web identity rather than the generic local API-key owner.
+
+The login page shows the allowed Workspace domains when Google is configured. If Google account selection returns a domain error, choose an account from `MYCELIS_AUTH_ALLOWED_DOMAINS` or use the local owner login while correcting the deployment domain list.
 
 ## GitHub
 

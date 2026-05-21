@@ -84,6 +84,9 @@ func buildAuditRecord(id, templateID, source, message string, ts time.Time, cont
 	if details, ok := ctx["details"].(map[string]any); ok && len(details) > 0 {
 		record.Details = details
 	}
+	if actorIdentity, ok := ctx["actor_identity"].(map[string]any); ok && len(actorIdentity) > 0 {
+		record.ActorIdentity = actorIdentity
+	}
 	return record
 }
 
@@ -138,14 +141,14 @@ func (s *AdminServer) HandleCancelAction(w http.ResponseWriter, r *http.Request)
 	auditID, _ := s.createAuditEvent(
 		protocol.TemplateChatToProposal, "cancel-action",
 		"Chat proposal cancelled",
-		map[string]any{
+		attachActorIdentity(map[string]any{
 			"actor":           "Soma",
 			"user":            auditUserLabelFromRequest(r),
 			"action":          "proposal_cancelled",
 			"result_status":   "cancelled",
 			"intent_proof_id": req.IntentProofID,
 			"approval_status": "cancelled",
-		},
+		}, r),
 	)
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]any{

@@ -132,7 +132,7 @@ function SignalRow({ signal }: { signal: StreamSignal }) {
     const selectSignalDetail = useCortexStore((s) => s.selectSignalDetail);
     const time = formatTime(signal.timestamp);
     const source = signal.source ?? 'system';
-    const message = signal.message ?? JSON.stringify(signal.payload ?? {});
+    const message = signal.message ?? 'Signal retained for inspect.';
     const colors = spectrumColor(signal.type);
     const direction = classifyDirection(signal.type);
     const DirIcon = DIRECTION_ICONS[direction];
@@ -177,7 +177,7 @@ export function NatsWaterfall() {
     const isConnected = useCortexStore((s) => s.isStreamConnected);
     const initializeStream = useCortexStore((s) => s.initializeStream);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
     const [filter, setFilter] = useState<FilterMode>('all');
 
     // Initialize SSE on mount
@@ -214,7 +214,7 @@ export function NatsWaterfall() {
                 >
                     <Radio className="w-3.5 h-3.5 text-cortex-text-muted mr-2" />
                     <span className="text-[10px] font-bold uppercase tracking-widest text-cortex-text-muted">
-                        Spectrum
+                        Inspect live stream
                     </span>
                     <span className="ml-2 text-cortex-text-muted">
                         {isExpanded ? (
