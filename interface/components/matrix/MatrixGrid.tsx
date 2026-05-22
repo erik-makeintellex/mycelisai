@@ -265,7 +265,6 @@ function ProviderConfigModal({
     const [endpoint, setEndpoint] = useState(provider.endpoint ?? "");
     const [modelId, setModelId] = useState(provider.model_id ?? "");
     const [apiKeyEnv, setApiKeyEnv] = useState(NEEDS_API_KEY[providerId] ?? "");
-    const [apiKey, setApiKey] = useState("");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -277,7 +276,6 @@ function ProviderConfigModal({
             if (endpoint !== (provider.endpoint ?? "")) body.endpoint = endpoint;
             if (modelId !== provider.model_id) body.model_id = modelId;
             if (apiKeyEnv) body.api_key_env = apiKeyEnv;
-            if (apiKey) body.api_key = apiKey;
 
             const res = await fetch(`/api/v1/cognitive/providers/${providerId}`, {
                 method: "PUT",
@@ -346,24 +344,7 @@ function ProviderConfigModal({
                     <div>
                         <label className="text-[10px] font-mono font-bold text-cortex-text-muted uppercase tracking-wider block mb-1">
                             <Key size={10} className="inline mr-1" />
-                            API Key (stored in-memory only)
-                        </label>
-                        <input
-                            type="password"
-                            value={apiKey}
-                            onChange={(e) => setApiKey(e.target.value)}
-                            placeholder="sk-..."
-                            className="w-full bg-cortex-bg border border-cortex-border rounded px-3 py-2 text-xs font-mono text-cortex-text-main placeholder:text-cortex-text-muted/50 focus:outline-none focus:ring-1 focus:ring-cortex-primary"
-                        />
-                        <p className="text-[9px] text-cortex-text-muted mt-1">
-                            Direct key — only stored in server memory, never written to disk.
-                        </p>
-                    </div>
-
-                    <div>
-                        <label className="text-[10px] font-mono font-bold text-cortex-text-muted uppercase tracking-wider block mb-1">
-                            <Key size={10} className="inline mr-1" />
-                            API Key Env Variable (persisted to config)
+                            Secret env variable
                         </label>
                         <input
                             type="text"
@@ -373,7 +354,7 @@ function ProviderConfigModal({
                             className="w-full bg-cortex-bg border border-cortex-border rounded px-3 py-2 text-xs font-mono text-cortex-text-main placeholder:text-cortex-text-muted/50 focus:outline-none focus:ring-1 focus:ring-cortex-primary"
                         />
                         <p className="text-[9px] text-cortex-text-muted mt-1">
-                            Environment variable name — the server reads the key at runtime.
+                            Secret value stays in .env or the deployment secret backend.
                         </p>
                     </div>
 

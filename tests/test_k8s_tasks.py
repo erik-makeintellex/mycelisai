@@ -7,7 +7,6 @@ import subprocess
 
 from invoke import Context
 import pytest
-
 from ops import k8s
 
 
@@ -20,7 +19,6 @@ class FakeResult:
     @property
     def ok(self) -> bool:
         return self.exited == 0
-
 
 class FakeContext(Context):
     def __init__(self, command_results: dict[str, FakeResult] | None = None):
@@ -35,7 +33,6 @@ class FakeContext(Context):
     @contextmanager
     def cd(self, _path: str):
         yield
-
 
 def test_deploy_uses_core_build_task_body(monkeypatch):
     ctx = FakeContext()
@@ -53,6 +50,9 @@ def test_deploy_uses_core_build_task_body(monkeypatch):
     assert build_calls == ["build"]
     assert any("kind load docker-image mycelis/core:v0.1.0-deadbee" in command for command in ctx.commands)
     assert any("--set image.tag=v0.1.0-deadbee" in command for command in ctx.commands)
+    helm_command = next(command for command in ctx.commands if command.startswith("helm upgrade --install"))
+    assert "--set postgresql.auth.password=" not in helm_command and "--set coreAuth.apiKey=dev-key" not in helm_command
+    assert "--set-file postgresql.auth.password=" in helm_command and "--set-file coreAuth.apiKey=" in helm_command
 
 
 def test_deploy_uses_k3d_image_import_when_k3d_backend_selected(monkeypatch, capsys):

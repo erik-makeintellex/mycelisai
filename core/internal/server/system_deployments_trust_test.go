@@ -13,6 +13,7 @@ func TestHandleDeploymentTrustUnknownsDoNotExposeSecrets(t *testing.T) {
 	t.Setenv("MYCELIS_PROOF_LANE", "")
 	t.Setenv("MYCELIS_ARTIFACT_ROOT", "")
 	t.Setenv("MYCELIS_ARTIFACTS_ROOT", "")
+	t.Setenv("DATA_DIR", "")
 	t.Setenv("MYCELIS_BREAK_GLASS_API_KEY", "super-secret")
 
 	s := newTestServer()
@@ -46,6 +47,27 @@ func TestHandleDeploymentTrustUnknownsDoNotExposeSecrets(t *testing.T) {
 	}
 	if payload.Data.RuntimeHealth.Total == 0 {
 		t.Fatalf("expected runtime health services")
+	}
+}
+
+func TestHandleDeploymentTrustUsesDataDirArtifactFallback(t *testing.T) {
+	t.Setenv("MYCELIS_ARTIFACT_ROOT", "")
+	t.Setenv("MYCELIS_ARTIFACTS_ROOT", "")
+	t.Setenv("DATA_DIR", "/data/artifacts")
+
+	s := newTestServer()
+	mux := setupMux(t, "GET /api/v1/system/deployments/trust", s.HandleDeploymentTrust)
+	rr := doRequest(t, mux, http.MethodGet, "/api/v1/system/deployments/trust", "")
+
+	assertStatus(t, rr, http.StatusOK)
+	var payload struct {
+		Data DeploymentTrustSnapshot `json:"data"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.Data.ArtifactRoot != "/data/artifacts" {
+		t.Fatalf("artifact_root = %q, want /data/artifacts", payload.Data.ArtifactRoot)
 	}
 }
 

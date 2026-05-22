@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/mycelis/core/internal/artifacts"
@@ -205,10 +204,7 @@ func startMCPRuntime(ctx context.Context, sharedDB *sql.DB) (*mcp.Service, *mcp.
 }
 
 func startArtifactRuntime(ctx context.Context, sharedDB *sql.DB) *artifacts.Service {
-	dataDir := os.Getenv("DATA_DIR")
-	if dataDir == "" {
-		dataDir = "/data/artifacts"
-	}
+	dataDir := resolveArtifactRoot()
 	if err := ensureStorageLayout(resolveWorkspaceRoot(), dataDir); err != nil {
 		log.Printf("WARN: Failed to prepare storage layout: %v", err)
 	}

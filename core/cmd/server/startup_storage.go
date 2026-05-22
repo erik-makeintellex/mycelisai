@@ -15,6 +15,15 @@ func resolveWorkspaceRoot() string {
 	return workspace
 }
 
+func resolveArtifactRoot() string {
+	for _, key := range []string{"MYCELIS_ARTIFACT_ROOT", "MYCELIS_ARTIFACTS_ROOT", "DATA_DIR"} {
+		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+			return value
+		}
+	}
+	return "/data/artifacts"
+}
+
 func ensureStorageLayout(workspaceRoot, dataDir string) error {
 	dirs := []string{
 		workspaceRoot,

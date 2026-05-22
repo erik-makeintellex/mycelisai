@@ -132,7 +132,6 @@ func (s *AdminServer) handleInfer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad JSON", http.StatusBadRequest)
 		return
 	}
-
 	resp, err := s.Cognitive.Infer(req)
 	if err != nil {
 		log.Printf("Inference Failed: %v", err)
@@ -223,12 +222,16 @@ func (s *AdminServer) HandleUpdateProvider(w http.ResponseWriter, r *http.Reques
 	var req struct {
 		Endpoint  string `json:"endpoint,omitempty"`
 		ModelID   string `json:"model_id,omitempty"`
-		APIKey    string `json:"api_key,omitempty"`     // Direct key (stored in-memory only, not persisted to YAML)
+		APIKey    string `json:"api_key,omitempty"`     // Rejected; kept only for explicit legacy payload errors.
 		APIKeyEnv string `json:"api_key_env,omitempty"` // Env var name (persisted to YAML)
 		Type      string `json:"type,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Bad JSON", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(req.APIKey) != "" {
+		http.Error(w, "raw api_key values are not accepted; use api_key_env or a deployment secret reference", http.StatusBadRequest)
 		return
 	}
 
@@ -250,10 +253,6 @@ func (s *AdminServer) HandleUpdateProvider(w http.ResponseWriter, r *http.Reques
 	if req.APIKeyEnv != "" {
 		existing.AuthKeyEnv = req.APIKeyEnv
 	}
-	if req.APIKey != "" {
-		existing.AuthKey = req.APIKey
-	}
-
 	s.Cognitive.Config.Providers[providerID] = existing
 
 	// Persist to YAML (AuthKey/AuthKeyEnv are json:"-" so won't leak)

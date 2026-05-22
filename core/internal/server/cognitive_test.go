@@ -49,6 +49,42 @@ func TestCognitiveMatrix(t *testing.T) {
 	}
 }
 
+func TestHandleUpdateProvider_RejectsRawAPIKey(t *testing.T) {
+	cogOpt := withCognitive(t,
+		map[string]cognitive.ProviderConfig{
+			"production_gpt4": {Type: "openai", Endpoint: "https://api.openai.com/v1", ModelID: "gpt-4.1-nano"},
+		},
+		map[string]cognitive.LLMProvider{},
+	)
+	s := newTestServer(cogOpt)
+
+	mux := setupMux(t, "PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
+	rr := doRequest(t, mux, "PUT", "/api/v1/cognitive/providers/production_gpt4", `{"api_key":"sk-live-secret"}`)
+
+	assertStatus(t, rr, http.StatusBadRequest)
+	if got := s.Cognitive.Config.Providers["production_gpt4"].AuthKey; got != "" {
+		t.Fatalf("raw API key should not be retained, got %q", got)
+	}
+}
+
+func TestHandleUpdateProvider_AcceptsAPIKeyEnvReference(t *testing.T) {
+	cogOpt := withCognitive(t,
+		map[string]cognitive.ProviderConfig{
+			"production_gpt4": {Type: "openai", Endpoint: "https://api.openai.com/v1", ModelID: "gpt-4.1-nano"},
+		},
+		map[string]cognitive.LLMProvider{},
+	)
+	s := newTestServer(cogOpt)
+
+	mux := setupMux(t, "PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
+	rr := doRequest(t, mux, "PUT", "/api/v1/cognitive/providers/production_gpt4", `{"api_key_env":"OPENAI_API_KEY"}`)
+
+	assertStatus(t, rr, http.StatusOK)
+	if got := s.Cognitive.Config.Providers["production_gpt4"].AuthKeyEnv; got != "OPENAI_API_KEY" {
+		t.Fatalf("api_key_env = %q, want OPENAI_API_KEY", got)
+	}
+}
+
 func TestHandleCognitiveStatus_ExposesTypedMediaProviderContract(t *testing.T) {
 	mediaEnabled := true
 	mediaHealth := newLocalHTTPTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -2,9 +2,9 @@ import os
 import socket
 import subprocess
 import shutil
+import tempfile
 import time
 from pathlib import Path
-
 from invoke import task, Collection
 from .config import API_PORT, CLUSTER_NAME, NAMESPACE, is_windows, ROOT_DIR
 from .core import build as core_build
@@ -12,7 +12,6 @@ from .k8s_search import append_search_overrides, print_search_overrides, search_
 from .k8s_standards import _shell_quote, standards
 from .packaging import relative_to_root, resolve_repo_path, slugify_label, write_checksum_file, write_json
 from .version import get_version
-
 def _k8s_backend() -> str:
     requested = os.environ.get("MYCELIS_K8S_BACKEND", "auto").strip().lower()
     if requested not in {"", "auto", "k3d", "kind", "rancher"}:
@@ -33,7 +32,6 @@ def _k8s_backend() -> str:
             if result.returncode == 0 and result.stdout.strip() == "rancher-desktop":
                 return "rancher"
         raise SystemExit("No supported local Kubernetes backend found. Install k3d/kind or start Rancher Desktop.")
-
     if requested == "k3d" and not shutil.which("k3d"):
         raise SystemExit("MYCELIS_K8S_BACKEND=k3d requires k3d on PATH.")
     if requested == "kind" and not shutil.which("kind"):
@@ -41,7 +39,6 @@ def _k8s_backend() -> str:
     if requested == "rancher" and not shutil.which("kubectl"):
         raise SystemExit("MYCELIS_K8S_BACKEND=rancher requires kubectl on PATH.")
     return requested
-
 def _cluster_list_has_name(output: str, backend: str) -> bool:
     for line in output.splitlines():
         stripped = line.strip()
@@ -55,7 +52,6 @@ def _cluster_list_has_name(output: str, backend: str) -> bool:
         elif stripped == CLUSTER_NAME:
             return True
     return False
-
 def _cluster_exists(c) -> bool:
     backend = _k8s_backend()
     if backend == "rancher":
@@ -66,12 +62,9 @@ def _cluster_exists(c) -> bool:
     if not result or not result.ok:
         return False
     return _cluster_list_has_name(result.stdout, backend)
-
 def _resource_exists(c, resource: str) -> bool:
     result = c.run(f"kubectl get {resource} -n {NAMESPACE}", hide=True, warn=True)
     return bool(result and result.ok)
-
-
 def _wait_rollout(c, resource: str, timeout_seconds: int = 180, required: bool = True) -> bool:
     if not _resource_exists(c, resource):
         if required:
@@ -365,27 +358,34 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
     if values_file:
         print(f"   Helm values file: {values_file}")
 
-    cmd = (
-        "helm upgrade --install mycelis-core ./charts/mycelis-core "
-        f"--namespace {NAMESPACE} --create-namespace "
-        f"--set image.tag={tag} "
-        f"--set postgresql.auth.username={pg_user} "
-        f"--set postgresql.auth.password={pg_pass} "
-        f"--set postgresql.auth.database={pg_db} "
-        f"--set coreAuth.apiKey={_shell_quote(api_key)} "
-    )
-    if values_file:
-        cmd += f"--values {_shell_quote(values_file)} "
-    if k8s_text_endpoint:
-        cmd += f"--set-string ai.textEndpoint={_shell_quote(k8s_text_endpoint)} "
-        cmd += "--set networkPolicy.aiEgress.enabled=true "
-    if k8s_text_model_id:
-        cmd += f"--set-string ai.textModelId={_shell_quote(k8s_text_model_id)} "
-    if k8s_media_endpoint:
-        cmd += f"--set-string ai.mediaEndpoint={_shell_quote(k8s_media_endpoint)} "
-    cmd = append_search_overrides(cmd, k8s_search)
-    cmd += "--wait"
-    c.run(cmd)
+    with tempfile.TemporaryDirectory(prefix="mycelis-k8s-secrets-") as secrets_dir:
+        secrets_path = Path(secrets_dir)
+        pg_password_file = secrets_path / "postgres-password"
+        core_api_key_file = secrets_path / "core-api-key"
+        pg_password_file.write_text(pg_pass, encoding="utf-8")
+        core_api_key_file.write_text(api_key, encoding="utf-8")
+
+        cmd = (
+            "helm upgrade --install mycelis-core ./charts/mycelis-core "
+            f"--namespace {NAMESPACE} --create-namespace "
+            f"--set image.tag={tag} "
+            f"--set postgresql.auth.username={pg_user} "
+            f"--set postgresql.auth.database={pg_db} "
+            f"--set-file postgresql.auth.password={_shell_quote(pg_password_file)} "
+            f"--set-file coreAuth.apiKey={_shell_quote(core_api_key_file)} "
+        )
+        if values_file:
+            cmd += f"--values {_shell_quote(values_file)} "
+        if k8s_text_endpoint:
+            cmd += f"--set-string ai.textEndpoint={_shell_quote(k8s_text_endpoint)} "
+            cmd += "--set networkPolicy.aiEgress.enabled=true "
+        if k8s_text_model_id:
+            cmd += f"--set-string ai.textModelId={_shell_quote(k8s_text_model_id)} "
+        if k8s_media_endpoint:
+            cmd += f"--set-string ai.mediaEndpoint={_shell_quote(k8s_media_endpoint)} "
+        cmd = append_search_overrides(cmd, k8s_search)
+        cmd += "--wait"
+        c.run(cmd)
     
     # 4. Restart to ensure fresh config
     c.run(f"kubectl rollout restart deployment/mycelis-core -n {NAMESPACE}")

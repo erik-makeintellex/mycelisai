@@ -9,6 +9,7 @@ Use this page as the repo documentation map. It separates product docs, repo/ope
 - [Repo Guidance](#repo-guidance)
 - [Architecture Contracts](#architecture-contracts)
 - [Testing And Release](#testing-and-release)
+- [Agent And Maintainer Notes](#agent-and-maintainer-notes)
 - [Compatibility Boundary](#compatibility-boundary)
 
 ## User Guidance
@@ -35,8 +36,6 @@ These are the best entry points for someone using Mycelis through the product or
 These are the active authority surfaces for contributors changing or reviewing the repo:
 
 - **Repository Entry Point**: `../README.md`
-- **Repository Standards**: `../AGENTS.md`
-- **Active Development State**: `../.state/V8_DEV_STATE.md`
 - **Operations**: `./architecture/OPERATIONS.md`
 - **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
 - **API Reference**: `./API_REFERENCE.md`
@@ -61,9 +60,9 @@ The active architecture library is intentionally small. It is not a holding area
 - **V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 - **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 - **V8 Capability Manifest And Runtime Integration Standard**: `./architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md`
+- **V8 Secret Storage And Credential Boundary**: `./architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md`
 - **V8 UI Testing Agentry Product Contract**: `./architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - **V8 UI Team Full Test Set**: `./architecture-library/V8_UI_TEAM_FULL_TEST_SET.md`
-- **Source File Size And Indexing Plan**: `./architecture-library/SOURCE_FILE_SIZE_AND_INDEXING_PLAN.md`
 
 ## Testing And Release
 
@@ -75,6 +74,17 @@ Use these when the goal is verification, release proof, or workflow-complete val
 - **Governance System**: `./governance.md`
 - **Licensing & Editions**: `./licensing.md`
 
+## Agent And Maintainer Notes
+
+These files are useful for Codex, maintainers, and architecture reviewers, but they should not be treated as ordinary user-facing product docs:
+
+- **Repository Standards**: `../AGENTS.md`
+- **Active Development State**: `../.state/V8_DEV_STATE.md`
+- **Legacy V7 Development State**: `../.state/V7_DEV_STATE.md`
+- **Source File Size And Indexing Plan**: `./architecture-library/SOURCE_FILE_SIZE_AND_INDEXING_PLAN.md`
+
+Keep these out of the normal operator path unless the task is repo maintenance, architecture review, or delivery-state inspection.
+
 ## Compatibility Boundary
 
 The active documentation surface does not retain superseded V7 or older V8 topical docs as readable authority. Historical state remains only where it is needed to explain migration evidence:
@@ -83,8 +93,9 @@ The active documentation surface does not retain superseded V7 or older V8 topic
 - **Legacy V7 Development State**: `../.state/V7_DEV_STATE.md`
 
 Guidance rules:
-- user guidance should stay focused on using the product, not implementation internals
+- user guidance should stay focused on using the product, visible outputs, and recovery paths, not implementation internals
 - repo guidance should point to operating and implementation contracts, not old planning notes
 - architecture guidance should remain small, current, and directly referenced
+- agent/maintainer notes should stay out of the default in-app operator docs unless they are intentionally surfaced for architecture review
 - testing guidance should point to durable verification contracts rather than temporary execution notes
 - if a removed doc contains a still-needed requirement, promote that requirement into the nearest active contract instead of restoring the old doc

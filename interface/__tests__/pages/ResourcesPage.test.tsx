@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -54,12 +54,14 @@ vi.mock('@/components/catalogue/CataloguePage', () => ({
 }));
 
 const mockAdvancedMode = vi.fn(() => true);
+const mockToggleAdvancedMode = vi.fn();
 const mockFetchMCPServers = vi.fn();
 const mockDeleteMCPServer = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
     useCortexStore: (selector: any) =>
         selector({
             advancedMode: mockAdvancedMode(),
+            toggleAdvancedMode: mockToggleAdvancedMode,
             mcpServers: [],
             isFetchingMCPServers: false,
             fetchMCPServers: mockFetchMCPServers,
@@ -75,6 +77,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
             mockSearchParams.delete(key);
         }
         mockAdvancedMode.mockReturnValue(true);
+        mockToggleAdvancedMode.mockReset();
     });
 
     it('renders page title', async () => {
@@ -126,5 +129,12 @@ describe('Resources Page (V8.1 advanced support)', () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => { render(<ResourcesPage />); });
         expect(screen.getByText(/Advanced resources stay tucked away by default/i)).toBeDefined();
+    });
+
+    it('lets an operator open Advanced mode from the gate', async () => {
+        mockAdvancedMode.mockReturnValue(false);
+        await act(async () => { render(<ResourcesPage />); });
+        fireEvent.click(screen.getByRole('button', { name: /Open Advanced mode/i }));
+        expect(mockToggleAdvancedMode).toHaveBeenCalledOnce();
     });
 });

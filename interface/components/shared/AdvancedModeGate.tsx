@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, Eye } from "lucide-react";
+import { useCortexStore } from "@/store/useCortexStore";
 
 export default function AdvancedModeGate({
     title,
@@ -14,6 +15,8 @@ export default function AdvancedModeGate({
     returnHref?: string;
     returnLabel?: string;
 }) {
+    const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
+
     return (
         <div className="flex h-full items-center justify-center bg-cortex-bg px-6 py-10">
             <div className="max-w-xl rounded-3xl border border-cortex-border bg-cortex-surface p-6 shadow-[0_18px_40px_rgba(148,163,184,0.16)]">
@@ -26,7 +29,15 @@ export default function AdvancedModeGate({
                 <p className="mt-3 text-sm leading-7 text-cortex-text-muted">
                     Turn on Advanced mode from the left rail when you want to inspect deeper tools, system details, or configuration surfaces.
                 </p>
-                <div className="mt-5">
+                <div className="mt-5 flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={toggleAdvancedMode}
+                        className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-primary px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-cortex-primary/90"
+                    >
+                        <Eye className="h-4 w-4" />
+                        Open Advanced mode
+                    </button>
                     <Link
                         href={returnHref}
                         className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"

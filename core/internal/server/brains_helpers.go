@@ -32,6 +32,7 @@ type brainUpsertRequest struct {
 	Endpoint           string   `json:"endpoint"`
 	ModelID            string   `json:"model_id"`
 	APIKey             string   `json:"api_key"`
+	APIKeyEnv          string   `json:"api_key_env"`
 	Location           string   `json:"location"`
 	DataBoundary       string   `json:"data_boundary"`
 	UsagePolicy        string   `json:"usage_policy"`
@@ -46,7 +47,7 @@ func providerConfigFromBrainRequest(req brainUpsertRequest, applyDefaults bool) 
 		Type:               req.Type,
 		Endpoint:           req.Endpoint,
 		ModelID:            req.ModelID,
-		AuthKey:            req.APIKey,
+		AuthKeyEnv:         req.APIKeyEnv,
 		Location:           req.Location,
 		DataBoundary:       req.DataBoundary,
 		UsagePolicy:        req.UsagePolicy,

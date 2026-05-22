@@ -146,6 +146,8 @@ search:
 
 # Environment variables (Extras)
 env:
+  - name: MYCELIS_ARTIFACT_ROOT
+    value: "/data/artifacts"
   - name: DATA_DIR
     value: "/data/artifacts"
   - name: MYCELIS_WORKSPACE

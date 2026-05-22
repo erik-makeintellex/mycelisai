@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -16,11 +16,13 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockAdvancedMode = vi.fn(() => true);
+const mockToggleAdvancedMode = vi.fn();
 const mockFetchServicesStatus = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
     useCortexStore: (selector: any) =>
         selector({
             advancedMode: mockAdvancedMode(),
+            toggleAdvancedMode: mockToggleAdvancedMode,
             servicesStatus: [],
             isFetchingServicesStatus: false,
             servicesStatusUpdatedAt: null,
@@ -36,6 +38,7 @@ describe('System Page (V8.1 advanced diagnostics)', () => {
             mockSearchParams.delete(key);
         }
         mockAdvancedMode.mockReturnValue(true);
+        mockToggleAdvancedMode.mockReset();
         // Mock fetch for health checks
         vi.spyOn(global, 'fetch').mockResolvedValue({
             ok: true,
@@ -76,6 +79,13 @@ describe('System Page (V8.1 advanced diagnostics)', () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => { render(<SystemPage />); });
         expect(screen.getByText(/System diagnostics are hidden until you open Advanced mode/i)).toBeDefined();
+    });
+
+    it('lets an operator open Advanced mode from the gate', async () => {
+        mockAdvancedMode.mockReturnValue(false);
+        await act(async () => { render(<SystemPage />); });
+        fireEvent.click(screen.getByRole('button', { name: /Open Advanced mode/i }));
+        expect(mockToggleAdvancedMode).toHaveBeenCalledOnce();
     });
 
     it('shows lifecycle commands through the supported invoke contract', async () => {

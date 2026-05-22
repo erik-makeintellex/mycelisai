@@ -50,9 +50,7 @@ Task runner contract: use `uv run inv ...` for real execution; use `uvx --from i
 | Source development | `native-infra.*` + lifecycle tasks | best for implementation, not the operator deployment story |
 
 Promoted chart presets are `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, and `charts/mycelis-core/values-enterprise-windows-ai.yaml`; set `MYCELIS_K8S_VALUES_FILE` before `uv run inv k8s.deploy` or `uv run inv k8s.up`.
-
 ## Deployment Guidance By Host Architecture
-
 Windows x86_64, Linux x86_64, Linux arm64, and Mixed-architecture deployments must keep runtime, control-plane, and AI endpoint addresses explicit; use [Deployment Method Selection](user/deployment-methods.md) for lane selection.
 
 ## Configuration Reference
@@ -76,7 +74,7 @@ Common runtime variables:
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`: native PostgreSQL bootstrap user for creating/updating the app role/database
 - `NATS_URL`: Core NATS connection
 - `MYCELIS_DEV_INFRA_MODE`: `native` for Windows/source-mode PostgreSQL/NATS; `k8s` only for explicit port-forward bridge proof
-- `MYCELIS_WORKSPACE`: workspace sandbox root
+- `MYCELIS_WORKSPACE`, `MYCELIS_ARTIFACT_ROOT`: governed output root and artifact/cache root; `DATA_DIR` is still honored as a legacy artifact alias, but new runtime config should set `MYCELIS_ARTIFACT_ROOT`
 - `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
 - `MYCELIS_K8S_TEXT_MODEL_ID`: Kubernetes/Helm text model override
@@ -103,6 +101,8 @@ The deployed Core image resolves those files from `/core/config`; the Helm chart
 ## Recommended Host Paths
 
 Use separate generated dependency/runtime roots per host: Windows editing checkout for source/review/git, WSL proof checkout for release-style validation, Compose data/output under `workspace/docker-compose/...`, and repo-local tool/cache roots visible through `uv run inv cache.status`. Do not share `.venv`, `interface/node_modules`, `.next`, or generated runtime state across Windows and WSL.
+
+For native source development, set `MYCELIS_WORKSPACE=./workspace` and `MYCELIS_ARTIFACT_ROOT=./workspace/artifacts` in `.env` so operators know where generated packages, workspace files, browser outputs, and artifact downloads land. Keep legacy `DATA_DIR` aligned with `MYCELIS_ARTIFACT_ROOT`; `System -> Deployments` reports both runtime roots for proof.
 
 ## Native Source-Mode Infrastructure
 

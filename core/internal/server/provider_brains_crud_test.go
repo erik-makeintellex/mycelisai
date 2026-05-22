@@ -122,6 +122,22 @@ func TestHandleAddBrain_MissingType(t *testing.T) {
 	assertStatus(t, rr, http.StatusBadRequest)
 }
 
+func TestHandleAddBrain_RejectsRawAPIKey(t *testing.T) {
+	cogOpt := withCognitive(t,
+		map[string]cognitive.ProviderConfig{
+			"ollama": {Type: "openai_compatible", Enabled: true},
+		},
+		map[string]cognitive.LLMProvider{},
+	)
+	s := newTestServer(cogOpt)
+
+	body := `{"id": "hosted-openai", "type": "openai", "api_key": "sk-live-secret"}`
+	mux := setupMux(t, "POST /api/v1/brains", s.HandleAddBrain)
+	rr := doRequest(t, mux, "POST", "/api/v1/brains", body)
+
+	assertStatus(t, rr, http.StatusBadRequest)
+}
+
 func TestHandleAddBrain_DuplicateID(t *testing.T) {
 	cogOpt := withCognitive(t,
 		map[string]cognitive.ProviderConfig{
@@ -220,6 +236,21 @@ func TestHandleUpdateBrain_BadJSON(t *testing.T) {
 
 	mux := setupMux(t, "PUT /api/v1/brains/{id}", s.HandleUpdateBrain)
 	rr := doRequest(t, mux, "PUT", "/api/v1/brains/ollama", "not-json")
+
+	assertStatus(t, rr, http.StatusBadRequest)
+}
+
+func TestHandleUpdateBrain_RejectsRawAPIKey(t *testing.T) {
+	cogOpt := withCognitive(t,
+		map[string]cognitive.ProviderConfig{
+			"ollama": {Type: "openai_compatible", Enabled: true},
+		},
+		map[string]cognitive.LLMProvider{},
+	)
+	s := newTestServer(cogOpt)
+
+	mux := setupMux(t, "PUT /api/v1/brains/{id}", s.HandleUpdateBrain)
+	rr := doRequest(t, mux, "PUT", "/api/v1/brains/ollama", `{"type":"openai_compatible","api_key":"live-secret"}`)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }

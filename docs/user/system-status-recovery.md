@@ -71,6 +71,12 @@ External Comms is optional in the self-hosted runtime. If the Comms gateway is o
 
 The Deployments tab shows the deployment trust snapshot from `/api/v1/system/deployments/trust`: deployment root, execution root, workspace root, artifact root, current commit, image tag, chart version, deployment lane, endpoint posture, runtime health, proof lane, and recovery posture. Rows are copyable for support/debug threads. Missing values are shown as `unknown` instead of guessed, and secret material is not exposed.
 
+Use the root rows to find generated data:
+- `workspace_root` is `MYCELIS_WORKSPACE`, where generated files, project packages, browser games, and filesystem MCP writes land
+- `artifact_root` is `MYCELIS_ARTIFACT_ROOT`; `DATA_DIR` is honored as a legacy fallback for artifact/cache storage
+
+If these paths do not match the host folder you expect, update `.env` for native source mode or the Compose/Helm output block before asking Soma to produce more retained files.
+
 ---
 
 ## Recommended Recovery Sequence

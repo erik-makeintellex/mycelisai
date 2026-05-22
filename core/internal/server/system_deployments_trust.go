@@ -53,7 +53,7 @@ func (s *AdminServer) HandleDeploymentTrust(w http.ResponseWriter, r *http.Reque
 		DeploymentRoot:  valueOrUnknown(envFirst("MYCELIS_DEPLOYMENT_ROOT"), repoRoot),
 		ExecutionRoot:   valueOrUnknown(mustGetwd()),
 		WorkspaceRoot:   valueOrUnknown(envFirst("MYCELIS_BACKEND_WORKSPACE_ROOT", "MYCELIS_WORKSPACE")),
-		ArtifactRoot:    valueOrUnknown(envFirst("MYCELIS_ARTIFACT_ROOT", "MYCELIS_ARTIFACTS_ROOT")),
+		ArtifactRoot:    valueOrUnknown(envFirst("MYCELIS_ARTIFACT_ROOT", "MYCELIS_ARTIFACTS_ROOT", "DATA_DIR")),
 		CurrentCommit:   valueOrUnknown(envFirst("MYCELIS_CURRENT_COMMIT", "GIT_COMMIT", "SOURCE_COMMIT"), readGitCommit(repoRoot)),
 		ImageTag:        valueOrUnknown(envFirst("MYCELIS_IMAGE_TAG", "IMAGE_TAG")),
 		ChartVersion:    valueOrUnknown(envFirst("MYCELIS_CHART_VERSION"), readChartVersion(repoRoot)),

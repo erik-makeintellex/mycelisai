@@ -22,6 +22,26 @@ func TestResolveWorkspaceRootDefault(t *testing.T) {
 	}
 }
 
+func TestResolveArtifactRootPrefersCanonicalEnv(t *testing.T) {
+	t.Setenv("MYCELIS_ARTIFACT_ROOT", "/data/artifacts")
+	t.Setenv("MYCELIS_ARTIFACTS_ROOT", "/legacy/artifacts")
+	t.Setenv("DATA_DIR", "/legacy/data")
+
+	if got := resolveArtifactRoot(); got != "/data/artifacts" {
+		t.Fatalf("resolveArtifactRoot() = %q, want /data/artifacts", got)
+	}
+}
+
+func TestResolveArtifactRootUsesLegacyDataDir(t *testing.T) {
+	t.Setenv("MYCELIS_ARTIFACT_ROOT", "")
+	t.Setenv("MYCELIS_ARTIFACTS_ROOT", "")
+	t.Setenv("DATA_DIR", "/legacy/data")
+
+	if got := resolveArtifactRoot(); got != "/legacy/data" {
+		t.Fatalf("resolveArtifactRoot() = %q, want /legacy/data", got)
+	}
+}
+
 func TestEnsureStorageLayoutCreatesWorkspaceAndArtifacts(t *testing.T) {
 	root := t.TempDir()
 	workspaceRoot := filepath.Join(root, "workspace")

@@ -161,6 +161,20 @@ The browser starts at the MCP-safe `workspace` root rather than the Core
 process working directory, so ordinary browse/read/write actions stay inside
 the configured mounted data boundary.
 
+Output locations:
+- generated files, project packages, browser games, and filesystem MCP writes land under `MYCELIS_WORKSPACE`
+- file-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`
+- `DATA_DIR` remains a legacy alias for artifact storage and should match `MYCELIS_ARTIFACT_ROOT` until older paths are removed
+
+For local source development, the default readable shape is:
+
+```text
+MYCELIS_WORKSPACE=./workspace
+MYCELIS_ARTIFACT_ROOT=./workspace/artifacts
+```
+
+Use `System -> Deployments` to confirm the runtime is reporting the same workspace root and artifact root that you expect on disk.
+
 Supported operator actions:
 - browse directories (`list_directory`)
 - read files (`read_text_file`)

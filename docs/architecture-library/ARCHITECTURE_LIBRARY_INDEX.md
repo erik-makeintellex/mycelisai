@@ -34,6 +34,7 @@ The active architecture library keeps only documents that are directly used for 
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | bootstrap bundles, templates, inheritance, precedence, startup truth |
 | [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) | operator terminology, response states, screen/API expectations, advanced boundary |
 | [V8 Capability Manifest And Runtime Integration Standard](V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md) | governed capabilities, MCP/custom tools, output normalization, permission and recovery posture |
+| [V8 Secret Storage And Credential Boundary](V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md) | secret references, runtime resolution, UI exposure, audit/proof, rotation |
 | [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) | browser-visible product proof standard |
 | [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) | full GUI validation contract and verdict format |
 | [Source File Size And Indexing Plan](SOURCE_FILE_SIZE_AND_INDEXING_PLAN.md) | repo-size hygiene and decomposition rules |

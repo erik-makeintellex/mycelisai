@@ -148,6 +148,10 @@ func (s *AdminServer) HandleAddBrain(w http.ResponseWriter, r *http.Request) {
 		respondError(w, "type is required", http.StatusBadRequest)
 		return
 	}
+	if req.APIKey != "" {
+		respondError(w, "raw api_key values are not accepted; use api_key_env or a deployment secret reference", http.StatusBadRequest)
+		return
+	}
 	if _, exists := s.Cognitive.Config.Providers[req.ID]; exists {
 		respondError(w, "provider id already exists", http.StatusConflict)
 		return
@@ -183,6 +187,10 @@ func (s *AdminServer) HandleUpdateBrain(w http.ResponseWriter, r *http.Request) 
 	var req brainUpsertRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, "Bad JSON", http.StatusBadRequest)
+		return
+	}
+	if req.APIKey != "" {
+		respondError(w, "raw api_key values are not accepted; use api_key_env or a deployment secret reference", http.StatusBadRequest)
 		return
 	}
 

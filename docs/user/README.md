@@ -22,6 +22,8 @@ For most user testing and daily operation, start with Soma:
 
 The normal product path is not "configure every backend component first." It is "tell Soma the goal, review the proposed execution shape, and inspect outputs."
 
+Generated project packages, browser games, workspace files, and filesystem MCP writes land under the configured `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`. Open **System -> Deployments** in Advanced mode when you need to confirm the exact runtime paths before or after execution.
+
 Concrete requests Soma should understand when the matching capability is configured:
 
 - "Search the web for the latest changes in self-hosted AI agent products, summarize the findings, and cite sources."

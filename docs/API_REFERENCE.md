@@ -31,7 +31,7 @@ Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity
 | `/api/v1/cognitive/matrix` | GET | Alias for cognitive config (matrix view) |
 | `/api/v1/cognitive/status` | GET | Live health probe of text (vLLM/Ollama) + media (Diffusers) engines |
 | `/api/v1/cognitive/profiles` | PUT | Update profile→provider routing (persists to cognitive.yaml) |
-| `/api/v1/cognitive/providers/{id}` | PUT | Configure provider (endpoint, model_id, api_key, api_key_env) |
+| `/api/v1/cognitive/providers/{id}` | PUT | Configure provider (endpoint, model_id, api_key_env). Raw `api_key` values are rejected; use env/secret references. |
 | **Intent & Missions** | | |
 | `/api/v1/intent/negotiate` | POST | Blueprint generation from natural language intent |
 | `/api/v1/intent/commit` | POST | Instantiate mission from blueprint |
@@ -149,8 +149,8 @@ Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity
 | `/healthz` | GET | Health check |
 | **Brains (Provider CRUD)** | | |
 | `/api/v1/brains` | GET | List all providers with health status, location, data boundary |
-| `/api/v1/brains` | POST | Add a new provider — hot-injects into running router, immediate probe |
-| `/api/v1/brains/{id}` | PUT | Update provider config — empty api_key keeps existing |
+| `/api/v1/brains` | POST | Add a new provider using env/secret references — hot-injects into running router, immediate probe. Raw `api_key` values are rejected. |
+| `/api/v1/brains/{id}` | PUT | Update provider config using env/secret references. Raw `api_key` values are rejected. |
 | `/api/v1/brains/{id}` | DELETE | Remove provider — rejected if last remaining |
 | `/api/v1/brains/{id}/toggle` | PUT | Enable/disable provider — persists to cognitive.yaml |
 | `/api/v1/brains/{id}/policy` | PUT | Update usage_policy + roles_allowed — persists to cognitive.yaml |
@@ -168,7 +168,7 @@ Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity
 | **Service Health** | | |
 | `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive, Reactive, Scheduler, Comms, Group Bus monitor |
 | `/api/v1/system/quick-checks/{id}` | GET | Focused system quick check; currently supports `scheduler` for Automation timing |
-| `/api/v1/system/deployments/trust` | GET | Deployment trust snapshot for System -> Deployments: deployment/execution/workspace/artifact roots, current commit, image tag, chart version, deployment/proof lanes, endpoint and recovery posture, and runtime health summary. Unknown or unavailable values are returned as `unknown`; secrets are never exposed. |
+| `/api/v1/system/deployments/trust` | GET | Deployment trust snapshot for System -> Deployments: deployment/execution/workspace/artifact roots, current commit, image tag, chart version, deployment/proof lanes, endpoint and recovery posture, and runtime health summary. `workspace_root` reports `MYCELIS_BACKEND_WORKSPACE_ROOT` or `MYCELIS_WORKSPACE`; `artifact_root` reports `MYCELIS_ARTIFACT_ROOT`, `MYCELIS_ARTIFACTS_ROOT`, or legacy `DATA_DIR`. Unknown or unavailable values are returned as `unknown`; secrets are never exposed. |
 
 Memory/governance note:
 - `AGENT_MEMORY` is the canonical team-shared execution lane
@@ -228,12 +228,14 @@ Provider inventory and auth contract:
 
 | Provider type | Typical provider IDs | Auth expectation | Config contract |
 | :--- | :--- | :--- | :--- |
-| `openai_compatible` | `ollama`, `vllm`, `lmstudio`, custom local gateways | `Authorization: Bearer <api_key>` when the upstream checks keys. Local tools such as Ollama can ignore the placeholder key while still requiring the client field. | `endpoint`, `model_id`, optional `api_key` or `api_key_env` |
+| `openai_compatible` | `ollama`, `vllm`, `lmstudio`, custom local gateways | `Authorization: Bearer <resolved secret>` when the upstream checks keys. Local tools such as Ollama can ignore the placeholder key while still requiring the client field. | `endpoint`, `model_id`, optional `api_key_env`; future `secret_ref` |
 | `openai` | `production_gpt4` | `Authorization: Bearer $OPENAI_API_KEY` | `endpoint=https://api.openai.com/v1`, `api_key_env=OPENAI_API_KEY` |
 | `anthropic` | `production_claude` | `x-api-key: $ANTHROPIC_API_KEY` plus `anthropic-version` | `api_key_env=ANTHROPIC_API_KEY`, optional custom endpoint |
 | `google` | `production_gemini` | `x-goog-api-key: $GEMINI_API_KEY` | `api_key_env=GEMINI_API_KEY`, endpoint defaults to the Gemini `models` REST root |
 
 Implementation notes:
 - use `/api/v1/brains` and `/api/v1/cognitive/providers/{id}` to manage the provider inventory exposed in the product
-- provider secrets are write-only in API payloads; `api_key` and `api_key_env` never come back in provider reads
+- provider secrets resolve through env/secret references; raw `api_key` update payloads are rejected by provider-management APIs
+- provider reads never return raw secret values; safe configuration responses may expose configured/readiness posture only
+- the canonical secret boundary is [V8 Secret Storage And Credential Boundary](architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md)
 - for local-model switching and profile routing, see [Local Dev Workflow](LOCAL_DEV_WORKFLOW.md) and [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md)

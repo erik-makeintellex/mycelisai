@@ -8,7 +8,7 @@ Canonical ownership:
 - `README.md`: inception, navigation, and repo-wide working rules
 - `architecture/v8-2.md`, `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`, and `docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`: active V8.2/B2+ production target plus embodiment rule, exact first demo slice, runtime object schemas, degradation posture, and product-category framing
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` and `docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`: operator UX, screen/API truth, and directed-execution alignment
-- `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md`: capability manifest, run/output, MCP/custom integration, and proof truth
+- `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md` and `docs/architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md`: capability, MCP/custom integration, proof, secret-reference, UI exposure, and rotation truth
 - `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`: V7-to-V8 bootstrap migration truth
 - `.state/V8_DEV_STATE.md`: live implementation scoreboard; read the active snapshot and immediate next actions before dated historical boards
 ## README TOC
@@ -214,7 +214,7 @@ every implementation slice must include a docs review for the touched surface, e
 
 Go owns runtime, orchestration, API, NATS, and backend persistence-facing logic. TypeScript owns the interface and in-app docs browser. Python owns repo management, operator automation, CI orchestration, and local test harnesses. SQL owns migrations, and `db.migrate` compatibility gates include the V8.2 capability, proof, and team-work tables. PowerShell may only be a thin host wrapper when the platform requires it.
 
-Keep secrets in `.env`. Use `.env.compose` for Compose topology and non-secret runtime shape.
+Keep secrets in `.env` or deployment secret backends. Use `.env.compose` for Compose topology and non-secret runtime shape. Runtime config and UI surfaces should carry env-var or `SecretRef` references, not raw secret values; see [V8 Secret Storage And Credential Boundary](docs/architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md).
 
 Env override contract: `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*` are supported deployment-time knobs. The retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` must not return. `Bundle -> Instantiated Organization -> Inheritance -> Routing` remains the runtime truth. env overrides are deployment-time infrastructure wiring, not runtime organization behavior and do not replace bundle-defined runtime organization truth.
 
@@ -228,7 +228,7 @@ AI endpoint contract: use a reachable host/IP like `http://192.168.x.x:11434/v1`
 
 Kubernetes values contract: prefer Rancher Desktop K3s on Windows and `k3d` on WSL/Linux as the local Kubernetes backends; prefer `k3d` as the local Kubernetes backend when it is available on WSL/Linux; set `MYCELIS_K8S_BACKEND=kind` only as fallback. `MYCELIS_K8S_VALUES_FILE` may select `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`.
 
-Runtime packaging contract: the supported Core container image includes Node/npm/npx for curated stdio MCP servers, and manual `filesystem` library install must be able to launch and bind to the configured `/data/workspace` output block.
+Runtime packaging contract: the supported Core container image includes Node/npm/npx for curated stdio MCP servers, and manual `filesystem` library install must be able to launch and bind to the configured output block. `MYCELIS_WORKSPACE` is the governed workspace for generated files, project packages, browser games, and filesystem MCP writes. `MYCELIS_ARTIFACT_ROOT` is the file-backed artifact/cache root; `DATA_DIR` is a legacy alias that should stay aligned until removed. Compose maps these to `/data/workspace` and `/data/artifacts`, and System -> Deployments reports both roots for operator proof.
 
 Release proof contract: start with local source gates (`core.test`, `interface.test`, `interface.typecheck`, `interface.build`, focused Playwright) against native PostgreSQL/NATS when live data or bus proof is required. Only after those pass, containerize Core/Interface for Compose/K8s proof. Use `uv run inv ci.release-preflight --lane=release` for the full local release gate, guarded WSL tasks when WSL Compose deployment-mimic proof matters, and Rancher Desktop K3s with `MYCELIS_K8S_BACKEND=rancher` when the release slice needs local Kubernetes parity proof. Hosted release jobs remain manual; `Full Release Candidate` chains source gates, authenticated browser proof, optional hosted source API proof, Helm packaging, optional images, and binary packaging.
 

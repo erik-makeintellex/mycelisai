@@ -260,7 +260,7 @@ the compose Core image includes Node/npm/npx so manual curated stdio MCP install
 
 ### Persistent Storage Contract
 
-PostgreSQL plus pgvector owns durable memory/context. Output block storage is configured by `MYCELIS_OUTPUT_BLOCK_MODE` and `MYCELIS_OUTPUT_HOST_PATH` for local-hosted Compose, or PVC-backed cluster storage for Kubernetes. Native Core live-browser proof infers the host-visible workspace as `core/workspace` from `MYCELIS_WORKSPACE=./workspace`; K8s live-browser proof that checks backend-written files should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` so the assertion targets the Core pod workspace/PVC rather than host-only paths.
+PostgreSQL plus pgvector owns durable memory/context. Generated files, browser game packages, filesystem MCP writes, and retained project outputs land under `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`; `DATA_DIR` remains a legacy fallback and should stay aligned with `MYCELIS_ARTIFACT_ROOT` until it is removed. Compose maps those paths into `/data/workspace` and `/data/artifacts`; Kubernetes uses the chart output block/PVC mounted at `/data`. Native Core live-browser proof infers the host-visible workspace as `core/workspace` from `MYCELIS_WORKSPACE=./workspace`; K8s live-browser proof that checks backend-written files should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` so the assertion targets the Core pod workspace/PVC rather than host-only paths.
 
 ### Startup Sequence
 
