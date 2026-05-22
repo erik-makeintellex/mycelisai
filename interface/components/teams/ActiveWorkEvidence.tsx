@@ -6,7 +6,10 @@ import type { TeamWorkItem } from "@/store/useCortexStore";
 
 export function ActiveWorkEvidence({ item }: { item: TeamWorkItem }) {
   const outputRefs = item.outputRefs ?? [];
-  const proofRefs = item.proofRefs ?? [];
+  const proofRefs = uniqueRefs([
+    ...(item.proofRefs ?? []),
+    ...outputRefs.flatMap((output) => [output.proof_ref, output.proof_id]),
+  ]);
   const auditRefs = item.auditRefs ?? [];
   const hiddenRefs = Math.max(outputRefs.length - 3, 0) + Math.max(proofRefs.length - 3, 0) + Math.max(auditRefs.length - 2, 0);
   if (!item.runId && outputRefs.length === 0 && proofRefs.length === 0 && auditRefs.length === 0) {
@@ -28,8 +31,8 @@ export function ActiveWorkEvidence({ item }: { item: TeamWorkItem }) {
         <EvidenceLink
           key={output.output_id}
           label={output.label || "Output"}
-          href={outputURL(output.storage_ref)}
-          muted={!output.storage_ref}
+          href={outputURL(output)}
+          muted={!outputURL(output)}
         />
       ))}
       {proofRefs.slice(0, 3).map((proof) => (
@@ -84,8 +87,8 @@ function EvidenceLink({
   );
 }
 
-function outputURL(storageRef?: string | null): string | null {
-  const value = storageRef?.trim();
+function outputURL(output: { storage_ref?: string | null; entrypoint?: string | null }): string | null {
+  const value = outputPath(output);
   if (!value) return null;
   if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/")) {
     return value;
@@ -94,6 +97,27 @@ function outputURL(storageRef?: string | null): string | null {
     return `/api/v1/workspace/files/view?path=${encodeURIComponent(value)}`;
   }
   return null;
+}
+
+function outputPath(output: { storage_ref?: string | null; entrypoint?: string | null }) {
+  const storageRef = output.storage_ref?.trim() ?? "";
+  const entrypoint = output.entrypoint?.trim() ?? "";
+  if (!entrypoint) return storageRef;
+  if (entrypoint.startsWith("http://") || entrypoint.startsWith("https://") || entrypoint.startsWith("/")) {
+    return entrypoint;
+  }
+  if (!storageRef) return entrypoint;
+  if (looksLikeFile(storageRef)) return storageRef;
+  return `${storageRef.replace(/[\\/]+$/, "")}/${entrypoint}`;
+}
+
+function looksLikeFile(value: string) {
+  const lastSegment = value.split(/[\\/]/).filter(Boolean).at(-1) ?? "";
+  return /\.[A-Za-z0-9]+$/.test(lastSegment);
+}
+
+function uniqueRefs(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.map((value) => value?.trim() ?? "").filter(Boolean)));
 }
 
 function compactID(value: string) {

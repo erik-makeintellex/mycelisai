@@ -23,9 +23,12 @@ Suggested focused browser proof after local source changes:
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/homepage.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/mcp-connected-tools.spec.ts
 uv run inv interface.e2e --headed --project=chromium --workers=1 --spec=e2e/specs/desktop-mobile-compression.spec.ts
-uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/active-work-api.spec.ts
+$env:PLAYWRIGHT_ACTIVE_WORK_API_LIVE='1'; uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/active-work-api.spec.ts
 ```
 
 Use `active-work-ask-live.spec.ts` instead of the broader API proof when the
 question is specifically whether a responsive local runtime team can return a
-readable `output_ready` reply through the GUI.
+readable `output_ready` reply through the GUI. Set
+`PLAYWRIGHT_TEAM_WORK_GUI_LIVE=1` and the target team id before that stricter
+proof, and record skipped live gates as environment skips rather than accepted
+new-user delivery proof.

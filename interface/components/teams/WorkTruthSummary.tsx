@@ -9,7 +9,13 @@ export function WorkTruthSummary({ item }: { item: TeamWorkItem }) {
   const packageCount = outputRefs.filter(
     (output) => output.kind === "project_package" || Boolean(output.entrypoint),
   ).length;
-  const proofCount = (item.proofRefs ?? []).length + (item.runId ? 1 : 0);
+  const outputProofRefs = outputRefs.flatMap((output) => [
+    output.proof_ref,
+    output.proof_id,
+  ]).filter(Boolean);
+  const proofCount =
+    new Set([...(item.proofRefs ?? []), ...outputProofRefs]).size +
+    (item.runId ? 1 : 0);
   const recoverAction = item.interactions.find(
     (action) => action.action === "recover",
   );

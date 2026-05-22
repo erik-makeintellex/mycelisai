@@ -91,9 +91,9 @@ Minimum route families under active proof:
 - `/runs`, `/runs/[id]`, `/runs/[id]/chain`
 - legacy redirect routes
 
-Current local-source GUI certification posture from 2026-05-18:
-- Green headed live proof now includes Soma governance, Resources Workspace Files, Connected Tools, Settings, Accessibility baseline, and the prior homepage/navigation/layout/package/team/groups/system/mobile/compression matrix. Dense-panel proof uses `clickVisibleControl` in `interface/e2e/support/click-visible-control.ts`, Settings/Auth follows the Advanced Settings -> Auth Providers and Resources -> Connected Tools contract, and the accessibility baseline keeps critical checks active while `color-contrast` remains split out after axe timeouts in headed Chromium.
-
+Current local-source GUI certification posture:
+- Green focused proof includes signed-in `/login` -> `/dashboard` entry, Soma governance, Resources Workspace Files, Connected Tools, Settings, Accessibility baseline, homepage/navigation/layout/package/team/groups/system/mobile/compression, and the new-user acceptance surfaces in [V8 New-User Acceptance Matrix](architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md). Dense-panel proof uses `clickVisibleControl` in `interface/e2e/support/click-visible-control.ts`, Settings/Auth follows the Advanced Settings -> Auth Providers and Resources -> Connected Tools contract, and the accessibility baseline keeps critical checks active while `color-contrast` remains split out after axe timeouts in headed Chromium.
+- New-user delivery proof is not accepted from unit/type/build evidence alone. After local source services are intentionally up, run the focused headed GUI matrix for login/dashboard orientation, MCP/Resources, Active Work, output/proof/recovery, and desktop/mobile compression; record any skipped live-backend gates as blockers or explicit environment skips in `.state/V8_DEV_STATE.md`.
 ## Backend/API -> UI Target Plan
 When backend/API behavior changes, attach this block before review:
 

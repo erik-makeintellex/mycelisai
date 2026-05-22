@@ -93,6 +93,75 @@ describe("ActiveWorkLane", () => {
     expect(screen.getByText("Proof available")).toBeDefined();
   });
 
+  it("opens retained project-package entrypoints and proof carried on output refs", () => {
+    render(
+      <ActiveWorkLane
+        items={[
+          {
+            ...baseItem,
+            outputRefs: [
+              {
+                output_id: "out-package",
+                team_id: "team-alpha",
+                work_item_id: "work-1",
+                kind: "project_package",
+                label: "Playable package",
+                storage_ref: "workspace/generated/playable",
+                entrypoint: "index.html",
+                proof_id: "proof-package-1",
+              },
+            ],
+            interactions: [],
+          },
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: /Playable package/i }).getAttribute("href"),
+    ).toBe(
+      "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fplayable%2Findex.html",
+    );
+    expect(screen.getByText("1 package retained")).toBeDefined();
+    expect(screen.getByText("Proof available")).toBeDefined();
+    expect(screen.getByText("Proof proof-pa...")).toBeDefined();
+  });
+
+  it("joins retained package folders with relative nested entrypoints", () => {
+    render(
+      <ActiveWorkLane
+        items={[
+          {
+            ...baseItem,
+            outputRefs: [
+              {
+                output_id: "out-nested-package",
+                team_id: "team-alpha",
+                work_item_id: "work-1",
+                kind: "project_package",
+                label: "Nested playable package",
+                storage_ref: "workspace/generated/nested",
+                entrypoint: "dist/index.html",
+                proof_ref: "proof-nested-1",
+              },
+            ],
+            interactions: [],
+          },
+        ]}
+      />,
+    );
+
+    expect(
+      screen
+        .getByRole("link", { name: /Nested playable package/i })
+        .getAttribute("href"),
+    ).toBe(
+      "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fnested%2Fdist%2Findex.html",
+    );
+    expect(screen.getByText("Proof available")).toBeDefined();
+    expect(screen.getByText("Proof proof-ne...")).toBeDefined();
+  });
+
   it("summarizes degraded work with recovery and proof gaps", () => {
     render(
       <ActiveWorkLane

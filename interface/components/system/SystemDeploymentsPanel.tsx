@@ -44,6 +44,27 @@ const TRUST_ROWS: Array<{ key: keyof DeploymentTrustSnapshot; label: string }> =
     { key: "recovery_posture", label: "Recovery Posture" },
 ];
 
+const STORAGE_ROOTS: Array<{ key: keyof DeploymentTrustSnapshot; label: string; env: string; detail: string }> = [
+    {
+        key: "workspace_root",
+        label: "Workspace files",
+        env: "MYCELIS_WORKSPACE",
+        detail: "Generated project packages, browser games, and filesystem MCP writes land here.",
+    },
+    {
+        key: "artifact_root",
+        label: "Artifacts and media",
+        env: "MYCELIS_ARTIFACT_ROOT",
+        detail: "Retained artifacts, generated media, and cache-backed outputs use this root.",
+    },
+    {
+        key: "deployment_root",
+        label: "Compose/Helm output block",
+        env: "MYCELIS_OUTPUT_HOST_PATH",
+        detail: "Set this for the host-mounted output block in packaged runtimes when applicable.",
+    },
+];
+
 function statusClass(status: string): string {
     if (status === "online") return "text-cortex-success border-cortex-success/30 bg-cortex-success/10";
     if (status === "degraded") return "text-cortex-warning border-cortex-warning/30 bg-cortex-warning/10";
@@ -145,6 +166,37 @@ export default function SystemDeploymentsPanel() {
                         <p className="text-xs font-mono">
                             {health ? `${health.online}/${health.total} online, ${health.degraded} degraded, ${health.offline} offline` : "unknown"}
                         </p>
+                    </div>
+
+                    <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                        <div className="flex flex-col gap-1">
+                            <p className="text-[10px] uppercase font-mono text-cortex-text-muted">Output root configuration</p>
+                            <p className="text-xs text-cortex-text-muted">
+                                These are the operator-visible roots to check before Add MCP, Workspace Files, or retained output proof.
+                            </p>
+                        </div>
+                        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                            {STORAGE_ROOTS.map(({ key, label, env, detail }) => {
+                                const raw = snapshot[key];
+                                const value = typeof raw === "string" ? raw : "unknown";
+                                const muted = value === "unknown" || value === "unavailable";
+                                return (
+                                    <div key={key} className="rounded-lg border border-cortex-border bg-cortex-bg px-3 py-3">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-semibold text-cortex-text-main">{label}</p>
+                                                <p className="mt-1 text-[10px] font-mono text-cortex-primary">{env}</p>
+                                            </div>
+                                            <CopyButton value={value} id={String(key)} />
+                                        </div>
+                                        <code className={`mt-2 block truncate text-[11px] font-mono ${muted ? "text-cortex-text-muted" : "text-cortex-text-main"}`}>
+                                            {value}
+                                        </code>
+                                        <p className="mt-2 text-[11px] leading-5 text-cortex-text-muted">{detail}</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     <div className="rounded-xl border border-cortex-border bg-cortex-surface overflow-hidden">

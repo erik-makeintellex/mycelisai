@@ -108,8 +108,8 @@ test.describe("System -> Deployments focused proof", () => {
     await expect(page.getByRole("heading", { name: "System", exact: true })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole("button", { name: "Deployments" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Deployment Trust" })).toBeVisible();
-    await expect(page.getByText("kubernetes/rancher-local")).toBeVisible();
-    await expect(page.getByText("core/workspace", { exact: true })).toBeVisible();
+    await expect(page.getByText("kubernetes/rancher-local").first()).toBeVisible();
+    await expect(page.getByText("core/workspace", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("abcdef1234567890")).toBeVisible();
     await expect(page.getByText("interface-proxy-to-core-8081")).toBeVisible();
     await expect(page.getByText("headed-chromium-live-backend")).toBeVisible();
