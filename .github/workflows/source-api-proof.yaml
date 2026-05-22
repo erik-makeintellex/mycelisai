@@ -38,6 +38,7 @@ concurrency:
 
 env:
   CI: "true"
+  UV_HTTP_TIMEOUT: "120"
   NEXT_TELEMETRY_DISABLED: "1"
   MYCELIS_API_KEY: "ci-local-only"
   MYCELIS_BREAK_GLASS_API_KEY: "ci-break-glass-only"

@@ -273,7 +273,7 @@ uv run inv compose.storage-health
 ```
 
 ## CI Pipelines
-GitHub Actions remain manual-only through `workflow_dispatch` and are hosted corroboration after local source proof, not the first place to find ordinary development failures. Manual hosted lanes: `CI` has selectable repo/core/interface/browser/Helm lanes plus `browser_spec`; `Source API Proof` runs hosted pgvector PostgreSQL/NATS against `api.delivery-proof`; `Full Release Candidate` chains source gates, authenticated browser proof, optional source API proof, Helm packaging, optional images, and binaries; `Dev Build`, `Release Packaging`, and `Release Core Binaries` remain narrower explicit lanes. Hosted workflow maintenance uses Node 24-capable action majors, Node.js 24 for Interface lanes, checksum-verified pinned Helm 3 instead of `azure/setup-helm@v4`, and self-hosted runners new enough for Node 24 actions.
+GitHub Actions remain manual-only through `workflow_dispatch` and are hosted corroboration after local source proof, not the first place to find ordinary development failures. Manual hosted lanes: `CI` has selectable repo/core/interface/browser/Helm lanes plus `browser_spec`; `Source API Proof` runs hosted pgvector PostgreSQL/NATS against `api.delivery-proof`; `Full Release Candidate` chains source gates, authenticated browser proof, optional source API proof, Helm packaging, optional images, and binaries; `Dev Build`, `Release Packaging`, and `Release Core Binaries` remain narrower explicit lanes. Hosted workflow maintenance uses Node 24-capable action majors, Node.js 24 for Interface lanes/container builds, checksum-verified pinned Helm 3 instead of `azure/setup-helm@v4`, and self-hosted runners new enough for Node 24 actions.
 
 Primary local gates:
 - `uv run inv ci.test`

@@ -223,6 +223,8 @@ def test_release_workflow_verifies_enterprise_packaging_before_optional_image_pu
     assert "values-enterprise-windows-ai.yaml" in workflow
     assert "actions/upload-artifact@v7" in workflow
     assert "docker/build-push-action@v7" in workflow
+    assert "context: ." in workflow
+    assert "file: interface/Dockerfile" in workflow
     assert "if: inputs.publish_images == true" in workflow
 
 

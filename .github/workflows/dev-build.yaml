@@ -63,8 +63,8 @@ jobs:
       - name: Build Interface Image
         uses: docker/build-push-action@v7
         with:
-          context: ./interface
-          file: ./interface/Dockerfile
+          context: .
+          file: interface/Dockerfile
           push: ${{ inputs.push_images }}
           tags: ${{ env.REGISTRY }}/mycelis/interface:${{ inputs.image_tag }}
           labels: ${{ steps.meta.outputs.labels }}

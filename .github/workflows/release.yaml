@@ -42,6 +42,7 @@ env:
   HELM_VERSION: "v3.20.2"
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  UV_HTTP_TIMEOUT: "120"
 
 concurrency:
   group: release-packaging-${{ github.ref }}-${{ inputs.release_label || github.run_number }}
@@ -160,8 +161,8 @@ jobs:
       - name: Build and push Interface
         uses: docker/build-push-action@v7
         with:
-          context: ./interface
-          file: ./interface/Dockerfile
+          context: .
+          file: interface/Dockerfile
           push: true
           tags: ${{ env.REGISTRY }}/mycelis/interface:${{ needs.verify-enterprise-packaging.outputs.release_label }}
           labels: ${{ steps.meta.outputs.labels }}

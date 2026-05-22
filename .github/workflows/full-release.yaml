@@ -55,6 +55,7 @@ concurrency:
 env:
   CI: "true"
   HELM_VERSION: "v3.20.2"
+  UV_HTTP_TIMEOUT: "120"
   NEXT_TELEMETRY_DISABLED: "1"
   MYCELIS_API_KEY: "ci-local-only"
   MYCELIS_WEB_SESSION_SECRET: "ci-web-session-only"

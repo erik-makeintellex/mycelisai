@@ -47,6 +47,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      UV_HTTP_TIMEOUT: "120"
     strategy:
       fail-fast: false
       matrix:
