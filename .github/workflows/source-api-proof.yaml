@@ -82,27 +82,27 @@ jobs:
           - 4222:4222
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set Up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
 
       - name: Set Up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: core/go.mod
           cache-dependency-path: core/go.sum
 
       - name: Set Up Node.js
         if: ${{ inputs.run_active_work_api_spec == true }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: interface/package-lock.json
 
@@ -180,7 +180,7 @@ jobs:
 
       - name: Upload Source Proof Logs On Failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: source-api-proof-logs
           path: |

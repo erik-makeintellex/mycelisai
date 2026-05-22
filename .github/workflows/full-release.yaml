@@ -54,6 +54,7 @@ concurrency:
 
 env:
   CI: "true"
+  HELM_VERSION: "v3.20.2"
   NEXT_TELEMETRY_DISABLED: "1"
   MYCELIS_API_KEY: "ci-local-only"
   MYCELIS_WEB_SESSION_SECRET: "ci-web-session-only"
@@ -70,26 +71,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: core/go.mod
           cache-dependency-path: core/go.sum
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: interface/package-lock.json
 
-      - uses: azure/setup-helm@v4
+      - name: Set Up Helm
+        shell: bash
+        run: |
+          tarball="helm-${HELM_VERSION}-linux-amd64.tar.gz"
+          curl -fsSLO "https://get.helm.sh/${tarball}"
+          curl -fsSLO "https://get.helm.sh/${tarball}.sha256sum"
+          sha256sum -c "${tarball}.sha256sum"
+          tar -xzf "${tarball}"
+          sudo install linux-amd64/helm /usr/local/bin/helm
+          helm version --short
 
       - name: Install Tooling
         run: |
@@ -129,14 +139,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - uses: astral-sh/setup-uv@v6
-      - uses: actions/setup-node@v4
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: interface/package-lock.json
       - name: Install Tooling
@@ -154,7 +164,7 @@ jobs:
           --spec=${{ inputs.browser_spec }}
       - name: Upload Browser Artifacts On Failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: full-release-browser-artifacts
           path: |

@@ -31,7 +31,7 @@ Install the toolchain needed for the runtime lane you will use:
 | Kind | explicit legacy fallback via `MYCELIS_K8S_BACKEND=kind` |
 | kubectl and Helm | cluster interaction and chart deploy/render |
 | Go 1.26 | Core build/test |
-| Node.js 20+ | Interface build/test |
+| Node.js 20+ | Interface build/test; hosted GitHub Interface lanes currently prove Node.js 24 |
 | uv | Python environment and Invoke task runner |
 | psql 16+ and nats-server | native database and event-bus proof |
 | Ollama or compatible endpoint | local/self-hosted text inference |

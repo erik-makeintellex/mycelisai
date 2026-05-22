@@ -2,7 +2,7 @@
 > Navigation: [Project README](../README.md) | [Docs Home](README.md) | [Testing](TESTING.md)
 
 > Status: IN_REVIEW
-> Last Updated: 2026-05-19
+> Last Updated: 2026-05-22
 > Purpose: Current release-candidate handoff packet for operator proof, packaging, and follow-on validation.
 
 ## Current RC Result
@@ -15,7 +15,7 @@
 - Proven browser gate: authenticated Chromium homepage proof.
 - Proven source API gate: hosted pgvector PostgreSQL/NATS, migrations, Core health, and `uv run inv api.delivery-proof --read-only`.
 - Proven release artifacts: enterprise and enterprise Windows-AI Helm verification bundles plus Core binary archives for linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, and windows/amd64.
-- Known non-blocking warning: GitHub-hosted Actions reports Node.js 20 action deprecation; schedule Node 24 workflow maintenance before the runner default changes.
+- Hosted workflow maintenance: GitHub workflow actions have been updated to the Node 24-capable major lines, Interface CI now runs on Node.js 24, and Helm setup avoids the still-Node-20 `azure/setup-helm` action by installing pinned Helm 3 from `get.helm.sh` with checksum verification.
 
 ## Deployment Lanes
 
@@ -117,7 +117,7 @@ Generated artifact set:
 Helm verification prerequisites:
 - `bitnami` repo: `https://charts.bitnami.com/bitnami`
 - `nats` repo: `https://nats-io.github.io/k8s/helm/charts/`
-- The hosted `Release Packaging` and `Full Release Candidate` workflows add and update these Helm repos before verification so a clean GitHub runner can package without prior Helm repo state.
+- The hosted `Release Packaging`, `CI`, and `Full Release Candidate` workflows install `HELM_VERSION=v3.20.2` from the official Helm binary distribution with checksum verification, then add and update these Helm repos before verification so a clean GitHub runner can package without prior Helm repo state or Node-20 Helm action warnings.
 
 ## Optional WSL Compose Proof
 

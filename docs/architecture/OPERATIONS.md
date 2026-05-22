@@ -237,8 +237,7 @@ Local CI tasks:
 - `ci.service-check`: currently running local stack
 - `ci.release-preflight`: lane-aware release gate
 
-GitHub CI proves repo health without hosted agentry. Live service/browser proof is local, WSL, Compose, or target-cluster evidence.
-
+GitHub CI proves repo health without hosted agentry. Live service/browser proof is local, WSL, Compose, or target-cluster evidence. Hosted workflow maintenance stays on Node 24-capable action majors, runs Interface CI with Node.js 24, uses checksum-verified pinned Helm 3 instead of `azure/setup-helm@v4`, and requires self-hosted runners that support Node 24 actions.
 Invoke manages the Next.js server lifecycle for browser proof. Merge gates use the built production Interface server path, while CI also keeps a Chromium authenticated-front-door smoke. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; `--lane=release` is the recommended full runtime/operator gate. Guarded WSL proof-checkout tasks are `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`; add `--headed-browser` to `wsl.validate` or `wsl.cycle` when focused live-backend Playwright proof must open visible browser windows.
 `uv run inv interface.check` includes a small retry loop for transient Windows socket-reuse errors after heavy browser proof, but persistent route failures still fail the task.
 

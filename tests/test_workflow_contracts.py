@@ -211,7 +211,9 @@ def test_release_workflow_verifies_enterprise_packaging_before_optional_image_pu
 
     assert "verify-enterprise-packaging" in workflow
     assert "package_profile" in workflow
-    assert "azure/setup-helm@v4" in workflow
+    assert "HELM_VERSION: \"v3.20.2\"" in workflow
+    assert "https://get.helm.sh/${tarball}.sha256sum" in workflow
+    assert "sha256sum -c" in workflow
     assert "helm repo add bitnami https://charts.bitnami.com/bitnami" in workflow
     assert "helm repo add nats https://nats-io.github.io/k8s/helm/charts/" in workflow
     assert "helm repo update" in workflow
@@ -219,7 +221,8 @@ def test_release_workflow_verifies_enterprise_packaging_before_optional_image_pu
     assert "--verify-package" in workflow
     assert "values-enterprise.yaml" in workflow
     assert "values-enterprise-windows-ai.yaml" in workflow
-    assert "actions/upload-artifact@v4" in workflow
+    assert "actions/upload-artifact@v7" in workflow
+    assert "docker/build-push-action@v7" in workflow
     assert "if: inputs.publish_images == true" in workflow
 
 
