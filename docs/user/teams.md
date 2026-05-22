@@ -58,6 +58,7 @@ Use the root Soma chat when you want the simplest path:
 Use `Teams` when you want to inspect or manage existing teams:
 
 - review the Active Work Lane to see whether a team is new, queued, running, output-ready, degraded, paused, or waiting on the operator
+- treat the Dashboard Active Work lane as an attention-first slice; use `Teams` for the full durable backlog
 - open the team lead workspace
 - review current outputs while the team is active
 - use Ask Team or Respond on a durable active-work row to request a bounded follow-on output or supply missing input without opening raw bus details
@@ -159,7 +160,9 @@ When testing team workflows, verify:
 - broad work splits into several smaller lead-owned lanes instead of starting a large roster
 - broad asks produce multiple small coordinated lanes instead of one huge team
 - the team lead is the first visible operational counterpart
+- Dashboard Active Work remains capped and points to `/teams` for the full durable backlog
 - Ask Team or Respond creates a durable follow-on work item, then visibly returns output-ready or degraded state
+- degraded team asks name timeout/offline/unreadable-response proof, recovery options, and what remains trusted
 - raw input/delivery subjects, models, prompts, and tool ids stay behind Advanced/Inspect instead of default team cards
 - retained outputs remain reviewable in `/groups` after a temporary collaboration is closed
 - event-driven actuation is configured through `/automations` Trigger Rules, not through the team workspace itself

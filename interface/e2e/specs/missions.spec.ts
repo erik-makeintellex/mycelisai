@@ -22,13 +22,13 @@ test.describe('Soma Dashboard (/dashboard)', () => {
     });
 
     test('organization entry actions render', async ({ page }) => {
-        await page.getByRole('button', { name: 'Create or open AI Organizations' }).click();
+        await page.getByRole('button', { name: 'Set up an AI Organization' }).click();
         await expect(page.getByRole('button', { name: 'Start from template' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Start Empty', exact: true })).toBeVisible();
     });
 
     test('recent organization guidance renders', async ({ page }) => {
-        await page.getByRole('button', { name: 'Create or open AI Organizations' }).click();
+        await page.getByRole('button', { name: 'Set up an AI Organization' }).click();
         await expect(page.getByRole('heading', { name: 'Create AI Organization' })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Choose how to start' })).toBeVisible();
         await expect(

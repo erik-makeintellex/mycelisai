@@ -193,6 +193,43 @@ def test_testing_docs_cover_finalization_concretization_contracts():
     assert not missing, "Testing docs are missing concretization proof requirements: " + str(missing)
 
 
+def test_new_user_acceptance_matrix_is_documented_across_testing_and_user_guides():
+    testing = _read("docs/TESTING.md")
+    acceptance_matrix = _read("docs/architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md")
+    user_home = _read("docs/user/README.md")
+    resources_doc = _read("docs/user/resources.md")
+    teams_doc = _read("docs/user/teams.md")
+    auth_doc = _read("docs/user/auth-modes.md")
+    ui_contract = _read("docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md")
+
+    required = [
+        (testing, "V8 New-User Acceptance Matrix"),
+        (acceptance_matrix, "Login boundary"),
+        (acceptance_matrix, "Setup checklist"),
+        (acceptance_matrix, "Provider readiness"),
+        (acceptance_matrix, "MCP readiness"),
+        (acceptance_matrix, "Workspace/output roots"),
+        (acceptance_matrix, "Canonical demo"),
+        (acceptance_matrix, "Team active/degraded proof"),
+        (user_home, "## New-User Setup Checklist"),
+        (user_home, "signed-in Soma operating environment"),
+        (user_home, "MYCELIS_WORKSPACE"),
+        (user_home, "MYCELIS_ARTIFACT_ROOT"),
+        (resources_doc, "New-user readiness checks"),
+        (resources_doc, "Add MCP Server"),
+        (resources_doc, "System -> Deployments"),
+        (resources_doc, "governed workspace boundary"),
+        (teams_doc, "Dashboard Active Work remains capped"),
+        (teams_doc, "output-ready or degraded state"),
+        (auth_doc, "local owner login for self-hosted nodes"),
+        (auth_doc, "Access, Identity, and Scope"),
+        (ui_contract, "New-user source deployment"),
+        (ui_contract, "canonical retained demo output"),
+    ]
+    missing = [snippet for text, snippet in required if snippet not in text]
+    assert not missing, "New-user acceptance docs are missing required snippets: " + str(missing)
+
+
 def test_release_binaries_workflow_uses_core_package_task():
     workflow = _read(".github/workflows/release-binaries.yaml")
 

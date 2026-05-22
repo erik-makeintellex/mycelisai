@@ -14,6 +14,11 @@ Settings is the administrative surface for account posture and operator preferen
 - which AI engine and MCP/tool surfaces are available
 - what recovery action is needed when access is denied
 
+For a new admin, the guided setup panel should make four checks obvious:
+SSO/auth, AI provider, workspace/output roots, and Add MCP connected tools.
+Workspace/output roots are confirmed from `System -> Deployments`, while MCP
+install and filesystem workspace browsing remain in `Resources`.
+
 Settings is not the default Soma workspace. Use Soma for normal work, groups, and execution requests; use Settings when you need account, provider, or access posture.
 
 ## Profile

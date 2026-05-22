@@ -70,9 +70,10 @@ describe("ActiveWorkLane", () => {
                 output_id: "out-1",
                 team_id: "team-alpha",
                 work_item_id: "work-1",
-                kind: "file",
+                kind: "project_package",
                 label: "Launch brief",
                 storage_ref: "generated/launch/brief.md",
+                entrypoint: "generated/launch/index.html",
               },
             ],
             proofRefs: ["proof-1"],
@@ -87,6 +88,31 @@ describe("ActiveWorkLane", () => {
     expect(screen.getByRole("link", { name: /Launch brief/i }).getAttribute("href")).toBe("/api/v1/workspace/files/view?path=generated%2Flaunch%2Fbrief.md");
     expect(screen.getByRole("link", { name: /Proof proof-1/i }).getAttribute("href")).toBe("/runs/run-1");
     expect(screen.getByText(/Audit audit-1/i)).toBeDefined();
+    expect(screen.getByText("Running, output may still change")).toBeDefined();
+    expect(screen.getByText("1 package retained")).toBeDefined();
+    expect(screen.getByText("Proof available")).toBeDefined();
+  });
+
+  it("summarizes degraded work with recovery and proof gaps", () => {
+    render(
+      <ActiveWorkLane
+        items={[
+          {
+            ...baseItem,
+            state: "degraded",
+            fallbackReason: "Team response timed out before output was retained.",
+            recoveryOptions: ["Retry with retained context"],
+            interactions: [{ action: "recover", label: "Recover" }],
+          },
+        ]}
+        onAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Needs recovery")).toBeDefined();
+    expect(screen.getByText("No retained output yet")).toBeDefined();
+    expect(screen.getByText("Proof pending")).toBeDefined();
+    expect(screen.getByText("Recovery: Retry with retained context")).toBeDefined();
   });
 
   it("keeps the default lane compact when a visible item cap is provided", () => {

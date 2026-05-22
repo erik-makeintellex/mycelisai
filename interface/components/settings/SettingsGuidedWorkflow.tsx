@@ -3,8 +3,10 @@ import type React from "react";
 import {
   ArrowRight,
   Brain,
+  FolderOpen,
   KeyRound,
   Layers,
+  ServerCog,
   Shield,
   User,
   Wrench,
@@ -20,7 +22,8 @@ export type SettingsTabId =
   | "tools";
 
 type WorkflowCardDefinition = {
-  id: SettingsTabId;
+  id: string;
+  selectTabId?: SettingsTabId;
   title: string;
   summary: string;
   buttonLabel: string;
@@ -31,6 +34,7 @@ type WorkflowCardDefinition = {
 const DEFAULT_WORKFLOW_CARDS: WorkflowCardDefinition[] = [
   {
     id: "profile",
+    selectTabId: "profile",
     title: "Name Soma and set the workspace look",
     summary: "Start by setting your assistant identity and daily product theme.",
     buttonLabel: "Open Profile",
@@ -38,6 +42,7 @@ const DEFAULT_WORKFLOW_CARDS: WorkflowCardDefinition[] = [
   },
   {
     id: "profiles",
+    selectTabId: "profiles",
     title: "Shape reusable mission defaults",
     summary: "Keep workflow-ready mission profiles available before execution.",
     buttonLabel: "Open Mission Profiles",
@@ -45,6 +50,7 @@ const DEFAULT_WORKFLOW_CARDS: WorkflowCardDefinition[] = [
   },
   {
     id: "users",
+    selectTabId: "users",
     title: "Review people and access",
     summary: "Confirm who can work in this workspace.",
     buttonLabel: "Open People & Access",
@@ -54,26 +60,44 @@ const DEFAULT_WORKFLOW_CARDS: WorkflowCardDefinition[] = [
 
 const ADVANCED_WORKFLOW_CARDS: WorkflowCardDefinition[] = [
   {
+    id: "auth",
+    selectTabId: "auth",
+    title: "Set login and SSO",
+    summary: "Review local owner login, Google Workspace, OIDC, SAML, Entra, GitHub, and SCIM posture.",
+    buttonLabel: "Open Auth Providers",
+    icon: KeyRound,
+  },
+  {
     id: "engines",
-    title: "Inspect AI engine posture",
-    summary: "Review how Soma and the wider workspace are tuned.",
+    selectTabId: "engines",
+    title: "Choose the AI provider",
+    summary: "Confirm which model provider Soma and the workspace will use before live work.",
     buttonLabel: "Open AI Engines",
     icon: Brain,
   },
   {
-    id: "tools",
-    title: "Manage connected tools",
-    summary: "Use Resources as the primary MCP, search, and tool readiness home.",
-    buttonLabel: "Open Resources",
+    id: "workspace-roots",
+    title: "Check workspace and output roots",
+    summary: "Confirm where generated files, packages, artifacts, and filesystem MCP writes land.",
+    buttonLabel: "Open Deployments",
+    icon: FolderOpen,
+    href: "/system?tab=deployments",
+  },
+  {
+    id: "mcp-tools",
+    title: "Add MCP connected tools",
+    summary: "Install filesystem, fetch, search, or other curated tool servers from Resources.",
+    buttonLabel: "Add MCP",
     icon: Wrench,
     href: "/resources?tab=tools",
   },
   {
-    id: "auth",
-    title: "Plan enterprise authentication",
-    summary: "Review SSO, SAML, OIDC, Entra, Google Workspace, GitHub, and SCIM.",
-    buttonLabel: "Open Auth Providers",
-    icon: KeyRound,
+    id: "workspace-files",
+    title: "Browse workspace files",
+    summary: "Use the filesystem MCP boundary to verify the mounted workspace from the operator UI.",
+    buttonLabel: "Open Workspace Files",
+    icon: ServerCog,
+    href: "/resources?tab=workspace",
   },
 ];
 
@@ -93,21 +117,19 @@ export function SettingsGuidedWorkflow({
           <p className="text-[11px] font-mono uppercase tracking-[0.24em] text-cortex-primary">
             Guided setup path
           </p>
-          <h2 className="text-xl font-semibold text-cortex-text-main">
-            Start with the controls most operators actually need.
-          </h2>
+          <h2 className="text-xl font-semibold text-cortex-text-main">New admin setup checklist</h2>
           <p className="text-sm leading-6 text-cortex-text-muted">
-            Settings moves from identity and workflow defaults into deeper admin
-            controls without becoming the main connected-tools console.
+            Make login, AI provider, storage roots, and connected tools obvious before handing
+            the workspace to operators.
           </p>
         </div>
         <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
           <p className="font-medium text-cortex-text-main">
-            Tools live in Resources
+            Setup has four concrete checks
           </p>
           <p className="mt-1 leading-6">
-            Open Resources for MCP servers, search readiness, and recent tool
-            use. Settings keeps the admin setup path tidy.
+            Auth, AI provider, workspace/output roots, and Add MCP are linked directly
+            from this panel.
           </p>
         </div>
       </div>
@@ -116,8 +138,8 @@ export function SettingsGuidedWorkflow({
           <WorkflowCard
             key={card.id}
             {...card}
-            active={activeTab === card.id}
-            onSelect={() => onSelect(card.id)}
+            active={activeTab === card.selectTabId}
+            onSelect={() => card.selectTabId ? onSelect(card.selectTabId) : undefined}
           />
         ))}
       </div>
@@ -129,10 +151,10 @@ export function SettingsGuidedWorkflow({
           <div className="mt-4 grid gap-3 lg:grid-cols-3">
             {ADVANCED_WORKFLOW_CARDS.map((card) => (
               <WorkflowCard
-                key={card.id}
+                key={`${card.id}-${card.title}`}
                 {...card}
-                active={activeTab === card.id}
-                onSelect={() => onSelect(card.id)}
+                active={activeTab === card.selectTabId}
+                onSelect={() => card.selectTabId ? onSelect(card.selectTabId) : undefined}
               />
             ))}
           </div>
@@ -140,11 +162,11 @@ export function SettingsGuidedWorkflow({
       ) : (
         <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
           <p className="font-medium text-cortex-text-main">
-            Advanced controls unlock when you need them
+            Advanced controls unlock the full admin checklist
           </p>
           <p className="mt-1 leading-6">
-            Turn on Advanced mode when you need engines, auth, or connected tool
-            setup. Resources remains the main tool workspace.
+            Turn on Advanced mode to configure SSO/auth, AI providers, workspace/output
+            roots, and MCP connected tools.
           </p>
         </div>
       )}

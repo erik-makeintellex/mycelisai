@@ -23,6 +23,7 @@ The UI testing agentry must cover these operator-visible actions.
 
 | Surface | Required operator action | Required proof |
 | --- | --- | --- |
+| New-user source deployment | Start from a fresh browser, sign in, orient on `/dashboard`, review setup surfaces, then run one direct/proposal/team proof | Login clarity, signed-in environment strip, compact Active Work, provider/search/MCP/workspace-root readiness, canonical retained demo output, and bounded team `output_ready` or visible degraded proof are all browser-visible. |
 | AI Organization entry | Open an existing AI Organization and land in the Soma-first workspace | Soma is clearly primary and the organization frame stays visible |
 | Expression framing | Ask Soma for a meaningful output | UI shows outcome, output shape, audience/use or assumption, agentry posture, proof expectation, and next action before exposing raw topology |
 | Direct Soma answer | Ask a non-mutating question in the main Soma conversation | Response lands in `answer` state with readable content |
@@ -134,6 +135,7 @@ The UI testing agentry must fail the release recommendation if any of the follow
 - audit visibility is missing or only exposes raw backend noise
 - default-path UI copy leaks developer-facing architecture terms
 - browser layout technically avoids overflow but still leaves too little practical work surface for a new user
+- a new local-source operator cannot find login posture, provider/search readiness, Add MCP Server, workspace/output roots, canonical demo output, or team degraded/output-ready proof without reading logs or code
 - Teams, Resources, Runs, System, or Settings require long-scroll topology reading before a normal operator can continue work
 
 Passing this contract means the product behavior is believable, governed, and explainable from the operator's point of view.

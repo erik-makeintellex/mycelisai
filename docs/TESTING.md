@@ -62,7 +62,7 @@ Every accepted user-interaction proof must verify:
 - activity, run events, live stream, and team/agentry panels show compact summaries by default, cap long lists, avoid raw JSON/log dumps in the default path, and keep raw payloads, topics, prompts, and full evidence behind explicit Inspect/Advanced controls
 - AI-host failure produces a visible blocker and recovery restores the lane
 
-Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof and [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for the full browser matrix.
+Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof, [V8 New-User Acceptance Matrix](architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md) for first-run/browser gates, and [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for the full browser matrix.
 
 ## Finalization Concretization Gate
 Every finalization slice must prove the concrete runtime contract it touches, not only that screens render or APIs return `200`.

@@ -60,6 +60,9 @@ describe("CentralSomaHome", () => {
         expect(await screen.findByText("erik@mycelis.link")).toBeDefined();
         expect(screen.getByText("Google Workspace")).toBeDefined();
         expect(screen.getByText("mycelis.link")).toBeDefined();
+        expect(screen.getByText("Start here")).toBeDefined();
+        expect(screen.getByText(/Ask Soma to plan, review, create, or execute governed work/i)).toBeDefined();
+        expect(screen.getByRole("button", { name: "Set up an AI Organization" })).toBeDefined();
         expect(screen.queryByText("Soma just did this")).toBeNull();
         expect(screen.getByText("Evidence of Soma's work")).toBeDefined();
         expect(screen.getByText("Live team interaction stream")).toBeDefined();
@@ -76,7 +79,7 @@ describe("CentralSomaHome", () => {
             render(<CentralSomaHome />);
             await screen.findByText("erik@mycelis.link");
 
-            const trigger = screen.getByRole("button", { name: "Create or open AI Organizations" });
+            const trigger = screen.getByRole("button", { name: "Set up an AI Organization" });
             fireEvent.click(trigger);
 
             expect(details.open).toBe(true);

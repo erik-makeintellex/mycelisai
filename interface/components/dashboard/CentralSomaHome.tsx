@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
-import { Building2, FolderPlus, ShieldCheck, Sparkles } from "lucide-react";
+import { Building2, FolderPlus, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
 import { readLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
 import CentralActivityStream from "@/components/dashboard/CentralActivityStream";
 import { SomaOperatingSurface } from "@/components/soma/SomaOperatingSurface";
@@ -108,12 +108,23 @@ export default function CentralSomaHome({
     return (
         <section className="space-y-5">
             <EnvironmentEntryBar sessionUser={sessionUser} />
-            <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-3">
-                <div className="flex flex-wrap gap-2">
+            <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                        <p className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
+                            <MessageCircle className="h-3.5 w-3.5" />
+                            Start here
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                            Ask Soma to plan, review, create, or execute governed work. Set up an AI Organization only when you want a durable workspace behind the conversation.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
                         {lastOrganization ? (
                             <QuickLink href={`/organizations/${lastOrganization.id}`} icon={<Building2 className="h-4 w-4" />} label={`Return to ${lastOrganization.name}`} />
                         ) : null}
-                        <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Create or open AI Organizations" />
+                        <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Set up an AI Organization" />
+                    </div>
                 </div>
             </div>
             {focusedTeam ? (

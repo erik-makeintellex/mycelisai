@@ -95,7 +95,7 @@ export async function openOrganizationSetup(page: Page) {
         return;
     }
 
-    const setupTrigger = page.getByRole("button", { name: "Create or open AI Organizations" });
+    const setupTrigger = page.getByRole("button", { name: "Set up an AI Organization" });
     await expect(setupTrigger).toBeVisible();
     await setupTrigger.click();
     if (await startEmptyButton.isVisible().catch(() => false)) {

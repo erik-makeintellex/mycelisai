@@ -37,6 +37,7 @@ The active architecture library keeps only documents that are directly used for 
 | [V8 Secret Storage And Credential Boundary](V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md) | secret references, runtime resolution, UI exposure, audit/proof, rotation |
 | [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) | browser-visible product proof standard |
 | [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) | full GUI validation contract and verdict format |
+| [V8 New-User Acceptance Matrix](V8_NEW_USER_ACCEPTANCE_MATRIX.md) | first-run, login, setup, Resources/MCP, outputs, and team recovery browser gates |
 | [Source File Size And Indexing Plan](SOURCE_FILE_SIZE_AND_INDEXING_PLAN.md) | repo-size hygiene and decomposition rules |
 
 The full production architecture target lives outside this folder at [architecture/v8-2.md](../../architecture/v8-2.md). The live implementation scoreboard is [.state/V8_DEV_STATE.md](../../.state/V8_DEV_STATE.md).

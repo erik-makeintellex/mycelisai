@@ -47,6 +47,13 @@ The Dashboard readiness strip summarizes search/tool posture for Soma, but
 Resources is the primary place to inspect or change MCP servers, web search
 readiness, and recent tool activity.
 
+New-user readiness checks:
+- Installed should tell you whether any MCP servers are connected or whether the first step is **Add MCP Server**.
+- **Add MCP Server** should open the curated library, not a raw JSON/config paste box.
+- Curated entries must name required environment variables without exposing secret values.
+- After install or reapply, return to Installed and confirm the server card, tool list, capability binding, and recent MCP activity are visible.
+- If the registry is unreachable, the UI should say that Connected Tools could not confirm installed servers and must not pretend the registry is truly empty.
+
 Current baseline posture:
 - curated library installs are the default path
 - `filesystem` and `fetch` are common curated entries, not assumed bootstrap defaults in the supported runtime lanes
@@ -174,6 +181,12 @@ MYCELIS_ARTIFACT_ROOT=./workspace/artifacts
 ```
 
 Use `System -> Deployments` to confirm the runtime is reporting the same workspace root and artifact root that you expect on disk.
+
+New-user proof should verify both sides of this boundary:
+- `Resources -> Connected Tools` shows whether `filesystem` is installed and connected.
+- `Resources -> Workspace Files` can browse/read/write only under the governed workspace boundary.
+- `System -> Deployments` reports the deployment/workspace/artifact roots that explain where generated output will land.
+- A retained demo output or project package opened from Soma/Teams/Groups resolves to the same workspace root family instead of a hidden process working directory.
 
 Supported operator actions:
 - browse directories (`list_directory`)

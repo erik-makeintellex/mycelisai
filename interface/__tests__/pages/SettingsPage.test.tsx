@@ -124,7 +124,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         });
 
         expect(screen.getByText('Guided setup path')).toBeDefined();
-        expect(screen.getByText('Start with the controls most operators actually need.')).toBeDefined();
+        expect(screen.getByText('New admin setup checklist')).toBeDefined();
         expect(screen.getByText('Profile')).toBeDefined();
         expect(screen.getByText('Mission Profiles')).toBeDefined();
         expect(screen.getByText('People & Access')).toBeDefined();
@@ -145,6 +145,13 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.getByText('Shape reusable mission defaults')).toBeDefined();
         expect(screen.getByText('Review people and access')).toBeDefined();
         expect(screen.getByText('Advanced controls are open')).toBeDefined();
+        expect(screen.getByText('Set login and SSO')).toBeDefined();
+        expect(screen.getByText('Choose the AI provider')).toBeDefined();
+        expect(screen.getByText('Check workspace and output roots')).toBeDefined();
+        expect(screen.getByText('Add MCP connected tools')).toBeDefined();
+        expect(screen.getByRole('link', { name: 'Open Deployments' }).getAttribute('href')).toBe('/system?tab=deployments');
+        expect(screen.getByRole('link', { name: 'Add MCP' }).getAttribute('href')).toBe('/resources?tab=tools');
+        expect(screen.getByRole('link', { name: 'Open Workspace Files' }).getAttribute('href')).toBe('/resources?tab=workspace');
         expect(screen.getByRole('option', { name: 'Aero Light' })).toBeDefined();
         expect(screen.getByRole('option', { name: 'Midnight Cortex' })).toBeDefined();
         expect(screen.getByRole('option', { name: 'System' })).toBeDefined();
@@ -160,7 +167,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.queryByText('AI Engines')).toBeNull();
         expect(screen.queryByText('Auth Providers')).toBeNull();
         expect(screen.queryByText('Connected Tools')).toBeNull();
-        expect(screen.getByText('Advanced controls unlock when you need them')).toBeDefined();
+        expect(screen.getByText('Advanced controls unlock the full admin checklist')).toBeDefined();
         expect(screen.queryByText('Advanced controls are open')).toBeNull();
     });
 

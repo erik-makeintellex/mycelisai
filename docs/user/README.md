@@ -14,13 +14,33 @@ Use this page when you want to operate Mycelis through the product instead of re
 
 For most user testing and daily operation, start with Soma:
 
-1. Open the Soma workspace.
-2. Ask for the outcome you want.
-3. Let Soma propose the smallest useful team or direct answer path.
-4. Review visible outputs in chat, team lead workspaces, or retained artifacts.
-5. Use Settings, Resources, or Memory only when the workflow calls for them.
+1. Sign in through `/login` with the local owner credential or enabled enterprise SSO.
+2. Confirm `/dashboard` shows the signed-in Soma operating environment, including Access, Identity, and Scope.
+3. Open the Soma workspace.
+4. Ask for the outcome you want.
+5. Let Soma propose the smallest useful team or direct answer path.
+6. Review visible outputs in chat, team lead workspaces, or retained artifacts.
+7. Use Settings, Resources, System, or Memory only when the workflow calls for them.
 
-The normal product path is not "configure every backend component first." It is "tell Soma the goal, review the proposed execution shape, and inspect outputs."
+The normal product path is not "configure every backend component first." It is "sign in, tell Soma the goal, review the proposed execution shape, and inspect outputs."
+
+## New-User Setup Checklist
+
+Before accepting a new-user browser pass, verify these from the product:
+
+1. Login is clear: local owner login works, SSO availability or domain restriction copy is understandable, and failures are actionable.
+2. Dashboard orientation is clear: Soma input is primary, Active Work is compact by default, and any backlog opens through `Teams`.
+3. Provider/search readiness is visible: Settings, Resources, or System tells the operator whether Soma can use the intended local or hosted engine/search path.
+4. Connected Tools are understandable: `Resources -> Connected Tools` shows installed MCP servers, **Add MCP Server**, required env vars by name, and recent MCP activity when tools are used.
+5. Output roots are known: `MYCELIS_WORKSPACE` is where generated files, project packages, browser games, and filesystem MCP writes land; `MYCELIS_ARTIFACT_ROOT` is where file-backed artifacts and cached media land.
+6. Canonical demo is repeatable: a retained demo output, such as a project package, opens from the browser, survives refresh/reload, and links to run/proof evidence.
+7. Team proof is honest: one bounded team ask reaches readable `output_ready` or a visible `degraded` timeout/offline/unreadable state with recovery guidance.
+
+Good first prompts:
+
+- "Give me a short readiness check for this Mycelis environment."
+- "Create a retained demo package I can open in the browser and include proof I can revisit."
+- "Ask the active delivery team for one bounded status update; if it times out, show the degraded proof and recovery path."
 
 Generated project packages, browser games, workspace files, and filesystem MCP writes land under the configured `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`. Open **System -> Deployments** in Advanced mode when you need to confirm the exact runtime paths before or after execution.
 

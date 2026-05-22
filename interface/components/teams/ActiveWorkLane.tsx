@@ -19,6 +19,7 @@ import {
 } from "@/store/useCortexStore";
 import { ActiveWorkEvidence } from "./ActiveWorkEvidence";
 import { TeamAskForm } from "./TeamAskForm";
+import { WorkTruthSummary } from "./WorkTruthSummary";
 
 const stateStyles: Record<TeamWorkItemState, string> = {
   new: "border-cortex-primary/25 bg-cortex-primary/10 text-cortex-primary",
@@ -176,6 +177,7 @@ function WorkItemRow({
               {item.fallbackReason}
             </p>
           ) : null}
+          <WorkTruthSummary item={item} />
           <ActiveWorkEvidence item={item} />
           <TeamAskForm item={item} onTeamAsk={onTeamAsk} />
         </div>
