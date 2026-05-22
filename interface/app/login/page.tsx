@@ -93,6 +93,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                     ) : (
                         <p className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm leading-6 text-cortex-text-muted">
                             Google Workspace login appears after `MYCELIS_AUTH_GOOGLE_CLIENT_ID`, `MYCELIS_AUTH_GOOGLE_CLIENT_SECRET`, and `MYCELIS_AUTH_GOOGLE_REDIRECT_URI` are configured.
+                            Personal Gmail accounts are rejected when Workspace SSO is enabled for this deployment.
                         </p>
                     )}
                 </section>
