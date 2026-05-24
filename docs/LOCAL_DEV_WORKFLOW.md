@@ -282,7 +282,7 @@ uv run inv cognitive.up
 uv run inv cognitive.status
 ```
 
-For private Pinokio media generation, use the `.env.example` `MYCELIS_MEDIA_GATEWAY_*` block and `uv run inv cognitive.media-gateway`; details live in [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md).
+For private Pinokio media generation, use the `.env.example` `MYCELIS_MEDIA_GATEWAY_*` block and `uv run inv cognitive.media-gateway`; the gateway accepts local/private upstreams by default, returns `b64_json`, and requires `MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1` for intentional non-private upstream routing. Details live in [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md).
 
 ## Binary Release Process
 

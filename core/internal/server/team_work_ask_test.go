@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -138,6 +139,27 @@ func TestHandleTeamWorkAsk_RecordsDegradedWhenNATSOffline(t *testing.T) {
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestTeamWorkAskFollowupContextSurvivesRequestCancellation(t *testing.T) {
+	parent, cancelParent := context.WithCancel(context.Background())
+	cancelParent()
+
+	ctx, cancel := teamWorkAskFollowupContext(parent)
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+		t.Fatalf("follow-up context should stay usable after request cancellation: %v", ctx.Err())
+	default:
+	}
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		t.Fatal("follow-up context should retain a bounded deadline")
+	}
+	if remaining := time.Until(deadline); remaining <= 0 || remaining > teamAskFollowupTimeout {
+		t.Fatalf("deadline remaining = %v, want within %v", remaining, teamAskFollowupTimeout)
 	}
 }
 

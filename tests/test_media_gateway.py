@@ -60,6 +60,60 @@ def test_media_gateway_reports_unsupported_backend(monkeypatch):
     assert "Forge/AUTOMATIC1111" in response.json()["detail"]
 
 
+def test_media_gateway_rejects_url_response_format(monkeypatch):
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_BACKEND", "forge")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_UPSTREAM", "http://127.0.0.1:7860")
+
+    client = TestClient(media_gateway.app)
+    response = client.post(
+        "/v1/images/generations",
+        json={"prompt": "private concept", "n": 1, "size": "512x512", "response_format": "url"},
+    )
+
+    assert response.status_code == 400
+    assert "response_format='url' is not supported" in response.json()["detail"]
+    assert "private API response" in response.json()["detail"]
+
+
+def test_media_gateway_blocks_public_upstream_by_default(monkeypatch):
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_BACKEND", "forge")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_UPSTREAM", "http://8.8.8.8:7860")
+    monkeypatch.delenv("MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM", raising=False)
+
+    client = TestClient(media_gateway.app)
+    response = client.post(
+        "/v1/images/generations",
+        json={"prompt": "private concept", "n": 1, "size": "512x512"},
+    )
+
+    assert response.status_code == 500
+    assert "refused a public upstream host" in response.json()["detail"]
+
+
+def test_media_gateway_allows_explicit_public_upstream_override(monkeypatch):
+    seen: dict[str, object] = {}
+    image = base64.b64encode(b"png-bytes").decode("ascii")
+
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_BACKEND", "forge")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_UPSTREAM", "http://8.8.8.8:7860")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM", "1")
+
+    def fake_post(url, body, timeout):
+        seen["url"] = url
+        return {"images": [image]}
+
+    monkeypatch.setattr(media_gateway, "_json_post", fake_post)
+
+    client = TestClient(media_gateway.app)
+    response = client.post(
+        "/v1/images/generations",
+        json={"prompt": "private concept", "n": 1, "size": "512x512"},
+    )
+
+    assert response.status_code == 200
+    assert seen["url"] == "http://8.8.8.8:7860/sdapi/v1/txt2img"
+
+
 def test_media_gateway_invalid_numeric_env_falls_back(monkeypatch):
     seen: dict[str, object] = {}
     image = base64.b64encode(b"png-bytes").decode("ascii")

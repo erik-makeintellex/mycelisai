@@ -117,13 +117,38 @@ function defaultTeamWorkItems(teamID: string) {
             kind: "project_package",
             label: "Coin Runner package",
             storage_ref: "generated/coin-runner",
-            entrypoint: "generated/coin-runner/index.html",
+            entrypoint: "index.html",
             proof_ref: "proof-first-demo",
           },
         ],
         proof_refs: ["proof-first-demo"],
         audit_refs: ["audit-first-demo"],
         updated_at: "2026-05-17T12:05:00Z",
+      },
+    ];
+  }
+  if (teamID === "degraded-proof-team") {
+    return [
+      {
+        work_item_id: "work-recovery-proof",
+        team_id: "degraded-proof-team",
+        run_id: "run-recovery-proof",
+        objective: "Recover failed package proof",
+        execution_shape: "deliverable",
+        state: "degraded",
+        needs_operator: true,
+        degradation_state: "team_response_timeout",
+        last_event: {
+          headline: "Team response timed out",
+          details: "The failed package proof is retained, but no completed output should be trusted yet.",
+          next_action: "Recover with retained run context or open the backlog.",
+        },
+        expected_outputs: ["Recovered package proof"],
+        expected_proof: ["Recovery event or retained failed-run proof"],
+        recovery_options: ["Retry with retained run context"],
+        proof_refs: ["proof-recovery-failed-run"],
+        audit_refs: ["audit-recovery-proof"],
+        updated_at: "2026-05-17T12:06:00Z",
       },
     ];
   }

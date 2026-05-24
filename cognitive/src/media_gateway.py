@@ -10,10 +10,12 @@ the same /v1/images/generations endpoint.
 from __future__ import annotations
 
 import base64
+import ipaddress
 import json
 import os
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 
@@ -24,6 +26,7 @@ from pydantic import BaseModel, Field
 DEFAULT_BACKEND = "auto1111"
 DEFAULT_UPSTREAM = "http://127.0.0.1:7860"
 DEFAULT_TIMEOUT_SECONDS = 300
+SUPPORTED_RESPONSE_FORMAT = "b64_json"
 
 
 class ImageGenerationRequest(BaseModel):
@@ -79,6 +82,52 @@ def gateway_timeout() -> int:
     return _env_int("MYCELIS_MEDIA_GATEWAY_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS)
 
 
+def public_upstream_allowed() -> bool:
+    return _env("MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM", "0").lower() in {"1", "true", "yes"}
+
+
+def _validate_response_format(req: ImageGenerationRequest) -> None:
+    if req.response_format == SUPPORTED_RESPONSE_FORMAT:
+        return
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            f"response_format={req.response_format!r} is not supported by the local media gateway; "
+            "use b64_json so generated image bytes stay in the private API response."
+        ),
+    )
+
+
+def _validate_private_upstream(upstream: str) -> None:
+    parsed = urllib.parse.urlparse(upstream)
+    host = (parsed.hostname or "").strip().lower()
+    if not host:
+        raise HTTPException(status_code=500, detail="local media gateway upstream is missing a host")
+    if public_upstream_allowed():
+        return
+    if host in {"localhost", "host.docker.internal"}:
+        return
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "local media gateway upstream must be localhost or a private IP by default; "
+                "set MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1 only for an intentional private deployment override."
+            ),
+        ) from exc
+    if address.is_loopback or address.is_private or address.is_link_local:
+        return
+    raise HTTPException(
+        status_code=500,
+        detail=(
+            "local media gateway refused a public upstream host; use localhost/private IP or set "
+            "MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1 for an intentional override."
+        ),
+    )
+
+
 def _json_get(url: str, timeout: int) -> dict[str, Any]:
     req = urllib.request.Request(url, method="GET")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -129,6 +178,9 @@ def _ensure_base64_image(value: str) -> str:
 
 
 def _auto1111_generate(req: ImageGenerationRequest) -> ImageGenerationResponse:
+    _validate_response_format(req)
+    upstream_url = gateway_upstream()
+    _validate_private_upstream(upstream_url)
     width, height = _parse_size(req.size)
     timeout = gateway_timeout()
     steps = _env_int("MYCELIS_MEDIA_GATEWAY_STEPS", 24)
@@ -150,9 +202,12 @@ def _auto1111_generate(req: ImageGenerationRequest) -> ImageGenerationResponse:
         body["sampler_name"] = sampler
 
     try:
-        upstream = _json_post(f"{gateway_upstream()}/sdapi/v1/txt2img", body, timeout)
+        upstream = _json_post(f"{upstream_url}/sdapi/v1/txt2img", body, timeout)
     except urllib.error.URLError as exc:
-        raise HTTPException(status_code=503, detail=f"local media engine unreachable: {exc}") from exc
+        raise HTTPException(
+            status_code=503,
+            detail="local/private media engine unreachable at configured upstream",
+        ) from exc
 
     images = upstream.get("images")
     if not isinstance(images, list) or not images:
@@ -181,6 +236,11 @@ def health() -> dict[str, Any]:
             "upstream": upstream,
             "detail": "Only Forge/AUTOMATIC1111 txt2img is implemented in this gateway slice.",
         }
+
+    try:
+        _validate_private_upstream(upstream)
+    except HTTPException as exc:
+        return {"status": "blocked", "backend": backend, "upstream": upstream, "detail": exc.detail}
 
     try:
         _json_get(f"{upstream}/sdapi/v1/options", timeout)

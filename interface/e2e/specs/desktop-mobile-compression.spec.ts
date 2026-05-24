@@ -22,12 +22,24 @@ test.describe("Desktop/mobile compression proof", () => {
     const firstDemoRow = activeLane.locator("article").filter({ hasText: "First Demo Game Team" });
     await expect(activeLane).toBeVisible();
     await expect(page.getByText("First Demo Game Team").first()).toBeVisible();
-    await expect(firstDemoRow.getByText("output ready")).toBeVisible();
+    await expect(firstDemoRow.getByText("output ready", { exact: true })).toBeVisible();
     await expect(firstDemoRow.getByText("Durable team work").first()).toBeVisible();
     await expect(firstDemoRow.getByText("Projection fallback")).toHaveCount(0);
     await expect(firstDemoRow.getByRole("link", { name: /Run proof/i })).toHaveAttribute("href", /\/runs\/run-first-demo/);
-    await expect(firstDemoRow.getByText("Coin Runner package")).toBeVisible();
+    await expect(firstDemoRow.getByRole("link", { name: /Coin Runner package/i })).toHaveAttribute(
+      "href",
+      "/api/v1/workspace/files/view?path=generated%2Fcoin-runner%2Findex.html",
+    );
+    await expect(firstDemoRow.getByText("1 package retained")).toBeVisible();
+    await expect(firstDemoRow.getByText("Proof available")).toBeVisible();
     await expect(firstDemoRow.getByRole("button", { name: /Ask team/i })).toBeVisible();
+
+    const recoveryRow = activeLane.locator("article").filter({ hasText: "Recover failed package proof" });
+    await expect(recoveryRow).toBeVisible();
+    await expect(recoveryRow.getByText("degraded", { exact: true })).toBeVisible();
+    await expect(recoveryRow.getByText("Needs recovery")).toBeVisible();
+    await expect(recoveryRow.getByText("Recovery: Retry with retained run context")).toBeVisible();
+    await expect(recoveryRow.getByRole("button", { name: /Recover/i })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 

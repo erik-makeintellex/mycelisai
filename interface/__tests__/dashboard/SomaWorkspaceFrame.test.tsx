@@ -20,6 +20,11 @@ describe("SomaWorkspaceFrame", () => {
     expect(within(frame).getByText("Output")).toBeDefined();
     expect(within(frame).getByText("Trust")).toBeDefined();
     expect(within(frame).getByText("Context")).toBeDefined();
+    expect(within(frame).getByText(/Intent, output shape, constraints, and proof/i)).toBeDefined();
+    expect(within(frame).getByText(/Current work, operator attention/i)).toBeDefined();
+    expect(within(frame).getByText(/Trusted evidence, failure state/i)).toBeDefined();
+    expect(within(frame).getByText(/Retained files, packages, and reviewable results/i)).toBeDefined();
+    expect(within(frame).getByText(/Setup evidence, tools, memory, and activity links/i)).toBeDefined();
     expect(within(frame).getByText("Conversation transcript")).toBeDefined();
     expect(within(frame).getByText("Compact trust package")).toBeDefined();
   });

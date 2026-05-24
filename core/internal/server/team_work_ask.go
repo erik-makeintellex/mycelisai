@@ -16,6 +16,7 @@ const (
 	teamWorkAskSourceChannel = "api.teams.work.ask"
 	defaultTeamAskTimeout    = 15 * time.Second
 	maxTeamAskTimeout        = 60 * time.Second
+	teamAskFollowupTimeout   = 5 * time.Second
 )
 
 type teamWorkAskRequest struct {
@@ -72,8 +73,10 @@ func (s *AdminServer) HandleTeamWorkAsk(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	timeout := boundedTeamAskTimeout(req.TimeoutSeconds)
+	followupCtx, followupCancel := teamWorkAskFollowupContext(r.Context())
+	defer followupCancel()
 	if s.NC == nil || !s.NC.IsConnected() {
-		s.respondTeamWorkAskDegraded(w, r.Context(), item, subject, "nats_offline", "NATS connection offline; the team ask was recorded but not sent.", http.StatusAccepted)
+		s.respondTeamWorkAskDegraded(w, followupCtx, item, subject, "nats_offline", "NATS connection offline; the team ask was recorded but not sent.", http.StatusAccepted)
 		return
 	}
 
@@ -81,15 +84,19 @@ func (s *AdminServer) HandleTeamWorkAsk(w http.ResponseWriter, r *http.Request) 
 	defer cancel()
 	msg, err := s.NC.RequestWithContext(ctx, subject, raw)
 	if err != nil {
-		s.respondTeamWorkAskDegraded(w, r.Context(), item, subject, "team_response_timeout", "The team did not return a response within "+timeout.String()+": "+err.Error(), http.StatusAccepted)
+		s.respondTeamWorkAskDegraded(w, followupCtx, item, subject, "team_response_timeout", "The team did not return a response within "+timeout.String()+": "+err.Error(), http.StatusAccepted)
 		return
 	}
 	reply := string(msg.Data)
 	if !teamWorkAskReplyReadable(reply) {
-		s.respondTeamWorkAskDegraded(w, r.Context(), item, subject, "team_response_unreadable", "The team returned a response, but it was not suitable as operator-visible output.", http.StatusAccepted)
+		s.respondTeamWorkAskDegraded(w, followupCtx, item, subject, "team_response_unreadable", "The team returned a response, but it was not suitable as operator-visible output.", http.StatusAccepted)
 		return
 	}
-	s.respondTeamWorkAskOutput(w, r.Context(), item, subject, reply)
+	s.respondTeamWorkAskOutput(w, followupCtx, item, subject, reply)
+}
+
+func teamWorkAskFollowupContext(parent context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(parent), teamAskFollowupTimeout)
 }
 
 func newTeamWorkAskItem(teamID string, req teamWorkAskRequest) protocol.TeamWorkItem {
