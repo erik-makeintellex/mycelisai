@@ -6,7 +6,7 @@ This README is the development-swarm inception document. It points to current au
 
 Canonical ownership:
 - `README.md`: inception, navigation, and repo-wide working rules
-- `architecture/v8-2.md`, `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`, and `docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`: active V8.2/B2+ production target plus embodiment rule, exact first demo slice, runtime object schemas, degradation posture, and product-category framing
+- `docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`, `docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md`, and `docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`: active release-candidate embodiment target; `architecture/v8-2.md` remains the stable full architecture baseline V8.3 concretizes
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` and `docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`: operator UX, screen/API truth, and directed-execution alignment
 - `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md` and `docs/architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md`: capability, MCP/custom integration, proof, secret-reference, UI exposure, and rotation truth
 - `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`: V7-to-V8 bootstrap migration truth
@@ -17,7 +17,7 @@ Canonical ownership:
 - [User Guidance](#user-guidance)
 - [Agent Guidance](#agent-guidance)
 - [What Mycelis Is](#what-mycelis-is)
-- [Active Delivery Target (V8.2 B2+)](#active-delivery-target-v82-b2)
+- [Active Delivery Target (V8.3 Embodiment)](#active-delivery-target-v83-embodiment)
 - [Compatibility Baseline](#compatibility-baseline)
 - [Current Implementation State](#current-implementation-state)
 - [Default And Advanced Surfaces](#default-and-advanced-surfaces)
@@ -42,22 +42,22 @@ Review these before planning or editing:
 1. [AGENTS.md](AGENTS.md)
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
 3. [V8 Development State](.state/V8_DEV_STATE.md)
-4. [V8.2 Production Architecture Target](architecture/v8-2.md)
-5. [V8.2 Operational Embodiment Directive](docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md)
-6. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
-7. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
-8. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
-9. [Operations](docs/architecture/OPERATIONS.md)
-10. [Testing](docs/TESTING.md)
-11. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
-12. [V8.2 Current State And Finalization PRD](docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
-13. [V8.2 Finalization Delivery Plan](docs/architecture-library/V8_2_FINALIZATION_DELIVERY_PLAN.md), [V8.2 Finalization Concretization Contract](docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md), and [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
-14. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
-15. [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
+4. [V8.3 Operational Embodiment PRD](docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md)
+5. [V8.3 Dev Agentry Operational Directive](docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md)
+6. [V8.3 Multi-Agentry Steering Doctrine](docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md)
+7. [V8.2 Production Architecture Target](architecture/v8-2.md)
+8. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
+9. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
+10. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+11. [Operations](docs/architecture/OPERATIONS.md)
+12. [Testing](docs/TESTING.md)
+13. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
+14. [V8.2 Current State And Finalization PRD](docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
+15. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
 16. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
-- V8.2 docs are the active authority. Historical V7 state remains migration evidence only, not active product authority.
+- V8.3 docs own current release-candidate embodiment; V8.2 docs remain stable architecture and compatibility authority. Historical V7 state remains migration evidence only, not active product authority.
 - `.state/V8_DEV_STATE.md` is the implementation truth for what is actually complete; use its active snapshot first and treat dated boards as evidence unless reactivated.
 - Keep user-facing docs and engineering docs cross-linked but distinct.
 
@@ -83,14 +83,14 @@ In operator language, Mycelis lets someone ask Soma to create or review meaningf
 
 In architecture language, Mycelis is built around instantiated organizations as runtime truth, a Soma operational identity layer, governed execution, memory/continuity contracts, durable outputs, recoverable runs, and auditable automation.
 
-## Active Delivery Target (V8.2 B2+)
+## Active Delivery Target (V8.3 Embodiment)
 
-The active target is [V8.2 Production Architecture Target](architecture/v8-2.md), the full actuation architecture. V8.2 B2+ is the active delivery target.
+The active delivery target is [V8.3 Operational Embodiment PRD](docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md): make the converged V8 architecture operationally trustworthy through async execution, durable proof, recovery, local/private media proof, and fresh-user GUI validation. [V8.2 Production Architecture Target](architecture/v8-2.md) remains the stable full architecture baseline being concretized.
 
 Delivery rule:
-- advance V8.2 modules only with a named boundary, proof lane, promotion rule, and documentation review
+- advance V8.3 slices only with a named boundary, proof lane, promotion rule, and documentation review
 - prefer operational embodiment over new doctrine: the canonical MVP workflow is intent -> Soma -> governed approval when needed -> execution -> run -> durable output -> proof/recovery
-- do not grow V8.1 docs with new B2+ target scope
+- do not grow historical V7/V8.1 docs with current release-candidate scope
 
 ## Compatibility Baseline
 
@@ -212,7 +212,7 @@ end-of-slice reporting must explicitly state which tests ran, which docs changed
 
 every implementation slice must include a docs review for the touched surface, even when the result is "reviewed, no content change required". Review `docs/API_REFERENCE.md` when API behavior, payload meaning, or endpoint contract changes.
 
-Go owns runtime, orchestration, API, NATS, and backend persistence-facing logic. TypeScript owns the interface and in-app docs browser. Python owns repo management, operator automation, CI orchestration, and local test harnesses. SQL owns migrations, and `db.migrate` compatibility gates include the V8.2 capability, proof, and team-work tables. PowerShell may only be a thin host wrapper when the platform requires it.
+Go owns runtime, orchestration, API, NATS, and backend persistence-facing logic. TypeScript owns the interface and in-app docs browser. Python owns repo management, operator automation, CI orchestration, and local test harnesses. SQL owns migrations, and `db.migrate` compatibility gates include the current capability, proof, trust, and team-work tables. PowerShell may only be a thin host wrapper when the platform requires it.
 
 Keep secrets in `.env` or deployment secret backends. Use `.env.compose` for Compose topology and non-secret runtime shape. Runtime config and UI surfaces should carry env-var or `SecretRef` references, not raw secret values; see [V8 Secret Storage And Credential Boundary](docs/architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md).
 
@@ -297,4 +297,4 @@ Every implementation slice that changes product behavior, runtime behavior, oper
 
 ## Status
 
-The repo is in active V8.2/B2+ delivery with a protected V8.1 compatibility baseline. Treat this README as a compact navigation contract; do not re-expand it into a duplicate architecture monolith.
+The repo is in active V8.3 operational embodiment with stable V8/V8.2 compatibility baselines. Treat this README as a compact navigation contract; do not re-expand it into a duplicate architecture monolith.

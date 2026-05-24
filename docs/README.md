@@ -54,6 +54,7 @@ The active architecture library is intentionally small. It is not a holding area
 - **V8.3 Operational Embodiment PRD**: `./architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`
 - **V8.3 Dev Agentry Operational Directive**: `./architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md`
 - **V8.3 Multi-Agentry Steering Doctrine**: `./architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`
+- **V8 New-User Acceptance Matrix**: `./architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md`
 - **V8.2 Current State And Finalization PRD**: `./architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md`
 - **V8.2 Finalization Delivery Plan**: `./architecture-library/V8_2_FINALIZATION_DELIVERY_PLAN.md`
 - **V8.2 Finalization Concretization Contract**: `./architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`
@@ -74,6 +75,7 @@ Use these when the goal is verification, release proof, or workflow-complete val
 
 - **Testing Guide**: `./TESTING.md`
 - **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
+- **V8 New-User Acceptance Matrix**: `./architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md`
 - **Release Handoff**: `./RELEASE_HANDOFF.md`
 - **Governance System**: `./governance.md`
 - **Licensing & Editions**: `./licensing.md`

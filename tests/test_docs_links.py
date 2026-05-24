@@ -77,6 +77,7 @@ def test_docs_manifest_exposes_required_canonical_docs():
     text = DOCS_MANIFEST.read_text(encoding="utf-8")
     required_paths = [
         "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
+        "docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md", "docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md", "docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md", "docs/architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md",
         "docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md",
         "docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md",
         "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
@@ -221,8 +222,8 @@ def test_readme_has_fresh_agent_review_sequence():
     required_refs = [
         "AGENTS.md",
         "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
+        "docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md", "docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md", "docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md",
         "docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md",
-        "docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md",
         "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
         "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md",
         "docs/architecture/OPERATIONS.md",
@@ -266,7 +267,7 @@ def test_readme_exposes_layered_architecture_truth():
     text = README.read_text(encoding="utf-8")
 
     required_sections = [
-        "## Active Delivery Target (V8.2 B2+)",
+        "## Active Delivery Target (V8.3 Embodiment)",
         "## Compatibility Baseline",
         "## Current Implementation State",
     ]
@@ -274,9 +275,9 @@ def test_readme_exposes_layered_architecture_truth():
     assert not missing_sections, f"README is missing required layered-truth sections: {missing_sections}"
 
     required_snippets = [
+        "docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md",
         "architecture/v8-2.md",
-        "full actuation architecture",
-        "V8.2 B2+ is the active delivery target",
+        "V8.3 Operational Embodiment PRD", "V8.2 Production Architecture Target", "stable full architecture baseline",
         "The Soma-primary compatibility baseline is now held in current V8.2 docs",
         "Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).",
     ]
@@ -1007,9 +1008,6 @@ def test_v8_ui_api_contract_is_indexed_exposed_and_complete():
         f"{missing_contract_snippets}"
     )
 
-
-
-
 def test_v8_runtime_contracts_cover_semantic_continuity_and_learning_layers():
     text = (ROOT / "docs" / "architecture-library" / "V8_RUNTIME_CONTRACTS.md").read_text(encoding="utf-8")
     required_snippets = [
@@ -1140,7 +1138,7 @@ def test_v8_docs_keep_compatibility_baseline_and_v8_2_b2_target_distinct():
 
     required_readme_snippets = [
         "The Soma-primary compatibility baseline is now held in current V8.2 docs",
-        "V8.2 B2+ is the active delivery target.",
+        "The active delivery target is [V8.3 Operational Embodiment PRD]", "V8.2 Production Architecture Target",
     ]
     missing_readme_snippets = [snippet for snippet in required_readme_snippets if snippet not in readme_text]
     assert not missing_readme_snippets, (
@@ -1148,7 +1146,7 @@ def test_v8_docs_keep_compatibility_baseline_and_v8_2_b2_target_distinct():
         f"{missing_readme_snippets}"
     )
 
-    required_state_snippets = ["V8.2/B2+ is the active delivery target.", "Soma-primary compatibility baseline", "## Parallel Execution Overlay (2026-04-27)", "Backend/Auth Architecture", "Frontend/Auth UX", "Workflow Testing", "Runtime/MCP/Web Capability"]
+    required_state_snippets = ["V8.3 release-candidate embodiment planning is now canonical", "Soma-primary compatibility baseline", "## Parallel Execution Overlay (2026-04-27)", "Backend/Auth Architecture", "Frontend/Auth UX", "Workflow Testing", "Runtime/MCP/Web Capability"]
     missing_state_snippets = [snippet for snippet in required_state_snippets if snippet not in state_text]
     assert not missing_state_snippets, (
         "V8 dev state is missing the current-release vs full-target distinction: "

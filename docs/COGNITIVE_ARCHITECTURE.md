@@ -26,7 +26,7 @@ Media generation stays local-first. Core always calls the configured media provi
 | `vllm` | `openai_compatible` | `http://127.0.0.1:8000/v1` | vLLM inference server — high throughput, GPU-optimized |
 | `ollama` | `openai_compatible` | `http://127.0.0.1:11434/v1` | Ollama — local model runner, easy setup |
 | `lmstudio` | `openai_compatible` | `http://127.0.0.1:1234/v1` | LM Studio — GUI-based local inference |
-| `production_gpt4` | `openai` | `https://api.openai.com/v1` | OpenAI GPT-4 (requires `OPENAI_API_KEY`) |
+| `production_gpt4` | `openai` | `https://api.openai.com/v1` | Hosted OpenAI provider; model is configurable and credentials come from `OPENAI_API_KEY` |
 | `production_claude` | `anthropic` | — | Anthropic Claude (requires `ANTHROPIC_API_KEY`) |
 | `production_gemini` | `google` | — | Google Gemini (requires `GEMINI_API_KEY`) |
 

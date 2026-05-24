@@ -225,7 +225,9 @@ Local/private runtime capability remains strategic infrastructure for local infe
 
 The local/private media lane is sovereign cognition infrastructure, not merely image generation support.
 
-Required now: commit and push media gateway, verify local generation, verify retained artifacts, verify proof linkage, verify degradation handling, and verify recovery actions. Only after this should ComfyUI integration begin.
+Current state: the local/private media gateway is landed and in review for the Pinokio Forge/AUTOMATIC1111 path. It exposes the OpenAI-compatible image endpoint, returns `b64_json`, blocks public upstreams by default, and has unit proof for adapter, privacy, and unsupported-backend behavior.
+
+Required next: verify local generation against a running private media backend, verify retained artifacts, verify proof linkage, verify degradation handling, and verify recovery actions through Soma/Core/UI. Only after this should ComfyUI integration begin.
 
 ## Runtime Teams Doctrine
 
@@ -239,10 +241,10 @@ The system reaches RC posture when a fresh operator can log in, ask Soma for wor
 
 P0:
 
-1. Commit and push local/private media gateway.
-2. Generate `MYCELIS_BREAK_GLASS_API_KEY`.
+1. Push current V8.3 embodiment commits so WSL and hosted proof can refresh from git.
+2. Generate and verify `MYCELIS_BREAK_GLASS_API_KEY`.
 3. Rerun auth posture proof.
-4. Convert team asks to async/polling/event-driven runtime.
+4. Convert team asks and confirmed execution to async/polling/event-driven runtime.
 5. Canonicalize `RunState`.
 6. Implement `RecoveryAction` runtime contracts.
 7. Formalize `ExpressionFrame`.
@@ -254,7 +256,7 @@ P1:
 
 1. ComfyUI workflow adapter.
 2. Canonical trust package assembly.
-3. Team steering lifecycle.
+3. Team steering lifecycle beyond the landed bounded ask/action APIs.
 4. MCP/operator capability UX refinement.
 5. Documentation compression.
 6. Confidence provenance preparation.
