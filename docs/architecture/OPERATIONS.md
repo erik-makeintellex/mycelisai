@@ -141,11 +141,12 @@ Do not use `k8s.reset` as Rancher Desktop, Docker Desktop, WSL, or VM repair. Th
 ```bash
 uv run inv cognitive.install
 uv run inv cognitive.up
+uv run inv cognitive.media-gateway
 uv run inv cognitive.status
 uv run inv cognitive.stop
 ```
 
-These are optional local GPU/helper tasks, not the default path for every host.
+These are optional local GPU/helper tasks, not the default path for every host; `cognitive.media-gateway` is the Windows-friendly Pinokio Forge/AUTOMATIC1111 lane for local/private media generation.
 
 ### Test Tasks (`ops/test.py`) And CI Tasks (`ops/ci.py`)
 
@@ -209,7 +210,7 @@ Configuration sources:
 - `core/config/teams/*.yaml`: standing team and legacy migration inputs
 - Helm values files: cluster deployment shape
 
-Provider/media env overrides are deployment-time infrastructure configuration only. Use `MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID`, `MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_MODEL_ID`; the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` must not return. `Bundle -> Instantiated Organization -> Inheritance -> Routing` remains authoritative, so do not treat env overrides as runtime organization behavior.
+Provider/media env overrides are deployment-time infrastructure configuration only. Use `MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID`, `MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, `MYCELIS_MEDIA_MODEL_ID`, and `MYCELIS_MEDIA_GATEWAY_*`; the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` must not return. `Bundle -> Instantiated Organization -> Inheritance -> Routing` remains authoritative, so do not treat env overrides as runtime organization behavior.
 
 The Helm chart mounts this runtime config tree at `/core/config`.
 

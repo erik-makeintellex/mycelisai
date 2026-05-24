@@ -23,6 +23,9 @@ The active architecture library keeps only documents that are directly used for 
 
 | Document | Use For |
 | --- | --- |
+| [V8.3 Operational Embodiment PRD](V8_3_OPERATIONAL_EMBODIMENT_PRD.md) | release-candidate embodiment plan, async runtime, recovery actions, ExpressionFrame, new-user proof |
+| [V8.3 Dev Agentry Operational Directive](V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md) | delivery-agent posture for operational trust, async execution, recovery, proof, and Soma-first embodiment |
+| [V8.3 Multi-Agentry Steering Doctrine](V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md) | coordination doctrine for shared runtime truth, Soma authority, team lanes, capability governance, and proof semantics |
 | [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md) | current implementation truth, target finalization state, workstreams, blockers, exit gates |
 | [V8.2 Finalization Delivery Plan](V8_2_FINALIZATION_DELIVERY_PLAN.md) | team sequence, GUI matrix, runtime gates, and orchestration rules |
 | [V8.2 Finalization Concretization Contract](V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md) | first demo slice, ExecutionContract, ProofArtifact, UI states, degraded lifecycle, close-out template |

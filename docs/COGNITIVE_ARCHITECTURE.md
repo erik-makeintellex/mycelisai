@@ -17,6 +17,8 @@
 
 Mycelis supports **multiple self-hosted and commercial inference engines** — configure any combination of vLLM, Ollama, LM Studio, OpenAI, Anthropic, and Google via `cognitive.yaml` or the AI Engines settings surface.
 
+Media generation stays local-first. Core always calls the configured media provider through an OpenAI-compatible `/v1/images/generations` contract. For Pinokio-hosted apps, run `uv run inv cognitive.media-gateway` and point `MYCELIS_MEDIA_ENDPOINT` at `http://127.0.0.1:8001/v1`; the gateway adapts local Forge/AUTOMATIC1111 `txt2img` responses without sending prompts or images to hosted providers.
+
 ## Provider Registry
 
 | Provider ID | Type | Default Endpoint | Description |
@@ -156,6 +158,23 @@ media:
 ```
 
 The media block keeps a legacy `endpoint` and `model_id` surface for compatibility, but the typed `media.provider` record is the preferred contract when you want local-hosted or hosted media behavior to be explicit.
+
+Pinokio local media profile:
+
+```env
+MYCELIS_MEDIA_PROVIDER_ID=pinokio-local
+MYCELIS_MEDIA_TYPE=openai_compatible
+MYCELIS_MEDIA_ENDPOINT=http://127.0.0.1:8001/v1
+MYCELIS_MEDIA_MODEL_ID=local-media
+MYCELIS_MEDIA_LOCATION=local
+MYCELIS_MEDIA_DATA_BOUNDARY=local_only
+MYCELIS_MEDIA_USAGE_POLICY=local_first
+MYCELIS_MEDIA_ENABLED=true
+MYCELIS_MEDIA_GATEWAY_BACKEND=forge
+MYCELIS_MEDIA_GATEWAY_UPSTREAM=http://127.0.0.1:7860
+```
+
+ComfyUI is intentionally not wired directly to Core because its native contract is workflow/queue based (`/prompt`, `/history/{prompt_id}`, `/view`) rather than OpenAI-compatible. Add it as a gateway adapter with a reviewed workflow template when that slice is ready.
 
 ## Local Model Switching
 

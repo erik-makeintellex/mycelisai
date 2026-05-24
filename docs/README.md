@@ -38,6 +38,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **Repository Entry Point**: `../README.md`
 - **Operations**: `./architecture/OPERATIONS.md`
 - **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
+- **Cognitive Architecture**: `./COGNITIVE_ARCHITECTURE.md`
 - **API Reference**: `./API_REFERENCE.md`
 - **Logging Standard**: `./logging.md`
 - **Ops README**: `../ops/README.md`
@@ -50,6 +51,9 @@ The active architecture library is intentionally small. It is not a holding area
 
 - **Architecture Docs Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **V8.2 Production Architecture Target / B2+ Delivery Frame**: `../architecture/v8-2.md`
+- **V8.3 Operational Embodiment PRD**: `./architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`
+- **V8.3 Dev Agentry Operational Directive**: `./architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md`
+- **V8.3 Multi-Agentry Steering Doctrine**: `./architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`
 - **V8.2 Current State And Finalization PRD**: `./architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md`
 - **V8.2 Finalization Delivery Plan**: `./architecture-library/V8_2_FINALIZATION_DELIVERY_PLAN.md`
 - **V8.2 Finalization Concretization Contract**: `./architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`

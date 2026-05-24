@@ -78,7 +78,7 @@ Common runtime variables:
 - `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
 - `MYCELIS_K8S_TEXT_MODEL_ID`: Kubernetes/Helm text model override
-- `MYCELIS_MEDIA_ENDPOINT`, `MYCELIS_MEDIA_MODEL_ID`, `OPENAI_API_KEY`: media overrides and optional hosted OpenAI proof credential
+- `MYCELIS_MEDIA_ENDPOINT`, `MYCELIS_MEDIA_MODEL_ID`, `MYCELIS_MEDIA_GATEWAY_*`, `OPENAI_API_KEY`: local/private media gateway overrides and optional hosted OpenAI proof credential
 - `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, `MYCELIS_SEARCH_MAX_RESULTS`: governed search posture; default native Core search is `local_sources`, while Compose defaults to self-hosted `searxng`
 
 Provider override pattern:
@@ -282,22 +282,16 @@ uv run inv cognitive.up
 uv run inv cognitive.status
 ```
 
+For private Pinokio media generation, use the `.env.example` `MYCELIS_MEDIA_GATEWAY_*` block and `uv run inv cognitive.media-gateway`; details live in [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md).
+
 ## Binary Release Process
 
-Package Core with:
-
-```bash
-uv run inv core.package
-```
+Package Core with `uv run inv core.package`.
 
 Run release gates from [Testing](TESTING.md) before handoff.
 
 ## Full Command Reference
 
-List current tasks with:
-
-```bash
-uv run inv -l
-```
+List current tasks with `uv run inv -l`.
 
 The task registry lives in Python under `tasks.py` and `ops/*.py`. App-tied management logic belongs there, not in PowerShell scripts.

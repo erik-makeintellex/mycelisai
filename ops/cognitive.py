@@ -119,6 +119,34 @@ def media(c):
 
 
 @task
+def media_gateway(c):
+    """
+    Start the local Pinokio media gateway.
+
+    The gateway exposes Mycelis' OpenAI-compatible media contract on port 8001
+    and adapts local Forge/AUTOMATIC1111 txt2img APIs behind it.
+    """
+    host = os.getenv("MYCELIS_MEDIA_GATEWAY_HOST", "127.0.0.1")
+    port = os.getenv("MYCELIS_MEDIA_GATEWAY_PORT", "8001")
+    backend = os.getenv("MYCELIS_MEDIA_GATEWAY_BACKEND", "auto1111")
+    upstream = os.getenv("MYCELIS_MEDIA_GATEWAY_UPSTREAM", "http://127.0.0.1:7860")
+
+    print("Starting Mycelis local media gateway")
+    print(f"  Listen  : {host}:{port}")
+    print(f"  Backend : {backend}")
+    print(f"  Upstream: {upstream}")
+    print("  Core media endpoint should be MYCELIS_MEDIA_ENDPOINT=http://127.0.0.1:8001/v1")
+
+    cmd = (
+        "uv run uvicorn src.media_gateway:app "
+        f"--host {host} --port {port} --log-level info"
+    )
+
+    with c.cd(str(COGNITIVE_DIR)):
+        c.run(cmd, pty=not is_windows(), in_stream=False, env=_task_env())
+
+
+@task
 def up(c):
     """
     Start the optional full cognitive stack (vLLM + Media Server).
@@ -240,6 +268,7 @@ ns = Collection("cognitive")
 ns.add_task(install)
 ns.add_task(llm)
 ns.add_task(media)
+ns.add_task(media_gateway, name="media-gateway")
 ns.add_task(up)
 ns.add_task(stop)
 ns.add_task(status)

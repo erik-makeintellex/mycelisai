@@ -199,11 +199,12 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **Install**: `uv run inv cognitive.install`
 - **LLM**: `uv run inv cognitive.llm`
 - **Media**: `uv run inv cognitive.media`
+- **Media Gateway**: `uv run inv cognitive.media-gateway`
 - **Up**: `uv run inv cognitive.up`
 - **Stop**: `uv run inv cognitive.stop`
 - **Status**: `uv run inv cognitive.status`
 - These are optional local helpers for vLLM/Diffusers experimentation, not part of the supported default Core + Interface runtime contract.
-- The repo-local `cognitive.*` helper lane is intended for supported Linux GPU hosts; on Windows, use Ollama locally or point `core/config/cognitive.yaml` at a remote OpenAI-compatible vLLM server instead.
+- The repo-local vLLM/Diffusers helper lane is intended for supported Linux GPU hosts; on Windows, use Ollama locally for text and `cognitive.media-gateway` for Pinokio-hosted Forge/AUTOMATIC1111 media generation.
 
 ## Clean Run Discipline for Runtime and Integration Checks
 
