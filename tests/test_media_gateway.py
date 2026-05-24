@@ -58,3 +58,28 @@ def test_media_gateway_reports_unsupported_backend(monkeypatch):
 
     assert response.status_code == 501
     assert "Forge/AUTOMATIC1111" in response.json()["detail"]
+
+
+def test_media_gateway_invalid_numeric_env_falls_back(monkeypatch):
+    seen: dict[str, object] = {}
+    image = base64.b64encode(b"png-bytes").decode("ascii")
+
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_BACKEND", "forge")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_STEPS", "not-an-int")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_CFG_SCALE", "not-a-float")
+
+    def fake_post(url, body, timeout):
+        seen["body"] = body
+        return {"images": [image]}
+
+    monkeypatch.setattr(media_gateway, "_json_post", fake_post)
+
+    client = TestClient(media_gateway.app)
+    response = client.post(
+        "/v1/images/generations",
+        json={"prompt": "private concept", "n": 1, "size": "512x512"},
+    )
+
+    assert response.status_code == 200
+    assert seen["body"]["steps"] == 24
+    assert seen["body"]["cfg_scale"] == 7.0

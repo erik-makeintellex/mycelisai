@@ -116,6 +116,43 @@ Runtime teams are bounded operational collaborators. No team may self-expand, re
 
 All team delegation must attach to runs, attach to proof, emit events, and remain inspectable.
 
+## Team Deployment And Write Ownership
+
+Parallel delivery teams must receive disjoint write scopes. A team may read anywhere, but writes are owned by one lane per slice so implementation, proof, and docs can converge without avoidable merge conflicts.
+
+| Lane | Primary Write Scope | Shared Read-Only Context |
+| --- | --- | --- |
+| Runtime / Async | Core runtime packages, team APIs, migrations, runtime tests | V8.3 PRD, steering doctrine, API contracts |
+| Recovery / Trust | proof, recovery, audit, trust-state runtime packages and tests | Runtime / Async contracts and Event Spine semantics |
+| Soma UI | Interface dashboard, workspace, `ExpressionFrame`, Active Work, output/proof components and tests | API fixtures, canonical state objects, docs manifest |
+| Media / Capability | `cognitive/`, media gateway tests, media tasks, capability docs | Proof contracts, recovery contracts, output-root config |
+| Docs / State | architecture docs, user docs, ops docs, docs manifest, `.state/V8_DEV_STATE.md` | Accepted implementation changes and validation output |
+| QA / GUI | e2e specs, browser fixtures, proof runbooks, test harnesses | All implementation lanes after handoff |
+
+Collision rules:
+
+1. No two teams edit the same file in the same slice.
+2. Shared contracts change first, then implementation lanes branch from those contracts.
+3. Docs / State performs the final integration pass after implementation teams finish.
+4. Test fixture ownership belongs to the team that owns the touched runtime or UI surface.
+5. If a second lane needs a shared file, it records an integration note instead of editing directly.
+6. The orchestrator owns final merge order, quality gates, and conflict resolution.
+
+Every team handoff must name:
+
+```text
+owning lane
+files changed
+files read only
+runtime objects changed
+events emitted
+UI surfaces changed
+tests run
+docs/state changed
+recovery behavior
+remaining risks
+```
+
 ## Capability Steering Rules
 
 Capabilities are governed operational authorities. Every capability must expose purpose, risk, approval requirements, output expectations, fallback posture, recovery behavior, and trust implications.

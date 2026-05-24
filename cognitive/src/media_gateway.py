@@ -51,6 +51,22 @@ def _env(name: str, default: str) -> str:
     return os.getenv(name, default).strip() or default
 
 
+def _env_int(name: str, default: int, min_value: int = 1) -> int:
+    raw = _env(name, str(default))
+    try:
+        return max(min_value, int(raw))
+    except ValueError:
+        return default
+
+
+def _env_float(name: str, default: float, min_value: float = 0.0) -> float:
+    raw = _env(name, str(default))
+    try:
+        return max(min_value, float(raw))
+    except ValueError:
+        return default
+
+
 def gateway_backend() -> str:
     return _env("MYCELIS_MEDIA_GATEWAY_BACKEND", DEFAULT_BACKEND).lower()
 
@@ -60,11 +76,7 @@ def gateway_upstream() -> str:
 
 
 def gateway_timeout() -> int:
-    raw = _env("MYCELIS_MEDIA_GATEWAY_TIMEOUT_SECONDS", str(DEFAULT_TIMEOUT_SECONDS))
-    try:
-        return max(1, int(raw))
-    except ValueError:
-        return DEFAULT_TIMEOUT_SECONDS
+    return _env_int("MYCELIS_MEDIA_GATEWAY_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS)
 
 
 def _json_get(url: str, timeout: int) -> dict[str, Any]:
@@ -119,8 +131,8 @@ def _ensure_base64_image(value: str) -> str:
 def _auto1111_generate(req: ImageGenerationRequest) -> ImageGenerationResponse:
     width, height = _parse_size(req.size)
     timeout = gateway_timeout()
-    steps = int(_env("MYCELIS_MEDIA_GATEWAY_STEPS", "24"))
-    cfg_scale = float(_env("MYCELIS_MEDIA_GATEWAY_CFG_SCALE", "7"))
+    steps = _env_int("MYCELIS_MEDIA_GATEWAY_STEPS", 24)
+    cfg_scale = _env_float("MYCELIS_MEDIA_GATEWAY_CFG_SCALE", 7.0)
     sampler = os.getenv("MYCELIS_MEDIA_GATEWAY_SAMPLER", "").strip()
 
     body: dict[str, Any] = {
@@ -157,7 +169,7 @@ app = FastAPI(title="Mycelis Local Media Gateway", version="0.1.0")
 
 
 @app.get("/health")
-async def health() -> dict[str, Any]:
+def health() -> dict[str, Any]:
     backend = gateway_backend()
     upstream = gateway_upstream()
     timeout = min(gateway_timeout(), 5)
@@ -179,7 +191,7 @@ async def health() -> dict[str, Any]:
 
 
 @app.get("/v1/models")
-async def list_models() -> dict[str, Any]:
+def list_models() -> dict[str, Any]:
     return {
         "object": "list",
         "data": [
@@ -194,7 +206,7 @@ async def list_models() -> dict[str, Any]:
 
 
 @app.post("/v1/images/generations", response_model=ImageGenerationResponse)
-async def generate_images(req: ImageGenerationRequest) -> ImageGenerationResponse:
+def generate_images(req: ImageGenerationRequest) -> ImageGenerationResponse:
     backend = gateway_backend()
     if backend in {"auto1111", "automatic1111", "forge"}:
         return _auto1111_generate(req)
