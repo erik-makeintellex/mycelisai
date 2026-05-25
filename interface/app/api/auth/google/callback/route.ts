@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
     WEB_SESSION_COOKIE,
     createSessionToken,
+    decodeOAuthStateCookie,
     getWebAuthConfig,
     roleForEmail,
     sessionCookieOptions,
@@ -25,10 +26,9 @@ export async function GET(request: NextRequest) {
     const config = getWebAuthConfig();
     const code = request.nextUrl.searchParams.get("code");
     const state = request.nextUrl.searchParams.get("state");
-    const saved = request.cookies.get(STATE_COOKIE)?.value || "";
-    const [savedState, nextPath = "/dashboard"] = saved.split(":");
+    const saved = decodeOAuthStateCookie(request.cookies.get(STATE_COOKIE)?.value);
     if (!config.sessionSecret) return redirectToLogin(request, "config");
-    if (!code || !state || state !== savedState) return redirectToLogin(request, "google_state");
+    if (!code || !state || state !== saved.state) return redirectToLogin(request, "google_state");
 
     try {
         const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
             iat: now,
             exp: now + 60 * 60 * 8,
         };
-        const response = NextResponse.redirect(webAuthRedirectURL(safeNext(nextPath) || "/dashboard", request.nextUrl.origin));
+        const response = NextResponse.redirect(webAuthRedirectURL(safeNext(saved.next) || "/dashboard", request.nextUrl.origin));
         response.cookies.delete(STATE_COOKIE);
         response.cookies.set(WEB_SESSION_COOKIE, await createSessionToken(session, config.sessionSecret), sessionCookieOptions());
         return response;
@@ -85,7 +85,9 @@ export async function GET(request: NextRequest) {
 function redirectToLogin(request: NextRequest, error: string) {
     const url = webAuthRedirectURL("/login", request.nextUrl.origin);
     url.searchParams.set("error", error);
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    response.cookies.delete(STATE_COOKIE);
+    return response;
 }
 
 function safeNext(value: string | null): string {

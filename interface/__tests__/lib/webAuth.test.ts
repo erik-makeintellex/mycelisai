@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createForwardedWebIdentityHeaders, createSessionToken, roleForEmail, sha256Hex, splitList, verifySessionToken, webAuthRedirectURL, type WebSession } from "@/lib/webAuth";
+import { createForwardedWebIdentityHeaders, createSessionToken, decodeOAuthStateCookie, encodeOAuthStateCookie, roleForEmail, sha256Hex, splitList, verifySessionToken, webAuthRedirectURL, type WebSession } from "@/lib/webAuth";
 
 describe("webAuth", () => {
     it("signs and verifies web sessions", async () => {
@@ -57,6 +57,15 @@ describe("webAuth", () => {
         expect(headers["x-mycelis-web-identity"]).toMatch(/^[A-Za-z0-9_-]+$/);
         expect(headers["x-mycelis-web-identity-signature"]).toMatch(/^[A-Za-z0-9_-]+$/);
         expect(headers["x-mycelis-web-identity-signature"]).not.toBe(headers["x-mycelis-web-identity"]);
+    });
+
+    it("round-trips Google OAuth state cookie values without delimiter fragility", () => {
+        const encoded = encodeOAuthStateCookie("state-123", "/api/v1/workspace/files/view?path=generated%2Fmedia%2Fproof%2Fimage.png");
+        expect(decodeOAuthStateCookie(encoded)).toEqual({
+            state: "state-123",
+            next: "/api/v1/workspace/files/view?path=generated%2Fmedia%2Fproof%2Fimage.png",
+        });
+        expect(decodeOAuthStateCookie("state-123:/dashboard")).toEqual({ state: "", next: "/dashboard" });
     });
 
     it("keeps auth redirects on the public origin instead of the bind host", () => {

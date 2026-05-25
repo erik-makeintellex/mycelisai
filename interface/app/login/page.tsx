@@ -52,9 +52,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                         <h2 className="mt-2 text-2xl font-semibold">Continue to Soma</h2>
                     </div>
                     {errorText ? (
-                        <p role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                            {errorText}
-                        </p>
+                        <div role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                            <p>{errorText}</p>
+                            {params?.error === "google_state" && googleReady ? (
+                                <Link href={`/auth/google/start?next=${encodeURIComponent(next)}`} className="mt-3 inline-flex rounded-lg border border-red-300/30 px-3 py-2 text-xs font-semibold text-red-100 hover:bg-red-500/10">
+                                    Restart Google sign-in
+                                </Link>
+                            ) : null}
+                        </div>
                     ) : null}
 
                     <form action={`/auth/local?next=${encodeURIComponent(next)}`} method="post" className="space-y-4">

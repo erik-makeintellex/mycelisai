@@ -129,6 +129,24 @@ export function webAuthBaseOrigin(fallbackOrigin?: string | null): string {
     return "http://127.0.0.1:3000";
 }
 
+export function encodeOAuthStateCookie(state: string, nextPath: string): string {
+    return encodeURIComponent(JSON.stringify({ state, next: nextPath }));
+}
+
+export function decodeOAuthStateCookie(value: string | undefined): { state: string; next: string } {
+    if (!value) return { state: "", next: "/dashboard" };
+    try {
+        const parsed = JSON.parse(decodeURIComponent(value)) as { state?: unknown; next?: unknown };
+        const state = typeof parsed.state === "string" ? parsed.state : "";
+        const next = typeof parsed.next === "string" && parsed.next.startsWith("/") && !parsed.next.startsWith("//")
+            ? parsed.next
+            : "/dashboard";
+        return { state, next };
+    } catch {
+        return { state: "", next: "/dashboard" };
+    }
+}
+
 export async function sha256Hex(input: string): Promise<string> {
     const hash = await crypto.subtle.digest("SHA-256", encoder.encode(input));
     return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");

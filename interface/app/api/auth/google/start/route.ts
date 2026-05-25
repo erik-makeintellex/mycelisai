@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWebAuthConfig, googleConfigured, secureCookieEnabled, webAuthRedirectURL } from "@/lib/webAuth";
+import { encodeOAuthStateCookie, getWebAuthConfig, googleConfigured, secureCookieEnabled, webAuthRedirectURL } from "@/lib/webAuth";
 
 const STATE_COOKIE = "mycelis_google_state";
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     if (config.googleHostedDomain) authURL.searchParams.set("hd", config.googleHostedDomain);
 
     const response = NextResponse.redirect(authURL);
-    response.cookies.set(STATE_COOKIE, `${state}:${safeNext(request.nextUrl.searchParams.get("next")) || "/dashboard"}`, {
+    response.cookies.set(STATE_COOKIE, encodeOAuthStateCookie(state, safeNext(request.nextUrl.searchParams.get("next")) || "/dashboard"), {
         httpOnly: true,
         sameSite: "lax",
         secure: secureCookieEnabled(),
