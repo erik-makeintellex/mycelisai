@@ -19,11 +19,12 @@ export async function proxy(request: NextRequest) {
     );
     if (!session && !isPublicPath(request.nextUrl.pathname)) {
         if (request.nextUrl.pathname.startsWith('/api/')) {
+            if (shouldRedirectUnauthenticatedApiRequest(request.headers)) {
+                return redirectToLogin(request);
+            }
             return NextResponse.json({ ok: false, error: 'authentication_required' }, { status: 401 });
         }
-        const login = new URL('/login', request.url);
-        login.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search);
-        return NextResponse.redirect(login);
+        return redirectToLogin(request);
     }
     if (session?.role === 'standard' && isAdminPath(request.nextUrl)) {
         return NextResponse.redirect(new URL('/access-denied', request.url));
@@ -44,6 +45,19 @@ export async function proxy(request: NextRequest) {
         }
     }
     return NextResponse.next({ request: { headers } });
+}
+
+function redirectToLogin(request: NextRequest): NextResponse {
+    const login = new URL('/login', request.url);
+    login.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(login);
+}
+
+export function shouldRedirectUnauthenticatedApiRequest(headers: Headers): boolean {
+    const accept = headers.get('accept') || '';
+    const fetchMode = headers.get('sec-fetch-mode') || '';
+    const fetchDest = headers.get('sec-fetch-dest') || '';
+    return fetchMode === 'navigate' || fetchDest === 'document' || accept.includes('text/html');
 }
 
 function isPublicPath(pathname: string): boolean {

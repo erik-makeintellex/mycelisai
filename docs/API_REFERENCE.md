@@ -20,7 +20,7 @@
 | `/auth/session` | GET | Returns current Interface session posture: authenticated user, role, provider, and enabled login providers. |
 | `/auth/logout` | POST | Clears the Interface web session and redirects to `/login`. |
 
-Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity` and `X-Mycelis-Web-Identity-Signature` when calling Core with the deployment API key. Core verifies the HMAC with `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` or `MYCELIS_WEB_SESSION_SECRET` before using that principal for governance/audit context and `actor_identity` metadata. Invalid forwarded identity headers fail closed; missing headers retain the local API-key identity.
+Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity` and `X-Mycelis-Web-Identity-Signature` when calling Core with the deployment API key. Core verifies the HMAC with `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` or `MYCELIS_WEB_SESSION_SECRET` before using that principal for governance/audit context and `actor_identity` metadata. Invalid forwarded identity headers fail closed; missing headers retain the local API-key identity. When no browser session exists, document navigations to protected API or workspace-file URLs redirect to `/login?next=...`; programmatic fetches still receive structured `401` JSON with `{"ok":false,"error":"authentication_required"}` so components can handle the state without losing request context.
 | **Council Chat** | | |
 | `/api/v1/council/{member}/chat` | POST | Chat with any council member via NATS request-reply. Returns `APIResponse<CTSEnvelope>` with trust score + provenance |
 | `/api/v1/council/members` | GET | List all addressable council members from standing teams (admin-core, council-core) |

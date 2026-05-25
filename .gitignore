@@ -73,4 +73,5 @@ interface/.playwright/
 workspace/tool-cache/
 workspace/logs/
 workspace/docker-compose/
+workspace/generated/
 interface/.env.local
