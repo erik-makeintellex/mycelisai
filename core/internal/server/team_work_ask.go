@@ -30,13 +30,16 @@ type teamWorkAskRequest struct {
 	CapabilityRequirements []string                 `json:"capability_requirements,omitempty"`
 	GovernancePosture      protocol.ApprovalPosture `json:"governance_posture,omitempty"`
 	Payload                map[string]any           `json:"payload,omitempty"`
+	Async                  bool                     `json:"async,omitempty"`
 }
 
 type teamWorkAskResult struct {
-	WorkItem protocol.TeamWorkItem    `json:"work_item"`
-	Event    protocol.TeamStatusEvent `json:"event"`
-	Reply    string                   `json:"reply,omitempty"`
-	Subject  string                   `json:"subject"`
+	WorkItem      protocol.TeamWorkItem    `json:"work_item"`
+	Event         protocol.TeamStatusEvent `json:"event"`
+	Reply         string                   `json:"reply,omitempty"`
+	Subject       string                   `json:"subject"`
+	Accepted      bool                     `json:"accepted,omitempty"`
+	DispatchState string                   `json:"dispatch_state,omitempty"`
 }
 
 // HandleTeamWorkAsk submits one bounded request to a team and records either
@@ -66,15 +69,33 @@ func (s *AdminServer) HandleTeamWorkAsk(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, teamID)
 	raw, err := teamWorkAskPayload(req)
 	if err != nil {
 		respondAPIError(w, "Failed to serialize team ask: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	timeout := boundedTeamAskTimeout(req.TimeoutSeconds)
+	if req.Async {
+		subject := fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID)
+		dispatchState, err := s.dispatchTeamWorkAsk(item, req, subject)
+		if err != nil {
+			followupCtx, followupCancel := teamWorkAskFollowupContext(r.Context())
+			defer followupCancel()
+			s.respondTeamWorkAskDegraded(w, followupCtx, item, subject, dispatchState, err.Error(), http.StatusAccepted)
+			return
+		}
+		respondAPIJSON(w, http.StatusAccepted, protocol.NewAPISuccess(teamWorkAskResult{
+			WorkItem:      item,
+			Event:         queued,
+			Subject:       subject,
+			Accepted:      true,
+			DispatchState: dispatchState,
+		}))
+		return
+	}
 	followupCtx, followupCancel := teamWorkAskFollowupContext(r.Context())
 	defer followupCancel()
+	subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, teamID)
 	if s.NC == nil || !s.NC.IsConnected() {
 		s.respondTeamWorkAskDegraded(w, followupCtx, item, subject, "nats_offline", "NATS connection offline; the team ask was recorded but not sent.", http.StatusAccepted)
 		return
@@ -132,6 +153,50 @@ func teamWorkAskPayload(req teamWorkAskRequest) ([]byte, error) {
 	return []byte(req.Message), nil
 }
 
+func (s *AdminServer) dispatchTeamWorkAsk(item protocol.TeamWorkItem, req teamWorkAskRequest, subject string) (string, error) {
+	if s.NC == nil || !s.NC.IsConnected() {
+		return "nats_offline", fmt.Errorf("NATS connection offline; the team ask was recorded but not sent.")
+	}
+	payload, err := teamWorkAskCommandEnvelope(item, req)
+	if err != nil {
+		return "team_ask_payload_invalid", fmt.Errorf("team ask command payload could not be prepared: %w", err)
+	}
+	if err := s.NC.Publish(subject, payload); err != nil {
+		return "team_ask_publish_failed", fmt.Errorf("team ask command could not be published: %w", err)
+	}
+	return "published", nil
+}
+
+func teamWorkAskCommandEnvelope(item protocol.TeamWorkItem, req teamWorkAskRequest) ([]byte, error) {
+	ask := req.AskValue()
+	if ask.IsZero() {
+		ask = protocol.TeamAsk{Message: req.Message}
+	}
+	ask = ask.Normalize()
+	ask.Context = map[string]any{
+		"work_item_id":             item.WorkItemID,
+		"team_id":                  item.TeamID,
+		"details":                  req.Payload,
+		"expected_outputs":         item.ExpectedOutputs,
+		"expected_proof":           item.ExpectedProof,
+		"capability_requirements":  item.CapabilityRequirements,
+		"governance_posture":       item.GovernancePosture,
+		"source_active_work_state": item.State,
+		"source_channel":           teamWorkAskSourceChannel,
+	}
+	raw, err := json.Marshal(ask)
+	if err != nil {
+		return nil, err
+	}
+	return protocol.WrapSignalPayload(
+		protocol.SourceKindWebAPI,
+		teamWorkAskSourceChannel,
+		protocol.PayloadKindCommand,
+		item.TeamID,
+		raw,
+	)
+}
+
 func boundedTeamAskTimeout(seconds int) time.Duration {
 	if seconds <= 0 {
 		return defaultTeamAskTimeout
@@ -185,102 +250,21 @@ func teamWorkAskInteraction(item protocol.TeamWorkItem, req teamWorkAskRequest, 
 }
 
 func (s *AdminServer) respondTeamWorkAskDegraded(w http.ResponseWriter, ctx context.Context, item protocol.TeamWorkItem, subject, degradation, details string, status int) {
-	item.State = protocol.TeamWorkStateDegraded
-	item.NeedsOperator = true
-	item.DegradationState = degradation
-	item.RecoveryOptions = []string{"Recover the work item after NATS/team availability is restored.", "Add steering guidance before retrying.", "Archive if the work is no longer needed."}
-	event := teamWorkAskStatusEvent(item, protocol.TeamWorkStateDegraded, "Team ask degraded", details, "operator_attention", "Recover or steer this work item before retrying.", []string{degradation})
-	if err := s.insertTeamStatusEventDB(ctx, &event); err != nil {
-		respondAPIError(w, "Failed to record degraded team ask: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err := s.updateTeamWorkItemLastEventDB(ctx, &item, event); err != nil {
-		respondAPIError(w, "Failed to update degraded team ask: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	interaction := protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
-		InteractionID: uuid.NewString(),
-		TeamID:        item.TeamID,
-		WorkItemID:    item.WorkItemID,
-		SourceKind:    string(protocol.SourceKindWebAPI),
-		SourceChannel: teamWorkAskSourceChannel,
-		ActorRef:      "Soma",
-		Verb:          "degraded",
-		Summary:       details,
-		PayloadKind:   string(protocol.PayloadKindError),
-		Payload:       map[string]any{"subject": subject, "degradation_state": degradation},
-		Version:       "v1",
-	})
-	if err := s.insertTeamInteractionDB(ctx, &interaction); err != nil {
-		respondAPIError(w, "Failed to record degraded team interaction: "+err.Error(), http.StatusInternalServerError)
+	event, err := s.recordTeamWorkAskDegraded(ctx, &item, subject, degradation, details)
+	if err != nil {
+		respondAPIError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	respondAPIJSON(w, status, protocol.NewAPISuccess(teamWorkAskResult{WorkItem: item, Event: event, Subject: subject}))
 }
 
 func (s *AdminServer) respondTeamWorkAskOutput(w http.ResponseWriter, ctx context.Context, item protocol.TeamWorkItem, subject, reply string) {
-	item.State = protocol.TeamWorkStateOutputReady
-	item.NeedsOperator = false
-	item.DegradationState = ""
-	event := teamWorkAskStatusEvent(item, protocol.TeamWorkStateOutputReady, "Team response ready", teamAskReplyDetails(reply), "team_response", "Review the response and decide whether to retain, steer, or ask for follow-up.", nil)
-	if err := s.insertTeamStatusEventDB(ctx, &event); err != nil {
-		respondAPIError(w, "Failed to record team response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err := s.updateTeamWorkItemLastEventDB(ctx, &item, event); err != nil {
-		respondAPIError(w, "Failed to update team response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	interaction := protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
-		InteractionID: uuid.NewString(),
-		TeamID:        item.TeamID,
-		WorkItemID:    item.WorkItemID,
-		SourceKind:    string(protocol.SourceKindWebAPI),
-		SourceChannel: teamWorkAskSourceChannel,
-		ActorRef:      item.TeamID,
-		Verb:          "response",
-		Summary:       firstNonEmptyString(reply, "Team returned an empty response."),
-		PayloadKind:   string(protocol.PayloadKindResult),
-		Payload:       map[string]any{"subject": subject, "reply": reply},
-		Version:       "v1",
-	})
-	if err := s.insertTeamInteractionDB(ctx, &interaction); err != nil {
-		respondAPIError(w, "Failed to record team response interaction: "+err.Error(), http.StatusInternalServerError)
+	event, err := s.recordTeamWorkAskOutput(ctx, &item, subject, reply)
+	if err != nil {
+		respondAPIError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(teamWorkAskResult{WorkItem: item, Event: event, Reply: reply, Subject: subject}))
-}
-
-func teamAskReplyDetails(reply string) string {
-	trimmed := strings.Join(strings.Fields(reply), " ")
-	if trimmed == "" {
-		return "The team returned an empty bounded response for this ask."
-	}
-	const maxDetailRunes = 180
-	runes := []rune(trimmed)
-	if len(runes) > maxDetailRunes {
-		trimmed = string(runes[:maxDetailRunes]) + "..."
-	}
-	return "Reply: " + trimmed
-}
-
-func teamWorkAskReplyReadable(reply string) bool {
-	trimmed := strings.TrimSpace(reply)
-	if trimmed == "" {
-		return false
-	}
-	if strings.Contains(trimmed, "No response — LLM may be unavailable") ||
-		strings.Contains(trimmed, "No response - LLM may be unavailable") {
-		return false
-	}
-	normalized := strings.Trim(trimmed, "` \t\r\n")
-	if strings.HasPrefix(normalized, "json") {
-		normalized = strings.TrimSpace(strings.TrimPrefix(normalized, "json"))
-	}
-	if strings.HasPrefix(normalized, "{") && strings.Contains(normalized, `"tool_call"`) {
-		return false
-	}
-	return true
 }
 
 func defaultStringSlice(items []string, fallback string) []string {

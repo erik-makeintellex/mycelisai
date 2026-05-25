@@ -4,6 +4,7 @@ import type React from "react";
 import { Activity, CheckSquare, ListChecks, Wrench } from "lucide-react";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import { ActiveWorkLane } from "@/components/teams/ActiveWorkLane";
+import { useTeamWorkActionHandler } from "@/components/teams/useTeamWorkActionHandler";
 import type { ChatMessage, TeamWorkItem } from "@/store/useCortexStore";
 import { useCortexStore } from "@/store/useCortexStore";
 import {
@@ -55,11 +56,17 @@ export function SomaOperatingSurface({
   const missionChat = useCortexStore((state) => state.missionChat);
   const teamsDetail = useCortexStore((state) => state.teamsDetail);
   const durableWorkRefreshVersion = useCortexStore((state) => state.durableWorkRefreshVersion);
+  const selectTeam = useCortexStore((state) => state.selectTeam);
+  const activeWorkActions = useTeamWorkActionHandler(selectTeam);
   const evidence = evidenceItems ?? defaultEvidence;
   const latestSoma = lastSomaMessage(missionChat);
   const outputItems = outputWorkbenchItems(latestSoma?.execution_summary, latestSoma?.artifacts);
   const projectPackages = projectPackageOutputs(latestSoma?.execution_summary?.outputs);
-  const teamWork = useDurableTeamWork({ teams: teamsDetail, focusedTeamId, refreshVersion: durableWorkRefreshVersion });
+  const teamWork = useDurableTeamWork({
+    teams: teamsDetail,
+    focusedTeamId,
+    refreshVersion: durableWorkRefreshVersion + activeWorkActions.activeWorkRefreshVersion,
+  });
   const teamOutputItems = teamOutputWorkbenchItems(teamWork.outputRefs);
   const teamProjectPackages = teamOutputProjectPackages(teamWork.outputRefs);
   const mergedOutputItems = mergeOutputWorkbenchItems(outputItems, teamOutputItems);
@@ -101,7 +108,9 @@ export function SomaOperatingSurface({
                 ? `${activeMode} is the current workspace lane. ${teamWork.emptyMessage}`
                 : teamWork.emptyMessage}
               statusLabel={teamWork.statusLabel}
-              degradedMessage={teamWork.degradedMessage}
+              degradedMessage={activeWorkActions.activeWorkActionError ?? teamWork.degradedMessage}
+              onAction={activeWorkActions.handleActiveWorkAction}
+              onTeamAsk={activeWorkActions.handleTeamAsk}
               frame={false}
               maxVisibleItems={focusedTeamId ? 6 : 3}
               totalItemCount={teamWork.items.length}

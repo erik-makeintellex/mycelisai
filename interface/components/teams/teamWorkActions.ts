@@ -52,6 +52,7 @@ export async function postTeamWorkAsk(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         message,
+        async: true,
         summary: `Operator asked ${teamId} to continue work on "${item.title}".`,
         actor_ref: "operator",
         timeout_seconds: 60,
