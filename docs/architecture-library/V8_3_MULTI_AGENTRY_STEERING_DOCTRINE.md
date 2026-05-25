@@ -92,6 +92,8 @@ Outputs are durable operational artifacts. Every meaningful execution must attac
 
 A task is not complete because the model responded, code compiled, or UI rendered. A task is complete only when the operator can trust what happened.
 
+Run-linked team work now participates in this doctrine through `team_work.status` mission events. Teams still own concise `TeamStatusEvent` timelines, but the run-level Event Spine carries the normalized state, blocker, proof, and next-action metadata required for replay and recovery review.
+
 ## Async Runtime Steering
 
 All slow execution must become queued, resumable, event-driven, and non-blocking. The organism must never depend on synchronous cognition loops.

@@ -114,5 +114,5 @@ Related references:
 - `docs/user/governance-trust.md`
 - `docs/licensing.md`
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
-- `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`
-- `docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`
+- `docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`
+- `docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`

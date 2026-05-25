@@ -193,6 +193,8 @@ TeamWorkItem {
 
 The Event Spine is the operational truth layer. It is not logging, analytics, or telemetry decoration. It must support replay, reconstruction, audit, debugging, recovery, proof lineage, and execution history. Every meaningful execution transition must emit durable events.
 
+Current implementation state: run-linked `TeamStatusEvent` records mirror into `mission_events` as `team_work.status` payloads with normalized team/work/run/proof/source/state/blocker/next-action metadata. This makes confirmed team creation, delegated work, retained deliverables, and degraded team-work transitions reconstructable from the run event timeline without exposing raw bus topology in the default UI.
+
 ## ExpressionFrame Doctrine
 
 `ExpressionFrame` is the canonical translation layer between internal topology and operator understanding. Every frame must show intent, current state, next action, approval posture, risk posture, outputs, proof, recovery, and inspectable advanced details.

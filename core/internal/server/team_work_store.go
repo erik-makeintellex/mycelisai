@@ -110,7 +110,7 @@ func (s *AdminServer) insertTeamStatusEventDB(ctx context.Context, event *protoc
 	if strings.TrimSpace(event.Version) == "" {
 		event.Version = "v1"
 	}
-	return db.QueryRowContext(ctx, `
+	if err := db.QueryRowContext(ctx, `
 		INSERT INTO team_status_events (
 			id, tenant_id, team_id, work_item_id, run_id, intent_proof_id, contract_id, proof_id,
 			state, headline, details, confidence_posture, blocked_by, next_action,
@@ -126,7 +126,10 @@ func (s *AdminServer) insertTeamStatusEventDB(ctx context.Context, event *protoc
 		string(event.State), event.Headline, event.Details, event.ConfidencePosture,
 		jsonArray(event.BlockedBy), event.NextAction, event.SourceKind, event.SourceChannel,
 		event.PayloadKind, jsonArray(event.AuditRefs), event.Version,
-	).Scan(&event.Timestamp)
+	).Scan(&event.Timestamp); err != nil {
+		return err
+	}
+	return s.insertTeamWorkMissionEventDB(ctx, event)
 }
 
 func (s *AdminServer) updateTeamWorkItemLastEventDB(ctx context.Context, item *protocol.TeamWorkItem, event protocol.TeamStatusEvent) error {

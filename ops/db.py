@@ -285,7 +285,10 @@ def reset(c):
 
 
 ns = Collection("db")
+from .db_context import clear_runtime_context
+
 ns.add_task(status)
 ns.add_task(create)
 ns.add_task(migrate)
 ns.add_task(reset)
+ns.add_task(clear_runtime_context)

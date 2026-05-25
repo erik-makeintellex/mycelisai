@@ -173,6 +173,16 @@ func expectTeamStatusEventInsert(mock sqlmock.Sqlmock, teamID string, state prot
 			"api.intent.confirm-action", string(protocol.PayloadKindStatus), sqlmock.AnyArg(), "v1",
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
+	expectTeamWorkMissionEventInsert(mock, teamID, state)
+}
+
+func expectTeamWorkMissionEventInsert(mock sqlmock.Sqlmock, teamID string, state protocol.TeamWorkState) {
+	mock.ExpectExec("INSERT INTO mission_events").
+		WithArgs(
+			sqlmock.AnyArg(), sqlmock.AnyArg(), "default", string(protocol.EventTeamWorkStatus),
+			string(teamWorkMissionEventSeverity(state)), "soma", teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
+		).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 }
 
 func expectTeamWorkItemUpdate(mock sqlmock.Sqlmock, state protocol.TeamWorkState, outputRefs driver.Value) {

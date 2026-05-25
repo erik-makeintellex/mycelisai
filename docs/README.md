@@ -55,10 +55,6 @@ The active architecture library is intentionally small. It is not a holding area
 - **V8.3 Dev Agentry Operational Directive**: `./architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md`
 - **V8.3 Multi-Agentry Steering Doctrine**: `./architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`
 - **V8 New-User Acceptance Matrix**: `./architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md`
-- **V8.2 Current State And Finalization PRD**: `./architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md`
-- **V8.2 Finalization Delivery Plan**: `./architecture-library/V8_2_FINALIZATION_DELIVERY_PLAN.md`
-- **V8.2 Finalization Concretization Contract**: `./architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`
-- **V8.2 Operational Embodiment Directive**: `./architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`
 - **V8.2 Soma UI Architecture Expression**: `./architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`
 - **V8.2 Soma Team Interaction Contract**: `./architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md`
 - **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`
@@ -87,7 +83,6 @@ These files are useful for Codex, maintainers, and architecture reviewers, but t
 - **Repository Standards**: `../AGENTS.md`
 - **Active Development State**: `../.state/V8_DEV_STATE.md`
 - **Legacy V7 Development State**: `../.state/V7_DEV_STATE.md`
-- **Source File Size And Indexing Plan**: `./architecture-library/SOURCE_FILE_SIZE_AND_INDEXING_PLAN.md`
 
 Keep these out of the normal operator path unless the task is repo maintenance, architecture review, or delivery-state inspection.
 

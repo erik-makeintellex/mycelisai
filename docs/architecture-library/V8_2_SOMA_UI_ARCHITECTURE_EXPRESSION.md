@@ -5,7 +5,7 @@ Status: canonical target-expression document.
 
 Purpose: define the ideal operator experience and UI architecture posture for Soma as Mycelis moves from architecture description into operational embodiment.
 
-This document owns the expression model. The research-backed target UX, external calibration, information architecture, and delivery order are now captured in [V8.2 UI Research And Target Experience Review](V8_2_UI_RESEARCH_AND_TARGET_EXPERIENCE_REVIEW.md).
+This document owns the expression model. Research-backed target UX, external calibration, information architecture, and delivery order should be promoted here or into the V8.3 embodiment docs instead of being retained as separate research notes.
 
 ## Core Idea
 
@@ -87,7 +87,7 @@ The output type should determine the visible UI state, available controls, and r
 
 ## Research Calibration
 
-Microsoft HAX, Google PAIR, IBM Carbon for AI, IBM explainability guidance, and VIKTOR-style app building all reinforce the same UI lesson: start with concrete user value, show capability and limits early, keep correction/control easy, and explain consequences through proof and recovery instead of topology. The detailed research synthesis lives in the UI research review. Research calibration informs the product expression; it does not justify more default surfaces.
+Microsoft HAX, Google PAIR, IBM Carbon for AI, IBM explainability guidance, and VIKTOR-style app building all reinforce the same UI lesson: start with concrete user value, show capability and limits early, keep correction/control easy, and explain consequences through proof and recovery instead of topology. Research calibration informs the product expression; it does not justify more default surfaces.
 
 ## Operator Journey
 

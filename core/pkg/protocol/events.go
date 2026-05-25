@@ -17,8 +17,9 @@ const (
 	EventMissionCancelled EventType = "mission.cancelled"
 
 	// Team lifecycle
-	EventTeamSpawned EventType = "team.spawned"
-	EventTeamStopped EventType = "team.stopped"
+	EventTeamSpawned    EventType = "team.spawned"
+	EventTeamStopped    EventType = "team.stopped"
+	EventTeamWorkStatus EventType = "team_work.status"
 
 	// Agent lifecycle
 	EventAgentStarted EventType = "agent.started"
@@ -88,13 +89,13 @@ type RunsManager interface {
 // ConversationTurnData holds all fields for a single conversation turn.
 // Used by ConversationLogger.LogTurn to persist full-fidelity agent transcripts.
 type ConversationTurnData struct {
-	RunID          string                 `json:"run_id,omitempty"`     // nullable: standing-team chats
+	RunID          string                 `json:"run_id,omitempty"` // nullable: standing-team chats
 	SessionID      string                 `json:"session_id"`
 	TenantID       string                 `json:"tenant_id"`
 	AgentID        string                 `json:"agent_id"`
 	TeamID         string                 `json:"team_id,omitempty"`
 	TurnIndex      int                    `json:"turn_index"`
-	Role           string                 `json:"role"`                 // system|user|assistant|tool_call|tool_result|interjection
+	Role           string                 `json:"role"` // system|user|assistant|tool_call|tool_result|interjection
 	Content        string                 `json:"content"`
 	ProviderID     string                 `json:"provider_id,omitempty"`
 	ModelUsed      string                 `json:"model_used,omitempty"`

@@ -129,5 +129,5 @@ Related references:
 - `docs/licensing.md`
 - `docs/user/memory.md`
 - `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
-- `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`
-- `docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md`
+- `docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`
+- `docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`

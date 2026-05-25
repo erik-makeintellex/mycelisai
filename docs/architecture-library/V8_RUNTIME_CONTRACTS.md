@@ -3,7 +3,7 @@
 
 Status: canonical V8 runtime contract.
 
-This document owns the active runtime contract set. Earlier split runtime and V8.1 baseline detail docs have been removed from the active library; preserve still-needed requirements here, in [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md), or in [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md).
+This document owns the active runtime contract set. Earlier split runtime, V8.1 baseline detail, and V8.2 planning docs have been removed from the active library; preserve still-needed requirements here, in [V8.3 Operational Embodiment PRD](V8_3_OPERATIONAL_EMBODIMENT_PRD.md), or in [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md).
 
 ## Purpose
 

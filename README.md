@@ -7,7 +7,7 @@ This README is the development-swarm inception document. It points to current au
 Canonical ownership:
 - `README.md`: inception, navigation, and repo-wide working rules
 - `docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`, `docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md`, and `docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`: active release-candidate embodiment target; `architecture/v8-2.md` remains the stable full architecture baseline V8.3 concretizes
-- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` and `docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`: operator UX, screen/API truth, and directed-execution alignment
+- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`, `docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`, and `docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md`: operator UX, screen/API truth, team-work steering, and directed-execution alignment
 - `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md` and `docs/architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md`: capability, MCP/custom integration, proof, secret-reference, UI exposure, and rotation truth
 - `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`: V7-to-V8 bootstrap migration truth
 - `.state/V8_DEV_STATE.md`: live implementation scoreboard; read the active snapshot and immediate next actions before dated historical boards
@@ -52,12 +52,12 @@ Review these before planning or editing:
 11. [Operations](docs/architecture/OPERATIONS.md)
 12. [Testing](docs/TESTING.md)
 13. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
-14. [V8.2 Current State And Finalization PRD](docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
-15. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
+14. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
+15. [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
 16. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
-- V8.3 docs own current release-candidate embodiment; V8.2 docs remain stable architecture and compatibility authority. Historical V7 state remains migration evidence only, not active product authority.
+- V8.3 docs own current release-candidate embodiment; V8.2 docs that remain in the active library are stable architecture and implementation contracts. Historical V7 state remains migration evidence only, not active product authority.
 - `.state/V8_DEV_STATE.md` is the implementation truth for what is actually complete; use its active snapshot first and treat dated boards as evidence unless reactivated.
 - Keep user-facing docs and engineering docs cross-linked but distinct.
 
@@ -212,7 +212,7 @@ end-of-slice reporting must explicitly state which tests ran, which docs changed
 
 every implementation slice must include a docs review for the touched surface, even when the result is "reviewed, no content change required". Review `docs/API_REFERENCE.md` when API behavior, payload meaning, or endpoint contract changes.
 
-Go owns runtime, orchestration, API, NATS, and backend persistence-facing logic. TypeScript owns the interface and in-app docs browser. Python owns repo management, operator automation, CI orchestration, and local test harnesses. SQL owns migrations, and `db.migrate` compatibility gates include the current capability, proof, trust, and team-work tables. PowerShell may only be a thin host wrapper when the platform requires it.
+Go owns runtime, orchestration, API, NATS, and backend persistence-facing logic. TypeScript owns the interface and in-app docs browser. Python owns repo management, operator automation, CI orchestration, and local test harnesses. SQL owns migrations, and `db.migrate` compatibility gates include the current capability, proof, trust, and team-work tables. `uv run inv db.clear-runtime-context` is the guarded source-mode reset for stale Soma/team runtime context before fresh UX proof. PowerShell may only be a thin host wrapper when the platform requires it.
 
 Keep secrets in `.env` or deployment secret backends. Use `.env.compose` for Compose topology and non-secret runtime shape. Runtime config and UI surfaces should carry env-var or `SecretRef` references, not raw secret values; see [V8 Secret Storage And Credential Boundary](docs/architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md).
 

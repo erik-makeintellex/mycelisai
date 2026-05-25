@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-05-17
+> Last Updated: 2026-05-24
 > Purpose: Keep the active architecture surface small enough to use.
 
 ## TOC
@@ -26,12 +26,7 @@ The active architecture library keeps only documents that are directly used for 
 | [V8.3 Operational Embodiment PRD](V8_3_OPERATIONAL_EMBODIMENT_PRD.md) | release-candidate embodiment plan, async runtime, recovery actions, ExpressionFrame, new-user proof |
 | [V8.3 Dev Agentry Operational Directive](V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md) | delivery-agent posture for operational trust, async execution, recovery, proof, and Soma-first embodiment |
 | [V8.3 Multi-Agentry Steering Doctrine](V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md) | coordination doctrine for shared runtime truth, Soma authority, team lanes, capability governance, and proof semantics |
-| [V8.2 Current State And Finalization PRD](V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md) | current implementation truth, target finalization state, workstreams, blockers, exit gates |
-| [V8.2 Finalization Delivery Plan](V8_2_FINALIZATION_DELIVERY_PLAN.md) | team sequence, GUI matrix, runtime gates, and orchestration rules |
-| [V8.2 Finalization Concretization Contract](V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md) | first demo slice, ExecutionContract, ProofArtifact, UI states, degraded lifecycle, close-out template |
-| [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) | visible execution, durable outputs, proof, recovery, deployment trust |
 | [V8.2 Soma UI Architecture Expression](V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md) | ideal Soma interaction model, one-window UI architecture, active work, outputs, proof, teams |
-| [V8.2 UI Research And Target Experience Review](V8_2_UI_RESEARCH_AND_TARGET_EXPERIENCE_REVIEW.md) | research-backed target UX, expression-to-output workbench architecture, default/Inspect rules, delivery plan |
 | [V8.2 Soma Team Interaction Contract](V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md) | talking with new or running teams, TeamWorkItem, TeamInteraction, TeamStatusEvent, recovery |
 | [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) | instantiated organization runtime truth, Soma, Council, provider policy, continuity |
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | bootstrap bundles, templates, inheritance, precedence, startup truth |
@@ -41,7 +36,6 @@ The active architecture library keeps only documents that are directly used for 
 | [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) | browser-visible product proof standard |
 | [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) | full GUI validation contract and verdict format |
 | [V8 New-User Acceptance Matrix](V8_NEW_USER_ACCEPTANCE_MATRIX.md) | first-run, login, setup, Resources/MCP, outputs, and team recovery browser gates |
-| [Source File Size And Indexing Plan](SOURCE_FILE_SIZE_AND_INDEXING_PLAN.md) | repo-size hygiene and decomposition rules |
 
 The full production architecture target lives outside this folder at [architecture/v8-2.md](../../architecture/v8-2.md). The live implementation scoreboard is [.state/V8_DEV_STATE.md](../../.state/V8_DEV_STATE.md).
 

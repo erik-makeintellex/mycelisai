@@ -12,8 +12,8 @@ V8_DEV_STATE = ROOT / ".state/V8_DEV_STATE.md"
 V8_BOOTSTRAP_MODEL = ROOT / "docs" / "architecture-library" / "V8_CONFIG_AND_BOOTSTRAP_MODEL.md"
 V8_UI_API_CONTRACT = ROOT / "docs" / "architecture-library" / "V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md"
 V8_2_FULL_ARCHITECTURE = ROOT / "architecture/v8-2.md"
-V8_2_CURRENT_STATE_PRD = ROOT / "docs" / "architecture-library" / "V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md"
-V8_2_FINALIZATION_CONTRACT = ROOT / "docs" / "architecture-library" / "V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md"
+V8_3_OPERATIONAL_EMBODIMENT = ROOT / "docs" / "architecture-library" / "V8_3_OPERATIONAL_EMBODIMENT_PRD.md"
+V8_3_STEERING = ROOT / "docs" / "architecture-library" / "V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md"
 V8_CAPABILITY_MANIFEST = ROOT / "docs" / "architecture-library" / "V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md"
 CANONICAL_DOCS = [
     README,
@@ -22,7 +22,7 @@ CANONICAL_DOCS = [
     ROOT / "docs" / "architecture" / "OPERATIONS.md",
     ROOT / "ops" / "README.md",
     ROOT / "docs" / "user" / "system-status-recovery.md",
-    V8_2_CURRENT_STATE_PRD,
+    V8_3_OPERATIONAL_EMBODIMENT,
     V8_CAPABILITY_MANIFEST,
 ]
 
@@ -78,14 +78,12 @@ def test_docs_manifest_exposes_required_canonical_docs():
     required_paths = [
         "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
         "docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md", "docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md", "docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md", "docs/architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md",
-        "docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md",
-        "docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md",
         "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
         "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
         "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md",
-        "docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md",
         "docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md",
+        "docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md",
         "architecture/v8-2.md",
         "architecture/mycelis-architecture-v7.md",
     ]
@@ -223,9 +221,9 @@ def test_readme_has_fresh_agent_review_sequence():
         "AGENTS.md",
         "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
         "docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md", "docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md", "docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md",
-        "docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md",
         "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
         "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md",
+        "docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md",
         "docs/architecture/OPERATIONS.md",
         "docs/TESTING.md",
         ".state/V8_DEV_STATE.md",
@@ -641,8 +639,8 @@ def test_prd_index_points_to_modular_architecture_library():
     text = PRD_INDEX.read_text(encoding="utf-8")
     required_links = [
         "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
-        "docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md",
-        "docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md",
+        "docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md",
+        "docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md",
         "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
         "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
         "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md",
@@ -889,17 +887,21 @@ def test_v8_bootstrap_model_defines_v7_to_v8_migration_contract():
 
 
 def test_execution_governance_docs_reference_v8_migration_contract():
-    governance_text = V8_2_FINALIZATION_CONTRACT.read_text(encoding="utf-8")
-    team_text = V8_2_CURRENT_STATE_PRD.read_text(encoding="utf-8")
+    governance_text = V8_3_OPERATIONAL_EMBODIMENT.read_text(encoding="utf-8")
+    steering_text = V8_3_STEERING.read_text(encoding="utf-8")
 
     required = [
-        (governance_text, "## First Demo Slice"),
+        (governance_text, "## Canonical Runtime Objects"),
         (governance_text, "ExecutionContract"),
         (governance_text, "ProofArtifact"),
-        (team_text, "## Architecture Team Workstreams"),
-        (team_text, "Soma Experience"),
-        *[(team_text, snippet) for snippet in ("## Concretization Objects", "ExecutionContract", "ProofArtifact", "CapabilityManifestState", "UIResponseState", "System -> Deployments")],
-        (team_text, ".state/V8_DEV_STATE.md"),
+        (governance_text, "RunState"),
+        (governance_text, "TrustState"),
+        (governance_text, "RecoveryAction"),
+        (governance_text, "ExpressionFrame"),
+        (steering_text, "Shared Runtime Truth"),
+        (steering_text, "Soma Steering Authority"),
+        (steering_text, "Team Steering Rules"),
+        (steering_text, "Proof Doctrine"),
     ]
 
     missing = [snippet for text, snippet in required if snippet not in text]

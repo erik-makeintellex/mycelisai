@@ -2,8 +2,8 @@
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
 > Status: Compatibility entrypoint
-> Last Updated: 2026-05-16
-> Purpose: Preserve the stable historical PRD path while pointing active work to the current V8.2 architecture and finalization surfaces.
+> Last Updated: 2026-05-24
+> Purpose: Preserve the stable historical PRD path while pointing active work to the current V8.3 embodiment and V8.2 architecture baseline.
 
 ## TOC
 
@@ -17,19 +17,21 @@
 
 `architecture/mycelis-architecture-v7.md` is a retained path for older references and agent onboarding. It is not the place to grow new doctrine, topology language, or detailed product plans.
 
-The prior monolithic V7 documents have been removed from active documentation because they were superseded by V8.2 operational-embodiment contracts. New work should enter through the current modular library.
+The prior monolithic V7 documents have been removed from active documentation because they were superseded by current V8/V8.3 contracts. New work should enter through the current modular library.
 
 ## Current Authority
 
 Start here:
 - [Architecture Library Index](../docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
+- [V8.3 Operational Embodiment PRD](../docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md)
+- [V8.3 Dev Agentry Operational Directive](../docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md)
+- [V8.3 Multi-Agentry Steering Doctrine](../docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md)
 - [V8.2 Full Production Architecture](v8-2.md)
-- [V8.2 Current State And Finalization PRD](../docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md)
-- [V8.2 Operational Embodiment Directive](../docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md)
 - [V8 Runtime Contracts](../docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
 - [V8 UI/API and Operator Experience Contract](../docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
 - [V8 Capability Manifest And Runtime Integration Standard](../docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
-- [V8.2 Finalization Concretization Contract](../docs/architecture-library/V8_2_FINALIZATION_CONCRETIZATION_CONTRACT.md)
+- [V8.2 Soma UI Architecture Expression](../docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md)
+- [V8.2 Soma Team Interaction Contract](../docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
 - [V8 Development State](../.state/V8_DEV_STATE.md)
 
 Supporting implementation references:
@@ -41,9 +43,9 @@ Supporting implementation references:
 
 ## Compatibility Boundary
 
-Historical V7 development state remains in [.state/V7_DEV_STATE.md](../.state/V7_DEV_STATE.md) as migration evidence only. It should not be used as product authority when it conflicts with current V8.2 docs.
+Historical V7 development state remains in [.state/V7_DEV_STATE.md](../.state/V7_DEV_STATE.md) as migration evidence only. It should not be used as product authority when it conflicts with current V8/V8.3 docs.
 
-Superseded archive drafts and old V7 topical documents are intentionally deleted rather than retained as stale reference material. If a missing concept is still needed, promote it into the appropriate current V8.2 contract instead of restoring an old document.
+Superseded archive drafts and old V7/V8 topical documents are intentionally deleted rather than retained as stale reference material. If a missing concept is still needed, promote it into the appropriate current V8/V8.3 contract instead of restoring an old document.
 
 ## Current Product Position
 
@@ -55,7 +57,7 @@ The operator experience should collapse into:
 - I can see what happened.
 - I can trust the result.
 
-Current V8.2 work prioritizes operational embodiment: visible runs, durable outputs, inspectable proof, recovery, deployment trust, and confidence provenance preparation.
+Current V8.3 work prioritizes operational embodiment: async execution, visible runs, durable outputs, inspectable proof, executable recovery, deployment trust, and confidence provenance preparation.
 
 ## Delivery Framing
 
@@ -68,4 +70,4 @@ Every implementation slice should answer:
 - Does this reduce conceptual density?
 - Does this strengthen Soma as the singular operating surface?
 
-The active finalization roadmap lives in [V8.2 Current State And Finalization PRD](../docs/architecture-library/V8_2_CURRENT_STATE_AND_FINALIZATION_PRD.md).
+The active finalization roadmap lives in [V8.3 Operational Embodiment PRD](../docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md) and the implementation scoreboard lives in [V8 Development State](../.state/V8_DEV_STATE.md).
