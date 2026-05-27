@@ -12,6 +12,7 @@ func collaborationGroupColumns() []string {
 	return []string{
 		"id", "tenant_id", "name", "goal_statement", "work_mode",
 		"allowed_capabilities", "member_user_ids", "team_ids",
+		"workspace_folder",
 		"coordinator_profile", "approval_policy_ref", "status", "created_by",
 		"expiry", "created_audit_event_id", "updated_audit_event_id",
 		"created_at", "updated_at",
@@ -43,6 +44,7 @@ func TestHandleCreateGroup_ScopeDenied(t *testing.T) {
 }
 
 func TestHandleCreateAndListGroups_HappyPath_DB(t *testing.T) {
+	t.Setenv("MYCELIS_WORKSPACE", t.TempDir())
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt)
 	createMux := setupMux(t, "POST /api/v1/groups", s.HandleCreateGroup)
@@ -81,6 +83,7 @@ func TestHandleCreateAndListGroups_HappyPath_DB(t *testing.T) {
 				[]byte(`["runs.read","runs.propose"]`),
 				[]byte(`["u1","u2"]`),
 				[]byte(`["admin-core","council-core"]`),
+				"groups/admin-core",
 				"ops-profile",
 				"policy.ops",
 				"active",

@@ -141,7 +141,7 @@ func (r *InternalToolRegistry) handleSaveCachedImage(ctx context.Context, args m
 	if err != nil {
 		return "", err
 	}
-	if _, err := r.db.ExecContext(ctx, `UPDATE artifacts SET file_path = $1, file_size_bytes = $2, metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('saved', true, 'saved_path', $1, 'saved_at', NOW()) WHERE id = $3::uuid`, rel, int64(len(data)), id); err != nil {
+	if _, err := r.db.ExecContext(ctx, `UPDATE artifacts SET file_path = $1::text, file_size_bytes = $2, metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('saved', true, 'saved_path', $1::text, 'saved_at', NOW()) WHERE id = $3::uuid`, rel, int64(len(data)), id); err != nil {
 		return "", fmt.Errorf("update image save metadata: %w", err)
 	}
 	return mustJSON(map[string]any{"message": fmt.Sprintf("Saved cached image to %s", rel), "artifact": map[string]any{"id": id, "type": "file", "title": filename, "saved_path": rel}}), nil

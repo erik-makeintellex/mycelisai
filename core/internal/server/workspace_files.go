@@ -48,13 +48,23 @@ func normalizeWorkspacePath(rawPath string) string {
 }
 
 func resolveWorkspaceFilePath(rawPath string) (string, string, error) {
+	return resolveWorkspacePath(rawPath, false)
+}
+
+func resolveWorkspacePath(rawPath string, allowRoot bool) (string, string, error) {
 	root, err := workspaceRoot()
 	if err != nil {
 		return "", "", fmt.Errorf("invalid workspace root: %w", err)
 	}
 	normalized := normalizeWorkspacePath(rawPath)
-	if normalized == "" || normalized == "." {
+	if normalized == "" {
 		return "", "", fmt.Errorf("workspace file path is required")
+	}
+	if normalized == "." {
+		if !allowRoot {
+			return "", "", fmt.Errorf("workspace file path is required")
+		}
+		return root, ".", nil
 	}
 
 	var target string
@@ -139,7 +149,7 @@ func (s *AdminServer) HandleWorkspaceFileReveal(w http.ResponseWriter, r *http.R
 		respondAPIError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	target, rel, err := resolveWorkspaceFilePath(r.URL.Query().Get("path"))
+	target, rel, err := resolveWorkspacePath(r.URL.Query().Get("path"), true)
 	if err != nil {
 		respondAPIError(w, err.Error(), http.StatusBadRequest)
 		return

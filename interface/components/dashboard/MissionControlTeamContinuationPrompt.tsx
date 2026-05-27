@@ -1,6 +1,6 @@
 "use client";
 
-import { PlayCircle } from "lucide-react";
+import { FileText, ListChecks, PlayCircle, type LucideIcon } from "lucide-react";
 import type { ChatMessage, ExecutionSummaryData, ExecutionSummaryItem } from "@/store/useCortexStore";
 
 function valueText(value: unknown): string {
@@ -51,6 +51,38 @@ function latestTeamOnlyCreation(messages: ChatMessage[]) {
     return null;
 }
 
+type ContinuationAction = {
+    label: string;
+    detail: string;
+    prompt: string;
+    Icon: LucideIcon;
+    primary?: boolean;
+};
+
+function continuationActions(teamName: string): ContinuationAction[] {
+    return [
+        {
+            label: "Build playable prototype",
+            detail: "Project package, README, validation, proof",
+            prompt: `Have ${teamName} build the first playable browser-game prototype as a reviewable project package. Save it in the team's group folder with README, validation notes, output link, and proof.`,
+            Icon: PlayCircle,
+            primary: true,
+        },
+        {
+            label: "Write design brief",
+            detail: "Mechanics, roles, output shape, acceptance criteria",
+            prompt: `Have ${teamName} write a concise game design brief with mechanics, art direction, team roles, acceptance criteria, output path, and proof needed before build.`,
+            Icon: FileText,
+        },
+        {
+            label: "Draft delivery plan",
+            detail: "Next tasks, tools, risks, expected proof",
+            prompt: `Have ${teamName} draft the next deliverable plan with output shape, owner roles, needed tools, risks, and proof expected.`,
+            Icon: ListChecks,
+        },
+    ];
+}
+
 export default function MissionControlTeamContinuationPrompt({
     messages,
     disabled,
@@ -62,25 +94,41 @@ export default function MissionControlTeamContinuationPrompt({
 }) {
     const teamNeedingWork = latestTeamOnlyCreation(messages);
     if (!teamNeedingWork || disabled) return null;
+    const actions = continuationActions(teamNeedingWork);
 
     return (
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-md border border-cortex-warning/25 bg-cortex-warning/10 px-3 py-2">
+        <div className="mb-2 rounded-md border border-cortex-warning/25 bg-cortex-warning/10 px-3 py-2">
             <div className="min-w-0">
-                <div className="text-[11px] font-semibold text-cortex-text-main">
-                    {teamNeedingWork} is ready. No work item has started yet.
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-semibold text-cortex-text-main">
+                        {teamNeedingWork} is ready. Choose the first deliverable.
+                    </span>
+                    <span className="rounded-full border border-cortex-warning/25 bg-cortex-bg px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-cortex-warning">
+                        Needs first task
+                    </span>
                 </div>
                 <div className="text-[10px] leading-4 text-cortex-text-muted">
-                    Start a concrete deliverable so outputs and proof appear here.
+                    Pick a starter, review it in Soma, then send. Soma will create a governed work item before anything runs.
                 </div>
             </div>
-            <button
-                type="button"
-                onClick={() => onStarterPrompt(`Have ${teamNeedingWork} build the first playable browser game prototype and save it as a reviewable output.`)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-cortex-info/30 bg-cortex-info/10 px-2.5 py-1.5 text-[10px] font-mono font-bold uppercase text-cortex-info transition-colors hover:bg-cortex-info/15"
-            >
-                <PlayCircle className="h-3.5 w-3.5" />
-                Start work
-            </button>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+                {actions.map(({ label, detail, prompt, Icon, primary }) => (
+                    <button
+                        key={label}
+                        type="button"
+                        onClick={() => onStarterPrompt(prompt)}
+                        title={`${label}: ${detail}`}
+                        className={
+                            primary
+                                ? "inline-flex items-center gap-1.5 rounded-md border border-cortex-info/30 bg-cortex-info/10 px-2.5 py-1.5 text-[10px] font-mono font-bold uppercase text-cortex-info transition-colors hover:bg-cortex-info/15"
+                                : "inline-flex items-center gap-1.5 rounded-md border border-cortex-border bg-cortex-bg px-2.5 py-1.5 text-[10px] font-mono font-bold uppercase text-cortex-text-muted transition-colors hover:border-cortex-primary/30 hover:text-cortex-text-main"
+                        }
+                    >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                    </button>
+                ))}
+            </div>
         </div>
     );
 }

@@ -21,6 +21,12 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 		} else if fileCall, ok := inferFirstTeamGameDeliverablePlanFromRequest(latestRequest, planned[0]); ok {
 			planned = append(planned, normalizePlannedToolCall(fileCall))
 		}
+		if imageCall, saveCall, ok := inferTeamMediaDeliverablePlanFromRequest(latestRequest, planned[0]); ok && containsToolName(mutTools, "generate_image") {
+			planned = append(planned, normalizePlannedToolCall(imageCall))
+			if containsToolName(mutTools, "save_cached_image") {
+				planned = append(planned, normalizePlannedToolCall(saveCall))
+			}
+		}
 		return planned
 	}
 	if hasParsedCall {
@@ -31,6 +37,14 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 			if tool == "write_file" {
 				if call, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
 					planned = append(planned, normalizePlannedToolCall(call))
+				}
+			}
+			if tool == "generate_image" {
+				if imageCall, saveCall, ok := inferStandaloneMediaDeliverablePlanFromRequest(latestRequest); ok {
+					planned = append(planned, normalizePlannedToolCall(imageCall))
+					if containsToolName(mutTools, "save_cached_image") {
+						planned = append(planned, normalizePlannedToolCall(saveCall))
+					}
 				}
 			}
 		}
@@ -59,6 +73,12 @@ func plannedCallsHaveWritableOutput(planned []protocol.PlannedToolCall) bool {
 		if strings.EqualFold(strings.TrimSpace(call.Name), "write_file") {
 			return true
 		}
+		if strings.EqualFold(strings.TrimSpace(call.Name), "generate_image") {
+			return true
+		}
+		if strings.EqualFold(strings.TrimSpace(call.Name), "save_cached_image") {
+			return true
+		}
 	}
 	return false
 }
@@ -66,7 +86,7 @@ func plannedCallsHaveWritableOutput(planned []protocol.PlannedToolCall) bool {
 func plannedCallsAreDeterministicProposalSafe(planned []protocol.PlannedToolCall) bool {
 	for _, call := range planned {
 		switch strings.TrimSpace(call.Name) {
-		case "create_team", "write_file":
+		case "create_team", "generate_image", "save_cached_image", "write_file":
 			continue
 		default:
 			return false
@@ -77,14 +97,37 @@ func plannedCallsAreDeterministicProposalSafe(planned []protocol.PlannedToolCall
 
 func firstPlannedOutputTarget(planned []protocol.PlannedToolCall) string {
 	for _, call := range planned {
-		if !strings.EqualFold(strings.TrimSpace(call.Name), "write_file") {
-			continue
+		switch strings.TrimSpace(call.Name) {
+		case "write_file":
+			if target := firstNonEmptyString(call.Arguments["path"], call.Arguments["package_entrypoint"], call.Arguments["package_folder"]); target != "" {
+				return target
+			}
+		case "save_cached_image":
+			if target := workspaceMediaTarget(call.Arguments); target != "" {
+				return target
+			}
 		}
-		if target := firstNonEmptyString(call.Arguments["path"], call.Arguments["package_entrypoint"], call.Arguments["package_folder"]); target != "" {
-			return target
+	}
+	for _, call := range planned {
+		if strings.TrimSpace(call.Name) == "generate_image" {
+			if target := firstNonEmptyString(call.Arguments["goal"], call.Arguments["prompt"]); target != "" {
+				return target
+			}
 		}
 	}
 	return ""
+}
+
+func workspaceMediaTarget(arguments map[string]any) string {
+	folder := strings.Trim(strings.TrimSpace(fmt.Sprint(arguments["folder"])), "/\\")
+	filename := strings.Trim(strings.TrimSpace(fmt.Sprint(arguments["filename"])), "/\\")
+	if filename == "" {
+		return folder
+	}
+	if folder == "" {
+		return filename
+	}
+	return folder + "/" + filename
 }
 
 func countUserChatMessages(messages []chatRequestMessage) int {

@@ -206,6 +206,12 @@ func (s *AdminServer) ensureGroupForCreatedTeam(ctx context.Context, auditID, au
 		CreatedAuditEventID: auditID,
 		UpdatedAuditEventID: auditID,
 	}
+	if err := assignGroupWorkspaceFolder(&group, ""); err != nil {
+		return err
+	}
+	if err := ensureGroupWorkspaceFolder(group.WorkspaceFolder); err != nil {
+		return err
+	}
 	return s.insertGroupDB(ctx, &group)
 }
 

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ChevronUp, File, Folder, FolderPlus, RefreshCw, Save } from "lucide-react";
 import { useCortexStore, type MCPServerWithTools } from "@/store/useCortexStore";
 import { extractApiError, formatMCPToolResult, type ResourceCallRequest } from "@/lib/apiContracts";
+import WorkspaceFolderAccessCard from "./WorkspaceFolderAccessCard";
 
 const WORKSPACE_ROOT_PATH = "workspace";
 type WorkspaceEntry = { name: string; path: string; type: "file" | "dir" };
@@ -210,9 +211,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
                         <AlertTriangle className="w-4 h-4" />
                         <h3 className="text-sm font-semibold">Filesystem MCP not installed</h3>
                     </div>
-                    <p className="text-xs text-cortex-text-muted mb-3">
-                        Workspace Files requires the `filesystem` connected tool. Install or reconnect it from Resources / Connected Tools.
-                    </p>
+                    <p className="text-xs text-cortex-text-muted mb-3">Output Files requires the `filesystem` connected tool. Install or reconnect it from Resources / Connected Tools.</p>
                     <div className="flex gap-2">
                         <button onClick={onOpenToolsTab} className="px-3 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10">
                             Open Connected Tools
@@ -234,9 +233,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
                         <AlertTriangle className="w-4 h-4" />
                         <h3 className="text-sm font-semibold">Filesystem MCP not connected</h3>
                     </div>
-                    <p className="text-xs text-cortex-text-muted mb-3">
-                        Current status: <span className="font-mono">{filesystemServer.status}</span>. Reconnect it from Connected Tools, then retry.
-                    </p>
+                    <p className="text-xs text-cortex-text-muted mb-3">Current status: <span className="font-mono">{filesystemServer.status}</span>. Reconnect it from Connected Tools, then retry.</p>
                     <div className="flex gap-2">
                         <button onClick={onOpenToolsTab} className="px-3 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10">
                             Open Connected Tools
@@ -252,6 +249,9 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
 
     return (
         <div className="h-full grid grid-cols-12 gap-4 p-6">
+            <div className="col-span-12">
+                <WorkspaceFolderAccessCard currentPath={currentPath} onStatus={setStatus} />
+            </div>
             <section className="col-span-5 rounded-xl border border-cortex-border bg-cortex-surface p-3 flex flex-col min-h-0">
                 <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs font-mono text-cortex-text-muted">Path:</span>

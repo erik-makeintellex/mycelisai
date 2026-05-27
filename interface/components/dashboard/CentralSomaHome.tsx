@@ -106,27 +106,8 @@ export default function CentralSomaHome({
     };
 
     return (
-        <section className="space-y-5">
+        <section className="space-y-3">
             <EnvironmentEntryBar sessionUser={sessionUser} />
-            <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-4">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0">
-                        <p className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
-                            <MessageCircle className="h-3.5 w-3.5" />
-                            Start here
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                            Ask Soma to plan, review, create, or execute governed work. Set up an AI Organization only when you want a durable workspace behind the conversation.
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {lastOrganization ? (
-                            <QuickLink href={`/organizations/${lastOrganization.id}`} icon={<Building2 className="h-4 w-4" />} label={`Return to ${lastOrganization.name}`} />
-                        ) : null}
-                        <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Set up an AI Organization" />
-                    </div>
-                </div>
-            </div>
             {focusedTeam ? (
                 <div className="rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-3 text-sm text-cortex-text-main">
                     <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Focused team context</p>
@@ -142,7 +123,32 @@ export default function CentralSomaHome({
                 focusedTeamId={requestedTeamId || null}
             />
 
-            <CentralActivityStream />
+            <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2">
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <p className="min-w-0 text-xs leading-5 text-cortex-text-muted">
+                        <span className="mr-2 inline-flex items-center gap-1 font-mono uppercase tracking-[0.16em] text-cortex-primary">
+                            <MessageCircle className="h-3.5 w-3.5" />
+                            Start here
+                        </span>
+                        Ask Soma to plan, review, create, or execute governed work. Use organizations only when you need durable workspace context.
+                    </p>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                        {lastOrganization ? (
+                            <QuickLink href={`/organizations/${lastOrganization.id}`} icon={<Building2 className="h-4 w-4" />} label={`Return to ${lastOrganization.name}`} />
+                        ) : null}
+                        <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Set up an AI Organization" />
+                    </div>
+                </div>
+            </div>
+
+            <details className="rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2">
+                <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.16em] text-cortex-text-muted">
+                    Live team stream
+                </summary>
+                <div className="mt-3">
+                    <CentralActivityStream />
+                </div>
+            </details>
         </section>
     );
 }
@@ -156,25 +162,25 @@ function EnvironmentEntryBar({ sessionUser }: { sessionUser: WebSessionUser | nu
     return (
         <section
             data-testid="soma-environment-entry"
-            className="rounded-3xl border border-cortex-border bg-cortex-surface px-4 py-3"
+            className="rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2"
             aria-label="Signed-in Soma environment"
         >
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-primary">
                             <Sparkles className="h-3.5 w-3.5" />
-                            Soma operating environment
+                            Soma environment
                         </span>
-                        <span className="rounded-full border border-cortex-success/25 bg-cortex-success/10 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-success">
+                        <span className="rounded-full border border-cortex-success/25 bg-cortex-success/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.14em] text-cortex-success">
                             Signed in
                         </span>
+                        <span className="truncate text-sm font-medium text-cortex-text-main">
+                            {identityLabel}
+                        </span>
                     </div>
-                    <p className="mt-2 truncate text-sm font-medium text-cortex-text-main">
-                        {identityLabel}
-                    </p>
                 </div>
-                <div className="grid gap-2 text-xs text-cortex-text-muted sm:grid-cols-3 lg:min-w-[520px]">
+                <div className="flex flex-wrap gap-2 text-xs text-cortex-text-muted">
                     <EntryFact label="Access" value={roleLabel} />
                     <EntryFact label="Identity" value={providerLabel} />
                     <EntryFact label="Scope" value={workspaceScope} />
@@ -186,12 +192,12 @@ function EnvironmentEntryBar({ sessionUser }: { sessionUser: WebSessionUser | nu
 
 function EntryFact({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-3 py-2">
-            <p className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
+        <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-cortex-border bg-cortex-bg px-2.5 py-1.5">
+            <p className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.14em] text-cortex-text-muted">
                 <ShieldCheck className="h-3.5 w-3.5 text-cortex-primary" />
                 {label}
             </p>
-            <p className="mt-1 truncate font-medium text-cortex-text-main">{value}</p>
+            <p className="truncate font-medium text-cortex-text-main">{value}</p>
         </div>
     );
 }

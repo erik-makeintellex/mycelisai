@@ -27,6 +27,7 @@ func scanGroupRow(scanner interface{ Scan(dest ...any) error }) (*CollaborationG
 		&allowedRaw,
 		&memberRaw,
 		&teamRaw,
+		&g.WorkspaceFolder,
 		&g.CoordinatorProfile,
 		&g.ApprovalPolicyRef,
 		&g.Status,
@@ -52,6 +53,11 @@ func scanGroupRow(scanner interface{ Scan(dest ...any) error }) (*CollaborationG
 	if err != nil {
 		return nil, fmt.Errorf("decode team_ids: %w", err)
 	}
+	if strings.TrimSpace(g.WorkspaceFolder) == "" {
+		if assignErr := assignGroupWorkspaceFolder(&g, ""); assignErr != nil {
+			return nil, assignErr
+		}
+	}
 	if expiry.Valid {
 		ts := expiry.Time.UTC()
 		g.Expiry = &ts
@@ -69,6 +75,7 @@ func (s *AdminServer) listGroupsDB(ctx context.Context) ([]CollaborationGroup, e
 	rows, err := db.QueryContext(ctx, `
 		SELECT id::text, tenant_id, name, goal_statement, work_mode,
 		       allowed_capabilities, member_user_ids, team_ids,
+		       COALESCE(workspace_folder, ''),
 		       coordinator_profile, approval_policy_ref, status, created_by,
 		       expiry,
 		       COALESCE(created_audit_event_id::text, ''),
@@ -104,6 +111,7 @@ func (s *AdminServer) getGroupDB(ctx context.Context, id string) (*Collaboration
 	row := db.QueryRowContext(ctx, `
 		SELECT id::text, tenant_id, name, goal_statement, work_mode,
 		       allowed_capabilities, member_user_ids, team_ids,
+		       COALESCE(workspace_folder, ''),
 		       coordinator_profile, approval_policy_ref, status, created_by,
 		       expiry,
 		       COALESCE(created_audit_event_id::text, ''),
@@ -127,6 +135,7 @@ func (s *AdminServer) getGroupByNameDB(ctx context.Context, name string) (*Colla
 	row := db.QueryRowContext(ctx, `
 		SELECT id::text, tenant_id, name, goal_statement, work_mode,
 		       allowed_capabilities, member_user_ids, team_ids,
+		       COALESCE(workspace_folder, ''),
 		       coordinator_profile, approval_policy_ref, status, created_by,
 		       expiry,
 		       COALESCE(created_audit_event_id::text, ''),
@@ -147,23 +156,29 @@ func (s *AdminServer) insertGroupDB(ctx context.Context, g *CollaborationGroup) 
 	if db == nil {
 		return errors.New("database not available")
 	}
+	if strings.TrimSpace(g.WorkspaceFolder) == "" {
+		if err := assignGroupWorkspaceFolder(g, ""); err != nil {
+			return err
+		}
+	}
 	return db.QueryRowContext(ctx, `
 		INSERT INTO collaboration_groups (
 			id, tenant_id, name, goal_statement, work_mode,
-			allowed_capabilities, member_user_ids, team_ids,
+			allowed_capabilities, member_user_ids, team_ids, workspace_folder,
 			coordinator_profile, approval_policy_ref, status,
 			created_by, expiry, created_audit_event_id, updated_audit_event_id
 		) VALUES (
 			$1, $2, $3, $4, $5,
-			$6, $7, $8,
-			$9, $10, $11,
-			$12, $13, $14, $15
+			$6, $7, $8, $9,
+			$10, $11, $12,
+			$13, $14, $15, $16
 		)
 		RETURNING created_at, updated_at`,
 		g.ID, g.TenantID, g.Name, g.GoalStatement, g.WorkMode,
 		marshalStringList(g.AllowedCapabilities),
 		marshalStringList(g.MemberUserIDs),
 		marshalStringList(g.TeamIDs),
+		g.WorkspaceFolder,
 		g.CoordinatorProfile, g.ApprovalPolicyRef, g.Status,
 		g.CreatedBy, g.Expiry,
 		parseAuditUUID(g.CreatedAuditEventID),
@@ -176,6 +191,17 @@ func (s *AdminServer) updateGroupDB(ctx context.Context, id string, req createGr
 	if db == nil {
 		return nil, errors.New("database not available")
 	}
+	workspaceFolder := strings.TrimSpace(req.WorkspaceFolder)
+	if workspaceFolder != "" {
+		var folderErr error
+		workspaceFolder, folderErr = normalizeRequestedGroupWorkspaceFolder(workspaceFolder)
+		if folderErr != nil {
+			return nil, folderErr
+		}
+		if err := ensureGroupWorkspaceFolder(workspaceFolder); err != nil {
+			return nil, err
+		}
+	}
 	res, err := db.ExecContext(ctx, `
 		UPDATE collaboration_groups
 		SET name=$2,
@@ -186,8 +212,9 @@ func (s *AdminServer) updateGroupDB(ctx context.Context, id string, req createGr
 		    team_ids=$7,
 		    coordinator_profile=$8,
 		    approval_policy_ref=$9,
-		    expiry=$10,
-		    updated_audit_event_id=$11,
+		    workspace_folder=COALESCE(NULLIF($10, ''), workspace_folder),
+		    expiry=$11,
+		    updated_audit_event_id=$12,
 		    updated_at=NOW()
 		WHERE id=$1 AND tenant_id='default'`,
 		id,
@@ -199,6 +226,7 @@ func (s *AdminServer) updateGroupDB(ctx context.Context, id string, req createGr
 		marshalStringList(req.TeamIDs),
 		strings.TrimSpace(req.CoordinatorProfile),
 		strings.TrimSpace(req.ApprovalPolicyRef),
+		workspaceFolder,
 		req.Expiry,
 		parseAuditUUID(updatedAuditEventID),
 	)

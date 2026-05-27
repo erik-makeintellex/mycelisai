@@ -11,6 +11,7 @@ import { clearPersistedChat, loadOrCreateChatSessionId, loadPersistedChat, norma
 import {
     buildChatRouteConfig,
     buildRecentMissionMessages,
+    organizationIdFromMissionChatScope,
     resolveSelectedTeamContext,
     setMissionChatBlocker,
     setMissionChatSuccess,
@@ -55,7 +56,7 @@ export function createCortexMissionChatSlice(
                         body: JSON.stringify({
                             messages,
                             session_id: sessionId ?? undefined,
-                            organization_id: get().workspaceChatScope ?? undefined,
+                            organization_id: organizationIdFromMissionChatScope(get().workspaceChatScope) ?? undefined,
                             team_id: teamContext?.id,
                             team_name: teamContext?.name,
                         }),

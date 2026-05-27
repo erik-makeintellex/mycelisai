@@ -147,6 +147,7 @@ export default function GroupManagementPanel({
           goal_statement: draft.goalStatement.trim(),
           work_mode: draft.workMode,
           team_ids: splitList(draft.teamIDs),
+          workspace_folder: draft.workspaceFolder.trim(),
           member_user_ids: splitList(draft.memberIDs),
           coordinator_profile: draft.coordinatorProfile.trim(),
           approval_policy_ref: draft.approvalPolicyRef.trim(),

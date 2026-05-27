@@ -66,6 +66,7 @@ func (s *AdminServer) HandleCreateGroup(w http.ResponseWriter, r *http.Request) 
 		map[string]any{
 			"name":                 strings.TrimSpace(req.Name),
 			"work_mode":            strings.TrimSpace(req.WorkMode),
+			"workspace_folder":     strings.TrimSpace(req.WorkspaceFolder),
 			"approval_policy_ref":  strings.TrimSpace(req.ApprovalPolicyRef),
 			"allowed_capabilities": normalizeStringSlice(req.AllowedCapabilities),
 			"team_ids":             normalizeStringSlice(req.TeamIDs),
@@ -88,6 +89,14 @@ func (s *AdminServer) HandleCreateGroup(w http.ResponseWriter, r *http.Request) 
 		CreatedBy:           identity.UserID,
 		CreatedAuditEventID: auditEventID,
 		UpdatedAuditEventID: auditEventID,
+	}
+	if err := assignGroupWorkspaceFolder(&group, req.WorkspaceFolder); err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := ensureGroupWorkspaceFolder(group.WorkspaceFolder); err != nil {
+		respondAPIError(w, "Failed to create group workspace folder: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if err := s.insertGroupDB(r.Context(), &group); err != nil {
 		respondAPIError(w, "Failed to create group: "+err.Error(), http.StatusInternalServerError)
@@ -129,6 +138,7 @@ func (s *AdminServer) HandleUpdateGroup(w http.ResponseWriter, r *http.Request) 
 			"group_id":             id,
 			"name":                 strings.TrimSpace(req.Name),
 			"work_mode":            strings.TrimSpace(req.WorkMode),
+			"workspace_folder":     strings.TrimSpace(req.WorkspaceFolder),
 			"approval_policy_ref":  strings.TrimSpace(req.ApprovalPolicyRef),
 			"allowed_capabilities": normalizeStringSlice(req.AllowedCapabilities),
 			"team_ids":             normalizeStringSlice(req.TeamIDs),

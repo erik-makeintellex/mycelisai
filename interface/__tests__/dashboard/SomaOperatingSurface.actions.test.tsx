@@ -7,12 +7,14 @@ const mocks = vi.hoisted(() => {
   const selectTeam = vi.fn();
   const handleActiveWorkAction = vi.fn();
   const handleTeamAsk = vi.fn();
+  const missionControlChat = vi.fn();
   const useDurableTeamWork = vi.fn();
   const useTeamWorkActionHandler = vi.fn();
   return {
     selectTeam,
     handleActiveWorkAction,
     handleTeamAsk,
+    missionControlChat,
     useDurableTeamWork,
     useTeamWorkActionHandler,
   };
@@ -24,6 +26,7 @@ vi.mock("@/store/useCortexStore", () => ({
     teamsDetail: [{ id: "team-alpha", name: "Alpha" }],
     durableWorkRefreshVersion: 5,
     selectTeam: mocks.selectTeam,
+    selectedTeamId: null,
   }),
 }));
 
@@ -61,7 +64,10 @@ vi.mock("@/components/teams/ActiveWorkLane", () => ({
 }));
 
 vi.mock("@/components/dashboard/MissionControlChat", () => ({
-  default: () => <div data-testid="mission-chat" />,
+  default: (props: { focusedTeamId?: string | null }) => {
+    mocks.missionControlChat(props);
+    return <div data-testid="mission-chat" />;
+  },
 }));
 
 vi.mock("@/components/soma/SomaHeader", () => ({
@@ -125,6 +131,10 @@ describe("SomaOperatingSurface active work actions", () => {
       focusedTeamId: "team-alpha",
       refreshVersion: 12,
     }));
+    expect(mocks.missionControlChat).toHaveBeenCalledWith(expect.objectContaining({
+      focusedTeamId: "team-alpha",
+    }));
+    expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Alpha");
     expect(screen.getByText("Team action needs operator attention.")).toBeDefined();
 
     fireEvent.click(screen.getByRole("button", { name: /pause work/i }));

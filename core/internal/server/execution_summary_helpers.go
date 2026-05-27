@@ -95,7 +95,7 @@ func executionOutputsFromArtifacts(artifacts []protocol.ChatArtifactRef) []proto
 			title = "Artifact"
 		}
 		retained := artifact.ID != "" || artifact.Cached || artifact.SavedPath != ""
-		href := firstNonEmptyString(artifact.URL, artifact.SavedPath)
+		href := firstNonEmptyString(artifact.URL, workspaceFileOutputHref(artifact.SavedPath))
 		if artifact.Type == "project_package" {
 			retained = true
 			href = firstNonEmptyString(href, workspaceFileOutputHref(artifact.Entrypoint))

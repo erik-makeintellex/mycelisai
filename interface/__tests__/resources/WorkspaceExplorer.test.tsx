@@ -27,8 +27,13 @@ vi.mock("@/store/useCortexStore", () => ({
 
 function mockToolFetch() {
     const calls: Array<{ tool: string; body: any }> = [];
+    const revealCalls: string[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url.includes("/api/v1/workspace/files/reveal")) {
+            revealCalls.push(url);
+            return Response.json({ ok: true, data: { workspace_path: ".", folder_path: "workspace" } });
+        }
         const match = url.match(/\/tools\/([^/]+)\/call$/);
         const tool = match?.[1] ?? "";
         const body = init?.body ? JSON.parse(String(init.body)) : {};
@@ -46,7 +51,7 @@ function mockToolFetch() {
         return Response.json({ error: `unexpected tool ${tool}` }, { status: 500 });
     });
     vi.stubGlobal("fetch", fetchMock);
-    return { calls, fetchMock };
+    return { calls, revealCalls, fetchMock };
 }
 
 describe("WorkspaceExplorer", () => {
@@ -56,7 +61,7 @@ describe("WorkspaceExplorer", () => {
     });
 
     it("uses current filesystem MCP tool names with the arguments envelope", async () => {
-        const { calls } = mockToolFetch();
+        const { calls, revealCalls } = mockToolFetch();
 
         render(<WorkspaceExplorer onOpenToolsTab={vi.fn()} />);
 
@@ -64,6 +69,12 @@ describe("WorkspaceExplorer", () => {
             expect(calls.some((call) => call.tool === "list_directory")).toBe(true);
         });
         expect(calls[0].body).toEqual({ arguments: { path: "workspace" } });
+        expect(screen.getByText("Generated content lives here")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: /Open current folder workspace/i }));
+        await waitFor(() => {
+            expect(revealCalls.some((url) => url.includes("path=workspace"))).toBe(true);
+        });
 
         fireEvent.click(await screen.findByText("proof.md"));
         await waitFor(() => {

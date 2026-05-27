@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Brain, Megaphone } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import { SomaConversationThread } from "@/components/soma/SomaConversationThread";
@@ -24,16 +24,19 @@ import { MissionControlAdvancedInput } from "./MissionControlAdvancedInput";
 import MissionControlTeamContinuationPrompt from "./MissionControlTeamContinuationPrompt";
 import OrchestrationInspector from "./OrchestrationInspector";
 import { somaPlaceholder, teamSuggestions } from "./missionControlChatUi";
+import { buildMissionChatScope } from "@/store/cortexStoreMissionChatHelpers";
 
 export default function MissionControlChat({
     simpleMode = false,
     autoFocus = false,
     organizationId,
+    focusedTeamId,
     suggestions = DEFAULT_SOMA_SUGGESTIONS,
 }: {
     simpleMode?: boolean;
     autoFocus?: boolean;
     organizationId?: string;
+    focusedTeamId?: string | null;
     suggestions?: readonly SomaSuggestion[];
 }) {
     const missionChat = useCortexStore((s) => s.missionChat);
@@ -59,9 +62,14 @@ export default function MissionControlChat({
     const inputRef = useRef<HTMLInputElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const showAdvancedRouting = !simpleMode;
-    const currentTeam = selectedTeamId
-        ? teamsDetail.find((team) => team.id === selectedTeamId) ?? null
+    const currentTeamId = focusedTeamId || selectedTeamId;
+    const currentTeam = currentTeamId
+        ? teamsDetail.find((team) => team.id === currentTeamId) ?? null
         : null;
+    const chatScope = useMemo(
+        () => buildMissionChatScope(organizationId, currentTeamId),
+        [organizationId, currentTeamId],
+    );
     const activeSuggestions = currentTeam ? teamSuggestions(currentTeam.name) : suggestions;
     const isLoading = isMissionChatting || isBroadcasting;
     const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
@@ -71,8 +79,8 @@ export default function MissionControlChat({
     }, [setCouncilTarget]);
 
     useEffect(() => {
-        setMissionChatScope(organizationId ?? null);
-    }, [organizationId, setMissionChatScope]);
+        setMissionChatScope(chatScope);
+    }, [chatScope, setMissionChatScope]);
 
     useEffect(() => {
         setDirectTarget(councilTarget === "admin" ? null : councilTarget);

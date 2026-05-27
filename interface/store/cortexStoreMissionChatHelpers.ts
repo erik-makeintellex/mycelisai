@@ -10,6 +10,8 @@ interface ChatRouteConfig {
     allowSilentColdStartRetry: boolean;
 }
 
+const TEAM_CHAT_SCOPE_SEPARATOR = "::team::";
+
 interface MissionChatBlockerOptions {
     assistantName: string;
     targetId: string;
@@ -40,14 +42,57 @@ export function buildRecentMissionMessages(messages: ChatMessage[]) {
         }));
 }
 
-export function resolveSelectedTeamContext(get: CortexGet): { id: string; name: string } | null {
-    const { selectedTeamId, teamsDetail } = get();
-    if (!selectedTeamId) {
+export function buildMissionChatScope(
+    organizationId?: string | null,
+    teamId?: string | null,
+): string | null {
+    const normalizedTeam = typeof teamId === "string" && teamId.trim() ? teamId.trim() : null;
+    const normalizedOrganization = typeof organizationId === "string" && organizationId.trim()
+        ? organizationId.trim()
+        : null;
+
+    if (!normalizedTeam) {
+        return normalizedOrganization;
+    }
+
+    return `${normalizedOrganization ?? "root"}${TEAM_CHAT_SCOPE_SEPARATOR}${normalizedTeam}`;
+}
+
+export function organizationIdFromMissionChatScope(scope?: string | null): string | null {
+    const normalizedScope = typeof scope === "string" && scope.trim() ? scope.trim() : null;
+    if (!normalizedScope) {
         return null;
     }
-    const team = teamsDetail.find((entry) => entry.id === selectedTeamId);
+    const teamScopeIndex = normalizedScope.indexOf(TEAM_CHAT_SCOPE_SEPARATOR);
+    if (teamScopeIndex === -1) {
+        return normalizedScope;
+    }
+    const organizationScope = normalizedScope.slice(0, teamScopeIndex).trim();
+    return organizationScope && organizationScope !== "root" ? organizationScope : null;
+}
+
+export function teamIdFromMissionChatScope(scope?: string | null): string | null {
+    const normalizedScope = typeof scope === "string" && scope.trim() ? scope.trim() : null;
+    if (!normalizedScope) {
+        return null;
+    }
+    const teamScopeIndex = normalizedScope.indexOf(TEAM_CHAT_SCOPE_SEPARATOR);
+    if (teamScopeIndex === -1) {
+        return null;
+    }
+    const teamId = normalizedScope.slice(teamScopeIndex + TEAM_CHAT_SCOPE_SEPARATOR.length).trim();
+    return teamId || null;
+}
+
+export function resolveSelectedTeamContext(get: CortexGet): { id: string; name: string } | null {
+    const { selectedTeamId, teamsDetail, workspaceChatScope } = get();
+    const teamId = selectedTeamId || teamIdFromMissionChatScope(workspaceChatScope);
+    if (!teamId) {
+        return null;
+    }
+    const team = teamsDetail.find((entry) => entry.id === teamId);
     if (!team) {
-        return { id: selectedTeamId, name: selectedTeamId };
+        return { id: teamId, name: teamId };
     }
     return {
         id: team.id,

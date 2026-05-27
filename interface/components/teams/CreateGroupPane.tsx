@@ -120,6 +120,17 @@ export function CreateGroupPane({
               className={compactInputClassName}
             />
           </Field>
+          <Field label="Workspace Folder">
+            <input
+              aria-label="Workspace Folder"
+              placeholder="auto: groups/team-id"
+              value={draft.workspaceFolder}
+              onChange={(event) =>
+                onDraftChange({ workspaceFolder: event.target.value })
+              }
+              className={compactInputClassName}
+            />
+          </Field>
           <Field label="Coordinator Profile">
             <input
               aria-label="Coordinator Profile"

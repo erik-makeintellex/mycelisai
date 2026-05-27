@@ -82,6 +82,32 @@ func TestHandleWorkspaceFileReveal_OpensContainingFolderWithinWorkspace(t *testi
 	}
 }
 
+func TestHandleWorkspaceFileReveal_OpensWorkspaceRoot(t *testing.T) {
+	workspace := t.TempDir()
+	t.Setenv("MYCELIS_WORKSPACE", workspace)
+	t.Setenv("MYCELIS_WORKSPACE_REVEAL_DRY_RUN", "1")
+
+	s := newTestServer()
+	mux := setupMux(t, "POST /api/v1/workspace/files/reveal", s.HandleWorkspaceFileReveal)
+	rr := doAuthenticatedRequest(t, mux, http.MethodPost, "/api/v1/workspace/files/reveal?path=workspace", "")
+
+	assertStatus(t, rr, http.StatusOK)
+	var body map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	data, ok := body["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("data = %#v", body["data"])
+	}
+	if data["workspace_path"] != "." {
+		t.Fatalf("workspace_path = %#v", data["workspace_path"])
+	}
+	if data["folder_path"] != workspace {
+		t.Fatalf("folder_path = %#v", data["folder_path"])
+	}
+}
+
 func TestHandleWorkspaceFileReveal_RejectsEscapingPath(t *testing.T) {
 	t.Setenv("MYCELIS_WORKSPACE", t.TempDir())
 	t.Setenv("MYCELIS_WORKSPACE_REVEAL_DRY_RUN", "1")

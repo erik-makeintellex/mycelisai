@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 
 from fastapi.testclient import TestClient
 
@@ -47,8 +48,74 @@ def test_media_gateway_adapts_auto1111_txt2img(monkeypatch):
     }
 
 
-def test_media_gateway_reports_unsupported_backend(monkeypatch):
+def test_media_gateway_adapts_comfyui_workflow_prompt_history_and_view(monkeypatch, tmp_path):
+    seen: dict[str, object] = {}
+    workflow = {
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": ""}},
+        "5": {"class_type": "EmptyLatentImage", "inputs": {"width": 512, "height": 512, "batch_size": 1}},
+        "9": {"class_type": "SaveImage", "inputs": {"images": ["8", 0]}},
+    }
+    workflow_file = tmp_path / "workflow.json"
+    workflow_file.write_text(json.dumps(workflow), encoding="utf-8")
+
     monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_BACKEND", "comfyui")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_UPSTREAM", "http://127.0.0.1:8188")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_COMFY_WORKFLOW_FILE", str(workflow_file))
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_COMFY_PROMPT_NODE_ID", "3")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_COMFY_SIZE_NODE_ID", "5")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_COMFY_BATCH_NODE_ID", "5")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_COMFY_POLL_SECONDS", "0.1")
+
+    def fake_post(url, body, timeout):
+        seen["post_url"] = url
+        seen["post_body"] = body
+        return {"prompt_id": "prompt-123", "number": 1, "node_errors": {}}
+
+    def fake_json_get(url, timeout):
+        seen["history_url"] = url
+        return {
+            "prompt-123": {
+                "outputs": {
+                    "9": {
+                        "images": [
+                            {"filename": "ComfyUI_00001_.png", "subfolder": "", "type": "output"}
+                        ]
+                    }
+                }
+            }
+        }
+
+    def fake_bytes_get(url, timeout):
+        seen["view_url"] = url
+        return b"png-bytes"
+
+    monkeypatch.setattr(media_gateway, "_json_post", fake_post)
+    monkeypatch.setattr(media_gateway, "_json_get", fake_json_get)
+    monkeypatch.setattr(media_gateway, "_bytes_get", fake_bytes_get)
+
+    client = TestClient(media_gateway.app)
+    response = client.post(
+        "/v1/images/generations",
+        json={"prompt": "private node graph concept", "n": 1, "size": "768x512"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"][0]["b64_json"] == base64.b64encode(b"png-bytes").decode("ascii")
+    assert seen["post_url"] == "http://127.0.0.1:8188/prompt"
+    assert seen["history_url"] == "http://127.0.0.1:8188/history/prompt-123"
+    assert seen["view_url"] == "http://127.0.0.1:8188/view?filename=ComfyUI_00001_.png&subfolder=&type=output"
+    submitted_workflow = seen["post_body"]["prompt"]
+    assert submitted_workflow["3"]["inputs"]["text"] == "private node graph concept"
+    assert submitted_workflow["5"]["inputs"]["width"] == 768
+    assert submitted_workflow["5"]["inputs"]["height"] == 512
+    assert submitted_workflow["5"]["inputs"]["batch_size"] == 1
+
+
+def test_media_gateway_comfyui_requires_workflow_mapping(monkeypatch):
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_BACKEND", "comfyui")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_UPSTREAM", "http://127.0.0.1:8188")
+    monkeypatch.delenv("MYCELIS_MEDIA_GATEWAY_COMFY_WORKFLOW_FILE", raising=False)
+    monkeypatch.delenv("MYCELIS_MEDIA_GATEWAY_COMFY_WORKFLOW_JSON", raising=False)
 
     client = TestClient(media_gateway.app)
     response = client.post(
@@ -56,8 +123,8 @@ def test_media_gateway_reports_unsupported_backend(monkeypatch):
         json={"prompt": "private concept", "n": 1, "size": "512x512"},
     )
 
-    assert response.status_code == 501
-    assert "Forge/AUTOMATIC1111" in response.json()["detail"]
+    assert response.status_code == 500
+    assert "MYCELIS_MEDIA_GATEWAY_COMFY_WORKFLOW_FILE" in response.json()["detail"]
 
 
 def test_media_gateway_rejects_url_response_format(monkeypatch):

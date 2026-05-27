@@ -23,6 +23,11 @@ func inferFirstTeamGameDeliverablePlanFromRequest(text string, teamCall protocol
 		slug = "soma-game-team"
 	}
 	folder := "workspace/generated/" + slug + "-first-game"
+	if teamID != "" {
+		if groupFolder := groupWorkspaceFolderForTeamID(teamID); groupFolder != "" {
+			folder = groupFolder + "/generated/first-game"
+		}
+	}
 	entrypoint := folder + "/index.html"
 	title := firstNonEmptyString(teamName, "Soma Game Team") + " First Playable"
 

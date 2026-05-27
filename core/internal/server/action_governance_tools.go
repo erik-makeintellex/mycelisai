@@ -37,6 +37,10 @@ func capabilityForPlannedTool(name string) string {
 		return "learning"
 	case "create_team", "delegate_task":
 		return "team_orchestration"
+	case "generate_image":
+		return "media_generation"
+	case "save_cached_image":
+		return "media_output"
 	case "delegate":
 		return "review"
 	case "publish_signal", "broadcast":
@@ -61,7 +65,7 @@ func capabilityRiskForTool(name string, arguments map[string]any) string {
 		default:
 			return "medium"
 		}
-	case "write_file", "create_team", "delegate", "delegate_task", "remember", "summarize_conversation":
+	case "generate_image", "save_cached_image", "write_file", "create_team", "delegate", "delegate_task", "remember", "summarize_conversation":
 		return "medium"
 	default:
 		return "low"
@@ -77,6 +81,10 @@ func estimateActionCost(name string, arguments map[string]any) float64 {
 			return 0.75
 		}
 		return 0.35
+	case "generate_image":
+		return 0.5
+	case "save_cached_image":
+		return 0.2
 	case "load_deployment_context":
 		switch strings.TrimSpace(fmt.Sprint(arguments["knowledge_class"])) {
 		case "soma_operating_context", "user_private_context", "reflection_synthesis":

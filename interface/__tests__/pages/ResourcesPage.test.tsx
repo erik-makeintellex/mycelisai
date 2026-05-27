@@ -91,7 +91,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
         expect(screen.getByRole('button', { name: /Connected Tools/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Exchange/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Deployment Context/i })).toBeDefined();
-        expect(screen.getByRole('button', { name: /Workspace Files/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Output Files/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /AI Engines/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Role Library/i })).toBeDefined();
     });

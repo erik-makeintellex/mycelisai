@@ -16,7 +16,7 @@ async function openWorkspaceFiles(page: Page) {
     await enableAdvancedMode(page);
     await page.goto("/resources?tab=workspace", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Advanced Resources" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: /Workspace Files/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Output Files/i })).toBeVisible();
 }
 
 async function mockWorkspaceMCP(page: Page) {
@@ -96,6 +96,14 @@ async function mockWorkspaceMCP(page: Page) {
         await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: `unexpected tool ${tool}` }) });
     });
 
+    await page.route("**/api/v1/workspace/files/reveal?*", async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ ok: true, data: { workspace_path: "workspace", folder_path: "workspace" } }),
+        });
+    });
+
     return calls;
 }
 
@@ -119,7 +127,11 @@ test.describe("Resources workspace files", () => {
         await openWorkspaceFiles(page);
 
         await expect(page.getByText("proof.md")).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByText("Generated content lives here")).toBeVisible();
         expect(calls[0]).toEqual({ tool: "list_directory", arguments: { path: "workspace" } });
+
+        await clickVisibleControl(page, page.getByRole("button", { name: /Open current folder workspace/i }));
+        await expect(page.getByText(/Opened local folder for workspace/i)).toBeVisible();
 
         await clickVisibleControl(page, page.getByRole("button", { name: "Open file proof.md" }));
         await expect(page.locator("textarea").first()).toHaveValue(/Readable through filesystem MCP/i);
@@ -128,7 +140,7 @@ test.describe("Resources workspace files", () => {
         await page.getByPlaceholder("new directory name").fill("generated");
         await clickVisibleControl(page, page.getByRole("button", { name: /Create Dir/i }));
         await waitForToolCall(page, calls, (call) => call.tool === "create_directory" && call.arguments.path === "workspace/generated");
-        await expect(page.getByText("generated")).toBeVisible();
+        await expect(page.getByRole("button", { name: "Open folder generated" })).toBeVisible();
 
         await page.getByPlaceholder("new file name").fill("generated-proof.md");
         await page.getByPlaceholder("Optional content for new file").fill("# Generated Proof\nCreated from the Workspace Files GUI.");

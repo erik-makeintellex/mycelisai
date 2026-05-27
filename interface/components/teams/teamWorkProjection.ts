@@ -62,7 +62,7 @@ export function projectTeamWorkItem(team: TeamDetailEntry): TeamWorkItem {
     { action: "steer", label: "Steer", href: leadHref, audited: true },
     {
       action: "start_work",
-      label: "Start",
+      label: "Start task",
       href: leadHref,
       audited: true,
     },

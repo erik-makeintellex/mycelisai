@@ -9,6 +9,7 @@ import {
   asItems,
   itemText,
   itemUrl,
+  normalizeWorkspaceOutputUrl,
 } from "./ExecutionSummaryCardModel";
 import OutputAccessActions from "./OutputAccessActions";
 
@@ -70,13 +71,7 @@ export function mergeOutputWorkbenchItems(...groups: OutputWorkbenchItem[][]): O
 }
 
 function outputUrl(storageRef?: string | null): string | null {
-  const value = storageRef?.trim();
-  if (!value) return null;
-  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/")) return value;
-  if (value.includes("/") || value.includes(".")) {
-    return `/api/v1/workspace/files/view?path=${encodeURIComponent(value)}`;
-  }
-  return null;
+  return normalizeWorkspaceOutputUrl(storageRef);
 }
 
 function quotedOutputText(output: OutputWorkbenchItem) {
@@ -129,7 +124,7 @@ export function OutputWorkbench({
                     <div className="truncate text-sm font-semibold text-cortex-text-main">{title}</div>
                     {project.summary ? <div className="text-xs leading-5 text-cortex-text-muted">{project.summary}</div> : null}
                   </div>
-                  <OutputAccessActions label={title} url={href} storagePath={folder} openLabel={projectOpenLabel} />
+                  <OutputAccessActions label={title} url={href} storagePath={folder} openLabel={projectOpenLabel} folderLabel="Open folder" />
                 </div>
                 {(project.entrypoint || folder) ? (
                   <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-mono text-cortex-text-muted">
@@ -172,7 +167,7 @@ export function OutputWorkbench({
                 ) : (
                   <span className="min-w-0 truncate text-sm text-cortex-text-main">{output.text}</span>
                 )}
-                <OutputAccessActions label={output.text} url={output.url} />
+                <OutputAccessActions label={output.text} url={output.url} folderLabel="Open folder" />
                 <button
                   type="button"
                   onClick={() => void copyOutputQuote(output, key)}

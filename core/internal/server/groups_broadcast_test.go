@@ -33,6 +33,7 @@ func TestHandleGroupBroadcast_FanoutParallel_DB(t *testing.T) {
 				[]byte(`["runs.propose"]`),
 				[]byte(`["u1","u2"]`),
 				[]byte(`["admin-core","council-core"]`),
+				"groups/admin-core",
 				"ops-profile",
 				"policy.ops",
 				groupStatusActive,

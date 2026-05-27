@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { buildMissionChatFailure } from '@/lib/missionChatFailure';
+import {
+    buildMissionChatScope,
+    organizationIdFromMissionChatScope,
+    teamIdFromMissionChatScope,
+} from '@/store/cortexStoreMissionChatHelpers';
 import { useCortexStore } from '@/store/useCortexStore';
 import { resetCortexStore } from './useCortexStoreTestSupport';
 
@@ -63,6 +68,19 @@ describe('useCortexStore mission chat scope', () => {
         useCortexStore.getState().setMissionChatScope('org-2');
         expect(useCortexStore.getState().workspaceChatScope).toBe('org-2');
         expect(useCortexStore.getState().missionChat).toMatchObject([{ role: 'user', content: 'org-2 history' }]);
+    });
+
+    it('builds team chat scopes without losing the organization boundary', () => {
+        const scoped = buildMissionChatScope('org-1', 'team-alpha');
+        const rootTeamScoped = buildMissionChatScope(null, 'team-beta');
+
+        expect(scoped).toBe('org-1::team::team-alpha');
+        expect(organizationIdFromMissionChatScope(scoped)).toBe('org-1');
+        expect(teamIdFromMissionChatScope(scoped)).toBe('team-alpha');
+        expect(rootTeamScoped).toBe('root::team::team-beta');
+        expect(organizationIdFromMissionChatScope(rootTeamScoped)).toBeNull();
+        expect(teamIdFromMissionChatScope(rootTeamScoped)).toBe('team-beta');
+        expect(buildMissionChatScope('org-1', null)).toBe('org-1');
     });
 
     it('clears in-flight workspace chat state when switching organization scope', () => {

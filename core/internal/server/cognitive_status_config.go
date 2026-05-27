@@ -13,7 +13,7 @@ import (
 )
 
 // GET /api/v1/cognitive/status
-// Returns health and configuration of all cognitive engines (vLLM text + Diffusers media).
+// Returns health and configuration of all cognitive engines (text + configured media).
 func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Request) {
 	if s.Cognitive == nil || s.Cognitive.Config == nil {
 		respondJSON(w, map[string]any{"text": map[string]string{"status": "offline"}, "media": map[string]string{"status": "offline"}})

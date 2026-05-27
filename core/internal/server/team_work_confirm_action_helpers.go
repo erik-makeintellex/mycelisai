@@ -109,7 +109,7 @@ func isDelegateTool(toolName string) bool {
 
 func isDeliverableTool(toolName string) bool {
 	switch strings.TrimSpace(toolName) {
-	case "write_file", "store_artifact":
+	case "generate_image", "save_cached_image", "write_file", "store_artifact":
 		return true
 	default:
 		return false
@@ -147,6 +147,12 @@ func objectiveForDeliverableResult(result plannedToolExecutionResult) string {
 	path := firstNonEmptyString(result.Arguments["path"], result.Arguments["file_path"], result.Arguments["target_path"])
 	if path != "" {
 		return "Produce retained output " + path
+	}
+	if strings.TrimSpace(result.Name) == "generate_image" {
+		return firstNonEmptyString(result.Arguments["goal"], result.Arguments["prompt"], "Generate retained media output")
+	}
+	if strings.TrimSpace(result.Name) == "save_cached_image" {
+		return firstNonEmptyString(result.Arguments["goal"], result.Arguments["filename"], "Save generated media output")
 	}
 	return objectiveForPlannedTool(result.Name, result.Arguments)
 }

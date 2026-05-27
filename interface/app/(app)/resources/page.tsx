@@ -53,9 +53,9 @@ const RESOURCE_TABS: ResourceTab[] = [
     },
     {
         id: "workspace",
-        label: "Workspace Files",
-        summary: "Browse and write files through the governed filesystem MCP boundary.",
-        detail: "Mounted workspace",
+        label: "Output Files",
+        summary: "Open generated content folders and browse retained files through the governed workspace boundary.",
+        detail: "Generated content",
         icon: FolderOpen,
     },
     {

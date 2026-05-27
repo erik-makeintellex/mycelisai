@@ -124,7 +124,8 @@ def media_gateway(c):
     Start the local Pinokio media gateway.
 
     The gateway exposes Mycelis' OpenAI-compatible media contract on port 8001
-    and adapts local Forge/AUTOMATIC1111 txt2img APIs behind it.
+    and adapts local Forge/AUTOMATIC1111 txt2img or ComfyUI workflow APIs
+    behind it.
     """
     host = os.getenv("MYCELIS_MEDIA_GATEWAY_HOST", "127.0.0.1")
     port = os.getenv("MYCELIS_MEDIA_GATEWAY_PORT", "8001")
@@ -136,6 +137,8 @@ def media_gateway(c):
     print(f"  Backend : {backend}")
     print(f"  Upstream: {upstream}")
     print("  Core media endpoint should be MYCELIS_MEDIA_ENDPOINT=http://127.0.0.1:8001/v1")
+    if backend.lower() == "comfyui":
+        print("  ComfyUI requires MYCELIS_MEDIA_GATEWAY_COMFY_WORKFLOW_FILE and node mapping env vars")
 
     cmd = (
         "uv run uvicorn src.media_gateway:app "

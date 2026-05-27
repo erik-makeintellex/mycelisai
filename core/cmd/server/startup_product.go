@@ -102,6 +102,15 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 		services.RunsManager,
 	)
 	wireAdminServices(ctx, mux, core, adminSrv, services)
+	if core.SharedDB != nil && core.NC != nil && core.NC.IsConnected() {
+		if err := server.StartTeamWorkSignalProjection(ctx, adminSrv); err != nil {
+			log.Printf("WARN: Team work signal projection disabled: %v", err)
+		} else {
+			log.Println("Team work signal projection active.")
+		}
+	} else {
+		log.Println("WARN: Team work signal projection disabled (database or NATS unavailable).")
+	}
 
 	return &productRuntime{Admin: adminSrv, Soma: soma, MCPPool: services.MCPPool}
 }

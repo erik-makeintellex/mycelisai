@@ -41,6 +41,7 @@ type CollaborationGroup struct {
 	AllowedCapabilities []string   `json:"allowed_capabilities"`
 	MemberUserIDs       []string   `json:"member_user_ids"`
 	TeamIDs             []string   `json:"team_ids"`
+	WorkspaceFolder     string     `json:"workspace_folder"`
 	CoordinatorProfile  string     `json:"coordinator_profile"`
 	ApprovalPolicyRef   string     `json:"approval_policy_ref"`
 	Status              string     `json:"status"`
@@ -59,6 +60,7 @@ type createGroupRequest struct {
 	AllowedCapabilities []string   `json:"allowed_capabilities"`
 	MemberUserIDs       []string   `json:"member_user_ids"`
 	TeamIDs             []string   `json:"team_ids"`
+	WorkspaceFolder     string     `json:"workspace_folder,omitempty"`
 	CoordinatorProfile  string     `json:"coordinator_profile"`
 	ApprovalPolicyRef   string     `json:"approval_policy_ref"`
 	Expiry              *time.Time `json:"expiry,omitempty"`

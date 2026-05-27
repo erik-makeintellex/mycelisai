@@ -51,7 +51,7 @@ describe("CentralSomaHome", () => {
     });
 
     it("renders the central Soma chat and signed-in operating environment on the front page", async () => {
-        render(<CentralSomaHome />);
+        const { container } = render(<CentralSomaHome />);
 
         expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
         expect(screen.getByText("What do you want Soma to do?")).toBeDefined();
@@ -68,6 +68,11 @@ describe("CentralSomaHome", () => {
         expect(screen.getByText("Live team interaction stream")).toBeDefined();
         expect(screen.getByRole("link", { name: /Return to Northstar Labs/i }).getAttribute("href")).toBe("/organizations/org-1");
         expect(screen.queryByRole("link", { name: /Review Soma context model/i })).toBeNull();
+        const somaSurface = screen.getByTestId("soma-operating-surface");
+        const startHere = screen.getByText("Start here");
+        expect([...container.querySelectorAll("*")].indexOf(somaSurface)).toBeLessThan(
+            [...container.querySelectorAll("*")].indexOf(startHere),
+        );
     }, 15000);
 
     it("opens the AI Organization setup details from the quick action", async () => {

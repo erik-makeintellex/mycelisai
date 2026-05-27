@@ -15,6 +15,8 @@ var mutationTools = map[string]bool{
 	"delegate":                   true,
 	"create_team":                true,
 	"delegate_task":              true,
+	"generate_image":             true,
+	"save_cached_image":          true,
 	"write_file":                 true,
 	"publish_signal":             true,
 	"broadcast":                  true,
@@ -27,7 +29,7 @@ const directAnswerRoutePrefix = "[DIRECT ANSWER ROUTE]"
 const directAnswerRetryRoutePrefix = "[DIRECT ANSWER RETRY]"
 
 var (
-	namedFilePattern     = regexp.MustCompile("(?i)(?:named|called|at path|path)\\s+[`'\"]?([^`'\"\\s]+)[`'\"]?")
+	namedFilePattern     = regexp.MustCompile("(?i)(?:named|called|at path|path|at)\\s+[`'\"]?([^`'\"\\s]+)[`'\"]?")
 	printsPattern        = regexp.MustCompile("(?i)prints?\\s+[`'\"]?([^`'\".]+(?:\\s+[^`'\".]+)*)[`'\"]?")
 	quotedContentPattern = regexp.MustCompile("(?i)(?:with content|containing|that says)\\s+[`'\"]([^`'\"]+)[`'\"]")
 )
@@ -169,6 +171,12 @@ func inferMutationToolsFromText(text string) []string {
 	hasWeakFileTarget := requestContainsAny(lower, weakFileTargets)
 	if hasFileAction && (hasStrongFileTarget || (hasWeakFileTarget && !teamMention)) {
 		tools = append(tools, "write_file")
+	}
+
+	mediaActions := []string{"create", "generate", "make", "produce", "draw", "render"}
+	mediaTargets := []string{"image", "images", "picture", "illustration", "comic", "comic book", "media", "artwork", "visual"}
+	if requestContainsAny(lower, mediaActions) && requestContainsAny(lower, mediaTargets) {
+		tools = append(tools, "generate_image", "save_cached_image")
 	}
 
 	blueprintActions := []string{"create", "generate", "draft", "build", "compose", "design"}

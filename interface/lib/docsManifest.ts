@@ -32,7 +32,7 @@ export const DOC_MANIFEST: DocSection[] = [
             { slug: "workflow-variants-plan-memory", label: "Workflow Variants + Plan Memory", path: "docs/user/workflow-variants-and-plan-memory.md", description: "Direct Soma, compact teams, multi-lane workflows, and durable plan memory" },
             { slug: "teams-guide", label: "Teams", path: "docs/user/teams.md", description: "Active team work, compact defaults, broad-ask splitting, and lead-centered workflows" },
             { slug: "automations-guide", label: "Automations", path: "docs/user/automations.md", description: "Event trigger rules, schedules, mission profiles, and approvals around automated work" },
-            { slug: "resources-guide", label: "Resources", path: "docs/user/resources.md", description: "Connected Tools, MCP structure review, workspace files, AI engines, and governed context" },
+            { slug: "resources-guide", label: "Resources", path: "docs/user/resources.md", description: "Connected Tools, MCP structure review, output files, AI engines, and governed context" },
             { slug: "memory-guide", label: "Memory", path: "docs/user/memory.md", description: "Trusted recall, memory lanes, governed context, and continuity rules" },
             { slug: "governance-trust", label: "Governance & Trust", path: "docs/user/governance-trust.md", description: "Approval posture, risk classes, audit visibility, and trusted-memory precedence" },
             { slug: "settings-access", label: "Settings And Access", path: "docs/user/settings-access.md", description: "Profile, access posture, auth providers, and connected-tool/search boundaries" },

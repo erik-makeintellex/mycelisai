@@ -16,6 +16,7 @@ func organizationCollaborationGroupColumns() []string {
 	return []string{
 		"id", "tenant_id", "name", "goal_statement", "work_mode",
 		"allowed_capabilities", "member_user_ids", "team_ids",
+		"workspace_folder",
 		"coordinator_profile", "approval_policy_ref", "status", "created_by",
 		"expiry", "created_audit_event_id", "updated_audit_event_id",
 		"created_at", "updated_at",
@@ -146,6 +147,7 @@ func TestHandleTeamLeadGuidedAction_ResumeRetainedPackageUsesLatestGroupOutputs(
 				[]byte(`["artifact.review","team.coordinate"]`),
 				[]byte(`["owner"]`),
 				[]byte(`["11111111-1111-1111-1111-111111111111"]`),
+				"groups/11111111-1111-1111-1111-111111111111",
 				"release-workflow-coordinator",
 				"",
 				groupStatusArchived,

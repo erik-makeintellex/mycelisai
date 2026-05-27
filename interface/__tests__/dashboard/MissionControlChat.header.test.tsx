@@ -52,6 +52,31 @@ describe('MissionControlChat header and routing chrome', () => {
         expect(screen.getByText('Persisted org message')).toBeDefined();
     });
 
+    it('rehydrates team-scoped chat history when a focused team is provided', async () => {
+        localStorage.setItem('mycelis-workspace-chat:org-123::team::team-alpha', JSON.stringify([
+            { role: 'user', content: 'Persisted focused team message' },
+        ]));
+        useCortexStore.setState({
+            teamsDetail: [{
+                id: 'team-alpha',
+                name: 'Alpha Team',
+                role: 'delivery',
+                type: 'mission',
+                mission_id: null,
+                mission_intent: null,
+                inputs: [],
+                deliveries: [],
+                agents: [],
+            }],
+        });
+
+        render(<MissionControlChat simpleMode organizationId="org-123" focusedTeamId="team-alpha" />);
+        await settleMissionControlChat();
+
+        expect(useCortexStore.getState().workspaceChatScope).toBe('org-123::team::team-alpha');
+        expect(screen.getByText('Persisted focused team message')).toBeDefined();
+    });
+
     it('clears a stale loading lock when a new organization scope is applied', async () => {
         localStorage.setItem('mycelis-workspace-chat:org-123', JSON.stringify([
             { role: 'user', content: 'Persisted org message' },

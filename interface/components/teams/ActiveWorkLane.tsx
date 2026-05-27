@@ -2,16 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import {
-  Archive,
-  Eye,
-  Pause,
-  Play,
-  Radio,
-  RefreshCw,
-  Search,
-  Send,
-} from "lucide-react";
+import { Archive, Eye, Pause, Play, Radio, RefreshCw, Search, Send } from "lucide-react";
 import {
   type TeamInteraction,
   type TeamWorkItem,
@@ -35,15 +26,9 @@ const stateStyles: Record<TeamWorkItemState, string> = {
   archived: "border-cortex-border bg-cortex-bg text-cortex-text-muted",
 };
 
-const actionIcons = {
-  inspect: Eye,
-  steer: Send,
-  start_work: Play,
-  pause: Pause,
-  resume: Play,
-  recover: RefreshCw,
-  archive: Archive,
-};
+const stateLabels: Record<TeamWorkItemState, string> = { new: "Ready to brief", briefed: "Ready to start", queued: "Queued", running: "In progress", reviewing: "In review", paused: "Paused", output_ready: "Output ready", degraded: "Degraded", needs_operator: "Needs operator", archived: "Archived" };
+
+const actionIcons = { inspect: Eye, steer: Send, start_work: Play, pause: Pause, resume: Play, recover: RefreshCw, archive: Archive };
 
 export function ActiveWorkLane({
   title = "Active work lane",
@@ -142,7 +127,7 @@ function WorkItemRow({
             <span
               className={`rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] ${stateStyles[item.state]}`}
             >
-              {item.state.replace("_", " ")}
+              {stateLabels[item.state]}
             </span>
             {item.sourceLabel ? (
               <span className="rounded-full border border-cortex-border bg-cortex-surface px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-text-muted">

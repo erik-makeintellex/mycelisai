@@ -11,10 +11,39 @@ export type SomaEvidenceItem = {
 export function SomaEvidencePanel({
   title = "Evidence of Soma's work",
   items,
+  compact = false,
 }: {
   title?: string;
   items: SomaEvidenceItem[];
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <nav className="space-y-2" aria-label={title}>
+        {items.map((item) => {
+          const content = (
+            <span className="flex min-w-0 items-center gap-2 rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main transition-colors hover:border-cortex-primary/35">
+              <span className="shrink-0 text-cortex-primary">{item.icon}</span>
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">{item.title}</span>
+                <span className="block truncate text-xs text-cortex-text-muted">
+                  {item.detail}
+                </span>
+              </span>
+            </span>
+          );
+          return item.href ? (
+            <Link key={item.title} href={item.href}>
+              {content}
+            </Link>
+          ) : (
+            <div key={item.title}>{content}</div>
+          );
+        })}
+      </nav>
+    );
+  }
+
   return (
     <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-5">
       <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">

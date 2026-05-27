@@ -124,8 +124,8 @@ func TestBuildPlannedToolCalls_StartsTeamGameDeliverable(t *testing.T) {
 		t.Fatalf("second call = %q, want write_file", calls[1].Name)
 	}
 	path, _ := calls[1].Arguments["path"].(string)
-	if !strings.HasPrefix(path, "workspace/generated/") || !strings.HasSuffix(path, "/index.html") {
-		t.Fatalf("path = %q, want generated browser-game entrypoint", path)
+	if path != "groups/snes-style-browser-game-team/generated/first-game/index.html" {
+		t.Fatalf("path = %q, want group-scoped browser-game entrypoint", path)
 	}
 	content, _ := calls[1].Arguments["content"].(string)
 	if !strings.Contains(content, "<canvas id=\"game\"") || !strings.Contains(content, "requestAnimationFrame(loop)") {
@@ -251,6 +251,32 @@ func TestInferCreateTeamPlanFromRequest_DefaultResearchTeam(t *testing.T) {
 	}
 	if call.Arguments["initial_member_count"] != 1 || call.Arguments["recommended_member_limit"] != 3 {
 		t.Fatalf("minimal staffing args = %#v, want lead-only start with bounded expansion", call.Arguments)
+	}
+}
+
+func TestBuildPlannedToolCalls_ComicTeamIncludesSpecialistsAndMediaDeliverable(t *testing.T) {
+	request := "Create a team to write a comic book page. We need an artist, someone who comes up with characters, and someone who writes the lines. Generate a comic image using local ComfyUI."
+	result, ok := deterministicGovernedMutationResult(request, []string{"create_team", "generate_image", "save_cached_image"})
+	if !ok || !strings.Contains(result.Text, "groups/soma-requested-team/media") {
+		t.Fatalf("deterministic proposal = %#v, ok=%v, want group media target", result, ok)
+	}
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, []string{"create_team", "generate_image", "save_cached_image"})
+	if len(calls) != 3 {
+		t.Fatalf("planned calls = %#v, want create_team + generate_image + save_cached_image", calls)
+	}
+	if calls[0].Name != "create_team" || calls[1].Name != "generate_image" || calls[2].Name != "save_cached_image" {
+		t.Fatalf("planned call names = %#v", calls)
+	}
+	agents, ok := calls[0].Arguments["agents"].([]map[string]any)
+	if !ok || len(agents) < 5 || calls[0].Arguments["staffing_mode"] != "specialist_delivery" {
+		t.Fatalf("team args = %#v, agents = %#v", calls[0].Arguments, agents)
+	}
+	if calls[1].Arguments["size"] != "768x1024" || calls[2].Arguments["folder"] != "groups/soma-requested-team/media" {
+		t.Fatalf("media calls = %#v %#v", calls[1], calls[2])
+	}
+	tools := toolsForPlannedCalls(calls, nil)
+	if !containsString(tools, "generate_image") || !containsString(tools, "save_cached_image") {
+		t.Fatalf("tools = %#v, want media tools", tools)
 	}
 }
 

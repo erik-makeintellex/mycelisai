@@ -73,23 +73,29 @@ func TestHandleChat_PrependsWorkspaceContextForSelectedTeam(t *testing.T) {
 
 	select {
 	case turns := <-forwarded:
-		if len(turns) < 2 {
-			t.Fatalf("forwarded turn count = %d, want at least 2", len(turns))
+		if len(turns) < 3 {
+			t.Fatalf("forwarded turn count = %d, want at least 3", len(turns))
 		}
-		if turns[0].Role != "user" {
-			t.Fatalf("prepended role = %q, want user", turns[0].Role)
+		if turns[0].Role != "system" {
+			t.Fatalf("attunement role = %q, want system", turns[0].Role)
 		}
-		if !strings.Contains(turns[0].Content, "[WORKSPACE CONTEXT]") {
-			t.Fatalf("prepended content = %q, want workspace context marker", turns[0].Content)
+		if !strings.Contains(turns[0].Content, somaAttunementContextHeader) {
+			t.Fatalf("attunement content = %q, want attunement marker", turns[0].Content)
 		}
-		if !strings.Contains(turns[0].Content, "Organization: Northstar Labs.") {
-			t.Fatalf("prepended content missing organization: %q", turns[0].Content)
+		if turns[1].Role != "user" {
+			t.Fatalf("workspace role = %q, want user", turns[1].Role)
 		}
-		if !strings.Contains(turns[0].Content, "Visible departments/teams in this organization: Marketing and Product.") {
-			t.Fatalf("prepended content missing department summary: %q", turns[0].Content)
+		if !strings.Contains(turns[1].Content, "[WORKSPACE CONTEXT]") {
+			t.Fatalf("workspace content = %q, want workspace context marker", turns[1].Content)
 		}
-		if !strings.Contains(turns[0].Content, "Current team focus: Marketing (id: marketing-team).") {
-			t.Fatalf("prepended content missing current team: %q", turns[0].Content)
+		if !strings.Contains(turns[1].Content, "Organization: Northstar Labs.") {
+			t.Fatalf("workspace content missing organization: %q", turns[1].Content)
+		}
+		if !strings.Contains(turns[1].Content, "Visible departments/teams in this organization: Marketing and Product.") {
+			t.Fatalf("workspace content missing department summary: %q", turns[1].Content)
+		}
+		if !strings.Contains(turns[1].Content, "Current team focus: Marketing (id: marketing-team).") {
+			t.Fatalf("workspace content missing current team: %q", turns[1].Content)
 		}
 		last := turns[len(turns)-1].Content
 		if !strings.Contains(last, directAnswerRoutePrefix) {
@@ -169,20 +175,23 @@ func TestHandleChat_ReplaysAndPersistsSessionConversation(t *testing.T) {
 
 	select {
 	case turns := <-forwarded:
-		if len(turns) != 3 {
-			t.Fatalf("forwarded turn count = %d, want 3", len(turns))
+		if len(turns) != 4 {
+			t.Fatalf("forwarded turn count = %d, want 4", len(turns))
 		}
-		if turns[0].Content != "Remember the launch marker." {
-			t.Fatalf("first forwarded content = %q", turns[0].Content)
+		if turns[0].Role != "system" || !strings.Contains(turns[0].Content, somaAttunementContextHeader) {
+			t.Fatalf("first forwarded turn = %#v, want system attunement", turns[0])
 		}
-		if turns[1].Role != "assistant" || turns[1].Content != "I have the launch marker in this session context." {
-			t.Fatalf("second forwarded turn = %#v", turns[1])
+		if turns[1].Content != "Remember the launch marker." {
+			t.Fatalf("second forwarded content = %q", turns[1].Content)
 		}
-		if !strings.Contains(turns[2].Content, directAnswerRoutePrefix) {
-			t.Fatalf("latest forwarded content missing direct-answer route: %q", turns[2].Content)
+		if turns[2].Role != "assistant" || turns[2].Content != "I have the launch marker in this session context." {
+			t.Fatalf("third forwarded turn = %#v", turns[2])
 		}
-		if !strings.Contains(turns[2].Content, "Original request:\nWhat was the launch marker?") {
-			t.Fatalf("latest forwarded content missing original request: %q", turns[2].Content)
+		if !strings.Contains(turns[3].Content, directAnswerRoutePrefix) {
+			t.Fatalf("latest forwarded content missing direct-answer route: %q", turns[3].Content)
+		}
+		if !strings.Contains(turns[3].Content, "Original request:\nWhat was the launch marker?") {
+			t.Fatalf("latest forwarded content missing original request: %q", turns[3].Content)
 		}
 	default:
 		t.Fatal("expected forwarded messages to be captured")

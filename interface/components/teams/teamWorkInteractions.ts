@@ -37,7 +37,7 @@ export function durableInteractions({
     },
     {
       action: "start_work",
-      label: "Start",
+      label: "Start task",
       disabled: !canStart,
       disabledReason: startDisabledReason(canStart, isTeamSetup, workItemId, state),
       audited: true,

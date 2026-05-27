@@ -15,6 +15,7 @@ export type Group = {
   allowed_capabilities?: string[];
   member_user_ids: string[];
   team_ids: string[];
+  workspace_folder?: string;
   coordinator_profile: string;
   approval_policy_ref: string;
   status: "active" | "paused" | "archived";
@@ -98,6 +99,7 @@ export type GroupDraft = {
   workMode: WorkMode;
   expiry: string;
   teamIDs: string;
+  workspaceFolder: string;
   memberIDs: string;
   coordinatorProfile: string;
   approvalPolicyRef: string;
@@ -110,6 +112,7 @@ export const emptyGroupDraft: GroupDraft = {
   workMode: "propose_only",
   expiry: "",
   teamIDs: "",
+  workspaceFolder: "",
   memberIDs: "",
   coordinatorProfile: "",
   approvalPolicyRef: "",

@@ -44,7 +44,18 @@ export function itemText(item: SummaryValue): string | null {
 
 export function itemUrl(item: SummaryValue): string | null {
     if (typeof item === "string") return null;
-    return compactText(item.url) ?? compactText(item.href) ?? compactText(item.path) ?? null;
+    return normalizeWorkspaceOutputUrl(compactText(item.url) ?? compactText(item.href) ?? compactText(item.path));
+}
+
+export function normalizeWorkspaceOutputUrl(value?: string | null): string | null {
+    const raw = compactText(value);
+    if (!raw) return null;
+    if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("/")) return raw;
+    const normalized = raw.replace(/\\/g, "/");
+    if (normalized.startsWith("workspace/") || normalized.includes("/") || /\.[a-z0-9]{1,8}$/i.test(normalized)) {
+        return `/api/v1/workspace/files/view?path=${encodeURIComponent(normalized)}`;
+    }
+    return raw;
 }
 
 export function intentLines(intent: ExecutionSummaryData["intent"]): string[] {

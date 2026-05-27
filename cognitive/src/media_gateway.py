@@ -5,6 +5,10 @@ Mycelis Core speaks an OpenAI-compatible image-generation contract. Pinokio
 apps such as Forge and AUTOMATIC1111 expose their own Stable Diffusion APIs.
 This gateway keeps Core stable while adapting local/private generators behind
 the same /v1/images/generations endpoint.
+
+ComfyUI support is workflow-template based: export a workflow in API format,
+set MYCELIS_MEDIA_GATEWAY_COMFY_WORKFLOW_FILE, and map the prompt/size node
+ids through env vars so the gateway can submit, poll, and retrieve outputs.
 """
 
 from __future__ import annotations
@@ -135,6 +139,12 @@ def _json_get(url: str, timeout: int) -> dict[str, Any]:
     return json.loads(payload) if payload else {}
 
 
+def _bytes_get(url: str, timeout: int) -> bytes:
+    req = urllib.request.Request(url, method="GET")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read()
+
+
 def _json_post(url: str, body: dict[str, Any], timeout: int) -> dict[str, Any]:
     data = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
@@ -229,12 +239,12 @@ def health() -> dict[str, Any]:
     upstream = gateway_upstream()
     timeout = min(gateway_timeout(), 5)
 
-    if backend not in {"auto1111", "automatic1111", "forge"}:
+    if backend not in {"auto1111", "automatic1111", "forge", "comfyui"}:
         return {
             "status": "unsupported",
             "backend": backend,
             "upstream": upstream,
-            "detail": "Only Forge/AUTOMATIC1111 txt2img is implemented in this gateway slice.",
+            "detail": "Supported backends are Forge/AUTOMATIC1111 and ComfyUI.",
         }
 
     try:
@@ -242,8 +252,13 @@ def health() -> dict[str, Any]:
     except HTTPException as exc:
         return {"status": "blocked", "backend": backend, "upstream": upstream, "detail": exc.detail}
 
+    health_path = "/sdapi/v1/options"
+    if backend == "comfyui":
+        from .media_gateway_comfy import comfy_health_path
+
+        health_path = comfy_health_path()
     try:
-        _json_get(f"{upstream}/sdapi/v1/options", timeout)
+        _json_get(f"{upstream}{health_path}", timeout)
     except Exception as exc:
         return {"status": "offline", "backend": backend, "upstream": upstream, "detail": str(exc)}
 
@@ -270,7 +285,11 @@ def generate_images(req: ImageGenerationRequest) -> ImageGenerationResponse:
     backend = gateway_backend()
     if backend in {"auto1111", "automatic1111", "forge"}:
         return _auto1111_generate(req)
+    if backend == "comfyui":
+        from .media_gateway_comfy import comfy_generate
+
+        return comfy_generate(req)
     raise HTTPException(
         status_code=501,
-        detail="Only Forge/AUTOMATIC1111 txt2img is implemented in this gateway slice.",
+        detail="Supported local media backends are Forge/AUTOMATIC1111 and ComfyUI.",
     )

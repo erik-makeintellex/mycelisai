@@ -33,8 +33,10 @@ const (
 	TopicMissionTask = "swarm.mission.task"
 
 	// Wildcard subscriptions
-	TopicTeamInternalWild = "swarm.team.*.internal.>"
-	TopicSwarmWild        = "swarm.>"
+	TopicTeamInternalWild     = "swarm.team.*.internal.>"
+	TopicTeamSignalStatusWild = "swarm.team.*.signal.status"
+	TopicTeamSignalResultWild = "swarm.team.*.signal.result"
+	TopicSwarmWild            = "swarm.>"
 
 	// Council request-reply (direct addressing)
 	TopicCouncilRequestFmt = "swarm.council.%s.request" // agent ID

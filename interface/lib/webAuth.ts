@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 export type WebUserRole = "admin" | "standard";
 
 export type WebAuthProvider = "local" | "google";
@@ -39,19 +42,20 @@ export interface ForwardedWebIdentity {
 export const WEB_SESSION_COOKIE = "mycelis_web_session";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+let rootEnvCache: Record<string, string> | null = null;
 
 export function getWebAuthConfig(): WebAuthConfig {
     return {
-        sessionSecret: process.env.MYCELIS_WEB_SESSION_SECRET || process.env.MYCELIS_API_KEY || "",
-        localUsername: process.env.MYCELIS_LOCAL_ADMIN_USERNAME || "admin",
-        localPassword: process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || "",
-        localPasswordSha256: process.env.MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256 || "",
-        googleClientId: process.env.MYCELIS_AUTH_GOOGLE_CLIENT_ID || "",
-        googleClientSecret: process.env.MYCELIS_AUTH_GOOGLE_CLIENT_SECRET || "",
-        googleRedirectUri: process.env.MYCELIS_AUTH_GOOGLE_REDIRECT_URI || "",
-        googleHostedDomain: process.env.MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN || "",
-        allowedDomains: splitList(process.env.MYCELIS_AUTH_ALLOWED_DOMAINS || process.env.MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN || ""),
-        adminEmails: splitList(process.env.MYCELIS_AUTH_ADMIN_EMAILS || ""),
+        sessionSecret: envValue("MYCELIS_WEB_SESSION_SECRET") || envValue("MYCELIS_API_KEY") || "",
+        localUsername: envValue("MYCELIS_LOCAL_ADMIN_USERNAME") || "admin",
+        localPassword: envValue("MYCELIS_LOCAL_ADMIN_PASSWORD") || envValue("MYCELIS_API_KEY") || "",
+        localPasswordSha256: envValue("MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256") || "",
+        googleClientId: envValue("MYCELIS_AUTH_GOOGLE_CLIENT_ID") || "",
+        googleClientSecret: envValue("MYCELIS_AUTH_GOOGLE_CLIENT_SECRET") || "",
+        googleRedirectUri: envValue("MYCELIS_AUTH_GOOGLE_REDIRECT_URI") || "",
+        googleHostedDomain: envValue("MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN") || "",
+        allowedDomains: splitList(envValue("MYCELIS_AUTH_ALLOWED_DOMAINS") || envValue("MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN") || ""),
+        adminEmails: splitList(envValue("MYCELIS_AUTH_ADMIN_EMAILS") || ""),
     };
 }
 
@@ -113,8 +117,8 @@ export function sessionCookieOptions(maxAgeSeconds = 60 * 60 * 8) {
 }
 
 export function secureCookieEnabled(): boolean {
-    if (process.env.MYCELIS_WEB_COOKIE_SECURE) return process.env.MYCELIS_WEB_COOKIE_SECURE === "true";
-    return Boolean(process.env.MYCELIS_PUBLIC_ORIGIN?.startsWith("https://"));
+    if (envValue("MYCELIS_WEB_COOKIE_SECURE")) return envValue("MYCELIS_WEB_COOKIE_SECURE") === "true";
+    return Boolean(envValue("MYCELIS_PUBLIC_ORIGIN").startsWith("https://"));
 }
 
 export function webAuthRedirectURL(path: string, fallbackOrigin?: string | null): URL {
@@ -124,7 +128,7 @@ export function webAuthRedirectURL(path: string, fallbackOrigin?: string | null)
 export function webAuthBaseOrigin(fallbackOrigin?: string | null): string {
     const fallback = (fallbackOrigin || "").trim();
     if (fallback && !fallback.includes("[::]")) return fallback.replace(/\/+$/, "");
-    const configured = (process.env.MYCELIS_PUBLIC_ORIGIN || "").trim().replace(/\/+$/, "");
+    const configured = envValue("MYCELIS_PUBLIC_ORIGIN").trim().replace(/\/+$/, "");
     if (configured) return configured;
     return "http://127.0.0.1:3000";
 }
@@ -154,6 +158,45 @@ export async function sha256Hex(input: string): Promise<string> {
 
 export function splitList(value: string): string[] {
     return value.split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+}
+
+function envValue(key: string): string {
+    return process.env[key] ?? rootEnv()[key] ?? "";
+}
+
+function rootEnv(): Record<string, string> {
+    if (rootEnvCache) return rootEnvCache;
+    rootEnvCache = {};
+    for (const candidate of rootEnvCandidates()) {
+        if (!fs.existsSync(candidate)) continue;
+        rootEnvCache = parseEnvFile(candidate);
+        break;
+    }
+    return rootEnvCache;
+}
+
+function rootEnvCandidates(): string[] {
+    return [
+        path.resolve(process.cwd(), ".env"),
+        path.resolve(process.cwd(), "..", ".env"),
+    ];
+}
+
+function parseEnvFile(envPath: string): Record<string, string> {
+    const values: Record<string, string> = {};
+    for (const line of fs.readFileSync(envPath, "utf8").split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const equals = trimmed.indexOf("=");
+        if (equals <= 0) continue;
+        const key = trimmed.slice(0, equals).trim();
+        let value = trimmed.slice(equals + 1).trim();
+        if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+        }
+        values[key] = value;
+    }
+    return values;
 }
 
 async function sign(payload: string, secret: string): Promise<string> {

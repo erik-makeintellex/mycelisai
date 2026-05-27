@@ -129,4 +129,4 @@ media:
         api_key_env: ""
         enabled: true
     endpoint: http://127.0.0.1:8001/v1
-    model_id: stable-diffusion-xl
+    model_id: local-media

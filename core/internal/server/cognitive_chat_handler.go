@@ -91,6 +91,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		req.Messages,
 		s.buildChatWorkspaceContext(req.OrganizationID, req.TeamID, req.TeamName),
 	)
+	req.Messages = prependSomaAttunementContext(req.Messages, latestUserText, s.searchCapabilityStatus())
 
 	if availability := s.chatExecutionAvailability(); !availability.Available {
 		respondAPIJSON(w, http.StatusServiceUnavailable, protocol.APIResponse{

@@ -1,11 +1,11 @@
 "use client";
 
 import type React from "react";
-import { Activity, CheckSquare, ListChecks, Wrench } from "lucide-react";
+import { Activity, CheckSquare, Layers2, ListChecks, Wrench, X } from "lucide-react";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import { ActiveWorkLane } from "@/components/teams/ActiveWorkLane";
 import { useTeamWorkActionHandler } from "@/components/teams/useTeamWorkActionHandler";
-import type { ChatMessage, TeamWorkItem } from "@/store/useCortexStore";
+import type { ChatMessage, TeamInteraction, TeamWorkItem } from "@/store/useCortexStore";
 import { useCortexStore } from "@/store/useCortexStore";
 import {
   mergeOutputWorkbenchItems,
@@ -57,14 +57,19 @@ export function SomaOperatingSurface({
   const teamsDetail = useCortexStore((state) => state.teamsDetail);
   const durableWorkRefreshVersion = useCortexStore((state) => state.durableWorkRefreshVersion);
   const selectTeam = useCortexStore((state) => state.selectTeam);
+  const selectedTeamId = useCortexStore((state) => state.selectedTeamId);
   const activeWorkActions = useTeamWorkActionHandler(selectTeam);
   const evidence = evidenceItems ?? defaultEvidence;
   const latestSoma = lastSomaMessage(missionChat);
+  const effectiveFocusedTeamId = focusedTeamId || selectedTeamId || null;
+  const focusedTeam = effectiveFocusedTeamId
+    ? teamsDetail.find((team) => team.id === effectiveFocusedTeamId) ?? null
+    : null;
   const outputItems = outputWorkbenchItems(latestSoma?.execution_summary, latestSoma?.artifacts);
   const projectPackages = projectPackageOutputs(latestSoma?.execution_summary?.outputs);
   const teamWork = useDurableTeamWork({
     teams: teamsDetail,
-    focusedTeamId,
+    focusedTeamId: effectiveFocusedTeamId,
     refreshVersion: durableWorkRefreshVersion + activeWorkActions.activeWorkRefreshVersion,
   });
   const teamOutputItems = teamOutputWorkbenchItems(teamWork.outputRefs);
@@ -74,6 +79,24 @@ export function SomaOperatingSurface({
   const somaHomeWorkItems = prioritizeSomaHomeWorkItems(teamWork.items).filter(
     (item) => item.state !== "archived",
   );
+  const displayedMode = activeMode ?? (focusedTeam ? `Focused team: ${focusedTeam.name}` : null);
+
+  const clearFocusedContext = () => {
+    selectTeam(null);
+    if (typeof window !== "undefined" && window.location.pathname === "/dashboard") {
+      window.history.replaceState(null, "", "/dashboard");
+    }
+  };
+
+  const handleActiveWorkAction = async (item: TeamWorkItem, action: TeamInteraction) => {
+    await activeWorkActions.handleActiveWorkAction(item, action);
+    if (action.action === "inspect") {
+      const teamId = item.teamIds[0] ?? item.id;
+      if (typeof window !== "undefined" && window.location.pathname === "/dashboard") {
+        window.history.replaceState(null, "", `/dashboard?team_id=${encodeURIComponent(teamId)}`);
+      }
+    }
+  };
 
   return (
     <section
@@ -82,20 +105,26 @@ export function SomaOperatingSurface({
     >
       <SomaHeader
         organizationName={organizationName}
-        activeMode={activeMode}
+        activeMode={displayedMode}
         governancePosture={governancePosture}
       />
       <div className="p-4 lg:p-5">
+        <SomaContextFocusBar
+          teamName={focusedTeam?.name}
+          teamId={effectiveFocusedTeamId}
+          onClear={clearFocusedContext}
+        />
         <SomaWorkspaceFrame
           expression={(
             <div
               data-testid="central-soma-chat-frame"
-              className="h-[68vh] min-h-[500px] max-h-[760px] overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg"
+              className="h-[64vh] min-h-[460px] overflow-hidden rounded-xl border border-cortex-border bg-cortex-bg lg:h-full lg:min-h-0"
             >
               <MissionControlChat
                 simpleMode
                 autoFocus
                 organizationId={organizationId}
+                focusedTeamId={effectiveFocusedTeamId}
                 suggestions={suggestions}
               />
             </div>
@@ -109,10 +138,10 @@ export function SomaOperatingSurface({
                 : teamWork.emptyMessage}
               statusLabel={teamWork.statusLabel}
               degradedMessage={activeWorkActions.activeWorkActionError ?? teamWork.degradedMessage}
-              onAction={activeWorkActions.handleActiveWorkAction}
+              onAction={handleActiveWorkAction}
               onTeamAsk={activeWorkActions.handleTeamAsk}
               frame={false}
-              maxVisibleItems={focusedTeamId ? 6 : 3}
+              maxVisibleItems={effectiveFocusedTeamId ? 6 : 3}
               totalItemCount={teamWork.items.length}
               moreItemsHref="/teams"
             />
@@ -127,10 +156,54 @@ export function SomaOperatingSurface({
                 : "Soma has not returned a retained output package yet."}
             />
           )}
-          context={contextSlot ?? <SomaEvidencePanel items={evidence} />}
+          context={contextSlot ?? <SomaEvidencePanel items={evidence} compact />}
         />
       </div>
     </section>
+  );
+}
+
+function SomaContextFocusBar({
+  teamName,
+  teamId,
+  onClear,
+}: {
+  teamName?: string | null;
+  teamId?: string | null;
+  onClear: () => void;
+}) {
+  const isFocused = Boolean(teamId);
+  return (
+    <div
+      className="mb-3 flex flex-col gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-muted lg:flex-row lg:items-center lg:justify-between"
+      data-testid="soma-context-focus-bar"
+    >
+      <div className="flex min-w-0 items-start gap-2">
+        <span className="mt-0.5 text-cortex-primary">
+          <Layers2 className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cortex-primary">
+            {isFocused ? "Focused team context" : "Root Soma context"}
+          </p>
+          <p className="mt-1 leading-5">
+            {isFocused
+              ? `${teamName || teamId} has its own chat, active work, and retained output focus. Soma can still reference other team contexts when you ask.`
+              : "Select a running or executed team to switch this workbench into that team's chat, active work, and output lane."}
+          </p>
+        </div>
+      </div>
+      {isFocused ? (
+        <button
+          type="button"
+          onClick={onClear}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cortex-border px-2.5 py-1.5 text-xs font-semibold text-cortex-text-main hover:border-cortex-primary/30"
+        >
+          <X className="h-3.5 w-3.5" />
+          Soma root
+        </button>
+      ) : null}
+    </div>
   );
 }
 

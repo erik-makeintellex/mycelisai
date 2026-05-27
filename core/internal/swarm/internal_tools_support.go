@@ -70,6 +70,7 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 	if systemPrompt == "" {
 		systemPrompt = fmt.Sprintf("You are %s in team %s. Execute assigned tasks and report outcomes. Start as the only team member; request a temporary specialist only when you can name the missing capability, owned task, proof expected, and removal point.", role, teamID)
 	}
+	members := runtimeTeamMembersFromArgs(merged, teamID, agentID, role, systemPrompt)
 
 	inputs := stringSlice(merged["inputs"])
 	if len(inputs) == 0 {
@@ -83,7 +84,6 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 			deliveries = []string{fmt.Sprintf(protocol.TopicTeamSignalResult, teamID)}
 		}
 	}
-	tools := stringSlice(merged["tools"])
 	askRouting := parseTeamAskRouting(merged["ask_routing"])
 	if len(askRouting) == 0 {
 		askRouting = defaultTeamAskRouting()
@@ -93,17 +93,93 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 		ID:          teamID,
 		Name:        name,
 		Type:        teamType,
-		Description: "Runtime-created lead-only team; expand only with operator action or justified temporary specialist request.",
+		Description: runtimeTeamDescription(members),
 		AskRouting:  askRouting,
-		Members: []protocol.AgentManifest{{
-			ID:            agentID,
-			Role:          role,
-			SystemPrompt:  systemPrompt,
-			Tools:         tools,
-			MaxIterations: 6,
-		}},
-		Inputs:     inputs,
-		Deliveries: deliveries,
+		Members:     members,
+		Inputs:      inputs,
+		Deliveries:  deliveries,
+	}
+}
+
+func runtimeTeamDescription(members []protocol.AgentManifest) string {
+	if len(members) <= 1 {
+		return "Runtime-created lead-only team; expand only with operator action or justified temporary specialist request."
+	}
+	return "Runtime-created specialist delivery team with bounded roles, retained outputs, and Soma-owned governance."
+}
+
+func runtimeTeamMembersFromArgs(merged map[string]any, teamID, fallbackAgentID, fallbackRole, fallbackSystemPrompt string) []protocol.AgentManifest {
+	tools := stringSlice(merged["tools"])
+	if agents := runtimeAgentsFromRaw(merged["agents"], teamID, tools); len(agents) > 0 {
+		return agents
+	}
+	return []protocol.AgentManifest{{
+		ID:            fallbackAgentID,
+		Role:          fallbackRole,
+		SystemPrompt:  fallbackSystemPrompt,
+		Tools:         tools,
+		MaxIterations: 6,
+	}}
+}
+
+func runtimeAgentsFromRaw(raw any, teamID string, fallbackTools []string) []protocol.AgentManifest {
+	var sources []map[string]any
+	switch typed := raw.(type) {
+	case []map[string]any:
+		sources = typed
+	case []any:
+		for _, item := range typed {
+			if source, ok := item.(map[string]any); ok {
+				sources = append(sources, source)
+			}
+		}
+	}
+	members := make([]protocol.AgentManifest, 0, len(sources))
+	seen := map[string]struct{}{}
+	for idx, source := range sources {
+		member := runtimeAgentFromMap(source, teamID, idx, fallbackTools)
+		if member.ID == "" {
+			continue
+		}
+		if _, exists := seen[member.ID]; exists {
+			continue
+		}
+		seen[member.ID] = struct{}{}
+		members = append(members, member)
+	}
+	return members
+}
+
+func runtimeAgentFromMap(source map[string]any, teamID string, idx int, fallbackTools []string) protocol.AgentManifest {
+	role := pickFirstString(source, "role", "name")
+	if role == "" {
+		role = "specialist"
+	}
+	id := normalizeRuntimeID(pickFirstString(source, "id", "agent_id"))
+	if id == "" {
+		id = normalizeRuntimeID(fmt.Sprintf("%s-%s-%d", teamID, role, idx+1))
+	}
+	tools := stringSlice(source["tools"])
+	if len(tools) == 0 {
+		tools = fallbackTools
+	}
+	if len(tools) == 0 {
+		tools = []string{"store_artifact"}
+	}
+	maxIterations := intValue(source["max_iterations"])
+	if maxIterations <= 0 {
+		maxIterations = 6
+	}
+	return protocol.AgentManifest{
+		ID:            id,
+		Role:          role,
+		SystemPrompt:  firstNonEmptyString(stringValue(source["system_prompt"]), fmt.Sprintf("You are the %s for team %s. Own your bounded specialist contribution and report concise output/proof to Soma.", role, teamID)),
+		Model:         stringValue(source["model"]),
+		Provider:      stringValue(source["provider"]),
+		Inputs:        stringSlice(source["inputs"]),
+		Outputs:       stringSlice(source["outputs"]),
+		Tools:         tools,
+		MaxIterations: maxIterations,
 	}
 }
 

@@ -54,10 +54,12 @@ describe('MissionControlChat team continuation', () => {
 
         render(<MissionControlChat simpleMode />);
 
-        expect(await screen.findByText('SNES-Style Browser Game Team is ready. No work item has started yet.')).toBeDefined();
-        fireEvent.click(screen.getByRole('button', { name: /Start work/i }));
+        expect(await screen.findByText('SNES-Style Browser Game Team is ready. Choose the first deliverable.')).toBeDefined();
+        expect(screen.getByRole('button', { name: /Write design brief/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Draft delivery plan/i })).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: /Build playable prototype/i }));
 
         expect((screen.getByPlaceholderText(/Tell Soma/i) as HTMLInputElement).value)
-            .toBe('Have SNES-Style Browser Game Team build the first playable browser game prototype and save it as a reviewable output.');
+            .toBe("Have SNES-Style Browser Game Team build the first playable browser-game prototype as a reviewable project package. Save it in the team's group folder with README, validation notes, output link, and proof.");
     });
 });

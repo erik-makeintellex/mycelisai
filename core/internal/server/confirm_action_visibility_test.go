@@ -11,6 +11,7 @@ import (
 )
 
 func TestEnsureGroupForCreatedTeamMirrorsConfirmedCreateTeam(t *testing.T) {
+	t.Setenv("MYCELIS_WORKSPACE", t.TempDir())
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt)
 	mock.MatchExpectationsInOrder(true)
@@ -24,7 +25,7 @@ func TestEnsureGroupForCreatedTeamMirrorsConfirmedCreateTeam(t *testing.T) {
 			sqlmock.AnyArg(), "default", "Research Team",
 			"Map optimal agentry architecture.",
 			"propose_only",
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "groups/research-team",
 			"researcher lead", "confirmed-chat-proposal", groupStatusActive,
 			"test-user", nil, sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
@@ -45,6 +46,7 @@ func TestEnsureGroupForCreatedTeamMirrorsConfirmedCreateTeam(t *testing.T) {
 }
 
 func TestEnsureGroupForCreatedTeamMergesRepeatTeamName(t *testing.T) {
+	t.Setenv("MYCELIS_WORKSPACE", t.TempDir())
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt)
 	mock.MatchExpectationsInOrder(true)
@@ -61,6 +63,7 @@ func TestEnsureGroupForCreatedTeamMergesRepeatTeamName(t *testing.T) {
 				`["team.coordinate","artifact.review","broadcast"]`,
 				`[]`,
 				`["first-demo-game-team-old"]`,
+				"groups/first-demo-game-team-old",
 				"worker lead", "confirmed-chat-proposal", groupStatusActive,
 				"admin", nil, auditID, auditID, now, now,
 			))
@@ -123,6 +126,25 @@ func TestExecutionOutputsFromToolResultsRetainsTeamAndCodeFile(t *testing.T) {
 	}
 	if outputs[1].RetentionClass != protocol.ExecutionRetentionClassRetained {
 		t.Fatalf("file retention = %q", outputs[1].RetentionClass)
+	}
+}
+
+func TestExecutionOutputsFromArtifactsUsesWorkspaceViewerForSavedMedia(t *testing.T) {
+	outputs := executionOutputsFromArtifacts([]protocol.ChatArtifactRef{{
+		ID:        "artifact-image-1",
+		Type:      "image",
+		Title:     "Comic page",
+		SavedPath: "saved-media/comic-page.png",
+	}})
+
+	if len(outputs) != 1 {
+		t.Fatalf("outputs = %#v, want 1", outputs)
+	}
+	if outputs[0].Href != "/api/v1/workspace/files/view?path=saved-media%2Fcomic-page.png" {
+		t.Fatalf("href = %q", outputs[0].Href)
+	}
+	if outputs[0].Retained == nil || !*outputs[0].Retained {
+		t.Fatalf("retained = %#v", outputs[0].Retained)
 	}
 }
 

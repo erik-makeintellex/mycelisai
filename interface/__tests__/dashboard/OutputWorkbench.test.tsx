@@ -76,6 +76,26 @@ describe("OutputWorkbench", () => {
     expect(mergeOutputWorkbenchItems([{ text: "Launch brief", url: durableItems[0].url }], durableItems)).toHaveLength(1);
   });
 
+  it("normalizes retained media paths so Soma can preview and open generated content", () => {
+    const summary: ExecutionSummaryData = {
+      outputs: [
+        {
+          kind: "image",
+          title: "Comic page",
+          href: "saved-media/comic-page.png",
+          retained: true,
+        },
+      ],
+    };
+
+    expect(outputWorkbenchItems(summary)).toEqual([
+      {
+        text: "Comic page",
+        url: "/api/v1/workspace/files/view?path=saved-media%2Fcomic-page.png",
+      },
+    ]);
+  });
+
   it("renders package actions and copyable output quotes", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {

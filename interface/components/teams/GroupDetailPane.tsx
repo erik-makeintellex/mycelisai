@@ -72,6 +72,23 @@ export function GroupDetailPane({
             Jump into Soma or the group’s team leads after reviewing scope and
             outputs.
           </p>
+          {selectedGroup.workspace_folder ? (
+            <div className="mt-3 rounded-lg border border-cortex-border bg-cortex-surface p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cortex-text-muted">
+                Group output folder
+              </p>
+              <p className="mt-1 break-all font-mono text-xs text-cortex-text-main">
+                {selectedGroup.workspace_folder}
+              </p>
+              <div className="mt-2">
+                <OutputAccessActions
+                  label={`${selectedGroup.name} output folder`}
+                  url={null}
+                  storagePath={selectedGroup.workspace_folder}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="mt-4 flex flex-col gap-2">
             <Link href="/dashboard" className={linkClassName}>
               Open Soma admin home

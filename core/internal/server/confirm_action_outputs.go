@@ -68,7 +68,7 @@ func executionOutputsFromToolResults(results []plannedToolExecutionResult) []pro
 			Summary:        firstNonEmptyString(result.Output, toolName+" completed."),
 			Href:           href,
 			Entrypoint:     outputEntrypoint(packageOutput),
-			Folder:         outputFolder(packageOutput),
+			Folder:         firstNonEmptyString(outputFolder(packageOutput), outputFolderForTeam(toolName, id)),
 			Files:          outputFiles(packageOutput),
 			Validation:     outputValidation(packageOutput),
 			Retained:       boolPtr(retained),
@@ -76,6 +76,13 @@ func executionOutputsFromToolResults(results []plannedToolExecutionResult) []pro
 		})
 	}
 	return outputs
+}
+
+func outputFolderForTeam(toolName, teamID string) string {
+	if strings.TrimSpace(toolName) != "create_team" {
+		return ""
+	}
+	return groupWorkspaceFolderForTeamID(teamID)
 }
 
 func mergeArtifactRefsWithArgs(artifacts []protocol.ChatArtifactRef, args map[string]any) []protocol.ChatArtifactRef {
