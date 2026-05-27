@@ -24,6 +24,26 @@ function readInitialAdvancedMode(): boolean {
         : false;
 }
 
+function readInitialTheme(): CortexState['theme'] {
+    if (
+        typeof window === 'undefined'
+        || typeof localStorage === 'undefined'
+        || typeof localStorage.getItem !== 'function'
+    ) {
+        return 'aero-light';
+    }
+    try {
+        const raw = localStorage.getItem('mycelis-user-settings');
+        const parsed = raw ? JSON.parse(raw) as { theme?: unknown } : {};
+        if (parsed.theme === 'midnight-cortex' || parsed.theme === 'system') {
+            return parsed.theme;
+        }
+    } catch {
+        return 'aero-light';
+    }
+    return 'aero-light';
+}
+
 const initialDraftGraphState: StripActions<CortexDraftGraphContract> = {
     chatHistory: [],
     nodes: [],
@@ -139,7 +159,7 @@ const initialAutomationRunsState: StripActions<CortexAutomationRunsContract> = {
 
 const initialProfilesSettingsState: StripActions<CortexProfilesSettingsContract> = {
     advancedMode: readInitialAdvancedMode(),
-    theme: 'aero-light',
+    theme: readInitialTheme(),
     missionProfiles: [],
     activeProfileId: null,
     contextSnapshots: [],

@@ -38,4 +38,31 @@ test.describe('Authenticated front door', () => {
         await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
         await expect(page.getByTestId('soma-environment-entry')).toBeVisible();
     });
+
+    test('dashboard first paint honors the stored workspace theme', async ({ page }) => {
+        await page.addInitScript(() => {
+            window.localStorage.setItem('mycelis-user-settings', JSON.stringify({
+                assistantName: 'Soma',
+                theme: 'midnight-cortex',
+            }));
+        });
+        await page.route('**/api/v1/user/settings', async (route) => {
+            await route.fulfill({
+                json: {
+                    ok: true,
+                    data: {
+                        assistant_name: 'Soma',
+                        theme: 'midnight-cortex',
+                    },
+                },
+            });
+        });
+
+        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+
+        await expect(page.locator('html')).toHaveAttribute('data-theme', 'midnight-cortex');
+        await expect.poll(async () => page.evaluate(() =>
+            window.getComputedStyle(document.documentElement).getPropertyValue('--color-cortex-bg').trim(),
+        )).toBe('#0f1116');
+    });
 });

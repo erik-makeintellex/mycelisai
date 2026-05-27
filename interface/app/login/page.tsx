@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { ArrowRight, Building2, KeyRound, ShieldCheck, Sparkles } from "lucide-react";
@@ -55,9 +54,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                         <div role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                             <p>{errorText}</p>
                             {params?.error === "google_state" && googleReady ? (
-                                <Link href={`/auth/google/start?next=${encodeURIComponent(next)}`} className="mt-3 inline-flex rounded-lg border border-red-300/30 px-3 py-2 text-xs font-semibold text-red-100 hover:bg-red-500/10">
+                                <a href={`/auth/google/start?next=${encodeURIComponent(next)}`} className="mt-3 inline-flex rounded-lg border border-red-300/30 px-3 py-2 text-xs font-semibold text-red-100 hover:bg-red-500/10">
                                     Restart Google sign-in
-                                </Link>
+                                </a>
                             ) : null}
                         </div>
                     ) : null}
@@ -84,10 +83,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                     </div>
                     {googleReady ? (
                         <div className="space-y-3">
-                            <Link href={`/auth/google/start?next=${encodeURIComponent(next)}`} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 font-semibold hover:border-cortex-primary/40">
+                            <a href={`/auth/google/start?next=${encodeURIComponent(next)}`} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 font-semibold hover:border-cortex-primary/40">
                                 <KeyRound className="h-4 w-4" />
                                 Sign in with Google Workspace
-                            </Link>
+                            </a>
                             {allowedDomains.length ? (
                                 <p className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 text-xs leading-5 text-cortex-text-muted">
                                     Use a Google account from: <span className="font-mono text-cortex-text-main">{allowedDomains.join(", ")}</span>.
