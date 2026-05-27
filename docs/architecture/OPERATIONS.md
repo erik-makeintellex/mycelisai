@@ -146,7 +146,7 @@ uv run inv cognitive.status
 uv run inv cognitive.stop
 ```
 
-These are optional local GPU/helper tasks, not the default path for every host; `cognitive.media-gateway` is the Windows-friendly Pinokio Forge/AUTOMATIC1111 lane for local/private media generation.
+These are optional local GPU/helper tasks, not the default path for every host; `cognitive.media-gateway` is the Windows-friendly Pinokio Forge/AUTOMATIC1111 or ComfyUI lane for local/private media generation.
 
 ### Test Tasks (`ops/test.py`) And CI Tasks (`ops/ci.py`)
 

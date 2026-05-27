@@ -116,6 +116,8 @@ Use Google Workspace through OIDC/OAuth for enterprise SSO.
 
 The login page shows the allowed Workspace domains when Google is configured. Google sign-in and restart links should use a full document navigation into `/auth/google/start` so the browser enters the OAuth redirect flow cleanly instead of treating the route as an in-app RSC transition. If Google account selection returns a domain error, choose an account from `MYCELIS_AUTH_ALLOWED_DOMAINS` or use the local owner login while correcting the deployment domain list.
 
+For local source development, keep the Google values in repo-root `.env`. The Interface auth server also reads that file when Next runs from `interface/`, so `/login` should still show **Sign in with Google Workspace** without duplicating secrets into `interface/.env.local`.
+
 ## GitHub
 
 Use GitHub for team login only when the organization accepts GitHub identity as a login proof.

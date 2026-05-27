@@ -1,7 +1,7 @@
 # Resources
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Advanced-mode support surface for connected tools, deployment context intake, managed exchange, workspace files, AI engine setup, and reusable role definitions.
+> Advanced-mode support surface for connected tools, deployment context intake, managed exchange, generated output files, AI engine setup, and reusable role definitions.
 
 ---
 
@@ -16,7 +16,7 @@ Current resource menu:
 | Connected Tools | Installed MCP servers and tool capability visibility |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
 | Deployment Context | Load governed private/user records, customer context, approved company knowledge, Soma operating context, and reflection/synthesis observations into separate governed context lanes |
-| Workspace Files | Filesystem MCP-backed browsing and file operations inside workspace boundary |
+| Output Files | Open generated content folders and browse filesystem MCP-backed files inside workspace boundary |
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
 
@@ -161,15 +161,22 @@ Operators should be able to answer "what governed context did we intentionally l
 
 ---
 
-## Workspace Files
+## Output Files
 
-Workspace Files uses the `filesystem` MCP server directly from Resources.
+Output Files uses the `filesystem` MCP server directly from Resources.
 The browser starts at the MCP-safe `workspace` root rather than the Core
 process working directory, so ordinary browse/read/write actions stay inside
 the configured mounted data boundary.
 
+The top of the panel includes **Open folder** for the current workspace path.
+Use it when an operator wants to grab generated files, media proof, project
+packages, or browser-game output from the local machine without decoding the
+storage configuration. Retained output cards in Soma, Teams, and Groups should
+also expose **Open folder** when they carry a workspace path.
+
 Output locations:
 - generated files, project packages, browser games, and filesystem MCP writes land under `MYCELIS_WORKSPACE`
+- standing or Soma-created group deliverables should land under `MYCELIS_WORKSPACE/groups/...`; the Groups detail pane shows the exact `workspace_folder` and an `Open folder` action
 - file-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`
 - `DATA_DIR` remains a legacy alias for artifact storage and should match `MYCELIS_ARTIFACT_ROOT` until older paths are removed
 
@@ -184,9 +191,9 @@ Use `System -> Deployments` to confirm the runtime is reporting the same workspa
 
 New-user proof should verify both sides of this boundary:
 - `Resources -> Connected Tools` shows whether `filesystem` is installed and connected.
-- `Resources -> Workspace Files` can browse/read/write only under the governed workspace boundary.
+- `Resources -> Output Files` can browse/read/write only under the governed workspace boundary and can open the current local folder through the workspace-confined reveal endpoint.
 - `System -> Deployments` reports the deployment/workspace/artifact roots that explain where generated output will land.
-- A retained demo output or project package opened from Soma/Teams/Groups resolves to the same workspace root family instead of a hidden process working directory.
+- A retained demo output or project package opened from Soma/Teams/Groups resolves to the same workspace root family instead of a hidden process working directory; team-owned packages and media should be inside the selected group folder unless the operator explicitly chose another workspace path.
 
 Supported operator actions:
 - browse directories (`list_directory`)

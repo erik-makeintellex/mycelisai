@@ -38,6 +38,14 @@ Concrete central Soma phrases:
 
 Live activity text indicates current steps such as thinking, consulting, searching memory, and invoking tools.
 
+## Understanding Attunement
+
+Soma should understand what you are trying to produce, not just parse the words in the request. For every meaningful ask, Soma should infer the intended outcome, audience, output form, constraints, and uncertainty before answering or proposing execution.
+
+Expected behavior: use current workspace, organization, retained outputs, and deployment context before asking you to repeat information; use configured search/source capability when the request needs current, external, or researched knowledge; disclose the source boundary in the trust package; ask one concise clarifying question only when the missing detail would materially change the action or output quality; otherwise proceed with explicit assumptions.
+
+For example, `create a comic book page with a small team` should be understood as a retained visual/media deliverable with roles, prompt/work product, output path, and proof. `research the latest media generation tools and write a report` should use the configured source path and treat external results as interpreted leads, not unquestioned truth.
+
 ## Referential Review And Confirmation
 
 Soma should treat action-oriented requests as contextual, not isolated.
@@ -88,14 +96,19 @@ If you leave the organization workspace and come back later, the current guided 
 
 Team workspaces are different from the root Soma workspace:
 - the root workspace is Soma-first and organization-wide
-- the root Soma home also carries a live interaction stream so an admin can review active team output without leaving the main chat surface
+- the dashboard uses a focus-first workbench: Soma conversation stays in the primary pane, while Active Work, retained outputs, trust, context, and focused team lanes open from a minimizable, tabbed Work panel overlay
+- the Work panel is for quick review and action; use each tab's full-page link for deeper backlog, output-folder, activity/proof, or Resources review
+- focused team context switches the primary chat, active-work lane, and retained-output view to the selected team's scope, while Soma remains able to reference other teams, such as a story-writing team and a comic-visual team, when you ask
+- when Soma creates a team but has not yet created the first delegated work item, the Dashboard shows a compact first-deliverable launcher; choose a starter prompt, review it in the Soma input, then send it so execution still goes through the governed work-item path
+- the root Soma home keeps the live interaction stream collapsed by default so an admin can open it on demand without pushing Soma away from the first work surface
 - the root Soma chat should stay in a bounded panel and scroll message history internally, so long conversations do not push the live stream and review panels farther down the page
 - that stream can be filtered by multiple teams and by available output aspects such as status, results, artifacts, tools, governance, and errors
 - the `Teams` page is where admins review active work state, open focused lead workspaces, and define the reusable member templates Soma should apply when creating new team members
 - the dedicated guided team-creation workflow now lives at `/teams/create`, so detailed team creation is a step-by-step Soma lane instead of a dense roster-side form
 - when Soma returns a native execution path there, the same lane can now launch a temporary workflow group directly, hand you into `Groups`, and continue through archive/closure while keeping retained outputs reviewable
 - team defaults should start with one accountable lead, not a prefilled specialist roster
-- a single team should stay lead-only at creation; if more roles seem useful, the operator can add a member deliberately or the temporary team lead can request one temporary specialist after naming the missing capability, owned task, expected proof, and removal point
+- a single generic team should stay lead-only at creation; explicit specialist-output requests, such as a comic page that names artist, character, dialogue, layout, and proof roles, may create a bounded specialist roster in the same governed proposal
+- if more roles seem useful after generic team creation, the operator can add a member deliberately or the temporary team lead can request one temporary specialist after naming the missing capability, owned task, expected proof, and removal point
 - entering a created team should center the team's focused lead entity first
 - that team lead can still coordinate back through Soma using scoped memory, RAG retrieval, and broader organization context when needed
 - the team's lead and specialists inherit the organization output-model policy unless an admin changes it
@@ -167,6 +180,8 @@ No mutation executes until you confirm.
 - if a response generates an image, it is rendered directly in chat
 - generated images are cache-first and expire after 60 minutes unless saved
 - use the inline `Save` action or ask Soma to save it (for example: "save this image to saved-media")
+- if you ask Soma to create a specialist media team and generate the first output, the proposal should include both the team creation and media deliverable steps, then return retained output/proof or a visible degraded recovery state
+- saved media and file outputs should appear in the same Soma output workbench with a preview when possible, **Open**, and **Open folder** action; the folder action shows inline success or blocked feedback, and `Resources -> Output Files` is the broader browser for containing folders later
 
 ---
 
@@ -236,18 +251,12 @@ Available actions:
 This keeps recovery inline without retyping or page switching.
 `Switch to Soma` is specifically a recovery path for when you were using a direct specialist route and want to return to the default orchestration path.
 
----
-
 ## Direct Council Access
-
-To send directly to a specialist:
 
 1. Click `Direct` in chat header.
 2. Pick Architect, Coder, Creative, or Sentry.
 3. Send your message.
 4. Use `Soma` option to return to default orchestration.
-
----
 
 ## Launch Crew Flow
 
@@ -262,20 +271,18 @@ For multi-step execution:
 
 On success, a system message includes a run link (`/runs/{run_id}`).
 
-When crew creation is needed, Soma should start lead-only:
+When generic crew creation is needed, Soma should start lead-only:
 
 1. Team Lead: owns the operator-facing state, handoffs, and final output summary.
 2. Temporary Specialist, only if needed: owns one named missing capability and returns the expected proof before removal.
 
-Soma can add a temporary specialist only when the operator or team lead names the missing capability, owned task, expected proof, and removal point. If the work needs multiple distinct roles, Soma should split the request into multiple lead-owned lanes and explain what each lane will produce.
+Soma can add a temporary specialist only when the operator or team lead names the missing capability, owned task, expected proof, and removal point. If the work needs multiple distinct roles but no concrete deliverable needs a shared roster immediately, Soma should split the request into multiple lead-owned lanes and explain what each lane will produce. If the operator explicitly asks for a concrete output with named roles, Soma may manifest the smallest bounded specialist roster and attach the first retained deliverable to the same governed execution.
 
 When specialized output is needed, Soma should prefer to:
 1. plan the need at the root workspace
 2. shape the right team or specialist lane
 3. let the team's lead inherit the configured output model policy
 4. only override delivery routing through governed admin configuration, not ad hoc user chat
-
----
 
 ## Operational Helpers
 
@@ -284,8 +291,6 @@ While chatting, you can use:
 - **Degraded Mode Banner** actions
 - **Focus Mode** (`F`) to prioritize chat height
 - **Advanced Mode** toggle (Settings footer) to show/hide high-density telemetry surfaces
-
----
 
 ## Good Prompting Practices
 

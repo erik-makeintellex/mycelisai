@@ -143,7 +143,7 @@ Deployment trust is product trust. The operator should eventually inspect deploy
 
 Local/private media generation is strategic infrastructure. The media lane must remain sovereign, retain prompts locally, generate proof-linked outputs, support recovery, and integrate into Soma naturally.
 
-Commit and stabilize the current media gateway before expanding into ComfyUI orchestration.
+Commit and stabilize the current media gateway before expanding beyond the reviewed ComfyUI workflow-template adapter into richer ComfyUI orchestration.
 
 ## Documentation Doctrine
 

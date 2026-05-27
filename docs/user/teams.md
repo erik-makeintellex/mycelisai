@@ -1,7 +1,7 @@
 # Teams
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Soma-first team workflow for active team work: start lead-only, keep the lead visible, and add temporary specialists only when the work proves a gap.
+> Soma-first team workflow for active team work: start lead-owned by default, and create explicit specialist rosters only when the requested output already names distinct roles.
 
 ---
 
@@ -28,7 +28,7 @@ Use the adjacent workstream surfaces deliberately:
 Default rule:
 - teams should be small, explicit, and focused on the output
 - the ideal launch team is one accountable lead
-- a single team should stay lead-only at creation
+- a single team should stay lead-only at creation unless the operator explicitly asks for named specialist roles tied to a retained deliverable
 - broad requests should become a few lead-only teams or lane bundles, not one large roster
 - add temporary specialists only after the operator or team lead names the missing capability, owned task, expected proof, and removal point
 - the root Soma workspace remains the main place to ask for team creation and orchestration
@@ -45,6 +45,8 @@ The lead is the user-facing counterpart who keeps the mission, status, and outpu
 - the removal point
 
 Soma should not launch a broad standing pool just because the request sounds ambitious. If multiple capabilities seem useful, Soma should split the work into smaller lead-owned lanes and explain the lane outputs.
+
+Explicit specialist-output requests are different. If the operator asks for a concrete team like "an artist, a character designer, and someone who writes the lines" and also asks for a retained output such as a comic page or image, Soma may create a bounded specialist delivery roster in the same governed proposal. That roster must still have one accountable lead, named specialist roles, expected output/proof, local/private media posture where relevant, and retained artifacts.
 
 ## Choosing The Right Workflow
 
@@ -67,7 +69,9 @@ Use `Teams` when you want to inspect or manage existing teams:
 - review or edit template role, model, and MCP/internal tool references
 - check whether a team should be archived or kept
 
-Use `Groups` when you want to review retained outputs or collaboration records after a temporary workflow has been archived.
+When a team has just been created and no delegated work item exists yet, the Dashboard shows a first-deliverable launcher instead of treating the team shell as active work. Choose a starter such as `Build playable prototype`, `Write design brief`, or `Draft delivery plan`; Soma places the bounded ask in the chat input for review, then your send creates the governed work item that can run, produce output, and attach proof.
+
+Use `Groups` when you want to review retained outputs or collaboration records after a temporary workflow has been archived. Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
 
 Use `Automations` when you want event rules to actuate work, route proposals, or require approval before execution. Cadence authoring belongs to the scheduler production lane when that surface is available.
 
@@ -129,6 +133,8 @@ The team lead is the user-facing counterpart for that team, not a hidden extra m
 
 After a temporary collaboration is archived, use `/groups` to review the retained output package and collaboration record.
 
+For permanent or standing groups, keep deliverables inside the group folder instead of the general output folders. Soma-owned team media defaults to `groups/<team-id>/media`, and Soma-owned team project packages default to `groups/<team-id>/generated/...`. Explicit operator paths are still respected when you intentionally name a different workspace-confined target.
+
 ## Team Creation
 
 Use the guided team-creation workflow when you want Soma to shape the team for you.
@@ -156,9 +162,12 @@ Create the smallest useful team for this outcome: draft an investor-ready produc
 
 When testing team workflows, verify:
 - compact team defaults are visible and start lead-only
+- explicit specialist-output requests preserve the requested roles instead of collapsing them into a ceremonial single-member shell
+- media team requests produce or degrade a retained media deliverable with output/proof references
 - any temporary specialist explains the missing capability, owned task, proof expected, and removal point
 - broad work splits into several smaller lead-owned lanes instead of starting a large roster
 - broad asks produce multiple small coordinated lanes instead of one huge team
+- team-only creation does not imply the team is already executing; the Dashboard first-deliverable launcher should seed a bounded Soma ask and leave final send/approval with the operator
 - the team lead is the first visible operational counterpart
 - Dashboard Active Work remains capped and points to `/teams` for the full durable backlog
 - Ask Team or Respond creates a durable follow-on work item, then visibly returns output-ready or degraded state

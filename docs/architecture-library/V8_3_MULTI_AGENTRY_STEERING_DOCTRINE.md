@@ -181,7 +181,7 @@ P0:
 
 P1:
 
-1. ComfyUI workflow adaptation.
+1. ComfyUI workflow adaptation live proof and operator workflow-template UX.
 2. Canonical trust package.
 3. Advanced team steering.
 4. Capability UX refinement.

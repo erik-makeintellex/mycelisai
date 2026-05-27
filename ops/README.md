@@ -204,7 +204,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **Stop**: `uv run inv cognitive.stop`
 - **Status**: `uv run inv cognitive.status`
 - These are optional local helpers for vLLM/Diffusers experimentation, not part of the supported default Core + Interface runtime contract.
-- The repo-local vLLM/Diffusers helper lane is intended for supported Linux GPU hosts; on Windows, use Ollama locally for text and `cognitive.media-gateway` for Pinokio-hosted Forge/AUTOMATIC1111 media generation.
+- The repo-local vLLM/Diffusers helper lane is intended for supported Linux GPU hosts; on Windows, use Ollama locally for text and `cognitive.media-gateway` for Pinokio-hosted Forge/AUTOMATIC1111 or ComfyUI media generation.
 
 ## Clean Run Discipline for Runtime and Integration Checks
 

@@ -56,6 +56,7 @@ Windows x86_64, Linux x86_64, Linux arm64, and Mixed-architecture deployments mu
 ## Configuration Reference
 
 Keep secrets in `.env`. Keep Compose topology and non-secret container shape in `.env.compose`.
+When running the Interface directly from `interface/`, server-side auth reads repo-root `.env` as the fallback secret store, so local owner and Google Workspace login stay aligned with the same repo-local values used by Core and task automation. `interface/.env.local` may still override Interface-only values for a one-off proof, but it should not become a second long-lived secret source.
 
 Important files:
 - `.env.example`: starting point for local secret/runtime values
@@ -282,7 +283,7 @@ uv run inv cognitive.up
 uv run inv cognitive.status
 ```
 
-For private Pinokio media generation, use the `.env.example` `MYCELIS_MEDIA_GATEWAY_*` block and `uv run inv cognitive.media-gateway`; the gateway accepts local/private upstreams by default, returns `b64_json`, and requires `MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1` for intentional non-private upstream routing. Details live in [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md).
+For private Pinokio media generation, use the `.env.example` `MYCELIS_MEDIA_GATEWAY_*` block and `uv run inv cognitive.media-gateway`; the gateway accepts local/private upstreams by default, returns `b64_json`, and requires `MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1` for intentional non-private upstream routing. Forge/AUTOMATIC1111 can use the direct `txt2img` adapter. ComfyUI uses `MYCELIS_MEDIA_GATEWAY_BACKEND=comfyui` plus a reviewed API-format workflow file and node mappings so the gateway can submit `/prompt`, poll `/history/{prompt_id}`, and fetch outputs through `/view`. Details live in [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md).
 
 ## Binary Release Process
 

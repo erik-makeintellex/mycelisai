@@ -201,6 +201,18 @@ Current implementation state: run-linked `TeamStatusEvent` records mirror into `
 
 Canonical frame types: `DirectAnswerFrame`, `ProposalFrame`, `ActiveWorkFrame`, `OutputReadyFrame`, `ProofFrame`, `RecoveryFrame`, `BlockedFrame`, `DegradedFrame`.
 
+Focused work context is part of ExpressionFrame, not a separate topology view. Selecting a running or executed team should switch the workbench into that team's scoped chat, active-work, output, proof, and recovery lane while keeping Soma available as the cross-context coordinator. This lets one team own a story-writing context, another team own comic-page visual generation, and Soma reference either context deliberately without merging every interaction into one unbounded root chat.
+
+The default workbench posture should favor operator focus. Active work, outputs, trust, and context should be available through an expandable/minimizable Work panel overlay rather than permanently squeezing Soma into a narrow chat column. The panel should be tabbed and quick-action oriented; dense backlog review, output browsing, proof/audit review, and resource configuration belong on full pages or Inspect surfaces.
+
+## Understanding Attunement Doctrine
+
+Soma must treat operator expression as intent-bearing work context, not as a bare command string. Before direct answers or governed proposals, Soma should compactly infer desired outcome, audience, output form, constraints, relevant prior/workspace context, and uncertainty.
+
+Knowledge lookup is part of attunement, not an ungoverned side channel. Soma should prefer workspace, organization, retained-output, and deployment context first; use configured search/source capability for current, external, or research-heavy questions; disclose the source boundary in the trust package; and surface a blocker or recovery path when necessary source capability is unavailable.
+
+The goal is better-fitting delivery, not more doctrine. Attunement should make outputs land closer to the user's intended world while preserving governance, proof, and progressive disclosure.
+
 ## Progressive Operational Disclosure
 
 New operators should see Soma, task, result, proof, and recovery. Advanced users may inspect capabilities, providers, runs, deployment roots, MCP state, audit chains, Event Spine details, and provider routing. The product must never default to topology exposure.
@@ -227,13 +239,15 @@ Local/private runtime capability remains strategic infrastructure for local infe
 
 The local/private media lane is sovereign cognition infrastructure, not merely image generation support.
 
-Current state: the local/private media gateway is landed and in review for the Pinokio Forge/AUTOMATIC1111 path. It exposes the OpenAI-compatible image endpoint, returns `b64_json`, blocks public upstreams by default, and has unit proof for adapter, privacy, and unsupported-backend behavior.
+Current state: the local/private media gateway is landed and in review for the Pinokio Forge/AUTOMATIC1111 path and the first ComfyUI workflow-template path. It exposes the OpenAI-compatible image endpoint, returns `b64_json`, blocks public upstreams by default, adapts Forge/AUTOMATIC1111 `txt2img`, and can submit a reviewed ComfyUI API-format workflow to `/prompt`, poll `/history/{prompt_id}`, and retrieve generated files through `/view`.
 
-Required next: verify local generation against a running private media backend, verify retained artifacts, verify proof linkage, verify degradation handling, and verify recovery actions through Soma/Core/UI. Only after this should ComfyUI integration begin.
+Required next: verify local generation against a running private Forge/AUTOMATIC1111 or ComfyUI backend, verify retained artifacts, verify proof linkage, verify degradation handling, and verify recovery actions through Soma/Core/UI. ComfyUI is still `IN_REVIEW` until a real local workflow is proofed through Soma and retained outputs.
 
 ## Runtime Teams Doctrine
 
 Runtime teams are bounded operational collaborators, not autonomous digital coworkers. They are not production-ready delivery collaborators until async execution works, degradation is visible, output reliability stabilizes, and bounded tasks complete within expected operational posture.
+
+Generic team creation should remain lead-owned and compact. Explicit specialist-output creation is a first-class exception: when the operator asks for a concrete retained deliverable and names the needed roles, Soma should preserve the smallest useful specialist roster in the ExecutionContract, execute the first deliverable through governed capabilities, and return retained output/proof or a degraded RecoveryAction. A comic-page request with artist, character, dialogue, layout, proof, `generate_image`, and `save_cached_image` is the current embodiment target for this path.
 
 ## Release Candidate Threshold
 
@@ -256,7 +270,7 @@ P0:
 
 P1:
 
-1. ComfyUI workflow adapter.
+1. ComfyUI workflow adapter live proof and operator workflow-template UX.
 2. Canonical trust package assembly.
 3. Team steering lifecycle beyond the landed bounded ask/action APIs.
 4. MCP/operator capability UX refinement.

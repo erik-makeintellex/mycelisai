@@ -17,7 +17,7 @@
 
 Mycelis supports **multiple self-hosted and commercial inference engines** — configure any combination of vLLM, Ollama, LM Studio, OpenAI, Anthropic, and Google via `cognitive.yaml` or the AI Engines settings surface.
 
-Media generation stays local-first. Core always calls the configured media provider through an OpenAI-compatible `/v1/images/generations` contract. For Pinokio-hosted apps, run `uv run inv cognitive.media-gateway` and point `MYCELIS_MEDIA_ENDPOINT` at `http://127.0.0.1:8001/v1`; the gateway adapts local Forge/AUTOMATIC1111 `txt2img` responses without sending prompts or images to hosted providers. The gateway returns `b64_json` only and blocks public upstream hosts by default.
+Media generation stays local-first. Core always calls the configured media provider through an OpenAI-compatible `/v1/images/generations` contract, but that contract is only the wire shape; it does not require OpenAI or `OPENAI_API_KEY`. For Pinokio-hosted apps, run `uv run inv cognitive.media-gateway` and point `MYCELIS_MEDIA_ENDPOINT` at `http://127.0.0.1:8001/v1`; the gateway adapts local Forge/AUTOMATIC1111 `txt2img` responses or ComfyUI workflow output retrieval without sending prompts or images to hosted providers. The gateway returns `b64_json` only and blocks public upstream hosts by default.
 
 ## Provider Registry
 
@@ -154,7 +154,7 @@ media:
     api_key_env: ""
     enabled: true
   endpoint: "http://127.0.0.1:8001/v1"
-  model_id: "stable-diffusion-xl"
+  model_id: "local-media"
 ```
 
 The media block keeps a legacy `endpoint` and `model_id` surface for compatibility, but the typed `media.provider` record is the preferred contract when you want local-hosted or hosted media behavior to be explicit.
@@ -175,7 +175,40 @@ MYCELIS_MEDIA_GATEWAY_UPSTREAM=http://127.0.0.1:7860
 MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=0
 ```
 
-ComfyUI is intentionally not wired directly to Core because its native contract is workflow/queue based (`/prompt`, `/history/{prompt_id}`, `/view`) rather than OpenAI-compatible. Add it as a gateway adapter with a reviewed workflow template when that slice is ready.
+ComfyUI local media profile:
+
+```env
+MYCELIS_MEDIA_PROVIDER_ID=pinokio-comfyui-local
+MYCELIS_MEDIA_TYPE=openai_compatible
+MYCELIS_MEDIA_ENDPOINT=http://127.0.0.1:8001/v1
+MYCELIS_MEDIA_MODEL_ID=local-media
+MYCELIS_MEDIA_LOCATION=local
+MYCELIS_MEDIA_DATA_BOUNDARY=local_only
+MYCELIS_MEDIA_USAGE_POLICY=local_first
+MYCELIS_MEDIA_ENABLED=true
+MYCELIS_MEDIA_GATEWAY_BACKEND=comfyui
+MYCELIS_MEDIA_GATEWAY_UPSTREAM=http://127.0.0.1:8188
+MYCELIS_MEDIA_GATEWAY_COMFY_WORKFLOW_FILE=./workspace/media/comfyui-workflow.json
+MYCELIS_MEDIA_GATEWAY_COMFY_PROMPT_NODE_ID=6
+MYCELIS_MEDIA_GATEWAY_COMFY_PROMPT_INPUT=text
+MYCELIS_MEDIA_GATEWAY_COMFY_SIZE_NODE_ID=5
+MYCELIS_MEDIA_GATEWAY_COMFY_WIDTH_INPUT=width
+MYCELIS_MEDIA_GATEWAY_COMFY_HEIGHT_INPUT=height
+MYCELIS_MEDIA_GATEWAY_COMFY_BATCH_NODE_ID=5
+MYCELIS_MEDIA_GATEWAY_COMFY_BATCH_INPUT=batch_size
+MYCELIS_MEDIA_GATEWAY_COMFY_POLL_SECONDS=1
+MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=0
+```
+
+ComfyUI setup steps:
+
+1. Start ComfyUI locally through Pinokio and confirm the local API is reachable at `http://127.0.0.1:8188`.
+2. In ComfyUI, build the desired image workflow and export/save it in API format.
+3. Store that workflow under the governed workspace, for example `core/workspace/media/comfyui-workflow.json`.
+4. Set `MYCELIS_MEDIA_GATEWAY_BACKEND=comfyui`, point `MYCELIS_MEDIA_GATEWAY_UPSTREAM` at the local ComfyUI endpoint, and map the prompt node through `MYCELIS_MEDIA_GATEWAY_COMFY_PROMPT_NODE_ID`.
+5. If the workflow has a latent or image-size node, set `MYCELIS_MEDIA_GATEWAY_COMFY_SIZE_NODE_ID` plus width/height input names so Soma's requested image size transmits into the workflow.
+6. Start `uv run inv cognitive.media-gateway`; Core continues to call `http://127.0.0.1:8001/v1/images/generations`.
+7. Ask Soma to generate an image. The gateway submits the workflow to ComfyUI `/prompt`, polls `/history/{prompt_id}`, fetches generated files through `/view`, and returns `b64_json` to Core so outputs can be retained as Mycelis artifacts.
 
 Use `MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1` only when intentionally routing the private media gateway to a reviewed non-private endpoint. Normal local Pinokio proof should use `localhost`, `host.docker.internal`, loopback, or private LAN IP upstreams.
 

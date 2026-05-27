@@ -42,7 +42,7 @@ Good first prompts:
 - "Create a retained demo package I can open in the browser and include proof I can revisit."
 - "Ask the active delivery team for one bounded status update; if it times out, show the degraded proof and recovery path."
 
-Generated project packages, browser games, workspace files, and filesystem MCP writes land under the configured `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`. Open **System -> Deployments** in Advanced mode when you need to confirm the exact runtime paths before or after execution.
+Generated project packages, browser games, workspace files, and filesystem MCP writes land under the configured `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`. Open **Resources -> Output Files** to browse generated content or use **Open folder** on an output card to open its local folder directly. Open **System -> Deployments** in Advanced mode when you need to confirm the exact runtime paths before or after execution.
 
 Concrete requests Soma should understand when the matching capability is configured:
 
@@ -60,7 +60,7 @@ Concrete requests Soma should understand when the matching capability is configu
 - [Workflow Variants And Plan Memory](workflow-variants-and-plan-memory.md): when direct Soma is enough, when a team matters, and how to keep plans through a reboot.
 - [Teams](teams.md): compact team creation, lead-centered workflow, and broad-ask lane splitting.
 - [Core Concepts](core-concepts.md): operator-language explanation of Soma, Council, teams, memory, and governance.
-- [Resources](resources.md): private/context content, MCP tool structure, workspace files, AI engines, deployment context, and Connected Tools activity.
+- [Resources](resources.md): private/context content, MCP tool structure, output files, AI engines, deployment context, and Connected Tools activity.
 - [Memory](memory.md): semantic search, retained knowledge, reflection context, and continuity boundaries.
 - [Settings And Access](settings-access.md): profile, People & Access, auth-provider posture, access-denied recovery, and connected-tool/search management boundaries.
 - [Authentication Modes](auth-modes.md): local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM enablement.

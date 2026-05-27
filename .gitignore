@@ -74,4 +74,8 @@ workspace/tool-cache/
 workspace/logs/
 workspace/docker-compose/
 workspace/generated/
+workspace/native-infra/
+workspace/tmp/
+workspace/*.err
+workspace/*.out
 interface/.env.local

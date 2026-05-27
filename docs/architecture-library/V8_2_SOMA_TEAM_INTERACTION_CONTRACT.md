@@ -37,7 +37,7 @@ Operator intent
 -> operator reviews, steers, retries, pauses, or archives
 ```
 
-Team creation alone is not a completed work outcome. When a request asks for a team to do meaningful work, the system must either start a first work item, ask for approval to do so, or clearly say that no work item has started yet.
+Team creation alone is not a completed work outcome. When a request asks for a team to do meaningful work, the system must either start a first work item, ask for approval to do so, or clearly say that no work item has started yet. Explicit specialist-output requests, such as creating a comic team with artist, character, dialogue, layout, and proof roles plus a generated page, must preserve the bounded roster in the ExecutionContract and attach the first retained deliverable or a degraded recovery state to the governed run.
 
 ## Actor Responsibilities
 
@@ -250,6 +250,13 @@ Temporary specialists require:
 - expected output
 - expected proof
 - stop/removal condition
+
+Explicit specialist rosters require:
+- one accountable lead
+- named roles requested by the operator or required by the concrete deliverable
+- capability requirements, such as `generate_image` and `save_cached_image` for media work
+- retained output/proof expectations
+- a bounded reason the roster should exist at creation instead of being split into multiple lead-only lanes
 
 Degraded team work must answer:
 - what succeeded
