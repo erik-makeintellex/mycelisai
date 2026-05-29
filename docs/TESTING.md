@@ -173,7 +173,7 @@ For `MYC-RC-000` through `MYC-RC-003`, testing must prove the platform change, n
 - `MYC-RC-000`: docs/state/index agree on convergence authority, no stale nonexistent V8.3 links remain, and gates use `uv run inv ...`.
 - `MYC-RC-001`: a Codex task package is produced only after proposal/confirm, creates mission run/events, writes retained artifacts, and exposes proof.
 - `MYC-RC-002` / `MYC-RC-002B`: output refs normalize file/team/MCP/template/package outputs with open/reveal/proof/source lineage, and the UI presents one package card with Inspect details.
-- `MYC-RC-003`: write/output proof records checksum or fingerprint, path-boundary verification, execution status, output ref, and proof readback.
+- `MYC-RC-003`: write/output proof records checksum or fingerprint, path-boundary verification, execution status, output ref, artifact linkage, and proof readback. Use [MYC-RC-003 Proof Envelope Delivery Plan](architecture-library/MYC_RC_003_PROOF_ENVELOPE_DELIVERY_PLAN.md) for the active owner map and Windows-managed proof lane.
 
 Current focused `MYC-RC-001` / `MYC-RC-002` package-output proof:
 - `go test ./internal/server`
@@ -185,6 +185,8 @@ Current focused `MYC-RC-001` / `MYC-RC-002` package-output proof:
 `MYC-RC-002` adds explicit assertions that confirmed packages and Soma package envelopes carry `output_refs`, `delivery_package`, and `execution_summary`, including primary/proof roles and source run/contract lineage. Keep compatibility assertions for `artifacts` and legacy `package` fields until all consumers move to `OutputRef`.
 
 Browser proof must include refresh/re-entry so retained package visibility is not a transient chat-only success. Manual acceptance is useful for exploration, but RC lock requires an automated focused browser spec or an explicit `BLOCKED` note naming the missing spec.
+
+Current `MYC-RC-003A` proof adds backend assertions for package-file checksum, byte count, path-boundary verification, artifact identity, source run/contract, proof artifact linkage, and event payload proof metadata; store/component assertions for proof fields in confirm/chat normalization and Output Workbench; and Windows-managed Chromium as the local full-browser gate while WSL/Docker is environment-blocked.
 
 ## Tier 1: Backend Unit Tests
 

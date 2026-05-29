@@ -200,15 +200,25 @@ Purpose: apply a minimum proof envelope to meaningful write/output actions.
 
 Owners:
 
+- `docs/architecture-library/MYC_RC_003_PROOF_ENVELOPE_DELIVERY_PLAN.md`
+- `core/pkg/protocol/execution_summary.go`
+- `core/internal/artifacts/service.go`
+- `core/internal/server/templates_codex_package.go`
+- `core/internal/server/confirm_action_outputs.go`
+- `core/internal/server/templates_confirm_action.go`
+- `core/internal/server/templates_codex_package_test.go`
 - `core/internal/swarm/internal_tools.go`
 - `core/internal/swarm/internal_tools_handlers_io.go`
 - `core/internal/server/templates_execution.go`
-- `core/internal/server/execution_summary_helpers.go`
-- `core/internal/trust/store.go`
-- `core/internal/trust/contract_update.go`
-- `core/internal/server/trust_read.go`
+- `interface/store/cortexStoreTypesChat.ts`
+- `interface/store/cortexStoreOutputRefs.ts`
+- `interface/components/soma/OutputWorkbench.tsx`
+- `interface/components/runs/EventCard.tsx`
+- `interface/e2e/specs/codex-package-retention.spec.ts`
 
 Acceptance: write-file proof records checksum, path boundary verification, execution status, output ref, and proof readback.
+
+Current slice: `MYC-RC-003A` starts with Codex task packages. It adds artifact-linked package-file proof, real artifact IDs on output refs, proof/readback metadata, and Windows-managed full-browser proof while WSL remains environment-blocked.
 
 ## Validation Gates
 
