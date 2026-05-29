@@ -254,6 +254,8 @@ def test_run_compose_migrations_uses_configured_db_login(monkeypatch):
     commands: list[list[str]] = []
     files = [Path("001_init_memory.sql")]
 
+    monkeypatch.delenv("DB_USER", raising=False)
+    monkeypatch.delenv("DB_NAME", raising=False)
     monkeypatch.setattr(compose.db_tasks, "_migration_files", lambda: files)
     monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "owner", "DB_NAME": "ownerdb"})
     monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: False)
@@ -452,6 +454,8 @@ def test_compose_infra_up_can_run_migrations_when_requested(monkeypatch):
 
 
 def test_compose_infra_up_prints_connection_guidance(monkeypatch, capsys):
+    monkeypatch.delenv("DB_USER", raising=False)
+    monkeypatch.delenv("DB_NAME", raising=False)
     monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
     monkeypatch.setattr(
         compose,

@@ -219,6 +219,14 @@ def test_schema_bootstrapped_requires_all_current_runtime_objects(monkeypatch):
     assert db_tasks.schema_bootstrapped() is False
 
 
+def test_schema_bootstrapped_requires_group_workspace_folder_column():
+    checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
+
+    assert "collaboration_groups workspace_folder column" in checks
+    assert "collaboration_groups" in checks["collaboration_groups workspace_folder column"]
+    assert "workspace_folder" in checks["collaboration_groups workspace_folder column"]
+
+
 def test_schema_bootstrapped_accepts_current_runtime_schema(monkeypatch):
     monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
     monkeypatch.setattr(

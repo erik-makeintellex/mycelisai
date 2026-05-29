@@ -40,6 +40,11 @@ SCHEMA_COMPATIBILITY_CHECKS = (
         "WHERE table_schema = 'public' AND table_name = 'collaboration_groups';",
     ),
     (
+        "collaboration_groups workspace_folder column",
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_schema = 'public' AND table_name = 'collaboration_groups' AND column_name = 'workspace_folder';",
+    ),
+    (
         "capability_manifests table",
         "SELECT 1 FROM information_schema.tables "
         "WHERE table_schema = 'public' AND table_name = 'capability_manifests';",
