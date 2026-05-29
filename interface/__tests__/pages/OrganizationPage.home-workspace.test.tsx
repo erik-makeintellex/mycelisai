@@ -37,10 +37,7 @@ describe("OrganizationPage home workspace slices", () => {
         expect(screen.getByText("Inspect the current organization")).toBeDefined();
         expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
         expect(screen.getByRole("heading", { name: "What do you want Soma to do?" })).toBeDefined();
-        expect(screen.getByText("Evidence of Soma's work")).toBeDefined();
-        expect(screen.getByRole("link", { name: /Activity/i }).getAttribute("href")).toBe("/activity");
-        expect(screen.getByRole("link", { name: /Learning and context/i }).getAttribute("href")).toBe("/memory");
-        expect(screen.getByRole("link", { name: /Tools and capabilities/i }).getAttribute("href")).toBe("/resources?tab=tools");
+        expect(screen.getByRole("button", { name: "Work panel" })).toBeDefined();
         expect(screen.getByTestId("mission-chat")).toBeDefined();
         expect(screen.queryByText("Direct")).toBeNull();
         expect(screen.queryByTitle(/Broadcast mode/i)).toBeNull();

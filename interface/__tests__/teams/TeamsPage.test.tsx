@@ -95,7 +95,7 @@ describe("TeamsPage", () => {
       expect(screen.getByText("Draft launch package")).toBeDefined();
     });
     expect(screen.getByText("Durable team-work state loaded.")).toBeDefined();
-    expect(screen.getAllByText("output ready").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Output ready").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Durable team work").length).toBeGreaterThan(0);
     expect(screen.queryByText("Projection fallback")).toBeNull();
     expect(screen.queryByText(/Durable TeamWorkItem records were unavailable/i)).toBeNull();

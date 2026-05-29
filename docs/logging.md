@@ -266,7 +266,7 @@ Teams still log locally first; centralized review mirrors the same operational t
 
 Use `core/pkg/protocol/events.go` constants only. Do not invent ad-hoc event names.
 
-Core families: Mission (`mission.started`, `mission.completed`, `mission.failed`, `mission.cancelled`), Team (`team.spawned`, `team.stopped`), Agent (`agent.started`, `agent.stopped`), Tool (`tool.invoked`, `tool.completed`, `tool.failed`), Artifact (`artifact.created`), Memory (`memory.stored`, `memory.recalled`), Orchestration (`trigger.fired`, `trigger.skipped`, `scheduler.tick`).
+Core families: Mission (`mission.started`, `mission.completed`, `mission.failed`, `mission.cancelled`), Team (`team.spawned`, `team.stopped`, `team_work.status`), Agent (`agent.started`, `agent.stopped`), Tool (`tool.invoked`, `tool.completed`, `tool.failed`), Artifact (`artifact.created`), Memory (`memory.stored`, `memory.recalled`), Orchestration (`trigger.fired`, `trigger.skipped`, `scheduler.tick`).
 
 ## 10. Anti-Patterns
 
