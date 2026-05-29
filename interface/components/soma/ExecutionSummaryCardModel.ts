@@ -44,7 +44,7 @@ export function itemText(item: SummaryValue): string | null {
 
 export function itemUrl(item: SummaryValue): string | null {
     if (typeof item === "string") return null;
-    return normalizeWorkspaceOutputUrl(compactText(item.url) ?? compactText(item.href) ?? compactText(item.path));
+    return normalizeWorkspaceOutputUrl(compactText(item.open_url) ?? compactText(item.url) ?? compactText(item.href) ?? compactText(item.path));
 }
 
 export function normalizeWorkspaceOutputUrl(value?: string | null): string | null {

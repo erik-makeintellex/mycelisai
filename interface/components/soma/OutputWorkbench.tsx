@@ -2,7 +2,7 @@
 
 import { Check, ExternalLink, Quote, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import type { ChatArtifactRef, ExecutionSummaryData, ExecutionSummaryItem, TeamOutputRef } from "@/store/useCortexStore";
+import type { ChatArtifactRef, ExecutionSummaryData, ExecutionSummaryItem, OutputProofEnvelope, TeamOutputRef } from "@/store/useCortexStore";
 import ExecutionSummaryMediaPreview from "./ExecutionSummaryMediaPreview";
 import {
   artifactOutputItems,
@@ -16,6 +16,8 @@ import OutputAccessActions from "./OutputAccessActions";
 export type OutputWorkbenchItem = {
   text: string;
   url: string | null;
+  proof?: OutputProofEnvelope;
+  proofArtifactId?: string;
 };
 
 export function projectPackageOutputs(outputs: ExecutionSummaryData["outputs"]) {
@@ -27,7 +29,12 @@ export function projectPackageOutputs(outputs: ExecutionSummaryData["outputs"]) 
 export function outputWorkbenchItems(summary?: ExecutionSummaryData, artifacts?: ChatArtifactRef[]) {
   const directOutputs = asItems(summary?.outputs)
     .filter((item) => typeof item === "string" || item.kind !== "project_package")
-    .map((item) => ({ text: itemText(item), url: itemUrl(item) }))
+    .map((item) => ({
+      text: itemText(item),
+      url: itemUrl(item),
+      ...(typeof item !== "string" && item.proof ? { proof: item.proof } : {}),
+      ...(typeof item !== "string" && item.proof_artifact_id ? { proofArtifactId: item.proof_artifact_id } : {}),
+    }))
     .filter((item): item is OutputWorkbenchItem => Boolean(item.text));
   const artifactOutputs = artifactOutputItems(artifacts);
 
@@ -43,6 +50,8 @@ export function teamOutputWorkbenchItems(outputRefs: TeamOutputRef[]): OutputWor
     .map((output) => ({
       text: output.label?.trim() || "Team output",
       url: outputUrl(output.storage_ref),
+      ...(output.proof ? { proof: output.proof } : {}),
+      ...(output.proof_id ? { proofArtifactId: output.proof_id } : {}),
     }))
     .filter((item): item is OutputWorkbenchItem => Boolean(item.text));
 }
@@ -57,6 +66,8 @@ export function teamOutputProjectPackages(outputRefs: TeamOutputRef[]): Executio
       folder: output.storage_ref || undefined,
       entrypoint: output.entrypoint || undefined,
       validation: output.validation_ref || output.proof_ref ? "Linked proof or validation record" : undefined,
+      proof: output.proof,
+      proof_artifact_id: output.proof_id,
     }));
 }
 
@@ -76,6 +87,30 @@ function outputUrl(storageRef?: string | null): string | null {
 
 function quotedOutputText(output: OutputWorkbenchItem) {
   return output.url ? `> ${output.text}\n${output.url}` : `> ${output.text}`;
+}
+
+function shortHash(value?: string) {
+  return value && value.length > 12 ? value.slice(0, 12) : value;
+}
+
+function proofStatusLabel(value?: string) {
+  if (!value) return null;
+  return value.replace(/[_-]+/g, " ");
+}
+
+function OutputProofBadges({ proof, proofArtifactId }: { proof?: OutputProofEnvelope; proofArtifactId?: string }) {
+  const pathStatus = proofStatusLabel(proof?.path_boundary_status);
+  const readbackStatus = proofStatusLabel(proof?.readback_status);
+  const checksum = shortHash(proof?.checksum);
+  if (!proof && !proofArtifactId) return null;
+  return (
+    <span className="inline-flex max-w-full flex-wrap items-center gap-1 text-[10px] leading-4 text-cortex-text-muted">
+      {pathStatus ? <span className="rounded border border-cortex-success/40 px-1 text-cortex-success">path {pathStatus}</span> : null}
+      {readbackStatus ? <span className="rounded border border-cortex-success/40 px-1 text-cortex-success">readback {readbackStatus}</span> : null}
+      {checksum ? <span className="rounded border border-cortex-border/70 px-1 font-mono">sha256 {checksum}</span> : null}
+      {proofArtifactId && !checksum ? <span className="rounded border border-cortex-border/70 px-1 font-mono">proof {shortHash(proofArtifactId)}</span> : null}
+    </span>
+  );
 }
 
 export function OutputWorkbench({
@@ -147,6 +182,9 @@ export function OutputWorkbench({
                     <span>{project.validation}</span>
                   </div>
                 ) : null}
+                <div className="mt-2">
+                  <OutputProofBadges proof={project.proof} proofArtifactId={project.proof_artifact_id} />
+                </div>
               </article>
             );
           })}
@@ -168,6 +206,7 @@ export function OutputWorkbench({
                   <span className="min-w-0 truncate text-sm text-cortex-text-main">{output.text}</span>
                 )}
                 <OutputAccessActions label={output.text} url={output.url} folderLabel="Open folder" />
+                <OutputProofBadges proof={output.proof} proofArtifactId={output.proofArtifactId} />
                 <button
                   type="button"
                   onClick={() => void copyOutputQuote(output, key)}

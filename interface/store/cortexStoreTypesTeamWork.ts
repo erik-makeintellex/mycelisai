@@ -1,3 +1,5 @@
+import type { OutputProofEnvelope } from "./cortexStoreTypesExecutionSummary";
+
 export type TeamWorkItemState =
     | 'new'
     | 'briefed'
@@ -41,6 +43,7 @@ export interface TeamOutputRef {
     proof_ref?: string;
     contract_id?: string;
     proof_id?: string;
+    proof?: OutputProofEnvelope;
     audit_refs?: string[];
     created_at?: string;
 }

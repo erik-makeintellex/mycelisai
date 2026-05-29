@@ -23,8 +23,11 @@ export interface ExecutionSummaryItem {
     value?: string;
     url?: string;
     href?: string;
+    open_url?: string;
     path?: string;
     id?: string;
+    artifact_id?: string;
+    proof_artifact_id?: string;
     type?: string;
     status?: string;
     kind?: string;
@@ -35,6 +38,24 @@ export interface ExecutionSummaryItem {
     folder?: string;
     files?: string[];
     validation?: string;
+    proof?: OutputProofEnvelope;
+}
+
+export interface OutputProofEnvelope {
+    proof_id?: string;
+    output_ref_id?: string;
+    artifact_id?: string;
+    storage_ref?: string;
+    source_run_id?: string;
+    source_contract_id?: string;
+    execution_status?: string;
+    path_boundary_status?: string;
+    checksum?: string;
+    checksum_algorithm?: string;
+    bytes?: number;
+    content_type?: string;
+    readback_status?: string;
+    recovery_hint?: string;
 }
 
 export interface ExecutionSummaryIntent {

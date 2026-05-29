@@ -105,7 +105,17 @@ describe("OutputWorkbench", () => {
 
     render(
       <OutputWorkbench
-        outputs={[{ text: "Launch brief", url: "/runs/run-1" }]}
+        outputs={[{
+          text: "Launch brief",
+          url: "/runs/run-1",
+          proofArtifactId: "proof-artifact-1",
+          proof: {
+            path_boundary_status: "verified",
+            readback_status: "verified",
+            checksum_algorithm: "sha256",
+            checksum: "b94d27b9934d3e08a52e52d7da7dabfadebf1fde558f6ad0845e1274f7f9cde9",
+          },
+        }]}
         projectPackages={[
           {
             kind: "project_package",
@@ -125,6 +135,9 @@ describe("OutputWorkbench", () => {
     expect(screen.getByText("Reviewable output package")).toBeDefined();
     expect(screen.getByText("entry: index.html")).toBeDefined();
     expect(screen.getByText("Smoke test passed")).toBeDefined();
+    expect(screen.getByText("path verified")).toBeDefined();
+    expect(screen.getByText("readback verified")).toBeDefined();
+    expect(screen.getByText("sha256 b94d27b9934d")).toBeDefined();
     expect(screen.getByRole("button", { name: /Open Launch brief/i })).toBeDefined();
     expect(screen.getByRole("button", { name: /Open local folder for Launch microsite/i })).toBeDefined();
 

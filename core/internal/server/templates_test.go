@@ -221,6 +221,9 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	if !executionSummaryHasOutput(outputs, "file", "output/confirmed.txt", true) {
 		t.Fatalf("outputs missing retained file output: %#v", outputs)
 	}
+	if !executionSummaryHasVerifiedOutputProof(outputs, "file", "output/confirmed.txt", proofArtifactID, "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9") {
+		t.Fatalf("outputs missing file proof envelope: %#v", outputs)
+	}
 	auditID, _ := data["audit_event_id"].(string)
 	if strings.TrimSpace(auditID) == "" {
 		t.Fatal("expected non-empty audit_event_id")
@@ -237,6 +240,33 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet db expectations: %v", err)
 	}
+}
+
+func executionSummaryHasVerifiedOutputProof(outputs []any, kind, id, proofID, checksum string) bool {
+	for _, raw := range outputs {
+		output, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		if output["kind"] != kind || output["id"] != id {
+			continue
+		}
+		if output["proof_artifact_id"] != proofID || output["open_url"] != "/api/v1/workspace/files/view?path=output%2Fconfirmed.txt" {
+			return false
+		}
+		proof, ok := output["proof"].(map[string]any)
+		if !ok {
+			return false
+		}
+		return proof["proof_id"] == proofID &&
+			proof["source_run_id"] != "" &&
+			proof["source_contract_id"] == "33333333-3333-3333-3333-333333333333" &&
+			proof["path_boundary_status"] == "verified" &&
+			proof["readback_status"] == "verified" &&
+			proof["checksum_algorithm"] == "sha256" &&
+			proof["checksum"] == checksum
+	}
+	return false
 }
 
 func TestExecutePlannedToolCalls_UsesMCPToolRef(t *testing.T) {

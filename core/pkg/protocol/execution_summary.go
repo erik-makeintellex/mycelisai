@@ -134,17 +134,38 @@ type CapabilityUse struct {
 }
 
 type ExecutionOutput struct {
-	ID             string                  `json:"id,omitempty"`
-	Kind           string                  `json:"kind"`
-	Title          string                  `json:"title"`
-	Summary        string                  `json:"summary,omitempty"`
-	Href           string                  `json:"href,omitempty"`
-	Entrypoint     string                  `json:"entrypoint,omitempty"`
-	Folder         string                  `json:"folder,omitempty"`
-	Files          []string                `json:"files,omitempty"`
-	Validation     string                  `json:"validation,omitempty"`
-	Retained       *bool                   `json:"retained,omitempty"`
-	RetentionClass ExecutionRetentionClass `json:"retention_class,omitempty"`
+	ID              string                  `json:"id,omitempty"`
+	ArtifactID      string                  `json:"artifact_id,omitempty"`
+	ProofArtifactID string                  `json:"proof_artifact_id,omitempty"`
+	Kind            string                  `json:"kind"`
+	Title           string                  `json:"title"`
+	Summary         string                  `json:"summary,omitempty"`
+	Href            string                  `json:"href,omitempty"`
+	OpenURL         string                  `json:"open_url,omitempty"`
+	Entrypoint      string                  `json:"entrypoint,omitempty"`
+	Folder          string                  `json:"folder,omitempty"`
+	Files           []string                `json:"files,omitempty"`
+	Validation      string                  `json:"validation,omitempty"`
+	Retained        *bool                   `json:"retained,omitempty"`
+	RetentionClass  ExecutionRetentionClass `json:"retention_class,omitempty"`
+	Proof           *OutputProofEnvelope    `json:"proof,omitempty"`
+}
+
+type OutputProofEnvelope struct {
+	ProofID            string `json:"proof_id,omitempty"`
+	OutputRefID        string `json:"output_ref_id,omitempty"`
+	ArtifactID         string `json:"artifact_id,omitempty"`
+	StorageRef         string `json:"storage_ref,omitempty"`
+	SourceRunID        string `json:"source_run_id,omitempty"`
+	SourceContractID   string `json:"source_contract_id,omitempty"`
+	ExecutionStatus    string `json:"execution_status,omitempty"`
+	PathBoundaryStatus string `json:"path_boundary_status,omitempty"`
+	Checksum           string `json:"checksum,omitempty"`
+	ChecksumAlgorithm  string `json:"checksum_algorithm,omitempty"`
+	Bytes              int64  `json:"bytes,omitempty"`
+	ContentType        string `json:"content_type,omitempty"`
+	ReadbackStatus     string `json:"readback_status,omitempty"`
+	RecoveryHint       string `json:"recovery_hint,omitempty"`
 }
 
 type ExecutionProof struct {
