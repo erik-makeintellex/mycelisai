@@ -123,6 +123,10 @@ func inferMutationToolsFromText(text string) []string {
 
 	var tools []string
 
+	if isCodexTaskBundleRequest(lower) {
+		tools = append(tools, "write_file")
+	}
+
 	fileActions := []string{"create", "write", "update", "edit", "modify", "replace", "append", "save", "persist", "store", "generate", "draft"}
 	fileTargets := []string{"file", "folder", "directory", "workspace", "path", "script", "config", "json", "yaml", "yml", "toml", "markdown", "document", "doc", "repo", "repository", "codebase"}
 	if requestContainsAny(lower, fileActions) && requestContainsAny(lower, fileTargets) {

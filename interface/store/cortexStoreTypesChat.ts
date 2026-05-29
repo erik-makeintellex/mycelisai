@@ -15,6 +15,24 @@ export interface ChatArtifactRef {
     saved_path?: string;
 }
 
+export interface DeliveryPackageFile {
+    path: string;
+    title?: string;
+    content_type?: string;
+    bytes?: number;
+    sha256?: string;
+}
+
+export interface DeliveryPackageSummary {
+    package_kind: string;
+    package_slug?: string;
+    base_path?: string;
+    proof_path?: string;
+    run_id?: string;
+    proof_id?: string;
+    files?: DeliveryPackageFile[];
+}
+
 export type AskClass =
     | 'direct_answer'
     | 'governed_mutation'
@@ -115,6 +133,7 @@ export interface ChatMessage {
     proposal_status?: ProposalLifecycleStatus;
     brain?: BrainProvenance;
     run_id?: string;
+    delivery_package?: DeliveryPackageSummary;
 }
 
 export interface CouncilMember {
@@ -141,6 +160,7 @@ export interface CTSChatEnvelope {
         consultations?: ChatConsultation[];
         tools_used?: string[];
         artifacts?: ChatArtifactRef[];
+        delivery_package?: DeliveryPackageSummary;
         provenance?: AnswerProvenance;
         brain?: BrainProvenance;
         proposal?: {

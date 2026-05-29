@@ -44,6 +44,12 @@ function payloadSummary(event: MissionEvent): string {
     if (p.tool)          return String(p.tool);
     if (p.tool_name)     return String(p.tool_name);
     if (p.error)         return String(p.error).slice(0, 80);
+    if (event.event_type === "artifact.created" && p.package_kind === "codex_task_bundle") {
+        const label = String(p.package_slug ?? p.base_path ?? "codex_task_bundle");
+        const fileCount = Array.isArray(p.files) ? ` · ${p.files.length} files` : "";
+        const proof = typeof p.proof_path === "string" ? ` · proof: ${p.proof_path}` : "";
+        return `Codex task bundle: ${label}${fileCount}${proof}`;
+    }
     if (p.title)         return String(p.title);
     if (p.member)        return `member: ${p.member}`;
     if (p.mission_id)    return `mission: ${String(p.mission_id).slice(0, 8)}`;

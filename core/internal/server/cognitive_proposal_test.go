@@ -119,3 +119,22 @@ func TestBuildProposalDisplayContractUsesDelegateTaskFallback(t *testing.T) {
 		t.Fatalf("affected_resources = %#v, want [governed state]", display.AffectedResources)
 	}
 }
+
+func TestBuildProposalDisplayContractSummarizesCodexBundle(t *testing.T) {
+	planned, ok := inferCodexTaskBundlePlanFromRequest("Generate a Codex task package for MYC-RC-001.")
+	if !ok {
+		t.Fatal("expected codex task bundle plan")
+	}
+
+	display := buildProposalDisplayContract(planned, "Generate a Codex task package for MYC-RC-001.", []string{"write_file"})
+
+	if display.OperatorSummary != `Create a Codex task bundle under "codex-task-packages/myc-rc-001".` {
+		t.Fatalf("operator_summary = %q", display.OperatorSummary)
+	}
+	if display.ExpectedResult != "A multi-file Codex-ready implementation package will be created with durable run proof after approval." {
+		t.Fatalf("expected_result = %q", display.ExpectedResult)
+	}
+	if len(display.AffectedResources) != 4 {
+		t.Fatalf("affected_resources = %#v, want 4 bundle files", display.AffectedResources)
+	}
+}

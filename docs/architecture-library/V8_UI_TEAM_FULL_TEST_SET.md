@@ -15,6 +15,7 @@ The UI test set proves that:
 - Soma is the persistent counterpart
 - AI Organizations are governed work contexts
 - direct answers and team-managed outputs remain distinct
+- package-producing work returns a coherent retained package, not raw tool output
 - governed execution is trustworthy
 - settings and continuity persist
 - advanced depth remains reachable without polluting the default path
@@ -66,12 +67,13 @@ Critical commands are listed in [V8 UI Team Browser Workflows](V8_UI_TEAM_BROWSE
 4. organization workspace bootstrap proof
 5. direct-answer and content-delivery proof
 6. governed mutation and artifact proof
-7. continuity and refresh proof
-8. settings persistence proof
-9. advanced-surface boundary proof
-10. audit/activity visibility proof
-11. disruption and recovery proof
-12. deployed live-backend proof
+7. package card, open/reveal, proof, and Inspect-boundary proof
+8. continuity and refresh proof
+9. settings persistence proof
+10. advanced-surface boundary proof
+11. audit/activity visibility proof
+12. disruption and recovery proof
+13. deployed live-backend proof
 
 ## 5. Workflow Test Set
 
@@ -88,6 +90,7 @@ Report:
 - branch/SHA
 - commands run
 - pass/fail results
+- package/output proof when retained outputs changed
 - screenshots or recording locations
 - blockers
 - docs reviewed/updated

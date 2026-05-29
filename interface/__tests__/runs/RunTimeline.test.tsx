@@ -204,6 +204,38 @@ describe('RunTimeline', () => {
         expect(toolTexts.length).toBeGreaterThanOrEqual(2);
     });
 
+    it('summarizes Codex task package artifact events', async () => {
+        mockFetchOk([
+            {
+                id: 'evt-package',
+                run_id: 'run-abc',
+                tenant_id: 'default',
+                event_type: 'artifact.created',
+                severity: 'info',
+                source_agent: 'admin',
+                emitted_at: now,
+                payload: {
+                    package_kind: 'codex_task_bundle',
+                    package_slug: 'myc-rc-001',
+                    proof_path: 'codex-task-packages/myc-rc-001/proof.md',
+                    files: [
+                        { path: 'codex-task-packages/myc-rc-001/implementation_task.md' },
+                        { path: 'codex-task-packages/myc-rc-001/proof.md' },
+                    ],
+                },
+            },
+        ]);
+
+        await act(async () => {
+            render(<RunTimeline runId="run-abc" />);
+        });
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(0);
+        });
+
+        expect(screen.getByText('Codex task bundle: myc-rc-001 · 2 files · proof: codex-task-packages/myc-rc-001/proof.md')).toBeDefined();
+    });
+
     it('shows run ID in header (truncated)', async () => {
         mockFetchOk([]);
 

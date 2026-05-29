@@ -1,9 +1,9 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-05-04
+> Updated: 2026-05-28
 > Canonical state file for active V8 grading and delivery tracking
-> References: `README.md`, `architecture/v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `.state/V7_DEV_STATE.md` (legacy migration input)
+> References: `README.md`, `architecture/v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md` (`MYC-RC-000` candidate), `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `.state/V7_DEV_STATE.md` (legacy migration input)
 
 ---
 
@@ -81,6 +81,9 @@ Development is now operating in the V8.2/B2+ delivery frame while preserving the
 - V8.2/B2+ is the active delivery target.
 - V8.2 is the distributed, learning, capability-enabled, and actuation target being advanced through bounded modules.
 - V8.1 remains the foundation and compatibility baseline for the default Soma-primary operator surface.
+- `IN_REVIEW` `MYC-RC-000` is the current convergence-management slice. `docs/architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md` is candidate V8.3 convergence authority for package-first delivery, Codex task artifact planning, OutputRef/proof/timeline alignment, and team execution sequencing. It does not supersede the V8.2/B2+ delivery frame until this state file, README, architecture index, and validation evidence are synchronized in the same slice.
+- `IN_REVIEW` `MYC-RC-001` initial runtime and browser-retention slice is locally landed on the existing chat proposal -> confirm-action -> mission run/proof rail: Codex task package requests infer four approved `write_file` artifacts, confirmation writes the retained bundle plus `proof.md`, emits `artifact.created`, returns package/artifact metadata, and the Interface confirm flow appends the returned delivery package into a single Output Workbench card. Focused Chromium proof now covers proposal, approval, package card visibility, run link, refresh, and organization re-entry.
+- `IN_REVIEW` `MYC-RC-002` has an initial UI bridge but not the final normalized OutputRef contract: Codex package messages render as one workbench rather than loose artifact cards, and `/runs` now summarizes `artifact.created` `codex_task_bundle` events without requiring raw JSON expansion.
 - `README.md` is the primary inception summary that must distinguish target, baseline, and live implementation state.
 
 Flow rule:
@@ -88,6 +91,7 @@ Flow rule:
 - V8.2/B2+ work is allowed to proceed when it is modular, proof-producing, and kept behind stable contracts rather than pushed into the default surface prematurely.
 - V8.2-aligned slices must declare which boundary they advance: runtime/deployment, memory/learning, team/workflow, capability/MCP, UI/advanced surface, user/auth, or governance/trust.
 - A V8.2 slice may be `ACTIVE` only if it does not weaken the current proof lane, does not introduce default-surface complexity without promotion, and updates the owning docs/state in the same slice.
+- `MYC-RC-002` through `MYC-RC-003` may begin only after `MYC-RC-001` review accepts the initial package rail and `MYC-RC-000` records the accepted terminology and proof lane: `DeliveryPackage` must map onto existing retained package/project-package behavior, `OutputRef` must be a shared normalization boundary rather than another local shape, and proof gates must use `uv run inv ...`.
 
 Release posture:
 - `ACTIVE` current posture is `V1 MVP Release Candidate`.

@@ -39,6 +39,35 @@ func formatProposalResource(resource string) string {
 	return trimmed
 }
 
+func codexBundleBasePath(planned []protocol.PlannedToolCall) (string, bool) {
+	if len(planned) < 2 {
+		return "", false
+	}
+	basePath := ""
+	for _, call := range planned {
+		if strings.TrimSpace(call.Name) != "write_file" {
+			return "", false
+		}
+		if firstStringArgument(call.Arguments, "package_kind") != "codex_task_bundle" {
+			return "", false
+		}
+		path := firstStringArgument(call.Arguments, "path")
+		slash := strings.LastIndex(strings.ReplaceAll(path, "\\", "/"), "/")
+		if slash <= 0 {
+			return "", false
+		}
+		currentBase := strings.ReplaceAll(path[:slash], "\\", "/")
+		if basePath == "" {
+			basePath = currentBase
+			continue
+		}
+		if currentBase != basePath {
+			return "", false
+		}
+	}
+	return basePath, true
+}
+
 func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequest string, mutTools []string) proposalDisplayContract {
 	display := proposalDisplayContract{
 		OperatorSummary: "Carry out the requested governed action.",
@@ -49,6 +78,15 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 		if formatted := formatProposalResource(resource); formatted != "" {
 			display.AffectedResources = append(display.AffectedResources, formatted)
 		}
+	}
+
+	if basePath, ok := codexBundleBasePath(planned); ok {
+		display.OperatorSummary = fmt.Sprintf("Create a Codex task bundle under %q.", basePath)
+		display.ExpectedResult = "A multi-file Codex-ready implementation package will be created with durable run proof after approval."
+		if len(display.AffectedResources) == 0 {
+			display.AffectedResources = []string{basePath}
+		}
+		return display
 	}
 
 	if len(planned) > 0 {

@@ -246,4 +246,5 @@ describe('MissionControlChat output contracts', () => {
         expect(savedObjectLink.getAttribute('href')).toBe('/api/v1/artifacts/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/download');
         expect(screen.getByText(/Saved object:/i)).toBeDefined();
     });
+
 });

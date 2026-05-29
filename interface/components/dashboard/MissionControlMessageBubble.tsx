@@ -14,6 +14,7 @@ import { useCortexStore, type ChatConsultation, type ChatMessage } from "@/store
 import InlineArtifact from "./InlineArtifact";
 import MissionControlMarkdown from "./MissionControlMarkdown";
 import ProposedActionBlock from "./ProposedActionBlock";
+import OutputWorkbench from "@/components/soma/OutputWorkbench";
 import {
     artifactResultSummary,
     askClassBadge,
@@ -150,7 +151,12 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
     const isUser = msg.role === "user";
     const isBroadcast = isUser && msg.content.startsWith("[BROADCAST]");
     const assistantName = useCortexStore((s) => s.assistantName);
-    const artifactSummary = artifactResultSummary(msg.artifacts);
+    const isPackageOutput = Boolean(msg.delivery_package)
+        || Boolean(msg.artifacts?.some((artifact) => (
+            artifact.type === "project_package"
+            || artifact.saved_path?.startsWith("codex-task-packages/")
+        )));
+    const artifactSummary = isPackageOutput ? null : artifactResultSummary(msg.artifacts);
     const consultationSummary = consultationResultSummary(msg.consultations);
 
     if (msg.role === "system") {
@@ -195,6 +201,9 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
                     </div>
                 ) : null}
                 {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}
+                {!isUser && isPackageOutput ? (
+                    <OutputWorkbench deliveryPackage={msg.delivery_package} artifacts={msg.artifacts} runId={msg.run_id} />
+                ) : null}
                 {!isUser && artifactSummary && (
                     <div className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/5 px-3 py-2">
                         <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-primary">
@@ -211,7 +220,7 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">{consultationSummary}</p>
                     </div>
                 )}
-                {!isUser && msg.artifacts?.length ? (
+                {!isUser && msg.artifacts?.length && !isPackageOutput ? (
                     <div className="space-y-1">
                         {msg.artifacts.map((artifact, i) => <InlineArtifact key={artifact.id || `art-${i}`} artifact={artifact} />)}
                     </div>

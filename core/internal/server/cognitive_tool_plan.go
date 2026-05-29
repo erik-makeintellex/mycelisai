@@ -120,6 +120,10 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 	if len(planned) == 0 {
 		for _, tool := range mutTools {
 			if tool == "write_file" {
+				if calls, ok := inferCodexTaskBundlePlanFromRequest(latestRequest); ok {
+					planned = append(planned, calls...)
+					break
+				}
 				if call, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
 					planned = append(planned, normalizePlannedToolCall(call))
 				}

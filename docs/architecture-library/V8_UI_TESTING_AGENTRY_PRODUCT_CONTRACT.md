@@ -28,6 +28,8 @@ The UI testing agentry must cover these operator-visible actions.
 | Governed mutation | Ask for a file or other mutating action | Response lands in `proposal` state with approval context and capability risk |
 | Proposal cancellation | Cancel a pending proposed action | Proposal is neutralized and the UI states that no action executed |
 | Approval execution | Confirm a pending proposed action | UI shows execution proof or an explicit bounded blocker |
+| Package-first output | Complete a retained-output workflow or Codex task package | One coherent output/package card appears with primary result, included items, open/reveal actions, and proof state |
+| Inspect boundary | Open package/run proof details | Default view stays non-technical; raw refs, event payloads, tool JSON, and proof internals stay behind Inspect or Advanced |
 | Cold-start recovery | Trigger a first-query transient failure | Transient startup failure is surfaced gracefully with a retry path, and retry recovers to a valid terminal state |
 | Continuity | Refresh or re-enter the same AI Organization | Prior Soma context remains legible and scoped to that organization |
 | Audit visibility | Open Automations -> Approvals -> Audit | Inspect-only `Activity Log` shows recent governance and execution events |
@@ -113,6 +115,8 @@ The UI testing agentry must fail the release recommendation if any of the follow
 - the first-path workspace request fails without a clear retry and recovery path
 - a mutating request bypasses the proposal and approval contract
 - cancelling a proposal leaves uncertainty about whether execution still happened
+- package-producing work appears only as raw tool output, logs, or disconnected artifact cards
+- retained package output does not survive refresh or lacks proof/open actions
 - the operator cannot refresh or re-enter with confidence
 - audit visibility is missing or only exposes raw backend noise
 - default-path UI copy leaks developer-facing architecture terms

@@ -4,8 +4,42 @@ import {
     updateProposalLifecycle,
 } from '@/store/cortexStoreChatWorkflow';
 import { buildMissionChatFailure } from '@/lib/missionChatFailure';
-import type { ChatMessage, ConfirmProposalResult } from '@/store/cortexStoreTypes';
+import type {
+    ChatArtifactRef,
+    ChatMessage,
+    ConfirmProposalResult,
+    DeliveryPackageSummary,
+} from '@/store/cortexStoreTypes';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
+
+function extractArtifactsFromConfirmResponse(raw: unknown): ChatArtifactRef[] {
+    if (!raw || typeof raw !== 'object') {
+        return [];
+    }
+    const record = raw as Record<string, unknown>;
+    const data = record.data && typeof record.data === 'object' ? record.data as Record<string, unknown> : null;
+    const artifacts = data?.artifacts;
+    return Array.isArray(artifacts) ? artifacts.filter((artifact): artifact is ChatArtifactRef => (
+        artifact != null
+        && typeof artifact === 'object'
+        && typeof (artifact as ChatArtifactRef).type === 'string'
+        && typeof (artifact as ChatArtifactRef).title === 'string'
+    )) : [];
+}
+
+function extractDeliveryPackageFromConfirmResponse(raw: unknown): DeliveryPackageSummary | undefined {
+    if (!raw || typeof raw !== 'object') {
+        return undefined;
+    }
+    const record = raw as Record<string, unknown>;
+    const data = record.data && typeof record.data === 'object' ? record.data as Record<string, unknown> : null;
+    const deliveryPackage = data?.package;
+    if (!deliveryPackage || typeof deliveryPackage !== 'object') {
+        return undefined;
+    }
+    const candidate = deliveryPackage as Partial<DeliveryPackageSummary>;
+    return typeof candidate.package_kind === 'string' ? candidate as DeliveryPackageSummary : undefined;
+}
 
 export function createCortexProposalExecutionSlice(
     set: CortexSet,
@@ -34,6 +68,8 @@ export function createCortexProposalExecutionSlice(
                         ?? trimToNonEmpty(body?.message)
                         ?? trimToNonEmpty(body?.data?.summary)
                         ?? trimToNonEmpty(body?.summary);
+                    const artifacts = extractArtifactsFromConfirmResponse(body);
+                    const deliveryPackage = extractDeliveryPackageFromConfirmResponse(body);
                     const lifecycle = runId ? 'executed' : 'confirmed_pending_execution';
                     const systemMsg: ChatMessage = {
                         role: 'system',
@@ -42,6 +78,18 @@ export function createCortexProposalExecutionSlice(
                         run_id: runId ?? undefined,
                         timestamp: new Date().toISOString(),
                     };
+                    const packageMsg: ChatMessage | null = artifacts.length > 0
+                        ? {
+                            role: 'council',
+                            content: proofSummary ?? 'Codex task bundle created with retained package proof.',
+                            mode: 'execution_result',
+                            run_id: runId ?? undefined,
+                            artifacts,
+                            delivery_package: deliveryPackage,
+                            tools_used: ['write_file'],
+                            timestamp: new Date().toISOString(),
+                        }
+                        : null;
                     set((s) => ({
                         activeRunId: runId,
                         activeMode: runId ? 'execution_result' : 'proposal',
@@ -53,6 +101,7 @@ export function createCortexProposalExecutionSlice(
                                 run_id: runId ?? undefined,
                             }),
                             systemMsg,
+                            ...(packageMsg ? [packageMsg] : []),
                         ],
                         pendingProposal: null,
                         activeConfirmToken: null,

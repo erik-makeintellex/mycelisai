@@ -46,7 +46,8 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 	}
 
 	auditUser := auditUserLabelFromRequest(r)
-	if err := s.executePlannedToolCalls(r.Context(), scope, auditUser); err != nil {
+	packageSummary, err := s.executePlannedToolCalls(r.Context(), tx, scope, auditUser, runID, proofID)
+	if err != nil {
 		s.respondConfirmActionFailure(w, tx, proofID, runID, auditUser, err)
 		return
 	}
@@ -68,7 +69,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 	}
 
 	auditID := s.auditConfirmedAction(proofID, runID, scope, auditUser)
-	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]any{
+	data := map[string]any{
 		"confirmed":       true,
 		"verified":        true,
 		"execution_state": "verified",
@@ -76,7 +77,20 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		"audit_event_id":  auditID,
 		"run_id":          runID,
 		"run_status":      runs.StatusCompleted,
-	}))
+	}
+	if packageSummary != nil {
+		data["message"] = fmt.Sprintf("Codex task bundle created under %s with proof at %s.", packageSummary.BasePath, packageSummary.ProofPath)
+		data["package"] = packageSummary
+		data["artifacts"] = packageSummary.Artifacts
+		data["execution_summary"] = map[string]any{
+			"title":        "Codex task bundle",
+			"package_kind": packageSummary.PackageKind,
+			"base_path":    packageSummary.BasePath,
+			"proof_path":   packageSummary.ProofPath,
+			"file_count":   len(packageSummary.Files),
+		}
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(data))
 }
 
 func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, *protocol.ScopeValidation, string, bool) {

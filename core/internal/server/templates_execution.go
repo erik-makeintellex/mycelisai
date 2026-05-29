@@ -135,9 +135,9 @@ func (s *AdminServer) markRunFailedTx(tx *sql.Tx, runID, proofID, reason string)
 	return err
 }
 
-func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protocol.ScopeValidation, auditUser string) error {
+func (s *AdminServer) executePlannedToolCalls(ctx context.Context, tx *sql.Tx, scope *protocol.ScopeValidation, auditUser, runID, proofID string) (*packageOutputSummary, error) {
 	if scope == nil || len(scope.PlannedToolCalls) == 0 {
-		return fmt.Errorf("no approved execution plan was stored for this proposal")
+		return nil, fmt.Errorf("no approved execution plan was stored for this proposal")
 	}
 
 	registry := swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
@@ -147,6 +147,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 	})
 	executor := swarm.NewCompositeToolExecutor(registry, nil)
 	toolCtx := swarm.WithToolInvocationContext(ctx, swarm.ToolInvocationContext{
+		RunID:         runID,
 		SourceKind:    protocol.SourceKindWebAPI,
 		SourceChannel: "api.intent.confirm-action",
 		PayloadKind:   protocol.PayloadKindCommand,
@@ -158,19 +159,24 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 	for _, planned := range scope.PlannedToolCalls {
 		toolName := strings.TrimSpace(planned.Name)
 		if toolName == "" {
-			return fmt.Errorf("approved execution plan contained an empty tool name")
+			return nil, fmt.Errorf("approved execution plan contained an empty tool name")
 		}
 		serverID, resolvedToolName, err := executor.FindToolByName(toolCtx, toolName)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if _, err := executor.CallTool(toolCtx, serverID, resolvedToolName, planned.Arguments); err != nil {
-			return err
+			return nil, err
 		}
 		s.auditExecutedPlannedTool(planned, resolvedToolName, auditUser)
 	}
 
-	return nil
+	packageSummary, err := s.finalizeCodexTaskBundleTx(tx, scope.PlannedToolCalls, runID, proofID)
+	if err != nil {
+		return nil, err
+	}
+
+	return packageSummary, nil
 }
 
 func (s *AdminServer) auditExecutedPlannedTool(planned protocol.PlannedToolCall, resolvedToolName, auditUser string) {

@@ -13,6 +13,7 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 - [Clean Run Discipline](#clean-run-discipline)
 - [Quick Reference](#quick-reference)
 - [Product Delivery Proof](#product-delivery-proof)
+- [MYC-RC Package Proof](#myc-rc-package-proof)
 - [Tier 1: Backend Unit Tests](#tier-1-backend-unit-tests)
 - [Tier 2: Frontend Unit Tests](#tier-2-frontend-unit-tests)
 - [Tier 3: End-to-End Tests](#tier-3-end-to-end-tests)
@@ -164,6 +165,24 @@ For output block, media readiness, and team-managed review, use:
 
 If the media engine is offline, record a blocker instead of treating missing media as passed.
 
+## MYC-RC Package Proof
+
+For `MYC-RC-000` through `MYC-RC-003`, testing must prove the platform change, not only route health.
+
+- `MYC-RC-000`: docs/state/index agree on convergence authority, no stale nonexistent V8.3 links remain, and gates use `uv run inv ...`.
+- `MYC-RC-001`: a Codex task package is produced only after proposal/confirm, creates mission run/events, writes retained artifacts, and exposes proof.
+- `MYC-RC-002` / `MYC-RC-002B`: output refs normalize file/team/MCP/template/package outputs with open/reveal/proof/source lineage, and the UI presents one package card with Inspect details.
+- `MYC-RC-003`: write/output proof records checksum or fingerprint, path-boundary verification, execution status, output ref, and proof readback.
+
+Current focused `MYC-RC-001` proof:
+- `go test ./internal/server`
+- `npm test -- --run __tests__/store/useCortexStore.confirm-proposal.execution.test.ts`
+- `npm test -- --run __tests__/dashboard/MissionControlChat.package-output.test.tsx __tests__/runs/RunTimeline.test.tsx`
+- `npx tsc --noEmit`
+- `uv run inv interface.e2e --project=chromium --spec=e2e/specs/codex-package-retention.spec.ts`
+
+Browser proof must include refresh/re-entry so retained package visibility is not a transient chat-only success. Manual acceptance is useful for exploration, but RC lock requires an automated focused browser spec or an explicit `BLOCKED` note naming the missing spec.
+
 ## Tier 1: Backend Unit Tests
 
 Run:
@@ -253,7 +272,6 @@ Deployment proof contracts:
 - Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof.
 - Kubernetes / Helm clustered deployment reached through the real ingress, remote host, IP, or hostname; the browser opens the UI through the same operator-facing address the delivered environment will actually use.
 - when the validation target is clustered deployment, run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`; Compose remains rapid local development/proof only.
-- clustered Kubernetes proof: `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`.
 - when the validation target is local Kubernetes, prefer `k3d`; fallback with `MYCELIS_K8S_BACKEND=kind`.
 - use `MYCELIS_K8S_TEXT_ENDPOINT` and optional `MYCELIS_K8S_MEDIA_ENDPOINT`, an explicit reachable AI host instead of a chart-baked or localhost default, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`; Compose may relay `MYCELIS_COMPOSE_OLLAMA_HOST` through the WSL host.
 - `MYCELIS_K8S_VALUES_FILE` may select `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`.

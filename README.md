@@ -43,23 +43,25 @@ Review these before planning or editing:
 1. [AGENTS.md](AGENTS.md)
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
 3. [V8 Development State](.state/V8_DEV_STATE.md)
-4. [V8.2 Production Architecture Target](architecture/v8-2.md)
-5. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
-6. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
-7. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
-8. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
-9. [Operations](docs/architecture/OPERATIONS.md)
-10. [Testing](docs/TESTING.md)
-11. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
-12. [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md)
-13. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
-14. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
-15. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
-16. [V7 Development State](.state/V7_DEV_STATE.md)
-17. [Docs Manifest](interface/lib/docsManifest.ts)
+4. [V8.3 Current-State Convergence PRD](docs/architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md) for `MYC-RC-000` / `MYC-RC-001` convergence work
+5. [V8.2 Production Architecture Target](architecture/v8-2.md)
+6. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
+7. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
+8. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
+9. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+10. [Operations](docs/architecture/OPERATIONS.md)
+11. [Testing](docs/TESTING.md)
+12. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
+13. [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md)
+14. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+15. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
+16. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
+17. [V7 Development State](.state/V7_DEV_STATE.md)
+18. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
 - V8 docs override V7 migration inputs when they conflict.
+- The V8.3 convergence PRD is candidate authority for the MYC-RC convergence slices; use `.state/V8_DEV_STATE.md` to determine which implementation slice is active or in review.
 - V7 documents remain useful migration evidence, not current product authority.
 - `.state/V8_DEV_STATE.md` is the implementation truth for what is actually complete.
 - Keep user-facing docs and engineering docs cross-linked but distinct.

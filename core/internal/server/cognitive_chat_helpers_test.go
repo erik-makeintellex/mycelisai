@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mycelis/core/pkg/protocol"
@@ -16,6 +17,30 @@ func TestParsePlannedToolCall_NormalizesWriteFileAliases(t *testing.T) {
 	}
 	if call.Arguments["content"] != "print('hello world')" {
 		t.Fatalf("content = %#v", call.Arguments["content"])
+	}
+}
+
+func TestBuildPlannedToolCalls_InfersCodexTaskBundle(t *testing.T) {
+	calls := buildPlannedToolCalls(chatAgentResult{}, "Generate a Codex task package for MYC-RC-001 current platform changes.", []string{"write_file"})
+
+	if len(calls) != 4 {
+		t.Fatalf("planned calls = %d, want 4", len(calls))
+	}
+	for _, call := range calls {
+		if call.Name != "write_file" {
+			t.Fatalf("call name = %q, want write_file", call.Name)
+		}
+		if call.Arguments["package_kind"] != "codex_task_bundle" {
+			t.Fatalf("package_kind = %#v, want codex_task_bundle", call.Arguments["package_kind"])
+		}
+		path, _ := call.Arguments["path"].(string)
+		if !strings.HasPrefix(path, "codex-task-packages/myc-rc-001/") {
+			t.Fatalf("path = %q, want codex bundle folder", path)
+		}
+		content, _ := call.Arguments["content"].(string)
+		if strings.TrimSpace(content) == "" {
+			t.Fatalf("expected non-empty content for %q", path)
+		}
 	}
 }
 
