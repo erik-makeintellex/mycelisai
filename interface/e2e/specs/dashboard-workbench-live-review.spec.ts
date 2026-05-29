@@ -70,7 +70,34 @@ test.describe("Dashboard workbench live review", () => {
     );
     await page.getByRole("button", { name: /Approve & Execute|Execute/i }).last().click();
     const confirmed = await confirmResponse;
-    expect(confirmed.ok(), await confirmed.text()).toBeTruthy();
+    const confirmedRaw = await confirmed.text();
+    expect(confirmed.ok(), confirmedRaw).toBeTruthy();
+    const confirmedBody = JSON.parse(confirmedRaw) as {
+      data?: {
+        proof_artifact_id?: string;
+        execution_summary?: {
+          outputs?: Array<{
+            id?: string;
+            proof_artifact_id?: string;
+            proof?: {
+              proof_id?: string;
+              path_boundary_status?: string;
+              readback_status?: string;
+              checksum_algorithm?: string;
+              checksum?: string;
+            };
+          }>;
+        };
+      };
+    };
+    const outputRef = confirmedBody.data?.execution_summary?.outputs?.find((output) => output.id === targetPath);
+    expect(outputRef, confirmedRaw).toBeTruthy();
+    expect(outputRef?.proof_artifact_id).toBe(confirmedBody.data?.proof_artifact_id);
+    expect(outputRef?.proof?.proof_id).toBe(confirmedBody.data?.proof_artifact_id);
+    expect(outputRef?.proof?.path_boundary_status).toBe("verified");
+    expect(outputRef?.proof?.readback_status).toBe("verified");
+    expect(outputRef?.proof?.checksum_algorithm).toBe("sha256");
+    expect(outputRef?.proof?.checksum).toMatch(/^[a-f0-9]{64}$/);
 
     await expect(page.getByText(/Run proof|retained output|verified/i).last()).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
@@ -84,6 +111,9 @@ test.describe("Dashboard workbench live review", () => {
     await expect(rail).toHaveAttribute("aria-hidden", "false");
     await rail.getByRole("tab", { name: /Output/i }).click();
     await expect(page.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("path verified").last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("readback verified").last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/sha256 [a-f0-9]{12}/i).last()).toBeVisible({ timeout: 30_000 });
     await page.screenshot({ path: testInfo.outputPath("dashboard-after-output.png"), fullPage: true });
 
     await rail.getByRole("tab", { name: /Work/i }).click();

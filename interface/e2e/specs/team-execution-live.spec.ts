@@ -29,10 +29,25 @@ type ChatEnvelope = {
 type ConfirmEnvelope = {
     data?: {
         run_id?: string;
+        proof_artifact_id?: string;
         verified?: boolean;
         execution_state?: string;
         execution_summary?: {
-            outputs?: Array<{ kind?: string; title?: string; id?: string; href?: string; retained?: boolean }>;
+            outputs?: Array<{
+                kind?: string;
+                title?: string;
+                id?: string;
+                href?: string;
+                retained?: boolean;
+                proof_artifact_id?: string;
+                proof?: {
+                    proof_id?: string;
+                    path_boundary_status?: string;
+                    readback_status?: string;
+                    checksum_algorithm?: string;
+                    checksum?: string;
+                };
+            }>;
         };
     };
 };
@@ -226,6 +241,12 @@ test.describe('Live team execution produces retained code outputs', () => {
             expect(codeOutput?.retained).toBeTruthy();
             expect(codeOutput?.title).toBe(filePath);
             expect(codeOutput?.href).toBe(outputHref);
+            expect(codeOutput?.proof_artifact_id).toBe(confirmed.body?.data?.proof_artifact_id);
+            expect(codeOutput?.proof?.proof_id).toBe(confirmed.body?.data?.proof_artifact_id);
+            expect(codeOutput?.proof?.path_boundary_status).toBe('verified');
+            expect(codeOutput?.proof?.readback_status).toBe('verified');
+            expect(codeOutput?.proof?.checksum_algorithm).toBe('sha256');
+            expect(codeOutput?.proof?.checksum).toMatch(/^[a-f0-9]{64}$/);
 
             await expect.poll(() => targetExists(filePath), {
                 timeout: 30_000,
@@ -233,6 +254,9 @@ test.describe('Live team execution produces retained code outputs', () => {
             }).toBeTruthy();
             await expect(page.getByText(/Execution verified/i)).toBeVisible({ timeout: 30_000 });
             await expect(page.getByText(filePath).first()).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByText('path verified').last()).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByText('readback verified').last()).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByText(/sha256 [a-f0-9]{12}/i).last()).toBeVisible({ timeout: 30_000 });
             const gameLink = page.getByRole('link', { name: new RegExp(escapeRegExp(filePath)) }).first();
             await expect(gameLink).toHaveAttribute('href', outputHref);
             await expect(gameLink).toHaveAttribute('target', '_blank');
