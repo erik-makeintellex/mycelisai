@@ -32,7 +32,7 @@ def repo_local_core_listener_active() -> bool:
                 "-NoProfile",
                 "-Command",
                 f"Get-CimInstance Win32_Process -Filter \"{filter_expr}\" | "
-                "Select-Object ProcessId,Name,CommandLine | "
+                "Select-Object ProcessId,Name,CommandLine,ExecutablePath | "
                 "ConvertTo-Json -Compress",
             ],
             capture_output=True,
@@ -48,7 +48,7 @@ def repo_local_core_listener_active() -> bool:
 
     core_hint = _normalize_process_text(str(CORE_DIR))
     for row in rows:
-        command = _normalize_process_text(row.get("CommandLine") or "")
+        command = _normalize_process_text(f"{row.get('CommandLine') or ''} {row.get('ExecutablePath') or ''}")
         if core_hint in command and ("core/bin/server" in command or "cmd/server" in command):
             return True
     return False

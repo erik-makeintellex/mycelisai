@@ -16,6 +16,7 @@ from .config import (
     is_windows,
     managed_cache_env,
 )
+from .env_files import load_env_file
 from .interface_workspace import infer_native_backend_workspace_root
 INTERFACE_DIR = ROOT_DIR / "interface"
 
@@ -24,14 +25,13 @@ def _load_env():
     """Load Interface env files while keeping root .env as the secret source."""
     try:
         from dotenv import load_dotenv
-
         load_dotenv(str(ROOT_DIR / ".env.compose"), override=True)
         load_dotenv(str(ROOT_DIR / ".env"), override=True)
     except ImportError:
-        pass
+        load_env_file(ROOT_DIR / ".env.compose")
+        load_env_file(ROOT_DIR / ".env")
     # Root .env owns the Go Core HTTP port; Next.js must use INTERFACE_PORT.
     os.environ.pop("PORT", None)
-
 def _task_env(extra=None):
     _load_env()
     ensure_managed_cache_dirs()

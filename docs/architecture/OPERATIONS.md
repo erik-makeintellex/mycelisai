@@ -260,7 +260,7 @@ the compose Core image includes Node/npm/npx so manual curated stdio MCP install
 
 ### Persistent Storage Contract
 
-PostgreSQL plus pgvector owns durable memory/context. Generated files, browser game packages, filesystem MCP writes, and retained project outputs land under `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`; `DATA_DIR` remains a legacy fallback and should stay aligned with `MYCELIS_ARTIFACT_ROOT` until it is removed. Compose maps those paths into `/data/workspace` and `/data/artifacts`; Kubernetes uses the chart output block/PVC mounted at `/data`. Native Core live-browser proof infers the host-visible workspace as `core/workspace` from `MYCELIS_WORKSPACE=./workspace`; K8s live-browser proof that checks backend-written files should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` so the assertion targets the Core pod workspace/PVC rather than host-only paths.
+PostgreSQL plus pgvector owns durable memory/context. Generated files, browser game packages, filesystem MCP writes, and retained project outputs land under `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`; `DATA_DIR` remains a legacy fallback and should stay aligned with `MYCELIS_ARTIFACT_ROOT` until it is removed. Compose maps those paths into `/data/workspace` and `/data/artifacts`; Kubernetes uses the chart output block/PVC mounted at `/data`. Native Core live-browser proof infers the host-visible workspace from the loaded `.env`/process `MYCELIS_WORKSPACE`, using absolute roots directly and mapping repo-local `./workspace` to `core/workspace`; K8s live-browser proof that checks backend-written files should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` so the assertion targets the Core pod workspace/PVC rather than host-only paths.
 
 ### Startup Sequence
 
@@ -285,7 +285,7 @@ Use task health checks rather than raw port checks when claiming product readine
 - Docker-in-WSL may require `MYCELIS_WSL_DISTRO`.
 - Compose may relay a Windows-hosted AI endpoint through WSL for bridge containers.
 - Do not share generated environments across Windows and WSL.
-- Browser proof that checks backend-written files infers `core/workspace` for repo-local native Core; Compose or split-checkout proof may still set `MYCELIS_BACKEND_WORKSPACE_ROOT`.
+- Browser proof that checks backend-written files infers the active native Core workspace from `.env`/process `MYCELIS_WORKSPACE`; Compose or split-checkout proof may still set `MYCELIS_BACKEND_WORKSPACE_ROOT`.
 - K8s/PVC browser proof should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`, `PLAYWRIGHT_K8S_NAMESPACE`, `PLAYWRIGHT_K8S_CORE_SELECTOR`, and `PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT`.
 
 ## IX. Monitoring & Observability

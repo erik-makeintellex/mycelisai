@@ -37,6 +37,21 @@ def test_build_playwright_env_preserves_explicit_and_k8s_workspace_roots(monkeyp
     assert "MYCELIS_BACKEND_WORKSPACE_ROOT" not in k8s_env
 
 
+def test_build_playwright_env_infers_absolute_native_workspace_root(monkeypatch, tmp_path):
+    workspace = tmp_path / "runtime-workspace"
+    workspace.mkdir()
+    monkeypatch.setattr(interface_workspace, "repo_local_core_listener_active", lambda: True)
+    monkeypatch.setattr(interface_env, "_task_env", lambda extra=None: dict(extra or {}))
+    monkeypatch.setenv("MYCELIS_WORKSPACE", str(workspace))
+    monkeypatch.delenv("MYCELIS_BACKEND_WORKSPACE_ROOT", raising=False)
+    monkeypatch.delenv("PLAYWRIGHT_BACKEND_WORKSPACE_ROOT", raising=False)
+    monkeypatch.delenv("PLAYWRIGHT_BACKEND_WORKSPACE_PROBE", raising=False)
+
+    env = interface_env._build_playwright_env(live_backend=True, port=4311)
+
+    assert env["MYCELIS_BACKEND_WORKSPACE_ROOT"] == str(workspace)
+
+
 def test_build_playwright_env_leaves_workspace_unset_without_repo_local_core(monkeypatch, tmp_path):
     monkeypatch.setattr(interface_workspace, "ROOT_DIR", tmp_path)
     monkeypatch.setattr(interface_workspace, "repo_local_core_listener_active", lambda: False)
