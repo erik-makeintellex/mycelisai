@@ -38,7 +38,9 @@ async function fulfillJson(route: { fulfill: (options: { status: number; content
 }
 
 async function mockGroupsWorkspace(page: Page) {
-    const createdAt = '2026-04-09T10:00:00Z';
+    const createdAt = new Date(Date.now() - 86_400_000).toISOString();
+    const activeExpiry = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    const archivedExpiry = new Date(Date.now() - 2 * 86_400_000).toISOString();
     const groups: GroupRecord[] = [
         {
             group_id: 'group-standing',
@@ -64,7 +66,7 @@ async function mockGroupsWorkspace(page: Page) {
             coordinator_profile: 'Launch Sprint lead',
             approval_policy_ref: 'high-impact',
             status: 'active',
-            expiry: '2026-04-12T12:00:00Z',
+            expiry: activeExpiry,
             created_by: 'owner',
             created_at: createdAt,
         },
@@ -78,7 +80,7 @@ async function mockGroupsWorkspace(page: Page) {
             coordinator_profile: 'Archive Review lead',
             approval_policy_ref: 'high-impact',
             status: 'archived',
-            expiry: '2026-04-08T17:00:00Z',
+            expiry: archivedExpiry,
             created_by: 'owner',
             created_at: createdAt,
         },

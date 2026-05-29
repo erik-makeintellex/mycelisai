@@ -5,6 +5,7 @@ import {
     fallbackChatContent,
     isRetryableWorkspaceChatFailure,
 } from '@/store/cortexStoreChatWorkflow';
+import { normalizeOutputRefs } from '@/store/cortexStoreOutputRefs';
 import type { APIResponse, ChatMessage, CTSChatEnvelope } from '@/store/cortexStoreTypes';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import { clearPersistedChat, loadOrCreateChatSessionId, loadPersistedChat, normalizeProposalData } from '@/store/cortexStoreUtils';
@@ -112,6 +113,13 @@ export function createCortexMissionChatSlice(
                     }
 
                     const envelope = body.data;
+                    const outputRefs = envelope.payload.output_refs?.length
+                        ? envelope.payload.output_refs
+                        : normalizeOutputRefs({
+                            artifacts: envelope.payload.artifacts,
+                            deliveryPackage: envelope.payload.delivery_package,
+                            executionSummary: envelope.payload.execution_summary,
+                        });
                     const chatMsg: ChatMessage = {
                         role: 'council',
                         content: fallbackChatContent(envelope.payload, assistantName),
@@ -122,6 +130,9 @@ export function createCortexMissionChatSlice(
                         trust_score: envelope.trust_score,
                         timestamp: envelope.meta.timestamp,
                         artifacts: envelope.payload.artifacts,
+                        delivery_package: envelope.payload.delivery_package,
+                        output_refs: outputRefs,
+                        execution_summary: envelope.payload.execution_summary,
                         template_id: envelope.template_id || 'chat-to-answer',
                         mode: envelope.mode || 'answer',
                         provenance: envelope.payload?.provenance,

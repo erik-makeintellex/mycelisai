@@ -87,6 +87,42 @@ describe('useCortexStore confirm proposal execution', () => {
                 data: {
                     run_id: 'run-456',
                     message: 'Codex task bundle created under codex-task-packages/myc-rc-001 with proof at codex-task-packages/myc-rc-001/proof.md.',
+                    delivery_package: {
+                        package_id: 'codex_task_bundle:myc-rc-001',
+                        package_kind: 'codex_task_bundle',
+                        title: 'Codex task bundle',
+                        status: 'verified',
+                        run_id: 'run-456',
+                        items: [
+                            {
+                                id: 'codex_task_bundle:myc-rc-001:implementation_task.md',
+                                kind: 'document',
+                                label: 'Implementation Task',
+                                storage_ref: 'codex-task-packages/myc-rc-001/implementation_task.md',
+                                source_run_id: 'run-456',
+                                source_contract_id: 'ip-456',
+                                package_id: 'codex_task_bundle:myc-rc-001',
+                                role: 'primary',
+                                status: 'final',
+                            },
+                            {
+                                id: 'codex_task_bundle:myc-rc-001:proof.md',
+                                kind: 'document',
+                                label: 'Package Proof',
+                                storage_ref: 'codex-task-packages/myc-rc-001/proof.md',
+                                source_run_id: 'run-456',
+                                source_contract_id: 'ip-456',
+                                package_id: 'codex_task_bundle:myc-rc-001',
+                                role: 'proof',
+                                status: 'final',
+                            },
+                        ],
+                    },
+                    execution_summary: {
+                        title: 'Codex task bundle',
+                        status: 'verified',
+                        run_id: 'run-456',
+                    },
                     artifacts: [
                         {
                             type: 'document',
@@ -115,5 +151,17 @@ describe('useCortexStore confirm proposal execution', () => {
         expect(packageMessage).toBeDefined();
         expect(packageMessage?.run_id).toBe('run-456');
         expect(packageMessage?.artifacts).toHaveLength(2);
+        expect(packageMessage?.delivery_package?.package_id).toBe('codex_task_bundle:myc-rc-001');
+        expect(packageMessage?.execution_summary?.status).toBe('verified');
+        expect(packageMessage?.output_refs).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                role: 'primary',
+                storage_ref: 'codex-task-packages/myc-rc-001/implementation_task.md',
+            }),
+            expect.objectContaining({
+                role: 'proof',
+                storage_ref: 'codex-task-packages/myc-rc-001/proof.md',
+            }),
+        ]));
     });
 });

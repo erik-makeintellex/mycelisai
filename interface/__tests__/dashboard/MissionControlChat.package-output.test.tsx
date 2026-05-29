@@ -70,6 +70,26 @@ describe('MissionControlChat package outputs', () => {
                             saved_path: 'codex-task-packages/myc-rc-001/proof.md',
                         },
                     ],
+                    output_refs: [
+                        {
+                            id: 'codex_task_bundle:myc-rc-001:implementation_task.md',
+                            kind: 'document',
+                            label: 'Implementation Task',
+                            storage_ref: 'codex-task-packages/myc-rc-001/implementation_task.md',
+                            package_id: 'codex_task_bundle:myc-rc-001',
+                            role: 'primary',
+                            status: 'final',
+                        },
+                        {
+                            id: 'codex_task_bundle:myc-rc-001:proof.md',
+                            kind: 'document',
+                            label: 'Package Proof',
+                            storage_ref: 'codex-task-packages/myc-rc-001/proof.md',
+                            package_id: 'codex_task_bundle:myc-rc-001',
+                            role: 'proof',
+                            status: 'final',
+                        },
+                    ],
                 },
             ],
         });

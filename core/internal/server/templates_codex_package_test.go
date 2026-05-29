@@ -108,6 +108,41 @@ func TestHandleConfirmAction_CreatesCodexTaskBundleWithProof(t *testing.T) {
 	if pkg["proof_path"] != "codex-task-packages/myc-rc-001/proof.md" {
 		t.Fatalf("proof_path = %v", pkg["proof_path"])
 	}
+	if pkg["package_id"] != "codex_task_bundle:myc-rc-001" {
+		t.Fatalf("package_id = %v", pkg["package_id"])
+	}
+	outputRefs, ok := data["output_refs"].([]any)
+	if !ok || len(outputRefs) != 5 {
+		t.Fatalf("output_refs = %#v, want 5 normalized refs", data["output_refs"])
+	}
+	firstRef, ok := outputRefs[0].(map[string]any)
+	if !ok {
+		t.Fatalf("first output ref = %#v, want map", outputRefs[0])
+	}
+	if firstRef["role"] != "primary" || firstRef["source_run_id"] == "" || firstRef["source_contract_id"] != proofID {
+		t.Fatalf("first output ref metadata = %#v", firstRef)
+	}
+	proofRef, ok := outputRefs[4].(map[string]any)
+	if !ok {
+		t.Fatalf("proof output ref = %#v, want map", outputRefs[4])
+	}
+	if proofRef["role"] != "proof" || proofRef["storage_ref"] != "codex-task-packages/myc-rc-001/proof.md" {
+		t.Fatalf("proof output ref metadata = %#v", proofRef)
+	}
+	deliveryPackage, ok := data["delivery_package"].(map[string]any)
+	if !ok {
+		t.Fatalf("delivery_package = %#v, want map", data["delivery_package"])
+	}
+	if deliveryPackage["package_id"] != "codex_task_bundle:myc-rc-001" || deliveryPackage["status"] != "verified" {
+		t.Fatalf("delivery package metadata = %#v", deliveryPackage)
+	}
+	executionSummary, ok := data["execution_summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("execution_summary = %#v, want map", data["execution_summary"])
+	}
+	if executionSummary["status"] != "verified" {
+		t.Fatalf("execution summary = %#v", executionSummary)
+	}
 	artifacts, ok := data["artifacts"].([]any)
 	if !ok || len(artifacts) != 5 {
 		t.Fatalf("artifacts = %#v, want 5 package artifacts", data["artifacts"])

@@ -191,6 +191,69 @@ describe('useCortexStore mission chat send', () => {
         });
     });
 
+    it('stores delivery package output refs for package-bearing Soma answers', async () => {
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                ok: true,
+                data: {
+                    meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                    signal_type: 'chat_response',
+                    trust_score: 0.5,
+                    template_id: 'chat-to-answer',
+                    mode: 'answer',
+                    payload: {
+                        text: 'Codex task bundle created.',
+                        delivery_package: {
+                            package_id: 'codex_task_bundle:myc-rc-001',
+                            package_kind: 'codex_task_bundle',
+                            title: 'Codex task bundle',
+                            status: 'verified',
+                            run_id: 'run-789',
+                            items: [
+                                {
+                                    id: 'codex_task_bundle:myc-rc-001:implementation_task.md',
+                                    kind: 'document',
+                                    label: 'Implementation Task',
+                                    storage_ref: 'codex-task-packages/myc-rc-001/implementation_task.md',
+                                    source_run_id: 'run-789',
+                                    package_id: 'codex_task_bundle:myc-rc-001',
+                                    role: 'primary',
+                                    status: 'final',
+                                },
+                                {
+                                    id: 'codex_task_bundle:myc-rc-001:proof.md',
+                                    kind: 'document',
+                                    label: 'Package Proof',
+                                    storage_ref: 'codex-task-packages/myc-rc-001/proof.md',
+                                    source_run_id: 'run-789',
+                                    package_id: 'codex_task_bundle:myc-rc-001',
+                                    role: 'proof',
+                                    status: 'final',
+                                },
+                            ],
+                        },
+                        execution_summary: {
+                            title: 'Codex task bundle',
+                            status: 'verified',
+                            run_id: 'run-789',
+                        },
+                    },
+                },
+            }),
+        });
+
+        await useCortexStore.getState().sendMissionChat('create package');
+
+        const packageMessage = useCortexStore.getState().missionChat.at(-1);
+        expect(packageMessage?.delivery_package?.package_id).toBe('codex_task_bundle:myc-rc-001');
+        expect(packageMessage?.execution_summary?.status).toBe('verified');
+        expect(packageMessage?.output_refs).toEqual(expect.arrayContaining([
+            expect.objectContaining({ role: 'primary', label: 'Implementation Task' }),
+            expect.objectContaining({ role: 'proof', label: 'Package Proof' }),
+        ]));
+    });
+
     it('stores specialist consultation ask-class metadata for consulted answers', async () => {
         mockFetch.mockResolvedValue({
             ok: true,

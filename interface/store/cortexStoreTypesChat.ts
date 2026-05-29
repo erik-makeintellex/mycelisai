@@ -23,14 +23,51 @@ export interface DeliveryPackageFile {
     sha256?: string;
 }
 
+export interface OutputRef {
+    id?: string;
+    kind: string;
+    label: string;
+    storage_ref?: string;
+    open_url?: string;
+    reveal_url?: string;
+    source_run_id?: string;
+    source_contract_id?: string;
+    proof_artifact_id?: string;
+    package_id?: string;
+    role?: string;
+    status?: string;
+    content_type?: string;
+    bytes?: number;
+    sha256?: string;
+}
+
 export interface DeliveryPackageSummary {
+    package_id?: string;
     package_kind: string;
     package_slug?: string;
+    title?: string;
+    summary?: string;
+    status?: string;
     base_path?: string;
     proof_path?: string;
     run_id?: string;
     proof_id?: string;
     files?: DeliveryPackageFile[];
+    primary_output_ref?: OutputRef;
+    items?: OutputRef[];
+    next_actions?: string[];
+    proof_ref?: OutputRef;
+    inspect_refs?: OutputRef[];
+}
+
+export interface ExecutionSummary {
+    title: string;
+    summary?: string;
+    status: string;
+    run_id?: string;
+    proof_id?: string;
+    output_refs?: OutputRef[];
+    delivery_package?: DeliveryPackageSummary;
 }
 
 export type AskClass =
@@ -134,6 +171,8 @@ export interface ChatMessage {
     brain?: BrainProvenance;
     run_id?: string;
     delivery_package?: DeliveryPackageSummary;
+    output_refs?: OutputRef[];
+    execution_summary?: ExecutionSummary;
 }
 
 export interface CouncilMember {
@@ -161,6 +200,8 @@ export interface CTSChatEnvelope {
         tools_used?: string[];
         artifacts?: ChatArtifactRef[];
         delivery_package?: DeliveryPackageSummary;
+        output_refs?: OutputRef[];
+        execution_summary?: ExecutionSummary;
         provenance?: AnswerProvenance;
         brain?: BrainProvenance;
         proposal?: {

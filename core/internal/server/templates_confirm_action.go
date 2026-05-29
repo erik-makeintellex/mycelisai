@@ -82,13 +82,9 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		data["message"] = fmt.Sprintf("Codex task bundle created under %s with proof at %s.", packageSummary.BasePath, packageSummary.ProofPath)
 		data["package"] = packageSummary
 		data["artifacts"] = packageSummary.Artifacts
-		data["execution_summary"] = map[string]any{
-			"title":        "Codex task bundle",
-			"package_kind": packageSummary.PackageKind,
-			"base_path":    packageSummary.BasePath,
-			"proof_path":   packageSummary.ProofPath,
-			"file_count":   len(packageSummary.Files),
-		}
+		data["delivery_package"] = deliveryPackageFromPackageSummary(packageSummary)
+		data["output_refs"] = packageSummary.OutputRefs
+		data["execution_summary"] = executionSummaryFromPackageSummary(packageSummary)
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(data))
 }

@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-05-28
+> Last Updated: 2026-05-29
 > Purpose: Maintain one precise, durable documentation surface for product target, runtime structure, UI contract, and delivery proof.
 
 ## TOC
@@ -29,7 +29,7 @@ This index is now intentionally narrower:
 
 - [README](../../README.md) is the primary inception document for active development.
 - [V8.2 Full Production Architecture](../../architecture/v8-2.md) is the canonical full production architecture, full actuation target, and current B2+ delivery frame.
-- [V8.3 Current-State Convergence PRD](mycelis_soma_updated_prd_v8_3_current_state_convergence.md) is candidate convergence authority for `MYC-RC-000`; it becomes active implementation authority only through synchronized state, README, and proof updates.
+- [V8.3 Current-State Convergence PRD](mycelis_soma_updated_prd_v8_3_current_state_convergence.md) is candidate convergence authority for `MYC-RC-000` through `MYC-RC-002`; it becomes active implementation authority only through synchronized state, README, and proof updates.
 - [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the foundation and compatibility baseline for the Soma-primary operator surface.
 - [V8 Development State](../../.state/V8_DEV_STATE.md) is the live implementation scoreboard.
 
@@ -49,7 +49,7 @@ V8.2/B2+ work may proceed when it is modular and proof-producing. Keep each slic
 | [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) | shaping new V8 runtime contracts | inception, kernel, council, provider policy, and continuity contracts |
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | planning configuration sources, templates, bootstrap behavior, or inheritance | V7-to-V8 bootstrap migration, template vs instantiated organization, and precedence rules |
 | [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) | changing first-run flow, AI Organization creation, Soma-primary workspace, or screen-to-API mapping | canonical V8 operator PRD, source-of-truth layering, and UI/API contracts |
-| [V8.3 Current-State Convergence PRD](mycelis_soma_updated_prd_v8_3_current_state_convergence.md) | coordinating `MYC-RC-000` convergence, package-first delivery, Codex task artifact planning, or V8.3 promotion decisions | candidate convergence plan for DeliveryPackage/OutputRef/proof/timeline alignment against current implementation state |
+| [V8.3 Current-State Convergence PRD](mycelis_soma_updated_prd_v8_3_current_state_convergence.md) | coordinating `MYC-RC-000` through `MYC-RC-002` convergence, package-first delivery, Codex task artifact planning, OutputRef normalization, or V8.3 promotion decisions | candidate convergence plan for DeliveryPackage/OutputRef/proof/timeline alignment against current implementation state |
 | [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) | checking the V8.1 foundation and compatibility baseline | baseline architecture for loops, continuity, capabilities, and bounded automations |
 | [V8 Compact Team Orchestration And Defaults](V8_COMPACT_TEAM_ORCHESTRATION_AND_DEFAULTS.md) | defining how team creation should stay compact by default | compact team shape guidance, broad-ask splitting, and Soma/Council orchestration over NATS |
 | [V8 Teamed Agentry Workflow Advantage](V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md) | deciding when a team actually beats one strong context-rich agent | workflow variants, team-vs-single-agent boundary, and complex patterns where teamed agentry wins |
@@ -82,7 +82,7 @@ V8.2/B2+ work may proceed when it is modular and proof-producing. Keep each slic
 8. Use [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) when defining the new canonical V8 runtime contracts during migration.
 9. Use [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) when translating V7 assumptions through the template -> instantiation -> inheritance -> precedence pipeline.
 10. Use [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) when defining first-run flow, Soma-primary workspace behavior, advanced-mode boundaries, or screen-to-API mapping.
-11. Use [V8.3 Current-State Convergence PRD](mycelis_soma_updated_prd_v8_3_current_state_convergence.md) only for `MYC-RC-000` convergence and promotion decisions until state marks a narrower implementation slice active.
+11. Use [V8.3 Current-State Convergence PRD](mycelis_soma_updated_prd_v8_3_current_state_convergence.md) only for `MYC-RC-000` through `MYC-RC-002` convergence, package-output normalization, and promotion decisions until state marks a narrower implementation slice active.
 12. Use [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) when checking the foundation and compatibility baseline.
 13. Use [V8 Compact Team Orchestration And Defaults](V8_COMPACT_TEAM_ORCHESTRATION_AND_DEFAULTS.md) when shaping team defaults, broad-ask decomposition, or Soma/Council coordination over NATS.
 14. Use [V8 Teamed Agentry Workflow Advantage](V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md) when deciding whether a request should stay direct Soma, become a compact team, or split into several coordinated lanes.

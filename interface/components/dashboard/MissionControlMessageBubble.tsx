@@ -152,6 +152,7 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
     const isBroadcast = isUser && msg.content.startsWith("[BROADCAST]");
     const assistantName = useCortexStore((s) => s.assistantName);
     const isPackageOutput = Boolean(msg.delivery_package)
+        || Boolean(msg.output_refs?.some((ref) => ref.package_id || ref.role === "proof"))
         || Boolean(msg.artifacts?.some((artifact) => (
             artifact.type === "project_package"
             || artifact.saved_path?.startsWith("codex-task-packages/")
@@ -202,7 +203,7 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
                 ) : null}
                 {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}
                 {!isUser && isPackageOutput ? (
-                    <OutputWorkbench deliveryPackage={msg.delivery_package} artifacts={msg.artifacts} runId={msg.run_id} />
+                    <OutputWorkbench deliveryPackage={msg.delivery_package} artifacts={msg.artifacts} outputRefs={msg.output_refs} runId={msg.run_id} />
                 ) : null}
                 {!isUser && artifactSummary && (
                     <div className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/5 px-3 py-2">

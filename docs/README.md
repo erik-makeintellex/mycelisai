@@ -42,7 +42,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`
 - **V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 - **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
-- **V8.3 Current-State Convergence PRD**: `./architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md` for `MYC-RC-000` convergence and promotion planning only until state marks a narrower implementation slice active
+- **V8.3 Current-State Convergence PRD**: `./architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md` for `MYC-RC-000` through `MYC-RC-002` convergence, package output, and promotion planning while state marks those slices active or in review
 - **V8.1 Living Organization Baseline**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
 - **V8 Memory Layer + Reflection Contract**: `./architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md`
 - **V8 Trusted Memory Arbitration Contract**: `./architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
@@ -112,7 +112,7 @@ Top detailed framework memory surfaces for active V8 work:
 2. `./architecture-library/V8_RUNTIME_CONTRACTS.md`
 3. `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 4. `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
-5. `./architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md` for `MYC-RC-000` only
+5. `./architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md` for `MYC-RC-000` through `MYC-RC-002` convergence work
 6. `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
 7. `../.state/V8_DEV_STATE.md`
 8. `./TESTING.md`

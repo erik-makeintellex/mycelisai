@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, ClipboardList, ExternalLink, FileText, ShieldCheck } from "lucide-react";
-import type { ChatArtifactRef, DeliveryPackageFile, DeliveryPackageSummary } from "@/store/useCortexStore";
+import type { ChatArtifactRef, DeliveryPackageFile, DeliveryPackageSummary, OutputRef } from "@/store/useCortexStore";
 
 function isProofFile(path?: string, title?: string): boolean {
     const lowerPath = path?.toLowerCase() ?? "";
@@ -29,21 +29,35 @@ function artifactForPath(artifacts: ChatArtifactRef[], path?: string, title?: st
 export default function OutputWorkbench({
     deliveryPackage,
     artifacts = [],
+    outputRefs = [],
     runId,
 }: {
     deliveryPackage?: DeliveryPackageSummary;
     artifacts?: ChatArtifactRef[];
+    outputRefs?: OutputRef[];
     runId?: string;
 }) {
-    if (!deliveryPackage && artifacts.length === 0) return null;
+    if (!deliveryPackage && artifacts.length === 0 && outputRefs.length === 0) return null;
 
-    const files: DeliveryPackageFile[] = deliveryPackage?.files ?? artifacts.map((artifact) => ({
-        path: artifact.saved_path || artifact.title,
-        title: artifact.title,
-        content_type: artifact.content_type,
-    }));
+    const refs = outputRefs.length > 0 ? outputRefs : deliveryPackage?.items ?? [];
+    const files: DeliveryPackageFile[] = deliveryPackage?.files
+        ?? (refs.length > 0
+            ? refs.map((ref) => ({
+                path: ref.storage_ref || ref.label,
+                title: ref.label,
+                content_type: ref.content_type,
+                bytes: ref.bytes,
+                sha256: ref.sha256,
+            }))
+            : artifacts.map((artifact) => ({
+                path: artifact.saved_path || artifact.title,
+                title: artifact.title,
+                content_type: artifact.content_type,
+            })));
     const proof = files.find((file) => isProofFile(file.path, file.title));
     const packageRunId = runId || deliveryPackage?.run_id;
+    const packageIdentity = deliveryPackage?.base_path || deliveryPackage?.package_id;
+    const packageStatus = deliveryPackage?.status || "verified";
     const contentArtifacts = artifacts.filter((artifact) => artifact.content?.trim());
 
     return (
@@ -54,13 +68,13 @@ export default function OutputWorkbench({
                     <div className="truncate text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-primary">
                         {packageTitle(deliveryPackage?.package_kind)}
                     </div>
-                    {deliveryPackage?.base_path ? (
-                        <div className="truncate text-[9px] font-mono text-cortex-text-muted">{deliveryPackage.base_path}</div>
+                    {packageIdentity ? (
+                        <div className="truncate text-[9px] font-mono text-cortex-text-muted">{packageIdentity}</div>
                     ) : null}
                 </div>
                 <span className="inline-flex items-center gap-1 rounded border border-cortex-success/30 bg-cortex-success/10 px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase text-cortex-success">
                     <CheckCircle2 className="h-2.5 w-2.5" />
-                    Verified
+                    {packageStatus}
                 </span>
                 {packageRunId ? (
                     <a
@@ -76,7 +90,9 @@ export default function OutputWorkbench({
             <div className="divide-y divide-cortex-border/60">
                 {files.map((file) => {
                     const artifact = artifactForPath(artifacts, file.path, file.title);
+                    const ref = refs.find((candidate) => candidate.storage_ref === file.path || candidate.label === file.title);
                     const proofFile = isProofFile(file.path, file.title);
+                    const role = ref?.role || (proofFile ? "proof" : "");
                     return (
                         <div key={`${file.path}-${file.title}`} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-2">
                             {proofFile ? (
@@ -93,7 +109,7 @@ export default function OutputWorkbench({
                                 </div>
                             </div>
                             <div className="text-right text-[8px] font-mono text-cortex-text-muted">
-                                {file.bytes != null ? `${file.bytes}b` : artifact?.content_type?.replace("text/", "") ?? file.content_type?.replace("text/", "")}
+                                {role ? role : file.bytes != null ? `${file.bytes}b` : artifact?.content_type?.replace("text/", "") ?? file.content_type?.replace("text/", "")}
                             </div>
                         </div>
                     );

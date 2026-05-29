@@ -33,6 +33,7 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 - Use `uv run inv ci.baseline --no-e2e` only for intentionally narrower debugging.
 - GitHub CI proves codebase health without hosted agentry; live AI/service proof remains local, WSL, Compose, or target-cluster evidence.
 - Windows is the edit/review/push surface; WSL is the authoritative release-style proof checkout.
+- When WSL/Docker instability blocks that lane, use the Windows repo with managed `uv run inv interface.e2e ...` full-browser Chromium sessions as the active local product-proof workaround, and record WSL as an environment blocker rather than an application failure.
 - `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required.
 - Playwright starts/stops the managed Next.js app, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant.
 
@@ -174,12 +175,14 @@ For `MYC-RC-000` through `MYC-RC-003`, testing must prove the platform change, n
 - `MYC-RC-002` / `MYC-RC-002B`: output refs normalize file/team/MCP/template/package outputs with open/reveal/proof/source lineage, and the UI presents one package card with Inspect details.
 - `MYC-RC-003`: write/output proof records checksum or fingerprint, path-boundary verification, execution status, output ref, and proof readback.
 
-Current focused `MYC-RC-001` proof:
+Current focused `MYC-RC-001` / `MYC-RC-002` package-output proof:
 - `go test ./internal/server`
-- `npm test -- --run __tests__/store/useCortexStore.confirm-proposal.execution.test.ts`
-- `npm test -- --run __tests__/dashboard/MissionControlChat.package-output.test.tsx __tests__/runs/RunTimeline.test.tsx`
+- `npm test -- --run __tests__/dashboard/MissionControlChat.package-output.test.tsx __tests__/runs/RunTimeline.test.tsx __tests__/store/useCortexStore.confirm-proposal.execution.test.ts __tests__/store/useCortexStore.mission-chat-send.test.ts`
 - `npx tsc --noEmit`
 - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/codex-package-retention.spec.ts`
+- `uv run inv interface.e2e --project=chromium --workers=1`
+
+`MYC-RC-002` adds explicit assertions that confirmed packages and Soma package envelopes carry `output_refs`, `delivery_package`, and `execution_summary`, including primary/proof roles and source run/contract lineage. Keep compatibility assertions for `artifacts` and legacy `package` fields until all consumers move to `OutputRef`.
 
 Browser proof must include refresh/re-entry so retained package visibility is not a transient chat-only success. Manual acceptance is useful for exploration, but RC lock requires an automated focused browser spec or an explicit `BLOCKED` note naming the missing spec.
 

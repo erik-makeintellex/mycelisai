@@ -26,12 +26,16 @@ type packageOutputFile struct {
 type packageOutputSummary struct {
 	PackageKind string                     `json:"package_kind"`
 	PackageSlug string                     `json:"package_slug"`
+	PackageID   string                     `json:"package_id"`
 	BasePath    string                     `json:"base_path"`
 	ProofPath   string                     `json:"proof_path"`
 	RunID       string                     `json:"run_id"`
 	ProofID     string                     `json:"proof_id"`
 	Files       []packageOutputFile        `json:"files"`
 	Artifacts   []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
+	OutputRefs  []protocol.OutputRef       `json:"output_refs,omitempty"`
+	PrimaryRef  *protocol.OutputRef        `json:"primary_output_ref,omitempty"`
+	ProofRef    *protocol.OutputRef        `json:"proof_ref,omitempty"`
 }
 
 func (s *AdminServer) finalizeCodexTaskBundleTx(tx *sql.Tx, planned []protocol.PlannedToolCall, runID, proofID string) (*packageOutputSummary, error) {
@@ -63,6 +67,7 @@ func (s *AdminServer) finalizeCodexTaskBundleTx(tx *sql.Tx, planned []protocol.P
 	summary := &packageOutputSummary{
 		PackageKind: "codex_task_bundle",
 		PackageSlug: slug,
+		PackageID:   "codex_task_bundle:" + slug,
 		BasePath:    basePath,
 		ProofPath:   proofPath,
 		RunID:       runID,
@@ -70,6 +75,8 @@ func (s *AdminServer) finalizeCodexTaskBundleTx(tx *sql.Tx, planned []protocol.P
 		Files:       files,
 		Artifacts:   artifacts,
 	}
+	summary.OutputRefs = outputRefsFromPackageSummary(summary)
+	summary.PrimaryRef, summary.ProofRef = outputRefPointers(summary.OutputRefs)
 	if err := s.insertPackageArtifactEventTx(tx, summary); err != nil {
 		return nil, err
 	}
@@ -209,12 +216,16 @@ func (s *AdminServer) insertPackageArtifactEventTx(tx *sql.Tx, summary *packageO
 		return nil
 	}
 	payload, _ := json.Marshal(map[string]any{
-		"package_kind": summary.PackageKind,
-		"package_slug": summary.PackageSlug,
-		"base_path":    summary.BasePath,
-		"proof_path":   summary.ProofPath,
-		"proof_id":     summary.ProofID,
-		"files":        summary.Files,
+		"package_kind":       summary.PackageKind,
+		"package_slug":       summary.PackageSlug,
+		"package_id":         summary.PackageID,
+		"base_path":          summary.BasePath,
+		"proof_path":         summary.ProofPath,
+		"proof_id":           summary.ProofID,
+		"files":              summary.Files,
+		"output_refs":        summary.OutputRefs,
+		"primary_output_ref": summary.PrimaryRef,
+		"proof_ref":          summary.ProofRef,
 	})
 	_, err := tx.Exec(
 		`INSERT INTO mission_events

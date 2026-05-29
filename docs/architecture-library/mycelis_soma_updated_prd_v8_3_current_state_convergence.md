@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: `ACTIVE` candidate for `MYC-RC-000`
-> Date: 2026-05-28
+> Date: 2026-05-29
 > Purpose: converge the current implementation toward package-first, proof-backed Soma delivery without creating a parallel greenfield architecture.
 
 ## Authority Boundary
@@ -162,16 +162,21 @@ Owners:
 
 - `core/pkg/protocol/execution_summary.go`
 - `core/internal/server/confirm_action_outputs.go`
-- `core/internal/server/execution_summary_helpers.go`
+- `core/internal/server/templates_codex_package.go`
 - `core/internal/server/execution_summary_mcp.go`
 - `core/internal/server/team_work_confirm_action_helpers.go`
 - `core/internal/server/team_group_execution_summaries.go`
-- `interface/store/cortexStoreTypesExecutionSummary.ts`
+- `interface/store/cortexStoreTypesChat.ts`
+- `interface/store/cortexStoreOutputRefs.ts`
+- `interface/store/cortexStoreMissionChatSlice.ts`
+- `interface/store/cortexStoreProposalExecutionSlice.ts`
 - `interface/store/cortexStoreTypesTeamWork.ts`
 - `interface/components/soma/ExecutionSummaryCardModel.ts`
 - `interface/components/soma/OutputWorkbench.tsx`
 
 Acceptance: output shape includes label, kind, storage ref, open/reveal link, source run, source contract, proof ref, status, package id, and role.
+
+Current slice: Codex task packages now project backend `OutputRef`, `DeliveryPackageSummary`, and `ExecutionSummary` fields through confirm-action and package event payloads, while Interface store boundaries normalize package output refs into the existing Output Workbench. Broader media/team/MCP/template adoption remains follow-on work.
 
 ### MYC-RC-002B - Package Manifest And Output Card
 
