@@ -31,7 +31,7 @@ func TestHandleListProofArtifacts_ReturnsProofArtifacts(t *testing.T) {
 			string(protocol.TrustValidationSourceConfirmAction),
 			string(protocol.TrustEvidenceStrengthRunAudit),
 			string(protocol.TrustProofQualityVerified),
-			[]byte(`[]`),
+			[]byte(`[{"id":"workspace/output.md","kind":"file","title":"output","proof_artifact_id":"44444444-4444-4444-4444-444444444444","open_url":"/api/v1/workspace/files/view?path=workspace%2Foutput.md","proof":{"proof_id":"44444444-4444-4444-4444-444444444444","source_run_id":"55555555-5555-5555-5555-555555555555","source_contract_id":"11111111-1111-1111-1111-111111111111","path_boundary_status":"verified","readback_status":"verified","checksum_algorithm":"sha256","checksum":"b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"}}]`),
 			[]byte(`[]`),
 			[]byte(`[]`),
 			[]byte(`{}`),
@@ -53,6 +53,21 @@ func TestHandleListProofArtifacts_ReturnsProofArtifacts(t *testing.T) {
 	first := items[0].(map[string]any)
 	if first["id"] != "44444444-4444-4444-4444-444444444444" {
 		t.Fatalf("id = %v", first["id"])
+	}
+	outputs := first["output_refs"].([]any)
+	if len(outputs) != 1 {
+		t.Fatalf("output_refs = %#v, want one", outputs)
+	}
+	output := outputs[0].(map[string]any)
+	if output["proof_artifact_id"] != "44444444-4444-4444-4444-444444444444" {
+		t.Fatalf("proof_artifact_id = %v", output["proof_artifact_id"])
+	}
+	proof := output["proof"].(map[string]any)
+	if proof["proof_id"] != "44444444-4444-4444-4444-444444444444" ||
+		proof["path_boundary_status"] != "verified" ||
+		proof["readback_status"] != "verified" ||
+		proof["checksum_algorithm"] != "sha256" {
+		t.Fatalf("unexpected proof envelope = %#v", proof)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)

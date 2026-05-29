@@ -184,7 +184,7 @@ func TestListProofArtifactsReturnsBoundedProofRecords(t *testing.T) {
 			string(protocol.TrustValidationSourceConfirmAction),
 			string(protocol.TrustEvidenceStrengthRunAudit),
 			string(protocol.TrustProofQualityVerified),
-			[]byte(`[]`),
+			[]byte(`[{"id":"workspace/output.md","kind":"file","title":"output","proof_artifact_id":"44444444-4444-4444-4444-444444444444","open_url":"/api/v1/workspace/files/view?path=workspace%2Foutput.md","proof":{"proof_id":"44444444-4444-4444-4444-444444444444","source_run_id":"55555555-5555-5555-5555-555555555555","source_contract_id":"11111111-1111-1111-1111-111111111111","path_boundary_status":"verified","readback_status":"verified","checksum_algorithm":"sha256","checksum":"b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"}}]`),
 			[]byte(`[]`),
 			[]byte(`[]`),
 			[]byte(`{}`),
@@ -206,6 +206,25 @@ func TestListProofArtifactsReturnsBoundedProofRecords(t *testing.T) {
 	}
 	if items[0].Payload["summary"] != "completed" {
 		t.Fatalf("payload = %+v", items[0].Payload)
+	}
+	if len(items[0].OutputRefs) != 1 {
+		t.Fatalf("output refs = %+v, want one", items[0].OutputRefs)
+	}
+	output := items[0].OutputRefs[0]
+	if output.ProofArtifactID != "44444444-4444-4444-4444-444444444444" || output.OpenURL == "" {
+		t.Fatalf("output ref linkage = %+v", output)
+	}
+	if output.Proof == nil {
+		t.Fatalf("output proof envelope missing: %+v", output)
+	}
+	if output.Proof.ProofID != "44444444-4444-4444-4444-444444444444" ||
+		output.Proof.SourceRunID != "55555555-5555-5555-5555-555555555555" ||
+		output.Proof.SourceContractID != "11111111-1111-1111-1111-111111111111" ||
+		output.Proof.PathBoundaryStatus != "verified" ||
+		output.Proof.ReadbackStatus != "verified" ||
+		output.Proof.ChecksumAlgorithm != "sha256" ||
+		output.Proof.Checksum == "" {
+		t.Fatalf("unexpected output proof envelope: %+v", output.Proof)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
