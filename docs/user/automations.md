@@ -65,7 +65,7 @@ Typical fields:
 - name
 - event pattern/type
 - target mission
-- mode (`propose` or `execute` when policy allows)
+- mode (`propose` or `auto_execute` when policy allows)
 - cooldown/depth/concurrency guards
 
 Safety posture:
