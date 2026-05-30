@@ -52,8 +52,8 @@ func TestSetActive_Activate(t *testing.T) {
 	mock.ExpectQuery("SELECT .+ FROM trigger_rules").
 		WithArgs("r-1").
 		WillReturnRows(sqlmock.NewRows(ruleColumns).
-			AddRow("r-1", "default", "Rule A", "", "mission.completed",
-				[]byte(`{}`), "m-1", "propose", 60, 5, 3, true, nil, now, now))
+			AddRow("r-1", "default", "Rule A", "", "event", "mission.completed",
+				[]byte(`{}`), "m-1", "propose", 60, 5, 3, true, nil, 0, nil, "", "", now, now))
 
 	if err := s.SetActive(context.Background(), "r-1", true); err != nil {
 		t.Fatalf("SetActive(true) error: %v", err)

@@ -59,6 +59,10 @@ vi.mock('@/components/automations/TriggerRulesTab', () => ({
     __esModule: true,
     default: () => <div data-testid="triggers-tab">TriggerRulesTab</div>,
 }));
+vi.mock('@/components/automations/ScheduleRulesTab', () => ({
+    __esModule: true,
+    default: () => <div data-testid="schedules-tab">ScheduleRulesTab</div>,
+}));
 vi.mock('@/components/shared/DegradedState', () => ({
     __esModule: true,
     default: ({ title }: any) => <div data-testid="degraded-state">{title}</div>,
@@ -94,6 +98,7 @@ describe('Automations Page (V7)', () => {
         await act(async () => { render(<AutomationsPage />); });
         expect(screen.getByRole('button', { name: 'Active Automations' })).toBeDefined();
         expect(screen.getByRole('button', { name: 'Trigger Rules' })).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Schedule Rules' })).toBeDefined();
         expect(screen.getByRole('button', { name: 'Approvals' })).toBeDefined();
     });
 
@@ -124,5 +129,12 @@ describe('Automations Page (V7)', () => {
         await act(async () => { render(<AutomationsPage />); });
         expect(await screen.findByTestId('approvals-tab')).toBeDefined();
         expect(screen.getByRole('button', { name: 'Approvals' })).toBeDefined();
+    });
+
+    it('deep-links to schedule rules tab via search param', async () => {
+        window.history.pushState({}, '', '/automations?tab=schedules');
+        await act(async () => { render(<AutomationsPage />); });
+        expect(await screen.findByTestId('schedules-tab')).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Schedule Rules' })).toBeDefined();
     });
 });

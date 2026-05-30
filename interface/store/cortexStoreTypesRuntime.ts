@@ -87,11 +87,16 @@ export interface TriggerRule {
     tenant_id: string;
     name: string;
     description?: string;
+    trigger_kind?: 'event' | 'schedule';
     event_pattern: string;
     condition: Record<string, unknown>;
     target_mission_id: string;
     mode: 'propose' | 'auto_execute';
     cooldown_seconds: number;
+    schedule_interval_seconds?: number;
+    next_run_at?: string;
+    proof_expectations?: string;
+    recovery_behavior?: string;
     max_depth: number;
     max_active_runs: number;
     is_active: boolean;
@@ -103,11 +108,15 @@ export interface TriggerRule {
 export interface TriggerRuleCreate {
     name: string;
     description?: string;
+    trigger_kind?: 'event' | 'schedule';
     event_pattern: string;
     condition?: Record<string, unknown>;
     target_mission_id: string;
     mode?: 'propose' | 'auto_execute';
     cooldown_seconds?: number;
+    schedule_interval_seconds?: number;
+    proof_expectations?: string;
+    recovery_behavior?: string;
     max_depth?: number;
     max_active_runs?: number;
     is_active?: boolean;

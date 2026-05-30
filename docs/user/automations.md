@@ -13,7 +13,7 @@ Current ownership:
 
 - `/teams` is for active team work and team lead workspaces.
 - `/groups` is for retained outputs, archived collaboration records, and reviewable temporary-workflow history.
-- `/automations` is for event trigger rules and approvals around automation behavior.
+- `/automations` is for event trigger rules, propose-only schedule rules, and approvals around automation behavior.
 
 Current tabs:
 
@@ -21,6 +21,7 @@ Current tabs:
 |-----|---------|
 | Active Automations | Actionable hub for current automation setup, trigger-rule entry, and governance review |
 | Trigger Rules | Event-driven actuation rules |
+| Schedule Rules | Propose-only cadence rules with cooldown, proof expectations, recovery text, and next-run state |
 | Approvals | Governance review queue and policy controls |
 | Workflow Builder (Advanced) | Lower-level workflow structure editing |
 
@@ -32,6 +33,7 @@ This tab is intentionally non-empty. It should orient operators toward the autom
 
 Layout:
 - **Trigger Rules** for event-driven actuation setup
+- **Schedule Rules** for cadence proposals that remain reviewable before execution
 - **Approvals** for governed automation decisions
 - **Workflow Builder** when Advanced mode is on
 - primary CTA for building a governed automation chain
@@ -99,7 +101,7 @@ This is the graph-level authoring and editing surface for advanced workflow stru
 
 ## Scheduler Status
 
-Cadence authoring is a production scheduler lane, not a placeholder card in the default UI. When scheduled actuation is available for operator use, it should appear as a governed rule type with the same propose/execute, cooldown, audit, and proof expectations as event-driven actuation.
+Cadence authoring is now present as propose-only Schedule Rules. A schedule rule records a rule name, target mission, cadence interval, next proposal time, cooldown, proof expectations, and recovery behavior. Scheduler ticks can record a proposed cadence outcome and update the next run, but this first production slice does not autonomously execute the target mission. Operators should treat Schedule Rules as reviewable cadence intent until the approval/execution trust path is promoted.
 
 ---
 
@@ -108,6 +110,7 @@ Cadence authoring is a production scheduler lane, not a placeholder card in the 
 For the current V8 UX baseline, `/automations` should show:
 - Active Automations tab content with the Automation Hub
 - a clear path into Trigger Rules
+- a clear path into Schedule Rules
 - a clear path into Approvals
 - no misplaced team-readiness tab
 - no roadmap placeholder copy for scheduler behavior

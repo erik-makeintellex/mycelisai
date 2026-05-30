@@ -15,10 +15,10 @@ func TestHandleListTriggers(t *testing.T) {
 	now := time.Now()
 	mock.ExpectQuery("SELECT .+ FROM trigger_rules").
 		WillReturnRows(sqlmock.NewRows(triggerRuleColumns).
-			AddRow("r-1", "default", "Rule A", "desc", "mission.completed",
-				[]byte(`{}`), "m-target-1", "propose", 60, 5, 3, true, nil, now, now).
-			AddRow("r-2", "default", "Rule B", "", "tool.completed",
-				[]byte(`{}`), "m-target-2", "auto_execute", 120, 3, 1, false, nil, now, now))
+			AddRow("r-1", "default", "Rule A", "desc", "event", "mission.completed",
+				[]byte(`{}`), "m-target-1", "propose", 60, 5, 3, true, nil, 0, nil, "", "", now, now).
+			AddRow("r-2", "default", "Rule B", "", "event", "tool.completed",
+				[]byte(`{}`), "m-target-2", "auto_execute", 120, 3, 1, false, nil, 0, nil, "", "", now, now))
 
 	mux := setupMux(t, "GET /api/v1/triggers", s.HandleListTriggers)
 	rr := doRequest(t, mux, "GET", "/api/v1/triggers", "")

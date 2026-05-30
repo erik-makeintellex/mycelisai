@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { ScrollText, Cable, ShieldCheck, Clock } from "lucide-react";
+import { ScrollText, Cable, ShieldCheck, Clock, CalendarClock } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import AutomationHub from "@/components/automations/AutomationHub";
 
@@ -21,8 +21,13 @@ const TriggersContent = dynamic(() => import("@/components/automations/TriggerRu
     loading: () => <TabLoading label="trigger rules" />,
 });
 
-type TabId = "active" | "triggers" | "approvals" | "wiring";
-const VALID_TABS: TabId[] = ["active", "triggers", "approvals", "wiring"];
+const SchedulesContent = dynamic(() => import("@/components/automations/ScheduleRulesTab"), {
+    ssr: false,
+    loading: () => <TabLoading label="schedule rules" />,
+});
+
+type TabId = "active" | "triggers" | "schedules" | "approvals" | "wiring";
+const VALID_TABS: TabId[] = ["active", "triggers", "schedules", "approvals", "wiring"];
 
 export default function AutomationsPage() {
     return <AutomationsContent />;
@@ -67,6 +72,7 @@ function AutomationsContent() {
                 <div className="flex gap-1 border-b border-cortex-border overflow-x-auto">
                     <TabButton active={effectiveTab === "active"} onClick={() => setActiveTab("active")} icon={<Clock size={14} />} label="Active Automations" />
                     <TabButton active={effectiveTab === "triggers"} onClick={() => setActiveTab("triggers")} icon={<ScrollText size={14} />} label="Trigger Rules" />
+                    <TabButton active={effectiveTab === "schedules"} onClick={() => setActiveTab("schedules")} icon={<CalendarClock size={14} />} label="Schedule Rules" />
                     <TabButton active={effectiveTab === "approvals"} onClick={() => setActiveTab("approvals")} icon={<ShieldCheck size={14} />} label="Approvals" />
                     {effectiveAdvancedMode && (
                         <TabButton active={effectiveTab === "wiring"} onClick={() => setActiveTab("wiring")} icon={<Cable size={14} />} label="Workflow Builder" />
@@ -82,6 +88,7 @@ function AutomationsContent() {
                     />
                 )}
                 {effectiveTab === "triggers" && <TriggersContent />}
+                {effectiveTab === "schedules" && <SchedulesContent />}
                 {effectiveTab === "approvals" && <ApprovalsContent />}
                 {effectiveTab === "wiring" && <WiringContent />}
             </div>

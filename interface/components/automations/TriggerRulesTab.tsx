@@ -37,7 +37,7 @@ const EVENT_PATTERNS = [
 ];
 
 export default function TriggerRulesTab() {
-    const rules = useCortexStore((s) => s.triggerRules);
+    const allRules = useCortexStore((s) => s.triggerRules);
     const isFetching = useCortexStore((s) => s.isFetchingTriggers);
     const fetchTriggerRules = useCortexStore((s) => s.fetchTriggerRules);
     const createTriggerRule = useCortexStore((s) => s.createTriggerRule);
@@ -46,6 +46,7 @@ export default function TriggerRulesTab() {
 
     const [showCreate, setShowCreate] = useState(false);
     const [expandedRule, setExpandedRule] = useState<string | null>(null);
+    const rules = allRules.filter((rule) => (rule.trigger_kind ?? "event") === "event");
 
     useEffect(() => {
         fetchTriggerRules();
@@ -53,7 +54,6 @@ export default function TriggerRulesTab() {
 
     return (
         <div className="h-full flex flex-col p-6 gap-4">
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <ScrollText size={18} className="text-cortex-primary" />

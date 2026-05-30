@@ -14,6 +14,7 @@ test.describe('Automations Layout Geometry', () => {
         await expect(page.locator('h1:has-text("Automations")')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Active Automations' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Trigger Rules' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Schedule Rules' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Approvals' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Shared Teams' })).not.toBeVisible();
         await expect(page.getByRole('button', { name: 'Workflow Builder' })).not.toBeVisible();

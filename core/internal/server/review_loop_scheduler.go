@@ -116,6 +116,7 @@ func (ls *LoopScheduler) run(ctx context.Context) {
 
 func (ls *LoopScheduler) runDueLoopsAt(now time.Time) loopSchedulerTickStats {
 	stats := loopSchedulerTickStats{}
+	ls.runDueScheduleTriggersAt(now)
 	summaries := ls.server.organizationStore().List()
 	for _, summary := range summaries {
 		home, ok := ls.server.organizationStore().Get(summary.ID)

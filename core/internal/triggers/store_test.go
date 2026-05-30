@@ -19,10 +19,10 @@ func TestLoadActiveRules(t *testing.T) {
 	now := time.Now()
 	mock.ExpectQuery("SELECT .+ FROM trigger_rules").
 		WillReturnRows(sqlmock.NewRows(ruleColumns).
-			AddRow("r-1", "default", "Rule A", "desc", "mission.completed",
-				[]byte(`{}`), "m-target-1", "propose", 60, 5, 3, true, nil, now, now).
-			AddRow("r-2", "default", "Rule B", "", "tool.completed",
-				[]byte(`{}`), "m-target-2", "auto_execute", 120, 3, 1, true, now, now, now))
+			AddRow("r-1", "default", "Rule A", "desc", "event", "mission.completed",
+				[]byte(`{}`), "m-target-1", "propose", 60, 5, 3, true, nil, 0, nil, "", "", now, now).
+			AddRow("r-2", "default", "Rule B", "", "event", "tool.completed",
+				[]byte(`{}`), "m-target-2", "auto_execute", 120, 3, 1, true, now, 0, nil, "", "", now, now))
 
 	if err := s.LoadActiveRules(context.Background()); err != nil {
 		t.Fatalf("LoadActiveRules error: %v", err)
@@ -87,8 +87,8 @@ func TestListAll(t *testing.T) {
 	now := time.Now()
 	mock.ExpectQuery("SELECT .+ FROM trigger_rules").
 		WillReturnRows(sqlmock.NewRows(ruleColumns).
-			AddRow("r-1", "default", "Rule A", "desc", "mission.completed",
-				[]byte(`{}`), "m-1", "propose", 60, 5, 3, true, nil, now, now))
+			AddRow("r-1", "default", "Rule A", "desc", "event", "mission.completed",
+				[]byte(`{}`), "m-1", "propose", 60, 5, 3, true, nil, 0, nil, "", "", now, now))
 
 	rules, err := s.ListAll(context.Background())
 	if err != nil {
@@ -147,8 +147,8 @@ func TestGet(t *testing.T) {
 	mock.ExpectQuery("SELECT .+ FROM trigger_rules").
 		WithArgs("r-1").
 		WillReturnRows(sqlmock.NewRows(ruleColumns).
-			AddRow("r-1", "default", "Rule A", "desc", "mission.completed",
-				[]byte(`{}`), "m-1", "propose", 60, 5, 3, true, nil, now, now))
+			AddRow("r-1", "default", "Rule A", "desc", "event", "mission.completed",
+				[]byte(`{}`), "m-1", "propose", 60, 5, 3, true, nil, 0, nil, "", "", now, now))
 
 	rule, err := s.Get(context.Background(), "r-1")
 	if err != nil {

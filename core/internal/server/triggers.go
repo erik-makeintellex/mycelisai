@@ -23,16 +23,20 @@ import (
 
 // triggerRuleRequest is the JSON body for create/update.
 type triggerRuleRequest struct {
-	Name            string          `json:"name"`
-	Description     string          `json:"description,omitempty"`
-	EventPattern    string          `json:"event_pattern"`
-	Condition       json.RawMessage `json:"condition"`
-	TargetMissionID string          `json:"target_mission_id"`
-	Mode            string          `json:"mode"`
-	CooldownSeconds int             `json:"cooldown_seconds"`
-	MaxDepth        int             `json:"max_depth"`
-	MaxActiveRuns   int             `json:"max_active_runs"`
-	IsActive        bool            `json:"is_active"`
+	Name                    string          `json:"name"`
+	Description             string          `json:"description,omitempty"`
+	TriggerKind             string          `json:"trigger_kind"`
+	EventPattern            string          `json:"event_pattern"`
+	Condition               json.RawMessage `json:"condition"`
+	TargetMissionID         string          `json:"target_mission_id"`
+	Mode                    string          `json:"mode"`
+	CooldownSeconds         int             `json:"cooldown_seconds"`
+	ScheduleIntervalSeconds int             `json:"schedule_interval_seconds"`
+	ProofExpectations       string          `json:"proof_expectations"`
+	RecoveryBehavior        string          `json:"recovery_behavior"`
+	MaxDepth                int             `json:"max_depth"`
+	MaxActiveRuns           int             `json:"max_active_runs"`
+	IsActive                bool            `json:"is_active"`
 }
 
 // GET /api/v1/triggers
@@ -68,7 +72,7 @@ func (s *AdminServer) HandleCreateTrigger(w http.ResponseWriter, r *http.Request
 		respondAPIError(w, "name is required", http.StatusBadRequest)
 		return
 	}
-	if req.EventPattern == "" {
+	if req.TriggerKind != "schedule" && req.EventPattern == "" {
 		respondAPIError(w, "event_pattern is required", http.StatusBadRequest)
 		return
 	}
@@ -83,16 +87,20 @@ func (s *AdminServer) HandleCreateTrigger(w http.ResponseWriter, r *http.Request
 	}
 
 	rule := &triggers.TriggerRule{
-		Name:            req.Name,
-		Description:     req.Description,
-		EventPattern:    req.EventPattern,
-		Condition:       req.Condition,
-		TargetMissionID: req.TargetMissionID,
-		Mode:            req.Mode,
-		CooldownSeconds: req.CooldownSeconds,
-		MaxDepth:        req.MaxDepth,
-		MaxActiveRuns:   req.MaxActiveRuns,
-		IsActive:        req.IsActive,
+		Name:                    req.Name,
+		Description:             req.Description,
+		TriggerKind:             req.TriggerKind,
+		EventPattern:            req.EventPattern,
+		Condition:               req.Condition,
+		TargetMissionID:         req.TargetMissionID,
+		Mode:                    req.Mode,
+		CooldownSeconds:         req.CooldownSeconds,
+		ScheduleIntervalSeconds: req.ScheduleIntervalSeconds,
+		ProofExpectations:       req.ProofExpectations,
+		RecoveryBehavior:        req.RecoveryBehavior,
+		MaxDepth:                req.MaxDepth,
+		MaxActiveRuns:           req.MaxActiveRuns,
+		IsActive:                req.IsActive,
 	}
 
 	if err := s.Triggers.Create(r.Context(), rule); err != nil {
@@ -132,17 +140,21 @@ func (s *AdminServer) HandleUpdateTrigger(w http.ResponseWriter, r *http.Request
 	}
 
 	rule := &triggers.TriggerRule{
-		ID:              id,
-		Name:            req.Name,
-		Description:     req.Description,
-		EventPattern:    req.EventPattern,
-		Condition:       req.Condition,
-		TargetMissionID: req.TargetMissionID,
-		Mode:            req.Mode,
-		CooldownSeconds: req.CooldownSeconds,
-		MaxDepth:        req.MaxDepth,
-		MaxActiveRuns:   req.MaxActiveRuns,
-		IsActive:        req.IsActive,
+		ID:                      id,
+		Name:                    req.Name,
+		Description:             req.Description,
+		TriggerKind:             req.TriggerKind,
+		EventPattern:            req.EventPattern,
+		Condition:               req.Condition,
+		TargetMissionID:         req.TargetMissionID,
+		Mode:                    req.Mode,
+		CooldownSeconds:         req.CooldownSeconds,
+		ScheduleIntervalSeconds: req.ScheduleIntervalSeconds,
+		ProofExpectations:       req.ProofExpectations,
+		RecoveryBehavior:        req.RecoveryBehavior,
+		MaxDepth:                req.MaxDepth,
+		MaxActiveRuns:           req.MaxActiveRuns,
+		IsActive:                req.IsActive,
 	}
 
 	if err := s.Triggers.Update(r.Context(), rule); err != nil {

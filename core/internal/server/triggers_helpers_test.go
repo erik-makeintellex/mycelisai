@@ -8,9 +8,10 @@ import (
 )
 
 var triggerRuleColumns = []string{
-	"id", "tenant_id", "name", "description", "event_pattern",
+	"id", "tenant_id", "name", "description", "trigger_kind", "event_pattern",
 	"condition", "target_mission_id", "mode", "cooldown_seconds",
 	"max_depth", "max_active_runs", "is_active", "last_fired_at",
+	"schedule_interval_seconds", "next_run_at", "proof_expectations", "recovery_behavior",
 	"created_at", "updated_at",
 }
 
