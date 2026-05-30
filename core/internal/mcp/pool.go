@@ -40,6 +40,8 @@ func NewClientPool(svc *Service) *ClientPool {
 // It creates the transport, starts the client, initializes the MCP session,
 // discovers tools, caches them in the database, and stores the managed client.
 func (p *ClientPool) Connect(ctx context.Context, cfg ServerConfig) error {
+	_ = p.Disconnect(cfg.ID)
+
 	var t transport.Interface
 	var err error
 

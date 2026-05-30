@@ -22,7 +22,7 @@ test.describe("Desktop/mobile compression proof", () => {
     const firstDemoRow = activeLane.locator("article").filter({ hasText: "First Demo Game Team" });
     await expect(activeLane).toBeVisible();
     await expect(page.getByText("First Demo Game Team").first()).toBeVisible();
-    await expect(firstDemoRow.getByText("output ready", { exact: true })).toBeVisible();
+    await expect(firstDemoRow.getByText("Output ready", { exact: true })).toBeVisible();
     await expect(firstDemoRow.getByText("Durable team work").first()).toBeVisible();
     await expect(firstDemoRow.getByText("Projection fallback")).toHaveCount(0);
     await expect(firstDemoRow.getByRole("link", { name: /Run proof/i })).toHaveAttribute("href", /\/runs\/run-first-demo/);
@@ -36,7 +36,7 @@ test.describe("Desktop/mobile compression proof", () => {
 
     const recoveryRow = activeLane.locator("article").filter({ hasText: "Recover failed package proof" });
     await expect(recoveryRow).toBeVisible();
-    await expect(recoveryRow.getByText("degraded", { exact: true })).toBeVisible();
+    await expect(recoveryRow.getByText("Degraded", { exact: true })).toBeVisible();
     await expect(recoveryRow.getByText("Needs recovery")).toBeVisible();
     await expect(recoveryRow.getByText("Recovery: Retry with retained run context")).toBeVisible();
     await expect(recoveryRow.getByRole("button", { name: /Recover/i })).toBeVisible();

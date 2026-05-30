@@ -1,7 +1,9 @@
 package mcp
 
 import (
+	"context"
 	"os"
+	"reflect"
 	"strings"
 )
 
@@ -28,4 +30,23 @@ func ResolveFilesystemWorkspaceRoot() string {
 		return "./workspace"
 	}
 	return workspace
+}
+
+func (s *Service) EnsureRuntimeDefaults(ctx context.Context, cfg ServerConfig) (ServerConfig, error) {
+	runtimeCfg, err := ApplyRuntimeDefaults(cfg)
+	if err != nil {
+		return cfg, err
+	}
+	if reflect.DeepEqual(runtimeCfg.Args, cfg.Args) &&
+		reflect.DeepEqual(runtimeCfg.Env, cfg.Env) &&
+		runtimeCfg.Command == cfg.Command &&
+		runtimeCfg.Transport == cfg.Transport &&
+		runtimeCfg.URL == cfg.URL {
+		return runtimeCfg, nil
+	}
+	installed, err := s.Install(ctx, runtimeCfg)
+	if err != nil {
+		return runtimeCfg, err
+	}
+	return *installed, nil
 }

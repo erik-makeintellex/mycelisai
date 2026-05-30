@@ -204,6 +204,14 @@ func startMCPRuntime(ctx context.Context, sharedDB *sql.DB) (*mcp.Service, *mcp.
 	mcpService.ToolSets = mcpToolSets
 	mcpPool := mcp.NewClientPool(mcpService)
 	if servers, err := mcpService.List(ctx); err == nil {
+		for i, server := range servers {
+			normalized, err := mcpService.EnsureRuntimeDefaults(ctx, server)
+			if err != nil {
+				log.Printf("WARN: Failed to normalize MCP runtime defaults for %s: %v", server.Name, err)
+				continue
+			}
+			servers[i] = normalized
+		}
 		mcpPool.ReconnectAll(ctx, servers)
 	} else {
 		log.Printf("WARN: Failed to list MCP servers for reconnect: %v", err)
