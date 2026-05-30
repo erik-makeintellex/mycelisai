@@ -41,7 +41,8 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 		"media": {Status: "offline"},
 	}
 
-	// Probe all openai_compatible text engines (vLLM, Ollama, LM Studio, etc.)
+	// Probe enabled OpenAI-compatible text engines (vLLM, Ollama, LM Studio, etc.).
+	// Disabled providers remain visible in config but must not slow or alter health.
 	cfg := s.Cognitive.Config
 	textAvailability := s.Cognitive.ExecutionAvailability("chat", "")
 	if !textAvailability.Available {
@@ -54,7 +55,7 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 		}
 	}
 	for provID, prov := range cfg.Providers {
-		if prov.Type != "openai_compatible" || prov.Endpoint == "" {
+		if !prov.Enabled || (prov.Type != "openai_compatible" && prov.Type != "ollama") || prov.Endpoint == "" {
 			continue
 		}
 		adapter, ok := s.Cognitive.Adapters[provID]

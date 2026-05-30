@@ -32,7 +32,6 @@ from . import db as db_tasks
 from . import lifecycle_status
 from .lifecycle_processes import COMPILED_GO_PROCESS_HINTS, WINDOWS_COMPILED_GO_PROCESS_NAMES
 
-
 # ── Port / Service Definitions ───────────────────────────────────────
 
 SERVICES = {
@@ -44,6 +43,7 @@ SERVICES = {
 }
 
 CORE_STARTUP_LOG = ROOT_DIR / "workspace" / "logs" / "core-startup.log"
+COGNITIVE_STATUS_TIMEOUT_SECONDS = 12.0
 # ── Low-Level Probes ─────────────────────────────────────────────────
 
 def _port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:
@@ -808,15 +808,15 @@ def health(c):
     errors = []
 
     endpoints = [
-        ("/api/v1/cognitive/status", "Cognitive Engine"),
-        ("/api/v1/templates", "Template Engine"),
-        ("/api/v1/brains", "Brains API"),
-        ("/api/v1/telemetry/compute", "Telemetry"),
+        ("/api/v1/cognitive/status", "Cognitive Engine", COGNITIVE_STATUS_TIMEOUT_SECONDS),
+        ("/api/v1/templates", "Template Engine", 5.0),
+        ("/api/v1/brains", "Brains API", 5.0),
+        ("/api/v1/telemetry/compute", "Telemetry", 5.0),
     ]
 
-    for path, label in endpoints:
+    for path, label, timeout_seconds in endpoints:
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-        status, body = _http_get(f"{base}{path}", timeout=5.0, headers=headers)
+        status, body = _http_get(f"{base}{path}", timeout=timeout_seconds, headers=headers)
         if status == 200:
             print(f"  [OK] {label:<20} {path} [200]")
         else:

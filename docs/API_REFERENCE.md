@@ -29,7 +29,7 @@ Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity
 | `/api/v1/cognitive/infer` | POST | Direct cognitive inference (profile-routed) |
 | `/api/v1/cognitive/config` | GET | Read cognitive router configuration (providers, profiles, media) |
 | `/api/v1/cognitive/matrix` | GET | Alias for cognitive config (matrix view) |
-| `/api/v1/cognitive/status` | GET | Live health probe of text engines and the configured local/private or hosted media provider |
+| `/api/v1/cognitive/status` | GET | Live health probe of enabled text engines and the configured local/private or hosted media provider; disabled text providers remain configurable but are not probed as health candidates |
 | `/api/v1/cognitive/profiles` | PUT | Update profile→provider routing (persists to cognitive.yaml) |
 | `/api/v1/cognitive/providers/{id}` | PUT | Configure provider (endpoint, model_id, api_key_env). Raw `api_key` values are rejected; use env/secret references. |
 | **Intent & Missions** | | |

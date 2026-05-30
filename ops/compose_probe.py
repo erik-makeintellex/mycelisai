@@ -5,6 +5,8 @@ import subprocess
 import time
 from typing import Callable
 
+COGNITIVE_STATUS_TIMEOUT_SECONDS = 12.0
+
 
 def print_step(step: int, total: int, title: str, expectation: str | None = None):
     print(f"[{step}/{total}] {title}")
@@ -233,7 +235,11 @@ def run_health(
             failures.append(f"{label}: {body}")
 
     cognitive_url = f"http://{api_host}:{api_port}/api/v1/cognitive/status"
-    cognitive_status, cognitive_body = http_getter(cognitive_url, timeout=5.0, headers=headers)
+    cognitive_status, cognitive_body = http_getter(
+        cognitive_url,
+        timeout=COGNITIVE_STATUS_TIMEOUT_SECONDS,
+        headers=headers,
+    )
     if cognitive_status != 200:
         print(f"  [FAIL] {'Cognitive Engine':<18} {cognitive_url} [{cognitive_status}]")
         failures.append(f"Cognitive Engine: {cognitive_body}")

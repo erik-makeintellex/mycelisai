@@ -103,7 +103,7 @@ uv run inv lifecycle.down
 uv run inv lifecycle.memory-restart --frontend
 ```
 
-`lifecycle.status` is the fast local snapshot. It reports process/port state and confirms Core through `/healthz` plus Ollama through `/api/tags` over loopback fallbacks. Use `lifecycle.health` for the deeper endpoint proof gate before claiming service readiness.
+`lifecycle.status` is the fast local snapshot. It reports process/port state and confirms Core through `/healthz` plus Ollama through `/api/tags` over loopback fallbacks. Use `lifecycle.health` for the deeper endpoint proof gate before claiming service readiness; its cognitive-status probe uses a longer client timeout than the endpoint's bounded provider probes so failures return as evidence instead of socket timeouts.
 `lifecycle.up` defaults to the native infrastructure lane and only starts Core/Interface after PostgreSQL and NATS are reachable. It does not repair Docker/Rancher/WSL.
 
 ### Compose Tasks (`ops/compose.py`)

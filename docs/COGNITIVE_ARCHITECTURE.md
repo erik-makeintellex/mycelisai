@@ -96,7 +96,7 @@ Current self-hosted starting points surfaced in product:
 
 `GET /api/v1/cognitive/status` returns real-time health for all providers:
 
-- **Text engines** (vLLM, Ollama, LM Studio): probed via `LLMProvider.Probe()` — checks endpoint reachability
+- **Text engines** (vLLM, Ollama, LM Studio): enabled providers are probed via `LLMProvider.Probe()` to check endpoint reachability; disabled providers remain in configuration without contributing latency or online status
 - **Media engines**: local/self-hosted endpoints are probed via HTTP GET to the configured endpoint and returned with typed provider metadata (`provider_id`, `type`, `location`, `data_boundary`, `usage_policy`, `enabled`) so local/self-hosted and hosted providers stay explicit in status output
 - Hosted media providers report `configured` once endpoint/model/credentials posture is expressible; live upstream errors are handled during generation so APIs without a local-style `/health` endpoint are not mislabeled as offline
 - Status: `online` / `offline` / `configured` / `disabled` / `error`
