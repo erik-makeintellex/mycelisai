@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TriggerRule } from "@/store/useCortexStore";
 
@@ -75,5 +75,71 @@ describe("ScheduleRulesTab", () => {
             mode: "propose",
             target_mission_id: "mission-daily",
         }));
+    });
+
+    it("shows disabled schedule state with resume action", async () => {
+        triggerRules = [{
+            id: "r-disabled",
+            tenant_id: "default",
+            name: "Paused quarterly evidence review",
+            trigger_kind: "schedule",
+            event_pattern: "scheduler.due",
+            condition: {},
+            target_mission_id: "mission-review",
+            mode: "propose",
+            cooldown_seconds: 3600,
+            schedule_interval_seconds: 3600,
+            next_run_at: now,
+            proof_expectations: "Visible audit and retained proof",
+            recovery_behavior: "Pause and inspect the failed proposal",
+            max_depth: 5,
+            max_active_runs: 1,
+            is_active: false,
+            created_at: now,
+            updated_at: now,
+        }];
+
+        await act(async () => { render(<ScheduleRulesTab />); });
+
+        expect(screen.getByText("disabled")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Resume" })).toBeDefined();
+    });
+
+    it("disables pause or resume while toggle is in flight", async () => {
+        triggerRules = [{
+            id: "r-pending",
+            tenant_id: "default",
+            name: "Weekly evidence review",
+            trigger_kind: "schedule",
+            event_pattern: "scheduler.due",
+            condition: {},
+            target_mission_id: "mission-review",
+            mode: "propose",
+            cooldown_seconds: 3600,
+            schedule_interval_seconds: 3600,
+            next_run_at: now,
+            proof_expectations: "Visible audit and retained proof",
+            recovery_behavior: "Pause and inspect the failed proposal",
+            max_depth: 5,
+            max_active_runs: 1,
+            is_active: true,
+            created_at: now,
+            updated_at: now,
+        }];
+        let resolveToggle: () => void = () => {};
+        mockToggleTriggerRule.mockReturnValue(new Promise<void>((resolve) => {
+            resolveToggle = resolve;
+        }));
+
+        await act(async () => { render(<ScheduleRulesTab />); });
+
+        await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Pause" })); });
+
+        const pendingButton = screen.getByRole("button", { name: "Updating..." }) as HTMLButtonElement;
+        expect(pendingButton.disabled).toBe(true);
+        expect(mockToggleTriggerRule).toHaveBeenCalledWith("r-pending", false);
+
+        await act(async () => { resolveToggle(); });
+        await waitFor(() => expect(screen.getByRole("button", { name: "Pause" })).toBeDefined());
     });
 });

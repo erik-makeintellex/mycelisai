@@ -23,6 +23,7 @@ export default function ScheduleRulesTab() {
     const createTriggerRule = useCortexStore((s) => s.createTriggerRule);
     const toggleTriggerRule = useCortexStore((s) => s.toggleTriggerRule);
     const [showCreate, setShowCreate] = useState(false);
+    const [pendingToggleRuleID, setPendingToggleRuleID] = useState<string | null>(null);
 
     useEffect(() => {
         fetchTriggerRules();
@@ -35,10 +36,10 @@ export default function ScheduleRulesTab() {
 
     return (
         <div className="h-full flex flex-col p-6 gap-4">
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <CalendarClock size={18} className="text-cortex-primary" />
-                    <div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                    <CalendarClock size={18} className="text-cortex-primary flex-shrink-0" />
+                    <div className="min-w-0">
                         <h2 className="text-sm font-semibold text-cortex-text-main">Schedule Rules</h2>
                         <p className="text-xs text-cortex-text-muted">
                             Cadence proposals with cooldown, proof expectations, and recovery text.
@@ -48,7 +49,7 @@ export default function ScheduleRulesTab() {
                 <button
                     type="button"
                     onClick={() => setShowCreate((value) => !value)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-cortex-primary/10 text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
+                    className="flex flex-shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-cortex-primary/10 text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
                 >
                     <Plus size={14} />
                     New Schedule
@@ -81,37 +82,68 @@ export default function ScheduleRulesTab() {
                         </div>
                     </div>
                 ) : (
-                    schedules.map((rule) => (
-                        <article key={rule.id} className="rounded-md border border-cortex-border bg-cortex-surface p-4 space-y-3">
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-sm font-semibold text-cortex-text-main">{rule.name}</h3>
-                                        <span className="px-1.5 py-0.5 text-[10px] rounded bg-cortex-primary/10 text-cortex-primary font-mono">propose only</span>
-                                        {!rule.is_active && <span className="px-1.5 py-0.5 text-[10px] rounded bg-cortex-border text-cortex-text-muted font-mono">disabled</span>}
+                    schedules.map((rule) => {
+                        const isToggling = pendingToggleRuleID === rule.id;
+                        const toggleLabel = isToggling ? "Updating..." : rule.is_active ? "Pause" : "Resume";
+                        return (
+                            <article key={rule.id} className="rounded-md border border-cortex-border bg-cortex-surface p-4 space-y-3">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                            <h3
+                                                data-testid={`schedule-rule-name-${rule.id}`}
+                                                className="min-w-0 max-w-full truncate text-sm font-semibold text-cortex-text-main"
+                                                title={rule.name}
+                                            >
+                                                {rule.name}
+                                            </h3>
+                                            <span
+                                                data-testid={`schedule-rule-badge-propose-${rule.id}`}
+                                                className="flex-shrink-0 px-1.5 py-0.5 text-[10px] rounded bg-cortex-primary/10 text-cortex-primary font-mono"
+                                            >
+                                                propose only
+                                            </span>
+                                            {!rule.is_active && (
+                                                <span
+                                                    data-testid={`schedule-rule-badge-disabled-${rule.id}`}
+                                                    className="flex-shrink-0 px-1.5 py-0.5 text-[10px] rounded bg-cortex-border text-cortex-text-muted font-mono"
+                                                >
+                                                    disabled
+                                                </span>
+                                            )}
+                                        </div>
+                                        {rule.description && <p className="mt-1 truncate text-xs text-cortex-text-muted" title={rule.description}>{rule.description}</p>}
                                     </div>
-                                    {rule.description && <p className="text-xs text-cortex-text-muted mt-1">{rule.description}</p>}
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setPendingToggleRuleID(rule.id);
+                                            try {
+                                                await toggleTriggerRule(rule.id, !rule.is_active);
+                                            } finally {
+                                                setPendingToggleRuleID(null);
+                                            }
+                                        }}
+                                        disabled={isToggling}
+                                        className="flex flex-shrink-0 items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main disabled:cursor-wait disabled:opacity-50"
+                                    >
+                                        {isToggling && <Loader2 size={12} className="animate-spin" />}
+                                        {toggleLabel}
+                                    </button>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => toggleTriggerRule(rule.id, !rule.is_active)}
-                                    className="px-2.5 py-1.5 text-xs rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main"
-                                >
-                                    {rule.is_active ? "Pause" : "Resume"}
-                                </button>
-                            </div>
 
-                            <div className="grid gap-3 md:grid-cols-3">
-                                <ScheduleFact icon={<Clock3 size={13} />} label="Cadence" value={formatInterval(rule.schedule_interval_seconds)} />
-                                <ScheduleFact icon={<History size={13} />} label="Next proposal" value={formatDate(rule.next_run_at)} />
-                                <ScheduleFact icon={<ShieldCheck size={13} />} label="Cooldown" value={`${rule.cooldown_seconds}s`} />
-                            </div>
-                            <div className="grid gap-3 md:grid-cols-2">
-                                <TextBlock label="Proof expected" value={rule.proof_expectations || "Operator-visible result, audit event, and retained proof."} />
-                                <TextBlock label="Recovery" value={rule.recovery_behavior || "Pause the schedule and review the last proposed run."} />
-                            </div>
-                        </article>
-                    ))
+                                <div className="grid gap-3 md:grid-cols-3">
+                                    <ScheduleFact icon={<Clock3 size={13} />} label="Cadence" value={formatInterval(rule.schedule_interval_seconds)} />
+                                    <ScheduleFact icon={<History size={13} />} label="Next proposal" value={formatDate(rule.next_run_at)} />
+                                    <ScheduleFact icon={<ShieldCheck size={13} />} label="Cooldown" value={`${rule.cooldown_seconds}s`} />
+                                </div>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <TextBlock label="Proof expected" value={rule.proof_expectations || "Operator-visible result, audit event, and retained proof."} />
+                                    <TextBlock label="Recovery" value={rule.recovery_behavior || "Pause the schedule and review the last proposed run."} />
+                                </div>
+                            </article>
+                        );
+                    })
                 )}
             </div>
         </div>
