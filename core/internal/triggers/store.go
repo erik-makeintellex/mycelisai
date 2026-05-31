@@ -40,13 +40,18 @@ type TriggerRule struct {
 
 // TriggerExecution is the audit record for a single evaluation.
 type TriggerExecution struct {
-	ID         string    `json:"id"`
-	RuleID     string    `json:"rule_id"`
-	EventID    string    `json:"event_id"`
-	RunID      string    `json:"run_id,omitempty"`
-	Status     string    `json:"status"` // "fired" | "skipped" | "proposed"
-	SkipReason string    `json:"skip_reason,omitempty"`
-	ExecutedAt time.Time `json:"executed_at"`
+	ID             string          `json:"id"`
+	RuleID         string          `json:"rule_id"`
+	EventID        string          `json:"event_id"`
+	RunID          string          `json:"run_id,omitempty"`
+	Status         string          `json:"status"` // "fired" | "skipped" | "proposed"
+	SkipReason     string          `json:"skip_reason,omitempty"`
+	HandoffKey     string          `json:"handoff_key,omitempty"`
+	IntentProofID  string          `json:"intent_proof_id,omitempty"`
+	ContractID     string          `json:"contract_id,omitempty"`
+	ProposalStatus string          `json:"proposal_status,omitempty"`
+	HandoffPayload json.RawMessage `json:"handoff_payload,omitempty"`
+	ExecutedAt     time.Time       `json:"executed_at"`
 }
 
 // Store manages trigger rules in the database with an in-memory cache for

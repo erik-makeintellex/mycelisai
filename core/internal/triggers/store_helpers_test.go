@@ -9,5 +9,6 @@ var ruleColumns = []string{
 }
 
 var execColumns = []string{
-	"id", "rule_id", "event_id", "run_id", "status", "skip_reason", "executed_at",
+	"id", "rule_id", "event_id", "run_id", "status", "skip_reason",
+	"handoff_key", "intent_proof_id", "contract_id", "proposal_status", "handoff_payload", "executed_at",
 }

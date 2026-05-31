@@ -129,6 +129,11 @@ export interface TriggerExecution {
     run_id?: string;
     status: 'fired' | 'skipped' | 'proposed';
     skip_reason?: string;
+    handoff_key?: string;
+    intent_proof_id?: string;
+    contract_id?: string;
+    proposal_status?: string;
+    handoff_payload?: Record<string, unknown>;
     executed_at: string;
 }
 

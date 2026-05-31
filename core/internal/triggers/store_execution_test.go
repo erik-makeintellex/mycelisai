@@ -117,8 +117,8 @@ func TestListExecutions(t *testing.T) {
 	now := time.Now()
 	mock.ExpectQuery("SELECT .+ FROM trigger_executions").
 		WillReturnRows(sqlmock.NewRows(execColumns).
-			AddRow("exec-1", "r-1", "ev-1", "run-1", "fired", "", now).
-			AddRow("exec-2", "r-1", "ev-2", "", "skipped", "cooldown", now))
+			AddRow("exec-1", "r-1", "ev-1", "run-1", "fired", "", "", "", "", "", []byte(`{}`), now).
+			AddRow("exec-2", "r-1", "ev-2", "", "skipped", "cooldown", "", "", "", "", []byte(`{}`), now))
 
 	execs, err := s.ListExecutions(context.Background(), "r-1", 20)
 	if err != nil {

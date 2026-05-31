@@ -16,7 +16,8 @@ var triggerRuleColumns = []string{
 }
 
 var triggerExecColumns = []string{
-	"id", "rule_id", "event_id", "run_id", "status", "skip_reason", "executed_at",
+	"id", "rule_id", "event_id", "run_id", "status", "skip_reason",
+	"handoff_key", "intent_proof_id", "contract_id", "proposal_status", "handoff_payload", "executed_at",
 }
 
 // withTriggerStore wires a real triggers.Store (backed by sqlmock) onto the server.

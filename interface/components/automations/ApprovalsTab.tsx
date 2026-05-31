@@ -2,19 +2,7 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { DecisionCard } from "@/components/approvals/DecisionCard";
-import {
-  ShieldCheck,
-  Loader2,
-  Settings,
-  Plus,
-  Trash2,
-  Save,
-  ChevronDown,
-  ChevronRight,
-  ScrollText,
-  BadgeCheck,
-  ShieldAlert,
-} from "lucide-react";
+import { BadgeCheck, ChevronDown, ChevronRight, Loader2, Plus, Save, ScrollText, Settings, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
 import {
   useCortexStore,
   type AuditLogEntry,
@@ -24,6 +12,7 @@ import {
 } from "@/store/useCortexStore";
 import TrustSlider from "@/components/workspace/TrustSlider";
 import ManifestationPanel from "@/components/dashboard/ManifestationPanel";
+import ScheduleAuditContext from "@/components/automations/ScheduleAuditContext";
 
 type SubTab = "queue" | "policy" | "proposals" | "audit";
 
@@ -244,6 +233,8 @@ function AuditEntryCard({ entry }: { entry: AuditLogEntry }) {
           {operatorSummary}
         </p>
       ) : null}
+
+      <ScheduleAuditContext entry={entry} />
 
       <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-mono">
         {entry.capability_used ? (

@@ -101,7 +101,7 @@ This is the graph-level authoring and editing surface for advanced workflow stru
 
 ## Scheduler Status
 
-Cadence authoring is now present as propose-only Schedule Rules. A schedule rule records a rule name, target mission, cadence interval, next proposal time, cooldown, proof expectations, and recovery behavior. Scheduler ticks can record a proposed cadence outcome and update the next run, but this first production slice does not autonomously execute the target mission. Operators should treat Schedule Rules as reviewable cadence intent until the approval/execution trust path is promoted.
+Cadence authoring is now present as propose-only Schedule Rules. A schedule rule records a rule name, target mission, cadence interval, next proposal time, cooldown, proof expectations, and recovery behavior. Scheduler ticks record a proposed cadence outcome, attach durable handoff references for trust review, and update the next run, but they do not autonomously execute the target mission or expose a confirm token. Operators should treat Schedule Rules as reviewable cadence intent until an explicit approval/execution path is promoted.
 
 ---
 
