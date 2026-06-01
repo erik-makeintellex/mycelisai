@@ -97,6 +97,7 @@ If you leave the organization workspace and come back later, the current guided 
 Team workspaces are different from the root Soma workspace:
 - the root workspace is Soma-first and organization-wide
 - the dashboard uses a focus-first workbench: Soma conversation stays in the primary pane, while Active Work, retained outputs, trust, context, and focused team lanes open from a minimizable, tabbed Work panel overlay
+- the `Work contexts` strip above the chat switches the same workbench between root Soma and team-focused lanes, so the chat scope, active work, retained outputs, and proof move together
 - the Work panel is for quick review and action; use each tab's full-page link for deeper backlog, output-folder, activity/proof, or Resources review
 - focused team context switches the primary chat, active-work lane, and retained-output view to the selected team's scope, while Soma remains able to reference other teams, such as a story-writing team and a comic-visual team, when you ask
 - when Soma creates a team but has not yet created the first delegated work item, the Dashboard shows a compact first-deliverable launcher; choose a starter prompt, review it in the Soma input, then send it so execution still goes through the governed work-item path

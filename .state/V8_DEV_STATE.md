@@ -8,28 +8,28 @@
 
 | Field | State |
 | --- | --- |
-| Current committed checkpoint | `11ca823e Add schedule handoff approval controls` |
-| Working tree at checkpoint | Clean after the committed scheduler handoff approval-state/testing slice |
-| Release proof | `uv run inv ci.release-preflight --lane=baseline --no-e2e` passed on checkpoint `11ca823e` |
-| Focused browser proof | Schedule Rules Chromium E2E passed for the committed handoff controls slice |
+| Current committed checkpoint | `c33216f6 Advance next phase state` |
+| Working tree at checkpoint | Active coherent-journey proof slice: native services started, live GUI/media/governance/recovery proof refreshed, homepage proof assertion aligned to current UI wording, local media workspace artifacts ignored, focused ComfyUI journey proof added, and dashboard Work contexts switcher implemented |
+| Release proof | `uv run inv ci.release-preflight --lane=baseline --no-e2e` passed on checkpoint `11ca823e`; next-phase state committed at `c33216f6` |
+| Focused browser proof | Schedule Rules Chromium E2E passed for the committed handoff controls slice; live login/dashboard, dashboard workbench, governance, package reload, retained-media, focused ComfyUI journey, and dashboard context-switching proofs now pass on native services; recovery/degradation UI proof passes in mocked mode |
 | Product posture | Governed schedule proposals are durable and reviewable; scheduler ticks do not execute work autonomously |
-| Main release risk | Full live GUI/media proof is still blocked by local provider/gateway availability |
-| Environment blocker | Live media proof is blocked until NATS/Core/Frontend plus a local media provider and `cognitive.media-gateway` are online |
+| Main release risk | Full release-candidate proof still needs async team execution and richer team-specific output views so generated content and active work stay obvious without topology interpretation |
+| Environment blocker | None for local ComfyUI media proof while ComfyUI and the gateway remain online |
 
 ## Delivery Status
 
 | Lane | Status | Where We Are | Next Target | Proof Gate |
 | --- | --- | --- | --- | --- |
 | Scheduler/Cadence | `COMPLETE` | Schedule due ticks persist idempotent handoff records with `handoff_key`, intent proof, execution contract, proposal status, bounded payload, and explicit terminal handoff approval transitions (`approved`, `rejected`, `cancelled`). | Keep the no-autonomous-execution boundary intact while later slices connect handoff approval into live run creation. | Go scheduler/history/triggers tests, API history proof, autonomous-execution guard review. |
-| UI Workflow/Expression | `COMPLETE` | Schedule Rules and Approvals tolerate and display explicit schedule handoff approval states from rule, execution, audit, or payload-shaped state fields. Schedule Rules exposes approve/reject/cancel controls only for persisted `awaiting_approval` schedule handoff executions. | Apply the same proof discipline to the next visible workflow slice: active media output, focused team context, and output folder affordances. | Focused Vitest, TypeScript, max-lines, and headed/browser proof where the workflow is visible. |
+| UI Workflow/Expression | `IN_REVIEW` | Schedule Rules and Approvals are complete. Dashboard now exposes a `Work contexts` strip that switches root Soma and team-focused lanes while chat, active work, retained outputs, and proof move together. Live login/dashboard proof is green after aligning the homepage spec to the current `Soma environment` label. Dashboard workbench proof shows contained scrolling and retained-output/folder affordances on native services. Governance, package reload, media output, focused ComfyUI journey, and recovery/degradation are proven across focused specs. | Continue from context switching into richer team-specific output views and async team execution. | Focused Vitest, TypeScript, max-lines, and headed/browser proof where the workflow is visible. |
 | API/Runtime Contract | `COMPLETE` | Trigger execution history includes schedule handoff proof fields, and `POST /api/v1/triggers/{id}/history/{executionId}/approval` transitions persisted schedule handoff state only. | Keep API docs synchronized for the next runtime contract change. | Go API tests, docs/API reference review, history reload proof. |
-| Deployment/Proof | `ACTIVE` | Baseline source release-preflight is green on committed checkpoint `11ca823e`; local Go reports `go1.26.3`. Native status check shows PostgreSQL and Ollama up, with NATS, Core API, and Frontend down. | Start native NATS/Core/Frontend intentionally, then run focused live GUI/media proof before Compose/WSL/K8s promotion. | `ci.release-preflight`, focused live GUI, `compose.health`, `wsl.validate --lane=release`, K8s proof. |
-| Docs/State | `ACTIVE` | API reference, automation user docs, and this scoreboard reflect the committed scheduler handoff slice and next-phase kickoff. | Keep docs/state synchronized in the same slice as behavior, API, runtime, workflow, testing, or terminology changes. | docs/workflow tests, `git diff --check`, max-lines. |
-| Media Lane | `NEXT` | Media gateway unit coverage is green, but live provider/gateway checks remain offline until services are intentionally started. | Start Forge/AUTOMATIC1111 or ComfyUI and the media gateway, verify `/health`, then run live retained-media output proof through Soma/UI. | `tests/test_media_gateway.py` and headed live media retained-output proof. |
+| Deployment/Proof | `ACTIVE` | Baseline source release-preflight is green; local Go reports `go1.26.3`. Native NATS, Core API, Frontend, PostgreSQL, Ollama, ComfyUI, and the media gateway are currently up and healthy. Volatile Soma/team context was cleared for fresh UI proof while keeping auth, providers, capability manifests, deployment config, and memory vectors. | Keep native services stable, then run one coherent live Soma journey before Compose/WSL/K8s promotion. | `ci.release-preflight`, focused live GUI, `compose.health`, `wsl.validate --lane=release`, K8s proof. |
+| Docs/State | `ACTIVE` | API reference, automation user docs, and this scoreboard reflect the committed scheduler handoff slice, next-phase kickoff, live GUI proof, and live ComfyUI media proof. | Keep docs/state synchronized in the same slice as behavior, API, runtime, workflow, testing, or terminology changes. | docs/workflow tests, `git diff --check`, max-lines. |
+| Media Lane | `COMPLETE` | Media gateway unit coverage, direct ComfyUI gateway smoke, mocked retained-media browser proof, live retained-media UI proof, and focused ComfyUI journey proof are green. Windows-host optional Diffusers/vLLM helpers remain unsupported, so local image generation uses Pinokio ComfyUI through the gateway. | Keep media visible in Soma/team output views and carry the same proof standard into richer team-generated media packages. | `tests/test_media_gateway.py`, direct gateway generation smoke, mocked retained-media browser proof, live retained-output proof, and focused ComfyUI journey proof. |
 
 ## Proof Evidence
 
-Latest green proof for checkpoint `11ca823e`:
+Latest green proof through next-phase native-services engagement:
 
 1. `go test ./...`
 2. `go test ./internal/triggers -run "Test(LogExecution_WithHandoffRefs|GetExecutionByHandoffKey|TransitionScheduleHandoffApproval)"`
@@ -42,6 +42,32 @@ Latest green proof for checkpoint `11ca823e`:
 9. `uv run inv interface.e2e --server-mode=start --project=chromium --workers=1 --spec=e2e/specs/schedule-rules.spec.ts`
 10. `uv run pytest tests/test_media_gateway.py -q`
 11. `uv run inv ci.release-preflight --lane=baseline --no-e2e`
+12. `uv run inv lifecycle.up --frontend --build`
+13. `uv run inv lifecycle.status`
+14. `uv run inv lifecycle.health`
+15. `uv run inv native-infra.status`
+16. `uv run inv db.clear-runtime-context --yes`
+17. `uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/homepage.spec.ts`
+18. `uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/dashboard-workbench-live-review.spec.ts`
+19. `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/soma-media-retained-output-live.spec.ts`
+20. `uv run inv lifecycle.up --frontend`
+21. `curl.exe -fsS http://127.0.0.1:8188/system_stats`
+22. `curl.exe -fsS http://127.0.0.1:8001/health`
+23. `Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8001/v1/images/generations ...` returned `data[0].b64_json`
+24. `$env:PLAYWRIGHT_LIVE_MEDIA_RETAINED_OUTPUT='1'; uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-media-retained-output-live.spec.ts`
+25. `uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/ui-finalization-browser-package-live.spec.ts`
+26. `uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-governance-live.spec.ts`
+27. `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/soma-proposal-mode.spec.ts`
+28. `uv run inv lifecycle.up --frontend`
+29. `uv run pytest tests/test_media_gateway.py -q`
+30. `npx tsc --noEmit`
+31. `uv run inv quality.max-lines --limit 300`
+32. `$env:PLAYWRIGHT_LIVE_MEDIA_RETAINED_OUTPUT='1'; uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-media-comfyui-journey.spec.ts`
+33. `npm test -- SomaOperatingSurface.actions.test.tsx SomaOperatingSurface.test.ts CentralSomaHome.test.tsx MissionControlChat.header.test.tsx OutputWorkbench.test.tsx ActiveWorkLane.test.tsx`
+34. `npx tsc --noEmit`
+35. `uv run inv quality.max-lines --limit 300`
+36. `uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/desktop-mobile-compression.spec.ts`
+37. `uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/dashboard-workbench-live-review.spec.ts`
 
 Known non-blocking warnings:
 
@@ -51,9 +77,9 @@ Known non-blocking warnings:
 
 | Priority | Target | Action | Owner Lane | Exit Criteria |
 | --- | --- | --- | --- | --- |
-| P0 | Native service kickoff | Start NATS, Core API, and Frontend through repo tasks in native mode and verify authenticated UI access. | Deployment/Proof + QA/Embodiment | `lifecycle.status` shows services up and browser reaches the Soma dashboard without auth-state loops. |
 | P0 | Full workflow proof standard | For each product slice, prove both UI workflow and API/runtime contract across create/propose/approve/execute/output/proof/recovery/reload where applicable. | QA/Embodiment | Test plan names every user-visible and API-visible step touched by the slice. |
-| P0 | Media unblock | Start Forge/AUTOMATIC1111 or ComfyUI and the media gateway; validate retained output from browser UI. | Media Lane | Live media retained-output proof passes with open/viewable artifact evidence and obvious open-folder affordance. |
+| P0 | Async team execution | Make team asks durable, non-blocking, and visibly progressing from queued/running to output-ready/degraded without requiring a synchronous browser request. | Runtime Teams + QA/Embodiment | Team work starts quickly, remains visible in the focused context, and returns retained output/proof or actionable degradation. |
+| P0 | Team output usability | Carry the now-green ComfyUI proof into richer team output views: media preview, open file, open folder, proof, and recovery should be obvious from the focused team context. | Media Lane + Visual/UI | Generated media appears in the relevant team/output context with one-click file/folder access and proof/recovery nearby. |
 | P1 | Toolchain alignment | Keep baseline preflight green with local Go `1.26.3`, Node `v25.2.1`, and npm `11.6.2`. | Deployment/Proof | Toolchain check remains green and baseline remains green. |
 | P1 | Visual expression review | Run focused review on Dashboard/Soma, Automations, Approvals, Groups, Resources, and System after each touched slice. | Visual/UI | No overlap, no confusing density, no stale wording, and target Soma-governed expression is preserved. |
 | P2 | Promotion proof | After local source proof is green and services are intentionally up, run Compose, WSL, Rancher/K8s, and hosted/manual workflows as corroboration. | Deployment/Proof | Promotion proof records exact commit, environment, commands, and pass/fail result. |
@@ -64,7 +90,7 @@ Known non-blocking warnings:
 | Team | Immediate Assignment | Coordination Rule |
 | --- | --- | --- |
 | Scheduler/Cadence | Hold the approved handoff contract steady while live run creation remains a later governed slice. | Do not weaken the no-autonomous-execution boundary. |
-| Visual/UI | Review active media output, focused team context, output folder access, and dashboard density before new feature expansion. | Browser proof required for visible workflow changes. |
+| Visual/UI | Review active media output, focused team context switching, output folder access, and dashboard density before new feature expansion. | Browser proof required for visible workflow changes. |
 | Deployment/Proof | Own native service startup, authenticated UI access, and ordered promotion proof. | Source proof first; deployment proof corroborates after local correctness. |
 | Media Lane | Unblock local provider/gateway and prove retained media artifacts. | No release claim for media until live provider proof is green. |
 | Docs/State | Keep state/docs synchronized with behavior changes. | Use canonical status markers only: `REQUIRED`, `NEXT`, `ACTIVE`, `IN_REVIEW`, `COMPLETE`, `BLOCKED`. |

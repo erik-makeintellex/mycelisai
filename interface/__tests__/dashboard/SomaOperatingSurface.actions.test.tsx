@@ -135,6 +135,8 @@ describe("SomaOperatingSurface active work actions", () => {
       focusedTeamId: "team-alpha",
     }));
     expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Alpha");
+    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Work contexts");
+    expect(screen.getByRole("button", { name: /Alpha/i })).toBeDefined();
     expect(screen.getByText("Team action needs operator attention.")).toBeDefined();
 
     fireEvent.click(screen.getByRole("button", { name: /pause work/i }));
@@ -148,5 +150,13 @@ describe("SomaOperatingSurface active work actions", () => {
       expect.objectContaining({ id: "work-1" }),
       "Continue the proof",
     );
+  });
+
+  it("lets operators switch the Soma surface into a team work context", () => {
+    render(<SomaOperatingSurface />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Alpha/i }));
+
+    expect(mocks.selectTeam).toHaveBeenCalledWith("team-alpha");
   });
 });

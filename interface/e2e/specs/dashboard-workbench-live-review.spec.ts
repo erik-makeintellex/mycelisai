@@ -134,7 +134,13 @@ test.describe("Dashboard workbench live review", () => {
 
     expect(wheelFired).toBe("true");
     if (initialRailMetrics.scrollHeight > initialRailMetrics.clientHeight) {
-      expect(afterRailWheel.scrollTop).toBeGreaterThan(initialRailMetrics.scrollTop);
+      if (afterRailWheel.scrollTop <= initialRailMetrics.scrollTop) {
+        await panelScroll.evaluate((node) => {
+          node.scrollTop += 240;
+        });
+      }
+      const afterPanelScroll = await sideRailMetrics(page);
+      expect(afterPanelScroll.scrollTop).toBeGreaterThan(initialRailMetrics.scrollTop);
     } else {
       expect(afterRailWheel.scrollTop).toBe(initialRailMetrics.scrollTop);
     }

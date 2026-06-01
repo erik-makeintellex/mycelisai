@@ -30,6 +30,7 @@ export default function CentralSomaHome({
     const [sessionUser, setSessionUser] = useState<WebSessionUser | null>(null);
     const fetchTeamsDetail = useCortexStore((s) => s.fetchTeamsDetail);
     const selectTeam = useCortexStore((s) => s.selectTeam);
+    const selectedTeamId = useCortexStore((s) => s.selectedTeamId);
     const teamsDetail = useCortexStore((s) => s.teamsDetail);
     const assistantName = useCortexStore((s) => s.assistantName);
     const resolvedSearchParams = requestedTeamIdPromise ? use(requestedTeamIdPromise) : undefined;
@@ -82,8 +83,8 @@ export default function CentralSomaHome({
     }, [fetchTeamsDetail, requestedTeamId, selectTeam]);
 
     const focusedTeam = useMemo(
-        () => (requestedTeamId ? teamsDetail.find((team) => team.id === requestedTeamId) ?? null : null),
-        [requestedTeamId, teamsDetail],
+        () => (selectedTeamId ? teamsDetail.find((team) => team.id === selectedTeamId) ?? null : null),
+        [selectedTeamId, teamsDetail],
     );
 
     const openOrganizationSetup = () => {
@@ -120,7 +121,7 @@ export default function CentralSomaHome({
             <SomaOperatingSurface
                 organizationName={lastOrganization?.name}
                 activeMode={focusedTeam ? `Focused team: ${focusedTeam.name}` : null}
-                focusedTeamId={requestedTeamId || null}
+                focusedTeamId={selectedTeamId}
             />
 
             <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2">

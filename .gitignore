@@ -72,6 +72,7 @@ interface/playwright-report/
 interface/.playwright/
 workspace/tool-cache/
 workspace/logs/
+workspace/media/
 workspace/docker-compose/
 workspace/generated/
 workspace/native-infra/

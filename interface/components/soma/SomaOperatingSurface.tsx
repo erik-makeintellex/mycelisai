@@ -19,6 +19,7 @@ import { SomaCausalSummary } from "./SomaCausalSummary";
 import { SomaEvidencePanel, type SomaEvidenceItem } from "./SomaEvidencePanel";
 import { SomaHeader } from "./SomaHeader";
 import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "./SomaSuggestionBar";
+import { SomaTeamContextSwitcher } from "./SomaTeamContextSwitcher";
 import { SomaWorkspaceFrame } from "./SomaWorkspaceFrame";
 import { useDurableTeamWork } from "./useDurableTeamWork";
 
@@ -88,6 +89,13 @@ export function SomaOperatingSurface({
     }
   };
 
+  const focusTeamContext = (teamId: string) => {
+    selectTeam(teamId);
+    if (typeof window !== "undefined" && window.location.pathname === "/dashboard") {
+      window.history.replaceState(null, "", `/dashboard?team_id=${encodeURIComponent(teamId)}`);
+    }
+  };
+
   const handleActiveWorkAction = async (item: TeamWorkItem, action: TeamInteraction) => {
     await activeWorkActions.handleActiveWorkAction(item, action);
     if (action.action === "inspect") {
@@ -113,6 +121,13 @@ export function SomaOperatingSurface({
           teamName={focusedTeam?.name}
           teamId={effectiveFocusedTeamId}
           onClear={clearFocusedContext}
+        />
+        <SomaTeamContextSwitcher
+          teams={teamsDetail}
+          workItems={teamWork.items}
+          focusedTeamId={effectiveFocusedTeamId}
+          onRootSelect={clearFocusedContext}
+          onTeamSelect={focusTeamContext}
         />
         <SomaWorkspaceFrame
           expression={(

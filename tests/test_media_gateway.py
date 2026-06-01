@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import urllib.error
 
 from fastapi.testclient import TestClient
 
@@ -109,6 +110,34 @@ def test_media_gateway_adapts_comfyui_workflow_prompt_history_and_view(monkeypat
     assert submitted_workflow["5"]["inputs"]["width"] == 768
     assert submitted_workflow["5"]["inputs"]["height"] == 512
     assert submitted_workflow["5"]["inputs"]["batch_size"] == 1
+
+
+def test_media_gateway_comfyui_unreachable_upstream_degrades(monkeypatch):
+    workflow = {
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": ""}},
+        "5": {"class_type": "EmptyLatentImage", "inputs": {"width": 512, "height": 512, "batch_size": 1}},
+    }
+
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_BACKEND", "comfyui")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_UPSTREAM", "http://127.0.0.1:8188")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_COMFY_WORKFLOW_JSON", json.dumps(workflow))
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_COMFY_PROMPT_NODE_ID", "3")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_COMFY_SIZE_NODE_ID", "5")
+    monkeypatch.setenv("MYCELIS_MEDIA_GATEWAY_COMFY_BATCH_NODE_ID", "5")
+
+    def unavailable_post(_url, _body, _timeout):
+        raise urllib.error.URLError("forced unavailable gateway")
+
+    monkeypatch.setattr(media_gateway, "_json_post", unavailable_post)
+
+    client = TestClient(media_gateway.app)
+    response = client.post(
+        "/v1/images/generations",
+        json={"prompt": "private outage proof", "n": 1, "size": "512x512"},
+    )
+
+    assert response.status_code == 503
+    assert "local/private ComfyUI engine unreachable at configured upstream" in response.json()["detail"]
 
 
 def test_media_gateway_comfyui_requires_workflow_mapping(monkeypatch):
