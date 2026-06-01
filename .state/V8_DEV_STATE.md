@@ -1,47 +1,35 @@
 # Mycelis V8 - Active Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-05-31
+> Updated: 2026-06-01
 > Canonical active scoreboard for V8 delivery. Historical V7/V8 migration evidence remains in `.state/V7_DEV_STATE.md`, git history, and canonical architecture docs.
 
 ## Current Checkpoint
 
 | Field | State |
 | --- | --- |
-| Current committed checkpoint | `53121487 Compact V8 active state` |
-| Working tree at checkpoint | Schedule-handoff approval-state/testing slice complete in working tree and ready for commit |
-| Release proof | `uv run inv ci.release-preflight --lane=baseline --no-e2e` passed on committed baseline before this working slice |
-| Focused browser proof | Schedule Rules Chromium E2E passed before the final baseline gate |
+| Current committed checkpoint | `11ca823e Add schedule handoff approval controls` |
+| Working tree at checkpoint | Clean after the committed scheduler handoff approval-state/testing slice |
+| Release proof | `uv run inv ci.release-preflight --lane=baseline --no-e2e` passed on checkpoint `11ca823e` |
+| Focused browser proof | Schedule Rules Chromium E2E passed for the committed handoff controls slice |
 | Product posture | Governed schedule proposals are durable and reviewable; scheduler ticks do not execute work autonomously |
 | Main release risk | Full live GUI/media proof is still blocked by local provider/gateway availability |
-| Environment blocker | Live media proof is blocked until a local media provider and `cognitive.media-gateway` are online |
+| Environment blocker | Live media proof is blocked until NATS/Core/Frontend plus a local media provider and `cognitive.media-gateway` are online |
 
 ## Delivery Status
 
 | Lane | Status | Where We Are | Next Target | Proof Gate |
 | --- | --- | --- | --- | --- |
-| Scheduler/Cadence | `COMPLETE` | Schedule due ticks persist idempotent handoff records with `handoff_key`, intent proof, execution contract, proposal status, and bounded payload. Explicit terminal handoff approval transitions (`approved`, `rejected`, `cancelled`) are covered without scheduler-created runs, confirm tokens, NATS/team command publication, or confirm-action calls. | Commit this working slice, then move to live service proof or media unblock. | Go scheduler/history/triggers tests, API history proof, autonomous-execution guard review. |
-| UI Workflow/Expression | `COMPLETE` | Schedule Rules and Approvals tolerate and display explicit schedule handoff approval states from rule, execution, audit, or payload-shaped state fields. Schedule Rules exposes approve/reject/cancel controls only for persisted `awaiting_approval` schedule handoff executions. UI work is judged on workflow fit and visual target expression, not only feature function. | Apply the same proof discipline to the next visible workflow slice. | Focused Vitest, TypeScript, max-lines, and headed/browser proof where the workflow is visible. |
-| API/Runtime Contract | `COMPLETE` | Trigger execution history includes schedule handoff proof fields, and `POST /api/v1/triggers/{id}/history/{executionId}/approval` transitions persisted schedule handoff state only. | Commit this working slice and keep API docs synchronized for the next runtime contract change. | Go API tests, docs/API reference review, history reload proof. |
-| Deployment/Proof | `COMPLETE` | Baseline source release-preflight is green on the committed tree. | Align local Go to `1.26`, then promote through full E2E, Compose, WSL, Rancher/K8s, and hosted/manual proof as needed. | `ci.release-preflight`, focused live GUI, `compose.health`, `wsl.validate --lane=release`, K8s proof. |
-| Docs/State | `ACTIVE` | API reference, automation user docs, and this scoreboard reflect the scheduler handoff slice. | Keep docs/state synchronized in the same slice as behavior, API, runtime, workflow, testing, or terminology changes. | docs/workflow tests, `git diff --check`, max-lines. |
-| Media Lane | `BLOCKED` | Media provider/gateway checks are offline: no gateway on `127.0.0.1:8001`, no Forge/AUTOMATIC1111 on `:7860`, no ComfyUI on `:8188`. | Start a local provider, run `uv run inv cognitive.media-gateway`, verify `/health`, then run live retained-media output proof. | `tests/test_media_gateway.py` and headed live media retained-output proof. |
+| Scheduler/Cadence | `COMPLETE` | Schedule due ticks persist idempotent handoff records with `handoff_key`, intent proof, execution contract, proposal status, bounded payload, and explicit terminal handoff approval transitions (`approved`, `rejected`, `cancelled`). | Keep the no-autonomous-execution boundary intact while later slices connect handoff approval into live run creation. | Go scheduler/history/triggers tests, API history proof, autonomous-execution guard review. |
+| UI Workflow/Expression | `COMPLETE` | Schedule Rules and Approvals tolerate and display explicit schedule handoff approval states from rule, execution, audit, or payload-shaped state fields. Schedule Rules exposes approve/reject/cancel controls only for persisted `awaiting_approval` schedule handoff executions. | Apply the same proof discipline to the next visible workflow slice: active media output, focused team context, and output folder affordances. | Focused Vitest, TypeScript, max-lines, and headed/browser proof where the workflow is visible. |
+| API/Runtime Contract | `COMPLETE` | Trigger execution history includes schedule handoff proof fields, and `POST /api/v1/triggers/{id}/history/{executionId}/approval` transitions persisted schedule handoff state only. | Keep API docs synchronized for the next runtime contract change. | Go API tests, docs/API reference review, history reload proof. |
+| Deployment/Proof | `ACTIVE` | Baseline source release-preflight is green on committed checkpoint `11ca823e`; local Go reports `go1.26.3`. Native status check shows PostgreSQL and Ollama up, with NATS, Core API, and Frontend down. | Start native NATS/Core/Frontend intentionally, then run focused live GUI/media proof before Compose/WSL/K8s promotion. | `ci.release-preflight`, focused live GUI, `compose.health`, `wsl.validate --lane=release`, K8s proof. |
+| Docs/State | `ACTIVE` | API reference, automation user docs, and this scoreboard reflect the committed scheduler handoff slice and next-phase kickoff. | Keep docs/state synchronized in the same slice as behavior, API, runtime, workflow, testing, or terminology changes. | docs/workflow tests, `git diff --check`, max-lines. |
+| Media Lane | `NEXT` | Media gateway unit coverage is green, but live provider/gateway checks remain offline until services are intentionally started. | Start Forge/AUTOMATIC1111 or ComfyUI and the media gateway, verify `/health`, then run live retained-media output proof through Soma/UI. | `tests/test_media_gateway.py` and headed live media retained-output proof. |
 
 ## Proof Evidence
 
-Latest green proof for checkpoint `53121487` before the active working slice:
-
-1. `go test ./internal/triggers ./internal/server -count=1`
-2. `go test ./...`
-3. `npm test -- ApprovalsTab ScheduleRulesTab --maxWorkers=1`
-4. `npm test -- ApprovalsTab --maxWorkers=1`
-5. `npx tsc --noEmit`
-6. `uv run pytest tests/test_db_tasks.py tests/test_docs_links.py tests/test_workflow_contracts.py tests/test_runtime_deploy_contract_text.py -q`
-7. `uv run inv quality.max-lines --limit 300`
-8. `uv run inv interface.e2e --server-mode=start --project=chromium --workers=1 --spec=e2e/specs/schedule-rules.spec.ts`
-9. `uv run inv ci.release-preflight --lane=baseline --no-e2e`
-
-Additional active-slice proof:
+Latest green proof for checkpoint `11ca823e`:
 
 1. `go test ./...`
 2. `go test ./internal/triggers -run "Test(LogExecution_WithHandoffRefs|GetExecutionByHandoffKey|TransitionScheduleHandoffApproval)"`
@@ -52,31 +40,21 @@ Additional active-slice proof:
 7. `uv run pytest tests/test_docs_links.py tests/test_workflow_contracts.py tests/test_runtime_deploy_contract_text.py -q`
 8. `uv run inv quality.max-lines --limit 300`
 9. `uv run inv interface.e2e --server-mode=start --project=chromium --workers=1 --spec=e2e/specs/schedule-rules.spec.ts`
-
-Earlier active-slice proof before the testing hardening pass:
-
-1. `go test ./internal/triggers ./internal/server -run "TestLogExecution_WithHandoffRefs|TestGetExecutionByHandoffKey|TestTransitionScheduleHandoffApproval|TestHandleTriggerHistory|TestHandleScheduleHandoffApproval|TestProposeScheduleRule|TestProposeScheduleRuleHandoff"`
-2. `go test ./...`
-3. `npm test -- --run __tests__/automations/ApprovalsTab.test.tsx __tests__/automations/ScheduleRulesTab.test.tsx`
-4. `npx tsc --noEmit`
-5. `npm run build`
-6. `uv run pytest tests/test_docs_links.py tests/test_workflow_contracts.py -q`
-7. `uv run inv quality.max-lines --limit 300`
-8. `uv run inv interface.e2e --server-mode=start --project=chromium --workers=1 --spec=e2e/specs/schedule-rules.spec.ts`
+10. `uv run pytest tests/test_media_gateway.py -q`
+11. `uv run inv ci.release-preflight --lane=baseline --no-e2e`
 
 Known non-blocking warnings:
 
-- Local `go env GOVERSION` now reports `go1.26.3`; rerun full baseline after the active schedule-handoff approval slice is committed.
 - Interface unit tests still emit existing React `act(...)` and localstorage-file warnings, but the suite passes.
 
 ## Next Run Targets
 
 | Priority | Target | Action | Owner Lane | Exit Criteria |
 | --- | --- | --- | --- | --- |
-| P0 | Commit handoff slice | Commit the schedule-handoff approval-state and testing hardening slice from the cleanly validated working tree. | Scheduler/Cadence + API + UI + Docs | Commit includes endpoint, UI controls, hardened tests, docs/state, and no ignored generated artifacts. |
+| P0 | Native service kickoff | Start NATS, Core API, and Frontend through repo tasks in native mode and verify authenticated UI access. | Deployment/Proof + QA/Embodiment | `lifecycle.status` shows services up and browser reaches the Soma dashboard without auth-state loops. |
 | P0 | Full workflow proof standard | For each product slice, prove both UI workflow and API/runtime contract across create/propose/approve/execute/output/proof/recovery/reload where applicable. | QA/Embodiment | Test plan names every user-visible and API-visible step touched by the slice. |
-| P1 | Toolchain alignment | Rerun baseline preflight with local Go `1.26.3` on the committed next checkpoint. | Deployment/Proof | Toolchain check no longer warns and baseline remains green. |
-| P1 | Media unblock | Start Forge/AUTOMATIC1111 or ComfyUI and the media gateway; validate retained output from browser UI. | Media Lane | Live media retained-output proof passes with open/viewable artifact evidence. |
+| P0 | Media unblock | Start Forge/AUTOMATIC1111 or ComfyUI and the media gateway; validate retained output from browser UI. | Media Lane | Live media retained-output proof passes with open/viewable artifact evidence and obvious open-folder affordance. |
+| P1 | Toolchain alignment | Keep baseline preflight green with local Go `1.26.3`, Node `v25.2.1`, and npm `11.6.2`. | Deployment/Proof | Toolchain check remains green and baseline remains green. |
 | P1 | Visual expression review | Run focused review on Dashboard/Soma, Automations, Approvals, Groups, Resources, and System after each touched slice. | Visual/UI | No overlap, no confusing density, no stale wording, and target Soma-governed expression is preserved. |
 | P2 | Promotion proof | After local source proof is green and services are intentionally up, run Compose, WSL, Rancher/K8s, and hosted/manual workflows as corroboration. | Deployment/Proof | Promotion proof records exact commit, environment, commands, and pass/fail result. |
 | P2 | Documentation hygiene | Keep canonical docs compact and linked; avoid turning state back into a historical transcript. | Docs/State | State file stays as active scoreboard; deep evidence lives in commit history and owning docs. |
@@ -85,9 +63,9 @@ Known non-blocking warnings:
 
 | Team | Immediate Assignment | Coordination Rule |
 | --- | --- | --- |
-| Scheduler/Cadence | Own next approval-state transition slice. | Do not weaken the no-autonomous-execution boundary. |
-| Visual/UI | Review every touched workflow for function, clarity, layout, and target expression. | Browser proof required for visible workflow changes. |
-| Deployment/Proof | Own Go `1.26` alignment and ordered promotion proof. | Source proof first; deployment proof corroborates after local correctness. |
+| Scheduler/Cadence | Hold the approved handoff contract steady while live run creation remains a later governed slice. | Do not weaken the no-autonomous-execution boundary. |
+| Visual/UI | Review active media output, focused team context, output folder access, and dashboard density before new feature expansion. | Browser proof required for visible workflow changes. |
+| Deployment/Proof | Own native service startup, authenticated UI access, and ordered promotion proof. | Source proof first; deployment proof corroborates after local correctness. |
 | Media Lane | Unblock local provider/gateway and prove retained media artifacts. | No release claim for media until live provider proof is green. |
 | Docs/State | Keep state/docs synchronized with behavior changes. | Use canonical status markers only: `REQUIRED`, `NEXT`, `ACTIVE`, `IN_REVIEW`, `COMPLETE`, `BLOCKED`. |
 
