@@ -45,4 +45,4 @@ tests/test_lifecycle_tasks.py=568
 tests/test_misc_tasks.py=342
 tests/test_runtime_deploy_contract_text.py=507
 tests/test_wsl_runtime_tasks.py=317
-docs/TESTING.md=319
+docs/TESTING.md=318

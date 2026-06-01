@@ -4,10 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+)
+
+var (
+	ErrExecutionNotFound          = errors.New("triggers: execution not found")
+	ErrInvalidApprovalState       = errors.New("triggers: invalid approval state")
+	ErrApprovalTransitionConflict = errors.New("triggers: approval transition conflict")
 )
 
 func (s *Store) LogExecution(ctx context.Context, exec *TriggerExecution) error {
@@ -43,6 +50,26 @@ func (s *Store) LogExecution(ctx context.Context, exec *TriggerExecution) error 
 	return nil
 }
 
+func (s *Store) GetExecution(ctx context.Context, ruleID, execID string) (*TriggerExecution, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("triggers: database not available")
+	}
+	if ruleID == "" || execID == "" {
+		return nil, nil
+	}
+	row := s.db.QueryRowContext(ctx, triggerExecutionSelectSQL+`
+		WHERE rule_id = $1 AND id = $2
+		LIMIT 1`, ruleID, execID)
+	exec, err := scanTriggerExecution(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("triggers: get execution failed: %w", err)
+	}
+	return exec, nil
+}
+
 func (s *Store) GetExecutionByHandoffKey(ctx context.Context, ruleID, handoffKey string) (*TriggerExecution, error) {
 	if s.db == nil {
 		return nil, fmt.Errorf("triggers: database not available")
@@ -61,6 +88,54 @@ func (s *Store) GetExecutionByHandoffKey(ctx context.Context, ruleID, handoffKey
 		return nil, fmt.Errorf("triggers: get handoff execution failed: %w", err)
 	}
 	return exec, nil
+}
+
+func (s *Store) TransitionScheduleHandoffApproval(ctx context.Context, ruleID, execID, proposalStatus string) (*TriggerExecution, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("triggers: database not available")
+	}
+	if ruleID == "" || execID == "" {
+		return nil, ErrExecutionNotFound
+	}
+	if !isTerminalScheduleApprovalState(proposalStatus) {
+		return nil, ErrInvalidApprovalState
+	}
+
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE trigger_executions AS e
+		SET proposal_status = $3,
+		    handoff_payload = jsonb_set(
+		        jsonb_set(COALESCE(e.handoff_payload, '{}'::jsonb), '{approval_state}', to_jsonb($3::text), true),
+		        '{autonomous_execution}', 'false'::jsonb, true
+		    )
+		FROM trigger_rules AS r
+		WHERE e.rule_id = r.id
+		  AND r.tenant_id = 'default'
+		  AND r.trigger_kind = 'schedule'
+		  AND e.rule_id = $1
+		  AND e.id = $2
+		  AND e.handoff_key IS NOT NULL
+		  AND e.run_id IS NULL
+		  AND e.proposal_status = 'awaiting_approval'
+		RETURNING e.id, e.rule_id, e.event_id, COALESCE(e.run_id,''), e.status, COALESCE(e.skip_reason,''),
+		       COALESCE(e.handoff_key,''), COALESCE(e.intent_proof_id::text,''), COALESCE(e.contract_id::text,''),
+		       COALESCE(e.proposal_status,''), COALESCE(e.handoff_payload, '{}'::jsonb), e.executed_at`,
+		ruleID, execID, proposalStatus)
+	exec, err := scanTriggerExecution(row)
+	if err == nil {
+		return exec, nil
+	}
+	if err != sql.ErrNoRows {
+		return nil, fmt.Errorf("triggers: transition schedule handoff approval failed: %w", err)
+	}
+	existing, getErr := s.GetExecution(ctx, ruleID, execID)
+	if getErr != nil {
+		return nil, getErr
+	}
+	if existing == nil {
+		return nil, ErrExecutionNotFound
+	}
+	return nil, ErrApprovalTransitionConflict
 }
 
 func (s *Store) UpdateExecutionHandoffRefs(ctx context.Context, execID, intentProofID, contractID, proposalStatus string, payload json.RawMessage) error {
@@ -85,6 +160,15 @@ func (s *Store) UpdateExecutionHandoffRefs(ctx context.Context, execID, intentPr
 		return fmt.Errorf("triggers: update handoff refs failed: %w", err)
 	}
 	return nil
+}
+
+func isTerminalScheduleApprovalState(status string) bool {
+	switch status {
+	case "approved", "rejected", "cancelled":
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *Store) ListExecutions(ctx context.Context, ruleID string, limit int) ([]TriggerExecution, error) {

@@ -233,6 +233,11 @@ export interface CortexAutomationRunsContract {
     updateTriggerRule: (id: string, r: TriggerRuleCreate) => Promise<void>;
     deleteTriggerRule: (id: string) => Promise<void>;
     toggleTriggerRule: (id: string, isActive: boolean) => Promise<void>;
+    resolveScheduleHandoff: (
+        ruleId: string,
+        executionId: string,
+        status: 'approved' | 'rejected' | 'cancelled',
+    ) => Promise<void>;
     fetchRunConversation: (runId: string, agentFilter?: string) => Promise<void>;
     interjectInRun: (runId: string, message: string, agentId?: string) => Promise<void>;
 }

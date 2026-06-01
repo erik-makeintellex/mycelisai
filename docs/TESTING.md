@@ -115,9 +115,8 @@ Backend/API -> UI Target Plan
   - <unit/component/type/build/focused browser/live-backend/deployment docs gates>
 ```
 
-No backend/API review is complete without a mapped UI target and evidence result.
+No backend/API review is complete without a mapped UI target and evidence result. For propose-only schedule handoff approval changes, prove backend success plus invalid/not-found/conflict/attached-run guards, UI state badges/actions/store behavior, focused Schedule Rules browser proof, and API/user/state/testing doc review.
 ## Clean Run Discipline
-
 - Stop prior Core/Interface services before runtime or integration tests: `uv run inv lifecycle.down`. Native PostgreSQL and NATS remain development dependencies and are inspected with `uv run inv native-infra.status`.
 - Do not keep full Docker/K8s app stacks running during ordinary source work; use local run/build/test with native PostgreSQL/NATS when needed, then intentionally bring up Compose/K8s for deployment proof.
 - For Compose data-plane proof, use `uv run inv compose.infra-up`, `compose.infra-health`, and `compose.storage-health`.

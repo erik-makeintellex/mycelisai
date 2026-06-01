@@ -83,6 +83,7 @@ Approvals is the governance queue.
 You review:
 - low-trust or governed mutation proposals
 - propose-mode trigger outcomes
+- propose-only schedule handoffs with explicit approval state
 - manual mutation proposals from Workspace flows
 
 Core actions:
@@ -101,7 +102,9 @@ This is the graph-level authoring and editing surface for advanced workflow stru
 
 ## Scheduler Status
 
-Cadence authoring is now present as propose-only Schedule Rules. A schedule rule records a rule name, target mission, cadence interval, next proposal time, cooldown, proof expectations, and recovery behavior. Scheduler ticks record a proposed cadence outcome, attach durable handoff references for trust review, and update the next run, but they do not autonomously execute the target mission or expose a confirm token. Operators should treat Schedule Rules as reviewable cadence intent until an explicit approval/execution path is promoted.
+Cadence authoring is now present as propose-only Schedule Rules. A schedule rule records a rule name, target mission, cadence interval, next proposal time, cooldown, proof expectations, and recovery behavior. Scheduler ticks record a proposed cadence outcome, attach durable handoff references for trust review, and update the next run, but they do not autonomously execute the target mission or expose a confirm token.
+
+Schedule handoffs can now show explicit states such as `awaiting approval`, `approved`, `rejected`, or `cancelled` in Schedule Rules and approval/audit context. When a persisted handoff execution is waiting for approval, Schedule Rules exposes bounded actions to approve, reject, or cancel that handoff. These states make the operator decision visible and reloadable, but approval of the handoff is still not the same as executing the target mission. Execution remains a separate governed path.
 
 ---
 

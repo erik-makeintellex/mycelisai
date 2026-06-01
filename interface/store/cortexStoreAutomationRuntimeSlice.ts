@@ -11,6 +11,7 @@ export function createCortexAutomationRuntimeSlice(
     | 'updateTriggerRule'
     | 'deleteTriggerRule'
     | 'toggleTriggerRule'
+    | 'resolveScheduleHandoff'
     | 'fetchRunConversation'
     | 'interjectInRun'
 > {
@@ -100,6 +101,39 @@ export function createCortexAutomationRuntimeSlice(
                 }));
             } catch (err) {
                 console.error('[TRIGGERS] Toggle error:', err);
+            }
+        },
+
+        resolveScheduleHandoff: async (ruleId, executionId, status) => {
+            try {
+                const res = await fetch(`/api/v1/triggers/${ruleId}/history/${executionId}/approval`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status }),
+                });
+                if (!res.ok) {
+                    console.error('[TRIGGERS] Schedule handoff transition failed:', await res.text());
+                    return;
+                }
+                const body = await res.json();
+                const execution = body.data?.execution;
+                set((s) => ({
+                    triggerRules: s.triggerRules.map((rule) => {
+                        if (rule.id !== ruleId) return rule;
+                        return {
+                            ...rule,
+                            schedule_handoff_state: status,
+                            latest_execution: execution ?? {
+                                ...rule.latest_execution,
+                                id: executionId,
+                                rule_id: ruleId,
+                                proposal_status: status,
+                            },
+                        };
+                    }),
+                }));
+            } catch (err) {
+                console.error('[TRIGGERS] Schedule handoff transition error:', err);
             }
         },
 

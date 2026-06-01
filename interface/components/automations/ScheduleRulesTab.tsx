@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, Clock3, History, Loader2, Plus, ShieldCheck } from "lucide-react";
-import { useCortexStore, type TriggerRuleCreate } from "@/store/useCortexStore";
+import { useCortexStore, type TriggerRule, type TriggerRuleCreate } from "@/store/useCortexStore";
+import {
+    getScheduleHandoffState,
+} from "@/components/automations/scheduleHandoffState";
+import {
+    ScheduleHandoffActions,
+    ScheduleHandoffBadge,
+} from "@/components/automations/ScheduleHandoffControls";
 
 function formatDate(value?: string) {
     if (!value) return "Awaiting first schedule";
@@ -16,14 +23,32 @@ function formatInterval(seconds?: number) {
     return `${seconds}s cadence`;
 }
 
+function getRuleHandoffState(rule: TriggerRule) {
+    return (
+        getScheduleHandoffState(rule) ||
+        getScheduleHandoffState(rule.latest_execution) ||
+        getScheduleHandoffState(rule.last_execution) ||
+        getScheduleHandoffState(rule.recent_execution)
+    );
+}
+
+function getRuleHandoffExecution(rule: TriggerRule) {
+    for (const execution of [rule.latest_execution, rule.last_execution, rule.recent_execution]) {
+        if (execution?.id && getScheduleHandoffState(execution)) return execution;
+    }
+    return null;
+}
+
 export default function ScheduleRulesTab() {
     const rules = useCortexStore((s) => s.triggerRules);
     const isFetching = useCortexStore((s) => s.isFetchingTriggers);
     const fetchTriggerRules = useCortexStore((s) => s.fetchTriggerRules);
     const createTriggerRule = useCortexStore((s) => s.createTriggerRule);
     const toggleTriggerRule = useCortexStore((s) => s.toggleTriggerRule);
+    const resolveScheduleHandoff = useCortexStore((s) => s.resolveScheduleHandoff);
     const [showCreate, setShowCreate] = useState(false);
     const [pendingToggleRuleID, setPendingToggleRuleID] = useState<string | null>(null);
+    const [pendingHandoffAction, setPendingHandoffAction] = useState<string | null>(null);
 
     useEffect(() => {
         fetchTriggerRules();
@@ -85,6 +110,10 @@ export default function ScheduleRulesTab() {
                     schedules.map((rule) => {
                         const isToggling = pendingToggleRuleID === rule.id;
                         const toggleLabel = isToggling ? "Updating..." : rule.is_active ? "Pause" : "Resume";
+                        const handoffState = getRuleHandoffState(rule);
+                        const handoffExecution = getRuleHandoffExecution(rule);
+                        const canResolveHandoff =
+                            Boolean(handoffExecution?.id) && handoffState === "awaiting_approval";
                         return (
                             <article key={rule.id} className="rounded-md border border-cortex-border bg-cortex-surface p-4 space-y-3">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -110,6 +139,9 @@ export default function ScheduleRulesTab() {
                                                 >
                                                     disabled
                                                 </span>
+                                            )}
+                                            {handoffState && (
+                                                <ScheduleHandoffBadge ruleID={rule.id} state={handoffState} />
                                             )}
                                         </div>
                                         {rule.description && <p className="mt-1 truncate text-xs text-cortex-text-muted" title={rule.description}>{rule.description}</p>}
@@ -141,6 +173,19 @@ export default function ScheduleRulesTab() {
                                     <TextBlock label="Proof expected" value={rule.proof_expectations || "Operator-visible result, audit event, and retained proof."} />
                                     <TextBlock label="Recovery" value={rule.recovery_behavior || "Pause the schedule and review the last proposed run."} />
                                 </div>
+                                {canResolveHandoff && handoffExecution?.id && (
+                                    <ScheduleHandoffActions
+                                        disabled={pendingHandoffAction === handoffExecution.id}
+                                        onResolve={async (status) => {
+                                            setPendingHandoffAction(handoffExecution.id);
+                                            try {
+                                                await resolveScheduleHandoff(rule.id, handoffExecution.id, status);
+                                            } finally {
+                                                setPendingHandoffAction(null);
+                                            }
+                                        }}
+                                    />
+                                )}
                             </article>
                         );
                     })

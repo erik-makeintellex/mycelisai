@@ -57,6 +57,7 @@ describe("ApprovalsTab", () => {
             schedule_rule_id: "schedule-rule-1",
             schedule_rule_name: "Weekly evidence review",
             schedule_execution_id: "schedule-execution-1",
+            schedule_handoff_state: "approved",
             schedule_proposed_at: "2026-03-26T12:00:00Z",
             proof_expectations: "Visible audit and retained proof",
             recovery_behavior: "Pause and inspect the failed proposal",
@@ -89,6 +90,7 @@ describe("ApprovalsTab", () => {
     expect(screen.getByText(/schedule origin/i)).toBeDefined();
     expect(screen.getByText("Weekly evidence review")).toBeDefined();
     expect(screen.getByText(/schedule execution: schedule-execution-1/i)).toBeDefined();
+    expect(screen.getByText(/handoff: approved/i)).toBeDefined();
     expect(screen.getByText(/proof: visible audit and retained proof/i)).toBeDefined();
     expect(screen.getByText(/recovery: pause and inspect the failed proposal/i)).toBeDefined();
   }, 15000);

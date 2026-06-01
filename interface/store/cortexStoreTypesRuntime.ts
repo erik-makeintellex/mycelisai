@@ -82,6 +82,18 @@ export interface MissionEvent {
     emitted_at: string;
 }
 
+export type ScheduleHandoffApprovalState =
+    | 'pending'
+    | 'proposed'
+    | 'approved'
+    | 'rejected'
+    | 'executed'
+    | 'awaiting_approval'
+    | 'confirmed_pending_execution'
+    | 'cancelled'
+    | 'failed'
+    | (string & {});
+
 export interface TriggerRule {
     id: string;
     tenant_id: string;
@@ -97,6 +109,15 @@ export interface TriggerRule {
     next_run_at?: string;
     proof_expectations?: string;
     recovery_behavior?: string;
+    schedule_handoff_state?: ScheduleHandoffApprovalState;
+    schedule_handoff_status?: ScheduleHandoffApprovalState;
+    handoff_state?: ScheduleHandoffApprovalState;
+    handoff_status?: ScheduleHandoffApprovalState;
+    approval_state?: ScheduleHandoffApprovalState;
+    proposal_status?: ScheduleHandoffApprovalState;
+    latest_execution?: TriggerExecution;
+    last_execution?: TriggerExecution;
+    recent_execution?: TriggerExecution;
     max_depth: number;
     max_active_runs: number;
     is_active: boolean;
@@ -132,7 +153,12 @@ export interface TriggerExecution {
     handoff_key?: string;
     intent_proof_id?: string;
     contract_id?: string;
-    proposal_status?: string;
+    proposal_status?: ScheduleHandoffApprovalState;
+    schedule_handoff_state?: ScheduleHandoffApprovalState;
+    schedule_handoff_status?: ScheduleHandoffApprovalState;
+    handoff_state?: ScheduleHandoffApprovalState;
+    handoff_status?: ScheduleHandoffApprovalState;
+    approval_state?: ScheduleHandoffApprovalState;
     handoff_payload?: Record<string, unknown>;
     executed_at: string;
 }

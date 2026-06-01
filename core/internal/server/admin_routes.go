@@ -192,6 +192,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/triggers/{id}", s.HandleDeleteTrigger)
 	mux.HandleFunc("POST /api/v1/triggers/{id}/toggle", s.HandleToggleTrigger)
 	mux.HandleFunc("GET /api/v1/triggers/{id}/history", s.HandleTriggerHistory)
+	mux.HandleFunc("POST /api/v1/triggers/{id}/history/{executionId}/approval", s.HandleScheduleHandoffApproval)
 
 	mux.HandleFunc("GET /api/v1/services/status", s.HandleServicesStatus)
 	mux.HandleFunc("GET /api/v1/system/quick-checks/{id}", s.HandleSystemQuickCheck)
