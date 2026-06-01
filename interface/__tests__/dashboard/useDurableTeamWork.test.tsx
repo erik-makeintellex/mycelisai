@@ -124,4 +124,52 @@ describe("useDurableTeamWork", () => {
     });
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
+
+  it("polls active durable rows until work reaches a terminal state", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [
+            {
+              work_item_id: "work-1",
+              team_id: "team-alpha",
+              objective: "Queued package ask",
+              state: "queued",
+              updated_at: "2026-05-17T18:00:00Z",
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [
+            {
+              work_item_id: "work-1",
+              team_id: "team-alpha",
+              objective: "Queued package ask",
+              state: "output_ready",
+              updated_at: "2026-05-17T18:01:00Z",
+            },
+          ],
+        }),
+      });
+
+    const { result } = renderHook(() =>
+      useDurableTeamWork({ teams: [team], pollIntervalMs: 100 }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.items[0]?.state).toBe("queued");
+    });
+
+    await waitFor(() => {
+      expect(result.current.items[0]?.state).toBe("output_ready");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    await new Promise((resolve) => window.setTimeout(resolve, 30));
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
 });

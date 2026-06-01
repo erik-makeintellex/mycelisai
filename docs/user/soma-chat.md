@@ -4,7 +4,6 @@
 > Workspace-first interaction model: you send intent, Soma orchestrates execution.
 
 ---
-
 ## Overview
 
 Open `Workspace` (`/dashboard`) and type naturally. Soma receives every message, coordinates the rest, and should execute deliverable outcomes rather than instruct you step-by-step on manual work.

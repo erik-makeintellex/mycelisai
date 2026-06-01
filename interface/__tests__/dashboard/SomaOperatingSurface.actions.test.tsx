@@ -32,6 +32,10 @@ vi.mock("@/store/useCortexStore", () => ({
 
 vi.mock("@/components/teams/useTeamWorkActionHandler", () => ({
   useTeamWorkActionHandler: mocks.useTeamWorkActionHandler,
+  mergeTeamWorkItems: (
+    durableItems: Array<{ id: string }>,
+    submittedItems: Array<{ id: string }>,
+  ) => [...submittedItems, ...durableItems],
 }));
 
 vi.mock("@/components/soma/useDurableTeamWork", () => ({
@@ -41,11 +45,13 @@ vi.mock("@/components/soma/useDurableTeamWork", () => ({
 vi.mock("@/components/teams/ActiveWorkLane", () => ({
   ActiveWorkLane: (props: {
     items: Array<{ id: string; title: string }>;
+    statusLabel?: string | null;
     degradedMessage?: string | null;
     onAction?: (item: unknown, action: unknown) => void;
     onTeamAsk?: (item: unknown, message: string) => void;
   }) => (
     <section data-testid="active-work-lane">
+      <p>{props.statusLabel}</p>
       <p>{props.degradedMessage}</p>
       <button
         type="button"
@@ -104,6 +110,8 @@ describe("SomaOperatingSurface active work actions", () => {
     mocks.useTeamWorkActionHandler.mockReturnValue({
       activeWorkRefreshVersion: 7,
       activeWorkActionError: "Team action needs operator attention.",
+      activeWorkActionNotice: "Team ask queued. You can keep working.",
+      submittedTeamWorkItems: [],
       handleActiveWorkAction: mocks.handleActiveWorkAction,
       handleTeamAsk: mocks.handleTeamAsk,
     });
@@ -138,6 +146,7 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Work contexts");
     expect(screen.getByRole("button", { name: /Alpha/i })).toBeDefined();
     expect(screen.getByText("Team action needs operator attention.")).toBeDefined();
+    expect(screen.getByText("Team ask queued. You can keep working.")).toBeDefined();
 
     fireEvent.click(screen.getByRole("button", { name: /pause work/i }));
     fireEvent.click(screen.getByRole("button", { name: /ask team/i }));

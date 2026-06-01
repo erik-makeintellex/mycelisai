@@ -5,6 +5,16 @@ type TeamWorkActionResponse = {
   error?: string;
 };
 
+export type TeamWorkAskResult = {
+  accepted: boolean;
+  dispatchState?: string;
+  workItemId?: string;
+  teamId?: string;
+  state?: string;
+  objective?: string;
+  degradationState?: string;
+};
+
 export async function postTeamWorkAction(
   item: TeamWorkItem,
   action: TeamInteractionAction,
@@ -39,7 +49,7 @@ export async function postTeamWorkAction(
 export async function postTeamWorkAsk(
   item: TeamWorkItem,
   message: string,
-): Promise<void> {
+): Promise<TeamWorkAskResult> {
   const teamId = item.teamIds[0];
   if (!teamId) {
     throw new Error("Team work item is missing its team id.");
@@ -69,4 +79,29 @@ export async function postTeamWorkAsk(
   if (!response.ok) {
     throw new Error(payload.error || "Could not ask the team for more work.");
   }
+  return normalizeTeamWorkAskResult(payload.data);
+}
+
+function normalizeTeamWorkAskResult(data: unknown): TeamWorkAskResult {
+  if (!isRecord(data)) {
+    return { accepted: false };
+  }
+  const workItem = isRecord(data.work_item) ? data.work_item : {};
+  return {
+    accepted: data.accepted === true,
+    dispatchState: stringValue(data.dispatch_state),
+    workItemId: stringValue(workItem.work_item_id),
+    teamId: stringValue(workItem.team_id),
+    state: stringValue(workItem.state),
+    objective: stringValue(workItem.objective),
+    degradationState: stringValue(workItem.degradation_state),
+  };
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

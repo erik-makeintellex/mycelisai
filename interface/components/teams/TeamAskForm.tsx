@@ -75,7 +75,7 @@ export function TeamAskForm({
         className="inline-flex h-10 items-center justify-center gap-1 rounded-lg border border-cortex-primary/30 px-3 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Send className="h-3.5 w-3.5" />
-        <span>{isSubmitting ? "Sending" : "Send"}</span>
+        <span>{isSubmitting ? "Queueing" : "Queue ask"}</span>
       </button>
     </form>
   );

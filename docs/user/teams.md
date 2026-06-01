@@ -64,13 +64,15 @@ Use `Teams` when you want to inspect or manage existing teams:
 - use the Dashboard `Work contexts` strip when you want to switch Soma into a specific team's focused chat/output/proof lane without leaving the main workbench
 - open the team lead workspace
 - review current outputs while the team is active
-- use Ask Team or Respond on a durable active-work row to request a bounded follow-on output or supply missing input without opening raw bus details
+- use Ask Team or Respond on a durable active-work row to queue a bounded follow-on output or supply missing input without opening raw bus details
 - use Inspect, Steer, Start, Pause, Resume, or Archive controls when they are enabled for the current team state
 - inspect member templates
 - review or edit template role, model, and MCP/internal tool references
 - check whether a team should be archived or kept
 
 When a team has just been created and no delegated work item exists yet, the Dashboard shows a first-deliverable launcher instead of treating the team shell as active work. Choose a starter such as `Build playable prototype`, `Write design brief`, or `Draft delivery plan`; Soma places the bounded ask in the chat input for review, then your send creates the governed work item that can run, produce output, and attach proof.
+
+Ask Team is non-blocking. When you queue a follow-on ask, the row should close the form, show a queued work item immediately, keep the workspace usable, and refresh Active Work while the team moves toward `running`, `output_ready`, or `degraded`. If the team bus or worker lane is unavailable, the ask remains durable and the row should explain the degraded delivery and recovery posture instead of leaving the operator waiting on a browser request.
 
 Use `Groups` when you want to review retained outputs or collaboration records after a temporary workflow has been archived. Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
 
@@ -171,7 +173,7 @@ When testing team workflows, verify:
 - team-only creation does not imply the team is already executing; the Dashboard first-deliverable launcher should seed a bounded Soma ask and leave final send/approval with the operator
 - the team lead is the first visible operational counterpart
 - Dashboard Active Work remains capped and points to `/teams` for the full durable backlog
-- Ask Team or Respond creates a durable follow-on work item, then visibly returns output-ready or degraded state
+- Ask Team or Respond creates a durable follow-on work item, shows queued state immediately, keeps the UI usable, then visibly returns output-ready or degraded state
 - degraded team asks name timeout/offline/unreadable-response proof, recovery options, and what remains trusted
 - raw input/delivery subjects, models, prompts, and tool ids stay behind Advanced/Inspect instead of default team cards
 - retained outputs remain reviewable in `/groups` after a temporary collaboration is closed

@@ -24,7 +24,7 @@ async function skipWhenLivePrerequisiteMissing(response: APIResponse, body: stri
 }
 
 test.describe("Active work Ask Team live GUI proof", () => {
-  test("submits a bounded ask from /teams and shows output_ready with visible reply proof", async ({ page }) => {
+  test("submits a bounded ask from /teams without blocking the operator", async ({ page }) => {
     test.skip(
       !liveGUIProofRequested(),
       "BLOCKED: set PLAYWRIGHT_TEAM_WORK_GUI_LIVE=1 with local Core, Interface, NATS, PostgreSQL, and a responsive runtime team.",
@@ -79,20 +79,30 @@ test.describe("Active work Ask Team live GUI proof", () => {
         response.request().method() === "POST",
       { timeout: 90_000 },
     );
-    await sourceRow.getByRole("button", { name: /^send$/i }).click();
+    await sourceRow.getByRole("button", { name: /^queue ask$/i }).click();
     const askResponse = await askResponsePromise;
     const askBody = await askResponse.text();
-    expect(askResponse.status(), askBody).toBe(200);
-    const askData = JSON.parse(askBody).data as { work_item: TeamWorkItem; reply: string };
-    expect(askData.work_item.state).toBe("output_ready");
-    expect(askData.reply).toContain(askMarkerId);
+    expect([200, 202], askBody).toContain(askResponse.status());
+    const askData = JSON.parse(askBody).data as { work_item: TeamWorkItem; reply?: string };
+    expect(["queued", "output_ready", "degraded"]).toContain(askData.work_item.state);
 
     const resultTitle = `Operator asked ${teamId} to continue work on "${sourceObjective}".`;
     const resultRow = lane.locator("article").filter({ hasText: resultTitle });
     await expect(resultRow).toBeVisible({ timeout: 20_000 });
-    await expect(resultRow.getByText("output ready", { exact: true }).first()).toBeVisible();
+    if (askData.work_item.state === "queued") {
+      await expect(resultRow.getByText(/Queued/i).first()).toBeVisible();
+      await expect(lane.getByText(/Team ask queued. You can keep working/i)).toBeVisible();
+      return;
+    }
+    if (askData.work_item.state === "degraded") {
+      await expect(resultRow.getByText(/Degraded/i).first()).toBeVisible();
+      await expect(resultRow.getByText(/Needs recovery|No retained output yet/i).first()).toBeVisible();
+      return;
+    }
+    await expect(resultRow.getByText(/Output ready/i).first()).toBeVisible();
     await expect(resultRow.getByText("Durable team work", { exact: true }).first()).toBeVisible();
     await expect(resultRow.getByText(/Team response ready/)).toBeVisible();
+    expect(askData.reply ?? "").toContain(askMarkerId);
     await expect(resultRow.getByText(new RegExp(askMarkerId))).toBeVisible();
     await expect(resultRow.getByText(/Review the response/i).first()).toBeVisible();
   });

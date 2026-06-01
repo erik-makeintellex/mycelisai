@@ -62,7 +62,7 @@ describe("TeamsPage bounded ask", () => {
     fireEvent.change(input, {
       target: { value: "Create the next validation note" },
     });
-    fireEvent.submit(input.closest("form") as HTMLFormElement);
+    fireEvent.click(within(targetRow).getByRole("button", { name: /queue ask/i }));
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
@@ -72,6 +72,11 @@ describe("TeamsPage bounded ask", () => {
           body: expect.stringContaining("Create the next validation note"),
         }),
       );
+    });
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(/Team ask queued. You can keep working/i).length,
+      ).toBeGreaterThan(0);
     });
     expect(
       mockFetch.mock.calls.filter(([url]) =>

@@ -4,7 +4,10 @@ import type React from "react";
 import { Activity, CheckSquare, Layers2, ListChecks, Wrench, X } from "lucide-react";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import { ActiveWorkLane } from "@/components/teams/ActiveWorkLane";
-import { useTeamWorkActionHandler } from "@/components/teams/useTeamWorkActionHandler";
+import {
+  mergeTeamWorkItems,
+  useTeamWorkActionHandler,
+} from "@/components/teams/useTeamWorkActionHandler";
 import type { ChatMessage, TeamInteraction, TeamWorkItem } from "@/store/useCortexStore";
 import { useCortexStore } from "@/store/useCortexStore";
 import {
@@ -77,7 +80,11 @@ export function SomaOperatingSurface({
   const teamProjectPackages = teamOutputProjectPackages(teamWork.outputRefs);
   const mergedOutputItems = mergeOutputWorkbenchItems(outputItems, teamOutputItems);
   const mergedProjectPackages = [...projectPackages, ...teamProjectPackages];
-  const somaHomeWorkItems = prioritizeSomaHomeWorkItems(teamWork.items).filter(
+  const activeWorkItems = mergeTeamWorkItems(
+    teamWork.items,
+    activeWorkActions.submittedTeamWorkItems,
+  );
+  const somaHomeWorkItems = prioritizeSomaHomeWorkItems(activeWorkItems).filter(
     (item) => item.state !== "archived",
   );
   const displayedMode = activeMode ?? (focusedTeam ? `Focused team: ${focusedTeam.name}` : null);
@@ -151,13 +158,13 @@ export function SomaOperatingSurface({
               emptyMessage={activeMode && teamWork.items.length === 0
                 ? `${activeMode} is the current workspace lane. ${teamWork.emptyMessage}`
                 : teamWork.emptyMessage}
-              statusLabel={teamWork.statusLabel}
+              statusLabel={activeWorkActions.activeWorkActionNotice ?? teamWork.statusLabel}
               degradedMessage={activeWorkActions.activeWorkActionError ?? teamWork.degradedMessage}
               onAction={handleActiveWorkAction}
               onTeamAsk={activeWorkActions.handleTeamAsk}
               frame={false}
               maxVisibleItems={effectiveFocusedTeamId ? 6 : 3}
-              totalItemCount={teamWork.items.length}
+              totalItemCount={activeWorkItems.length}
               moreItemsHref="/teams"
             />
           )}

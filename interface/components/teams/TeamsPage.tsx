@@ -16,7 +16,7 @@ import TeamDetailDrawer from "./TeamDetailDrawer";
 import TeamsIntroPanel from "./TeamsIntroPanel";
 import { TeamMemberTemplatesPanel } from "./TeamMemberTemplatesPanel";
 import { useDurableTeamWork } from "@/components/soma/useDurableTeamWork";
-import { useTeamWorkActionHandler } from "./useTeamWorkActionHandler";
+import { mergeTeamWorkItems, useTeamWorkActionHandler } from "./useTeamWorkActionHandler";
 
 const FILTERS: { value: TeamsFilter; label: string }[] = [
   { value: "all", label: "All Teams" },
@@ -111,6 +111,10 @@ export default function TeamsPage() {
     refreshVersion: durableWorkRefreshVersion + activeWorkActions.activeWorkRefreshVersion,
     maxTeams: 12,
   });
+  const activeWorkItems = mergeTeamWorkItems(
+    activeTeamWork.items,
+    activeWorkActions.submittedTeamWorkItems,
+  );
 
   const openTemplateDrawer = useCallback((agent: CatalogueAgent | null) => {
     setEditingTemplate(agent);
@@ -223,9 +227,9 @@ export default function TeamsPage() {
           </div>
         </div>
         <ActiveWorkLane
-          items={activeTeamWork.items}
+          items={activeWorkItems}
           emptyMessage={activeTeamWork.emptyMessage}
-          statusLabel={activeTeamWork.statusLabel}
+          statusLabel={activeWorkActions.activeWorkActionNotice ?? activeTeamWork.statusLabel}
           degradedMessage={
             activeWorkActions.activeWorkActionError ?? activeTeamWork.degradedMessage
           }

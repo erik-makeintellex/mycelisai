@@ -249,7 +249,7 @@ describe("ActiveWorkLane", () => {
     fireEvent.change(input, {
       target: { value: "Create the next validation note" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /send/i }));
+    fireEvent.click(screen.getByRole("button", { name: /queue ask/i }));
 
     await waitFor(() => {
       expect(onTeamAsk).toHaveBeenCalledWith(

@@ -110,8 +110,10 @@ export function mockTeamWorkFetch(mockFetch: ReturnType<typeof vi.fn>) {
               team_id: "team-alpha",
               objective: "Create the next validation note",
               execution_shape: "delegated_work",
-              state: "output_ready",
+              state: "queued",
             },
+            accepted: true,
+            dispatch_state: "published",
           },
         }),
       };

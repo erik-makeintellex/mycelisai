@@ -25,15 +25,18 @@ export function useDurableTeamWork({
   focusedTeamId,
   refreshVersion = 0,
   maxTeams = 8,
+  pollIntervalMs = 5000,
 }: {
   teams: TeamDetailEntry[];
   focusedTeamId?: string | null;
   refreshVersion?: number;
   maxTeams?: number;
+  pollIntervalMs?: number;
 }): DurableTeamWorkState {
   const [isLoading, setIsLoading] = useState(false);
   const [durableItems, setDurableItems] = useState<TeamWorkItem[]>([]);
   const [failedTeamIds, setFailedTeamIds] = useState<string[]>([]);
+  const [pollVersion, setPollVersion] = useState(0);
 
   const selectedTeams = useMemo(() => {
     if (focusedTeamId) {
@@ -87,7 +90,20 @@ export function useDurableTeamWork({
     return () => {
       cancelled = true;
     };
-  }, [refreshVersion, selectedTeamKey]);
+  }, [pollVersion, refreshVersion, selectedTeamKey]);
+
+  const hasPollingWork = useMemo(
+    () => durableItems.some((item) => shouldPollTeamWork(item)),
+    [durableItems],
+  );
+
+  useEffect(() => {
+    if (!hasPollingWork) return undefined;
+    const interval = window.setInterval(() => {
+      setPollVersion((version) => version + 1);
+    }, pollIntervalMs);
+    return () => window.clearInterval(interval);
+  }, [hasPollingWork, pollIntervalMs]);
 
   const fallbackItems = useMemo(() => (
     failedTeamIds.length > 0 && durableItems.length === 0
@@ -143,6 +159,10 @@ export function useDurableTeamWork({
       ? "No active team work is attached to this view yet. Ask Soma to start work when you want a team to produce an output."
       : "No active team work is attached to this view yet.",
   };
+}
+
+function shouldPollTeamWork(item: TeamWorkItem) {
+  return item.state === "queued" || item.state === "running" || item.state === "reviewing";
 }
 
 function sortWorkItems(items: TeamWorkItem[]) {
