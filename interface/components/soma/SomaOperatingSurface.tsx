@@ -18,6 +18,7 @@ import {
   teamOutputProjectPackages,
   teamOutputWorkbenchItems,
 } from "./OutputWorkbench";
+import { FocusedTeamOutputDock } from "./FocusedTeamOutputDock";
 import { SomaCausalSummary } from "./SomaCausalSummary";
 import { SomaEvidencePanel, type SomaEvidenceItem } from "./SomaEvidencePanel";
 import { SomaHeader } from "./SomaHeader";
@@ -135,6 +136,11 @@ export function SomaOperatingSurface({
           focusedTeamId={effectiveFocusedTeamId}
           onRootSelect={clearFocusedContext}
           onTeamSelect={focusTeamContext}
+        />
+        <FocusedTeamOutputDock
+          teamName={focusedTeam?.name}
+          teamId={effectiveFocusedTeamId}
+          outputRefs={teamWork.outputRefs}
         />
         <SomaWorkspaceFrame
           expression={(

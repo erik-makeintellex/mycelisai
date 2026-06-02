@@ -62,6 +62,7 @@ Use `Teams` when you want to inspect or manage existing teams:
 - review the Active Work Lane to see whether a team is new, queued, running, output-ready, degraded, paused, or waiting on the operator
 - treat the Dashboard Active Work lane as an attention-first slice; use `Teams` for the full durable backlog
 - use the Dashboard `Work contexts` strip when you want to switch Soma into a specific team's focused chat/output/proof lane without leaving the main workbench
+- when a focused team has retained outputs, use the compact `Team outputs` dock above Soma's workbench for immediate open/open-folder access; use the Work panel or Team page for the deeper retained-output list
 - open the team lead workspace
 - review current outputs while the team is active
 - use Ask Team or Respond on a durable active-work row to queue a bounded follow-on output or supply missing input without opening raw bus details

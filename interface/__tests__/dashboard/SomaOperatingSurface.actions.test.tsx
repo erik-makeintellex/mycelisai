@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SomaOperatingSurface } from "@/components/soma/SomaOperatingSurface";
 
@@ -167,5 +167,38 @@ describe("SomaOperatingSurface active work actions", () => {
     fireEvent.click(screen.getByRole("button", { name: /Alpha/i }));
 
     expect(mocks.selectTeam).toHaveBeenCalledWith("team-alpha");
+  });
+
+  it("shows focused team retained outputs before the work panel is opened", () => {
+    mocks.useDurableTeamWork.mockReturnValue({
+      items: [{
+        id: "work-1",
+        title: "Comic page generation",
+        state: "output_ready",
+        teamIds: ["team-alpha"],
+        interactions: [],
+      }],
+      outputRefs: [{
+        output_id: "comic-page-output",
+        team_id: "team-alpha",
+        work_item_id: "work-1",
+        kind: "media",
+        label: "Comic page",
+        storage_ref: "groups/team-alpha/media/comic-page.png",
+        proof_id: "proof-comic-1",
+      }],
+      emptyMessage: "No active work.",
+      status: "ready",
+      statusLabel: "Ready",
+      degradedMessage: null,
+    });
+
+    render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
+
+    const dock = within(screen.getByTestId("focused-team-output-dock"));
+    expect(dock.getByText("Comic page")).toBeDefined();
+    expect(screen.getByRole("link", { name: /Team page/i }).getAttribute("href")).toBe("/teams?team_id=team-alpha");
+    expect(dock.getByRole("button", { name: /Open Comic page in a new browser window/i })).toBeDefined();
+    expect(dock.getByRole("button", { name: /Open local folder for Comic page/i })).toBeDefined();
   });
 });
