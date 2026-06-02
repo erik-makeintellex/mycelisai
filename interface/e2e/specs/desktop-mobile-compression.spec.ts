@@ -54,6 +54,25 @@ test.describe("Desktop/mobile compression proof", () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test("Dashboard focused team output dock stays scannable without opening the work panel", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/dashboard?team_id=active-demo-team", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByTestId("soma-operating-surface")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("central-soma-chat-frame")).toBeVisible();
+    const dock = page.getByTestId("focused-team-output-dock");
+    await expect(dock).toBeVisible();
+    await expect(dock.getByText("Coin Runner package")).toBeVisible();
+    await expect(dock.getByRole("link", { name: /Team page/i })).toHaveAttribute(
+      "href",
+      "/teams?team_id=active-demo-team",
+    );
+    await expect(dock.getByRole("button", { name: /Open Coin Runner package in a new browser window/i })).toBeVisible();
+    await expect(dock.getByRole("button", { name: /Open local folder for Coin Runner package/i })).toBeVisible();
+    await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveAttribute("aria-expanded", "false");
+    await expectNoHorizontalOverflow(page);
+  });
+
   test("System services stay bounded on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/system?tab=services", { waitUntil: "domcontentloaded" });

@@ -181,6 +181,20 @@ async function expectTeamVisibleInGroups(page: Page, teamID: string) {
     await expect(page.getByText(teamID).first()).toBeVisible();
 }
 
+async function expectTeamOutputVisibleOnDashboard(page: Page, ask: TeamOutputAsk) {
+    await page.goto(`/dashboard?team_id=${encodeURIComponent(ask.teamID)}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('soma-operating-surface')).toBeVisible({ timeout: 30_000 });
+    const dock = page.getByTestId('focused-team-output-dock');
+    await expect(dock).toBeVisible({ timeout: 30_000 });
+    await expect(dock.getByText(ask.filePath)).toBeVisible();
+    await expect(dock.getByRole('link', { name: /Team page/i })).toHaveAttribute(
+        'href',
+        `/teams?team_id=${encodeURIComponent(ask.teamID)}`,
+    );
+    await expect(dock.getByRole('button', { name: `Open ${ask.filePath} in a new browser window` })).toBeVisible();
+    await expect(dock.getByRole('button', { name: `Open local folder for ${ask.filePath}` })).toBeVisible();
+}
+
 test.describe('Live teams produce reviewable content outputs', () => {
     test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, 'requires a live Core backend');
     test.setTimeout(180_000);
@@ -202,6 +216,9 @@ test.describe('Live teams produce reviewable content outputs', () => {
         await openWorkspace(page, organizationId);
         for (const ask of asks) {
             await executeTeamOutput(page, ask);
+        }
+        for (const ask of asks) {
+            await expectTeamOutputVisibleOnDashboard(page, ask);
         }
         for (const ask of asks) {
             await expectTeamVisibleInGroups(page, ask.teamID);
