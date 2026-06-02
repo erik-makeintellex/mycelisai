@@ -77,7 +77,9 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	projectedState := projectedSignalState(item, payloadKind, payload)
 	item.State = projectedState
 	item.NeedsOperator = projectedState == protocol.TeamWorkStateNeedsOperator || projectedState == protocol.TeamWorkStateDegraded
-	if projectedState != protocol.TeamWorkStateDegraded {
+	if projectedState == protocol.TeamWorkStateDegraded {
+		item.DegradationState = firstNonEmptyString(stringField(payload, "degradation_state"), stringField(payload, "degradation"), item.DegradationState)
+	} else {
 		item.DegradationState = ""
 	}
 	event := projectedSignalStatusEvent(item, env, subject, payloadKind, payload)
@@ -122,11 +124,11 @@ func signalWorkItemID(payload map[string]any) string {
 }
 
 func projectedSignalState(item protocol.TeamWorkItem, payloadKind protocol.SignalPayloadKind, payload map[string]any) protocol.TeamWorkState {
-	if payloadKind == protocol.PayloadKindResult {
-		return protocol.TeamWorkStateOutputReady
-	}
 	if state := protocol.TeamWorkState(stringField(payload, "state")); protocol.IsTeamExecutionState(state) {
 		return state
+	}
+	if payloadKind == protocol.PayloadKindResult {
+		return protocol.TeamWorkStateOutputReady
 	}
 	return item.State
 }
@@ -155,7 +157,9 @@ func projectedSignalStatusEvent(item protocol.TeamWorkItem, env protocol.SignalE
 
 func projectedSignalInteraction(item protocol.TeamWorkItem, env protocol.SignalEnvelope, subject string, payloadKind protocol.SignalPayloadKind, payload map[string]any) protocol.TeamInteraction {
 	verb := "status"
-	if payloadKind == protocol.PayloadKindResult {
+	if item.State == protocol.TeamWorkStateDegraded {
+		verb = "degraded"
+	} else if payloadKind == protocol.PayloadKindResult {
 		verb = "output_ready"
 	}
 	return protocol.NormalizeTeamInteraction(protocol.TeamInteraction{

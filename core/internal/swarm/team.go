@@ -3,6 +3,7 @@ package swarm
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/cognitive"
@@ -50,6 +51,14 @@ type Team struct {
 	compositeExec      *CompositeToolExecutor
 	mcpServerNames     map[uuid.UUID]string
 	mcpToolDescs       map[string]string
+	pendingCorrelation *teamCommandCorrelation
+}
+
+type teamCommandCorrelation struct {
+	WorkItemID string
+	TeamID     string
+	RunID      string
+	ExpiresAt  time.Time
 }
 
 // NewTeam creates a new Team instance.

@@ -73,6 +73,37 @@ func TestTeamWorkSignalProjection_StatusUsesExplicitState(t *testing.T) {
 	}
 }
 
+func TestTeamWorkSignalProjection_ResultHonorsExplicitDegradedState(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	workID := "11111111-1111-1111-1111-111111111111"
+	mock.MatchExpectationsInOrder(true)
+	mockTeamWorkItem(mock, "research-team", workID, protocol.TeamWorkStateRunning, false, "", now)
+	expectProjectedStatusEventWithSource(mock, "research-team", workID, protocol.TeamWorkStateDegraded, protocol.PayloadKindResult, string(protocol.SourceKindSystem), "swarm.team.research-team.internal.response", now)
+	expectProjectedTeamWorkUpdate(mock, workID, protocol.TeamWorkStateDegraded, true, "provider_timeout")
+	expectProjectedInteractionWithSource(mock, "research-team", workID, "degraded", protocol.PayloadKindResult, string(protocol.SourceKindSystem), "swarm.team.research-team.internal.response", now)
+
+	raw := mustSignalEnvelope(t, protocol.SignalEnvelope{
+		Meta: protocol.SignalMeta{
+			Timestamp:     now,
+			SourceKind:    protocol.SourceKindSystem,
+			SourceChannel: "swarm.team.research-team.internal.response",
+			PayloadKind:   protocol.PayloadKindResult,
+			TeamID:        "research-team",
+		},
+		Payload: json.RawMessage(`{"work_item_id":"` + workID + `","state":"degraded","headline":"Team ask degraded","details":"Provider timed out.","degradation_state":"provider_timeout"}`),
+	})
+
+	projection := &teamWorkSignalProjection{server: s}
+	if err := projection.project(t.Context(), "swarm.team.research-team.signal.result", raw); err != nil {
+		t.Fatalf("project: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestTeamWorkSignalProjection_UncorrelatedSignalIgnored(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)
@@ -99,13 +130,17 @@ func TestTeamWorkSignalProjection_UncorrelatedSignalIgnored(t *testing.T) {
 }
 
 func expectProjectedStatusEvent(mock sqlmock.Sqlmock, teamID, workID string, state protocol.TeamWorkState, kind protocol.SignalPayloadKind, now time.Time) {
+	expectProjectedStatusEventWithSource(mock, teamID, workID, state, kind, string(protocol.SourceKindInternalTool), "swarm.team."+teamID+".internal.trigger", now)
+}
+
+func expectProjectedStatusEventWithSource(mock sqlmock.Sqlmock, teamID, workID string, state protocol.TeamWorkState, kind protocol.SignalPayloadKind, sourceKind, sourceChannel string, now time.Time) {
 	mock.ExpectQuery("INSERT INTO team_status_events").
 		WithArgs(
 			sqlmock.AnyArg(), teamID, workID, sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			string(state), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindInternalTool),
-			"swarm.team."+teamID+".internal.trigger", string(kind), sqlmock.AnyArg(), "v1",
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sourceKind,
+			sourceChannel, string(kind), sqlmock.AnyArg(), "v1",
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
 }
@@ -120,11 +155,15 @@ func expectProjectedTeamWorkUpdate(mock sqlmock.Sqlmock, workID string, state pr
 }
 
 func expectProjectedInteraction(mock sqlmock.Sqlmock, teamID, workID, verb string, kind protocol.SignalPayloadKind, now time.Time) {
+	expectProjectedInteractionWithSource(mock, teamID, workID, verb, kind, string(protocol.SourceKindInternalTool), "swarm.team."+teamID+".internal.trigger", now)
+}
+
+func expectProjectedInteractionWithSource(mock sqlmock.Sqlmock, teamID, workID, verb string, kind protocol.SignalPayloadKind, sourceKind, sourceChannel string, now time.Time) {
 	mock.ExpectQuery("INSERT INTO team_interactions").
 		WithArgs(
 			sqlmock.AnyArg(), teamID, workID, sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindInternalTool),
-			"swarm.team."+teamID+".internal.trigger", sqlmock.AnyArg(), verb, sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sourceKind,
+			sourceChannel, sqlmock.AnyArg(), verb, sqlmock.AnyArg(),
 			string(kind), "", sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), "v1",
 		).

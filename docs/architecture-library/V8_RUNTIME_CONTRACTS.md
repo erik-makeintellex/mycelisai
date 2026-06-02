@@ -94,6 +94,18 @@ Template/config sources
   -> governed execution, memory, activity, and retained outputs
 ```
 
+## Team Work Signals
+
+Durable team work is an operator-visible runtime object, not only a bus message.
+
+Rules:
+- bounded team asks create a `TeamWorkItem` before any worker response exists
+- async asks publish governed command envelopes with `work_item_id`, `team_id`, expected outputs, expected proof, and source context
+- team command/result/status paths must preserve `work_item_id` so `swarm.team.{team_id}.signal.status` and `swarm.team.{team_id}.signal.result` can update the original Active Work row
+- status-only teams may still advance a queued item to `output_ready` when their correlated status payload declares `state=output_ready`
+- explicit degraded states in result/status payloads must remain degraded and carry the degradation reason into recovery posture
+- uncorrelated team signals are ignored by Active Work projection instead of mutating the wrong work item
+
 ## Migration Note
 
 Historical content remains migration evidence only. Promote active requirements into this document, bootstrap docs, UI/API docs, and `.state/V8_DEV_STATE.md`.
