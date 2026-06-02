@@ -102,6 +102,7 @@ Rules:
 - bounded team asks create a `TeamWorkItem` before any worker response exists
 - async asks publish governed command envelopes with `work_item_id`, `team_id`, expected outputs, expected proof, and source context
 - team command/result/status paths must preserve `work_item_id` so `swarm.team.{team_id}.signal.status` and `swarm.team.{team_id}.signal.result` can update the original Active Work row
+- correlated result payloads should include retained `outputs[]` or normalized `output_refs[]`; the runtime projects real workspace paths, app URLs, proof refs, and audit refs onto the original work item instead of fabricating storage locations
 - status-only teams may still advance a queued item to `output_ready` when their correlated status payload declares `state=output_ready`
 - explicit degraded states in result/status payloads must remain degraded and carry the degradation reason into recovery posture
 - uncorrelated team signals are ignored by Active Work projection instead of mutating the wrong work item

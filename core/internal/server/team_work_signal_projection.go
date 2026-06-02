@@ -82,6 +82,7 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	} else {
 		item.DegradationState = ""
 	}
+	item.OutputRefs = mergeTeamOutputRefs(item.OutputRefs, projectedSignalOutputRefs(item, env, payload))
 	event := projectedSignalStatusEvent(item, env, subject, payloadKind, payload)
 	if err := p.server.insertTeamStatusEventDB(ctx, &event); err != nil {
 		return fmt.Errorf("insert projected team status event: %w", err)
