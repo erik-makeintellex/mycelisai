@@ -169,6 +169,38 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(mocks.selectTeam).toHaveBeenCalledWith("team-alpha");
   });
 
+  it("does not show standing team topology as work context on a clean root dashboard", () => {
+    mocks.useDurableTeamWork.mockReturnValue({
+      items: [],
+      outputRefs: [],
+      emptyMessage: "No active work.",
+      status: "ready",
+      statusLabel: "Ready",
+      degradedMessage: null,
+    });
+
+    render(<SomaOperatingSurface />);
+
+    expect(screen.queryByTestId("soma-context-focus-bar")).toBeNull();
+    expect(screen.queryByTestId("soma-team-context-switcher")).toBeNull();
+  });
+
+  it("keeps work context switching visible when a team is focused", () => {
+    mocks.useDurableTeamWork.mockReturnValue({
+      items: [],
+      outputRefs: [],
+      emptyMessage: "No active work.",
+      status: "ready",
+      statusLabel: "Ready",
+      degradedMessage: null,
+    });
+
+    render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
+
+    expect(screen.getByTestId("soma-context-focus-bar")).toBeDefined();
+    expect(screen.getByTestId("soma-team-context-switcher")).toBeDefined();
+  });
+
   it("shows focused team retained outputs before the work panel is opened", () => {
     mocks.useDurableTeamWork.mockReturnValue({
       items: [{

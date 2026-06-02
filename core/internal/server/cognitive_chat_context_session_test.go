@@ -11,6 +11,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
 
@@ -106,6 +107,50 @@ func TestHandleChat_PrependsWorkspaceContextForSelectedTeam(t *testing.T) {
 		}
 	default:
 		t.Fatal("expected forwarded messages to be captured")
+	}
+}
+
+func TestBuildChatWorkspaceContextIncludesLatestTeamOutputs(t *testing.T) {
+	dbOpt, mock := withDB(t)
+	s := newTestServer(dbOpt)
+	now := time.Now().UTC()
+	mock.ExpectQuery("SELECT id::text, team_id").
+		WithArgs("comic-team", 5).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			"11111111-1111-1111-1111-111111111111",
+			"comic-team",
+			"22222222-2222-2222-2222-222222222222",
+			"",
+			"",
+			"proof-1",
+			"Create comic page",
+			[]byte(`[]`),
+			"Soma",
+			string(protocol.TeamExecutionShapeDeliverable),
+			[]byte(`["comic page"]`),
+			[]byte(`["run proof"]`),
+			[]byte(`[]`),
+			"required",
+			string(protocol.TeamWorkStateOutputReady),
+			[]byte(`null`),
+			false,
+			"",
+			[]byte(`[]`),
+			[]byte(`[{"label":"Generated comic page","storage_ref":"saved-media/comic-page.png","entrypoint":"saved-media/comic-page.png"}]`),
+			[]byte(`["proof-1"]`),
+			[]byte(`["audit-1"]`),
+			now,
+			now,
+			"v1",
+		))
+
+	context := s.buildChatWorkspaceContext(t.Context(), "", "comic-team", "Comic Team")
+
+	if !strings.Contains(context, "Latest retained outputs for current team: Generated comic page at saved-media/comic-page.png.") {
+		t.Fatalf("workspace context = %q, want latest retained output path", context)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
 	}
 }
 

@@ -60,4 +60,52 @@ describe('useCortexStore confirm proposal pending proof', () => {
             content: 'Proposal confirmed. Waiting for execution proof.',
         });
     });
+
+    it('marks the proposal pending while confirmation is still in flight', async () => {
+        useCortexStore.setState({
+            pendingProposal: {
+                intent: 'Launch a docs crew',
+                teams: 1,
+                agents: 2,
+                tools: ['delegate_task'],
+                risk_level: 'medium',
+                confirm_token: 'ct-123',
+                intent_proof_id: 'ip-123',
+            },
+            activeConfirmToken: 'ct-123',
+            missionChat: [{
+                role: 'council',
+                content: 'Proposed execution path',
+                mode: 'proposal',
+                proposal: {
+                    intent: 'Launch a docs crew',
+                    teams: 1,
+                    agents: 2,
+                    tools: ['delegate_task'],
+                    risk_level: 'medium',
+                    confirm_token: 'ct-123',
+                    intent_proof_id: 'ip-123',
+                },
+                proposal_status: 'active',
+            }],
+            activeMode: 'proposal',
+        });
+        let resolveFetch!: (value: any) => void;
+        mockFetch.mockImplementation(() => new Promise((resolve) => {
+            resolveFetch = resolve;
+        }));
+
+        const pending = useCortexStore.getState().confirmProposal();
+
+        expect(useCortexStore.getState().missionChat[0]).toMatchObject({
+            proposal_status: 'confirmed_pending_execution',
+            mode: 'proposal',
+        });
+
+        resolveFetch({
+            ok: true,
+            json: async () => ({ data: { confirmed: true, run_id: 'run-1' } }),
+        });
+        await pending;
+    });
 });

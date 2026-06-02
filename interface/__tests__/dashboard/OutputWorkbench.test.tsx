@@ -135,10 +135,11 @@ describe("OutputWorkbench", () => {
     expect(screen.getByText("Reviewable output package")).toBeDefined();
     expect(screen.getByText("entry: index.html")).toBeDefined();
     expect(screen.getByText("Smoke test passed")).toBeDefined();
+    expect(screen.getByText("Latest output")).toBeDefined();
     expect(screen.getByText("path verified")).toBeDefined();
     expect(screen.getByText("readback verified")).toBeDefined();
     expect(screen.getByText("sha256 b94d27b9934d")).toBeDefined();
-    expect(screen.getByRole("button", { name: /Open Launch brief/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Open file Launch brief/i })).toBeDefined();
     expect(screen.getByRole("button", { name: /Open local folder for Launch microsite/i })).toBeDefined();
 
     fireEvent.click(screen.getByRole("button", { name: /Copy output quote for Launch brief/i }));

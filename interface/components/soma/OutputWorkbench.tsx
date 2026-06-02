@@ -127,6 +127,10 @@ export function OutputWorkbench({
   const [copiedOutputKey, setCopiedOutputKey] = useState<string | null>(null);
   const packages = projectPackages ?? [];
   const hasOutputs = outputs.length > 0 || packages.length > 0;
+  const primaryOutputIndex = outputs.findIndex((output) => Boolean(output.url));
+  const normalizedPrimaryIndex = primaryOutputIndex >= 0 ? primaryOutputIndex : outputs.length > 0 ? 0 : -1;
+  const primaryOutput = normalizedPrimaryIndex >= 0 ? outputs[normalizedPrimaryIndex] : null;
+  const secondaryOutputs = outputs.filter((_, index) => index !== normalizedPrimaryIndex);
 
   const copyOutputQuote = async (output: OutputWorkbenchItem, key: string) => {
     await navigator.clipboard.writeText(quotedOutputText(output));
@@ -190,9 +194,38 @@ export function OutputWorkbench({
           })}
         </div>
       ) : null}
-      {outputs.length > 0 ? (
-        <div className="flex flex-wrap gap-x-3 gap-y-2">
-          {outputs.map((output, index) => {
+      {primaryOutput ? (
+        <article className="rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-primary">Latest output</div>
+              <div className="mt-1 truncate text-sm font-semibold text-cortex-text-main">{primaryOutput.text}</div>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-1">
+              <OutputAccessActions label={primaryOutput.text} url={primaryOutput.url} openLabel="Open file" folderLabel="Open folder" />
+              <button
+                type="button"
+                onClick={() => void copyOutputQuote(primaryOutput, `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}`)}
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
+                title={copiedOutputKey === `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}` ? "Copied output quote" : "Copy output quote"}
+                aria-label={copiedOutputKey === `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}` ? "Copied output quote" : `Copy output quote for ${primaryOutput.text}`}
+              >
+                {copiedOutputKey === `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}` ? <Check className="h-3.5 w-3.5" /> : <Quote className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          </div>
+          <div className="mt-2">
+            <OutputProofBadges proof={primaryOutput.proof} proofArtifactId={primaryOutput.proofArtifactId} />
+          </div>
+        </article>
+      ) : null}
+      {secondaryOutputs.length > 0 ? (
+        <details className="rounded-lg border border-cortex-border/70 bg-cortex-bg/50 px-3 py-2">
+          <summary className="cursor-pointer text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
+            Output details and proof
+          </summary>
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-2">
+          {secondaryOutputs.map((output, index) => {
             const key = `${output.text}-${output.url ?? "text"}-${index}`;
             const copied = copiedOutputKey === key;
             return (
@@ -219,7 +252,8 @@ export function OutputWorkbench({
               </span>
             );
           })}
-        </div>
+          </div>
+        </details>
       ) : null}
       <ExecutionSummaryMediaPreview outputs={outputs} />
     </div>

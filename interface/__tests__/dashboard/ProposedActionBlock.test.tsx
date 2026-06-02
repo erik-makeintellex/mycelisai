@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ProposedActionBlock from '@/components/dashboard/ProposedActionBlock';
 import { useCortexStore, type ChatMessage } from '@/store/useCortexStore';
 
@@ -87,7 +87,7 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/write file/i)).toBeDefined();
     });
 
-    it('dispatches confirm and cancel actions', () => {
+    it('dispatches confirm and cancel actions', async () => {
         const confirmProposal = vi.fn().mockResolvedValue({ ok: true, runId: null });
         const cancelProposal = vi.fn();
         useCortexStore.setState({ confirmProposal, cancelProposal });
@@ -95,14 +95,33 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
         fireEvent.click(screen.getByRole('button', { name: /approve & execute/i }));
-        fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
-        expect(confirmProposal).toHaveBeenCalledTimes(1);
+        await waitFor(() => expect(confirmProposal).toHaveBeenCalledTimes(1));
         expect(confirmProposal).toHaveBeenCalledWith(expect.objectContaining({
             confirm_token: 'ct-123',
             intent_proof_id: 'ip-123',
         }));
+
+        fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
         expect(cancelProposal).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows immediate execution feedback after approval click', async () => {
+        let resolveConfirm!: (value: { ok: boolean; runId: string | null }) => void;
+        const confirmProposal = vi.fn(() => new Promise<{ ok: boolean; runId: string | null }>((resolve) => {
+            resolveConfirm = resolve;
+        }));
+        useCortexStore.setState({ confirmProposal, cancelProposal: vi.fn() });
+
+        render(<ProposedActionBlock message={buildMessage()} />);
+
+        fireEvent.click(screen.getByRole('button', { name: /approve & execute/i }));
+
+        expect(screen.getByRole('button', { name: /executing/i })).toBeDefined();
+        expect(screen.getByText(/approval received/i)).toBeDefined();
+        resolveConfirm({ ok: true, runId: 'run-1' });
+
+        await waitFor(() => expect(screen.queryByRole('button', { name: /executing/i })).toBeNull());
     });
 
     it('renders terminal lifecycle messaging and hides actions for cancelled proposals', () => {

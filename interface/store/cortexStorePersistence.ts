@@ -70,6 +70,10 @@ export function loadPersistedChat(scope?: string | null): ChatMessage[] {
 export function persistChat(messages: ChatMessage[], scope?: string | null) {
     if (typeof window === 'undefined') return;
     try {
+        if (messages.length === 0) {
+            localStorage.removeItem(buildChatStorageKey(scope));
+            return;
+        }
         localStorage.setItem(buildChatStorageKey(scope), JSON.stringify(messages.slice(-CHAT_MAX_PERSISTED)));
     } catch {
         // quota exceeded - silently drop
@@ -82,6 +86,29 @@ export function clearPersistedChat(scope?: string | null) {
         localStorage.removeItem(buildChatStorageKey(scope));
         localStorage.removeItem(buildChatSessionStorageKey(scope));
         if (!scope) localStorage.removeItem(CHAT_STORAGE_KEY_LEGACY);
+    } catch {
+        // ignore localStorage failures
+    }
+}
+
+export function clearAllPersistedChat() {
+    if (typeof window === 'undefined') return;
+    try {
+        const keys: string[] = [];
+        for (let index = 0; index < localStorage.length; index += 1) {
+            const key = localStorage.key(index);
+            if (!key) continue;
+            if (
+                key === CHAT_STORAGE_KEY_LEGACY
+                || key === CHAT_STORAGE_KEY
+                || key === CHAT_SESSION_STORAGE_KEY
+                || key.startsWith(`${CHAT_STORAGE_KEY}:`)
+                || key.startsWith(`${CHAT_SESSION_STORAGE_KEY}:`)
+            ) {
+                keys.push(key);
+            }
+        }
+        keys.forEach((key) => localStorage.removeItem(key));
     } catch {
         // ignore localStorage failures
     }

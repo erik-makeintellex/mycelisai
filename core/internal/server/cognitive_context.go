@@ -59,7 +59,7 @@ func summarizeDepartmentNames(departments []OrganizationDepartmentSummary) strin
 	}
 }
 
-func (s *AdminServer) buildChatWorkspaceContext(organizationID, teamID, teamName string) string {
+func (s *AdminServer) buildChatWorkspaceContext(ctx context.Context, organizationID, teamID, teamName string) string {
 	organizationID = strings.TrimSpace(organizationID)
 	teamID = strings.TrimSpace(teamID)
 	teamName = normalizeChatWorkspaceName(teamName)
@@ -98,8 +98,50 @@ func (s *AdminServer) buildChatWorkspaceContext(organizationID, teamID, teamName
 	} else if teamID != "" {
 		lines = append(lines, fmt.Sprintf("Current team focus id: %s.", teamID))
 	}
+	lines = appendLatestTeamOutputContext(lines, s.latestTeamOutputContext(ctx, teamID))
 	lines = append(lines, "Treat phrases like 'the team', 'this team', or 'do you see it' as referring to the current team focus above when one is present. Use this workspace context before falling back to a broader runtime roster check.")
 	return strings.Join(lines, "\n")
+}
+
+func (s *AdminServer) latestTeamOutputContext(ctx context.Context, teamID string) []string {
+	teamID = strings.TrimSpace(teamID)
+	if teamID == "" || s.getDB() == nil {
+		return nil
+	}
+	items, err := s.listTeamWorkItemsDB(ctx, teamID, 5)
+	if err != nil {
+		log.Printf("[chat] latest team output context lookup failed: %v", err)
+		return nil
+	}
+	outputs := make([]string, 0, 3)
+	for _, item := range items {
+		for _, output := range item.OutputRefs {
+			label := normalizeChatWorkspaceName(output.Label)
+			ref := normalizeChatWorkspaceName(firstNonEmptyString(output.Entrypoint, output.StorageRef))
+			if label == "" && ref == "" {
+				continue
+			}
+			if label == "" {
+				label = "Retained output"
+			}
+			if ref != "" {
+				outputs = append(outputs, fmt.Sprintf("%s at %s", label, ref))
+			} else {
+				outputs = append(outputs, label)
+			}
+			if len(outputs) >= 3 {
+				return outputs
+			}
+		}
+	}
+	return outputs
+}
+
+func appendLatestTeamOutputContext(lines []string, outputs []string) []string {
+	if len(outputs) == 0 {
+		return lines
+	}
+	return append(lines, "Latest retained outputs for current team: "+strings.Join(outputs, "; ")+".")
 }
 
 func prependChatWorkspaceContext(messages []chatRequestMessage, context string) []chatRequestMessage {

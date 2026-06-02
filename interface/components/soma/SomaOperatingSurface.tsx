@@ -89,6 +89,9 @@ export function SomaOperatingSurface({
     (item) => item.state !== "archived",
   );
   const displayedMode = activeMode ?? (focusedTeam ? `Focused team: ${focusedTeam.name}` : null);
+  const hasWorkContextChoices = Boolean(effectiveFocusedTeamId)
+    || activeWorkItems.length > 0
+    || teamWork.outputRefs.length > 0;
 
   const clearFocusedContext = () => {
     selectTeam(null);
@@ -125,18 +128,22 @@ export function SomaOperatingSurface({
         governancePosture={governancePosture}
       />
       <div className="p-4 lg:p-5">
-        <SomaContextFocusBar
-          teamName={focusedTeam?.name}
-          teamId={effectiveFocusedTeamId}
-          onClear={clearFocusedContext}
-        />
-        <SomaTeamContextSwitcher
-          teams={teamsDetail}
-          workItems={teamWork.items}
-          focusedTeamId={effectiveFocusedTeamId}
-          onRootSelect={clearFocusedContext}
-          onTeamSelect={focusTeamContext}
-        />
+        {effectiveFocusedTeamId ? (
+          <SomaContextFocusBar
+            teamName={focusedTeam?.name}
+            teamId={effectiveFocusedTeamId}
+            onClear={clearFocusedContext}
+          />
+        ) : null}
+        {hasWorkContextChoices ? (
+          <SomaTeamContextSwitcher
+            teams={teamsDetail}
+            workItems={teamWork.items}
+            focusedTeamId={effectiveFocusedTeamId}
+            onRootSelect={clearFocusedContext}
+            onTeamSelect={focusTeamContext}
+          />
+        ) : null}
         <FocusedTeamOutputDock
           teamName={focusedTeam?.name}
           teamId={effectiveFocusedTeamId}

@@ -179,6 +179,61 @@ func TestBuildConfirmActionExecutionSummaryNamesTeamDeliverable(t *testing.T) {
 	}
 }
 
+func TestBuildConfirmActionExecutionSummaryNamesTeamMediaDeliverable(t *testing.T) {
+	summary := buildConfirmActionExecutionSummary(
+		"proof-123",
+		"contract-123",
+		"artifact-123",
+		"run-123",
+		"audit-123",
+		&protocol.ScopeValidation{
+			Tools: []string{"create_team", "generate_image", "save_cached_image"},
+			PlannedToolCalls: []protocol.PlannedToolCall{
+				{Name: "create_team"},
+				{Name: "generate_image"},
+				{Name: "save_cached_image"},
+			},
+		},
+		[]plannedToolExecutionResult{
+			{Name: "create_team", Arguments: map[string]any{"team_id": "comic-team", "name": "Comic Team"}},
+			{
+				Name: "generate_image",
+				Arguments: map[string]any{
+					"prompt": "Generate a vertical comic page.",
+				},
+				Artifacts: []protocol.ChatArtifactRef{{
+					ID:        "comic-page",
+					Type:      "image",
+					Title:     "Comic page",
+					SavedPath: "saved-media/comic-page.png",
+				}},
+			},
+			{
+				Name: "save_cached_image",
+				Arguments: map[string]any{
+					"filename": "comic-page.png",
+				},
+				Artifacts: []protocol.ChatArtifactRef{{
+					ID:        "comic-page-cache",
+					Type:      "image",
+					Title:     "Cached comic page",
+					SavedPath: "saved-media/comic-page.png",
+				}},
+			},
+		},
+	)
+
+	if summary.Understanding.Summary != "Team created and its first retained deliverable completed." {
+		t.Fatalf("understanding = %q", summary.Understanding.Summary)
+	}
+	if summary.Execution.Summary != "Soma created the governed team, produced the first reviewable output, and recorded durable proof." {
+		t.Fatalf("execution summary = %q", summary.Execution.Summary)
+	}
+	if len(summary.Outputs) < 2 {
+		t.Fatalf("outputs = %+v, want retained media outputs", summary.Outputs)
+	}
+}
+
 func TestBuildConfirmActionExecutionSummaryNamesTeamOnlyAsNotStarted(t *testing.T) {
 	summary := buildConfirmActionExecutionSummary(
 		"proof-123",

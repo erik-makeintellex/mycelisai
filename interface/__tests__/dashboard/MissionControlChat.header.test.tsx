@@ -77,6 +77,27 @@ describe('MissionControlChat header and routing chrome', () => {
         expect(screen.getByText('Persisted focused team message')).toBeDefined();
     });
 
+    it('clears all persisted chat scopes when opened with fresh reset flag', async () => {
+        localStorage.setItem('mycelis-workspace-chat', JSON.stringify([
+            { role: 'user', content: 'Persisted root message' },
+        ]));
+        localStorage.setItem('mycelis-workspace-chat:org-123::team::team-alpha', JSON.stringify([
+            { role: 'user', content: 'Persisted team message' },
+        ]));
+        localStorage.setItem('mycelis-workspace-chat-session:org-123::team::team-alpha', 'session-1');
+        window.history.pushState(null, '', '/dashboard?fresh=1');
+
+        render(<MissionControlChat simpleMode />);
+        await settleMissionControlChat();
+
+        expect(localStorage.getItem('mycelis-workspace-chat')).toBeNull();
+        expect(localStorage.getItem('mycelis-workspace-chat:org-123::team::team-alpha')).toBeNull();
+        expect(localStorage.getItem('mycelis-workspace-chat-session:org-123::team::team-alpha')).toBeNull();
+        expect(window.location.search).toBe('');
+        expect(screen.queryByText('Persisted root message')).toBeNull();
+        expect(screen.queryByText('Persisted team message')).toBeNull();
+    });
+
     it('clears a stale loading lock when a new organization scope is applied', async () => {
         localStorage.setItem('mycelis-workspace-chat:org-123', JSON.stringify([
             { role: 'user', content: 'Persisted org message' },

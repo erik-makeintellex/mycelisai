@@ -56,6 +56,14 @@ export function createCortexProposalExecutionSlice(
                     error: 'No pending proposal to confirm',
                 };
             }
+            set((s) => ({
+                activeMode: 'proposal',
+                missionChatError: null,
+                missionChatFailure: null,
+                missionChat: updateProposalLifecycle(s.missionChat, proposal.intent_proof_id, 'confirmed_pending_execution', {
+                    mode: 'proposal',
+                }),
+            }));
             try {
                 const res = await fetch('/api/v1/intent/confirm-action', {
                     method: 'POST',

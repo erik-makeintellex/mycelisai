@@ -3,6 +3,7 @@ export {
     buildChatStorageKey,
     CHAT_SESSION_STORAGE_KEY,
     CHAT_STORAGE_KEY,
+    clearAllPersistedChat,
     clearPersistedChat,
     loadOrCreateChatSessionId,
     loadPersistedChat,

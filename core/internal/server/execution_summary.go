@@ -124,12 +124,13 @@ func buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, ru
 	outputs = attachConfirmActionOutputProofs(outputs, proofArtifactID, runID, contractID, results)
 	understandingSummary := "Confirmed proposal execution completed."
 	executionStateSummary := "Soma executed the confirmed proposal and recorded durable proof."
+	hasTeamDeliverable := hasDeliverableToolResult(results)
 	nextStep := &protocol.ExecutionNextStep{
 		Label:  "Review run",
 		Action: "view_run",
 		Href:   "/api/v1/runs/" + runID,
 	}
-	if toolResultExists(results, "create_team") && toolResultExists(results, "write_file") {
+	if toolResultExists(results, "create_team") && hasTeamDeliverable {
 		understandingSummary = "Team created and its first retained deliverable completed."
 		executionStateSummary = "Soma created the governed team, produced the first reviewable output, and recorded durable proof."
 		nextStep = &protocol.ExecutionNextStep{
@@ -185,6 +186,15 @@ func buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, ru
 func toolResultExists(results []plannedToolExecutionResult, name string) bool {
 	for _, result := range results {
 		if strings.TrimSpace(result.Name) == name {
+			return true
+		}
+	}
+	return false
+}
+
+func hasDeliverableToolResult(results []plannedToolExecutionResult) bool {
+	for _, result := range results {
+		if isDeliverableTool(result.Name) {
 			return true
 		}
 	}

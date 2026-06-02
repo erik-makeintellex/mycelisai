@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Clock3, XCircle } from "lucide-react";
+import { Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Clock3, Loader2, XCircle } from "lucide-react";
 import { useCortexStore, type ChatMessage, type ProposalData } from "@/store/useCortexStore";
 import { brainBadge, toolLabel, sourceNodeLabel } from "@/lib/labels";
 import ProposalRunIntent from "./ProposalRunIntent";
@@ -55,6 +55,8 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const cancelProposal = useCortexStore((s) => s.cancelProposal);
     const assistantName = useCortexStore((s) => s.assistantName);
     const [detailsOpen, setDetailsOpen] = useState(false);
+    const [confirming, setConfirming] = useState(false);
+    const [confirmError, setConfirmError] = useState<string | null>(null);
 
     const proposal = message.proposal;
     if (!proposal) return null;
@@ -104,7 +106,23 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                 ? CheckCircle
                 : renderedLifecycle === "failed"
                     ? AlertTriangle
-                    : Shield;
+            : Shield;
+    const handleConfirm = async () => {
+        if (!hasConfirmToken || confirming) return;
+        setConfirming(true);
+        setConfirmError(null);
+        const result = await confirmProposal(proposal);
+        setConfirming(false);
+        if (!result.ok) {
+            setConfirmError(result.error || "Execution did not complete. Review the blocker below.");
+        }
+    };
+
+    const handleCancel = () => {
+        if (confirming) return;
+        cancelProposal();
+    };
+
     return (
         <div className="mt-3 rounded-lg border border-amber-400/30 bg-cortex-surface/80 overflow-hidden">
             <div className="px-4 py-2 bg-amber-400/5 border-b border-amber-400/20 flex flex-wrap items-center justify-between gap-2">
@@ -269,26 +287,37 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
             </div>
 
             {isActionable ? (
-                <div className="px-4 py-3 border-t border-cortex-border flex items-center gap-2">
-                    <button
-                        onClick={() => confirmProposal(proposal)}
-                        disabled={!hasConfirmToken}
-                        className="px-3 py-1.5 rounded bg-cortex-success/20 border border-cortex-success/40 text-cortex-success text-xs font-mono hover:bg-cortex-success/30 transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed disabled:border-cortex-border disabled:bg-cortex-bg/40 disabled:text-cortex-text-muted"
-                    >
-                        <CheckCircle className="w-3 h-3" />
-                        {hasConfirmToken ? actionLabel : "Execution unavailable"}
-                    </button>
-                    <button
-                        onClick={() => cancelProposal()}
-                        className="px-3 py-1.5 rounded text-red-400 text-xs font-mono hover:bg-red-400/10 transition-colors flex items-center gap-1.5"
-                    >
-                        <XCircle className="w-3 h-3" />
-                        Cancel
-                    </button>
-                    {!hasConfirmToken ? (
-                        <span className="text-[11px] text-cortex-text-muted">
-                            This proposal is missing executable approval proof. Ask Soma to regenerate it.
-                        </span>
+                <div className="px-4 py-3 border-t border-cortex-border space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            onClick={() => void handleConfirm()}
+                            disabled={!hasConfirmToken || confirming}
+                            className="px-3 py-1.5 rounded bg-cortex-success/20 border border-cortex-success/40 text-cortex-success text-xs font-mono hover:bg-cortex-success/30 transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed disabled:border-cortex-border disabled:bg-cortex-bg/40 disabled:text-cortex-text-muted"
+                        >
+                            {confirming ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                            {confirming ? "Executing..." : hasConfirmToken ? actionLabel : "Execution unavailable"}
+                        </button>
+                        <button
+                            onClick={handleCancel}
+                            disabled={confirming}
+                            className="px-3 py-1.5 rounded text-red-400 text-xs font-mono hover:bg-red-400/10 transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed disabled:text-cortex-text-muted"
+                        >
+                            <XCircle className="w-3 h-3" />
+                            Cancel
+                        </button>
+                        {!hasConfirmToken ? (
+                            <span className="text-[11px] text-cortex-text-muted">
+                                This proposal is missing executable approval proof. Ask Soma to regenerate it.
+                            </span>
+                        ) : null}
+                    </div>
+                    {confirming ? (
+                        <p className="text-[11px] leading-5 text-cortex-text-muted">
+                            Approval received. Soma is starting the governed run; output and proof will appear below.
+                        </p>
+                    ) : null}
+                    {confirmError ? (
+                        <p className="text-[11px] leading-5 text-red-300">{confirmError}</p>
                     ) : null}
                 </div>
             ) : null}

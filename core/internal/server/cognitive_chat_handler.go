@@ -89,7 +89,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	req.Messages = prependReferentialReviewContext(req.Messages, referentialReview)
 	req.Messages = prependChatWorkspaceContext(
 		req.Messages,
-		s.buildChatWorkspaceContext(req.OrganizationID, req.TeamID, req.TeamName),
+		s.buildChatWorkspaceContext(r.Context(), req.OrganizationID, req.TeamID, req.TeamName),
 	)
 	req.Messages = prependSomaAttunementContext(req.Messages, latestUserText, s.searchCapabilityStatus())
 

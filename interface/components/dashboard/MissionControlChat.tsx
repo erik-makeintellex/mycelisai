@@ -25,6 +25,7 @@ import MissionControlTeamContinuationPrompt from "./MissionControlTeamContinuati
 import OrchestrationInspector from "./OrchestrationInspector";
 import { somaPlaceholder, teamSuggestions } from "./missionControlChatUi";
 import { buildMissionChatScope } from "@/store/cortexStoreMissionChatHelpers";
+import { clearAllPersistedChat } from "@/store/cortexStoreUtils";
 
 export default function MissionControlChat({
     simpleMode = false,
@@ -77,6 +78,19 @@ export default function MissionControlChat({
     useEffect(() => {
         setCouncilTarget("admin");
     }, [setCouncilTarget]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("fresh") !== "1" && params.get("reset_chat") !== "1") return;
+        clearAllPersistedChat();
+        clearMissionChat();
+        params.delete("fresh");
+        params.delete("reset_chat");
+        const nextSearch = params.toString();
+        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+        window.history.replaceState(null, "", nextUrl);
+    }, [clearMissionChat]);
 
     useEffect(() => {
         setMissionChatScope(chatScope);
