@@ -61,7 +61,7 @@ describe("CentralSomaHome", () => {
         expect(screen.getByText("Google Workspace")).toBeDefined();
         expect(screen.getByText("mycelis.link")).toBeDefined();
         expect(screen.getByText("Start here")).toBeDefined();
-        expect(screen.getByText(/Ask Soma to plan, review, create, or execute governed work/i)).toBeDefined();
+        expect(screen.getByText(/Ask Soma to plan, review, create, make changes, or follow up/i)).toBeDefined();
         expect(screen.getByRole("button", { name: "Set up an AI Organization" })).toBeDefined();
         expect(screen.queryByText("Soma just did this")).toBeNull();
         expect(screen.getByText("Evidence of Soma's work")).toBeDefined();

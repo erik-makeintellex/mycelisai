@@ -78,12 +78,13 @@ describe('MissionControlChat execution summary', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Operator trust package')).toBeDefined();
-            expect(screen.getByText('Proof needs review')).toBeDefined();
-            expect(screen.getByText('Directed execution')).toBeDefined();
+            expect(screen.getByText('Result needs review')).toBeDefined();
+            expect(screen.getByText('Completed work')).toBeDefined();
             expect(screen.getByText('workflow.launch')).toBeDefined();
             expect(screen.getByText('Operations Team')).toBeDefined();
             expect(screen.getByRole('link', { name: /Audit proof/i }).getAttribute('href')).toBe('/proof/proof-123');
-            expect(screen.getByRole('link', { name: /Onboarding run package/i }).getAttribute('href')).toBe('/runs/run-123');
+            expect(screen.getByText('Onboarding run package')).toBeDefined();
+            expect(screen.getByRole('button', { name: /Open file Onboarding run package/i })).toBeDefined();
             expect(screen.getByText('Review the generated package before notifying operators.')).toBeDefined();
         });
 
@@ -95,7 +96,7 @@ describe('MissionControlChat execution summary', () => {
         });
     });
 
-    it('renders direct search tool-assisted Soma execution proof', async () => {
+    it('renders direct search tool-assisted Soma result details', async () => {
         useCortexStore.setState({
             councilMembers: COUNCIL_MEMBERS,
             councilTarget: 'admin',
@@ -146,7 +147,7 @@ describe('MissionControlChat execution summary', () => {
 
         await waitFor(() => {
             expect(screen.getByTestId('execution-summary-card')).toBeDefined();
-            expect(screen.getByText('Verified execution proof')).toBeDefined();
+            expect(screen.getByText('Result verified')).toBeDefined();
             expect(screen.getByRole('link', { name: /Run search-r/i }).getAttribute('href')).toBe('/runs/search-run-123');
             expect(screen.getByText('Tool-assisted work')).toBeDefined();
             expect(screen.getAllByText('web_search').length).toBeGreaterThan(0);
@@ -203,13 +204,11 @@ describe('MissionControlChat execution summary', () => {
 
         render(<MissionControlChat simpleMode />);
 
-        const outputLink = await screen.findByRole('link', { name: new RegExp(filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
-        expect(outputLink.getAttribute('href')).toBe(href);
-        expect(outputLink.getAttribute('target')).toBe('_blank');
-        expect(screen.getByText('Run proof + retained output')).toBeDefined();
+        expect(await screen.findByText(filePath)).toBeDefined();
+        expect(screen.getByText('Result saved')).toBeDefined();
         expect(screen.getByRole('link', { name: /Mission activated/i }).getAttribute('href')).toBe('/runs/run-game-123456');
 
-        fireEvent.click(screen.getByRole('button', { name: new RegExp(`Open ${filePath} in a new browser window`) }));
+        fireEvent.click(screen.getByRole('button', { name: new RegExp(`Open file ${filePath} in a new browser window`) }));
         expect(openWindow).toHaveBeenCalledWith(href, '_blank', 'noopener,noreferrer');
 
         fireEvent.click(screen.getByRole('button', { name: new RegExp(`Open local folder for ${filePath}`) }));
@@ -283,7 +282,7 @@ describe('MissionControlChat execution summary', () => {
         });
     });
 
-    it('renders degradation proof boundaries for failed run messages', async () => {
+    it('renders plain failed-run boundaries for failed run messages', async () => {
         useCortexStore.setState({
             missionChat: [{
                 role: 'council',
@@ -317,14 +316,14 @@ describe('MissionControlChat execution summary', () => {
 
         render(<MissionControlChat simpleMode />);
 
-        expect(await screen.findByText('Needs operator attention')).toBeDefined();
+        expect(await screen.findByText('Needs review')).toBeDefined();
         expect(screen.getByText('Failed: tool unavailable')).toBeDefined();
-        expect(screen.getByText('Still trusted: The failed run record remains trusted.')).toBeDefined();
-        expect(screen.getByText('Invalid proof: No completed output should be trusted.')).toBeDefined();
+        expect(screen.getByText('Still available: The failed run record remains trusted.')).toBeDefined();
+        expect(screen.getByText('Not reliable: No completed output should be trusted.')).toBeDefined();
         expect(screen.getByText('Safe next: Review the failed run and retry.')).toBeDefined();
         expect(screen.getAllByRole('link', { name: /Run run-fail/i })
             .some((link) => link.getAttribute('href') === '/runs/run-failed-123456')).toBe(true);
-        expect(screen.queryByText('Run proof + retained output')).toBeNull();
-        expect(screen.queryByText('Verified execution proof')).toBeNull();
+        expect(screen.queryByText('Result saved')).toBeNull();
+        expect(screen.queryByText('Result verified')).toBeNull();
     });
 });

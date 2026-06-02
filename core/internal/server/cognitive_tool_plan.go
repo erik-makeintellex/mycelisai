@@ -16,9 +16,11 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 		} else {
 			planned = append(planned, normalizePlannedToolCall(inferredTeamCall))
 		}
-		if fileCall, ok := inferWriteFilePlanFromRequest(latestRequest); ok && containsToolName(mutTools, "write_file") {
+		if fileCall, ok := inferWriteFilePlanFromRequest(latestRequest); ok && containsToolName(mutTools, "write_file") && requestHasExplicitWriteFileContent(latestRequest) {
 			planned = append(planned, normalizePlannedToolCall(fileCall))
 		} else if fileCall, ok := inferFirstTeamGameDeliverablePlanFromRequest(latestRequest, planned[0]); ok {
+			planned = append(planned, normalizePlannedToolCall(fileCall))
+		} else if fileCall, ok := inferWriteFileExecutionPlan(agentResult, latestRequest); ok && containsToolName(mutTools, "write_file") {
 			planned = append(planned, normalizePlannedToolCall(fileCall))
 		}
 		if imageCall, saveCall, ok := inferTeamMediaDeliverablePlanFromRequest(latestRequest, planned[0]); ok && containsToolName(mutTools, "generate_image") {
@@ -27,7 +29,7 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 				planned = append(planned, normalizePlannedToolCall(saveCall))
 			}
 		}
-		return planned
+		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
 	}
 	if hasParsedCall {
 		planned = append(planned, normalizePlannedToolCall(parsedCall))
@@ -35,7 +37,7 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 	if len(planned) == 0 {
 		for _, tool := range mutTools {
 			if tool == "write_file" {
-				if call, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
+				if call, ok := inferWriteFileExecutionPlan(agentResult, latestRequest); ok {
 					planned = append(planned, normalizePlannedToolCall(call))
 				}
 			}
@@ -48,6 +50,31 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 				}
 			}
 		}
+	}
+	return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
+}
+
+func ensureWriteFileExecutionPlan(planned []protocol.PlannedToolCall, agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
+	if !containsToolName(mutTools, "write_file") {
+		return planned
+	}
+
+	fallback, hasFallback := inferWriteFileExecutionPlan(agentResult, latestRequest)
+	for i, call := range planned {
+		call = normalizePlannedToolCall(call)
+		if !strings.EqualFold(strings.TrimSpace(call.Name), "write_file") {
+			planned[i] = call
+			continue
+		}
+		if hasFallback {
+			call = mergeMissingPlannedToolArguments(call, fallback)
+		}
+		planned[i] = normalizePlannedToolCall(call)
+		return planned
+	}
+
+	if hasFallback {
+		return append(planned, normalizePlannedToolCall(fallback))
 	}
 	return planned
 }
@@ -145,11 +172,21 @@ func mergeMissingPlannedToolArguments(primary, fallback protocol.PlannedToolCall
 		primary.Arguments = map[string]any{}
 	}
 	for key, value := range fallback.Arguments {
-		if strings.TrimSpace(fmt.Sprint(primary.Arguments[key])) == "" {
+		if plannedArgumentIsEmpty(primary.Arguments[key]) {
 			primary.Arguments[key] = value
 		}
 	}
 	return primary
+}
+
+func plannedArgumentIsEmpty(value any) bool {
+	if value == nil {
+		return true
+	}
+	if text, ok := value.(string); ok {
+		return strings.TrimSpace(text) == ""
+	}
+	return strings.TrimSpace(fmt.Sprint(value)) == ""
 }
 
 func containsToolName(tools []string, want string) bool {

@@ -184,6 +184,45 @@ func TestDeterministicGovernedMutationResult_BuildsWriteFileProposalWithoutAgent
 	}
 }
 
+func TestBuildPlannedToolCalls_AddsExecutableWriteFilePlanFromAgentText(t *testing.T) {
+	request := "Write workspace/logs/approval_storage_note.md for the operator."
+	result := chatAgentResult{
+		Text:      "The approval execution plan is retained with the intent proof so confirmation can replay it.",
+		ToolsUsed: []string{"write_file"},
+	}
+
+	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	if len(calls) != 1 || calls[0].Name != "write_file" {
+		t.Fatalf("planned calls = %#v, want one write_file call", calls)
+	}
+	if calls[0].Arguments["path"] != "workspace/logs/approval_storage_note.md" {
+		t.Fatalf("path = %#v, want raw request path", calls[0].Arguments["path"])
+	}
+	content, _ := calls[0].Arguments["content"].(string)
+	if !strings.Contains(content, "approval execution plan is retained") {
+		t.Fatalf("content = %#v, want agent text retained", calls[0].Arguments["content"])
+	}
+}
+
+func TestBuildPlannedToolCalls_CompletesPartialWriteFileToolCall(t *testing.T) {
+	request := "Create a file at path workspace/logs/partial_plan.md containing 'approved execution plan retained'."
+	result := chatAgentResult{
+		Text:      `{"tool_call":{"name":"write_file","arguments":{"path":"workspace/logs/partial_plan.md"}}}`,
+		ToolsUsed: []string{"write_file"},
+	}
+
+	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	if len(calls) != 1 || calls[0].Name != "write_file" {
+		t.Fatalf("planned calls = %#v, want one write_file call", calls)
+	}
+	if calls[0].Arguments["path"] != "workspace/logs/partial_plan.md" {
+		t.Fatalf("path = %#v", calls[0].Arguments["path"])
+	}
+	if calls[0].Arguments["content"] != "approved execution plan retained" {
+		t.Fatalf("content = %#v, want request content fallback", calls[0].Arguments["content"])
+	}
+}
+
 func TestDeterministicGovernedMutationResult_BuildsFirstDemoTeamGameProposal(t *testing.T) {
 	request := strings.Join([]string{
 		"Create a team with team_id first-demo-game-team named First Demo Game Team.",

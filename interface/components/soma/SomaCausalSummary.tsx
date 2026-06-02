@@ -130,6 +130,20 @@ function artifactLabels(artifacts?: ChatArtifactRef[]) {
   return artifacts?.map((artifact) => artifact.title || artifact.type || artifact.id || "artifact").filter(Boolean) ?? [];
 }
 
+function executionShapeText(value?: string | null) {
+  const shape = compactText(value);
+  if (!shape) return null;
+  const labels: Record<string, string> = {
+    directed_execution: "completed work",
+    team_execution: "team work",
+    native_team: "team work",
+    tool_assisted_work: "tool-assisted work",
+    proposal: "proposal",
+    guided_proposal: "proposal",
+  };
+  return labels[shape] ?? shape.replace(/[_-]+/g, " ");
+}
+
 export function SomaCausalSummary({
   messages,
   fallbackAction = "Ready for your first Soma request",
@@ -150,7 +164,7 @@ export function SomaCausalSummary({
   const summary = latestSoma?.execution_summary;
   const responseState = defaultResponseState(latestSoma);
   const action = latestUser?.content?.replace(/^\[BROADCAST\]\s*/i, "").trim();
-  const executionShape = compactText(summary?.execution?.shape) ?? compactText(summary?.execution_shape);
+  const executionShape = executionShapeText(summary?.execution?.shape) ?? executionShapeText(summary?.execution_shape);
   const executionStatus = compactText(summary?.execution?.status) ?? compactText(summary?.execution_status);
   const executionSummary = compactText(summary?.execution?.summary) ?? compactText(summary?.execution_summary);
   const execution = [executionStatus, executionShape, executionSummary].filter(Boolean).join(": ");
@@ -172,7 +186,7 @@ export function SomaCausalSummary({
 
   const facts = [
     {
-      label: "Intent",
+      label: "Request",
       value: intentText(summary?.intent) ?? action ?? fallbackAction,
       icon: <Route className="h-3.5 w-3.5" />,
     },
@@ -182,8 +196,8 @@ export function SomaCausalSummary({
       icon: <Sparkles className="h-3.5 w-3.5" />,
     },
     {
-      label: "Execution",
-      value: execution || "No directed execution proof has been returned yet.",
+      label: "Progress",
+      value: execution || "No run result has been returned yet.",
       icon: <Gauge className="h-3.5 w-3.5" />,
     },
     {
@@ -198,7 +212,7 @@ export function SomaCausalSummary({
       quoteValue: produced.join(", "),
     },
     {
-      label: "Proof",
+      label: "Evidence",
       value: proof || updated.join(", "),
       icon: proof ? <ShieldCheck className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />,
     },
@@ -212,7 +226,7 @@ export function SomaCausalSummary({
   const primaryFacts = facts.slice(0, 4);
   const secondaryFacts = facts.slice(4);
   const outputFact = facts.find((fact) => fact.label === "Outputs");
-  const proofFact = facts.find((fact) => fact.label === "Proof");
+  const proofFact = facts.find((fact) => fact.label === "Evidence");
   const nextFact = facts.find((fact) => fact.label === "Next");
   const outcome = executionSummary ?? latestSoma?.content ?? "Soma is ready for your next request.";
   const copyFactQuote = async (fact: FactModel) => {
@@ -234,7 +248,7 @@ export function SomaCausalSummary({
             {responseState.label}
           </span>
         </div>
-        <p className="mt-2 text-sm leading-6 text-cortex-text-main">Tell Soma what you want to plan, review, create, or execute.</p>
+        <p className="mt-2 text-sm leading-6 text-cortex-text-main">Tell Soma what you want to plan, review, create, or run.</p>
       </section>
     );
   }
@@ -250,7 +264,7 @@ export function SomaCausalSummary({
           <span className={`rounded border px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${responseStateToneClass(responseState.tone)}`}>
             {responseState.label ?? responseState.kind.replace(/_/g, " ")}
           </span>
-          <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Trust package</p>
+          <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Review details</p>
         </div>
       </div>
       <p className="mt-2 text-sm leading-6 text-cortex-text-main">{outcome}</p>
@@ -272,7 +286,7 @@ export function SomaCausalSummary({
         aria-expanded={detailsOpen}
       >
         {detailsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        {detailsOpen ? "Hide trust details" : "Show trust details"}
+        {detailsOpen ? "Hide details" : "Show details"}
       </button>
       {detailsOpen ? (
         <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">

@@ -33,7 +33,7 @@ export const STARTER_PROMPTS = [
     "Create or review media output and show it in chat",
     "Schedule this as a recurring review after I approve",
     "Keep a monitor running and summarize changes here",
-    "Connect this task to the current team's NATS lane if configured",
+    "Connect this task to the current team if configured",
     "Propose a small temporary team and ask me to approve",
     "Review private/service boundaries before taking action",
     "Ask the active teams for blockers and summarize",

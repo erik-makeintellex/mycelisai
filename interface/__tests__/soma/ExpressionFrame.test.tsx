@@ -56,7 +56,7 @@ describe("ExpressionFrame", () => {
     expect(screen.getByRole("link", { name: /Intent proof/i }).getAttribute("href")).toBe("/runs/run-1");
     expect(screen.getByText("Revise scope or retry with a smaller output.")).toBeDefined();
 
-    fireEvent.click(screen.getByText("Inspect"));
+    fireEvent.click(screen.getByText("More details"));
     expect(screen.getByText("run-1")).toBeDefined();
     expect(screen.getByText("media-team")).toBeDefined();
   });

@@ -1,6 +1,23 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const chatPlaceholder = /Tell Soma what you want to plan, review, create, or execute/i;
+const chatPlaceholder = /Tell Soma what you want to plan, review, create, or run/i;
+
+type ConfirmActionBody = {
+  ok?: boolean;
+  error?: string;
+  data?: {
+    run_id?: string;
+    proof_artifact_id?: string;
+    verified?: boolean;
+    execution_state?: string;
+    execution_summary?: {
+      outputs?: Array<{ id?: string; text?: string; title?: string; url?: string } | string>;
+      audit_recovery?: unknown;
+      next_step?: unknown;
+      proof?: unknown;
+    };
+  };
+};
 
 async function pageScrollMetrics(page: Page) {
   return page.evaluate(() => ({
@@ -18,7 +35,74 @@ async function sideRailMetrics(page: Page) {
   }));
 }
 
+async function expectFreshDashboardWithoutStaleContent(page: Page) {
+  await page.goto("/dashboard?fresh=1", { waitUntil: "domcontentloaded" });
+  await expect(page.getByTestId("soma-environment-entry")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("soma-operating-surface")).toBeVisible();
+  await expect(page.getByTestId("central-soma-chat-frame")).toBeVisible();
+  await expect(page.getByTestId("soma-conversation-thread").getByText(chatPlaceholder)).toBeVisible();
+  await expect(page.getByTestId("output-workbench")).toHaveCount(0);
+  await expect(page.getByTestId("focused-team-output-dock")).toHaveCount(0);
+  await expect(page.getByRole("img", { name: /generated|retained|media|artifact/i })).toHaveCount(0);
+  await expect(page.getByText(/Latest output|Open Game|Run proof \+ retained output/i)).toHaveCount(0);
+}
+
+function outputMatchesTarget(body: ConfirmActionBody, targetPath: string) {
+  return (body.data?.execution_summary?.outputs ?? []).some((output) => {
+    if (typeof output === "string") return output.includes(targetPath);
+    return [output.id, output.text, output.title, output.url].some((value) => value?.includes(targetPath));
+  });
+}
+
 test.describe("Dashboard workbench live review", () => {
+  test("fresh business-owner dashboard stays clean and approved proposal creates a retained output", async ({ page }, testInfo) => {
+    test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires the live local Core/Interface stack");
+    test.setTimeout(180_000);
+
+    const stamp = Date.now();
+    const targetPath = `generated/business-owner-flow-${stamp}/owner-note.md`;
+
+    await expectFreshDashboardWithoutStaleContent(page);
+    await page.screenshot({ path: testInfo.outputPath("fresh-dashboard-clean.png"), fullPage: true });
+
+    const input = page.getByPlaceholder(chatPlaceholder);
+    await input.fill(
+      [
+        `Create a markdown file at ${targetPath}.`,
+        'Put exactly "# Business Owner Flow\n\nThe approval path must return output or one clear recovery action."',
+        "Return retained output and proof.",
+      ].join(" "),
+    );
+    const chatResponse = page.waitForResponse(
+      (response) => response.url().includes("/api/v1/chat") && response.request().method() === "POST",
+      { timeout: 120_000 },
+    );
+    await input.press("Enter");
+    const chat = await chatResponse;
+    const chatRaw = await chat.text();
+    expect(chat.ok(), chatRaw).toBeTruthy();
+
+    await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 45_000 });
+
+    const confirmResponse = page.waitForResponse(
+      (response) => response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
+      { timeout: 120_000 },
+    );
+    await page.getByRole("button", { name: /Approve and run|Run/i }).last().click();
+    const confirmed = await confirmResponse;
+    const confirmedRaw = await confirmed.text();
+    const confirmedBody = JSON.parse(confirmedRaw) as ConfirmActionBody;
+
+    expect(confirmed.ok(), confirmedRaw).toBeTruthy();
+    expect(confirmedBody.data?.run_id, confirmedRaw).toBeTruthy();
+    expect(
+      outputMatchesTarget(confirmedBody, targetPath) || Boolean(confirmedBody.data?.proof_artifact_id),
+      confirmedRaw,
+    ).toBeTruthy();
+    await expect(page.getByText(/Action completed|Result saved|Latest output|retained output|verified/i).last()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText(/owner-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
+  });
+
   test("uses Soma, generates retained content, and keeps active/prior work in the workbench rail", async ({ page }, testInfo) => {
     test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires the live local Core/Interface stack");
     test.setTimeout(180_000);

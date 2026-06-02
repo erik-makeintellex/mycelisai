@@ -101,8 +101,8 @@ export function MissionControlEmptyState({
         : showAdvancedRouting && directTarget
         ? `Direct message to ${councilLabel(directTarget, assistantName).name}...`
         : currentTeamName
-        ? `Tell ${assistantName} what you want to plan, review, create, or execute for ${currentTeamName}.`
-        : `Tell ${assistantName} what you want to plan, review, create, or execute.`;
+        ? `Tell ${assistantName} what you want to plan, review, create, or run for ${currentTeamName}.`
+        : `Tell ${assistantName} what you want to plan, review, create, or run.`;
 
     return (
         <div className="flex flex-col items-center justify-center h-full text-cortex-text-muted">

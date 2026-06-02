@@ -140,11 +140,11 @@ export function MissionControlChatHeader({
                     <Brain className="w-3.5 h-3.5 text-cortex-primary" />
                     <div className="min-w-0">
                         <span className="block text-[9px] font-bold uppercase tracking-widest text-cortex-primary font-mono">
-                            {simpleMode ? "Soma conversation" : assistantName}
+                            {assistantName}
                         </span>
                         {simpleMode ? (
                             <span className="block text-[11px] text-cortex-text-muted">
-                                Work with {assistantName} on plans, governed changes, reusable context, and delivery decisions.
+                                Ask for plans, changes, files, decisions, or follow-up work.
                             </span>
                         ) : null}
                     </div>

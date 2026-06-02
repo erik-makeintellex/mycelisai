@@ -10,8 +10,8 @@ describe("SomaCausalSummary", () => {
         expect(screen.getByText("Ready for your first request")).toBeDefined();
         expect(screen.getByText("First request")).toBeDefined();
         expect(screen.queryByText("Soma just did this")).toBeNull();
-        expect(screen.queryByText("Trust package")).toBeNull();
-        expect(screen.queryByText("Proof")).toBeNull();
+        expect(screen.queryByText("Review details")).toBeNull();
+        expect(screen.queryByText("Evidence")).toBeNull();
     });
 
     it("summarizes the latest directed execution as one causal package", () => {
@@ -68,7 +68,7 @@ describe("SomaCausalSummary", () => {
         render(<SomaCausalSummary messages={messages} />);
 
         expect(screen.getByText("Soma just did this")).toBeDefined();
-        expect(screen.getByText("Trust package")).toBeDefined();
+        expect(screen.getByText("Review details")).toBeDefined();
         expect(screen.getByText("Output ready")).toBeDefined();
         expect(screen.getByText(/Soma coordinated the operations lane and produced reviewable output/i)).toBeDefined();
         expect(screen.getByText(/Onboarding run package/i)).toBeDefined();
@@ -79,11 +79,11 @@ describe("SomaCausalSummary", () => {
         expect(screen.getByText("Review the package with operators.")).toBeDefined();
         expect(screen.queryByText("Prepare a reviewed onboarding package")).toBeNull();
 
-        fireEvent.click(screen.getByRole("button", { name: /Show trust details/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Show details/i }));
 
         expect(screen.getByText("Prepare a reviewed onboarding package")).toBeDefined();
         expect(screen.getByText(/Package the request for the operations team/i)).toBeDefined();
-        expect(screen.getByText(/complete: directed_execution/i)).toBeDefined();
+        expect(screen.getByText(/complete: completed work/i)).toBeDefined();
         expect(screen.getByText(/Teams: Operations Team/i)).toBeDefined();
 
         fireEvent.click(screen.getAllByRole("button", { name: /Copy output quote for Onboarding run package, Onboarding brief/i })[0]);

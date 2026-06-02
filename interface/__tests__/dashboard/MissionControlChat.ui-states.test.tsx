@@ -144,7 +144,7 @@ describe('MissionControlChat UI states', () => {
         render(<MissionControlChat />);
         await settleMissionControlChat();
 
-        expect(screen.getByText(/Tell Soma what you want to plan, review, create, or execute/i)).toBeDefined();
+        expect(screen.getByText(/Tell Soma what you want to plan, review, create, or run/i)).toBeDefined();
     });
 
     it('turns starter prompts into clickable guided actions in simple mode', async () => {

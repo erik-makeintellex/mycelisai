@@ -122,10 +122,11 @@ describe('MissionControlChat header and routing chrome', () => {
         render(<MissionControlChat simpleMode />);
         await settleMissionControlChat();
 
-        expect(screen.getByText('Soma conversation')).toBeDefined();
+        expect(screen.getByText('Soma')).toBeDefined();
+        expect(screen.getByText(/Ask for plans, changes, files, decisions, or follow-up work/i)).toBeDefined();
         expect(screen.queryByText('Direct')).toBeNull();
         expect(screen.queryByTitle(/Broadcast mode/)).toBeNull();
-        expect(screen.getByPlaceholderText(/Tell Soma what you want to plan, review, create, or execute/i)).toBeDefined();
+        expect(screen.getByPlaceholderText(/Tell Soma what you want to plan, review, create, or run/i)).toBeDefined();
     });
 
     it('shows "Broadcast" header in broadcast mode', async () => {

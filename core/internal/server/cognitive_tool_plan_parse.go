@@ -98,7 +98,7 @@ func inferWriteFilePlanFromRequest(text string) (protocol.PlannedToolCall, bool)
 	}
 
 	if content == "" {
-		return protocol.PlannedToolCall{}, false
+		content = synthesizeRequestedFileContent(trimmed, targetPath)
 	}
 
 	return protocol.PlannedToolCall{
@@ -108,6 +108,24 @@ func inferWriteFilePlanFromRequest(text string) (protocol.PlannedToolCall, bool)
 			"content": content,
 		},
 	}, true
+}
+
+func synthesizeRequestedFileContent(request, targetPath string) string {
+	request = strings.TrimSpace(request)
+	ext := filepathExt(targetPath)
+	switch ext {
+	case ".md", ".markdown":
+		return "# Generated note\n\n" +
+			"Soma created this file from your request.\n\n" +
+			"## What you asked for\n\n" +
+			request + "\n"
+	default:
+		if strings.Contains(strings.ToLower(request), "where") && strings.Contains(strings.ToLower(request), "output") {
+			return "Welcome to Mycelis.\n\n" +
+				"Ask Soma for the work you want done. When Soma creates files, images, or other outputs, they appear in the latest output area with controls to open the file or open the containing folder. The run proof remains linked so you can review what happened later.\n"
+		}
+		return "Soma created this file from your request:\n\n" + request + "\n"
+	}
 }
 
 func extractRequestedFilePath(text string) string {
@@ -121,7 +139,191 @@ func extractRequestedFilePath(text string) string {
 			return strings.Trim(candidate, `"'.,;`)
 		}
 	}
+	for _, field := range strings.Fields(text) {
+		candidate := strings.Trim(field, `"'.,;:()[]{}<>`)
+		if looksLikeFilePath(candidate) {
+			return candidate
+		}
+	}
 	return ""
+}
+
+func inferWriteFileExecutionPlan(agentResult chatAgentResult, latestRequest string) (protocol.PlannedToolCall, bool) {
+	if parsed, ok := parsePlannedToolCall(agentResult.Text); ok && strings.EqualFold(strings.TrimSpace(parsed.Name), "write_file") {
+		parsed = normalizePlannedToolCall(parsed)
+		if writeFilePlanHasPathAndContent(parsed) {
+			return parsed, true
+		}
+		if fallback, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
+			return normalizePlannedToolCall(mergeMissingPlannedToolArguments(parsed, fallback)), true
+		}
+		path := firstNonEmptyString(parsed.Arguments["path"], extractRequestedFilePath(latestRequest))
+		if path != "" {
+			parsed.Arguments["path"] = path
+			parsed.Arguments["content"] = inferWriteFileContent(agentResult, latestRequest, path)
+			if writeFilePlanHasPathAndContent(parsed) {
+				return normalizePlannedToolCall(parsed), true
+			}
+		}
+	}
+
+	if artifactPlan, ok := inferWriteFilePlanFromArtifacts(agentResult.Artifacts, latestRequest); ok {
+		return normalizePlannedToolCall(artifactPlan), true
+	}
+	if path := extractRequestedFilePath(latestRequest); path != "" && !requestHasExplicitWriteFileContent(latestRequest) {
+		if content := inferWriteFileContentFromAgentOutput(agentResult); content != "" {
+			return protocol.PlannedToolCall{
+				Name: "write_file",
+				Arguments: map[string]any{
+					"path":    path,
+					"content": content,
+				},
+			}, true
+		}
+	}
+	if inferred, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
+		return normalizePlannedToolCall(inferred), true
+	}
+
+	path := extractRequestedFilePath(latestRequest)
+	if path == "" {
+		path = defaultWriteFilePathForRequest(latestRequest)
+	}
+	content := inferWriteFileContent(agentResult, latestRequest, path)
+	if path == "" || content == "" {
+		return protocol.PlannedToolCall{}, false
+	}
+	return protocol.PlannedToolCall{
+		Name: "write_file",
+		Arguments: map[string]any{
+			"path":    path,
+			"content": content,
+		},
+	}, true
+}
+
+func writeFilePlanHasPathAndContent(call protocol.PlannedToolCall) bool {
+	return firstNonEmptyString(call.Arguments["path"]) != "" && firstNonEmptyString(call.Arguments["content"]) != ""
+}
+
+func requestHasExplicitWriteFileContent(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return false
+	}
+	if quoted := quotedContentPattern.FindStringSubmatch(trimmed); len(quoted) >= 2 {
+		return true
+	}
+	if prints := printsPattern.FindStringSubmatch(trimmed); len(prints) >= 2 {
+		return true
+	}
+	return false
+}
+
+func inferWriteFilePlanFromArtifacts(artifacts []protocol.ChatArtifactRef, latestRequest string) (protocol.PlannedToolCall, bool) {
+	for _, artifact := range artifacts {
+		content := strings.TrimSpace(artifact.Content)
+		if content == "" {
+			continue
+		}
+		path := firstNonEmptyString(artifact.Entrypoint, artifact.SavedPath)
+		if path == "" && artifact.Folder != "" && len(artifact.Files) > 0 {
+			path = strings.TrimRight(strings.TrimSpace(artifact.Folder), `/\`) + "/" + strings.TrimLeft(strings.TrimSpace(artifact.Files[0]), `/\`)
+		}
+		if path == "" {
+			path = extractRequestedFilePath(latestRequest)
+		}
+		if path == "" {
+			path = defaultWriteFilePathForArtifact(artifact, latestRequest)
+		}
+		if path == "" {
+			continue
+		}
+		return protocol.PlannedToolCall{
+			Name: "write_file",
+			Arguments: map[string]any{
+				"path":    path,
+				"content": content,
+			},
+		}, true
+	}
+	return protocol.PlannedToolCall{}, false
+}
+
+func inferWriteFileContent(agentResult chatAgentResult, latestRequest, targetPath string) string {
+	if content := inferWriteFileContentFromAgentOutput(agentResult); content != "" {
+		return content
+	}
+	if targetPath == "" || strings.TrimSpace(latestRequest) == "" {
+		return ""
+	}
+	return synthesizeRequestedFileContent(latestRequest, targetPath)
+}
+
+func inferWriteFileContentFromAgentOutput(agentResult chatAgentResult) string {
+	for _, artifact := range agentResult.Artifacts {
+		if content := strings.TrimSpace(artifact.Content); content != "" {
+			return content
+		}
+	}
+	text := strings.TrimSpace(agentResult.Text)
+	if text != "" && !containsToolCallJSON(text) && !isWeakDirectAnswerFallback(text) && !isGovernedProposalSummaryText(text) {
+		return strings.TrimRight(text, "\r\n") + "\n"
+	}
+	return ""
+}
+
+func isGovernedProposalSummaryText(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	return strings.HasPrefix(trimmed, "Soma can create `") && strings.Contains(trimmed, "through a governed proposal")
+}
+
+func defaultWriteFilePathForArtifact(artifact protocol.ChatArtifactRef, latestRequest string) string {
+	ext := ".md"
+	switch strings.ToLower(strings.TrimSpace(artifact.Type)) {
+	case "code", "file":
+		ext = extensionForWriteFileRequest(latestRequest)
+	case "data", "chart":
+		ext = ".json"
+	}
+	title := firstNonEmptyString(artifact.Title, "soma-output")
+	return "workspace/generated/" + slugID(title) + ext
+}
+
+func defaultWriteFilePathForRequest(latestRequest string) string {
+	if strings.TrimSpace(latestRequest) == "" {
+		return ""
+	}
+	return "workspace/generated/" + slugID(firstWords(latestRequest, 8)) + extensionForWriteFileRequest(latestRequest)
+}
+
+func extensionForWriteFileRequest(text string) string {
+	lower := strings.ToLower(text)
+	switch {
+	case strings.Contains(lower, "python") || strings.Contains(lower, "script"):
+		return ".py"
+	case strings.Contains(lower, "html") || strings.Contains(lower, "browser"):
+		return ".html"
+	case strings.Contains(lower, "json"):
+		return ".json"
+	case strings.Contains(lower, "yaml") || strings.Contains(lower, " yml"):
+		return ".yaml"
+	case strings.Contains(lower, "markdown") || strings.Contains(lower, "readme"):
+		return ".md"
+	default:
+		return ".md"
+	}
+}
+
+func firstWords(text string, limit int) string {
+	fields := strings.Fields(strings.TrimSpace(text))
+	if len(fields) == 0 {
+		return "soma-output"
+	}
+	if len(fields) > limit {
+		fields = fields[:limit]
+	}
+	return strings.Join(fields, " ")
 }
 
 func looksLikeFilePath(value string) bool {

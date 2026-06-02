@@ -183,11 +183,11 @@ export function ExpressionFrame({
       </div>
 
       <div className="space-y-2">
-        <FrameFact icon={<Route className="h-3.5 w-3.5" />} label="Intent">
+        <FrameFact icon={<Route className="h-3.5 w-3.5" />} label="Request">
           {intent}
         </FrameFact>
         {state ? (
-          <FrameFact icon={<Gauge className="h-3.5 w-3.5" />} label="State">
+          <FrameFact icon={<Gauge className="h-3.5 w-3.5" />} label="Status">
             {state}
           </FrameFact>
         ) : null}
@@ -197,7 +197,7 @@ export function ExpressionFrame({
           </FrameFact>
         ) : null}
         {(risk || approval) ? (
-          <FrameFact icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Approval">
+          <FrameFact icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Review">
             <div className="space-y-1">
               {risk ? <div>{risk}</div> : null}
               {approval ? <div>{approval}</div> : null}
@@ -210,7 +210,7 @@ export function ExpressionFrame({
           </FrameFact>
         ) : null}
         {proof.length > 0 ? (
-          <FrameFact icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Proof">
+          <FrameFact icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Evidence">
             <ReferenceList items={proof} />
           </FrameFact>
         ) : null}
@@ -229,7 +229,7 @@ export function ExpressionFrame({
             <details className="group basis-full">
               <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-xs font-mono text-cortex-primary hover:text-cortex-primary/80">
                 <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
-                Inspect
+                More details
               </summary>
               <div className="mt-2 grid gap-2 rounded border border-cortex-border/60 bg-cortex-surface/60 p-2 md:grid-cols-2">
                 {inspect.map((item) => (

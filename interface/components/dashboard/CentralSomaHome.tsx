@@ -108,7 +108,6 @@ export default function CentralSomaHome({
 
     return (
         <section className="space-y-3">
-            <EnvironmentEntryBar sessionUser={sessionUser} />
             {focusedTeam ? (
                 <div className="rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-3 text-sm text-cortex-text-main">
                     <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Focused team context</p>
@@ -123,6 +122,7 @@ export default function CentralSomaHome({
                 activeMode={focusedTeam ? `Focused team: ${focusedTeam.name}` : null}
                 focusedTeamId={selectedTeamId}
             />
+            <EnvironmentEntryBar sessionUser={sessionUser} />
 
             <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2">
                 <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -131,7 +131,7 @@ export default function CentralSomaHome({
                             <MessageCircle className="h-3.5 w-3.5" />
                             Start here
                         </span>
-                        Ask Soma to plan, review, create, or execute governed work. Use organizations only when you need durable workspace context.
+                        Ask Soma to plan, review, create, make changes, or follow up. Set up an AI Organization when you want durable workspace context.
                     </p>
                     <div className="flex shrink-0 flex-wrap gap-2">
                         {lastOrganization ? (
@@ -144,7 +144,7 @@ export default function CentralSomaHome({
 
             <details className="rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2">
                 <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.16em] text-cortex-text-muted">
-                    Live team stream
+                    Recent team activity
                 </summary>
                 <div className="mt-3">
                     <CentralActivityStream />

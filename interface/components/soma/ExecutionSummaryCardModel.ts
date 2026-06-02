@@ -18,12 +18,12 @@ export function executionShapeLabel(value?: string | null) {
     if (!shape) return null;
     const labels: Record<string, string> = {
         direct_answer: "Direct answer",
-        directed_execution: "Directed execution",
-        governed_artifact: "Governed artifact",
-        proposal: "Governed proposal",
-        guided_proposal: "Governed proposal",
-        team_execution: "Directed execution",
-        native_team: "Native team execution",
+        directed_execution: "Completed work",
+        governed_artifact: "Saved artifact",
+        proposal: "Proposal",
+        guided_proposal: "Proposal",
+        team_execution: "Team work",
+        native_team: "Team work",
         external_workflow: "External workflow",
         external_workflow_contract: "External workflow contract",
         tool_assisted_work: "Tool-assisted work",
@@ -163,8 +163,8 @@ export function degradationLines(value: ExecutionSummaryData["audit_recovery"]):
     const degradation = value.degradation;
     return [
         compactText(degradation.what_failed) ? `Failed: ${degradation.what_failed}` : null,
-        compactText(degradation.trusted_state) ? `Still trusted: ${degradation.trusted_state}` : null,
-        compactText(degradation.invalidated_proof) ? `Invalid proof: ${degradation.invalidated_proof}` : null,
+        compactText(degradation.trusted_state) ? `Still available: ${degradation.trusted_state}` : null,
+        compactText(degradation.invalidated_proof) ? `Not reliable: ${degradation.invalidated_proof}` : null,
         compactText(degradation.safe_continuation) ? `Safe next: ${degradation.safe_continuation}` : null,
     ].filter(Boolean) as string[];
 }
@@ -216,50 +216,50 @@ export function trustVerdict(summary: ExecutionSummaryData, runId?: string, arti
 
     if (degradation?.requires_attention || ["failed", "blocked", "cancelled"].includes(status) || compactText(audit?.blocker)) {
         return {
-            label: "Needs operator attention",
+            label: "Needs review",
             detail: compactText(degradation?.what_failed)
-                ?? "Part of the work is blocked or failed. Review recovery before trusting the result.",
+                ?? "Part of the work is blocked or failed. Review recovery before relying on the result.",
             tone: "attention",
         };
     }
     if (status === "proposed" || audit?.approval_status === "approval_required" || audit?.recovery_state === "awaiting_confirmation") {
         return {
             label: "Awaiting approval",
-            detail: "Soma has intent proof, but execution trust is not established until approval runs.",
+            detail: "Soma prepared a proposal. Approve it before relying on changes.",
             tone: "review",
         };
     }
     if (hasRun && retainedOutput) {
         return {
-            label: "Run proof + retained output",
-            detail: "A run is linked and the produced output is available for review.",
+            label: "Result saved",
+            detail: "The produced output is available for review.",
             tone: "trusted",
         };
     }
     if (hasRun || verified) {
         return {
-            label: "Verified execution proof",
-            detail: "Run or audit proof is linked for this result.",
+            label: "Result verified",
+            detail: "Run details are linked for this result.",
             tone: "trusted",
         };
     }
     if (proofClass === "audit_only") {
         return {
-            label: "Audit-only proof",
-            detail: "No execution run was needed; the audit record is the trust anchor.",
+            label: "Review record only",
+            detail: "No run was needed; the review record explains what happened.",
             tone: "review",
         };
     }
     if (proofClass === "intent_proof") {
         return {
-            label: "Intent proof only",
-            detail: "Soma captured the governed intent; execution proof will appear after approval.",
+            label: "Proposal only",
+            detail: "Soma prepared the request; results will appear after approval.",
             tone: "review",
         };
     }
     return {
-        label: "Proof needs review",
-        detail: "Review the available output and proof before relying on this result.",
+        label: "Result needs review",
+        detail: "Review the available output before relying on this result.",
         tone: "review",
     };
 }

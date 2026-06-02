@@ -20,7 +20,7 @@ describe("SomaWorkspaceFrame", () => {
 
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(sideRail.getAttribute("aria-hidden")).toBe("true");
-    expect(within(frame).getByText("Expression")).toBeDefined();
+    expect(within(frame).queryByText("Expression")).toBeNull();
     fireEvent.click(toggle);
 
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
@@ -30,8 +30,7 @@ describe("SomaWorkspaceFrame", () => {
     expect(within(sideRail).getByRole("tab", { name: /Trust/i })).toBeDefined();
     expect(within(sideRail).getByRole("tab", { name: /Context/i })).toBeDefined();
     expect(within(sideRail).getByText("Active work")).toBeDefined();
-    expect(within(frame).getByText(/Intent, output shape, constraints, and proof/i)).toBeDefined();
-    expect(within(frame).getAllByText(/Current items and operator attention/i).length).toBeGreaterThan(0);
+    expect(within(frame).getAllByText(/Current work that needs review or follow-up/i).length).toBeGreaterThan(0);
     expect(within(frame).getByText("Conversation transcript")).toBeDefined();
     expect(within(sideRail).getByText("Active lane fallback")).toBeDefined();
     expect(within(sideRail).queryByText("Output package")).toBeNull();
@@ -42,5 +41,14 @@ describe("SomaWorkspaceFrame", () => {
     expect(within(sideRail).getByText("Compact trust package")).toBeDefined();
     fireEvent.click(within(sideRail).getByRole("tab", { name: /Context/i }));
     expect(within(sideRail).getByText("Context links")).toBeDefined();
+  });
+
+  it("keeps the first-run Soma surface focused when there is nothing to review yet", () => {
+    render(<SomaWorkspaceFrame expression={<div>Ask Soma anything</div>} />);
+
+    expect(screen.getByText("Ask Soma anything")).toBeDefined();
+    expect(screen.queryByTestId("soma-workbench-panel-toggle")).toBeNull();
+    expect(screen.queryByTestId("soma-workbench-side-rail")).toBeNull();
+    expect(screen.queryByText("Expression")).toBeNull();
   });
 });

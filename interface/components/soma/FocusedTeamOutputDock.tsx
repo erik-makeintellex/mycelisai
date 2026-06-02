@@ -83,7 +83,7 @@ export function FocusedTeamOutputDock({
       </div>
       {hiddenCount > 0 ? (
         <div className="mt-2 text-xs text-cortex-text-muted">
-          +{hiddenCount} more retained outputs are available from the Team page or Work panel.
+          +{hiddenCount} more retained outputs are available from the Team page or work review.
         </div>
       ) : null}
     </section>

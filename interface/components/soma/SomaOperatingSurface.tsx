@@ -92,6 +92,14 @@ export function SomaOperatingSurface({
   const hasWorkContextChoices = Boolean(effectiveFocusedTeamId)
     || activeWorkItems.length > 0
     || teamWork.outputRefs.length > 0;
+  const hasWorkReviewContent = Boolean(effectiveFocusedTeamId)
+    || somaHomeWorkItems.length > 0
+    || teamWork.status === "loading"
+    || Boolean(activeWorkActions.activeWorkActionNotice)
+    || Boolean(activeWorkActions.activeWorkActionError);
+  const hasOutputReviewContent = mergedOutputItems.length > 0 || mergedProjectPackages.length > 0;
+  const hasTrustReviewContent = missionChat.length > 0;
+  const hasContextReviewContent = Boolean(effectiveFocusedTeamId) || hasWorkContextChoices;
 
   const clearFocusedContext = () => {
     selectTeam(null);
@@ -165,33 +173,37 @@ export function SomaOperatingSurface({
             </div>
           )}
           activeWork={activeWorkSlot ?? (
-            <ActiveWorkLane
-              title="Active work"
-              items={somaHomeWorkItems}
-              emptyMessage={activeMode && teamWork.items.length === 0
-                ? `${activeMode} is the current workspace lane. ${teamWork.emptyMessage}`
-                : teamWork.emptyMessage}
-              statusLabel={activeWorkActions.activeWorkActionNotice ?? teamWork.statusLabel}
-              degradedMessage={activeWorkActions.activeWorkActionError ?? teamWork.degradedMessage}
-              onAction={handleActiveWorkAction}
-              onTeamAsk={activeWorkActions.handleTeamAsk}
-              frame={false}
-              maxVisibleItems={effectiveFocusedTeamId ? 6 : 3}
-              totalItemCount={activeWorkItems.length}
-              moreItemsHref="/teams"
-            />
+            hasWorkReviewContent ? (
+              <ActiveWorkLane
+                title="Active work"
+                items={somaHomeWorkItems}
+                emptyMessage={activeMode && teamWork.items.length === 0
+                  ? `${activeMode} is the current workspace lane. ${teamWork.emptyMessage}`
+                  : teamWork.emptyMessage}
+                statusLabel={activeWorkActions.activeWorkActionNotice ?? teamWork.statusLabel}
+                degradedMessage={activeWorkActions.activeWorkActionError ?? teamWork.degradedMessage}
+                onAction={handleActiveWorkAction}
+                onTeamAsk={activeWorkActions.handleTeamAsk}
+                frame={false}
+                maxVisibleItems={effectiveFocusedTeamId ? 6 : 3}
+                totalItemCount={activeWorkItems.length}
+                moreItemsHref="/teams"
+              />
+            ) : undefined
           )}
-          trust={trustSlot ?? <SomaCausalSummary messages={missionChat} />}
+          trust={trustSlot ?? (hasTrustReviewContent ? <SomaCausalSummary messages={missionChat} /> : undefined)}
           output={outputSlot ?? (
-            <OutputWorkbench
-              outputs={mergedOutputItems}
-              projectPackages={mergedProjectPackages}
-              emptyMessage={teamWork.status === "loading"
-                ? "Checking for retained Soma and team outputs."
-                : "Soma has not returned a retained output package yet."}
-            />
+            hasOutputReviewContent ? (
+              <OutputWorkbench
+                outputs={mergedOutputItems}
+                projectPackages={mergedProjectPackages}
+                emptyMessage={teamWork.status === "loading"
+                  ? "Checking for retained Soma and team outputs."
+                  : "Soma has not returned a retained output package yet."}
+              />
+            ) : undefined
           )}
-          context={contextSlot ?? <SomaEvidencePanel items={evidence} compact />}
+          context={contextSlot ?? (hasContextReviewContent ? <SomaEvidencePanel items={evidence} compact /> : undefined)}
         />
       </div>
     </section>
@@ -224,7 +236,7 @@ function SomaContextFocusBar({
           <p className="mt-1 leading-5">
             {isFocused
               ? `${teamName || teamId} has its own chat, active work, and retained output focus. Soma can still reference other team contexts when you ask.`
-              : "Select a running or executed team to switch this workbench into that team's chat, active work, and output lane."}
+              : "Select a running or completed team to focus Soma on that team's chat, active work, and outputs."}
           </p>
         </div>
       </div>

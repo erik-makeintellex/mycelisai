@@ -23,20 +23,20 @@ function cadenceSummary(proposal: ProposalData): string {
         case "Event-driven":
             return "Soma should react to matching platform events instead of running immediately.";
         default:
-            return "Soma should execute once and return the result here.";
+            return "Soma should run once and return the result here.";
     }
 }
 
 function busLabel(scope?: ProposalData["bus_scope"]): string {
     switch (scope) {
         case "current_team":
-            return "Current team bus";
+            return "Current team";
         case "multi_team":
-            return "Multi-team bus";
+            return "Multiple teams";
         case "global":
-            return "Global bus";
+            return "Whole workspace";
         default:
-            return "Run bus";
+            return "Run record";
     }
 }
 
@@ -56,7 +56,7 @@ export default function ProposalRunIntent({ proposal }: { proposal: ProposalData
             <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
                 <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
                     {cadenceLabel(proposal) === "Run once" ? <Clock3 className="h-3 w-3" /> : <RefreshCcw className="h-3 w-3" />}
-                    Task lifecycle
+                    When it runs
                 </div>
                 <p className="mt-1.5 text-sm font-medium text-cortex-text-main">{cadenceLabel(proposal)}</p>
                 <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{cadenceSummary(proposal)}</p>
@@ -64,11 +64,11 @@ export default function ProposalRunIntent({ proposal }: { proposal: ProposalData
             <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
                 <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
                     <RadioTower className="h-3 w-3" />
-                    Team / NATS connection
+                    Team connection
                 </div>
                 <p className="mt-1.5 text-sm font-medium text-cortex-text-main">{busLabel(busScope)}</p>
                 <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-                    {showBus ? "Soma will connect this team work to the configured agentry bus after approval." : "Soma will record the approved work through the run/audit path; team work uses NATS automatically."}
+                    {showBus ? "Soma will connect this work to the right team after approval." : "Soma will save the approved work and result for review."}
                 </p>
                 {subjects.length > 0 ? (
                     <div className="mt-2 flex flex-wrap gap-1">

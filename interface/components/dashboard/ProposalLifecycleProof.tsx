@@ -26,7 +26,7 @@ export default function ProposalLifecycleProof({
                 <span className="text-current/85">{proof.detail}</span>
                 {runId && lifecycle === "executed" ? (
                     <Link href={`/runs/${runId}`} className="inline-flex items-center gap-1 font-mono underline underline-offset-2">
-                        Open run proof
+                        Open run details
                         <ExternalLink className="h-3 w-3" />
                     </Link>
                 ) : null}
@@ -39,31 +39,31 @@ function proofFor(lifecycle: RenderedProposalLifecycle, runId?: string) {
     if (lifecycle === "executed" && runId) {
         return {
             icon: CheckCircle2,
-            label: "Proof created",
-            detail: "The approved action produced a durable run proof. The result can be revisited and audited.",
+            label: "Result saved",
+            detail: "The approved action finished and the result is available to review.",
             className: "border-cortex-success/30 bg-cortex-success/10 text-cortex-success",
         };
     }
     if (lifecycle === "confirmed_pending_execution") {
         return {
             icon: Clock3,
-            label: "Approved, not yet trusted",
-            detail: "Approval was recorded, but no durable run proof has arrived yet. Wait for proof before relying on changes.",
+            label: "Approved, still running",
+            detail: "Approval was recorded. Wait for Soma to finish before relying on changes.",
             className: "border-amber-400/25 bg-amber-400/10 text-amber-300",
         };
     }
     if (lifecycle === "failed") {
         return {
             icon: AlertTriangle,
-            label: "No trusted execution",
-            detail: "Confirmation did not execute. No run proof was created, so requested changes should not be trusted.",
+            label: "Nothing changed",
+            detail: "Soma could not run the approved action, so requested changes were not applied.",
             className: "border-red-400/30 bg-red-400/10 text-red-300",
         };
     }
     return {
         icon: lifecycle === "cancelled" ? XCircle : ShieldOff,
         label: "No action executed",
-        detail: "The proposal did not run, so it changed nothing and created no execution proof.",
+        detail: "The proposal did not run, so it changed nothing.",
         className: "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted",
     };
 }

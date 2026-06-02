@@ -63,21 +63,21 @@ function continuationActions(teamName: string): ContinuationAction[] {
     return [
         {
             label: "Build playable prototype",
-            detail: "Project package, README, validation, proof",
-            prompt: `Have ${teamName} build the first playable browser-game prototype as a reviewable project package. Save it in the team's group folder with README, validation notes, output link, and proof.`,
+            detail: "Project package, README, validation notes",
+            prompt: `Have ${teamName} build the first playable browser-game prototype as a reviewable project package. Save it in the team's group folder with README, validation notes, and output link.`,
             Icon: PlayCircle,
             primary: true,
         },
         {
             label: "Write design brief",
             detail: "Mechanics, roles, output shape, acceptance criteria",
-            prompt: `Have ${teamName} write a concise game design brief with mechanics, art direction, team roles, acceptance criteria, output path, and proof needed before build.`,
+            prompt: `Have ${teamName} write a concise game design brief with mechanics, art direction, team roles, acceptance criteria, and output path needed before build.`,
             Icon: FileText,
         },
         {
             label: "Draft delivery plan",
-            detail: "Next tasks, tools, risks, expected proof",
-            prompt: `Have ${teamName} draft the next deliverable plan with output shape, owner roles, needed tools, risks, and proof expected.`,
+            detail: "Next tasks, tools, risks, expected review",
+            prompt: `Have ${teamName} draft the next deliverable plan with output shape, owner roles, needed tools, risks, and expected review.`,
             Icon: ListChecks,
         },
     ];
@@ -108,7 +108,7 @@ export default function MissionControlTeamContinuationPrompt({
                     </span>
                 </div>
                 <div className="text-[10px] leading-4 text-cortex-text-muted">
-                    Pick a starter, review it in Soma, then send. Soma will create a governed work item before anything runs.
+                    Pick a starter, review it in Soma, then send. Soma will create a work item before anything runs.
                 </div>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">

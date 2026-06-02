@@ -24,9 +24,9 @@ export function teamSuggestions(teamName: string): SomaSuggestion[] {
       prompt: `Keep monitoring ${teamName} and report changes here`,
     },
     {
-      label: "Governed change",
-      detail: "Create a proposal before execution.",
-      prompt: `Run a governed change for ${teamName}`,
+      label: "Reviewed change",
+      detail: "Create a proposal before anything runs.",
+      prompt: `Plan a reviewed change for ${teamName}`,
     },
   ];
 }
@@ -52,7 +52,7 @@ export function somaPlaceholder({
   }
   if (currentTeamName) return `Ask ${assistantName} about ${currentTeamName}...`;
   if (simpleMode) {
-    return `Tell ${assistantName} what you want to plan, review, create, or execute`;
+    return `Tell ${assistantName} what you want to plan, review, create, or run`;
   }
   return `Ask ${assistantName}... (or /all to broadcast)`;
 }
