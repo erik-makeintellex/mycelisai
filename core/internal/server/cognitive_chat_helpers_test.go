@@ -41,16 +41,9 @@ func TestParsePlannedToolCall_PreservesMCPToolRef(t *testing.T) {
 }
 
 func TestBuildPlannedToolCalls_PrefersExplicitCreateTeamRequest(t *testing.T) {
-	calls := buildPlannedToolCalls(chatAgentResult{
-		Text: `{"tool_call":{"name":"generate_blueprint","arguments":{"topic":"wrong"}}}`,
-	}, "Create a team with team_id qa-visibility-team named QA Visibility Team. Role researcher.", []string{"generate_blueprint", "delegate"})
+	calls := plannedCallsFromWrongBlueprint("Create a team with team_id qa-visibility-team named QA Visibility Team. Role researcher.", []string{"generate_blueprint", "delegate"})
 
-	if len(calls) != 1 {
-		t.Fatalf("planned calls = %#v, want one create_team call", calls)
-	}
-	if calls[0].Name != "create_team" {
-		t.Fatalf("planned call = %q, want create_team", calls[0].Name)
-	}
+	requirePlannedCallNames(t, calls, "create_team")
 	if calls[0].Arguments["team_id"] != "qa-visibility-team" {
 		t.Fatalf("team_id = %#v", calls[0].Arguments["team_id"])
 	}
@@ -71,16 +64,9 @@ func TestBuildPlannedToolCalls_PrefersExplicitCreateTeamRequest(t *testing.T) {
 
 func TestBuildPlannedToolCalls_KeepsTeamAndConcreteCodeOutput(t *testing.T) {
 	request := "Create a compact team with team_id qa-browser-game-team. Then have that team create a simple browser click game at path workspace/logs/qa_team_game.html containing '<!doctype html><title>QA Click Game</title><button id=coin>Coin</button><p id=score>0</p><script>let s=0;coin.onclick=()=>score.textContent=++s</script>'"
-	calls := buildPlannedToolCalls(chatAgentResult{
-		Text: `{"tool_call":{"name":"generate_blueprint","arguments":{"topic":"wrong"}}}`,
-	}, request, []string{"write_file", "generate_blueprint", "delegate"})
+	calls := plannedCallsFromWrongBlueprint(request, []string{"write_file", "generate_blueprint", "delegate"})
 
-	if len(calls) != 2 {
-		t.Fatalf("planned calls = %#v, want create_team + write_file", calls)
-	}
-	if calls[0].Name != "create_team" {
-		t.Fatalf("first call = %q, want create_team", calls[0].Name)
-	}
+	requirePlannedCallNames(t, calls, "create_team", "write_file")
 	if calls[0].Arguments["team_id"] != "qa-browser-game-team" {
 		t.Fatalf("team_id = %#v", calls[0].Arguments["team_id"])
 	}
@@ -89,9 +75,6 @@ func TestBuildPlannedToolCalls_KeepsTeamAndConcreteCodeOutput(t *testing.T) {
 	}
 	if calls[0].Arguments["initial_member_count"] != 1 {
 		t.Fatalf("initial_member_count = %#v, want 1", calls[0].Arguments["initial_member_count"])
-	}
-	if calls[1].Name != "write_file" {
-		t.Fatalf("second call = %q, want write_file", calls[1].Name)
 	}
 	if calls[1].Arguments["path"] != "workspace/logs/qa_team_game.html" {
 		t.Fatalf("path = %#v", calls[1].Arguments["path"])
@@ -107,21 +90,11 @@ func TestBuildPlannedToolCalls_KeepsTeamAndConcreteCodeOutput(t *testing.T) {
 
 func TestBuildPlannedToolCalls_StartsTeamGameDeliverable(t *testing.T) {
 	request := "Create a team named SNES-Style Browser Game Team and get them to work on developing a detailed game"
-	calls := buildPlannedToolCalls(chatAgentResult{
-		Text: `{"tool_call":{"name":"generate_blueprint","arguments":{"topic":"wrong"}}}`,
-	}, request, []string{"generate_blueprint", "delegate"})
+	calls := plannedCallsFromWrongBlueprint(request, []string{"generate_blueprint", "delegate"})
 
-	if len(calls) != 2 {
-		t.Fatalf("planned calls = %#v, want create_team + write_file", calls)
-	}
-	if calls[0].Name != "create_team" {
-		t.Fatalf("first call = %q, want create_team", calls[0].Name)
-	}
+	requirePlannedCallNames(t, calls, "create_team", "write_file")
 	if calls[0].Arguments["name"] != "SNES-Style Browser Game Team" {
 		t.Fatalf("name = %#v", calls[0].Arguments["name"])
-	}
-	if calls[1].Name != "write_file" {
-		t.Fatalf("second call = %q, want write_file", calls[1].Name)
 	}
 	path, _ := calls[1].Arguments["path"].(string)
 	if path != "groups/snes-style-browser-game-team/generated/first-game/index.html" {
@@ -146,13 +119,9 @@ func TestBuildPlannedToolCalls_GameDeliverableIncludesReadmeWhenRequested(t *tes
 		"The package metadata must include files index.html and README.md plus validation notes from opening the browser game.",
 		"After approval, return a retained project_package output with entrypoint, folder, files, and validation.",
 	}, " ")
-	calls := buildPlannedToolCalls(chatAgentResult{
-		Text: `{"tool_call":{"name":"generate_blueprint","arguments":{"topic":"wrong"}}}`,
-	}, request, []string{"generate_blueprint", "delegate"})
+	calls := plannedCallsFromWrongBlueprint(request, []string{"generate_blueprint", "delegate"})
 
-	if len(calls) != 2 || calls[1].Name != "write_file" {
-		t.Fatalf("planned calls = %#v, want create_team + write_file", calls)
-	}
+	requirePlannedCallNames(t, calls, "create_team", "write_file")
 	files := confirmedActionStringSlice(calls[1].Arguments["package_files"])
 	if !containsString(files, "index.html") || !containsString(files, "README.md") {
 		t.Fatalf("package_files = %#v, want index.html and README.md", files)
@@ -176,9 +145,7 @@ func TestDeterministicGovernedMutationResult_BuildsWriteFileProposalWithoutAgent
 	}
 
 	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
-	if len(calls) != 1 || calls[0].Name != "write_file" {
-		t.Fatalf("planned calls = %#v, want one write_file call", calls)
-	}
+	requirePlannedCallNames(t, calls, "write_file")
 	if calls[0].Arguments["path"] != "workspace/logs/hello.py" {
 		t.Fatalf("path = %#v, want workspace/logs/hello.py", calls[0].Arguments["path"])
 	}
@@ -192,9 +159,7 @@ func TestBuildPlannedToolCalls_AddsExecutableWriteFilePlanFromAgentText(t *testi
 	}
 
 	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
-	if len(calls) != 1 || calls[0].Name != "write_file" {
-		t.Fatalf("planned calls = %#v, want one write_file call", calls)
-	}
+	requirePlannedCallNames(t, calls, "write_file")
 	if calls[0].Arguments["path"] != "workspace/logs/approval_storage_note.md" {
 		t.Fatalf("path = %#v, want raw request path", calls[0].Arguments["path"])
 	}
@@ -212,9 +177,7 @@ func TestBuildPlannedToolCalls_CompletesPartialWriteFileToolCall(t *testing.T) {
 	}
 
 	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
-	if len(calls) != 1 || calls[0].Name != "write_file" {
-		t.Fatalf("planned calls = %#v, want one write_file call", calls)
-	}
+	requirePlannedCallNames(t, calls, "write_file")
 	if calls[0].Arguments["path"] != "workspace/logs/partial_plan.md" {
 		t.Fatalf("path = %#v", calls[0].Arguments["path"])
 	}
@@ -239,9 +202,7 @@ func TestDeterministicGovernedMutationResult_BuildsFirstDemoTeamGameProposal(t *
 	}
 
 	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
-	if len(calls) != 2 || calls[0].Name != "create_team" || calls[1].Name != "write_file" {
-		t.Fatalf("planned calls = %#v, want create_team + write_file", calls)
-	}
+	requirePlannedCallNames(t, calls, "create_team", "write_file")
 	if calls[0].Arguments["name"] != "First Demo Game Team" {
 		t.Fatalf("team name = %#v, want First Demo Game Team", calls[0].Arguments["name"])
 	}
@@ -260,19 +221,14 @@ func TestBuildPlannedToolCalls_PreservesExplicitCreateTeamArguments(t *testing.T
 		Text: `{"tool_call":{"name":"create_team","arguments":{"team_id":"rich-team","name":"Rich Team","role":"validator","manifest":{"ask_routing":{"validation":"validator"}},"required_capabilities":["write_file"]}}}`,
 	}, request, []string{"create_team", "write_file"})
 
-	if len(calls) != 2 {
-		t.Fatalf("planned calls = %#v, want create_team + write_file", calls)
-	}
-	if calls[0].Name != "create_team" {
-		t.Fatalf("first call = %q, want create_team", calls[0].Name)
-	}
+	requirePlannedCallNames(t, calls, "create_team", "write_file")
 	if calls[0].Arguments["name"] != "Rich Team" || calls[0].Arguments["role"] != "validator" {
 		t.Fatalf("create_team arguments = %#v, want rich model-provided arguments", calls[0].Arguments)
 	}
 	if _, ok := calls[0].Arguments["manifest"].(map[string]any); !ok {
 		t.Fatalf("manifest = %#v, want preserved model-provided manifest", calls[0].Arguments["manifest"])
 	}
-	if calls[1].Name != "write_file" || calls[1].Arguments["path"] != "workspace/logs/rich_team_note.md" {
+	if calls[1].Arguments["path"] != "workspace/logs/rich_team_note.md" {
 		t.Fatalf("write_file call = %#v", calls[1])
 	}
 }
@@ -300,12 +256,7 @@ func TestBuildPlannedToolCalls_ComicTeamIncludesSpecialistsAndMediaDeliverable(t
 		t.Fatalf("deterministic proposal = %#v, ok=%v, want group media target", result, ok)
 	}
 	calls := buildPlannedToolCalls(chatAgentResult{}, request, []string{"create_team", "generate_image", "save_cached_image"})
-	if len(calls) != 3 {
-		t.Fatalf("planned calls = %#v, want create_team + generate_image + save_cached_image", calls)
-	}
-	if calls[0].Name != "create_team" || calls[1].Name != "generate_image" || calls[2].Name != "save_cached_image" {
-		t.Fatalf("planned call names = %#v", calls)
-	}
+	requirePlannedCallNames(t, calls, "create_team", "generate_image", "save_cached_image")
 	agents, ok := calls[0].Arguments["agents"].([]map[string]any)
 	if !ok || len(agents) < 5 || calls[0].Arguments["staffing_mode"] != "specialist_delivery" {
 		t.Fatalf("team args = %#v, agents = %#v", calls[0].Arguments, agents)
@@ -317,13 +268,4 @@ func TestBuildPlannedToolCalls_ComicTeamIncludesSpecialistsAndMediaDeliverable(t
 	if !containsString(tools, "generate_image") || !containsString(tools, "save_cached_image") {
 		t.Fatalf("tools = %#v, want media tools", tools)
 	}
-}
-
-func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
 }

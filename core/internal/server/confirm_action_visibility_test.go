@@ -130,12 +130,9 @@ func TestExecutionOutputsFromToolResultsRetainsTeamAndCodeFile(t *testing.T) {
 }
 
 func TestExecutionOutputsFromArtifactsUsesWorkspaceViewerForSavedMedia(t *testing.T) {
-	outputs := executionOutputsFromArtifacts([]protocol.ChatArtifactRef{{
-		ID:        "artifact-image-1",
-		Type:      "image",
-		Title:     "Comic page",
-		SavedPath: "saved-media/comic-page.png",
-	}})
+	outputs := executionOutputsFromArtifacts([]protocol.ChatArtifactRef{
+		visibilitySavedImageArtifact("artifact-image-1", "Comic page"),
+	})
 
 	if len(outputs) != 1 {
 		t.Fatalf("outputs = %#v, want 1", outputs)
@@ -149,23 +146,10 @@ func TestExecutionOutputsFromArtifactsUsesWorkspaceViewerForSavedMedia(t *testin
 }
 
 func TestBuildConfirmActionExecutionSummaryNamesTeamDeliverable(t *testing.T) {
-	summary := buildConfirmActionExecutionSummary(
-		"proof-123",
-		"contract-123",
-		"artifact-123",
-		"run-123",
-		"audit-123",
-		&protocol.ScopeValidation{
-			Tools: []string{"create_team", "write_file"},
-			PlannedToolCalls: []protocol.PlannedToolCall{
-				{Name: "create_team"},
-				{Name: "write_file"},
-			},
-		},
-		[]plannedToolExecutionResult{
-			{Name: "create_team", Arguments: map[string]any{"team_id": "game-team", "name": "Game Team"}},
-			{Name: "write_file", Arguments: map[string]any{"path": "workspace/generated/game/index.html"}},
-		},
+	summary := visibilityConfirmActionSummary(
+		visibilityScopeValidation("create_team", "write_file"),
+		visibilityCreateTeamResult("game-team", "Game Team"),
+		visibilityWriteFileResult("workspace/generated/game/index.html"),
 	)
 
 	if summary.Understanding.Summary != "Team created and its first retained deliverable completed." {
@@ -180,47 +164,19 @@ func TestBuildConfirmActionExecutionSummaryNamesTeamDeliverable(t *testing.T) {
 }
 
 func TestBuildConfirmActionExecutionSummaryNamesTeamMediaDeliverable(t *testing.T) {
-	summary := buildConfirmActionExecutionSummary(
-		"proof-123",
-		"contract-123",
-		"artifact-123",
-		"run-123",
-		"audit-123",
-		&protocol.ScopeValidation{
-			Tools: []string{"create_team", "generate_image", "save_cached_image"},
-			PlannedToolCalls: []protocol.PlannedToolCall{
-				{Name: "create_team"},
-				{Name: "generate_image"},
-				{Name: "save_cached_image"},
-			},
-		},
-		[]plannedToolExecutionResult{
-			{Name: "create_team", Arguments: map[string]any{"team_id": "comic-team", "name": "Comic Team"}},
-			{
-				Name: "generate_image",
-				Arguments: map[string]any{
-					"prompt": "Generate a vertical comic page.",
-				},
-				Artifacts: []protocol.ChatArtifactRef{{
-					ID:        "comic-page",
-					Type:      "image",
-					Title:     "Comic page",
-					SavedPath: "saved-media/comic-page.png",
-				}},
-			},
-			{
-				Name: "save_cached_image",
-				Arguments: map[string]any{
-					"filename": "comic-page.png",
-				},
-				Artifacts: []protocol.ChatArtifactRef{{
-					ID:        "comic-page-cache",
-					Type:      "image",
-					Title:     "Cached comic page",
-					SavedPath: "saved-media/comic-page.png",
-				}},
-			},
-		},
+	summary := visibilityConfirmActionSummary(
+		visibilityScopeValidation("create_team", "generate_image", "save_cached_image"),
+		visibilityCreateTeamResult("comic-team", "Comic Team"),
+		visibilityToolResult(
+			"generate_image",
+			map[string]any{"prompt": "Generate a vertical comic page."},
+			visibilitySavedImageArtifact("comic-page", "Comic page"),
+		),
+		visibilityToolResult(
+			"save_cached_image",
+			map[string]any{"filename": "comic-page.png"},
+			visibilitySavedImageArtifact("comic-page-cache", "Cached comic page"),
+		),
 	)
 
 	if summary.Understanding.Summary != "Team created and its first retained deliverable completed." {
@@ -235,19 +191,9 @@ func TestBuildConfirmActionExecutionSummaryNamesTeamMediaDeliverable(t *testing.
 }
 
 func TestBuildConfirmActionExecutionSummaryNamesTeamOnlyAsNotStarted(t *testing.T) {
-	summary := buildConfirmActionExecutionSummary(
-		"proof-123",
-		"contract-123",
-		"artifact-123",
-		"run-123",
-		"audit-123",
-		&protocol.ScopeValidation{
-			Tools:            []string{"create_team"},
-			PlannedToolCalls: []protocol.PlannedToolCall{{Name: "create_team"}},
-		},
-		[]plannedToolExecutionResult{
-			{Name: "create_team", Arguments: map[string]any{"team_id": "game-team", "name": "Game Team"}},
-		},
+	summary := visibilityConfirmActionSummary(
+		visibilityScopeValidation("create_team"),
+		visibilityCreateTeamResult("game-team", "Game Team"),
 	)
 
 	if summary.Understanding.Summary != "Team created. No work item has started yet." {
