@@ -8,21 +8,28 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func (s *AdminServer) persistConfirmedActionTeamWork(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) error {
+func (s *AdminServer) persistConfirmedActionTeamWork(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) ([]confirmActionTeamWorkRef, error) {
 	if s.getDB() == nil || link.Scope == nil {
-		return nil
+		return nil, nil
 	}
 	var errs []error
-	if err := s.persistConfirmedCreateTeamItems(ctx, link, results); err != nil {
+	refs := []confirmActionTeamWorkRef{}
+	createRefs, err := s.persistConfirmedCreateTeamItems(ctx, link, results)
+	if err != nil {
 		errs = append(errs, err)
 	}
-	if err := s.persistConfirmedDelegatedWorkItems(ctx, link, results); err != nil {
+	refs = append(refs, createRefs...)
+	delegateRefs, err := s.persistConfirmedDelegatedWorkItems(ctx, link, results)
+	if err != nil {
 		errs = append(errs, err)
 	}
-	if err := s.persistConfirmedDeliverableWorkItems(ctx, link, results); err != nil {
+	refs = append(refs, delegateRefs...)
+	deliverableRefs, err := s.persistConfirmedDeliverableWorkItems(ctx, link, results)
+	if err != nil {
 		errs = append(errs, err)
 	}
-	return errors.Join(errs...)
+	refs = append(refs, deliverableRefs...)
+	return refs, errors.Join(errs...)
 }
 
 func (s *AdminServer) persistFailedConfirmedActionTeamWork(ctx context.Context, link confirmedActionTeamWorkLink, failure error) error {
@@ -67,8 +74,27 @@ type confirmedActionTeamWorkLink struct {
 	Scope           *protocol.ScopeValidation
 }
 
-func (s *AdminServer) persistConfirmedCreateTeamItems(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) error {
+type confirmActionTeamWorkRef struct {
+	WorkItemID string                   `json:"work_item_id"`
+	TeamID     string                   `json:"team_id"`
+	State      protocol.TeamWorkState   `json:"state"`
+	RunID      string                   `json:"run_id,omitempty"`
+	OutputRefs []protocol.TeamOutputRef `json:"output_refs,omitempty"`
+}
+
+func confirmActionTeamWorkRefForItem(item protocol.TeamWorkItem) confirmActionTeamWorkRef {
+	return confirmActionTeamWorkRef{
+		WorkItemID: item.WorkItemID,
+		TeamID:     item.TeamID,
+		State:      item.State,
+		RunID:      item.RunID,
+		OutputRefs: item.OutputRefs,
+	}
+}
+
+func (s *AdminServer) persistConfirmedCreateTeamItems(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) ([]confirmActionTeamWorkRef, error) {
 	var errs []error
+	refs := []confirmActionTeamWorkRef{}
 	for _, result := range results {
 		if strings.TrimSpace(result.Name) != "create_team" {
 			continue
@@ -88,13 +114,16 @@ func (s *AdminServer) persistConfirmedCreateTeamItems(ctx context.Context, link 
 		interaction := confirmedActionInteraction(link, item, "create_team", "Soma created the runtime team shell without marking it as active execution.", result.Name, result.Arguments)
 		if err := s.persistTeamWorkItemWithLifecycle(ctx, &item, []protocol.TeamStatusEvent{*item.LastEvent}, interaction); err != nil {
 			errs = append(errs, err)
+			continue
 		}
+		refs = append(refs, confirmActionTeamWorkRefForItem(item))
 	}
-	return errors.Join(errs...)
+	return refs, errors.Join(errs...)
 }
 
-func (s *AdminServer) persistConfirmedDelegatedWorkItems(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) error {
+func (s *AdminServer) persistConfirmedDelegatedWorkItems(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) ([]confirmActionTeamWorkRef, error) {
 	var errs []error
+	refs := []confirmActionTeamWorkRef{}
 	for _, result := range results {
 		if !isDelegateTool(result.Name) {
 			continue
@@ -113,13 +142,16 @@ func (s *AdminServer) persistConfirmedDelegatedWorkItems(ctx context.Context, li
 		interaction := confirmedActionInteraction(link, item, "delegate", firstNonEmptyString(result.Output, "Soma delegated a confirmed task to the team."), result.Name, result.Arguments)
 		if err := s.persistTeamWorkItemWithLifecycle(ctx, &item, []protocol.TeamStatusEvent{*item.LastEvent}, interaction); err != nil {
 			errs = append(errs, err)
+			continue
 		}
+		refs = append(refs, confirmActionTeamWorkRefForItem(item))
 	}
-	return errors.Join(errs...)
+	return refs, errors.Join(errs...)
 }
 
-func (s *AdminServer) persistConfirmedDeliverableWorkItems(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) error {
+func (s *AdminServer) persistConfirmedDeliverableWorkItems(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) ([]confirmActionTeamWorkRef, error) {
 	var errs []error
+	refs := []confirmActionTeamWorkRef{}
 	defaultTeamID := confirmedActionCreatedTeamID(results)
 	for _, result := range results {
 		if !isDeliverableTool(result.Name) {
@@ -145,9 +177,11 @@ func (s *AdminServer) persistConfirmedDeliverableWorkItems(ctx context.Context, 
 		interaction := confirmedActionInteraction(link, item, "output_ready", firstNonEmptyString(result.Output, "Confirmed deliverable output is ready."), result.Name, result.Arguments)
 		if err := s.persistTeamWorkItemWithLifecycle(ctx, &item, events, interaction); err != nil {
 			errs = append(errs, err)
+			continue
 		}
+		refs = append(refs, confirmActionTeamWorkRefForItem(item))
 	}
-	return errors.Join(errs...)
+	return refs, errors.Join(errs...)
 }
 
 func (s *AdminServer) persistTeamWorkItemWithLifecycle(ctx context.Context, item *protocol.TeamWorkItem, events []protocol.TeamStatusEvent, interaction protocol.TeamInteraction) error {

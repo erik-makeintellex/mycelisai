@@ -29,7 +29,7 @@ func TestPersistConfirmedActionTeamWork_CreateTeamStaysNew(t *testing.T) {
 	expectTeamWorkItemUpdate(mock, protocol.TeamWorkStateNew, jsonContainsArg("research-team"))
 	expectTeamInteractionInsert(mock, "research-team", "create_team", now)
 
-	err := s.persistConfirmedActionTeamWork(t.Context(), link, []plannedToolExecutionResult{{
+	refs, err := s.persistConfirmedActionTeamWork(t.Context(), link, []plannedToolExecutionResult{{
 		Name: "create_team",
 		Arguments: map[string]any{
 			"team_id": "research-team",
@@ -40,6 +40,7 @@ func TestPersistConfirmedActionTeamWork_CreateTeamStaysNew(t *testing.T) {
 	if err != nil {
 		t.Fatalf("persistConfirmedActionTeamWork: %v", err)
 	}
+	assertTeamWorkRef(t, refs, "research-team", protocol.TeamWorkStateNew, 1)
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
 	}
@@ -78,7 +79,7 @@ func TestPersistConfirmedActionTeamWork_DeliverableOutputReadyHasRefs(t *testing
 	expectTeamWorkItemUpdate(mock, protocol.TeamWorkStateOutputReady, jsonContainsArg("output/confirmed.txt"))
 	expectTeamInteractionInsert(mock, "qa-team", "output_ready", now)
 
-	err := s.persistConfirmedActionTeamWork(t.Context(), link, []plannedToolExecutionResult{
+	refs, err := s.persistConfirmedActionTeamWork(t.Context(), link, []plannedToolExecutionResult{
 		{
 			Name:      "create_team",
 			Arguments: map[string]any{"team_id": "qa-team", "name": "QA Team"},
@@ -96,6 +97,11 @@ func TestPersistConfirmedActionTeamWork_DeliverableOutputReadyHasRefs(t *testing
 	if err != nil {
 		t.Fatalf("persistConfirmedActionTeamWork: %v", err)
 	}
+	if len(refs) != 2 {
+		t.Fatalf("refs = %#v, want create-team and deliverable refs", refs)
+	}
+	assertTeamWorkRef(t, refs[:1], "qa-team", protocol.TeamWorkStateNew, 0)
+	assertTeamWorkRef(t, refs[1:], "qa-team", protocol.TeamWorkStateOutputReady, 1)
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
 	}

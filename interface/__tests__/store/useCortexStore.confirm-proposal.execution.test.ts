@@ -8,7 +8,7 @@ describe('useCortexStore confirm proposal execution', () => {
         resetCortexStore();
     });
 
-    it('records an execution result and run id on successful confirmation', async () => {
+    it('records an execution result and run id on successful confirmation without team work refs', async () => {
         useCortexStore.setState({
             pendingProposal: {
                 intent: 'Launch a docs crew',
@@ -72,6 +72,7 @@ describe('useCortexStore confirm proposal execution', () => {
         expect(mockFetch).toHaveBeenCalledWith('/api/v1/teams/detail');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Run run-123 started.');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Review active work and latest output below');
+        expect(useCortexStore.getState().missionChat.at(-1)?.content).not.toContain('Active Work');
         expect(useCortexStore.getState().missionChat.at(-1)?.execution_summary?.outputs).toEqual([
             {
                 id: 'workspace/logs/game.html',

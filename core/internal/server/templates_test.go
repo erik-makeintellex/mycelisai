@@ -228,6 +228,7 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	if strings.TrimSpace(auditID) == "" {
 		t.Fatal("expected non-empty audit_event_id")
 	}
+	assertTeamWorkRefsForConfirmAction(t, data, "qa-runtime-team", runID)
 
 	written, err := os.ReadFile(filepath.Join(workspace, "output", "confirmed.txt"))
 	if err != nil {

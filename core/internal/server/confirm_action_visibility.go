@@ -11,7 +11,7 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func (s *AdminServer) persistConfirmedActionVisibility(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) error {
+func (s *AdminServer) persistConfirmedActionVisibility(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) ([]confirmActionTeamWorkRef, error) {
 	var errs []error
 	if err := s.logConfirmedActionConversation(ctx, link.RunID, link.AuditUser, results); err != nil {
 		errs = append(errs, err)
@@ -22,10 +22,11 @@ func (s *AdminServer) persistConfirmedActionVisibility(ctx context.Context, link
 	if err := s.persistConfirmedActionOutputArtifacts(ctx, link.RunID, results); err != nil {
 		errs = append(errs, err)
 	}
-	if err := s.persistConfirmedActionTeamWork(ctx, link, results); err != nil {
+	refs, err := s.persistConfirmedActionTeamWork(ctx, link, results)
+	if err != nil {
 		errs = append(errs, err)
 	}
-	return errors.Join(errs...)
+	return refs, errors.Join(errs...)
 }
 
 func (s *AdminServer) logConfirmedActionConversation(ctx context.Context, runID, auditUser string, results []plannedToolExecutionResult) error {

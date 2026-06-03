@@ -5,6 +5,7 @@ import {
 } from '@/store/cortexStoreChatWorkflow';
 import { buildMissionChatFailure } from '@/lib/missionChatFailure';
 import type { ChatMessage, ConfirmProposalResult } from '@/store/cortexStoreTypes';
+import { extractTeamWorkRefs, teamWorkMessage, type TeamWorkConfirmationRef } from '@/store/cortexStoreProposalTeamWorkRefs';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { ProposalData } from '@/store/cortexStoreTypesChat';
 
@@ -27,12 +28,12 @@ function recoveryTextFromExecutionSummary(summary: any) {
     };
 }
 
-function confirmedRunMessage(runId: string | null, summary?: string | null) {
+function confirmedRunMessage(runId: string | null, summary?: string | null, teamWorkRefs: TeamWorkConfirmationRef[] = []) {
     const state = runId ? `Run ${runId.slice(0, 8)} started.` : 'Proposal approved.';
     const next = runId
         ? 'Review active work and latest output below as Soma records progress.'
         : 'Soma is waiting for execution proof.';
-    return [state, next, summary].filter(Boolean).join(' ');
+    return [state, next, teamWorkMessage(teamWorkRefs), summary].filter(Boolean).join(' ');
 }
 
 export function createCortexProposalExecutionSlice(
@@ -91,6 +92,7 @@ export function createCortexProposalExecutionSlice(
                 if (res.ok) {
                     const body = await res.json();
                     const runId = extractRunIdFromResponse(body);
+                    const teamWorkRefs = extractTeamWorkRefs(body);
                     const proofSummary = trimToNonEmpty(body?.data?.message)
                         ?? trimToNonEmpty(body?.message)
                         ?? trimToNonEmpty(body?.data?.summary)
@@ -98,7 +100,7 @@ export function createCortexProposalExecutionSlice(
                     const lifecycle = runId ? 'executed' : 'confirmed_pending_execution';
                     const systemMsg: ChatMessage = {
                         role: 'system',
-                        content: confirmedRunMessage(runId, proofSummary),
+                        content: confirmedRunMessage(runId, proofSummary, teamWorkRefs),
                         mode: runId ? 'execution_result' : 'proposal',
                         run_id: runId ?? undefined,
                         execution_summary: body?.data?.execution_summary,

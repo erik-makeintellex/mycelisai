@@ -80,10 +80,11 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		AuditUser:       auditUser,
 		Scope:           scope,
 	}
-	if err := s.persistConfirmedActionVisibility(r.Context(), link, results); err != nil {
+	teamWorkRefs, err := s.persistConfirmedActionVisibility(r.Context(), link, results)
+	if err != nil {
 		log.Printf("CE-1: confirm-action visibility persistence failed: %v", err)
 	}
-	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID, scope, results)))
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID, scope, results, teamWorkRefs)))
 }
 
 func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, string, *protocol.ScopeValidation, string, bool) {
