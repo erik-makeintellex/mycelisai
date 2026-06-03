@@ -45,6 +45,7 @@ describe("OutputWorkbench", () => {
         kind: "file",
         label: "Launch brief",
         storage_ref: "generated/launch/brief.md",
+        created_at: "2026-05-17T18:00:00Z",
       },
       {
         output_id: "out-2",
@@ -55,6 +56,7 @@ describe("OutputWorkbench", () => {
         storage_ref: "generated/launch",
         entrypoint: "index.html",
         proof_ref: "proof-1",
+        created_at: "2026-05-17T18:01:00Z",
       },
     ];
 
@@ -75,6 +77,37 @@ describe("OutputWorkbench", () => {
       }),
     ]);
     expect(mergeOutputWorkbenchItems([{ text: "Launch brief", url: durableItems[0].url }], durableItems)).toHaveLength(1);
+  });
+
+  it("orders durable team outputs newest-first for the workbench primary output", () => {
+    const durableItems = teamOutputWorkbenchItems([
+      {
+        output_id: "out-old",
+        team_id: "team-alpha",
+        work_item_id: "work-1",
+        kind: "file",
+        label: "Older focused brief",
+        storage_ref: "generated/launch/older.md",
+        created_at: "2026-05-17T18:00:00Z",
+      },
+      {
+        output_id: "out-new",
+        team_id: "team-alpha",
+        work_item_id: "work-2",
+        kind: "file",
+        label: "Newest focused brief",
+        storage_ref: "generated/launch/newest.md",
+        created_at: "2026-05-17T18:05:00Z",
+      },
+    ]);
+
+    expect(durableItems.map((item) => item.text)).toEqual([
+      "Newest focused brief",
+      "Older focused brief",
+    ]);
+    expect(outputWorkbenchDigest({ outputs: durableItems })).toMatchObject({
+      text: "Newest focused brief",
+    });
   });
 
   it("normalizes retained media paths so Soma can preview and open generated content", () => {

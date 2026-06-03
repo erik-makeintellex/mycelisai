@@ -108,6 +108,60 @@ func TestTeamWorkSignalProjection_ResultPersistsNormalizedOutputRefs(t *testing.
 	}
 }
 
+func TestOutputRefFromMapNormalizesViewerURLToWorkspaceStorageRef(t *testing.T) {
+	item := protocol.TeamWorkItem{
+		TeamID:     "first-demo-game-team",
+		WorkItemID: "work-1",
+		RunID:      "run-1",
+		ProofID:    "proof-1",
+	}
+	env := protocol.SignalEnvelope{
+		Meta: protocol.SignalMeta{
+			TeamID: "first-demo-game-team",
+			RunID:  "run-1",
+		},
+	}
+
+	ref, ok := outputRefFromMap(item, env, map[string]any{
+		"id":          "playable-package",
+		"kind":        "project_package",
+		"title":       "Playable package",
+		"storage_ref": "/api/v1/workspace/files/view?path=groups%2Ffirst-demo-game-team%2Fgenerated%2Ffirst-game%2Findex.html",
+		"entrypoint":  "groups/first-demo-game-team/generated/first-game/index.html",
+	})
+	if !ok {
+		t.Fatal("outputRefFromMap returned no ref")
+	}
+	if ref.StorageRef != "groups/first-demo-game-team/generated/first-game" {
+		t.Fatalf("storage_ref = %q, want workspace folder", ref.StorageRef)
+	}
+	if ref.Entrypoint != "index.html" {
+		t.Fatalf("entrypoint = %q, want relative package entrypoint", ref.Entrypoint)
+	}
+}
+
+func TestOutputRefFromMapDerivesFilePathFromViewerHrefForMedia(t *testing.T) {
+	item := protocol.TeamWorkItem{
+		TeamID:     "media-team",
+		WorkItemID: "work-1",
+	}
+	env := protocol.SignalEnvelope{Meta: protocol.SignalMeta{TeamID: "media-team"}}
+
+	ref, ok := outputRefFromMap(item, env, map[string]any{
+		"id":     "comic-page",
+		"kind":   "media",
+		"title":  "Comic page",
+		"folder": "groups/media-team/media",
+		"href":   "/api/v1/workspace/files/view?path=groups%2Fmedia-team%2Fmedia%2Fcomic-page.png",
+	})
+	if !ok {
+		t.Fatal("outputRefFromMap returned no ref")
+	}
+	if ref.StorageRef != "groups/media-team/media/comic-page.png" {
+		t.Fatalf("storage_ref = %q, want decoded workspace file path", ref.StorageRef)
+	}
+}
+
 func expectProjectedTeamWorkUpdateWithOutputs(mock sqlmock.Sqlmock, workID string, state protocol.TeamWorkState, needsOperator bool, degradation string, outputs sqlmock.Argument) {
 	mock.ExpectExec("UPDATE team_work_items").
 		WithArgs(

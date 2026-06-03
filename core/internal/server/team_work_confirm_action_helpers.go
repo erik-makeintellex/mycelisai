@@ -78,6 +78,7 @@ func executionOutputsForResult(result plannedToolExecutionResult) []protocol.Exe
 func outputRefsForTeamWork(link confirmedActionTeamWorkLink, workItemID, teamID string, outputs []protocol.ExecutionOutput) []protocol.TeamOutputRef {
 	refs := make([]protocol.TeamOutputRef, 0, len(outputs))
 	for _, output := range outputs {
+		storageRef := teamOutputStorageRefFromExecutionOutput(output)
 		refs = append(refs, protocol.TeamOutputRef{
 			OutputID:      firstNonEmptyString(output.ID, output.Title),
 			TeamID:        teamID,
@@ -85,8 +86,8 @@ func outputRefsForTeamWork(link confirmedActionTeamWorkLink, workItemID, teamID 
 			RunID:         link.RunID,
 			Kind:          firstNonEmptyString(output.Kind, "output"),
 			Label:         firstNonEmptyString(output.Title, output.ID, "Team output"),
-			StorageRef:    firstNonEmptyString(output.Href, output.Folder),
-			Entrypoint:    output.Entrypoint,
+			StorageRef:    storageRef,
+			Entrypoint:    relativeTeamOutputEntrypoint(storageRef, output.Entrypoint),
 			ValidationRef: output.Validation,
 			ProofRef:      link.ProofArtifactID,
 			ContractID:    link.ContractID,

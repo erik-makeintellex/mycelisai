@@ -2,6 +2,7 @@
 
 import { Check, ExternalLink, Quote, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import { sortTeamOutputRefsNewestFirst } from "@/components/teams/teamWorkProjection";
 import type { ChatArtifactRef, ExecutionSummaryData, ExecutionSummaryItem, OutputProofEnvelope, TeamOutputRef } from "@/store/useCortexStore";
 import ExecutionSummaryMediaPreview from "./ExecutionSummaryMediaPreview";
 import {
@@ -45,7 +46,7 @@ export function outputWorkbenchItems(summary?: ExecutionSummaryData, artifacts?:
 }
 
 export function teamOutputWorkbenchItems(outputRefs: TeamOutputRef[]): OutputWorkbenchItem[] {
-  return outputRefs
+  return sortTeamOutputRefsNewestFirst(outputRefs)
     .filter((output) => output.kind !== "project_package" && !output.entrypoint)
     .map((output) => ({
       text: output.label?.trim() || "Team output",
@@ -57,7 +58,7 @@ export function teamOutputWorkbenchItems(outputRefs: TeamOutputRef[]): OutputWor
 }
 
 export function teamOutputProjectPackages(outputRefs: TeamOutputRef[]): ExecutionSummaryItem[] {
-  return outputRefs
+  return sortTeamOutputRefsNewestFirst(outputRefs)
     .filter((output) => output.kind === "project_package" || Boolean(output.entrypoint))
     .map((output) => ({
       kind: "project_package",

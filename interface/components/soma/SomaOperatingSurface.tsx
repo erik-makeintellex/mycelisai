@@ -95,8 +95,13 @@ export function SomaOperatingSurface({
   });
   const teamOutputItems = teamOutputWorkbenchItems(teamWork.outputRefs);
   const teamProjectPackages = teamOutputProjectPackages(teamWork.outputRefs);
-  const mergedOutputItems = mergeOutputWorkbenchItems(outputItems, teamOutputItems);
-  const mergedProjectPackages = [...projectPackages, ...teamProjectPackages];
+  const preferFocusedOutputs = Boolean(effectiveFocusedTeamId);
+  const mergedOutputItems = preferFocusedOutputs
+    ? mergeOutputWorkbenchItems(teamOutputItems, outputItems)
+    : mergeOutputWorkbenchItems(outputItems, teamOutputItems);
+  const mergedProjectPackages = preferFocusedOutputs
+    ? [...teamProjectPackages, ...projectPackages]
+    : [...projectPackages, ...teamProjectPackages];
   const activeWorkItems = mergeTeamWorkItems(
     teamWork.items,
     activeWorkActions.submittedTeamWorkItems,

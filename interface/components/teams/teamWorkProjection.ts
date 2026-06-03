@@ -123,7 +123,12 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
   if (!workItemId || !teamId || !objective) return null;
 
   const state = teamWorkState(raw.state);
-  const outputRefs = outputRefArray(raw.output_refs, teamId, workItemId);
+  const outputRefs = outputRefArray(
+    raw.output_refs,
+    teamId,
+    workItemId,
+    stringValue(raw.updated_at) ?? stringValue(raw.created_at),
+  );
   const lastEvent = objectValue<TeamStatusEventAPIRecord>(raw.last_event);
   const runId = stringValue(raw.run_id);
   const expectedOutputs = stringArray(raw.expected_outputs);
@@ -178,15 +183,27 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
 
 export function teamOutputRefsFromItems(items: TeamWorkItem[]): TeamOutputRef[] {
   const seen = new Set<string>();
-  return items
+  return sortTeamOutputRefsNewestFirst(items
     .filter((item) => item.source === "durable")
-    .flatMap((item) => item.outputRefs ?? [])
+    .flatMap((item) => item.outputRefs ?? []))
     .filter((output) => {
       const key = output.output_id || `${output.team_id}-${output.work_item_id}-${output.label}-${output.storage_ref ?? ""}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+}
+
+export function sortTeamOutputRefsNewestFirst(outputRefs: TeamOutputRef[]): TeamOutputRef[] {
+  return outputRefs
+    .map((output, index) => ({ output, index }))
+    .sort((left, right) => {
+      const leftTime = outputRefTime(left.output);
+      const rightTime = outputRefTime(right.output);
+      if (leftTime !== rightTime) return rightTime - leftTime;
+      return left.index - right.index;
+    })
+    .map(({ output }) => output);
 }
 
 export function parseTeamWorkAPIItems(payload: unknown): TeamWorkAPIRecord[] {
@@ -206,7 +223,7 @@ function executionShapeLabel(shape?: string | null) {
   return "Durable team work";
 }
 
-function outputRefArray(value: unknown, teamId: string, workItemId: string): TeamOutputRef[] {
+function outputRefArray(value: unknown, teamId: string, workItemId: string, fallbackCreatedAt?: string | null): TeamOutputRef[] {
   if (!Array.isArray(value)) return [];
   return value.filter(isRecord).map((item, index) => ({
     output_id: stringValue(item.output_id) ?? `${workItemId}-output-${index}`,
@@ -222,8 +239,13 @@ function outputRefArray(value: unknown, teamId: string, workItemId: string): Tea
     contract_id: stringValue(item.contract_id) ?? undefined,
     proof_id: stringValue(item.proof_id) ?? undefined,
     audit_refs: stringArray(item.audit_refs),
-    created_at: stringValue(item.created_at) ?? undefined,
+    created_at: stringValue(item.created_at) ?? stringValue(item.updated_at) ?? fallbackCreatedAt ?? undefined,
   }));
+}
+
+function outputRefTime(output: TeamOutputRef) {
+  const time = output.created_at ? Date.parse(output.created_at) : 0;
+  return Number.isFinite(time) ? time : 0;
 }
 
 function latestHeartbeat(team: TeamDetailEntry): string | null {

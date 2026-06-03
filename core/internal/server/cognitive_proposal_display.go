@@ -42,11 +42,15 @@ func formatProposalResource(resource string) string {
 }
 
 func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequest string, mutTools []string) proposalDisplayContract {
+	return buildProposalDisplayContractForTeam(planned, latestRequest, mutTools, "admin-core")
+}
+
+func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, latestRequest string, mutTools []string, fallbackTeamID string) proposalDisplayContract {
 	display := proposalDisplayContract{
 		OperatorSummary: "Carry out the requested governed action.",
 		ExpectedResult:  "Soma will perform the approved action and return durable execution proof.",
 	}
-	display.BusScope, display.NATSSubjects = proposalBusWiring(planned, mutTools, "admin-core")
+	display.BusScope, display.NATSSubjects = proposalBusWiring(planned, mutTools, resolveFocusedSomaTeamID(fallbackTeamID))
 
 	for _, resource := range affectedResourcesForPlannedCalls(planned) {
 		if formatted := formatProposalResource(resource); formatted != "" {

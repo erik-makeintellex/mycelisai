@@ -10,6 +10,13 @@ const mocks = vi.hoisted(() => {
   const missionControlChat = vi.fn();
   const useDurableTeamWork = vi.fn();
   const useTeamWorkActionHandler = vi.fn();
+  const storeState = {
+    missionChat: [] as unknown[],
+    teamsDetail: [{ id: "team-alpha", name: "Alpha" }],
+    durableWorkRefreshVersion: 5,
+    selectTeam,
+    selectedTeamId: null as string | null,
+  };
   return {
     selectTeam,
     handleActiveWorkAction,
@@ -17,17 +24,12 @@ const mocks = vi.hoisted(() => {
     missionControlChat,
     useDurableTeamWork,
     useTeamWorkActionHandler,
+    storeState,
   };
 });
 
 vi.mock("@/store/useCortexStore", () => ({
-  useCortexStore: (selector: (state: unknown) => unknown) => selector({
-    missionChat: [],
-    teamsDetail: [{ id: "team-alpha", name: "Alpha" }],
-    durableWorkRefreshVersion: 5,
-    selectTeam: mocks.selectTeam,
-    selectedTeamId: null,
-  }),
+  useCortexStore: (selector: (state: unknown) => unknown) => selector(mocks.storeState),
 }));
 
 vi.mock("@/components/teams/useTeamWorkActionHandler", () => ({
@@ -107,6 +109,8 @@ vi.mock("@/components/soma/SomaWorkspaceFrame", () => ({
 describe("SomaOperatingSurface active work actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.storeState.missionChat = [];
+    mocks.storeState.selectedTeamId = null;
     mocks.useTeamWorkActionHandler.mockReturnValue({
       activeWorkRefreshVersion: 7,
       activeWorkActionError: "Team action needs operator attention.",
@@ -211,13 +215,23 @@ describe("SomaOperatingSurface active work actions", () => {
         interactions: [],
       }],
       outputRefs: [{
-        output_id: "comic-page-output",
+        output_id: "comic-page-output-old",
+        team_id: "team-alpha",
+        work_item_id: "work-1",
+        kind: "media",
+        label: "Old comic page",
+        storage_ref: "groups/team-alpha/media/old-comic-page.png",
+        proof_id: "proof-comic-1",
+        created_at: "2026-05-17T18:00:00Z",
+      }, {
+        output_id: "comic-page-output-new",
         team_id: "team-alpha",
         work_item_id: "work-1",
         kind: "media",
         label: "Comic page",
         storage_ref: "groups/team-alpha/media/comic-page.png",
-        proof_id: "proof-comic-1",
+        proof_id: "proof-comic-2",
+        created_at: "2026-05-17T18:05:00Z",
       }],
       emptyMessage: "No active work.",
       status: "ready",
@@ -229,8 +243,50 @@ describe("SomaOperatingSurface active work actions", () => {
 
     const dock = within(screen.getByTestId("focused-team-output-dock"));
     expect(dock.getByText("Comic page")).toBeDefined();
+    expect(screen.getByTestId("focused-team-output-dock").textContent?.indexOf("Comic page")).toBeLessThan(
+      screen.getByTestId("focused-team-output-dock").textContent?.indexOf("Old comic page") ?? 0,
+    );
     expect(screen.getByRole("link", { name: /Team page/i }).getAttribute("href")).toBe("/teams?team_id=team-alpha");
     expect(dock.getByRole("button", { name: /Open Comic page in a new browser window/i })).toBeDefined();
     expect(dock.getByRole("button", { name: /Open local folder for Comic page/i })).toBeDefined();
+  });
+
+  it("prioritizes focused team output over older global Soma chat output", () => {
+    mocks.storeState.missionChat = [{
+      role: "architect",
+      content: "Global package is available.",
+      timestamp: "2026-05-17T18:00:00Z",
+      execution_summary: {
+        outputs: [{ title: "Older global brief", url: "/runs/global-brief" }],
+      },
+    }];
+    mocks.useDurableTeamWork.mockReturnValue({
+      items: [{
+        id: "work-1",
+        title: "Focused output",
+        state: "output_ready",
+        teamIds: ["team-alpha"],
+        interactions: [],
+      }],
+      outputRefs: [{
+        output_id: "focused-output",
+        team_id: "team-alpha",
+        work_item_id: "work-1",
+        kind: "file",
+        label: "Newest focused brief",
+        storage_ref: "groups/team-alpha/output/newest.md",
+        created_at: "2026-05-17T18:05:00Z",
+      }],
+      emptyMessage: "No active work.",
+      status: "ready",
+      statusLabel: "Ready",
+      degradedMessage: null,
+    });
+
+    render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
+
+    const workbench = within(screen.getByTestId("output-workbench"));
+    expect(workbench.getByText("Latest output").closest("article")?.textContent).toContain("Newest focused brief");
+    expect(workbench.getByText("Output details and proof").closest("details")?.textContent).toContain("Older global brief");
   });
 });

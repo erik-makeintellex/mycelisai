@@ -253,9 +253,7 @@ func inferAdapterKindFromTool(tool string) string {
 
 func buildTeamExpressionsFromTools(tools []string, teamID string, rolePlan []string) []protocol.ChatTeamExpression {
 	deduped := uniqueOrderedTools(tools)
-	if strings.TrimSpace(teamID) == "" {
-		teamID = "admin-core"
-	}
+	teamID = resolveFocusedSomaTeamID(teamID)
 	if len(rolePlan) == 0 {
 		rolePlan = []string{"admin"}
 	}

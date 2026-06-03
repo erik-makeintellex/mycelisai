@@ -42,6 +42,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty conversation", http.StatusBadRequest)
 		return
 	}
+	focusedTeamID := resolveFocusedSomaTeamID(req.TeamID)
 
 	sessionID, sessionIDValid := validateOptionalChatSessionID(req.SessionID)
 	if !sessionIDValid {
@@ -76,7 +77,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	referentialReview := s.buildSomaReferentialReview(r.Context(), req.Messages)
 	if referentialReview.NeedsConfirmation {
-		logSomaConversationTurn(r.Context(), s.Conversations, sessionID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
+		logSomaConversationTurn(r.Context(), s.Conversations, sessionID, focusedTeamID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
 		s.respondReferentialConfirmation(w, r, referentialReview)
 		return
 	}
@@ -84,7 +85,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		req.Messages = applyConfirmedReferentialAction(req.Messages, referentialReview)
 		latestUserText = referentialReview.EffectiveRequest
 	}
-	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
+	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, focusedTeamID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
 
 	req.Messages = prependReferentialReviewContext(req.Messages, referentialReview)
 	req.Messages = prependChatWorkspaceContext(
@@ -159,7 +160,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	replyText := readableChatText(agentResult, isMutation)
-	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, sessionTurnIndex+1, "assistant", replyText, agentResult)
+	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, focusedTeamID, sessionTurnIndex+1, "assistant", replyText, agentResult)
 
 	chatPayload := protocol.ChatResponsePayload{
 		Text:          replyText,
@@ -227,9 +228,9 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		if confirmToken != nil {
 			token = confirmToken.Token
 		}
-		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, effectiveTools)
+		display := buildProposalDisplayContractForTeam(plannedToolCalls, latestUserText, effectiveTools, focusedTeamID)
 		chatPayload.ToolsUsed = chatResponseTools(isMutation, agentResult.ToolsUsed, effectiveTools)
-		chatPayload.Proposal = buildMutationChatProposal(effectiveTools, proofID, token, "admin-core", []string{"admin"}, approval, profile.snapshot(), display)
+		chatPayload.Proposal = buildMutationChatProposal(effectiveTools, proofID, token, focusedTeamID, []string{"admin"}, approval, profile.snapshot(), display)
 		chatPayload.ExecutionSummary = buildProposalExecutionSummary(latestUserText, plannedToolCalls, effectiveTools, display, proofID, contractID, auditEventID, approval)
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{

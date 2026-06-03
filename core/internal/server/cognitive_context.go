@@ -207,7 +207,14 @@ func validateOptionalChatSessionID(sessionID string) (string, bool) {
 	return parsed.String(), true
 }
 
-func logSomaConversationTurn(ctx context.Context, store protocol.ConversationLogger, sessionID string, index int, role string, content string, agentResult chatAgentResult) {
+func resolveFocusedSomaTeamID(teamID string) string {
+	if focused := strings.TrimSpace(teamID); focused != "" {
+		return focused
+	}
+	return "admin-core"
+}
+
+func logSomaConversationTurn(ctx context.Context, store protocol.ConversationLogger, sessionID string, teamID string, index int, role string, content string, agentResult chatAgentResult) {
 	if store == nil || sessionID == "" || strings.TrimSpace(content) == "" {
 		return
 	}
@@ -215,7 +222,7 @@ func logSomaConversationTurn(ctx context.Context, store protocol.ConversationLog
 		SessionID:  sessionID,
 		TenantID:   "default",
 		AgentID:    "admin",
-		TeamID:     "admin-core",
+		TeamID:     resolveFocusedSomaTeamID(teamID),
 		TurnIndex:  index,
 		Role:       role,
 		Content:    content,

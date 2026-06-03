@@ -39,17 +39,10 @@ func outputRefsFromRaw(item protocol.TeamWorkItem, env protocol.SignalEnvelope, 
 
 func outputRefFromMap(item protocol.TeamWorkItem, env protocol.SignalEnvelope, data map[string]any) (protocol.TeamOutputRef, bool) {
 	outputID := firstNonEmptyString(stringField(data, "output_id"), stringField(data, "id"), stringField(data, "artifact_id"))
-	storageRef := firstNonEmptyString(
-		stringField(data, "storage_ref"),
-		stringField(data, "href"),
-		stringField(data, "open_url"),
-		stringField(data, "file_path"),
-		stringField(data, "path"),
-		stringField(data, "folder"),
-	)
-	entrypoint := stringField(data, "entrypoint")
 	label := firstNonEmptyString(stringField(data, "label"), stringField(data, "title"), stringField(data, "summary"))
 	kind := firstNonEmptyString(stringField(data, "kind"), stringField(data, "output_kind"), "output")
+	storageRef := teamOutputStorageRefFromMap(kind, data)
+	entrypoint := relativeTeamOutputEntrypoint(storageRef, stringField(data, "entrypoint"))
 	if outputID == "" && storageRef == "" && entrypoint == "" && label == "" {
 		return protocol.TeamOutputRef{}, false
 	}

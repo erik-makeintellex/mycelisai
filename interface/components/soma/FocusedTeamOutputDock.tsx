@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type React from "react";
 import { ExternalLink, FileText, Image as ImageIcon, PackageOpen, ShieldCheck } from "lucide-react";
+import { sortTeamOutputRefsNewestFirst } from "@/components/teams/teamWorkProjection";
 import type { TeamOutputRef } from "@/store/useCortexStore";
 import { normalizeWorkspaceOutputUrl } from "./ExecutionSummaryCardModel";
 import OutputAccessActions from "./OutputAccessActions";
@@ -16,7 +17,7 @@ export function FocusedTeamOutputDock({
   teamId?: string | null;
   outputRefs: TeamOutputRef[];
 }) {
-  const outputs = outputRefs.map(teamOutputItem).filter((item): item is TeamOutputItem => Boolean(item));
+  const outputs = sortTeamOutputRefsNewestFirst(outputRefs).map(teamOutputItem).filter((item): item is TeamOutputItem => Boolean(item));
   if (!teamId || outputs.length === 0) return null;
   const visible = outputs.slice(0, 3);
   const hiddenCount = Math.max(outputs.length - visible.length, 0);
