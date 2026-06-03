@@ -213,14 +213,18 @@ test.describe("Dashboard workbench live review", () => {
     await expect(rail.getByRole("tab", { name: /Output/i })).toHaveAttribute("aria-selected", "true");
     await expect(rail.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
     await expect(rail.getByText(/Guided proposal/i)).toHaveCount(0);
-    await expect(page.getByText("path verified").last()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("readback verified").last()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(/sha256 [a-f0-9]{12}/i).last()).toBeVisible({ timeout: 30_000 });
+    await rail.getByText("Verification details").last().click();
+    await expect(rail.getByText("path verified").last()).toBeVisible({ timeout: 30_000 });
+    await expect(rail.getByText("readback verified").last()).toBeVisible({ timeout: 30_000 });
+    await expect(rail.getByText(/sha256 [a-f0-9]{12}/i).last()).toBeVisible({ timeout: 30_000 });
     await page.screenshot({ path: testInfo.outputPath("dashboard-after-output.png"), fullPage: true });
 
     await rail.getByRole("tab", { name: /Trust/i }).click();
-    await expect(page.getByText(/Proof, recovery, and safe next action/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/Proof, recovery, and the safe next step/i).last()).toBeVisible({ timeout: 30_000 });
     const panelScroll = page.getByTestId("soma-workbench-panel-scroll");
+    await panelScroll.evaluate((node) => {
+      node.scrollTop = 0;
+    });
     const initialRailMetrics = await sideRailMetrics(page);
     await panelScroll.evaluate((node) => {
       node.addEventListener("wheel", () => {

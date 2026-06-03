@@ -82,7 +82,7 @@ export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkben
           <div className="mt-0.5 truncate text-xs font-semibold text-cortex-text-main">
             {digest.text}
           </div>
-          {workspacePath ? (
+          {workspacePath && workspacePath !== digest.text ? (
             <code className="mt-0.5 block max-w-56 truncate font-mono text-[10px] text-cortex-text-muted">
               {workspacePath}
             </code>
