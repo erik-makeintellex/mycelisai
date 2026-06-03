@@ -13,7 +13,7 @@ import {
   normalizeWorkspaceOutputUrl,
 } from "./ExecutionSummaryCardModel";
 import OutputAccessActions from "./OutputAccessActions";
-import { itemWorkspacePath, OutputPathHint } from "./OutputWorkbenchPathHint";
+import { itemWorkspacePath, outputWorkspacePath, OutputPathHint } from "./OutputWorkbenchPathHint";
 
 export type OutputWorkbenchItem = {
   text: string;
@@ -93,6 +93,22 @@ export function actionableOutputWorkbenchItems(outputs: OutputWorkbenchItem[]): 
   return outputs.filter((output) => Boolean(output.url || output.proof || output.proofArtifactId));
 }
 
+function preferredOutputIndex(outputs: OutputWorkbenchItem[]) {
+  const fileIndex = outputs.findIndex((output) => Boolean(output.url) && isFileLikeOutput(output));
+  if (fileIndex >= 0) return fileIndex;
+  const nonFolderIndex = outputs.findIndex((output) => Boolean(output.url) && !isGroupFolderOutput(output));
+  if (nonFolderIndex >= 0) return nonFolderIndex;
+  return outputs.findIndex((output) => Boolean(output.url));
+}
+
+function isFileLikeOutput(output: OutputWorkbenchItem) {
+  return /\.[a-z0-9]{1,8}$/i.test(outputWorkspacePath(output) ?? "");
+}
+
+function isGroupFolderOutput(output: OutputWorkbenchItem) {
+  return (outputWorkspacePath(output) ?? "").replace(/\\/g, "/").startsWith("groups/");
+}
+
 function outputUrl(storageRef?: string | null): string | null {
   return normalizeWorkspaceOutputUrl(storageRef);
 }
@@ -139,7 +155,7 @@ export function OutputWorkbench({
   const [copiedOutputKey, setCopiedOutputKey] = useState<string | null>(null);
   const packages = projectPackages ?? [];
   const hasOutputs = outputs.length > 0 || packages.length > 0;
-  const primaryOutputIndex = outputs.findIndex((output) => Boolean(output.url));
+  const primaryOutputIndex = preferredOutputIndex(outputs);
   const normalizedPrimaryIndex = primaryOutputIndex >= 0 ? primaryOutputIndex : outputs.length > 0 ? 0 : -1;
   const primaryOutput = normalizedPrimaryIndex >= 0 ? outputs[normalizedPrimaryIndex] : null;
   const secondaryOutputs = outputs.filter((_, index) => index !== normalizedPrimaryIndex);

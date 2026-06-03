@@ -20,7 +20,7 @@ export function outputWorkbenchDigest({
   projectPackages?: ExecutionSummaryItem[];
 }): OutputWorkbenchDigest | null {
   const packages = projectPackages ?? [];
-  const primaryOutputIndex = outputs.findIndex((output) => Boolean(output.url));
+  const primaryOutputIndex = preferredOutputIndex(outputs);
   const normalizedPrimaryIndex = primaryOutputIndex >= 0 ? primaryOutputIndex : outputs.length > 0 ? 0 : -1;
   const primaryOutput = normalizedPrimaryIndex >= 0 ? outputs[normalizedPrimaryIndex] : null;
 
@@ -43,6 +43,26 @@ export function outputWorkbenchDigest({
     storagePath: primaryPackage.folder ?? primaryPackage.entrypoint ?? null,
     count: outputs.length + packages.length,
   };
+}
+
+function preferredOutputIndex(outputs: OutputWorkbenchItem[]) {
+  const fileIndex = outputs.findIndex((output) => Boolean(output.url) && isFileLikeOutput(output));
+  if (fileIndex >= 0) return fileIndex;
+  const nonFolderIndex = outputs.findIndex((output) => Boolean(output.url) && !isGroupFolderOutput(output));
+  if (nonFolderIndex >= 0) return nonFolderIndex;
+  return outputs.findIndex((output) => Boolean(output.url));
+}
+
+function outputWorkspacePath(output: OutputWorkbenchItem) {
+  return output.storagePath?.trim() || workspacePathFromOutputUrl(output.url) || "";
+}
+
+function isFileLikeOutput(output: OutputWorkbenchItem) {
+  return /\.[a-z0-9]{1,8}$/i.test(outputWorkspacePath(output));
+}
+
+function isGroupFolderOutput(output: OutputWorkbenchItem) {
+  return outputWorkspacePath(output).replace(/\\/g, "/").startsWith("groups/");
 }
 
 export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkbenchDigest }) {

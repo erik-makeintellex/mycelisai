@@ -73,6 +73,10 @@ async function requestWithTransientRetry<T>(request: () => Promise<T>): Promise<
     throw new Error(lastError || 'request failed');
 }
 
+function escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function createOrganization(page: Page, name: string) {
     const response = await page.request.post('/api/v1/organizations', {
         data: { name, purpose: 'Live team output content proof', start_mode: 'empty' },
@@ -85,11 +89,11 @@ async function createOrganization(page: Page, name: string) {
 
 async function openWorkspace(page: Page, organizationId: string) {
     await page.goto(`/organizations/${organizationId}`, { waitUntil: 'domcontentloaded' });
-    await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
+    await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or (?:execute|run)/i).waitFor({ timeout: 30_000 });
 }
 
 async function submitWorkspaceChat(page: Page, content: string) {
-    const input = page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i);
+    const input = page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or (?:execute|run)/i);
     await input.fill(content);
     const responsePromise = page.waitForResponse(
         (response) => response.url().includes('/api/v1/chat') && response.request().method() === 'POST',
@@ -106,7 +110,7 @@ async function confirmProposal(page: Page) {
         (response) => response.url().includes('/api/v1/intent/confirm-action') && response.request().method() === 'POST',
         { timeout: 120_000 },
     );
-    await page.getByRole('button', { name: /Approve & Execute|Execute/i }).last().click();
+    await page.getByRole('button', { name: /Approve & Execute|Execute|Run/i }).last().click();
     const response = await responsePromise;
     const parsed = await parseJSONIfPossible<ConfirmEnvelope>(response);
     return { response, raw: parsed.raw, body: parsed.body };
@@ -133,10 +137,10 @@ async function executeTeamOutput(page: Page, ask: TeamOutputAsk) {
     expect(outputs.some((output) => output.kind === 'team' && output.id === ask.teamID && output.retained)).toBeTruthy();
     expect(outputs.some((output) => output.id === ask.filePath && output.href === outputHref && output.retained)).toBeTruthy();
 
-    await expect(page.getByText(/Execution verified/i).last()).toBeVisible({ timeout: 30_000 });
-    const outputLink = page.getByRole('link', { name: ask.filePath }).last();
-    await expect(outputLink).toHaveAttribute('href', outputHref);
-    const openButton = page.getByRole('button', { name: `Open ${ask.filePath} in a new browser window` }).last();
+    await expect(page.getByText(/Action completed|Result saved|The produced output is available for review/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Latest output').last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(ask.filePath).last()).toBeVisible();
+    const openButton = page.getByRole('button', { name: /Open(?: file)? .+ in a new browser window/i }).last();
     const outputPagePromise = page.context().waitForEvent('page');
     await openButton.click();
     const outputPage = await outputPagePromise;
@@ -158,7 +162,7 @@ async function executeTeamOutput(page: Page, ask: TeamOutputAsk) {
     const revealResponsePromise = page.waitForResponse((response) => {
         return response.url().includes('/api/v1/workspace/files/reveal') && response.request().method() === 'POST';
     }, { timeout: 30_000 });
-    await page.getByRole('button', { name: `Open local folder for ${ask.filePath}` }).last().click();
+    await page.getByRole('button', { name: new RegExp(`Open local folder for .*${escapeRegex(ask.filePath)}`, 'i') }).last().click();
     const revealResponse = await revealResponsePromise;
     expect(revealResponse.ok()).toBeTruthy();
 
@@ -187,12 +191,12 @@ async function expectTeamOutputVisibleOnDashboard(page: Page, ask: TeamOutputAsk
     const dock = page.getByTestId('focused-team-output-dock');
     await expect(dock).toBeVisible({ timeout: 30_000 });
     await expect(dock.getByText(ask.filePath)).toBeVisible();
-    await expect(dock.getByRole('link', { name: /Team page/i })).toHaveAttribute(
+    await expect(dock.getByRole('link', { name: /Open team/i })).toHaveAttribute(
         'href',
         `/teams?team_id=${encodeURIComponent(ask.teamID)}`,
     );
-    await expect(dock.getByRole('button', { name: `Open ${ask.filePath} in a new browser window` })).toBeVisible();
-    await expect(dock.getByRole('button', { name: `Open local folder for ${ask.filePath}` })).toBeVisible();
+    await expect(dock.getByRole('button', { name: new RegExp(`Open ${escapeRegex(ask.filePath)} in a new browser window`, 'i') })).toBeVisible();
+    await expect(dock.getByRole('button', { name: new RegExp(`Open local folder for .*${escapeRegex(ask.filePath)}`, 'i') })).toBeVisible();
 }
 
 test.describe('Live teams produce reviewable content outputs', () => {

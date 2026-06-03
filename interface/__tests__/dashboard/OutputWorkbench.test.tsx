@@ -156,6 +156,26 @@ describe("OutputWorkbench", () => {
     });
 
     expect(outputWorkbenchDigest({
+      outputs: [
+        {
+          text: "New team folder",
+          url: "/api/v1/workspace/files/view?path=groups%2Fnew-team",
+          storagePath: "groups/new-team",
+        },
+        {
+          text: "Playable output",
+          url: "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fplayable.html",
+          storagePath: "workspace/logs/playable.html",
+        },
+      ],
+    })).toEqual({
+      text: "Playable output",
+      url: "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fplayable.html",
+      storagePath: "workspace/logs/playable.html",
+      count: 2,
+    });
+
+    expect(outputWorkbenchDigest({
       outputs: [],
       projectPackages: [{
         kind: "project_package",
@@ -168,6 +188,29 @@ describe("OutputWorkbench", () => {
       storagePath: "generated/owner-package",
       count: 1,
     });
+  });
+
+  it("prioritizes generated files over team folders in the main output workbench", () => {
+    render(
+      <OutputWorkbench
+        outputs={[
+          {
+            text: "New team folder",
+            url: "/api/v1/workspace/files/view?path=groups%2Fnew-team",
+            storagePath: "groups/new-team",
+          },
+          {
+            text: "Playable output",
+            url: "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fplayable.html",
+            storagePath: "workspace/logs/playable.html",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Latest output").closest("article")?.textContent).toContain("Playable output");
+    expect(screen.getByRole("button", { name: /Open file Playable output/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Open local folder for Playable output/i })).toBeDefined();
   });
 
   it("renders package actions and copyable output quotes", async () => {
