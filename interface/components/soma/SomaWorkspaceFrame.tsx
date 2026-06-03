@@ -48,12 +48,18 @@ export function SomaWorkspaceFrame({
   output,
   trust,
   context,
+  primaryPanel,
+  reviewCount,
+  showOutputDigest = true,
 }: {
   expression: React.ReactNode;
   activeWork?: React.ReactNode;
   output?: React.ReactNode;
   trust?: React.ReactNode;
   context?: React.ReactNode;
+  primaryPanel?: Extract<PanelKey, "work" | "output">;
+  reviewCount?: number;
+  showOutputDigest?: boolean;
 }) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<PanelKey>("work");
@@ -98,15 +104,17 @@ export function SomaWorkspaceFrame({
   ].filter((panel) => Boolean(panel.content));
   const outputPanel = panels.find((panel) => panel.key === "output");
   const outputDigest = digestFromOutputNode(output);
+  const primaryPanelKey = primaryPanel ?? (outputPanel ? "output" : "work");
+  const primaryReviewPanel = panels.find((panel) => panel.key === primaryPanelKey) ?? outputPanel ?? panels[0];
   const selectedPanel = panels.find((panel) => panel.key === activePanel) ?? outputPanel ?? panels[0];
   const hasPanels = panels.length > 0;
-  const reviewCount = outputDigest?.count ?? panels.length;
-  const reviewLabel = outputPanel ? "Review output" : "Review work";
+  const visibleReviewCount = reviewCount ?? outputDigest?.count ?? panels.length;
+  const reviewLabel = primaryReviewPanel?.key === "output" ? "Review output" : "Review work";
 
   const togglePanel = () => {
     setIsPanelOpen((open) => {
-      if (!open && outputPanel) {
-        setActivePanel("output");
+      if (!open && primaryReviewPanel) {
+        setActivePanel(primaryReviewPanel.key);
       }
       return !open;
     });
@@ -131,7 +139,7 @@ export function SomaWorkspaceFrame({
       {hasPanels ? (
         <>
           <div className="absolute right-3 top-3 z-30 flex max-w-[min(92vw,620px)] flex-col items-end gap-2 sm:flex-row sm:items-start">
-            {outputDigest && !isPanelOpen ? <OutputWorkbenchCompactDigest digest={outputDigest} /> : null}
+            {outputDigest && showOutputDigest && !isPanelOpen ? <OutputWorkbenchCompactDigest digest={outputDigest} /> : null}
             <button
               type="button"
               aria-controls={sideRailId}
@@ -144,9 +152,9 @@ export function SomaWorkspaceFrame({
               <span>{isPanelOpen ? "Hide review" : reviewLabel}</span>
               <span
                 className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-1.5 text-[10px] font-bold text-cortex-primary"
-                aria-label={`${reviewCount} review ${reviewCount === 1 ? "item" : "items"}`}
+                aria-label={`${visibleReviewCount} review ${visibleReviewCount === 1 ? "item" : "items"}`}
               >
-                {reviewCount}
+                {visibleReviewCount}
               </span>
             </button>
           </div>

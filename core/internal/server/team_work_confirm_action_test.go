@@ -101,6 +101,28 @@ func TestPersistConfirmedActionTeamWork_DeliverableOutputReadyHasRefs(t *testing
 	}
 }
 
+func TestOutputRefsForTeamWork_NormalizesViewerURLFolderForDeliverable(t *testing.T) {
+	link := testConfirmedActionTeamWorkLink(&protocol.ScopeValidation{})
+
+	refs := outputRefsForTeamWork(link, "work-1", "qa-team", []protocol.ExecutionOutput{{
+		ID:     "workspace/logs/generated.html",
+		Kind:   "code",
+		Title:  "Generated HTML",
+		Folder: "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fgenerated.html",
+		Href:   "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fgenerated.html",
+	}})
+
+	if len(refs) != 1 {
+		t.Fatalf("refs length = %d, want 1", len(refs))
+	}
+	if refs[0].StorageRef != "workspace/logs/generated.html" {
+		t.Fatalf("storage_ref = %q, want decoded workspace path", refs[0].StorageRef)
+	}
+	if strings.HasPrefix(refs[0].StorageRef, "/api/v1/workspace/files/view") {
+		t.Fatalf("storage_ref retained viewer URL: %q", refs[0].StorageRef)
+	}
+}
+
 func TestPersistFailedConfirmedActionTeamWork_RecordsDegradedWork(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)

@@ -101,13 +101,9 @@ function preferredOutputIndex(outputs: OutputWorkbenchItem[]) {
   return outputs.findIndex((output) => Boolean(output.url));
 }
 
-function isFileLikeOutput(output: OutputWorkbenchItem) {
-  return /\.[a-z0-9]{1,8}$/i.test(outputWorkspacePath(output) ?? "");
-}
+function isFileLikeOutput(output: OutputWorkbenchItem) { return /\.[a-z0-9]{1,8}$/i.test(outputWorkspacePath(output) ?? ""); }
 
-function isGroupFolderOutput(output: OutputWorkbenchItem) {
-  return (outputWorkspacePath(output) ?? "").replace(/\\/g, "/").startsWith("groups/");
-}
+function isGroupFolderOutput(output: OutputWorkbenchItem) { return (outputWorkspacePath(output) ?? "").replace(/\\/g, "/").startsWith("groups/"); }
 
 function outputUrl(storageRef?: string | null): string | null {
   return normalizeWorkspaceOutputUrl(storageRef);

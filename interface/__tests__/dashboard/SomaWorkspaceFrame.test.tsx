@@ -90,4 +90,36 @@ describe("SomaWorkspaceFrame", () => {
     expect(within(sideRail).getByText("Owner note")).toBeDefined();
     expect(within(sideRail).queryByText("Active lane fallback")).toBeNull();
   });
+
+  it("opens work first and hides the compact output digest when active work needs attention", () => {
+    render(
+      <SomaWorkspaceFrame
+        expression={<div>Conversation transcript</div>}
+        activeWork={<div>Running team task</div>}
+        output={(
+          <OutputWorkbench
+            outputs={[{
+              text: "Generated page",
+              url: "/api/v1/workspace/files/view?path=generated%2Fpage.html",
+            }]}
+          />
+        )}
+        primaryPanel="work"
+        reviewCount={2}
+        showOutputDigest={false}
+      />,
+    );
+
+    expect(screen.queryByTestId("soma-workbench-output-digest")).toBeNull();
+    const toggle = screen.getByTestId("soma-workbench-panel-toggle");
+    expect(toggle.textContent).toContain("Review work");
+    expect(toggle.textContent).toContain("2");
+
+    fireEvent.click(toggle);
+
+    const sideRail = screen.getByTestId("soma-workbench-side-rail");
+    expect(within(sideRail).getByRole("tab", { name: /Work/i }).getAttribute("aria-selected")).toBe("true");
+    expect(within(sideRail).getByText("Running team task")).toBeDefined();
+    expect(within(sideRail).queryByText("Generated page")).toBeNull();
+  });
 });

@@ -61,8 +61,8 @@ Use `Teams` when you want to inspect or manage existing teams:
 
 - review the Active Work Lane to see whether a team is new, queued, running, output-ready, degraded, paused, or waiting on the operator
 - treat the Dashboard Active Work lane as an attention-first slice; use `Teams` for the full durable backlog
-- use the Dashboard `Work contexts` strip when you want to switch Soma into a specific team's focused chat/output/proof lane without leaving the main workbench
-- when a focused team has retained outputs, use the compact `Team outputs` dock above Soma's workbench for immediate open/open-folder access; focused team outputs should appear before older root Soma outputs, with newest retained work first
+- use the Dashboard `Team focus` strip when you want to switch Soma between `All Soma work` and a specific team's focused chat/output/proof lane without leaving the main workbench
+- when a focused team has retained outputs and no active work needs attention, use the compact output access above Soma's workbench for immediate open/open-folder access; when work is queued, running, degraded, or waiting on the operator, the review button opens Work first so the next action stays obvious
 - focused team chat stays scoped to that team for conversation continuity, proposals, and team bus wiring while root Soma remains the cross-team reviewer when no team is selected
 - open the team lead workspace
 - review current outputs while the team is active

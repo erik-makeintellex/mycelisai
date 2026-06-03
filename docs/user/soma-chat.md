@@ -96,8 +96,9 @@ If you leave the organization workspace and come back later, the current guided 
 Team workspaces are different from the root Soma workspace:
 - the root workspace is Soma-first and organization-wide
 - the dashboard uses a focus-first workbench: Soma conversation stays in the primary pane, while Active Work, retained outputs, trust, context, and focused team lanes open from a minimizable, tabbed Work panel overlay
-- the `Work contexts` strip above the chat switches the same workbench between root Soma and team-focused lanes, so the chat scope, active work, retained outputs, and proof move together
+- the `Team focus` strip above the chat switches the same workbench between `All Soma work` and a team's focused lane, so the chat scope, active work, retained outputs, and proof move together
 - the Work panel is for quick review and action; use each tab's full-page link for deeper backlog, output-folder, activity/proof, or Resources review
+- when a focused team has queued, running, degraded, or operator-needed work, the review button opens Work first and hides duplicate output previews so the next action stays obvious
 - focused team context switches the primary chat, active-work lane, and retained-output view to the selected team's scope, while Soma remains able to reference other teams, such as a story-writing team and a comic-visual team, when you ask
 - when Soma creates a team but has not yet created the first delegated work item, the Dashboard shows a compact first-deliverable launcher; choose a starter prompt, review it in the Soma input, then send it so execution still goes through the governed work-item path
 - the root Soma home keeps the live interaction stream collapsed by default so an admin can open it on demand without pushing Soma away from the first work surface
@@ -112,7 +113,6 @@ Team workspaces are different from the root Soma workspace:
 - entering a created team should center the team's focused lead entity first
 - that team lead can still coordinate back through Soma using scoped memory, RAG retrieval, and broader organization context when needed
 - the team's lead and specialists inherit the organization output-model policy unless an admin changes it
-
 Groups are a separate workflow surface:
 - use `Groups` when you want a temporary or standing collaboration lane without cluttering the root Soma home
 - the Groups screen uses a compact list/detail layout: select a group from the left rail, then use the main pane for lane data, broadcast/review, outputs, and retained artifacts

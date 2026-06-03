@@ -10,6 +10,12 @@ import (
 func teamOutputStorageRefFromExecutionOutput(output protocol.ExecutionOutput) string {
 	kind := strings.TrimSpace(output.Kind)
 	if storageRef := strings.TrimSpace(output.Folder); storageRef != "" {
+		if path := workspacePathFromViewerURL(storageRef); path != "" {
+			if kind == "project_package" {
+				return firstNonEmptyString(parentWorkspacePath(path), path)
+			}
+			return path
+		}
 		return storageRef
 	}
 	if path := workspacePathFromViewerURL(output.Href); path != "" {

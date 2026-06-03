@@ -42,6 +42,20 @@ type ConversationEnvelope = {
     };
 };
 
+type TeamOutputRef = { storage_ref?: string; team_id?: string; run_id?: string; kind?: string };
+
+type TeamWorkItem = { work_item_id?: string; team_id?: string; run_id?: string; state?: string; execution_shape?: string; output_refs?: TeamOutputRef[] };
+
+type TeamStatusEvent = { state?: string; source_kind?: string; source_channel?: string; payload_kind?: string; run_id?: string };
+
+type RevealEnvelope = {
+    ok?: boolean;
+    data?: {
+        workspace_path?: string;
+        folder_path?: string;
+    };
+};
+
 type TeamOutputAsk = {
     teamID: string;
     filePath: string;
@@ -75,6 +89,10 @@ async function requestWithTransientRetry<T>(request: () => Promise<T>): Promise<
 
 function escapeRegex(value: string) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function expectedRevealWorkspacePath(path: string) {
+    return path.replace(/^workspace[\\/]/i, '').replace(/\\/g, '/');
 }
 
 async function createOrganization(page: Page, name: string) {
@@ -136,6 +154,8 @@ async function executeTeamOutput(page: Page, ask: TeamOutputAsk) {
     const outputs = confirmed.body?.data?.execution_summary?.outputs ?? [];
     expect(outputs.some((output) => output.kind === 'team' && output.id === ask.teamID && output.retained)).toBeTruthy();
     expect(outputs.some((output) => output.id === ask.filePath && output.href === outputHref && output.retained)).toBeTruthy();
+    const runID = confirmed.body!.data!.run_id!;
+    await expectConfirmedTeamWorkReadback(page, ask, runID);
 
     await expect(page.getByText(/Action completed|Result saved|The produced output is available for review/i).last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText('Latest output').last()).toBeVisible({ timeout: 30_000 });
@@ -165,13 +185,54 @@ async function executeTeamOutput(page: Page, ask: TeamOutputAsk) {
     await page.getByRole('button', { name: new RegExp(`Open local folder for .*${escapeRegex(ask.filePath)}`, 'i') }).last().click();
     const revealResponse = await revealResponsePromise;
     expect(revealResponse.ok()).toBeTruthy();
+    expect(revealResponse.url()).toContain(encodeURIComponent(ask.filePath));
+    const parsedReveal = await parseJSONIfPossible<RevealEnvelope>(revealResponse);
+    expect(parsedReveal.body?.ok, parsedReveal.raw).toBeTruthy();
+    expect(parsedReveal.body?.data?.workspace_path).toBe(expectedRevealWorkspacePath(ask.filePath));
+    expect(parsedReveal.body?.data?.folder_path).toBeTruthy();
 
-    const conversation = await page.request.get(`/api/v1/runs/${confirmed.body!.data!.run_id}/conversation`);
+    const conversation = await page.request.get(`/api/v1/runs/${runID}/conversation`);
     const parsedConversation = await parseJSONIfPossible<ConversationEnvelope>(conversation);
     expect(conversation.ok(), parsedConversation.body ? JSON.stringify(parsedConversation.body) : parsedConversation.raw).toBeTruthy();
     const toolNames = (parsedConversation.body?.data?.turns ?? []).map((turn) => turn.tool_name).filter(Boolean);
     expect(toolNames).toContain('create_team');
     expect(toolNames).toContain('write_file');
+}
+
+async function expectConfirmedTeamWorkReadback(page: Page, ask: TeamOutputAsk, runID: string) {
+    const response = await requestWithTransientRetry(() => page.request.get(`/api/v1/teams/${encodeURIComponent(ask.teamID)}/work?limit=25`));
+    const parsed = await parseJSONIfPossible<APIEnvelope<TeamWorkItem[]>>(response);
+    expect(response.ok(), parsed.body ? JSON.stringify(parsed.body) : parsed.raw).toBeTruthy();
+    const items = parsed.body?.data ?? [];
+    const item = items.find((candidate) => (
+        candidate.run_id === runID
+        && (candidate.output_refs ?? []).some((output) => output.storage_ref === ask.filePath)
+    ));
+    expect(item, JSON.stringify(items)).toBeTruthy();
+    expect(item?.team_id).toBe(ask.teamID);
+    expect(item?.execution_shape).toBe('deliverable');
+    expect(item?.state).toBe('output_ready');
+    const outputRef = item?.output_refs?.find((output) => output.storage_ref === ask.filePath);
+    expect(outputRef, JSON.stringify(item?.output_refs ?? [])).toBeTruthy();
+    expect(outputRef?.storage_ref?.startsWith('/api/v1/workspace/files/view')).toBe(false);
+    expect(outputRef?.team_id).toBe(ask.teamID);
+    expect(outputRef?.run_id).toBe(runID);
+    expect(outputRef?.kind).toBeTruthy();
+    expect(item?.work_item_id).toBeTruthy();
+
+    const eventsResponse = await page.request.get(`/api/v1/teams/${encodeURIComponent(ask.teamID)}/work/${encodeURIComponent(item!.work_item_id!)}/status-events?limit=25`);
+    const parsedEvents = await parseJSONIfPossible<APIEnvelope<TeamStatusEvent[]>>(eventsResponse);
+    expect(eventsResponse.ok(), parsedEvents.body ? JSON.stringify(parsedEvents.body) : parsedEvents.raw).toBeTruthy();
+    const events = parsedEvents.body?.data ?? [];
+    const states = events.map((event) => event.state);
+    expect(states).toContain('queued');
+    expect(states).toContain('running');
+    expect(states).toContain('output_ready');
+    for (const event of events.filter((candidate) => candidate.run_id === runID)) {
+        expect(event.source_kind).toBe('web_api');
+        expect(event.source_channel).toBe('api.intent.confirm-action');
+        expect(event.payload_kind).toBe('status');
+    }
 }
 
 async function expectTeamVisibleInGroups(page: Page, teamID: string) {
@@ -190,7 +251,7 @@ async function expectTeamOutputVisibleOnDashboard(page: Page, ask: TeamOutputAsk
     await expect(page.getByTestId('soma-operating-surface')).toBeVisible({ timeout: 30_000 });
     const dock = page.getByTestId('focused-team-output-dock');
     await expect(dock).toBeVisible({ timeout: 30_000 });
-    await expect(dock.getByText(ask.filePath)).toBeVisible();
+    await expect(dock.getByText(ask.filePath).first()).toBeVisible();
     await expect(dock.getByRole('link', { name: /Open team/i })).toHaveAttribute(
         'href',
         `/teams?team_id=${encodeURIComponent(ask.teamID)}`,

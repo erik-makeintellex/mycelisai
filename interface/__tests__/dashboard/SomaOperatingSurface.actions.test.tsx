@@ -88,15 +88,17 @@ vi.mock("@/components/soma/SomaWorkspaceFrame", () => ({
     context,
     expression,
     output,
+    primaryPanel,
+    reviewCount,
+    showOutputDigest,
     trust,
-  }: {
-    activeWork: React.ReactNode;
-    context: React.ReactNode;
-    expression: React.ReactNode;
-    output: React.ReactNode;
-    trust: React.ReactNode;
-  }) => (
-    <div>
+  }: { activeWork: React.ReactNode; context: React.ReactNode; expression: React.ReactNode; output: React.ReactNode; primaryPanel?: string; reviewCount?: number; showOutputDigest?: boolean; trust: React.ReactNode }) => (
+    <div
+      data-testid="mock-soma-workspace-frame"
+      data-primary-panel={primaryPanel ?? ""}
+      data-review-count={reviewCount ?? ""}
+      data-show-output-digest={String(showOutputDigest)}
+    >
       {expression}
       {activeWork}
       {trust}
@@ -147,7 +149,11 @@ describe("SomaOperatingSurface active work actions", () => {
       focusedTeamId: "team-alpha",
     }));
     expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Alpha");
-    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Work contexts");
+    expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Team focus");
+    expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Chat, work, and outputs for this team");
+    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Team focus");
+    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("work");
+    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("false");
     expect(screen.getByRole("button", { name: /Alpha/i })).toBeDefined();
     expect(screen.getByText("Team action needs operator attention.")).toBeDefined();
     expect(screen.getByText("Team ask queued. You can keep working.")).toBeDefined();
@@ -242,6 +248,8 @@ describe("SomaOperatingSurface active work actions", () => {
     render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
 
     const dock = within(screen.getByTestId("focused-team-output-dock"));
+    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("");
+    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("true");
     expect(dock.getByText("Comic page")).toBeDefined();
     expect(screen.getByTestId("focused-team-output-dock").textContent?.indexOf("Comic page")).toBeLessThan(
       screen.getByTestId("focused-team-output-dock").textContent?.indexOf("Old comic page") ?? 0,

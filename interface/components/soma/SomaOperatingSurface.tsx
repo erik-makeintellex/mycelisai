@@ -109,6 +109,7 @@ export function SomaOperatingSurface({
   const somaHomeWorkItems = prioritizeSomaHomeWorkItems(activeWorkItems).filter(
     (item) => item.state !== "archived",
   );
+  const attentionWorkCount = somaHomeWorkItems.filter(needsWorkAttention).length;
   const displayedMode = activeMode ?? (focusedTeam ? focusedTeam.name : null);
   const hasWorkContextChoices = Boolean(effectiveFocusedTeamId)
     || activeWorkItems.length > 0
@@ -173,11 +174,13 @@ export function SomaOperatingSurface({
             onTeamSelect={focusTeamContext}
           />
         ) : null}
-        <FocusedTeamOutputDock
-          teamName={focusedTeam?.name}
-          teamId={effectiveFocusedTeamId}
-          outputRefs={teamWork.outputRefs}
-        />
+        {attentionWorkCount === 0 ? (
+          <FocusedTeamOutputDock
+            teamName={focusedTeam?.name}
+            teamId={effectiveFocusedTeamId}
+            outputRefs={teamWork.outputRefs}
+          />
+        ) : null}
         <SomaWorkspaceFrame
           expression={(
             <div
@@ -225,6 +228,9 @@ export function SomaOperatingSurface({
             ) : undefined
           )}
           context={contextSlot ?? (hasContextReviewContent ? <SomaEvidencePanel items={evidence} compact /> : undefined)}
+          primaryPanel={attentionWorkCount > 0 ? "work" : undefined}
+          reviewCount={attentionWorkCount > 0 ? attentionWorkCount : undefined}
+          showOutputDigest={attentionWorkCount === 0}
         />
       </div>
     </section>
@@ -285,4 +291,8 @@ export function prioritizeSomaHomeWorkItems(items: TeamWorkItem[]) {
 function itemPriority(item: TeamWorkItem) {
   const sourcePenalty = item.source === "projection" ? 20 : 0;
   return (item.needsOperator ? -1 : statePriority[item.state]) + sourcePenalty;
+}
+
+function needsWorkAttention(item: TeamWorkItem) {
+  return item.needsOperator || ["needs_operator", "degraded", "running", "reviewing", "queued"].includes(item.state);
 }
