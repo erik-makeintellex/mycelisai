@@ -2,73 +2,16 @@
 
 import { useState } from "react";
 import { Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Clock3, Loader2, XCircle } from "lucide-react";
-import { useCortexStore, type ChatMessage, type ProposalData } from "@/store/useCortexStore";
-import { brainBadge, toolLabel, sourceNodeLabel } from "@/lib/labels";
-import ProposalRunIntent from "./ProposalRunIntent";
+import { useCortexStore, type ChatMessage } from "@/store/useCortexStore";
+import ProposedActionDetails from "./ProposedActionDetails";
 import ProposalLifecycleProof from "./ProposalLifecycleProof";
-
-const plainLabelMap: Record<string, string> = {
-    auto_approve: "Low-risk action",
-    capability_risk: "Needs approval",
-    governed_mutation_intent: "Requested change",
-    governed_state: "Current status",
-    write_file: "File changes",
-};
-
-function humanizeLabel(value: string): string {
-    const mapped = plainLabelMap[value.toLowerCase()];
-    if (mapped) return mapped;
-    const normalized = value.replace(/[_-]+/g, " ").trim();
-    if (!normalized) return "";
-    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
-function plainExecutionText(value: string): string {
-    return value
-        .replace(/\bgoverned mutation intent\b/gi, "requested change")
-        .replace(/\bgoverned state\b/gi, "current status")
-        .replace(/\bcapability[_ -]risk\b/gi, "approval need")
-        .replace(/\bgoverned module binding\b/gi, "tool step")
-        .replace(/\bmodule binding\b/gi, "tool step")
-        .replace(/\bgoverned\b/gi, "reviewed");
-}
-
-function fallbackOperatorSummary(proposal: ProposalData): string {
-    if (proposal.tools.includes("write_file")) return "create or update files in your workspace.";
-    if (proposal.tools.includes("generate_blueprint")) return "prepare a durable blueprint artifact.";
-    if (proposal.tools.includes("publish_signal") || proposal.tools.includes("broadcast")) return "send a platform message.";
-    if (proposal.tools.includes("delegate") || proposal.tools.includes("delegate_task")) return "coordinate team work.";
-    return "carry out the requested action.";
-}
-
-function fallbackExpectedResult(proposal: ProposalData): string {
-    if (proposal.tools.includes("write_file")) return "The requested file change will be created after approval.";
-    if (proposal.tools.includes("generate_blueprint")) return "A saved blueprint artifact will be returned in this conversation.";
-    if (proposal.tools.includes("publish_signal") || proposal.tools.includes("broadcast")) return "The platform message will be sent and the outcome will be returned here.";
-    if (proposal.tools.includes("delegate") || proposal.tools.includes("delegate_task")) return "Soma will return the result in this conversation.";
-    return "Soma will return the result in this conversation.";
-}
-
-function fallbackAffectedResources(proposal: ProposalData): string[] {
-    if (proposal.tools.includes("write_file")) return ["Workspace files"];
-    if (proposal.tools.includes("generate_blueprint")) return ["Blueprint artifact"];
-    if (proposal.tools.includes("publish_signal") || proposal.tools.includes("broadcast")) return ["Platform message"];
-    if (proposal.tools.includes("delegate") || proposal.tools.includes("delegate_task")) return ["Team workflow"];
-    return [];
-}
-
-function explainApprovalPosture(proposal: ProposalData, approvalRequired: boolean, approvalMode: string): string {
-    if (approvalRequired) {
-        if (proposal.capability_ids?.includes("write_file")) return "This action will change your workspace, so Soma needs your approval before running it.";
-        if (proposal.external_data_use) return "This action may use external systems or data, so Soma needs your approval before running it.";
-        if (proposal.approval_reason === "cost_threshold") return "This action may incur additional spend, so Soma needs your approval before running it.";
-        return "This action needs your approval before Soma runs it.";
-    }
-
-    return approvalMode === "optional"
-        ? "This action stays within current policy thresholds, but you can still review it before execution."
-        : "This action is within current policy thresholds and can run without a mandatory approval.";
-}
+import {
+    explainApprovalPosture,
+    fallbackAffectedResources,
+    fallbackExpectedResult,
+    fallbackOperatorSummary,
+    plainExecutionText,
+} from "./proposedActionCopy";
 
 export default function ProposedActionBlock({ message }: { message: ChatMessage }) {
     const confirmProposal = useCortexStore((s) => s.confirmProposal);
@@ -83,14 +26,11 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const lifecycle = message.proposal_status ?? "active";
     const hasRunProof = Boolean(message.run_id?.trim());
     const renderedLifecycle = lifecycle === "executed" && !hasRunProof ? "confirmed_pending_execution" : lifecycle;
-    const expressions = proposal.team_expressions ?? [];
-    const bindingCount = expressions.reduce((sum, expr) => sum + (expr.module_bindings?.length ?? 0), 0);
     const isActionable = renderedLifecycle === "active";
     const hasConfirmToken = Boolean(proposal.confirm_token?.trim());
     const approvalRequired = proposal.approval_required ?? true;
     const approvalMode = proposal.approval_mode ?? (approvalRequired ? "required" : "auto_allowed");
     const capabilityRisk = proposal.capability_risk ?? proposal.risk_level ?? "low";
-    const capabilityIDs = proposal.capability_ids ?? [];
     const governanceSummary = approvalRequired ? "Approval required" : approvalMode === "optional" ? "Approval optional" : "No approval needed";
     const actionLabel = approvalRequired ? "Approve and run" : "Run";
     const operatorSummary = plainExecutionText(proposal.operator_summary?.trim() || fallbackOperatorSummary(proposal));
@@ -217,91 +157,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                 </button>
 
                 {detailsOpen ? (
-                    <div className="space-y-2 rounded border border-cortex-border bg-cortex-bg/40 px-3 py-3 text-xs font-mono">
-                        <ProposalRunIntent proposal={proposal} />
-                        <div className="flex items-center gap-4">
-                                <span className="text-cortex-text-muted w-16">Handled by</span>
-                                <span className="text-cortex-text-main">{sourceNodeLabel(message.source_node || "admin", assistantName)}</span>
-                            </div>
-                        {message.brain && (
-                            <div className="flex items-center gap-4">
-                                <span className="text-cortex-text-muted w-16">AI</span>
-                                <span className="text-cortex-text-main">{brainBadge(message.brain.provider_id, message.brain.location)}</span>
-                                {message.brain.location === "remote" && (
-                                    <span className="text-amber-400 text-[10px] flex items-center gap-1">
-                                        <AlertTriangle className="w-3 h-3" /> External
-                                    </span>
-                                )}
-                            </div>
-                        )}
-                        {proposal.tools.length > 0 && (
-                            <div className="flex items-start gap-4">
-                                <span className="text-cortex-text-muted w-16 pt-0.5">Can use</span>
-                                <div className="flex flex-wrap gap-1">
-                                    {proposal.tools.map((t) => (
-                                        <span key={t} className="px-1.5 py-0.5 rounded bg-cortex-primary/10 text-cortex-primary text-[10px] border border-cortex-primary/20">
-                                            {toolLabel(t)}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        <div className="flex items-center gap-4">
-                            <span className="text-cortex-text-muted w-16">Scope</span>
-                            <span className="text-cortex-text-main">
-                                {proposal.teams} team{proposal.teams !== 1 ? "s" : ""}, {proposal.agents} agent{proposal.agents !== 1 ? "s" : ""}
-                            </span>
-                        </div>
-                        {proposal.approval_reason ? (
-                            <div className="flex items-center gap-4">
-                                <span className="text-cortex-text-muted w-16">Why</span>
-                                <span className="text-cortex-text-main">{humanizeLabel(proposal.approval_reason)}</span>
-                            </div>
-                        ) : null}
-                        {capabilityIDs.length > 0 ? (
-                            <div className="flex items-start gap-4">
-                                <span className="text-cortex-text-muted w-16 pt-0.5">Allowed</span>
-                                <div className="flex flex-wrap gap-1">
-                                    {capabilityIDs.map((capability) => (
-                                        <span
-                                            key={capability}
-                                            className="px-1.5 py-0.5 rounded border text-[10px] bg-cortex-bg/60 text-cortex-text-main border-cortex-border"
-                                        >
-                                            {humanizeLabel(capability)}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        ) : null}
-                        {expressions.length > 0 && (
-                            <div className="flex items-start gap-4">
-                                <span className="text-cortex-text-muted w-16 pt-0.5">Team plan</span>
-                                <div className="flex-1 space-y-1.5">
-                                    <div className="text-cortex-text-muted text-[10px]">
-                                        {expressions.length} team plan step{expressions.length !== 1 ? "s" : ""}, {bindingCount} tool link{bindingCount !== 1 ? "s" : ""}
-                                    </div>
-                                    {expressions.map((expr, idx) => (
-                                        <div key={expr.expression_id || `expr-${idx}`} className="rounded border border-cortex-border px-2 py-1.5 bg-cortex-bg/40">
-                                            <div className="text-cortex-text-main text-[10px]">{plainExecutionText(expr.objective)}</div>
-                                            {expr.module_bindings && expr.module_bindings.length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                    {expr.module_bindings.map((binding, bIdx) => (
-                                                        <span
-                                                            key={binding.binding_id || `${binding.module_id}-${bIdx}`}
-                                                            className="px-1.5 py-0.5 rounded border text-[10px] bg-cortex-primary/10 text-cortex-primary border-cortex-primary/20"
-                                                            title={binding.operation || binding.module_id}
-                                                        >
-                                                            {toolLabel(binding.module_id)}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <ProposedActionDetails assistantName={assistantName} message={message} proposal={proposal} />
                 ) : null}
             </div>
 

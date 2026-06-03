@@ -1,9 +1,13 @@
 "use client";
 
-import type React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Boxes, FileText, PanelRightOpen, Radio, ShieldCheck, Sparkles, X } from "lucide-react";
+import {
+  OutputWorkbenchCompactDigest,
+  outputWorkbenchDigest,
+} from "./OutputWorkbenchDigest";
+import { OutputWorkbench } from "./OutputWorkbench";
 
 type PanelKey = "work" | "output" | "trust" | "context";
 
@@ -92,8 +96,21 @@ export function SomaWorkspaceFrame({
       content: context,
     },
   ].filter((panel) => Boolean(panel.content));
-  const selectedPanel = panels.find((panel) => panel.key === activePanel) ?? panels[0];
+  const outputPanel = panels.find((panel) => panel.key === "output");
+  const outputDigest = digestFromOutputNode(output);
+  const selectedPanel = panels.find((panel) => panel.key === activePanel) ?? outputPanel ?? panels[0];
   const hasPanels = panels.length > 0;
+  const reviewCount = outputDigest?.count ?? panels.length;
+  const reviewLabel = outputPanel ? "Review output" : "Review work";
+
+  const togglePanel = () => {
+    setIsPanelOpen((open) => {
+      if (!open && outputPanel) {
+        setActivePanel("output");
+      }
+      return !open;
+    });
+  };
 
   return (
     <div
@@ -113,17 +130,26 @@ export function SomaWorkspaceFrame({
       </div>
       {hasPanels ? (
         <>
-          <button
-            type="button"
-            aria-controls={sideRailId}
-            aria-expanded={isPanelOpen}
-            data-testid="soma-workbench-panel-toggle"
-            onClick={() => setIsPanelOpen((open) => !open)}
-            className="absolute right-3 top-3 z-30 inline-flex items-center gap-2 rounded-lg border border-cortex-primary/30 bg-cortex-surface/95 px-3 py-2 text-xs font-semibold text-cortex-text-main shadow-lg shadow-black/10 backdrop-blur transition-colors hover:border-cortex-primary/60"
-          >
-            <PanelRightOpen className="h-3.5 w-3.5 text-cortex-primary" />
-            {isPanelOpen ? "Hide review" : "Review work"}
-          </button>
+          <div className="absolute right-3 top-3 z-30 flex max-w-[min(92vw,620px)] flex-col items-end gap-2 sm:flex-row sm:items-start">
+            {outputDigest && !isPanelOpen ? <OutputWorkbenchCompactDigest digest={outputDigest} /> : null}
+            <button
+              type="button"
+              aria-controls={sideRailId}
+              aria-expanded={isPanelOpen}
+              data-testid="soma-workbench-panel-toggle"
+              onClick={togglePanel}
+              className="inline-flex items-center gap-2 rounded-lg border border-cortex-primary/30 bg-cortex-surface/95 px-3 py-2 text-xs font-semibold text-cortex-text-main shadow-lg shadow-black/10 backdrop-blur transition-colors hover:border-cortex-primary/60"
+            >
+              <PanelRightOpen className="h-3.5 w-3.5 text-cortex-primary" />
+              <span>{isPanelOpen ? "Hide review" : reviewLabel}</span>
+              <span
+                className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-1.5 text-[10px] font-bold text-cortex-primary"
+                aria-label={`${reviewCount} review ${reviewCount === 1 ? "item" : "items"}`}
+              >
+                {reviewCount}
+              </span>
+            </button>
+          </div>
           <div
             id={sideRailId}
             aria-hidden={!isPanelOpen}
@@ -210,4 +236,9 @@ export function SomaWorkspaceFrame({
       ) : null}
     </div>
   );
+}
+
+function digestFromOutputNode(output?: React.ReactNode) {
+  if (!React.isValidElement(output) || output.type !== OutputWorkbench) return null;
+  return outputWorkbenchDigest(output.props as React.ComponentProps<typeof OutputWorkbench>);
 }

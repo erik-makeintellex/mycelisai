@@ -42,6 +42,8 @@ async function expectFreshDashboardWithoutStaleContent(page: Page) {
   await expect(page.getByTestId("central-soma-chat-frame")).toBeVisible();
   await expect(page.getByTestId("soma-conversation-thread").getByText(chatPlaceholder)).toBeVisible();
   await expect(page.getByTestId("output-workbench")).toHaveCount(0);
+  await expect(page.getByTestId("soma-workbench-output-digest")).toHaveCount(0);
+  await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveCount(0);
   await expect(page.getByTestId("focused-team-output-dock")).toHaveCount(0);
   await expect(page.getByRole("img", { name: /generated|retained|media|artifact/i })).toHaveCount(0);
   await expect(page.getByText(/Latest output|Open Game|Run proof \+ retained output/i)).toHaveCount(0);
@@ -102,8 +104,11 @@ test.describe("Dashboard workbench live review", () => {
     ).toBeTruthy();
     await expect(page.getByText(/Action completed|Result saved|Latest output|retained output|verified/i).last()).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText(/owner-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole("button", { name: /Open file .*owner-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: /Open local folder .*owner-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
+    const digest = page.getByTestId("soma-workbench-output-digest");
+    await expect(digest).toBeVisible({ timeout: 15_000 });
+    await expect(digest.getByText(/owner-note\.md/i)).toBeVisible({ timeout: 15_000 });
+    await expect(digest.getByRole("button", { name: /Open file .*owner-note\.md/i })).toBeVisible({ timeout: 15_000 });
+    await expect(digest.getByRole("button", { name: /Open local folder .*owner-note\.md/i })).toBeVisible({ timeout: 15_000 });
   });
 
   test("uses Soma, generates retained content, and keeps active/prior work in the workbench rail", async ({ page }, testInfo) => {
@@ -190,8 +195,14 @@ test.describe("Dashboard workbench live review", () => {
     await expect(page.getByText(/Review request, proof, and recovery/i).last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
     await expect(workPanelToggle).toBeVisible({ timeout: 15_000 });
+    await expect(workPanelToggle).toContainText(/Review output/i);
+    await expect(workPanelToggle).toContainText(/[1-9]/);
     await expect(workPanelToggle).toHaveAttribute("aria-expanded", "false");
-    const folderButton = page.getByRole("button", { name: /Open local folder for/i }).last();
+    const digest = page.getByTestId("soma-workbench-output-digest");
+    await expect(digest).toBeVisible({ timeout: 15_000 });
+    await expect(digest.getByText(/operator-note\.md/i)).toBeVisible({ timeout: 15_000 });
+    await expect(digest.getByRole("button", { name: /Open file .*operator-note\.md/i })).toBeVisible({ timeout: 15_000 });
+    const folderButton = digest.getByRole("button", { name: /Open local folder .*operator-note\.md/i });
     await expect(folderButton).toBeVisible({ timeout: 15_000 });
     await folderButton.click();
     await expect(folderButton).toContainText(/Folder opened|Folder blocked/i, { timeout: 15_000 });
@@ -199,7 +210,7 @@ test.describe("Dashboard workbench live review", () => {
     await workPanelToggle.click();
     await expect(workPanelToggle).toHaveAttribute("aria-expanded", "true");
     await expect(rail).toHaveAttribute("aria-hidden", "false");
-    await rail.getByRole("tab", { name: /Output/i }).click();
+    await expect(rail.getByRole("tab", { name: /Output/i })).toHaveAttribute("aria-selected", "true");
     await expect(rail.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
     await expect(rail.getByText(/Guided proposal/i)).toHaveCount(0);
     await expect(page.getByText("path verified").last()).toBeVisible({ timeout: 30_000 });

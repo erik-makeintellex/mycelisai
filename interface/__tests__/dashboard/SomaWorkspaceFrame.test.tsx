@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { SomaWorkspaceFrame } from "@/components/soma/SomaWorkspaceFrame";
+import { OutputWorkbench } from "@/components/soma/OutputWorkbench";
 
 describe("SomaWorkspaceFrame", () => {
   it("renders the bounded Soma workspace slots without requiring runtime APIs", () => {
@@ -21,6 +22,8 @@ describe("SomaWorkspaceFrame", () => {
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(sideRail.getAttribute("aria-hidden")).toBe("true");
     expect(within(frame).queryByText("Expression")).toBeNull();
+    expect(toggle.textContent).toContain("Review output");
+    expect(toggle.textContent).toContain("4");
     fireEvent.click(toggle);
 
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
@@ -29,14 +32,14 @@ describe("SomaWorkspaceFrame", () => {
     expect(within(sideRail).getByRole("tab", { name: /Output/i })).toBeDefined();
     expect(within(sideRail).getByRole("tab", { name: /Trust/i })).toBeDefined();
     expect(within(sideRail).getByRole("tab", { name: /Context/i })).toBeDefined();
+    expect(within(frame).getByText("Conversation transcript")).toBeDefined();
+    expect(within(sideRail).getByText("Output package")).toBeDefined();
+    expect(within(sideRail).queryByText("Active lane fallback")).toBeNull();
+
+    fireEvent.click(within(sideRail).getByRole("tab", { name: /Work/i }));
     expect(within(sideRail).getByText("Active work")).toBeDefined();
     expect(within(frame).getAllByText(/Current work that needs review or follow-up/i).length).toBeGreaterThan(0);
-    expect(within(frame).getByText("Conversation transcript")).toBeDefined();
     expect(within(sideRail).getByText("Active lane fallback")).toBeDefined();
-    expect(within(sideRail).queryByText("Output package")).toBeNull();
-
-    fireEvent.click(within(sideRail).getByRole("tab", { name: /Output/i }));
-    expect(within(sideRail).getByText("Output package")).toBeDefined();
     fireEvent.click(within(sideRail).getByRole("tab", { name: /Trust/i }));
     expect(within(sideRail).getByText("Compact trust package")).toBeDefined();
     fireEvent.click(within(sideRail).getByRole("tab", { name: /Context/i }));
@@ -50,5 +53,40 @@ describe("SomaWorkspaceFrame", () => {
     expect(screen.queryByTestId("soma-workbench-panel-toggle")).toBeNull();
     expect(screen.queryByTestId("soma-workbench-side-rail")).toBeNull();
     expect(screen.queryByText("Expression")).toBeNull();
+  });
+
+  it("surfaces the latest output digest before opening the review rail", () => {
+    render(
+      <SomaWorkspaceFrame
+        expression={<div>Conversation transcript</div>}
+        activeWork={<div>Active lane fallback</div>}
+        output={(
+          <OutputWorkbench
+            outputs={[{
+              text: "Owner note",
+              url: "/api/v1/workspace/files/view?path=generated%2Fowner-note.md",
+            }]}
+          />
+        )}
+      />,
+    );
+
+    const digest = within(screen.getByTestId("soma-workbench-output-digest"));
+    expect(digest.getByText("Latest output")).toBeDefined();
+    expect(digest.getByText("Owner note")).toBeDefined();
+    expect(digest.getByRole("button", { name: /Open file Owner note/i })).toBeDefined();
+    expect(digest.getByRole("button", { name: /Open local folder for Owner note/i })).toBeDefined();
+
+    const toggle = screen.getByTestId("soma-workbench-panel-toggle");
+    expect(toggle.textContent).toContain("Review output");
+    expect(toggle.textContent).toContain("1");
+
+    fireEvent.click(toggle);
+
+    const sideRail = screen.getByTestId("soma-workbench-side-rail");
+    expect(within(sideRail).getByRole("tab", { name: /Output/i }).getAttribute("aria-selected")).toBe("true");
+    expect(within(sideRail).getByTestId("output-workbench")).toBeDefined();
+    expect(within(sideRail).getByText("Owner note")).toBeDefined();
+    expect(within(sideRail).queryByText("Active lane fallback")).toBeNull();
   });
 });

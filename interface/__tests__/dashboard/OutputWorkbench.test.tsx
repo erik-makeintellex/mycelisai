@@ -8,6 +8,7 @@ import {
   teamOutputProjectPackages,
   teamOutputWorkbenchItems,
 } from "@/components/soma/OutputWorkbench";
+import { outputWorkbenchDigest } from "@/components/soma/OutputWorkbenchDigest";
 import type { ExecutionSummaryData, TeamOutputRef } from "@/store/useCortexStore";
 
 describe("OutputWorkbench", () => {
@@ -94,6 +95,38 @@ describe("OutputWorkbench", () => {
         url: "/api/v1/workspace/files/view?path=saved-media%2Fcomic-page.png",
       },
     ]);
+  });
+
+  it("selects a compact digest from the latest actionable output", () => {
+    expect(outputWorkbenchDigest({
+      outputs: [
+        { text: "Proof note", url: null, proofArtifactId: "proof-1" },
+        { text: "Owner note", url: "/api/v1/workspace/files/view?path=generated%2Fowner-note.md" },
+      ],
+      projectPackages: [{
+        kind: "project_package",
+        title: "Owner package",
+        folder: "generated/owner-package",
+      }],
+    })).toEqual({
+      text: "Owner note",
+      url: "/api/v1/workspace/files/view?path=generated%2Fowner-note.md",
+      count: 3,
+    });
+
+    expect(outputWorkbenchDigest({
+      outputs: [],
+      projectPackages: [{
+        kind: "project_package",
+        title: "Owner package",
+        folder: "generated/owner-package",
+      }],
+    })).toEqual({
+      text: "Owner package",
+      url: null,
+      storagePath: "generated/owner-package",
+      count: 1,
+    });
   });
 
   it("renders package actions and copyable output quotes", async () => {
