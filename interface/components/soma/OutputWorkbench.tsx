@@ -81,6 +81,10 @@ export function mergeOutputWorkbenchItems(...groups: OutputWorkbenchItem[][]): O
   });
 }
 
+export function actionableOutputWorkbenchItems(outputs: OutputWorkbenchItem[]): OutputWorkbenchItem[] {
+  return outputs.filter((output) => Boolean(output.url || output.proof || output.proofArtifactId));
+}
+
 function outputUrl(storageRef?: string | null): string | null {
   return normalizeWorkspaceOutputUrl(storageRef);
 }

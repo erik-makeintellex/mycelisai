@@ -77,8 +77,9 @@ describe('MissionControlChat execution summary', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         await waitFor(() => {
-            expect(screen.getByText('Operator trust package')).toBeDefined();
+            expect(screen.getByText('Result')).toBeDefined();
             expect(screen.getByText('Result needs review')).toBeDefined();
+            expect(screen.getByText('Review request, proof, and recovery')).toBeDefined();
             expect(screen.getByText('Completed work')).toBeDefined();
             expect(screen.getByText('workflow.launch')).toBeDefined();
             expect(screen.getByText('Operations Team')).toBeDefined();

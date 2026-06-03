@@ -45,10 +45,12 @@ export function createCortexProposalExecutionSlice(
     return {
         confirmProposal: async (proposalOverride?: ProposalData): Promise<ConfirmProposalResult> => {
             const { activeConfirmToken, pendingProposal } = get();
-            const proposal = pendingProposal ?? proposalOverride ?? latestActiveProposal();
-            const confirmToken = trimToNonEmpty(activeConfirmToken)
-                ?? trimToNonEmpty(proposalOverride?.confirm_token)
-                ?? trimToNonEmpty(proposal?.confirm_token);
+            const proposal = proposalOverride ?? pendingProposal ?? latestActiveProposal();
+            const confirmToken = proposalOverride
+                ? trimToNonEmpty(proposalOverride.confirm_token)
+                : trimToNonEmpty(activeConfirmToken)
+                    ?? trimToNonEmpty(pendingProposal?.confirm_token)
+                    ?? trimToNonEmpty(proposal?.confirm_token);
             if (!confirmToken || !proposal) {
                 return {
                     ok: false,

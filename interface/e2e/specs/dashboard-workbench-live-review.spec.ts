@@ -89,6 +89,7 @@ test.describe("Dashboard workbench live review", () => {
       { timeout: 120_000 },
     );
     await page.getByRole("button", { name: /Approve and run|Run/i }).last().click();
+    await expect(page.getByText(/Running|Approval received|Action completed|Result saved/i).last()).toBeVisible({ timeout: 15_000 });
     const confirmed = await confirmResponse;
     const confirmedRaw = await confirmed.text();
     const confirmedBody = JSON.parse(confirmedRaw) as ConfirmActionBody;
@@ -101,6 +102,8 @@ test.describe("Dashboard workbench live review", () => {
     ).toBeTruthy();
     await expect(page.getByText(/Action completed|Result saved|Latest output|retained output|verified/i).last()).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText(/owner-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: /Open file .*owner-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: /Open local folder .*owner-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
   });
 
   test("uses Soma, generates retained content, and keeps active/prior work in the workbench rail", async ({ page }, testInfo) => {
@@ -116,9 +119,8 @@ test.describe("Dashboard workbench live review", () => {
     await expect(page.getByTestId("central-soma-chat-frame")).toBeVisible();
     const workPanelToggle = page.getByTestId("soma-workbench-panel-toggle");
     const rail = page.getByTestId("soma-workbench-side-rail");
-    await expect(workPanelToggle).toBeVisible();
-    await expect(workPanelToggle).toHaveAttribute("aria-expanded", "false");
-    await expect(rail).toHaveAttribute("aria-hidden", "true");
+    await expect(workPanelToggle).toHaveCount(0);
+    await expect(rail).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath("dashboard-initial.png"), fullPage: true });
 
     const initialPageMetrics = await pageScrollMetrics(page);
@@ -152,7 +154,8 @@ test.describe("Dashboard workbench live review", () => {
       (response) => response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
       { timeout: 120_000 },
     );
-    await page.getByRole("button", { name: /Approve & Execute|Execute/i }).last().click();
+    await page.getByRole("button", { name: /Approve and run|Run/i }).last().click();
+    await expect(page.getByText(/Running|Approval received|Action completed|Result saved/i).last()).toBeVisible({ timeout: 15_000 });
     const confirmed = await confirmResponse;
     const confirmedRaw = await confirmed.text();
     expect(confirmed.ok(), confirmedRaw).toBeTruthy();
@@ -183,8 +186,11 @@ test.describe("Dashboard workbench live review", () => {
     expect(outputRef?.proof?.checksum_algorithm).toBe("sha256");
     expect(outputRef?.proof?.checksum).toMatch(/^[a-f0-9]{64}$/);
 
-    await expect(page.getByText(/Run proof|retained output|verified/i).last()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText(/Result saved|Latest output/i).last()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText(/Review request, proof, and recovery/i).last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(workPanelToggle).toBeVisible({ timeout: 15_000 });
+    await expect(workPanelToggle).toHaveAttribute("aria-expanded", "false");
     const folderButton = page.getByRole("button", { name: /Open local folder for/i }).last();
     await expect(folderButton).toBeVisible({ timeout: 15_000 });
     await folderButton.click();
@@ -194,13 +200,15 @@ test.describe("Dashboard workbench live review", () => {
     await expect(workPanelToggle).toHaveAttribute("aria-expanded", "true");
     await expect(rail).toHaveAttribute("aria-hidden", "false");
     await rail.getByRole("tab", { name: /Output/i }).click();
-    await expect(page.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(rail.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(rail.getByText(/Guided proposal/i)).toHaveCount(0);
     await expect(page.getByText("path verified").last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("readback verified").last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/sha256 [a-f0-9]{12}/i).last()).toBeVisible({ timeout: 30_000 });
     await page.screenshot({ path: testInfo.outputPath("dashboard-after-output.png"), fullPage: true });
 
-    await rail.getByRole("tab", { name: /Work/i }).click();
+    await rail.getByRole("tab", { name: /Trust/i }).click();
+    await expect(page.getByText(/Proof, recovery, and safe next action/i).last()).toBeVisible({ timeout: 30_000 });
     const panelScroll = page.getByTestId("soma-workbench-panel-scroll");
     const initialRailMetrics = await sideRailMetrics(page);
     await panelScroll.evaluate((node) => {

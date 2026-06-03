@@ -111,6 +111,61 @@ func TestHandleGenerateImage_UsesMediaProviderAuthKeyEnv(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateImage_ReturnsErrorOnProviderHTTPFailure(t *testing.T) {
+	server := newSwarmLocalHTTPTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "generation failed", http.StatusBadGateway)
+	}))
+
+	enabled := true
+	registry := NewInternalToolRegistry(InternalToolDeps{
+		Brain: &cognitive.Router{
+			Config: &cognitive.BrainConfig{
+				Media: &cognitive.MediaConfig{
+					Provider: cognitive.MediaProviderConfig{
+						ProviderID: "local-media",
+						Type:       "openai_compatible",
+						Endpoint:   server.URL + "/v1",
+						ModelID:    "sdxl",
+						Enabled:    &enabled,
+					},
+				},
+			},
+		},
+	})
+
+	if _, err := registry.handleGenerateImage(context.Background(), map[string]any{"prompt": "fresh comic page"}); err == nil || !strings.Contains(err.Error(), "media engine error") {
+		t.Fatalf("expected media engine error, got %v", err)
+	}
+}
+
+func TestHandleGenerateImage_ReturnsErrorWhenProviderHasNoImageData(t *testing.T) {
+	server := newSwarmLocalHTTPTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"b64_json":""}]}`))
+	}))
+
+	enabled := true
+	registry := NewInternalToolRegistry(InternalToolDeps{
+		Brain: &cognitive.Router{
+			Config: &cognitive.BrainConfig{
+				Media: &cognitive.MediaConfig{
+					Provider: cognitive.MediaProviderConfig{
+						ProviderID: "local-media",
+						Type:       "openai_compatible",
+						Endpoint:   server.URL + "/v1",
+						ModelID:    "sdxl",
+						Enabled:    &enabled,
+					},
+				},
+			},
+		},
+	})
+
+	if _, err := registry.handleGenerateImage(context.Background(), map[string]any{"prompt": "fresh comic page"}); err == nil || !strings.Contains(err.Error(), "no image data") {
+		t.Fatalf("expected no image data error, got %v", err)
+	}
+}
+
 func newSwarmLocalHTTPTestServer(t *testing.T, handler http.Handler) *httptest.Server {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")

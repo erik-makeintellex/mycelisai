@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
-import { Building2, FolderPlus, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
+import { ShieldCheck, Sparkles } from "lucide-react";
 import { readLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
-import CentralActivityStream from "@/components/dashboard/CentralActivityStream";
 import { SomaOperatingSurface } from "@/components/soma/SomaOperatingSurface";
 import { useCortexStore } from "@/store/useCortexStore";
 
@@ -87,25 +85,6 @@ export default function CentralSomaHome({
         [selectedTeamId, teamsDetail],
     );
 
-    const openOrganizationSetup = () => {
-        if (typeof document === "undefined") {
-            return;
-        }
-
-        const details = document.getElementById("dashboard-organization-setup");
-        if (!(details instanceof HTMLDetailsElement)) {
-            return;
-        }
-
-        details.open = true;
-        if (typeof details.scrollIntoView === "function") {
-            details.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        if (typeof window !== "undefined") {
-            window.history.replaceState(null, "", "#dashboard-organization-setup");
-        }
-    };
-
     return (
         <section className="space-y-3">
             {focusedTeam ? (
@@ -123,33 +102,6 @@ export default function CentralSomaHome({
                 focusedTeamId={selectedTeamId}
             />
             <EnvironmentEntryBar sessionUser={sessionUser} />
-
-            <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2">
-                <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                    <p className="min-w-0 text-xs leading-5 text-cortex-text-muted">
-                        <span className="mr-2 inline-flex items-center gap-1 font-mono uppercase tracking-[0.16em] text-cortex-primary">
-                            <MessageCircle className="h-3.5 w-3.5" />
-                            Start here
-                        </span>
-                        Ask Soma to plan, review, create, make changes, or follow up. Set up an AI Organization when you want durable workspace context.
-                    </p>
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                        {lastOrganization ? (
-                            <QuickLink href={`/organizations/${lastOrganization.id}`} icon={<Building2 className="h-4 w-4" />} label={`Return to ${lastOrganization.name}`} />
-                        ) : null}
-                        <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Set up an AI Organization" />
-                    </div>
-                </div>
-            </div>
-
-            <details className="rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2">
-                <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.16em] text-cortex-text-muted">
-                    Recent team activity
-                </summary>
-                <div className="mt-3">
-                    <CentralActivityStream />
-                </div>
-            </details>
         </section>
     );
 }
@@ -200,44 +152,5 @@ function EntryFact({ label, value }: { label: string; value: string }) {
             </p>
             <p className="truncate font-medium text-cortex-text-main">{value}</p>
         </div>
-    );
-}
-function QuickLink({
-    href,
-    icon,
-    label,
-}: {
-    href: string;
-    icon: React.ReactNode;
-    label: string;
-}) {
-    return (
-        <Link
-            href={href}
-            className="inline-flex items-center gap-2 rounded-2xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:bg-cortex-surface"
-        >
-            <span className="text-cortex-primary">{icon}</span>
-            {label}
-        </Link>
-    );
-}
-function QuickAction({
-    onClick,
-    icon,
-    label,
-}: {
-    onClick: () => void;
-    icon: React.ReactNode;
-    label: string;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="inline-flex items-center gap-2 rounded-2xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:bg-cortex-surface"
-        >
-            <span className="text-cortex-primary">{icon}</span>
-            {label}
-        </button>
     );
 }

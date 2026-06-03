@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { useCortexStore } from "@/store/useCortexStore";
 import { mockFetch } from "../setup";
 
@@ -60,38 +60,17 @@ describe("CentralSomaHome", () => {
         expect(await screen.findByText("erik@mycelis.link")).toBeDefined();
         expect(screen.getByText("Google Workspace")).toBeDefined();
         expect(screen.getByText("mycelis.link")).toBeDefined();
-        expect(screen.getByText("Start here")).toBeDefined();
-        expect(screen.getByText(/Ask Soma to plan, review, create, make changes, or follow up/i)).toBeDefined();
-        expect(screen.getByRole("button", { name: "Set up an AI Organization" })).toBeDefined();
+        expect(screen.queryByText("Start here")).toBeNull();
+        expect(screen.queryByRole("button", { name: "Set up an AI Organization" })).toBeNull();
         expect(screen.queryByText("Soma just did this")).toBeNull();
         expect(screen.getByText("Evidence of Soma's work")).toBeDefined();
-        expect(screen.getByText("Live team interaction stream")).toBeDefined();
-        expect(screen.getByRole("link", { name: /Return to Northstar Labs/i }).getAttribute("href")).toBe("/organizations/org-1");
+        expect(screen.queryByText("Live team interaction stream")).toBeNull();
+        expect(screen.queryByRole("link", { name: /Return to Northstar Labs/i })).toBeNull();
         expect(screen.queryByRole("link", { name: /Review Soma context model/i })).toBeNull();
         const somaSurface = screen.getByTestId("soma-operating-surface");
-        const startHere = screen.getByText("Start here");
+        const environment = screen.getByTestId("soma-environment-entry");
         expect([...container.querySelectorAll("*")].indexOf(somaSurface)).toBeLessThan(
-            [...container.querySelectorAll("*")].indexOf(startHere),
+            [...container.querySelectorAll("*")].indexOf(environment),
         );
     }, 15000);
-
-    it("opens the AI Organization setup details from the quick action", async () => {
-        const details = document.createElement("details");
-        details.id = "dashboard-organization-setup";
-        document.body.appendChild(details);
-
-        try {
-            render(<CentralSomaHome />);
-            await screen.findByText("erik@mycelis.link");
-
-            const trigger = screen.getByRole("button", { name: "Set up an AI Organization" });
-            fireEvent.click(trigger);
-
-            expect(details.open).toBe(true);
-            expect(window.location.hash).toBe("#dashboard-organization-setup");
-        } finally {
-            details.remove();
-            window.history.replaceState(null, "", window.location.pathname);
-        }
-    });
 });

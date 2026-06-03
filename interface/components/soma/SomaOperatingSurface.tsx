@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { Activity, CheckSquare, Layers2, ListChecks, Wrench, X } from "lucide-react";
+import { Activity, CheckSquare, ListChecks, Wrench } from "lucide-react";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import { ActiveWorkLane } from "@/components/teams/ActiveWorkLane";
 import {
@@ -11,6 +11,7 @@ import {
 import type { ChatMessage, TeamInteraction, TeamWorkItem } from "@/store/useCortexStore";
 import { useCortexStore } from "@/store/useCortexStore";
 import {
+  actionableOutputWorkbenchItems,
   mergeOutputWorkbenchItems,
   OutputWorkbench,
   outputWorkbenchItems,
@@ -20,6 +21,7 @@ import {
 } from "./OutputWorkbench";
 import { FocusedTeamOutputDock } from "./FocusedTeamOutputDock";
 import { SomaCausalSummary } from "./SomaCausalSummary";
+import { SomaContextFocusBar } from "./SomaContextFocusBar";
 import { SomaEvidencePanel, type SomaEvidenceItem } from "./SomaEvidencePanel";
 import { SomaHeader } from "./SomaHeader";
 import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "./SomaSuggestionBar";
@@ -31,6 +33,15 @@ function lastSomaMessage(messages: ChatMessage[]) {
   return [...messages]
     .reverse()
     .find((message) => message.role !== "user" && message.role !== "system");
+}
+
+function somaMessagesNewestFirst(messages: ChatMessage[]) {
+  return [...messages]
+    .reverse()
+    .filter((message) => (
+      message.role !== "user"
+      && (message.role !== "system" || Boolean(message.execution_summary || message.artifacts?.length))
+    ));
 }
 
 export function SomaOperatingSurface({
@@ -66,12 +77,17 @@ export function SomaOperatingSurface({
   const activeWorkActions = useTeamWorkActionHandler(selectTeam);
   const evidence = evidenceItems ?? defaultEvidence;
   const latestSoma = lastSomaMessage(missionChat);
+  const somaMessages = somaMessagesNewestFirst(missionChat);
   const effectiveFocusedTeamId = focusedTeamId || selectedTeamId || null;
   const focusedTeam = effectiveFocusedTeamId
     ? teamsDetail.find((team) => team.id === effectiveFocusedTeamId) ?? null
     : null;
-  const outputItems = outputWorkbenchItems(latestSoma?.execution_summary, latestSoma?.artifacts);
-  const projectPackages = projectPackageOutputs(latestSoma?.execution_summary?.outputs);
+  const outputItems = actionableOutputWorkbenchItems(mergeOutputWorkbenchItems(
+    ...somaMessages.map((message) => outputWorkbenchItems(message.execution_summary, message.artifacts)),
+  ));
+  const projectPackages = somaMessages.flatMap((message) => (
+    projectPackageOutputs(message.execution_summary?.outputs)
+  ));
   const teamWork = useDurableTeamWork({
     teams: teamsDetail,
     focusedTeamId: effectiveFocusedTeamId,
@@ -207,50 +223,6 @@ export function SomaOperatingSurface({
         />
       </div>
     </section>
-  );
-}
-
-function SomaContextFocusBar({
-  teamName,
-  teamId,
-  onClear,
-}: {
-  teamName?: string | null;
-  teamId?: string | null;
-  onClear: () => void;
-}) {
-  const isFocused = Boolean(teamId);
-  return (
-    <div
-      className="mb-3 flex flex-col gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-muted lg:flex-row lg:items-center lg:justify-between"
-      data-testid="soma-context-focus-bar"
-    >
-      <div className="flex min-w-0 items-start gap-2">
-        <span className="mt-0.5 text-cortex-primary">
-          <Layers2 className="h-4 w-4" />
-        </span>
-        <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cortex-primary">
-            {isFocused ? "Focused team context" : "Root Soma context"}
-          </p>
-          <p className="mt-1 leading-5">
-            {isFocused
-              ? `${teamName || teamId} has its own chat, active work, and retained output focus. Soma can still reference other team contexts when you ask.`
-              : "Select a running or completed team to focus Soma on that team's chat, active work, and outputs."}
-          </p>
-        </div>
-      </div>
-      {isFocused ? (
-        <button
-          type="button"
-          onClick={onClear}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cortex-border px-2.5 py-1.5 text-xs font-semibold text-cortex-text-main hover:border-cortex-primary/30"
-        >
-          <X className="h-3.5 w-3.5" />
-          Soma root
-        </button>
-      ) : null}
-    </div>
   );
 }
 

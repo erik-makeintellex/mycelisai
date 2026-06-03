@@ -2,7 +2,7 @@
 > Navigation: [Project README](../README.md) | [Docs Home](README.md) | [Testing](TESTING.md)
 
 > Status: IN_REVIEW
-> Last Updated: 2026-05-22
+> Last Updated: 2026-06-02
 > Purpose: Current release-candidate handoff packet for operator proof, packaging, and follow-on validation.
 
 ## Current RC Result
@@ -13,6 +13,7 @@
 - Result: hosted `Full Release Candidate` is green with image publishing disabled.
 - Proven source gates: repo hygiene/Python tests, Core tests/vet, Interface tests/build/typecheck, and Helm standards.
 - Proven browser gate: authenticated Chromium homepage proof.
+- Current local-source GUI gate: headed/live dashboard proof must show fresh Soma entry, proposal approval feedback, current retained output, and obvious file/folder access before promotion proof is trusted.
 - Proven source API gate: hosted pgvector PostgreSQL/NATS, migrations, Core health, and `uv run inv api.delivery-proof --read-only`.
 - Proven release artifacts: enterprise and enterprise Windows-AI Helm verification bundles plus Core binary archives for linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, and windows/amd64.
 - Hosted workflow maintenance: GitHub workflow actions have been updated to the Node 24-capable major lines, Interface CI now runs on Node.js 24, and Helm setup avoids the still-Node-20 `azure/setup-helm` action by installing pinned Helm 3 from `get.helm.sh` with checksum verification.
@@ -65,6 +66,7 @@ $env:PLAYWRIGHT_K8S_CORE_SELECTOR="app=mycelis-core"
 $env:PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT="/data/workspace"
 
 uv run inv interface.e2e --headed --live-backend --project=chromium --workers=1 --server-mode=dev --spec=e2e/specs/soma-governance-live.spec.ts
+uv run inv interface.e2e --headed --live-backend --project=chromium --workers=1 --server-mode=external --spec=e2e/specs/dashboard-workbench-live-review.spec.ts
 uv run inv interface.e2e --headed --live-backend --project=chromium --workers=1 --server-mode=dev --spec=e2e/specs/team-creation.spec.ts
 uv run inv interface.e2e --headed --live-backend --project=chromium --workers=1 --server-mode=dev --spec=e2e/specs/groups-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --project=chromium --workers=1 --server-mode=dev --spec=e2e/specs/workspace-live-backend.spec.ts

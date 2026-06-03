@@ -51,7 +51,7 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 	defer resp.Body.Close()
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Sprintf("Media engine error (HTTP %d): %s", resp.StatusCode, string(respBody)), nil
+		return "", fmt.Errorf("media engine error (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
 	var imgResp struct {
@@ -61,7 +61,10 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &imgResp); err != nil {
-		return "Image generated but failed to parse response metadata.", nil
+		return "", fmt.Errorf("image generated but response metadata could not be parsed: %w", err)
+	}
+	if len(imgResp.Data) == 0 || strings.TrimSpace(imgResp.Data[0].B64JSON) == "" {
+		return "", fmt.Errorf("media engine returned no image data")
 	}
 	return r.finishGeneratedImage(ctx, prompt, size, imgResp)
 }

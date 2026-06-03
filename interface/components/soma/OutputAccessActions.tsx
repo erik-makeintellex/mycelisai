@@ -60,7 +60,7 @@ export default function OutputAccessActions({
                 <button
                     type="button"
                     onClick={openOutput}
-                    className="inline-flex h-5 items-center gap-1 rounded border border-cortex-border/70 px-1.5 text-[9px] font-mono uppercase text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
+                    className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"
                     title={`${openLabel} ${label} in a new browser window`}
                     aria-label={`${openLabel} ${label} in a new browser window`}
                 >
@@ -72,7 +72,7 @@ export default function OutputAccessActions({
                 <button
                     type="button"
                     onClick={() => void openFolder()}
-                    className="inline-flex h-5 items-center gap-1 rounded border border-cortex-border/70 px-1.5 text-[9px] font-mono uppercase text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
+                    className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-border/80 bg-cortex-bg/70 px-2.5 text-[11px] font-semibold text-cortex-text-main transition-colors hover:border-cortex-primary/45 hover:bg-cortex-primary/10 hover:text-cortex-primary"
                     title={folderState === "failed" ? "Could not open local storage folder" : `Open local storage folder for ${label}`}
                     aria-label={`Open local folder for ${label}`}
                     disabled={folderState === "opening"}

@@ -1,9 +1,14 @@
 "use client";
 
 import type React from "react";
-import { CheckCircle2, ExternalLink, FileText, Gauge, RotateCcw, Route, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle2, ChevronDown, ExternalLink, FileText, Gauge, RotateCcw, Route, ShieldCheck, Sparkles } from "lucide-react";
 import type { ChatArtifactRef, ExecutionSummaryData } from "@/store/useCortexStore";
-import { OutputWorkbench, outputWorkbenchItems, projectPackageOutputs } from "./OutputWorkbench";
+import {
+  actionableOutputWorkbenchItems,
+  OutputWorkbench,
+  outputWorkbenchItems,
+  projectPackageOutputs,
+} from "./OutputWorkbench";
 import {
     auditText,
     capabilityGroups,
@@ -83,7 +88,7 @@ export default function ExecutionSummaryCard({
     const intent = intentLines(summary.intent);
     const understanding = understandingLines(summary.understanding);
     const projectPackages = projectPackageOutputs(summary.outputs);
-    const allOutputs = outputWorkbenchItems(summary, artifacts);
+  const allOutputs = actionableOutputWorkbenchItems(outputWorkbenchItems(summary, artifacts));
     const proofs = proofLinks(summary.proof)
         .map((proof) => ({ text: linkLabel(proof), url: linkHref(proof) }))
         .filter((proof): proof is { text: string; url: string | null } => Boolean(proof.text));
@@ -110,12 +115,23 @@ export default function ExecutionSummaryCard({
 
     if (!hasContent) return null;
 
+    const hasReviewDetails = intent.length
+        || understanding.length
+        || executionShape
+        || executionSummary
+        || capabilities.length
+        || searchSources.length
+        || proofs.length
+        || audit
+        || degradation.length
+        || nextStep;
+
     return (
         <div className="rounded-lg border border-cortex-info/20 bg-cortex-info/5 px-3 py-2.5 shadow-sm" data-testid="execution-summary-card">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-info">
                     <Sparkles className="h-3 w-3" />
-                    Operator trust package
+                    Result
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                     <span className={`rounded border px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${trustToneClass(trust.tone)}`}>
@@ -135,89 +151,99 @@ export default function ExecutionSummaryCard({
                 </div>
             </div>
             <div className="space-y-2">
-                {intent.length > 0 && (
-                    <SummaryRow icon={<Route className="h-3.5 w-3.5" />} label="Intent">
-                        <div className="space-y-1">
-                            {intent.map((line) => <div key={line}>{line}</div>)}
-                        </div>
-                    </SummaryRow>
-                )}
-                {understanding.length > 0 && (
-                    <SummaryRow icon={<Sparkles className="h-3.5 w-3.5" />} label="Understood">
-                        <div className="space-y-1">
-                            {understanding.map((line) => <div key={line}>{line}</div>)}
-                        </div>
-                    </SummaryRow>
-                )}
-                {(executionShape || executionSummary) && (
-                    <SummaryRow icon={<Gauge className="h-3.5 w-3.5" />} label="Execution">
-                        <div className="space-y-1">
-                            {executionShape && <div className="font-mono text-[10px] text-cortex-info">{executionShape}</div>}
-                            {executionSummary && <div>{executionSummary}</div>}
-                        </div>
-                    </SummaryRow>
-                )}
-                {capabilities.length > 0 && (
-                    <SummaryRow icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="Capability">
-                        <div className="space-y-1.5">
-                            {capabilities.map((group) => (
-                                <div key={group.label} className="flex flex-wrap items-center gap-1.5">
-                                    <span className="text-[9px] font-mono uppercase text-cortex-text-muted">{group.label}</span>
-                                    <ChipList values={group.values} />
-                                </div>
-                            ))}
-                        </div>
-                    </SummaryRow>
-                )}
-                {searchSources.length > 0 && (
-                    <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Source">
-                        <div className="space-y-1">
-                            {searchSources.map((line) => <div key={line}>{line}</div>)}
-                        </div>
-                    </SummaryRow>
-                )}
                 {(allOutputs.length > 0 || projectPackages.length > 0) && (
                     <SummaryRow icon={<FileText className="h-3.5 w-3.5" />} label="Outputs">
                         <OutputWorkbench outputs={allOutputs} projectPackages={projectPackages} projectOpenLabel="Open Game" />
                     </SummaryRow>
                 )}
-                {proofs.length > 0 && (
-                    <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Proof">
-                        <div className="flex flex-wrap gap-x-3 gap-y-1">
-                            {proofs.map((proof) => (
-                                proof.url ? (
-                                    <a key={`${proof.text}-${proof.url}`} href={proof.url} className="inline-flex items-center gap-1 text-cortex-primary hover:underline">
-                                        {proof.text}
-                                        <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                ) : (
-                                    <span key={proof.text}>{proof.text}</span>
-                                )
-                            ))}
-                        </div>
-                    </SummaryRow>
-                )}
-                {audit && (
-                    <SummaryRow icon={<RotateCcw className="h-3.5 w-3.5" />} label="Recovery">
-                        {audit}
-                    </SummaryRow>
-                )}
-                {degradation.length > 0 && (
-                    <SummaryRow icon={<RotateCcw className="h-3.5 w-3.5" />} label="Degraded">
-                        <div className="space-y-1">
-                            {degradation.map((line) => <div key={line}>{line}</div>)}
-                        </div>
-                    </SummaryRow>
-                )}
                 <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Trust">
                     {trust.detail}
                 </SummaryRow>
-                {nextStep && (
-                    <div className="rounded border border-cortex-border/60 bg-cortex-surface/60 px-2 py-1.5 text-[11px] leading-5 text-cortex-text-main">
-                        <span className="mr-1 font-mono text-[9px] font-bold uppercase tracking-widest text-cortex-text-muted">Next</span>
-                        {nextStep}
-                    </div>
-                )}
+                {hasReviewDetails ? (
+                    <details className="rounded border border-cortex-border/60 bg-cortex-surface/60 px-2 py-1.5">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-cortex-text-muted">
+                            <span>Review request, proof, and recovery</span>
+                            <ChevronDown className="h-3.5 w-3.5" />
+                        </summary>
+                        <div className="mt-2 space-y-2">
+                            {intent.length > 0 && (
+                                <SummaryRow icon={<Route className="h-3.5 w-3.5" />} label="Request">
+                                    <div className="space-y-1">
+                                        {intent.map((line) => <div key={line}>{line}</div>)}
+                                    </div>
+                                </SummaryRow>
+                            )}
+                            {understanding.length > 0 && (
+                                <SummaryRow icon={<Sparkles className="h-3.5 w-3.5" />} label="Understood">
+                                    <div className="space-y-1">
+                                        {understanding.map((line) => <div key={line}>{line}</div>)}
+                                    </div>
+                                </SummaryRow>
+                            )}
+                            {(executionShape || executionSummary) && (
+                                <SummaryRow icon={<Gauge className="h-3.5 w-3.5" />} label="Progress">
+                                    <div className="space-y-1">
+                                        {executionShape && <div className="font-mono text-[10px] text-cortex-info">{executionShape}</div>}
+                                        {executionSummary && <div>{executionSummary}</div>}
+                                    </div>
+                                </SummaryRow>
+                            )}
+                            {capabilities.length > 0 && (
+                                <SummaryRow icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="Used">
+                                    <div className="space-y-1.5">
+                                        {capabilities.map((group) => (
+                                            <div key={group.label} className="flex flex-wrap items-center gap-1.5">
+                                                <span className="text-[9px] font-mono uppercase text-cortex-text-muted">{group.label}</span>
+                                                <ChipList values={group.values} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </SummaryRow>
+                            )}
+                            {searchSources.length > 0 && (
+                                <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Source">
+                                    <div className="space-y-1">
+                                        {searchSources.map((line) => <div key={line}>{line}</div>)}
+                                    </div>
+                                </SummaryRow>
+                            )}
+                            {proofs.length > 0 && (
+                                <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Evidence">
+                                    <div className="flex flex-wrap gap-x-3 gap-y-1">
+                                        {proofs.map((proof) => (
+                                            proof.url ? (
+                                                <a key={`${proof.text}-${proof.url}`} href={proof.url} className="inline-flex items-center gap-1 text-cortex-primary hover:underline">
+                                                    {proof.text}
+                                                    <ExternalLink className="h-3 w-3" />
+                                                </a>
+                                            ) : (
+                                                <span key={proof.text}>{proof.text}</span>
+                                            )
+                                        ))}
+                                    </div>
+                                </SummaryRow>
+                            )}
+                            {audit && (
+                                <SummaryRow icon={<RotateCcw className="h-3.5 w-3.5" />} label="Recovery">
+                                    {audit}
+                                </SummaryRow>
+                            )}
+                            {degradation.length > 0 && (
+                                <SummaryRow icon={<RotateCcw className="h-3.5 w-3.5" />} label="Degraded">
+                                    <div className="space-y-1">
+                                        {degradation.map((line) => <div key={line}>{line}</div>)}
+                                    </div>
+                                </SummaryRow>
+                            )}
+                            {nextStep && (
+                                <div className="rounded border border-cortex-border/60 bg-cortex-bg/70 px-2 py-1.5 text-[11px] leading-5 text-cortex-text-main">
+                                    <span className="mr-1 font-mono text-[9px] font-bold uppercase tracking-widest text-cortex-text-muted">Next</span>
+                                    {nextStep}
+                                </div>
+                            )}
+                        </div>
+                    </details>
+                ) : null}
             </div>
         </div>
     );

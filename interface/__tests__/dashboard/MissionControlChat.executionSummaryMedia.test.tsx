@@ -8,7 +8,7 @@ import { useCortexStore } from '@/store/useCortexStore';
 import { COUNCIL_MEMBERS, resetMissionControlChatStore } from './support/missionControlChatTestUtils';
 
 describe('MissionControlChat execution summary media previews', () => {
-    it('previews linked media outputs inside the Operator trust package', async () => {
+    it('previews linked media outputs inside the result card', async () => {
         resetMissionControlChatStore();
         const imageHref = '/api/v1/workspace/files/view?path=workspace%2Fsaved-media%2Flaunch-hero.png';
         const audioHref = '/api/v1/workspace/files/view?path=workspace%2Fsaved-media%2Flaunch-voiceover.wav';

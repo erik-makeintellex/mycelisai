@@ -36,6 +36,15 @@ func extractPlannedToolOutputArtifacts(toolResult string) (string, []protocol.Ch
 	return toolOutput.Message, artifacts, true
 }
 
+func firstGeneratedImageArtifactID(artifacts []protocol.ChatArtifactRef) string {
+	for _, artifact := range artifacts {
+		if strings.EqualFold(strings.TrimSpace(artifact.Type), "image") && strings.TrimSpace(artifact.ID) != "" {
+			return strings.TrimSpace(artifact.ID)
+		}
+	}
+	return ""
+}
+
 func (s *AdminServer) plannedMCPToolExecutor() swarm.MCPToolExecutor {
 	if s == nil {
 		return nil

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Users } from "lucide-react";
 import type { TeamDetailEntry, TeamWorkItem } from "@/store/useCortexStore";
 
@@ -16,7 +17,7 @@ export function SomaTeamContextSwitcher({
   onRootSelect: () => void;
   onTeamSelect: (teamId: string) => void;
 }) {
-  const teamSummaries = buildTeamContextSummaries(teams, workItems).slice(0, 6);
+  const teamSummaries = buildTeamContextSummaries(teams, workItems, focusedTeamId).slice(0, 6);
   if (teamSummaries.length === 0) return null;
 
   return (
@@ -29,9 +30,9 @@ export function SomaTeamContextSwitcher({
           <Users className="h-3.5 w-3.5 text-cortex-primary" />
           Work contexts
         </p>
-        <span className="text-xs text-cortex-text-muted">
-          Switch chat, active work, outputs, and proof together.
-        </span>
+        <Link href="/teams" className="text-xs font-semibold text-cortex-primary hover:underline">
+          Manage teams
+        </Link>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
         <button
@@ -48,7 +49,7 @@ export function SomaTeamContextSwitcher({
             Soma root
           </span>
           <span className="mt-1 block text-xs text-cortex-text-muted">
-            Cross-team continuity
+            General chat
           </span>
         </button>
         {teamSummaries.map((team) => {
@@ -80,7 +81,7 @@ export function SomaTeamContextSwitcher({
   );
 }
 
-function buildTeamContextSummaries(teams: TeamDetailEntry[], workItems: TeamWorkItem[]) {
+function buildTeamContextSummaries(teams: TeamDetailEntry[], workItems: TeamWorkItem[], focusedTeamId?: string | null) {
   return teams.map((team) => {
     const teamWork = workItems.filter((item) => item.teamIds.includes(team.id));
     const outputCount = teamWork.reduce((total, item) => total + (item.outputCount ?? item.outputRefs?.length ?? 0), 0);
@@ -97,8 +98,9 @@ function buildTeamContextSummaries(teams: TeamDetailEntry[], workItems: TeamWork
       outputCount,
       stateLabel,
       priority: Number.isFinite(highestPriority) ? highestPriority : 50,
+      visible: focusedTeamId === team.id || teamWork.length > 0 || outputCount > 0,
     };
-  }).sort((left, right) => {
+  }).filter((team) => team.visible).sort((left, right) => {
     if (left.priority !== right.priority) return left.priority - right.priority;
     if (right.outputCount !== left.outputCount) return right.outputCount - left.outputCount;
     return left.name.localeCompare(right.name);

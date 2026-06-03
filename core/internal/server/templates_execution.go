@@ -198,11 +198,18 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 	})
 
 	results := make([]plannedToolExecutionResult, 0, len(scope.PlannedToolCalls))
+	lastGeneratedImageArtifactID := ""
 	for _, planned := range scope.PlannedToolCalls {
 		planned = normalizePlannedToolCall(planned)
 		toolName := strings.TrimSpace(planned.Name)
 		if toolName == "" {
 			return results, fmt.Errorf("approved execution plan contained an empty tool name")
+		}
+		if strings.EqualFold(toolName, "save_cached_image") && firstNonEmptyString(planned.Arguments["artifact_id"]) == "" && lastGeneratedImageArtifactID != "" {
+			if planned.Arguments == nil {
+				planned.Arguments = map[string]any{}
+			}
+			planned.Arguments["artifact_id"] = lastGeneratedImageArtifactID
 		}
 		serverID, resolvedToolName, err := s.resolveApprovedToolCall(toolCtx, executor, mcpExec, planned)
 		if err != nil {
@@ -218,6 +225,9 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 				output = message
 			}
 			artifacts = parsedArtifacts
+		}
+		if strings.EqualFold(resolvedToolName, "generate_image") {
+			lastGeneratedImageArtifactID = firstGeneratedImageArtifactID(artifacts)
 		}
 		results = append(results, plannedToolExecutionResult{
 			Name:      resolvedToolName,
