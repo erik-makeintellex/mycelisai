@@ -28,6 +28,8 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const renderedLifecycle = lifecycle === "executed" && !hasRunProof ? "confirmed_pending_execution" : lifecycle;
     const isActionable = renderedLifecycle === "active";
     const hasConfirmToken = Boolean(proposal.confirm_token?.trim());
+    const hasIntentProof = Boolean(proposal.intent_proof_id?.trim());
+    const canRunProposal = hasConfirmToken && hasIntentProof;
     const approvalRequired = proposal.approval_required ?? true;
     const approvalMode = proposal.approval_mode ?? (approvalRequired ? "required" : "auto_allowed");
     const capabilityRisk = proposal.capability_risk ?? proposal.risk_level ?? "low";
@@ -68,7 +70,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     ? AlertTriangle
             : Shield;
     const handleConfirm = async () => {
-        if (!hasConfirmToken || confirming) return;
+        if (!canRunProposal || confirming) return;
         setConfirming(true);
         setConfirmError(null);
         const result = await confirmProposal(proposal);
@@ -166,11 +168,11 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     <div className="flex flex-wrap items-center gap-2">
                         <button
                             onClick={() => void handleConfirm()}
-                            disabled={!hasConfirmToken || confirming}
+                            disabled={!canRunProposal || confirming}
                             className="px-3 py-1.5 rounded bg-cortex-success/20 border border-cortex-success/40 text-cortex-success text-xs font-mono hover:bg-cortex-success/30 transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed disabled:border-cortex-border disabled:bg-cortex-bg/40 disabled:text-cortex-text-muted"
                         >
                             {confirming ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
-                            {confirming ? "Running..." : hasConfirmToken ? actionLabel : "Cannot run yet"}
+                            {confirming ? "Running..." : canRunProposal ? actionLabel : "Cannot run yet"}
                         </button>
                         <button
                             onClick={handleCancel}
@@ -180,7 +182,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                             <XCircle className="w-3 h-3" />
                             Cancel
                         </button>
-                        {!hasConfirmToken ? (
+                        {!canRunProposal ? (
                             <span className="text-[11px] text-cortex-text-muted">
                                 This proposal is missing the information Soma needs to run it. Ask Soma to regenerate it.
                             </span>

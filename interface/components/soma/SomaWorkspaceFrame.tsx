@@ -110,6 +110,9 @@ export function SomaWorkspaceFrame({
   const hasPanels = panels.length > 0;
   const visibleReviewCount = reviewCount ?? outputDigest?.count ?? panels.length;
   const reviewLabel = primaryReviewPanel?.key === "output" ? "Review output" : "Review work";
+  const showClosedOutputDigest = Boolean(
+    outputDigest && showOutputDigest && !isPanelOpen && primaryReviewPanel?.key !== "work",
+  );
 
   const togglePanel = () => {
     setIsPanelOpen((open) => {
@@ -139,7 +142,7 @@ export function SomaWorkspaceFrame({
       {hasPanels ? (
         <>
           <div className="absolute right-3 top-3 z-30 flex max-w-[min(92vw,620px)] flex-col items-end gap-2 sm:flex-row sm:items-start">
-            {outputDigest && showOutputDigest && !isPanelOpen ? <OutputWorkbenchCompactDigest digest={outputDigest} /> : null}
+            {showClosedOutputDigest && outputDigest ? <OutputWorkbenchCompactDigest digest={outputDigest} /> : null}
             <button
               type="button"
               aria-controls={sideRailId}
@@ -165,80 +168,84 @@ export function SomaWorkspaceFrame({
               isPanelOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
             }`}
             data-testid="soma-workbench-side-rail"
-            tabIndex={0}
+            tabIndex={isPanelOpen ? 0 : -1}
           >
-        <div className="shrink-0 rounded-xl border border-cortex-border bg-cortex-bg/95 p-2 backdrop-blur">
-          <div className="flex items-center justify-between gap-2 px-1">
-            <div>
-              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-cortex-text-muted">
-                Review
-              </p>
-              <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-                Check the most useful details here. Open the full page for more.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsPanelOpen(false)}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cortex-border text-cortex-text-main hover:border-cortex-primary/40"
-              aria-label="Close work panel"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div
-            className="mt-3 grid grid-cols-4 gap-1"
-            role="tablist"
-            aria-label="Soma review sections"
-          >
-            {panels.map((panel) => (
-              <button
-                key={panel.key}
-                type="button"
-                role="tab"
-                aria-selected={selectedPanel?.key === panel.key}
-                onClick={() => setActivePanel(panel.key)}
-                className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors ${
-                  selectedPanel?.key === panel.key
-                    ? "border-cortex-primary/40 bg-cortex-primary/15 text-cortex-primary"
-                    : "border-cortex-border text-cortex-text-muted hover:border-cortex-primary/30 hover:text-cortex-text-main"
-                }`}
-              >
-                <span className="hidden sm:inline">{panel.label}</span>
-                <span className="sm:hidden">{panel.icon}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        {selectedPanel ? (
-          <div
-            className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
-            data-testid="soma-workbench-panel-scroll"
-          >
-            <SlotPanel
-              icon={selectedPanel.icon}
-              label={selectedPanel.title}
-              description={selectedPanel.description}
-            >
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <p className="text-xs leading-5 text-cortex-text-muted">
-                  {selectedPanel.description}
-                </p>
-                <Link
-                  href={selectedPanel.href}
-                  className="shrink-0 rounded-lg border border-cortex-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-main hover:border-cortex-primary/40"
-                >
-                  Open page
-                </Link>
-              </div>
-              {selectedPanel.content}
-            </SlotPanel>
-          </div>
-        ) : (
-          <div className="mt-3 rounded-xl border border-cortex-border bg-cortex-bg p-3 text-sm text-cortex-text-muted">
-            No review content is available yet.
-          </div>
-        )}
+            {isPanelOpen ? (
+              <>
+                <div className="shrink-0 rounded-xl border border-cortex-border bg-cortex-bg/95 p-2 backdrop-blur">
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <div>
+                      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-cortex-text-muted">
+                        Review
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
+                        Check the most useful details here. Open the full page for more.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsPanelOpen(false)}
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cortex-border text-cortex-text-main hover:border-cortex-primary/40"
+                      aria-label="Close work panel"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div
+                    className="mt-3 grid grid-cols-4 gap-1"
+                    role="tablist"
+                    aria-label="Soma review sections"
+                  >
+                    {panels.map((panel) => (
+                      <button
+                        key={panel.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={selectedPanel?.key === panel.key}
+                        onClick={() => setActivePanel(panel.key)}
+                        className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                          selectedPanel?.key === panel.key
+                            ? "border-cortex-primary/40 bg-cortex-primary/15 text-cortex-primary"
+                            : "border-cortex-border text-cortex-text-muted hover:border-cortex-primary/30 hover:text-cortex-text-main"
+                        }`}
+                      >
+                        <span className="hidden sm:inline">{panel.label}</span>
+                        <span className="sm:hidden">{panel.icon}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {selectedPanel ? (
+                  <div
+                    className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
+                    data-testid="soma-workbench-panel-scroll"
+                  >
+                    <SlotPanel
+                      icon={selectedPanel.icon}
+                      label={selectedPanel.title}
+                      description={selectedPanel.description}
+                    >
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <p className="text-xs leading-5 text-cortex-text-muted">
+                          {selectedPanel.description}
+                        </p>
+                        <Link
+                          href={selectedPanel.href}
+                          className="shrink-0 rounded-lg border border-cortex-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-main hover:border-cortex-primary/40"
+                        >
+                          Open page
+                        </Link>
+                      </div>
+                      {selectedPanel.content}
+                    </SlotPanel>
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-xl border border-cortex-border bg-cortex-bg p-3 text-sm text-cortex-text-muted">
+                    No review content is available yet.
+                  </div>
+                )}
+              </>
+            ) : null}
           </div>
         </>
       ) : null}

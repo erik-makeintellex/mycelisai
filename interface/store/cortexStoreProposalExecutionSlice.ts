@@ -27,6 +27,14 @@ function recoveryTextFromExecutionSummary(summary: any) {
     };
 }
 
+function confirmedRunMessage(runId: string | null, summary?: string | null) {
+    const state = runId ? `Run ${runId.slice(0, 8)} started.` : 'Proposal approved.';
+    const next = runId
+        ? 'Review active work and latest output below as Soma records progress.'
+        : 'Soma is waiting for execution proof.';
+    return [state, next, summary].filter(Boolean).join(' ');
+}
+
 export function createCortexProposalExecutionSlice(
     set: CortexSet,
     get: CortexGet,
@@ -58,11 +66,19 @@ export function createCortexProposalExecutionSlice(
                     error: 'No pending proposal to confirm',
                 };
             }
+            const intentProofId = trimToNonEmpty(proposal.intent_proof_id);
+            if (!intentProofId) {
+                return {
+                    ok: false,
+                    runId: null,
+                    error: 'This proposal is missing executable proof. Ask Soma to regenerate it before running.',
+                };
+            }
             set((s) => ({
                 activeMode: 'proposal',
                 missionChatError: null,
                 missionChatFailure: null,
-                missionChat: updateProposalLifecycle(s.missionChat, proposal.intent_proof_id, 'confirmed_pending_execution', {
+                missionChat: updateProposalLifecycle(s.missionChat, intentProofId, 'confirmed_pending_execution', {
                     mode: 'proposal',
                 }),
             }));
@@ -82,7 +98,7 @@ export function createCortexProposalExecutionSlice(
                     const lifecycle = runId ? 'executed' : 'confirmed_pending_execution';
                     const systemMsg: ChatMessage = {
                         role: 'system',
-                        content: proofSummary ?? (runId ? 'Mission activated' : 'Proposal confirmed. Waiting for execution proof.'),
+                        content: confirmedRunMessage(runId, proofSummary),
                         mode: runId ? 'execution_result' : 'proposal',
                         run_id: runId ?? undefined,
                         execution_summary: body?.data?.execution_summary,
@@ -95,7 +111,7 @@ export function createCortexProposalExecutionSlice(
                         missionChatFailure: null,
                         durableWorkRefreshVersion: s.durableWorkRefreshVersion + 1,
                         missionChat: [
-                            ...updateProposalLifecycle(s.missionChat, proposal.intent_proof_id, lifecycle, {
+                            ...updateProposalLifecycle(s.missionChat, intentProofId, lifecycle, {
                                 mode: runId ? 'execution_result' : 'proposal',
                                 run_id: runId ?? undefined,
                             }),
@@ -136,10 +152,10 @@ export function createCortexProposalExecutionSlice(
                 set((s) => ({
                     missionChatError: failureWithRecovery.summary,
                     missionChatFailure: failureWithRecovery,
-                    activeMode: 'blocker',
-                    activeRunId: failureRunId ?? null,
-                    missionChat: [
-                        ...updateProposalLifecycle(s.missionChat, proposal.intent_proof_id, 'failed', {
+                        activeMode: 'blocker',
+                        activeRunId: failureRunId ?? null,
+                        missionChat: [
+                        ...updateProposalLifecycle(s.missionChat, intentProofId, 'failed', {
                             mode: 'blocker',
                             run_id: failureRunId ?? undefined,
                         }),
@@ -169,9 +185,9 @@ export function createCortexProposalExecutionSlice(
                     missionChatError: failure.summary,
                     missionChatFailure: failure,
                     activeMode: 'blocker',
-                    activeRunId: null,
-                    missionChat: [
-                        ...updateProposalLifecycle(s.missionChat, proposal.intent_proof_id, 'failed', {
+                        activeRunId: null,
+                        missionChat: [
+                        ...updateProposalLifecycle(s.missionChat, intentProofId, 'failed', {
                             mode: 'blocker',
                         }),
                         { role: 'council', content: failure.summary, source_node: 'admin', mode: 'blocker' },

@@ -209,8 +209,10 @@ describe("OutputWorkbench", () => {
     );
 
     expect(screen.getByText("Latest output").closest("article")?.textContent).toContain("Playable output");
+    expect(screen.getByText("Use Open file to view it, or Open folder to show it in the workspace.")).toBeDefined();
     expect(screen.getByRole("button", { name: /Open file Playable output/i })).toBeDefined();
     expect(screen.getByRole("button", { name: /Open local folder for Playable output/i })).toBeDefined();
+    expect(screen.getByText("More outputs and verification")).toBeDefined();
   });
 
   it("renders package actions and copyable output quotes", async () => {
@@ -257,6 +259,9 @@ describe("OutputWorkbench", () => {
     expect(screen.getAllByText("index.html").length).toBeGreaterThan(0);
     expect(screen.getByText("Smoke test passed")).toBeDefined();
     expect(screen.getByText("Latest output")).toBeDefined();
+    expect(screen.getByText("Use Open file to view it, or Open folder to show it in the workspace.")).toBeDefined();
+    const verificationDetails = screen.getByText("Verification details").closest("details");
+    expect(verificationDetails?.open).toBe(false);
     expect(screen.getByText("path verified")).toBeDefined();
     expect(screen.getByText("readback verified")).toBeDefined();
     expect(screen.getByText("sha256 b94d27b9934d")).toBeDefined();

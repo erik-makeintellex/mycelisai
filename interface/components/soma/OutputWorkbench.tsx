@@ -136,7 +136,10 @@ function OutputProofBadges({ proof, proofArtifactId }: { proof?: OutputProofEnve
     </span>
   );
 }
-
+function OutputProofDetails({ proof, proofArtifactId }: { proof?: OutputProofEnvelope; proofArtifactId?: string }) {
+  if (!proof && !proofArtifactId) return null;
+  return <details className="mt-2 text-xs text-cortex-text-muted"><summary className="cursor-pointer text-[10px] font-mono uppercase tracking-[0.16em]">Verification details</summary><OutputProofBadges proof={proof} proofArtifactId={proofArtifactId} /></details>;
+}
 export function OutputWorkbench({
   outputs,
   projectPackages,
@@ -221,20 +224,19 @@ export function OutputWorkbench({
                     <span>{project.validation}</span>
                   </div>
                 ) : null}
-                <div className="mt-2">
-                  <OutputProofBadges proof={project.proof} proofArtifactId={project.proof_artifact_id} />
-                </div>
+                <OutputProofDetails proof={project.proof} proofArtifactId={project.proof_artifact_id} />
               </article>
             );
           })}
         </div>
       ) : null}
       {primaryOutput ? (
-        <article className="rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2">
+        <article className="rounded-lg border border-cortex-primary/50 bg-cortex-primary/15 px-3 py-2 shadow-[0_0_0_1px_rgba(115,92,255,0.12)]" aria-label="Latest output">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-primary">Latest output</div>
               <div className="mt-1 truncate text-sm font-semibold text-cortex-text-main">{primaryOutput.text}</div>
+              <p className="mt-1 text-xs leading-5 text-cortex-text-muted">Use Open file to view it, or Open folder to show it in the workspace.</p>
               <OutputPathHint storagePath={primaryOutput.storagePath} url={primaryOutput.url} />
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-1">
@@ -250,15 +252,13 @@ export function OutputWorkbench({
               </button>
             </div>
           </div>
-          <div className="mt-2">
-            <OutputProofBadges proof={primaryOutput.proof} proofArtifactId={primaryOutput.proofArtifactId} />
-          </div>
+          <OutputProofDetails proof={primaryOutput.proof} proofArtifactId={primaryOutput.proofArtifactId} />
         </article>
       ) : null}
       {secondaryOutputs.length > 0 ? (
         <details className="rounded-lg border border-cortex-border/70 bg-cortex-bg/50 px-3 py-2">
           <summary className="cursor-pointer text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
-            Output details and proof
+            More outputs and verification
           </summary>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-2">
             {secondaryOutputs.map((output, index) => {

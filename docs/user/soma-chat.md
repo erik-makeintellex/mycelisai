@@ -2,7 +2,6 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Workspace-first interaction model: you send intent, Soma orchestrates execution.
-
 ---
 ## Overview
 
@@ -99,6 +98,7 @@ Team workspaces are different from the root Soma workspace:
 - the `Team focus` strip above the chat switches the same workbench between `All Soma work` and a team's focused lane, so the chat scope, active work, retained outputs, and proof move together
 - the Work panel is for quick review and action; use each tab's full-page link for deeper backlog, output-folder, activity/proof, or Resources review
 - when a focused team has queued, running, degraded, or operator-needed work, the review button opens Work first and hides duplicate output previews so the next action stays obvious
+- when review details are closed, Soma keeps the conversation readable and moves Work, Output, Trust, and Context details into the minimizable Work panel
 - focused team context switches the primary chat, active-work lane, and retained-output view to the selected team's scope, while Soma remains able to reference other teams, such as a story-writing team and a comic-visual team, when you ask
 - when Soma creates a team but has not yet created the first delegated work item, the Dashboard shows a compact first-deliverable launcher; choose a starter prompt, review it in the Soma input, then send it so execution still goes through the governed work-item path
 - the root Soma home keeps the live interaction stream collapsed by default so an admin can open it on demand without pushing Soma away from the first work surface
@@ -166,7 +166,7 @@ Soma responses can include:
 - compact cards showing which council members were consulted
 
 4. **Proposal block (mutation paths)**
-- explicit action preview with confirm/cancel, including whether the task answers directly, proposes action, executes, blocks, degrades, awaits approval, requires retry, or connects to an active team work lane
+- explicit action preview with confirm/cancel, proof-linked run-started feedback, and states for direct answer, proposal, execution result, blocker, degradation, awaiting approval, retry, or active team work
 
 No mutation executes until you confirm.
 
@@ -181,7 +181,7 @@ No mutation executes until you confirm.
 - generated images are cache-first and expire after 60 minutes unless saved
 - use the inline `Save` action or ask Soma to save it (for example: "save this image to saved-media")
 - if you ask Soma to create a specialist media team and generate the first output, the proposal should include both the team creation and media deliverable steps, then return retained output/proof or a visible degraded recovery state
-- saved media and file outputs should appear in the same Soma output workbench with a preview when possible, **Open**, visible workspace path, and **Open folder** action; the folder action shows inline success or open-failed feedback, and `Resources -> Output Files` is the broader browser for containing folders later
+- saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details; `Resources -> Output Files` is the broader browser for containing folders later
 
 ---
 

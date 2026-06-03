@@ -239,4 +239,17 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByRole('button', { name: /cannot run yet/i }).hasAttribute('disabled')).toBe(true);
         expect(screen.getByText(/missing the information soma needs to run it/i)).toBeDefined();
     });
+
+    it('blocks execution when a token exists but proof linkage is missing', () => {
+        render(<ProposedActionBlock message={buildMessage({
+            proposal: {
+                ...buildMessage().proposal!,
+                confirm_token: 'ct-present',
+                intent_proof_id: '',
+            },
+        })} />);
+
+        expect(screen.getByRole('button', { name: /cannot run yet/i }).hasAttribute('disabled')).toBe(true);
+        expect(screen.getByText(/missing the information soma needs to run it/i)).toBeDefined();
+    });
 });

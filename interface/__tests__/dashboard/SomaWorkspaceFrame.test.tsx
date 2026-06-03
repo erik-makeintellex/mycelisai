@@ -24,6 +24,9 @@ describe("SomaWorkspaceFrame", () => {
     expect(within(frame).queryByText("Expression")).toBeNull();
     expect(toggle.textContent).toContain("Review output");
     expect(toggle.textContent).toContain("4");
+    expect(within(frame).queryByText("Output package")).toBeNull();
+    expect(within(frame).queryByText("Active lane fallback")).toBeNull();
+    expect(within(frame).queryByText("Compact trust package")).toBeNull();
     fireEvent.click(toggle);
 
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
@@ -77,6 +80,7 @@ describe("SomaWorkspaceFrame", () => {
     expect(digest.getByText("generated/owner-note.md")).toBeDefined();
     expect(digest.getByRole("button", { name: /Open file Owner note/i })).toBeDefined();
     expect(digest.getByRole("button", { name: /Open local folder for Owner note/i })).toBeDefined();
+    expect(screen.queryByTestId("output-workbench")).toBeNull();
 
     const toggle = screen.getByTestId("soma-workbench-panel-toggle");
     expect(toggle.textContent).toContain("Review output");
@@ -106,7 +110,6 @@ describe("SomaWorkspaceFrame", () => {
         )}
         primaryPanel="work"
         reviewCount={2}
-        showOutputDigest={false}
       />,
     );
 

@@ -70,6 +70,8 @@ describe('useCortexStore confirm proposal execution', () => {
         expect(useCortexStore.getState().activeRunId).toBe('run-123');
         expect(useCortexStore.getState().durableWorkRefreshVersion).toBe(1);
         expect(mockFetch).toHaveBeenCalledWith('/api/v1/teams/detail');
+        expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Run run-123 started.');
+        expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Review active work and latest output below');
         expect(useCortexStore.getState().missionChat.at(-1)?.execution_summary?.outputs).toEqual([
             {
                 id: 'workspace/logs/game.html',
@@ -209,5 +211,41 @@ describe('useCortexStore confirm proposal execution', () => {
             proposal_status: 'executed',
             run_id: 'run-visible',
         });
+    });
+
+    it('does not run proposals that are missing executable proof linkage', async () => {
+        const renderedProposal = {
+            intent: 'Create this visible file',
+            teams: 1,
+            agents: 1,
+            tools: ['write_file'],
+            risk_level: 'medium',
+            confirm_token: 'ct-visible',
+            intent_proof_id: '',
+        };
+        useCortexStore.setState({
+            pendingProposal: null,
+            activeConfirmToken: null,
+            missionChat: [{
+                role: 'council',
+                content: 'Visible proposal',
+                mode: 'proposal',
+                proposal: renderedProposal,
+                proposal_status: 'active',
+            }],
+            missionChatError: null,
+            activeMode: 'proposal',
+            activeRunId: null,
+        });
+
+        const result = await useCortexStore.getState().confirmProposal(renderedProposal);
+
+        expect(result).toEqual({
+            ok: false,
+            runId: null,
+            error: 'This proposal is missing executable proof. Ask Soma to regenerate it before running.',
+        });
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(useCortexStore.getState().missionChat[0]).toMatchObject({ proposal_status: 'active' });
     });
 });
