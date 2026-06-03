@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
   OutputWorkbench,
@@ -12,6 +12,11 @@ import { outputWorkbenchDigest } from "@/components/soma/OutputWorkbenchDigest";
 import type { ExecutionSummaryData, TeamOutputRef } from "@/store/useCortexStore";
 
 describe("OutputWorkbench", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it("extracts project packages separately from retained outputs and artifacts", () => {
     const summary: ExecutionSummaryData = {
       outputs: [
@@ -65,6 +70,7 @@ describe("OutputWorkbench", () => {
       {
         text: "Launch brief",
         url: "/api/v1/workspace/files/view?path=generated%2Flaunch%2Fbrief.md",
+        storagePath: "generated/launch/brief.md",
       },
     ]);
     expect(teamOutputProjectPackages(teamOutputs)).toEqual([
@@ -126,6 +132,7 @@ describe("OutputWorkbench", () => {
       {
         text: "Comic page",
         url: "/api/v1/workspace/files/view?path=saved-media%2Fcomic-page.png",
+        storagePath: "saved-media/comic-page.png",
       },
     ]);
   });
@@ -144,6 +151,7 @@ describe("OutputWorkbench", () => {
     })).toEqual({
       text: "Owner note",
       url: "/api/v1/workspace/files/view?path=generated%2Fowner-note.md",
+      storagePath: "generated/owner-note.md",
       count: 3,
     });
 
@@ -164,6 +172,8 @@ describe("OutputWorkbench", () => {
 
   it("renders package actions and copyable output quotes", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
+    const fetchMock = vi.fn(async () => Response.json({ ok: true, data: { workspace_path: "generated/launch" } }));
+    vi.stubGlobal("fetch", fetchMock);
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText },
       configurable: true,
@@ -199,7 +209,9 @@ describe("OutputWorkbench", () => {
     expect(screen.getByTestId("output-workbench")).toBeDefined();
     expect(screen.getByText("Launch microsite")).toBeDefined();
     expect(screen.getByText("Reviewable output package")).toBeDefined();
-    expect(screen.getByText("entry: index.html")).toBeDefined();
+    expect(screen.getByText("Workspace folder")).toBeDefined();
+    expect(screen.getByText("generated/launch")).toBeDefined();
+    expect(screen.getAllByText("index.html").length).toBeGreaterThan(0);
     expect(screen.getByText("Smoke test passed")).toBeDefined();
     expect(screen.getByText("Latest output")).toBeDefined();
     expect(screen.getByText("path verified")).toBeDefined();
@@ -207,6 +219,13 @@ describe("OutputWorkbench", () => {
     expect(screen.getByText("sha256 b94d27b9934d")).toBeDefined();
     expect(screen.getByRole("button", { name: /Open file Launch brief/i })).toBeDefined();
     expect(screen.getByRole("button", { name: /Open local folder for Launch microsite/i })).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: /Open local folder for Launch microsite/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith("/api/v1/workspace/files/reveal?path=generated%2Flaunch", { method: "POST" });
+      expect(screen.getByText("Folder opened")).toBeDefined();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /Copy output quote for Launch brief/i }));
 

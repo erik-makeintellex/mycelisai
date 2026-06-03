@@ -30,17 +30,17 @@ export function FocusedTeamOutputDock({
       <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cortex-primary">
-            Team outputs
+            Ready outputs
           </p>
           <p className="mt-1 text-sm leading-5 text-cortex-text-muted">
-            {teamName || teamId} retained output is ready in this focused context.
+            {teamName || teamId} has files ready to open.
           </p>
         </div>
         <Link
           href={`/teams?team_id=${encodeURIComponent(teamId)}`}
           className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-cortex-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-main hover:border-cortex-primary/40"
         >
-          Team page
+          Open team
           <ExternalLink className="h-3 w-3" />
         </Link>
       </div>
@@ -84,7 +84,7 @@ export function FocusedTeamOutputDock({
       </div>
       {hiddenCount > 0 ? (
         <div className="mt-2 text-xs text-cortex-text-muted">
-          +{hiddenCount} more retained outputs are available from the Team page or work review.
+          +{hiddenCount} more outputs are available on the team page or in review.
         </div>
       ) : null}
     </section>

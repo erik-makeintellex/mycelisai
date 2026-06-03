@@ -2,7 +2,7 @@
 
 import type { ExecutionSummaryItem } from "@/store/useCortexStore";
 import { itemText, itemUrl } from "./ExecutionSummaryCardModel";
-import OutputAccessActions from "./OutputAccessActions";
+import OutputAccessActions, { workspacePathFromOutputUrl } from "./OutputAccessActions";
 import type { OutputWorkbenchItem } from "./OutputWorkbench";
 
 export type OutputWorkbenchDigest = {
@@ -25,9 +25,11 @@ export function outputWorkbenchDigest({
   const primaryOutput = normalizedPrimaryIndex >= 0 ? outputs[normalizedPrimaryIndex] : null;
 
   if (primaryOutput) {
+    const storagePath = primaryOutput.storagePath ?? workspacePathFromOutputUrl(primaryOutput.url);
     return {
       text: primaryOutput.text,
       url: primaryOutput.url,
+      ...(storagePath ? { storagePath } : {}),
       count: outputs.length + packages.length,
     };
   }
@@ -44,6 +46,8 @@ export function outputWorkbenchDigest({
 }
 
 export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkbenchDigest }) {
+  const workspacePath = digest.storagePath?.trim() || workspacePathFromOutputUrl(digest.url);
+
   return (
     <aside
       className="max-w-[min(82vw,360px)] rounded-xl border border-cortex-primary/30 bg-cortex-surface/95 px-3 py-2 shadow-lg shadow-black/10 backdrop-blur"
@@ -58,6 +62,11 @@ export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkben
           <div className="mt-0.5 truncate text-xs font-semibold text-cortex-text-main">
             {digest.text}
           </div>
+          {workspacePath ? (
+            <code className="mt-0.5 block max-w-56 truncate font-mono text-[10px] text-cortex-text-muted">
+              {workspacePath}
+            </code>
+          ) : null}
         </div>
         <OutputAccessActions
           label={digest.text}

@@ -89,16 +89,16 @@ export default function CentralSomaHome({
         <section className="space-y-3">
             {focusedTeam ? (
                 <div className="rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-3 text-sm text-cortex-text-main">
-                    <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Focused team context</p>
+                    <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Focused team</p>
                     <p className="mt-2 font-semibold">{focusedTeam.name}</p>
                     <p className="mt-1 text-sm text-cortex-text-muted">
-                        {assistantName} is treating this team as the active operating lane inside the Soma surface.
+                        {assistantName} is focused on this team. Ask for updates, decisions, or the next file from here.
                     </p>
                 </div>
             ) : null}
             <SomaOperatingSurface
                 organizationName={lastOrganization?.name}
-                activeMode={focusedTeam ? `Focused team: ${focusedTeam.name}` : null}
+                activeMode={focusedTeam ? focusedTeam.name : null}
                 focusedTeamId={selectedTeamId}
             />
             <EnvironmentEntryBar sessionUser={sessionUser} />
@@ -134,9 +134,9 @@ function EnvironmentEntryBar({ sessionUser }: { sessionUser: WebSessionUser | nu
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs text-cortex-text-muted">
-                    <EntryFact label="Access" value={roleLabel} />
-                    <EntryFact label="Identity" value={providerLabel} />
-                    <EntryFact label="Scope" value={workspaceScope} />
+                    <EntryFact label="Role" value={roleLabel} />
+                    <EntryFact label="Sign-in" value={providerLabel} />
+                    <EntryFact label="Workspace" value={workspaceScope} />
                 </div>
             </div>
         </section>

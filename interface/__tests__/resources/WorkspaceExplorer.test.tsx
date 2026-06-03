@@ -74,6 +74,7 @@ describe("WorkspaceExplorer", () => {
         fireEvent.click(screen.getByRole("button", { name: /Open current folder workspace/i }));
         await waitFor(() => {
             expect(revealCalls.some((url) => url.includes("path=workspace"))).toBe(true);
+            expect(screen.getByText("Folder opened")).toBeDefined();
         });
 
         fireEvent.click(await screen.findByText("proof.md"));

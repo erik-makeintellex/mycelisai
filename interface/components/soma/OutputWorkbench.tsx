@@ -13,10 +13,12 @@ import {
   normalizeWorkspaceOutputUrl,
 } from "./ExecutionSummaryCardModel";
 import OutputAccessActions from "./OutputAccessActions";
+import { itemWorkspacePath, OutputPathHint } from "./OutputWorkbenchPathHint";
 
 export type OutputWorkbenchItem = {
   text: string;
   url: string | null;
+  storagePath?: string;
   proof?: OutputProofEnvelope;
   proofArtifactId?: string;
 };
@@ -30,12 +32,16 @@ export function projectPackageOutputs(outputs: ExecutionSummaryData["outputs"]) 
 export function outputWorkbenchItems(summary?: ExecutionSummaryData, artifacts?: ChatArtifactRef[]) {
   const directOutputs = asItems(summary?.outputs)
     .filter((item) => typeof item === "string" || item.kind !== "project_package")
-    .map((item) => ({
-      text: itemText(item),
-      url: itemUrl(item),
-      ...(typeof item !== "string" && item.proof ? { proof: item.proof } : {}),
-      ...(typeof item !== "string" && item.proof_artifact_id ? { proofArtifactId: item.proof_artifact_id } : {}),
-    }))
+    .map((item) => {
+      const storagePath = typeof item !== "string" ? itemWorkspacePath(item) : null;
+      return {
+        text: itemText(item),
+        url: itemUrl(item),
+        ...(storagePath ? { storagePath } : {}),
+        ...(typeof item !== "string" && item.proof ? { proof: item.proof } : {}),
+        ...(typeof item !== "string" && item.proof_artifact_id ? { proofArtifactId: item.proof_artifact_id } : {}),
+      };
+    })
     .filter((item): item is OutputWorkbenchItem => Boolean(item.text));
   const artifactOutputs = artifactOutputItems(artifacts);
 
@@ -51,6 +57,7 @@ export function teamOutputWorkbenchItems(outputRefs: TeamOutputRef[]): OutputWor
     .map((output) => ({
       text: output.label?.trim() || "Team output",
       url: outputUrl(output.storage_ref),
+      ...(output.storage_ref ? { storagePath: output.storage_ref } : {}),
       ...(output.proof ? { proof: output.proof } : {}),
       ...(output.proof_id ? { proofArtifactId: output.proof_id } : {}),
     }))
@@ -158,7 +165,8 @@ export function OutputWorkbench({
           {packages.map((project, index) => {
             const title = itemText(project) ?? "Project package";
             const href = itemUrl(project);
-            const folder = project.folder ?? project.entrypoint ?? null;
+            const folder = project.folder ?? null;
+            const revealPath = project.folder ?? project.entrypoint ?? null;
             const files = project.files ?? [];
 
             return (
@@ -168,12 +176,22 @@ export function OutputWorkbench({
                     <div className="truncate text-sm font-semibold text-cortex-text-main">{title}</div>
                     {project.summary ? <div className="text-xs leading-5 text-cortex-text-muted">{project.summary}</div> : null}
                   </div>
-                  <OutputAccessActions label={title} url={href} storagePath={folder} openLabel={projectOpenLabel} folderLabel="Open folder" />
+                  <OutputAccessActions label={title} url={href} storagePath={revealPath} openLabel={projectOpenLabel} folderLabel="Open folder" />
                 </div>
                 {(project.entrypoint || folder) ? (
-                  <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-mono text-cortex-text-muted">
-                    {project.entrypoint ? <span>entry: {project.entrypoint}</span> : null}
-                    {folder ? <span>folder: {folder}</span> : null}
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-cortex-text-muted">
+                    {folder ? (
+                      <span className="inline-flex min-w-0 items-center gap-1 rounded border border-cortex-border/60 bg-cortex-bg/70 px-1.5 py-0.5">
+                        <span>Workspace folder</span>
+                        <code className="max-w-64 truncate font-mono text-cortex-text-main">{folder}</code>
+                      </span>
+                    ) : null}
+                    {project.entrypoint ? (
+                      <span className="inline-flex min-w-0 items-center gap-1 rounded border border-cortex-border/60 bg-cortex-bg/70 px-1.5 py-0.5">
+                        <span>Open file</span>
+                        <code className="max-w-64 truncate font-mono text-cortex-text-main">{project.entrypoint}</code>
+                      </span>
+                    ) : null}
                   </div>
                 ) : null}
                 {files.length > 0 ? (
@@ -205,9 +223,10 @@ export function OutputWorkbench({
             <div className="min-w-0">
               <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-primary">Latest output</div>
               <div className="mt-1 truncate text-sm font-semibold text-cortex-text-main">{primaryOutput.text}</div>
+              <OutputPathHint storagePath={primaryOutput.storagePath} url={primaryOutput.url} />
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-1">
-              <OutputAccessActions label={primaryOutput.text} url={primaryOutput.url} openLabel="Open file" folderLabel="Open folder" />
+              <OutputAccessActions label={primaryOutput.text} url={primaryOutput.url} storagePath={primaryOutput.storagePath} openLabel="Open file" folderLabel="Open folder" />
               <button
                 type="button"
                 onClick={() => void copyOutputQuote(primaryOutput, `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}`)}
@@ -230,33 +249,36 @@ export function OutputWorkbench({
             Output details and proof
           </summary>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-2">
-          {secondaryOutputs.map((output, index) => {
-            const key = `${output.text}-${output.url ?? "text"}-${index}`;
-            const copied = copiedOutputKey === key;
-            return (
-              <span key={key} className="inline-flex max-w-full items-center gap-1">
-                {output.url ? (
-                  <a href={output.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1 text-cortex-primary hover:underline">
-                    <span className="truncate">{output.text}</span>
-                    <ExternalLink className="h-3 w-3 shrink-0" />
-                  </a>
-                ) : (
-                  <span className="min-w-0 truncate text-sm text-cortex-text-main">{output.text}</span>
-                )}
-                <OutputAccessActions label={output.text} url={output.url} folderLabel="Open folder" />
-                <OutputProofBadges proof={output.proof} proofArtifactId={output.proofArtifactId} />
-                <button
-                  type="button"
-                  onClick={() => void copyOutputQuote(output, key)}
-                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
-                  title={copied ? "Copied output quote" : "Copy output quote"}
-                  aria-label={copied ? "Copied output quote" : `Copy output quote for ${output.text}`}
-                >
-                  {copied ? <Check className="h-3.5 w-3.5" /> : <Quote className="h-3.5 w-3.5" />}
-                </button>
-              </span>
-            );
-          })}
+            {secondaryOutputs.map((output, index) => {
+              const key = `${output.text}-${output.url ?? "text"}-${index}`;
+              const copied = copiedOutputKey === key;
+              return (
+                <span key={key} className="inline-flex max-w-full items-center gap-1">
+                  <span className="min-w-0">
+                    {output.url ? (
+                      <a href={output.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1 text-cortex-primary hover:underline">
+                        <span className="truncate">{output.text}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    ) : (
+                      <span className="min-w-0 truncate text-sm text-cortex-text-main">{output.text}</span>
+                    )}
+                    <OutputPathHint storagePath={output.storagePath} url={output.url} />
+                  </span>
+                  <OutputAccessActions label={output.text} url={output.url} storagePath={output.storagePath} openLabel="Open file" folderLabel="Open folder" />
+                  <OutputProofBadges proof={output.proof} proofArtifactId={output.proofArtifactId} />
+                  <button
+                    type="button"
+                    onClick={() => void copyOutputQuote(output, key)}
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
+                    title={copied ? "Copied output quote" : "Copy output quote"}
+                    aria-label={copied ? "Copied output quote" : `Copy output quote for ${output.text}`}
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5" /> : <Quote className="h-3.5 w-3.5" />}
+                  </button>
+                </span>
+              );
+            })}
           </div>
         </details>
       ) : null}

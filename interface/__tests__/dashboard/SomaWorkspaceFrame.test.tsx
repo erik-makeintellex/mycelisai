@@ -37,8 +37,8 @@ describe("SomaWorkspaceFrame", () => {
     expect(within(sideRail).queryByText("Active lane fallback")).toBeNull();
 
     fireEvent.click(within(sideRail).getByRole("tab", { name: /Work/i }));
-    expect(within(sideRail).getByText("Active work")).toBeDefined();
-    expect(within(frame).getAllByText(/Current work that needs review or follow-up/i).length).toBeGreaterThan(0);
+    expect(within(sideRail).getByText("Work to review")).toBeDefined();
+    expect(within(frame).getAllByText(/Work that needs a decision, check, or follow-up/i).length).toBeGreaterThan(0);
     expect(within(sideRail).getByText("Active lane fallback")).toBeDefined();
     fireEvent.click(within(sideRail).getByRole("tab", { name: /Trust/i }));
     expect(within(sideRail).getByText("Compact trust package")).toBeDefined();
@@ -74,6 +74,7 @@ describe("SomaWorkspaceFrame", () => {
     const digest = within(screen.getByTestId("soma-workbench-output-digest"));
     expect(digest.getByText("Latest output")).toBeDefined();
     expect(digest.getByText("Owner note")).toBeDefined();
+    expect(digest.getByText("generated/owner-note.md")).toBeDefined();
     expect(digest.getByRole("button", { name: /Open file Owner note/i })).toBeDefined();
     expect(digest.getByRole("button", { name: /Open local folder for Owner note/i })).toBeDefined();
 

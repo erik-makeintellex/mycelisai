@@ -109,7 +109,7 @@ export function SomaOperatingSurface({
   const somaHomeWorkItems = prioritizeSomaHomeWorkItems(activeWorkItems).filter(
     (item) => item.state !== "archived",
   );
-  const displayedMode = activeMode ?? (focusedTeam ? `Focused team: ${focusedTeam.name}` : null);
+  const displayedMode = activeMode ?? (focusedTeam ? focusedTeam.name : null);
   const hasWorkContextChoices = Boolean(effectiveFocusedTeamId)
     || activeWorkItems.length > 0
     || teamWork.outputRefs.length > 0;
@@ -196,10 +196,10 @@ export function SomaOperatingSurface({
           activeWork={activeWorkSlot ?? (
             hasWorkReviewContent ? (
               <ActiveWorkLane
-                title="Active work"
+                title="Work to review"
                 items={somaHomeWorkItems}
-                emptyMessage={activeMode && teamWork.items.length === 0
-                  ? `${activeMode} is the current workspace lane. ${teamWork.emptyMessage}`
+                emptyMessage={displayedMode && teamWork.items.length === 0
+                  ? `Soma is focused on ${displayedMode}. ${teamWork.emptyMessage}`
                   : teamWork.emptyMessage}
                 statusLabel={activeWorkActions.activeWorkActionNotice ?? teamWork.statusLabel}
                 degradedMessage={activeWorkActions.activeWorkActionError ?? teamWork.degradedMessage}
@@ -219,8 +219,8 @@ export function SomaOperatingSurface({
                 outputs={mergedOutputItems}
                 projectPackages={mergedProjectPackages}
                 emptyMessage={teamWork.status === "loading"
-                  ? "Checking for retained Soma and team outputs."
-                  : "Soma has not returned a retained output package yet."}
+                  ? "Checking for saved Soma and team outputs."
+                  : "No finished output is ready yet."}
               />
             ) : undefined
           )}
@@ -234,25 +234,25 @@ export function SomaOperatingSurface({
 const defaultEvidence: SomaEvidenceItem[] = [
   {
     title: "Approval queue",
-    detail: "Review gated actions, risk decisions, and pending confirmations.",
+    detail: "Approve or reject actions that need your decision.",
     href: "/approvals",
     icon: <CheckSquare className="h-4 w-4" />,
   },
   {
     title: "Activity and runs",
-    detail: "See progress, events, and recent outcomes behind Soma actions.",
+    detail: "See recent progress and what changed.",
     href: "/activity",
     icon: <ListChecks className="h-4 w-4" />,
   },
   {
     title: "Learning and context",
-    detail: "Inspect retained patterns, artifacts, and continuity evidence.",
+    detail: "Review saved patterns and useful context.",
     href: "/memory",
     icon: <Activity className="h-4 w-4" />,
   },
   {
-    title: "Tool readiness",
-    detail: "Check connected tools, search configuration, and MCP capability status.",
+    title: "Tool setup",
+    detail: "Check connected tools and search setup.",
     href: "/resources?tab=tools",
     icon: <Wrench className="h-4 w-4" />,
   },

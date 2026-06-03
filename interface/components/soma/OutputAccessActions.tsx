@@ -18,6 +18,13 @@ export function workspacePathFromOutputUrl(url: string | null) {
     }
 }
 
+function folderButtonLabel(folderState: "idle" | "opening" | "opened" | "failed", fallbackLabel: string) {
+    if (folderState === "opening") return "Opening...";
+    if (folderState === "opened") return "Folder opened";
+    if (folderState === "failed") return "Open failed";
+    return fallbackLabel;
+}
+
 export default function OutputAccessActions({
     label,
     url,
@@ -54,6 +61,10 @@ export default function OutputAccessActions({
         window.setTimeout(() => setFolderState("idle"), 4000);
     };
 
+    const folderTitle = folderState === "failed"
+        ? "Could not open the local folder. Browse it from Resources -> Output Files."
+        : `Open the local folder containing ${label}${workspacePath ? ` (${workspacePath})` : ""}`;
+
     return (
         <span className="inline-flex shrink-0 items-center gap-1">
             {url && (
@@ -73,15 +84,15 @@ export default function OutputAccessActions({
                     type="button"
                     onClick={() => void openFolder()}
                     className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-border/80 bg-cortex-bg/70 px-2.5 text-[11px] font-semibold text-cortex-text-main transition-colors hover:border-cortex-primary/45 hover:bg-cortex-primary/10 hover:text-cortex-primary"
-                    title={folderState === "failed" ? "Could not open local storage folder" : `Open local storage folder for ${label}`}
-                    aria-label={`Open local folder for ${label}`}
+                    title={folderTitle}
+                    aria-label={`Open local folder for ${label}${workspacePath ? ` at ${workspacePath}` : ""}`}
                     disabled={folderState === "opening"}
                 >
                     {folderState === "opening" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                     {folderState === "opened" ? <Check className="h-3 w-3" /> : null}
                     {folderState === "idle" ? <FolderOpen className="h-3 w-3" /> : null}
                     {folderState === "failed" ? <FolderOpen className="h-3 w-3 text-amber-300" /> : null}
-                    {folderState === "opened" ? "Folder opened" : folderState === "failed" ? "Folder blocked" : folderLabel}
+                    {folderButtonLabel(folderState, folderLabel)}
                 </button>
             )}
         </span>

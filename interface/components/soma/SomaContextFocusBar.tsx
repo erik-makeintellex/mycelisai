@@ -23,12 +23,12 @@ export function SomaContextFocusBar({
         </span>
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cortex-primary">
-            {isFocused ? "Focused team context" : "Root Soma context"}
+            {isFocused ? "Focused team" : "Soma home"}
           </p>
           <p className="mt-1 leading-5">
             {isFocused
-              ? `${teamName || teamId} has its own chat, active work, and retained output focus. Soma can still reference other team contexts when you ask.`
-              : "Select a running or completed team to focus Soma on that team's chat, active work, and outputs."}
+              ? `${teamName || teamId} is in focus. Soma will keep this team's chat, work, and outputs close by.`
+              : "Select a team to focus Soma on that team's chat, work, and outputs."}
           </p>
         </div>
       </div>

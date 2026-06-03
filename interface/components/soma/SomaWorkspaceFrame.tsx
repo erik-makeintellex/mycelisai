@@ -63,8 +63,8 @@ export function SomaWorkspaceFrame({
       key: "work" as const,
       icon: <Radio className="h-3.5 w-3.5" />,
       label: "Work",
-      title: "Active work",
-      description: "Current work that needs review or follow-up.",
+      title: "Work to review",
+      description: "Work that needs a decision, check, or follow-up.",
       href: "/teams",
       content: activeWork,
     },
@@ -73,7 +73,7 @@ export function SomaWorkspaceFrame({
       icon: <FileText className="h-3.5 w-3.5" />,
       label: "Output",
       title: "Output",
-      description: "Retained files, media, and packages.",
+      description: "Files, media, and packages Soma can open for you.",
       href: "/resources?tab=workspace",
       content: output,
     },
@@ -82,7 +82,7 @@ export function SomaWorkspaceFrame({
       icon: <ShieldCheck className="h-3.5 w-3.5" />,
       label: "Trust",
       title: "Trust",
-      description: "Proof, recovery, and safe next action.",
+      description: "Proof, recovery, and the safe next step.",
       href: "/activity",
       content: trust,
     },
@@ -91,7 +91,7 @@ export function SomaWorkspaceFrame({
       icon: <Boxes className="h-3.5 w-3.5" />,
       label: "Context",
       title: "Context",
-      description: "Tools, memory, resources, and setup.",
+      description: "Tools, saved context, and setup.",
       href: "/resources",
       content: context,
     },
@@ -163,10 +163,10 @@ export function SomaWorkspaceFrame({
           <div className="flex items-center justify-between gap-2 px-1">
             <div>
               <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-cortex-text-muted">
-                Work review
+                Review
               </p>
               <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-                Check useful context here. Open the full page when you want more detail.
+                Check the most useful details here. Open the full page for more.
               </p>
             </div>
             <button
@@ -220,7 +220,7 @@ export function SomaWorkspaceFrame({
                   href={selectedPanel.href}
                   className="shrink-0 rounded-lg border border-cortex-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-main hover:border-cortex-primary/40"
                 >
-                  Full page
+                  Open page
                 </Link>
               </div>
               {selectedPanel.content}

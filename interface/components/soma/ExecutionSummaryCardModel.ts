@@ -184,6 +184,7 @@ export function artifactOutputItems(artifacts?: ChatArtifactRef[]) {
     return artifacts?.map((artifact) => ({
         text: artifact.title || artifact.type || artifact.id || "Artifact",
         url: artifact.url ?? null,
+        ...((artifact.saved_path ?? artifact.folder ?? artifact.entrypoint) ? { storagePath: artifact.saved_path ?? artifact.folder ?? artifact.entrypoint } : {}),
     })) ?? [];
 }
 

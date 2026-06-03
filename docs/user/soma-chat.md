@@ -181,7 +181,7 @@ No mutation executes until you confirm.
 - generated images are cache-first and expire after 60 minutes unless saved
 - use the inline `Save` action or ask Soma to save it (for example: "save this image to saved-media")
 - if you ask Soma to create a specialist media team and generate the first output, the proposal should include both the team creation and media deliverable steps, then return retained output/proof or a visible degraded recovery state
-- saved media and file outputs should appear in the same Soma output workbench with a preview when possible, **Open**, and **Open folder** action; the folder action shows inline success or blocked feedback, and `Resources -> Output Files` is the broader browser for containing folders later
+- saved media and file outputs should appear in the same Soma output workbench with a preview when possible, **Open**, visible workspace path, and **Open folder** action; the folder action shows inline success or open-failed feedback, and `Resources -> Output Files` is the broader browser for containing folders later
 
 ---
 

@@ -246,7 +246,7 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(screen.getByTestId("focused-team-output-dock").textContent?.indexOf("Comic page")).toBeLessThan(
       screen.getByTestId("focused-team-output-dock").textContent?.indexOf("Old comic page") ?? 0,
     );
-    expect(screen.getByRole("link", { name: /Team page/i }).getAttribute("href")).toBe("/teams?team_id=team-alpha");
+    expect(screen.getByRole("link", { name: /Open team/i }).getAttribute("href")).toBe("/teams?team_id=team-alpha");
     expect(dock.getByRole("button", { name: /Open Comic page in a new browser window/i })).toBeDefined();
     expect(dock.getByRole("button", { name: /Open local folder for Comic page/i })).toBeDefined();
   });
