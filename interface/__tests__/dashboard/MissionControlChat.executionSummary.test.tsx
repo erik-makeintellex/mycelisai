@@ -160,12 +160,7 @@ describe('MissionControlChat execution summary', () => {
     });
 
     it('renders confirmed generated file outputs as openable links on system run messages', async () => {
-        const writeText = vi.fn().mockResolvedValue(undefined);
         const openWindow = vi.spyOn(window, 'open').mockReturnValue(null);
-        Object.defineProperty(navigator, 'clipboard', {
-            value: { writeText },
-            configurable: true,
-        });
         mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
             const url = requestUrl(input);
             if (url.includes('/api/v1/council/members')) return okJson({ ok: true, data: COUNCIL_MEMBERS });
@@ -216,12 +211,6 @@ describe('MissionControlChat execution summary', () => {
         await waitFor(() => {
             expect(mockFetch).toHaveBeenCalledWith('/api/v1/workspace/files/reveal?path=workspace%2Flogs%2Fqa_team_click_game.html', { method: 'POST' });
         });
-
-        fireEvent.click(screen.getByRole('button', { name: new RegExp(`Copy output quote for ${filePath}`) }));
-
-        await waitFor(() => {
-            expect(writeText).toHaveBeenCalledWith(`> ${filePath}\n${href}`);
-        });
     });
 
     it('renders generated project packages as deliverable review cards', async () => {
@@ -269,12 +258,11 @@ describe('MissionControlChat execution summary', () => {
         render(<MissionControlChat simpleMode />);
 
         expect(await screen.findByText('Coin Runner Game')).toBeDefined();
-        expect(screen.getByText('entry: workspace/generated/coin-runner/index.html')).toBeDefined();
-        expect(screen.getByText('folder: workspace/generated/coin-runner')).toBeDefined();
-        expect(screen.getByText('game.js')).toBeDefined();
-        expect(screen.getByText('Browser opened and score increased after click.')).toBeDefined();
+        expect(screen.getByText('Latest output')).toBeDefined();
+        expect(screen.queryByText('entry: workspace/generated/coin-runner/index.html')).toBeNull();
+        expect(screen.queryByText('game.js')).toBeNull();
 
-        fireEvent.click(screen.getByRole('button', { name: /Open Game Coin Runner Game in a new browser window/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Open file Coin Runner Game in a new browser window/i }));
         expect(openWindow).toHaveBeenCalledWith(href, '_blank', 'noopener,noreferrer');
 
         fireEvent.click(screen.getByRole('button', { name: /Open local folder for Coin Runner Game/i }));
@@ -318,10 +306,10 @@ describe('MissionControlChat execution summary', () => {
         render(<MissionControlChat simpleMode />);
 
         expect(await screen.findByText('Needs review')).toBeDefined();
-        expect(screen.getByText('Failed: tool unavailable')).toBeDefined();
-        expect(screen.getByText('Still available: The failed run record remains trusted.')).toBeDefined();
-        expect(screen.getByText('Not reliable: No completed output should be trusted.')).toBeDefined();
-        expect(screen.getByText('Safe next: Review the failed run and retry.')).toBeDefined();
+        expect(screen.getAllByText('Failed: tool unavailable').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Still available: The failed run record remains trusted.').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Not reliable: No completed output should be trusted.').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Safe next: Review the failed run and retry.').length).toBeGreaterThan(0);
         expect(screen.getAllByRole('link', { name: /Run run-fail/i })
             .some((link) => link.getAttribute('href') === '/runs/run-failed-123456')).toBe(true);
         expect(screen.queryByText('Result saved')).toBeNull();

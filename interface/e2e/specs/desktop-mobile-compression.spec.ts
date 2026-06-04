@@ -63,7 +63,7 @@ test.describe("Desktop/mobile compression proof", () => {
     const dock = page.getByTestId("focused-team-output-dock");
     await expect(dock).toBeVisible();
     await expect(dock.getByText("Coin Runner package")).toBeVisible();
-    await expect(dock.getByRole("link", { name: /Team page/i })).toHaveAttribute(
+    await expect(dock.getByRole("link", { name: /Open team/i })).toHaveAttribute(
       "href",
       "/teams?team_id=active-demo-team",
     );

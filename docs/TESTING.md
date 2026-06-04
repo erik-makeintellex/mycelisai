@@ -60,7 +60,8 @@ Every accepted user-interaction proof must verify:
 - retained outputs survive refresh/reload
 - activity, run events, live stream, and team/agentry panels show compact summaries by default, cap long lists, avoid raw JSON/log dumps in the default path, and keep raw payloads, topics, prompts, and full evidence behind explicit Inspect/Advanced controls
 - AI-host failure produces a visible blocker and recovery restores the lane
-
+- Soma dashboard result cards stay compact: show result state, one obvious latest-output open path, small media preview, and visible failure boundaries; keep full output lists, proof detail, capability usage, logs, and event history in Work panel, Runs, Activity, Resources, or Inspect surfaces.
+- Page-by-page GUI review covers each route's user job, not just rendering: Dashboard asks/runs/outputs, Teams/Groups work contexts, Resources output/tool access, Activity/Runs proof inspection, System recovery, Settings/admin setup, Docs guidance, and legacy redirects.
 Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof, [V8 New-User Acceptance Matrix](architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md) for first-run/browser gates, and [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for the full browser matrix.
 
 ## Finalization Concretization Gate
@@ -77,6 +78,7 @@ Every finalization slice must prove the concrete runtime contract it touches, no
 | CapabilityManifestState | durable Go/SQL/API proof for capability id, health, probe status, risk, approval posture, allowed roles, input/output schemas, failure/recovery posture, audit/secret policy, owner, updated time, and manifest version; `db.migrate` compatibility now requires the current capability/proof/trust/team-work tables and collaboration-group workspace-folder schema; UI proof remains the next Connected Tools/Resources gate | `IN_REVIEW` for persistence/API, `REQUIRED` for UI proof |
 | Deployment trust | `System -> Deployments` proof for deployment/execution/workspace roots, current commit, endpoint posture, runtime posture, proof lane, recovery state | `IN_REVIEW`; backend/API and mocked browser proof are available, local-source live proof uses already-running Core/Interface with native PostgreSQL/NATS and skips honestly when that lane is not available |
 Related active contracts: [V8.3 Operational Embodiment PRD](architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md), [V8 New-User Acceptance Matrix](architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md), [V8 UI/API and Operator Experience Contract](architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md), [V8.2 Soma Team Interaction Contract](architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md), and [V8 UI Testing Agentry Product Contract](architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md). Current GUI proof status: live Soma governance/team/playable-output flows are green; `team-output-content-live.spec.ts` proves chat -> confirm-action -> durable team work -> status events -> reveal API readback; unit proof covers proof-linked approval feedback, latest-output file/folder guidance, and closed-panel dashboard compression; retry specs cover degraded/retry UI with current compact copy (`Needs review`, `Still available`, `Not reliable`, `Safe next`). Legacy `v8-organization-entry.*` setup specs still describe the removed dashboard setup affordance and should be retired or rewritten around the Soma-first dashboard entry before they are used as release proof.
+
 ## Full GUI Coverage Matrix
 
 Current browser workflow requirements live in [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md). Keep this document as the validation policy entrypoint rather than a route-by-route duplicate.
@@ -89,7 +91,6 @@ Minimum route families under active proof:
 - `/memory`, `/system`, `/settings`
 - `/runs`, `/runs/[id]`, `/runs/[id]/chain`
 - legacy redirect routes
-
 Current local-source GUI certification posture:
 - Green focused proof includes signed-in `/login` -> `/dashboard` entry, Soma governance, Resources Output Files, Connected Tools, Settings, Accessibility baseline, homepage/navigation/layout/package/team/groups/system/mobile/compression, and the new-user acceptance surfaces in [V8 New-User Acceptance Matrix](architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md). Dense-panel proof uses `clickVisibleControl` in `interface/e2e/support/click-visible-control.ts`, Settings/Auth follows the Advanced Settings -> Auth Providers and Resources -> Connected Tools contract, and the accessibility baseline keeps critical checks active while `color-contrast` remains split out after axe timeouts in headed Chromium.
 - New-user delivery proof is not accepted from unit/type/build evidence alone. After local source services are intentionally up, run the focused headed GUI matrix for login/dashboard orientation, MCP/Resources, Active Work, output/proof/recovery, and desktop/mobile compression; record any skipped live-backend gates as blockers or explicit environment skips in `.state/V8_DEV_STATE.md`.
@@ -113,7 +114,6 @@ Backend/API -> UI Target Plan
 - Evidence commands:
   - <unit/component/type/build/focused browser/live-backend/deployment docs gates>
 ```
-
 No backend/API review is complete without a mapped UI target and evidence result. For propose-only schedule handoff approval changes, prove backend success plus invalid/not-found/conflict/attached-run guards, UI state badges/actions/store behavior, focused Schedule Rules browser proof, and API/user/state/testing doc review.
 ## Clean Run Discipline
 - Stop prior Core/Interface services before runtime or integration tests: `uv run inv lifecycle.down`. Native PostgreSQL and NATS remain development dependencies and are inspected with `uv run inv native-infra.status`.

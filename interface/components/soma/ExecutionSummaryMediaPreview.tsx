@@ -23,7 +23,13 @@ function mediaPreviewKind(url: string | null): "image" | "audio" | "video" | nul
     return null;
 }
 
-export default function ExecutionSummaryMediaPreview({ outputs }: { outputs: ExecutionSummaryOutputPreview[] }) {
+export default function ExecutionSummaryMediaPreview({
+    outputs,
+    compact = false,
+}: {
+    outputs: ExecutionSummaryOutputPreview[];
+    compact?: boolean;
+}) {
     const previews = outputs
         .map((output, index) => ({ output, index, kind: mediaPreviewKind(output.url) }))
         .filter((item): item is { output: ExecutionSummaryOutputPreview; index: number; kind: "image" | "audio" | "video" } => Boolean(item.kind && item.output.url));
@@ -31,17 +37,21 @@ export default function ExecutionSummaryMediaPreview({ outputs }: { outputs: Exe
     if (!previews.length) return null;
 
     return (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className={compact ? "grid gap-2" : "grid gap-2 sm:grid-cols-2"}>
             {previews.map(({ output, index, kind }) => {
                 const key = `${output.text}-${output.url}-${kind}-${index}`;
                 return (
                     <div key={key} className="overflow-hidden rounded border border-cortex-border/70 bg-cortex-bg">
                         {kind === "image" ? (
-                            <img src={output.url!} alt={output.text} className="max-h-52 w-full object-contain p-1" />
+                            <img
+                                src={output.url!}
+                                alt={output.text}
+                                className={`${compact ? "max-h-32" : "max-h-52"} w-full object-contain p-1`}
+                            />
                         ) : kind === "audio" ? (
                             <audio controls className="w-full px-2 py-2" src={output.url!}>Your browser does not support audio playback.</audio>
                         ) : (
-                            <video controls className="max-h-52 w-full bg-black" src={output.url!}>Your browser does not support video playback.</video>
+                            <video controls className={`${compact ? "max-h-32" : "max-h-52"} w-full bg-black`} src={output.url!}>Your browser does not support video playback.</video>
                         )}
                     </div>
                 );

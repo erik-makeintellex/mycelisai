@@ -26,6 +26,7 @@ import {
     type TrustVerdictTone,
     understandingLines,
 } from "./ExecutionSummaryCardModel";
+import ExecutionSummaryCompactCard from "./ExecutionSummaryCompactCard";
 
 function SummaryRow({
     icon,
@@ -73,10 +74,12 @@ export default function ExecutionSummaryCard({
     summary,
     runId,
     artifacts,
+    compact = false,
 }: {
     summary?: ExecutionSummaryData;
     runId?: string;
     artifacts?: ChatArtifactRef[];
+    compact?: boolean;
 }) {
     if (!summary) return null;
 
@@ -97,6 +100,16 @@ export default function ExecutionSummaryCard({
     const degradation = degradationLines(summary.audit_recovery);
     const nextStep = nextStepText(summary.next_step);
     const trust = trustVerdict(summary, summaryRunId ?? runId, artifacts);
+    const hasReviewDetails = intent.length
+        || understanding.length
+        || executionShape
+        || executionSummary
+        || capabilities.length
+        || searchSources.length
+        || proofs.length
+        || audit
+        || degradation.length
+        || nextStep;
 
     const hasContent = intent.length
         || understanding.length
@@ -115,16 +128,9 @@ export default function ExecutionSummaryCard({
 
     if (!hasContent) return null;
 
-    const hasReviewDetails = intent.length
-        || understanding.length
-        || executionShape
-        || executionSummary
-        || capabilities.length
-        || searchSources.length
-        || proofs.length
-        || audit
-        || degradation.length
-        || nextStep;
+    if (compact) {
+        return <ExecutionSummaryCompactCard summary={summary} runId={runId} artifacts={artifacts} />;
+    }
 
     return (
         <div className="rounded-lg border border-cortex-info/20 bg-cortex-info/5 px-3 py-2.5 shadow-sm" data-testid="execution-summary-card">

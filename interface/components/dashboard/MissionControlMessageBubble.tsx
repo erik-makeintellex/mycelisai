@@ -147,7 +147,13 @@ function ToolsUsed({ tools }: { tools?: string[] }) {
     );
 }
 
-export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage }) {
+export default function MissionControlMessageBubble({
+    msg,
+    compactResult = false,
+}: {
+    msg: ChatMessage;
+    compactResult?: boolean;
+}) {
     const isUser = msg.role === "user";
     const isBroadcast = isUser && msg.content.startsWith("[BROADCAST]");
     const assistantName = useCortexStore((s) => s.assistantName);
@@ -175,6 +181,7 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
                                 summary={msg.execution_summary}
                                 runId={msg.run_id}
                                 artifacts={msg.artifacts}
+                                compact={compactResult}
                             />
                         </div>
                     )}
@@ -211,6 +218,7 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
                         summary={msg.execution_summary}
                         runId={msg.run_id}
                         artifacts={msg.artifacts}
+                        compact={compactResult}
                     />
                 )}
                 {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}

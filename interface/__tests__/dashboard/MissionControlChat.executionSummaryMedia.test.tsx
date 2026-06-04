@@ -40,7 +40,7 @@ describe('MissionControlChat execution summary media previews', () => {
 
         expect((await screen.findByAltText('Launch hero image')).getAttribute('src')).toBe(imageHref);
         expect(container.querySelector(`audio[src="${audioHref}"]`)).toBeTruthy();
-        expect(screen.getByRole('button', { name: 'Open local folder for Launch hero image' })).toBeDefined();
-        expect(screen.getByRole('button', { name: 'Open local folder for Launch voiceover' })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Open local folder for Launch hero image/i })).toBeDefined();
+        expect(screen.queryByRole('button', { name: /Open local folder for Launch voiceover/i })).toBeNull();
     });
 });
