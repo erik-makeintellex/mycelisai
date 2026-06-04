@@ -15,6 +15,7 @@ import InlineArtifact from "./InlineArtifact";
 import MissionControlMarkdown from "./MissionControlMarkdown";
 import ProposedActionBlock from "./ProposedActionBlock";
 import ExecutionSummaryCard from "@/components/soma/ExecutionSummaryCard";
+import ExecutionSummaryReceipt, { shouldUseExecutionSummaryReceipt } from "@/components/soma/ExecutionSummaryReceipt";
 import {
     artifactResultSummary,
     askClassBadge,
@@ -159,6 +160,13 @@ export default function MissionControlMessageBubble({
     const assistantName = useCortexStore((s) => s.assistantName);
     const artifactSummary = artifactResultSummary(msg.artifacts);
     const consultationSummary = consultationResultSummary(msg.consultations);
+    const useReceipt = compactResult && msg.execution_summary
+        ? shouldUseExecutionSummaryReceipt({
+            summary: msg.execution_summary,
+            runId: msg.run_id,
+            artifacts: msg.artifacts,
+        })
+        : false;
 
     if (msg.role === "system") {
         return (
@@ -177,12 +185,20 @@ export default function MissionControlMessageBubble({
                     )}
                     {msg.execution_summary && (
                         <div className="w-full">
-                            <ExecutionSummaryCard
-                                summary={msg.execution_summary}
-                                runId={msg.run_id}
-                                artifacts={msg.artifacts}
-                                compact={compactResult}
-                            />
+                            {useReceipt ? (
+                                <ExecutionSummaryReceipt
+                                    summary={msg.execution_summary}
+                                    runId={msg.run_id}
+                                    artifacts={msg.artifacts}
+                                />
+                            ) : (
+                                <ExecutionSummaryCard
+                                    summary={msg.execution_summary}
+                                    runId={msg.run_id}
+                                    artifacts={msg.artifacts}
+                                    compact={compactResult}
+                                />
+                            )}
                         </div>
                     )}
                 </div>
@@ -214,12 +230,20 @@ export default function MissionControlMessageBubble({
                     </div>
                 ) : null}
                 {!isUser && msg.execution_summary && (
-                    <ExecutionSummaryCard
-                        summary={msg.execution_summary}
-                        runId={msg.run_id}
-                        artifacts={msg.artifacts}
-                        compact={compactResult}
-                    />
+                    useReceipt ? (
+                        <ExecutionSummaryReceipt
+                            summary={msg.execution_summary}
+                            runId={msg.run_id}
+                            artifacts={msg.artifacts}
+                        />
+                    ) : (
+                        <ExecutionSummaryCard
+                            summary={msg.execution_summary}
+                            runId={msg.run_id}
+                            artifacts={msg.artifacts}
+                            compact={compactResult}
+                        />
+                    )
                 )}
                 {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}
                 {!isUser && artifactSummary && (

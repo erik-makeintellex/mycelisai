@@ -60,7 +60,7 @@ Every accepted user-interaction proof must verify:
 - retained outputs survive refresh/reload
 - activity, run events, live stream, and team/agentry panels show compact summaries by default, cap long lists, avoid raw JSON/log dumps in the default path, and keep raw payloads, topics, prompts, and full evidence behind explicit Inspect/Advanced controls
 - AI-host failure produces a visible blocker and recovery restores the lane
-- Soma dashboard result cards stay compact: show result state, one obvious latest-output open path, small media preview, and visible failure boundaries; keep full output lists, proof detail, capability usage, logs, and event history in Work panel, Runs, Activity, Resources, or Inspect surfaces.
+- Soma dashboard result cards stay compact: trusted results render as chat receipts with one obvious latest-output open path and small media preview; failed/degraded results keep visible boundaries; full output lists, proof detail, capability usage, logs, and event history stay in Work panel, Runs, Activity, Resources, or Inspect surfaces.
 - Page-by-page GUI review covers each route's user job, not just rendering: Dashboard asks/runs/outputs, Teams/Groups work contexts, Resources output/tool access, Activity/Runs proof inspection, System recovery, Settings/admin setup, Docs guidance, and legacy redirects.
 Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof, [V8 New-User Acceptance Matrix](architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md) for first-run/browser gates, and [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for the full browser matrix.
 
