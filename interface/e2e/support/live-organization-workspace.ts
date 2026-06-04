@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 
 export function organizationChatInput(page: Page) {
-    return page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i);
+    return page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or (execute|run)/i);
 }
 
 export async function waitForOrganizationWorkspaceReady(page: Page) {

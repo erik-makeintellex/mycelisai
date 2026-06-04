@@ -131,16 +131,20 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await openOrganization(page);
     await sendWorkspaceMessage(page, firstDemoAsk);
     await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /Approve & Execute|Execute/i }).last().click();
-    await expect(page.getByText("Confirmation failed")).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
+    const failureCard = page.getByTestId("execution-summary-card").last();
+    await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
+    await expect(failureCard.getByText("Review request, proof, and recovery")).toBeVisible();
+    await failureCard.getByText("Review request, proof, and recovery").click();
     await expect(page.getByText("mocked package write failed").last()).toBeVisible();
-    await expect(page.getByText("Needs operator attention").last()).toBeVisible();
+    await expect(page.getByText("Still available: The failed run record remains trusted, but no package output is trusted.").last()).toBeVisible();
+    await expect(page.getByText("Not reliable: README, validation notes, entrypoint, folder, and files metadata were not retained by the failed run.").last()).toBeVisible();
     await expect(page.getByText("Safe next: Resubmit the same package request and approve the retry.").last()).toBeVisible();
     await expect(page.getByText("Run proof + retained output")).toHaveCount(0);
 
     await sendWorkspaceMessage(page, firstDemoAsk);
     await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /Approve & Execute|Execute/i }).last().click();
+    await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
     await expect(page.locator(`a[href="/runs/${retryRunId}"]`).first()).toBeVisible();
 

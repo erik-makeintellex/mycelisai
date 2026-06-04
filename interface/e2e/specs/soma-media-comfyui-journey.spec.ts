@@ -163,19 +163,21 @@ test.describe("Soma ComfyUI media journey", () => {
     await sendWorkspaceMessage(page, "Create a local/private ComfyUI media team output.");
 
     await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /Approve & Execute|Execute/i }).last().click();
+    await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
 
-    await expect(page.getByText("Confirmation failed")).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText("Needs operator attention").last()).toBeVisible();
-    await expect(page.getByText("Failed: local/private ComfyUI gateway unavailable").last()).toBeVisible();
+    const failureCard = page.getByTestId("execution-summary-card").last();
+    await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
+    await expect(failureCard.getByText("Review request, proof, and recovery")).toBeVisible();
+    await failureCard.getByText("Review request, proof, and recovery").click();
+    await expect(failureCard.getByText("Failed: local/private ComfyUI gateway unavailable")).toBeVisible();
     await expect(
-      page.getByText("Still trusted: The approval, intent proof, failed run record, and audit event remain trusted.").last(),
+      failureCard.getByText("Still available: The approval, intent proof, failed run record, and audit event remain trusted."),
     ).toBeVisible();
     await expect(
-      page.getByText("Invalid proof: No generated media output or retained image should be trusted for this attempt.").last(),
+      failureCard.getByText("Not reliable: No generated media output or retained image should be trusted for this attempt."),
     ).toBeVisible();
     await expect(
-      page.getByText("Safe next: Restore the local/private media gateway, confirm ComfyUI health, then retry the media proposal.").last(),
+      failureCard.getByText("Safe next: Restore the local/private media gateway, confirm ComfyUI health, then retry the media proposal."),
     ).toBeVisible();
     await expect(page.getByText("Run proof + retained output")).toHaveCount(0);
   });

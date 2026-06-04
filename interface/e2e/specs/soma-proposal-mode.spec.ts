@@ -90,17 +90,18 @@ test.describe("Soma proposal mode", () => {
         await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
 
         await expect(page.getByText("PROPOSED ACTION")).toBeVisible({ timeout: 20_000 });
-        await page.getByRole("button", { name: /^Execute$/i }).click();
+        await page.getByRole("button", { name: /^(Execute|Run)$/i }).click();
 
-        await expect(page.getByText("Confirmation failed")).toBeVisible({ timeout: 20_000 });
-        await expect(page.getByText("tool unavailable").last()).toBeVisible();
-        await expect(page.getByText("Operator trust package").last()).toBeVisible();
-        await expect(page.getByText("Needs operator attention").last()).toBeVisible();
-        await expect(page.getByText("Failed: tool unavailable").last()).toBeVisible();
-        await expect(page.getByText("Still trusted: The failed run record remains trusted.").last()).toBeVisible();
-        await expect(page.getByText("Invalid proof: No completed output should be trusted.").last()).toBeVisible();
-        await expect(page.getByText("Safe next: Review the failed run and retry.").last()).toBeVisible();
-        await expect(page.getByRole("link", { name: `Run ${failedRunId}` })).toHaveAttribute("href", `/runs/${failedRunId}`);
+        const failureCard = page.getByTestId("execution-summary-card").last();
+        await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
+        await expect(failureCard.getByText("Review request, proof, and recovery")).toBeVisible();
+        await failureCard.getByText("Review request, proof, and recovery").click();
+
+        await expect(failureCard.getByText("Failed: tool unavailable")).toBeVisible();
+        await expect(failureCard.getByText("Still available: The failed run record remains trusted.")).toBeVisible();
+        await expect(failureCard.getByText("Not reliable: No completed output should be trusted.")).toBeVisible();
+        await expect(failureCard.getByText("Safe next: Review the failed run and retry.")).toBeVisible();
+        await expect(failureCard.getByRole("link", { name: /Run run-fail/i }).first()).toHaveAttribute("href", `/runs/${failedRunId}`);
         await expect(page.getByText("Run proof + retained output")).toHaveCount(0);
         await expect(page.getByText("Verified execution proof")).toHaveCount(0);
     });

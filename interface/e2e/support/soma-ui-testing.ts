@@ -1,7 +1,7 @@
 import { expect, type Page, type Route } from "@playwright/test";
 
 export const organizationId = "org-ui-testing-agent";
-export const chatPlaceholder = /Tell .* what you want to plan, review, create, or execute/i;
+export const chatPlaceholder = /Tell .* what you want to plan, review, create, or (execute|run)/i;
 
 export const organizationHome = {
     id: organizationId,
@@ -278,7 +278,6 @@ export async function openOrganization(page: Page) {
     await page.goto(`/organizations/${organizationId}`);
     await page.waitForLoadState("domcontentloaded");
     await page.getByPlaceholder(chatPlaceholder).waitFor({ timeout: 20_000 });
-    await expect(page.getByRole("heading", { name: "What do you want Soma to do?" })).toBeVisible();
 }
 
 export async function sendWorkspaceMessage(page: Page, content: string) {

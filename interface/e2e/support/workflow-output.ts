@@ -1,7 +1,7 @@
 import { expect, type Page, type Route } from "@playwright/test";
 
 export const organizationId = "org-workflow-variants";
-export const chatPlaceholder = /Tell .* what you want to plan, review, create, or execute/i;
+export const chatPlaceholder = /Tell .* what you want to plan, review, create, or (execute|run)/i;
 
 export type GroupRecord = {
     group_id: string;
@@ -115,7 +115,6 @@ export async function installWorkflowOutputShell(page: Page) {
 export async function openOrganization(page: Page) {
     await gotoWithColdStartRetry(page, `/organizations/${organizationId}`);
     await page.getByPlaceholder(chatPlaceholder).waitFor({ timeout: 20_000 });
-    await expect(page.getByRole("heading", { name: "What do you want Soma to do?" })).toBeVisible();
 }
 
 export async function openAdvancedTeamDesign(page: Page) {

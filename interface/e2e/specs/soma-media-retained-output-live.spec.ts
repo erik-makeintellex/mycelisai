@@ -27,6 +27,10 @@ const mediaHref = `/api/v1/workspace/files/view?path=${encodeURIComponent(mediaP
 const tinyPng =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/axX6fQAAAAASUVORK5CYII=";
 
+function escaped(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 test.skip(({ browserName }) => browserName !== "chromium", "Media retained-output proof is stabilized in Chromium.");
 
 async function fulfillJSON(route: Route, status: number, body: unknown) {
@@ -200,22 +204,22 @@ test.describe("Soma media retained output proof", () => {
 
     await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(mediaPath).last()).toBeVisible();
-    await page.getByRole("button", { name: /Approve & Execute|Execute/i }).last().click();
+    await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
 
-    await expect(page.getByText("Run proof + retained output").last()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Latest output").last()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(mediaTitle).last()).toBeVisible();
     await expect(page.getByRole("img", { name: mediaTitle })).toBeVisible();
-    await expect(page.getByRole("link", { name: mediaTitle }).last()).toHaveAttribute("href", mediaHref);
+    await expect(page.getByRole("button", { name: new RegExp(`Open file .*${mediaTitle}`, "i") }).last()).toBeVisible();
 
     const outputPagePromise = page.context().waitForEvent("page");
-    await page.getByRole("button", { name: `Open ${mediaTitle} in a new browser window` }).last().click();
+    await page.getByRole("button", { name: new RegExp(`Open file .*${mediaTitle}`, "i") }).last().click();
     const outputPage = await outputPagePromise;
     await outputPage.waitForLoadState("domcontentloaded").catch(() => undefined);
     expect(outputPage.url()).toContain("/api/v1/workspace/files/view");
     expect(outputPage.url()).toContain(encodeURIComponent(mediaPath));
     await outputPage.close();
 
-    await page.getByRole("button", { name: `Open local folder for ${mediaTitle}` }).last().click();
+    await page.getByRole("button", { name: new RegExp(`Open .*folder .*${mediaTitle}`, "i") }).last().click();
     await expect.poll(() => revealCalls.some((url) => url.includes(encodeURIComponent(mediaPath)))).toBe(true);
 
     await enableAdvancedMode(page);
@@ -266,9 +270,9 @@ test.describe("Soma media retained output proof", () => {
     expect(mediaOutput, JSON.stringify(outputs)).toBeTruthy();
 
     const outputLabel = mediaOutput!.title || mediaOutput!.id || "Team output";
-    await expect(page.getByText("Run proof + retained output").last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/Latest output|Result saved/i).last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(outputLabel).last()).toBeVisible();
     await expect(page.getByRole("button", { name: new RegExp(`Open .*${outputLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.*browser window`) }).last()).toBeVisible();
-    await expect(page.getByRole("button", { name: `Open local folder for ${outputLabel}` }).last()).toBeVisible();
+    await expect(page.getByRole("button", { name: new RegExp(`Open .*folder .*${escaped(outputLabel)}`, "i") }).last()).toBeVisible();
   });
 });

@@ -190,7 +190,7 @@ export async function waitForConfirmAction(page: Page) {
         (response) => response.url().includes('/api/v1/intent/confirm-action') && response.request().method() === 'POST',
         { timeout: LIVE_CHAT_RESPONSE_TIMEOUT_MS },
     );
-    const executeButton = page.getByRole('button', { name: /Approve & Execute|Execute/i }).last();
+    const executeButton = page.getByRole('button', { name: /Approve & Execute|Execute|Run/i }).last();
     await clickVisibleControl(page, executeButton, { timeout: 20_000 });
     const response = await responsePromise;
     const parsed = await parseJSONIfPossible<ConfirmEnvelope>(response);

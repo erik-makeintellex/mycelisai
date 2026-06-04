@@ -163,11 +163,11 @@ async function createOrganization(page: Page, name: string) {
 
 async function openWorkspace(page: Page, organizationId: string) {
     await page.goto(`/organizations/${organizationId}`, { waitUntil: 'domcontentloaded' });
-    await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
+    await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or (execute|run)/i).waitFor({ timeout: 30_000 });
 }
 
 async function submitWorkspaceChat(page: Page, content: string) {
-    const input = page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i);
+    const input = page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or (execute|run)/i);
     await input.fill(content);
     const responsePromise = page.waitForResponse(
         (response) => response.url().includes('/api/v1/chat') && response.request().method() === 'POST',
@@ -184,7 +184,7 @@ async function confirmProposal(page: Page) {
         (response) => response.url().includes('/api/v1/intent/confirm-action') && response.request().method() === 'POST',
         { timeout: CHAT_TIMEOUT_MS },
     );
-    await page.getByRole('button', { name: /Approve & Execute|Execute/i }).click();
+    await page.getByRole('button', { name: /Approve & Execute|Execute|Run/i }).click();
     const response = await responsePromise;
     const parsed = await parseJSONIfPossible<ConfirmEnvelope>(response);
     return { response, raw: parsed.raw, body: parsed.body };

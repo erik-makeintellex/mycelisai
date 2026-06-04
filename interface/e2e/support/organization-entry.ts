@@ -71,7 +71,7 @@ export const createdTemplateOrganization = {
     ],
 };
 
-export const organizationChatPlaceholder = /Tell Soma what you want to plan, review, create, or execute/i;
+export const organizationChatPlaceholder = /Tell Soma what you want to plan, review, create, or (execute|run)/i;
 
 export async function saveScreenshot(page: Page, testInfo: TestInfo, name: string) {
     await page.screenshot({

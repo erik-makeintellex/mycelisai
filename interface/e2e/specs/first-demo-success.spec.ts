@@ -94,7 +94,7 @@ test.describe("Canonical first-demo success path", () => {
     await openOrganization(page);
     await sendWorkspaceMessage(page, "Create the exact first-demo playable browser game package with README and validation notes.");
     await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /Approve & Execute|Execute/i }).last().click();
+    await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
 
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
     await expect(page.locator(`a[href="/runs/${runId}"]`).first()).toBeVisible();

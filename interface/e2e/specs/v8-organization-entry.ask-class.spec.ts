@@ -90,9 +90,9 @@ test.describe("V8 AI Organization entry flow - ask-class output cues", () => {
         await openCreatedOrganization(page, createdTemplateOrganization.id);
 
         await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
-        await expect(page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i)).toBeVisible();
+        await expect(page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or (execute|run)/i)).toBeVisible();
 
-        const input = page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i);
+        const input = page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or (execute|run)/i);
         await input.fill("Create an artifact brief for this launch.");
         await input.press("Enter");
         await expect(page.getByTestId("mission-chat").getByText("Artifact result")).toBeVisible({ timeout: 20_000 });

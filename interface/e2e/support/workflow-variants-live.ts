@@ -140,14 +140,14 @@ export async function openWorkspace(page: Page, organizationId: string) {
   await gotoWithColdStartRetry(page, `/organizations/${organizationId}`);
   await page
     .getByPlaceholder(
-      /Tell Soma what you want to plan, review, create, or execute/i,
+      /Tell Soma what you want to plan, review, create, or (execute|run)/i,
     )
     .waitFor({ timeout: 30_000 });
 }
 
 export async function submitWorkspaceChat(page: Page, content: string) {
   const input = page.getByPlaceholder(
-    /Tell Soma what you want to plan, review, create, or execute/i,
+    /Tell Soma what you want to plan, review, create, or (execute|run)/i,
   );
   await input.fill(content);
   const responsePromise = page.waitForResponse(

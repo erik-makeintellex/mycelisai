@@ -155,11 +155,11 @@ export async function liveAPIGet(page: Page, url: string) {
 
 export async function openLiveWorkspace(page: Page, organizationId: string) {
   await page.goto(`/organizations/${organizationId}`, { waitUntil: "domcontentloaded" });
-  await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
+  await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or (execute|run)/i).waitFor({ timeout: 30_000 });
 }
 
 export async function submitLiveWorkspaceChat(page: Page, content: string) {
-  const input = page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i);
+  const input = page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or (execute|run)/i);
   await input.fill(content);
   const responsePromise = page.waitForResponse(
     (response) => response.url().includes("/api/v1/chat") && response.request().method() === "POST",
@@ -176,7 +176,7 @@ export async function confirmProposal(page: Page) {
     (response) => response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
     { timeout: chatTimeoutMs },
   );
-  await page.getByRole("button", { name: /Approve & Execute|Execute/i }).last().click();
+  await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
   const response = await responsePromise;
   const parsed = await parseJSONIfPossible<ConfirmEnvelope>(response);
   return { response, raw: parsed.raw, body: parsed.body };
@@ -202,13 +202,14 @@ export async function expectProjectPackageVisible(page: Page, expected: {
   entrypoint: string;
   folder: string;
 }) {
-  await expect(page.getByText("Operator trust package").last()).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText("Run proof + retained output").last()).toBeVisible();
   await expect(page.getByText(expected.title).last()).toBeVisible();
-  await expect(page.getByText(`entry: ${expected.entrypoint}`).last()).toBeVisible();
-  await expect(page.getByText(`folder: ${expected.folder}`).last()).toBeVisible();
+  await expect(page.getByText(expected.entrypoint).last()).toBeVisible();
+  await expect(page.getByText(expected.folder).last()).toBeVisible();
+  await expect(page.getByRole("button", { name: new RegExp(`Open Game .*${expected.title}`, "i") }).last()).toBeVisible();
+  await expect(page.getByRole("button", { name: /Open .*folder/i }).last()).toBeVisible();
   await expect(page.getByText("README.md").last()).toBeVisible();
   await expect(page.getByText(/browser|validation|opened|play/i).last()).toBeVisible();
+  await expect(page.getByText("Review request, proof, and recovery").last()).toBeVisible();
 }
 
 export async function fulfillJSON(route: Route, status: number, body: unknown) {
