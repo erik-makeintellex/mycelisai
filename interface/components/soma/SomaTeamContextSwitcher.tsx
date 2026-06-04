@@ -28,7 +28,7 @@ export function SomaTeamContextSwitcher({
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="inline-flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-cortex-text-muted">
           <Users className="h-3.5 w-3.5 text-cortex-primary" />
-          Team focus
+          Focused team
         </p>
         <Link href="/teams" className="text-xs font-semibold text-cortex-primary hover:underline">
           Manage teams
@@ -46,10 +46,10 @@ export function SomaTeamContextSwitcher({
           }`}
         >
           <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-primary">
-            All Soma work
+            Root Soma
           </span>
           <span className="mt-1 block text-xs text-cortex-text-muted">
-            Chat, work, and outputs across Soma
+            Cross-team chat, work, outputs, and proof
           </span>
         </button>
         {teamSummaries.map((team) => {
@@ -70,7 +70,7 @@ export function SomaTeamContextSwitcher({
                 {team.name}
               </span>
               <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.12em] text-cortex-text-muted">
-                Chat, work, and outputs for this team
+                Team chat, work, outputs, and proof
                 {team.outputCount > 0 ? ` | ${team.outputCount} output${team.outputCount === 1 ? "" : "s"}` : ""}
               </span>
             </button>

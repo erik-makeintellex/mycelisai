@@ -75,6 +75,8 @@ describe('MissionControlChat header and routing chrome', () => {
 
         expect(useCortexStore.getState().workspaceChatScope).toBe('org-123::team::team-alpha');
         expect(screen.getByText('Persisted focused team message')).toBeDefined();
+        expect(screen.getByText(/Team chat for Alpha Team/i)).toBeDefined();
+        expect(screen.getByText(/Soma can still reference other work when you ask/i)).toBeDefined();
     });
 
     it('clears all persisted chat scopes when opened with fresh reset flag', async () => {

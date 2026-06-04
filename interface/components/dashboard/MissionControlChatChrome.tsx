@@ -107,6 +107,7 @@ export function MissionControlChatHeader({
     clearMissionChat,
     councilMembers,
     directTarget,
+    focusedTeamName,
     isLoading,
     messageCount,
     setBroadcastMode,
@@ -120,6 +121,7 @@ export function MissionControlChatHeader({
     clearMissionChat: () => void;
     councilMembers: { id: string; role: string }[];
     directTarget: string | null;
+    focusedTeamName?: string | null;
     isLoading: boolean;
     messageCount: number;
     setBroadcastMode: (next: (prev: boolean) => boolean) => void;
@@ -144,7 +146,9 @@ export function MissionControlChatHeader({
                         </span>
                         {simpleMode ? (
                             <span className="block text-[11px] text-cortex-text-muted">
-                                Ask for plans, changes, files, decisions, or follow-up work.
+                                {focusedTeamName
+                                    ? `Team chat for ${focusedTeamName}. Soma can still reference other work when you ask.`
+                                    : "Ask for plans, changes, files, decisions, or follow-up work."}
                             </span>
                         ) : null}
                     </div>

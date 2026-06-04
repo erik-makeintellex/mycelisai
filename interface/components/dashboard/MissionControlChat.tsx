@@ -157,6 +157,7 @@ export default function MissionControlChat({
                 clearMissionChat={clearMissionChat}
                 councilMembers={councilMembers}
                 directTarget={directTarget}
+                focusedTeamName={currentTeam?.name}
                 isLoading={isLoading}
                 messageCount={missionChat.length}
                 setBroadcastMode={setBroadcastMode}

@@ -225,7 +225,7 @@ test.describe("Dashboard focused-team output proof", () => {
     await expect(rail.getByRole("tab", { name: /Output/i })).toHaveAttribute("aria-selected", "true");
     await expect(rail.getByText(focusedOutputLabel).first()).toBeVisible();
 
-    await rail.getByText("Output details and proof").click();
+    await rail.getByText("More outputs and verification").click();
     await expect(rail.getByText(olderSomaOutputLabel).first()).toBeVisible();
 
     const railText = await rail.textContent();

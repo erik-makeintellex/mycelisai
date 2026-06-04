@@ -86,7 +86,8 @@ export function teamIdFromMissionChatScope(scope?: string | null): string | null
 
 export function resolveSelectedTeamContext(get: CortexGet): { id: string; name: string } | null {
     const { selectedTeamId, teamsDetail, workspaceChatScope } = get();
-    const teamId = selectedTeamId || teamIdFromMissionChatScope(workspaceChatScope);
+    const scopedTeamId = teamIdFromMissionChatScope(workspaceChatScope);
+    const teamId = scopedTeamId || selectedTeamId;
     if (!teamId) {
         return null;
     }

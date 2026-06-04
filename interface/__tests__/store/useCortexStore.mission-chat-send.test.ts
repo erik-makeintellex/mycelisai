@@ -219,4 +219,60 @@ describe('useCortexStore mission chat send', () => {
             ask_class: 'specialist_consultation',
         });
     });
+
+    it('uses the visible workspace team scope over a stale selected team when sending', async () => {
+        useCortexStore.setState({
+            selectedTeamId: 'team-bravo',
+            teamsDetail: [
+                {
+                    id: 'team-alpha',
+                    name: 'Alpha Team',
+                    role: 'delivery',
+                    type: 'standing',
+                    mission_id: null,
+                    mission_intent: null,
+                    inputs: [],
+                    deliveries: [],
+                    agents: [],
+                },
+                {
+                    id: 'team-bravo',
+                    name: 'Bravo Team',
+                    role: 'delivery',
+                    type: 'standing',
+                    mission_id: null,
+                    mission_intent: null,
+                    inputs: [],
+                    deliveries: [],
+                    agents: [],
+                },
+            ],
+        });
+        useCortexStore.getState().setMissionChatScope('org-123::team::team-alpha');
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                ok: true,
+                data: {
+                    meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                    signal_type: 'chat_response',
+                    trust_score: 0.5,
+                    template_id: 'chat-to-answer',
+                    mode: 'answer',
+                    payload: {
+                        text: 'Alpha team received the request.',
+                        tools_used: [],
+                    },
+                },
+            }),
+        });
+
+        await useCortexStore.getState().sendMissionChat('continue the focused work');
+
+        const request = mockFetch.mock.calls[0]?.[1] as RequestInit;
+        const body = JSON.parse(String(request.body));
+        expect(body.organization_id).toBe('org-123');
+        expect(body.team_id).toBe('team-alpha');
+        expect(body.team_name).toBe('Alpha Team');
+    });
 });

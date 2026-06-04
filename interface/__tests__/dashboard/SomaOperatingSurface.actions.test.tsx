@@ -149,9 +149,9 @@ describe("SomaOperatingSurface active work actions", () => {
       focusedTeamId: "team-alpha",
     }));
     expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Alpha");
-    expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Team focus");
-    expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Chat, work, and outputs for this team");
-    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Team focus");
+    expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Focused team");
+    expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("chat, active work, outputs, and proof");
+    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Focused team");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("work");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("false");
     expect(screen.getByRole("button", { name: /Alpha/i })).toBeDefined();
@@ -295,6 +295,6 @@ describe("SomaOperatingSurface active work actions", () => {
 
     const workbench = within(screen.getByTestId("output-workbench"));
     expect(workbench.getByText("Latest output").closest("article")?.textContent).toContain("Newest focused brief");
-    expect(workbench.getByText("Output details and proof").closest("details")?.textContent).toContain("Older global brief");
+    expect(workbench.getByText("More outputs and verification").closest("details")?.textContent).toContain("Older global brief");
   });
 });

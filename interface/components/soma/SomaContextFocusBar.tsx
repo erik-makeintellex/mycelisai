@@ -23,12 +23,12 @@ export function SomaContextFocusBar({
         </span>
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cortex-primary">
-            {isFocused ? "Team focus" : "All Soma work"}
+            {isFocused ? "Focused team" : "Root Soma"}
           </p>
           <p className="mt-1 leading-5">
             {isFocused
-              ? `${teamName || teamId} is in focus. Chat, work, and outputs for this team stay close by.`
-              : "Select a team to focus Soma on that team's chat, work, and outputs."}
+              ? `${teamName || teamId} is in focus. This chat, active work, outputs, and proof are centered on that team.`
+              : "Select a team to switch Soma into that team's chat, active work, outputs, and proof."}
           </p>
         </div>
       </div>
@@ -39,7 +39,7 @@ export function SomaContextFocusBar({
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-cortex-border px-2.5 py-1.5 text-xs font-semibold text-cortex-text-main hover:border-cortex-primary/30"
         >
           <X className="h-3.5 w-3.5" />
-          All Soma work
+          Return to Root Soma
         </button>
       ) : null}
     </div>
