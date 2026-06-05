@@ -102,7 +102,7 @@ test.describe("Canonical first-demo success path", () => {
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
 
     const outputPagePromise = page.context().waitForEvent("page");
-    await page.getByRole("button", { name: `Open Game ${packageTitle} in a new browser window` }).last().click();
+    await page.getByRole("button", { name: `Open file ${packageTitle} in a new browser window` }).last().click();
     const outputPage = await outputPagePromise;
     await outputPage.waitForLoadState("domcontentloaded").catch(() => undefined);
     if (!outputPage.url().includes("/api/v1/workspace/files/view")) {

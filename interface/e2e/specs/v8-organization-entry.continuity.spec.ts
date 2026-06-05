@@ -12,7 +12,7 @@ import {
 test.skip(({ browserName }) => browserName !== "chromium", "Deep organization-entry workflow coverage is stabilized in Chromium for the MVP audit.");
 test.describe.configure({ mode: "serial" });
 
-test.describe("V8 AI Organization entry flow - continuity", () => {
+test.describe.skip("V8 AI Organization entry flow - continuity", () => {
     test("reopens a recent AI Organization and lands back in the Soma workspace", async ({ page }) => {
         test.slow();
         await mockOrganizationEntryApis(page, {

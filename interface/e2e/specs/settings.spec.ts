@@ -68,11 +68,12 @@ test.describe('Settings Page (/settings)', () => {
 
     test('settings page leads with a guided setup path', async ({ page }) => {
         await expect(page.getByText('Guided setup path')).toBeVisible();
-        await expect(page.getByText('Start with the controls most operators actually need.')).toBeVisible();
+        await expect(page.getByText('New admin setup checklist')).toBeVisible();
+        await expect(page.getByText(/Make login, AI provider, storage roots, and connected tools obvious/i)).toBeVisible();
         await expect(page.getByRole('button', { name: 'Open Profile' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Open Mission Profiles' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Open People & Access' })).toBeVisible();
-        await expect(page.getByText('Tools live in Resources')).toBeVisible();
+        await expect(page.getByText('Advanced controls unlock the full admin checklist')).toBeVisible();
     });
 
     test('guided workflow controls can switch visible sections', async ({ page }) => {

@@ -21,19 +21,19 @@ test.describe('Soma Dashboard (/dashboard)', () => {
         await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
     });
 
-    test('organization entry actions render', async ({ page }) => {
-        await page.getByRole('button', { name: 'Set up an AI Organization' }).click();
-        await expect(page.getByRole('button', { name: 'Start from template' })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Start Empty', exact: true })).toBeVisible();
+    test('Soma-first entry replaces legacy organization setup actions', async ({ page }) => {
+        await expect(page.getByTestId('soma-operating-surface')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Set up an AI Organization' })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Start from template' })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Start Empty', exact: true })).toHaveCount(0);
     });
 
-    test('recent organization guidance renders', async ({ page }) => {
-        await page.getByRole('button', { name: 'Set up an AI Organization' }).click();
-        await expect(page.getByRole('heading', { name: 'Create AI Organization' })).toBeVisible();
-        await expect(page.getByRole('heading', { name: 'Choose how to start' })).toBeVisible();
-        await expect(
-            page.getByText(/Create the AI Organization first so Mycelis opens with structure, not a one-off assistant session\./i),
-        ).toBeVisible();
+    test('signed-in environment guidance renders below the Soma workspace', async ({ page }) => {
+        const surface = page.getByTestId('soma-operating-surface');
+        const environment = page.getByTestId('soma-environment-entry');
+        await expect(surface).toBeVisible();
+        await expect(environment).toBeVisible();
+        await expect(environment.getByText(/Signed in/i)).toBeVisible();
     });
 
     test('no bg-white leak on dashboard', async ({ page }) => {

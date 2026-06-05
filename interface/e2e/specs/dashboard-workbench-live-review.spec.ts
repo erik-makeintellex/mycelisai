@@ -46,7 +46,7 @@ async function expectFreshDashboardWithoutStaleContent(page: Page) {
   await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveCount(0);
   await expect(page.getByTestId("focused-team-output-dock")).toHaveCount(0);
   await expect(page.getByRole("img", { name: /generated|retained|media|artifact/i })).toHaveCount(0);
-  await expect(page.getByText(/Latest output|Open Game|Run proof \+ retained output/i)).toHaveCount(0);
+  await expect(page.getByText(/Latest output|Open file|Run proof \+ retained output/i)).toHaveCount(0);
 }
 
 function outputMatchesTarget(body: ConfirmActionBody, targetPath: string) {
@@ -192,7 +192,7 @@ test.describe("Dashboard workbench live review", () => {
     expect(outputRef?.proof?.checksum).toMatch(/^[a-f0-9]{64}$/);
 
     await expect(page.getByText(/Result saved|Latest output/i).last()).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText(/Review request, proof, and recovery/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/More outputs and verification/i).last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
     await expect(workPanelToggle).toBeVisible({ timeout: 15_000 });
     await expect(workPanelToggle).toContainText(/Review output/i);

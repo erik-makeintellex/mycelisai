@@ -101,7 +101,7 @@ test.describe("Groups broadcast proof visibility", () => {
     await page.getByRole("button", { name: "Broadcast to group" }).click();
 
     const summary = page.getByTestId("groups-broadcast-execution-summary");
-    await expect(summary).toContainText("Directed execution");
+    await expect(summary).toContainText("Result needs review");
     await expect(summary).toContainText(
       "Broadcast queued to 2 team command lanes.",
     );

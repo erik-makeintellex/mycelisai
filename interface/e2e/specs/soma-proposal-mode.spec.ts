@@ -94,8 +94,8 @@ test.describe("Soma proposal mode", () => {
 
         const failureCard = page.getByTestId("execution-summary-card").last();
         await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
-        await expect(failureCard.getByText("Review request, proof, and recovery")).toBeVisible();
-        await failureCard.getByText("Review request, proof, and recovery").click();
+        await expect(failureCard.getByText("Details and proof")).toBeVisible();
+        await failureCard.getByText("Details and proof").click();
 
         await expect(failureCard.getByText("Failed: tool unavailable")).toBeVisible();
         await expect(failureCard.getByText("Still available: The failed run record remains trusted.")).toBeVisible();

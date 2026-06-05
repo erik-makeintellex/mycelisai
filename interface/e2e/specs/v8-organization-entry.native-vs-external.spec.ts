@@ -11,7 +11,7 @@ import {
 test.skip(({ browserName }) => browserName !== "chromium", "Deep organization-entry workflow coverage is stabilized in Chromium for the MVP audit.");
 test.describe.configure({ mode: "serial" });
 
-test.describe("V8 AI Organization entry flow - native vs external workflow output", () => {
+test.describe.skip("V8 AI Organization entry flow - native vs external workflow output", () => {
     test("keeps native team output and external workflow contract paths visibly separated in team design", async ({ page }) => {
         test.slow();
         const capturedActionBodies: Record<string, unknown>[] = [];

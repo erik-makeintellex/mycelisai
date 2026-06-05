@@ -74,7 +74,7 @@ test.describe("UI finalization exact browser package live proof", () => {
       await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
 
       const outputPagePromise = page.context().waitForEvent("page");
-      await page.getByRole("button", { name: `Open Game ${packageTitle} in a new browser window` }).last().click();
+      await page.getByRole("button", { name: `Open file ${packageTitle} in a new browser window` }).last().click();
       const outputPage = await outputPagePromise;
       await outputPage.waitForLoadState("domcontentloaded");
       await expect(outputPage).toHaveTitle(packageTitle);

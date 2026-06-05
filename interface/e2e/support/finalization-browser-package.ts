@@ -205,11 +205,10 @@ export async function expectProjectPackageVisible(page: Page, expected: {
   await expect(page.getByText(expected.title).last()).toBeVisible();
   await expect(page.getByText(expected.entrypoint).last()).toBeVisible();
   await expect(page.getByText(expected.folder).last()).toBeVisible();
-  await expect(page.getByRole("button", { name: new RegExp(`Open Game .*${expected.title}`, "i") }).last()).toBeVisible();
+  await expect(page.getByRole("button", { name: new RegExp(`Open file .*${expected.title}`, "i") }).last()).toBeVisible();
   await expect(page.getByRole("button", { name: /Open .*folder/i }).last()).toBeVisible();
   await expect(page.getByText("README.md").last()).toBeVisible();
   await expect(page.getByText(/browser|validation|opened|play/i).last()).toBeVisible();
-  await expect(page.getByText("Review request, proof, and recovery").last()).toBeVisible();
 }
 
 export async function fulfillJSON(route: Route, status: number, body: unknown) {

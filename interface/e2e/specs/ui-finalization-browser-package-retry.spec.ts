@@ -134,8 +134,8 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
     const failureCard = page.getByTestId("execution-summary-card").last();
     await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
-    await expect(failureCard.getByText("Review request, proof, and recovery")).toBeVisible();
-    await failureCard.getByText("Review request, proof, and recovery").click();
+    await expect(failureCard.getByText("Details and proof")).toBeVisible();
+    await failureCard.getByText("Details and proof").click();
     await expect(page.getByText("mocked package write failed").last()).toBeVisible();
     await expect(page.getByText("Still available: The failed run record remains trusted, but no package output is trusted.").last()).toBeVisible();
     await expect(page.getByText("Not reliable: README, validation notes, entrypoint, folder, and files metadata were not retained by the failed run.").last()).toBeVisible();
@@ -149,7 +149,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await expect(page.locator(`a[href="/runs/${retryRunId}"]`).first()).toBeVisible();
 
     const outputPagePromise = page.context().waitForEvent("page");
-    await page.getByRole("button", { name: `Open Game ${packageTitle} in a new browser window` }).last().click();
+    await page.getByRole("button", { name: `Open file ${packageTitle} in a new browser window` }).last().click();
     const outputPage = await outputPagePromise;
     await outputPage.waitForLoadState("domcontentloaded").catch(() => undefined);
     if (!outputPage.url().includes("/api/v1/workspace/files/view")) {
