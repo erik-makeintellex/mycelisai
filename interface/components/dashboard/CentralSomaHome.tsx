@@ -19,6 +19,16 @@ type WebSessionUser = {
     hd?: string;
 };
 
+export function resolveDashboardRequestedTeamId(
+    requestedTeamId: string,
+    teams: Array<{ id: string }>,
+) {
+    if (!requestedTeamId) {
+        return null;
+    }
+    return teams.some((team) => team.id === requestedTeamId) ? requestedTeamId : null;
+}
+
 export default function CentralSomaHome({
     requestedTeamIdPromise,
 }: {
@@ -74,9 +84,11 @@ export default function CentralSomaHome({
 
     useEffect(() => {
         void fetchTeamsDetail().finally(() => {
-            if (requestedTeamId) {
-                selectTeam(requestedTeamId);
-            }
+            const resolvedTeamId = resolveDashboardRequestedTeamId(
+                requestedTeamId,
+                useCortexStore.getState().teamsDetail,
+            );
+            selectTeam(resolvedTeamId);
         });
     }, [fetchTeamsDetail, requestedTeamId, selectTeam]);
 
@@ -97,9 +109,10 @@ export default function CentralSomaHome({
                 </div>
             ) : null}
             <SomaOperatingSurface
+                organizationId={lastOrganization?.id}
                 organizationName={lastOrganization?.name}
                 activeMode={focusedTeam ? focusedTeam.name : null}
-                focusedTeamId={selectedTeamId}
+                focusedTeamId={focusedTeam?.id ?? null}
             />
             <EnvironmentEntryBar sessionUser={sessionUser} />
         </section>

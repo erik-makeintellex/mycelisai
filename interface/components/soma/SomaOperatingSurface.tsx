@@ -29,12 +29,6 @@ import { SomaTeamContextSwitcher } from "./SomaTeamContextSwitcher";
 import { SomaWorkspaceFrame } from "./SomaWorkspaceFrame";
 import { useDurableTeamWork } from "./useDurableTeamWork";
 
-function lastSomaMessage(messages: ChatMessage[]) {
-  return [...messages]
-    .reverse()
-    .find((message) => message.role !== "user" && message.role !== "system");
-}
-
 function somaMessagesNewestFirst(messages: ChatMessage[]) {
   return [...messages]
     .reverse()
@@ -76,7 +70,6 @@ export function SomaOperatingSurface({
   const selectedTeamId = useCortexStore((state) => state.selectedTeamId);
   const activeWorkActions = useTeamWorkActionHandler(selectTeam);
   const evidence = evidenceItems ?? defaultEvidence;
-  const latestSoma = lastSomaMessage(missionChat);
   const somaMessages = somaMessagesNewestFirst(missionChat);
   const effectiveFocusedTeamId = focusedTeamId || selectedTeamId || null;
   const focusedTeam = effectiveFocusedTeamId
