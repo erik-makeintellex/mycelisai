@@ -69,7 +69,10 @@ describe("WorkspaceExplorer", () => {
             expect(calls.some((call) => call.tool === "list_directory")).toBe(true);
         });
         expect(calls[0].body).toEqual({ arguments: { path: "workspace" } });
-        expect(screen.getByText("Generated content lives here")).toBeDefined();
+        expect(screen.getByText("Open generated output on this machine")).toBeDefined();
+        expect(screen.getByRole("tablist", { name: "Workspace output panes" })).toBeDefined();
+        expect(screen.getByRole("tab", { name: /Find outputs/i }).getAttribute("aria-selected")).toBe("true");
+        expect(screen.queryByPlaceholderText("new directory name")).toBeNull();
 
         fireEvent.click(screen.getByRole("button", { name: /Open current folder workspace/i }));
         await waitFor(() => {
@@ -81,8 +84,11 @@ describe("WorkspaceExplorer", () => {
         await waitFor(() => {
             expect(calls.some((call) => call.tool === "read_text_file")).toBe(true);
         });
+        expect(screen.getByRole("tab", { name: /Preview/i }).getAttribute("aria-selected")).toBe("true");
         expect(screen.getByDisplayValue(/Readable through filesystem MCP/i)).toBeDefined();
 
+        fireEvent.click(screen.getByRole("tab", { name: /Create/i }));
+        expect(screen.getByRole("tabpanel", { name: /Create/i })).toBeDefined();
         fireEvent.change(screen.getByPlaceholderText("new directory name"), { target: { value: "generated" } });
         fireEvent.click(screen.getByRole("button", { name: /Create Dir/i }));
         await waitFor(() => {

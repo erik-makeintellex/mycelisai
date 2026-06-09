@@ -132,6 +132,7 @@ export default function TeamsPage() {
       }
       onAction={activeWorkActions.handleActiveWorkAction}
       onTeamAsk={activeWorkActions.handleTeamAsk}
+      purpose={isWorkReviewView ? "review" : "active"}
     />
   );
 

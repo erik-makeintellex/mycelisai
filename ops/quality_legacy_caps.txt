@@ -22,7 +22,6 @@ interface/components/organizations/OrganizationContextShell.tsx=2358
 interface/components/organizations/teamLeadExecutionCards.tsx=347
 interface/components/organizations/teamLeadGuidanceNormalization.ts=546
 interface/components/resources/DeploymentContextPanel.tsx=502
-interface/components/resources/WorkspaceExplorer.tsx=352
 interface/components/settings/BrainsPage.tsx=908
 interface/components/settings/MissionProfilesPage.tsx=551
 interface/components/settings/UsersPage.tsx=593

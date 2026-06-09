@@ -41,6 +41,67 @@ test.describe('Teams Workspace (/teams)', () => {
         await expect(page.getByRole('link', { name: 'Open guided team creation' })).toHaveAttribute('href', '/teams/create');
     });
 
+    test('review route puts decision work before team context', async ({ page }) => {
+        await page.route('**/api/v1/teams/detail', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify([
+                    {
+                        id: 'team-review',
+                        name: 'Review Team',
+                        role: 'action',
+                        type: 'mission',
+                        mission_id: 'mission-review',
+                        mission_intent: 'Review blocked output',
+                        inputs: [],
+                        deliveries: [],
+                        agents: [],
+                    },
+                ]),
+            });
+        });
+        await page.route('**/api/v1/catalogue/agents**', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ data: [] }),
+            });
+        });
+        await page.route('**/api/v1/teams/team-review/work?*', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    data: [
+                        {
+                            work_item_id: 'work-review-1',
+                            team_id: 'team-review',
+                            objective: 'Recover failed release notes',
+                            execution_shape: 'deliverable',
+                            state: 'degraded',
+                            needs_operator: true,
+                            degradation_state: 'provider_timeout',
+                            recovery_options: ['retry with retained proof'],
+                            updated_at: '2026-06-09T10:00:00Z',
+                        },
+                    ],
+                }),
+            });
+        });
+
+        await page.goto('/teams?view=work', { waitUntil: 'domcontentloaded' });
+
+        await expect(page.getByRole('heading', { name: 'Work to Review', exact: true })).toBeVisible();
+        await expect(page.getByLabel('Review queue summary')).toBeVisible();
+        await expect(page.getByText('Needs decision', { exact: true })).toBeVisible();
+        await expect(page.getByText('Reason', { exact: true })).toBeVisible();
+        await expect(page.getByText('Trust', { exact: true })).toBeVisible();
+        await expect(page.getByText('Move', { exact: true })).toBeVisible();
+        const bodyText = await page.locator('body').innerText();
+        expect(bodyText.indexOf('Work to Review')).toBeLessThan(bodyText.indexOf('Team context'));
+    });
+
     test('team quick action links are wired', async ({ page }) => {
         const cards = page.getByRole('button')
             .filter({ hasText: 'Open lead workspace' })

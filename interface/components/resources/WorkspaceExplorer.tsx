@@ -1,85 +1,21 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChevronUp, File, Folder, FolderPlus, RefreshCw, Save } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useCortexStore, type MCPServerWithTools } from "@/store/useCortexStore";
 import { extractApiError, formatMCPToolResult, type ResourceCallRequest } from "@/lib/apiContracts";
 import WorkspaceFolderAccessCard from "./WorkspaceFolderAccessCard";
+import {
+    WorkspaceBrowsePane,
+    WorkspaceCreatePane,
+    WorkspacePaneTabs,
+    WorkspacePreviewPane,
+} from "./WorkspaceExplorerPanes";
+import { joinPath, normalizePath, parseListOutput } from "./WorkspaceExplorerUtils";
 
 const WORKSPACE_ROOT_PATH = "workspace";
-type WorkspaceEntry = { name: string; path: string; type: "file" | "dir" };
-
-function normalizePath(path: string): string {
-    const raw = (path || ".").replaceAll("\\", "/").trim();
-    const parts = raw.split("/").filter(Boolean);
-    const stack: string[] = [];
-    for (const p of parts) {
-        if (p === ".") continue;
-        if (p === "..") {
-            stack.pop();
-            continue;
-        }
-        stack.push(p);
-    }
-    return stack.length === 0 ? "." : stack.join("/");
-}
-
-function joinPath(base: string, child: string): string {
-    return normalizePath(base === "." ? child : `${base}/${child}`);
-}
-
-function parseListOutput(raw: string, currentPath: string): WorkspaceEntry[] {
-    const text = raw.trim();
-    if (!text) return [];
-
-    try {
-        const parsed = JSON.parse(text) as unknown;
-        if (Array.isArray(parsed)) {
-            return parsed
-                .filter((v) => typeof v === "string")
-                .map((name) => ({
-                    name: name as string,
-                    path: joinPath(currentPath, name as string),
-                    type: (name as string).endsWith("/") ? "dir" : "file",
-                }));
-        }
-        if (parsed && typeof parsed === "object" && Array.isArray((parsed as { entries?: unknown[] }).entries)) {
-            return ((parsed as { entries: unknown[] }).entries ?? [])
-                .filter((v) => v && typeof v === "object")
-                .map((v) => {
-                    const entry = v as Record<string, unknown>;
-                    const name = String(entry.name ?? "");
-                    const isDir = entry.type === "directory" || entry.type === "dir" || Boolean(entry.isDirectory);
-                    return {
-                        name,
-                        path: joinPath(currentPath, name),
-                        type: isDir ? "dir" : "file",
-                    } satisfies WorkspaceEntry;
-                })
-                .filter((e) => e.name.length > 0);
-        }
-    } catch {
-        // Non-JSON output, parse line format.
-    }
-
-    return text
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-            const dirTagged = line.startsWith("[DIR] ");
-            const fileTagged = line.startsWith("[FILE] ");
-            const cleaned = line
-                .replace(/^\[DIR\]\s*/, "")
-                .replace(/^\[FILE\]\s*/, "")
-                .replace(/\s+\(directory\)$/i, "")
-                .trim();
-            const type: WorkspaceEntry["type"] = dirTagged || cleaned.endsWith("/") ? "dir" : fileTagged ? "file" : "file";
-            const name = cleaned.endsWith("/") ? cleaned.slice(0, -1) : cleaned;
-            return { name, path: joinPath(currentPath, name), type } satisfies WorkspaceEntry;
-        })
-        .filter((entry) => entry.name.length > 0);
-}
+export type WorkspaceEntry = { name: string; path: string; type: "file" | "dir" };
+export type WorkspacePane = "browse" | "preview" | "create";
 
 export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: () => void }) {
     const mcpServers = useCortexStore((s) => s.mcpServers);
@@ -95,6 +31,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
     const [newDir, setNewDir] = useState("");
     const [newFile, setNewFile] = useState("");
     const [newFileContent, setNewFileContent] = useState("");
+    const [activePane, setActivePane] = useState<WorkspacePane>("browse");
 
     useEffect(() => {
         fetchMCPServers();
@@ -162,6 +99,7 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
             const text = await callTool("read_text_file", { path });
             setSelectedFile(path);
             setPreview(text);
+            setActivePane("preview");
             setStatus(`Opened ${path}`);
         } catch (err) {
             setStatus(err instanceof Error ? err.message : "Read failed");
@@ -248,104 +186,74 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
     }
 
     return (
-        <div className="h-full grid grid-cols-12 gap-4 p-6">
-            <div className="col-span-12">
-                <WorkspaceFolderAccessCard currentPath={currentPath} onStatus={setStatus} />
-            </div>
-            <section className="col-span-5 rounded-xl border border-cortex-border bg-cortex-surface p-3 flex flex-col min-h-0">
-                <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-mono text-cortex-text-muted">Path:</span>
-                    <code className="text-xs font-mono text-cortex-primary bg-cortex-bg px-2 py-1 rounded border border-cortex-border flex-1 truncate">
-                        {currentPath}
-                    </code>
-                </div>
-                <div className="flex gap-2 mb-3">
-                    <button
-                        type="button"
-                        onClick={() => setCurrentPath(currentPath === WORKSPACE_ROOT_PATH ? WORKSPACE_ROOT_PATH : normalizePath(`${currentPath}/..`))}
-                        className="px-2 py-1 rounded border border-cortex-border text-xs font-mono text-cortex-text-main hover:bg-cortex-border inline-flex items-center gap-1"
-                    >
-                        <ChevronUp className="w-3 h-3" />
-                        Up
-                    </button>
-                    <button
-                        type="button"
-                        onClick={refreshList}
-                        disabled={busy || isFetchingMCPServers}
-                        className="px-2 py-1 rounded border border-cortex-border text-xs font-mono text-cortex-text-main hover:bg-cortex-border inline-flex items-center gap-1"
-                    >
-                        <RefreshCw className={`w-3 h-3 ${(busy || isFetchingMCPServers) ? "animate-spin" : ""}`} />
-                        Refresh
-                    </button>
+        <div className="flex h-full min-h-0 flex-col gap-3 p-4 sm:p-6">
+            <WorkspaceFolderAccessCard currentPath={currentPath} onStatus={setStatus} />
+
+            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface">
+                <div className="border-b border-cortex-border bg-cortex-bg/70 px-3 py-3">
+                    <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div className="min-w-0">
+                            <p className="text-xs font-semibold text-cortex-text-main">Workspace output access</p>
+                            <p className="mt-1 text-[11px] leading-5 text-cortex-text-muted">
+                                Start with retained files, then open a preview or create a small handoff artifact when needed.
+                            </p>
+                        </div>
+                        <div className="flex min-w-0 items-center gap-2">
+                            <span className="text-[11px] font-mono text-cortex-text-muted">Path</span>
+                            <code className="max-w-full truncate rounded border border-cortex-border bg-cortex-surface px-2 py-1 text-xs font-mono text-cortex-primary md:max-w-[22rem]">
+                                {currentPath}
+                            </code>
+                        </div>
+                    </div>
+
+                    <WorkspacePaneTabs activePane={activePane} onSelect={setActivePane} />
                 </div>
 
-                <div className="flex-1 overflow-y-auto rounded border border-cortex-border/60 bg-cortex-bg">
-                    {entries.length === 0 ? (
-                        <div className="p-3 text-xs font-mono text-cortex-text-muted">No entries</div>
-                    ) : (
-                        entries.map((entry) => (
-                            <button
-                                type="button"
-                                key={`${entry.type}:${entry.path}`}
-                                aria-label={entry.type === "dir" ? `Open folder ${entry.name}` : `Open file ${entry.name}`}
-                                onClick={() => (entry.type === "dir" ? setCurrentPath(entry.path) : openFile(entry.path))}
-                                className="w-full px-3 py-2 text-left border-b last:border-b-0 border-cortex-border/40 hover:bg-cortex-surface/70 transition-colors flex items-center gap-2"
-                            >
-                                {entry.type === "dir" ? <Folder className="w-3.5 h-3.5 text-cortex-warning" /> : <File className="w-3.5 h-3.5 text-cortex-primary" />}
-                                <span className="text-xs font-mono text-cortex-text-main truncate">{entry.name}</span>
-                            </button>
-                        ))
+                <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                    {activePane === "browse" && (
+                        <WorkspaceBrowsePane
+                            currentPath={currentPath}
+                            entries={entries}
+                            busy={busy}
+                            isFetchingMCPServers={isFetchingMCPServers}
+                            onUp={() =>
+                                setCurrentPath(
+                                    currentPath === WORKSPACE_ROOT_PATH
+                                        ? WORKSPACE_ROOT_PATH
+                                        : normalizePath(`${currentPath}/..`),
+                                )
+                            }
+                            onRefresh={refreshList}
+                            onOpenFolder={setCurrentPath}
+                            onOpenFile={openFile}
+                        />
+                    )}
+
+                    {activePane === "preview" && (
+                        <WorkspacePreviewPane
+                            selectedFile={selectedFile}
+                            preview={preview}
+                            onPreviewChange={setPreview}
+                        />
+                    )}
+
+                    {activePane === "create" && (
+                        <WorkspaceCreatePane
+                            newDir={newDir}
+                            newFile={newFile}
+                            newFileContent={newFileContent}
+                            onNewDirChange={setNewDir}
+                            onNewFileChange={setNewFile}
+                            onNewFileContentChange={setNewFileContent}
+                            onCreateDirectory={createDirectory}
+                            onCreateFile={createFile}
+                        />
                     )}
                 </div>
 
-                <div className="mt-3 grid grid-cols-1 gap-2">
-                    <div className="flex gap-2">
-                        <input
-                            value={newDir}
-                            onChange={(e) => setNewDir(e.target.value)}
-                            placeholder="new directory name"
-                            className="flex-1 bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-xs font-mono text-cortex-text-main"
-                        />
-                        <button type="button" onClick={createDirectory} className="px-2 py-1 rounded border border-cortex-border text-xs font-mono text-cortex-text-main hover:bg-cortex-border inline-flex items-center gap-1">
-                            <FolderPlus className="w-3 h-3" />
-                            Create Dir
-                        </button>
-                    </div>
-                    <div className="flex gap-2">
-                        <input
-                            value={newFile}
-                            onChange={(e) => setNewFile(e.target.value)}
-                            placeholder="new file name"
-                            className="flex-1 bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-xs font-mono text-cortex-text-main"
-                        />
-                        <button type="button" onClick={createFile} className="px-2 py-1 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10 inline-flex items-center gap-1">
-                            <Save className="w-3 h-3" />
-                            Write File
-                        </button>
-                    </div>
+                <div className="border-t border-cortex-border bg-cortex-bg px-3 py-2 text-[11px] font-mono text-cortex-text-muted">
+                    <span className="block truncate">{status}</span>
                 </div>
-            </section>
-
-            <section className="col-span-7 rounded-xl border border-cortex-border bg-cortex-surface p-3 flex flex-col min-h-0">
-                <div className="mb-2">
-                    <p className="text-xs font-mono text-cortex-text-muted">Preview</p>
-                    <code className="text-[11px] font-mono text-cortex-primary truncate block">
-                        {selectedFile ?? "(no file selected)"}
-                    </code>
-                </div>
-                <textarea
-                    value={preview}
-                    onChange={(e) => setPreview(e.target.value)}
-                    placeholder="Select a file to preview contents"
-                    className="flex-1 w-full bg-cortex-bg border border-cortex-border rounded p-3 text-xs font-mono text-cortex-text-main resize-none"
-                />
-                <textarea
-                    value={newFileContent}
-                    onChange={(e) => setNewFileContent(e.target.value)}
-                    placeholder="Optional content for new file"
-                    className="mt-3 h-24 w-full bg-cortex-bg border border-cortex-border rounded p-2 text-xs font-mono text-cortex-text-main resize-y"
-                />
-                <div className="mt-2 text-[11px] font-mono text-cortex-text-muted truncate">{status}</div>
             </section>
         </div>
     );

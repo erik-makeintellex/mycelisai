@@ -96,9 +96,12 @@ describe('Resources Page (V8.1 advanced support)', () => {
         expect(screen.getByRole('button', { name: /Role Library/i })).toBeDefined();
     });
 
-    it('defaults to connected tools tab', async () => {
+    it('defaults to output files tab', async () => {
         await act(async () => { render(<ResourcesPage />); });
-        expect(await screen.findByTestId('mcp-tools', {}, { timeout: 5000 })).toBeDefined();
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: /Output Files/i }).getAttribute('aria-current')).toBe('page');
+        });
+        expect(screen.getByText(/Find, open, and inspect generated output/i)).toBeDefined();
     });
 
     it('deep-links to role library tab via search param', async () => {

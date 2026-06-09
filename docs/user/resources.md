@@ -13,10 +13,10 @@ Current resource menu:
 
 | Resource Type | Purpose |
 |-----|---------|
+| Output Files | Open generated content folders and browse filesystem MCP-backed files inside workspace boundary |
 | Connected Tools | Installed MCP servers and tool capability visibility |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
 | Deployment Context | Load governed private/user records, customer context, approved company knowledge, Soma operating context, and reflection/synthesis observations into separate governed context lanes |
-| Output Files | Open generated content folders and browse filesystem MCP-backed files inside workspace boundary |
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
 
@@ -163,10 +163,15 @@ Operators should be able to answer "what governed context did we intentionally l
 
 ## Output Files
 
-Output Files uses the `filesystem` MCP server directly from Resources.
+Output Files is the default `/resources` view and uses the `filesystem` MCP server directly from Resources.
 The browser starts at the MCP-safe `workspace` root rather than the Core
 process working directory, so ordinary browse/read/write actions stay inside
 the configured mounted data boundary.
+
+The workspace explorer is organized around three operator steps:
+- `Find outputs` lists retained files and folders and opens file selections into preview.
+- `Preview` reads the selected generated file without leaving the Resources surface.
+- `Create` keeps small handoff-folder and handoff-file writes available without making write controls the default browse path.
 
 The top of the panel includes **Open folder** for the current workspace path.
 Use it when an operator wants to grab generated files, media proof, project

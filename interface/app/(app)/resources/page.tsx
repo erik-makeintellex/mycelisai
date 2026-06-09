@@ -45,18 +45,18 @@ type ResourceTab = {
 
 const RESOURCE_TABS: ResourceTab[] = [
     {
+        id: "workspace",
+        label: "Output Files",
+        summary: "Find, open, and inspect generated output retained in the governed workspace.",
+        detail: "Find generated work",
+        icon: FolderOpen,
+    },
+    {
         id: "tools",
         label: "Connected Tools",
         summary: "MCP servers, capability readiness, search posture, and recent tool use.",
         detail: "What Soma can use",
         icon: Wrench,
-    },
-    {
-        id: "workspace",
-        label: "Output Files",
-        summary: "Open generated content folders and browse retained files through the governed workspace boundary.",
-        detail: "Generated content",
-        icon: FolderOpen,
     },
     {
         id: "exchange",
@@ -101,7 +101,7 @@ function ResourcesContent() {
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const tabParam = (searchParams?.get("tab") as TabId | null) ?? null;
     const [activeTab, setActiveTab] = useState<TabId>(
-        tabParam && VALID_TABS.includes(tabParam) ? tabParam : "tools"
+        tabParam && VALID_TABS.includes(tabParam) ? tabParam : "workspace"
     );
 
     if (!advancedMode) {
@@ -123,8 +123,8 @@ function ResourcesContent() {
                             Advanced Resources
                         </h1>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-cortex-text-muted">
-                            Select one resource type, work inside the focused panel, and keep the rest of the support
-                            system out of the operator's scroll path.
+                            Open generated work first, then use focused panes for connected tools, context, exchange
+                            channels, and advanced configuration.
                         </p>
                     </div>
                     <div className="rounded border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-xs text-cortex-primary">

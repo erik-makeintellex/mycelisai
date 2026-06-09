@@ -60,7 +60,8 @@ Use the root Soma chat when you want the simplest path:
 Use `Teams` when you want to inspect or manage existing teams:
 
 - review the Active Work Lane to see whether a team is new, queued, running, output-ready, degraded, paused, or waiting on the operator
-- use `/teams?view=work` when arriving from the Dashboard review panel; this focused Review Queue puts why attention is needed, what remains trusted, and the safest next move before team creation, templates, and the roster
+- use `/teams?view=work` when arriving from the Dashboard review panel; this focused Review Queue starts with counts for work needing a decision, ready output, work still running, and items that can be cleared
+- in Review Work, each row should answer `Reason`, `Trust`, and `Move` before the decision actions so the operator can decide whether to inspect, respond, recover, or clear it without reading the whole team setup page first
 - treat the Dashboard Active Work lane as an attention-first slice; use `Teams` for the full durable backlog
 - use the Dashboard current-work lane for the quickest read of focused workflow, active task posture, latest output, and next review action
 - use the Dashboard `Working in` picker when you want to switch Soma between `Soma root` and a specific team's focused chat/output/proof lane without leaving the main workbench
@@ -180,6 +181,7 @@ When testing team workflows, verify:
 - the team lead is the first visible operational counterpart
 - Dashboard Active Work remains capped and points to `/teams` for the full durable backlog
 - archived or cleared work does not appear in the Dashboard review queue or `/teams?view=work`, but retained history remains available outside the active review lane
+- Review Work shows the queue summary and concise `Reason` / `Trust` / `Move` labels before team context, setup, or roster content
 - Dashboard current-work lane shows one obvious next action while keeping any latest output openable
 - Ask Team or Respond creates a durable follow-on work item, shows queued state immediately, keeps the UI usable, then visibly returns output-ready or degraded state
 - degraded team asks name timeout/offline/unreadable-response proof, recovery options, and what remains trusted

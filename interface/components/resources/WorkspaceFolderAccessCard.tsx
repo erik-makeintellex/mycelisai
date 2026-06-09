@@ -40,9 +40,9 @@ export default function WorkspaceFolderAccessCard({
         <div className="mb-3 rounded-lg border border-cortex-primary/25 bg-cortex-primary/10 p-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                    <p className="text-xs font-semibold text-cortex-text-main">Generated content lives here</p>
+                    <p className="text-xs font-semibold text-cortex-text-main">Open generated output on this machine</p>
                     <p className="mt-1 text-[11px] leading-5 text-cortex-text-muted">
-                        Open the current workspace folder on this machine, or browse files below inside Mycelis.
+                        Jump to the current retained-output folder, or stay in Mycelis to browse and preview files.
                     </p>
                 </div>
                 <button

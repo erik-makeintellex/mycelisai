@@ -153,36 +153,13 @@ describe("TeamsPage", () => {
         }),
       );
     });
-    expect(
-      mockFetch.mock.calls.filter(([url]) =>
-        String(url).includes("/api/v1/teams/team-bravo/work?limit=8&include_archived=false"),
-      ).length,
-    ).toBeGreaterThan(1);
-  });
-
-  it("opens a review-focused Teams page when routed from the Soma review rail", async () => {
-    window.history.pushState({}, "", "/teams?view=work");
-    useCortexStore.setState({
-      teamsDetail: mockTeams,
-      catalogueAgents: mockTemplates,
-    });
-
-    render(<TeamsPage />);
-
-    expect(screen.getByText("Work to Review")).toBeDefined();
-    expect(screen.getByText("Decide what happens to this work")).toBeDefined();
     await waitFor(() => {
-      expect(screen.getByText("Draft launch package")).toBeDefined();
+      expect(
+        mockFetch.mock.calls.filter(([url]) =>
+          String(url).includes("/api/v1/teams/team-bravo/work?limit=8&include_archived=false"),
+        ).length,
+      ).toBeGreaterThan(1);
     });
-    expect(screen.getAllByText("Why review").length).toBeGreaterThan(0);
-    expect(screen.getByText(/Clear this from review. Nothing ran/i)).toBeDefined();
-    expect(screen.queryByText("Archived stale proof")).toBeNull();
-    const pageText = document.body.textContent ?? "";
-    expect(pageText.indexOf("Active work lane")).toBe(-1);
-    expect(pageText.indexOf("Work to review")).toBeLessThan(
-      pageText.indexOf("Team context"),
-    );
-    expect(screen.getByRole("link", { name: /Open all teams/i }).getAttribute("href")).toBe("/teams");
   });
 
   it("posts recover and steer actions as durable team-work evidence", async () => {

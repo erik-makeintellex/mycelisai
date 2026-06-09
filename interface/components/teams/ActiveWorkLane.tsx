@@ -17,6 +17,7 @@ import {
   isStaleFailedPlanItem,
 } from "./activeWorkCompact";
 import { ReviewDecisionGuide } from "./ReviewDecisionGuide";
+import { ReviewQueueSummary } from "./ReviewQueueSummary";
 import { TeamAskForm } from "./TeamAskForm";
 import { WorkTruthSummary } from "./WorkTruthSummary";
 
@@ -37,6 +38,7 @@ const stateStyles: Record<TeamWorkItemState, string> = {
 const stateLabels: Record<TeamWorkItemState, string> = { new: "Ready to brief", briefed: "Ready to start", queued: "Queued", running: "In progress", reviewing: "In review", paused: "Paused", output_ready: "Output ready", degraded: "Degraded", needs_operator: "Needs operator", archived: "Archived" };
 
 const actionIcons = { inspect: Eye, steer: Send, start_work: Play, pause: Pause, resume: Play, recover: RefreshCw, archive: Archive };
+type LanePurpose = "active" | "review";
 
 export function ActiveWorkLane({
   title = "Active work lane",
@@ -48,6 +50,7 @@ export function ActiveWorkLane({
   maxVisibleItems,
   totalItemCount,
   moreItemsHref = "/teams",
+  purpose = "active",
   onAction,
   onTeamAsk,
 }: {
@@ -60,6 +63,7 @@ export function ActiveWorkLane({
   maxVisibleItems?: number;
   totalItemCount?: number;
   moreItemsHref?: string;
+  purpose?: LanePurpose;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
   onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
@@ -71,6 +75,7 @@ export function ActiveWorkLane({
   const count = totalItemCount ?? items.length;
   const hiddenCount = Math.max(count - shownCount, 0);
   const compact = !frame;
+  const isReviewPurpose = purpose === "review";
   const className = frame
     ? "rounded-2xl border border-cortex-border bg-cortex-surface p-4"
     : "min-w-0";
@@ -87,6 +92,9 @@ export function ActiveWorkLane({
           {count} item{count === 1 ? "" : "s"}
         </span>
       </div>}
+      {!compact && isReviewPurpose && items.length > 0 ? (
+        <ReviewQueueSummary items={items} />
+      ) : null}
       {!compact && (statusLabel || degradedMessage) ? (
         <div className="mt-3 rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-xs leading-5 text-cortex-text-muted">
           {statusLabel ? <span className="font-semibold text-cortex-text-main">{statusLabel}</span> : null}
@@ -100,7 +108,14 @@ export function ActiveWorkLane({
           </p>
         ) : (
           visibleItems.map((item) => (
-            <WorkItemRow key={item.id} item={item} compact={compact} onAction={onAction} onTeamAsk={onTeamAsk} />
+            <WorkItemRow
+              key={item.id}
+              item={item}
+              compact={compact}
+              reviewMode={isReviewPurpose}
+              onAction={onAction}
+              onTeamAsk={onTeamAsk}
+            />
           ))
         )}
         {hiddenCount > 0 ? (
@@ -122,11 +137,13 @@ export function ActiveWorkLane({
 function WorkItemRow({
   item,
   compact = false,
+  reviewMode = false,
   onAction,
   onTeamAsk,
 }: {
   item: TeamWorkItem;
   compact?: boolean;
+  reviewMode?: boolean;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
   onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
@@ -180,14 +197,22 @@ function WorkItemRow({
               {item.fallbackReason}
             </p>
           ) : null}
+          {reviewMode && !compact ? (
+            <ReviewDecisionGuide item={item} concise />
+          ) : null}
           <WorkTruthSummary item={item} compact={compact} />
-          {compact ? null : <ReviewDecisionGuide item={item} />}
+          {compact || reviewMode ? null : <ReviewDecisionGuide item={item} />}
           <ActiveWorkEvidence item={item} />
           {compact || isStaleFailedPlanItem(item) ? null : (
             <TeamAskForm item={item} onTeamAsk={onTeamAsk} />
           )}
         </div>
         <div className={compact ? "flex flex-wrap gap-2" : "grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:justify-end"}>
+          {reviewMode && !compact ? (
+            <p className="col-span-3 w-full font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-text-muted sm:text-right">
+              Decision actions
+            </p>
+          ) : null}
           {visibleActions.map((action) => (
             <ActionControl
               key={action.action}
