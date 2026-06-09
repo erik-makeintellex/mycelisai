@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/mycelis/core/pkg/protocol"
@@ -16,7 +17,12 @@ func (s *AdminServer) HandleListTeamWork(w http.ResponseWriter, r *http.Request)
 		respondAPIError(w, "team_id is required", http.StatusBadRequest)
 		return
 	}
-	items, err := s.listTeamWorkItemsDB(r.Context(), teamID, parseLimit(r.URL.Query().Get("limit"), 20))
+	items, err := s.listTeamWorkItemsDB(
+		r.Context(),
+		teamID,
+		parseLimit(r.URL.Query().Get("limit"), 20),
+		parseBoolDefault(r.URL.Query().Get("include_archived"), true),
+	)
 	if err != nil {
 		respondAPIError(w, "Failed to list team work: "+err.Error(), http.StatusServiceUnavailable)
 		return
@@ -119,4 +125,16 @@ func (s *AdminServer) HandleCreateTeamInteraction(w http.ResponseWriter, r *http
 
 func teamWorkPathIDs(r *http.Request) (string, string) {
 	return strings.TrimSpace(r.PathValue("id")), strings.TrimSpace(r.PathValue("workItemId"))
+}
+
+func parseBoolDefault(value string, fallback bool) bool {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseBool(trimmed)
+	if err != nil {
+		return fallback
+	}
+	return parsed
 }

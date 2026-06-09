@@ -63,8 +63,8 @@ function continuationActions(teamName: string): ContinuationAction[] {
     return [
         {
             label: "Build playable prototype",
-            detail: "Project package, README, validation notes",
-            prompt: `Have ${teamName} build the first playable browser-game prototype as a reviewable project package. Save it in the team's group folder with README, validation notes, and output link.`,
+            detail: "Project package, README, validation notes, proof",
+            prompt: `Have ${teamName} build the first playable browser-game prototype as a reviewable project package. Save it in the team's group folder with README, validation notes, output link, and proof.`,
             Icon: PlayCircle,
             primary: true,
         },

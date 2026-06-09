@@ -108,7 +108,7 @@ func (s *AdminServer) latestTeamOutputContext(ctx context.Context, teamID string
 	if teamID == "" || s.getDB() == nil {
 		return nil
 	}
-	items, err := s.listTeamWorkItemsDB(ctx, teamID, 5)
+	items, err := s.listTeamWorkItemsDB(ctx, teamID, 5, true)
 	if err != nil {
 		log.Printf("[chat] latest team output context lookup failed: %v", err)
 		return nil

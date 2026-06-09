@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.3 Operational Embodiment PRD](V8_3_OPERATIONAL_EMBODIMENT_PRD.md)
 
 > Status: Canonical working contract
-> Last Updated: 2026-05-20
+> Last Updated: 2026-06-09
 > Module Boundary: Soma experience, team/workflow, governance/trust, runtime/capability, QA/embodiment
 > Purpose: Define how Soma, Council, operators, and runtime teams talk about new or active work without exposing raw orchestration topology as the main product experience.
 
@@ -75,7 +75,7 @@ Team creation alone is not a completed work outcome. When a request asks for a t
 | `recover` | Soma chooses retry, fallback, partial continuation, or stop. | Recovery state and proof impact. |
 | `pause` | Work is intentionally stopped without archive. | Paused state with resume condition. |
 | `resume` | Paused work continues from retained state. | Active state and lineage preserved. |
-| `archive` | Team or work item is no longer active. | Outputs/proof retained; active lane removed. |
+| `archive` | Team or work item is no longer active. | Outputs/proof retained; active review removed. |
 
 ### Production Action Semantics
 
@@ -92,9 +92,11 @@ Supported actions are `start_work`, `pause`, `resume`, `archive`, `steer`, and `
 | `start_work` | `new`, `briefed`, `queued` on delegated/deliverable work | `running` | Operator has released the work item into active execution; output/proof still arrives through governed runtime results. |
 | `pause` | `queued`, `running`, `needs_operator`, `reviewing`, `degraded` | `paused` | Operator intentionally stops active progress without losing retained context. |
 | `resume` | `paused` | `queued` | Operator asks Soma/team to continue from retained state; the system does not fabricate output. |
-| `archive` | any non-archived delegated/deliverable work | `archived` | Work leaves the active lane while retained outputs, proof, audit, and history remain inspectable. |
+| `archive` | any non-archived delegated/deliverable work | `archived` | Work leaves active review while retained outputs, proof, audit, and history remain inspectable. The UI labels this `Clear from review`. |
 | `steer` | any non-archived delegated/deliverable work | unchanged | Operator guidance is recorded as durable status and interaction evidence without pretending execution completed. |
 | `recover` | `degraded`, `needs_operator` | `queued` | Operator requests safe continuation from retained context, output, proof, and audit state. |
+
+Active review surfaces should read `GET /api/v1/teams/{team_id}/work?include_archived=false` so cleared work does not keep crowding the operator's decision queue. Archived rows remain durable history for audit, proof, output reconstruction, and later inspection.
 
 ### Bounded Team Ask Semantics
 
@@ -209,8 +211,9 @@ Required fields:
 
 The default Soma workspace should expose team work through these surfaces:
 
-- Active Work Lane: compact list of queued, running, blocked, degraded, and output-ready work.
-- Team Control Bar: `inspect`, `steer`, `pause`, `resume`, `archive`, `start work`, and bounded Ask Team or Respond actions.
+- Current Work Lane: compact Dashboard summary of selected workflow, active task posture, latest output access, and next review action.
+- Active Work Lane: compact list of non-archived queued, running, blocked, degraded, and output-ready work.
+- Team Control Bar: operator-labeled controls such as `Open details`, `Open run`, `Reply to team`, `Ask for changes`, `Retry recovery`, `Clear from review`, `pause`, `resume`, `start work`, and bounded Ask Team or Respond actions.
 - Team Event Log: readable status/result/recovery events, not raw NATS subjects.
 - Output Workbench: retained team deliverables with open, storage, proof, and validation controls.
 - Trust Package: run, output, capability/team use, proof, audit, degradation, and next step.
@@ -272,7 +275,7 @@ This contract is releasable only when the product proves:
 
 1. A user asks Soma to create a team and produce a meaningful deliverable.
 2. Soma creates or proposes a `TeamWorkItem`, not just a team shell.
-3. The Active Work Lane shows queued/running/output/degraded state.
+3. The Dashboard current-work lane summarizes the selected workflow and next action while the Active Work Lane shows queued/running/output/degraded state.
 4. The operator can inspect and steer the work while active.
 5. The output becomes a retained `TeamOutputRef`.
 6. Proof/audit links explain team, capability, output, and recovery lineage.

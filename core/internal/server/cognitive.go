@@ -174,8 +174,7 @@ func inferMutationToolsFromText(text string) []string {
 	}
 
 	mediaActions := []string{"create", "generate", "make", "produce", "draw", "render"}
-	mediaTargets := []string{"image", "images", "picture", "illustration", "comic", "comic book", "media", "artwork", "visual"}
-	if requestContainsAny(lower, mediaActions) && requestContainsAny(lower, mediaTargets) {
+	if requestContainsAny(lower, mediaActions) && requestAsksForMedia(lower) {
 		tools = append(tools, "generate_image", "save_cached_image")
 	}
 
@@ -192,14 +191,13 @@ func inferMutationToolsFromText(text string) []string {
 	}
 
 	teamCreationActions := []string{"create", "build", "launch", "instantiate", "manifest", "put together", "orchestrate", "need", "asked for", "ask for", "want", "form"}
-	teamCreationTargets := []string{"team", "teams", "specialist", "members", "lane", "lanes"}
-	if requestContainsAny(lower, teamCreationActions) && requestContainsAny(lower, teamCreationTargets) {
+	if requestContainsAny(lower, teamCreationActions) && requestAsksToCreateTeam(lower) {
 		tools = append(tools, "generate_blueprint", "delegate")
 	}
 
 	mcpBindingActions := []string{"enable", "install", "connect", "associate", "configure", "assign"}
 	mcpBindingTargets := []string{"mcp", "mcps", "tool", "tools", "web search", "github", "fetch", "browser", "host data", "shared-sources"}
-	if requestContainsAny(lower, mcpBindingActions) && requestContainsAny(lower, mcpBindingTargets) {
+	if requestContainsAny(lower, mcpBindingActions) && requestContainsAny(lower, mcpBindingTargets) && !isToolPostureGuidanceRequest(lower) {
 		tools = append(tools, "delegate")
 	}
 

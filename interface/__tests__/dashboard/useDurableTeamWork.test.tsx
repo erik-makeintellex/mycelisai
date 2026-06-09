@@ -40,6 +40,24 @@ describe("useDurableTeamWork", () => {
             ],
             updated_at: "2026-05-17T18:00:00Z",
           },
+          {
+            work_item_id: "work-archived",
+            team_id: "team-alpha",
+            objective: "Old failed proof",
+            execution_shape: "delegated_work",
+            state: "archived",
+            output_refs: [
+              {
+                output_id: "out-archived",
+                team_id: "team-alpha",
+                work_item_id: "work-archived",
+                kind: "file",
+                label: "Old proof",
+                storage_ref: "generated/old/proof.md",
+              },
+            ],
+            updated_at: "2026-05-17T18:01:00Z",
+          },
         ],
       }),
     });
@@ -55,6 +73,11 @@ describe("useDurableTeamWork", () => {
       outputCount: 1,
     });
     expect(result.current.outputRefs).toHaveLength(1);
+    expect(result.current.items.map((item) => item.id)).not.toContain("work-archived");
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/v1/teams/team-alpha/work?limit=8&include_archived=false",
+      expect.objectContaining({ cache: "no-store" }),
+    );
   });
 
   it("falls back to degraded roster projection when durable state is unavailable", async () => {

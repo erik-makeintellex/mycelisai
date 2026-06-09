@@ -173,6 +173,32 @@ export function mockTeamWorkFetch(mockFetch: ReturnType<typeof vi.fn>) {
               recovery_options: ["retry with retained proof"],
               updated_at: "2026-05-19T12:02:00Z",
             },
+            {
+              work_item_id: "work-bravo-stale",
+              team_id: "team-bravo",
+              objective: "Playwright bounded team ask proof",
+              execution_shape: "delegated_work",
+              state: "degraded",
+              needs_operator: true,
+              degradation_state: "missing_execution_plan",
+              recovery_options: [
+                "Review the failed run, adjust the request or runtime dependency, then retry the proposal.",
+              ],
+              last_event: {
+                headline: "Soma could not complete the approved proposal.",
+                details: "no approved execution plan was stored for this proposal",
+                next_action: "Clear this stale test item from review or inspect diagnostics before retrying.",
+              },
+              updated_at: "2026-05-19T12:03:00Z",
+            },
+            {
+              work_item_id: "work-bravo-archived",
+              team_id: "team-bravo",
+              objective: "Archived stale proof",
+              execution_shape: "delegated_work",
+              state: "archived",
+              updated_at: "2026-05-19T12:04:00Z",
+            },
           ],
         }),
       };

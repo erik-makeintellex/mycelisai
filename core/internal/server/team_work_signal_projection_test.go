@@ -104,6 +104,35 @@ func TestTeamWorkSignalProjection_ResultHonorsExplicitDegradedState(t *testing.T
 	}
 }
 
+func TestTeamWorkSignalProjection_IgnoresArchivedWork(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	workID := "11111111-1111-1111-1111-111111111111"
+	mock.MatchExpectationsInOrder(true)
+	mockTeamWorkItem(mock, "research-team", workID, protocol.TeamWorkStateArchived, false, "missing_execution_plan", now)
+
+	raw := mustSignalEnvelope(t, protocol.SignalEnvelope{
+		Meta: protocol.SignalMeta{
+			Timestamp:     now,
+			SourceKind:    protocol.SourceKindInternalTool,
+			SourceChannel: "swarm.team.research-team.internal.trigger",
+			PayloadKind:   protocol.PayloadKindResult,
+			TeamID:        "research-team",
+			AgentID:       "builder",
+		},
+		Payload: json.RawMessage(`{"work_item_id":"` + workID + `","summary":"Late result arrived","details":"This must not revive active review."}`),
+	})
+
+	projection := &teamWorkSignalProjection{server: s}
+	if err := projection.project(t.Context(), "swarm.team.research-team.signal.result", raw); err != nil {
+		t.Fatalf("project: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestTeamWorkSignalProjection_UncorrelatedSignalIgnored(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)

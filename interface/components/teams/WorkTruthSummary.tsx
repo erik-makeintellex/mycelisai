@@ -3,7 +3,7 @@
 import { AlertTriangle, CheckCircle2, Radio } from "lucide-react";
 import type { TeamWorkItem } from "@/store/useCortexStore";
 
-export function WorkTruthSummary({ item }: { item: TeamWorkItem }) {
+export function WorkTruthSummary({ item, compact = false }: { item: TeamWorkItem; compact?: boolean }) {
   const outputRefs = item.outputRefs ?? [];
   const outputCount = item.outputCount ?? outputRefs.length;
   const packageCount = outputRefs.filter(
@@ -44,6 +44,25 @@ export function WorkTruthSummary({ item }: { item: TeamWorkItem }) {
         ? `${outputCount} output${outputCount === 1 ? "" : "s"} retained`
         : "No retained output yet";
   const proofText = proofCount > 0 ? "Proof available" : "Proof pending";
+
+  if (compact) {
+    return (
+      <div
+        className="mt-3 rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs leading-5 text-cortex-text-muted"
+        aria-label={`Work truth for ${item.title}`}
+      >
+        <span>{outputText}</span>
+        <span className="px-1.5 text-cortex-text-muted/70">/</span>
+        <span>{proofText}</span>
+        {isDegraded && item.recoveryOptions?.[0] ? (
+          <>
+            <span className="px-1.5 text-cortex-text-muted/70">/</span>
+            <span className="text-amber-200">{item.recoveryOptions[0]}</span>
+          </>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div

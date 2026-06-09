@@ -60,7 +60,7 @@ export default function MissionControlChat({
     const [broadcastMode, setBroadcastMode] = useState(false);
     const [fetchedMembers, setFetchedMembers] = useState(false);
     const [directTarget, setDirectTarget] = useState<string | null>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const showAdvancedRouting = !simpleMode;
     const currentTeamId = focusedTeamId || selectedTeamId;

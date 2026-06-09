@@ -28,6 +28,22 @@ function recoveryTextFromExecutionSummary(summary: any) {
     };
 }
 
+function isMediaDependencyFailure(message?: string | null) {
+    const lower = (message ?? '').toLowerCase();
+    return lower.includes('comfyui')
+        || lower.includes('media engine')
+        || lower.includes('media capability')
+        || lower.includes('local/private');
+}
+
+function mediaDependencyRecoveryCopy(diagnostics: string) {
+    return {
+        summary: 'Local media generation is not reachable, so Soma could not create the requested image output.',
+        recommendedAction: 'Start or reconnect the configured ComfyUI upstream, then retry this proposal. If you only need files or text, ask Soma to rerun without image generation.',
+        diagnostics,
+    };
+}
+
 function confirmedRunMessage(runId: string | null, summary?: string | null, teamWorkRefs: TeamWorkConfirmationRef[] = []) {
     const state = runId ? `Run ${runId.slice(0, 8)} started.` : 'Proposal approved.';
     const next = runId
@@ -144,13 +160,25 @@ export function createCortexProposalExecutionSlice(
                     message: recovery.whatFailed ?? errMsg,
                     statusCode: res.status,
                 });
+                const mediaRecovery = isMediaDependencyFailure([
+                    errMsg,
+                    recovery.whatFailed,
+                    recovery.safeContinuation,
+                    recovery.diagnostics,
+                ].filter(Boolean).join(' '))
+                    ? mediaDependencyRecoveryCopy(recovery.diagnostics ?? errMsg)
+                    : null;
                 const failureWithRecovery = {
                     ...failure,
-                    summary: recovery.whatFailed ?? failure.summary,
-                    recommendedAction: recovery.safeContinuation ?? failure.recommendedAction,
-                    diagnostics: recovery.diagnostics ?? failure.diagnostics,
+                    summary: mediaRecovery?.summary ?? recovery.whatFailed ?? failure.summary,
+                    recommendedAction: mediaRecovery?.recommendedAction ?? recovery.safeContinuation ?? failure.recommendedAction,
+                    diagnostics: mediaRecovery?.diagnostics ?? recovery.diagnostics ?? failure.diagnostics,
                 };
-                console.error('[CE-1] Confirm action failed:', errMsg);
+                if (res.status === 502 || res.status === 503 || mediaRecovery) {
+                    console.warn('[CE-1] Confirm action blocked by runtime dependency:', errMsg);
+                } else {
+                    console.error('[CE-1] Confirm action failed:', errMsg);
+                }
                 set((s) => ({
                     missionChatError: failureWithRecovery.summary,
                     missionChatFailure: failureWithRecovery,

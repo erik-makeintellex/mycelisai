@@ -13,6 +13,7 @@ import {
   compactText,
   degradationLines,
   executionShapeLabel,
+  executionSummaryHeading,
   linkHref,
   linkLabel,
   linkRunId,
@@ -74,13 +75,14 @@ export default function ExecutionSummaryCompactCard({
   const trust = trustVerdict(summary, summaryRunId ?? runId, artifacts);
   const outputDigest = outputWorkbenchDigest({ outputs: allOutputs, projectPackages });
   const hasDetails = executionShape || proofs.length || audit || degradation.length || nextStep;
+  const heading = executionSummaryHeading(summary, allOutputs.length + projectPackages.length);
 
   return (
     <div className="rounded-lg border border-cortex-info/20 bg-cortex-info/5 px-3 py-2.5 shadow-sm" data-testid="execution-summary-card">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 font-mono text-[9px] font-bold uppercase tracking-widest text-cortex-info">
           <Sparkles className="h-3 w-3" />
-          Result ready
+          {heading}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <span className={`rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${trustToneClass(trust.tone)}`}>

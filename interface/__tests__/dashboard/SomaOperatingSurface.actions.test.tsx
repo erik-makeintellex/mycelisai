@@ -148,13 +148,13 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(mocks.missionControlChat).toHaveBeenCalledWith(expect.objectContaining({
       focusedTeamId: "team-alpha",
     }));
-    expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Alpha");
-    expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("Focused team");
-    expect(screen.getByTestId("soma-context-focus-bar").textContent).toContain("chat, active work, outputs, and proof");
-    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Focused team");
+    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Working in");
+    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Alpha");
+    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Team chat, work, outputs, and proof");
+    expect(screen.queryByRole("tab", { name: /Alpha/i })).toBeNull();
+    expect(screen.getByRole("button", { name: /Alpha/i }).getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("work");
-    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("false");
-    expect(screen.getByRole("button", { name: /Alpha/i })).toBeDefined();
+    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("true");
     expect(screen.getByText("Team action needs operator attention.")).toBeDefined();
     expect(screen.getByText("Team ask queued. You can keep working.")).toBeDefined();
 
@@ -174,7 +174,8 @@ describe("SomaOperatingSurface active work actions", () => {
   it("lets operators switch the Soma surface into a team work context", () => {
     render(<SomaOperatingSurface />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Alpha/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Soma root/i }));
+    fireEvent.click(screen.getByRole("option", { name: /Alpha/i }));
 
     expect(mocks.selectTeam).toHaveBeenCalledWith("team-alpha");
   });
@@ -207,11 +208,11 @@ describe("SomaOperatingSurface active work actions", () => {
 
     render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
 
-    expect(screen.getByTestId("soma-context-focus-bar")).toBeDefined();
+    expect(screen.queryByTestId("soma-context-focus-bar")).toBeNull();
     expect(screen.getByTestId("soma-team-context-switcher")).toBeDefined();
   });
 
-  it("shows focused team retained outputs before the work panel is opened", () => {
+  it("keeps focused team retained outputs in the workbench instead of stacking a pre-chat dock", () => {
     mocks.useDurableTeamWork.mockReturnValue({
       items: [{
         id: "work-1",
@@ -247,16 +248,14 @@ describe("SomaOperatingSurface active work actions", () => {
 
     render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
 
-    const dock = within(screen.getByTestId("focused-team-output-dock"));
+    const workbench = within(screen.getByTestId("output-workbench"));
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("true");
-    expect(dock.getByText("Comic page")).toBeDefined();
-    expect(screen.getByTestId("focused-team-output-dock").textContent?.indexOf("Comic page")).toBeLessThan(
-      screen.getByTestId("focused-team-output-dock").textContent?.indexOf("Old comic page") ?? 0,
+    expect(screen.queryByTestId("focused-team-output-dock")).toBeNull();
+    expect(workbench.getByText("Comic page")).toBeDefined();
+    expect(screen.getByTestId("output-workbench").textContent?.indexOf("Comic page")).toBeLessThan(
+      screen.getByTestId("output-workbench").textContent?.indexOf("Old comic page") ?? 0,
     );
-    expect(screen.getByRole("link", { name: /Open team/i }).getAttribute("href")).toBe("/teams?team_id=team-alpha");
-    expect(dock.getByRole("button", { name: /Open Comic page in a new browser window/i })).toBeDefined();
-    expect(dock.getByRole("button", { name: /Open local folder for Comic page/i })).toBeDefined();
   });
 
   it("prioritizes focused team output over older global Soma chat output", () => {

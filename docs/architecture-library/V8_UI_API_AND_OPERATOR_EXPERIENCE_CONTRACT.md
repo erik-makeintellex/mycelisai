@@ -124,7 +124,7 @@ Soma owns answers, proposals, execution results, blockers, and recovery.
 
 The dashboard Soma surface and the AI Organization Soma surface use one shared operating model. Intent suggestions live inside Soma and should be phrased as concrete outcomes. The workspace frames user expression as outcome, output shape, audience/use, constraints, agentry posture, proof, and continuation before showing internal topology. After meaningful actions, the interface shows an Operator trust package that connects what Soma understood, what teams/tools were coordinated, what outputs were produced, what proof exists, what state changed, and what the user can do next.
 
-The target workspace keeps expression, recent active work, output preview, and trust summary together. The Soma home active-work lane is a readable recent slice, while full backlog management belongs in Teams. Teams, Resources, Runs, System, and Settings use focused list/detail or menu/detail panes so primary browser work does not become a long scrolling topology page.
+The target workspace keeps expression, current workflow, recent active work, latest output access, and trust summary together. The Soma home current-work lane is a readable attention summary over the selected workflow, while full backlog management belongs in Teams and full output browsing belongs in Resources or the Work panel. Teams, Resources, Runs, System, and Settings use focused list/detail or menu/detail panes so primary browser work does not become a long scrolling topology page.
 
 When execution degrades, the same package must expose:
 - what failed
@@ -176,6 +176,7 @@ Minimum product proof covers:
 - expression framing into output/proof expectations
 - Soma direct answer
 - governed proposal cancel/execute
+- current-work lane state for selected workflow, active task posture, latest output, and next review action
 - active work lane state for running, blocked, degraded, and output-ready work
 - durable output review from the output workbench
 - team/group creation and retained output review

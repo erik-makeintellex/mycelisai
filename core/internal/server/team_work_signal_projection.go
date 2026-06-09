@@ -70,6 +70,10 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	if err != nil {
 		return fmt.Errorf("ignored signal on %s: work item %s/%s not found: %w", subject, teamID, workItemID, err)
 	}
+	if item.State == protocol.TeamWorkStateArchived {
+		log.Printf("team work signal projection: ignored signal on %s for archived work item %s/%s", subject, teamID, workItemID)
+		return nil
+	}
 	payloadKind := env.Meta.PayloadKind
 	if payloadKind == "" {
 		payloadKind = payloadKindFromSignalSubject(subject)

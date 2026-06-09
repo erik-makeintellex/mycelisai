@@ -163,3 +163,28 @@ func TestApplyTeamWorkAction_RejectsInvalidTransitions(t *testing.T) {
 		t.Fatal("expected output_ready recover to be rejected")
 	}
 }
+
+func TestApplyTeamWorkAction_RejectsArchivedMutation(t *testing.T) {
+	item := NormalizeTeamWorkItem(TeamWorkItem{
+		TeamID:         "delivery-team",
+		Objective:      "Retained old proof",
+		ExecutionShape: TeamExecutionShapeDeliverable,
+		State:          TeamWorkStateArchived,
+	})
+	for _, action := range []TeamWorkAction{
+		TeamWorkActionRecover,
+		TeamWorkActionResume,
+		TeamWorkActionSteer,
+		TeamWorkActionArchive,
+	} {
+		t.Run(string(action), func(t *testing.T) {
+			got, err := ApplyTeamWorkAction(item, action)
+			if err == nil {
+				t.Fatalf("expected archived %s to be rejected", action)
+			}
+			if got != TeamWorkStateArchived {
+				t.Fatalf("state = %q, want archived", got)
+			}
+		})
+	}
+}

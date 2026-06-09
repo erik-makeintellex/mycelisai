@@ -18,7 +18,8 @@ export function durableInteractions({
   needsOperator?: boolean;
   executionShape?: string | null;
 }): TeamInteraction[] {
-  const inspectHref = runId ? `/runs/${encodeURIComponent(runId)}` : "/teams";
+  const inspectHref = runId ? `/runs/${encodeURIComponent(runId)}` : "/teams?view=work";
+  const inspectLabel = runId ? "Open run" : "Open details";
   const isActive = state === "running" || state === "reviewing";
   const canSteer = state !== "archived";
   const canRecover = state === "degraded" || state === "needs_operator";
@@ -27,10 +28,10 @@ export function durableInteractions({
     !isTeamSetup && (state === "briefed" || state === "queued" || state === "new");
   const canResume = state === "paused";
   return [
-    { action: "inspect", label: "Inspect", href: inspectHref, audited: true },
+    { action: "inspect", label: inspectLabel, href: inspectHref, audited: true },
     {
       action: "steer",
-      label: needsOperator ? "Respond" : "Steer",
+      label: needsOperator ? "Reply to team" : "Ask for changes",
       disabled: !canSteer,
       disabledReason: canSteer ? undefined : "Archived work cannot be steered.",
       audited: true,
@@ -58,7 +59,7 @@ export function durableInteractions({
     },
     {
       action: "recover",
-      label: "Recover",
+      label: "Retry recovery",
       disabled: !canRecover,
       disabledReason: canRecover
         ? undefined
@@ -67,7 +68,7 @@ export function durableInteractions({
     },
     {
       action: "archive",
-      label: "Archive",
+      label: "Clear from review",
       disabled: state === "archived",
       disabledReason: state === "archived" ? "This work item is already archived." : undefined,
       audited: true,

@@ -120,6 +120,35 @@ func TestHandleTeamWorkAction_RecoverQueuesDegradedWork(t *testing.T) {
 	}
 }
 
+func TestHandleTeamWorkAction_ArchiveClearsReviewQueue(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	workID := "11111111-1111-1111-1111-111111111111"
+	mockTeamWorkItem(mock, "research-team", workID, protocol.TeamWorkStateDegraded, true, "missing_execution_plan", now)
+	expectTeamWorkActionPersistence(mock, now)
+
+	rr := doTeamWorkAction(t, s, workID, `{"action":"archive"}`)
+
+	assertStatus(t, rr, http.StatusOK)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	data := resp["data"].(map[string]any)
+	if data["state"] != string(protocol.TeamWorkStateArchived) {
+		t.Fatalf("state = %v", data["state"])
+	}
+	if data["needs_operator"] != false {
+		t.Fatalf("needs_operator = %v", data["needs_operator"])
+	}
+	lastEvent := data["last_event"].(map[string]any)
+	if lastEvent["headline"] != "Team work archived" {
+		t.Fatalf("headline = %v", lastEvent["headline"])
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func doTeamWorkAction(t *testing.T, s *AdminServer, workID, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	mux := setupMux(t, "POST /api/v1/teams/{id}/work/{workItemId}/actions", s.HandleTeamWorkAction)

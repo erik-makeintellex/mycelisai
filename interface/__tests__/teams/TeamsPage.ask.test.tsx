@@ -80,7 +80,7 @@ describe("TeamsPage bounded ask", () => {
     });
     expect(
       mockFetch.mock.calls.filter(([url]) =>
-        String(url).includes("/api/v1/teams/team-alpha/work?limit=8"),
+        String(url).includes("/api/v1/teams/team-alpha/work?limit=8&include_archived=false"),
       ).length,
     ).toBeGreaterThan(1);
   });

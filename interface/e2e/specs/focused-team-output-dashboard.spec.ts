@@ -177,26 +177,18 @@ async function expectFocusedDashboardLane(page: Page) {
   await expect(page.getByTestId("soma-operating-surface")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText(`Mode: ${focusedTeamName}`)).toBeVisible();
 
-  const focusBar = page.getByTestId("soma-context-focus-bar");
-  await expect(focusBar).toBeVisible();
-  await expect(focusBar).toContainText("Focused team");
-  await expect(focusBar).toContainText(focusedTeamName);
-
-  const dock = page.getByTestId("focused-team-output-dock");
-  await expect(dock).toBeVisible();
-  await expect(dock).toContainText(focusedOutputLabel);
-  await expect(dock).toContainText(focusedOutputPath);
-  await expect(dock.getByRole("link", { name: /Open team|Team page/i })).toHaveAttribute(
-    "href",
-    `/teams?team_id=${focusedTeamId}`,
-  );
-  await expect(dock.getByRole("button", { name: `Open ${focusedOutputLabel} in a new browser window` })).toBeVisible();
-  await expect(dock.getByRole("button", { name: new RegExp(`Open local folder for ${focusedOutputLabel}`) })).toBeVisible();
+  await expect(page.getByTestId("soma-context-focus-bar")).toHaveCount(0);
+  await expect(page.getByTestId("focused-team-output-dock")).toHaveCount(0);
+  const switcher = page.getByTestId("soma-team-context-switcher");
+  await expect(switcher).toBeVisible();
+  await expect(switcher).toContainText("Working in");
+  await expect(switcher).toContainText(focusedTeamName);
 
   const digest = page.getByTestId("soma-workbench-output-digest");
   await expect(digest).toBeVisible();
   await expect(digest).toContainText("Latest output");
   await expect(digest).toContainText(focusedOutputLabel);
+  await expect(digest).toContainText(focusedOutputPath);
   await expect(digest).not.toContainText(olderSomaOutputLabel);
 }
 
@@ -207,11 +199,11 @@ test.describe("Dashboard focused-team output proof", () => {
     await page.goto(`/dashboard?team_id=${focusedTeamId}`, { waitUntil: "domcontentloaded" });
     await expectFocusedDashboardLane(page);
 
-    const dockFolderButton = page
-      .getByTestId("focused-team-output-dock")
-      .getByRole("button", { name: new RegExp(`Open local folder for ${focusedOutputLabel}`) });
-    await dockFolderButton.click();
-    await expect(dockFolderButton).toContainText("Folder opened");
+    const digestFolderButton = page
+      .getByTestId("soma-workbench-output-digest")
+      .getByRole("button", { name: /Open local folder/i });
+    await digestFolderButton.click();
+    await expect(digestFolderButton).toContainText("Folder opened");
 
     const panelToggle = page.getByTestId("soma-workbench-panel-toggle");
     await expect(panelToggle).toContainText("Review output");

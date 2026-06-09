@@ -44,7 +44,7 @@ test.describe("UI finalization exact browser package live proof", () => {
 
       expect(proposal.response.ok(), proposal.body ? JSON.stringify(proposal.body) : proposal.raw).toBeTruthy();
       expect(proposal.body?.data?.mode).toBe("proposal");
-      await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText(teamID).last()).toBeVisible();
       expect(targetExists(entrypoint)).toBeFalsy();
 

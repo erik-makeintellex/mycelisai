@@ -82,7 +82,8 @@ describe("OrganizationPage inspect panel slices", () => {
         expect(screen.getByText("Decision support")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
-        expect(screen.getByRole("button", { name: "Work panel" })).toBeDefined();
+        expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
+        expect(screen.getByRole("heading", { name: "What do you want Soma to do?" })).toBeDefined();
     });
 
     it("opens Department details from the support column and preserves organization context", async () => {

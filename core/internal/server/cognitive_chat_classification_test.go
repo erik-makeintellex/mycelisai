@@ -203,6 +203,20 @@ func TestInferMutationToolsTreatsNeedResearchTeamAsBlueprintDelegation(t *testin
 	}
 }
 
+func TestInferMutationToolsTreatsToolPostureGuidanceAsReadOnly(t *testing.T) {
+	tests := []string{
+		"Check available tools and walk me through enabling what is missing.",
+		"show me currently configured tools",
+	}
+	for _, input := range tests {
+		t.Run(input, func(t *testing.T) {
+			if tools := inferMutationToolsFromText(input); len(tools) != 0 {
+				t.Fatalf("tools = %#v, want no mutation tools", tools)
+			}
+		})
+	}
+}
+
 func TestNormalizeRetryRequestUsesPriorUserIntent(t *testing.T) {
 	messages := []chatRequestMessage{
 		{Role: "user", Content: "create a research team and have them generate documentation"},

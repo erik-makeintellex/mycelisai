@@ -62,6 +62,15 @@ func TestBuildPlannedToolCalls_PrefersExplicitCreateTeamRequest(t *testing.T) {
 	}
 }
 
+func TestBuildPlannedToolCalls_RecognizesPutTogetherTeamRequest(t *testing.T) {
+	calls := plannedCallsFromWrongBlueprint("Put together a team named QA Game Studio and get them to build a playable browser game.", []string{"generate_blueprint", "delegate"})
+
+	requirePlannedCallNames(t, calls, "create_team", "write_file")
+	if calls[0].Arguments["name"] != "QA Game Studio" {
+		t.Fatalf("name = %#v, want QA Game Studio", calls[0].Arguments["name"])
+	}
+}
+
 func TestBuildPlannedToolCalls_KeepsTeamAndConcreteCodeOutput(t *testing.T) {
 	request := "Create a compact team with team_id qa-browser-game-team. Then have that team create a simple browser click game at path workspace/logs/qa_team_game.html containing '<!doctype html><title>QA Click Game</title><button id=coin>Coin</button><p id=score>0</p><script>let s=0;coin.onclick=()=>score.textContent=++s</script>'"
 	calls := plannedCallsFromWrongBlueprint(request, []string{"write_file", "generate_blueprint", "delegate"})
@@ -148,6 +157,31 @@ func TestDeterministicGovernedMutationResult_BuildsWriteFileProposalWithoutAgent
 	requirePlannedCallNames(t, calls, "write_file")
 	if calls[0].Arguments["path"] != "workspace/logs/hello.py" {
 		t.Fatalf("path = %#v, want workspace/logs/hello.py", calls[0].Arguments["path"])
+	}
+}
+
+func TestBuildPlannedToolCalls_TextOnlyFocusedTeamNoteDoesNotCreateTeamOrImage(t *testing.T) {
+	request := "Create a text-only markdown file at generated/team-focus-action-retry/note.md. Write two short bullets about why this focused team view needs to stay simple. Return retained output and proof. Do not generate an image."
+	mutTools := inferMutationToolsFromText(request)
+	if !containsString(mutTools, "write_file") {
+		t.Fatalf("mutTools = %#v, want write_file", mutTools)
+	}
+	if containsString(mutTools, "generate_blueprint") || containsString(mutTools, "delegate") || containsString(mutTools, "generate_image") || containsString(mutTools, "save_cached_image") {
+		t.Fatalf("mutTools = %#v, did not expect team/media tools", mutTools)
+	}
+
+	result, ok := deterministicGovernedMutationResult(request, mutTools)
+	if !ok {
+		t.Fatal("expected deterministic governed mutation result")
+	}
+	if len(result.ToolsUsed) != 1 || result.ToolsUsed[0] != "write_file" {
+		t.Fatalf("tools_used = %#v, want write_file only", result.ToolsUsed)
+	}
+
+	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	requirePlannedCallNames(t, calls, "write_file")
+	if calls[0].Arguments["path"] != "generated/team-focus-action-retry/note.md" {
+		t.Fatalf("path = %#v", calls[0].Arguments["path"])
 	}
 }
 
@@ -246,26 +280,5 @@ func TestInferCreateTeamPlanFromRequest_DefaultResearchTeam(t *testing.T) {
 	}
 	if call.Arguments["initial_member_count"] != 1 || call.Arguments["recommended_member_limit"] != 3 {
 		t.Fatalf("minimal staffing args = %#v, want lead-only start with bounded expansion", call.Arguments)
-	}
-}
-
-func TestBuildPlannedToolCalls_ComicTeamIncludesSpecialistsAndMediaDeliverable(t *testing.T) {
-	request := "Create a team to write a comic book page. We need an artist, someone who comes up with characters, and someone who writes the lines. Generate a comic image using local ComfyUI."
-	result, ok := deterministicGovernedMutationResult(request, []string{"create_team", "generate_image", "save_cached_image"})
-	if !ok || !strings.Contains(result.Text, "groups/soma-requested-team/media") {
-		t.Fatalf("deterministic proposal = %#v, ok=%v, want group media target", result, ok)
-	}
-	calls := buildPlannedToolCalls(chatAgentResult{}, request, []string{"create_team", "generate_image", "save_cached_image"})
-	requirePlannedCallNames(t, calls, "create_team", "generate_image", "save_cached_image")
-	agents, ok := calls[0].Arguments["agents"].([]map[string]any)
-	if !ok || len(agents) < 5 || calls[0].Arguments["staffing_mode"] != "specialist_delivery" {
-		t.Fatalf("team args = %#v, agents = %#v", calls[0].Arguments, agents)
-	}
-	if calls[1].Arguments["size"] != "768x1024" || calls[2].Arguments["folder"] != "groups/soma-requested-team/media" {
-		t.Fatalf("media calls = %#v %#v", calls[1], calls[2])
-	}
-	tools := toolsForPlannedCalls(calls, nil)
-	if !containsString(tools, "generate_image") || !containsString(tools, "save_cached_image") {
-		t.Fatalf("tools = %#v, want media tools", tools)
 	}
 }

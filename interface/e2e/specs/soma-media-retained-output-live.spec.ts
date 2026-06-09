@@ -202,7 +202,7 @@ test.describe("Soma media retained output proof", () => {
     await openOrganization(page);
     await sendWorkspaceMessage(page, "Create a local/private media team output and retain the image for review.");
 
-    await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(mediaPath).last()).toBeVisible();
     await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
 
@@ -255,7 +255,7 @@ test.describe("Soma media retained output proof", () => {
     );
     expect(proposal.response.ok(), proposal.body ? JSON.stringify(proposal.body) : proposal.raw).toBeTruthy();
     expect(proposal.body?.data?.mode).toBe("proposal");
-    await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 30_000 });
 
     const confirmed = await confirmProposal(page);
     expect(confirmed.response.ok(), confirmed.body ? JSON.stringify(confirmed.body) : confirmed.raw).toBeTruthy();

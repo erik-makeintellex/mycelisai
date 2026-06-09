@@ -95,7 +95,7 @@ describe("SomaWorkspaceFrame", () => {
     expect(within(sideRail).queryByText("Active lane fallback")).toBeNull();
   });
 
-  it("opens work first and hides the compact output digest when active work needs attention", () => {
+  it("opens work first while keeping latest output accessible when active work needs attention", () => {
     render(
       <SomaWorkspaceFrame
         expression={<div>Conversation transcript</div>}
@@ -113,7 +113,11 @@ describe("SomaWorkspaceFrame", () => {
       />,
     );
 
-    expect(screen.queryByTestId("soma-workbench-output-digest")).toBeNull();
+    const lane = screen.getByTestId("soma-current-work-lane");
+    expect(within(lane).getByText("Current workflow")).toBeDefined();
+    expect(within(lane).getByText("Work needs review")).toBeDefined();
+    expect(within(lane).getByText("Generated page")).toBeDefined();
+    expect(within(lane).getByRole("button", { name: /Open local folder for Generated page/i })).toBeDefined();
     const toggle = screen.getByTestId("soma-workbench-panel-toggle");
     expect(toggle.textContent).toContain("Review work");
     expect(toggle.textContent).toContain("2");

@@ -22,6 +22,7 @@ export function useTeamWorkActionHandler(
       setActiveWorkActionNotice(null);
       try {
         await postTeamWorkAction(item, action.action, actionSummary(item, action));
+        setActiveWorkActionNotice(actionNotice(item, action));
         setActiveWorkRefreshVersion((version) => version + 1);
       } catch (error) {
         setActiveWorkActionError(
@@ -136,5 +137,27 @@ function actionSummary(item: TeamWorkItem, action: TeamInteraction) {
   if (action.action === "recover") {
     return `Operator requested recovery for "${item.title}" using retained context, outputs, proof, and audit refs.`;
   }
+  if (action.action === "archive") {
+    return `Operator archived "${item.title}" from active review. Retained proof remains inspectable in history.`;
+  }
   return undefined;
+}
+
+function actionNotice(item: TeamWorkItem, action: TeamInteraction) {
+  if (action.action === "archive") {
+    return "Cleared from Review Queue. Retained proof remains available in history.";
+  }
+  if (action.action === "recover") {
+    return "Recovery requested. Watch this lane for a new output, proof, or blocker.";
+  }
+  if (action.action === "pause") {
+    return "Work paused. Resume or archive it when ready.";
+  }
+  if (action.action === "resume" || action.action === "start_work") {
+    return "Work queued. Watch this lane for status and retained output.";
+  }
+  if (action.action === "steer") {
+    return "Steering recorded. The team can continue from the retained work state.";
+  }
+  return `Updated ${item.title}.`;
 }

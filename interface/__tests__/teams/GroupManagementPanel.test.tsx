@@ -179,7 +179,7 @@ describe("GroupManagementPanel", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Open local folder for Coin Runner Game",
+        name: /Open local folder for Coin Runner Game/i,
       }),
     );
     await waitFor(() =>

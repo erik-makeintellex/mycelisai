@@ -15,14 +15,15 @@ test.describe("Soma proposal mode", () => {
         await openOrganization(page);
         await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
 
-        await expect(page.getByText("PROPOSED ACTION")).toBeVisible({ timeout: 20_000 });
-        await expect(page.getByText("Soma wants to")).toBeVisible();
+        await expect(page.getByText("RUN CONFIRMATION")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Let Soma run this now?")).toBeVisible();
+        await expect(page.getByText("What Soma will do")).toBeVisible();
         await expect(page.getByText("create a hello_world.py file in your workspace.")).toBeVisible();
         await expect(page.getByText("A new Python file will be saved to workspace/logs/hello_world.py after approval.")).toBeVisible();
-        await expect(page.getByText("workspace/logs/hello_world.py", { exact: true })).toBeVisible();
-        await expect(page.getByText("Approval optional")).toBeVisible();
-        await expect(page.getByText(/RISK MEDIUM/i)).toBeVisible();
-        await expect(page.getByRole("button", { name: /Show details/i })).toBeVisible();
+        await expect(page.getByText("workspace/logs/hello_world.py", { exact: true })).toHaveCount(0);
+        await expect(page.getByText("Can run now")).toBeVisible();
+        await expect(page.getByText(/RISK MEDIUM/i)).toHaveCount(0);
+        await expect(page.getByRole("button", { name: /Review run details/i })).toBeVisible();
 
         await page.getByRole("button", { name: /^Cancel$/i }).click();
         await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 20_000 });
@@ -89,8 +90,8 @@ test.describe("Soma proposal mode", () => {
         await openOrganization(page);
         await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
 
-        await expect(page.getByText("PROPOSED ACTION")).toBeVisible({ timeout: 20_000 });
-        await page.getByRole("button", { name: /^(Execute|Run)$/i }).click();
+        await expect(page.getByText("RUN CONFIRMATION")).toBeVisible({ timeout: 20_000 });
+        await page.getByRole("button", { name: /Run now/i }).click();
 
         const failureCard = page.getByTestId("execution-summary-card").last();
         await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });

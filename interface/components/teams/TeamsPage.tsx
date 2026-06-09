@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useCallback, useMemo, useState } from "react";
-import Link from "next/link";
 import { RefreshCw, Users } from "lucide-react";
 import {
   useCortexStore,
@@ -13,8 +12,12 @@ import AgentEditorDrawer from "@/components/catalogue/AgentEditorDrawer";
 import { ActiveWorkLane } from "./ActiveWorkLane";
 import TeamCard from "./TeamCard";
 import TeamDetailDrawer from "./TeamDetailDrawer";
-import TeamsIntroPanel from "./TeamsIntroPanel";
-import { TeamMemberTemplatesPanel } from "./TeamMemberTemplatesPanel";
+import {
+  TeamsOutputCollaboration,
+  TeamsReviewContextNote,
+  TeamsSetupPanels,
+  TeamsWorkReviewIntro,
+} from "./TeamsPageSections";
 import { useDurableTeamWork } from "@/components/soma/useDurableTeamWork";
 import { mergeTeamWorkItems, useTeamWorkActionHandler } from "./useTeamWorkActionHandler";
 
@@ -46,6 +49,9 @@ export default function TeamsPage() {
     null,
   );
   const activeWorkActions = useTeamWorkActionHandler(selectTeam);
+  const isWorkReviewView =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("view") === "work";
 
   useEffect(() => {
     fetchTeamsDetail();
@@ -115,6 +121,19 @@ export default function TeamsPage() {
     activeTeamWork.items,
     activeWorkActions.submittedTeamWorkItems,
   );
+  const activeWorkLane = (
+    <ActiveWorkLane
+      title={isWorkReviewView ? "Work to review" : "Active work lane"}
+      items={activeWorkItems}
+      emptyMessage={activeTeamWork.emptyMessage}
+      statusLabel={activeWorkActions.activeWorkActionNotice ?? activeTeamWork.statusLabel}
+      degradedMessage={
+        activeWorkActions.activeWorkActionError ?? activeTeamWork.degradedMessage
+      }
+      onAction={activeWorkActions.handleActiveWorkAction}
+      onTeamAsk={activeWorkActions.handleTeamAsk}
+    />
+  );
 
   const openTemplateDrawer = useCallback((agent: CatalogueAgent | null) => {
     setEditingTemplate(agent);
@@ -151,7 +170,7 @@ export default function TeamsPage() {
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-sm font-mono font-bold text-cortex-text-main uppercase tracking-wider">
-                Team Lead Workspaces
+                {isWorkReviewView ? "Work to Review" : "Team Lead Workspaces"}
               </h1>
               <span className="text-[10px] font-mono text-cortex-text-muted">
                 {filteredTeams.length} team
@@ -162,9 +181,9 @@ export default function TeamsPage() {
               </span>
             </div>
             <p className="mt-1 text-xs text-cortex-text-muted">
-              Review live teams here, open focused lead workspaces, and define
-              which reusable team-member templates Soma should apply when
-              specializing a new lane.
+              {isWorkReviewView
+                ? "Review active team work first. Open the team workspace or outputs only when the item needs more context."
+                : "Review live teams here, open focused lead workspaces, and define which reusable team-member templates Soma should apply when specializing a new lane."}
             </p>
           </div>
         </div>
@@ -195,47 +214,25 @@ export default function TeamsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <TeamsIntroPanel />
-          <TeamMemberTemplatesPanel
-            highlightedTemplates={highlightedTemplates}
-            templateCoverage={templateCoverage}
-            isFetchingCatalogue={isFetchingCatalogue}
-            onNewTemplate={() => openTemplateDrawer(null)}
-            onEditTemplate={openTemplateDrawer}
-          />
-        </div>
-
-        <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-cortex-text-main">
-                Outputs and active collaboration
-              </p>
-              <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
-                Keep active team work here. Use Groups when a team has retained
-                outputs, archived collaboration records, or multi-team
-                coordination to review.
-              </p>
-            </div>
-            <Link
-              href="/groups"
-              className="inline-flex items-center justify-center rounded-2xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10"
-            >
-              Review group outputs
-            </Link>
-          </div>
-        </div>
-        <ActiveWorkLane
-          items={activeWorkItems}
-          emptyMessage={activeTeamWork.emptyMessage}
-          statusLabel={activeWorkActions.activeWorkActionNotice ?? activeTeamWork.statusLabel}
-          degradedMessage={
-            activeWorkActions.activeWorkActionError ?? activeTeamWork.degradedMessage
-          }
-          onAction={activeWorkActions.handleActiveWorkAction}
-          onTeamAsk={activeWorkActions.handleTeamAsk}
-        />
+        {isWorkReviewView ? (
+          <>
+            <TeamsWorkReviewIntro />
+            {activeWorkLane}
+            <TeamsReviewContextNote />
+          </>
+        ) : (
+          <>
+            <TeamsSetupPanels
+                highlightedTemplates={highlightedTemplates}
+                templateCoverage={templateCoverage}
+                isFetchingCatalogue={isFetchingCatalogue}
+                onNewTemplate={() => openTemplateDrawer(null)}
+                onEditTemplate={openTemplateDrawer}
+            />
+            <TeamsOutputCollaboration />
+            {activeWorkLane}
+          </>
+        )}
         {filteredTeams.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredTeams.map((team) => (

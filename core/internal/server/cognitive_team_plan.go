@@ -13,7 +13,7 @@ func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool
 	if trimmed == "" || !strings.Contains(lower, "team") {
 		return protocol.PlannedToolCall{}, false
 	}
-	if !strings.Contains(lower, "create") && !strings.Contains(lower, "form") && !strings.Contains(lower, "assemble") && !strings.Contains(lower, "need") {
+	if !requestAsksToCreateTeam(lower) {
 		return protocol.PlannedToolCall{}, false
 	}
 
@@ -66,6 +66,41 @@ func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool
 	}
 
 	return protocol.PlannedToolCall{Name: "create_team", Arguments: args}, true
+}
+
+func requestAsksToCreateTeam(lower string) bool {
+	normalized := strings.Join(strings.Fields(lower), " ")
+	verbs := []string{"create", "build", "launch", "instantiate", "form", "assemble", "put", "need", "want", "orchestrate"}
+	if strings.Contains(normalized, "team_id") || strings.Contains(normalized, "team id") || strings.Contains(normalized, "team named") {
+		return requestContainsAny(normalized, verbs)
+	}
+	fields := strings.FieldsFunc(normalized, func(r rune) bool {
+		return !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '-')
+	})
+	for index, field := range fields {
+		if !containsExactString(verbs, field) {
+			continue
+		}
+		limit := index + 6
+		if limit > len(fields) {
+			limit = len(fields)
+		}
+		for _, candidate := range fields[index+1 : limit] {
+			if candidate == "team" || candidate == "teams" || strings.HasSuffix(candidate, "-team") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func containsExactString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func specialistAgentsForTeamRequest(teamID, lower string) []map[string]any {

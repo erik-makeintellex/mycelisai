@@ -130,7 +130,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     const firstDemoAsk = "Create the exact first-demo playable browser game package with README and validation notes.";
     await openOrganization(page);
     await sendWorkspaceMessage(page, firstDemoAsk);
-    await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 20_000 });
     await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
     const failureCard = page.getByTestId("execution-summary-card").last();
     await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
@@ -143,7 +143,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await expect(page.getByText("Run proof + retained output")).toHaveCount(0);
 
     await sendWorkspaceMessage(page, firstDemoAsk);
-    await expect(page.getByText("PROPOSED ACTION").last()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 20_000 });
     await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
     await expect(page.locator(`a[href="/runs/${retryRunId}"]`).first()).toBeVisible();

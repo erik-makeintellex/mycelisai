@@ -57,7 +57,7 @@ describe('useCortexStore confirm proposal pending proof', () => {
         expect(useCortexStore.getState().missionChat.at(-1)).toMatchObject({
             role: 'system',
             mode: 'proposal',
-            content: 'Proposal confirmed. Waiting for execution proof.',
+            content: 'Proposal approved. Soma is waiting for execution proof.',
         });
     });
 

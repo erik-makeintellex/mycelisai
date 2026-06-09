@@ -165,7 +165,7 @@ The default card shows outcome, outputs, proof, and next step. Full lineage belo
 
 ### Soma Operating Surface
 
-Owns input, starter prompts, response-state rendering, active execution, current output summary, trust summary, and follow-up steering.
+Owns input, starter prompts, response-state rendering, current workflow summary, active execution, current output summary, trust summary, and follow-up steering.
 
 Target expression: one reusable Soma operating model across dashboard and organization workspaces.
 
@@ -178,6 +178,10 @@ Target expression: outputs are first-class review surfaces, not attachments buri
 ### Active Work Lane
 
 Owns queued/running/blocked/done state, team or capability work-item identity, progress events, timeout/degradation state, and operator-needed prompts. Soma home shows an attention-first recent slice; Teams owns full durable backlog management and inspection.
+
+### Current Work Lane
+
+Owns the compact Dashboard summary of selected workflow, active task posture, latest retained output access, and next review action. It is a summary of existing Active Work and Output Workbench state, not a separate runtime object or revived pre-chat output dock.
 
 Target expression: users can work with teams while they are still active.
 
@@ -209,7 +213,7 @@ Target expression: self-hosted operators can trust the installation without read
 
 ## State Architecture
 
-Default state views show the operator ask, Soma summary, decision, risk, active work, output card, proof link, degradation next step, and schedule next run. Default activity and team surfaces summarize recent evidence instead of streaming raw logs or rosters. Inspect views reveal original request, assumptions, contracts, resources, policies, events, team/capability details, storage paths, schemas, evidence, audit refs, validation source, retryability, uncertainty, cooldowns, and history.
+Default state views show the operator ask, Soma summary, decision, risk, current-work summary, active work, output card, proof link, degradation next step, and schedule next run. Default activity and team surfaces summarize recent evidence instead of streaming raw logs or rosters. Inspect views reveal original request, assumptions, contracts, resources, policies, events, team/capability details, storage paths, schemas, evidence, audit refs, validation source, retryability, uncertainty, cooldowns, and history.
 
 Security rule: UI may show secret reference names, redacted readiness, and rotation guidance, never raw secret values.
 

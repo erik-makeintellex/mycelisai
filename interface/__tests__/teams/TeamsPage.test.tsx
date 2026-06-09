@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { mockFetch } from "../setup";
 
 vi.mock("@/components/teams/TeamDetailDrawer", () => ({
@@ -31,6 +31,7 @@ describe("TeamsPage", () => {
   const originalClearInterval = global.clearInterval;
 
   beforeEach(() => {
+    window.history.pushState({}, "", "/teams");
     global.setInterval = vi.fn(() => 1) as any;
     global.clearInterval = vi.fn() as any;
     useCortexStore.setState({
@@ -154,9 +155,34 @@ describe("TeamsPage", () => {
     });
     expect(
       mockFetch.mock.calls.filter(([url]) =>
-        String(url).includes("/api/v1/teams/team-bravo/work?limit=8"),
+        String(url).includes("/api/v1/teams/team-bravo/work?limit=8&include_archived=false"),
       ).length,
     ).toBeGreaterThan(1);
+  });
+
+  it("opens a review-focused Teams page when routed from the Soma review rail", async () => {
+    window.history.pushState({}, "", "/teams?view=work");
+    useCortexStore.setState({
+      teamsDetail: mockTeams,
+      catalogueAgents: mockTemplates,
+    });
+
+    render(<TeamsPage />);
+
+    expect(screen.getByText("Work to Review")).toBeDefined();
+    expect(screen.getByText("Decide what happens to this work")).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText("Draft launch package")).toBeDefined();
+    });
+    expect(screen.getAllByText("Why review").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Clear this from review. Nothing ran/i)).toBeDefined();
+    expect(screen.queryByText("Archived stale proof")).toBeNull();
+    const pageText = document.body.textContent ?? "";
+    expect(pageText.indexOf("Active work lane")).toBe(-1);
+    expect(pageText.indexOf("Work to review")).toBeLessThan(
+      pageText.indexOf("Team context"),
+    );
+    expect(screen.getByRole("link", { name: /Open all teams/i }).getAttribute("href")).toBe("/teams");
   });
 
   it("posts recover and steer actions as durable team-work evidence", async () => {
@@ -170,8 +196,10 @@ describe("TeamsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Recover failed release notes")).toBeDefined();
     });
-    const recover = screen
-      .getAllByRole("button", { name: /recover/i })
+    const recoverRow = screen.getByText("Recover failed release notes").closest("article");
+    expect(recoverRow).toBeDefined();
+    const recover = within(recoverRow as HTMLElement)
+      .getAllByRole("button", { name: /retry recovery/i })
       .find((button) => !(button as HTMLButtonElement).disabled);
     expect(recover).toBeDefined();
     fireEvent.click(recover as HTMLElement);
@@ -185,7 +213,8 @@ describe("TeamsPage", () => {
         }),
       );
     });
-    fireEvent.click(screen.getAllByRole("button", { name: /steer/i })[0]);
+    expect(screen.getByText(/Recovery requested. Watch this lane/i)).toBeDefined();
+    fireEvent.click(within(recoverRow as HTMLElement).getAllByRole("button", { name: /reply to team/i })[0]);
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining("/actions"),

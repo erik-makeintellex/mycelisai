@@ -2,12 +2,12 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Boxes, FileText, PanelRightOpen, Radio, ShieldCheck, Sparkles, X } from "lucide-react";
+import { Boxes, FileText, Radio, ShieldCheck, Sparkles, X } from "lucide-react";
 import {
-  OutputWorkbenchCompactDigest,
   outputWorkbenchDigest,
 } from "./OutputWorkbenchDigest";
 import { OutputWorkbench } from "./OutputWorkbench";
+import { SomaCurrentWorkLane } from "./SomaCurrentWorkLane";
 
 type PanelKey = "work" | "output" | "trust" | "context";
 
@@ -71,7 +71,7 @@ export function SomaWorkspaceFrame({
       label: "Work",
       title: "Work to review",
       description: "Work that needs a decision, check, or follow-up.",
-      href: "/teams",
+      href: "/teams?view=work",
       content: activeWork,
     },
     {
@@ -110,9 +110,7 @@ export function SomaWorkspaceFrame({
   const hasPanels = panels.length > 0;
   const visibleReviewCount = reviewCount ?? outputDigest?.count ?? panels.length;
   const reviewLabel = primaryReviewPanel?.key === "output" ? "Review output" : "Review work";
-  const showClosedOutputDigest = Boolean(
-    outputDigest && showOutputDigest && !isPanelOpen && primaryReviewPanel?.key !== "work",
-  );
+  const showClosedOutputDigest = Boolean(outputDigest && showOutputDigest);
 
   const togglePanel = () => {
     setIsPanelOpen((open) => {
@@ -125,15 +123,29 @@ export function SomaWorkspaceFrame({
 
   return (
     <div
-      className="relative grid gap-3 lg:h-[calc(100vh-260px)] lg:min-h-[420px] 2xl:min-h-[560px]"
+      className="relative grid gap-3 lg:h-[calc(100vh-260px)] lg:min-h-[300px] 2xl:min-h-[560px]"
       data-testid="soma-workspace-frame"
     >
-      <div className="min-h-0 min-w-0">
+      <div className="flex h-full min-h-0 min-w-0 flex-col">
+        {hasPanels && primaryReviewPanel ? (
+          <div className="mb-3 shrink-0">
+            <SomaCurrentWorkLane
+              digest={outputDigest}
+              isPanelOpen={isPanelOpen}
+              onTogglePanel={togglePanel}
+              panelId={sideRailId}
+              primaryKind={primaryReviewPanel.key === "work" ? "work" : "output"}
+              reviewCount={visibleReviewCount}
+              reviewLabel={reviewLabel}
+              showOutputDigest={showClosedOutputDigest}
+            />
+          </div>
+        ) : null}
         <SlotPanel
           icon={<Sparkles className="h-3.5 w-3.5" />}
           label="Soma"
           description="Ask Soma for the next plan, change, file, decision, or follow-up."
-          className="flex h-full min-h-0 flex-col"
+          className="flex min-h-0 flex-1 flex-col"
           showHeader={false}
         >
           {expression}
@@ -141,30 +153,10 @@ export function SomaWorkspaceFrame({
       </div>
       {hasPanels ? (
         <>
-          <div className="absolute right-3 top-3 z-30 flex max-w-[min(92vw,620px)] flex-col items-end gap-2 sm:flex-row sm:items-start">
-            {showClosedOutputDigest && outputDigest ? <OutputWorkbenchCompactDigest digest={outputDigest} /> : null}
-            <button
-              type="button"
-              aria-controls={sideRailId}
-              aria-expanded={isPanelOpen}
-              data-testid="soma-workbench-panel-toggle"
-              onClick={togglePanel}
-              className="inline-flex items-center gap-2 rounded-lg border border-cortex-primary/30 bg-cortex-surface/95 px-3 py-2 text-xs font-semibold text-cortex-text-main shadow-lg shadow-black/10 backdrop-blur transition-colors hover:border-cortex-primary/60"
-            >
-              <PanelRightOpen className="h-3.5 w-3.5 text-cortex-primary" />
-              <span>{isPanelOpen ? "Hide review" : reviewLabel}</span>
-              <span
-                className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-1.5 text-[10px] font-bold text-cortex-primary"
-                aria-label={`${visibleReviewCount} review ${visibleReviewCount === 1 ? "item" : "items"}`}
-              >
-                {visibleReviewCount}
-              </span>
-            </button>
-          </div>
           <div
             id={sideRailId}
             aria-hidden={!isPanelOpen}
-            className={`fixed inset-y-0 right-0 z-40 flex w-[min(92vw,440px)] min-w-0 flex-col overflow-hidden border-l border-cortex-border bg-cortex-surface/95 p-3 shadow-2xl shadow-black/20 backdrop-blur transition duration-200 lg:absolute lg:inset-y-3 lg:right-3 lg:rounded-2xl lg:border ${
+            className={`fixed bottom-3 right-3 top-3 z-40 flex w-[min(92vw,440px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface/95 p-3 shadow-2xl shadow-black/20 backdrop-blur transition duration-200 ${
               isPanelOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
             }`}
             data-testid="soma-workbench-side-rail"
@@ -223,7 +215,6 @@ export function SomaWorkspaceFrame({
                     <SlotPanel
                       icon={selectedPanel.icon}
                       label={selectedPanel.title}
-                      description={selectedPanel.description}
                     >
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <p className="text-xs leading-5 text-cortex-text-muted">

@@ -10,10 +10,14 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func (s *AdminServer) listTeamWorkItemsDB(ctx context.Context, teamID string, limit int) ([]protocol.TeamWorkItem, error) {
+func (s *AdminServer) listTeamWorkItemsDB(ctx context.Context, teamID string, limit int, includeArchived bool) ([]protocol.TeamWorkItem, error) {
 	db := s.getDB()
 	if db == nil {
 		return nil, errors.New("database not available")
+	}
+	archivedFilter := ""
+	if !includeArchived {
+		archivedFilter = "AND state <> 'archived'"
 	}
 	rows, err := db.QueryContext(ctx, `
 		SELECT id::text, team_id, COALESCE(run_id::text,''), COALESCE(intent_proof_id::text,''),
@@ -24,6 +28,7 @@ func (s *AdminServer) listTeamWorkItemsDB(ctx context.Context, teamID string, li
 		       created_at, updated_at, version
 		FROM team_work_items
 		WHERE tenant_id='default' AND team_id=$1
+		`+archivedFilter+`
 		ORDER BY updated_at DESC
 		LIMIT $2`, strings.TrimSpace(teamID), limit)
 	if err != nil {

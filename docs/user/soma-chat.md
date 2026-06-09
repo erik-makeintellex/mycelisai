@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Workspace-first interaction model: you send intent, Soma orchestrates execution.
----
+
 ## Overview
 
 Open `Workspace` (`/dashboard`) and type naturally. Soma receives every message, coordinates the rest, and should execute deliverable outcomes rather than instruct you step-by-step on manual work.
@@ -10,13 +10,7 @@ Workspace should open with Soma already active, so you should not need to manual
 
 Display-name customization: open `Settings -> Profile`, set **Assistant Name**, and save to update Workspace/status labels that normally show "Soma".
 
-```
-You type -> Soma reasons (ReAct, up to 10 iterations)
-         -> optional council consultation
-         -> answer and/or governed proposal
-```
-
----
+`You type -> Soma reasons -> optional council consultation -> answer and/or governed proposal`
 
 ## Sending Messages
 
@@ -94,12 +88,16 @@ If you leave the organization workspace and come back later, the current guided 
 
 Team workspaces are different from the root Soma workspace:
 - the root workspace is Soma-first and organization-wide
-- the dashboard uses a focus-first workbench: Soma conversation stays in the primary pane, while Active Work, retained outputs, trust, context, and focused team lanes open from a minimizable, tabbed Work panel overlay
-- the `Team focus` strip above the chat switches the same workbench between `All Soma work` and a team's focused lane, so the chat scope, active work, retained outputs, and proof move together
-- the Work panel is for quick review and action; use each tab's full-page link for deeper backlog, output-folder, activity/proof, or Resources review
-- when a focused team has queued, running, degraded, or operator-needed work, the review button opens Work first and hides duplicate output previews so the next action stays obvious
+- the dashboard uses a focus-first workbench: Soma conversation stays in the primary pane, while a compact current-work lane above it summarizes the current workflow, attention state, latest output, and next review action
+- Active Work, retained outputs, trust, context, and focused team details still open from the minimizable, tabbed Work panel overlay instead of crowding the conversation
+- the compact `Working in` picker switches the same workbench between `Soma root` and a team's focused lane, so the chat scope, active work, retained outputs, and proof move together without adding a growing row of team tabs
+- the Work panel is for quick review and action; its default cards should summarize the operator outcome, next step, output/proof state, and a few useful actions, while technical labels and fuller backlog details stay behind Advanced inspect or full-page links
+- when the Work panel needs more room, `Open page` routes to `/teams?view=work`, where active review work appears before broader team setup and roster management
+- `Clear from review` archives stale or test work so it leaves the active Dashboard/Teams review queues while retaining proof and history for later inspection
+- when a focused team has queued, running, degraded, or operator-needed work, the current-work lane keeps Work as the primary review action while still leaving the latest retained output openable when one exists
 - when review details are closed, Soma keeps the conversation readable and moves Work, Output, Trust, and Context details into the minimizable Work panel
 - focused team context switches the primary chat, active-work lane, and retained-output view to the selected team's scope, while Soma remains able to reference other teams, such as a story-writing team and a comic-visual team, when you ask
+- focused-team retained output access appears inside the current-work lane and review-drawer action, not as a separate pre-chat output dock
 - when Soma creates a team but has not yet created the first delegated work item, the Dashboard shows a compact first-deliverable launcher; choose a starter prompt, review it in the Soma input, then send it so execution still goes through the governed work-item path
 - the root Soma home keeps the live interaction stream collapsed by default so an admin can open it on demand without pushing Soma away from the first work surface
 - the root Soma chat should stay in a bounded panel and scroll message history internally, so long conversations do not push the live stream and review panels farther down the page
@@ -118,8 +116,6 @@ Groups are a separate workflow surface:
 - the Groups screen uses a compact list/detail layout: select a group from the left rail, then use the main pane for lane data, broadcast/review, outputs, and retained artifacts
 - each group should expose the focused lead context, runtime/config posture such as work mode, approval policy, capabilities, and current model-inheritance status, plus output/contributing-lead summaries
 - Soma remains the root reviewer that can summarize groups, pull forward outputs, and route you into the right team lead when needed
-
----
 
 ## Output Model Routing
 
@@ -166,7 +162,11 @@ Soma responses can include:
 - compact cards showing which council members were consulted
 
 4. **Proposal block (mutation paths)**
-- explicit action preview with confirm/cancel, proof-linked run-started feedback, and states for direct answer, proposal, execution result, blocker, degradation, awaiting approval, retry, or active team work
+- simple run confirmation for actions that will execute or change something
+- the default view should answer: **Run this now?**, what Soma will do, and what you should get back
+- risk, cost, resources, capability details, proof intent, and team/tool wiring stay behind **Review run details** unless they need immediate operator attention
+- after confirmation, Soma should show immediate run-started feedback, then a proof-linked result or a visible recovery/blocker state
+- direct answer, proposal, execution result, blocker, degradation, retry, and active team work states should stay understandable without reading internal runtime topology
 
 No mutation executes until you confirm.
 
@@ -182,8 +182,6 @@ No mutation executes until you confirm.
 - use the inline `Save` action or ask Soma to save it (for example: "save this image to saved-media")
 - if you ask Soma to create a specialist media team and generate the first output, the proposal should include both the team creation and media deliverable steps, then return retained output/proof or a visible degraded recovery state
 - saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details; `Resources -> Output Files` is the broader browser for containing folders later
-
----
 
 ## Execution-First Contract
 
@@ -208,6 +206,8 @@ Web/research behavior:
 - if `brave-search` is installed and configured with `BRAVE_API_KEY`, Soma and web-capable specialists may use it for search
 - if `fetch` is installed and you provide a URL, Soma and web-capable specialists may use it to retrieve page content
 - if the needed server or credential is missing, Soma should name the missing MCP server/env var and point you to Connected Tools instead of claiming web requests are impossible
+- read-only tool posture prompts such as `show me currently configured tools` or `check available tools and walk me through enabling what is missing` should answer with current tool state and setup guidance, not create a runnable proposal
+- prompts that actually enable, install, connect, assign, or bind tools remain governed mutation requests and require confirmation/proof
 
 Direct drafting behavior:
 - if you ask for plain chat content such as a short letter, email, note, or message,

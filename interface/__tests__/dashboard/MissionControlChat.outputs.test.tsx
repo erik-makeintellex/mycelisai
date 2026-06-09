@@ -224,7 +224,7 @@ describe('MissionControlChat output contracts', () => {
         const savedLink = screen.getByRole('link', { name: 'saved-media/test.png' });
         expect(savedLink.getAttribute('href')).toBe('/api/v1/artifacts/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/download');
 
-        fireEvent.click(screen.getByRole('button', { name: 'Open local folder for saved-media/test.png' }));
+        fireEvent.click(screen.getByRole('button', { name: /Open local folder for saved-media\/test\.png/ }));
         await waitFor(() => {
             expect(mockFetch).toHaveBeenCalledWith('/api/v1/workspace/files/reveal?path=saved-media%2Ftest.png', { method: 'POST' });
         });
@@ -271,7 +271,7 @@ describe('MissionControlChat output contracts', () => {
         expect(savedObjectLink.getAttribute('href')).toBe('/api/v1/artifacts/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/download');
         expect(screen.getByText(/Saved object:/i)).toBeDefined();
 
-        fireEvent.click(screen.getByRole('button', { name: 'Open local folder for saved-media/campaign-voiceover.wav' }));
+        fireEvent.click(screen.getByRole('button', { name: /Open local folder for saved-media\/campaign-voiceover\.wav/ }));
         await waitFor(() => {
             expect(mockFetch).toHaveBeenCalledWith('/api/v1/workspace/files/reveal?path=saved-media%2Fcampaign-voiceover.wav', { method: 'POST' });
         });

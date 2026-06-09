@@ -5,6 +5,7 @@ import type {
     ExecutionSummaryItem,
     ExecutionSummaryLink,
 } from "@/store/useCortexStore";
+import { mediaDependencyRecovery, type DegradationShape } from "./ExecutionSummaryRecoveryModel";
 
 type SummaryValue = string | ExecutionSummaryItem;
 
@@ -31,6 +32,13 @@ export function executionShapeLabel(value?: string | null) {
     return labels[shape] ?? shape.replace(/[_-]+/g, " ");
 }
 
+export function executionSummaryHeading(summary: ExecutionSummaryData, outputCount = 0) {
+    const status = (compactText(summary.execution?.status) ?? compactText(summary.execution_status) ?? "").toLowerCase();
+    if (["failed", "blocked", "cancelled"].includes(status)) return "Could not run";
+    if (status === "proposed") return "Proposal ready";
+    return outputCount > 0 ? "Output ready" : "Result ready";
+}
+
 export function itemText(item: SummaryValue): string | null {
     if (typeof item === "string") return compactText(item);
     return compactText(item.label)
@@ -44,7 +52,21 @@ export function itemText(item: SummaryValue): string | null {
 
 export function itemUrl(item: SummaryValue): string | null {
     if (typeof item === "string") return null;
-    return normalizeWorkspaceOutputUrl(compactText(item.open_url) ?? compactText(item.url) ?? compactText(item.href) ?? compactText(item.path));
+    const id = compactText(item.id);
+    return normalizeWorkspaceOutputUrl(
+        compactText(item.open_url)
+        ?? compactText(item.url)
+        ?? compactText(item.href)
+        ?? compactText(item.path)
+        ?? (id && isWorkspacePathLike(id) ? id : null),
+    );
+}
+
+function isWorkspacePathLike(value: string) {
+    const normalized = value.replace(/\\/g, "/");
+    return normalized.startsWith("workspace/")
+        || normalized.includes("/")
+        || /\.[a-z0-9]{1,8}$/i.test(normalized);
 }
 
 export function normalizeWorkspaceOutputUrl(value?: string | null): string | null {
@@ -151,6 +173,8 @@ export function searchSourceLines(capabilityUse: ExecutionSummaryData["capabilit
 export function auditText(value: ExecutionSummaryData["audit_recovery"]) {
     if (!value) return null;
     if (typeof value === "string") return compactText(value);
+    const mediaRecovery = mediaDependencyRecovery(value.degradation);
+    if (mediaRecovery) return mediaRecovery.recovery;
     const status = compactText(value.status) ?? compactText(value.approval_status);
     const recovery = compactText(value.recovery_state);
     const summary = compactText(value.summary) ?? compactText(value.value) ?? compactText(value.label);
@@ -161,6 +185,15 @@ export function auditText(value: ExecutionSummaryData["audit_recovery"]) {
 export function degradationLines(value: ExecutionSummaryData["audit_recovery"]): string[] {
     if (!value || typeof value === "string" || !value.degradation) return [];
     const degradation = value.degradation;
+    const mediaRecovery = mediaDependencyRecovery(degradation);
+    if (mediaRecovery) {
+        return [
+            mediaRecovery.failed,
+            `Still available: ${mediaRecovery.trusted}`,
+            `Not reliable: ${mediaRecovery.invalid}`,
+            `Safe next: ${mediaRecovery.recovery}`,
+        ];
+    }
     return [
         compactText(degradation.what_failed) ? `Failed: ${degradation.what_failed}` : null,
         compactText(degradation.trusted_state) ? `Still available: ${degradation.trusted_state}` : null,
@@ -189,7 +222,6 @@ export function artifactOutputItems(artifacts?: ChatArtifactRef[]) {
 }
 
 export type TrustVerdictTone = "trusted" | "review" | "attention";
-
 export interface TrustVerdict {
     label: string;
     detail: string;
@@ -216,9 +248,11 @@ export function trustVerdict(summary: ExecutionSummaryData, runId?: string, arti
         || Boolean(artifacts?.some((artifact) => artifact.id || artifact.cached || artifact.saved_path || artifact.url));
 
     if (degradation?.requires_attention || ["failed", "blocked", "cancelled"].includes(status) || compactText(audit?.blocker)) {
+        const mediaRecovery = mediaDependencyRecovery(degradation);
         return {
             label: "Needs review",
-            detail: compactText(degradation?.what_failed)
+            detail: mediaRecovery?.failed
+                ?? compactText(degradation?.what_failed)
                 ?? "Part of the work is blocked or failed. Review recovery before relying on the result.",
             tone: "attention",
         };

@@ -154,6 +154,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		respondStructuredChatBlocker(w, agentResult)
 		return
 	}
+	isMutation, mutTools, plannedToolCalls := executableMutationPlan(isMutation, agentResult, latestUserText, mutTools)
 	if !isMutation && strings.TrimSpace(agentResult.Text) == "" && len(agentResult.Artifacts) == 0 {
 		respondStructuredChatBlocker(w, agentResult)
 		return
@@ -177,7 +178,6 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	mode := askContract.DefaultExecutionMode
 
 	if isMutation {
-		plannedToolCalls := buildPlannedToolCalls(agentResult, latestUserText, mutTools)
 		effectiveTools := toolsForPlannedCalls(plannedToolCalls, mutTools)
 		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
 		scope := &protocol.ScopeValidation{

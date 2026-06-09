@@ -58,8 +58,8 @@ export function projectTeamWorkItem(team: TeamDetailEntry): TeamWorkItem {
   const state: TeamWorkItemState = "degraded";
   const leadHref = `/dashboard?team_id=${encodeURIComponent(team.id)}`;
   const interactions: TeamInteraction[] = [
-    { action: "inspect", label: "Inspect", href: "/teams", audited: true },
-    { action: "steer", label: "Steer", href: leadHref, audited: true },
+    { action: "inspect", label: "Open details", href: "/teams?view=work", audited: true },
+    { action: "steer", label: "Ask for changes", href: leadHref, audited: true },
     {
       action: "start_work",
       label: "Start task",
@@ -80,7 +80,7 @@ export function projectTeamWorkItem(team: TeamDetailEntry): TeamWorkItem {
     },
     {
       action: "archive",
-      label: "Archive",
+      label: "Clear from review",
       disabled: true,
       disabledReason: "Archive requires a durable work item.",
     },

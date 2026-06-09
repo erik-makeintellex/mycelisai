@@ -130,6 +130,43 @@ func TestBuildSomaReferentialReviewAllowsReadOnlyMCPReview(t *testing.T) {
 	}
 }
 
+func TestBuildSomaReferentialReviewAllowsMCPEnablementGuidance(t *testing.T) {
+	s := newTestServer()
+	messages := []chatRequestMessage{{
+		Role:    "user",
+		Content: "Check available tools and walk me through enabling what is missing.",
+	}}
+
+	review := s.buildSomaReferentialReview(t.Context(), messages)
+
+	if review.NeedsConfirmation {
+		t.Fatalf("tool enablement guidance should not require confirmation: %#v", review)
+	}
+	if len(review.MutationTools) != 0 {
+		t.Fatalf("mutation tools = %#v, want none", review.MutationTools)
+	}
+	if review.InferredAction != "review current MCP/tool posture and recommend next connected tools" {
+		t.Fatalf("inferred action = %q", review.InferredAction)
+	}
+}
+
+func TestBuildSomaReferentialReviewStillProtectsActualMCPEnablement(t *testing.T) {
+	s := newTestServer()
+	messages := []chatRequestMessage{{
+		Role:    "user",
+		Content: "Enable the fetch MCP now for Soma and team agents.",
+	}}
+
+	review := s.buildSomaReferentialReview(t.Context(), messages)
+
+	if !review.NeedsConfirmation {
+		t.Fatal("actual MCP enablement should still require confirmation")
+	}
+	if !containsString(review.MutationTools, "delegate") {
+		t.Fatalf("mutation tools = %#v, want delegate", review.MutationTools)
+	}
+}
+
 func TestBuildSomaReferentialReviewProtectsRecurringTemplateBehavior(t *testing.T) {
 	s := newTestServer()
 	messages := []chatRequestMessage{{

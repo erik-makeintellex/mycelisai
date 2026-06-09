@@ -55,6 +55,39 @@ func TestHandleCreateTeamWork_RejectsRunningCreateTeam(t *testing.T) {
 	}
 }
 
+func TestHandleListTeamWork_ExcludesArchivedWhenRequested(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	workID := "11111111-1111-1111-1111-111111111111"
+	mock.ExpectQuery("state <> 'archived'").
+		WithArgs("research-team", 10).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			workID, "research-team", "", "", "", "", "Review failed proof", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDelegatedWork), []byte(`["review"]`), []byte(`["proof"]`), []byte(`[]`),
+			"auto_approved", string(protocol.TeamWorkStateDegraded), []byte(`null`), true, "missing_execution_plan",
+			[]byte(`["archive stale item"]`), []byte(`[]`), []byte(`["proof-1"]`), []byte(`["audit-1"]`), now, now, "v1",
+		))
+
+	mux := setupMux(t, "GET /api/v1/teams/{id}/work", s.HandleListTeamWork)
+	rr := doRequest(t, mux, http.MethodGet, "/api/v1/teams/research-team/work?limit=10&include_archived=false", "")
+
+	assertStatus(t, rr, http.StatusOK)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	items := resp["data"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("expected 1 work item, got %d", len(items))
+	}
+	first := items[0].(map[string]any)
+	if first["state"] != string(protocol.TeamWorkStateDegraded) {
+		t.Fatalf("state = %v", first["state"])
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestHandleCreateTeamInteraction_PersistsDurableSourceContract(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)

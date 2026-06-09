@@ -27,6 +27,19 @@ func requestAsksForMedia(text string) bool {
 	if lower == "" {
 		return false
 	}
+	if requestContainsAny(lower, []string{
+		"do not generate an image",
+		"don't generate an image",
+		"do not create an image",
+		"don't create an image",
+		"do not make an image",
+		"without image generation",
+		"no image generation",
+		"text-only",
+		"text only",
+	}) {
+		return false
+	}
 	mediaTargets := []string{"image", "images", "picture", "illustration", "comic", "comic book", "media", "artwork", "visual"}
 	return requestContainsAny(lower, mediaTargets)
 }

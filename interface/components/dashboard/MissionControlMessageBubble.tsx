@@ -167,6 +167,9 @@ export default function MissionControlMessageBubble({
             artifacts: msg.artifacts,
         })
         : false;
+    const assistantContentClass = compactResult && !isUser
+        ? "max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-cortex-border"
+        : "";
 
     if (msg.role === "system") {
         return (
@@ -215,7 +218,7 @@ export default function MissionControlMessageBubble({
             )}
             <div className="max-w-[85%] flex flex-col gap-0.5">
                 {!isUser && <MessageMeta msg={msg} assistantName={assistantName} />}
-                <div className={`px-3 py-2 rounded-lg text-sm font-mono leading-relaxed ${
+                <div className={`px-3 py-2 rounded-lg text-sm font-mono leading-relaxed ${assistantContentClass} ${
                     isBroadcast
                         ? "bg-cortex-warning/10 text-cortex-text-main border border-cortex-warning/30"
                         : isUser

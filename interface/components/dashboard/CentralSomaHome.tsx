@@ -40,7 +40,6 @@ export default function CentralSomaHome({
     const selectTeam = useCortexStore((s) => s.selectTeam);
     const selectedTeamId = useCortexStore((s) => s.selectedTeamId);
     const teamsDetail = useCortexStore((s) => s.teamsDetail);
-    const assistantName = useCortexStore((s) => s.assistantName);
     const resolvedSearchParams = requestedTeamIdPromise ? use(requestedTeamIdPromise) : undefined;
     const requestedTeamIdValue = resolvedSearchParams?.team_id;
     const requestedTeamId = Array.isArray(requestedTeamIdValue)
@@ -99,15 +98,6 @@ export default function CentralSomaHome({
 
     return (
         <section className="space-y-3">
-            {focusedTeam ? (
-                <div className="rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-3 text-sm text-cortex-text-main">
-                    <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Focused team</p>
-                    <p className="mt-2 font-semibold">{focusedTeam.name}</p>
-                    <p className="mt-1 text-sm text-cortex-text-muted">
-                        {assistantName} is focused on this team. Ask for updates, decisions, or the next file from here.
-                    </p>
-                </div>
-            ) : null}
             <SomaOperatingSurface
                 organizationId={lastOrganization?.id}
                 organizationName={lastOrganization?.name}

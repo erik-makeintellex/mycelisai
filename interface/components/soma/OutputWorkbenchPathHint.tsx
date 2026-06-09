@@ -5,12 +5,21 @@ import type { ExecutionSummaryItem } from "@/store/useCortexStore";
 import { workspacePathFromOutputUrl } from "./OutputAccessActions";
 
 export function itemWorkspacePath(item: ExecutionSummaryItem) {
+  const id = item.id?.trim();
   return item.folder
     ?? item.entrypoint
     ?? workspacePathFromOutputUrl(item.path ?? null)
     ?? workspacePathFromOutputUrl(item.href ?? null)
     ?? workspacePathFromOutputUrl(item.url ?? null)
-    ?? workspacePathFromOutputUrl(item.open_url ?? null);
+    ?? workspacePathFromOutputUrl(item.open_url ?? null)
+    ?? (id && isWorkspacePathLike(id) ? workspacePathFromOutputUrl(id) : null);
+}
+
+function isWorkspacePathLike(value: string) {
+  const normalized = value.replace(/\\/g, "/");
+  return normalized.startsWith("workspace/")
+    || normalized.includes("/")
+    || /\.[a-z0-9]{1,8}$/i.test(normalized);
 }
 
 export function outputWorkspacePath(output: { url: string | null; storagePath?: string }) {

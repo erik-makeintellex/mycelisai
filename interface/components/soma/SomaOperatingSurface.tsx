@@ -19,9 +19,7 @@ import {
   teamOutputProjectPackages,
   teamOutputWorkbenchItems,
 } from "./OutputWorkbench";
-import { FocusedTeamOutputDock } from "./FocusedTeamOutputDock";
 import { SomaCausalSummary } from "./SomaCausalSummary";
-import { SomaContextFocusBar } from "./SomaContextFocusBar";
 import { SomaEvidencePanel, type SomaEvidenceItem } from "./SomaEvidencePanel";
 import { SomaHeader } from "./SomaHeader";
 import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "./SomaSuggestionBar";
@@ -151,13 +149,6 @@ export function SomaOperatingSurface({
         governancePosture={governancePosture}
       />
       <div className="p-4 lg:p-5">
-        {effectiveFocusedTeamId ? (
-          <SomaContextFocusBar
-            teamName={focusedTeam?.name}
-            teamId={effectiveFocusedTeamId}
-            onClear={clearFocusedContext}
-          />
-        ) : null}
         {hasWorkContextChoices ? (
           <SomaTeamContextSwitcher
             teams={teamsDetail}
@@ -165,13 +156,6 @@ export function SomaOperatingSurface({
             focusedTeamId={effectiveFocusedTeamId}
             onRootSelect={clearFocusedContext}
             onTeamSelect={focusTeamContext}
-          />
-        ) : null}
-        {attentionWorkCount === 0 ? (
-          <FocusedTeamOutputDock
-            teamName={focusedTeam?.name}
-            teamId={effectiveFocusedTeamId}
-            outputRefs={teamWork.outputRefs}
           />
         ) : null}
         <SomaWorkspaceFrame
@@ -221,9 +205,9 @@ export function SomaOperatingSurface({
             ) : undefined
           )}
           context={contextSlot ?? (hasContextReviewContent ? <SomaEvidencePanel items={evidence} compact /> : undefined)}
-          primaryPanel={attentionWorkCount > 0 ? "work" : undefined}
-          reviewCount={attentionWorkCount > 0 ? attentionWorkCount : undefined}
-          showOutputDigest={attentionWorkCount === 0}
+          primaryPanel={attentionWorkCount > 0 && !hasOutputReviewContent ? "work" : undefined}
+          reviewCount={attentionWorkCount > 0 && !hasOutputReviewContent ? attentionWorkCount : undefined}
+          showOutputDigest
         />
       </div>
     </section>

@@ -60,14 +60,16 @@ Use the root Soma chat when you want the simplest path:
 Use `Teams` when you want to inspect or manage existing teams:
 
 - review the Active Work Lane to see whether a team is new, queued, running, output-ready, degraded, paused, or waiting on the operator
+- use `/teams?view=work` when arriving from the Dashboard review panel; this focused Review Queue puts why attention is needed, what remains trusted, and the safest next move before team creation, templates, and the roster
 - treat the Dashboard Active Work lane as an attention-first slice; use `Teams` for the full durable backlog
-- use the Dashboard `Team focus` strip when you want to switch Soma between `All Soma work` and a specific team's focused chat/output/proof lane without leaving the main workbench
-- when a focused team has retained outputs and no active work needs attention, use the compact output access above Soma's workbench for immediate open/open-folder access; when work is queued, running, degraded, or waiting on the operator, the review button opens Work first so the next action stays obvious
+- use the Dashboard current-work lane for the quickest read of focused workflow, active task posture, latest output, and next review action
+- use the Dashboard `Working in` picker when you want to switch Soma between `Soma root` and a specific team's focused chat/output/proof lane without leaving the main workbench
+- when a focused team has retained outputs and no active work needs attention, use the current-work lane or Work panel for immediate open/open-folder access; when work is queued, running, degraded, or waiting on the operator, the lane keeps Work as the primary next action while preserving latest-output access
 - focused team chat stays scoped to that team for conversation continuity, proposals, and team bus wiring while root Soma remains the cross-team reviewer when no team is selected
 - open the team lead workspace
 - review current outputs while the team is active
 - use Ask Team or Respond on a durable active-work row to queue a bounded follow-on output or supply missing input without opening raw bus details
-- use Inspect, Steer, Start, Pause, Resume, or Archive controls when they are enabled for the current team state
+- use `Open details`, `Reply to team`, `Ask for changes`, `Start task`, `Pause`, `Resume`, `Retry recovery`, or `Clear from review` when those controls are enabled for the current team state
 - inspect member templates
 - review or edit template role, model, and MCP/internal tool references
 - check whether a team should be archived or kept
@@ -75,6 +77,8 @@ Use `Teams` when you want to inspect or manage existing teams:
 When a team has just been created and no delegated work item exists yet, the Dashboard shows a first-deliverable launcher instead of treating the team shell as active work. Choose a starter such as `Build playable prototype`, `Write design brief`, or `Draft delivery plan`; Soma places the bounded ask in the chat input for review, then your send creates the governed work item that can run, produce output, and attach proof.
 
 Ask Team is non-blocking. When you queue a follow-on ask, the row should close the form, show a queued work item immediately, keep the workspace usable, and refresh Active Work while the team moves toward `running`, `output_ready`, or `degraded`. Correlated team status/result signals carry the work item back into the original row, including status-only team responses. Result signals that include retained `outputs` or `output_refs` become openable output chips on the same Active Work item, so generated files, media, package folders, proof, and audit evidence stay attached to the focused team context. Durable output refs should store workspace-confined file or folder paths, not browser viewer URLs; the UI can then derive `Open` and `Open folder` actions consistently. If the team bus or worker lane is unavailable, the ask remains durable and the row should explain the degraded delivery and recovery posture instead of leaving the operator waiting on a browser request.
+
+`Clear from review` archives a durable work item so it leaves active review queues while retained outputs, proof refs, audit refs, and history remain inspectable. Use it for stale failed proposals or old test data after confirming nothing useful is waiting to be recovered.
 
 Use `Groups` when you want to review retained outputs or collaboration records after a temporary workflow has been archived. Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
 
@@ -175,6 +179,8 @@ When testing team workflows, verify:
 - team-only creation does not imply the team is already executing; the Dashboard first-deliverable launcher should seed a bounded Soma ask and leave final send/approval with the operator
 - the team lead is the first visible operational counterpart
 - Dashboard Active Work remains capped and points to `/teams` for the full durable backlog
+- archived or cleared work does not appear in the Dashboard review queue or `/teams?view=work`, but retained history remains available outside the active review lane
+- Dashboard current-work lane shows one obvious next action while keeping any latest output openable
 - Ask Team or Respond creates a durable follow-on work item, shows queued state immediately, keeps the UI usable, then visibly returns output-ready or degraded state
 - degraded team asks name timeout/offline/unreadable-response proof, recovery options, and what remains trusted
 - raw input/delivery subjects, models, prompts, and tool ids stay behind Advanced/Inspect instead of default team cards

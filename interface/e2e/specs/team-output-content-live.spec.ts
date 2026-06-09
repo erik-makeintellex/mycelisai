@@ -142,7 +142,7 @@ async function executeTeamOutput(page: Page, ask: TeamOutputAsk) {
     expect(proposal.response.ok(), proposal.body ? JSON.stringify(proposal.body) : proposal.raw).toBeTruthy();
     expect(proposal.body?.data?.mode).toBe('proposal');
     expect(proposal.body?.data?.payload?.tools_used).toEqual(['create_team', 'write_file']);
-    await expect(page.getByText('PROPOSED ACTION').last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('RUN CONFIRMATION').last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(ask.teamID).last()).toBeVisible();
     await expect(page.getByText(ask.filePath).last()).toBeVisible();
 
@@ -249,15 +249,13 @@ async function expectTeamVisibleInGroups(page: Page, teamID: string) {
 async function expectTeamOutputVisibleOnDashboard(page: Page, ask: TeamOutputAsk) {
     await page.goto(`/dashboard?team_id=${encodeURIComponent(ask.teamID)}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('soma-operating-surface')).toBeVisible({ timeout: 30_000 });
-    const dock = page.getByTestId('focused-team-output-dock');
-    await expect(dock).toBeVisible({ timeout: 30_000 });
-    await expect(dock.getByText(ask.filePath).first()).toBeVisible();
-    await expect(dock.getByRole('link', { name: /Open team/i })).toHaveAttribute(
-        'href',
-        `/teams?team_id=${encodeURIComponent(ask.teamID)}`,
-    );
-    await expect(dock.getByRole('button', { name: new RegExp(`Open ${escapeRegex(ask.filePath)} in a new browser window`, 'i') })).toBeVisible();
-    await expect(dock.getByRole('button', { name: new RegExp(`Open local folder for .*${escapeRegex(ask.filePath)}`, 'i') })).toBeVisible();
+    await expect(page.getByTestId('focused-team-output-dock')).toHaveCount(0);
+    await expect(page.getByTestId('soma-team-context-switcher')).toContainText('Working in');
+    const digest = page.getByTestId('soma-workbench-output-digest');
+    await expect(digest).toBeVisible({ timeout: 30_000 });
+    await expect(digest.getByText(ask.filePath).first()).toBeVisible();
+    await expect(digest.getByRole('button', { name: /Open file/i })).toBeVisible();
+    await expect(digest.getByRole('button', { name: /Open local folder/i })).toBeVisible();
 }
 
 test.describe('Live teams produce reviewable content outputs', () => {

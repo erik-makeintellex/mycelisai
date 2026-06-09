@@ -62,7 +62,11 @@ describe("TeamLeadInteractionPanel external workflow contract", () => {
 
         expect((await screen.findAllByText("External workflow contract")).length).toBeGreaterThan(0);
         const summaryCard = screen.getByTestId("execution-summary-card");
-        expect(within(summaryCard).getByText("Directed execution")).toBeDefined();
+        expect(within(summaryCard).getByText("Result")).toBeDefined();
+        expect(within(summaryCard).getByText("Awaiting approval")).toBeDefined();
+        expect(within(summaryCard).getByText("Team work")).toBeDefined();
+        expect(within(summaryCard).getByText("Review request, proof, and recovery")).toBeDefined();
+        expect(within(summaryCard).getByText("External workflow contract is ready for operator review.")).toBeDefined();
         expect(container.querySelector('a[href^="/runs/"]')).toBeNull();
         expect(screen.getByText("n8n workflow contract")).toBeDefined();
         expect(screen.getByText("Normalized workflow result")).toBeDefined();

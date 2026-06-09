@@ -63,7 +63,7 @@ export function useDurableTeamWork({
 
       await Promise.all(selectedTeams.map(async (team) => {
         try {
-          const response = await fetch(`/api/v1/teams/${encodeURIComponent(team.id)}/work?limit=8`, {
+          const response = await fetch(`/api/v1/teams/${encodeURIComponent(team.id)}/work?limit=8&include_archived=false`, {
             cache: "no-store",
           });
           if (!response.ok) {
@@ -105,16 +105,21 @@ export function useDurableTeamWork({
     return () => window.clearInterval(interval);
   }, [hasPollingWork, pollIntervalMs]);
 
+  const reviewableItems = useMemo(
+    () => durableItems.filter((item) => item.state !== "archived"),
+    [durableItems],
+  );
+
   const fallbackItems = useMemo(() => (
-    failedTeamIds.length > 0 && durableItems.length === 0
+    failedTeamIds.length > 0 && reviewableItems.length === 0
       ? selectedTeams
         .filter((team) => failedTeamIds.includes(team.id))
         .map(projectTeamWorkItem)
       : []
-  ), [durableItems.length, failedTeamIds, selectedTeams]);
+  ), [failedTeamIds, reviewableItems.length, selectedTeams]);
 
-  const items = durableItems.length > 0 ? durableItems : fallbackItems;
-  const outputRefs = teamOutputRefsFromItems(durableItems);
+  const items = reviewableItems.length > 0 ? reviewableItems : fallbackItems;
+  const outputRefs = teamOutputRefsFromItems(reviewableItems);
 
   if (isLoading) {
     return {
@@ -126,10 +131,10 @@ export function useDurableTeamWork({
     };
   }
 
-  if (durableItems.length > 0) {
+  if (reviewableItems.length > 0) {
     return {
       status: "durable",
-      items: durableItems,
+      items: reviewableItems,
       outputRefs,
       statusLabel: "Durable team-work state loaded.",
       emptyMessage: "No active team work is attached to this view yet.",
@@ -154,7 +159,7 @@ export function useDurableTeamWork({
     status: selectedTeams.length > 0 ? "empty" : "idle",
     items: [],
     outputRefs: [],
-    statusLabel: selectedTeams.length > 0 ? "No durable work items found." : undefined,
+    statusLabel: selectedTeams.length > 0 ? "No reviewable work items found." : undefined,
     emptyMessage: selectedTeams.length > 0
       ? "No active team work is attached to this view yet. Ask Soma to start work when you want a team to produce an output."
       : "No active team work is attached to this view yet.",

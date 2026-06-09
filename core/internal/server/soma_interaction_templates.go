@@ -52,7 +52,7 @@ func defaultSomaInteractionThemes() []somaInteractionTheme {
 		{
 			ID:            "mcp_enablement",
 			Label:         "Enable or bind connected tools",
-			Phrases:       []string{"enable mcp", "install mcp", "connect mcp", "associate mcp", "configure mcp", "assign tools", "enable tools", "bind tools", "walk me through enabling"},
+			Phrases:       []string{"enable mcp", "enable the", "install mcp", "install the", "connect mcp", "connect the", "associate mcp", "configure mcp", "configure the", "assign tools", "enable tools", "bind tools", "walk me through enabling"},
 			Concepts:      []string{"mcp", "tool_binding", "connected_tools"},
 			MutationTools: []string{"delegate"},
 			Protected:     true,

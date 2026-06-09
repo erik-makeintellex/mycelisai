@@ -33,13 +33,17 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const approvalRequired = proposal.approval_required ?? true;
     const approvalMode = proposal.approval_mode ?? (approvalRequired ? "required" : "auto_allowed");
     const capabilityRisk = proposal.capability_risk ?? proposal.risk_level ?? "low";
-    const governanceSummary = approvalRequired ? "Approval required" : approvalMode === "optional" ? "Approval optional" : "No approval needed";
-    const actionLabel = approvalRequired ? "Approve and run" : "Run";
+    const governanceSummary = approvalRequired ? "Confirmation needed" : approvalMode === "optional" ? "Can run now" : "Ready";
+    const actionLabel = "Run now";
     const operatorSummary = plainExecutionText(proposal.operator_summary?.trim() || fallbackOperatorSummary(proposal));
     const expectedResult = plainExecutionText(proposal.expected_result?.trim() || fallbackExpectedResult(proposal));
     const affectedResources = (proposal.affected_resources ?? []).filter((value) => value.trim().length > 0);
     const visibleResources = (affectedResources.length > 0 ? affectedResources : fallbackAffectedResources(proposal)).map(plainExecutionText);
     const approvalExplanation = explainApprovalPosture(proposal, approvalRequired, approvalMode);
+    const runQuestion = approvalRequired ? "Run this now?" : "Let Soma run this now?";
+    const runHelp = approvalRequired
+        ? "Soma will start only after you confirm."
+        : "This is ready to run. You can still review the details first.";
     const lifecycleTone = renderedLifecycle === "cancelled"
         ? "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted"
         : renderedLifecycle === "confirmed_pending_execution"
@@ -90,21 +94,11 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
             <div className="px-4 py-2 bg-amber-400/5 border-b border-amber-400/20 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-amber-400" />
-                    <span className="text-amber-400 font-mono text-xs font-bold tracking-wider">PROPOSED ACTION</span>
+                    <span className="text-amber-400 font-mono text-xs font-bold tracking-wider">RUN CONFIRMATION</span>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                    <span className={`px-2 py-0.5 rounded border text-[10px] font-mono ${approvalRequired ? "text-amber-300 border-amber-400/30" : "text-cortex-success border-cortex-success/30"}`}>
-                        {governanceSummary.toUpperCase()}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded border text-[10px] font-mono ${capabilityRisk === "high" ? "text-red-300 border-red-400/30" : capabilityRisk === "medium" ? "text-amber-300 border-amber-400/30" : "text-cortex-success border-cortex-success/30"}`}>
-                        RISK {proposal.risk_level?.toUpperCase() || "LOW"}
-                    </span>
-                    {typeof proposal.estimated_cost === "number" ? (
-                        <span className="px-2 py-0.5 rounded border text-[10px] font-mono text-cortex-text-main border-cortex-border">
-                            EST. COST {proposal.estimated_cost.toFixed(2)}
-                        </span>
-                    ) : null}
-                </div>
+                <span className="rounded border border-amber-400/30 px-2 py-0.5 text-[10px] font-mono text-amber-300">
+                    {governanceSummary.toUpperCase()}
+                </span>
             </div>
 
             <div className="px-4 py-3 space-y-3">
@@ -115,38 +109,20 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                 <ProposalLifecycleProof lifecycle={renderedLifecycle} runId={message.run_id} />
 
                 <div className="space-y-2">
+                    {isActionable ? (
+                        <div>
+                            <h3 className="text-lg font-semibold text-cortex-text-main">{runQuestion}</h3>
+                            <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{runHelp}</p>
+                        </div>
+                    ) : null}
                     <div>
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Soma wants to</div>
+                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">What Soma will do</div>
                         <p className="mt-1 text-base leading-7 text-cortex-text-main">{operatorSummary}</p>
                     </div>
                     <p className="text-sm leading-6 text-cortex-text-muted">
-                        Result: <span className="text-cortex-text-main">{expectedResult}</span>
+                        You should get: <span className="text-cortex-text-main">{expectedResult}</span>
                     </p>
-                    <p className="text-xs leading-5 text-cortex-text-muted">{approvalExplanation}</p>
                 </div>
-
-                {visibleResources.length > 0 ? (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Changes</span>
-                        {visibleResources.map((resource) => (
-                            <span
-                                key={resource}
-                                className="rounded border border-cortex-border bg-cortex-bg/70 px-2 py-1 text-xs text-cortex-text-main"
-                            >
-                                {resource}
-                            </span>
-                        ))}
-                        {proposal.external_data_use ? (
-                            <span className="rounded border border-cortex-primary/30 px-2 py-1 text-[10px] font-mono text-cortex-primary">
-                                EXTERNAL DATA
-                            </span>
-                        ) : null}
-                    </div>
-                ) : proposal.external_data_use ? (
-                    <span className="inline-flex rounded border border-cortex-primary/30 px-2 py-1 text-[10px] font-mono text-cortex-primary">
-                        EXTERNAL DATA
-                    </span>
-                ) : null}
 
                 <button
                     type="button"
@@ -155,11 +131,45 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     aria-expanded={detailsOpen}
                 >
                     {detailsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                    {detailsOpen ? "Hide details" : "Show details"}
+                    {detailsOpen ? "Hide run details" : "Review run details"}
                 </button>
 
                 {detailsOpen ? (
-                    <ProposedActionDetails assistantName={assistantName} message={message} proposal={proposal} />
+                    <div className="space-y-2">
+                        <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-3 text-xs">
+                            <div className="grid gap-2 md:grid-cols-2">
+                                <div>
+                                    <div className="font-mono uppercase tracking-[0.14em] text-cortex-text-muted text-[10px]">Confirmation</div>
+                                    <p className="mt-1 text-cortex-text-main">{approvalExplanation}</p>
+                                </div>
+                                <div>
+                                    <div className="font-mono uppercase tracking-[0.14em] text-cortex-text-muted text-[10px]">Risk and cost</div>
+                                    <p className="mt-1 text-cortex-text-main">
+                                        Risk: {plainExecutionText(capabilityRisk)}{typeof proposal.estimated_cost === "number" ? `, estimated cost ${proposal.estimated_cost.toFixed(2)}` : ""}
+                                    </p>
+                                </div>
+                            </div>
+                            {visibleResources.length > 0 || proposal.external_data_use ? (
+                                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                                    <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Will touch</span>
+                                    {visibleResources.map((resource) => (
+                                        <span
+                                            key={resource}
+                                            className="rounded border border-cortex-border bg-cortex-bg/70 px-2 py-1 text-xs text-cortex-text-main"
+                                        >
+                                            {resource}
+                                        </span>
+                                    ))}
+                                    {proposal.external_data_use ? (
+                                        <span className="rounded border border-cortex-primary/30 px-2 py-1 text-[10px] font-mono text-cortex-primary">
+                                            EXTERNAL DATA
+                                        </span>
+                                    ) : null}
+                                </div>
+                            ) : null}
+                        </div>
+                        <ProposedActionDetails assistantName={assistantName} message={message} proposal={proposal} />
+                    </div>
                 ) : null}
             </div>
 
@@ -190,7 +200,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     </div>
                     {confirming ? (
                         <p className="text-[11px] leading-5 text-cortex-text-muted">
-                            Approval received. Soma is starting the run; results will appear below.
+                            Starting now. Soma will show the result below.
                         </p>
                     ) : null}
                     {confirmError ? (

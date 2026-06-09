@@ -15,6 +15,7 @@ import {
     compactText,
     degradationLines,
     executionShapeLabel,
+    executionSummaryHeading,
     intentLines,
     linkHref,
     linkLabel,
@@ -137,7 +138,7 @@ export default function ExecutionSummaryCard({
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-info">
                     <Sparkles className="h-3 w-3" />
-                    Result
+                    {executionSummaryHeading(summary, allOutputs.length + projectPackages.length)}
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                     <span className={`rounded border px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${trustToneClass(trust.tone)}`}>

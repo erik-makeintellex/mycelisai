@@ -57,6 +57,8 @@ describe("teamWorkProjection", () => {
       outputCount: 1,
       nextAction: "Review package",
     });
+    expect(item?.interactions.find((action) => action.action === "inspect")?.label).toBe("Open run");
+    expect(item?.interactions.find((action) => action.action === "archive")?.label).toBe("Clear from review");
     expect(item?.advanced?.expectedOutputs).toEqual(["reviewable package"]);
     expect(teamOutputRefsFromItems(item ? [item] : [])).toHaveLength(1);
   });
@@ -78,6 +80,7 @@ describe("teamWorkProjection", () => {
     expect(item.source).toBe("projection");
     expect(item.scopeLabel).toBe("Projection fallback");
     expect(item.fallbackReason).toContain("Durable TeamWorkItem records were unavailable");
-    expect(item.interactions.find((action) => action.action === "inspect")?.href).toBe("/teams");
+    expect(item.interactions.find((action) => action.action === "inspect")?.href).toBe("/teams?view=work");
+    expect(item.interactions.find((action) => action.action === "archive")?.label).toBe("Clear from review");
   });
 });

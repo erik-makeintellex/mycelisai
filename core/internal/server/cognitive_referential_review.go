@@ -122,6 +122,10 @@ func (s *AdminServer) buildSomaReferentialReview(ctx context.Context, messages [
 	}
 
 	review.NeedsConfirmation = match.Protected
+	if isToolPostureGuidanceRequest(normalizeIntentText(latest)) && interactionMatchHasTheme(match, "mcp_enablement") {
+		review.NeedsConfirmation = false
+		review.MutationTools = nil
+	}
 	return review
 }
 
@@ -129,6 +133,9 @@ func inferSomaReferentialAction(text string) (string, []string) {
 	if match := matchSomaInteractionTemplate(text); match.Template.ActionSummary != "" {
 		return match.Template.ActionSummary, match.MutationTools
 	} else if interactionMatchHasTheme(match, "mcp_enablement") {
+		if isToolPostureGuidanceRequest(normalizeIntentText(text)) {
+			return "review current MCP/tool posture and recommend next connected tools", nil
+		}
 		return "confirm MCP/tool enablement or binding guidance for Soma and team agents", match.MutationTools
 	}
 	lower := normalizeIntentText(text)

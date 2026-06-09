@@ -1,3 +1,4 @@
+import { useLayoutEffect } from "react";
 import { Loader2, Send } from "lucide-react";
 import type React from "react";
 
@@ -16,22 +17,34 @@ export function SomaIntentInput({
   loading?: boolean;
   placeholder: string;
   autoFocus?: boolean;
-  inputRef?: React.RefObject<HTMLInputElement | null>;
+  inputRef?: React.RefObject<HTMLTextAreaElement | null>;
   onChange: (value: string) => void;
   onSubmit: () => void;
 }) {
+  useLayoutEffect(() => {
+    const input = inputRef?.current;
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
+  }, [inputRef, value]);
+
   return (
-    <div className="flex gap-2">
-      <input
+    <div className="flex items-end gap-2">
+      <textarea
         ref={inputRef}
-        type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => event.key === "Enter" && onSubmit()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            onSubmit();
+          }
+        }}
         placeholder={placeholder}
         autoFocus={autoFocus}
         disabled={disabled}
-        className="flex-1 rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main placeholder-cortex-text-muted/60 focus:border-cortex-primary focus:outline-none focus:ring-1 focus:ring-cortex-primary/30 disabled:opacity-50"
+        rows={1}
+        className="max-h-[180px] min-h-10 flex-1 resize-none overflow-y-auto rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-sm leading-6 text-cortex-text-main placeholder-cortex-text-muted/60 focus:border-cortex-primary focus:outline-none focus:ring-1 focus:ring-cortex-primary/30 disabled:opacity-50"
       />
       <button
         type="button"
