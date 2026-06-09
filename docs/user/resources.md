@@ -208,6 +208,7 @@ Supported operator actions:
 
 Operational behavior:
 - if `filesystem` is not installed or not connected, explorer shows actionable recovery controls
+- the recovery state keeps two paths visible: **Open Connected Tools** to repair or install filesystem MCP, and **View storage roots** to confirm where generated output is mounted while MCP recovers
 - all tool calls run through the same API request contract used by other resource channels: `{"arguments": {...}}`
 - workspace boundaries still apply (sandboxed filesystem rules)
 

@@ -82,10 +82,13 @@ function upsertTeamWorkItem(items: TeamWorkItem[], next: TeamWorkItem) {
 
 function submittedTeamAskItem(sourceItem: TeamWorkItem, result: TeamWorkAskResult): TeamWorkItem {
   const state = submittedTeamAskState(result.state);
+  const outputRefs = result.outputRefs ?? [];
+  const proofRefs = result.proofRefs ?? [];
+  const auditRefs = result.auditRefs ?? [];
   return {
     id: result.workItemId ?? `${sourceItem.id}-submitted-ask`,
     title: result.objective ?? `Continue ${sourceItem.title}`,
-    description: teamAskNotice(sourceItem, result),
+    description: teamAskDescription(sourceItem, result),
     state,
     ownerLabel: "Soma",
     scopeLabel: "Delegated work",
@@ -93,11 +96,14 @@ function submittedTeamAskItem(sourceItem: TeamWorkItem, result: TeamWorkAskResul
     teamIds: [result.teamId ?? sourceItem.teamIds[0] ?? sourceItem.id],
     interactions: [],
     source: "durable",
-    sourceLabel: "Queued team ask",
+    sourceLabel: state === "output_ready" ? "Team output ready" : "Queued team ask",
+    runId: result.runId,
+    outputRefs,
+    outputCount: outputRefs.length || undefined,
+    proofRefs,
+    auditRefs,
     fallbackReason: state === "degraded" ? teamAskDegradedMessage(result) : undefined,
-    nextAction: state === "queued"
-      ? "Wait for team output or degradation proof."
-      : undefined,
+    nextAction: submittedTeamAskNextAction(state, outputRefs.length, result),
     recoveryOptions: state === "degraded"
       ? ["Review degraded delivery and retry from retained context."]
       : undefined,
@@ -125,9 +131,40 @@ function teamAskNotice(item: TeamWorkItem, result: TeamWorkAskResult) {
   return `Soma sent the ask to ${teamLabel}; Active Work will refresh with the result.`;
 }
 
+function teamAskDescription(item: TeamWorkItem, result: TeamWorkAskResult) {
+  const parts = [
+    result.eventHeadline,
+    result.eventDetails,
+    result.reply ? `Reply: ${result.reply}` : null,
+    !result.eventHeadline && !result.eventDetails ? teamAskNotice(item, result) : null,
+  ].filter(Boolean);
+  return parts.join(" ");
+}
+
 function teamAskDegradedMessage(result: TeamWorkAskResult) {
   const reason = result.degradationState ?? result.dispatchState ?? "delivery degraded";
   return `Team ask was recorded but degraded: ${reason}.`;
+}
+
+function submittedTeamAskNextAction(
+  state: TeamWorkItemState,
+  outputCount: number,
+  result: TeamWorkAskResult,
+) {
+  if (result.eventNextAction) return result.eventNextAction;
+  if (state === "output_ready") {
+    if (outputCount > 0) {
+      return "Review retained output and proof.";
+    }
+    return "Review the team response and proof.";
+  }
+  if (state === "queued" || state === "running") {
+    return "Wait for team output or degradation proof.";
+  }
+  if (state === "degraded") {
+    return "Review recovery before retrying.";
+  }
+  return undefined;
 }
 
 function actionSummary(item: TeamWorkItem, action: TeamInteraction) {

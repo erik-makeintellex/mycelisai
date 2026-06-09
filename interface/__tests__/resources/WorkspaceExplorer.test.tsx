@@ -3,23 +3,24 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import WorkspaceExplorer from "@/components/resources/WorkspaceExplorer";
 
 const mockFetchMCPServers = vi.fn();
+const connectedFilesystemServer = {
+    id: "filesystem-server",
+    name: "filesystem",
+    status: "connected",
+    tools: [
+        { name: "list_directory" },
+        { name: "read_text_file" },
+        { name: "create_directory" },
+        { name: "write_file" },
+    ],
+};
+
+let mockMCPServers: Array<Record<string, unknown>> = [connectedFilesystemServer];
 
 vi.mock("@/store/useCortexStore", () => ({
     useCortexStore: (selector: any) =>
         selector({
-            mcpServers: [
-                {
-                    id: "filesystem-server",
-                    name: "filesystem",
-                    status: "connected",
-                    tools: [
-                        { name: "list_directory" },
-                        { name: "read_text_file" },
-                        { name: "create_directory" },
-                        { name: "write_file" },
-                    ],
-                },
-            ],
+            mcpServers: mockMCPServers,
             isFetchingMCPServers: false,
             fetchMCPServers: mockFetchMCPServers,
         }),
@@ -58,6 +59,7 @@ describe("WorkspaceExplorer", () => {
     beforeEach(() => {
         vi.restoreAllMocks();
         mockFetchMCPServers.mockReset();
+        mockMCPServers = [connectedFilesystemServer];
     });
 
     it("uses current filesystem MCP tool names with the arguments envelope", async () => {
@@ -103,5 +105,30 @@ describe("WorkspaceExplorer", () => {
         });
         const writeCall = calls.find((call) => call.tool === "write_file");
         expect(writeCall?.body).toEqual({ arguments: { path: "workspace/new-proof.md", content: "# New proof" } });
+    });
+
+    it("guides operators to Connected Tools and storage roots when filesystem is missing", async () => {
+        mockMCPServers = [];
+        const onOpenToolsTab = vi.fn();
+
+        render(<WorkspaceExplorer onOpenToolsTab={onOpenToolsTab} />);
+
+        expect(screen.getByText("Filesystem MCP not installed")).toBeDefined();
+        expect(screen.getByRole("link", { name: /View storage roots/i }).getAttribute("href")).toBe("/system?tab=deployments");
+        fireEvent.click(screen.getByRole("button", { name: /Open Connected Tools/i }));
+        expect(onOpenToolsTab).toHaveBeenCalledOnce();
+        fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
+        expect(mockFetchMCPServers).toHaveBeenCalled();
+    });
+
+    it("keeps storage-root guidance visible while filesystem is disconnected", async () => {
+        mockMCPServers = [{ ...connectedFilesystemServer, status: "error" }];
+
+        render(<WorkspaceExplorer onOpenToolsTab={vi.fn()} />);
+
+        expect(screen.getByText("Filesystem MCP not connected")).toBeDefined();
+        expect(screen.getByText("error")).toBeDefined();
+        expect(screen.getByRole("link", { name: /View storage roots/i })).toBeDefined();
+        expect(screen.getByText(/find generated output while the MCP server is recovering/i)).toBeDefined();
     });
 });

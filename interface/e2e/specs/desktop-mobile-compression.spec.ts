@@ -37,7 +37,7 @@ test.describe("Desktop/mobile compression proof", () => {
     const recoveryRow = activeLane.locator("article").filter({ hasText: "Recover failed package proof" });
     await expect(recoveryRow).toBeVisible();
     await expect(recoveryRow.getByText("Degraded", { exact: true })).toBeVisible();
-    await expect(recoveryRow.getByText("Needs recovery")).toBeVisible();
+    await expect(recoveryRow.getByText("Needs recovery", { exact: true })).toBeVisible();
     await expect(recoveryRow.getByText("Recovery: Retry with retained run context")).toBeVisible();
     await expect(recoveryRow.getByRole("button", { name: /Recover/i })).toBeVisible();
     await expectNoHorizontalOverflow(page);

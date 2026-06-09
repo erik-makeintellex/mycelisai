@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle } from "lucide-react";
 import { useCortexStore, type MCPServerWithTools } from "@/store/useCortexStore";
 import { extractApiError, formatMCPToolResult, type ResourceCallRequest } from "@/lib/apiContracts";
 import WorkspaceFolderAccessCard from "./WorkspaceFolderAccessCard";
+import WorkspaceMCPRecoveryCard from "./WorkspaceMCPRecoveryCard";
 import {
     WorkspaceBrowsePane,
     WorkspaceCreatePane,
@@ -143,45 +143,29 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
 
     if (!filesystemServer) {
         return (
-            <div className="h-full p-6">
-                <div className="rounded-xl border border-cortex-warning/30 bg-cortex-warning/10 p-5 max-w-3xl">
-                    <div className="flex items-center gap-2 text-cortex-warning mb-2">
-                        <AlertTriangle className="w-4 h-4" />
-                        <h3 className="text-sm font-semibold">Filesystem MCP not installed</h3>
-                    </div>
-                    <p className="text-xs text-cortex-text-muted mb-3">Output Files requires the `filesystem` connected tool. Install or reconnect it from Resources / Connected Tools.</p>
-                    <div className="flex gap-2">
-                        <button onClick={onOpenToolsTab} className="px-3 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10">
-                            Open Connected Tools
-                        </button>
-                        <button onClick={fetchMCPServers} className="px-3 py-1.5 rounded border border-cortex-border text-cortex-text-main text-xs font-mono hover:bg-cortex-border">
-                            Refresh
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <WorkspaceMCPRecoveryCard
+                title="Filesystem MCP not installed"
+                detail="Output Files needs the filesystem connected tool before Mycelis can browse generated files here. Install it from Connected Tools, or view storage roots to confirm where generated content is mounted."
+                onOpenToolsTab={onOpenToolsTab}
+                onRefresh={fetchMCPServers}
+            />
         );
     }
 
     if (filesystemServer.status !== "connected") {
         return (
-            <div className="h-full p-6">
-                <div className="rounded-xl border border-cortex-warning/30 bg-cortex-warning/10 p-5 max-w-3xl">
-                    <div className="flex items-center gap-2 text-cortex-warning mb-2">
-                        <AlertTriangle className="w-4 h-4" />
-                        <h3 className="text-sm font-semibold">Filesystem MCP not connected</h3>
-                    </div>
-                    <p className="text-xs text-cortex-text-muted mb-3">Current status: <span className="font-mono">{filesystemServer.status}</span>. Reconnect it from Connected Tools, then retry.</p>
-                    <div className="flex gap-2">
-                        <button onClick={onOpenToolsTab} className="px-3 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10">
-                            Open Connected Tools
-                        </button>
-                        <button onClick={fetchMCPServers} className="px-3 py-1.5 rounded border border-cortex-border text-cortex-text-main text-xs font-mono hover:bg-cortex-border">
-                            Refresh
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <WorkspaceMCPRecoveryCard
+                title="Filesystem MCP not connected"
+                detail={(
+                    <>
+                        Current status: <span className="font-mono">{filesystemServer.status}</span>. Reconnect it
+                        from Connected Tools, then retry. View storage roots if you need to find generated output while
+                        the MCP server is recovering.
+                    </>
+                )}
+                onOpenToolsTab={onOpenToolsTab}
+                onRefresh={fetchMCPServers}
+            />
         );
     }
 

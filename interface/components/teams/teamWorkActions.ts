@@ -1,4 +1,8 @@
-import type { TeamInteractionAction, TeamWorkItem } from "@/store/useCortexStore";
+import type {
+  TeamInteractionAction,
+  TeamOutputRef,
+  TeamWorkItem,
+} from "@/store/useCortexStore";
 
 type TeamWorkActionResponse = {
   data?: unknown;
@@ -10,9 +14,17 @@ export type TeamWorkAskResult = {
   dispatchState?: string;
   workItemId?: string;
   teamId?: string;
+  runId?: string;
   state?: string;
   objective?: string;
   degradationState?: string;
+  reply?: string;
+  eventHeadline?: string;
+  eventDetails?: string;
+  eventNextAction?: string;
+  outputRefs?: TeamOutputRef[];
+  proofRefs?: string[];
+  auditRefs?: string[];
 };
 
 export async function postTeamWorkAction(
@@ -87,19 +99,67 @@ function normalizeTeamWorkAskResult(data: unknown): TeamWorkAskResult {
     return { accepted: false };
   }
   const workItem = isRecord(data.work_item) ? data.work_item : {};
+  const event = isRecord(data.event) ? data.event : {};
+  const workItemId = stringValue(workItem.work_item_id);
+  const teamId = stringValue(workItem.team_id);
   return {
     accepted: data.accepted === true,
     dispatchState: stringValue(data.dispatch_state),
-    workItemId: stringValue(workItem.work_item_id),
-    teamId: stringValue(workItem.team_id),
+    workItemId,
+    teamId,
+    runId: stringValue(workItem.run_id) ?? stringValue(data.run_id),
     state: stringValue(workItem.state),
     objective: stringValue(workItem.objective),
     degradationState: stringValue(workItem.degradation_state),
+    reply: stringValue(data.reply),
+    eventHeadline: stringValue(event.headline),
+    eventDetails: stringValue(event.details),
+    eventNextAction: stringValue(event.next_action),
+    outputRefs: outputRefArray(workItem.output_refs, teamId, workItemId),
+    proofRefs: stringArray(workItem.proof_refs),
+    auditRefs: stringArray(workItem.audit_refs),
   };
 }
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function stringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return unique(
+    value
+      .map((item) => stringValue(item))
+      .filter((item): item is string => Boolean(item)),
+  );
+}
+
+function outputRefArray(
+  value: unknown,
+  teamId?: string,
+  workItemId?: string,
+): TeamOutputRef[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isRecord).map((item, index) => ({
+    output_id: stringValue(item.output_id) ?? `${workItemId ?? "work"}-output-${index}`,
+    team_id: stringValue(item.team_id) ?? teamId ?? "",
+    work_item_id: stringValue(item.work_item_id) ?? workItemId ?? "",
+    run_id: stringValue(item.run_id),
+    kind: stringValue(item.kind) ?? "file",
+    label: stringValue(item.label) ?? "Team output",
+    storage_ref: stringValue(item.storage_ref),
+    entrypoint: stringValue(item.entrypoint),
+    validation_ref: stringValue(item.validation_ref),
+    proof_ref: stringValue(item.proof_ref),
+    contract_id: stringValue(item.contract_id),
+    proof_id: stringValue(item.proof_id),
+    audit_refs: stringArray(item.audit_refs),
+    created_at: stringValue(item.created_at) ?? stringValue(item.updated_at),
+  }));
+}
+
+function unique(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
