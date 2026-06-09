@@ -19,8 +19,10 @@ import {
   summarizeSignals,
 } from "@/components/activity/ActivityPanels";
 import { RunEventInspector } from "@/components/activity/RunEventInspector";
+import AdvancedModeRoute from "@/components/shared/AdvancedModeRoute";
 
 export default function ActivityPage() {
+  const advancedMode = useCortexStore((s) => s.advancedMode);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const recentRuns = useCortexStore((s) => s.recentRuns);
   const isFetchingRuns = useCortexStore((s) => s.isFetchingRuns);
@@ -35,6 +37,7 @@ export default function ActivityPage() {
   const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
 
   useEffect(() => {
+    if (!advancedMode) return;
     void fetchRecentRuns();
     void fetchServicesStatus();
     initializeStream();
@@ -43,9 +46,10 @@ export default function ActivityPage() {
       void fetchServicesStatus();
     }, 10000);
     return () => clearInterval(interval);
-  }, [fetchRecentRuns, fetchServicesStatus, initializeStream]);
+  }, [advancedMode, fetchRecentRuns, fetchServicesStatus, initializeStream]);
 
   useEffect(() => {
+    if (!advancedMode) return;
     if (recentRuns.length === 0) {
       setSelectedRunId(null);
       return;
@@ -53,13 +57,14 @@ export default function ActivityPage() {
     if (!selectedRunId || !recentRuns.some((run) => run.id === selectedRunId)) {
       setSelectedRunId(recentRuns[0].id);
     }
-  }, [recentRuns, selectedRunId]);
+  }, [advancedMode, recentRuns, selectedRunId]);
 
   useEffect(() => {
+    if (!advancedMode) return;
     if (selectedRunId) {
       void fetchRunTimeline(selectedRunId);
     }
-  }, [fetchRunTimeline, selectedRunId]);
+  }, [advancedMode, fetchRunTimeline, selectedRunId]);
 
   const activeRuns = useMemo(
     () => recentRuns.filter((run) => run.status === "running"),
@@ -77,35 +82,39 @@ export default function ActivityPage() {
   const groupsBus = services.find((svc) => svc.name === "groups_bus");
 
   return (
-    <div className="h-full overflow-y-auto bg-cortex-bg px-6 py-6 text-cortex-text-main">
-      <div className="mx-auto flex max-w-6xl flex-col gap-5">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-cortex-primary">
-              <Activity className="h-3.5 w-3.5" />
-              Advanced Activity
+    <AdvancedModeRoute
+      title="Activity review is an Advanced support view"
+      summary="Soma surfaces the useful outcome and proof first. Open Activity when you need deeper run lists, bus signals, and operator diagnostics."
+    >
+      <div className="h-full overflow-y-auto bg-cortex-bg px-6 py-6 text-cortex-text-main">
+        <div className="mx-auto flex max-w-6xl flex-col gap-5">
+          <header className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-cortex-primary">
+                <Activity className="h-3.5 w-3.5" />
+                Advanced Activity
+              </div>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+                Progress, runs, and bus review
+              </h1>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
+                Use this support view to trace what Soma did, what changed, and
+                which run or signal produced the outcome.
+              </p>
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-              Progress, runs, and bus review
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
-              Use this support view to trace what Soma did, what changed, and
-              which run or signal produced the outcome.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              void fetchRecentRuns();
-              void fetchServicesStatus();
-              initializeStream(true);
-            }}
-            className="inline-flex items-center gap-2 rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium hover:border-cortex-primary/30"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </button>
-        </header>
+            <button
+              type="button"
+              onClick={() => {
+                void fetchRecentRuns();
+                void fetchServicesStatus();
+                initializeStream(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium hover:border-cortex-primary/30"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </button>
+          </header>
 
         <section className="grid gap-3 md:grid-cols-4">
           <SummaryCard
@@ -170,7 +179,8 @@ export default function ActivityPage() {
             only when you need lower-level recovery or service commands.
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </AdvancedModeRoute>
   );
 }

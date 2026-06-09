@@ -7,6 +7,8 @@ const DEFAULT_NAV_ENTRIES = [
 ];
 
 const ADVANCED_NAV_ENTRIES = [
+    { href: '/groups', label: 'Groups', testId: 'nav-groups' },
+    { href: '/activity', label: 'Activity', testId: 'nav-activity' },
     { href: '/resources', label: 'Resources', testId: 'nav-resources' },
     { href: '/memory', label: 'Memory', testId: 'nav-memory' },
     { href: '/system', label: 'System', testId: 'nav-system' },
@@ -104,6 +106,19 @@ test.describe('V8.1 Soma-primary Navigation', () => {
     test('System tab is hidden by default (advanced mode off)', async ({ page }) => {
         await expect(page.getByTestId('nav-system')).toHaveCount(0);
     });
+
+    for (const route of [
+        { href: '/groups', gate: 'Groups are an Advanced coordination view' },
+        { href: '/activity', gate: 'Activity review is an Advanced support view' },
+        { href: '/runs', gate: 'Run lists are an Advanced proof view' },
+    ]) {
+        test(`direct ${route.href} opens an advanced gate while advanced mode is off`, async ({ page }) => {
+            await page.goto(route.href, { waitUntil: 'domcontentloaded' });
+            await expect(page.getByRole('heading', { name: route.gate })).toBeVisible();
+            await expect(page.getByRole('button', { name: 'Open Advanced mode' })).toBeVisible();
+            await expect(page.getByRole('link', { name: 'Return to AI Organization' })).toBeVisible();
+        });
+    }
 
     test('Advanced mode persistence flips visible state labels', async ({ page }) => {
         await expect(page.getByTestId('nav-resources')).toHaveCount(0);

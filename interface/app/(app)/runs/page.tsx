@@ -4,6 +4,7 @@ import React, { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Activity, Zap, Loader2 } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
+import AdvancedModeRoute from "@/components/shared/AdvancedModeRoute";
 
 function timeAgo(iso: string): string {
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -41,14 +42,16 @@ export default function RunsPage() {
 function RunsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const advancedMode = useCortexStore((s) => s.advancedMode);
     const recentRuns = useCortexStore((s) => s.recentRuns);
     const isFetchingRuns = useCortexStore((s) => s.isFetchingRuns);
     const fetchRecentRuns = useCortexStore((s) => s.fetchRecentRuns);
     const assistantName = useCortexStore((s) => s.assistantName);
 
     useEffect(() => {
+        if (!advancedMode) return;
         fetchRecentRuns();
-    }, [fetchRecentRuns]);
+    }, [advancedMode, fetchRecentRuns]);
 
     const requestedStatus = searchParams?.get("status") ?? "";
     const activeRuns = recentRuns.filter((r) => r.status === 'running');
@@ -57,6 +60,10 @@ function RunsContent() {
         : recentRuns;
 
     return (
+        <AdvancedModeRoute
+            title="Run lists are an Advanced proof view"
+            summary="Soma keeps current proof near the result. Open the run list when you need to inspect execution history across workflows."
+        >
         <div className="min-h-screen bg-cortex-bg text-cortex-text-main">
             {/* Header */}
             <div className="sticky top-0 z-10 bg-cortex-bg border-b border-cortex-border px-4 py-3 flex items-center gap-3">
@@ -149,5 +156,6 @@ function RunsContent() {
                 )}
             </div>
         </div>
+        </AdvancedModeRoute>
     );
 }
