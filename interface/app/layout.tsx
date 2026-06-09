@@ -13,14 +13,14 @@ const themeBootScript = `
     const parsed = raw ? JSON.parse(raw) : {};
     let theme = parsed && typeof parsed.theme === "string" ? parsed.theme : "";
     if (theme !== "aero-light" && theme !== "midnight-cortex" && theme !== "system") {
-      theme = "aero-light";
+      theme = "midnight-cortex";
     }
     if (theme === "system") {
       theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "midnight-cortex" : "aero-light";
     }
     document.documentElement.dataset.theme = theme;
   } catch {
-    document.documentElement.dataset.theme = "aero-light";
+    document.documentElement.dataset.theme = "midnight-cortex";
   }
 })();
 `;

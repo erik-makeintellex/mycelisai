@@ -30,18 +30,18 @@ function readInitialTheme(): CortexState['theme'] {
         || typeof localStorage === 'undefined'
         || typeof localStorage.getItem !== 'function'
     ) {
-        return 'aero-light';
+        return 'midnight-cortex';
     }
     try {
         const raw = localStorage.getItem('mycelis-user-settings');
         const parsed = raw ? JSON.parse(raw) as { theme?: unknown } : {};
-        if (parsed.theme === 'midnight-cortex' || parsed.theme === 'system') {
+        if (parsed.theme === 'aero-light' || parsed.theme === 'midnight-cortex' || parsed.theme === 'system') {
             return parsed.theme;
         }
     } catch {
-        return 'aero-light';
+        return 'midnight-cortex';
     }
-    return 'aero-light';
+    return 'midnight-cortex';
 }
 
 const initialDraftGraphState: StripActions<CortexDraftGraphContract> = {

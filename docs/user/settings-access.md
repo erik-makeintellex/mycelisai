@@ -28,7 +28,7 @@ Profile controls operator-facing identity preferences such as preferred name, ti
 Current expectations:
 
 - profile preferences may change how the interface names the operator or assistant
-- saved theme preferences are applied before the authenticated Soma shell paints so login does not flash from the default light surface into the selected workspace theme
+- the authenticated Soma shell defaults to the dark `midnight-cortex` theme before hydration; saved `aero-light`, `midnight-cortex`, or `system` preferences are applied before the shell paints so login does not flash between themes
 - deploy-owned edition and access posture are read-only here
 - profile edits must not override `.env` or deployment-owned auth configuration
 

@@ -83,6 +83,24 @@ describe('useCortexStore data fetch', () => {
             expect(useCortexStore.getState().assistantName).toBe('Atlas');
             expect(useCortexStore.getState().theme).toBe('midnight-cortex');
         });
+
+        it('normalizes unknown fetched themes to midnight cortex', async () => {
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    data: {
+                        assistant_name: 'Soma',
+                        theme: 'unknown-theme',
+                    },
+                }),
+            });
+
+            await useCortexStore.getState().fetchUserSettings();
+
+            expect(useCortexStore.getState().theme).toBe('midnight-cortex');
+            expect(localStorage.getItem('mycelis-user-settings')).toContain('"theme":"midnight-cortex"');
+        });
     });
 
     describe('fetchArtifacts', () => {

@@ -12,10 +12,10 @@ type LocalSettings = {
 const LOCAL_SETTINGS_KEY = 'mycelis-user-settings';
 
 function normalizeTheme(value: unknown): ThemeSetting {
-    if (value === 'midnight-cortex' || value === 'system') {
+    if (value === 'aero-light' || value === 'midnight-cortex' || value === 'system') {
         return value;
     }
-    return 'aero-light';
+    return 'midnight-cortex';
 }
 
 function readLocalSettings(): LocalSettings {

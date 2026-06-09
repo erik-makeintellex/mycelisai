@@ -65,4 +65,41 @@ test.describe('Authenticated front door', () => {
             window.getComputedStyle(document.documentElement).getPropertyValue('--color-cortex-bg').trim(),
         )).toBe('#0f1116');
     });
+
+    test('dashboard first paint defaults to the dark workspace theme without hydration noise', async ({ page }) => {
+        const hydrationMessages: string[] = [];
+        page.on('console', (message) => {
+            if (!['error', 'warning'].includes(message.type())) return;
+            const text = message.text();
+            if (/hydration|hydrating|did not match|text content does not match/i.test(text)) {
+                hydrationMessages.push(text);
+            }
+        });
+
+        await page.addInitScript(() => {
+            window.localStorage.removeItem('mycelis-user-settings');
+            window.localStorage.setItem('mycelis-advanced-mode', 'true');
+        });
+        await page.route('**/api/v1/user/settings', async (route) => {
+            await route.fulfill({
+                json: {
+                    ok: true,
+                    data: {
+                        assistant_name: 'Soma',
+                        theme: 'midnight-cortex',
+                    },
+                },
+            });
+        });
+
+        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+
+        await expect(page.locator('html')).toHaveAttribute('data-theme', 'midnight-cortex');
+        await expect(page.getByRole('button', { name: /Advanced: On/i })).toBeVisible();
+        await expect.poll(async () => page.evaluate(() =>
+            window.getComputedStyle(document.documentElement).getPropertyValue('--color-cortex-bg').trim(),
+        )).toBe('#0f1116');
+        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        expect(hydrationMessages).toEqual([]);
+    });
 });
