@@ -188,6 +188,17 @@ describe("OutputWorkbench", () => {
       storagePath: "generated/owner-package",
       count: 1,
     });
+
+    const packageDigest = outputWorkbenchDigest({
+      outputs: [{ text: "Game team folder", url: "/api/v1/workspace/files/view?path=groups%2Fgame-team", storagePath: "groups/game-team" }],
+      projectPackages: [{ kind: "project_package", title: "Playable game", folder: "groups/game-team/generated/first-game", entrypoint: "groups/game-team/generated/first-game/index.html" }],
+    });
+    expect(packageDigest).toEqual({
+      text: "Playable game",
+      url: "/api/v1/workspace/files/view?path=groups%2Fgame-team%2Fgenerated%2Ffirst-game%2Findex.html",
+      storagePath: "groups/game-team/generated/first-game",
+      count: 2,
+    });
   });
 
   it("prioritizes generated files over team folders in the main output workbench", () => {

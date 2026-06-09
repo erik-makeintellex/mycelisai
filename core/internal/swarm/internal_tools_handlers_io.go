@@ -120,7 +120,86 @@ func (r *InternalToolRegistry) handleWriteFile(_ context.Context, args map[strin
 	if err := os.WriteFile(safePath, []byte(content), 0o644); err != nil {
 		return "", fmt.Errorf("failed to write %s: %w", safePath, err)
 	}
+	supportCount, err := writeProjectPackageSupportFiles(path, args)
+	if err != nil {
+		return "", err
+	}
+	if supportCount > 0 {
+		return fmt.Sprintf("File written: %s (%d bytes). Project package support files written: %d.", safePath, len(content), supportCount), nil
+	}
 	return fmt.Sprintf("File written: %s (%d bytes).", safePath, len(content)), nil
+}
+
+func writeProjectPackageSupportFiles(mainPath string, args map[string]any) (int, error) {
+	if !strings.EqualFold(strings.TrimSpace(stringValue(args["package_kind"])), "project_package") {
+		return 0, nil
+	}
+	folder := strings.TrimSpace(stringValue(args["package_folder"]))
+	if folder == "" {
+		folder = filepath.Dir(normalizeWorkspaceRelativePath(mainPath))
+	}
+	if folder == "." || folder == "" {
+		return 0, nil
+	}
+	safeFolder, err := validateToolPath(folder)
+	if err != nil {
+		return 0, err
+	}
+	if err := os.MkdirAll(safeFolder, 0o755); err != nil {
+		return 0, fmt.Errorf("failed to create package folder %s: %w", safeFolder, err)
+	}
+
+	count := 0
+	for _, file := range stringSlice(args["package_files"]) {
+		rel := strings.Trim(strings.TrimSpace(file), `/\`)
+		if rel == "" {
+			continue
+		}
+		base := strings.ToLower(filepath.Base(rel))
+		if base != "readme.md" && base != "proof.md" && base != "validation-notes.md" {
+			continue
+		}
+		cleanRel := filepath.Clean(filepath.FromSlash(rel))
+		if filepath.IsAbs(cleanRel) || cleanRel == "." || strings.HasPrefix(cleanRel, "..") {
+			return count, fmt.Errorf("package support file %q escapes package folder", file)
+		}
+		target := filepath.Join(safeFolder, cleanRel)
+		relToFolder, err := filepath.Rel(safeFolder, target)
+		if err != nil || strings.HasPrefix(relToFolder, "..") {
+			return count, fmt.Errorf("package support file %q escapes package folder", file)
+		}
+		content := projectPackageSupportFileContent(base, args, mainPath)
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return count, fmt.Errorf("failed to create package support folder %s: %w", filepath.Dir(target), err)
+		}
+		if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
+			return count, fmt.Errorf("failed to write package support file %s: %w", target, err)
+		}
+		count++
+	}
+	return count, nil
+}
+
+func projectPackageSupportFileContent(file string, args map[string]any, mainPath string) string {
+	title := strings.TrimSpace(stringValue(args["package_title"]))
+	if title == "" {
+		title = "Generated project package"
+	}
+	entrypoint := strings.TrimSpace(stringValue(args["package_entrypoint"]))
+	if entrypoint == "" {
+		entrypoint = mainPath
+	}
+	validation := strings.TrimSpace(stringValue(args["validation"]))
+	if validation == "" {
+		validation = strings.TrimSpace(stringValue(args["validation_summary"]))
+	}
+	if validation == "" {
+		validation = "Open the entrypoint in a browser and review the retained output."
+	}
+	if file == "proof.md" || file == "validation-notes.md" {
+		return fmt.Sprintf("# %s Proof\n\n- Entrypoint: `%s`\n- Validation: %s\n- Generated graphics/assets: code-only browser output.\n- Recovery: rerun or ask Soma for a revision if browser validation fails.\n", title, entrypoint, validation)
+	}
+	return fmt.Sprintf("# %s\n\n## Open\n\nOpen `%s` in a browser.\n\n## Controls\n\nUse WASD or arrow keys to move. Press `R` or `Restart` to restart.\n\n## Validation\n\n%s\n", title, entrypoint, validation)
 }
 
 func (r *InternalToolRegistry) handleLocalCommand(ctx context.Context, args map[string]any) (string, error) {

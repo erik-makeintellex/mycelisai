@@ -23,8 +23,9 @@ export function outputWorkbenchDigest({
   const primaryOutputIndex = preferredOutputIndex(outputs);
   const normalizedPrimaryIndex = primaryOutputIndex >= 0 ? primaryOutputIndex : outputs.length > 0 ? 0 : -1;
   const primaryOutput = normalizedPrimaryIndex >= 0 ? outputs[normalizedPrimaryIndex] : null;
+  const primaryPackage = packages[0];
 
-  if (primaryOutput) {
+  if (primaryOutput && (!isGroupFolderOutput(primaryOutput) || !itemUrl(primaryPackage))) {
     const storagePath = primaryOutput.storagePath ?? workspacePathFromOutputUrl(primaryOutput.url);
     return {
       text: primaryOutput.text,
@@ -34,7 +35,6 @@ export function outputWorkbenchDigest({
     };
   }
 
-  const primaryPackage = packages[0];
   if (!primaryPackage) return null;
 
   return {

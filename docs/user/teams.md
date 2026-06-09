@@ -174,6 +174,7 @@ When testing team workflows, verify:
 - compact team defaults are visible and start lead-only
 - explicit specialist-output requests preserve the requested roles instead of collapsing them into a ceremonial single-member shell
 - media team requests produce or degrade a retained media deliverable with output/proof references
+- P0 generated-game proof uses a natural Soma/team request, not a pasted finished HTML file; the retained package should open as a browser app with code-generated graphics, movement, collision, hazards/enemies, health, key, locked door, win/fail states, and restart
 - any temporary specialist explains the missing capability, owned task, proof expected, and removal point
 - broad work splits into several smaller lead-owned lanes instead of starting a large roster
 - broad asks produce multiple small coordinated lanes instead of one huge team

@@ -38,7 +38,6 @@ export function executionSummaryHeading(summary: ExecutionSummaryData, outputCou
     if (status === "proposed") return "Proposal ready";
     return outputCount > 0 ? "Output ready" : "Result ready";
 }
-
 export function itemText(item: SummaryValue): string | null {
     if (typeof item === "string") return compactText(item);
     return compactText(item.label)
@@ -49,15 +48,16 @@ export function itemText(item: SummaryValue): string | null {
         ?? compactText(item.id)
         ?? null;
 }
-
 export function itemUrl(item: SummaryValue): string | null {
     if (typeof item === "string") return null;
-    const id = compactText(item.id);
+    const id = compactText(item.id), entrypoint = compactText(item.entrypoint), folder = compactText(item.folder);
+    const packageEntrypoint = entrypoint && folder && !entrypoint.includes("/") ? `${folder}/${entrypoint}` : entrypoint;
     return normalizeWorkspaceOutputUrl(
         compactText(item.open_url)
         ?? compactText(item.url)
         ?? compactText(item.href)
         ?? compactText(item.path)
+        ?? packageEntrypoint
         ?? (id && isWorkspacePathLike(id) ? id : null),
     );
 }
