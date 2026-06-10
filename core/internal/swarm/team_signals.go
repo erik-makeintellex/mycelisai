@@ -53,7 +53,7 @@ func normalizeCommandPayload(data []byte) []byte {
 // handleResponse receives an internal signal and broadens it to the external team bus.
 func (t *Team) handleResponse(msg *nats.Msg) {
 	log.Printf("Team [%s] Response: %s", t.Manifest.Name, string(msg.Data))
-	correlation := t.currentCommandCorrelation()
+	correlation := t.responseCommandCorrelation(msg.Data)
 	for _, subject := range t.Manifest.Deliveries {
 		payload := msg.Data
 		switch {
@@ -101,22 +101,43 @@ func (t *Team) rememberCommandCorrelation(correlation teamCommandCorrelation) {
 	correlation.TeamID = firstNonEmptySignalString(correlation.TeamID, t.Manifest.ID)
 	correlation.ExpiresAt = time.Now().UTC().Add(5 * time.Minute)
 	t.mu.Lock()
-	t.pendingCorrelation = &correlation
+	t.pruneExpiredCorrelationsLocked(time.Now().UTC())
+	t.pendingCorrelations = append(t.pendingCorrelations, correlation)
 	t.mu.Unlock()
 }
 
-func (t *Team) currentCommandCorrelation() *teamCommandCorrelation {
+func (t *Team) responseCommandCorrelation(raw []byte) *teamCommandCorrelation {
+	if explicit := correlationFromPayload(raw); explicit != nil {
+		explicit.TeamID = firstNonEmptySignalString(explicit.TeamID, t.Manifest.ID)
+		return explicit
+	}
+	return t.consumeCommandCorrelation()
+}
+
+func (t *Team) consumeCommandCorrelation() *teamCommandCorrelation {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.pendingCorrelation == nil {
+	now := time.Now().UTC()
+	t.pruneExpiredCorrelationsLocked(now)
+	if len(t.pendingCorrelations) == 0 {
 		return nil
 	}
-	if time.Now().UTC().After(t.pendingCorrelation.ExpiresAt) {
-		t.pendingCorrelation = nil
-		return nil
-	}
-	copied := *t.pendingCorrelation
+	copied := t.pendingCorrelations[0]
+	t.pendingCorrelations = append([]teamCommandCorrelation(nil), t.pendingCorrelations[1:]...)
 	return &copied
+}
+
+func (t *Team) pruneExpiredCorrelationsLocked(now time.Time) {
+	if len(t.pendingCorrelations) == 0 {
+		return
+	}
+	kept := t.pendingCorrelations[:0]
+	for _, correlation := range t.pendingCorrelations {
+		if correlation.ExpiresAt.IsZero() || !now.After(correlation.ExpiresAt) {
+			kept = append(kept, correlation)
+		}
+	}
+	t.pendingCorrelations = kept
 }
 
 func extractTeamCommandCorrelation(teamID string, rawEnvelope, normalizedPayload []byte) *teamCommandCorrelation {

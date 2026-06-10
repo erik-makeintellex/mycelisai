@@ -172,6 +172,9 @@ func (s *AdminServer) dispatchTeamWorkAsk(item protocol.TeamWorkItem, req teamWo
 	if err := s.NC.Publish(subject, payload); err != nil {
 		return "team_ask_publish_failed", fmt.Errorf("team ask command could not be published: %w", err)
 	}
+	if err := s.NC.Flush(); err != nil {
+		return "team_ask_publish_unflushed", fmt.Errorf("team ask command could not be flushed to NATS: %w", err)
+	}
 	return "published", nil
 }
 

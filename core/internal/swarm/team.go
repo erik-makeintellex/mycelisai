@@ -34,24 +34,24 @@ type TeamManifest struct {
 
 // Team represents a running instance of a TeamManifest.
 type Team struct {
-	Manifest           *TeamManifest
-	nc                 *nats.Conn
-	brain              *cognitive.Router
-	toolExecutor       MCPToolExecutor
-	toolDescs          map[string]string
-	internalTools      *InternalToolRegistry
-	ctx                context.Context
-	cancel             context.CancelFunc
-	mu                 sync.Mutex
-	sensorConfigs      map[string]SensorConfig
-	scheduler          *TeamScheduler
-	eventEmitter       protocol.EventEmitter
-	runID              string
-	conversationLogger protocol.ConversationLogger
-	compositeExec      *CompositeToolExecutor
-	mcpServerNames     map[uuid.UUID]string
-	mcpToolDescs       map[string]string
-	pendingCorrelation *teamCommandCorrelation
+	Manifest            *TeamManifest
+	nc                  *nats.Conn
+	brain               *cognitive.Router
+	toolExecutor        MCPToolExecutor
+	toolDescs           map[string]string
+	internalTools       *InternalToolRegistry
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	mu                  sync.Mutex
+	sensorConfigs       map[string]SensorConfig
+	scheduler           *TeamScheduler
+	eventEmitter        protocol.EventEmitter
+	runID               string
+	conversationLogger  protocol.ConversationLogger
+	compositeExec       *CompositeToolExecutor
+	mcpServerNames      map[uuid.UUID]string
+	mcpToolDescs        map[string]string
+	pendingCorrelations []teamCommandCorrelation
 }
 
 type teamCommandCorrelation struct {

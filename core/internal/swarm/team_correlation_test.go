@@ -102,6 +102,70 @@ func TestTeam_StatusDeliveryCarriesOutputReadyCorrelation(t *testing.T) {
 	assertProjectedWorkOutput(t, projected, workID, "Status-only note ready.")
 }
 
+func TestTeam_ResponseDeliveryConsumesPendingCorrelationsFIFO(t *testing.T) {
+	s, nc := startTestNATS(t)
+	defer s.Shutdown()
+	defer nc.Close()
+
+	team := NewTeam(&TeamManifest{
+		ID:         "test-core",
+		Name:       "Test Core",
+		Type:       TeamTypeAction,
+		Inputs:     []string{"swarm.team.test-core.internal.command"},
+		Deliveries: []string{"swarm.team.test-core.signal.result"},
+	}, nc, nil, nil)
+	if err := team.Start(); err != nil {
+		t.Fatalf("team start: %v", err)
+	}
+	defer team.Stop()
+
+	internalTriggerCh := make(chan struct{}, 2)
+	if _, err := nc.Subscribe("swarm.team.test-core.internal.trigger", func(msg *nats.Msg) {
+		internalTriggerCh <- struct{}{}
+	}); err != nil {
+		t.Fatalf("subscribe internal trigger: %v", err)
+	}
+	resultCh := make(chan *nats.Msg, 2)
+	if _, err := nc.Subscribe("swarm.team.test-core.signal.result", func(msg *nats.Msg) { resultCh <- msg }); err != nil {
+		t.Fatalf("subscribe result: %v", err)
+	}
+	nc.Flush()
+
+	const firstWorkID = "11111111-1111-1111-1111-111111111111"
+	const secondWorkID = "22222222-2222-2222-2222-222222222222"
+	publishCorrelatedCommand(t, nc, firstWorkID, "")
+	publishCorrelatedCommand(t, nc, secondWorkID, "")
+	waitForInternalTriggers(t, internalTriggerCh, 2)
+
+	if err := nc.Publish("swarm.team.test-core.internal.response", []byte("first ready")); err != nil {
+		t.Fatalf("publish first response: %v", err)
+	}
+	if err := nc.Publish("swarm.team.test-core.internal.response", []byte("second ready")); err != nil {
+		t.Fatalf("publish second response: %v", err)
+	}
+
+	_, first := decodeTeamSignalPayload(t, waitForTeamSignal(t, resultCh, "first correlated result").Data)
+	_, second := decodeTeamSignalPayload(t, waitForTeamSignal(t, resultCh, "second correlated result").Data)
+	assertProjectedWorkOutput(t, first, firstWorkID, "first ready")
+	assertProjectedWorkOutput(t, second, secondWorkID, "second ready")
+}
+
+func TestTeam_ResponseDeliveryUsesExplicitCorrelationWithoutConsumingPending(t *testing.T) {
+	team := NewTeam(&TeamManifest{ID: "test-core", Name: "Test Core"}, nil, nil, nil)
+	const pendingWorkID = "11111111-1111-1111-1111-111111111111"
+	const explicitWorkID = "22222222-2222-2222-2222-222222222222"
+	team.rememberCommandCorrelation(teamCommandCorrelation{WorkItemID: pendingWorkID, TeamID: "test-core"})
+
+	explicit := team.responseCommandCorrelation([]byte(`{"work_item_id":"` + explicitWorkID + `","team_id":"test-core","state":"running"}`))
+	if explicit == nil || explicit.WorkItemID != explicitWorkID {
+		t.Fatalf("explicit correlation = %+v, want %s", explicit, explicitWorkID)
+	}
+	pending := team.responseCommandCorrelation([]byte("plain follow-up"))
+	if pending == nil || pending.WorkItemID != pendingWorkID {
+		t.Fatalf("pending correlation = %+v, want %s", pending, pendingWorkID)
+	}
+}
+
 func publishCorrelatedCommand(t *testing.T, nc *nats.Conn, workID, runID string) {
 	t.Helper()
 	payload, err := protocol.WrapSignalPayloadWithMeta(
@@ -118,6 +182,17 @@ func publishCorrelatedCommand(t *testing.T, nc *nats.Conn, workID, runID string)
 	}
 	if err := nc.Publish("swarm.team.test-core.internal.command", payload); err != nil {
 		t.Fatalf("publish command: %v", err)
+	}
+}
+
+func waitForInternalTriggers(t *testing.T, ch <-chan struct{}, count int) {
+	t.Helper()
+	for i := 0; i < count; i++ {
+		select {
+		case <-ch:
+		case <-time.After(1 * time.Second):
+			t.Fatalf("timeout waiting for internal trigger %d/%d", i+1, count)
+		}
 	}
 }
 
