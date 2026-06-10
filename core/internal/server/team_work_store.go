@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -9,6 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/mycelis/core/pkg/protocol"
 )
+
+type teamWorkSQLExecutor interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
 
 func (s *AdminServer) listTeamWorkItemsDB(ctx context.Context, teamID string, limit int, includeArchived bool) ([]protocol.TeamWorkItem, error) {
 	db := s.getDB()
@@ -106,6 +112,13 @@ func (s *AdminServer) insertTeamStatusEventDB(ctx context.Context, event *protoc
 	if db == nil {
 		return errors.New("database not available")
 	}
+	return s.insertTeamStatusEventExec(ctx, db, event)
+}
+
+func (s *AdminServer) insertTeamStatusEventExec(ctx context.Context, exec teamWorkSQLExecutor, event *protocol.TeamStatusEvent) error {
+	if exec == nil {
+		return errors.New("database not available")
+	}
 	if strings.TrimSpace(event.EventID) == "" {
 		event.EventID = uuid.NewString()
 	}
@@ -115,7 +128,7 @@ func (s *AdminServer) insertTeamStatusEventDB(ctx context.Context, event *protoc
 	if strings.TrimSpace(event.Version) == "" {
 		event.Version = "v1"
 	}
-	if err := db.QueryRowContext(ctx, `
+	if err := exec.QueryRowContext(ctx, `
 		INSERT INTO team_status_events (
 			id, tenant_id, team_id, work_item_id, run_id, intent_proof_id, contract_id, proof_id,
 			state, headline, details, confidence_posture, blocked_by, next_action,
@@ -134,12 +147,23 @@ func (s *AdminServer) insertTeamStatusEventDB(ctx context.Context, event *protoc
 	).Scan(&event.Timestamp); err != nil {
 		return err
 	}
-	return s.insertTeamWorkMissionEventDB(ctx, event)
+	return s.insertTeamWorkMissionEventExec(ctx, exec, event)
 }
 
 func (s *AdminServer) updateTeamWorkItemLastEventDB(ctx context.Context, item *protocol.TeamWorkItem, event protocol.TeamStatusEvent) error {
 	db := s.getDB()
 	if db == nil {
+		return errors.New("database not available")
+	}
+	if err := s.updateTeamWorkItemLastEventExec(ctx, db, item, event); err != nil {
+		return err
+	}
+	item.LastEvent = &event
+	return nil
+}
+
+func (s *AdminServer) updateTeamWorkItemLastEventExec(ctx context.Context, exec teamWorkSQLExecutor, item *protocol.TeamWorkItem, event protocol.TeamStatusEvent) error {
+	if exec == nil {
 		return errors.New("database not available")
 	}
 	if item == nil {
@@ -149,7 +173,7 @@ func (s *AdminServer) updateTeamWorkItemLastEventDB(ctx context.Context, item *p
 	if err != nil {
 		return err
 	}
-	_, err = db.ExecContext(ctx, `
+	_, err = exec.ExecContext(ctx, `
 		UPDATE team_work_items
 		SET state=$2,
 		    last_event=$3,
@@ -165,9 +189,6 @@ func (s *AdminServer) updateTeamWorkItemLastEventDB(ctx context.Context, item *p
 		item.DegradationState, jsonArray(item.RecoveryOptions), jsonArray(item.OutputRefs),
 		jsonArray(item.ProofRefs), jsonArray(item.AuditRefs),
 	)
-	if err == nil {
-		item.LastEvent = &event
-	}
 	return err
 }
 
@@ -242,13 +263,20 @@ func (s *AdminServer) insertTeamInteractionDB(ctx context.Context, item *protoco
 	if db == nil {
 		return errors.New("database not available")
 	}
+	return s.insertTeamInteractionExec(ctx, db, item)
+}
+
+func (s *AdminServer) insertTeamInteractionExec(ctx context.Context, exec teamWorkSQLExecutor, item *protocol.TeamInteraction) error {
+	if exec == nil {
+		return errors.New("database not available")
+	}
 	if strings.TrimSpace(item.InteractionID) == "" {
 		item.InteractionID = uuid.NewString()
 	}
 	if err := validateTeamInteractionUUIDLinks(*item); err != nil {
 		return err
 	}
-	return db.QueryRowContext(ctx, `
+	return exec.QueryRowContext(ctx, `
 		INSERT INTO team_interactions (
 			id, tenant_id, team_id, work_item_id, run_id, intent_proof_id, contract_id, proof_id,
 			source_kind, source_channel, actor_ref, verb, summary, payload_kind,

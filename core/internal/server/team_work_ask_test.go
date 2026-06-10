@@ -2,15 +2,12 @@ package server
 
 import (
 	"context"
-	"database/sql/driver"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
@@ -24,9 +21,11 @@ func TestHandleTeamWorkAsk_RecordsOutputReadyResponse(t *testing.T) {
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectBegin()
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateOutputReady, now)
 	expectTeamWorkAskUpdateWithRetainedTextRefs(mock, protocol.TeamWorkStateOutputReady, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "response", string(protocol.PayloadKindResult), now)
+	mock.ExpectCommit()
 
 	subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, "qa-team")
 	if _, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
@@ -87,6 +86,38 @@ func TestHandleTeamWorkAsk_RecordsOutputReadyResponse(t *testing.T) {
 	}
 }
 
+func TestRecordTeamWorkAskOutput_RollsBackWhenInteractionInsertFails(t *testing.T) {
+	dbOpt, mock := withDB(t)
+	s := newTestServer(dbOpt)
+	now := time.Now().UTC()
+	mock.MatchExpectationsInOrder(true)
+	mock.ExpectBegin()
+	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateOutputReady, now)
+	expectTeamWorkAskUpdateWithRetainedTextRefs(mock, protocol.TeamWorkStateOutputReady, false, "")
+	expectTeamWorkAskInteractionFailure(mock, "qa-team", "response", string(protocol.PayloadKindResult), fmt.Errorf("interaction insert failed"))
+	mock.ExpectRollback()
+
+	item := protocol.NormalizeTeamWorkItem(protocol.TeamWorkItem{
+		WorkItemID:        "11111111-1111-1111-1111-111111111111",
+		TeamID:            "qa-team",
+		Objective:         "Validate the browser package.",
+		Owner:             "Soma",
+		ExecutionShape:    protocol.TeamExecutionShapeDelegatedWork,
+		GovernancePosture: protocol.ApprovalPostureAutoAllowed,
+		State:             protocol.TeamWorkStateQueued,
+	})
+	_, err := s.recordTeamWorkAskOutput(t.Context(), &item, "team.subject", "validated output package")
+	if err == nil {
+		t.Fatal("recordTeamWorkAskOutput succeeded, want interaction failure")
+	}
+	if item.LastEvent != nil {
+		t.Fatal("recordTeamWorkAskOutput set in-memory LastEvent after rollback")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestHandleTeamWorkAsk_RecordsDegradedForUnreadableTeamResponse(t *testing.T) {
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt, withNATS(t))
@@ -96,9 +127,11 @@ func TestHandleTeamWorkAsk_RecordsDegradedForUnreadableTeamResponse(t *testing.T
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectBegin()
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateDegraded, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateDegraded, true, "team_response_unreadable")
 	expectTeamWorkAskInteraction(mock, "qa-team", "degraded", string(protocol.PayloadKindError), now)
+	mock.ExpectCommit()
 
 	subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, "qa-team")
 	if _, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
@@ -141,9 +174,11 @@ func TestHandleTeamWorkAsk_RecordsDegradedWhenNATSOffline(t *testing.T) {
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectBegin()
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateDegraded, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateDegraded, true, "nats_offline")
 	expectTeamWorkAskInteraction(mock, "qa-team", "degraded", string(protocol.PayloadKindError), now)
+	mock.ExpectCommit()
 
 	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
 	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{"message":"Ship the report."}`)
@@ -186,85 +221,4 @@ func TestTeamWorkAskFollowupContextSurvivesRequestCancellation(t *testing.T) {
 	if remaining := time.Until(deadline); remaining <= 0 || remaining > teamAskFollowupTimeout {
 		t.Fatalf("deadline remaining = %v, want within %v", remaining, teamAskFollowupTimeout)
 	}
-}
-
-func expectTeamWorkAskInsert(mock sqlmock.Sqlmock, teamID string, state protocol.TeamWorkState, needsOperator bool, degradation string, now time.Time) {
-	mock.ExpectQuery("INSERT INTO team_work_items").
-		WithArgs(
-			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "Soma",
-			string(protocol.TeamExecutionShapeDelegatedWork), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			string(protocol.ApprovalPostureAutoAllowed), string(state), needsOperator,
-			degradation, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"created_at", "updated_at"}).AddRow(now, now))
-}
-
-func expectTeamWorkAskStatus(mock sqlmock.Sqlmock, teamID string, state protocol.TeamWorkState, now time.Time) {
-	mock.ExpectQuery("INSERT INTO team_status_events").
-		WithArgs(
-			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			string(state), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindWebAPI),
-			teamWorkAskSourceChannel, string(protocol.PayloadKindStatus), sqlmock.AnyArg(), "v1",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
-}
-
-func expectTeamWorkAskUpdate(mock sqlmock.Sqlmock, state protocol.TeamWorkState, needsOperator bool, degradation string) {
-	mock.ExpectExec("UPDATE team_work_items").
-		WithArgs(
-			sqlmock.AnyArg(), string(state), sqlmock.AnyArg(), needsOperator, degradation,
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-		).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-}
-
-func expectTeamWorkAskUpdateWithRetainedTextRefs(mock sqlmock.Sqlmock, state protocol.TeamWorkState, needsOperator bool, degradation string) {
-	mock.ExpectExec("UPDATE team_work_items").
-		WithArgs(
-			sqlmock.AnyArg(), string(state), sqlmock.AnyArg(), needsOperator, degradation,
-			sqlmock.AnyArg(),
-			outputRefsMatch{TeamID: "qa-team", Kind: "text_reply", Label: "Team text reply"},
-			stringListContainsMatch{Prefix: "team_status_event:"},
-			stringListContainsMatch{Prefix: "team_interaction:"},
-		).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-}
-
-func expectTeamWorkAskInteraction(mock sqlmock.Sqlmock, teamID, verb, payloadKind string, now time.Time) {
-	mock.ExpectQuery("INSERT INTO team_interactions").
-		WithArgs(
-			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindWebAPI),
-			teamWorkAskSourceChannel, sqlmock.AnyArg(), verb, sqlmock.AnyArg(),
-			payloadKind, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
-}
-
-type stringListContainsMatch struct {
-	Prefix string
-}
-
-func (m stringListContainsMatch) Match(value driver.Value) bool {
-	raw, ok := value.([]byte)
-	if !ok {
-		text, ok := value.(string)
-		if !ok {
-			return false
-		}
-		raw = []byte(text)
-	}
-	var items []string
-	if err := json.Unmarshal(raw, &items); err != nil {
-		return false
-	}
-	for _, item := range items {
-		if strings.HasPrefix(item, m.Prefix) {
-			return true
-		}
-	}
-	return false
 }

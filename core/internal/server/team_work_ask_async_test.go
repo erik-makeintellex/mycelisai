@@ -21,9 +21,11 @@ func TestHandleTeamWorkAsk_AsyncPublishesCommandAndReturnsQueued(t *testing.T) {
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectBegin()
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateRunning, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateRunning, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "dispatch", string(protocol.PayloadKindStatus), now)
+	mock.ExpectCommit()
 
 	subject := fmt.Sprintf(protocol.TopicTeamInternalCommand, "qa-team")
 	received := make(chan []byte, 1)
@@ -92,9 +94,11 @@ func TestHandleTeamWorkAsk_AsyncRecordsDegradedWhenNATSOffline(t *testing.T) {
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectBegin()
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateDegraded, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateDegraded, true, "nats_offline")
 	expectTeamWorkAskInteraction(mock, "qa-team", "degraded", string(protocol.PayloadKindError), now)
+	mock.ExpectCommit()
 
 	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
 	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{

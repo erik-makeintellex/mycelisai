@@ -21,12 +21,6 @@ func (s *AdminServer) recordTeamWorkAskDispatched(ctx context.Context, item *pro
 	})
 	details := fmt.Sprintf("Published async team ask to subject/channel %s from %s. Recovery deadline hint: if no status or result signal references work_item_id %s by %s, inspect the channel and retry or recover this work item.", subject, teamWorkAskSourceChannel, item.WorkItemID, deadline)
 	event := teamWorkAskStatusEvent(*item, protocol.TeamWorkStateRunning, "Team ask dispatched", details, dispatchState, fmt.Sprintf("Wait for a team status/result signal on %s; recover after %s if none arrives.", subject, deadline), nil)
-	if err := s.insertTeamStatusEventDB(ctx, &event); err != nil {
-		return event, err
-	}
-	if err := s.updateTeamWorkItemLastEventDB(ctx, item, event); err != nil {
-		return event, err
-	}
 	interaction := protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
 		InteractionID: uuid.NewString(),
 		TeamID:        item.TeamID,
@@ -47,7 +41,7 @@ func (s *AdminServer) recordTeamWorkAskDispatched(ctx context.Context, item *pro
 		},
 		Version: "v1",
 	})
-	if err := s.insertTeamInteractionDB(ctx, &interaction); err != nil {
+	if err := s.persistTeamWorkAskRecord(ctx, item, &event, &interaction); err != nil {
 		return event, err
 	}
 	return event, nil
@@ -59,12 +53,6 @@ func (s *AdminServer) recordTeamWorkAskDegraded(ctx context.Context, item *proto
 	item.DegradationState = degradation
 	item.RecoveryOptions = []string{"Recover the work item after NATS/team availability is restored.", "Add steering guidance before retrying.", "Archive if the work is no longer needed."}
 	event := teamWorkAskStatusEvent(*item, protocol.TeamWorkStateDegraded, "Team ask degraded", details, "operator_attention", "Recover or steer this work item before retrying.", []string{degradation})
-	if err := s.insertTeamStatusEventDB(ctx, &event); err != nil {
-		return event, err
-	}
-	if err := s.updateTeamWorkItemLastEventDB(ctx, item, event); err != nil {
-		return event, err
-	}
 	interaction := protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
 		InteractionID: uuid.NewString(),
 		TeamID:        item.TeamID,
@@ -78,7 +66,7 @@ func (s *AdminServer) recordTeamWorkAskDegraded(ctx context.Context, item *proto
 		Payload:       map[string]any{"subject": subject, "degradation_state": degradation},
 		Version:       "v1",
 	})
-	if err := s.insertTeamInteractionDB(ctx, &interaction); err != nil {
+	if err := s.persistTeamWorkAskRecord(ctx, item, &event, &interaction); err != nil {
 		return event, err
 	}
 	return event, nil
@@ -95,12 +83,6 @@ func (s *AdminServer) recordTeamWorkAskOutput(ctx context.Context, item *protoco
 	item.ProofRefs = mergeStrings(item.ProofRefs, []string{outputRef.ProofRef})
 	item.AuditRefs = mergeStrings(item.AuditRefs, outputRef.AuditRefs)
 	event.AuditRefs = mergeStrings(event.AuditRefs, item.AuditRefs)
-	if err := s.insertTeamStatusEventDB(ctx, &event); err != nil {
-		return event, err
-	}
-	if err := s.updateTeamWorkItemLastEventDB(ctx, item, event); err != nil {
-		return event, err
-	}
 	interaction := protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
 		InteractionID: interactionID,
 		TeamID:        item.TeamID,
@@ -122,10 +104,37 @@ func (s *AdminServer) recordTeamWorkAskOutput(ctx context.Context, item *protoco
 		AuditRefs:  item.AuditRefs,
 		Version:    "v1",
 	})
-	if err := s.insertTeamInteractionDB(ctx, &interaction); err != nil {
+	if err := s.persistTeamWorkAskRecord(ctx, item, &event, &interaction); err != nil {
 		return event, err
 	}
 	return event, nil
+}
+
+func (s *AdminServer) persistTeamWorkAskRecord(ctx context.Context, item *protocol.TeamWorkItem, event *protocol.TeamStatusEvent, interaction *protocol.TeamInteraction) error {
+	db := s.getDB()
+	if db == nil {
+		return fmt.Errorf("database not available")
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := s.insertTeamStatusEventExec(ctx, tx, event); err != nil {
+		return err
+	}
+	if err := s.updateTeamWorkItemLastEventExec(ctx, tx, item, *event); err != nil {
+		return err
+	}
+	if err := s.insertTeamInteractionExec(ctx, tx, interaction); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	item.LastEvent = event
+	return nil
 }
 
 func teamWorkAskTextOutputRef(item protocol.TeamWorkItem, eventID, interactionID, reply string) protocol.TeamOutputRef {

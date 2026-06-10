@@ -19,12 +19,22 @@ func (s *AdminServer) insertTeamWorkMissionEventDB(ctx context.Context, event *p
 	if db == nil {
 		return errors.New("database not available")
 	}
+	return s.insertTeamWorkMissionEventExec(ctx, db, event)
+}
+
+func (s *AdminServer) insertTeamWorkMissionEventExec(ctx context.Context, exec teamWorkSQLExecutor, event *protocol.TeamStatusEvent) error {
+	if strings.TrimSpace(event.RunID) == "" {
+		return nil
+	}
+	if exec == nil {
+		return errors.New("database not available")
+	}
 	emittedAt := event.Timestamp
 	if emittedAt.IsZero() {
 		emittedAt = time.Now()
 	}
 	payload, _ := json.Marshal(teamWorkMissionEventPayload(event, emittedAt))
-	_, err := db.ExecContext(ctx, `
+	_, err := exec.ExecContext(ctx, `
 		INSERT INTO mission_events
 			(id, run_id, tenant_id, event_type, severity, source_agent, source_team, payload, emitted_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
