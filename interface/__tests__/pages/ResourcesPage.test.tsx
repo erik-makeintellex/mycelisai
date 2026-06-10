@@ -40,6 +40,12 @@ vi.mock('@/components/settings/MCPToolRegistry', () => ({
     __esModule: true,
     default: () => <div data-testid="mcp-tools">MCPToolRegistry</div>,
 }));
+vi.mock('@/components/resources/WorkspaceExplorer', () => ({
+    __esModule: true,
+    default: ({ initialPath }: { initialPath?: string | null }) => (
+        <div data-testid="workspace-explorer">WorkspaceExplorer path={initialPath ?? ''}</div>
+    ),
+}));
 vi.mock('@/components/resources/ExchangeInspector', () => ({
     __esModule: true,
     default: () => <div data-testid="exchange-inspector">ExchangeInspector</div>,
@@ -117,6 +123,15 @@ describe('Resources Page (V8.1 advanced support)', () => {
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
             expect(screen.getByRole('button', { name: /Exchange/i }).getAttribute('aria-current')).toBe('page');
+        });
+    });
+
+    it('passes workspace path deep links to Output Files', async () => {
+        mockSearchParams.set('tab', 'workspace');
+        mockSearchParams.set('path', 'workspace/generated/game');
+        await act(async () => { render(<ResourcesPage />); });
+        await waitFor(() => {
+            expect(screen.getByTestId('workspace-explorer').textContent).toContain('path=workspace/generated/game');
         });
     });
 

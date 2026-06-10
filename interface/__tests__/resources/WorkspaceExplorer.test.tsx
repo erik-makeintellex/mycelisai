@@ -107,6 +107,18 @@ describe("WorkspaceExplorer", () => {
         expect(writeCall?.body).toEqual({ arguments: { path: "workspace/new-proof.md", content: "# New proof" } });
     });
 
+    it("starts browsing at the deep-linked workspace path", async () => {
+        const { calls } = mockToolFetch();
+
+        render(<WorkspaceExplorer initialPath="workspace/generated/game" onOpenToolsTab={vi.fn()} />);
+
+        await waitFor(() => {
+            expect(calls.some((call) => call.tool === "list_directory")).toBe(true);
+        });
+        expect(calls[0].body).toEqual({ arguments: { path: "workspace/generated/game" } });
+        expect(screen.getByText("workspace/generated/game")).toBeDefined();
+    });
+
     it("guides operators to Connected Tools and storage roots when filesystem is missing", async () => {
         mockMCPServers = [];
         const onOpenToolsTab = vi.fn();

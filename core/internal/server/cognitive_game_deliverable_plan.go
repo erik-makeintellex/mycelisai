@@ -47,7 +47,7 @@ func inferFirstTeamGameDeliverablePlanFromRequest(text string, teamCall protocol
 }
 
 func firstTeamGamePackageFiles(request string) []string {
-	files := []string{"index.html", "README.md", "PROOF.md"}
+	files := []string{"index.html", "README.md", "PROOF.md", "project-package.json"}
 	if projectPackageTextRequestsReadme(request) {
 		files = append(files, "README.md")
 	}

@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	teamWorkAskSourceChannel = "api.teams.work.ask"
-	defaultTeamAskTimeout    = 15 * time.Second
-	maxTeamAskTimeout        = 60 * time.Second
-	teamAskFollowupTimeout   = 5 * time.Second
+	teamWorkAskSourceChannel   = "api.teams.work.ask"
+	defaultTeamAskTimeout      = 15 * time.Second
+	maxTeamAskTimeout          = 60 * time.Second
+	teamAskFollowupTimeout     = 5 * time.Second
+	asyncTeamAskRecoveryWindow = 15 * time.Minute
 )
 
 type teamWorkAskRequest struct {
@@ -84,9 +85,16 @@ func (s *AdminServer) HandleTeamWorkAsk(w http.ResponseWriter, r *http.Request) 
 			s.respondTeamWorkAskDegraded(w, followupCtx, item, subject, dispatchState, err.Error(), http.StatusAccepted)
 			return
 		}
+		followupCtx, followupCancel := teamWorkAskFollowupContext(r.Context())
+		defer followupCancel()
+		dispatched, err := s.recordTeamWorkAskDispatched(followupCtx, &item, subject, dispatchState)
+		if err != nil {
+			respondAPIError(w, "Failed to record team ask dispatch: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 		respondAPIJSON(w, http.StatusAccepted, protocol.NewAPISuccess(teamWorkAskResult{
 			WorkItem:      item,
-			Event:         queued,
+			Event:         dispatched,
 			Subject:       subject,
 			Accepted:      true,
 			DispatchState: dispatchState,

@@ -2,8 +2,11 @@ package server
 
 import (
 	"context"
+	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,7 +25,7 @@ func TestHandleTeamWorkAsk_RecordsOutputReadyResponse(t *testing.T) {
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateOutputReady, now)
-	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateOutputReady, false, "")
+	expectTeamWorkAskUpdateWithRetainedTextRefs(mock, protocol.TeamWorkStateOutputReady, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "response", string(protocol.PayloadKindResult), now)
 
 	subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, "qa-team")
@@ -56,6 +59,28 @@ func TestHandleTeamWorkAsk_RecordsOutputReadyResponse(t *testing.T) {
 	event := data["event"].(map[string]any)
 	if event["details"] != "Reply: validated output package" {
 		t.Fatalf("event.details = %v", event["details"])
+	}
+	outputRefs, ok := work["output_refs"].([]any)
+	if !ok || len(outputRefs) != 1 {
+		t.Fatalf("output_refs = %#v, want one retained text output ref", work["output_refs"])
+	}
+	outputRef := outputRefs[0].(map[string]any)
+	if outputRef["kind"] != "text_reply" || outputRef["label"] != "Team text reply" {
+		t.Fatalf("output_ref = %#v, want retained text reply ref", outputRef)
+	}
+	if !strings.HasPrefix(fmt.Sprint(outputRef["storage_ref"]), "team_interaction:") {
+		t.Fatalf("storage_ref = %v, want team interaction ref", outputRef["storage_ref"])
+	}
+	if !strings.HasPrefix(fmt.Sprint(outputRef["proof_ref"]), "team_status_event:") {
+		t.Fatalf("proof_ref = %v, want status event proof ref", outputRef["proof_ref"])
+	}
+	proofRefs, ok := work["proof_refs"].([]any)
+	if !ok || len(proofRefs) == 0 {
+		t.Fatalf("proof_refs = %#v, want retained proof refs", work["proof_refs"])
+	}
+	auditRefs, ok := work["audit_refs"].([]any)
+	if !ok || len(auditRefs) < 2 {
+		t.Fatalf("audit_refs = %#v, want status and interaction audit refs", work["audit_refs"])
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
@@ -196,13 +221,50 @@ func expectTeamWorkAskUpdate(mock sqlmock.Sqlmock, state protocol.TeamWorkState,
 		WillReturnResult(sqlmock.NewResult(0, 1))
 }
 
+func expectTeamWorkAskUpdateWithRetainedTextRefs(mock sqlmock.Sqlmock, state protocol.TeamWorkState, needsOperator bool, degradation string) {
+	mock.ExpectExec("UPDATE team_work_items").
+		WithArgs(
+			sqlmock.AnyArg(), string(state), sqlmock.AnyArg(), needsOperator, degradation,
+			sqlmock.AnyArg(),
+			outputRefsMatch{TeamID: "qa-team", Kind: "text_reply", Label: "Team text reply"},
+			stringListContainsMatch{Prefix: "team_status_event:"},
+			stringListContainsMatch{Prefix: "team_interaction:"},
+		).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+}
+
 func expectTeamWorkAskInteraction(mock sqlmock.Sqlmock, teamID, verb, payloadKind string, now time.Time) {
 	mock.ExpectQuery("INSERT INTO team_interactions").
 		WithArgs(
 			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindWebAPI),
 			teamWorkAskSourceChannel, sqlmock.AnyArg(), verb, sqlmock.AnyArg(),
-			payloadKind, "", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
+			payloadKind, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
+}
+
+type stringListContainsMatch struct {
+	Prefix string
+}
+
+func (m stringListContainsMatch) Match(value driver.Value) bool {
+	raw, ok := value.([]byte)
+	if !ok {
+		text, ok := value.(string)
+		if !ok {
+			return false
+		}
+		raw = []byte(text)
+	}
+	var items []string
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return false
+	}
+	for _, item := range items {
+		if strings.HasPrefix(item, m.Prefix) {
+			return true
+		}
+	}
+	return false
 }

@@ -100,6 +100,7 @@ function ResourcesContent() {
     const searchParams = useSearchParams();
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const tabParam = (searchParams?.get("tab") as TabId | null) ?? null;
+    const pathParam = searchParams?.get("path") ?? null;
     const [activeTab, setActiveTab] = useState<TabId>(
         tabParam && VALID_TABS.includes(tabParam) ? tabParam : "workspace"
     );
@@ -165,7 +166,7 @@ function ResourcesContent() {
                         {activeTab === "exchange" && <ExchangeInspector />}
                         {activeTab === "deployment-context" && <DeploymentContextPanel />}
                         {activeTab === "workspace" && (
-                            <WorkspaceExplorer onOpenToolsTab={() => setActiveTab("tools")} />
+                            <WorkspaceExplorer initialPath={pathParam} onOpenToolsTab={() => setActiveTab("tools")} />
                         )}
                         {activeTab === "roles" && <CataloguePage />}
                     </div>

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,6 +21,9 @@ func TestHandleTeamWorkAsk_AsyncPublishesCommandAndReturnsQueued(t *testing.T) {
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateRunning, now)
+	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateRunning, false, "")
+	expectTeamWorkAskInteraction(mock, "qa-team", "dispatch", string(protocol.PayloadKindStatus), now)
 
 	subject := fmt.Sprintf(protocol.TopicTeamInternalCommand, "qa-team")
 	received := make(chan []byte, 1)
@@ -50,8 +54,22 @@ func TestHandleTeamWorkAsk_AsyncPublishesCommandAndReturnsQueued(t *testing.T) {
 		t.Fatalf("dispatch_state = %v", data["dispatch_state"])
 	}
 	work := data["work_item"].(map[string]any)
-	if work["state"] != string(protocol.TeamWorkStateQueued) {
+	if work["state"] != string(protocol.TeamWorkStateRunning) {
 		t.Fatalf("state = %v", work["state"])
+	}
+	recoveryOptions, ok := work["recovery_options"].([]any)
+	if !ok || len(recoveryOptions) < 2 {
+		t.Fatalf("recovery_options = %#v, want recovery hints", work["recovery_options"])
+	}
+	event := data["event"].(map[string]any)
+	if event["state"] != string(protocol.TeamWorkStateRunning) {
+		t.Fatalf("event.state = %v", event["state"])
+	}
+	details := fmt.Sprint(event["details"])
+	if !strings.Contains(details, subject) ||
+		!strings.Contains(details, teamWorkAskSourceChannel) ||
+		!strings.Contains(strings.ToLower(details), "deadline") {
+		t.Fatalf("event.details = %q, want subject, source, and deadline hint", details)
 	}
 
 	select {

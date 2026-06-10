@@ -2,11 +2,56 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/mycelis/core/pkg/protocol"
 )
+
+func (s *AdminServer) recordTeamWorkAskDispatched(ctx context.Context, item *protocol.TeamWorkItem, subject, dispatchState string) (protocol.TeamStatusEvent, error) {
+	deadline := time.Now().UTC().Add(asyncTeamAskRecoveryWindow).Format(time.RFC3339)
+	item.State = protocol.TeamWorkStateRunning
+	item.NeedsOperator = false
+	item.DegradationState = ""
+	item.RecoveryOptions = mergeStrings(item.RecoveryOptions, []string{
+		fmt.Sprintf("Watch subject/channel %s for team status or result signals tied to work_item_id %s.", subject, item.WorkItemID),
+		fmt.Sprintf("If no team signal arrives by %s, recover or retry from this durable work item.", deadline),
+	})
+	details := fmt.Sprintf("Published async team ask to subject/channel %s from %s. Recovery deadline hint: if no status or result signal references work_item_id %s by %s, inspect the channel and retry or recover this work item.", subject, teamWorkAskSourceChannel, item.WorkItemID, deadline)
+	event := teamWorkAskStatusEvent(*item, protocol.TeamWorkStateRunning, "Team ask dispatched", details, dispatchState, fmt.Sprintf("Wait for a team status/result signal on %s; recover after %s if none arrives.", subject, deadline), nil)
+	if err := s.insertTeamStatusEventDB(ctx, &event); err != nil {
+		return event, err
+	}
+	if err := s.updateTeamWorkItemLastEventDB(ctx, item, event); err != nil {
+		return event, err
+	}
+	interaction := protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
+		InteractionID: uuid.NewString(),
+		TeamID:        item.TeamID,
+		WorkItemID:    item.WorkItemID,
+		SourceKind:    string(protocol.SourceKindWebAPI),
+		SourceChannel: teamWorkAskSourceChannel,
+		ActorRef:      "Soma",
+		Verb:          "dispatch",
+		Summary:       "Async team ask published to the team command channel.",
+		PayloadKind:   string(protocol.PayloadKindStatus),
+		Payload: map[string]any{
+			"subject":                subject,
+			"channel":                subject,
+			"source":                 teamWorkAskSourceChannel,
+			"dispatch_state":         dispatchState,
+			"recovery_deadline_hint": deadline,
+			"recovery_hint":          "If no team status/result signal arrives by the deadline, retry or recover this durable work item.",
+		},
+		Version: "v1",
+	})
+	if err := s.insertTeamInteractionDB(ctx, &interaction); err != nil {
+		return event, err
+	}
+	return event, nil
+}
 
 func (s *AdminServer) recordTeamWorkAskDegraded(ctx context.Context, item *protocol.TeamWorkItem, subject, degradation, details string) (protocol.TeamStatusEvent, error) {
 	item.State = protocol.TeamWorkStateDegraded
@@ -44,6 +89,12 @@ func (s *AdminServer) recordTeamWorkAskOutput(ctx context.Context, item *protoco
 	item.NeedsOperator = false
 	item.DegradationState = ""
 	event := teamWorkAskStatusEvent(*item, protocol.TeamWorkStateOutputReady, "Team response ready", teamAskReplyDetails(reply), "team_response", "Review the response and decide whether to retain, steer, or ask for follow-up.", nil)
+	interactionID := uuid.NewString()
+	outputRef := teamWorkAskTextOutputRef(*item, event.EventID, interactionID, reply)
+	item.OutputRefs = mergeTeamOutputRefs(item.OutputRefs, []protocol.TeamOutputRef{outputRef})
+	item.ProofRefs = mergeStrings(item.ProofRefs, []string{outputRef.ProofRef})
+	item.AuditRefs = mergeStrings(item.AuditRefs, outputRef.AuditRefs)
+	event.AuditRefs = mergeStrings(event.AuditRefs, item.AuditRefs)
 	if err := s.insertTeamStatusEventDB(ctx, &event); err != nil {
 		return event, err
 	}
@@ -51,7 +102,7 @@ func (s *AdminServer) recordTeamWorkAskOutput(ctx context.Context, item *protoco
 		return event, err
 	}
 	interaction := protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
-		InteractionID: uuid.NewString(),
+		InteractionID: interactionID,
 		TeamID:        item.TeamID,
 		WorkItemID:    item.WorkItemID,
 		SourceKind:    string(protocol.SourceKindWebAPI),
@@ -60,13 +111,42 @@ func (s *AdminServer) recordTeamWorkAskOutput(ctx context.Context, item *protoco
 		Verb:          "response",
 		Summary:       firstNonEmptyString(reply, "Team returned an empty response."),
 		PayloadKind:   string(protocol.PayloadKindResult),
-		Payload:       map[string]any{"subject": subject, "reply": reply},
-		Version:       "v1",
+		Payload: map[string]any{
+			"subject":     subject,
+			"reply":       reply,
+			"output_refs": item.OutputRefs,
+			"proof_refs":  item.ProofRefs,
+			"audit_refs":  item.AuditRefs,
+		},
+		PayloadRef: outputRef.OutputID,
+		AuditRefs:  item.AuditRefs,
+		Version:    "v1",
 	})
 	if err := s.insertTeamInteractionDB(ctx, &interaction); err != nil {
 		return event, err
 	}
 	return event, nil
+}
+
+func teamWorkAskTextOutputRef(item protocol.TeamWorkItem, eventID, interactionID, reply string) protocol.TeamOutputRef {
+	outputID := "team-reply-" + uuid.NewSHA1(uuid.NameSpaceOID, []byte(strings.Join([]string{item.TeamID, item.WorkItemID, reply}, "\x00"))).String()
+	proofRef := "team_status_event:" + strings.TrimSpace(eventID)
+	interactionRef := "team_interaction:" + strings.TrimSpace(interactionID)
+	return protocol.TeamOutputRef{
+		OutputID:      outputID,
+		TeamID:        item.TeamID,
+		WorkItemID:    item.WorkItemID,
+		RunID:         item.RunID,
+		Kind:          "text_reply",
+		Label:         "Team text reply",
+		StorageRef:    interactionRef,
+		ValidationRef: "readable_team_reply",
+		ProofRef:      proofRef,
+		ContractID:    item.ContractID,
+		ProofID:       item.ProofID,
+		AuditRefs:     normalizeStringSlice([]string{proofRef, interactionRef}),
+		CreatedAt:     time.Now().UTC(),
+	}
 }
 
 func teamAskReplyDetails(reply string) string {

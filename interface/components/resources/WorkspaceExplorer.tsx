@@ -17,12 +17,17 @@ const WORKSPACE_ROOT_PATH = "workspace";
 export type WorkspaceEntry = { name: string; path: string; type: "file" | "dir" };
 export type WorkspacePane = "browse" | "preview" | "create";
 
-export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: () => void }) {
+function initialWorkspacePath(path?: string | null) {
+    const normalized = normalizePath(path?.trim() || WORKSPACE_ROOT_PATH);
+    return normalized === "." ? WORKSPACE_ROOT_PATH : normalized;
+}
+
+export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { initialPath?: string | null; onOpenToolsTab: () => void }) {
     const mcpServers = useCortexStore((s) => s.mcpServers);
     const isFetchingMCPServers = useCortexStore((s) => s.isFetchingMCPServers);
     const fetchMCPServers = useCortexStore((s) => s.fetchMCPServers);
 
-    const [currentPath, setCurrentPath] = useState(WORKSPACE_ROOT_PATH);
+    const [currentPath, setCurrentPath] = useState(() => initialWorkspacePath(initialPath));
     const [entries, setEntries] = useState<WorkspaceEntry[]>([]);
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [preview, setPreview] = useState("");
@@ -36,6 +41,10 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
     useEffect(() => {
         fetchMCPServers();
     }, [fetchMCPServers]);
+
+    useEffect(() => {
+        setCurrentPath(initialWorkspacePath(initialPath));
+    }, [initialPath]);
 
     const filesystemServer = useMemo<MCPServerWithTools | null>(() => {
         const match = mcpServers.find((s) => s.name === "filesystem");

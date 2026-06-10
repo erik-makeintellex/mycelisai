@@ -271,6 +271,7 @@ describe("OutputWorkbench", () => {
     expect(screen.getByText("Smoke test passed")).toBeDefined();
     expect(screen.getByText("Latest output")).toBeDefined();
     expect(screen.getByText("Use Open file to view it, or Open folder to show it in the workspace.")).toBeDefined();
+    expect(screen.getByRole("link", { name: /Open Launch microsite in Resources/i }).getAttribute("href")).toBe("/resources?tab=workspace&path=generated%2Flaunch");
     const verificationDetails = screen.getByText("Verification details").closest("details");
     expect(verificationDetails?.open).toBe(false);
     expect(screen.getByText("path verified")).toBeDefined();
