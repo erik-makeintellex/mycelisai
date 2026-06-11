@@ -135,16 +135,8 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectQuery("INSERT INTO collaboration_groups").
 		WillReturnRows(sqlmock.NewRows([]string{"created_at", "updated_at"}).AddRow(time.Now(), time.Now()))
-	expectTeamWorkItemInsert(mock, "qa-runtime-team", protocol.TeamExecutionShapeCreateTeam, protocol.TeamWorkStateNew, time.Now())
-	expectTeamStatusEventInsert(mock, "qa-runtime-team", protocol.TeamWorkStateNew, time.Now())
-	expectTeamWorkItemUpdate(mock, protocol.TeamWorkStateNew, sqlmock.AnyArg())
-	expectTeamInteractionInsert(mock, "qa-runtime-team", "create_team", time.Now())
-	expectTeamWorkItemInsert(mock, "qa-runtime-team", protocol.TeamExecutionShapeDeliverable, protocol.TeamWorkStateOutputReady, time.Now())
-	expectTeamStatusEventInsert(mock, "qa-runtime-team", protocol.TeamWorkStateQueued, time.Now())
-	expectTeamStatusEventInsert(mock, "qa-runtime-team", protocol.TeamWorkStateRunning, time.Now())
-	expectTeamStatusEventInsert(mock, "qa-runtime-team", protocol.TeamWorkStateOutputReady, time.Now())
-	expectTeamWorkItemUpdate(mock, protocol.TeamWorkStateOutputReady, jsonContainsArg("output/confirmed.txt"))
-	expectTeamInteractionInsert(mock, "qa-runtime-team", "output_ready", time.Now())
+	expectConfirmedCreateTeamLifecycle(mock, "qa-runtime-team", time.Now())
+	expectConfirmedDeliverableLifecycle(mock, "qa-runtime-team", "output/confirmed.txt", time.Now())
 
 	reqBody := `{"confirm_token":"` + token + `"}`
 	rr := doRequest(t, http.HandlerFunc(s.HandleConfirmAction), http.MethodPost, "/api/v1/intent/confirm-action", reqBody)

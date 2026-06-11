@@ -17,10 +17,12 @@ func TestHandleTeamWorkAsk_RecordsOutputReadyResponse(t *testing.T) {
 	s := newTestServer(dbOpt, withNATS(t))
 	now := time.Now().UTC()
 	mock.MatchExpectationsInOrder(true)
+	mock.ExpectBegin()
 	expectTeamWorkAskInsert(mock, "qa-team", protocol.TeamWorkStateQueued, false, "", now)
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectCommit()
 	mock.ExpectBegin()
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateOutputReady, now)
 	expectTeamWorkAskUpdateWithRetainedTextRefs(mock, protocol.TeamWorkStateOutputReady, false, "")
@@ -118,15 +120,41 @@ func TestRecordTeamWorkAskOutput_RollsBackWhenInteractionInsertFails(t *testing.
 	}
 }
 
+func TestHandleTeamWorkAsk_RollsBackInitialLifecycleWhenInteractionInsertFails(t *testing.T) {
+	dbOpt, mock := withDB(t)
+	s := newTestServer(dbOpt, withNATS(t))
+	now := time.Now().UTC()
+	mock.MatchExpectationsInOrder(true)
+	mock.ExpectBegin()
+	expectTeamWorkAskInsert(mock, "qa-team", protocol.TeamWorkStateQueued, false, "", now)
+	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
+	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
+	expectTeamWorkAskInteractionFailure(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), fmt.Errorf("ask interaction failed"))
+	mock.ExpectRollback()
+
+	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
+	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{"message":"Ship the report."}`)
+
+	assertStatus(t, rr, http.StatusInternalServerError)
+	if !strings.Contains(rr.Body.String(), "Failed to create team work ask") {
+		t.Fatalf("body = %s", rr.Body.String())
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestHandleTeamWorkAsk_RecordsDegradedForUnreadableTeamResponse(t *testing.T) {
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt, withNATS(t))
 	now := time.Now().UTC()
 	mock.MatchExpectationsInOrder(true)
+	mock.ExpectBegin()
 	expectTeamWorkAskInsert(mock, "qa-team", protocol.TeamWorkStateQueued, false, "", now)
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectCommit()
 	mock.ExpectBegin()
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateDegraded, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateDegraded, true, "team_response_unreadable")
@@ -170,10 +198,12 @@ func TestHandleTeamWorkAsk_RecordsDegradedWhenNATSOffline(t *testing.T) {
 	s := newTestServer(dbOpt)
 	now := time.Now().UTC()
 	mock.MatchExpectationsInOrder(true)
+	mock.ExpectBegin()
 	expectTeamWorkAskInsert(mock, "qa-team", protocol.TeamWorkStateQueued, false, "", now)
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectCommit()
 	mock.ExpectBegin()
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateDegraded, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateDegraded, true, "nats_offline")

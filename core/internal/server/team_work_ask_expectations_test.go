@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
@@ -20,6 +21,21 @@ func expectTeamWorkAskInsert(mock sqlmock.Sqlmock, teamID string, state protocol
 			degradation, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"created_at", "updated_at"}).AddRow(now, now))
+}
+
+func expectTeamWorkAskInsertFailure(mock sqlmock.Sqlmock, teamID string, err error) {
+	if err == nil {
+		err = errors.New("team work insert failed")
+	}
+	mock.ExpectQuery("INSERT INTO team_work_items").
+		WithArgs(
+			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "Soma",
+			string(protocol.TeamExecutionShapeDelegatedWork), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			string(protocol.ApprovalPostureAutoAllowed), string(protocol.TeamWorkStateQueued), false,
+			"", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
+		).
+		WillReturnError(err)
 }
 
 func expectTeamWorkAskStatus(mock sqlmock.Sqlmock, teamID string, state protocol.TeamWorkState, now time.Time) {

@@ -24,10 +24,12 @@ func TestPersistConfirmedActionTeamWork_CreateTeamStaysNew(t *testing.T) {
 		}},
 	})
 
+	mock.ExpectBegin()
 	expectTeamWorkItemInsert(mock, "research-team", protocol.TeamExecutionShapeCreateTeam, protocol.TeamWorkStateNew, now)
 	expectTeamStatusEventInsert(mock, "research-team", protocol.TeamWorkStateNew, now)
 	expectTeamWorkItemUpdate(mock, protocol.TeamWorkStateNew, jsonContainsArg("research-team"))
 	expectTeamInteractionInsert(mock, "research-team", "create_team", now)
+	mock.ExpectCommit()
 
 	refs, err := s.persistConfirmedActionTeamWork(t.Context(), link, []plannedToolExecutionResult{{
 		Name: "create_team",
@@ -67,17 +69,21 @@ func TestPersistConfirmedActionTeamWork_DeliverableOutputReadyHasRefs(t *testing
 	})
 	mock.MatchExpectationsInOrder(true)
 
+	mock.ExpectBegin()
 	expectTeamWorkItemInsert(mock, "qa-team", protocol.TeamExecutionShapeCreateTeam, protocol.TeamWorkStateNew, now)
 	expectTeamStatusEventInsert(mock, "qa-team", protocol.TeamWorkStateNew, now)
 	expectTeamWorkItemUpdate(mock, protocol.TeamWorkStateNew, sqlmock.AnyArg())
 	expectTeamInteractionInsert(mock, "qa-team", "create_team", now)
+	mock.ExpectCommit()
 
+	mock.ExpectBegin()
 	expectTeamWorkItemInsert(mock, "qa-team", protocol.TeamExecutionShapeDeliverable, protocol.TeamWorkStateOutputReady, now)
 	expectTeamStatusEventInsert(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamStatusEventInsert(mock, "qa-team", protocol.TeamWorkStateRunning, now)
 	expectTeamStatusEventInsert(mock, "qa-team", protocol.TeamWorkStateOutputReady, now)
 	expectTeamWorkItemUpdate(mock, protocol.TeamWorkStateOutputReady, jsonContainsArg("output/confirmed.txt"))
 	expectTeamInteractionInsert(mock, "qa-team", "output_ready", now)
+	mock.ExpectCommit()
 
 	refs, err := s.persistConfirmedActionTeamWork(t.Context(), link, []plannedToolExecutionResult{
 		{
@@ -143,10 +149,12 @@ func TestPersistFailedConfirmedActionTeamWork_RecordsDegradedWork(t *testing.T) 
 		}},
 	})
 
+	mock.ExpectBegin()
 	expectTeamWorkItemInsertWithPosture(mock, "qa-team", protocol.TeamExecutionShapeDelegatedWork, protocol.TeamWorkStateDegraded, true, "confirmed_action_failed", now)
 	expectTeamStatusEventInsert(mock, "qa-team", protocol.TeamWorkStateDegraded, now)
 	expectTeamWorkItemUpdateWithPosture(mock, protocol.TeamWorkStateDegraded, true, "confirmed_action_failed", sqlmock.AnyArg())
 	expectTeamInteractionInsert(mock, "qa-team", "degraded", now)
+	mock.ExpectCommit()
 
 	err := s.persistFailedConfirmedActionTeamWork(t.Context(), link, assertErr("tool failed"))
 	if err != nil {

@@ -1,7 +1,7 @@
 -- Migration 007: The Fractal Fabric (Data Seeds & Node Assignment)
 -- 1. Link Nodes to Teams (Ownership)
 ALTER TABLE nodes
-ADD COLUMN team_id UUID REFERENCES teams(id);
+ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id);
 -- 2. Seed Root Supervisor (The Architect)
 INSERT INTO users (id, username, role, settings)
 VALUES (

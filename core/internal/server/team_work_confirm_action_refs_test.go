@@ -23,10 +23,12 @@ func TestPersistConfirmedActionTeamWork_DelegatedWorkReturnsQueuedRef(t *testing
 		}},
 	})
 
+	mock.ExpectBegin()
 	expectTeamWorkItemInsert(mock, "qa-team", protocol.TeamExecutionShapeDelegatedWork, protocol.TeamWorkStateQueued, now)
 	expectTeamStatusEventInsert(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkItemUpdate(mock, protocol.TeamWorkStateQueued, sqlmock.AnyArg())
 	expectTeamInteractionInsert(mock, "qa-team", "delegate", now)
+	mock.ExpectCommit()
 
 	refs, err := s.persistConfirmedActionTeamWork(t.Context(), link, []plannedToolExecutionResult{{
 		Name: "delegate_task",

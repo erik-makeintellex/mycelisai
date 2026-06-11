@@ -17,10 +17,12 @@ func TestHandleTeamWorkAsk_AsyncPublishesCommandAndReturnsQueued(t *testing.T) {
 	s := newTestServer(dbOpt, withNATS(t))
 	now := time.Now().UTC()
 	mock.MatchExpectationsInOrder(true)
+	mock.ExpectBegin()
 	expectTeamWorkAskInsert(mock, "qa-team", protocol.TeamWorkStateQueued, false, "", now)
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectCommit()
 	mock.ExpectBegin()
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateRunning, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateRunning, false, "")
@@ -85,15 +87,62 @@ func TestHandleTeamWorkAsk_AsyncPublishesCommandAndReturnsQueued(t *testing.T) {
 	}
 }
 
+func TestHandleTeamWorkAsk_AsyncDoesNotPublishWhenDispatchPersistenceFails(t *testing.T) {
+	dbOpt, mock := withDB(t)
+	s := newTestServer(dbOpt, withNATS(t))
+	now := time.Now().UTC()
+	mock.MatchExpectationsInOrder(true)
+	mock.ExpectBegin()
+	expectTeamWorkAskInsert(mock, "qa-team", protocol.TeamWorkStateQueued, false, "", now)
+	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
+	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
+	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectCommit()
+	mock.ExpectBegin()
+	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateRunning, now)
+	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateRunning, false, "")
+	expectTeamWorkAskInteractionFailure(mock, "qa-team", "dispatch", string(protocol.PayloadKindStatus), fmt.Errorf("dispatch interaction failed"))
+	mock.ExpectRollback()
+
+	subject := fmt.Sprintf(protocol.TopicTeamInternalCommand, "qa-team")
+	received := make(chan []byte, 1)
+	if _, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
+		received <- append([]byte(nil), msg.Data...)
+	}); err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if err := s.NC.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+
+	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
+	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
+		"message":"Create the next validation note.",
+		"async":true
+	}`)
+
+	assertStatus(t, rr, http.StatusInternalServerError)
+	select {
+	case raw := <-received:
+		t.Fatalf("received async command despite failed dispatch persistence: %s", string(raw))
+	case <-time.After(100 * time.Millisecond):
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestHandleTeamWorkAsk_AsyncRecordsDegradedWhenNATSOffline(t *testing.T) {
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt)
 	now := time.Now().UTC()
 	mock.MatchExpectationsInOrder(true)
+	mock.ExpectBegin()
 	expectTeamWorkAskInsert(mock, "qa-team", protocol.TeamWorkStateQueued, false, "", now)
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateQueued, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateQueued, false, "")
 	expectTeamWorkAskInteraction(mock, "qa-team", "ask", string(protocol.PayloadKindCommand), now)
+	mock.ExpectCommit()
 	mock.ExpectBegin()
 	expectTeamWorkAskStatus(mock, "qa-team", protocol.TeamWorkStateDegraded, now)
 	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateDegraded, true, "nats_offline")

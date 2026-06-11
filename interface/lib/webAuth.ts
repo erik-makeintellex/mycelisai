@@ -152,7 +152,7 @@ export function decodeOAuthStateCookie(value: string | undefined): { state: stri
 }
 
 export async function sha256Hex(input: string): Promise<string> {
-    const hash = await crypto.subtle.digest("SHA-256", encoder.encode(input));
+    const hash = await webCryptoSubtle().digest("SHA-256", encoder.encode(input));
     return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
@@ -200,9 +200,15 @@ function parseEnvFile(envPath: string): Record<string, string> {
 }
 
 async function sign(payload: string, secret: string): Promise<string> {
-    const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-    const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
+    const subtle = webCryptoSubtle();
+    const key = await subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const signature = await subtle.sign("HMAC", key, encoder.encode(payload));
     return base64UrlEncodeBytes(new Uint8Array(signature));
+}
+
+function webCryptoSubtle(): SubtleCrypto {
+    if (globalThis.crypto?.subtle) return globalThis.crypto.subtle;
+    throw new Error("Web Crypto is unavailable for Mycelis web auth");
 }
 
 function base64UrlEncodeString(value: string): string {
@@ -210,6 +216,7 @@ function base64UrlEncodeString(value: string): string {
 }
 
 function base64UrlEncodeBytes(bytes: Uint8Array): string {
+    if (typeof btoa !== "function") return Buffer.from(bytes).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
     let binary = "";
     bytes.forEach((byte) => {
         binary += String.fromCharCode(byte);
@@ -219,6 +226,7 @@ function base64UrlEncodeBytes(bytes: Uint8Array): string {
 
 function base64UrlDecodeString(value: string): string {
     const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+    if (typeof atob !== "function") return Buffer.from(padded, "base64").toString("utf8");
     const binary = atob(padded);
     const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
     return decoder.decode(bytes);

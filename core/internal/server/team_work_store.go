@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -10,11 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/mycelis/core/pkg/protocol"
 )
-
-type teamWorkSQLExecutor interface {
-	ExecContext(context.Context, string, ...any) (sql.Result, error)
-	QueryRowContext(context.Context, string, ...any) *sql.Row
-}
 
 func (s *AdminServer) listTeamWorkItemsDB(ctx context.Context, teamID string, limit int, includeArchived bool) ([]protocol.TeamWorkItem, error) {
 	db := s.getDB()
@@ -79,13 +73,20 @@ func (s *AdminServer) insertTeamWorkItemDB(ctx context.Context, item *protocol.T
 	if db == nil {
 		return errors.New("database not available")
 	}
+	return s.insertTeamWorkItemExec(ctx, db, item)
+}
+
+func (s *AdminServer) insertTeamWorkItemExec(ctx context.Context, exec teamWorkSQLExecutor, item *protocol.TeamWorkItem) error {
+	if exec == nil {
+		return errors.New("database not available")
+	}
 	if strings.TrimSpace(item.WorkItemID) == "" {
 		item.WorkItemID = uuid.NewString()
 	}
 	if err := validateTeamWorkUUIDLinks(*item); err != nil {
 		return err
 	}
-	return db.QueryRowContext(ctx, `
+	return exec.QueryRowContext(ctx, `
 		INSERT INTO team_work_items (
 			id, tenant_id, team_id, run_id, intent_proof_id, contract_id, proof_id,
 			objective, scope, owner, execution_shape, expected_outputs, expected_proof,

@@ -189,23 +189,39 @@ func (s *AdminServer) persistTeamWorkItemWithLifecycle(ctx context.Context, item
 	if err := protocol.ValidateTeamWorkItem(*item); err != nil {
 		return err
 	}
-	if err := s.insertTeamWorkItemDB(ctx, item); err != nil {
+	db := s.getDB()
+	if db == nil {
+		return errors.New("database not available")
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := s.insertTeamWorkItemExec(ctx, tx, item); err != nil {
 		return err
 	}
 	for i := range events {
-		if err := s.insertTeamStatusEventDB(ctx, &events[i]); err != nil {
+		if err := s.insertTeamStatusEventExec(ctx, tx, &events[i]); err != nil {
 			return err
 		}
 	}
 	if len(events) > 0 {
-		if err := s.updateTeamWorkItemLastEventDB(ctx, item, events[len(events)-1]); err != nil {
+		if err := s.updateTeamWorkItemLastEventExec(ctx, tx, item, events[len(events)-1]); err != nil {
 			return err
 		}
 	}
 	if strings.TrimSpace(interaction.Summary) != "" {
-		if err := s.insertTeamInteractionDB(ctx, &interaction); err != nil {
+		if err := s.insertTeamInteractionExec(ctx, tx, &interaction); err != nil {
 			return err
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if len(events) > 0 {
+		item.LastEvent = &events[len(events)-1]
 	}
 	return nil
 }

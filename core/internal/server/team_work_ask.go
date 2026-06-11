@@ -78,18 +78,22 @@ func (s *AdminServer) HandleTeamWorkAsk(w http.ResponseWriter, r *http.Request) 
 	timeout := boundedTeamAskTimeout(req.TimeoutSeconds)
 	if req.Async {
 		subject := fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID)
-		dispatchState, err := s.dispatchTeamWorkAsk(item, req, subject)
-		if err != nil {
+		if s.NC == nil || !s.NC.IsConnected() {
 			followupCtx, followupCancel := teamWorkAskFollowupContext(r.Context())
 			defer followupCancel()
-			s.respondTeamWorkAskDegraded(w, followupCtx, item, subject, dispatchState, err.Error(), http.StatusAccepted)
+			s.respondTeamWorkAskDegraded(w, followupCtx, item, subject, "nats_offline", "NATS connection offline; the team ask was recorded but not sent.", http.StatusAccepted)
 			return
 		}
 		followupCtx, followupCancel := teamWorkAskFollowupContext(r.Context())
 		defer followupCancel()
-		dispatched, err := s.recordTeamWorkAskDispatched(followupCtx, &item, subject, dispatchState)
+		dispatched, err := s.recordTeamWorkAskDispatched(followupCtx, &item, subject, "publish_pending")
 		if err != nil {
 			respondAPIError(w, "Failed to record team ask dispatch: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dispatchState, err := s.dispatchTeamWorkAsk(item, req, subject)
+		if err != nil {
+			s.respondTeamWorkAskDegraded(w, followupCtx, item, subject, dispatchState, err.Error(), http.StatusAccepted)
 			return
 		}
 		respondAPIJSON(w, http.StatusAccepted, protocol.NewAPISuccess(teamWorkAskResult{
