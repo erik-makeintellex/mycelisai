@@ -6,6 +6,7 @@ import { useCortexStore } from "@/store/useCortexStore";
 describe("ActivityPage", () => {
   beforeEach(() => {
     useCortexStore.setState({
+      advancedMode: true,
       recentRuns: [
         {
           id: "run-active",
@@ -63,6 +64,16 @@ describe("ActivityPage", () => {
       ],
       fetchServicesStatus: vi.fn().mockResolvedValue([]),
     });
+  });
+
+  it("shows the advanced gate when advanced mode is off", () => {
+    useCortexStore.setState({ advancedMode: false });
+
+    render(<ActivityPage />);
+
+    expect(screen.getByText("Activity review is an Advanced support view")).toBeDefined();
+    expect(screen.getByText(/deeper run lists, bus signals, and operator diagnostics/i)).toBeDefined();
+    expect(screen.queryByText("Progress, runs, and bus review")).toBeNull();
   });
 
   it("renders a clean admin workflow and bus overview", async () => {

@@ -3,9 +3,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 const routerPush = vi.fn();
 const fetchRecentRuns = vi.fn();
+const toggleAdvancedMode = vi.fn();
 const searchParams = new URLSearchParams();
 
 type StoreState = {
+    advancedMode: boolean;
+    toggleAdvancedMode: () => void;
     recentRuns: Array<{
         id: string;
         mission_id: string;
@@ -39,8 +42,11 @@ describe('RunsPage', () => {
     beforeEach(() => {
         routerPush.mockReset();
         fetchRecentRuns.mockReset();
+        toggleAdvancedMode.mockReset();
         searchParams.delete('status');
         storeState = {
+            advancedMode: true,
+            toggleAdvancedMode,
             recentRuns: [
                 {
                     id: 'run-alpha-123',
@@ -53,6 +59,19 @@ describe('RunsPage', () => {
             fetchRecentRuns,
             assistantName: 'Soma',
         };
+    });
+
+    it('shows the advanced gate when advanced mode is off', () => {
+        storeState = {
+            ...storeState,
+            advancedMode: false,
+        };
+
+        render(<RunsPage />);
+
+        expect(screen.getByText('Run lists are an Advanced proof view')).toBeDefined();
+        expect(screen.getByText(/inspect execution history across workflows/i)).toBeDefined();
+        expect(screen.queryByText('run-alpha-123')).toBeNull();
     });
 
     it('fetches runs on mount and navigates to run details on click', () => {
