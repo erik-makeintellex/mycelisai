@@ -45,7 +45,7 @@ describe("GroupManagementPanel workspace tabs", () => {
       fireEvent.keyDown(tablist, { key: "Home" });
     });
     expect(
-      screen.getByRole("tab", { name: /Groups/i }).getAttribute("aria-selected"),
+      screen.getByRole("tab", { name: /Overview/i }).getAttribute("aria-selected"),
     ).toBe("true");
   });
 });

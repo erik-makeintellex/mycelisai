@@ -138,7 +138,6 @@ test.describe('Groups retained outputs live backend contract', () => {
 
         await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Open Soma' })).toHaveCount(2);
-        await page.getByRole('tab', { name: /Groups/i }).click();
         await expect(page.getByTestId(`groups-list-item-${group.group_id}`)).toBeVisible();
         await page.getByTestId(`groups-list-item-${group.group_id}`).click();
         await expect(page.getByRole('heading', { name: group.name })).toBeVisible();

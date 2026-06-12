@@ -62,7 +62,6 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     selectedGroup,
     hiddenSelectedGroup,
     selectedGroupId,
-    initialSelectedGroupId,
     outputs,
     outputSummary,
     draft,
@@ -84,9 +83,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     onBroadcast,
   onArchive,
   } = props;
-  const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>(
-    initialSelectedGroupId ? "overview" : "groups",
-  );
+  const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>("overview");
   const selectGroup = (groupId: string) => {
     onSelectGroup(groupId);
     setActivePanel("overview");
@@ -102,8 +99,16 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
         refreshing={refreshing}
         onRefresh={onRefresh}
       />
-      <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3 lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]">
+        <GroupRail
+          buckets={buckets}
+          filters={recordFilters}
+          hiddenSelectedGroup={hiddenSelectedGroup}
+          selectedGroupId={selectedGroupId}
+          onFiltersChange={onRecordFiltersChange}
+          onSelectGroup={selectGroup}
+        />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg/30">
           <GroupWorkspaceTabs
             activePanel={activePanel}
             outputCount={outputSummary.artifactCount}
@@ -132,23 +137,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
               ) : null}
             </div>
           ) : null}
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
-            {activePanel === "groups" ? (
-              <div
-                role="tabpanel"
-                id="groups-groups-panel"
-                aria-labelledby="groups-groups-tab"
-              >
-                <GroupRail
-                  buckets={buckets}
-                  filters={recordFilters}
-                  hiddenSelectedGroup={hiddenSelectedGroup}
-                  selectedGroupId={selectedGroupId}
-                  onFiltersChange={onRecordFiltersChange}
-                  onSelectGroup={selectGroup}
-                />
-              </div>
-            ) : null}
+          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
             {activePanel === "overview" ? (
               <div
                 role="tabpanel"

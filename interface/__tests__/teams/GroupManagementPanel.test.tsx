@@ -104,7 +104,6 @@ describe("GroupManagementPanel", () => {
         "Temporary group archived",
       ),
     );
-    fireEvent.click(screen.getByRole("tab", { name: /Groups/i }));
     fireEvent.click(screen.getByTestId("groups-list-item-group-temp"));
     fireEvent.click(screen.getByRole("tab", { name: /Message/i }));
     await waitFor(() =>
@@ -162,7 +161,6 @@ describe("GroupManagementPanel", () => {
         screen.getByRole("heading", { name: "Temp Campaign" }),
       ).toBeDefined(),
     );
-    fireEvent.click(screen.getByRole("tab", { name: /Groups/i }));
     expect(screen.getByText("Selected outside filters")).toBeDefined();
     expect(screen.getByTestId("groups-list").textContent).toContain(
       "Standing Ops",

@@ -22,11 +22,11 @@ export function CreateGroupPane({
     "w-full rounded-lg border border-cortex-border bg-cortex-bg px-3 py-1.5 text-sm text-cortex-text-main outline-none placeholder:text-cortex-text-muted";
 
   return (
-    <section className="rounded-2xl border border-cortex-border bg-cortex-surface p-3">
+    <section className="min-w-0 overflow-x-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Plus className="h-4 w-4 text-cortex-primary" />
-          <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-cortex-text-main">
+        <div className="flex min-w-0 items-center gap-2">
+          <Plus className="h-4 w-4 shrink-0 text-cortex-primary" />
+          <h2 className="min-w-0 break-words text-xs font-semibold uppercase tracking-[0.12em] text-cortex-text-main sm:text-sm sm:tracking-[0.16em]">
             Define group action lane
           </h2>
         </div>
@@ -35,7 +35,7 @@ export function CreateGroupPane({
           onClick={onCreateGroup}
           disabled={saving}
           data-testid="groups-create-button"
-          className="rounded-xl bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg disabled:opacity-60"
+          className="w-full rounded-xl bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg disabled:opacity-60 sm:w-auto"
         >
           {saving
             ? "Saving..."
@@ -190,7 +190,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-xs">
+    <label className="flex min-w-0 flex-col gap-1 text-xs">
       <span className="font-semibold text-cortex-text-main">{label}</span>
       {children}
     </label>
@@ -205,7 +205,7 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid content-start gap-2 rounded-xl border border-cortex-border bg-cortex-bg p-2.5">
+    <div className="grid min-w-0 content-start gap-2 rounded-xl border border-cortex-border bg-cortex-bg p-2.5">
       <h3 className="font-mono text-[11px] uppercase tracking-[0.16em] text-cortex-primary">
         {title}
       </h3>
