@@ -84,7 +84,7 @@ describe('System Page (V8.1 advanced diagnostics)', () => {
     it('lets an operator open Advanced mode from the gate', async () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => { render(<SystemPage />); });
-        fireEvent.click(screen.getByRole('button', { name: /Open Advanced mode/i }));
+        fireEvent.click(screen.getByRole('link', { name: /Open Advanced mode/i }));
         expect(mockToggleAdvancedMode).toHaveBeenCalledOnce();
     });
 

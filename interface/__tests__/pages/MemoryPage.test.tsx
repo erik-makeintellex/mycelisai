@@ -23,10 +23,17 @@ vi.mock('@/store/useCortexStore', () => ({
     useCortexStore: (selector: any) => selector({ advancedMode: mockAdvancedMode() }),
 }));
 
+const mockSearchParams = new URLSearchParams();
+vi.mock('next/navigation', () => ({
+    usePathname: () => '/memory',
+    useSearchParams: () => mockSearchParams,
+}));
+
 import MemoryRoute from '@/app/(app)/memory/page';
 
 describe('Memory Page (app/memory/page.tsx)', () => {
     beforeEach(() => {
+        mockSearchParams.delete('advanced');
         mockAdvancedMode.mockReturnValue(true);
     });
 

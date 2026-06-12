@@ -115,10 +115,20 @@ test.describe('V8.1 Soma-primary Navigation', () => {
         test(`direct ${route.href} opens an advanced gate while advanced mode is off`, async ({ page }) => {
             await page.goto(route.href, { waitUntil: 'domcontentloaded' });
             await expect(page.getByRole('heading', { name: route.gate })).toBeVisible();
-            await expect(page.getByRole('button', { name: 'Open Advanced mode' })).toBeVisible();
+            await expect(page.getByRole('link', { name: 'Open Advanced mode' })).toBeVisible();
             await expect(page.getByRole('link', { name: 'Return to AI Organization' })).toBeVisible();
         });
     }
+
+    test('advanced gate button opens the requested advanced page', async ({ page }) => {
+        await page.goto('/groups', { waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('heading', { name: 'Groups are an Advanced coordination view' })).toBeVisible();
+        await page.getByRole('link', { name: 'Open Advanced mode' }).click();
+        await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'true');
+        await expect(page.getByTestId('groups-workspace')).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Groups are an Advanced coordination view' })).toHaveCount(0);
+    });
 
     test('Advanced mode persistence flips visible state labels', async ({ page }) => {
         await expect(page.getByTestId('nav-resources')).toHaveCount(0);

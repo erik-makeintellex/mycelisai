@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
     groupPanelMock: vi.fn(() => <div data-testid="group-management-panel">Groups Panel</div>),
     advancedMode: vi.fn(() => true),
     toggleAdvancedMode: vi.fn(),
+    searchParams: new URLSearchParams(),
 }));
 
 vi.mock("@/components/teams/GroupManagementPanel", () => ({
@@ -20,6 +21,11 @@ vi.mock("@/store/useCortexStore", () => ({
         }),
 }));
 
+vi.mock("next/navigation", () => ({
+    usePathname: () => "/groups",
+    useSearchParams: () => mocks.searchParams,
+}));
+
 import GroupsPage from "@/app/(app)/groups/page";
 
 describe("GroupsPage", () => {
@@ -27,6 +33,7 @@ describe("GroupsPage", () => {
         mocks.groupPanelMock.mockClear();
         mocks.advancedMode.mockReturnValue(true);
         mocks.toggleAdvancedMode.mockReset();
+        mocks.searchParams.delete("advanced");
     });
 
     it("shows the advanced gate when advanced mode is off", async () => {

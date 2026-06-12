@@ -34,7 +34,7 @@ Primary app layout is implemented in `interface/app/(app)/layout.tsx` and `inter
 
 Release-candidate MVP note:
 - default operator navigation is intentionally smaller than the full route set: `Soma`, the current AI Organization when available, `Docs`, `Status`, and `Settings` stay visible by default, while `Groups`, `Activity/Runs`, `Resources/MCP`, `Memory`, and `System` are advanced/admin support routes
-- direct visits to advanced/admin support routes must show an explicit Advanced-mode gate when Advanced mode is off, rather than loading dense inspection pages behind hidden navigation
+- direct visits to advanced/admin support routes must show an explicit Advanced-mode gate when Advanced mode is off, and the gate must provide a reliable same-route `advanced=1` release path rather than trapping the operator behind hidden navigation
 
 | Shell area | Component | Purpose |
 | --- | --- | --- |

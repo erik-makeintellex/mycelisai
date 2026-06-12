@@ -3,8 +3,15 @@ import { render, screen, waitFor } from "@testing-library/react";
 import ActivityPage from "@/app/(app)/activity/page";
 import { useCortexStore } from "@/store/useCortexStore";
 
+const mockSearchParams = new URLSearchParams();
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/activity",
+  useSearchParams: () => mockSearchParams,
+}));
+
 describe("ActivityPage", () => {
   beforeEach(() => {
+    mockSearchParams.delete("advanced");
     useCortexStore.setState({
       advancedMode: true,
       recentRuns: [

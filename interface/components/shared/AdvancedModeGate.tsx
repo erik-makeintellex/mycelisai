@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ArrowLeft, Eye } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 
@@ -16,6 +18,14 @@ export default function AdvancedModeGate({
     returnLabel?: string;
 }) {
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
+    const pathname = usePathname() ?? "/dashboard";
+    const [advancedHref, setAdvancedHref] = useState(`${pathname}?advanced=1`);
+
+    useEffect(() => {
+        const advancedParams = new URLSearchParams(window.location.search);
+        advancedParams.set("advanced", "1");
+        setAdvancedHref(`${pathname}?${advancedParams.toString()}`);
+    }, [pathname]);
 
     return (
         <div className="flex h-full items-center justify-center bg-cortex-bg px-6 py-10">
@@ -30,14 +40,14 @@ export default function AdvancedModeGate({
                     Turn on Advanced mode from the left rail when you want to inspect deeper tools, system details, or configuration surfaces.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
-                    <button
-                        type="button"
+                    <Link
+                        href={advancedHref}
                         onClick={toggleAdvancedMode}
                         className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-primary px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-cortex-primary/90"
                     >
                         <Eye className="h-4 w-4" />
                         Open Advanced mode
-                    </button>
+                    </Link>
                     <Link
                         href={returnHref}
                         className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"

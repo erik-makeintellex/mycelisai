@@ -280,7 +280,9 @@ test.describe('Docs and Runs Route Coverage', () => {
         });
 
         await page.goto('/runs', { waitUntil: 'domcontentloaded' });
-
+        await expect(page.getByRole('heading', { name: 'Run lists are an Advanced proof view' })).toBeVisible();
+        await page.getByRole('link', { name: 'Open Advanced mode' }).click();
+        await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'true');
         await expect(page.locator('span:has-text("Runs")').first()).toBeVisible();
         await expect(page.getByText('1 active')).toBeVisible();
         await expect(page.getByText(runId, { exact: true })).toBeVisible();
@@ -291,17 +293,14 @@ test.describe('Docs and Runs Route Coverage', () => {
         const runRow = page.locator(`button:has-text("${runId}")`).first();
         await expect(runRow).toBeVisible();
         await runRow.click();
-
         await expect(page).toHaveURL(new RegExp(`/runs/${runId}$`));
         await expect(page.getByText('Soma is coordinating the active run.')).toBeVisible();
         await expect(page.getByText('Planner is preparing validation steps.')).toBeVisible();
         await expect(page.getByText('running').first()).toBeVisible();
         await expect(page.getByPlaceholder('Interject in this run...')).toBeVisible();
-
         await page.getByRole('button', { name: 'planner' }).click();
         await expect(page.getByText('Planner is preparing validation steps.')).toBeVisible();
         await expect(page.getByText('Soma is coordinating the active run.')).not.toBeVisible();
-
         await page.getByPlaceholder('Interject in this run...').fill('Pause this run and retry with a smaller validation step.');
         await page.getByRole('button', { name: 'Interject' }).click();
         await expect(page.getByText('Operator Interjection')).toBeVisible();

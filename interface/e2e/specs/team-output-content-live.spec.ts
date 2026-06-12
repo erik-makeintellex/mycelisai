@@ -242,6 +242,12 @@ async function expectTeamVisibleInGroups(page: Page, teamID: string) {
     const group = (parsed.body?.data ?? []).find((candidate) => candidate.team_ids?.includes(teamID));
     expect(group, JSON.stringify(parsed.body?.data ?? [])).toBeTruthy();
     await page.goto(`/groups?group_id=${encodeURIComponent(group!.group_id)}`, { waitUntil: 'domcontentloaded' });
+    const advancedGate = page.getByRole('heading', { name: 'Groups are an Advanced coordination view' });
+    if (await advancedGate.count()) {
+        await expect(advancedGate).toBeVisible({ timeout: 30_000 });
+        await page.getByRole('link', { name: 'Open Advanced mode' }).click();
+        await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'true');
+    }
     await expect(page.getByRole('heading', { name: group!.name })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(teamID).first()).toBeVisible();
 }
