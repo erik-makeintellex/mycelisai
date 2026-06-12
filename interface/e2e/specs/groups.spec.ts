@@ -12,6 +12,11 @@ test.describe("Groups workspace (/groups)", () => {
     await expect(page.getByRole("heading", { name: "Standing groups" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Temporary groups" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Completed records" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Overview/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Outputs/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Message/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Settings/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Create/i })).toBeVisible();
 
     await page.getByTestId("groups-list-item-group-temp-launch").click();
     await expect(page.getByText("Temporary group", { exact: true })).toBeVisible();
@@ -39,6 +44,10 @@ test.describe("Groups workspace (/groups)", () => {
       page.getByText("Archived temporary group", { exact: true }),
     ).toBeVisible();
     await page.getByRole("tab", { name: /Message/i }).click();
+    await expect(page.getByRole("link", { name: "Open bus diagnostics" })).toHaveAttribute(
+      "href",
+      "/system?tab=nats&advanced=1",
+    );
     await expect(page.getByTestId("groups-archived-readonly-note")).toContainText(
       "retained output review",
     );

@@ -76,4 +76,47 @@ describe("GroupManagementPanel project package outputs", () => {
     );
     openWindow.mockRestore();
   });
+
+  it("opens saved HTML outputs instead of presenting raw HTML as the result", async () => {
+    const openWindow = vi.spyOn(window, "open").mockImplementation(() => null);
+    installGroupsFetch({
+      groups: [tempGroup()],
+      outputs: {
+        "group-temp": [
+          documentArtifact({
+            id: "artifact-html",
+            artifact_type: "code",
+            title: "workspace/logs/qa_orbit_dash.html",
+            content_type: "text/html",
+            content:
+              "<!doctype html><title>Dot Dodge</title><style>body{background:#111}</style>",
+          }),
+        ],
+      },
+    });
+
+    render(<GroupManagementPanel initialSelectedGroupId="group-temp" />);
+
+    fireEvent.click(screen.getByRole("tab", { name: /Outputs/i }));
+    await waitFor(() =>
+      expect(screen.getByText("workspace/logs/qa_orbit_dash.html")).toBeDefined(),
+    );
+    expect(
+      screen.getByText(/HTML output is saved as a browser-viewable file/i),
+    ).toBeDefined();
+    expect(screen.queryByText(/<!doctype html><title>Dot Dodge/i)).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /Open output workspace\/logs\/qa_orbit_dash.html in a new browser window/i,
+      }),
+    );
+    expect(openWindow).toHaveBeenCalledWith(
+      "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fqa_orbit_dash.html",
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    openWindow.mockRestore();
+  });
 });

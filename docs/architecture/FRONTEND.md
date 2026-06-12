@@ -137,6 +137,8 @@ Component files under `interface/components`: `96` (`.tsx` and `.ts`) across `27
 
 Deep management pages should prefer a small set of related page-level tabs over stacking every panel vertically. Default to the most common review context, keep tab labels short, preserve `tablist`/`tab`/`tabpanel` semantics, support arrow-key plus Home/End tab movement, keep feedback notices in live regions, keep a clear route back to Soma on advanced pages, and bound generated prompts, logs, lists, and artifacts inside the active panel instead of increasing whole-page scroll. When a page has a dense record picker, use a master-detail layout where the picker stays in a bounded scroll rail and the selected item owns the tabbed detail surface. Keep filters collapsed by default and move the highest-value actions, such as opening Soma, outputs, folders, and lead workspaces, into the first selected-item viewport.
 
+Generated file outputs should present the retained user outcome first. HTML/code artifacts with a saved workspace path must expose an openable rendered-file action and local folder access instead of treating raw source text as the primary result. Advanced diagnostics links launched from advanced pages must preserve advanced mode in the destination route.
+
 ### 5.1 MVP audit decisions (RC lock)
 
 | Route / tab | Decision | Team Lead-first reason |

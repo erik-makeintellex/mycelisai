@@ -64,9 +64,14 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
   const folder = stringMetadata(artifact.metadata, "folder");
   const files = stringArrayMetadata(artifact.metadata, "files");
   const validation = stringMetadata(artifact.metadata, "validation");
+  const outputPath = projectPackage
+    ? entrypoint || artifact.file_path || ""
+    : outputPathForArtifact(artifact);
   const packageHref = projectPackage
-    ? workspaceFileHref(entrypoint || artifact.file_path || "")
+    ? workspaceFileHref(outputPath)
     : null;
+  const outputHref = !projectPackage ? workspaceFileHref(outputPath) : null;
+  const htmlOutput = isHtmlArtifact(artifact);
   const readable =
     artifact.artifact_type === "code" ||
     artifact.artifact_type === "document" ||
@@ -84,14 +89,24 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
             {relativeTime(artifact.created_at)}
           </p>
         </div>
-        <a
-          href={`/api/v1/artifacts/${encodeURIComponent(artifact.id)}/download`}
-          download
-          className="inline-flex items-center gap-1 rounded-xl border border-cortex-primary/30 px-3 py-2 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/10"
-        >
-          <Download className="h-3.5 w-3.5" />
-          Download
-        </a>
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          {!projectPackage && (outputHref || outputPath) ? (
+            <OutputAccessActions
+              label={artifact.title}
+              url={outputHref}
+              storagePath={outputPath}
+              openLabel={htmlOutput ? "Open output" : "Open file"}
+            />
+          ) : null}
+          <a
+            href={`/api/v1/artifacts/${encodeURIComponent(artifact.id)}/download`}
+            download
+            className="inline-flex items-center gap-1 rounded-xl border border-cortex-primary/30 px-3 py-2 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/10"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download
+          </a>
+        </div>
       </div>
       {projectPackage ? (
         <ProjectPackage
@@ -102,6 +117,14 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
           validation={validation}
           packageHref={packageHref}
         />
+      ) : htmlOutput && outputHref ? (
+        <div className="mt-3 rounded-xl border border-cortex-border bg-cortex-bg p-3 text-sm leading-6 text-cortex-text-muted">
+          HTML output is saved as a browser-viewable file. Use{" "}
+          <span className="font-semibold text-cortex-text-main">
+            Open output
+          </span>{" "}
+          to inspect the rendered result.
+        </div>
       ) : readable && artifact.content ? (
         <pre className="mt-3 max-h-48 overflow-auto rounded-xl border border-cortex-border bg-cortex-bg p-3 text-xs leading-6 text-cortex-text-muted">
           {artifact.content}
@@ -195,4 +218,37 @@ function workspaceFileHref(path: string) {
   const trimmed = path.trim();
   if (!trimmed) return null;
   return `/api/v1/workspace/files/view?path=${encodeURIComponent(trimmed)}`;
+}
+
+function outputPathForArtifact(artifact: Artifact) {
+  const metadataPath =
+    stringMetadata(artifact.metadata, "entrypoint") ||
+    stringMetadata(artifact.metadata, "path") ||
+    stringMetadata(artifact.metadata, "file_path");
+  if (metadataPath) return metadataPath;
+  if (artifact.file_path?.trim()) return artifact.file_path.trim();
+  return workspaceLikePath(artifact.title);
+}
+
+function workspaceLikePath(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^(workspace|groups|generated|outputs|reports|logs)\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return "";
+}
+
+function isHtmlArtifact(artifact: Artifact) {
+  const contentType = artifact.content_type?.toLowerCase() ?? "";
+  const title = artifact.title.toLowerCase();
+  const path = outputPathForArtifact(artifact).toLowerCase();
+  const content = artifact.content?.trimStart().toLowerCase() ?? "";
+  return (
+    contentType.includes("html") ||
+    title.endsWith(".html") ||
+    path.endsWith(".html") ||
+    content.startsWith("<!doctype html") ||
+    content.startsWith("<html")
+  );
 }

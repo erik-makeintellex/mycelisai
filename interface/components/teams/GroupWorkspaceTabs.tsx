@@ -28,7 +28,7 @@ export function GroupWorkspaceTabs({
 }: GroupWorkspaceTabsProps) {
   return (
     <div
-      className="grid grid-cols-2 gap-2 border-b border-cortex-border bg-cortex-bg/40 p-2 sm:flex sm:overflow-x-auto sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden"
+      className="grid grid-cols-2 gap-2 border-b border-cortex-border bg-cortex-bg/40 p-2 md:grid-cols-3 xl:grid-cols-5"
       role="tablist"
       aria-label="Group workspace sections"
       onKeyDown={(event) => handleTabKeyDown(event, activePanel, onSelect)}
@@ -67,7 +67,7 @@ function GroupWorkspaceTab({
         selected
           ? "border-cortex-primary/45 bg-cortex-primary/10 text-cortex-text-main"
           : "border-cortex-border bg-cortex-surface text-cortex-text-muted hover:text-cortex-text-main"
-      } min-w-0 sm:min-w-36 sm:shrink-0`}
+      } min-w-0`}
     >
       <span className="flex items-center gap-2 text-xs font-semibold">
         <Icon className="h-3.5 w-3.5" />

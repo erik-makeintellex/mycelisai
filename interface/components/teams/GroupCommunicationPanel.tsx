@@ -120,7 +120,7 @@ export function GroupCommunicationPanel({
             </p>
           ) : null}
           <a
-            href="/system?tab=nats"
+            href="/system?tab=nats&advanced=1"
             className={`${linkClassName} mt-3 inline-flex`}
           >
             Open bus diagnostics
