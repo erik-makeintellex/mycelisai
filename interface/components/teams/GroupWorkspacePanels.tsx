@@ -1,10 +1,16 @@
+import { useState } from "react";
 import { RefreshCw, Users } from "lucide-react";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { CreateGroupPane } from "./CreateGroupPane";
 import { GroupCommunicationPanel } from "./GroupCommunicationPanel";
 import { GroupConfigPane } from "./GroupConfigPane";
 import { GroupDetailPane } from "./GroupDetailPane";
+import { OutputsPanel } from "./GroupOutputsPanel";
 import { GroupRail } from "./GroupRail";
+import {
+  GroupWorkspaceTabs,
+  type GroupWorkspacePanel,
+} from "./GroupWorkspaceTabs";
 import {
   compactButtonClassName,
   type ApprovalPrompt,
@@ -75,6 +81,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     onBroadcast,
     onArchive,
   } = props;
+  const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>("overview");
 
   return (
     <section
@@ -95,44 +102,108 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
           onFiltersChange={onRecordFiltersChange}
           onSelectGroup={onSelectGroup}
         />
-        <div className="min-h-0 min-w-0 space-y-4 overflow-y-auto pr-1">
-          <GroupDetailPane
-            selectedGroup={selectedGroup}
-            outputs={outputs}
-            outputSummary={outputSummary}
-            archiving={archiving}
-            onArchive={onArchive}
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface">
+          <GroupWorkspaceTabs
+            activePanel={activePanel}
+            outputCount={outputSummary.artifactCount}
+            onSelect={setActivePanel}
           />
-          <GroupConfigPane selectedGroup={selectedGroup} />
-          <GroupCommunicationPanel
-            monitor={monitor}
-            selectedGroup={selectedGroup}
-            broadcastMessage={broadcastMessage}
-            lastBroadcastResult={lastBroadcastResult}
-            broadcasting={broadcasting}
-            onBroadcastMessageChange={onBroadcastMessageChange}
-            onBroadcast={onBroadcast}
-            onRefresh={onRefresh}
-          />
-          <details
-            className="rounded-2xl border border-cortex-border bg-cortex-surface p-3"
-            open={!selectedGroup}
-          >
-            <summary className="cursor-pointer text-sm font-semibold uppercase tracking-[0.16em] text-cortex-text-main">
-              Create a new group
-            </summary>
-            <div className="mt-3">
-              <CreateGroupPane
-                draft={draft}
-                notice={notice}
-                error={error}
-                approvalPrompt={approvalPrompt}
-                saving={saving}
-                onDraftChange={onDraftChange}
-                onCreateGroup={onCreateGroup}
-              />
+          {notice || error ? (
+            <div className="border-b border-cortex-border px-3 py-2">
+              {notice ? (
+                <p
+                  className="rounded-xl border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-sm text-cortex-primary"
+                  data-testid="groups-notice"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {notice}
+                </p>
+              ) : null}
+              {error ? (
+                <p
+                  className="rounded-xl border border-cortex-danger/30 bg-cortex-danger/10 px-3 py-2 text-sm text-cortex-danger"
+                  data-testid="groups-error"
+                  role="alert"
+                >
+                  {error}
+                </p>
+              ) : null}
             </div>
-          </details>
+          ) : null}
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            {activePanel === "overview" ? (
+              <div
+                role="tabpanel"
+                id="groups-overview-panel"
+                aria-labelledby="groups-overview-tab"
+              >
+                <GroupDetailPane
+                  selectedGroup={selectedGroup}
+                  outputSummary={outputSummary}
+                  archiving={archiving}
+                  onArchive={onArchive}
+                  onOpenOutputs={() => setActivePanel("outputs")}
+                />
+              </div>
+            ) : null}
+            {activePanel === "outputs" ? (
+              <div
+                role="tabpanel"
+                id="groups-outputs-panel"
+                aria-labelledby="groups-outputs-tab"
+              >
+                <OutputsPanel
+                  archived={selectedGroup?.status === "archived"}
+                  outputs={outputs}
+                  outputSummary={outputSummary}
+                />
+              </div>
+            ) : null}
+            {activePanel === "message" ? (
+              <div
+                role="tabpanel"
+                id="groups-message-panel"
+                aria-labelledby="groups-message-tab"
+              >
+                <GroupCommunicationPanel
+                  monitor={monitor}
+                  selectedGroup={selectedGroup}
+                  broadcastMessage={broadcastMessage}
+                  lastBroadcastResult={lastBroadcastResult}
+                  broadcasting={broadcasting}
+                  onBroadcastMessageChange={onBroadcastMessageChange}
+                  onBroadcast={onBroadcast}
+                  onRefresh={onRefresh}
+                />
+              </div>
+            ) : null}
+            {activePanel === "settings" ? (
+              <div
+                role="tabpanel"
+                id="groups-settings-panel"
+                aria-labelledby="groups-settings-tab"
+              >
+                <GroupConfigPane selectedGroup={selectedGroup} />
+              </div>
+            ) : null}
+            {activePanel === "create" ? (
+              <div
+                role="tabpanel"
+                id="groups-create-panel"
+                aria-labelledby="groups-create-tab"
+                className="rounded-2xl border border-cortex-border bg-cortex-surface p-3"
+              >
+                <CreateGroupPane
+                  draft={draft}
+                  approvalPrompt={approvalPrompt}
+                  saving={saving}
+                  onDraftChange={onDraftChange}
+                  onCreateGroup={onCreateGroup}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>

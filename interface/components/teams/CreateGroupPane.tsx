@@ -7,16 +7,12 @@ import {
 
 export function CreateGroupPane({
   draft,
-  notice,
-  error,
   approvalPrompt,
   saving,
   onDraftChange,
   onCreateGroup,
 }: {
   draft: GroupDraft;
-  notice: string | null;
-  error: string | null;
   approvalPrompt: ApprovalPrompt | null;
   saving: boolean;
   onDraftChange: (patch: Partial<GroupDraft>) => void;
@@ -181,22 +177,6 @@ export function CreateGroupPane({
             className={`${compactInputClassName} mt-3 font-mono`}
           />
         </div>
-      ) : null}
-      {notice ? (
-        <p
-          className="mt-4 text-sm text-cortex-primary"
-          data-testid="groups-notice"
-        >
-          {notice}
-        </p>
-      ) : null}
-      {error ? (
-        <p
-          className="mt-4 text-sm text-cortex-danger"
-          data-testid="groups-error"
-        >
-          {error}
-        </p>
       ) : null}
     </section>
   );

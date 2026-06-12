@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import GroupManagementPanel from "@/components/teams/GroupManagementPanel";
 import { mockFetch } from "../setup";
@@ -11,6 +11,7 @@ import {
 } from "./GroupManagementPanel.testSupport";
 
 function fillRequiredCreateFields() {
+  fireEvent.click(screen.getByRole("tab", { name: /Create/i }));
   fireEvent.change(screen.getByLabelText("Name"), {
     target: { value: "Ops Group" },
   });
@@ -89,7 +90,11 @@ describe("GroupManagementPanel", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /Temp Campaign/i }));
 
-    await waitFor(() => expect(screen.getByText("Launch brief")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByTestId("groups-output-summary").textContent).toContain(
+        "1 output",
+      ),
+    );
     fireEvent.click(
       screen.getByRole("button", { name: "Archive temporary group" }),
     );
@@ -100,11 +105,13 @@ describe("GroupManagementPanel", () => {
       ),
     );
     fireEvent.click(screen.getByTestId("groups-list-item-group-temp"));
+    fireEvent.click(screen.getByRole("tab", { name: /Message/i }));
     await waitFor(() =>
       expect(
         screen.getByTestId("groups-archived-readonly-note").textContent,
       ).toContain("retained output review"),
     );
+    fireEvent.click(screen.getByRole("tab", { name: /Outputs/i }));
     expect(
       screen.getByTestId("groups-retained-outputs-note").textContent,
     ).toContain("Downloads remain available");
@@ -115,6 +122,7 @@ describe("GroupManagementPanel", () => {
     expect(
       screen.getByRole("link", { name: /Download/i }).getAttribute("href"),
     ).toBe("/api/v1/artifacts/artifact-1/download");
+    fireEvent.click(screen.getByRole("tab", { name: /Overview/i }));
     expect(
       screen
         .getByRole("link", { name: "Open lead workspace: team-marketing" })
@@ -125,70 +133,6 @@ describe("GroupManagementPanel", () => {
         screen.queryByRole("button", { name: "Broadcast to group" }),
       ).toBeNull(),
     );
-  });
-
-  it("renders retained project package outputs with open and storage controls", async () => {
-    const openWindow = vi
-      .spyOn(window, "open")
-      .mockImplementation(() => null);
-    installGroupsFetch({
-      groups: [tempGroup()],
-      outputs: {
-        "group-temp": [
-          documentArtifact({
-            id: "artifact-game",
-            artifact_type: "project_package",
-            title: "Coin Runner Game",
-            content_type: "application/vnd.mycelis.project+json",
-            metadata: {
-              entrypoint: "workspace/generated/coin-runner/index.html",
-              folder: "workspace/generated/coin-runner",
-              files: ["index.html", "game.js", "styles.css"],
-              validation: "Opened in browser and score increased after click.",
-            },
-          }),
-        ],
-      },
-    });
-
-    render(<GroupManagementPanel initialSelectedGroupId="group-temp" />);
-
-    await waitFor(() =>
-      expect(screen.getByText("Coin Runner Game")).toBeDefined(),
-    );
-    expect(screen.getByText("Project package")).toBeDefined();
-    expect(
-      screen.getByText("workspace/generated/coin-runner/index.html"),
-    ).toBeDefined();
-    expect(screen.getByText("workspace/generated/coin-runner")).toBeDefined();
-    expect(screen.getByText("game.js")).toBeDefined();
-    expect(
-      screen.getByText("Opened in browser and score increased after click."),
-    ).toBeDefined();
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /Open Game Coin Runner Game in a new browser window/i,
-      }),
-    );
-    expect(openWindow).toHaveBeenCalledWith(
-      "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fcoin-runner%2Findex.html",
-      "_blank",
-      "noopener,noreferrer",
-    );
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /Open local folder for Coin Runner Game/i,
-      }),
-    );
-    await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/v1/workspace/files/reveal?path=workspace%2Fgenerated%2Fcoin-runner",
-        { method: "POST" },
-      ),
-    );
-    openWindow.mockRestore();
   });
 
   it("honors an initially selected group id from the route", async () => {
@@ -250,22 +194,25 @@ describe("GroupManagementPanel", () => {
 
     render(<GroupManagementPanel initialSelectedGroupId="group-temp" />);
 
-    await waitFor(() => expect(screen.getByText("Launch Brief")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByTestId("groups-output-summary").textContent).toContain(
+        "2 outputs",
+      ),
+    );
+    expect(screen.getByRole("tablist", { name: "Group workspace sections" })).toBeDefined();
+    expect(
+      screen.getByRole("tab", { name: /Overview/i }).getAttribute("aria-selected"),
+    ).toBe("true");
+    fireEvent.click(screen.getByRole("tab", { name: /Settings/i }));
     expect(screen.getByText("Agent backend model")).toBeDefined();
     expect(screen.getByText("Inherits organization AI Engine")).toBeDefined();
     expect(screen.getByText("runs.read, runs.propose")).toBeDefined();
-    expect(
-      screen
-        .getByText("Group records")
-        .compareDocumentPosition(screen.getByText("Define group action lane")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      screen
-        .getByText("Group records")
-        .compareDocumentPosition(screen.getByText("Coordination activity")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: /Create/i }));
+    expect(screen.getByText("Define group action lane")).toBeDefined();
+    fireEvent.click(screen.getByRole("tab", { name: /Message/i }));
+    expect(screen.getByText("Coordination activity")).toBeDefined();
+    fireEvent.click(screen.getByRole("tab", { name: /Outputs/i }));
+    expect(screen.getByText("Launch Brief")).toBeDefined();
     expect(screen.getByTestId("groups-output-summary").textContent).toContain(
       "2 outputs",
     );

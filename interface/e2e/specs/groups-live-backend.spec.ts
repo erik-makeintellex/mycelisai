@@ -35,10 +35,6 @@ async function parseJSONIfPossible<T>(response: { text(): Promise<string> }) {
     }
 }
 
-function summarizeGroups(groups: GroupRecord[]) {
-    return groups.map((group) => `${group.group_id}:${group.name}:${group.status}`).join(', ');
-}
-
 async function createLiveGroup(page: Page, teamIDs: string[]) {
     const stamp = Date.now();
     const response = await page.request.post('/api/v1/groups', {
@@ -70,27 +66,6 @@ async function listLiveGroups(page: Page) {
     return parsed.body!.data!;
 }
 
-async function waitForBrowserGroupList(page: Page, expectedGroupID: string) {
-    let response;
-    try {
-        response = await page.waitForResponse((candidate) => {
-            const url = new URL(candidate.url());
-            return candidate.request().method() === 'GET' && url.pathname === '/api/v1/groups';
-        }, { timeout: 30_000 });
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Groups UI did not issue GET /api/v1/groups after navigation. Check Playwright baseURL, Next proxy rewrites, and built static JS hydration. ${message}`);
-    }
-
-    const parsed = await parseJSONIfPossible<APIEnvelope<GroupRecord[]>>(response);
-    expect(response.ok(), parsed.body ? JSON.stringify(parsed.body) : parsed.raw).toBeTruthy();
-    const groups = parsed.body?.data ?? [];
-    expect(
-        groups.some((candidate) => candidate.group_id === expectedGroupID),
-        `Browser UI proxy GET /api/v1/groups did not include seeded group ${expectedGroupID}. Got: ${summarizeGroups(groups)}`,
-    ).toBeTruthy();
-}
-
 async function storeLiveArtifact(page: Page, teamID: string, title: string, agentID: string, content: string) {
     return await storeLiveArtifactWithRetry<ArtifactRecord>(page, {
         team_id: teamID,
@@ -115,6 +90,14 @@ async function gotoWithColdStartRetry(page: Page, path: string) {
             throw error;
         }
         await page.goto(path, { waitUntil: 'domcontentloaded' });
+    }
+}
+
+async function openGroupsWorkspace(page: Page, path: string) {
+    await gotoWithColdStartRetry(page, path);
+    const advancedGate = page.getByRole('heading', { name: 'Groups are an Advanced coordination view' });
+    if (await advancedGate.count()) {
+        await page.getByRole('link', { name: 'Open Advanced mode' }).click();
     }
 }
 
@@ -146,24 +129,27 @@ test.describe('Groups retained outputs live backend contract', () => {
             '# Live delivery checklist\n\n- Owner review\n- Release criteria',
         );
 
-        const groupsResponse = waitForBrowserGroupList(page, group.group_id);
-        await gotoWithColdStartRetry(page, `/groups?group_id=${encodeURIComponent(group.group_id)}`);
-        await groupsResponse;
+        await openGroupsWorkspace(page, `/groups?group_id=${encodeURIComponent(group.group_id)}`);
 
         await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
+        await expect(page.getByTestId(`groups-list-item-${group.group_id}`)).toBeVisible();
         await expect(page.getByRole('heading', { name: group.name })).toBeVisible();
         await expect(page.getByText('Temporary group', { exact: true })).toBeVisible();
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
+        await page.getByRole('tab', { name: /Outputs/i }).click();
         await expect(page.getByText(brief.title, { exact: true })).toBeVisible();
         await expect(page.getByText(checklist.title, { exact: true })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Download' }).first()).toHaveAttribute('href', new RegExp('/api/v1/artifacts/.+/download'));
 
+        await page.getByRole('tab', { name: /Overview/i }).click();
         await page.getByRole('button', { name: 'Archive temporary group' }).click();
 
         await expect(page.getByTestId('groups-notice')).toContainText('Temporary group archived.');
         await expect(page.getByText('Archived temporary group', { exact: true })).toBeVisible();
+        await page.getByRole('tab', { name: /Message/i }).click();
         await expect(page.getByTestId('groups-archived-readonly-note')).toContainText('retained output review');
+        await page.getByRole('tab', { name: /Outputs/i }).click();
         await expect(page.getByTestId('groups-retained-outputs-note')).toContainText('Downloads remain available');
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
