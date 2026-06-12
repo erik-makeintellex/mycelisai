@@ -97,8 +97,13 @@ async function openGroupsWorkspace(page: Page, path: string) {
     await gotoWithColdStartRetry(page, path);
     const advancedGate = page.getByRole('heading', { name: 'Groups are an Advanced coordination view' });
     if (await advancedGate.count()) {
-        await page.getByRole('link', { name: 'Open Advanced mode' }).click();
+        await gotoWithColdStartRetry(page, withAdvancedMode(path));
     }
+}
+
+function withAdvancedMode(path: string) {
+    const separator = path.includes('?') ? '&' : '?';
+    return path.includes('advanced=1') ? path : `${path}${separator}advanced=1`;
 }
 
 test.describe('Groups retained outputs live backend contract', () => {
@@ -132,7 +137,7 @@ test.describe('Groups retained outputs live backend contract', () => {
         await openGroupsWorkspace(page, `/groups?group_id=${encodeURIComponent(group.group_id)}`);
 
         await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Open Soma' })).toHaveAttribute('href', '/dashboard');
+        await expect(page.getByRole('link', { name: 'Open Soma' })).toHaveCount(2);
         await page.getByRole('tab', { name: /Groups/i }).click();
         await expect(page.getByTestId(`groups-list-item-${group.group_id}`)).toBeVisible();
         await page.getByTestId(`groups-list-item-${group.group_id}`).click();

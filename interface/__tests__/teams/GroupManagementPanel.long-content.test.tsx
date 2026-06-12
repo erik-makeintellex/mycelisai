@@ -38,7 +38,7 @@ describe("GroupManagementPanel long generated content", () => {
     );
     const goalSummary = screen.getByTestId("groups-goal-summary");
     expect(goalSummary.textContent).toContain("<style>body");
-    expect(goalSummary.className).toContain("max-h-32");
+    expect(goalSummary.className).toContain("max-h-24");
     expect(goalSummary.className).toContain("overflow-y-auto");
     expect(screen.queryByText("Dot Dodge")).toBeNull();
 

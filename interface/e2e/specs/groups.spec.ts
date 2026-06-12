@@ -19,14 +19,10 @@ test.describe("Groups workspace (/groups)", () => {
     await expect(page.getByTestId("groups-output-summary")).toContainText(
       "1 contributing lead",
     );
-    await expect(page.getByRole("link", { name: "Open Soma admin home" })).toHaveAttribute(
-      "href",
-      "/dashboard",
-    );
-    await expect(page.getByRole("link", { name: "Open Soma", exact: true })).toHaveAttribute(
-      "href",
-      "/dashboard",
-    );
+    await expect(page.getByRole("link", { name: "Open Soma", exact: true })).toHaveCount(2);
+    await expect(
+      page.getByLabel("OverviewScope and links").getByRole("link", { name: "Open Soma" }),
+    ).toHaveAttribute("href", "/dashboard");
     await expect(page.getByTitle("Open launch-lead lead")).toHaveAttribute(
       "href",
       "/dashboard?team_id=launch-lead",

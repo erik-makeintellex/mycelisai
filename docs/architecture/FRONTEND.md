@@ -130,12 +130,12 @@ Component files under `interface/components`: `96` (`.tsx` and `.ts`) across `27
 | `/teams` | direct route | team roster, lead-entry hub, and template specialization |
 | `/teams/create` | direct route | guided team-creation workflow with Soma handoff |
 | `/resources` | `tools`, `workspace`, `engines`, `roles` | Advanced support hub |
-| `/groups` | `groups`, `overview`, `outputs`, `message`, `settings`, `create` | Advanced group operations use page-level tabs so group records, retained outputs, broadcasts, config, and creation do not stack into a long mixed scroll |
+| `/groups` | `groups`, `overview`, `outputs`, `message`, `settings`, `create` | Advanced group operations use compact page-level tabs so group records, retained outputs, broadcasts, config, and creation do not stack into a long mixed scroll |
 | `/system` | `health`, `nats`, `database`, `services` | Advanced diagnostics |
 | `/settings` | `profile`, `profiles`, `users`, `engines`, `tools` | Preferences, access, and optional advanced setup |
 | `/runs/[id]` | `conversation`, `events` | Split run investigation view |
 
-Deep management pages should prefer a small set of related page-level tabs over stacking every panel vertically. Default to the most common review context, keep tab labels short, preserve `tablist`/`tab`/`tabpanel` semantics, support arrow-key plus Home/End tab movement, keep feedback notices in live regions, keep a clear route back to Soma on advanced pages, and bound generated prompts, logs, lists, and artifacts inside the active panel instead of increasing whole-page scroll.
+Deep management pages should prefer a small set of related page-level tabs over stacking every panel vertically. Default to the most common review context, keep tab labels short, preserve `tablist`/`tab`/`tabpanel` semantics, support arrow-key plus Home/End tab movement, keep feedback notices in live regions, keep a clear route back to Soma on advanced pages, and bound generated prompts, logs, lists, and artifacts inside the active panel instead of increasing whole-page scroll. When a page has a dense record picker, keep filters collapsed by default and move the highest-value actions, such as opening Soma, outputs, folders, and lead workspaces, into the first selected-item viewport.
 
 ### 5.1 MVP audit decisions (RC lock)
 

@@ -123,59 +123,64 @@ function GroupRecordFilterControls({
   onFiltersChange: (patch: Partial<GroupRecordFilters>) => void;
 }) {
   return (
-    <div className="mt-3 space-y-3 rounded-xl border border-cortex-border bg-cortex-bg p-3">
-      <label className="block text-xs">
-        <span className="font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
-          Search
-        </span>
-        <input
-          aria-label="Search group records"
-          value={filters.query}
-          onChange={(event) => onFiltersChange({ query: event.target.value })}
-          placeholder="Name, goal, team..."
-          className={`${inputClassName} mt-2`}
-        />
-      </label>
-      <FilterButtons<GroupKindFilter>
-        label="Type"
-        value={filters.kind}
-        options={[
-          ["all", "All"],
-          ["standing", "Full time"],
-          ["temporary", "Temp"],
-        ]}
-        onChange={(kind) => onFiltersChange({ kind })}
-      />
-      <FilterButtons<GroupStateFilter>
-        label="State"
-        value={filters.state}
-        options={[
-          ["all", "All"],
-          ["running", "Running"],
-          ["complete", "Complete"],
-        ]}
-        onChange={(state) => onFiltersChange({ state })}
-      />
-      <label className="block text-xs">
-        <span className="font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
-          Show completed records from last
-        </span>
-        <div className="mt-2 flex items-center gap-2">
+    <details className="mt-3 rounded-xl border border-cortex-border bg-cortex-bg">
+      <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-cortex-text-main">
+        Filters
+      </summary>
+      <div className="space-y-3 border-t border-cortex-border p-3">
+        <label className="block text-xs">
+          <span className="font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
+            Search
+          </span>
           <input
-            aria-label="Completed record retention days"
-            type="number"
-            min={1}
-            max={3650}
-            value={filters.retentionDays}
-            onChange={(event) =>
-              onFiltersChange({ retentionDays: Number(event.target.value) })
-            }
-            className={`${inputClassName} max-w-24`}
+            aria-label="Search group records"
+            value={filters.query}
+            onChange={(event) => onFiltersChange({ query: event.target.value })}
+            placeholder="Name, goal, team..."
+            className={`${inputClassName} mt-2`}
           />
-          <span className="text-xs text-cortex-text-muted">days</span>
-        </div>
-      </label>
-    </div>
+        </label>
+        <FilterButtons<GroupKindFilter>
+          label="Type"
+          value={filters.kind}
+          options={[
+            ["all", "All"],
+            ["standing", "Full time"],
+            ["temporary", "Temp"],
+          ]}
+          onChange={(kind) => onFiltersChange({ kind })}
+        />
+        <FilterButtons<GroupStateFilter>
+          label="State"
+          value={filters.state}
+          options={[
+            ["all", "All"],
+            ["running", "Running"],
+            ["complete", "Complete"],
+          ]}
+          onChange={(state) => onFiltersChange({ state })}
+        />
+        <label className="block text-xs">
+          <span className="font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
+            Show completed records from last
+          </span>
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              aria-label="Completed record retention days"
+              type="number"
+              min={1}
+              max={3650}
+              value={filters.retentionDays}
+              onChange={(event) =>
+                onFiltersChange({ retentionDays: Number(event.target.value) })
+              }
+              className={`${inputClassName} max-w-24`}
+            />
+            <span className="text-xs text-cortex-text-muted">days</span>
+          </div>
+        </label>
+      </div>
+    </details>
   );
 }
 

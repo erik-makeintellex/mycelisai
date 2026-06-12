@@ -30,7 +30,7 @@ export function GroupWorkspaceTabs({
 }: GroupWorkspaceTabsProps) {
   return (
     <div
-      className="grid gap-2 border-b border-cortex-border bg-cortex-bg/40 p-3 sm:grid-cols-2 xl:grid-cols-6"
+      className="flex gap-2 overflow-x-auto border-b border-cortex-border bg-cortex-bg/40 p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="tablist"
       aria-label="Group workspace sections"
       onKeyDown={(event) => handleTabKeyDown(event, activePanel, onSelect)}
@@ -69,13 +69,13 @@ function GroupWorkspaceTab({
         selected
           ? "border-cortex-primary/45 bg-cortex-primary/10 text-cortex-text-main"
           : "border-cortex-border bg-cortex-surface text-cortex-text-muted hover:text-cortex-text-main"
-      }`}
+      } min-w-32 shrink-0 sm:min-w-36`}
     >
       <span className="flex items-center gap-2 text-xs font-semibold">
         <Icon className="h-3.5 w-3.5" />
         {panel.label}
       </span>
-      <span className="mt-1 block truncate text-[11px] leading-4">
+      <span className="mt-1 hidden truncate text-[11px] leading-4 sm:block">
         {panel.summary}
       </span>
     </button>

@@ -260,6 +260,7 @@ describe("GroupManagementPanel", () => {
       "Old Complete",
     );
 
+    fireEvent.click(screen.getByText("Filters"));
     fireEvent.click(screen.getByRole("button", { name: "Temp" }));
     expect(screen.getByTestId("groups-list").textContent).not.toContain(
       "Standing Ops",

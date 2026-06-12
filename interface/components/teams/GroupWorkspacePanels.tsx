@@ -94,7 +94,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
 
   return (
     <section
-      className="flex h-[calc(100vh-2rem)] min-h-[640px] flex-col gap-3 overflow-hidden"
+      className="flex h-[calc(100dvh-4.5rem)] min-h-0 flex-col gap-3 overflow-hidden"
       data-testid="groups-workspace"
     >
       <GroupsHeader
@@ -238,19 +238,18 @@ function GroupsHeader({
 }) {
   return (
     <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
             <Users className="h-3.5 w-3.5" />
-            Advanced Group Operations
+            Groups
           </div>
-          <h1 className="mt-2 text-lg font-semibold text-cortex-text-main">
+          <h1 className="mt-2 text-base font-semibold text-cortex-text-main sm:text-lg">
             Manage focused collaboration lanes.
           </h1>
-          <p className="mt-1 max-w-3xl text-sm leading-5 text-cortex-text-muted">
-            Use this page when Soma has created or needs a temporary or standing
-            group. New users can stay in Soma; admins can filter, inspect,
-            archive, and review retained outputs here.
+          <p className="mt-1 max-w-3xl text-sm leading-5 text-cortex-text-muted sm:line-clamp-2">
+            Select a group, inspect retained outputs, or return to Soma without
+            leaving this operating surface.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
