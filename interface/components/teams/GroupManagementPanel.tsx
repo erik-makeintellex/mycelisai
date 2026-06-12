@@ -261,6 +261,7 @@ export default function GroupManagementPanel({
       selectedGroup={selectedGroup}
       hiddenSelectedGroup={selectedGroupHiddenByFilters ? selectedGroup : null}
       selectedGroupId={selectedGroupId}
+      initialSelectedGroupId={initialSelectedGroupId}
       outputs={outputs}
       outputSummary={summarizeOutputs(outputs)}
       draft={draft}

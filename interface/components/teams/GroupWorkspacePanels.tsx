@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { RefreshCw, Users } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, RefreshCw, Users } from "lucide-react";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { CreateGroupPane } from "./CreateGroupPane";
 import { GroupCommunicationPanel } from "./GroupCommunicationPanel";
@@ -30,6 +31,7 @@ type WorkspaceProps = {
   selectedGroup: Group | null;
   hiddenSelectedGroup: Group | null;
   selectedGroupId: string | null;
+  initialSelectedGroupId: string | null;
   outputs: Artifact[];
   outputSummary: OutputSummary;
   draft: GroupDraft;
@@ -60,6 +62,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     selectedGroup,
     hiddenSelectedGroup,
     selectedGroupId,
+    initialSelectedGroupId,
     outputs,
     outputSummary,
     draft,
@@ -79,9 +82,15 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     onCreateGroup,
     onBroadcastMessageChange,
     onBroadcast,
-    onArchive,
+  onArchive,
   } = props;
-  const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>("overview");
+  const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>(
+    initialSelectedGroupId ? "overview" : "groups",
+  );
+  const selectGroup = (groupId: string) => {
+    onSelectGroup(groupId);
+    setActivePanel("overview");
+  };
 
   return (
     <section
@@ -93,16 +102,8 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
         refreshing={refreshing}
         onRefresh={onRefresh}
       />
-      <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <GroupRail
-          buckets={buckets}
-          filters={recordFilters}
-          hiddenSelectedGroup={hiddenSelectedGroup}
-          selectedGroupId={selectedGroupId}
-          onFiltersChange={onRecordFiltersChange}
-          onSelectGroup={onSelectGroup}
-        />
-        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface">
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <GroupWorkspaceTabs
             activePanel={activePanel}
             outputCount={outputSummary.artifactCount}
@@ -132,6 +133,22 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
             </div>
           ) : null}
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            {activePanel === "groups" ? (
+              <div
+                role="tabpanel"
+                id="groups-groups-panel"
+                aria-labelledby="groups-groups-tab"
+              >
+                <GroupRail
+                  buckets={buckets}
+                  filters={recordFilters}
+                  hiddenSelectedGroup={hiddenSelectedGroup}
+                  selectedGroupId={selectedGroupId}
+                  onFiltersChange={onRecordFiltersChange}
+                  onSelectGroup={selectGroup}
+                />
+              </div>
+            ) : null}
             {activePanel === "overview" ? (
               <div
                 role="tabpanel"
@@ -236,16 +253,22 @@ function GroupsHeader({
             archive, and review retained outputs here.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onRefresh}
-          className={compactButtonClassName}
-        >
-          <RefreshCw
-            className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/dashboard" className={compactButtonClassName}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Open Soma
+          </Link>
+          <button
+            type="button"
+            onClick={onRefresh}
+            className={compactButtonClassName}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
+        </div>
       </div>
       {monitor ? (
         <p className="mt-2 text-xs text-cortex-text-muted">

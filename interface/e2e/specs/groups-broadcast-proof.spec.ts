@@ -98,9 +98,8 @@ test.describe("Groups broadcast proof visibility", () => {
       await page.getByRole("link", { name: "Open Advanced mode" }).click();
     }
 
-    await expect(
-      page.getByRole("heading", { name: "Broadcast Proof Lane" }),
-    ).toBeVisible();
+    await page.getByTestId("groups-list-item-group-broadcast-proof").click();
+    await expect(page.getByRole("heading", { name: "Broadcast Proof Lane" })).toBeVisible();
     await page.getByRole("tab", { name: /Message/i }).click();
     await page
       .getByLabel("Broadcast message")

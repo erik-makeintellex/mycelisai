@@ -23,6 +23,10 @@ test.describe("Groups workspace (/groups)", () => {
       "href",
       "/dashboard",
     );
+    await expect(page.getByRole("link", { name: "Open Soma", exact: true })).toHaveAttribute(
+      "href",
+      "/dashboard",
+    );
     await expect(page.getByTitle("Open launch-lead lead")).toHaveAttribute(
       "href",
       "/dashboard?team_id=launch-lead",
@@ -34,8 +38,8 @@ test.describe("Groups workspace (/groups)", () => {
       "/api/v1/artifacts/artifact-brief/download",
     );
 
+    await page.getByRole("tab", { name: /Groups/i }).click();
     await page.getByTestId("groups-list-item-group-temp-archived").click();
-    await page.getByRole("tab", { name: /Overview/i }).click();
     await expect(
       page.getByText("Archived temporary group", { exact: true }),
     ).toBeVisible();
@@ -56,6 +60,8 @@ test.describe("Groups workspace (/groups)", () => {
     const harness = await mockGroupsWorkspace(page);
     await openGroups(page);
 
+    await page.getByRole("tab", { name: /Groups/i }).click();
+    await page.getByRole("tab", { name: /Groups/i }).click();
     await page.getByTestId("groups-list-item-group-temp-launch").click();
     await page.getByRole("button", { name: "Archive temporary group" }).click();
 
@@ -102,6 +108,7 @@ test.describe("Groups workspace (/groups)", () => {
       "Group created successfully.",
     );
 
+    await page.getByRole("tab", { name: /Groups/i }).click();
     await page.getByTestId("groups-list-item-group-temp-launch").click();
     await page.getByRole("tab", { name: /Message/i }).click();
     await page

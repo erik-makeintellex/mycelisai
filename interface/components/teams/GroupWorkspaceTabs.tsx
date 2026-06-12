@@ -2,6 +2,7 @@ import type { KeyboardEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   ClipboardList,
+  ListFilter,
   MessageSquare,
   Plus,
   Settings2,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 
 export type GroupWorkspacePanel =
+  | "groups"
   | "overview"
   | "outputs"
   | "message"
@@ -28,7 +30,7 @@ export function GroupWorkspaceTabs({
 }: GroupWorkspaceTabsProps) {
   return (
     <div
-      className="grid gap-2 border-b border-cortex-border bg-cortex-bg/40 p-3 md:grid-cols-5"
+      className="grid gap-2 border-b border-cortex-border bg-cortex-bg/40 p-3 sm:grid-cols-2 xl:grid-cols-6"
       role="tablist"
       aria-label="Group workspace sections"
       onKeyDown={(event) => handleTabKeyDown(event, activePanel, onSelect)}
@@ -90,6 +92,12 @@ type PanelTab = {
 function workspacePanelTabs(outputCount: number): PanelTab[] {
   return [
     {
+      id: "groups",
+      label: "Groups",
+      summary: "Choose lane",
+      icon: ListFilter,
+    },
+    {
       id: "overview",
       label: "Overview",
       summary: "Scope and links",
@@ -123,6 +131,7 @@ function workspacePanelTabs(outputCount: number): PanelTab[] {
 }
 
 const panelOrder: GroupWorkspacePanel[] = [
+  "groups",
   "overview",
   "outputs",
   "message",

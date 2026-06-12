@@ -132,7 +132,10 @@ test.describe('Groups retained outputs live backend contract', () => {
         await openGroupsWorkspace(page, `/groups?group_id=${encodeURIComponent(group.group_id)}`);
 
         await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Open Soma' })).toHaveAttribute('href', '/dashboard');
+        await page.getByRole('tab', { name: /Groups/i }).click();
         await expect(page.getByTestId(`groups-list-item-${group.group_id}`)).toBeVisible();
+        await page.getByTestId(`groups-list-item-${group.group_id}`).click();
         await expect(page.getByRole('heading', { name: group.name })).toBeVisible();
         await expect(page.getByText('Temporary group', { exact: true })).toBeVisible();
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
