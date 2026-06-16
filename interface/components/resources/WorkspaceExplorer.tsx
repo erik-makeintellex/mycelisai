@@ -19,7 +19,11 @@ export type WorkspacePane = "browse" | "preview" | "create";
 
 function initialWorkspacePath(path?: string | null) {
     const normalized = normalizePath(path?.trim() || WORKSPACE_ROOT_PATH);
-    return normalized === "." ? WORKSPACE_ROOT_PATH : normalized;
+    if (normalized === ".") return WORKSPACE_ROOT_PATH;
+    if (/^(groups|generated|outputs|reports|logs|saved-media)(\/|$)/i.test(normalized)) {
+        return `${WORKSPACE_ROOT_PATH}/${normalized}`;
+    }
+    return normalized;
 }
 
 export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { initialPath?: string | null; onOpenToolsTab: () => void }) {
@@ -154,7 +158,7 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
         return (
             <WorkspaceMCPRecoveryCard
                 title="Filesystem MCP not installed"
-                detail="Output Files needs the filesystem connected tool before Mycelis can browse generated files here. Install it from Connected Tools, or view storage roots to confirm where generated content is mounted."
+                detail="Output Files needs the filesystem capability before Mycelis can browse generated files here. Install it from Capabilities, or view storage roots to confirm where generated content is mounted."
                 onOpenToolsTab={onOpenToolsTab}
                 onRefresh={fetchMCPServers}
             />
@@ -168,7 +172,7 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
                 detail={(
                     <>
                         Current status: <span className="font-mono">{filesystemServer.status}</span>. Reconnect it
-                        from Connected Tools, then retry. View storage roots if you need to find generated output while
+                        from Capabilities, then retry. View storage roots if you need to find generated output while
                         the MCP server is recovering.
                     </>
                 )}

@@ -36,8 +36,7 @@ test.describe("Desktop/mobile compression proof", () => {
 
     const recoveryRow = activeLane.locator("article").filter({ hasText: "Recover failed package proof" });
     await expect(recoveryRow).toBeVisible();
-    await expect(recoveryRow.getByText("Degraded", { exact: true })).toBeVisible();
-    await expect(recoveryRow.getByText("Needs recovery", { exact: true })).toBeVisible();
+    await expect(recoveryRow.getByText("Needs recovery", { exact: true }).first()).toBeVisible();
     await expect(recoveryRow.getByText("Recovery: Retry with retained run context")).toBeVisible();
     await expect(recoveryRow.getByRole("button", { name: /Recover/i })).toBeVisible();
     await expectNoHorizontalOverflow(page);
@@ -71,6 +70,30 @@ test.describe("Desktop/mobile compression proof", () => {
     await expect(digest.getByText("Coin Runner package")).toBeVisible();
     await expect(digest.getByRole("button", { name: /Open local folder/i })).toBeVisible();
     await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveAttribute("aria-expanded", "false");
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("Dashboard work review opens a focused inbox panel", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 720 });
+    await page.goto("/dashboard?team_id=degraded-proof-team", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByTestId("soma-current-work-lane")).toBeVisible({ timeout: 20_000 });
+    const toggle = page.getByTestId("soma-workbench-panel-toggle");
+    await expect(toggle).toContainText("Review work");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await toggle.click();
+
+    const panel = page.getByTestId("soma-workbench-side-rail");
+    await expect(panel).toHaveAttribute("aria-hidden", "false");
+    await expect(panel.getByText("Review work")).toBeVisible();
+    await expect(panel.getByText(/Understand the item/i)).toBeVisible();
+    await expect(panel.getByRole("tab", { name: /Work/i })).toHaveCount(0);
+    await expect(panel.getByRole("link", { name: /Open inbox/i })).toHaveAttribute("href", "/teams?view=work");
+    await expect(panel.getByLabel("Review queue summary")).toBeVisible();
+    await expect(panel.getByLabel("Needs decision: 1")).toBeVisible();
+    await expect(panel.getByText("Team work needs recovery")).toBeVisible();
+    await expect(panel.getByRole("button", { name: /Retry recovery/i })).toBeVisible();
+    await expect(panel.getByRole("button", { name: /Clear from review/i })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 

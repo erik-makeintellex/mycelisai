@@ -96,7 +96,7 @@ function SettingsContent() {
                         <>
                             <Tab label="AI Engines" icon={Brain} active={activeTab === "engines"} onClick={() => setActiveTab("engines")} />
                             <Tab label="Auth Providers" icon={KeyRound} active={activeTab === "auth"} onClick={() => setActiveTab("auth")} />
-                            <Tab label="Connected Tools" icon={Wrench} active={activeTab === "tools"} onClick={() => setActiveTab("tools")} />
+                            <Tab label="Capabilities" icon={Wrench} active={activeTab === "tools"} onClick={() => setActiveTab("tools")} />
                         </>
                     )}
                 </div>
@@ -118,21 +118,21 @@ function ConnectedToolsRedirect() {
     return (
         <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
             <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">
-                Connected Tools
+                Capabilities
             </p>
             <h2 className="mt-2 text-xl font-semibold text-cortex-text-main">
-                Manage MCP and search from Resources.
+                Manage capabilities, MCP, and search from Resources.
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-cortex-text-muted">
-                Resources is the operational home for MCP servers, web search readiness,
-                recent tool activity, and workspace data boundaries. Settings keeps the
+                Resources is the operational home for what Soma can use, repair, or request,
+                plus web search readiness, recent tool activity, and workspace data boundaries. Settings keeps the
                 admin setup path focused on preferences, people, engines, and auth.
             </p>
             <Link
                 href="/resources?tab=tools"
                 className="mt-5 inline-flex rounded-xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10"
             >
-                Open Resources tools
+                Open Resources capabilities
             </Link>
         </section>
     );
@@ -145,7 +145,7 @@ function AdvancedDeepLinkNotice({ requestedTab, onOpen }: { requestedTab: TabId;
         users: "People & Access",
         engines: "AI Engines",
         auth: "Auth Providers",
-        tools: "Connected Tools",
+        tools: "Capabilities",
     };
 
     return (

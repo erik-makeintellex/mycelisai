@@ -28,7 +28,7 @@ export default function WorkspaceMCPRecoveryCard({
                         onClick={onOpenToolsTab}
                         className="rounded border border-cortex-primary/30 px-3 py-1.5 text-xs font-mono text-cortex-primary hover:bg-cortex-primary/10"
                     >
-                        Open Connected Tools
+                        Open Capabilities
                     </button>
                     <a
                         href="/system?tab=deployments"

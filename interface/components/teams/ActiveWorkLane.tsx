@@ -7,6 +7,7 @@ import {
   type TeamWorkItem,
   type TeamWorkItemState,
 } from "@/store/useCortexStore";
+import { teamWorkStateLabel } from "@/lib/deliveryRuntimeLanguage";
 import { ActiveWorkAdvancedProjection } from "./ActiveWorkAdvancedProjection";
 import { ActiveWorkEvidence } from "./ActiveWorkEvidence";
 import {
@@ -19,6 +20,7 @@ import {
 import { ReviewDecisionGuide } from "./ReviewDecisionGuide";
 import { ReviewQueueSummary } from "./ReviewQueueSummary";
 import { TeamAskForm } from "./TeamAskForm";
+import { WorkReviewInbox } from "./WorkReviewInbox";
 import { WorkTruthSummary } from "./WorkTruthSummary";
 
 const stateStyles: Record<TeamWorkItemState, string> = {
@@ -34,8 +36,6 @@ const stateStyles: Record<TeamWorkItemState, string> = {
   needs_operator: "border-amber-400/30 bg-amber-400/10 text-amber-300",
   archived: "border-cortex-border bg-cortex-bg text-cortex-text-muted",
 };
-
-const stateLabels: Record<TeamWorkItemState, string> = { new: "Ready to brief", briefed: "Ready to start", queued: "Queued", running: "In progress", reviewing: "In review", paused: "Paused", output_ready: "Output ready", degraded: "Degraded", needs_operator: "Needs operator", archived: "Archived" };
 
 const actionIcons = { inspect: Eye, steer: Send, start_work: Play, pause: Pause, resume: Play, recover: RefreshCw, archive: Archive };
 type LanePurpose = "active" | "review";
@@ -79,6 +79,20 @@ export function ActiveWorkLane({
   const className = frame
     ? "rounded-2xl border border-cortex-border bg-cortex-surface p-4"
     : "min-w-0";
+
+  if (isReviewPurpose && frame) {
+    return (
+      <WorkReviewInbox
+        items={items}
+        emptyMessage={emptyMessage}
+        statusLabel={statusLabel}
+        degradedMessage={degradedMessage}
+        onAction={onAction}
+        onTeamAsk={onTeamAsk}
+      />
+    );
+  }
+
   return (
     <section className={className} data-testid="active-work-lane">
       {compact ? null : <div className="flex flex-wrap items-center justify-between gap-2">
@@ -92,7 +106,7 @@ export function ActiveWorkLane({
           {count} item{count === 1 ? "" : "s"}
         </span>
       </div>}
-      {!compact && isReviewPurpose && items.length > 0 ? (
+      {isReviewPurpose && items.length > 0 ? (
         <ReviewQueueSummary items={items} />
       ) : null}
       {!compact && (statusLabel || degradedMessage) ? (
@@ -162,7 +176,7 @@ function WorkItemRow({
             <span
               className={`rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] ${stateStyles[item.state]}`}
             >
-              {stateLabels[item.state]}
+              {teamWorkStateLabel(item.state)}
             </span>
             {!compact && item.sourceLabel ? (
               <span className="rounded-full border border-cortex-border bg-cortex-surface px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-text-muted">

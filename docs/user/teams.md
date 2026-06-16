@@ -85,9 +85,9 @@ Use `Groups` when you want to review retained outputs or collaboration records a
 
 Use `Automations` when you want event rules to actuate work, route proposals, require approval before execution, or author propose-only Schedule Rules for reviewable cadence.
 
-Use `Settings -> Connected Tools` or `Resources -> Connected Tools` when you need to confirm which tool refs, direct web search posture, or MCP servers are available before assigning them to a reusable agent template. Installed server cards should show the MCP structure, and Library is the reapply/edit path for curated server config.
+Use `Settings -> Capabilities` or `Resources -> Capabilities` when you need to confirm which tool refs, direct web search posture, or MCP servers are available before assigning them to a reusable agent template. Capability cards should show available/repair/request posture first, with MCP structure behind Inspect.
 
-If Soma recommends tools that are not installed yet, it should walk you through the enablement path before launch: name the missing MCP server, name required `.env` variables without exposing secret values, point to the Connected Tools Library, and then bind the resulting tool refs to the team or reusable member template after you confirm.
+If Soma recommends tools that are not installed yet, it should walk you through the enablement path before launch: name the missing MCP server, name required `.env` variables without exposing secret values, point to Capabilities and the MCP library, and then bind the resulting tool refs to the team or reusable member template after you confirm.
 
 Use `Create Team` when you want a guided setup instead of filling raw fields:
 

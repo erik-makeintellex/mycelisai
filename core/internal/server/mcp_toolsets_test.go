@@ -25,7 +25,7 @@ func withMCPToolSets(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 }
 
 func toolSetColumns() []string {
-	return []string{"id", "name", "description", "tool_refs", "tenant_id", "created_at", "updated_at"}
+	return []string{"id", "name", "description", "tool_refs", "scope_kind", "scope_ref", "tenant_id", "created_at", "updated_at"}
 }
 
 // ── handleListToolSets ────────────────────────────────────────
@@ -36,8 +36,8 @@ func TestHandleListToolSets_HappyPath(t *testing.T) {
 	now := time.Now()
 
 	rows := sqlmock.NewRows(toolSetColumns()).
-		AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "workspace", "File I/O", `["mcp:filesystem/*"]`, "default", now, now).
-		AddRow("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "research", "Web tools", `["mcp:fetch/*"]`, "default", now, now)
+		AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "workspace", "File I/O", `["mcp:filesystem/*"]`, "all", "", "default", now, now).
+		AddRow("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "research", "Web tools", `["mcp:fetch/*"]`, "group", "research-lane", "default", now, now)
 	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets").WillReturnRows(rows)
 
 	mux := setupMux(t, "GET /api/v1/mcp/toolsets", s.handleListToolSets)
@@ -70,12 +70,12 @@ func TestHandleCreateToolSet_HappyPath(t *testing.T) {
 	now := time.Now()
 
 	mock.ExpectQuery("INSERT INTO mcp_tool_sets").
-		WithArgs("development", "Dev tools", sqlmock.AnyArg()).
+		WithArgs("development", "Dev tools", sqlmock.AnyArg(), "group", "dev-team").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
 			AddRow("cccccccc-cccc-cccc-cccc-cccccccccccc", now, now))
 
 	mux := setupMux(t, "POST /api/v1/mcp/toolsets", s.handleCreateToolSet)
-	body := `{"name":"development","description":"Dev tools","tool_refs":["mcp:filesystem/*","mcp:github/*"]}`
+	body := `{"name":"development","description":"Dev tools","tool_refs":["mcp:filesystem/*","mcp:github/*"],"scope_kind":"group","scope_ref":"dev-team"}`
 	rr := doRequest(t, mux, "POST", "/api/v1/mcp/toolsets", body)
 
 	assertStatus(t, rr, http.StatusCreated)
@@ -102,6 +102,16 @@ func TestHandleCreateToolSet_BadJSON(t *testing.T) {
 
 	mux := setupMux(t, "POST /api/v1/mcp/toolsets", s.handleCreateToolSet)
 	rr := doRequest(t, mux, "POST", "/api/v1/mcp/toolsets", `{invalid}`)
+
+	assertStatus(t, rr, http.StatusBadRequest)
+}
+
+func TestHandleCreateToolSet_GroupScopeMissingRef(t *testing.T) {
+	opt, _ := withMCPToolSets(t)
+	s := newTestServer(opt)
+
+	mux := setupMux(t, "POST /api/v1/mcp/toolsets", s.handleCreateToolSet)
+	rr := doRequest(t, mux, "POST", "/api/v1/mcp/toolsets", `{"name":"team-tools","scope_kind":"group"}`)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -140,12 +150,12 @@ func TestHandleUpdateToolSet_HappyPath(t *testing.T) {
 	now := time.Now()
 
 	mock.ExpectQuery("UPDATE mcp_tool_sets SET").
-		WithArgs("workspace", "Updated", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs("workspace", "Updated", sqlmock.AnyArg(), "host", "edge-node-1", sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows(toolSetColumns()).
-			AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "workspace", "Updated", `["mcp:filesystem/*"]`, "default", now, now))
+			AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "workspace", "Updated", `["mcp:filesystem/*"]`, "host", "edge-node-1", "default", now, now))
 
 	mux := setupMux(t, "PUT /api/v1/mcp/toolsets/{id}", s.handleUpdateToolSet)
-	body := `{"name":"workspace","description":"Updated","tool_refs":["mcp:filesystem/*"]}`
+	body := `{"name":"workspace","description":"Updated","tool_refs":["mcp:filesystem/*"],"scope_kind":"host","scope_ref":"edge-node-1"}`
 	rr := doRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", body)
 
 	assertStatus(t, rr, http.StatusOK)
@@ -156,7 +166,7 @@ func TestHandleUpdateToolSet_NotFound(t *testing.T) {
 	s := newTestServer(opt)
 
 	mock.ExpectQuery("UPDATE mcp_tool_sets SET").
-		WithArgs("workspace", "", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs("workspace", "", sqlmock.AnyArg(), "all", "", sqlmock.AnyArg()).
 		WillReturnError(sql.ErrNoRows)
 
 	mux := setupMux(t, "PUT /api/v1/mcp/toolsets/{id}", s.handleUpdateToolSet)

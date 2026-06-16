@@ -142,6 +142,7 @@ describe('RunTimeline', () => {
         expect(screen.getByText('mission.started')).toBeDefined();
         expect(screen.getByText('tool.invoked')).toBeDefined();
         expect(screen.getByText('tool.completed')).toBeDefined();
+        expect(screen.getByText('Run receipt')).toBeDefined();
     });
 
     it('calls fetch on mount with the runId prop', async () => {
@@ -228,7 +229,8 @@ describe('RunTimeline', () => {
             await vi.advanceTimersByTimeAsync(0);
         });
 
-        expect(screen.getByText('completed')).toBeDefined();
+        expect(screen.getAllByText('completed').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText('Run completed')).toBeDefined();
     });
 
     it('shows error state on fetch failure', async () => {

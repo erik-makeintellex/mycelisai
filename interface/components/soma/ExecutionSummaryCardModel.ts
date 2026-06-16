@@ -6,6 +6,8 @@ import type {
     ExecutionSummaryLink,
 } from "@/store/useCortexStore";
 import { mediaDependencyRecovery, type DegradationShape } from "./ExecutionSummaryRecoveryModel";
+import { recoveryTrustLines } from "@/lib/deliveryRuntimeLanguage";
+import { projectPackageOpenPath } from "@/lib/outputPackageModel";
 
 type SummaryValue = string | ExecutionSummaryItem;
 
@@ -35,8 +37,7 @@ export function executionShapeLabel(value?: string | null) {
 export function executionSummaryHeading(summary: ExecutionSummaryData, outputCount = 0) {
     const status = (compactText(summary.execution?.status) ?? compactText(summary.execution_status) ?? "").toLowerCase();
     if (["failed", "blocked", "cancelled"].includes(status)) return "Could not run";
-    if (status === "proposed") return "Proposal ready";
-    return outputCount > 0 ? "Output ready" : "Result ready";
+    return status === "proposed" ? "Proposal ready" : outputCount > 0 ? "Output ready" : "Result ready";
 }
 export function itemText(item: SummaryValue): string | null {
     if (typeof item === "string") return compactText(item);
@@ -50,8 +51,12 @@ export function itemText(item: SummaryValue): string | null {
 }
 export function itemUrl(item: SummaryValue): string | null {
     if (typeof item === "string") return null;
-    const id = compactText(item.id), entrypoint = compactText(item.entrypoint), folder = compactText(item.folder);
-    const packageEntrypoint = entrypoint && folder && !entrypoint.includes("/") ? `${folder}/${entrypoint}` : entrypoint;
+    const id = compactText(item.id);
+    const packageEntrypoint = projectPackageOpenPath({
+        folder: compactText(item.folder),
+        entrypoint: compactText(item.entrypoint),
+        filePath: compactText(item.path),
+    });
     return normalizeWorkspaceOutputUrl(
         compactText(item.open_url)
         ?? compactText(item.url)
@@ -187,12 +192,7 @@ export function degradationLines(value: ExecutionSummaryData["audit_recovery"]):
     const degradation = value.degradation;
     const mediaRecovery = mediaDependencyRecovery(degradation);
     if (mediaRecovery) {
-        return [
-            mediaRecovery.failed,
-            `Still available: ${mediaRecovery.trusted}`,
-            `Not reliable: ${mediaRecovery.invalid}`,
-            `Safe next: ${mediaRecovery.recovery}`,
-        ];
+        return recoveryTrustLines(mediaRecovery);
     }
     return [
         compactText(degradation.what_failed) ? `Failed: ${degradation.what_failed}` : null,

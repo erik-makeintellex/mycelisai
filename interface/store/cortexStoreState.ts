@@ -17,6 +17,8 @@ import type {
     CTSEnvelope,
     ExecutionMode,
     MCPActivityEntry,
+    MCPToolSet,
+    MCPToolSetCreate,
     MCPServerWithTools,
     MCPLibraryCategory,
     MCPInstallResult,
@@ -102,6 +104,9 @@ export interface CortexResourcesContract {
     mcpActivity: MCPActivityEntry[];
     isFetchingMCPActivity: boolean;
     mcpTools: MCPTool[];
+    mcpToolSets: MCPToolSet[];
+    isFetchingMCPToolSets: boolean;
+    mcpToolSetsError: string | null;
     mcpLibrary: MCPLibraryCategory[];
     isFetchingMCPLibrary: boolean;
     searchCapability: SearchCapabilityStatus | null;
@@ -134,6 +139,8 @@ export interface CortexResourcesContract {
     fetchMCPActivity: () => Promise<void>;
     deleteMCPServer: (id: string) => Promise<void>;
     fetchMCPTools: () => Promise<void>;
+    fetchMCPToolSets: () => Promise<void>;
+    createMCPToolSet: (input: MCPToolSetCreate) => Promise<boolean>;
     fetchMCPLibrary: () => Promise<void>;
     installFromLibrary: (name: string, env?: Record<string, string>) => Promise<MCPInstallResult>;
     fetchSearchCapability: () => Promise<void>;

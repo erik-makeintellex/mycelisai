@@ -431,33 +431,32 @@ async function openConnectedTools(page: Page) {
     await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 20_000 });
 }
 
-test.describe("Connected Tools MCP workflow", () => {
-    test.skip(({ browserName }) => browserName !== "chromium", "Connected Tools browser workflow proof is stabilized in Chromium for MVP review.");
+test.describe("Capabilities MCP workflow", () => {
+    test.skip(({ browserName }) => browserName !== "chromium", "Capabilities browser workflow proof is stabilized in Chromium for MVP review.");
 
     test("shows active MCP usage and installs a curated server from the library", async ({ page }) => {
         await mockConnectedToolsApis(page);
         await openConnectedTools(page);
 
-        await expect(page.getByRole("button", { name: /Connected Tools/i })).toBeVisible();
-        await expect(page.getByText("Connected Tools Workflow")).toBeVisible();
+        await expect(page.getByRole("button", { name: /Capabilities/i })).toBeVisible();
+        await expect(page.getByText("Can use, needs repair, and can request").first()).toBeVisible();
+        await expect(page.getByText("Capability Workflow")).toBeVisible();
         await expect(page.getByText("Mycelis Search Capability")).toBeVisible();
         await expect(page.getByText("Soma search is ready")).toBeVisible();
         await expect(page.getByText("Soma direct: web_search")).toBeVisible();
-        await expect(page.getByText("Public web", { exact: true })).toBeVisible();
-        await expect(page.getByText("No hosted Brave token required for local_sources, local_api, or self-hosted SearXNG.")).toBeVisible();
         await expect(page.getByText("Recent MCP Activity", { exact: true })).toBeVisible();
         await expect(page.getByText("filesystem · read_file")).toBeVisible();
         await expect(page.getByText("Soma used filesystem.read_file while preparing the launch brief.").first()).toBeVisible();
         await expect(page.getByText("Team soma-launch-lane · Agent soma · Run run-launch-brief").first()).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("button", { name: "Inspect MCP topology" }));
         await expect(page.getByText("filesystem").first()).toBeVisible();
         await expect(page.getByText("2 tools")).toBeVisible();
-
         await clickVisibleControl(page, page.getByRole("button", { name: /filesystem.*2 tools/i }));
         await expect(page.getByText("Live Usage")).toBeVisible();
         await expect(page.getByText("list_directory", { exact: true }).last()).toBeVisible();
         await expect(page.getByText("read_file", { exact: true }).last()).toBeVisible();
 
-        await clickVisibleControl(page, page.getByRole("button", { name: "ADD MCP SERVER" }));
+        await clickVisibleControl(page, page.getByRole("button", { name: "Request capability" }));
         await expect(page.getByText("Add MCP Server")).toBeVisible();
         await expect(page.getByText("Fetch", { exact: true })).toBeVisible();
         await expect(page.getByText("Fetch web pages for research-backed agent work.")).toBeVisible();
@@ -468,7 +467,7 @@ test.describe("Connected Tools MCP workflow", () => {
         await expect(page.getByText("Fetch MCP server installed for the current user-owned group.").first()).toBeVisible();
     });
 
-    test("correlates a live team MCP-backed capability with recent Connected Tools activity", async ({ page }) => {
+    test("correlates a live team MCP-backed capability with recent Capabilities activity", async ({ page }) => {
         test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires a live Core backend");
         test.slow();
         test.setTimeout(180_000);
@@ -488,6 +487,7 @@ test.describe("Connected Tools MCP workflow", () => {
 
         await openConnectedTools(page);
         await expect(page.getByText("Recent MCP Activity", { exact: true })).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("button", { name: "Inspect MCP topology" }));
         await expect(page.getByText(/filesystem · read_file/).first()).toBeVisible({ timeout: 30_000 });
         await expect(page.getByText(`Team ${teamID} · Agent ${agentID}`).first()).toBeVisible();
     });
@@ -518,9 +518,9 @@ test.describe("Connected Tools MCP workflow", () => {
         await expect(page.getByText("Soma search needs configuration")).toBeVisible();
         await expect(page.getByText("Mycelis Search is disabled.").first()).toBeVisible();
         await expect(page.getByText("No MCP servers installed.", { exact: true })).toBeVisible({ timeout: 20_000 });
-        await expect(page.getByRole("button", { name: "ADD MCP SERVER" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Request capability" })).toBeVisible();
 
-        await clickVisibleControl(page, page.getByRole("button", { name: "ADD MCP SERVER" }));
+        await clickVisibleControl(page, page.getByRole("button", { name: "Request capability" }));
         await expect(page.getByText("Add MCP Server")).toBeVisible();
         await expect(page.getByText("Fetch", { exact: true })).toBeVisible();
     });

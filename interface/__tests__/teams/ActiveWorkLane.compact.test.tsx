@@ -18,6 +18,7 @@ describe("ActiveWorkLane compact review", () => {
     render(
       <ActiveWorkLane
         frame={false}
+        purpose="review"
         statusLabel="Durable team-work state loaded."
         items={[{
           ...baseItem,
@@ -43,6 +44,8 @@ describe("ActiveWorkLane compact review", () => {
 
     expect(screen.getByText("Team work needs recovery")).toBeDefined();
     expect(screen.getByText(/The team did not finish this work/i)).toBeDefined();
+    expect(screen.getByLabelText("Review queue summary")).toBeDefined();
+    expect(screen.getByLabelText("Needs decision: 1")).toBeDefined();
     expect(screen.getByText(/No retained output yet/)).toBeDefined();
     expect(screen.queryByText("Durable team-work state loaded.")).toBeNull();
     expect(screen.queryByText("Durable team work")).toBeNull();
@@ -59,6 +62,7 @@ describe("ActiveWorkLane compact review", () => {
     render(
       <ActiveWorkLane
         frame={false}
+        purpose="review"
         items={[{
           ...baseItem,
           state: "queued",

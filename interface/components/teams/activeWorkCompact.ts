@@ -1,4 +1,11 @@
 import type { TeamInteraction, TeamWorkItem } from "@/store/useCortexStore";
+import {
+  DEGRADED_TEAM_WORK_REVIEW_COPY,
+  NEEDS_OPERATOR_REVIEW_COPY,
+  OUTPUT_READY_REVIEW_COPY,
+  QUEUED_RECOVERY_REVIEW_COPY,
+  STALE_FAILED_PLAN_REVIEW_COPY,
+} from "@/lib/deliveryRuntimeLanguage";
 
 export function compactActions(item: TeamWorkItem) {
   const actions = item.interactions;
@@ -12,32 +19,32 @@ export function compactActions(item: TeamWorkItem) {
 }
 
 export function compactTitle(item: TeamWorkItem) {
-  if (isStaleFailedPlanItem(item)) return "Old proposal cannot run";
-  if (item.state === "degraded") return "Team work needs recovery";
-  if (item.state === "needs_operator") return "Team needs your response";
-  if (item.state === "queued" && isRecoveryRequest(item)) return "Recovery request queued";
+  if (isStaleFailedPlanItem(item)) return STALE_FAILED_PLAN_REVIEW_COPY.title;
+  if (item.state === "degraded") return DEGRADED_TEAM_WORK_REVIEW_COPY.title;
+  if (item.state === "needs_operator") return NEEDS_OPERATOR_REVIEW_COPY.title;
+  if (item.state === "queued" && isRecoveryRequest(item)) return QUEUED_RECOVERY_REVIEW_COPY.title;
   return item.title;
 }
 
 export function compactDescription(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) {
-    return "Soma could not find an approved execution plan for this older proposal. Nothing changed, and there is no completed output to trust.";
+    return STALE_FAILED_PLAN_REVIEW_COPY.description;
   }
   if (item.state === "degraded") {
-    return "The team did not finish this work. The saved work item is still available, but no output should be trusted yet.";
+    return DEGRADED_TEAM_WORK_REVIEW_COPY.description;
   }
   if (item.state === "needs_operator") {
-    return "The team is waiting for missing direction before it can continue.";
+    return NEEDS_OPERATOR_REVIEW_COPY.description;
   }
   if (item.state === "queued" && isRecoveryRequest(item)) {
-    return "Soma has queued a recovery attempt for this work item. Wait for a new output or proof before trusting the result.";
+    return QUEUED_RECOVERY_REVIEW_COPY.description;
   }
   return item.description;
 }
 
 export function compactNextAction(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) {
-    return "Clear this from review. Nothing ran, and there is no output to trust. Start a new Soma ask if you still want this work.";
+    return STALE_FAILED_PLAN_REVIEW_COPY.nextAction;
   }
   if (item.state === "degraded") {
     return item.nextAction ?? "Recover this work item when the team runtime is available, or archive it if this was only test data.";
@@ -50,45 +57,45 @@ export function compactNextAction(item: TeamWorkItem) {
 
 export function reviewReason(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) {
-    return "The original proposal is not executable anymore because no approved execution plan was retained for it.";
+    return STALE_FAILED_PLAN_REVIEW_COPY.reason;
   }
   if (item.state === "degraded") {
-    return "The team did not finish cleanly, so the result needs recovery or cleanup before you rely on it.";
+    return DEGRADED_TEAM_WORK_REVIEW_COPY.reason;
   }
   if (item.state === "needs_operator") {
-    return "The team needs a decision or missing direction before it can safely continue.";
+    return NEEDS_OPERATOR_REVIEW_COPY.reason;
   }
   if (item.state === "output_ready") {
-    return "The team produced retained output. Review it, then continue or archive the work item.";
+    return OUTPUT_READY_REVIEW_COPY.reason;
   }
   return "This work item is still active or retained and may need a decision before it leaves review.";
 }
 
 export function trustedState(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) {
-    return "Trusted: the failure record and audit trail. Not trusted: any implied output from this attempt.";
+    return STALE_FAILED_PLAN_REVIEW_COPY.trustedState;
   }
   if (item.state === "degraded" || item.state === "needs_operator") {
-    return "Trusted: retained context, proof refs, and status history. Not trusted: unfinished output.";
+    return item.state === "degraded" ? DEGRADED_TEAM_WORK_REVIEW_COPY.trustedState : NEEDS_OPERATOR_REVIEW_COPY.trustedState;
   }
   if (item.state === "output_ready") {
-    return "Trusted after review: retained outputs, proof refs, and run history shown on this item.";
+    return OUTPUT_READY_REVIEW_COPY.trustedState;
   }
   return "Trusted so far: durable work state. Output may change until the item finishes.";
 }
 
 export function recommendedReviewChoice(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) {
-    return "Clear from review if this is old test data. Inspect only if you need the failure details.";
+    return STALE_FAILED_PLAN_REVIEW_COPY.recommendedChoice;
   }
   if (item.state === "degraded") {
-    return "Recover when the runtime dependency is available, or archive if this attempt is no longer useful.";
+    return DEGRADED_TEAM_WORK_REVIEW_COPY.recommendedChoice;
   }
   if (item.state === "needs_operator") {
-    return "Respond or steer the work with the missing decision.";
+    return NEEDS_OPERATOR_REVIEW_COPY.recommendedChoice;
   }
   if (item.state === "output_ready") {
-    return "Open the output, verify the proof, then archive or ask for follow-up.";
+    return OUTPUT_READY_REVIEW_COPY.recommendedChoice;
   }
   return "Inspect for context, pause if it should stop, or wait for the next retained event.";
 }

@@ -16,6 +16,7 @@ import OutputAccessActions from "./OutputAccessActions";
 import { itemWorkspacePath, outputWorkspacePath, OutputPathHint } from "./OutputWorkbenchPathHint";
 import { OutputProofBadges, OutputProofDetails } from "./OutputWorkbenchProofDetails";
 import { OutputWorkbenchProjectPackage } from "./OutputWorkbenchProjectPackage";
+import { OUTPUT_PACKAGE_OPEN_LABEL } from "@/lib/outputPackageModel";
 
 export type OutputWorkbenchItem = {
   text: string;
@@ -119,7 +120,7 @@ export function OutputWorkbench({
   outputs,
   projectPackages,
   emptyMessage = "Soma outputs will appear here when a run, package, or retained artifact is available.",
-  projectOpenLabel = "Open output",
+  projectOpenLabel = OUTPUT_PACKAGE_OPEN_LABEL,
 }: {
   outputs: OutputWorkbenchItem[];
   projectPackages?: ExecutionSummaryItem[];

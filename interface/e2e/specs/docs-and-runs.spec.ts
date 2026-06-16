@@ -307,6 +307,7 @@ test.describe('Docs and Runs Route Coverage', () => {
         await expect(page.getByText('Pause this run and retry with a smaller validation step.')).toBeVisible();
 
         await page.getByRole('button', { name: 'Events' }).first().click();
+        await expect(page.getByLabel('Run receipt')).toBeVisible(); await expect(page.getByText('Run in progress')).toBeVisible(); await expect(page.getByText(/provisional until the run reaches a terminal state/i)).toBeVisible();
         await expect(page.getByText('mission.started')).toBeVisible();
         failNextManualEventRequest = true;
         await page.route(`**/api/v1/runs/${runId}/events**`, async (route) => {
@@ -315,11 +316,9 @@ test.describe('Docs and Runs Route Coverage', () => {
         await page.getByRole('button', { name: 'Refresh events' }).click();
         await expect(page.getByText('Failed to load events (503)')).toBeVisible();
         await page.getByRole('button', { name: 'Retry' }).last().click();
-        await expect(page.getByText('mission.failed')).toBeVisible();
-        await expect(page.getByText('tool.failed')).toBeVisible();
-        await expect(page.getByText('planner').first()).toBeVisible();
-        await expect(page.getByText('Planner validation provider timed out; operator retry is available.')).toBeVisible();
-        await expect(page.getByText('Mission stopped after retry budget was exhausted.')).toBeVisible();
+        await expect(page.getByText('Run needs recovery')).toBeVisible(); await expect(page.getByText(/failure evidence remain trusted/i)).toBeVisible(); await expect(page.getByText('Recovery needed')).toBeVisible();
+        await expect(page.getByText('mission.failed')).toBeVisible(); await expect(page.getByText('tool.failed')).toBeVisible(); await expect(page.getByText('planner').first()).toBeVisible();
+        await expect(page.getByText('Planner validation provider timed out; operator retry is available.', { exact: true })).toBeVisible(); await expect(page.getByText('Mission stopped after retry budget was exhausted.')).toBeVisible();
 
         await page.getByRole('link', { name: 'Chain' }).click();
         await expect(page).toHaveURL(new RegExp(`/runs/${runId}/chain$`));

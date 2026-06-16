@@ -52,8 +52,10 @@ The active architecture library is intentionally small. It is not a holding area
 - **Architecture Docs Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **V8.2 Production Architecture Target / B2+ Delivery Frame**: `../architecture/v8-2.md`
 - **V8.3 Operational Embodiment PRD**: `./architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`
-- **V8.3 Dev Agentry Operational Directive**: `./architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md`
-- **V8.3 Multi-Agentry Steering Doctrine**: `./architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`
+- **V8.3 Release Architecture Delivery Brief**: `./architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md`
+- **V8.3 Product Manifestation Architecture Review**: `./architecture-library/V8_3_PRODUCT_MANIFESTATION_REVIEW.md`
+- **V8.3 Soma User Experience Contract**: `./architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md`
+- **V8.3 MVP UI Runtime Delivery Plan**: `./architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md`
 - **V8 New-User Acceptance Matrix**: `./architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md`
 - **V8.2 Soma UI Architecture Expression**: `./architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`
 - **V8.2 Soma Team Interaction Contract**: `./architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md`
@@ -62,7 +64,6 @@ The active architecture library is intentionally small. It is not a holding area
 - **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 - **V8 Capability Manifest And Runtime Integration Standard**: `./architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md`
 - **V8 Secret Storage And Credential Boundary**: `./architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md`
-- **V8 UI Testing Agentry Product Contract**: `./architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - **V8 UI Team Full Test Set**: `./architecture-library/V8_UI_TEAM_FULL_TEST_SET.md`
 
 ## Testing And Release
@@ -72,6 +73,7 @@ Use these when the goal is verification, release proof, or workflow-complete val
 - **Testing Guide**: `./TESTING.md`
 - **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
 - **V8 New-User Acceptance Matrix**: `./architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md`
+- **V8 UI Testing Product Contract**: `./architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - **Release Handoff**: `./RELEASE_HANDOFF.md`
 - **Governance System**: `./governance.md`
 - **Licensing & Editions**: `./licensing.md`
@@ -83,6 +85,8 @@ These files are useful for Codex, maintainers, and architecture reviewers, but t
 - **Repository Standards**: `../AGENTS.md`
 - **Active Development State**: `../.state/V8_DEV_STATE.md`
 - **Legacy V7 Development State**: `../.state/V7_DEV_STATE.md`
+- **V8.3 Dev Agentry Operational Directive**: `./architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md`
+- **V8.3 Multi-Agentry Steering Doctrine**: `./architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`
 
 Keep these out of the normal operator path unless the task is repo maintenance, architecture review, or delivery-state inspection.
 

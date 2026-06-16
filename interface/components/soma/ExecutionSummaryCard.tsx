@@ -9,6 +9,7 @@ import {
   outputWorkbenchItems,
   projectPackageOutputs,
 } from "./OutputWorkbench";
+import { OUTPUT_PACKAGE_OPEN_LABEL } from "@/lib/outputPackageModel";
 import {
     auditText,
     capabilityGroups,
@@ -160,7 +161,7 @@ export default function ExecutionSummaryCard({
             <div className="space-y-2">
                 {(allOutputs.length > 0 || projectPackages.length > 0) && (
                     <SummaryRow icon={<FileText className="h-3.5 w-3.5" />} label="Outputs">
-                        <OutputWorkbench outputs={allOutputs} projectPackages={projectPackages} projectOpenLabel="Open Game" />
+                        <OutputWorkbench outputs={allOutputs} projectPackages={projectPackages} projectOpenLabel={OUTPUT_PACKAGE_OPEN_LABEL} />
                     </SummaryRow>
                 )}
                 <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Trust">

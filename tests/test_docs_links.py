@@ -76,20 +76,29 @@ def test_active_docs_expose_project_readme_navigation():
 def test_docs_manifest_exposes_required_canonical_docs():
     text = DOCS_MANIFEST.read_text(encoding="utf-8")
     required_paths = [
-        "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
-        "docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md", "docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md", "docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md", "docs/architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md",
-        "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
-        "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
-        "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
-        "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md",
-        "docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md",
-        "docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md",
-        "architecture/v8-2.md",
-        "architecture/mycelis-architecture-v7.md",
+        "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md", "docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md",
+        "docs/architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md", "docs/architecture-library/V8_3_PRODUCT_MANIFESTATION_REVIEW.md",
+        "docs/architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md", "docs/architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md",
+        "docs/architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md", "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
+        "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md", "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
+        "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md", "docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md",
+        "docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md", "architecture/v8-2.md", "architecture/mycelis-architecture-v7.md",
     ]
 
     missing = [path for path in required_paths if path not in text]
     assert not missing, f"docsManifest is missing required canonical docs: {missing}"
+
+
+def test_docs_manifest_keeps_agentry_docs_out_of_operator_surface():
+    text = DOCS_MANIFEST.read_text(encoding="utf-8")
+    maintainer_only_paths = [
+        "docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md",
+        "docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md",
+        "docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md",
+    ]
+
+    exposed = [path for path in maintainer_only_paths if path in text]
+    assert not exposed, f"docsManifest exposes maintainer-only agentry docs: {exposed}"
 
 
 def test_superseded_root_v8_1_draft_is_deleted_not_loose_or_archived():
@@ -171,20 +180,12 @@ def test_repo_readmes_expose_project_navigation():
 
 def test_stale_archive_and_v7_topical_docs_are_not_retained_as_active_docs():
     stale_paths = [
-        "docs/archive/README.md",
-        "docs/archive/drafts/v8-1.md",
-        "docs/WORKFLOWS.md",
-        "docs/SWARM_OPERATIONS.md",
-        "docs/QA_COUNCIL_CHAT_API.md",
-        "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
-        "docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md",
-        "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
-        "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
-        "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
-        "docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md",
-        "docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md",
-        "docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md",
-        "docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md",
+        "docs/archive/README.md", "docs/archive/drafts/v8-1.md", "docs/WORKFLOWS.md",
+        "docs/SWARM_OPERATIONS.md", "docs/QA_COUNCIL_CHAT_API.md", "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
+        "docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md", "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
+        "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md", "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
+        "docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md", "docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md",
+        "docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md", "docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md",
         "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
         "docs/architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md",
         "docs/architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md",
@@ -218,16 +219,12 @@ def test_readme_has_fresh_agent_review_sequence():
     assert "## Fresh Agent Start Here" in text, "README must expose a fresh-agent review section near the top"
 
     required_refs = [
-        "AGENTS.md",
-        "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
-        "docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md", "docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md", "docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md",
-        "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
-        "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md",
-        "docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md",
-        "docs/architecture/OPERATIONS.md",
-        "docs/TESTING.md",
-        ".state/V8_DEV_STATE.md",
-        "interface/lib/docsManifest.ts",
+        "AGENTS.md", "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
+        "docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md", "docs/architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md",
+        "docs/architecture-library/V8_3_PRODUCT_MANIFESTATION_REVIEW.md", "docs/architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md",
+        "docs/architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md", "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
+        "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md", "docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md",
+        "docs/architecture/OPERATIONS.md", "docs/TESTING.md", ".state/V8_DEV_STATE.md", "interface/lib/docsManifest.ts",
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
     ]
 

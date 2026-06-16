@@ -73,7 +73,7 @@ export function ConnectedToolsWorkflowCard({ isStreamConnected }: { isStreamConn
             <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-cortex-primary" />
                 <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                    Connected Tools Workflow
+                    Capability Workflow
                 </p>
             </div>
             <div className="mt-3 grid gap-3 md:grid-cols-3">

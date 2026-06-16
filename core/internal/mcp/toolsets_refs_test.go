@@ -14,9 +14,9 @@ func TestToolSetService_ResolveRefs_Mixed(t *testing.T) {
 	now := time.Now()
 
 	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets WHERE name").
-		WithArgs("workspace").
+		WithArgs("workspace", "all", "").
 		WillReturnRows(sqlmock.NewRows(toolSetColumns()).
-			AddRow(tsID1, "workspace", "File I/O", `["mcp:filesystem/*"]`, "default", now, now))
+			AddRow(tsID1, "workspace", "File I/O", `["mcp:filesystem/*"]`, "all", "", "default", now, now))
 
 	tools := []string{"read_file", "mcp:github/*", "toolset:workspace", "consult_council"}
 	resolved, err := svc.ResolveRefs(context.Background(), tools)
@@ -38,7 +38,7 @@ func TestToolSetService_ResolveRefs_MissingToolSet(t *testing.T) {
 	svc, mock := newTestToolSetService(t)
 
 	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets WHERE name").
-		WithArgs("unknown").
+		WithArgs("unknown", "all", "").
 		WillReturnError(sql.ErrNoRows)
 
 	resolved, err := svc.ResolveRefs(context.Background(), []string{"mcp:filesystem/*", "toolset:unknown"})
@@ -47,6 +47,34 @@ func TestToolSetService_ResolveRefs_MissingToolSet(t *testing.T) {
 	}
 	if len(resolved) != 1 {
 		t.Fatalf("got %d refs, want 1: %v", len(resolved), resolved)
+	}
+}
+
+func TestToolSetService_ResolveRefsForScope_UsesScopedThenFallback(t *testing.T) {
+	svc, mock := newTestToolSetService(t)
+	now := time.Now()
+
+	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets WHERE name").
+		WithArgs("workspace", "host", "edge-node-1").
+		WillReturnRows(sqlmock.NewRows(toolSetColumns()).
+			AddRow(tsID1, "workspace", "Edge files", `["mcp:edge-filesystem/*"]`, "host", "edge-node-1", "default", now, now))
+	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets WHERE name").
+		WithArgs("research", "host", "edge-node-1").
+		WillReturnError(sql.ErrNoRows)
+	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets WHERE name").
+		WithArgs("research", "all", "").
+		WillReturnRows(sqlmock.NewRows(toolSetColumns()).
+			AddRow(tsID2, "research", "Shared research", `["mcp:fetch/*"]`, "all", "", "default", now, now))
+
+	resolved, err := svc.ResolveRefsForScope(context.Background(), []string{"toolset:workspace", "toolset:research"}, "host", "edge-node-1")
+	if err != nil {
+		t.Fatalf("ResolveRefsForScope: %v", err)
+	}
+	want := []string{"mcp:edge-filesystem/*", "mcp:fetch/*"}
+	for i, expected := range want {
+		if resolved[i] != expected {
+			t.Fatalf("resolved[%d] = %q, want %q", i, resolved[i], expected)
+		}
 	}
 }
 

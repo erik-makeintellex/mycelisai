@@ -186,9 +186,10 @@ export function SomaOperatingSurface({
                 onAction={handleActiveWorkAction}
                 onTeamAsk={activeWorkActions.handleTeamAsk}
                 frame={false}
+                purpose="review"
                 maxVisibleItems={effectiveFocusedTeamId ? 6 : 3}
                 totalItemCount={activeWorkItems.length}
-                moreItemsHref="/teams"
+                moreItemsHref="/teams?view=work"
               />
             ) : undefined
           )}

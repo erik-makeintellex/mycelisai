@@ -95,9 +95,13 @@ test.describe('Teams Workspace (/teams)', () => {
         await expect(page.getByRole('heading', { name: 'Work to Review', exact: true })).toBeVisible();
         await expect(page.getByLabel('Review queue summary')).toBeVisible();
         await expect(page.getByText('Needs decision', { exact: true })).toBeVisible();
+        await expect(page.getByTestId('work-review-inbox')).toBeVisible();
+        await expect(page.getByRole('list', { name: 'Review work items' })).toBeVisible();
+        await expect(page.getByLabel('Review details for Recover failed release notes')).toBeVisible();
         await expect(page.getByText('Reason', { exact: true })).toBeVisible();
         await expect(page.getByText('Trust', { exact: true })).toBeVisible();
         await expect(page.getByText('Move', { exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: /Retry recovery/i }).first()).toBeVisible();
         const bodyText = await page.locator('body').innerText();
         expect(bodyText.indexOf('Work to Review')).toBeLessThan(bodyText.indexOf('Team context'));
     });

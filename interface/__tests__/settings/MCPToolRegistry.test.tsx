@@ -47,8 +47,13 @@ describe('MCPToolRegistry', () => {
             mcpServersError: null,
             mcpActivity: [],
             isFetchingMCPActivity: false,
+            mcpToolSets: [],
+            isFetchingMCPToolSets: false,
+            mcpToolSetsError: null,
             fetchMCPServers: vi.fn(),
             fetchMCPActivity: vi.fn(),
+            fetchMCPToolSets: vi.fn(),
+            createMCPToolSet: vi.fn().mockResolvedValue(true),
             fetchSearchCapability: vi.fn(),
             fetchCapabilities: vi.fn(),
             deleteMCPServer: vi.fn(),
@@ -67,12 +72,14 @@ describe('MCPToolRegistry', () => {
     it('renders the installed server list', () => {
         const initializeStream = vi.fn();
         const fetchMCPActivity = vi.fn();
+        const fetchMCPToolSets = vi.fn();
         const fetchSearchCapability = vi.fn();
         const fetchCapabilities = vi.fn();
         useCortexStore.setState({
             mcpServers: mockServers,
             initializeStream,
             fetchMCPActivity,
+            fetchMCPToolSets,
             fetchSearchCapability,
             fetchCapabilities,
             capabilities: [webResearchCapability],
@@ -81,30 +88,31 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        expect(screen.getByText('Connected Tools')).toBeDefined();
+        expect(screen.getByText('Capabilities')).toBeDefined();
 
-        // Both server cards should be rendered
-        expect(screen.getByTestId('server-card-srv-001')).toBeDefined();
-        expect(screen.getByTestId('server-card-srv-002')).toBeDefined();
+        expect(screen.queryByTestId('server-card-srv-001')).toBeNull();
+        expect(screen.queryByTestId('server-card-srv-002')).toBeNull();
 
-        // Server names should be visible
-        expect(screen.getByText('filesystem-server')).toBeDefined();
-        expect(screen.getByText('web-scraper')).toBeDefined();
-        expect(screen.getByText(/Connected Tools Workflow/i)).toBeDefined();
+        expect(screen.getByText(/Capability Workflow/i)).toBeDefined();
         expect(screen.getByText(/Concrete Soma Commands/i)).toBeDefined();
         expect(screen.getByText(/Search web/i)).toBeDefined();
         expect(screen.getAllByText(/Create team/i).length).toBeGreaterThan(0);
         expect(screen.getAllByText(/Read host data/i).length).toBeGreaterThan(0);
         expect(initializeStream).toHaveBeenCalledTimes(1);
         expect(fetchMCPActivity).toHaveBeenCalledTimes(1);
+        expect(fetchMCPToolSets).toHaveBeenCalledTimes(1);
         expect(fetchSearchCapability).toHaveBeenCalledTimes(1);
         expect(fetchCapabilities).toHaveBeenCalledTimes(1);
         expect(screen.getByText('What Soma Can Use')).toBeDefined();
+        expect(screen.getByText('MCP access layers')).toBeDefined();
+        expect(screen.getByText('Can use now')).toBeDefined();
+        expect(screen.getByText('Needs repair')).toBeDefined();
+        expect(screen.getByText('Can request/add')).toBeDefined();
         expect(screen.getByText('Web Research')).toBeDefined();
         expect(screen.getByText(/risk medium/i)).toBeDefined();
         expect(screen.getByText(/approval optional/i)).toBeDefined();
         expect(screen.getByText(/exchange.browser.research.results/i)).toBeDefined();
-        expect(screen.getByText(/searxng \/ web_search/i)).toBeDefined();
+        expect(screen.getAllByText(/Inspect capability binding/i).length).toBeGreaterThan(0);
         expect(screen.getByText('Mycelis Search Capability')).toBeDefined();
         expect(screen.getByText('Soma search is ready')).toBeDefined();
         expect(screen.getByText(/No hosted Brave token required/i)).toBeDefined();
@@ -112,6 +120,11 @@ describe('MCPToolRegistry', () => {
 
         // "Installed" tab should be active by default, showing server count badge
         expect(screen.getByText('2')).toBeDefined();
+        fireEvent.click(screen.getByText('Inspect MCP topology'));
+        expect(screen.getByTestId('server-card-srv-001')).toBeDefined();
+        expect(screen.getByTestId('server-card-srv-002')).toBeDefined();
+        expect(screen.getByText('filesystem-server')).toBeDefined();
+        expect(screen.getByText('web-scraper')).toBeDefined();
     });
 
     it('browse library button switches to the library tab', () => {
@@ -121,7 +134,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getByText('ADD MCP SERVER'));
+        fireEvent.click(screen.getByText('Request capability'));
 
         expect(screen.getByTestId('library-browser')).toBeDefined();
     });
@@ -194,7 +207,9 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText('filesystem-server: write_file')).toBeDefined();
         expect(screen.getByText(/approval required/i)).toBeDefined();
         expect(screen.getByText(/workspace files/i)).toBeDefined();
-        expect(screen.getByText(/filesystem-server \/ write_file/i)).toBeDefined();
+        expect(screen.getAllByText(/Inspect capability binding/i).length).toBeGreaterThan(0);
+        expect(screen.queryByText('MCP Server Drill-Down')).toBeNull();
+        fireEvent.click(screen.getByText('Inspect MCP topology'));
         expect(screen.getByText('MCP Server Drill-Down')).toBeDefined();
     });
 
@@ -228,7 +243,7 @@ describe('MCPToolRegistry', () => {
     it('returns to installed view with guidance after library install', () => {
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getByText('ADD MCP SERVER'));
+        fireEvent.click(screen.getByText('Request capability'));
         fireEvent.click(screen.getByText('Mock Install'));
 
         expect(screen.getByText(/Installed filesystem/i)).toBeDefined();
@@ -243,10 +258,9 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        // Click delete on srv-001
+        fireEvent.click(screen.getByText('Inspect MCP topology'));
         fireEvent.click(screen.getByTestId('delete-srv-001'));
 
-        // Store's deleteMCPServer should have been called
         expect(deleteFn).toHaveBeenCalledTimes(1);
         expect(deleteFn).toHaveBeenCalledWith('srv-001');
     });

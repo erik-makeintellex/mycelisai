@@ -15,7 +15,7 @@ Settings is the administrative surface for account posture and operator preferen
 - what recovery action is needed when access is denied
 
 For a new admin, the guided setup panel should make four checks obvious:
-SSO/auth, AI provider, workspace/output roots, and Add MCP connected tools.
+SSO/auth, AI provider, workspace/output roots, and capability/MCP setup.
 Workspace/output roots are confirmed from `System -> Deployments`, while MCP
 install and filesystem workspace browsing remain in `Resources`.
 
@@ -70,11 +70,11 @@ Mode summary:
 - SAML: configure metadata, entity ID, ACS URL, certificate/signature validation, NameID/email, and group claims
 - SCIM: future enterprise-only provisioning/deprovisioning, not required for Free Node or base self-hosted release
 
-## Connected Tools And MCP
+## Capabilities And MCP
 
-Connected-tool management lives in `Resources -> Connected Tools`, while Settings may expose related deep links.
+Capability and MCP management lives in `Resources -> Capabilities`, while Settings may expose related deep links.
 
-Use Connected Tools to inspect:
+Use Capabilities to inspect:
 
 - installed MCP servers
 - each server's transport, command or endpoint, args, env/header references, and status

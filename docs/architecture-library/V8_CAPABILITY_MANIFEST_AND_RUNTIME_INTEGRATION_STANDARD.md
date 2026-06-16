@@ -160,6 +160,8 @@ Output normalization rules:
 
 Every MCP server/tool must register as a capability.
 
+MCP tool-set configuration must support layered assignment: `all` is the shared organization fallback for plain `toolset:<name>` references, `group` binds a tool set to a group/team/collaboration lane through `scope_ref`, and `host` binds a tool set to a deployment/runtime host through `scope_ref`. Scoped resolution should prefer the requested group or host layer and fall back to `all` when no narrower tool set exists.
+
 Each MCP capability must define:
 
 - id

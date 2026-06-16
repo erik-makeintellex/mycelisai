@@ -13,7 +13,7 @@ Companion artifacts:
 - Workflow-variant mocked proof: `interface/e2e/specs/workflow-output.direct.spec.ts`, `interface/e2e/specs/workflow-output.compact-team.spec.ts`, `interface/e2e/specs/workflow-output.multi-lane.spec.ts`, and `interface/e2e/specs/workflow-output.reload-review.spec.ts`
 - Workflow-variant live backend proof: `interface/e2e/specs/workflow-variants-live-backend.spec.ts`
 - Live backend browser proof: `interface/e2e/specs/soma-governance-live.spec.ts`
-- Connected Tools MCP proof: `interface/e2e/specs/mcp-connected-tools.spec.ts` covers stable persisted activity/install visibility and includes a `PLAYWRIGHT_LIVE_BACKEND`-gated team-lane correlation case
+- Capabilities MCP proof: `interface/e2e/specs/mcp-connected-tools.spec.ts` covers stable persisted activity/install visibility and includes a `PLAYWRIGHT_LIVE_BACKEND`-gated team-lane correlation case
 - Workspace continuity manual trust pass: `tests/ui/browser_qa_plan_workspace_chat.md`
 - Workflow variants + reboot resume manual pass: `tests/ui/browser_qa_workflow_variants_reboot.md`
 
@@ -102,7 +102,7 @@ No single test lane is enough on its own.
    - Command:
      - `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 
-5. Connected Tools MCP activity proof
+5. Capabilities MCP activity proof
    - Purpose: prove persisted MCP activity, install visibility, and the live-gated team-lane-to-activity correlation path
    - Command:
      - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/mcp-connected-tools.spec.ts`

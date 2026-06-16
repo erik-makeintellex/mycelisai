@@ -1,18 +1,16 @@
 # Mycelis
-
 Mycelis is a governed cognitive operating environment for creating, operating, and evolving AI Organizations through a Soma-primary operator experience.
 
 This README is the development-swarm inception document. It points to current authority, defines the command and documentation contracts, and avoids duplicating the deeper architecture specs.
 
 Canonical ownership:
 - `README.md`: inception, navigation, and repo-wide working rules
-- `docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`, `docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md`, and `docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`: active release-candidate embodiment target; `architecture/v8-2.md` remains the stable full architecture baseline V8.3 concretizes
-- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`, `docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`, and `docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md`: operator UX, screen/API truth, team-work steering, and directed-execution alignment
+- `docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`, `docs/architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md`, `docs/architecture-library/V8_3_PRODUCT_MANIFESTATION_REVIEW.md`, `docs/architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md`, and `docs/architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md`: active release-candidate embodiment target, shareable delivery frame, product-value review, operator UX contract, and executable P0 delivery train; `architecture/v8-2.md` remains the stable full architecture baseline V8.3 concretizes
+- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`, `docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`, and `docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md`: screen/API truth, team-work steering, and directed-execution alignment
 - `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md` and `docs/architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md`: capability, MCP/custom integration, proof, secret-reference, UI exposure, and rotation truth
 - `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`: V7-to-V8 bootstrap migration truth
 - `.state/V8_DEV_STATE.md`: live implementation scoreboard; read the active snapshot and immediate next actions before dated historical boards
 ## README TOC
-
 - [Fresh Agent Start Here](#fresh-agent-start-here)
 - [User Guidance](#user-guidance)
 - [Agent Guidance](#agent-guidance)
@@ -43,18 +41,20 @@ Review these before planning or editing:
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
 3. [V8 Development State](.state/V8_DEV_STATE.md)
 4. [V8.3 Operational Embodiment PRD](docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md)
-5. [V8.3 Dev Agentry Operational Directive](docs/architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md)
-6. [V8.3 Multi-Agentry Steering Doctrine](docs/architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md)
-7. [V8.2 Production Architecture Target](architecture/v8-2.md)
-8. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
-9. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
-10. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
-11. [Operations](docs/architecture/OPERATIONS.md)
-12. [Testing](docs/TESTING.md)
-13. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
-14. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
-15. [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
-16. [Docs Manifest](interface/lib/docsManifest.ts)
+5. [V8.3 Release Architecture Delivery Brief](docs/architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md)
+6. [V8.3 Product Manifestation Architecture Review](docs/architecture-library/V8_3_PRODUCT_MANIFESTATION_REVIEW.md)
+7. [V8.3 Soma User Experience Contract](docs/architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md)
+8. [V8.3 MVP UI Runtime Delivery Plan](docs/architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md)
+9. [V8.2 Production Architecture Target](architecture/v8-2.md)
+10. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
+11. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
+12. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+13. [Operations](docs/architecture/OPERATIONS.md)
+14. [Testing](docs/TESTING.md)
+15. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
+16. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
+17. [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
+18. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
 - V8.3 docs own current release-candidate embodiment; V8.2 docs that remain in the active library are stable architecture and implementation contracts. Historical V7 state remains migration evidence only, not active product authority.
@@ -222,7 +222,7 @@ Deployment guidance by host architecture: Windows x86_64, Linux x86_64, Linux ar
 
 Supported user access lanes: source-mode local development with native PostgreSQL/NATS first, then Windows/Rancher Desktop Compose, Windows Docker Desktop Compose, Windows + WSL Docker Compose, Rancher Desktop K3s, WSL Compose, and Kubernetes / Helm clustered deployment when container proof is intentionally requested. Run/build/test Core and Interface locally before containerizing app services; open `http://localhost:3000` from the Windows browser for same-machine proof, and for clustered proof, prove the real ingress/hostname/IP from the operator machine. Rancher Desktop K3s is the preferred Windows local commercial-release parity lane once local source proof is acceptable.
 
-Deployment target contract: Kubernetes / Helm targets self-hosted and enterprise deployment using standard Kubernetes resources; Docker Compose remains rapid local development, demo, and same-machine proof runtime. Kubernetes / Helm: target self-hosted and enterprise deployment contract using standard Kubernetes resources. Docker Compose: rapid local development, demo, and same-machine proof runtime; it is not the target clustered deployment contract. Run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` and cover Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. Local Windows K3s proof uses `MYCELIS_K8S_BACKEND=rancher` against Rancher Desktop.
+Deployment target contract: Kubernetes / Helm targets self-hosted and enterprise deployment using standard Kubernetes resources; Docker Compose remains rapid local development, demo, and same-machine proof runtime, not the clustered deployment contract. Run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` and cover Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. Local Windows K3s proof uses `MYCELIS_K8S_BACKEND=rancher` against Rancher Desktop.
 
 AI endpoint contract: use a reachable host/IP like `http://192.168.x.x:11434/v1`, not `localhost`; for Compose point it at a host-reachable endpoint such as `http://host.docker.internal:11434`; WSL proof may auto-start a WSL-host relay for the AI endpoint when needed. K8s deployments can set `MYCELIS_K8S_TEXT_ENDPOINT` plus `MYCELIS_K8S_TEXT_MODEL_ID`; the Helm chart projects provider endpoint/model env vars and opens explicit AI egress ports only when configured.
 
@@ -238,7 +238,7 @@ Invoke-managed Playwright owns the local Next.js server lifecycle. Run `uv run i
 
 ## Testing Gate
 
-Canonical testing guidance lives in [Testing](docs/TESTING.md). Browser proof depth lives in [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) and [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md). Current RC proof and operator handoff evidence lives in [Release Handoff](docs/RELEASE_HANDOFF.md); `.state/V8_DEV_STATE.md` remains the detailed delivery scoreboard.
+Canonical testing guidance lives in [Testing](docs/TESTING.md). Browser proof depth lives in the [V8 UI Testing Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) and [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md). Current RC proof and operator handoff evidence lives in [Release Handoff](docs/RELEASE_HANDOFF.md); `.state/V8_DEV_STATE.md` remains the detailed delivery scoreboard.
 
 End-of-slice reporting should name evidence commands run, docs changed, touched docs reviewed unchanged, and any UI visual-expression review for surfaces the slice touched.
 

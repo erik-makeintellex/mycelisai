@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, ExternalLink, FolderOpen, Loader2 } from "lucide-react";
+import { outputFolderButtonLabel, type OutputFolderState } from "@/lib/deliveryRuntimeLanguage";
 
 export function workspacePathFromOutputUrl(url: string | null) {
     if (!url) return null;
@@ -18,13 +19,6 @@ export function workspacePathFromOutputUrl(url: string | null) {
     }
 }
 
-function folderButtonLabel(folderState: "idle" | "opening" | "opened" | "failed", fallbackLabel: string) {
-    if (folderState === "opening") return "Opening...";
-    if (folderState === "opened") return "Folder opened";
-    if (folderState === "failed") return "Open failed";
-    return fallbackLabel;
-}
-
 export default function OutputAccessActions({
     label,
     url,
@@ -38,7 +32,7 @@ export default function OutputAccessActions({
     openLabel?: string;
     folderLabel?: string;
 }) {
-    const [folderState, setFolderState] = useState<"idle" | "opening" | "opened" | "failed">("idle");
+    const [folderState, setFolderState] = useState<OutputFolderState>("idle");
     const workspacePath = useMemo(() => storagePath?.trim() || workspacePathFromOutputUrl(url), [storagePath, url]);
     if (!url && !workspacePath) return null;
 
@@ -92,7 +86,7 @@ export default function OutputAccessActions({
                     {folderState === "opened" ? <Check className="h-3 w-3" /> : null}
                     {folderState === "idle" ? <FolderOpen className="h-3 w-3" /> : null}
                     {folderState === "failed" ? <FolderOpen className="h-3 w-3 text-amber-300" /> : null}
-                    {folderButtonLabel(folderState, folderLabel)}
+                    {outputFolderButtonLabel(folderState, folderLabel)}
                 </button>
             )}
         </span>

@@ -13,6 +13,8 @@ type mcpToolSetRequest struct {
 	Name              string               `json:"name"`
 	Description       string               `json:"description"`
 	ToolRefs          []string             `json:"tool_refs"`
+	ScopeKind         string               `json:"scope_kind"`
+	ScopeRef          string               `json:"scope_ref"`
 	GovernanceContext mcpGovernanceContext `json:"governance_context,omitempty"`
 }
 
@@ -60,9 +62,11 @@ func (s *AdminServer) handleCreateToolSet(w http.ResponseWriter, r *http.Request
 		Name:        req.Name,
 		Description: req.Description,
 		ToolRefs:    req.ToolRefs,
+		ScopeKind:   req.ScopeKind,
+		ScopeRef:    req.ScopeRef,
 	})
 	if err != nil {
-		respondError(w, "Failed to create tool set: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, "Failed to create tool set: "+err.Error(), mcpToolSetErrorStatus(err))
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -102,13 +106,11 @@ func (s *AdminServer) handleUpdateToolSet(w http.ResponseWriter, r *http.Request
 		Name:        req.Name,
 		Description: req.Description,
 		ToolRefs:    req.ToolRefs,
+		ScopeKind:   req.ScopeKind,
+		ScopeRef:    req.ScopeRef,
 	})
 	if err != nil {
-		status := http.StatusInternalServerError
-		if strings.Contains(strings.ToLower(err.Error()), "not found") {
-			status = http.StatusNotFound
-		}
-		respondError(w, "Failed to update tool set: "+err.Error(), status)
+		respondError(w, "Failed to update tool set: "+err.Error(), mcpToolSetErrorStatus(err))
 		return
 	}
 	respondJSON(w, map[string]interface{}{
@@ -116,6 +118,18 @@ func (s *AdminServer) handleUpdateToolSet(w http.ResponseWriter, r *http.Request
 		"data":       updated,
 		"governance": buildMCPConfigGovernanceDecision(normalizeMCPGovernanceContext(r, req.GovernanceContext), "local", "low"),
 	})
+}
+
+func mcpToolSetErrorStatus(err error) int {
+	lower := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(lower, "not found"):
+		return http.StatusNotFound
+	case strings.Contains(lower, "scope_kind") || strings.Contains(lower, "scope_ref"):
+		return http.StatusBadRequest
+	default:
+		return http.StatusInternalServerError
+	}
 }
 
 // handleDeleteToolSet deletes an MCP tool set.

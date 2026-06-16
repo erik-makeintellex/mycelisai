@@ -94,7 +94,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
     it('renders all tabs', async () => {
         await act(async () => { render(<ResourcesPage />); });
         expect(screen.getByRole('navigation', { name: 'Resource type menu' })).toBeDefined();
-        expect(screen.getByRole('button', { name: /Connected Tools/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Capabilities/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Exchange/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Deployment Context/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Output Files/i })).toBeDefined();
@@ -108,6 +108,15 @@ describe('Resources Page (V8.1 advanced support)', () => {
             expect(screen.getByRole('button', { name: /Output Files/i }).getAttribute('aria-current')).toBe('page');
         });
         expect(screen.getByText(/Find, open, and inspect generated output/i)).toBeDefined();
+    });
+
+    it('keeps tab=tools as the capability catalog deep link', async () => {
+        mockSearchParams.set('tab', 'tools');
+        await act(async () => { render(<ResourcesPage />); });
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: /Capabilities/i }).getAttribute('aria-current')).toBe('page');
+        });
+        expect(screen.getByText(/What Soma can use, what needs repair, and what can be requested/i)).toBeDefined();
     });
 
     it('deep-links to role library tab via search param', async () => {

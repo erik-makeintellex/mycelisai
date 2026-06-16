@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Brain, Wrench, BookOpen, FolderOpen, GitBranch, BookMarked, type LucideIcon } from "lucide-react";
+import { Brain, BookOpen, FolderOpen, GitBranch, BookMarked, ShieldCheck, type LucideIcon } from "lucide-react";
 import BrainsPage from "@/components/settings/BrainsPage";
 import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
 import { useCortexStore } from "@/store/useCortexStore";
@@ -53,10 +53,10 @@ const RESOURCE_TABS: ResourceTab[] = [
     },
     {
         id: "tools",
-        label: "Connected Tools",
-        summary: "MCP servers, capability readiness, search posture, and recent tool use.",
+        label: "Capabilities",
+        summary: "What Soma can use, what needs repair, and what can be requested.",
         detail: "What Soma can use",
-        icon: Wrench,
+        icon: ShieldCheck,
     },
     {
         id: "exchange",
@@ -124,7 +124,7 @@ function ResourcesContent() {
                             Advanced Resources
                         </h1>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-cortex-text-muted">
-                            Open generated work first, then use focused panes for connected tools, context, exchange
+                            Open generated work first, then use focused panes for capabilities, context, exchange
                             channels, and advanced configuration.
                         </p>
                     </div>

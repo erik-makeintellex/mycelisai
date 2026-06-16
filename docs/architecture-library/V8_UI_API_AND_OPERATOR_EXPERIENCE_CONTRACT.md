@@ -133,6 +133,15 @@ When execution degrades, the same package must expose:
 - what can safely continue
 - what requires retry or operator attention
 
+The release-candidate UI now standardizes this into four reusable patterns:
+
+- `WorkInboxItem`: a concise operator-attention row for active, output-ready, degraded, failed, recovery, and archived work across Soma, Teams, Groups, Runs, and Resources
+- `RunReceipt`: a human-readable execution summary with outcome, status, output, trust, proof, recovery, and inspect actions
+- `OutputPackageCard`: a durable output object with preview/open/open-folder/README/PROOF/download/Resources actions where available
+- `RecoveryQueueItem`: an actionable failure state that names failed, still trusted, not trusted, safe next, and required operator action
+
+Visual run maps, capability topology, raw event payloads, and bus/provider internals are Advanced/Inspect material. The default operator path should show receipts, packages, and recovery actions before topology.
+
 ### 4.6 Advisor, Department, and Specialist visibility rules
 
 Advisors, Departments, and Specialists stay visible without becoming a flat default chat roster.
@@ -148,7 +157,7 @@ Current screen contract families:
 - direct answer
 - proposal/cancel/execute
 - teams/groups and retained outputs
-- resources/Connected Tools
+- resources/Capabilities
 - memory and activity
 - settings and advanced boundaries
 

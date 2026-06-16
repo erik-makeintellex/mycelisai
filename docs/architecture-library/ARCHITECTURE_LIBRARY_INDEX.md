@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-05-24
+> Last Updated: 2026-06-14
 > Purpose: Keep the active architecture surface small enough to use.
 
 ## TOC
@@ -24,8 +24,11 @@ The active architecture library keeps only documents that are directly used for 
 | Document | Use For |
 | --- | --- |
 | [V8.3 Operational Embodiment PRD](V8_3_OPERATIONAL_EMBODIMENT_PRD.md) | release-candidate embodiment plan, async runtime, recovery actions, ExpressionFrame, new-user proof |
-| [V8.3 Dev Agentry Operational Directive](V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md) | delivery-agent posture for operational trust, async execution, recovery, proof, and Soma-first embodiment |
-| [V8.3 Multi-Agentry Steering Doctrine](V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md) | coordination doctrine for shared runtime truth, Soma authority, team lanes, capability governance, and proof semantics |
+| [V8.3 Release Architecture Delivery Brief](V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md) ([printable HTML](V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.html)) | compact shareable architecture document for current MVP-to-release execution, delivery lanes, P0 train, and acceptance standard |
+| [V8.3 Product Manifestation Architecture Review](V8_3_PRODUCT_MANIFESTATION_REVIEW.md) | product-value review of each major subsystem, visibility boundary, MVP classification, and adoption risk |
+| [V8.3 Soma User Experience Contract](V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md) | operator-first product contract for working through Soma, deliverables, proof, recovery, capabilities, and optional Inspect |
+| [V8.3 MVP UI Runtime Delivery Plan](V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md) | executable delivery overlay for Soma inbox, run receipts, output packages, capability catalog, recovery queue, and advanced run-map proof |
+| [V8.3 MVP UI Runtime Detail Checklist](V8_3_MVP_UI_RUNTIME_DETAIL_CHECKLIST.md) | route-level usability checks, simplification patterns, starter families, and target-state component notes for visible UI slices |
 | [V8.2 Soma UI Architecture Expression](V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md) | ideal Soma interaction model, one-window UI architecture, active work, outputs, proof, teams |
 | [V8.2 Soma Team Interaction Contract](V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md) | talking with new or running teams, TeamWorkItem, TeamInteraction, TeamStatusEvent, recovery |
 | [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) | instantiated organization runtime truth, Soma, Council, provider policy, continuity |
@@ -33,7 +36,7 @@ The active architecture library keeps only documents that are directly used for 
 | [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) | operator terminology, response states, screen/API expectations, advanced boundary |
 | [V8 Capability Manifest And Runtime Integration Standard](V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md) | governed capabilities, MCP/custom tools, output normalization, permission and recovery posture |
 | [V8 Secret Storage And Credential Boundary](V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md) | secret references, runtime resolution, UI exposure, audit/proof, rotation |
-| [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) | browser-visible product proof standard |
+| [V8 UI Testing Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) | browser-visible product proof standard |
 | [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) | full GUI validation contract and verdict format |
 | [V8 New-User Acceptance Matrix](V8_NEW_USER_ACCEPTANCE_MATRIX.md) | first-run, login, setup, Resources/MCP, outputs, and team recovery browser gates |
 

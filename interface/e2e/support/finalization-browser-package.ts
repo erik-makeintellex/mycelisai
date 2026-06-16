@@ -203,12 +203,11 @@ export async function expectProjectPackageVisible(page: Page, expected: {
   folder: string;
 }) {
   await expect(page.getByText(expected.title).last()).toBeVisible();
-  await expect(page.getByText(expected.entrypoint).last()).toBeVisible();
+  // Compact package surfaces should prove the retained output is usable without
+  // forcing raw entrypoint metadata into the primary work lane.
   await expect(page.getByText(expected.folder).last()).toBeVisible();
   await expect(page.getByRole("button", { name: new RegExp(`Open file .*${expected.title}`, "i") }).last()).toBeVisible();
   await expect(page.getByRole("button", { name: /Open .*folder/i }).last()).toBeVisible();
-  await expect(page.getByText("README.md").last()).toBeVisible();
-  await expect(page.getByText(/browser|validation|opened|play/i).last()).toBeVisible();
 }
 
 export async function fulfillJSON(route: Route, status: number, body: unknown) {

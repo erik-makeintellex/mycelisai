@@ -4,6 +4,7 @@ import type { ExecutionSummaryItem } from "@/store/useCortexStore";
 import { itemText, itemUrl } from "./ExecutionSummaryCardModel";
 import OutputAccessActions, { workspacePathFromOutputUrl } from "./OutputAccessActions";
 import type { OutputWorkbenchItem } from "./OutputWorkbench";
+import { projectPackageOpenPath, projectPackageRevealPath, workspaceFileHref } from "@/lib/outputPackageModel";
 
 export type OutputWorkbenchDigest = {
   text: string;
@@ -39,8 +40,16 @@ export function outputWorkbenchDigest({
 
   return {
     text: itemText(primaryPackage) ?? "Project package",
-    url: itemUrl(primaryPackage),
-    storagePath: primaryPackage.folder ?? primaryPackage.entrypoint ?? null,
+    url: itemUrl(primaryPackage) ?? workspaceFileHref(projectPackageOpenPath({
+      folder: primaryPackage.folder,
+      entrypoint: primaryPackage.entrypoint,
+      filePath: primaryPackage.path,
+    })),
+    storagePath: projectPackageRevealPath({
+      folder: primaryPackage.folder,
+      entrypoint: primaryPackage.entrypoint,
+      filePath: primaryPackage.path,
+    }),
     count: outputs.length + packages.length,
   };
 }

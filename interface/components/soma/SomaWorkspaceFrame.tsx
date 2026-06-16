@@ -111,6 +111,7 @@ export function SomaWorkspaceFrame({
   const visibleReviewCount = reviewCount ?? outputDigest?.count ?? panels.length;
   const reviewLabel = primaryReviewPanel?.key === "output" ? "Review output" : "Review work";
   const showClosedOutputDigest = Boolean(outputDigest && showOutputDigest);
+  const isFocusedWorkReview = primaryReviewPanel?.key === "work";
 
   const togglePanel = () => {
     setIsPanelOpen((open) => {
@@ -168,10 +169,12 @@ export function SomaWorkspaceFrame({
                   <div className="flex items-center justify-between gap-2 px-1">
                     <div>
                       <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-cortex-text-muted">
-                        Review
+                        {isFocusedWorkReview ? "Review work" : "Review"}
                       </p>
                       <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-                        Check the most useful details here. Open the full page for more.
+                        {isFocusedWorkReview
+                          ? "Understand the item, then recover, clear, or open the full inbox."
+                          : "Check the most useful details here. Open the full page for more."}
                       </p>
                     </div>
                     <button
@@ -183,29 +186,31 @@ export function SomaWorkspaceFrame({
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <div
-                    className="mt-3 grid grid-cols-4 gap-1"
-                    role="tablist"
-                    aria-label="Soma review sections"
-                  >
-                    {panels.map((panel) => (
-                      <button
-                        key={panel.key}
-                        type="button"
-                        role="tab"
-                        aria-selected={selectedPanel?.key === panel.key}
-                        onClick={() => setActivePanel(panel.key)}
-                        className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors ${
-                          selectedPanel?.key === panel.key
-                            ? "border-cortex-primary/40 bg-cortex-primary/15 text-cortex-primary"
-                            : "border-cortex-border text-cortex-text-muted hover:border-cortex-primary/30 hover:text-cortex-text-main"
-                        }`}
-                      >
-                        <span className="hidden sm:inline">{panel.label}</span>
-                        <span className="sm:hidden">{panel.icon}</span>
-                      </button>
-                    ))}
-                  </div>
+                  {!isFocusedWorkReview ? (
+                    <div
+                      className="mt-3 grid grid-cols-4 gap-1"
+                      role="tablist"
+                      aria-label="Soma review sections"
+                    >
+                      {panels.map((panel) => (
+                        <button
+                          key={panel.key}
+                          type="button"
+                          role="tab"
+                          aria-selected={selectedPanel?.key === panel.key}
+                          onClick={() => setActivePanel(panel.key)}
+                          className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                            selectedPanel?.key === panel.key
+                              ? "border-cortex-primary/40 bg-cortex-primary/15 text-cortex-primary"
+                              : "border-cortex-border text-cortex-text-muted hover:border-cortex-primary/30 hover:text-cortex-text-main"
+                          }`}
+                        >
+                          <span className="hidden sm:inline">{panel.label}</span>
+                          <span className="sm:hidden">{panel.icon}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 {selectedPanel ? (
                   <div
@@ -224,7 +229,7 @@ export function SomaWorkspaceFrame({
                           href={selectedPanel.href}
                           className="shrink-0 rounded-lg border border-cortex-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-main hover:border-cortex-primary/40"
                         >
-                          Open page
+                          {isFocusedWorkReview ? "Open inbox" : "Open page"}
                         </Link>
                       </div>
                       {selectedPanel.content}

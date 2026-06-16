@@ -44,19 +44,7 @@ The operator should never feel like they are operating an agent topology stack. 
 
 ## Core Principles
 
-Every decision must improve one or more of:
-
-```text
-observable
-recoverable
-governable
-deployable
-interruptible
-inspectable
-trustworthy
-```
-
-If a feature does not improve those dimensions, defer it.
+Every decision must improve one or more of: observable, recoverable, governable, deployable, interruptible, inspectable, and trustworthy. If a feature does not improve those dimensions, defer it.
 
 ## Product Identity Doctrine
 
@@ -209,6 +197,19 @@ The default workbench posture should favor operator focus. A compact current-wor
 Research checkpoint, 2026-06-04: Airflow separates home health, DAG lists, details, grid/graph inspection, run tabs, task logs, events, code, and asset lineage; Temporal separates saved workflow views, failure views, event history, actions, relationships, workers, pending activities, and schedules; GitHub Actions separates workflow lists, run summaries, jobs/steps/logs, rerun/cancel actions, and artifacts; Linear-style systems emphasize filters, grouping, saved/custom views, team pages, and display options. Sources: [Airflow UI Overview](https://airflow.apache.org/docs/apache-airflow/stable/ui.html), [Temporal Web UI](https://docs.temporal.io/web-ui), [GitHub Actions workflow run history](https://docs.github.com/en/actions/how-tos/monitor-workflows/view-workflow-run-history), and [Linear filters](https://linear.app/docs/filters).
 Applied UI direction: default Soma chat uses trusted-result receipts, one obvious latest-output open path, compact media previews, a compact current-work lane, and plain run confirmation while keeping proof/log/resource density in the workbench panel or full pages. Work contexts switch chat, active work, outputs, proof, and recovery together through a bounded current-workflow picker, not a horizontally growing team tab strip or pre-chat output dock. Activity, Runs, Resources, Groups, Teams, System, and Settings each need a clear page job: overview, active work, output/recovery, or advanced inspect. Multi-job pages should use tabs or inner scrolling instead of extending the browser page indefinitely. Copy should speak to outcomes: ask, run, running, output ready, open file, open folder, proof, recovery. Internal vocabulary belongs behind Advanced/Inspect.
 
+### MVP UI Runtime Delivery Overlay
+
+The market pattern review on 2026-06-14 confirms that production agent platforms are converging around agent runtimes, runs, traces, human review, workflow visibility, capability catalogs, templates, and deployment/observability consoles. Mycelis should keep its default experience more compressed than node-builder products: Soma remains the primary operating surface, while visual run maps, capability topology, and raw event payloads stay behind Inspect.
+
+The executable overlay lives in [V8.3 MVP UI Runtime Delivery Plan](V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md). It locks the next delivery train around:
+
+- one Soma work inbox for active, output-ready, failed, recovery, and archived work
+- one run receipt standard for outcome, output, trust, proof, recovery, and inspect
+- one output package card standard for preview, open, open folder, README/PROOF, download, and Resources re-entry
+- one capability catalog that answers "what Soma can use" before exposing raw MCP server structure
+- one recovery queue that states failed, still trusted, not trusted, safe next, and operator action
+- one advanced run-map/timeline grammar for inspection without default topology exposure
+
 ## Understanding Attunement Doctrine
 
 Soma must treat operator expression as intent-bearing work context, not as a bare command string. Before direct answers or governed proposals, Soma should compactly infer desired outcome, audience, output form, constraints, relevant prior/workspace context, and uncertainty.
@@ -261,25 +262,20 @@ The system reaches RC posture when a fresh operator can log in, ask Soma for wor
 
 P0:
 
-1. Push current V8.3 embodiment commits so WSL and hosted proof can refresh from git.
-2. Generate and verify `MYCELIS_BREAK_GLASS_API_KEY`.
-3. Rerun auth posture proof.
-4. Convert team asks and confirmed execution to async/polling/event-driven runtime.
-5. Canonicalize `RunState`.
-6. Implement `RecoveryAction` runtime contracts.
-7. Formalize `ExpressionFrame`.
-8. Run local media generation through Soma.
-9. Verify artifact/output/proof linkage.
-10. Run full fresh-state GUI proof.
+1. Keep output packages, service health, and headed browser proof green.
+2. Finish the Soma/Teams review inbox pattern without card sprawl.
+3. Promote Resources into a capability catalog that answers what Soma can use, repair, or request before raw MCP topology.
+4. Standardize run receipts across successful, degraded, failed, and proposed work.
+5. Turn recovery into actionable queue items with still-trusted, not-trusted, safe-next, and repair/retry posture.
+6. Run full fresh-state GUI proof only after the visible workflow language converges.
 
 P1:
 
 1. ComfyUI workflow adapter live proof and operator workflow-template UX.
-2. Canonical trust package assembly.
+2. Canonical trust package assembly and confidence provenance preparation.
 3. Team steering lifecycle beyond the landed bounded ask/action APIs.
-4. MCP/operator capability UX refinement.
-5. Documentation compression.
-6. Confidence provenance preparation.
+4. Deeper MCP/operator capability UX after the catalog is usable.
+5. Documentation compression after each accepted MVP slice.
 
 ## Non-Goals
 

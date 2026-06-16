@@ -172,7 +172,7 @@ Expected: private context is treated as governed input, not leaked as raw backen
 
 ### 8. MCP Visibility And Tool Activity
 
-Open Resources/Connected Tools when MCP behavior is in scope.
+Open Resources/Capabilities when MCP behavior is in scope.
 
 Expected: registry/library/activity state is understandable and actions remain governed.
 

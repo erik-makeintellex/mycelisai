@@ -16,7 +16,7 @@ import {
 } from "../support/finalization-browser-package";
 
 test.describe("UI finalization exact browser package live proof", () => {
-  test("creates the first-demo package, opens proof, reloads output, and verifies Groups", async ({ page }) => {
+  test("creates the first-demo package, opens proof, reloads output, and verifies Resources and Groups", async ({ page }) => {
     test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires a live Core backend");
     test.setTimeout(liveTimeoutMs);
     test.slow();
@@ -83,15 +83,26 @@ test.describe("UI finalization exact browser package live proof", () => {
       await expect(outputPage.locator("canvas#game")).toBeVisible({ timeout: 30_000 });
       await outputPage.close();
 
+      const resourcesFolder = `workspace/${folder}`;
+      await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
+      await page.getByRole("button", { name: /Review output/i }).last().click();
+      await page.getByRole("link", { name: `Open ${packageTitle} in Resources` }).last().click();
+      await expect(page).toHaveURL(new RegExp(`/resources\\?tab=workspace&path=${encodeURIComponent(resourcesFolder)}`));
+      await expect(page.getByRole("heading", { name: "Advanced Resources" })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText(resourcesFolder).last()).toBeVisible();
+      await expect(page.getByText("index.html")).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("README.md")).toBeVisible();
+
       const groupsResponse = await liveAPIGet(page, "/api/v1/groups");
       const parsedGroups = await parseJSONIfPossible<APIEnvelope<GroupRecord[]>>(groupsResponse);
       expect(groupsResponse.ok(), parsedGroups.body ? JSON.stringify(parsedGroups.body) : parsedGroups.raw).toBeTruthy();
       const group = (parsedGroups.body?.data ?? []).find((candidate) => candidate.team_ids?.includes(teamID));
       expect(group, JSON.stringify(parsedGroups.body?.data ?? [])).toBeTruthy();
 
-      await page.goto(`/groups?group_id=${encodeURIComponent(group!.group_id)}`, { waitUntil: "domcontentloaded" });
+      await page.goto(`/groups?group_id=${encodeURIComponent(group!.group_id)}&advanced=1`, { waitUntil: "domcontentloaded" });
       await expect(page.getByRole("heading", { name: group!.name })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText(teamID).first()).toBeVisible();
+      await page.getByRole("tab", { name: /Outputs/i }).click();
       await expect(page.getByText("Project package").first()).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText(entrypoint).first()).toBeVisible();
       await expect(page.getByText(folder, { exact: true }).first()).toBeVisible();

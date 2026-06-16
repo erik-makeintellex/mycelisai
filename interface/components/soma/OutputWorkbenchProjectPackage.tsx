@@ -2,20 +2,17 @@
 
 import { FolderOpen, ShieldCheck } from "lucide-react";
 import type { ExecutionSummaryItem } from "@/store/useCortexStore";
+import {
+  OUTPUT_PACKAGE_FOLDER_LABEL,
+  OUTPUT_PACKAGE_RESOURCES_LABEL,
+  projectPackageOpenPath,
+  projectPackageResourcesHref,
+  projectPackageRevealPath,
+  workspaceFileHref,
+} from "@/lib/outputPackageModel";
 import { itemText, itemUrl } from "./ExecutionSummaryCardModel";
 import OutputAccessActions from "./OutputAccessActions";
 import { OutputProofDetails } from "./OutputWorkbenchProofDetails";
-
-function resourcesPathHref(path?: string | null) {
-  const normalized = path?.trim().replace(/\\/g, "/");
-  return normalized ? `/resources?tab=workspace&path=${encodeURIComponent(normalized)}` : null;
-}
-
-function parentWorkspacePath(path?: string | null) {
-  const normalized = path?.trim().replace(/\\/g, "/");
-  if (!normalized?.includes("/")) return null;
-  return normalized.slice(0, normalized.lastIndexOf("/"));
-}
 
 export function OutputWorkbenchProjectPackage({
   project,
@@ -27,10 +24,11 @@ export function OutputWorkbenchProjectPackage({
   projectOpenLabel: string;
 }) {
   const title = itemText(project) ?? "Project package";
-  const href = itemUrl(project);
+  const openPath = projectPackageOpenPath({ folder: project.folder, entrypoint: project.entrypoint, filePath: project.path });
+  const href = itemUrl(project) ?? workspaceFileHref(openPath);
   const folder = project.folder ?? null;
-  const revealPath = project.folder ?? project.entrypoint ?? null;
-  const resourcesHref = resourcesPathHref(project.folder ?? parentWorkspacePath(project.entrypoint));
+  const revealPath = projectPackageRevealPath({ folder: project.folder, entrypoint: project.entrypoint, filePath: project.path });
+  const resourcesHref = projectPackageResourcesHref({ folder: project.folder, entrypoint: project.entrypoint, filePath: project.path });
   const files = project.files ?? [];
 
   return (
@@ -49,10 +47,10 @@ export function OutputWorkbenchProjectPackage({
               aria-label={`Open ${title} in Resources`}
             >
               <FolderOpen className="h-3 w-3" />
-              Open in Resources
+              {OUTPUT_PACKAGE_RESOURCES_LABEL}
             </a>
           ) : null}
-          <OutputAccessActions label={title} url={href} storagePath={revealPath} openLabel={projectOpenLabel} folderLabel="Open folder" />
+          <OutputAccessActions label={title} url={href} storagePath={revealPath} openLabel={projectOpenLabel} folderLabel={OUTPUT_PACKAGE_FOLDER_LABEL} />
         </span>
       </div>
       {(project.entrypoint || folder) ? (

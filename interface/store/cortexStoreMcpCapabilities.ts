@@ -56,7 +56,7 @@ function normalizeCapabilityManifest(value: unknown): CapabilityManifest | null 
         risk,
         approval: stringField(raw.approval) ?? (approvalRequired ? 'required' : 'none'),
         inputs: stringArrayField(raw.inputs),
-        outputs: stringArrayField(raw.outputs) ?? toolRefs,
+        outputs: operatorOutputLabels(raw),
         writes: stringArrayField(raw.writes),
         allowed_roles: stringArrayField(raw.allowed_roles) ?? stringArrayField(raw.default_allowed_roles),
         audit: stringField(raw.audit) ?? (auditRequired ? 'required' : 'none'),
@@ -91,6 +91,15 @@ function stringArrayField(value: unknown): string[] | undefined {
     if (!Array.isArray(value)) return undefined;
     const values = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
     return values.length > 0 ? values : undefined;
+}
+
+function operatorOutputLabels(raw: Record<string, unknown>): string[] | undefined {
+    const direct = stringArrayField(raw.outputs);
+    if (direct) return direct;
+    const schema = stringField(raw.output_schema_ref);
+    if (!schema) return undefined;
+    const label = schema.split(/[/.#]/).filter(Boolean).pop();
+    return [label ? `${label} output` : 'Structured output'];
 }
 
 function firstToolName(toolRefs?: string[]): string | undefined {

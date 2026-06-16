@@ -52,7 +52,7 @@ Before creating teams, enabling MCP servers, assigning tools, or changing capabi
 
 When you confirm with wording such as `yes`, `confirm`, `proceed`, `do it`, or `one time`, Soma should bind that confirmation to the prior inferred action and continue through the governed proposal/execution path.
 
-For team manifestation, Soma should use Council or specialist context to choose the smallest useful member set, expected outputs, and target MCP/tool bindings. If a needed MCP server is missing, Soma should name the server and required `.env` variable, then point you to `Resources -> Connected Tools` to install, reapply, or enable it.
+For team manifestation, Soma should use Council or specialist context to choose the smallest useful member set, expected outputs, and target MCP/tool bindings. If a needed MCP server is missing, Soma should name the server and required `.env` variable, then point you to `Resources -> Capabilities` to install, reapply, or enable it.
 
 ## Protected Interaction Templates
 
@@ -205,7 +205,7 @@ Web/research behavior:
 - `local_api` lets Soma use an operator-owned HTTP search endpoint when configured through `MYCELIS_SEARCH_PROVIDER=local_api` and `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`
 - if `brave-search` is installed and configured with `BRAVE_API_KEY`, Soma and web-capable specialists may use it for search
 - if `fetch` is installed and you provide a URL, Soma and web-capable specialists may use it to retrieve page content
-- if the needed server or credential is missing, Soma should name the missing MCP server/env var and point you to Connected Tools instead of claiming web requests are impossible
+- if the needed server or credential is missing, Soma should name the missing MCP server/env var and point you to Capabilities instead of claiming web requests are impossible
 - read-only tool posture prompts such as `show me currently configured tools` or `check available tools and walk me through enabling what is missing` should answer with current tool state and setup guidance, not create a runnable proposal
 - prompts that actually enable, install, connect, assign, or bind tools remain governed mutation requests and require confirmation/proof
 

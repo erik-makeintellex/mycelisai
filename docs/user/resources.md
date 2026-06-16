@@ -1,7 +1,7 @@
 # Resources
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Advanced-mode support surface for connected tools, deployment context intake, managed exchange, generated output files, AI engine setup, and reusable role definitions.
+> Advanced-mode support surface for generated output files, capability readiness, deployment context intake, managed exchange, AI engine setup, and reusable role definitions.
 
 ---
 
@@ -14,7 +14,7 @@ Current resource menu:
 | Resource Type | Purpose |
 |-----|---------|
 | Output Files | Open generated content folders and browse filesystem MCP-backed files inside workspace boundary |
-| Connected Tools | Installed MCP servers and tool capability visibility |
+| Capabilities | What Soma can use now, what needs repair, and what can be requested |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
 | Deployment Context | Load governed private/user records, customer context, approved company knowledge, Soma operating context, and reflection/synthesis observations into separate governed context lanes |
 | AI Engines | Global AI engine configuration and health |
@@ -39,20 +39,20 @@ What you can do:
 
 ---
 
-## Connected Tools
+## Capabilities
 
 MCP servers, custom connectors, local scripts, external APIs, and future plugins expose capabilities Soma and teams can invoke during execution.
 
 The Dashboard readiness strip summarizes search/tool posture for Soma, but
-Resources is the primary place to inspect or change MCP servers, web search
-readiness, and recent tool activity.
+Resources is the primary place to inspect what Soma can use, repair missing capability, request MCP servers, check web search readiness, and review recent tool activity.
 
 New-user readiness checks:
+- Capabilities should tell you what Soma can use now, what needs repair, and what can be requested.
 - Installed should tell you whether any MCP servers are connected or whether the first step is **Add MCP Server**.
 - **Add MCP Server** should open the curated library, not a raw JSON/config paste box.
 - Curated entries must name required environment variables without exposing secret values.
 - After install or reapply, return to Installed and confirm the server card, tool list, capability binding, and recent MCP activity are visible.
-- If the registry is unreachable, the UI should say that Connected Tools could not confirm installed servers and must not pretend the registry is truly empty.
+- If the registry is unreachable, the UI should say that capability/tool readiness could not be confirmed and must not pretend the registry is truly empty.
 
 Current baseline posture:
 - curated library installs are the default path
@@ -69,6 +69,15 @@ Capability manifest expectation:
 - every meaningful output should normalize into Managed Exchange, a retained artifact/output, audit evidence, or a learning candidate before it is treated as durable product state
 - raw MCP/custom output should not be the final unmanaged state
 
+MCP tool-set layering supports three configuration forms:
+- `all`: a shared tool set available across the organization, used as the fallback for plain `toolset:<name>` references
+- `group`: a grouped tool set targeted to a collaboration/team/group lane through `scope_ref`
+- `host`: a host-targeted tool set for a specific deployment/runtime host through `scope_ref`
+
+When the same tool-set name exists at multiple layers, scoped runtime resolution should prefer the group or host layer first, then fall back to the shared `all` layer. This lets operators keep a default capability posture while adding narrower MCP access for a project lane or a particular host.
+
+The Capabilities page now exposes this as **MCP access layers**. Use **All** for organization-wide defaults, **Group** for a collaboration lane, and **Host** for a target runtime host. Group and Host layers require a target id before they can be saved, and saved layers should appear in the existing-layers list with their tool references visible for review.
+
 Review/edit expectation:
 - the installed server card should expand into an MCP structure view with transport, status, command or endpoint, arguments, env/header references, discovered tools, and recent use
 - the capability view should show manifest identity, input/output schema posture, risk, approval, availability, fallback, allowed roles, and output destinations
@@ -84,13 +93,13 @@ Current posture:
 - remote or higher-risk entries can return an explicit approval boundary instead of silently installing
 - credentialed external SaaS entries such as Slack, GitHub, hosted search, and hosted media should now be expected to require approval rather than behaving like low-risk local tools
 - `brave-search` provides governed web search when installed with `BRAVE_API_KEY`; `fetch` retrieves explicit URLs for analysis, and together they form the default curated research toolset without making web access unrestricted trust
-- `Mycelis Search Capability` shows the active Soma search posture directly in Connected Tools: the selected provider, whether Soma can call `web_search`, whether local shared sources or public web are supported, and whether the current path needs hosted Brave credentials
+- `Mycelis Search Capability` shows the active Soma search posture directly in Capabilities: the selected provider, whether Soma can call `web_search`, whether local shared sources or public web are supported, and whether the current path needs hosted Brave credentials
 - Soma's Operator trust package also names the active search source boundary for `web_search` results, such as `Search source: Local Mycelis context`, so operators can distinguish retained Mycelis context from public-web providers
 - self-hosted search does not have to depend on Brave tokens: `local_sources` is the default token-free provider for governed Mycelis context and falls back to bounded text search when embeddings are unavailable, `local_api` can call an operator-owned HTTP search endpoint, and the supported Compose release path starts SearXNG for public web search through an operator-owned endpoint
-- the same Connected Tools surface should make the workflow legible end to end: choose **Add MCP Server**, confirm the server is connected, and inspect recent persisted MCP activity plus live in-session usage showing which server/tool agents are using, including team, agent, and run labels when the runtime supplies them
+- the same Capabilities surface should make the workflow legible end to end: choose **Add MCP Server**, confirm the capability is available, and inspect recent persisted MCP activity plus live in-session usage showing which server/tool agents are using, including team, agent, and run labels when the runtime supplies them
 - the curated MCP library is now being standardized around the MCP registry `server.json` concepts so future registrations stay recognizable outside Mycelis too: each entry should carry a canonical server name, version, published package + transport metadata, repository/homepage metadata when known, and typed environment-variable declarations instead of only a local command block
 - curated MCP install is repeat-safe by server name; reapplying an allowed entry updates and reconnects the existing server instead of creating duplicate registry state
-- Connected Tools should also make package-version policy visible instead of hiding it in install internals; the current library now also carries deployment-boundary and bundle-posture metadata, while the next interoperability slice should preserve enough metadata to round-trip against published `server.json` records without flattening Mycelis governance-specific fields
+- Capabilities should also make package-version policy visible instead of hiding it in install internals; the current library now also carries deployment-boundary and bundle-posture metadata, while the next interoperability slice should preserve enough metadata to round-trip against published `server.json` records without flattening Mycelis governance-specific fields
 - enterprise packaging may later ship pinned supported bundle profiles for entries such as `filesystem`, `fetch`, `github`, `slack`, `postgres`, and `brave-search`, but free self-hosted deployments should still be able to install curated entries manually through the same governed path
 
 Useful Soma prompts from this surface:
@@ -195,7 +204,7 @@ MYCELIS_ARTIFACT_ROOT=./workspace/artifacts
 Use `System -> Deployments` to confirm the runtime is reporting the same workspace root and artifact root that you expect on disk.
 
 New-user proof should verify both sides of this boundary:
-- `Resources -> Connected Tools` shows whether `filesystem` is installed and connected.
+- `Resources -> Capabilities` shows whether `filesystem` is installed and connected.
 - `Resources -> Output Files` can browse/read/write only under the governed workspace boundary and can open the current local folder through the workspace-confined reveal endpoint.
 - `System -> Deployments` reports the deployment/workspace/artifact roots that explain where generated output will land.
 - A retained demo output or project package opened from Soma/Teams/Groups resolves to the same workspace root family instead of a hidden process working directory; team-owned packages and media should be inside the selected group folder unless the operator explicitly chose another workspace path.
@@ -208,7 +217,7 @@ Supported operator actions:
 
 Operational behavior:
 - if `filesystem` is not installed or not connected, explorer shows actionable recovery controls
-- the recovery state keeps two paths visible: **Open Connected Tools** to repair or install filesystem MCP, and **View storage roots** to confirm where generated output is mounted while MCP recovers
+- the recovery state keeps two paths visible: **Open Capabilities** to repair or install filesystem MCP, and **View storage roots** to confirm where generated output is mounted while MCP recovers
 - all tool calls run through the same API request contract used by other resource channels: `{"arguments": {...}}`
 - workspace boundaries still apply (sandboxed filesystem rules)
 

@@ -22,6 +22,27 @@ export interface MCPTool {
     capability_id?: string;
 }
 
+export type MCPToolSetScopeKind = 'all' | 'group' | 'host';
+
+export interface MCPToolSet {
+    id: string;
+    name: string;
+    description?: string;
+    tool_refs: string[];
+    scope_kind: MCPToolSetScopeKind;
+    scope_ref?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface MCPToolSetCreate {
+    name: string;
+    description?: string;
+    tool_refs: string[];
+    scope_kind: MCPToolSetScopeKind;
+    scope_ref?: string;
+}
+
 export interface MCPServerWithTools extends MCPServer {
     tools: MCPTool[];
 }

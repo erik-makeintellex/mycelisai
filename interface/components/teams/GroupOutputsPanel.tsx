@@ -1,6 +1,15 @@
-import { Download, ShieldCheck } from "lucide-react";
+import { Download, FolderOpen, ShieldCheck } from "lucide-react";
 import OutputAccessActions from "@/components/soma/OutputAccessActions";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
+import {
+  OUTPUT_PACKAGE_FOLDER_LABEL,
+  OUTPUT_PACKAGE_OPEN_LABEL,
+  OUTPUT_PACKAGE_RESOURCES_LABEL,
+  projectPackageOpenPath,
+  projectPackageResourcesHref,
+  projectPackageRevealPath,
+  workspaceFileHref,
+} from "@/lib/outputPackageModel";
 import { relativeTime, type OutputSummary } from "./groupWorkspaceTypes";
 import { Badge } from "./GroupDetailPane";
 
@@ -64,12 +73,9 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
   const folder = stringMetadata(artifact.metadata, "folder");
   const files = stringArrayMetadata(artifact.metadata, "files");
   const validation = stringMetadata(artifact.metadata, "validation");
-  const outputPath = projectPackage
-    ? entrypoint || artifact.file_path || ""
-    : outputPathForArtifact(artifact);
-  const packageHref = projectPackage
-    ? workspaceFileHref(outputPath)
-    : null;
+  const packagePath = projectPackageOpenPath({ folder, entrypoint, filePath: artifact.file_path });
+  const outputPath = projectPackage ? packagePath ?? "" : outputPathForArtifact(artifact);
+  const packageHref = projectPackage ? workspaceFileHref(packagePath) : null;
   const outputHref = !projectPackage ? workspaceFileHref(outputPath) : null;
   const htmlOutput = isHtmlArtifact(artifact);
   const readable =
@@ -95,7 +101,7 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
               label={artifact.title}
               url={outputHref}
               storagePath={outputPath}
-              openLabel={htmlOutput ? "Open output" : "Open file"}
+              openLabel="Open file"
             />
           ) : null}
           <a
@@ -121,7 +127,7 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
         <div className="mt-3 rounded-xl border border-cortex-border bg-cortex-bg p-3 text-sm leading-6 text-cortex-text-muted">
           HTML output is saved as a browser-viewable file. Use{" "}
           <span className="font-semibold text-cortex-text-main">
-            Open output
+            Open file
           </span>{" "}
           to inspect the rendered result.
         </div>
@@ -153,21 +159,37 @@ function ProjectPackage({
   validation: string;
   packageHref: string | null;
 }) {
+  const revealPath = projectPackageRevealPath({ folder, entrypoint, filePath: artifact.file_path });
+  const resourcesHref = projectPackageResourcesHref({ folder, entrypoint, filePath: artifact.file_path });
   return (
     <div className="mt-3 space-y-3 rounded-lg border border-cortex-border bg-cortex-bg p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cortex-text-muted">
           Project package
         </p>
-        <OutputAccessActions
-          label={artifact.title}
-          url={packageHref}
-          storagePath={folder || entrypoint || artifact.file_path}
-          openLabel="Open Game"
-        />
+        <span className="inline-flex flex-wrap items-center gap-1">
+          {resourcesHref ? (
+            <a
+              href={resourcesHref}
+              className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-border/80 bg-cortex-bg/70 px-2.5 text-[11px] font-semibold text-cortex-text-main transition-colors hover:border-cortex-primary/45 hover:bg-cortex-primary/10 hover:text-cortex-primary"
+              title={`Browse ${artifact.title} in Resources`}
+              aria-label={`Open ${artifact.title} in Resources`}
+            >
+              <FolderOpen className="h-3 w-3" />
+              {OUTPUT_PACKAGE_RESOURCES_LABEL}
+            </a>
+          ) : null}
+          <OutputAccessActions
+            label={artifact.title}
+            url={packageHref}
+            storagePath={revealPath}
+            openLabel={OUTPUT_PACKAGE_OPEN_LABEL}
+            folderLabel={OUTPUT_PACKAGE_FOLDER_LABEL}
+          />
+        </span>
       </div>
       {entrypoint ? <MetaLine label="Entrypoint" value={entrypoint} /> : null}
-      {folder ? <MetaLine label="Storage" value={folder} /> : null}
+      {folder ? <MetaLine label="Workspace folder" value={folder} /> : null}
       {files.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {files.slice(0, 8).map((file) => (
@@ -212,12 +234,6 @@ function stringArrayMetadata(
   return value
     .map((item) => (typeof item === "string" ? item.trim() : ""))
     .filter(Boolean);
-}
-
-function workspaceFileHref(path: string) {
-  const trimmed = path.trim();
-  if (!trimmed) return null;
-  return `/api/v1/workspace/files/view?path=${encodeURIComponent(trimmed)}`;
 }
 
 function outputPathForArtifact(artifact: Artifact) {

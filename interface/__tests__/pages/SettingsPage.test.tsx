@@ -130,7 +130,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.getByText('People & Access')).toBeDefined();
         expect(screen.getByText('AI Engines')).toBeDefined();
         expect(screen.getByText('Auth Providers')).toBeDefined();
-        expect(screen.getByText('Connected Tools')).toBeDefined();
+        expect(screen.getByText('Capabilities')).toBeDefined();
     });
 
     it('defaults to profile tab with appearance settings', async () => {
@@ -166,7 +166,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
 
         expect(screen.queryByText('AI Engines')).toBeNull();
         expect(screen.queryByText('Auth Providers')).toBeNull();
-        expect(screen.queryByText('Connected Tools')).toBeNull();
+        expect(screen.queryByText('Capabilities')).toBeNull();
         expect(screen.getByText('Advanced controls unlock the full admin checklist')).toBeDefined();
         expect(screen.queryByText('Advanced controls are open')).toBeNull();
     });
@@ -193,11 +193,11 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         window.history.pushState({}, '', '/settings?tab=tools');
         const view = render(<SettingsPage />);
 
-        expect(await screen.findByText('Connected Tools lives in Advanced mode')).toBeDefined();
+        expect(await screen.findByText('Capabilities lives in Advanced mode')).toBeDefined();
         expect(screen.queryByTestId('mcp-tool-registry')).toBeNull();
 
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Open Connected Tools' }));
+            fireEvent.click(screen.getByRole('button', { name: 'Open Capabilities' }));
         });
 
         expect(mockToggleAdvancedMode).toHaveBeenCalled();
@@ -208,8 +208,8 @@ describe('Settings Page (app/settings/page.tsx)', () => {
             view.rerender(<SettingsPage />);
         });
 
-        expect(screen.getByText('Manage MCP and search from Resources.')).toBeDefined();
-        expect(screen.getByRole('link', { name: 'Open Resources tools' }).getAttribute('href')).toBe('/resources?tab=tools');
+        expect(screen.getByText('Manage capabilities, MCP, and search from Resources.')).toBeDefined();
+        expect(screen.getByRole('link', { name: 'Open Resources capabilities' }).getAttribute('href')).toBe('/resources?tab=tools');
     });
 
     it('opens the enterprise auth provider scaffold from advanced settings', async () => {

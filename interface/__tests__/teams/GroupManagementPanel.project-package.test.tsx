@@ -26,7 +26,7 @@ describe("GroupManagementPanel project package outputs", () => {
             title: "Coin Runner Game",
             content_type: "application/vnd.mycelis.project+json",
             metadata: {
-              entrypoint: "workspace/generated/coin-runner/index.html",
+              entrypoint: "dist/index.html",
               folder: "workspace/generated/coin-runner",
               files: ["index.html", "game.js", "styles.css"],
               validation: "Opened in browser and score increased after click.",
@@ -44,7 +44,7 @@ describe("GroupManagementPanel project package outputs", () => {
     );
     expect(screen.getByText("Project package")).toBeDefined();
     expect(
-      screen.getByText("workspace/generated/coin-runner/index.html"),
+      screen.getByText("dist/index.html"),
     ).toBeDefined();
     expect(screen.getByText("workspace/generated/coin-runner")).toBeDefined();
     expect(screen.getByText("game.js")).toBeDefined();
@@ -54,14 +54,19 @@ describe("GroupManagementPanel project package outputs", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: /Open Game Coin Runner Game in a new browser window/i,
+        name: /Open file Coin Runner Game in a new browser window/i,
       }),
     );
     expect(openWindow).toHaveBeenCalledWith(
-      "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fcoin-runner%2Findex.html",
+      "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fcoin-runner%2Fdist%2Findex.html",
       "_blank",
       "noopener,noreferrer",
     );
+    expect(
+      screen.getByRole("link", {
+        name: /Open Coin Runner Game in Resources/i,
+      }).getAttribute("href"),
+    ).toBe("/resources?tab=workspace&path=workspace%2Fgenerated%2Fcoin-runner");
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -74,6 +79,49 @@ describe("GroupManagementPanel project package outputs", () => {
         { method: "POST" },
       ),
     );
+    openWindow.mockRestore();
+  });
+
+  it("opens sparse package outputs from the saved file path", async () => {
+    const openWindow = vi.spyOn(window, "open").mockImplementation(() => null);
+    installGroupsFetch({
+      groups: [tempGroup()],
+      outputs: {
+        "group-temp": [
+          documentArtifact({
+            id: "artifact-sparse-game",
+            artifact_type: "project_package",
+            title: "Sparse Game Package",
+            content_type: "application/vnd.mycelis.project+json",
+            file_path: "workspace/generated/sparse-game/index.html",
+            metadata: {},
+          }),
+        ],
+      },
+    });
+
+    render(<GroupManagementPanel initialSelectedGroupId="group-temp" />);
+
+    fireEvent.click(screen.getByRole("tab", { name: /Outputs/i }));
+    await waitFor(() =>
+      expect(screen.getByText("Sparse Game Package")).toBeDefined(),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /Open file Sparse Game Package in a new browser window/i,
+      }),
+    );
+    expect(openWindow).toHaveBeenCalledWith(
+      "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fsparse-game%2Findex.html",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(
+      screen.getByRole("link", {
+        name: /Open Sparse Game Package in Resources/i,
+      }).getAttribute("href"),
+    ).toBe("/resources?tab=workspace&path=workspace%2Fgenerated%2Fsparse-game");
     openWindow.mockRestore();
   });
 
@@ -108,7 +156,7 @@ describe("GroupManagementPanel project package outputs", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: /Open output workspace\/logs\/qa_orbit_dash.html in a new browser window/i,
+        name: /Open file workspace\/logs\/qa_orbit_dash.html in a new browser window/i,
       }),
     );
     expect(openWindow).toHaveBeenCalledWith(

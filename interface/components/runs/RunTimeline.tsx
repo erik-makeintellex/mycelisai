@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { MissionEvent } from "@/store/useCortexStore";
 import EventCard from "./EventCard";
+import RunReceipt from "./RunReceipt";
 
 // ── Terminal event types — stop polling ───────────────────────
 
@@ -190,6 +191,7 @@ export default function RunTimeline({ runId }: Props) {
 
                 {!loading && events.length > 0 && (
                     <div>
+                        <RunReceipt events={events} runId={runId} />
                         {events.map((event, i) => (
                             <EventCard
                                 key={event.id}

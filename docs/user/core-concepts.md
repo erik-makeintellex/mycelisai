@@ -219,12 +219,12 @@ If NATS degrades, UI enters degraded mode and offers recovery actions.
 
 ---
 
-## Connected Tools
+## Capabilities And Connected Tools
 
 Connected tools extend agent capabilities (filesystem, fetch, memory, etc.).
 
 Primary surfaces:
-- `Resources -> Connected Tools` for server/tool visibility and install flows
+- `Resources -> Capabilities` for what Soma can use, repair, or request, with server/tool visibility behind Inspect
 - `Workspace` for actual tool usage via agent execution
 
 Current baseline profile:

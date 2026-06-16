@@ -117,6 +117,58 @@ describe('useCortexStore resource registry', () => {
             expect(useCortexStore.getState().mcpActivity).toEqual(activity);
         });
 
+        it('stores scoped MCP access layers from API', async () => {
+            const toolSets = [
+                {
+                    id: 'set-workspace',
+                    name: 'workspace',
+                    tool_refs: ['mcp:filesystem/*'],
+                    scope_kind: 'all',
+                },
+                {
+                    id: 'set-host',
+                    name: 'deploy',
+                    tool_refs: ['mcp:ssh/*'],
+                    scope_kind: 'host',
+                    scope_ref: 'edge-node-1',
+                },
+            ];
+            mockFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true, data: toolSets }) });
+
+            await useCortexStore.getState().fetchMCPToolSets();
+
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/mcp/toolsets');
+            expect(useCortexStore.getState().mcpToolSets).toEqual(toolSets);
+            expect(useCortexStore.getState().mcpToolSetsError).toBeNull();
+        });
+
+        it('creates a scoped MCP access layer and refreshes the list', async () => {
+            mockFetch
+                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: { id: 'set-host' } }) })
+                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: [] }) });
+
+            const ok = await useCortexStore.getState().createMCPToolSet({
+                name: 'deploy',
+                description: 'Deployment tools',
+                tool_refs: ['mcp:ssh/*'],
+                scope_kind: 'host',
+                scope_ref: 'edge-node-1',
+            });
+
+            expect(ok).toBe(true);
+            expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/v1/mcp/toolsets', expect.objectContaining({
+                method: 'POST',
+                body: JSON.stringify({
+                    name: 'deploy',
+                    description: 'Deployment tools',
+                    tool_refs: ['mcp:ssh/*'],
+                    scope_kind: 'host',
+                    scope_ref: 'edge-node-1',
+                }),
+            }));
+            expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/v1/mcp/toolsets');
+        });
+
         it('stores Mycelis Search capability status from API', async () => {
             const status = {
                 provider: 'searxng',
@@ -145,6 +197,40 @@ describe('useCortexStore resource registry', () => {
 
             expect(useCortexStore.getState().searchCapability).toBeNull();
             expect(useCortexStore.getState().searchCapabilityError).toContain('HTTP 503');
+        });
+
+        it('normalizes capability manifests without exposing tool refs as outputs', async () => {
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    data: {
+                        capabilities: [{
+                            id: 'filesystem.read',
+                            display_name: 'Read workspace files',
+                            source: 'mcp',
+                            kind: 'filesystem',
+                            risk_class: 'low',
+                            approval_required: false,
+                            audit_required: true,
+                            output_schema_ref: 'schemas/filesystem/FileReadResult',
+                            tool_refs: ['mcp:filesystem/read_file'],
+                            default_allowed_roles: ['soma'],
+                            metadata: { server_name: 'filesystem', provider: 'mcp' },
+                        }],
+                    },
+                }),
+            });
+
+            await useCortexStore.getState().fetchCapabilities();
+
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/capabilities');
+            expect(useCortexStore.getState().capabilities[0]).toMatchObject({
+                name: 'Read workspace files',
+                outputs: ['FileReadResult output'],
+                bound_server_name: 'filesystem',
+                bound_tool_name: 'read_file',
+            });
         });
     });
 

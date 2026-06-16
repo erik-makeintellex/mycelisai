@@ -125,7 +125,10 @@ describe("SomaWorkspaceFrame", () => {
     fireEvent.click(toggle);
 
     const sideRail = screen.getByTestId("soma-workbench-side-rail");
-    expect(within(sideRail).getByRole("tab", { name: /Work/i }).getAttribute("aria-selected")).toBe("true");
+    expect(within(sideRail).getByText("Review work")).toBeDefined();
+    expect(within(sideRail).getByText(/Understand the item/i)).toBeDefined();
+    expect(within(sideRail).queryByRole("tab", { name: /Work/i })).toBeNull();
+    expect(within(sideRail).getByRole("link", { name: /Open inbox/i }).getAttribute("href")).toBe("/teams?view=work");
     expect(within(sideRail).getByText("Running team task")).toBeDefined();
     expect(within(sideRail).queryByText("Generated page")).toBeNull();
   });

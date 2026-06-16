@@ -119,7 +119,19 @@ describe("WorkspaceExplorer", () => {
         expect(screen.getByText("workspace/generated/game")).toBeDefined();
     });
 
-    it("guides operators to Connected Tools and storage roots when filesystem is missing", async () => {
+    it("normalizes retained output deep links into the workspace browser root", async () => {
+        const { calls } = mockToolFetch();
+
+        render(<WorkspaceExplorer initialPath="groups/game-team/generated/first-game" onOpenToolsTab={vi.fn()} />);
+
+        await waitFor(() => {
+            expect(calls.some((call) => call.tool === "list_directory")).toBe(true);
+        });
+        expect(calls[0].body).toEqual({ arguments: { path: "workspace/groups/game-team/generated/first-game" } });
+        expect(screen.getByText("workspace/groups/game-team/generated/first-game")).toBeDefined();
+    });
+
+    it("guides operators to Capabilities and storage roots when filesystem is missing", async () => {
         mockMCPServers = [];
         const onOpenToolsTab = vi.fn();
 
@@ -127,7 +139,7 @@ describe("WorkspaceExplorer", () => {
 
         expect(screen.getByText("Filesystem MCP not installed")).toBeDefined();
         expect(screen.getByRole("link", { name: /View storage roots/i }).getAttribute("href")).toBe("/system?tab=deployments");
-        fireEvent.click(screen.getByRole("button", { name: /Open Connected Tools/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Open Capabilities/i }));
         expect(onOpenToolsTab).toHaveBeenCalledOnce();
         fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
         expect(mockFetchMCPServers).toHaveBeenCalled();

@@ -116,6 +116,9 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await page.route("**/api/v1/groups", async (route) => {
       await fulfillJSON(route, 200, { ok: true, data: groups });
     });
+    await page.route("**/api/v1/groups/monitor", async (route) => {
+      await fulfillJSON(route, 200, { ok: true, data: { online: true, last_group_id: groups[0].group_id } });
+    });
     await page.route(/\/api\/v1\/groups\/([^/]+)\/outputs\?limit=8$/, async (route) => {
       await fulfillJSON(route, 200, { ok: true, data: groupOutputs });
     });
@@ -131,7 +134,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await openOrganization(page);
     await sendWorkspaceMessage(page, firstDemoAsk);
     await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
+    await page.getByRole("button", { name: /^Run now$/i }).last().click();
     const failureCard = page.getByTestId("execution-summary-card").last();
     await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
     await expect(failureCard.getByText("Details and proof")).toBeVisible();
@@ -144,7 +147,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
 
     await sendWorkspaceMessage(page, firstDemoAsk);
     await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
+    await page.getByRole("button", { name: /^Run now$/i }).last().click();
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
     await expect(page.locator(`a[href="/runs/${retryRunId}"]`).first()).toBeVisible();
 
@@ -161,8 +164,9 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await expect(outputPage.locator("body")).toContainText("validation-notes.md");
     await outputPage.close();
 
-    await page.goto("/groups?group_id=group-first-demo-package", { waitUntil: "domcontentloaded" });
+    await page.goto("/groups?group_id=group-first-demo-package&advanced=1", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "First Demo Game Team temporary workflow" })).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("tab", { name: /Outputs/i }).click();
     await expect(page.getByText("Project package")).toBeVisible();
     await expect(page.getByText(entrypoint)).toBeVisible();
     await expect(page.getByText(folder, { exact: true })).toBeVisible();

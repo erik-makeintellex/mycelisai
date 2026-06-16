@@ -69,8 +69,13 @@ describe("TeamsPage review route", () => {
       expect(screen.getByText("Draft launch package")).toBeDefined();
     });
     expect(screen.getByLabelText("Review queue summary")).toBeDefined();
+    expect(screen.getByTestId("work-review-inbox")).toBeDefined();
+    expect(screen.getByRole("list", { name: "Review work items" })).toBeDefined();
+    expect(screen.getByLabelText("Review details for Playwright bounded team ask proof")).toBeDefined();
+    expect(screen.getAllByRole("button", { name: /Clear from review/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /Open output/i })).toBeDefined();
     expect(screen.getAllByText("Reason").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Decision actions").length).toBeGreaterThan(0);
+    expect(screen.getByText("Other available actions")).toBeDefined();
     expect(screen.getByText(/Clear this from review. Nothing ran/i)).toBeDefined();
     expect(screen.queryByText("Archived stale proof")).toBeNull();
     const pageText = document.body.textContent ?? "";

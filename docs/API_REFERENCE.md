@@ -131,9 +131,9 @@ Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity
 | `/api/v1/mcp/library/inspect` | POST | Policy inspection preview for a library candidate (`allow|require_approval|deny`) before install. MCP settings installs may send `governance_context` so owner-scoped current-group config can auto-allow without a second approval loop |
 | `/api/v1/mcp/library/install` | POST | Apply/install from library by name. Allowed installs are idempotent by server name: a repeated install updates/reconnects the existing server instead of failing on duplicate registry state. Curated `filesystem` installs are runtime-normalized to the configured workspace root before persistence/launch. Returns `202` with inspection details when the candidate still requires approval |
 | `/api/v1/mcp/library/apply` | POST | One-call inspect/apply path for curated MCP candidates. Allowed installs are idempotent by server name, curated `filesystem` installs use the deployment workspace root, and success returns `status=installed` with server/tools/governance; boundary cases return `status=requires_approval` with inspection details |
-| `/api/v1/mcp/toolsets` | GET | List MCP tool sets (`tenant_id='default'`) |
-| `/api/v1/mcp/toolsets` | POST | Create MCP tool set (name, description, tool_refs, optional `governance_context`) |
-| `/api/v1/mcp/toolsets/{id}` | PUT | Update MCP tool set by ID (`404` if not found, optional `governance_context`) |
+| `/api/v1/mcp/toolsets` | GET | List MCP tool sets (`tenant_id='default'`) including `scope_kind` and optional `scope_ref` |
+| `/api/v1/mcp/toolsets` | POST | Create MCP tool set (`name`, `description`, `tool_refs`, `scope_kind=all\|group\|host`, optional `scope_ref`, optional `governance_context`) |
+| `/api/v1/mcp/toolsets/{id}` | PUT | Update MCP tool set by ID (`404` if not found; same scope fields as create; optional `governance_context`) |
 | `/api/v1/mcp/toolsets/{id}` | DELETE | Delete MCP tool set by ID (response includes normalized governance posture) |
 | **Governance Policy** | | |
 | `/api/v1/governance/policy` | GET/PUT | Read/update governance policy rules |

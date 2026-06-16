@@ -80,8 +80,37 @@ test.describe("Canonical first-demo success path", () => {
     await page.route("**/api/v1/groups", async (route) => {
       await fulfillJSON(route, 200, { ok: true, data: groups });
     });
+    await page.route("**/api/v1/groups/monitor", async (route) => {
+      await fulfillJSON(route, 200, { ok: true, data: { online: true, last_group_id: groups[0].group_id } });
+    });
     await page.route(/\/api\/v1\/groups\/([^/]+)\/outputs\?limit=8$/, async (route) => {
       await fulfillJSON(route, 200, { ok: true, data: groupOutputs });
+    });
+    await page.route("**/api/v1/mcp/servers", async (route) => {
+      await fulfillJSON(route, 200, [{
+        id: "filesystem-server",
+        name: "filesystem",
+        status: "connected",
+        transport: "stdio",
+        tools: [
+          { id: "list-directory", name: "list_directory", description: "List workspace files" },
+          { id: "read-text-file", name: "read_text_file", description: "Read workspace files" },
+        ],
+      }]);
+    });
+    await page.route("**/api/v1/mcp/servers/filesystem-server/tools/*/call", async (route) => {
+      const tool = route.request().url().match(/\/tools\/([^/]+)\/call$/)?.[1] ?? "";
+      const body = route.request().postDataJSON() as { arguments?: { path?: string } };
+      const requestedPath = body.arguments?.path ?? "";
+      if (tool === "list_directory" && requestedPath === folder) {
+        await fulfillJSON(route, 200, { content: [{ type: "text", text: "[FILE] index.html\n[FILE] README.md\n[FILE] validation-notes.md" }] });
+        return;
+      }
+      if (tool === "read_text_file") {
+        await fulfillJSON(route, 200, { content: [{ type: "text", text: "# Coin Runner Game\nMocked package README." }] });
+        return;
+      }
+      await fulfillJSON(route, 404, { error: `unexpected filesystem tool call: ${tool}` });
     });
     await page.context().route(/\/api\/v1\/workspace\/files\/view(?:\?.*)?$/, async (route) => {
       await route.fulfill({
@@ -114,8 +143,18 @@ test.describe("Canonical first-demo success path", () => {
     await expect(outputPage.locator("body")).toContainText("validation-notes.md");
     await outputPage.close();
 
-    await page.goto("/groups?group_id=group-first-demo-package-success", { waitUntil: "domcontentloaded" });
+    await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
+    await page.getByRole("button", { name: /Review output/i }).last().click();
+    await page.getByRole("link", { name: `Open ${packageTitle} in Resources` }).last().click();
+    await expect(page).toHaveURL(new RegExp(`/resources\\?tab=workspace&path=${encodeURIComponent(folder)}`));
+    await expect(page.getByRole("heading", { name: "Advanced Resources" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(folder).last()).toBeVisible();
+    await expect(page.getByText("index.html")).toBeVisible();
+    await expect(page.getByText("README.md")).toBeVisible();
+
+    await page.goto("/groups?group_id=group-first-demo-package-success&advanced=1", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "First Demo Game Team retained output" })).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("tab", { name: /Outputs/i }).click();
     await expect(page.getByText("Project package")).toBeVisible();
     await expect(page.getByText(entrypoint)).toBeVisible();
     await expect(page.getByText(folder, { exact: true })).toBeVisible();

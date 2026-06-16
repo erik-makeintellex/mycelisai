@@ -32,6 +32,22 @@ Activity is a split admin view: select a run on the left, then inspect its recor
 
 ---
 
+## Reading The Run Receipt
+
+The Events view now starts with a **Run receipt** before the raw event stream. Read this first.
+
+| Receipt Field | What It Answers |
+| --- | --- |
+| **What happened** | The useful outcome or failure summary from the latest terminal event. |
+| **What to trust** | Whether completed output/proof is reliable, provisional, or invalid for this attempt. |
+| **Next step** | What the operator should do now: review output, wait, inspect events, or recover. |
+| **Output refs** | Retained output references detected in the run evidence. |
+| **Proof refs** | Audit/proof identifiers detected in the run evidence. |
+
+Use **Inspect receipt evidence** when you need the exact run ID, output references, or proof references. Use the event stream below it only when you need low-level audit detail.
+
+---
+
 ## Reading the Timeline
 
 The timeline is a vertical sequence of event cards, oldest at top, newest at bottom. Auto-refreshes every 5 seconds while the run is active.

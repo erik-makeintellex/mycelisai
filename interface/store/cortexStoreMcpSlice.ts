@@ -1,7 +1,18 @@
 import { extractApiData } from '@/lib/apiContracts';
 import { isSearchCapabilityStatus, normalizeCapabilitiesPayload } from '@/store/cortexStoreMcpCapabilities';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
-import type { CapabilityManifest, MCPActivityEntry, MCPGovernanceDecision, MCPInstallResult, MCPServerWithTools, MCPLibraryCategory, MCPTool, SearchCapabilityStatus } from '@/store/cortexStoreTypes';
+import type {
+    CapabilityManifest,
+    MCPActivityEntry,
+    MCPGovernanceDecision,
+    MCPInstallResult,
+    MCPServerWithTools,
+    MCPLibraryCategory,
+    MCPTool,
+    MCPToolSet,
+    MCPToolSetCreate,
+    SearchCapabilityStatus,
+} from '@/store/cortexStoreTypes';
 
 interface MCPLibraryInspectionResponse {
     decision?: string;
@@ -35,6 +46,8 @@ export function createCortexMcpSlice(
     | 'fetchMCPActivity'
     | 'deleteMCPServer'
     | 'fetchMCPTools'
+    | 'fetchMCPToolSets'
+    | 'createMCPToolSet'
     | 'fetchMCPLibrary'
     | 'installFromLibrary'
     | 'fetchSearchCapability'
@@ -98,6 +111,55 @@ export function createCortexMcpSlice(
             } catch {
                 set({ mcpTools: [] });
             }
+        },
+
+        fetchMCPToolSets: async () => {
+            set({ isFetchingMCPToolSets: true, mcpToolSetsError: null });
+            try {
+                const res = await fetch('/api/v1/mcp/toolsets');
+                if (res.ok) {
+                    const payload = await res.json();
+                    const data = extractApiData<MCPToolSet[] | unknown>(payload);
+                    set({
+                        mcpToolSets: Array.isArray(data) ? data : [],
+                        isFetchingMCPToolSets: false,
+                        mcpToolSetsError: null,
+                    });
+                } else {
+                    set({
+                        mcpToolSets: [],
+                        isFetchingMCPToolSets: false,
+                        mcpToolSetsError: `MCP access layers unreachable (HTTP ${res.status})`,
+                    });
+                }
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'network error';
+                set({
+                    mcpToolSets: [],
+                    isFetchingMCPToolSets: false,
+                    mcpToolSetsError: `MCP access layers unreachable (${message})`,
+                });
+            }
+        },
+
+        createMCPToolSet: async (input: MCPToolSetCreate) => {
+            try {
+                const res = await fetch('/api/v1/mcp/toolsets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(input),
+                });
+                if (res.ok) {
+                    await get().fetchMCPToolSets();
+                    return true;
+                }
+                const message = await res.text();
+                set({ mcpToolSetsError: message || `MCP access layer was rejected (HTTP ${res.status})` });
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'network error';
+                set({ mcpToolSetsError: `MCP access layer could not be saved (${message})` });
+            }
+            return false;
         },
 
         fetchMCPLibrary: async () => {

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mycelis V8.3 Release Architecture Delivery Brief</title>
+  <style>
+    :root {
+      color-scheme: dark light;
+      --bg: #0f141c;
+      --surface: #151c26;
+      --text: #f5f7fb;
+      --muted: #b5c0d1;
+      --line: #2b3545;
+      --accent: #7de0cf;
+      --warn: #ffd35a;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+    main {
+      width: min(980px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 48px 0 72px;
+    }
+    h1, h2, h3 { line-height: 1.2; }
+    h1 { font-size: 2.25rem; margin: 0 0 12px; }
+    h2 { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 24px; }
+    h3 { margin-top: 24px; color: var(--accent); }
+    p, li { color: var(--muted); }
+    .meta, .callout {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 18px 0;
+    }
+    code, pre {
+      font-family: "Cascadia Code", Consolas, monospace;
+    }
+    pre {
+      overflow: auto;
+      border: 1px solid var(--line);
+      background: #0a0e14;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--accent); background: #101722; }
+    a { color: var(--accent); }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 22px 0;
+    }
+    button {
+      border: 1px solid rgba(125, 224, 207, 0.45);
+      border-radius: 8px;
+      background: rgba(125, 224, 207, 0.12);
+      color: var(--text);
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    @media print {
+      body { background: white; color: #111827; }
+      p, li { color: #1f2937; }
+      .actions { display: none; }
+      .meta, .callout, pre, th, td { border-color: #d1d5db; }
+      .meta, .callout, pre, th { background: #f9fafb; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Mycelis V8.3 Release Architecture Delivery Brief</h1>
+  <div class="meta">
+    <strong>Status:</strong> ACTIVE<br />
+    <strong>Last Updated:</strong> 2026-06-14<br />
+    <strong>Purpose:</strong> Compact, shareable architecture delivery document for the current MVP-to-release path.
+  </div>
+  <div class="actions">
+    <button onclick="window.print()">Print / Save as PDF</button>
+    <button onclick="location.href='V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md'">Open Markdown</button>
+  </div>
+
+  <h2>Executive Summary</h2>
+  <p>Mycelis V8.3 is converging from architecture expansion into operational embodiment. The product target is simple: I tell Soma what I want; Soma safely directs execution; I can see active work, outputs, proof, and recovery; I can trust what happened later.</p>
+  <p>Mycelis should now be described as a <strong>Soma-centered governed cognitive operating environment</strong>. The architecture remains deep internally, but the default user experience must collapse around visible execution, durable outputs, proof, recovery, and operator trust.</p>
+  <p>The operator-facing acceptance lens is defined in the V8.3 Soma User Experience Contract: users work through Soma, deliverables matter more than responses, proof and recovery must be visible, and advanced Inspect is optional.</p>
+  <p>The product-manifestation review is defined in the V8.3 Product Manifestation Architecture Review: every subsystem must justify user value, visibility, MVP classification, and adoption risk before it expands the visible product surface.</p>
+
+  <h2>Product Architecture Shape</h2>
+  <pre>Intent
+-> Soma understanding
+-> governed proposal or direct answer
+-> approved run when mutation/execution is required
+-> durable output package
+-> run receipt
+-> proof, recovery, or follow-up</pre>
+  <p>The default UI should not expose topology first. Advanced runtime detail belongs behind Inspect.</p>
+
+  <h2>Current Release Architecture Objects</h2>
+  <table>
+    <tr><th>Object</th><th>Operator Meaning</th><th>Release Requirement</th></tr>
+    <tr><td>Soma</td><td>Singular operating surface and continuity layer</td><td>Ask, review, approve, recover, and re-enter work from one trusted surface</td></tr>
+    <tr><td>Work Item</td><td>Something Soma or a team is doing, waiting on, or finished</td><td>Visible state, next action, output/proof links, and recovery path</td></tr>
+    <tr><td>Run Receipt</td><td>User-readable record of what happened</td><td>Outcome, status, output, trust, proof, recovery, inspect</td></tr>
+    <tr><td>Output Package</td><td>Durable generated result</td><td>Open file/app, open folder, open in Resources, proof, download/copy path where applicable</td></tr>
+    <tr><td>Capability</td><td>Governed tool/provider/integration Soma can use</td><td>Availability, risk, approval posture, output types, repair path</td></tr>
+    <tr><td>Recovery Item</td><td>Failed or degraded work that needs action</td><td>Failed, still trusted, not trusted, safe next</td></tr>
+    <tr><td>Advanced Run Map</td><td>Technical reconstruction of execution</td><td>Stepper/timeline/graph behind Inspect only</td></tr>
+  </table>
+
+  <h2>MVP Delivery Spine</h2>
+  <pre>User asks Soma to create or review meaningful work
+-> Soma evaluates intent
+-> proposal appears when governed execution is required
+-> operator approves
+-> execution creates a run/work item
+-> output package appears
+-> proof/audit/recovery is visible
+-> user revisits and trusts the result later</pre>
+
+  <h2>Delivery Ownership Model</h2>
+  <h3>Lane A - Soma Inbox And Review</h3>
+  <p>Owns Dashboard, review work, current work, and operator attention. Delivers Work Inbox tabs, list-detail review, one primary action per row, and selected detail with outcome, output, trust, recovery, conversation/events, and Inspect.</p>
+  <h3>Lane B - Output Package And Receipt</h3>
+  <p>Owns durable outputs and run receipts. Delivers one shared output package card, Soma and Groups convergence, rendered generated HTML/app opening, folder/resources/proof access, and source/code as secondary detail.</p>
+  <h3>Lane C - Resources Capability Catalog</h3>
+  <p>Owns tools, MCP, search, media, filesystem, AI engines, and runtime capability posture. Delivers capability-first Resources, availability states, risk and approval posture, and repair paths.</p>
+  <h3>Lane D - Runs, Proof, And Recovery</h3>
+  <p>Owns run receipts, recovery queue, and advanced inspect. Delivers receipt-first run pages, timeline/proof/raw payload behind tabs, unified recovery language, and the first advanced run-map stepper.</p>
+  <h3>Lane E - QA And Release Proof</h3>
+  <p>Owns validation and release confidence through one MVP proof script: login, Soma ask, proposal, approve, active work, output package, proof, Resources re-entry, and degraded sample recovery.</p>
+
+  <h2>Current P0 Delivery Train</h2>
+  <p>The P0 order is now release-convergence order. Do not reorder it unless a blocker demands it.</p>
+  <table>
+    <tr><th>Priority</th><th>Slice</th><th>Status</th><th>Exit Criteria</th></tr>
+    <tr><td>P0.1</td><td>Output package standard</td><td>ACTIVE</td><td>Soma, Groups, and Resources use one retained deliverable package pattern with preview/open/download/proof/inspect/revisit</td></tr>
+    <tr><td>P0.2</td><td>Service health and runtime proof</td><td>NEXT</td><td>Infrastructure, migrations, Core, Interface, and health reporting are clean and reachable</td></tr>
+    <tr><td>P0.3</td><td>Headed browser proof</td><td>NEXT</td><td>A real browser proves ask, approve, deliverable, open, and Resources/Groups re-entry</td></tr>
+    <tr><td>P0.4</td><td>Review inbox</td><td>NEXT</td><td>Review work becomes list-detail with one obvious next action</td></tr>
+    <tr><td>P0.5</td><td>Capability catalog</td><td>NEXT</td><td>Resources answers what Soma can use, repair, or request</td></tr>
+    <tr><td>P0.6</td><td>Run receipt standard</td><td>NEXT</td><td>Runs open to outcome, status, trust, proof, recovery, and outputs before raw logs</td></tr>
+    <tr><td>P0.7</td><td>Recovery queue</td><td>NEXT</td><td>Failure states show what failed, what remains trusted, what can retry, and what needs attention</td></tr>
+    <tr><td>P0.8</td><td>Full MVP proof</td><td>NEXT</td><td>Login, Soma request, proposal, approval, running work, deliverable, proof, re-entry, and recovery are green</td></tr>
+    <tr><td>P0.9</td><td>Documentation alignment</td><td>NEXT</td><td>State/docs explain proof and reality, not aspiration</td></tr>
+  </table>
+
+  <h2>P0.1 Current Implementation</h2>
+  <p>The output-package standardization slice is the active release-convergence priority. The earlier shared language and test fixture work is supporting groundwork inside this slice, not a separate release priority.</p>
+  <ul>
+    <li>Shared delivery-runtime language helper: <code>interface/lib/deliveryRuntimeLanguage.ts</code></li>
+    <li>Shared test fixture builders: <code>interface/__tests__/support/deliveryRuntimeFixtures.ts</code></li>
+    <li>Low-risk callers use shared language for output folder action states, local media recovery copy, compact review/failure copy, and Active Work state labels.</li>
+    <li>Shared output-package path/action helper: <code>interface/lib/outputPackageModel.ts</code></li>
+    <li>Soma and Groups share package open, folder, and Resources labels.</li>
+    <li>Groups project packages expose <strong>Open in Resources</strong> beside file and folder actions.</li>
+  </ul>
+  <p>Proof so far: focused output-package Vitest coverage and interface typecheck. Remaining before acceptance: headed browser proof opening a generated browser app/game from Soma and Groups, plus Resources folder re-entry proof.</p>
+  <p>P0.1 acceptance must satisfy the Soma UX contract: the operator should receive a retained deliverable package, not just a chat response or raw source dump.</p>
+
+  <h2>P0.2 And P0.3 Next Proof</h2>
+  <p>P0.2 brings the services up cleanly and proves runtime readiness. P0.3 proves the output package in a real headed browser. These are separate because a healthy stack is necessary but not sufficient; the user behavior must also work.</p>
+
+  <h2>UX Architecture Rules</h2>
+  <p>Default routes must answer what the user can do, what needs attention, and where the output or proof is. Complex surfaces should use bounded list-detail layouts, tabs inside selected detail, receipts before logs, output packages before raw tool output, one primary action per row/card, and Inspect for topology or raw payloads.</p>
+
+  <h2>Recovery And Confidence Posture</h2>
+  <p>Every degraded state should expose what failed, what remains trusted, what proof is invalid, what can continue safely, what requires retry, what requires operator attention, and what uncertainty now exists. Confidence provenance should be prepared through schemas and receipts, but not overbuilt before the MVP path works.</p>
+
+  <h2>Release Acceptance Standard</h2>
+  <p>A slice is not accepted unless it reports the operator problem solved, files changed, runtime/API contract touched or reviewed, docs changed, tests run, headed/browser proof when visible UI changed, and remaining trust/recovery gaps.</p>
+  <div class="callout">
+    <strong>Decisive release question:</strong><br />
+    Can a user trust this system through visible execution and recovery?
+  </div>
+</main>
+</body>
+</html>

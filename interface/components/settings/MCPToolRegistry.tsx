@@ -9,6 +9,7 @@ import { CapabilityRegistryPanel } from "./MCPToolCapabilityRegistry";
 import { formatActivityScope, useMCPRecentActivity } from "./MCPToolRegistryActivity";
 import { deriveFallbackCapabilities } from "./MCPToolRegistryCapabilities";
 import { ConnectedToolsWorkflowCard, SearchCapabilityCard, SomaToolPromptCard } from "./MCPToolGuidance";
+import { MCPToolSetLayersStorePanel } from "./MCPToolSetLayersPanel";
 
 type Tab = "installed" | "library";
 
@@ -32,9 +33,11 @@ export default function MCPToolRegistry() {
     const isFetchingCapabilities = useCortexStore((s) => s.isFetchingCapabilities);
     const capabilitiesError = useCortexStore((s) => s.capabilitiesError);
     const fetchCapabilities = useCortexStore((s) => s.fetchCapabilities);
+    const fetchMCPToolSets = useCortexStore((s) => s.fetchMCPToolSets);
 
     const [activeTab, setActiveTab] = useState<Tab>("installed");
     const [installNotice, setInstallNotice] = useState<string | null>(null);
+    const [showTopology, setShowTopology] = useState(false);
     const isRegistryErrorState = !isFetching && Boolean(mcpServersError);
     const isEmptyInstalledState = !isFetching && !mcpServersError && mcpServers.length === 0;
 
@@ -43,7 +46,8 @@ export default function MCPToolRegistry() {
         fetchMCPActivity();
         fetchSearchCapability();
         fetchCapabilities();
-    }, [fetchCapabilities, fetchMCPActivity, fetchMCPServers, fetchSearchCapability]);
+        fetchMCPToolSets();
+    }, [fetchCapabilities, fetchMCPActivity, fetchMCPServers, fetchMCPToolSets, fetchSearchCapability]);
 
     useEffect(() => {
         initializeStream();
@@ -81,7 +85,7 @@ export default function MCPToolRegistry() {
                     <div className="flex items-center gap-2.5">
                         <Wrench className="w-4 h-4 text-cortex-success" />
                         <span className="text-xs font-mono font-bold text-cortex-text-muted uppercase tracking-wider">
-                            Connected Tools
+                            Capabilities
                         </span>
                     </div>
                     <div className="flex items-center gap-1 bg-cortex-bg rounded-lg p-0.5 border border-cortex-border">
@@ -120,7 +124,7 @@ export default function MCPToolRegistry() {
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cortex-primary/10 border border-cortex-primary/30 text-xs font-mono font-bold text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
                     >
                         <BookOpen className="w-3.5 h-3.5" />
-                        ADD MCP SERVER
+                        Request capability
                     </button>
                 )}
             </div>
@@ -136,6 +140,7 @@ export default function MCPToolRegistry() {
                             error={capabilitiesError}
                             usingFallback={usingCapabilityFallback}
                         />
+                        <MCPToolSetLayersStorePanel />
 
                         <SearchCapabilityCard
                             status={searchCapability}
@@ -149,7 +154,7 @@ export default function MCPToolRegistry() {
                                     No MCP servers installed yet
                                 </p>
                                 <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
-                                    Default bootstrap is disabled in the compose home runtime, so Add MCP Server is the first activation step for connected tools.
+                                    Default bootstrap is disabled in the compose home runtime, so Add MCP Server is the first activation step for connected capabilities.
                                 </p>
                                 <p className="mt-2 text-[10px] font-mono leading-5 text-cortex-text-muted">
                                     Install a curated server such as filesystem or fetch, then return here to confirm the server card and recent activity appear.
@@ -163,7 +168,7 @@ export default function MCPToolRegistry() {
                                     MCP registry unreachable
                                 </p>
                                 <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
-                                    Connected Tools could not confirm installed MCP servers, so this is not treated as an empty registry.
+                                    Capabilities could not confirm installed MCP servers, so this is not treated as an empty registry.
                                 </p>
                                 <p className="mt-2 text-[10px] font-mono leading-5 text-cortex-text-muted">
                                     {mcpServersError}
@@ -240,7 +245,7 @@ export default function MCPToolRegistry() {
                                     onClick={() => setActiveTab("library")}
                                     className="mt-4 rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1.5 text-[10px] font-mono font-bold text-cortex-primary transition-colors hover:bg-cortex-primary/20"
                                 >
-                                    ADD FIRST MCP SERVER
+                                    REQUEST FIRST CAPABILITY
                                 </button>
                             </div>
                         )}
@@ -252,28 +257,37 @@ export default function MCPToolRegistry() {
                                         <ShieldCheck className="h-4 w-4 text-cortex-primary" />
                                         <div>
                                             <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                                                MCP Server Drill-Down
+                                                Advanced Inspect
                                             </p>
                                             <p className="mt-1 text-xs text-cortex-text-muted">
-                                                Server structure remains available for transport, command, secret refs, tool list, and activity review.
+                                                Raw MCP topology is available when you need transport, command, secret refs, tools, and activity detail.
                                             </p>
                                         </div>
                                     </div>
-                                    <span className="rounded-full border border-cortex-border bg-cortex-bg px-2 py-1 text-[10px] font-mono text-cortex-text-muted">
-                                        {mcpServers.length} server{mcpServers.length === 1 ? "" : "s"}
-                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowTopology((value) => !value)}
+                                        className="rounded border border-cortex-border bg-cortex-bg px-3 py-1.5 text-[10px] font-mono font-bold uppercase text-cortex-text-muted hover:text-cortex-text-main"
+                                    >
+                                        {showTopology ? "Hide topology" : "Inspect MCP topology"}
+                                    </button>
                                 </div>
-                                <div className="mt-3 space-y-3">
-                                    {mcpServers.map((server) => (
-                                        <MCPServerCard
-                                            key={server.id}
-                                            server={server}
-                                            onDelete={deleteMCPServer}
-                                            onEdit={() => setActiveTab("library")}
-                                            recentActivity={recentActivityByServer.get(server.id) ?? []}
-                                        />
-                                    ))}
-                                </div>
+                                {showTopology && (
+                                    <div className="mt-3 space-y-3">
+                                        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                                            MCP Server Drill-Down
+                                        </p>
+                                        {mcpServers.map((server) => (
+                                            <MCPServerCard
+                                                key={server.id}
+                                                server={server}
+                                                onDelete={deleteMCPServer}
+                                                onEdit={() => setActiveTab("library")}
+                                                recentActivity={recentActivityByServer.get(server.id) ?? []}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

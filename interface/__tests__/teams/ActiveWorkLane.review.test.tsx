@@ -48,10 +48,13 @@ describe("ActiveWorkLane review mode", () => {
     expect(within(summary).getByLabelText("Ready output: 1")).toBeDefined();
     expect(within(summary).getByLabelText("Still working: 1")).toBeDefined();
     expect(within(summary).getByLabelText("Can clear: 2")).toBeDefined();
+    expect(screen.getByTestId("work-review-inbox")).toBeDefined();
+    expect(screen.getByRole("list", { name: "Review work items" })).toBeDefined();
+    expect(screen.getByLabelText("Review details for Draft launch brief")).toBeDefined();
     expect(screen.getAllByText("Reason").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Trust").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Move").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Decision actions").length).toBeGreaterThan(0);
+    expect(screen.getByText("Other available actions")).toBeDefined();
     expect(screen.queryByText("What is safe to rely on")).toBeNull();
   });
 });

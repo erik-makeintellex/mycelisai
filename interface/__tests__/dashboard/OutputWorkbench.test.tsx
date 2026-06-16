@@ -12,10 +12,7 @@ import { outputWorkbenchDigest } from "@/components/soma/OutputWorkbenchDigest";
 import type { ExecutionSummaryData, TeamOutputRef } from "@/store/useCortexStore";
 
 describe("OutputWorkbench", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  beforeEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
   it("extracts project packages separately from retained outputs and artifacts", () => {
     const summary: ExecutionSummaryData = {
@@ -32,9 +29,7 @@ describe("OutputWorkbench", () => {
     };
 
     expect(projectPackageOutputs(summary.outputs)).toHaveLength(1);
-    expect(outputWorkbenchItems(summary, [{ type: "document", title: "Launch brief", url: "/runs/run-1" }])).toEqual([
-      { text: "Launch brief", url: "/runs/run-1" },
-    ]);
+    expect(outputWorkbenchItems(summary, [{ type: "document", title: "Launch brief", url: "/runs/run-1" }])).toEqual([{ text: "Launch brief", url: "/runs/run-1" }]);
     expect(outputWorkbenchItems(summary, [{ type: "document", title: "Operator notes", url: "/notes/1" }])).toEqual([
       { text: "Launch brief", url: "/runs/run-1" },
       { text: "Operator notes", url: "/notes/1" },
@@ -111,9 +106,7 @@ describe("OutputWorkbench", () => {
       "Newest focused brief",
       "Older focused brief",
     ]);
-    expect(outputWorkbenchDigest({ outputs: durableItems })).toMatchObject({
-      text: "Newest focused brief",
-    });
+    expect(outputWorkbenchDigest({ outputs: durableItems })).toMatchObject({ text: "Newest focused brief" });
   });
 
   it("normalizes retained media paths so Soma can preview and open generated content", () => {
@@ -189,15 +182,24 @@ describe("OutputWorkbench", () => {
       count: 1,
     });
 
-    const packageDigest = outputWorkbenchDigest({
+    expect(outputWorkbenchDigest({
       outputs: [{ text: "Game team folder", url: "/api/v1/workspace/files/view?path=groups%2Fgame-team", storagePath: "groups/game-team" }],
       projectPackages: [{ kind: "project_package", title: "Playable game", folder: "groups/game-team/generated/first-game", entrypoint: "groups/game-team/generated/first-game/index.html" }],
-    });
-    expect(packageDigest).toEqual({
+    })).toEqual({
       text: "Playable game",
       url: "/api/v1/workspace/files/view?path=groups%2Fgame-team%2Fgenerated%2Ffirst-game%2Findex.html",
       storagePath: "groups/game-team/generated/first-game",
       count: 2,
+    });
+
+    expect(outputWorkbenchDigest({
+      outputs: [],
+      projectPackages: [{ kind: "project_package", title: "Nested game", folder: "workspace/generated/nested-game", entrypoint: "dist/index.html" }],
+    })).toEqual({
+      text: "Nested game",
+      url: "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fnested-game%2Fdist%2Findex.html",
+      storagePath: "workspace/generated/nested-game",
+      count: 1,
     });
   });
 
@@ -254,7 +256,7 @@ describe("OutputWorkbench", () => {
             title: "Launch microsite",
             summary: "Reviewable output package",
             folder: "generated/launch",
-            entrypoint: "index.html",
+            entrypoint: "dist/index.html",
             files: ["index.html"],
             validation: "Smoke test passed",
           },
@@ -267,11 +269,11 @@ describe("OutputWorkbench", () => {
     expect(screen.getByText("Reviewable output package")).toBeDefined();
     expect(screen.getByText("Workspace folder")).toBeDefined();
     expect(screen.getByText("generated/launch")).toBeDefined();
-    expect(screen.getAllByText("index.html").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("dist/index.html").length).toBeGreaterThan(0);
     expect(screen.getByText("Smoke test passed")).toBeDefined();
     expect(screen.getByText("Latest output")).toBeDefined();
     expect(screen.getByText("Use Open file to view it, or Open folder to show it in the workspace.")).toBeDefined();
-    expect(screen.getByRole("link", { name: /Open Launch microsite in Resources/i }).getAttribute("href")).toBe("/resources?tab=workspace&path=generated%2Flaunch");
+    expect(screen.getByRole("link", { name: /Open Launch microsite in Resources/i }).getAttribute("href")).toBe("/resources?tab=workspace&path=workspace%2Fgenerated%2Flaunch");
     const verificationDetails = screen.getByText("Verification details").closest("details");
     expect(verificationDetails?.open).toBe(false);
     expect(screen.getByText("path verified")).toBeDefined();
