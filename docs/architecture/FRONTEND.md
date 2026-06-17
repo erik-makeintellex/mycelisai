@@ -33,8 +33,8 @@
 Primary app layout is implemented in `interface/app/(app)/layout.tsx` and `interface/components/shell/ShellLayout.tsx`.
 
 Release-candidate MVP note:
-- default operator navigation is intentionally smaller than the full route set: `Soma`, the current AI Organization when available, `Docs`, `Status`, and `Settings` stay visible by default, while `Groups`, `Activity/Runs`, `Resources/MCP`, `Memory`, and `System` are advanced/admin support routes
-- direct visits to advanced/admin support routes must show an explicit Advanced-mode gate when Advanced mode is off, and the gate must provide a reliable same-route `advanced=1` release path rather than trapping the operator behind hidden navigation
+- default operator navigation keeps the natural work-support paths visible: `Soma`, `Groups`, `Resources`, `Docs`, `Status`, and `Settings` stay visible by default, while `Activity/Runs`, `Memory`, and `System` remain Admin tools
+- direct visits to Admin tools routes must show an explicit Admin tools gate when Admin tools are off, and the gate must provide a reliable same-route release path rather than trapping the operator behind hidden navigation
 
 | Shell area | Component | Purpose |
 | --- | --- | --- |
@@ -62,7 +62,7 @@ Current `page.tsx` route count: `22`.
 | `/dashboard` | `app/(app)/dashboard/page.tsx` | Soma intent start and AI Organization entry flow |
 | `/organizations/[id]` | `app/(app)/organizations/[id]/page.tsx` | Soma-primary AI Organization workspace |
 | `/automations` | `app/(app)/automations/page.tsx` | Automation hub + tabs |
-| `/resources` | `app/(app)/resources/page.tsx` | Advanced resources (tools/files/AI engines/roles) |
+| `/resources` | `app/(app)/resources/page.tsx` | Resources (output files, capabilities, exchange, context, AI engines, roles) |
 | `/memory` | `app/(app)/memory/page.tsx` | Advanced memory explorer |
 | `/docs` | `app/(app)/docs/page.tsx` | In-app markdown docs browser |
 | `/system` | `app/(app)/system/page.tsx` | Advanced diagnostics and quick checks |
@@ -72,7 +72,7 @@ Current `page.tsx` route count: `22`.
 
 | Route | Source | Primary surface |
 | --- | --- | --- |
-| `/groups` | `app/(app)/groups/page.tsx` | Advanced group operations |
+| `/groups` | `app/(app)/groups/page.tsx` | Group operations and retained collaboration outputs |
 | `/runs` | `app/(app)/runs/page.tsx` | Run list and status summary |
 | `/runs/[id]` | `app/(app)/runs/[id]/page.tsx` | Run conversation/events tabs |
 | `/missions/[id]/teams` | `app/(app)/missions/[id]/teams/page.tsx` | Mission team actuation view |
@@ -129,15 +129,15 @@ Component files under `interface/components`: `96` (`.tsx` and `.ts`) across `27
 | `/automations` | `active`, `triggers`, `approvals`, `teams`, `wiring` | `teams` and `wiring` are advanced-mode gated |
 | `/teams` | direct route | team roster, lead-entry hub, and template specialization |
 | `/teams/create` | direct route | guided team-creation workflow with Soma handoff |
-| `/resources` | `tools`, `workspace`, `engines`, `roles` | Advanced support hub |
-| `/groups` | side group list + `overview`, `outputs`, `message`, `settings`, `create` | Advanced group operations use a bounded master-detail layout: group records stay in a scrollable side rail, while selected-group scope, retained outputs, broadcasts, config, and creation use compact tabs |
-| `/system` | `health`, `nats`, `database`, `services` | Advanced diagnostics |
-| `/settings` | `profile`, `profiles`, `users`, `engines`, `tools` | Preferences, access, and optional advanced setup |
+| `/resources` | `tools`, `workspace`, `engines`, `roles`, `exchange`, `deployment-context` | Operator support hub for files, capabilities, context, and managed configuration |
+| `/groups` | side group list + `overview`, `outputs`, `message`, `settings`, `create` | Group operations use a bounded master-detail layout: group records stay in a scrollable side rail, while selected-group scope, retained outputs, broadcasts, config, and creation use compact tabs |
+| `/system` | `health`, `nats`, `database`, `services`, `deployments` | Admin tools diagnostics |
+| `/settings` | `profile`, `profiles`, `users`, `engines`, `tools` | Preferences, access, and optional admin setup |
 | `/runs/[id]` | `conversation`, `events` | Split run investigation view |
 
 Deep management pages should prefer a small set of related page-level tabs over stacking every panel vertically. Default to the most common review context, keep tab labels short, preserve `tablist`/`tab`/`tabpanel` semantics, support arrow-key plus Home/End tab movement, keep feedback notices in live regions, keep a clear route back to Soma on advanced pages, and bound generated prompts, logs, lists, and artifacts inside the active panel instead of increasing whole-page scroll. When a page has a dense record picker, use a master-detail layout where the picker stays in a bounded scroll rail and the selected item owns the tabbed detail surface. Keep filters collapsed by default and move the highest-value actions, such as opening Soma, outputs, folders, and lead workspaces, into the first selected-item viewport.
 
-Generated file outputs should present the retained user outcome first. HTML/code artifacts with a saved workspace path must expose an openable rendered-file action and local folder access instead of treating raw source text as the primary result. Advanced diagnostics links launched from advanced pages must preserve advanced mode in the destination route.
+Generated file outputs should present the retained user outcome first. HTML/code artifacts with a saved workspace path must expose an openable rendered-file action and local folder access instead of treating raw source text as the primary result. Admin diagnostics links launched from Admin tools pages must preserve Admin tools access in the destination route.
 
 ### 5.1 MVP audit decisions (RC lock)
 
@@ -147,7 +147,8 @@ Generated file outputs should present the retained user outcome first. HTML/code
 | `/organizations/[id]` | keep | Team Lead workspace is the compatibility-protected Soma-primary operating surface |
 | `/automations` `active`, `triggers`, `approvals` | keep | directly support guided operation, recurring work, and governed decisions |
 | `/automations` `teams`, `wiring` | revise | keep available, but only in advanced mode so the default workflow stays simpler |
-| `/groups`, `/activity`, `/runs`, `/resources`, `/memory`, `/system` | revise | remain shipped as advanced/admin support routes, not default operator navigation |
+| `/groups`, `/resources` | keep | normal operator support routes for collaboration lanes, retained outputs, generated files, and capability readiness |
+| `/activity`, `/runs`, `/memory`, `/system` | revise | remain shipped as Admin tools routes, not default operator navigation |
 | `/settings` `profile`, `profiles`, `users` | keep | operator-visible preferences and access are still MVP-worthy |
 | `/settings` `engines`, `tools` | revise | advanced setup belongs behind explicit advanced mode |
 | legacy redirects | keep as redirects | preserve bookmarks while funneling usage back into the reduced MVP route set |

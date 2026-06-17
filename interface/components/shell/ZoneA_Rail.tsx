@@ -52,6 +52,8 @@ export function ZoneA() {
         (pathname === currentOrganizationHref || pathname?.startsWith(currentOrganizationHref + '/') === true);
     const primaryNav = [
         { href: '/dashboard', icon: Home, label: 'Soma', description: 'Ask first', testId: 'nav-dashboard' },
+        { href: '/groups', icon: Users, label: 'Groups', description: 'Outputs', testId: 'nav-groups' },
+        { href: '/resources', icon: FolderCog, label: 'Resources', description: 'Files & tools', testId: 'nav-resources' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
             icon: Building2,
@@ -63,9 +65,7 @@ export function ZoneA() {
         { href: '/docs', icon: BookOpen, label: 'Docs', testId: 'nav-docs' },
     ];
     const advancedNav = [
-        { href: '/groups', icon: Users, label: 'Groups', description: 'Operations', testId: 'nav-groups' },
         { href: '/activity', icon: Radio, label: 'Activity', description: 'Runs & bus', testId: 'nav-activity' },
-        { href: '/resources', icon: FolderCog, label: 'Resources', testId: 'nav-resources' },
         { href: '/memory', icon: Brain, label: 'Memory', testId: 'nav-memory' },
         { href: '/system', icon: Activity, label: 'System', testId: 'nav-system' },
     ];
@@ -99,7 +99,7 @@ export function ZoneA() {
                 {effectiveAdvancedMode && (
                     <div className="mt-3 space-y-1">
                         <div className="hidden px-2 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-cortex-text-muted/70 md:block">
-                            Advanced / Admin
+                            Admin tools
                         </div>
                         {advancedNav.map((item) => (
                             <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} testId={item.testId} />
@@ -122,7 +122,7 @@ export function ZoneA() {
                             <Eye className="w-5 h-5 flex-shrink-0" />
                         )}
                         <span className="hidden md:block ml-3 text-sm font-medium">
-                            {effectiveAdvancedMode ? 'Advanced: On' : 'Advanced: Off'}
+                            {effectiveAdvancedMode ? 'Admin tools: On' : 'Admin tools: Off'}
                         </span>
                     </button>
                 )}

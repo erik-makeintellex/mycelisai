@@ -147,7 +147,7 @@ test.describe("Canonical first-demo success path", () => {
     await page.getByRole("button", { name: /Review output/i }).last().click();
     await page.getByRole("link", { name: `Open ${packageTitle} in Resources` }).last().click();
     await expect(page).toHaveURL(new RegExp(`/resources\\?tab=workspace&path=${encodeURIComponent(folder)}`));
-    await expect(page.getByRole("heading", { name: "Advanced Resources" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(folder).last()).toBeVisible();
     await expect(page.getByText("index.html")).toBeVisible();
     await expect(page.getByText("README.md")).toBeVisible();

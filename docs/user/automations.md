@@ -23,7 +23,7 @@ Current tabs:
 | Trigger Rules | Event-driven actuation rules |
 | Schedule Rules | Propose-only cadence rules with cooldown, proof expectations, recovery text, and next-run state |
 | Approvals | Governance review queue and policy controls |
-| Workflow Builder (Advanced) | Lower-level workflow structure editing |
+| Workflow Builder (Admin tools) | Lower-level workflow structure editing |
 
 ---
 
@@ -35,7 +35,7 @@ Layout:
 - **Trigger Rules** for event-driven actuation setup
 - **Schedule Rules** for cadence proposals that remain reviewable before execution
 - **Approvals** for governed automation decisions
-- **Workflow Builder** when Advanced mode is on
+- **Workflow Builder** when Admin tools are on
 - primary CTA for building a governed automation chain
 
 Default chain guidance:
@@ -93,7 +93,7 @@ Core actions:
 
 ---
 
-## Workflow Builder (Advanced Mode)
+## Workflow Builder (Admin Tools)
 
 Advanced Mode enables the Workflow Builder tab.
 This is the graph-level authoring and editing surface for advanced workflow structure.

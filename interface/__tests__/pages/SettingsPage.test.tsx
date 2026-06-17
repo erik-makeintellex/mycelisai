@@ -144,7 +144,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.getByText('Name Soma and set the workspace look')).toBeDefined();
         expect(screen.getByText('Shape reusable mission defaults')).toBeDefined();
         expect(screen.getByText('Review people and access')).toBeDefined();
-        expect(screen.getByText('Advanced controls are open')).toBeDefined();
+        expect(screen.getByText('Admin tools are open')).toBeDefined();
         expect(screen.getByText('Set login and SSO')).toBeDefined();
         expect(screen.getByText('Choose the AI provider')).toBeDefined();
         expect(screen.getByText('Check workspace and output roots')).toBeDefined();
@@ -167,8 +167,8 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.queryByText('AI Engines')).toBeNull();
         expect(screen.queryByText('Auth Providers')).toBeNull();
         expect(screen.queryByText('Capabilities')).toBeNull();
-        expect(screen.getByText('Advanced controls unlock the full admin checklist')).toBeDefined();
-        expect(screen.queryByText('Advanced controls are open')).toBeNull();
+        expect(screen.getByText('Admin tools unlock the full setup checklist')).toBeDefined();
+        expect(screen.queryByText('Admin tools are open')).toBeNull();
     });
 
     it('lets the guided workflow cards switch the active section', async () => {
@@ -193,7 +193,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         window.history.pushState({}, '', '/settings?tab=tools');
         const view = render(<SettingsPage />);
 
-        expect(await screen.findByText('Capabilities lives in Advanced mode')).toBeDefined();
+        expect(await screen.findByText('Capabilities lives in Admin tools')).toBeDefined();
         expect(screen.queryByTestId('mcp-tool-registry')).toBeNull();
 
         await act(async () => {

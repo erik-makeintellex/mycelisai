@@ -70,7 +70,7 @@ describe('RunsPage', () => {
 
         render(<RunsPage />);
 
-        expect(screen.getByText('Run lists are an Advanced proof view')).toBeDefined();
+        expect(screen.getByText('Run lists are in Admin tools')).toBeDefined();
         expect(screen.getByText(/inspect execution history across workflows/i)).toBeDefined();
         expect(screen.queryByText('run-alpha-123')).toBeNull();
     });

@@ -51,9 +51,9 @@ describe('System Page (V8.1 advanced diagnostics)', () => {
         expect(screen.getByText('System')).toBeDefined();
     });
 
-    it('renders Advanced badge', async () => {
+    it('renders Admin tools badge', async () => {
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText('Advanced')).toBeDefined();
+        expect(screen.getByText('Admin tools')).toBeDefined();
     });
 
     it('renders all tabs', async () => {
@@ -78,13 +78,13 @@ describe('System Page (V8.1 advanced diagnostics)', () => {
     it('shows the advanced gate when advanced mode is off', async () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText(/System diagnostics are hidden until you open Advanced mode/i)).toBeDefined();
+        expect(screen.getByText(/System diagnostics are in Admin tools/i)).toBeDefined();
     });
 
-    it('lets an operator open Advanced mode from the gate', async () => {
+    it('lets an operator open Admin tools from the gate', async () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => { render(<SystemPage />); });
-        fireEvent.click(screen.getByRole('link', { name: /Open Advanced mode/i }));
+        fireEvent.click(screen.getByRole('link', { name: /Open admin tools/i }));
         expect(mockToggleAdvancedMode).toHaveBeenCalledOnce();
     });
 

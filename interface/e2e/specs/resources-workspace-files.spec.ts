@@ -15,7 +15,7 @@ async function enableAdvancedMode(page: Page) {
 async function openWorkspaceFiles(page: Page) {
     await enableAdvancedMode(page);
     await page.goto("/resources?tab=workspace", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Advanced Resources" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: /Output Files/i })).toBeVisible();
 }
 
@@ -23,8 +23,91 @@ async function mockWorkspaceMCP(page: Page) {
     const calls: ToolCallRecord[] = [];
     const files = new Map<string, string>([
         ["workspace/proof.md", "# Existing Proof\nReadable through filesystem MCP."],
+        ["workspace/groups/game-delivery/final/game-brief.md", "# Final Game Brief\nRetained user output."],
+        ["workspace/groups/game-delivery/source/gameplay.js", "export const loop = 'playable';"],
     ]);
-    const directories = new Set<string>(["workspace/logs"]);
+    const directories = new Set<string>([
+        "workspace/logs",
+        "workspace/groups",
+        "workspace/groups/game-delivery",
+        "workspace/groups/game-delivery/final",
+        "workspace/groups/game-delivery/source",
+        "workspace/groups/game-delivery/review",
+        "workspace/groups/game-delivery/media",
+    ]);
+
+    await page.route("**/api/v1/groups", async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+                data: [
+                    {
+                        group_id: "group-with-output",
+                        name: "Game Delivery Group",
+                        workspace_folder: "groups/game-delivery",
+                    },
+                    {
+                        group_id: "group-empty",
+                        name: "Empty Group",
+                        workspace_folder: "groups/empty",
+                    },
+                ],
+            }),
+        });
+    });
+
+    await page.route("**/api/v1/groups/group-with-output/outputs?limit=20", async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+                data: [
+                    {
+                        id: "artifact-final",
+                        agent_id: "lead",
+                        artifact_type: "document",
+                        title: "Final Game Brief",
+                        content_type: "text/markdown",
+                        file_path: "groups/game-delivery/final/game-brief.md",
+                        metadata: {},
+                        status: "approved",
+                        created_at: new Date().toISOString(),
+                    },
+                    {
+                        id: "artifact-code",
+                        agent_id: "gameplay-coder",
+                        artifact_type: "code",
+                        title: "Gameplay Loop",
+                        content_type: "text/javascript",
+                        file_path: "groups/game-delivery/source/gameplay.js",
+                        metadata: { role: "coder" },
+                        status: "approved",
+                        created_at: new Date().toISOString(),
+                    },
+                    {
+                        id: "artifact-review",
+                        agent_id: "qa-reviewer",
+                        artifact_type: "document",
+                        title: "QA Review Notes",
+                        content_type: "text/markdown",
+                        file_path: "groups/game-delivery/review/qa.md",
+                        metadata: { role: "reviewer" },
+                        status: "approved",
+                        created_at: new Date().toISOString(),
+                    },
+                ],
+            }),
+        });
+    });
+
+    await page.route("**/api/v1/groups/group-empty/outputs?limit=20", async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ data: [] }),
+        });
+    });
 
     await page.route("**/api/v1/mcp/servers", async (route) => {
         await route.fulfill({
@@ -126,6 +209,21 @@ test.describe("Resources workspace files", () => {
         const calls = await mockWorkspaceMCP(page);
         await openWorkspaceFiles(page);
 
+        await expect(page.getByTestId("workspace-group-output-selector")).toBeVisible();
+        await expect(page.getByLabel("Select group")).toHaveValue("group-with-output");
+        await expect(page.getByRole("tab", { name: /Team lead 1/i })).toBeVisible();
+        await expect(page.getByRole("tab", { name: /Coders 1/i })).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("tab", { name: /Coders 1/i }));
+        await expect(page.getByRole("button", { name: /Gameplay Loop/i })).toBeVisible();
+        await expect(page.getByRole("button", { name: /Final Game Brief/i })).toHaveCount(0);
+        await clickVisibleControl(page, page.getByRole("tab", { name: /All 3/i }));
+        await expect(page.getByText("Empty Group")).toHaveCount(0);
+        await clickVisibleControl(page, page.getByRole("button", { name: /Final Game Brief/i }));
+        await expect(page.locator("textarea").first()).toHaveValue(/Retained user output/i);
+        await page.getByLabel("Include team source files").check();
+        await waitForToolCall(page, calls, (call) => call.tool === "list_directory" && call.arguments.path === "workspace/groups/game-delivery");
+
+        await openWorkspaceFiles(page);
         await expect(page.getByText("proof.md")).toBeVisible({ timeout: 15_000 });
         await clickVisibleControl(page, page.getByRole("button", { name: "Preview output file proof.md" }));
         await expect(page.locator("textarea").first()).toHaveValue(/Readable through filesystem MCP/i);

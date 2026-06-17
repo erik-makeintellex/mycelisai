@@ -72,7 +72,7 @@ describe("AdvancedModeRoute", () => {
       </AdvancedModeRoute>,
     );
 
-    const link = screen.getByRole("link", { name: "Open Advanced mode" });
+    const link = screen.getByRole("link", { name: "Open admin tools" });
     expect(link.getAttribute("href")).toBe("/advanced-area?advanced=1");
     fireEvent.click(link);
 

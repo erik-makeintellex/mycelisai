@@ -2,8 +2,15 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useCortexStore, type MCPServerWithTools } from "@/store/useCortexStore";
+import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { extractApiError, formatMCPToolResult, type ResourceCallRequest } from "@/lib/apiContracts";
+import { workspaceBrowserPath } from "@/lib/outputPackageModel";
 import WorkspaceFolderAccessCard from "./WorkspaceFolderAccessCard";
+import WorkspaceGroupOutputSelector, {
+    artifactBrowsePath,
+    artifactFilePath,
+    type OutputGroup,
+} from "./WorkspaceGroupOutputSelector";
 import WorkspaceMCPRecoveryCard from "./WorkspaceMCPRecoveryCard";
 import {
     WorkspaceBrowsePane,
@@ -16,6 +23,12 @@ import { joinPath, normalizePath, parseListOutput } from "./WorkspaceExplorerUti
 const WORKSPACE_ROOT_PATH = "workspace";
 export type WorkspaceEntry = { name: string; path: string; type: "file" | "dir" };
 export type WorkspacePane = "browse" | "preview" | "create";
+
+type GroupRecord = {
+    group_id: string;
+    name: string;
+    workspace_folder?: string;
+};
 
 function initialWorkspacePath(path?: string | null) {
     const normalized = normalizePath(path?.trim() || WORKSPACE_ROOT_PATH);
@@ -41,6 +54,10 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
     const [newFile, setNewFile] = useState("");
     const [newFileContent, setNewFileContent] = useState("");
     const [activePane, setActivePane] = useState<WorkspacePane>("browse");
+    const [outputGroups, setOutputGroups] = useState<OutputGroup[]>([]);
+    const [selectedOutputGroupID, setSelectedOutputGroupID] = useState("");
+    const [includeTeamSourceFiles, setIncludeTeamSourceFiles] = useState(false);
+    const [outputGroupStatus, setOutputGroupStatus] = useState("Loading group outputs...");
 
     useEffect(() => {
         fetchMCPServers();
@@ -56,6 +73,65 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
     }, [mcpServers]);
 
     const canBrowse = filesystemServer?.status === "connected";
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadOutputGroups = async () => {
+            setOutputGroupStatus("Loading group outputs...");
+            try {
+                const groupsRes = await fetch("/api/v1/groups", { cache: "no-store" });
+                if (!groupsRes.ok) {
+                    throw new Error("Could not load groups");
+                }
+                const groups = await responseData<GroupRecord[]>(groupsRes);
+                const loaded: Array<OutputGroup | null> = await Promise.all(
+                    groups.map(async (group) => {
+                        try {
+                            const outputsRes = await fetch(
+                                `/api/v1/groups/${encodeURIComponent(group.group_id)}/outputs?limit=20`,
+                                { cache: "no-store" },
+                            );
+                            if (!outputsRes.ok) return null;
+                            const outputs = await responseData<Artifact[]>(outputsRes);
+                            if (!Array.isArray(outputs) || outputs.length === 0) return null;
+                            return {
+                                group_id: group.group_id,
+                                name: group.name || group.group_id,
+                                workspace_folder: group.workspace_folder,
+                                outputs,
+                            } satisfies OutputGroup;
+                        } catch {
+                            return null;
+                        }
+                    }),
+                );
+
+                if (cancelled) return;
+                const withOutputs = loaded.filter((group): group is OutputGroup => Boolean(group));
+                setOutputGroups(withOutputs);
+                setSelectedOutputGroupID((current) => {
+                    if (current && withOutputs.some((group) => group.group_id === current)) return current;
+                    return withOutputs[0]?.group_id ?? "";
+                });
+                setOutputGroupStatus(
+                    withOutputs.length > 0
+                        ? `Loaded ${withOutputs.length} group${withOutputs.length === 1 ? "" : "s"} with outputs`
+                        : "No groups with retained user outputs yet",
+                );
+            } catch (error) {
+                if (cancelled) return;
+                setOutputGroups([]);
+                setSelectedOutputGroupID("");
+                setOutputGroupStatus(error instanceof Error ? error.message : "Could not load group outputs");
+            }
+        };
+
+        loadOutputGroups();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const callTool = useCallback(
         async (toolName: string, args: Record<string, unknown>): Promise<string> => {
@@ -118,6 +194,67 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
             setStatus(err instanceof Error ? err.message : "Read failed");
         } finally {
             setBusy(false);
+        }
+    };
+
+    const openArtifact = async (artifact: Artifact) => {
+        const filePath = artifactFilePath(artifact);
+        const browsePath = artifactBrowsePath(artifact);
+        const workspacePath = workspaceBrowserPath(browsePath ?? filePath);
+        if (workspacePath) {
+            setCurrentPath(workspacePath);
+        }
+        if (filePath && artifact.artifact_type !== "project_package") {
+            const readablePath = workspaceBrowserPath(filePath) ?? filePath;
+            await openFile(readablePath);
+        } else {
+            setActivePane("browse");
+            setStatus(workspacePath ? `Opened output folder ${workspacePath}` : "Output has no workspace path");
+        }
+    };
+
+    const openSelectedGroupSourceFolder = (groupID: string) => {
+        const group = outputGroups.find((candidate) => candidate.group_id === groupID);
+        if (!group?.workspace_folder) {
+            setStatus("Selected group has no source folder");
+            return;
+        }
+        const workspacePath = workspaceBrowserPath(group.workspace_folder);
+        if (!workspacePath) {
+            setStatus("Selected group source folder is not workspace-readable");
+            return;
+        }
+        setCurrentPath(workspacePath);
+        setActivePane("browse");
+        setStatus(`Showing team source files for ${group.name}`);
+    };
+
+    const selectOutputGroup = (groupID: string) => {
+        setSelectedOutputGroupID(groupID);
+        setIncludeTeamSourceFiles(false);
+        const group = outputGroups.find((candidate) => candidate.group_id === groupID);
+        const firstOutput = group?.outputs[0];
+        const browsePath = workspaceBrowserPath(artifactBrowsePath(firstOutput) ?? artifactFilePath(firstOutput));
+        if (browsePath) {
+            setCurrentPath(browsePath);
+            setActivePane("browse");
+            setStatus(`Selected outputs for ${group?.name ?? groupID}`);
+        }
+    };
+
+    const toggleTeamSourceFiles = (checked: boolean) => {
+        setIncludeTeamSourceFiles(checked);
+        if (checked) {
+            openSelectedGroupSourceFolder(selectedOutputGroupID);
+            return;
+        }
+        const group = outputGroups.find((candidate) => candidate.group_id === selectedOutputGroupID);
+        const firstOutput = group?.outputs[0];
+        const browsePath = workspaceBrowserPath(artifactBrowsePath(firstOutput) ?? artifactFilePath(firstOutput));
+        if (browsePath) {
+            setCurrentPath(browsePath);
+            setActivePane("browse");
+            setStatus(`Showing retained outputs for ${group?.name ?? selectedOutputGroupID}`);
         }
     };
 
@@ -184,6 +321,16 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
 
     return (
         <div className="flex h-full min-h-0 flex-col gap-3 p-4 sm:p-6">
+            <WorkspaceGroupOutputSelector
+                groups={outputGroups}
+                selectedGroupID={selectedOutputGroupID}
+                includeTeamSourceFiles={includeTeamSourceFiles}
+                status={outputGroupStatus}
+                onSelectGroup={selectOutputGroup}
+                onToggleTeamSourceFiles={toggleTeamSourceFiles}
+                onOpenArtifact={openArtifact}
+            />
+
             <WorkspaceFolderAccessCard currentPath={currentPath} onStatus={setStatus} />
 
             <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface">
@@ -254,4 +401,13 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
             </section>
         </div>
     );
+}
+
+async function responseData<T>(res: Response): Promise<T> {
+    const payload = await res.json();
+    return (
+        payload && typeof payload === "object" && "data" in payload
+            ? (payload as { data: T }).data
+            : payload
+    ) as T;
 }

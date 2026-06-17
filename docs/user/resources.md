@@ -1,13 +1,13 @@
 # Resources
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Advanced-mode support surface for generated output files, capability readiness, deployment context intake, managed exchange, AI engine setup, and reusable role definitions.
+> Operator support surface for generated output files, capability readiness, deployment context intake, managed exchange, AI engine setup, and reusable role definitions.
 
 ---
 
 ## Overview
 
-Open `/resources` after turning on Advanced mode.
+Open `/resources` directly from the main rail when you need generated files, capability readiness, workspace roots, or connected-tool posture.
 
 Current resource menu:
 
@@ -26,7 +26,7 @@ The Resources page keeps these resource types in a persistent menu and renders t
 
 ## AI Engines
 
-AI engines define the curated model posture available to advanced operators.
+AI engines define the curated model posture available to admin operators.
 
 Provider families:
 - local/self-hosted (Ollama, vLLM, LM Studio)
@@ -177,6 +177,31 @@ The browser starts at the MCP-safe `workspace` root rather than the Core
 process working directory, so ordinary browse/read/write actions stay inside
 the configured mounted data boundary.
 
+Output Files now starts with a **Group outputs** selector when retained group
+artifacts exist. The selector only lists groups that produced retained
+user-facing outputs through `/api/v1/groups/{id}/outputs`; groups with no
+deliverable artifacts stay out of the output picker so operators do not have to
+scan abandoned or internal-only lanes.
+
+Group workflow logs and chat-pipeline history are reviewed in `Groups ->
+Workflow Log`, not in `Resources -> Output Files`. Output Files should stay
+focused on durable artifacts that a user can open, download, preview, or reveal
+in the workspace. When you need the work history that led to an artifact, open
+the group and review its Workflow Log.
+
+By default, selecting a group opens its retained output artifacts, such as final
+documents, packages, media, or generated files. Team-generated working files
+used to build the final deliverable stay hidden from this curated output list.
+Use **Include team source files** only when an operator needs to inspect the
+group workspace folder itself, including intermediate files under the same
+`workspace_folder`.
+
+When a retained group has many outputs, the group-output selector splits the
+artifact cards by contributor level. Use **All**, **Team lead**, **Coders**,
+**Review**, **Media**, or **Other** to narrow the visible artifacts without
+leaving the selected group. Mycelis uses artifact metadata such as role/agent
+level when present and falls back to the artifact agent id, title, and type.
+
 The workspace explorer is organized around three operator steps:
 - `Find outputs` lists retained files and folders and opens file selections into preview.
 - `Preview` reads the selected generated file without leaving the Resources surface.
@@ -205,6 +230,9 @@ Use `System -> Deployments` to confirm the runtime is reporting the same workspa
 
 New-user proof should verify both sides of this boundary:
 - `Resources -> Capabilities` shows whether `filesystem` is installed and connected.
+- `Resources -> Output Files` lists only groups with retained user-facing output in the group selector.
+- `Resources -> Output Files` can narrow retained artifacts by contributor level before opening a file or package.
+- `Resources -> Output Files -> Include team source files` switches from curated output artifacts to the selected group's workspace source folder.
 - `Resources -> Output Files` can browse/read/write only under the governed workspace boundary and can open the current local folder through the workspace-confined reveal endpoint.
 - `System -> Deployments` reports the deployment/workspace/artifact roots that explain where generated output will land.
 - A retained demo output or project package opened from Soma/Teams/Groups resolves to the same workspace root family instead of a hidden process working directory; team-owned packages and media should be inside the selected group folder unless the operator explicitly chose another workspace path.

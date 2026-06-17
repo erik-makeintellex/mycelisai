@@ -28,6 +28,7 @@ const actionIcons = {
 };
 
 export function WorkReviewInbox({
+  title = "Work to review",
   items,
   emptyMessage,
   statusLabel,
@@ -35,6 +36,7 @@ export function WorkReviewInbox({
   onAction,
   onTeamAsk,
 }: {
+  title?: string;
   items: TeamWorkItem[];
   emptyMessage: string;
   statusLabel?: string;
@@ -66,7 +68,7 @@ export function WorkReviewInbox({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-mono text-sm font-bold uppercase tracking-[0.16em] text-cortex-text-main">
-            Work to review
+            {title}
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-cortex-text-muted">
             Select one item, read the trusted state, then take the one next action that moves it forward.

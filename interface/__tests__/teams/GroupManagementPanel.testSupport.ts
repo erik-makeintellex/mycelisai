@@ -76,6 +76,8 @@ export function installApprovalCreateFetch(
           ok: true,
           data: { status: "online", published_count: 0 },
         });
+      if (url === "/api/v1/groups/lifecycle")
+        return jsonResponse({ ok: true, data: emptyLifecycleReport([]) });
       if (url === "/api/v1/groups" && init?.method === "POST") {
         postBodies.push(JSON.parse(String(init.body)));
         if (postBodies.length === 1)
@@ -105,10 +107,14 @@ export function installApprovalCreateFetch(
 export function installGroupsFetch({
   groups,
   outputs = {},
+  teamWork = {},
+  workflowLogs = {},
   monitor = { status: "online", published_count: 0 },
 }: {
   groups: TestGroup[];
   outputs?: Record<string, unknown[]>;
+  teamWork?: Record<string, unknown[]>;
+  workflowLogs?: Record<string, unknown>;
   monitor?: Record<string, unknown>;
 }) {
   mockFetch.mockImplementation(
@@ -121,6 +127,23 @@ export function installGroupsFetch({
         });
       if (url === "/api/v1/groups/monitor")
         return jsonResponse({ ok: true, data: monitor });
+      if (url === "/api/v1/groups/lifecycle")
+        return jsonResponse({
+          ok: true,
+          data: emptyLifecycleReport(groups),
+        });
+      if (
+        url === "/api/v1/groups/lifecycle/archive-expired" &&
+        init?.method === "POST"
+      )
+        return jsonResponse({
+          ok: true,
+          data: {
+            archived_count: 0,
+            archived_group_ids: [],
+            report: emptyLifecycleReport(groups),
+          },
+        });
       if (
         url.startsWith("/api/v1/workspace/files/reveal") &&
         init?.method === "POST"
@@ -145,9 +168,64 @@ export function installGroupsFetch({
           ok: true,
           data: outputs[decodeURIComponent(match[1])] ?? [],
         });
+      const workflowLogMatch = url.match(
+        /^\/api\/v1\/groups\/([^/]+)\/workflow-log\?limit=50&include_outputs=true&include_audit=true$/,
+      );
+      if (workflowLogMatch) {
+        const groupId = decodeURIComponent(workflowLogMatch[1]);
+        const workflowLog = workflowLogs[groupId];
+        if (workflowLog)
+          return jsonResponse({
+            ok: true,
+            data: workflowLog,
+          });
+        return jsonResponse({ error: "not found" }, false, 404);
+      }
+      const teamWorkMatch = url.match(
+        /^\/api\/v1\/teams\/([^/]+)\/work\?limit=8&include_archived=false$/,
+      );
+      if (teamWorkMatch)
+        return jsonResponse({
+          ok: true,
+          data: teamWork[decodeURIComponent(teamWorkMatch[1])] ?? [],
+        });
       return jsonResponse({ error: "not found" }, false, 404);
     },
   );
+}
+
+function emptyLifecycleReport(groups: TestGroup[]) {
+  return {
+    generated_at: new Date().toISOString(),
+    summary: {
+      total_groups: groups.length,
+      active_groups: groups.filter((group) => group.status === "active").length,
+      expired_active_groups: 0,
+      standing_no_expiry_groups: groups.filter((group) => !group.expiry).length,
+      stale_standing_groups: 0,
+      review_needed_groups: 0,
+      output_ready_idle_groups: 0,
+      team_work_needing_attention: 0,
+    },
+    items: groups.map((group) => ({
+      group_id: group.group_id,
+      name: group.name,
+      status: group.status,
+      work_mode: group.work_mode ?? "propose_only",
+      kind: group.expiry ? "temporary" : "standing",
+      recommendation: "keep_active",
+      reason: "Test group is active.",
+      expiry: group.expiry ?? null,
+      expired: false,
+      age_hours: 1,
+      team_count: Array.isArray(group.team_ids) ? group.team_ids.length : 0,
+      output_count: 0,
+      team_work_count: 0,
+      active_or_blocked_work_count: 0,
+      output_ready_work_count: 0,
+      archived_work_count: 0,
+    })),
+  };
 }
 
 function urlFromInput(input: RequestInfo | URL): string {

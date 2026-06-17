@@ -148,7 +148,7 @@ Advisors, Departments, and Specialists stay visible without becoming a flat defa
 
 ### 4.7 Advanced-mode boundaries
 
-Advanced mode exposes inheritance, config origin, groups, resources/MCP, deep memory, runs/bus state, settings, auth, and docs without becoming required for first use.
+Groups and Resources are normal operator support paths because users naturally need retained collaboration lanes, generated files, and capability readiness during ordinary work. Admin tools expose inheritance, config origin, deep memory, runs/bus state, system diagnostics, auth, and deeper setup without becoming required for first use.
 
 Current screen contract families:
 - first-run and organization creation

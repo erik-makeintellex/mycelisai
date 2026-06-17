@@ -42,7 +42,7 @@ Good first prompts:
 - "Create a retained demo package I can open in the browser and include proof I can revisit."
 - "Ask the active delivery team for one bounded status update; if it times out, show the degraded proof and recovery path."
 
-Generated project packages, browser games, workspace files, and filesystem MCP writes land under the configured `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`. Open **Resources -> Output Files** to browse generated content or use **Open folder** on an output card to open its local folder directly. Open **System -> Deployments** in Advanced mode when you need to confirm the exact runtime paths before or after execution.
+Generated project packages, browser games, workspace files, and filesystem MCP writes land under the configured `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`. Open **Resources -> Output Files** to browse generated content or use **Open folder** on an output card to open its local folder directly. Open **System -> Deployments** from Admin tools when you need to confirm the exact runtime paths before or after execution.
 
 Concrete requests Soma should understand when the matching capability is configured:
 

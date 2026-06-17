@@ -280,8 +280,8 @@ test.describe('Docs and Runs Route Coverage', () => {
         });
 
         await page.goto('/runs', { waitUntil: 'domcontentloaded' });
-        await expect(page.getByRole('heading', { name: 'Run lists are an Advanced proof view' })).toBeVisible();
-        await page.getByRole('link', { name: 'Open Advanced mode' }).click();
+        await expect(page.getByRole('heading', { name: 'Run lists are in Admin tools' })).toBeVisible();
+        await page.getByRole('link', { name: 'Open admin tools' }).click();
         await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'true');
         await expect(page.locator('span:has-text("Runs")').first()).toBeVisible();
         await expect(page.getByText('1 active')).toBeVisible();
@@ -290,9 +290,10 @@ test.describe('Docs and Runs Route Coverage', () => {
         await expect(page.getByText('running').first()).toBeVisible();
         await expect(page.getByText('failed').first()).toBeVisible();
 
-        const runRow = page.locator(`button:has-text("${runId}")`).first();
+        const runRow = page.getByRole('link', { name: new RegExp(runId) }).first();
         await expect(runRow).toBeVisible();
-        await runRow.click();
+        await expect(runRow).toHaveAttribute('href', `/runs/${runId}`);
+        await page.goto(`/runs/${runId}`, { waitUntil: 'domcontentloaded' });
         await expect(page).toHaveURL(new RegExp(`/runs/${runId}$`));
         await expect(page.getByText('Soma is coordinating the active run.')).toBeVisible();
         await expect(page.getByText('Planner is preparing validation steps.')).toBeVisible();

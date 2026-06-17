@@ -83,7 +83,7 @@ export default function ActivityPage() {
 
   return (
     <AdvancedModeRoute
-      title="Activity review is an Advanced support view"
+      title="Activity review is in Admin tools"
       summary="Soma surfaces the useful outcome and proof first. Open Activity when you need deeper run lists, bus signals, and operator diagnostics."
     >
       <div className="h-full overflow-y-auto bg-cortex-bg px-6 py-6 text-cortex-text-main">
@@ -92,7 +92,7 @@ export default function ActivityPage() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-cortex-primary">
                 <Activity className="h-3.5 w-3.5" />
-                Advanced Activity
+                Admin Activity
               </div>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight">
                 Progress, runs, and bus review

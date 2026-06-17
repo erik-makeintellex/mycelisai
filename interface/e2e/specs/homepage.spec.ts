@@ -95,7 +95,7 @@ test.describe('Authenticated front door', () => {
         await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
 
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'midnight-cortex');
-        await expect(page.getByRole('button', { name: /Advanced: On/i })).toBeVisible();
+        await expect(page.getByRole('button', { name: /Admin tools: On/i })).toBeVisible();
         await expect.poll(async () => page.evaluate(() =>
             window.getComputedStyle(document.documentElement).getPropertyValue('--color-cortex-bg').trim(),
         )).toBe('#0f1116');

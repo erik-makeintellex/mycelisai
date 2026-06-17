@@ -213,6 +213,31 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText('MCP Server Drill-Down')).toBeDefined();
     });
 
+    it('keeps degraded capabilities in the repair queue with recovery guidance', () => {
+        useCortexStore.setState({
+            capabilities: [{
+                ...webResearchCapability,
+                id: 'media.generate',
+                name: 'Local Media Generation',
+                category: 'media',
+                availability_status: 'degraded',
+                fallback_behavior: 'Keep the failed run recoverable, preserve request proof, and retry after the local media provider is reconnected.',
+                outputs: ['Image output'],
+                writes: ['workspace.saved_media'],
+            }],
+        });
+
+        render(<MCPToolRegistry />);
+
+        expect(screen.getByText('Needs repair')).toBeDefined();
+        expect(screen.getByText('Local Media Generation')).toBeDefined();
+        expect(screen.getByText('degraded')).toBeDefined();
+        expect(screen.getByText(/Keep the failed run recoverable/i)).toBeDefined();
+        expect(screen.getByText(/retry after the local media provider is reconnected/i)).toBeDefined();
+        expect(screen.getByText('workspace.saved_media')).toBeDefined();
+        expect(screen.queryByText(/derived from MCP servers and search status/i)).toBeNull();
+    });
+
     it('shows search capability blockers as operator guidance', () => {
         useCortexStore.setState({
             searchCapability: {

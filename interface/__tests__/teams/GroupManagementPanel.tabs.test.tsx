@@ -31,7 +31,9 @@ describe("GroupManagementPanel workspace tabs", () => {
       fireEvent.keyDown(tablist, { key: "ArrowRight" });
     });
     expect(
-      screen.getByRole("tab", { name: /Outputs/i }).getAttribute("aria-selected"),
+      screen
+        .getByRole("tab", { name: /Workflow Log/i })
+        .getAttribute("aria-selected"),
     ).toBe("true");
 
     await act(async () => {

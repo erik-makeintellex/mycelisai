@@ -125,7 +125,7 @@ The model inventory can include several models on the same Ollama, vLLM, or LM S
 Ollama text and vision models do not automatically mean image or voice generation is configured. Soma can use them to plan prompts, write website/code artifacts, or critique images; actual pixel/audio output needs the configured media engine.
 
 Primary management surfaces:
-- `Resources -> AI Engines` (Advanced mode)
+- `Resources -> AI Engines` (admin setup)
 - `Settings -> Profiles`
 - `AI Organization -> AI Engine Settings`
 
@@ -146,9 +146,9 @@ Common examples:
 
 ---
 
-## Operational Status UX (Gate A)
+## Operational Status UX
 
-V7 includes global operator-recovery UX:
+Current Mycelis surfaces global operator-recovery UX:
 
 - **Degraded Mode Banner**: appears when critical subsystems degrade
 - **Status Drawer**: global health panel (open via ribbon or floating status action)
@@ -168,7 +168,7 @@ Expected user-visible controls:
 ## Advanced Mode
 
 Advanced Mode reveals deeper operational surfaces (for power operators).
-Toggle from the rail footer (`Advanced: On/Off`).
+Toggle from the rail footer (`Admin tools: On/Off`).
 
 Typical unlocks:
 - System diagnostics depth
@@ -191,6 +191,7 @@ Collaboration groups now have their own dedicated workflow surface:
 - compact group selection in a left rail, with the selected group's data, config posture, broadcast/review workflow, and retained outputs shown in the main panes
 - focused group review, broadcast while active, output/contributing-lead summaries, and retained output visibility after archive
 - quick entry into the attached team-lead lanes
+- lifecycle review that separates expired temporary lanes, groups with team work still needing attention, output-ready idle lanes, and stale no-expiry standing groups; `Archive expired` moves only expired temporary groups into retained history and does not delete their outputs or proof
 
 The root Soma home also includes a filtered live interaction stream:
 - review active team output from the admin surface

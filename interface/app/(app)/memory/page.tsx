@@ -19,7 +19,7 @@ export default function MemoryRoute() {
     if (!advancedMode) {
         return (
             <AdvancedModeGate
-                title="Memory is an Advanced support view"
+                title="Memory is in Admin tools"
                 summary="Soma should surface useful learning and artifacts in the work layer. Open Memory when an admin needs deeper retained-context inspection."
             />
         );

@@ -92,7 +92,7 @@ test.describe('Teams Workspace (/teams)', () => {
 
         await page.goto('/teams?view=work', { waitUntil: 'domcontentloaded' });
 
-        await expect(page.getByRole('heading', { name: 'Work to Review', exact: true })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Recovery and Review', exact: true })).toBeVisible();
         await expect(page.getByLabel('Review queue summary')).toBeVisible();
         await expect(page.getByText('Needs decision', { exact: true })).toBeVisible();
         await expect(page.getByTestId('work-review-inbox')).toBeVisible();
@@ -103,7 +103,7 @@ test.describe('Teams Workspace (/teams)', () => {
         await expect(page.getByText('Move', { exact: true })).toBeVisible();
         await expect(page.getByRole('button', { name: /Retry recovery/i }).first()).toBeVisible();
         const bodyText = await page.locator('body').innerText();
-        expect(bodyText.indexOf('Work to Review')).toBeLessThan(bodyText.indexOf('Team context'));
+        expect(bodyText.indexOf('Recovery and Review')).toBeLessThan(bodyText.indexOf('Team context'));
     });
 
     test('team quick action links are wired', async ({ page }) => {

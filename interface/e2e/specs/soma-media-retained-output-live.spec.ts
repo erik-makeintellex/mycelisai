@@ -224,7 +224,7 @@ test.describe("Soma media retained output proof", () => {
 
     await enableAdvancedMode(page);
     await page.goto("/resources?tab=workspace", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Advanced Resources" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: /Output Files/i })).toBeVisible();
     await page.getByRole("button", { name: "Open folder saved-media" }).click();
     await page.getByRole("button", { name: "Open folder media-team-proof" }).click();

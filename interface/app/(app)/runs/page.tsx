@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Activity, Zap, Loader2 } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import AdvancedModeRoute from "@/components/shared/AdvancedModeRoute";
@@ -40,7 +40,6 @@ export default function RunsPage() {
 }
 
 function RunsContent() {
-    const router = useRouter();
     const searchParams = useSearchParams();
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const recentRuns = useCortexStore((s) => s.recentRuns);
@@ -61,7 +60,7 @@ function RunsContent() {
 
     return (
         <AdvancedModeRoute
-            title="Run lists are an Advanced proof view"
+            title="Run lists are in Admin tools"
             summary="Soma keeps current proof near the result. Open the run list when you need to inspect execution history across workflows."
         >
         <div className="min-h-screen bg-cortex-bg text-cortex-text-main">
@@ -123,9 +122,9 @@ function RunsContent() {
                 {visibleRuns.length > 0 && (
                     <div className="border border-cortex-border rounded-lg overflow-hidden">
                         {visibleRuns.map((run, i) => (
-                            <button
+                            <a
                                 key={run.id}
-                                onClick={() => router.push(`/runs/${run.id}`)}
+                                href={`/runs/${run.id}`}
                                 className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-cortex-border/30 transition-colors group ${
                                     i < visibleRuns.length - 1 ? 'border-b border-cortex-border/50' : ''
                                 }`}
@@ -150,7 +149,7 @@ function RunsContent() {
                                 </span>
 
                                 <Zap className="w-3 h-3 text-cortex-text-muted/30 group-hover:text-cortex-primary transition-colors flex-shrink-0" />
-                            </button>
+                            </a>
                         ))}
                     </div>
                 )}

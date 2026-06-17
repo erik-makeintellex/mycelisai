@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw, Users } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, Users } from "lucide-react";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { CreateGroupPane } from "./CreateGroupPane";
 import { GroupCommunicationPanel } from "./GroupCommunicationPanel";
@@ -8,6 +8,7 @@ import { GroupConfigPane } from "./GroupConfigPane";
 import { GroupDetailPane } from "./GroupDetailPane";
 import { OutputsPanel } from "./GroupOutputsPanel";
 import { GroupRail } from "./GroupRail";
+import { GroupWorkflowLog } from "./GroupWorkflowLog";
 import {
   GroupWorkspaceTabs,
   type GroupWorkspacePanel,
@@ -19,6 +20,8 @@ import {
   type GroupBucket,
   type GroupDraft,
   type GroupBroadcastResult,
+  type GroupLifecycleItem,
+  type GroupLifecycleReport,
   type GroupRecordFilters,
   type Monitor,
   type OutputSummary,
@@ -27,6 +30,8 @@ import {
 type WorkspaceProps = {
   buckets: GroupBucket[];
   monitor: Monitor | null;
+  lifecycleReport: GroupLifecycleReport | null;
+  lifecycleByGroupId: Map<string, GroupLifecycleItem>;
   recordFilters: GroupRecordFilters;
   selectedGroup: Group | null;
   hiddenSelectedGroup: Group | null;
@@ -42,9 +47,11 @@ type WorkspaceProps = {
   saving: boolean;
   broadcasting: boolean;
   archiving: boolean;
+  archivingExpired: boolean;
   broadcastMessage: string;
   lastBroadcastResult: GroupBroadcastResult | null;
   onRefresh: () => void;
+  onArchiveExpired: () => void;
   onRecordFiltersChange: (patch: Partial<GroupRecordFilters>) => void;
   onSelectGroup: (groupId: string) => void;
   onDraftChange: (patch: Partial<GroupDraft>) => void;
@@ -58,6 +65,8 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
   const {
     buckets,
     monitor,
+    lifecycleReport,
+    lifecycleByGroupId,
     recordFilters,
     selectedGroup,
     hiddenSelectedGroup,
@@ -72,16 +81,18 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     saving,
     broadcasting,
     archiving,
+    archivingExpired,
     broadcastMessage,
     lastBroadcastResult,
     onRefresh,
+    onArchiveExpired,
     onRecordFiltersChange,
     onSelectGroup,
     onDraftChange,
     onCreateGroup,
     onBroadcastMessageChange,
     onBroadcast,
-  onArchive,
+    onArchive,
   } = props;
   const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>("overview");
   const selectGroup = (groupId: string) => {
@@ -96,7 +107,11 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     >
       <GroupsHeader
         monitor={monitor}
+        lifecycleReport={lifecycleReport}
         refreshing={refreshing}
+        archivingExpired={archivingExpired}
+        onArchiveExpired={onArchiveExpired}
+        onCreate={() => setActivePanel("create")}
         onRefresh={onRefresh}
       />
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3 lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]">
@@ -104,6 +119,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
           buckets={buckets}
           filters={recordFilters}
           hiddenSelectedGroup={hiddenSelectedGroup}
+          lifecycleByGroupId={lifecycleByGroupId}
           selectedGroupId={selectedGroupId}
           onFiltersChange={onRecordFiltersChange}
           onSelectGroup={selectGroup}
@@ -146,6 +162,11 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
               >
                 <GroupDetailPane
                   selectedGroup={selectedGroup}
+                  lifecycleItem={
+                    selectedGroup
+                      ? lifecycleByGroupId.get(selectedGroup.group_id)
+                      : undefined
+                  }
                   outputSummary={outputSummary}
                   archiving={archiving}
                   onArchive={onArchive}
@@ -163,6 +184,27 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
                   archived={selectedGroup?.status === "archived"}
                   outputs={outputs}
                   outputSummary={outputSummary}
+                />
+              </div>
+            ) : null}
+            {activePanel === "workflow" ? (
+              <div
+                role="tabpanel"
+                id="groups-workflow-panel"
+                aria-labelledby="groups-workflow-tab"
+              >
+                <GroupWorkflowLog
+                  selectedGroup={selectedGroup}
+                  lifecycleItem={
+                    selectedGroup
+                      ? lifecycleByGroupId.get(selectedGroup.group_id)
+                      : undefined
+                  }
+                  outputs={outputs}
+                  monitor={monitor}
+                  lastBroadcastResult={lastBroadcastResult}
+                  onOpenOutputs={() => setActivePanel("outputs")}
+                  onOpenMessage={() => setActivePanel("message")}
                 />
               </div>
             ) : null}
@@ -218,13 +260,25 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
 
 function GroupsHeader({
   monitor,
+  lifecycleReport,
   refreshing,
+  archivingExpired,
+  onArchiveExpired,
+  onCreate,
   onRefresh,
 }: {
   monitor: Monitor | null;
+  lifecycleReport: GroupLifecycleReport | null;
   refreshing: boolean;
+  archivingExpired: boolean;
+  onArchiveExpired: () => void;
+  onCreate: () => void;
   onRefresh: () => void;
 }) {
+  const summary = lifecycleReport?.summary;
+  const expiredCount = summary?.expired_active_groups ?? 0;
+  const reviewCount = summary?.review_needed_groups ?? 0;
+  const workCount = summary?.team_work_needing_attention ?? 0;
   return (
     <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -242,10 +296,37 @@ function GroupsHeader({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {summary ? (
+            <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-xs text-cortex-text-muted">
+              <span className="font-semibold text-cortex-text-main">
+                {reviewCount} need review
+              </span>
+              <span>{expiredCount} expired</span>
+              <span>{workCount} work items</span>
+            </div>
+          ) : null}
+          {expiredCount > 0 ? (
+            <button
+              type="button"
+              onClick={onArchiveExpired}
+              disabled={archivingExpired}
+              className={compactButtonClassName}
+            >
+              Archive expired
+            </button>
+          ) : null}
           <Link href="/dashboard" className={compactButtonClassName}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Open Soma
           </Link>
+          <button
+            type="button"
+            onClick={onCreate}
+            className={compactButtonClassName}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create group
+          </button>
           <button
             type="button"
             onClick={onRefresh}

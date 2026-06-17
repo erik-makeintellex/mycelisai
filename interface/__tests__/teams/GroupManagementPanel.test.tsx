@@ -190,6 +190,69 @@ describe("GroupManagementPanel", () => {
           }),
         ],
       },
+      workflowLogs: {
+        "group-temp": {
+          timeline: [
+            {
+              id: "work-game-1",
+              kind: "team_work",
+              team_id: "team-marketing",
+              run_id: "run-game-1",
+              title: "Build a playable browser game package",
+              summary: "Game package ready",
+              state: "output_ready",
+              output_refs: [
+                {
+                  output_id: "game-package",
+                  label: "Playable game package",
+                  storage_ref: "groups/group-temp/generated/game",
+                },
+              ],
+              proof_refs: ["proof-game-1", "audit-game-1"],
+              timestamp: new Date().toISOString(),
+            },
+            {
+              id: "game-package",
+              kind: "team_output_ref",
+              team_id: "team-marketing",
+              run_id: "run-game-1",
+              title: "Playable game package",
+              summary: "browser_app",
+              state: "output_ready",
+              storage_ref: "groups/group-temp/generated/game",
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        },
+      },
+      teamWork: {
+        "team-marketing": [
+          {
+            work_item_id: "work-game-1",
+            team_id: "team-marketing",
+            run_id: "run-game-1",
+            objective: "Build a playable browser game package",
+            state: "output_ready",
+            owner: "Team lead",
+            execution_shape: "deliverable",
+            last_event: {
+              headline: "Game package ready",
+              details: "Reviewer confirmed the browser entrypoint opens.",
+              next_action: "Review retained output and proof.",
+            },
+            output_refs: [
+              {
+                output_id: "game-package",
+                label: "Playable game package",
+                storage_ref: "groups/group-temp/generated/game",
+              },
+            ],
+            proof_refs: ["proof-game-1"],
+            audit_refs: ["audit-game-1"],
+            updated_at: new Date().toISOString(),
+          },
+        ],
+      },
     });
 
     render(<GroupManagementPanel initialSelectedGroupId="group-temp" />);
@@ -203,6 +266,18 @@ describe("GroupManagementPanel", () => {
     expect(
       screen.getByRole("tab", { name: /Overview/i }).getAttribute("aria-selected"),
     ).toBe("true");
+    fireEvent.click(screen.getByRole("tab", { name: /Workflow Log/i }));
+    await waitFor(() =>
+      expect(screen.getByTestId("groups-workflow-log").textContent).toContain(
+        "Build a playable browser game package",
+      ),
+    );
+    expect(screen.getByTestId("groups-workflow-log").textContent).toContain(
+      "Playable game package",
+    );
+    expect(screen.getByTestId("groups-workflow-log").textContent).toContain(
+      "2 proof refs",
+    );
     fireEvent.click(screen.getByRole("tab", { name: /Settings/i }));
     expect(screen.getByText("Agent backend model")).toBeDefined();
     expect(screen.getByText("Inherits organization AI Engine")).toBeDefined();

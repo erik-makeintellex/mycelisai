@@ -88,7 +88,7 @@ test.describe("UI finalization exact browser package live proof", () => {
       await page.getByRole("button", { name: /Review output/i }).last().click();
       await page.getByRole("link", { name: `Open ${packageTitle} in Resources` }).last().click();
       await expect(page).toHaveURL(new RegExp(`/resources\\?tab=workspace&path=${encodeURIComponent(resourcesFolder)}`));
-      await expect(page.getByRole("heading", { name: "Advanced Resources" })).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText(resourcesFolder).last()).toBeVisible();
       await expect(page.getByText("index.html")).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText("README.md")).toBeVisible();

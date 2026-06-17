@@ -49,7 +49,7 @@ The banner auto-clears once health recovers.
 
 ---
 
-## System Checks (`/system`, Advanced mode)
+## System Checks (`/system`, Admin tools)
 
 System Checks lets you run targeted validations:
 - NATS connected

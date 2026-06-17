@@ -91,12 +91,7 @@ test.describe("Groups broadcast proof visibility", () => {
   }) => {
     await mockBroadcastProofWorkspace(page);
     await page.goto("/groups", { waitUntil: "domcontentloaded" });
-    const advancedGate = page.getByRole("heading", {
-      name: "Groups are an Advanced coordination view",
-    });
-    if (await advancedGate.count()) {
-      await page.getByRole("link", { name: "Open Advanced mode" }).click();
-    }
+    await expect(page.getByRole("heading", { name: /Manage focused collaboration lanes/i })).toBeVisible();
 
     await page.getByTestId("groups-list-item-group-broadcast-proof").click();
     await expect(page.getByRole("heading", { name: "Broadcast Proof Lane" })).toBeVisible();

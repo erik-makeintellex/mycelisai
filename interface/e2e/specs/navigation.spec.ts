@@ -2,14 +2,14 @@ import { test, expect, type Page } from '@playwright/test';
 
 const DEFAULT_NAV_ENTRIES = [
     { href: '/dashboard', label: 'Soma', testId: 'nav-dashboard' },
+    { href: '/groups', label: 'Groups', testId: 'nav-groups' },
+    { href: '/resources', label: 'Resources', testId: 'nav-resources' },
     { href: '/docs', label: 'Docs', testId: 'nav-docs' },
     { href: '/settings', label: 'Settings', testId: 'nav-settings' },
 ];
 
-const ADVANCED_NAV_ENTRIES = [
-    { href: '/groups', label: 'Groups', testId: 'nav-groups' },
+const ADMIN_NAV_ENTRIES = [
     { href: '/activity', label: 'Activity', testId: 'nav-activity' },
-    { href: '/resources', label: 'Resources', testId: 'nav-resources' },
     { href: '/memory', label: 'Memory', testId: 'nav-memory' },
     { href: '/system', label: 'System', testId: 'nav-system' },
 ];
@@ -36,7 +36,7 @@ async function openDashboard(page: Page) {
     }
 }
 
-async function toggleAdvancedMode(page: Page, fromLabel: 'Advanced: Off' | 'Advanced: On', expectedValue: 'true' | 'false') {
+async function toggleAdminTools(page: Page, fromLabel: 'Admin tools: Off' | 'Admin tools: On', expectedValue: 'true' | 'false') {
     for (let attempt = 0; attempt < 3; attempt += 1) {
         await page.getByRole('button', { name: fromLabel }).click();
         const stored = await page
@@ -52,10 +52,10 @@ async function toggleAdvancedMode(page: Page, fromLabel: 'Advanced: Off' | 'Adva
         }
         await page.waitForTimeout(500);
     }
-    throw new Error(`Advanced mode did not persist ${expectedValue}`);
+    throw new Error(`Admin tools mode did not persist ${expectedValue}`);
 }
 
-test.describe('V8.1 Soma-primary Navigation', () => {
+test.describe('Soma-primary Navigation', () => {
     test.describe.configure({ mode: 'serial' });
 
     test.beforeEach(async ({ page }) => {
@@ -75,7 +75,7 @@ test.describe('V8.1 Soma-primary Navigation', () => {
         for (const entry of DEFAULT_NAV_ENTRIES) {
             await expect(page.getByTestId(entry.testId)).toBeVisible();
         }
-        for (const entry of ADVANCED_NAV_ENTRIES) {
+        for (const entry of ADMIN_NAV_ENTRIES) {
             await expect(page.getByTestId(entry.testId)).toHaveCount(0);
         }
     });
@@ -87,6 +87,8 @@ test.describe('V8.1 Soma-primary Navigation', () => {
 
     for (const route of [
         { href: '/docs', testId: 'nav-docs', url: /\/docs/, label: 'docs' },
+        { href: '/groups', testId: 'nav-groups', url: /\/groups/, label: 'groups' },
+        { href: '/resources', testId: 'nav-resources', url: /\/resources/, label: 'resources' },
         { href: '/settings', testId: 'nav-settings', url: /\/settings/, label: 'settings' },
     ]) {
         test(`navigating to ${route.label} highlights the corresponding nav item`, async ({ page, browserName }) => {
@@ -103,44 +105,46 @@ test.describe('V8.1 Soma-primary Navigation', () => {
         });
     }
 
-    test('System tab is hidden by default (advanced mode off)', async ({ page }) => {
+    test('System tab is hidden by default when Admin tools are off', async ({ page }) => {
         await expect(page.getByTestId('nav-system')).toHaveCount(0);
     });
 
     for (const route of [
-        { href: '/groups', gate: 'Groups are an Advanced coordination view' },
-        { href: '/activity', gate: 'Activity review is an Advanced support view' },
-        { href: '/runs', gate: 'Run lists are an Advanced proof view' },
+        { href: '/activity', gate: 'Activity review is in Admin tools' },
+        { href: '/runs', gate: 'Run lists are in Admin tools' },
     ]) {
-        test(`direct ${route.href} opens an advanced gate while advanced mode is off`, async ({ page }) => {
+        test(`direct ${route.href} opens an Admin tools gate while Admin tools are off`, async ({ page }) => {
             await page.goto(route.href, { waitUntil: 'domcontentloaded' });
             await expect(page.getByRole('heading', { name: route.gate })).toBeVisible();
-            await expect(page.getByRole('link', { name: 'Open Advanced mode' })).toBeVisible();
+            await expect(page.getByRole('link', { name: 'Open admin tools' })).toBeVisible();
             await expect(page.getByRole('link', { name: 'Return to AI Organization' })).toBeVisible();
         });
     }
 
-    test('advanced gate button opens the requested advanced page', async ({ page }) => {
-        await page.goto('/groups', { waitUntil: 'domcontentloaded' });
-        await expect(page.getByRole('heading', { name: 'Groups are an Advanced coordination view' })).toBeVisible();
-        await page.getByRole('link', { name: 'Open Advanced mode' }).click();
+    test('Admin tools gate button opens the requested admin page', async ({ page }) => {
+        await page.goto('/activity', { waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('heading', { name: 'Activity review is in Admin tools' })).toBeVisible();
+        await page.getByRole('link', { name: 'Open admin tools' }).click();
         await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'true');
-        await expect(page.getByTestId('groups-workspace')).toBeVisible({ timeout: 30_000 });
-        await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
-        await expect(page.getByRole('heading', { name: 'Groups are an Advanced coordination view' })).toHaveCount(0);
+        await expect(page.getByRole('heading', { name: 'Progress, runs, and bus review' })).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByRole('heading', { name: 'Activity review is in Admin tools' })).toHaveCount(0);
     });
 
-    test('Advanced mode persistence flips visible state labels', async ({ page }) => {
-        await expect(page.getByTestId('nav-resources')).toHaveCount(0);
-        await toggleAdvancedMode(page, 'Advanced: Off', 'true');
+    test('Admin tools persistence flips visible state labels', async ({ page }) => {
+        await expect(page.getByTestId('nav-groups')).toBeVisible();
         await expect(page.getByTestId('nav-resources')).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Advanced: On' })).toBeVisible();
+        await expect(page.getByTestId('nav-activity')).toHaveCount(0);
+        await toggleAdminTools(page, 'Admin tools: Off', 'true');
+        await expect(page.getByTestId('nav-activity')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Admin tools: On' })).toBeVisible();
         await openDashboard(page);
+        await expect(page.getByTestId('nav-activity')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Admin tools: On' })).toBeVisible();
+        await toggleAdminTools(page, 'Admin tools: On', 'false');
+        await openDashboard(page);
+        await expect(page.getByTestId('nav-groups')).toBeVisible();
         await expect(page.getByTestId('nav-resources')).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Advanced: On' })).toBeVisible();
-        await toggleAdvancedMode(page, 'Advanced: On', 'false');
-        await openDashboard(page);
-        await expect(page.getByTestId('nav-resources')).toHaveCount(0);
-        await expect(page.getByRole('button', { name: 'Advanced: Off' })).toBeVisible();
+        await expect(page.getByTestId('nav-activity')).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Admin tools: Off' })).toBeVisible();
     });
 });

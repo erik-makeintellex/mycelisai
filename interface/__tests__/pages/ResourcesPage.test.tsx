@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -59,15 +59,11 @@ vi.mock('@/components/catalogue/CataloguePage', () => ({
     default: () => <div data-testid="catalogue-page">CataloguePage</div>,
 }));
 
-const mockAdvancedMode = vi.fn(() => true);
-const mockToggleAdvancedMode = vi.fn();
 const mockFetchMCPServers = vi.fn();
 const mockDeleteMCPServer = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
     useCortexStore: (selector: any) =>
         selector({
-            advancedMode: mockAdvancedMode(),
-            toggleAdvancedMode: mockToggleAdvancedMode,
             mcpServers: [],
             isFetchingMCPServers: false,
             fetchMCPServers: mockFetchMCPServers,
@@ -77,18 +73,16 @@ vi.mock('@/store/useCortexStore', () => ({
 
 import ResourcesPage from '@/app/(app)/resources/page';
 
-describe('Resources Page (V8.1 advanced support)', () => {
+describe('Resources Page (operator support)', () => {
     beforeEach(() => {
         for (const key of [...mockSearchParams.keys()]) {
             mockSearchParams.delete(key);
         }
-        mockAdvancedMode.mockReturnValue(true);
-        mockToggleAdvancedMode.mockReset();
     });
 
     it('renders page title', async () => {
         await act(async () => { render(<ResourcesPage />); });
-        expect(screen.getByText('Advanced Resources')).toBeDefined();
+        expect(screen.getByText('Resources')).toBeDefined();
     });
 
     it('renders all tabs', async () => {
@@ -152,16 +146,9 @@ describe('Resources Page (V8.1 advanced support)', () => {
         });
     });
 
-    it('shows the advanced gate when advanced mode is off', async () => {
-        mockAdvancedMode.mockReturnValue(false);
+    it('stays available without admin tools gating', async () => {
         await act(async () => { render(<ResourcesPage />); });
-        expect(screen.getByText(/Advanced resources stay tucked away by default/i)).toBeDefined();
-    });
-
-    it('lets an operator open Advanced mode from the gate', async () => {
-        mockAdvancedMode.mockReturnValue(false);
-        await act(async () => { render(<ResourcesPage />); });
-        fireEvent.click(screen.getByRole('link', { name: /Open Advanced mode/i }));
-        expect(mockToggleAdvancedMode).toHaveBeenCalledOnce();
+        expect(screen.getByRole('navigation', { name: 'Resource type menu' })).toBeDefined();
+        expect(screen.queryByText(/Admin tools/i)).toBeNull();
     });
 });

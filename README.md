@@ -295,6 +295,12 @@ Release licensing separates the local self-hosted node from the hosted admin con
 
 Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, canonical terminology, task execution, or validation must include documentation review in the same slice. When adding, removing, or renaming major README sections, update this README TOC in the same change.
 
+Keep documentation split into two layers:
+- **User help layer**: `docs/user/*` and the in-app `/docs` manifest should explain how a person uses Soma, groups, resources, outputs, proof, settings, and recovery. Lead with the task, the expected result, and the next action. Keep implementation contracts, raw topology, and historical doctrine out of the default path.
+- **Architecture and repo layer**: `README.md`, `docs/README.md`, `.state/V8_DEV_STATE.md`, and `docs/architecture-library/*` should define current delivery truth, proof gates, and engineering contracts. Update this layer only when the product meaning, workflow contract, or release target changes.
+
+After each subjective UI step, pair the code/test change with the matching docs cleanup: update the affected user guide if the operator experience changed, update the README/architecture layer if the product contract changed, update `interface/lib/docsManifest.ts` if the in-app help entry moved, and record the active state/proof in `.state/V8_DEV_STATE.md`.
+
 ## Status
 
 The repo is in active V8.3 operational embodiment with stable V8/V8.2 compatibility baselines. Treat this README as a compact navigation contract; do not re-expand it into a duplicate architecture monolith.

@@ -32,12 +32,12 @@ export default function AdvancedModeGate({
             <div className="max-w-xl rounded-3xl border border-cortex-border bg-cortex-surface p-6 shadow-[0_18px_40px_rgba(148,163,184,0.16)]">
                 <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.22em] text-cortex-primary">
                     <Eye className="h-3.5 w-3.5" />
-                    Advanced Mode
+                    Admin tools
                 </div>
                 <h1 className="mt-4 text-2xl font-semibold tracking-tight text-cortex-text-main">{title}</h1>
                 <p className="mt-3 text-sm leading-7 text-cortex-text-muted">{summary}</p>
                 <p className="mt-3 text-sm leading-7 text-cortex-text-muted">
-                    Turn on Advanced mode from the left rail when you want to inspect deeper tools, system details, or configuration surfaces.
+                    Turn on Admin tools from the left rail when you want deeper run history, system details, memory, or configuration inspection.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
                     <Link
@@ -46,7 +46,7 @@ export default function AdvancedModeGate({
                         className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-primary px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-cortex-primary/90"
                     >
                         <Eye className="h-4 w-4" />
-                        Open Advanced mode
+                        Open admin tools
                     </Link>
                     <Link
                         href={returnHref}

@@ -145,6 +145,84 @@ export async function mockGroupsWorkspace(page: Page) {
     ["group-standing", []],
   ]);
 
+  const teamWorkByTeam = new Map<string, Record<string, unknown>[]>([
+    [
+      "launch-lead",
+      [
+        {
+          work_item_id: "work-launch-package",
+          team_id: "launch-lead",
+          run_id: "run-launch-proof",
+          objective: "Prepare launch brief and asset bundle",
+          owner: "Launch lead",
+          execution_shape: "deliverable",
+          state: "output_ready",
+          last_event: {
+            headline: "Launch package ready",
+            details: "Review confirmed the retained package is ready to open.",
+            next_action: "Review retained outputs.",
+          },
+          output_refs: [
+            {
+              output_id: "artifact-brief",
+              label: "Launch Brief",
+              storage_ref: "groups/group-temp-launch/outputs/launch-brief.md",
+            },
+          ],
+          proof_refs: ["proof-launch"],
+          audit_refs: ["audit-launch"],
+          updated_at: "2026-04-09T10:14:00Z",
+        },
+      ],
+    ],
+    ["design-lead", []],
+    ["archive-review-lead", []],
+    ["revops-lead", []],
+  ]);
+
+  const workflowLogsByGroup = new Map<string, Record<string, unknown>>([
+    [
+      "group-temp-launch",
+      {
+        timeline: [
+          {
+            id: "work-launch-package",
+            kind: "team_work",
+            group_id: "group-temp-launch",
+            team_id: "launch-lead",
+            work_item_id: "work-launch-package",
+            run_id: "run-launch-proof",
+            title: "Prepare launch brief and asset bundle",
+            summary: "Launch package ready",
+            state: "output_ready",
+            output_refs: [
+              {
+                output_id: "artifact-brief",
+                label: "Launch Brief",
+                storage_ref: "groups/group-temp-launch/outputs/launch-brief.md",
+              },
+            ],
+            proof_refs: ["proof-launch"],
+            audit_refs: ["audit-launch"],
+            timestamp: "2026-04-09T10:14:00Z",
+          },
+          {
+            id: "artifact-brief",
+            kind: "retained_artifact",
+            group_id: "group-temp-launch",
+            team_id: "launch-lead",
+            artifact_id: "artifact-brief",
+            title: "Launch Brief",
+            summary: "document",
+            state: "approved",
+            storage_ref: "groups/group-temp-launch/outputs/launch-brief.md",
+            timestamp: "2026-04-09T10:10:00Z",
+          },
+        ],
+      },
+    ],
+  ]);
+
   const broadcastBodies: Array<Record<string, unknown>> = [];
   const statusBodies: Array<Record<string, unknown>> = [];
 
@@ -157,6 +235,75 @@ export async function mockGroupsWorkspace(page: Page) {
         last_group_id: "group-temp-launch",
         last_message: "Generate launch brief and asset bundle",
         last_published_at: "2026-04-09T10:13:00Z",
+      },
+    });
+  });
+
+  await page.route("**/api/v1/groups/lifecycle", async (route) => {
+    await fulfillJson(route, 200, {
+      ok: true,
+      data: {
+        generated_at: "2026-04-09T10:15:00Z",
+        summary: {
+          total_groups: groups.length,
+          active_groups: 2,
+          expired_active_groups: 0,
+          standing_no_expiry_groups: 1,
+          stale_standing_groups: 0,
+          review_needed_groups: 1,
+          output_ready_idle_groups: 1,
+          team_work_needing_attention: 0,
+        },
+        items: groups.map((group) => ({
+          group_id: group.group_id,
+          name: group.name,
+          status: group.status,
+          work_mode: group.work_mode,
+          kind: group.status === "archived" ? "archived" : group.expiry ? "temporary" : "standing",
+          recommendation:
+            group.group_id === "group-temp-launch"
+              ? "archive_completed"
+              : group.status === "archived"
+                ? "retained"
+                : "keep_active",
+          reason:
+            group.group_id === "group-temp-launch"
+              ? "Outputs are retained and no linked team work is active."
+              : "Group is retained for ongoing work.",
+          expiry: group.expiry ?? null,
+          expired: false,
+          age_hours: 24,
+          team_count: group.team_ids.length,
+          output_count: artifactsByGroup.get(group.group_id)?.length ?? 0,
+          team_work_count: 0,
+          active_or_blocked_work_count: 0,
+          output_ready_work_count: group.group_id === "group-temp-launch" ? 1 : 0,
+          archived_work_count: 0,
+        })),
+      },
+    });
+  });
+
+  await page.route("**/api/v1/groups/lifecycle/archive-expired", async (route) => {
+    await fulfillJson(route, 200, {
+      ok: true,
+      data: {
+        archived_count: 0,
+        archived_group_ids: [],
+        report: {
+          generated_at: "2026-04-09T10:16:00Z",
+          summary: {
+            total_groups: groups.length,
+            active_groups: 2,
+            expired_active_groups: 0,
+            standing_no_expiry_groups: 1,
+            stale_standing_groups: 0,
+            review_needed_groups: 1,
+            output_ready_idle_groups: 1,
+            team_work_needing_attention: 0,
+          },
+          items: [],
+        },
       },
     });
   });
@@ -197,6 +344,31 @@ export async function mockGroupsWorkspace(page: Page) {
     });
   });
 
+  await page.route(/\/api\/v1\/groups\/[^/]+\/workflow-log\?limit=.*/, async (route) => {
+    const url = new URL(route.request().url());
+    const pathParts = url.pathname.split("/");
+    const groupId = pathParts[pathParts.length - 2] ?? "";
+    const workflowLog = workflowLogsByGroup.get(groupId);
+    if (!workflowLog) {
+      await fulfillJson(route, 404, { ok: false, error: "not found" });
+      return;
+    }
+    await fulfillJson(route, 200, {
+      ok: true,
+      data: workflowLog,
+    });
+  });
+
+  await page.route(/\/api\/v1\/teams\/[^/]+\/work\?limit=8&include_archived=false/, async (route) => {
+    const url = new URL(route.request().url());
+    const pathParts = url.pathname.split("/");
+    const teamId = pathParts[pathParts.length - 2] ?? "";
+    await fulfillJson(route, 200, {
+      ok: true,
+      data: teamWorkByTeam.get(teamId) ?? [],
+    });
+  });
+
   await page.route("**/api/v1/groups/group-temp-launch/broadcast", async (route) => {
     broadcastBodies.push((route.request().postDataJSON() ?? {}) as Record<string, unknown>);
     await fulfillJson(route, 200, { ok: true, data: { queued: true } });
@@ -220,10 +392,7 @@ export async function mockGroupsWorkspace(page: Page) {
 
 export async function openGroups(page: Page) {
   await page.goto("/groups", { waitUntil: "domcontentloaded" });
-  const advancedGate = page.getByRole("heading", {
-    name: "Groups are an Advanced coordination view",
-  });
-  if (await advancedGate.count()) {
-    await page.getByRole("link", { name: "Open Advanced mode" }).click();
-  }
+  await page.getByRole("heading", { name: /Manage focused collaboration lanes/i }).waitFor();
+  await page.getByText("Group lane monitor is online.").waitFor();
+  await page.getByRole("heading", { name: "Standing groups" }).waitFor();
 }

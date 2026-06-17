@@ -46,9 +46,12 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/settings/user", s.HandleUserSettings)
 	mux.HandleFunc("GET /api/v1/groups", s.HandleListGroups)
 	mux.HandleFunc("GET /api/v1/groups/monitor", s.HandleGroupMonitor)
+	mux.HandleFunc("GET /api/v1/groups/lifecycle", s.HandleGroupLifecycleReport)
+	mux.HandleFunc("POST /api/v1/groups/lifecycle/archive-expired", s.HandleArchiveExpiredGroups)
 	mux.HandleFunc("POST /api/v1/groups", s.HandleCreateGroup)
 	mux.HandleFunc("PUT /api/v1/groups/{id}", s.HandleUpdateGroup)
 	mux.HandleFunc("PATCH /api/v1/groups/{id}/status", s.HandleUpdateGroupStatus)
+	mux.HandleFunc("GET /api/v1/groups/{id}/workflow-log", s.HandleGroupWorkflowLog)
 	mux.HandleFunc("GET /api/v1/groups/{id}/outputs", s.HandleGroupOutputs)
 	mux.HandleFunc("POST /api/v1/groups/{id}/broadcast", s.HandleGroupBroadcast)
 

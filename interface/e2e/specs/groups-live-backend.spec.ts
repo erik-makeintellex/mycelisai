@@ -95,15 +95,7 @@ async function gotoWithColdStartRetry(page: Page, path: string) {
 
 async function openGroupsWorkspace(page: Page, path: string) {
     await gotoWithColdStartRetry(page, path);
-    const advancedGate = page.getByRole('heading', { name: 'Groups are an Advanced coordination view' });
-    if (await advancedGate.count()) {
-        await gotoWithColdStartRetry(page, withAdvancedMode(path));
-    }
-}
-
-function withAdvancedMode(path: string) {
-    const separator = path.includes('?') ? '&' : '?';
-    return path.includes('advanced=1') ? path : `${path}${separator}advanced=1`;
+    await expect(page.getByRole('heading', { name: /Manage focused collaboration lanes/i })).toBeVisible();
 }
 
 test.describe('Groups retained outputs live backend contract', () => {

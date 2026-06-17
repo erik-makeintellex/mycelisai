@@ -83,6 +83,7 @@ export function ActiveWorkLane({
   if (isReviewPurpose && frame) {
     return (
       <WorkReviewInbox
+        title={title}
         items={items}
         emptyMessage={emptyMessage}
         statusLabel={statusLabel}
@@ -95,6 +96,24 @@ export function ActiveWorkLane({
 
   return (
     <section className={className} data-testid="active-work-lane">
+      {compact && isReviewPurpose ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-cortex-text-main">
+              {title}
+            </h2>
+            <p className="mt-0.5 font-mono text-[11px] text-cortex-text-muted">
+              {count} actionable item{count === 1 ? "" : "s"}
+            </p>
+          </div>
+          <Link
+            href={moreItemsHref}
+            className="inline-flex min-h-8 items-center justify-center rounded-lg border border-cortex-primary/30 px-2.5 text-[11px] font-semibold text-cortex-primary hover:bg-cortex-primary/10"
+          >
+            Open full queue
+          </Link>
+        </div>
+      ) : null}
       {compact ? null : <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Radio className="h-4 w-4 text-cortex-primary" />

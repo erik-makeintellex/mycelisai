@@ -3,6 +3,8 @@
 
 Use this page as the repo documentation map. It separates product docs, repo/operator docs, architecture contracts, and retained compatibility evidence.
 
+The in-app Help area should stay user-first. Its default path should help someone act through Soma, groups, resources, outputs, proof, settings, and recovery before exposing contributor or architecture-review material.
+
 ## Docs TOC
 
 - [User Guidance](#user-guidance)
@@ -30,6 +32,12 @@ These are the best entry points for someone using Mycelis through the product or
 - **Authentication Modes**: `./user/auth-modes.md`
 - **System Status & Recovery**: `./user/system-status-recovery.md`
 - **Run Timeline**: `./user/run-timeline.md`
+
+User guidance rules:
+- lead with the action a user is trying to complete
+- keep proof, recovery, and output access close to the workflow they explain
+- move implementation contracts, API details, raw topology, and old planning language into repo or architecture docs instead of the default user path
+- when a UI slice changes an operator workflow, update the matching user doc and the in-app docs manifest in the same slice
 
 ## Repo Guidance
 
@@ -104,3 +112,4 @@ Guidance rules:
 - agent/maintainer notes should stay out of the default in-app operator docs unless they are intentionally surfaced for architecture review
 - testing guidance should point to durable verification contracts rather than temporary execution notes
 - if a removed doc contains a still-needed requirement, promote that requirement into the nearest active contract instead of restoring the old doc
+- each subjective UI cleanup step should close with the docs touched, the docs reviewed unchanged, and the proof that the in-app Help entry still opens

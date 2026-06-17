@@ -32,6 +32,8 @@ import { ZoneA } from '@/components/shell/ZoneA_Rail';
 
 const DEFAULT_NAV_ENTRIES = [
     { href: '/dashboard', label: 'Soma' },
+    { href: '/groups', label: 'Groups' },
+    { href: '/resources', label: 'Resources' },
     { href: '/docs', label: 'Docs' },
 ];
 
@@ -105,18 +107,18 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
         expect(docsLink?.className).toContain('text-cortex-text-muted');
     });
 
-    it('keeps advanced routes hidden when advancedMode is off', () => {
+    it('keeps admin-only routes hidden when admin tools are off', () => {
         mockAdvancedMode.mockReturnValue(false);
         const { container } = render(<ZoneA />);
-        expect(container.querySelector('a[href="/groups"]')).toBeNull();
+        expect(container.querySelector('a[href="/groups"]')).toBeDefined();
+        expect(container.querySelector('a[href="/resources"]')).toBeDefined();
         expect(container.querySelector('a[href="/activity"]')).toBeNull();
-        expect(container.querySelector('a[href="/resources"]')).toBeNull();
         expect(container.querySelector('a[href="/memory"]')).toBeNull();
         const systemLink = container.querySelector('a[href="/system"]');
         expect(systemLink).toBeNull();
     });
 
-    it('shows advanced routes when advancedMode is on', () => {
+    it('shows admin-only routes when admin tools are on', () => {
         mockAdvancedMode.mockReturnValue(true);
         render(<ZoneA />);
         expect(screen.getByText('Groups')).toBeDefined();
@@ -128,7 +130,7 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
 
     it('renders Advanced toggle button', () => {
         render(<ZoneA />);
-        expect(screen.getByText('Advanced: Off')).toBeDefined();
+        expect(screen.getByText('Admin tools: Off')).toBeDefined();
     });
 
     it('does not use bg-white', () => {

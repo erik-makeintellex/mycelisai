@@ -5,17 +5,20 @@ import {
   groupKindLabel,
   linkClassName,
   type Group,
+  type GroupLifecycleItem,
   type OutputSummary,
 } from "./groupWorkspaceTypes";
 
 export function GroupDetailPane({
   selectedGroup,
+  lifecycleItem,
   outputSummary,
   archiving,
   onArchive,
   onOpenOutputs,
 }: {
   selectedGroup: Group | null;
+  lifecycleItem?: GroupLifecycleItem;
   outputSummary: OutputSummary;
   archiving: boolean;
   onArchive: () => void;
@@ -60,7 +63,20 @@ export function GroupDetailPane({
               {outputSummary.agentCount} contributing lead
               {outputSummary.agentCount === 1 ? "" : "s"}
             </Badge>
+            {lifecycleItem ? (
+              <Badge muted>
+                {lifecycleSummaryLabel(lifecycleItem)}
+              </Badge>
+            ) : null}
           </div>
+          {lifecycleItem ? (
+            <p className="mt-3 rounded-lg border border-cortex-border bg-cortex-surface p-3 text-xs leading-5 text-cortex-text-muted">
+              <span className="font-semibold text-cortex-text-main">
+                Recommended:
+              </span>{" "}
+              {lifecycleActionLabel(lifecycleItem)}. {lifecycleItem.reason}
+            </p>
+          ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -129,6 +145,32 @@ export function GroupDetailPane({
       </div>
     </section>
   );
+}
+
+function lifecycleSummaryLabel(item: GroupLifecycleItem) {
+  if (item.active_or_blocked_work_count > 0)
+    return `${item.active_or_blocked_work_count} work waiting`;
+  if (item.output_ready_work_count > 0 || item.output_count > 0)
+    return "output retained";
+  if (item.expired) return "expired";
+  return item.recommendation.replaceAll("_", " ");
+}
+
+function lifecycleActionLabel(item: GroupLifecycleItem) {
+  switch (item.recommendation) {
+    case "archive_expired":
+      return "archive expired temporary lane";
+    case "review_work":
+      return "review linked team work";
+    case "archive_completed":
+      return "archive completed lane after output review";
+    case "review_standing":
+      return "confirm this standing group is still useful";
+    case "retained":
+      return "keep retained record available";
+    default:
+      return "keep active";
+  }
 }
 
 export function Badge({

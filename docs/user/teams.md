@@ -22,7 +22,7 @@ The Teams area is where you review active teams, open a team lead workspace, and
 
 Use the adjacent workstream surfaces deliberately:
 - `/teams` is for active team work, team lead workspaces, team shape, and current execution posture.
-- `/groups` is for retained outputs, archived collaboration records, and reviewable temporary-workflow history after the active collaboration is closed.
+- `/groups` is for focused collaboration lanes, workflow-log review, retained outputs, archived collaboration records, and temporary-workflow history.
 - `/automations` is for trigger rules that react to events, plus approvals around automated actuation.
 
 Default rule:
@@ -81,7 +81,9 @@ Ask Team is non-blocking. When you queue a follow-on ask, the row should close t
 
 `Clear from review` archives a durable work item so it leaves active review queues while retained outputs, proof refs, audit refs, and history remain inspectable. Use it for stale failed proposals or old test data after confirming nothing useful is waiting to be recovered.
 
-Use `Groups` when you want to review retained outputs or collaboration records after a temporary workflow has been archived. Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
+Use `Groups` when you want to review a collaboration lane without opening every team surface. The selected group includes a **Workflow Log** tab that combines the group brief, lifecycle recommendation, attached team-work rows, retained output cues, latest broadcast result, and bus/recovery signal into one operator-readable stream. It is workflow context, not a final deliverable folder and not raw NATS/bus logs.
+
+Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
 
 Use `Automations` when you want event rules to actuate work, route proposals, require approval before execution, or author propose-only Schedule Rules for reviewable cadence.
 
@@ -141,7 +143,7 @@ When you open a team:
 
 The team lead is the user-facing counterpart for that team, not a hidden extra member list.
 
-After a temporary collaboration is archived, use `/groups` to review the retained output package and collaboration record.
+After a temporary collaboration is archived, use `/groups` to review the workflow log, retained output package, and collaboration record.
 
 For permanent or standing groups, keep deliverables inside the group folder instead of the general output folders. Soma-owned team media defaults to `groups/<team-id>/media`, and Soma-owned team project packages default to `groups/<team-id>/generated/...`. Explicit operator paths are still respected when you intentionally name a different workspace-confined target.
 
@@ -155,6 +157,7 @@ Tell Soma:
 - whether the work should stay as one compact team or split into multiple lanes
 - what outputs you want visible at the end
 - whether this is a temporary group whose logs can be reviewed and whose outputs should remain after closure
+- whether the group workflow log should show only final user-facing outputs or include deeper team-work/source context during review
 
 If the request is broad, expect Soma to recommend:
 - a few lead-only teams
@@ -188,4 +191,5 @@ When testing team workflows, verify:
 - degraded team asks name timeout/offline/unreadable-response proof, recovery options, and what remains trusted
 - raw input/delivery subjects, models, prompts, and tool ids stay behind Advanced/Inspect instead of default team cards
 - retained outputs remain reviewable in `/groups` after a temporary collaboration is closed
+- the group **Workflow Log** shows work items, run/proof cues, retained output cues, and recovery/degraded fetch guidance without exposing raw bus subjects by default
 - event-driven actuation is configured through `/automations` Trigger Rules, not through the team workspace itself

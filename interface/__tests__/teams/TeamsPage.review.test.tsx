@@ -63,7 +63,7 @@ describe("TeamsPage review route", () => {
 
     render(<TeamsPage />);
 
-    expect(screen.getByText("Work to Review")).toBeDefined();
+    expect(screen.getByText("Recovery and Review")).toBeDefined();
     expect(screen.getByText("Decide what happens to this work")).toBeDefined();
     await waitFor(() => {
       expect(screen.getByText("Draft launch package")).toBeDefined();

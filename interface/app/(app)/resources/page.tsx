@@ -5,8 +5,6 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Brain, BookOpen, FolderOpen, GitBranch, BookMarked, ShieldCheck, type LucideIcon } from "lucide-react";
 import BrainsPage from "@/components/settings/BrainsPage";
-import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
-import { useCortexStore } from "@/store/useCortexStore";
 
 const MCPToolRegistry = dynamic(() => import("@/components/settings/MCPToolRegistry"), {
     ssr: false,
@@ -98,21 +96,11 @@ export default function ResourcesPage() {
 
 function ResourcesContent() {
     const searchParams = useSearchParams();
-    const advancedMode = useCortexStore((s) => s.advancedMode);
     const tabParam = (searchParams?.get("tab") as TabId | null) ?? null;
     const pathParam = searchParams?.get("path") ?? null;
     const [activeTab, setActiveTab] = useState<TabId>(
         tabParam && VALID_TABS.includes(tabParam) ? tabParam : "workspace"
     );
-
-    if (!advancedMode) {
-        return (
-            <AdvancedModeGate
-                title="Advanced resources stay tucked away by default"
-                summary="Connected tools, workspace file access, role libraries, and global AI engine setup are available when you intentionally open Advanced mode."
-            />
-        );
-    }
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-cortex-bg">
@@ -121,7 +109,7 @@ function ResourcesContent() {
                     <div className="min-w-0">
                         <p className="text-[10px] font-semibold uppercase text-cortex-text-muted">Operator support systems</p>
                         <h1 className="text-2xl font-bold text-cortex-text-main tracking-tight">
-                            Advanced Resources
+                            Resources
                         </h1>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-cortex-text-muted">
                             Open generated work first, then use focused panes for capabilities, context, exchange
@@ -213,9 +201,6 @@ function ResourcePanelHeader({ tab }: { tab: ResourceTab }) {
                     <p className="mt-1 max-w-3xl text-xs leading-5 text-cortex-text-muted">{tab.summary}</p>
                 </div>
             </div>
-            <span className="rounded border border-cortex-border bg-cortex-surface px-2 py-1 text-[10px] uppercase text-cortex-text-muted">
-                Inner scroll
-            </span>
         </div>
     );
 }

@@ -78,7 +78,7 @@ describe("ActivityPage", () => {
 
     render(<ActivityPage />);
 
-    expect(screen.getByText("Activity review is an Advanced support view")).toBeDefined();
+    expect(screen.getByText("Activity review is in Admin tools")).toBeDefined();
     expect(screen.getByText(/deeper run lists, bus signals, and operator diagnostics/i)).toBeDefined();
     expect(screen.queryByText("Progress, runs, and bus review")).toBeNull();
   });

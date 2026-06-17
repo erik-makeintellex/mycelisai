@@ -35,8 +35,8 @@ function SystemContent() {
     if (!advancedMode) {
         return (
             <AdvancedModeGate
-                title="System diagnostics are hidden until you open Advanced mode"
-                summary="System health, service recovery, storage checks, and event-bus diagnostics stay behind Advanced mode so the default workflow remains centered on your AI Organization."
+                title="System diagnostics are in Admin tools"
+                summary="System health, service recovery, storage checks, and event-bus diagnostics stay behind Admin tools so the default workflow remains centered on your AI Organization."
             />
         );
     }
@@ -54,7 +54,7 @@ function SystemContent() {
                         </p>
                     </div>
                     <span className="text-[10px] font-mono uppercase text-cortex-warning bg-cortex-warning/10 border border-cortex-warning/20 px-2 py-1 rounded">
-                        Advanced
+                        Admin tools
                     </span>
                 </div>
 

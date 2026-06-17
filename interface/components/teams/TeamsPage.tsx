@@ -9,6 +9,7 @@ import {
   type TeamDetailEntry,
 } from "@/store/useCortexStore";
 import AgentEditorDrawer from "@/components/catalogue/AgentEditorDrawer";
+import { recoveryReviewQueueItems } from "@/components/recovery/recoveryQueue";
 import { ActiveWorkLane } from "./ActiveWorkLane";
 import TeamCard from "./TeamCard";
 import TeamDetailDrawer from "./TeamDetailDrawer";
@@ -121,11 +122,15 @@ export default function TeamsPage() {
     activeTeamWork.items,
     activeWorkActions.submittedTeamWorkItems,
   );
+  const recoveryReviewItems = recoveryReviewQueueItems(activeWorkItems);
+  const laneItems = isWorkReviewView ? recoveryReviewItems : activeWorkItems;
   const activeWorkLane = (
     <ActiveWorkLane
-      title={isWorkReviewView ? "Work to review" : "Active work lane"}
-      items={activeWorkItems}
-      emptyMessage={activeTeamWork.emptyMessage}
+      title={isWorkReviewView ? "Recovery and review" : "Active work lane"}
+      items={laneItems}
+      emptyMessage={isWorkReviewView && activeWorkItems.length > 0 && recoveryReviewItems.length === 0
+        ? "No recovery or review items need operator attention right now."
+        : activeTeamWork.emptyMessage}
       statusLabel={activeWorkActions.activeWorkActionNotice ?? activeTeamWork.statusLabel}
       degradedMessage={
         activeWorkActions.activeWorkActionError ?? activeTeamWork.degradedMessage
@@ -133,6 +138,7 @@ export default function TeamsPage() {
       onAction={activeWorkActions.handleActiveWorkAction}
       onTeamAsk={activeWorkActions.handleTeamAsk}
       purpose={isWorkReviewView ? "review" : "active"}
+      moreItemsHref="/teams?view=work"
     />
   );
 
@@ -171,7 +177,7 @@ export default function TeamsPage() {
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-sm font-mono font-bold text-cortex-text-main uppercase tracking-wider">
-                {isWorkReviewView ? "Work to Review" : "Team Lead Workspaces"}
+                {isWorkReviewView ? "Recovery and Review" : "Team Lead Workspaces"}
               </h1>
               <span className="text-[10px] font-mono text-cortex-text-muted">
                 {filteredTeams.length} team

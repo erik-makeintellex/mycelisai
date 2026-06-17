@@ -152,9 +152,9 @@ function AdvancedDeepLinkNotice({ requestedTab, onOpen }: { requestedTab: TabId;
         <section className="rounded-2xl border border-cortex-primary/25 bg-cortex-primary/10 px-4 py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p className="text-sm font-semibold text-cortex-text-main">{labels[requestedTab]} lives in Advanced mode</p>
+                    <p className="text-sm font-semibold text-cortex-text-main">{labels[requestedTab]} lives in Admin tools</p>
                     <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
-                        This link is valid, but the section is intentionally hidden until Advanced mode is on.
+                        This link is valid, but the section is intentionally hidden until Admin tools are on.
                     </p>
                 </div>
                 <button

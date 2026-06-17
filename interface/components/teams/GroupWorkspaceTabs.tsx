@@ -5,11 +5,13 @@ import {
   MessageSquare,
   Plus,
   Settings2,
+  ScrollText,
   Users,
 } from "lucide-react";
 
 export type GroupWorkspacePanel =
   | "overview"
+  | "workflow"
   | "outputs"
   | "message"
   | "settings"
@@ -28,7 +30,7 @@ export function GroupWorkspaceTabs({
 }: GroupWorkspaceTabsProps) {
   return (
     <div
-      className="grid grid-cols-2 gap-2 border-b border-cortex-border bg-cortex-bg/40 p-2 md:grid-cols-3 xl:grid-cols-5"
+      className="grid grid-cols-2 gap-2 border-b border-cortex-border bg-cortex-bg/40 p-2 sm:grid-cols-3 xl:grid-cols-6"
       role="tablist"
       aria-label="Group workspace sections"
       onKeyDown={(event) => handleTabKeyDown(event, activePanel, onSelect)}
@@ -62,6 +64,8 @@ function GroupWorkspaceTab({
       aria-selected={selected}
       aria-controls={`groups-${panel.id}-panel`}
       id={`groups-${panel.id}-tab`}
+      onPointerDown={() => onSelect(panel.id)}
+      onFocus={() => onSelect(panel.id)}
       onClick={() => onSelect(panel.id)}
       className={`rounded-xl border px-3 py-2 text-left transition-colors ${
         selected
@@ -96,6 +100,12 @@ function workspacePanelTabs(outputCount: number): PanelTab[] {
       icon: ClipboardList,
     },
     {
+      id: "workflow",
+      label: "Workflow log",
+      summary: "Phases and events",
+      icon: ScrollText,
+    },
+    {
       id: "outputs",
       label: "Outputs",
       summary: `${outputCount} retained`,
@@ -124,6 +134,7 @@ function workspacePanelTabs(outputCount: number): PanelTab[] {
 
 const panelOrder: GroupWorkspacePanel[] = [
   "overview",
+  "workflow",
   "outputs",
   "message",
   "settings",

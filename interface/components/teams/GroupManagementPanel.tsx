@@ -16,6 +16,7 @@ import {
   type Group,
   type GroupBroadcastResult,
   type GroupDraft,
+  type GroupLifecycleReport,
   type Monitor,
 } from "./groupWorkspaceTypes";
 import { pickSelectedGroupId } from "./groupSelection";
@@ -28,6 +29,8 @@ export default function GroupManagementPanel({
 }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [monitor, setMonitor] = useState<Monitor | null>(null);
+  const [lifecycleReport, setLifecycleReport] =
+    useState<GroupLifecycleReport | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [outputs, setOutputs] = useState<Artifact[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
@@ -39,6 +42,7 @@ export default function GroupManagementPanel({
   const [saving, setSaving] = useState(false);
   const [broadcasting, setBroadcasting] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [archivingExpired, setArchivingExpired] = useState(false);
   const [draft, setDraft] = useState<GroupDraft>(emptyGroupDraft);
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [lastBroadcastResult, setLastBroadcastResult] =
@@ -60,13 +64,19 @@ export default function GroupManagementPanel({
     () => buildGroupBuckets(filteredGroups),
     [filteredGroups],
   );
+  const lifecycleByGroupId = useMemo(() => {
+    const byID = new Map<string, GroupLifecycleReport["items"][number]>();
+    lifecycleReport?.items.forEach((item) => byID.set(item.group_id, item));
+    return byID;
+  }, [lifecycleReport]);
   const loadGroups = async () => {
     setRefreshing(true);
     setError(null);
     try {
-      const [groupsRes, monitorRes] = await Promise.all([
+      const [groupsRes, monitorRes, lifecycleRes] = await Promise.all([
         fetch("/api/v1/groups", { cache: "no-store" }),
         fetch("/api/v1/groups/monitor", { cache: "no-store" }),
+        fetch("/api/v1/groups/lifecycle", { cache: "no-store" }),
       ]);
       if (!groupsRes.ok) throw new Error("Could not load groups.");
       const nextGroups = await getData<Group[]>(groupsRes);
@@ -75,6 +85,8 @@ export default function GroupManagementPanel({
         pickSelectedGroupId(nextGroups, current, initialSelectedGroupId),
       );
       if (monitorRes.ok) setMonitor(await getData<Monitor>(monitorRes));
+      if (lifecycleRes.ok)
+        setLifecycleReport(await getData<GroupLifecycleReport>(lifecycleRes));
     } catch (loadError) {
       setError(errorMessage(loadError, "Could not load groups."));
     } finally {
@@ -253,10 +265,42 @@ export default function GroupManagementPanel({
     }
   };
 
+  const archiveExpiredGroups = async () => {
+    setArchivingExpired(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/v1/groups/lifecycle/archive-expired", {
+        method: "POST",
+      });
+      const payload = await getData<{
+        archived_count?: number;
+        report?: GroupLifecycleReport;
+      }>(res);
+      if (!res.ok) throw new Error("Could not archive expired groups.");
+      const archivedCount = payload.archived_count ?? 0;
+      if (payload.report) setLifecycleReport(payload.report);
+      setNotice(
+        archivedCount > 0
+          ? `${archivedCount} expired temporary group${archivedCount === 1 ? "" : "s"} archived. Retained outputs remain reviewable.`
+          : "No expired temporary groups needed cleanup.",
+      );
+      await loadGroups();
+    } catch (archiveError) {
+      setError(
+        errorMessage(archiveError, "Could not archive expired groups."),
+      );
+    } finally {
+      setArchivingExpired(false);
+    }
+  };
+
   return (
     <GroupWorkspacePanels
       buckets={buckets}
       monitor={monitor}
+      lifecycleReport={lifecycleReport}
+      lifecycleByGroupId={lifecycleByGroupId}
       recordFilters={recordFilters}
       selectedGroup={selectedGroup}
       hiddenSelectedGroup={selectedGroupHiddenByFilters ? selectedGroup : null}
@@ -272,9 +316,11 @@ export default function GroupManagementPanel({
       saving={saving}
       broadcasting={broadcasting}
       archiving={archiving}
+      archivingExpired={archivingExpired}
       broadcastMessage={broadcastMessage}
       lastBroadcastResult={visibleBroadcastResult}
       onRefresh={() => void loadGroups()}
+      onArchiveExpired={() => void archiveExpiredGroups()}
       onRecordFiltersChange={updateRecordFilters}
       onSelectGroup={setSelectedGroupId}
       onDraftChange={(patch) =>

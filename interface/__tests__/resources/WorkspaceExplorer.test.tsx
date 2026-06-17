@@ -31,6 +31,75 @@ function mockToolFetch() {
     const revealCalls: string[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url === "/api/v1/groups") {
+            return Response.json({
+                data: [
+                    {
+                        group_id: "group-with-output",
+                        name: "Game Delivery Group",
+                        workspace_folder: "groups/game-delivery",
+                    },
+                    {
+                        group_id: "group-empty",
+                        name: "Empty Group",
+                        workspace_folder: "groups/empty",
+                    },
+                ],
+            });
+        }
+        if (url.includes("/api/v1/groups/group-with-output/outputs")) {
+            return Response.json({
+                data: [
+                    {
+                        id: "artifact-final",
+                        agent_id: "lead",
+                        artifact_type: "document",
+                        title: "Final Game Brief",
+                        content_type: "text/markdown",
+                        file_path: "groups/game-delivery/final/game-brief.md",
+                        metadata: {},
+                        status: "approved",
+                        created_at: new Date().toISOString(),
+                    },
+                    {
+                        id: "artifact-code",
+                        agent_id: "gameplay-coder",
+                        artifact_type: "code",
+                        title: "Gameplay Loop",
+                        content_type: "text/javascript",
+                        file_path: "groups/game-delivery/source/gameplay.js",
+                        metadata: { role: "coder" },
+                        status: "approved",
+                        created_at: new Date().toISOString(),
+                    },
+                    {
+                        id: "artifact-review",
+                        agent_id: "qa-reviewer",
+                        artifact_type: "document",
+                        title: "QA Review Notes",
+                        content_type: "text/markdown",
+                        file_path: "groups/game-delivery/review/qa.md",
+                        metadata: { role: "reviewer" },
+                        status: "approved",
+                        created_at: new Date().toISOString(),
+                    },
+                    {
+                        id: "artifact-media",
+                        agent_id: "asset-artist",
+                        artifact_type: "image",
+                        title: "Sprite Sheet",
+                        content_type: "image/png",
+                        file_path: "groups/game-delivery/media/sprites.png",
+                        metadata: { role: "media artist" },
+                        status: "approved",
+                        created_at: new Date().toISOString(),
+                    },
+                ],
+            });
+        }
+        if (url.includes("/api/v1/groups/group-empty/outputs")) {
+            return Response.json({ data: [] });
+        }
         if (url.includes("/api/v1/workspace/files/reveal")) {
             revealCalls.push(url);
             return Response.json({ ok: true, data: { workspace_path: ".", folder_path: "workspace" } });
@@ -72,6 +141,9 @@ describe("WorkspaceExplorer", () => {
         });
         expect(calls[0].body).toEqual({ arguments: { path: "workspace" } });
         expect(screen.getByText("Open generated output on this machine")).toBeDefined();
+        expect(await screen.findByTestId("workspace-group-output-selector")).toBeDefined();
+        expect(screen.getByText("Game Delivery Group (4)")).toBeDefined();
+        expect(screen.queryByText("Empty Group")).toBeNull();
         expect(screen.getByRole("tablist", { name: "Workspace output panes" })).toBeDefined();
         expect(screen.getByRole("tab", { name: /Find outputs/i }).getAttribute("aria-selected")).toBe("true");
         expect(screen.queryByPlaceholderText("new directory name")).toBeNull();
@@ -105,6 +177,46 @@ describe("WorkspaceExplorer", () => {
         });
         const writeCall = calls.find((call) => call.tool === "write_file");
         expect(writeCall?.body).toEqual({ arguments: { path: "workspace/new-proof.md", content: "# New proof" } });
+    });
+
+    it("opens retained group outputs and can include team source files on demand", async () => {
+        const { calls } = mockToolFetch();
+
+        render(<WorkspaceExplorer onOpenToolsTab={vi.fn()} />);
+
+        await screen.findByText("Game Delivery Group (4)");
+        fireEvent.click(screen.getByRole("button", { name: /Final Game Brief/i }));
+        await waitFor(() => {
+            expect(calls.some((call) => call.tool === "read_text_file" && call.body.arguments.path === "workspace/groups/game-delivery/final/game-brief.md")).toBe(true);
+        });
+        expect(screen.getByRole("tab", { name: /Preview/i }).getAttribute("aria-selected")).toBe("true");
+
+        fireEvent.click(screen.getByLabelText(/Include team source files/i));
+        await waitFor(() => {
+            expect(calls.some((call) => call.tool === "list_directory" && call.body.arguments.path === "workspace/groups/game-delivery")).toBe(true);
+        });
+        expect(screen.getByText("workspace/groups/game-delivery")).toBeDefined();
+    });
+
+    it("filters retained group outputs by contributor level", async () => {
+        mockToolFetch();
+
+        render(<WorkspaceExplorer onOpenToolsTab={vi.fn()} />);
+
+        await screen.findByText("Game Delivery Group (4)");
+        expect(screen.getByRole("tablist", { name: /Output contributor level/i })).toBeDefined();
+        expect(screen.getByRole("tab", { name: /Team lead 1/i })).toBeDefined();
+        expect(screen.getByRole("tab", { name: /Coders 1/i })).toBeDefined();
+        expect(screen.getByRole("tab", { name: /Review 1/i })).toBeDefined();
+        expect(screen.getByRole("tab", { name: /Media 1/i })).toBeDefined();
+
+        fireEvent.click(screen.getByRole("tab", { name: /Coders 1/i }));
+        expect(screen.getByText("Gameplay Loop")).toBeDefined();
+        expect(screen.queryByText("Final Game Brief")).toBeNull();
+
+        fireEvent.click(screen.getByRole("tab", { name: /Review 1/i }));
+        expect(screen.getByText("QA Review Notes")).toBeDefined();
+        expect(screen.queryByText("Gameplay Loop")).toBeNull();
     });
 
     it("starts browsing at the deep-linked workspace path", async () => {

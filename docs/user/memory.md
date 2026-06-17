@@ -7,7 +7,7 @@
 
 ## Overview
 
-The **Memory** page (`/memory`) is available in Advanced mode and provides a unified view of the system's three storage temperatures:
+The **Memory** page (`/memory`) is available from Admin tools and provides a unified view of the system's three storage temperatures:
 
 ```
 HOT   → Live signal stream (real-time events, last N minutes)

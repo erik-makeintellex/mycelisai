@@ -25,7 +25,9 @@ export function SomaIntentInput({
     const input = inputRef?.current;
     if (!input) return;
     input.style.height = "auto";
-    input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
+    const nextHeight = Math.min(input.scrollHeight, 180);
+    input.style.height = `${nextHeight}px`;
+    input.style.overflowY = input.scrollHeight > nextHeight ? "auto" : "hidden";
   }, [inputRef, value]);
 
   return (

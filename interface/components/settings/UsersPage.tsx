@@ -565,11 +565,11 @@ export default function UsersPage() {
             <section data-testid="users-groups-section">
                 <div className="flex items-center gap-2 mb-2 px-1">
                     <Users className="w-4 h-4 text-cortex-primary" />
-                    <h3 className="text-sm font-semibold text-cortex-text-main uppercase tracking-wider">Advanced Group Operations</h3>
+                    <h3 className="text-sm font-semibold text-cortex-text-main uppercase tracking-wider">Group Operations</h3>
                 </div>
                 <div className="rounded-xl border border-cortex-border bg-cortex-surface/60 p-4 space-y-3">
                     <p className="text-sm leading-6 text-cortex-text-muted">
-                        Collaboration groups live in Advanced mode so this page can stay centered on identity, access posture, and environment ownership.
+                        Collaboration groups are available from the main rail so this page can stay centered on identity, access posture, and environment ownership.
                     </p>
                     <Link
                         href="/groups"

@@ -1,6 +1,7 @@
 import {
   inputClassName,
   type GroupBucket,
+  type GroupLifecycleItem,
   type GroupKindFilter,
   type GroupRecordFilters,
   type GroupStateFilter,
@@ -11,6 +12,7 @@ export function GroupRail({
   buckets,
   filters,
   hiddenSelectedGroup,
+  lifecycleByGroupId,
   selectedGroupId,
   onFiltersChange,
   onSelectGroup,
@@ -18,6 +20,7 @@ export function GroupRail({
   buckets: GroupBucket[];
   filters: GroupRecordFilters;
   hiddenSelectedGroup: Group | null;
+  lifecycleByGroupId: Map<string, GroupLifecycleItem>;
   selectedGroupId: string | null;
   onFiltersChange: (patch: Partial<GroupRecordFilters>) => void;
   onSelectGroup: (groupId: string) => void;
@@ -47,6 +50,7 @@ export function GroupRail({
           </p>
           <GroupRecordButton
             group={hiddenSelectedGroup}
+            lifecycleItem={lifecycleByGroupId.get(hiddenSelectedGroup.group_id)}
             selected
             onSelect={onSelectGroup}
           />
@@ -76,6 +80,7 @@ export function GroupRail({
                   <GroupRecordButton
                     key={group.group_id}
                     group={group}
+                    lifecycleItem={lifecycleByGroupId.get(group.group_id)}
                     selected={selectedGroupId === group.group_id}
                     onSelect={onSelectGroup}
                   />
@@ -91,13 +96,16 @@ export function GroupRail({
 
 function GroupRecordButton({
   group,
+  lifecycleItem,
   selected,
   onSelect,
 }: {
   group: Group;
+  lifecycleItem?: GroupLifecycleItem;
   selected: boolean;
   onSelect: (groupId: string) => void;
 }) {
+  const lifecycleLabel = lifecycleStatusLabel(lifecycleItem);
   return (
     <button
       type="button"
@@ -111,8 +119,28 @@ function GroupRecordButton({
         <span className="h-1 w-1 rounded-full bg-current opacity-50" />
         {group.team_ids.length} team{group.team_ids.length === 1 ? "" : "s"}
       </span>
+      {lifecycleLabel ? (
+        <span className="mt-1 inline-flex max-w-full rounded-full border border-cortex-border bg-cortex-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-cortex-text-muted">
+          {lifecycleLabel}
+        </span>
+      ) : null}
     </button>
   );
+}
+
+function lifecycleStatusLabel(item?: GroupLifecycleItem) {
+  switch (item?.recommendation) {
+    case "archive_expired":
+      return "Expired";
+    case "review_work":
+      return `${item.active_or_blocked_work_count} work to review`;
+    case "archive_completed":
+      return "Output ready";
+    case "review_standing":
+      return "Review owner";
+    default:
+      return null;
+  }
 }
 
 function GroupRecordFilterControls({

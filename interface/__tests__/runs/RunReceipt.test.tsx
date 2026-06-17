@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { MissionEvent } from "@/store/useCortexStore";
-import { buildRunReceipt } from "@/components/runs/RunReceipt";
+import RunReceipt, { buildRunReceipt } from "@/components/runs/RunReceipt";
 
 const now = new Date().toISOString();
 
@@ -51,5 +52,35 @@ describe("RunReceipt model", () => {
     expect(receipt.trust).toMatch(/failure evidence remain trusted/i);
     expect(receipt.next).toMatch(/retry from Soma/i);
     expect(receipt.proofRefs).toContain("audit-1");
+  });
+
+  it("renders failed runs as recoverable work with trust and inspect evidence", () => {
+    render(
+      <RunReceipt
+        runId="run-abc"
+        events={[
+          event("mission.started"),
+          event("tool.failed", { error: "Planner validation provider timed out." }),
+          event("mission.failed", { error: "Mission stopped after retry budget was exhausted.", audit_event_id: "audit-1" }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Run needs recovery")).toBeDefined();
+    expect(screen.getAllByText("failed").length).toBeGreaterThan(0);
+    expect(screen.getByText("What happened")).toBeDefined();
+    expect(screen.getByText("What to trust")).toBeDefined();
+    expect(screen.getByText("Next step")).toBeDefined();
+    expect(screen.getByText(/failure evidence remain trusted/i)).toBeDefined();
+    expect(screen.getByText(/Completed output proof is not reliable/i)).toBeDefined();
+    expect(screen.getByText(/retry from Soma or the owning workflow/i)).toBeDefined();
+    expect(screen.getByText("No retained output yet")).toBeDefined();
+    expect(screen.getByText("1 proof ref")).toBeDefined();
+    expect(screen.getByText("Recovery needed")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: /Inspect receipt evidence/i }));
+
+    expect(screen.getByText("run-abc")).toBeDefined();
+    expect(screen.getByText("audit-1")).toBeDefined();
   });
 });

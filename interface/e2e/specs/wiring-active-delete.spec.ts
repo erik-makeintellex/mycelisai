@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 async function openWiringTab(page: any) {
     await page.goto('/automations');
     await page.waitForLoadState('domcontentloaded');
-    const advancedOff = page.getByRole('button', { name: 'Advanced: Off' });
+    const advancedOff = page.getByRole('button', { name: 'Admin tools: Off' });
     if (await advancedOff.isVisible().catch(() => false)) {
         await advancedOff.click();
     }

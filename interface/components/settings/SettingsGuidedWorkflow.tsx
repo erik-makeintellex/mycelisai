@@ -146,7 +146,7 @@ export function SettingsGuidedWorkflow({
       {advancedMode ? (
         <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
           <p className="text-sm font-semibold text-cortex-text-main">
-            Advanced controls are open
+            Admin tools are open
           </p>
           <div className="mt-4 grid gap-3 lg:grid-cols-3">
             {ADVANCED_WORKFLOW_CARDS.map((card) => (
@@ -162,10 +162,10 @@ export function SettingsGuidedWorkflow({
       ) : (
         <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
           <p className="font-medium text-cortex-text-main">
-            Advanced controls unlock the full admin checklist
+            Admin tools unlock the full setup checklist
           </p>
           <p className="mt-1 leading-6">
-            Turn on Advanced mode to configure SSO/auth, AI providers, workspace/output
+            Turn on Admin tools to configure SSO/auth, AI providers, workspace/output
             roots, and MCP connected tools.
           </p>
         </div>

@@ -13,6 +13,7 @@ test.describe("Groups workspace (/groups)", () => {
     await expect(page.getByRole("heading", { name: "Temporary groups" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Completed records" })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Overview/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Workflow Log/i })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Outputs/i })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Message/i })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Settings/i })).toBeVisible();
@@ -31,6 +32,14 @@ test.describe("Groups workspace (/groups)", () => {
     await expect(page.getByTitle("Open launch-lead lead")).toHaveAttribute(
       "href",
       "/dashboard?team_id=launch-lead",
+    );
+    await page.getByRole("tab", { name: /Workflow Log/i }).click();
+    await expect(page.getByTestId("groups-workflow-log")).toContainText(
+      "Prepare launch brief and asset bundle",
+    );
+    await expect(page.getByTestId("groups-workflow-log")).toContainText("Launch Brief");
+    await expect(page.getByTestId("groups-workflow-log")).toContainText(
+      "run run-launch-proof",
     );
     await page.getByRole("tab", { name: /Outputs/i }).click();
     await expect(page.getByText("Launch Brief", { exact: true })).toBeVisible();
@@ -93,7 +102,7 @@ test.describe("Groups workspace (/groups)", () => {
     const harness = await mockGroupsWorkspace(page);
     await openGroups(page);
 
-    await page.getByRole("tab", { name: /Create/i }).click();
+    await page.getByRole("button", { name: "Create group" }).click();
     await page.getByLabel("Name").fill("Regional Expansion Sprint");
     await page
       .getByLabel("Goal Statement")

@@ -3,6 +3,7 @@
 import type React from "react";
 import { Activity, CheckSquare, ListChecks, Wrench } from "lucide-react";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
+import { recoveryReviewQueueItems } from "@/components/recovery/recoveryQueue";
 import { ActiveWorkLane } from "@/components/teams/ActiveWorkLane";
 import {
   mergeTeamWorkItems,
@@ -97,10 +98,8 @@ export function SomaOperatingSurface({
     teamWork.items,
     activeWorkActions.submittedTeamWorkItems,
   );
-  const somaHomeWorkItems = prioritizeSomaHomeWorkItems(activeWorkItems).filter(
-    (item) => item.state !== "archived",
-  );
-  const attentionWorkCount = somaHomeWorkItems.filter(needsWorkAttention).length;
+  const somaHomeWorkItems = recoveryReviewQueueItems(activeWorkItems);
+  const attentionWorkCount = somaHomeWorkItems.length;
   const displayedMode = activeMode ?? (focusedTeam ? focusedTeam.name : null);
   const hasWorkContextChoices = Boolean(effectiveFocusedTeamId)
     || activeWorkItems.length > 0
@@ -176,7 +175,7 @@ export function SomaOperatingSurface({
           activeWork={activeWorkSlot ?? (
             hasWorkReviewContent ? (
               <ActiveWorkLane
-                title="Work to review"
+                title="Recovery and review"
                 items={somaHomeWorkItems}
                 emptyMessage={displayedMode && teamWork.items.length === 0
                   ? `Soma is focused on ${displayedMode}. ${teamWork.emptyMessage}`
@@ -188,7 +187,7 @@ export function SomaOperatingSurface({
                 frame={false}
                 purpose="review"
                 maxVisibleItems={effectiveFocusedTeamId ? 6 : 3}
-                totalItemCount={activeWorkItems.length}
+                totalItemCount={somaHomeWorkItems.length}
                 moreItemsHref="/teams?view=work"
               />
             ) : undefined
@@ -242,35 +241,6 @@ const defaultEvidence: SomaEvidenceItem[] = [
   },
 ];
 
-const statePriority: Record<TeamWorkItem["state"], number> = {
-  needs_operator: 0,
-  degraded: 1,
-  running: 2,
-  reviewing: 3,
-  queued: 4,
-  output_ready: 5,
-  paused: 6,
-  briefed: 7,
-  new: 8,
-  archived: 9,
-};
-
 export function prioritizeSomaHomeWorkItems(items: TeamWorkItem[]) {
-  return [...items].sort((left, right) => {
-    const leftPriority = itemPriority(left);
-    const rightPriority = itemPriority(right);
-    if (leftPriority !== rightPriority) return leftPriority - rightPriority;
-    const leftTime = left.updatedAt ? Date.parse(left.updatedAt) : 0;
-    const rightTime = right.updatedAt ? Date.parse(right.updatedAt) : 0;
-    return rightTime - leftTime;
-  });
-}
-
-function itemPriority(item: TeamWorkItem) {
-  const sourcePenalty = item.source === "projection" ? 20 : 0;
-  return (item.needsOperator ? -1 : statePriority[item.state]) + sourcePenalty;
-}
-
-function needsWorkAttention(item: TeamWorkItem) {
-  return item.needsOperator || ["needs_operator", "degraded", "running", "reviewing", "queued"].includes(item.state);
+  return recoveryReviewQueueItems(items);
 }

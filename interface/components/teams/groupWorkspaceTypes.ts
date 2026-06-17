@@ -33,6 +33,50 @@ export type Monitor = {
   last_error?: string;
 };
 
+export type GroupLifecycleRecommendation =
+  | "archive_expired"
+  | "review_work"
+  | "review_standing"
+  | "archive_completed"
+  | "keep_active"
+  | "retained";
+
+export type GroupLifecycleItem = {
+  group_id: string;
+  name: string;
+  status: Group["status"];
+  work_mode: WorkMode;
+  kind: "standing" | "temporary" | "expired" | "archived";
+  recommendation: GroupLifecycleRecommendation;
+  reason: string;
+  expiry?: string | null;
+  expired: boolean;
+  age_hours: number;
+  team_count: number;
+  output_count: number;
+  team_work_count: number;
+  active_or_blocked_work_count: number;
+  output_ready_work_count: number;
+  archived_work_count: number;
+  latest_work_at?: string | null;
+};
+
+export type GroupLifecycleReport = {
+  generated_at: string;
+  summary: {
+    total_groups: number;
+    active_groups: number;
+    expired_active_groups: number;
+    standing_no_expiry_groups: number;
+    stale_standing_groups: number;
+    review_needed_groups: number;
+    output_ready_idle_groups: number;
+    team_work_needing_attention: number;
+    archived_by_last_cleanup?: number;
+  };
+  items: GroupLifecycleItem[];
+};
+
 export type ApprovalPrompt = { confirm_token?: { token?: string } };
 
 export type GroupBroadcastResult = {
