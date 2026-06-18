@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 const routerPush = vi.fn();
 const fetchRecentRuns = vi.fn();
@@ -75,18 +75,17 @@ describe('RunsPage', () => {
         expect(screen.queryByText('run-alpha-123')).toBeNull();
     });
 
-    it('fetches runs on mount and navigates to run details on click', () => {
+    it('fetches runs on mount and exposes run detail links', () => {
         render(<RunsPage />);
 
         expect(fetchRecentRuns).toHaveBeenCalledTimes(1);
         expect(screen.getByText('run-alpha-123')).toBeDefined();
         expect(screen.getByText('running')).toBeDefined();
 
-        const row = screen.getByText('run-alpha-123').closest('button');
+        const row = screen.getByText('run-alpha-123').closest('a');
         expect(row).toBeDefined();
-        fireEvent.click(row!);
 
-        expect(routerPush).toHaveBeenCalledWith('/runs/run-alpha-123');
+        expect(row?.getAttribute('href')).toBe('/runs/run-alpha-123');
     });
 
     it('renders empty state when no runs are available', () => {

@@ -84,7 +84,7 @@ test.describe("Active work Ask Team live GUI proof", () => {
     const askBody = await askResponse.text();
     expect([200, 202], askBody).toContain(askResponse.status());
     const askData = JSON.parse(askBody).data as { work_item: TeamWorkItem; reply?: string };
-    expect(["queued", "output_ready", "degraded"]).toContain(askData.work_item.state);
+    expect(["queued", "running", "output_ready", "degraded"]).toContain(askData.work_item.state);
 
     const resultTitle = `Operator asked ${teamId} to continue work on "${sourceObjective}".`;
     const resultRow = lane.locator("article").filter({ hasText: resultTitle });
@@ -92,6 +92,12 @@ test.describe("Active work Ask Team live GUI proof", () => {
     if (askData.work_item.state === "queued") {
       await expect(resultRow.getByText(/Queued/i).first()).toBeVisible();
       await expect(lane.getByText(/Team ask queued. You can keep working/i)).toBeVisible();
+      return;
+    }
+    if (askData.work_item.state === "running") {
+      await expect(resultRow.getByText(/In progress/i).first()).toBeVisible();
+      await expect(resultRow.getByText(/Running, output may still change/i).first()).toBeVisible();
+      await expect(resultRow.getByText(/Wait for a team status\/result signal/i).first()).toBeVisible();
       return;
     }
     if (askData.work_item.state === "degraded") {
