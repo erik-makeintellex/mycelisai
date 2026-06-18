@@ -235,16 +235,22 @@ async function expectConfirmedTeamWorkReadback(page: Page, ask: TeamOutputAsk, r
     }
 }
 
-async function expectTeamVisibleInGroups(page: Page, teamID: string) {
+async function expectTeamVisibleInGroups(page: Page, ask: TeamOutputAsk) {
     const response = await requestWithTransientRetry(() => page.request.get('/api/v1/groups'));
     const parsed = await parseJSONIfPossible<APIEnvelope<GroupRecord[]>>(response);
     expect(response.ok(), parsed.body ? JSON.stringify(parsed.body) : parsed.raw).toBeTruthy();
-    const group = (parsed.body?.data ?? []).find((candidate) => candidate.team_ids?.includes(teamID));
+    const group = (parsed.body?.data ?? []).find((candidate) => candidate.team_ids?.includes(ask.teamID));
     expect(group, JSON.stringify(parsed.body?.data ?? [])).toBeTruthy();
     await page.goto(`/groups?group_id=${encodeURIComponent(group!.group_id)}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /Manage focused collaboration lanes/i })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('heading', { name: group!.name })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(teamID).first()).toBeVisible();
+    await expect(page.getByText(ask.teamID).first()).toBeVisible();
+
+    await page.getByRole('tab', { name: /Workflow Log/i }).click();
+    const workflowLog = page.getByTestId('groups-workflow-log');
+    await expect(workflowLog).toBeVisible({ timeout: 30_000 });
+    await expect(workflowLog).toContainText(ask.teamID);
+    await expect(workflowLog).toContainText(ask.filePath);
 }
 
 async function expectTeamOutputVisibleOnDashboard(page: Page, ask: TeamOutputAsk) {
@@ -257,6 +263,17 @@ async function expectTeamOutputVisibleOnDashboard(page: Page, ask: TeamOutputAsk
     await expect(digest.getByText(ask.filePath).first()).toBeVisible();
     await expect(digest.getByRole('button', { name: /Open file/i })).toBeVisible();
     await expect(digest.getByRole('button', { name: /Open local folder/i })).toBeVisible();
+}
+
+async function expectTeamOutputVisibleInResources(page: Page, ask: TeamOutputAsk) {
+    const normalizedPath = ask.filePath.replace(/\\/g, '/');
+    const folderPath = normalizedPath.replace(/\/[^/]+$/, '');
+    const fileName = normalizedPath.split('/').pop()!;
+
+    await page.goto(`/resources?tab=workspace&path=${encodeURIComponent(folderPath)}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Resources' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(folderPath).last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(fileName).first()).toBeVisible({ timeout: 30_000 });
 }
 
 test.describe('Live teams produce reviewable content outputs', () => {
@@ -285,7 +302,10 @@ test.describe('Live teams produce reviewable content outputs', () => {
             await expectTeamOutputVisibleOnDashboard(page, ask);
         }
         for (const ask of asks) {
-            await expectTeamVisibleInGroups(page, ask.teamID);
+            await expectTeamVisibleInGroups(page, ask);
+        }
+        for (const ask of asks) {
+            await expectTeamOutputVisibleInResources(page, ask);
         }
     });
 });
