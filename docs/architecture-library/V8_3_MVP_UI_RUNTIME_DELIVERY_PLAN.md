@@ -256,16 +256,16 @@ Execution architecture:
 
 1. Keep the deterministic browser proof at `interface/e2e/specs/trusted-outcome-journey.spec.ts`.
 2. Keep reusable mocked runtime proof in `interface/e2e/support/trusted-outcome-journey.ts`.
-3. Add the live source-stack smoke only after deterministic proof stays stable, expected path `interface/e2e/specs/trusted-outcome-journey-live.spec.ts`.
+3. Keep the live source-stack smoke at `interface/e2e/specs/trusted-outcome-journey-live.spec.ts`.
 4. Start from Soma, then use Resources, Groups, and Runs only as proof and revisit destinations.
 5. Pair every visible success with durable API/runtime proof: confirmation, team work, proof artifact, execution contract, run events, group outputs, workspace view, and folder reveal.
 6. Treat service readiness as a gate through `lifecycle.status`, `lifecycle.health`, and `/api/v1/services/status`.
 
-Current deterministic proof:
+Current proof:
 
-`trusted-outcome-journey.spec.ts` covers Ask, Understand, Approve, Execute, Deliver, Trust, Recover, and Revisit. It verifies Soma input, proposal language, `confirm-action`, team work/status/interactions, rendered project-package opening, folder reveal, proof artifact, execution contract, canonical run events, degraded recovery metadata, reload persistence, and Resources/Groups/Runs re-entry.
+`trusted-outcome-journey.spec.ts` covers Ask, Understand, Approve, Execute, Deliver, Trust, Recover, and Revisit with deterministic run-event and recovery proof. `trusted-outcome-journey-live.spec.ts` proves the source-stack ask -> approval -> retained package -> rendered output -> proof artifacts/contracts -> Resources/Groups/Runs re-entry path, while exposing that live confirm-action run events may still be empty for this route.
 
-Primary proof command: `uv run inv interface.e2e --server-mode=dev --project=chromium --workers=1 --spec=e2e/specs/trusted-outcome-journey.spec.ts`
+Primary proof commands: deterministic `uv run inv interface.e2e --server-mode=dev --project=chromium --workers=1 --spec=e2e/specs/trusted-outcome-journey.spec.ts`; live `$env:PLAYWRIGHT_LIVE_BACKEND='1'; uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --workers=1 --spec=e2e/specs/trusted-outcome-journey-live.spec.ts`.
 
 Exit:
 - source gates pass
