@@ -143,14 +143,16 @@ Owner focus: P0.8 and P0.9.
 
 Deliverables:
 
-1. Maintain a single MVP proof script:
-   `login -> Soma ask -> proposal -> approve -> running -> output package -> proof -> open Resources -> recover degraded sample`.
-2. Keep headless and headed variants aligned with the authoritative P0 order.
-3. Complete documentation alignment only after the MVP proof evidence is current.
-4. Reject delivery if the Soma input is unreachable or if page scroll hides primary actions.
+1. Maintain a single Trusted Outcome Journey proof script:
+   `Ask -> Understand -> Approve -> Execute -> Deliver -> Trust -> Recover -> Revisit`.
+2. Keep the first proof deterministic and browser-visible before adding live-provider variability.
+3. Keep headless and headed variants aligned with the authoritative P0 order.
+4. Complete documentation alignment only after the MVP proof evidence is current.
+5. Reject delivery if the Soma input is unreachable, if page scroll hides primary actions, or if any UI-visible success lacks durable API/runtime proof.
 
 Proof:
 
+- fresh-state GUI proof from Soma ask through retained output, trust proof, recovery, and revisit
 - `uv run inv interface.e2e --server-mode=external --project=chromium --workers=1`
 - headed live-backend proof for changed visible paths
 - `uv run inv quality.max-lines --limit 300`
@@ -160,7 +162,7 @@ Proof:
 
 ### P0.1 - Output Package Standard
 
-Status: ACTIVE
+Status: IN_REVIEW
 
 Unify output package cards in Soma and Groups, because generated outputs are the core MVP proof object.
 
@@ -175,7 +177,7 @@ Exit:
 
 ### P0.2 - Service Health / Runtime Proof
 
-Status: NEXT
+Status: IN_REVIEW
 
 Make service readiness and runtime proof visible before review, catalog, and recovery expansion.
 
@@ -187,7 +189,7 @@ Exit:
 
 ### P0.3 - Headed Browser Proof
 
-Status: NEXT
+Status: COMPLETE
 
 Prove the visible output and runtime paths in a headed browser before expanding the review inbox.
 
@@ -199,7 +201,7 @@ Exit:
 
 ### P0.4 - Review Inbox
 
-Status: NEXT
+Status: IN_REVIEW
 
 Make Work Review understandable after output and proof paths are stable.
 
@@ -223,7 +225,7 @@ Exit:
 
 ### P0.6 - Run Receipt Standard
 
-Status: NEXT
+Status: IN_REVIEW
 
 Make runs readable as receipts before timeline/debugging.
 
@@ -235,7 +237,7 @@ Exit:
 
 ### P0.7 - Recovery Queue
 
-Status: NEXT
+Status: IN_REVIEW
 
 Make degraded work actionable after the run receipt contract is stable.
 
@@ -245,18 +247,97 @@ Exit:
 - recovery actions cover retry, repair, continue without capability, and archive
 - advanced run-map work remains behind Inspect
 
-### P0.8 - Full MVP Proof
+### P0.8 - Trusted Outcome Journey Proof
 
-Status: NEXT
+Status: ACTIVE
 
-Run and record the full proof ladder from clean committed state.
+Run and record one stitched operator journey from clean committed state. This is not a subsystem sweep. It proves that a non-technical user can ask Soma for meaningful work, understand the proposed outcome, approve governed execution, observe execution, open the delivered output, trust the receipt/proof, recover from a controlled degraded state, and revisit the result later without understanding agents, MCP, runs, topology, or infrastructure.
+
+Execution architecture:
+
+1. Add a deterministic browser proof first, expected path `interface/e2e/specs/trusted-outcome-journey.spec.ts`.
+2. Add or promote a live source-stack smoke variant only after the deterministic journey is stable, expected path `interface/e2e/specs/trusted-outcome-journey-live.spec.ts`.
+3. Keep the primary journey in the Soma organization workspace or fresh Dashboard path; use Groups, Resources, and Runs only as revisit/proof destinations, not as the starting mental model.
+4. Assert user-facing journey language before technical detail: useful ask, clear understanding, plain approval, visible running state, openable retained output, trust receipt, recovery action, and post-refresh revisit.
+5. Pair UI moments with durable API/runtime proof. A UI success is not accepted unless the matching run, output ref, proof artifact, execution contract, team work/status/interactions, or workspace readback exists.
+6. Treat service readiness as a gate: `lifecycle.status`, `lifecycle.health`, and `/api/v1/services/status` must distinguish liveness from real PostgreSQL/NATS/Core/Interface readiness.
+
+Proof packet template:
+
+```md
+Runtime lane:
+Commit:
+UI URL:
+Browser:
+Service posture:
+Environment skips:
+
+| Journey step | User proof | Runtime/API proof | Evidence command/spec | Result |
+| --- | --- | --- | --- | --- |
+| Ask | Soma input reachable from fresh login/dashboard | request/session scoped correctly |  |  |
+| Understand | Soma summarizes intent/proposal plainly | ExecutionContract/proposal fields present |  |  |
+| Approve | operator can approve/cancel governed mutation | confirm-action persists run/work/proof refs |  |  |
+| Execute | running/active work visible | queued/running/status events persisted |  |  |
+| Deliver | output package appears and opens | retained output refs/storage refs valid |  |  |
+| Trust | run receipt/proof visible before raw logs | proof artifact, execution contract, and run events reconstructable |  |  |
+| Recover | degraded sample has safe next action | recovery/degradation state persisted |  |  |
+| Revisit | Resources/Groups/Runs re-entry works after refresh | retained artifact readback and workflow log work |  |  |
+```
+
+Target browser proof sequence:
+
+1. Ask: open `/dashboard?fresh=1` or the active organization workspace, verify no stale output dominates the fresh path, and submit a governed Soma request for a useful retained deliverable.
+2. Understand: verify Soma presents the expected outcome/proposal in operator language before any technical detail.
+3. Approve: approve the governed action and verify clear running feedback.
+4. Execute: verify active work or status events appear without blocking the composer.
+5. Deliver: open the retained output and folder/resource entry.
+6. Trust: verify the run receipt/proof is visible before raw logs and that runtime proof can be read through API.
+7. Recover: drive a controlled degraded or retryable path and verify safe-next/retry/archive language with durable recovery state.
+8. Revisit: reload, then re-open the output through Resources/Groups and, when needed, the run receipt.
+
+Runtime/API proof focus:
+
+- `/api/v1/chat`
+- `/api/v1/intent/confirm-action`
+- `/api/v1/teams/{id}/work`, `/work/ask`, `/status-events`, `/interactions`, and `/actions`
+- `/api/v1/trust/proof-artifacts/{id}`
+- `/api/v1/trust/execution-contracts/{id}`
+- `/api/v1/runs/{id}/events`
+- `/api/v1/groups/{id}/workflow-log`
+- `/api/v1/workspace/files/view`
+- `/api/v1/workspace/files/reveal`
+- `/api/v1/services/status`
+
+Backstop proof commands:
+
+```powershell
+uv run inv lifecycle.status
+uv run inv lifecycle.health
+go test ./internal/server -run "TestHandleTeamWorkAsk|TestTeamWorkSignalProjection|TestHandleTeamWorkAction|TestHandleConfirmAction|TestHandleListProofArtifacts|TestHandleGetRunEvents|TestHandleWorkspaceFile" -count=1
+go test ./internal/swarm -run "TestTeam_ResponseDelivery|TestTeam_StatusDelivery" -count=1
+uv run inv interface.e2e --server-mode=start --project=chromium --workers=1 --spec=e2e/specs/trusted-outcome-journey.spec.ts
+uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/trusted-outcome-journey-live.spec.ts
+```
+
+Existing reference specs:
+
+- `interface/e2e/specs/soma-governance-live.spec.ts`
+- `interface/e2e/specs/dashboard-workbench-live-review.spec.ts`
+- `interface/e2e/specs/ui-finalization-browser-package-live.spec.ts`
+- `interface/e2e/specs/ui-finalization-browser-package-retry.spec.ts`
+- `interface/e2e/specs/workflow-output.reload-review.spec.ts`
+- `interface/e2e/specs/active-work-api.spec.ts`
+- `interface/e2e/specs/docs-and-runs.spec.ts`
+- `interface/e2e/specs/team-output-content-live.spec.ts`
 
 Exit:
 
 - source gates pass
 - headed GUI proof passes
 - release preflight passes
-- Compose/WSL/K8s promotion proof result recorded
+- journey proof packet is filled with pass/fail/blocker status for each journey step
+- live proof records exact environment skips instead of treating skipped gates as green
+- release handoff records the accepted proof result before promotion
 
 ### P0.9 - Documentation Alignment
 

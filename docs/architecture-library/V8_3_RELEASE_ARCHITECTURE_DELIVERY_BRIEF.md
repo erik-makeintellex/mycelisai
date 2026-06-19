@@ -175,9 +175,9 @@ The P0 order is now release-convergence order. Do not reorder it unless a blocke
 | P0.3 | Headed browser proof | Ask through Revisit | COMPLETE | A real browser proves ask -> approve -> deliverable -> open -> Resources/Groups re-entry |
 | P0.4 | Review inbox | Understand, Approve | IN_REVIEW | Dashboard and `/teams?view=work` now use focused review-inbox/list-detail patterns with summary, selected detail, one primary row action, recovery/clear/output actions, and headed proof green |
 | P0.5 | Capability catalog | Trust | IN_REVIEW | Resources now opens as Capabilities for tool/search readiness, grouped can-use/needs-repair/can-request state, and MCP topology behind Inspect |
-| P0.6 | Run receipt standard | Trust | NEXT | Runs open to outcome, status, trust, proof, recovery, and outputs before raw logs |
-| P0.7 | Recovery queue | Recover | NEXT | Failure states show what failed, what remains trusted, what can retry, and what needs attention |
-| P0.8 | Full MVP proof | Full journey | NEXT | Login -> Soma request -> proposal -> approval -> running work -> deliverable -> proof -> re-entry -> recovery is green |
+| P0.6 | Run receipt standard | Trust | IN_REVIEW | Runs open to outcome, status, trust, proof, recovery, and outputs before raw logs |
+| P0.7 | Recovery queue | Recover | IN_REVIEW | Failure states show what failed, what remains trusted, what can retry, and what needs attention |
+| P0.8 | Trusted Outcome Journey proof | Full journey | ACTIVE | Deterministic and live proof show Ask -> Understand -> Approve -> Execute -> Deliver -> Trust -> Recover -> Revisit as one operator journey |
 | P0.9 | Documentation alignment | All journey steps | NEXT | State/docs explain proof and reality, not aspiration |
 
 ## P0.1 Current Implementation
