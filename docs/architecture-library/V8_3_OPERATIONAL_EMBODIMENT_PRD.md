@@ -264,6 +264,21 @@ Generic team creation should remain lead-owned and compact. Explicit specialist-
 
 The system reaches RC posture when a fresh operator can log in, ask Soma for work, approve governed execution, observe active work, open retained outputs, inspect proof, encounter degradation, execute recovery, and trust the result later without reading logs, inspecting NATS, debugging infrastructure, manually interpreting runtime state, or understanding topology.
 
+The release journey is:
+
+```text
+Ask
+-> Understand
+-> Approve
+-> Execute
+-> Deliver
+-> Trust
+-> Recover
+-> Revisit
+```
+
+All P0 work must strengthen this Trusted Outcome Journey. Output Packages strengthen Deliver, Run Receipts strengthen Trust, Recovery Queue strengthens Recover, Review Inbox strengthens Understand and Approve, Capability Catalog strengthens Trust, and Resources/Groups convergence strengthens Revisit. Subsystems are not complete until they help a non-technical user complete the journey and trust the result later.
+
 ## Delivery Priorities
 
 P0:
@@ -289,9 +304,9 @@ Do not build recursive autonomy, self-modifying agents, public capability market
 
 ## Acceptance Gates
 
-A slice is acceptable only when code exists, runtime object exists, UI represents it, events emit correctly, proof exists, failure degrades safely, recovery is actionable, docs/state are updated, and browser proof passed.
+A slice is acceptable only when code exists, runtime object exists, UI represents it, events emit correctly, proof exists, failure degrades safely, recovery is actionable, docs/state are updated, browser proof passed, and the slice names which Trusted Outcome Journey step it improves.
 
-Every slice must answer: what operator problem was solved, what runtime object changed, what UI surface changed, what proof exists, what recovery exists, what remains untrusted, and what should still be deferred.
+Every slice must answer: which journey step improved, what operator problem was solved, what runtime object changed, what UI surface changed, what proof exists, what recovery exists, what remains untrusted, and what should still be deferred.
 
 ## Final Doctrine
 

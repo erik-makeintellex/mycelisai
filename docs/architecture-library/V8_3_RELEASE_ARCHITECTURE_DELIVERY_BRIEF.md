@@ -56,9 +56,28 @@ Autonomy remains future-facing and control-first. The governing boundary is [V8.
 | Advanced Run Map | Technical reconstruction of execution | Stepper/timeline/graph behind Inspect only |
 | Autonomy Control Boundary | Guardrails for future automated intent sources | No silent mutation, no hidden learning, no self-granted permissions, and no unbounded execution |
 
+## Trusted Outcome Journey
+
+All remaining P0 work is evaluated through the Trusted Outcome Journey, not subsystem completion:
+
+```text
+Ask
+-> Understand
+-> Approve
+-> Execute
+-> Deliver
+-> Trust
+-> Recover
+-> Revisit
+```
+
+Subsystems matter only insofar as they strengthen the journey. Output Packages strengthen Deliver. Run Receipts strengthen Trust. Recovery Queue strengthens Recover. Review Inbox strengthens Understand and Approve. Capability Catalog strengthens Trust. Resources and Groups convergence strengthens Revisit.
+
+The MVP is complete when a non-technical user can complete the full journey without understanding agents, MCP, workflows, runs, topology, or infrastructure.
+
 ## MVP Delivery Spine
 
-The release-candidate MVP should prove one excellent workflow before broadening:
+The release-candidate MVP should prove one excellent journey before broadening:
 
 ```text
 User asks Soma to create or review meaningful work
@@ -149,17 +168,17 @@ login
 
 The P0 order is now release-convergence order. Do not reorder it unless a blocker demands it.
 
-| Priority | Slice | Status | Exit Criteria |
-| --- | --- | --- | --- |
-| P0.1 | Output package standard | IN_REVIEW | Soma, Groups, and Resources use one retained deliverable package pattern with preview/open/download/proof/inspect/revisit; headless and headed live Resources/Groups re-entry proof is green |
-| P0.2 | Service health and runtime proof | IN_REVIEW | Infrastructure, migrations, Core, Interface, and health reporting are clean and reachable |
-| P0.3 | Headed browser proof | COMPLETE | A real browser proves ask -> approve -> deliverable -> open -> Resources/Groups re-entry |
-| P0.4 | Review inbox | IN_REVIEW | Dashboard and `/teams?view=work` now use focused review-inbox/list-detail patterns with summary, selected detail, one primary row action, recovery/clear/output actions, and headed proof green |
-| P0.5 | Capability catalog | IN_REVIEW | Resources now opens as Capabilities for tool/search readiness, grouped can-use/needs-repair/can-request state, and MCP topology behind Inspect |
-| P0.6 | Run receipt standard | NEXT | Runs open to outcome, status, trust, proof, recovery, and outputs before raw logs |
-| P0.7 | Recovery queue | NEXT | Failure states show what failed, what remains trusted, what can retry, and what needs attention |
-| P0.8 | Full MVP proof | NEXT | Login -> Soma request -> proposal -> approval -> running work -> deliverable -> proof -> re-entry -> recovery is green |
-| P0.9 | Documentation alignment | NEXT | State/docs explain proof and reality, not aspiration |
+| Priority | Slice | Journey Step | Status | Exit Criteria |
+| --- | --- | --- | --- | --- |
+| P0.1 | Output package standard | Deliver, Revisit | IN_REVIEW | Soma, Groups, and Resources use one retained deliverable package pattern with preview/open/download/proof/inspect/revisit; headless and headed live Resources/Groups re-entry proof is green |
+| P0.2 | Service health and runtime proof | Execute, Trust | IN_REVIEW | Infrastructure, migrations, Core, Interface, and health reporting are clean and reachable |
+| P0.3 | Headed browser proof | Ask through Revisit | COMPLETE | A real browser proves ask -> approve -> deliverable -> open -> Resources/Groups re-entry |
+| P0.4 | Review inbox | Understand, Approve | IN_REVIEW | Dashboard and `/teams?view=work` now use focused review-inbox/list-detail patterns with summary, selected detail, one primary row action, recovery/clear/output actions, and headed proof green |
+| P0.5 | Capability catalog | Trust | IN_REVIEW | Resources now opens as Capabilities for tool/search readiness, grouped can-use/needs-repair/can-request state, and MCP topology behind Inspect |
+| P0.6 | Run receipt standard | Trust | NEXT | Runs open to outcome, status, trust, proof, recovery, and outputs before raw logs |
+| P0.7 | Recovery queue | Recover | NEXT | Failure states show what failed, what remains trusted, what can retry, and what needs attention |
+| P0.8 | Full MVP proof | Full journey | NEXT | Login -> Soma request -> proposal -> approval -> running work -> deliverable -> proof -> re-entry -> recovery is green |
+| P0.9 | Documentation alignment | All journey steps | NEXT | State/docs explain proof and reality, not aspiration |
 
 ## P0.1 Current Implementation
 
@@ -283,11 +302,11 @@ A slice is not accepted unless it reports:
 The decisive release question is:
 
 ```text
-Can a user trust this system through visible execution and recovery?
+Can the user complete the Trusted Outcome Journey and trust the result later?
 ```
 
 Not:
 
 ```text
-Can we describe more architecture?
+Did we finish the subsystem?
 ```
