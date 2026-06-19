@@ -70,7 +70,7 @@ export function WorkspaceBrowsePane({
             role="tabpanel"
             id="workspace-browse-panel"
             aria-labelledby="workspace-browse-tab"
-            className="flex min-h-[24rem] flex-col"
+            className="flex h-full min-h-0 flex-col"
         >
             <div className="mb-3 flex flex-wrap gap-2">
                 <button
@@ -149,7 +149,7 @@ export function WorkspacePreviewPane({
             role="tabpanel"
             id="workspace-preview-panel"
             aria-labelledby="workspace-preview-tab"
-            className="flex min-h-[24rem] flex-col"
+            className="flex h-full min-h-0 flex-col"
         >
             <div className="mb-2 min-w-0">
                 <p className="text-xs font-semibold text-cortex-text-main">Selected output</p>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import {
     parentWorkspacePath,
@@ -43,6 +44,9 @@ export default function WorkspaceGroupOutputSelector({
 }) {
     const [selectedLevel, setSelectedLevel] = useState<ContributorLevel>("all");
     const selectedGroup = groups.find((group) => group.group_id === selectedGroupID) ?? null;
+    const selectedGroupHref = selectedGroup
+        ? `/groups?group_id=${encodeURIComponent(selectedGroup.group_id)}`
+        : "";
     const levelCounts = useMemo(
         () => countContributorLevels(selectedGroup?.outputs ?? []),
         [selectedGroup?.outputs],
@@ -63,10 +67,10 @@ export default function WorkspaceGroupOutputSelector({
 
     return (
         <section
-            className="rounded-lg border border-cortex-border bg-cortex-surface p-2"
+            className="max-h-[16rem] overflow-y-auto rounded-lg border border-cortex-border bg-cortex-surface p-2"
             data-testid="workspace-group-output-selector"
         >
-            <div className="flex flex-wrap items-end gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 <div className="min-w-[10rem]">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cortex-primary">
                         Group outputs
@@ -91,7 +95,7 @@ export default function WorkspaceGroupOutputSelector({
                         value={selectedGroupID}
                         onChange={(event) => onSelectGroup(event.target.value)}
                         disabled={groups.length === 0}
-                        className="rounded border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main outline-none disabled:opacity-60"
+                        className="rounded border border-cortex-border bg-cortex-bg px-3 py-1.5 text-sm text-cortex-text-main outline-none disabled:opacity-60"
                     >
                         {groups.length === 0 ? (
                             <option value="">No group outputs</option>
@@ -105,7 +109,7 @@ export default function WorkspaceGroupOutputSelector({
                     </select>
                 </div>
 
-                <label className="inline-flex h-10 items-center gap-2 rounded border border-cortex-border bg-cortex-bg px-3 text-xs text-cortex-text-main">
+                <label className="inline-flex h-9 items-center gap-2 rounded border border-cortex-border bg-cortex-bg px-3 text-xs text-cortex-text-main">
                     <input
                         type="checkbox"
                         checked={includeTeamSourceFiles}
@@ -115,6 +119,29 @@ export default function WorkspaceGroupOutputSelector({
                     />
                     Include team source files
                 </label>
+
+                {selectedGroup ? (
+                    <div className="flex flex-wrap gap-2">
+                        <Link
+                            href={`${selectedGroupHref}&panel=outputs`}
+                            className="inline-flex h-9 items-center rounded border border-cortex-primary/35 px-3 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/10"
+                        >
+                            Open group outputs
+                        </Link>
+                        <Link
+                            href={`${selectedGroupHref}&panel=workflow`}
+                            className="inline-flex h-9 items-center rounded border border-cortex-border bg-cortex-bg px-3 text-xs text-cortex-text-main hover:border-cortex-primary/30"
+                        >
+                            Workflow log
+                        </Link>
+                        <Link
+                            href={`${selectedGroupHref}&panel=message`}
+                            className="inline-flex h-9 items-center rounded border border-cortex-border bg-cortex-bg px-3 text-xs text-cortex-text-main hover:border-cortex-primary/30"
+                        >
+                            Message group
+                        </Link>
+                    </div>
+                ) : null}
             </div>
 
             {selectedGroup ? (
@@ -137,7 +164,7 @@ export default function WorkspaceGroupOutputSelector({
                                     aria-label={`${level.label} ${count}`}
                                     aria-selected={selected}
                                     onClick={() => setSelectedLevel(level.id)}
-                                    className={`shrink-0 rounded border px-3 py-2 text-left text-xs transition-colors ${
+                                    className={`shrink-0 rounded border px-3 py-1.5 text-left text-xs transition-colors ${
                                         selected
                                             ? "border-cortex-primary/50 bg-cortex-primary/10 text-cortex-text-main"
                                             : "border-cortex-border bg-cortex-bg text-cortex-text-muted hover:bg-cortex-bg/80"
@@ -151,7 +178,7 @@ export default function WorkspaceGroupOutputSelector({
                     </div>
 
                     <div
-                        className="max-h-32 overflow-y-auto rounded border border-cortex-border bg-cortex-bg"
+                        className="max-h-28 overflow-y-auto rounded border border-cortex-border bg-cortex-bg"
                         role="table"
                         aria-label="Retained output artifacts"
                     >

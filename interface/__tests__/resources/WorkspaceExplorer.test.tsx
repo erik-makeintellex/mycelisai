@@ -144,6 +144,15 @@ describe("WorkspaceExplorer", () => {
         expect(await screen.findByTestId("workspace-group-output-selector")).toBeDefined();
         expect(screen.getByText("Game Delivery Group (4)")).toBeDefined();
         expect(screen.queryByText("Empty Group")).toBeNull();
+        expect(screen.getByRole("link", { name: "Open group outputs" }).getAttribute("href")).toBe(
+            "/groups?group_id=group-with-output&panel=outputs",
+        );
+        expect(screen.getByRole("link", { name: "Workflow log" }).getAttribute("href")).toBe(
+            "/groups?group_id=group-with-output&panel=workflow",
+        );
+        expect(screen.getByRole("link", { name: "Message group" }).getAttribute("href")).toBe(
+            "/groups?group_id=group-with-output&panel=message",
+        );
         expect(screen.getByRole("tablist", { name: "Workspace output panes" })).toBeDefined();
         expect(screen.getByRole("tab", { name: /Find outputs/i }).getAttribute("aria-selected")).toBe("true");
         expect(screen.queryByPlaceholderText("new directory name")).toBeNull();

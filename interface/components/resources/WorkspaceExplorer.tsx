@@ -320,20 +320,22 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
     }
 
     return (
-        <div className="flex h-full min-h-0 flex-col gap-3 p-4 sm:p-6">
-            <WorkspaceGroupOutputSelector
-                groups={outputGroups}
-                selectedGroupID={selectedOutputGroupID}
-                includeTeamSourceFiles={includeTeamSourceFiles}
-                status={outputGroupStatus}
-                onSelectGroup={selectOutputGroup}
-                onToggleTeamSourceFiles={toggleTeamSourceFiles}
-                onOpenArtifact={openArtifact}
-            />
+        <div className="grid h-full min-h-0 gap-3 p-4 sm:p-6 lg:grid-cols-[minmax(13rem,17rem)_minmax(19rem,1fr)]">
+            <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+                <WorkspaceGroupOutputSelector
+                    groups={outputGroups}
+                    selectedGroupID={selectedOutputGroupID}
+                    includeTeamSourceFiles={includeTeamSourceFiles}
+                    status={outputGroupStatus}
+                    onSelectGroup={selectOutputGroup}
+                    onToggleTeamSourceFiles={toggleTeamSourceFiles}
+                    onOpenArtifact={openArtifact}
+                />
 
-            <WorkspaceFolderAccessCard currentPath={currentPath} onStatus={setStatus} />
+                <WorkspaceFolderAccessCard currentPath={currentPath} onStatus={setStatus} />
+            </div>
 
-            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface">
+            <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface">
                 <div className="border-b border-cortex-border bg-cortex-bg/70 px-3 py-3">
                     <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                         <div className="min-w-0">

@@ -98,6 +98,26 @@ test.describe("Groups workspace (/groups)", () => {
     await expect(page.getByRole("button", { name: "Broadcast to group" })).toHaveCount(0);
   });
 
+  test("opens a selected group directly into a requested panel", async ({ page }) => {
+    await mockGroupsWorkspace(page);
+    await page.goto("/groups?group_id=group-temp-launch&panel=workflow", {
+      waitUntil: "domcontentloaded",
+    });
+
+    await expect(page.getByRole("heading", { name: /Manage focused collaboration lanes/i })).toBeVisible();
+    await expect(page.getByTestId("groups-list-item-group-temp-launch")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    await expect(page.getByRole("tab", { name: /Workflow Log/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page.getByTestId("groups-workflow-log")).toContainText(
+      "Prepare launch brief and asset bundle",
+    );
+  });
+
   test("creates a temporary group and supports broadcast workflow", async ({ page }) => {
     const harness = await mockGroupsWorkspace(page);
     await openGroups(page);

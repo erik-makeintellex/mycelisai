@@ -37,6 +37,7 @@ type WorkspaceProps = {
   hiddenSelectedGroup: Group | null;
   selectedGroupId: string | null;
   initialSelectedGroupId: string | null;
+  initialPanel: GroupWorkspacePanel | null;
   outputs: Artifact[];
   outputSummary: OutputSummary;
   draft: GroupDraft;
@@ -71,6 +72,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     selectedGroup,
     hiddenSelectedGroup,
     selectedGroupId,
+    initialPanel,
     outputs,
     outputSummary,
     draft,
@@ -94,7 +96,9 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     onBroadcast,
     onArchive,
   } = props;
-  const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>("overview");
+  const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>(
+    initialPanel ?? "overview",
+  );
   const selectGroup = (groupId: string) => {
     onSelectGroup(groupId);
     setActivePanel("overview");

@@ -183,6 +183,12 @@ user-facing outputs through `/api/v1/groups/{id}/outputs`; groups with no
 deliverable artifacts stay out of the output picker so operators do not have to
 scan abandoned or internal-only lanes.
 
+When an output group is selected, Resources links back to the same group in
+`Groups` for **Outputs**, **Workflow Log**, and **Message** review. Use those
+links when you need the collaboration history, group conversation, or workflow
+context behind a file; keep Resources focused on opening and inspecting the
+generated content itself.
+
 Group workflow logs and chat-pipeline history are reviewed in `Groups ->
 Workflow Log`, not in `Resources -> Output Files`. Output Files should stay
 focused on durable artifacts that a user can open, download, preview, or reveal
@@ -231,6 +237,7 @@ Use `System -> Deployments` to confirm the runtime is reporting the same workspa
 New-user proof should verify both sides of this boundary:
 - `Resources -> Capabilities` shows whether `filesystem` is installed and connected.
 - `Resources -> Output Files` lists only groups with retained user-facing output in the group selector.
+- `Resources -> Output Files` can link the selected group into `Groups` Outputs, Workflow Log, and Message review.
 - `Resources -> Output Files` can narrow retained artifacts by contributor level before opening a file or package.
 - `Resources -> Output Files -> Include team source files` switches from curated output artifacts to the selected group's workspace source folder.
 - `Resources -> Output Files` can browse/read/write only under the governed workspace boundary and can open the current local folder through the workspace-confined reveal endpoint.

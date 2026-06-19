@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { GroupWorkspacePanels } from "./GroupWorkspacePanels";
+import type { GroupWorkspacePanel } from "./GroupWorkspaceTabs";
 import {
   buildGroupBuckets,
   emptyGroupDraft,
@@ -24,8 +25,10 @@ import { filterGroups, useGroupRecordFilters } from "./useGroupRecordFilters";
 
 export default function GroupManagementPanel({
   initialSelectedGroupId = null,
+  initialPanel = null,
 }: {
   initialSelectedGroupId?: string | null;
+  initialPanel?: GroupWorkspacePanel | null;
 }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [monitor, setMonitor] = useState<Monitor | null>(null);
@@ -306,6 +309,7 @@ export default function GroupManagementPanel({
       hiddenSelectedGroup={selectedGroupHiddenByFilters ? selectedGroup : null}
       selectedGroupId={selectedGroupId}
       initialSelectedGroupId={initialSelectedGroupId}
+      initialPanel={initialPanel}
       outputs={outputs}
       outputSummary={summarizeOutputs(outputs)}
       draft={draft}

@@ -110,6 +110,7 @@ function GroupRecordButton({
     <button
       type="button"
       data-testid={`groups-list-item-${group.group_id}`}
+      aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(group.group_id)}
       className={`w-full rounded-xl px-3 py-2 text-left transition ${selected ? "bg-cortex-primary/10 text-cortex-text-main ring-1 ring-cortex-primary/30" : "text-cortex-text-muted hover:bg-cortex-bg hover:text-cortex-text-main"}`}
     >

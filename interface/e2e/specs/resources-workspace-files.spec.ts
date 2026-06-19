@@ -211,6 +211,18 @@ test.describe("Resources workspace files", () => {
 
         await expect(page.getByTestId("workspace-group-output-selector")).toBeVisible();
         await expect(page.getByLabel("Select group")).toHaveValue("group-with-output");
+        await expect(page.getByRole("link", { name: "Open group outputs" })).toHaveAttribute(
+            "href",
+            "/groups?group_id=group-with-output&panel=outputs",
+        );
+        await expect(page.getByRole("link", { name: "Workflow log" })).toHaveAttribute(
+            "href",
+            "/groups?group_id=group-with-output&panel=workflow",
+        );
+        await expect(page.getByRole("link", { name: "Message group" })).toHaveAttribute(
+            "href",
+            "/groups?group_id=group-with-output&panel=message",
+        );
         await expect(page.getByRole("tab", { name: /Team lead 1/i })).toBeVisible();
         await expect(page.getByRole("tab", { name: /Coders 1/i })).toBeVisible();
         await clickVisibleControl(page, page.getByRole("tab", { name: /Coders 1/i }));
@@ -225,7 +237,8 @@ test.describe("Resources workspace files", () => {
 
         await openWorkspaceFiles(page);
         await expect(page.getByText("proof.md")).toBeVisible({ timeout: 15_000 });
-        await clickVisibleControl(page, page.getByRole("button", { name: "Preview output file proof.md" }));
+        const browsePane = page.getByRole("tabpanel", { name: /Find outputs/i }).last();
+        await browsePane.getByRole("button", { name: "Preview output file proof.md" }).click();
         await expect(page.locator("textarea").first()).toHaveValue(/Readable through filesystem MCP/i);
         expect(calls[0]).toEqual({ tool: "list_directory", arguments: { path: "workspace" } });
         expect(calls.some((call) => call.tool === "read_text_file" && call.arguments.path === "workspace/proof.md")).toBeTruthy();
@@ -248,7 +261,7 @@ test.describe("Resources workspace files", () => {
         await clickVisibleControl(page, page.getByRole("tab", { name: /Find outputs/i }));
         await expect(page.getByText("generated-proof.md")).toBeVisible();
 
-        await clickVisibleControl(page, page.getByRole("button", { name: "Preview output file generated-proof.md" }));
+        await browsePane.getByRole("button", { name: "Preview output file generated-proof.md" }).click();
         await expect(page.locator("textarea").first()).toHaveValue(/Created from the Workspace Files GUI/i);
     });
 
