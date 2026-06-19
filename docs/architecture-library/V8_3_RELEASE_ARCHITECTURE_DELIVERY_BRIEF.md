@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-06-14
+> Last Updated: 2026-06-19
 > Purpose: Provide a compact, shareable architecture delivery document for the current MVP-to-release path.
 > Printable HTML: [V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.html](V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.html)
 
@@ -41,6 +41,8 @@ Intent
 
 The default UI should not expose topology first. Advanced runtime detail belongs behind `Inspect`.
 
+Autonomy remains future-facing and control-first. The governing boundary is [V8.3 Autonomy Control Architecture](V8_3_AUTONOMY_CONTROL_ARCHITECTURE.md): autonomous work may supply intent, but it must not bypass Soma, ExecutionContract, policy, governed runs, capabilities, events, output/proof, review, or recovery. V8.3 should only add autonomy foundations when they strengthen the current MVP's observability, interruptibility, proof, recovery, capability boundaries, and budget/policy readiness.
+
 ## Current Release Architecture Objects
 
 | Object | Operator Meaning | Release Requirement |
@@ -52,6 +54,7 @@ The default UI should not expose topology first. Advanced runtime detail belongs
 | Capability | Governed tool/provider/integration Soma can use | Availability, risk, approval posture, output types, repair path |
 | Recovery Item | Failed or degraded work that needs action | Failed, still trusted, not trusted, safe next |
 | Advanced Run Map | Technical reconstruction of execution | Stepper/timeline/graph behind Inspect only |
+| Autonomy Control Boundary | Guardrails for future automated intent sources | No silent mutation, no hidden learning, no self-granted permissions, and no unbounded execution |
 
 ## MVP Delivery Spine
 

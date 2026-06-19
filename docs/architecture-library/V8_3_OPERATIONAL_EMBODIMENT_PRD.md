@@ -52,6 +52,12 @@ The product category is `Governed Operational Cognition Infrastructure`, not art
 
 The architecture must stay disciplined around bounded cognition, governed execution, explicit authority, visible runtime state, durable proof, recoverable workflows, and operator trust.
 
+### Autonomy Control Boundary
+
+Future autonomy is an operating mode, not an MVP bypass. The active boundary is defined in [V8.3 Autonomy Control Architecture](V8_3_AUTONOMY_CONTROL_ARCHITECTURE.md): autonomy may change the source of intent, but it must still pass through ExecutionContract, policy evaluation, governed run, capability invocation, event emission, output/proof, and review/recovery.
+
+V8.3 should prepare for autonomy only where the work strengthens observability, governance, interruption, proof, recovery, capability boundaries, policy, or budgets. It must not introduce silent mutation, hidden memory promotion, self-granted permissions, unbounded tool use, automatic policy changes, or self-improvement paths that mutate production behavior without review and rollback.
+
 ## Current Architectural Assessment
 
 Already implemented or substantially embodied:

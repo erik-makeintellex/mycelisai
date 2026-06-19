@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-06-14
+> Last Updated: 2026-06-19
 > Purpose: Keep the active architecture surface small enough to use.
 
 ## TOC
@@ -25,6 +25,7 @@ The active architecture library keeps only documents that are directly used for 
 | --- | --- |
 | [V8.3 Operational Embodiment PRD](V8_3_OPERATIONAL_EMBODIMENT_PRD.md) | release-candidate embodiment plan, async runtime, recovery actions, ExpressionFrame, new-user proof |
 | [V8.3 Release Architecture Delivery Brief](V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md) ([printable HTML](V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.html)) | compact shareable architecture document for current MVP-to-release execution, delivery lanes, P0 train, and acceptance standard |
+| [V8.3 Autonomy Control Architecture](V8_3_AUTONOMY_CONTROL_ARCHITECTURE.md) | control-first boundary for future autonomous, adaptive, and self-improving behavior without expanding the V8.3 MVP scope |
 | [V8.3 Product Manifestation Architecture Review](V8_3_PRODUCT_MANIFESTATION_REVIEW.md) | product-value review of each major subsystem, visibility boundary, MVP classification, and adoption risk |
 | [V8.3 Soma User Experience Contract](V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md) | operator-first product contract for working through Soma, deliverables, proof, recovery, capabilities, and optional Inspect |
 | [V8.3 MVP UI Runtime Delivery Plan](V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md) | executable delivery overlay for Soma inbox, run receipts, output packages, capability catalog, recovery queue, and advanced run-map proof |
