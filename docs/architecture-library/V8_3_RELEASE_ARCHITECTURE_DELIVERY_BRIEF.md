@@ -98,47 +98,25 @@ This is the delivery benchmark for the alpha demonstration and release confidenc
 
 Owns Dashboard, review work, current work, and operator attention.
 
-Deliver:
-
-- Work Inbox tabs: Needs Review, Running, Outputs, Failed / Recovery, Archived
-- list-detail review pattern
-- one primary action per row
-- selected detail with outcome, output, trust, recovery, conversation/events, and Inspect
+Deliver a list-detail Work Inbox with Needs Review, Running, Outputs, Failed / Recovery, and Archived states; one primary row action; and selected detail for outcome, output, trust, recovery, conversation/events, and Inspect.
 
 ### Lane B - Output Package And Receipt
 
 Owns durable outputs and run receipts.
 
-Deliver:
-
-- one shared output package card
-- Soma and Groups output card convergence
-- rendered generated HTML/app opening
-- folder/resources/proof access
-- source/code as secondary detail, not the default output experience
+Deliver one shared output-package card across Soma and Groups with rendered HTML/app opening, folder/resources/proof access, and source/code as secondary detail.
 
 ### Lane C - Resources Capability Catalog
 
 Owns tools, MCP, search, media, filesystem, AI engines, and runtime capability posture.
 
-Deliver:
-
-- capability-first Resources view
-- available/degraded/missing/needs approval states
-- risk and approval posture
-- repair paths for missing capabilities
-- raw MCP server detail behind Inspect
+Deliver a capability-first Resources view with availability, risk, approval posture, repair paths, and raw MCP detail behind Inspect.
 
 ### Lane D - Runs, Proof, And Recovery
 
 Owns run receipts, recovery queue, and advanced inspect.
 
-Deliver:
-
-- `/runs/[id]` receipt-first default
-- timeline/proof/raw payload behind tabs
-- unified recovery queue language
-- first advanced run-map stepper from existing events
+Deliver `/runs/[id]` as receipt-first, with timeline/proof/raw payload behind tabs, unified recovery language, and advanced run-map work behind Inspect.
 
 ### Lane E - QA And Release Proof
 
@@ -177,7 +155,7 @@ The P0 order is now release-convergence order. Do not reorder it unless a blocke
 | P0.5 | Capability catalog | Trust | IN_REVIEW | Resources now opens as Capabilities for tool/search readiness, grouped can-use/needs-repair/can-request state, and MCP topology behind Inspect |
 | P0.6 | Run receipt standard | Trust | IN_REVIEW | Runs open to outcome, status, trust, proof, recovery, and outputs before raw logs |
 | P0.7 | Recovery queue | Recover | IN_REVIEW | Failure states show what failed, what remains trusted, what can retry, and what needs attention |
-| P0.8 | Trusted Outcome Journey proof | Full journey | ACTIVE | Deterministic and live proof show Ask -> Understand -> Approve -> Execute -> Deliver -> Trust -> Recover -> Revisit as one operator journey |
+| P0.8 | Trusted Outcome Journey proof | Full journey | IN_REVIEW | Deterministic proof is green; live smoke remains next for Ask -> Understand -> Approve -> Execute -> Deliver -> Trust -> Recover -> Revisit |
 | P0.9 | Documentation alignment | All journey steps | NEXT | State/docs explain proof and reality, not aspiration |
 
 ## P0.1 Current Implementation
@@ -202,14 +180,7 @@ Implemented:
 - generated HTML outputs now use the same `Open file` language instead of a separate raw-output path
 - mocked browser package proof now follows Soma output -> Review output -> Open in Resources -> Workspace Explorer folder re-entry
 
-Proof:
-
-- `npm test -- outputPackageModel.test.ts OutputWorkbench.test.tsx GroupManagementPanel.project-package.test.tsx deliveryRuntimeLanguage.test.ts`
-- `npm test -- outputPackageModel.test.ts deliveryRuntimeLanguage.test.ts OutputWorkbench.test.tsx GroupManagementPanel.project-package.test.tsx ResourcesPage.test.tsx WorkspaceExplorer.test.tsx`
-- `uv run inv interface.typecheck`
-- `uv run inv interface.e2e --project=chromium --workers=1 --server-mode=external --spec=e2e/specs/first-demo-success.spec.ts`
-- `uv run inv interface.e2e --project=chromium --workers=1 --server-mode=external --spec=e2e/specs/ui-finalization-browser-package-retry.spec.ts`
-- `uv run inv lifecycle.health`
+Proof: focused unit, type, lifecycle, and browser-package proof covers shared package language, Soma/Groups package cards, Resources re-entry, mocked success, and retry behavior.
 
 Remaining before acceptance:
 
@@ -221,18 +192,13 @@ P0.1 acceptance must satisfy the Soma UX contract: the operator should receive a
 
 ## P0.2 And P0.3 Proof
 
-P0.2 brings the services up cleanly and proves runtime readiness. P0.3 proves the output package in a real headed browser. These are separate because a healthy stack is necessary but not sufficient; the user behavior must also work. Current source proof has passed both the headless and headed live package path; release promotion should keep this gate green rather than replacing it with mocked evidence.
+P0.2 proves runtime readiness. P0.3 proves the output package in a real headed browser. Current source proof has passed both headless and headed live package paths; release promotion should keep this gate green rather than replacing it with mocked evidence.
 
 ## P0.5 Current Implementation
 
 Resources now labels the tool/search surface as `Capabilities` while keeping `tab=tools` deep links stable. The default view groups capability state into can-use, needs-repair, and can-request/add posture; MCP server cards and binding details remain available only through Inspect. Manifest normalization maps `output_schema_ref` into operator-readable output labels instead of exposing raw `tool_refs` as outputs.
 
-Proof:
-
-- `npm test -- MCPToolRegistry.test.tsx ResourcesPage.test.tsx useCortexStore.resource-registry.test.ts SettingsPage.test.tsx WorkspaceExplorer.test.tsx`
-- `npx tsc --noEmit`
-- `uv run inv interface.e2e --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/mcp-connected-tools.spec.ts`
-- `uv run inv interface.e2e --headed --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/mcp-connected-tools.spec.ts`
+Proof: focused unit/type coverage plus headless and headed `mcp-connected-tools.spec.ts` keep the capability catalog path green.
 
 ## UX Architecture Rules
 
