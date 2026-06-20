@@ -88,6 +88,29 @@ test.describe("Trusted Outcome Journey", () => {
     expect(recoveryItem?.recovery?.safe_next).toContain("Repair dependency");
 
     await page.reload();
+    const outcomeOwnershipStart = Date.now();
+    await expect(page.getByTestId("soma-current-work-lane")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Output ready").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByLabel("Latest output")).toContainText(j.packageTitle, { timeout: 15_000 });
+    await expect(page.getByRole("button", { name: new RegExp(`Open file .*${j.packageTitle}`, "i") }).last()).toBeVisible({ timeout: 15_000 });
+
+    const reviewToggle = page.getByTestId("soma-workbench-panel-toggle");
+    await expect(reviewToggle).toContainText("Review output", { timeout: 15_000 });
+    await expect(reviewToggle).toContainText("1", { timeout: 15_000 });
+    await reviewToggle.click();
+    const reviewPanel = page.getByTestId("soma-workbench-side-rail");
+    await expect(reviewPanel).toHaveAttribute("aria-hidden", "false", { timeout: 15_000 });
+    await reviewPanel.getByRole("tab", { name: /Trust/i }).click();
+    await expect(reviewPanel.getByText("Soma just did this")).toBeVisible({ timeout: 15_000 });
+    await expect(reviewPanel.getByText("Outputs")).toBeVisible({ timeout: 15_000 });
+    await expect(reviewPanel.getByText("Conversation guidance")).toBeVisible({ timeout: 15_000 });
+    await expect(reviewPanel.getByText("Evidence")).toBeVisible({ timeout: 15_000 });
+    await expect(reviewPanel.getByText(new RegExp(j.runId))).toBeVisible({ timeout: 15_000 });
+    await expect(reviewPanel.getByText("Next", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(reviewPanel.getByText(/Review Soma's response|next action|Latest output/i).first()).toBeVisible({ timeout: 15_000 });
+    expect(Date.now() - outcomeOwnershipStart).toBeLessThan(15_000);
+    await reviewPanel.getByRole("button", { name: "Close work panel" }).click();
+
     await expectProjectPackageVisible(page, {
       title: j.packageTitle,
       entrypoint: j.entrypoint,

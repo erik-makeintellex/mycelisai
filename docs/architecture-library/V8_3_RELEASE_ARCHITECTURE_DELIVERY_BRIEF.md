@@ -157,7 +157,7 @@ The P0 order is now release-convergence order. Do not reorder it unless a blocke
 | P0.5 | Capability catalog | Trust | IN_REVIEW | Resources now opens as Capabilities for tool/search readiness, grouped can-use/needs-repair/can-request state, and MCP topology behind Inspect |
 | P0.6 | Run receipt standard | Trust | IN_REVIEW | Runs open to outcome, status, trust, proof, recovery, and outputs before raw logs |
 | P0.7 | Recovery queue | Recover | IN_REVIEW | Failure states show what failed, what remains trusted, what can retry, and what needs attention |
-| P0.8 | Outcome journey proof | Full journey | IN_REVIEW | Deterministic and live smoke proof are green; remaining gate is Outcome Ownership plus live run-event reconstruction |
+| P0.8 | Outcome journey proof | Full journey | IN_REVIEW | Deterministic journey plus Outcome Ownership and live smoke proof are green; remaining gates are default recovery ownership and live run-event reconstruction |
 | P0.9 | Documentation alignment | All journey steps | NEXT | State/docs explain proof and reality, not aspiration |
 
 ## P0.1 Current Implementation
