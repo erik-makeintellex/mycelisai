@@ -216,26 +216,26 @@ export function SomaOperatingSurface({
 
 const defaultEvidence: SomaEvidenceItem[] = [
   {
-    title: "Approval queue",
-    detail: "Approve or reject actions that need your decision.",
+    title: "Outcome approvals",
+    detail: "Decide what Soma can run next.",
     href: "/approvals",
     icon: <CheckSquare className="h-4 w-4" />,
   },
   {
-    title: "Activity and runs",
-    detail: "See recent progress and what changed.",
+    title: "Outcome history",
+    detail: "Review what happened and what changed.",
     href: "/activity",
     icon: <ListChecks className="h-4 w-4" />,
   },
   {
-    title: "Learning and context",
-    detail: "Review saved patterns and useful context.",
+    title: "Outcome context",
+    detail: "Review saved patterns that shape future work.",
     href: "/memory",
     icon: <Activity className="h-4 w-4" />,
   },
   {
-    title: "Tool setup",
-    detail: "Check connected tools and search setup.",
+    title: "What Soma can use",
+    detail: "Check capability readiness and repair paths.",
     href: "/resources?tab=tools",
     icon: <Wrench className="h-4 w-4" />,
   },

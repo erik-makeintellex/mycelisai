@@ -4,7 +4,7 @@
 Status: ACTIVE  
 Last Updated: 2026-06-14  
 Owner: Mycelis Product Experience  
-Scope: Normal operator experience with Soma-centered work, deliverables, proof, recovery, and optional advanced Inspect
+Scope: Normal operator experience with Soma-centered outcomes, deliverables, proof, recovery, and optional advanced Inspect
 
 ## Purpose
 
@@ -42,7 +42,7 @@ Soma is the primary interface, continuity layer, work coordinator, execution pla
 
 Soma is not a chatbot, search box, workflow canvas, model picker, tool registry, MCP console, or agent topology dashboard.
 
-The user experience must make the operator feel like they are working with Soma to get meaningful work done safely. It must not make them feel like they are operating an AI system.
+The user experience must make the operator feel like they are working with Soma to own meaningful outcomes safely. It must not make them feel like they are operating an AI system.
 
 ## User Mental Model
 
@@ -54,7 +54,7 @@ Soma understands the request.
 Soma explains the plan.
 Soma asks me only for meaningful choices or approvals.
 Soma performs or coordinates the work.
-Soma gives me a deliverable package.
+Soma gives me a deliverable package for the outcome.
 Soma shows what happened, what is trusted, and what needs attention.
 ```
 
@@ -90,7 +90,7 @@ After the user asks for work, Soma must show:
 
 - what Soma understood
 - what Soma plans to do
-- what deliverable or outcome will be produced
+- what outcome and deliverable will be produced
 - whether approval is needed
 - what user input would improve the result
 - what proof will be available
@@ -120,13 +120,13 @@ The user cares about:
 
 They should not need to read raw logs, NATS traffic, MCP messages, model traces, or specialist chatter to answer those questions.
 
-## Deliverables First
+## Outcomes First
 
-Deliverables are the primary product outcome. A response is not enough when the user asked for meaningful work.
+Outcome is the primary product object. Deliverable packages are retained results and evidence for that outcome. A response is not enough when the user asked for meaningful work.
 
 Soma may answer simple questions directly, but substantive work requests must produce a retained deliverable package or an explicit recovery state explaining why no complete package exists.
 
-A deliverable package should include:
+An outcome's deliverable package should include:
 
 - the usable output
 - a short summary
@@ -137,7 +137,7 @@ A deliverable package should include:
 
 ## Deliverable Package Types
 
-The UI and runtime must support these package types as first-class operator outcomes:
+The UI and runtime must support these package types as first-class retained results for outcomes:
 
 | Package type | Typical contents |
 | --- | --- |
@@ -246,7 +246,7 @@ Inspect may show:
 - topology
 - retained proof
 
-Inspect must not be required for normal trust. A user should be able to understand the outcome, proof, and recovery path from the primary Soma surface.
+Inspect must not be required for normal trust. A user should be able to understand the outcome, deliverables, proof, and recovery path from the primary Soma surface.
 
 ## Continuity
 
@@ -272,7 +272,7 @@ A Soma-centered UI slice is acceptable only when a normal operator can:
 2. See what Soma understood and plans to do.
 3. Understand whether approval, review, or more input is needed.
 4. Track work through Running, Waiting, Needs Review, Needs Approval, Completed, or Failed.
-5. Open or preview the resulting deliverable package.
+5. Open or preview the resulting outcome deliverable package.
 6. See proof, uncertainty, and next actions without opening raw logs.
 7. Recover from failure or partial completion through clear choices.
 8. Use Inspect only when they intentionally want advanced execution detail.

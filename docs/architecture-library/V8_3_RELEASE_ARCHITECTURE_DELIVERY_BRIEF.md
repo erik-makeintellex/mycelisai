@@ -19,7 +19,7 @@ I can see active work, outputs, proof, and recovery.
 I can trust what happened later.
 ```
 
-Mycelis should now be described as a **Soma-centered governed cognitive operating environment**. The architecture remains deep internally, but the default user experience must collapse around visible execution, durable outputs, proof, recovery, and operator trust.
+Mycelis should now be described as a **Soma-centered Outcome Management Engine powered by governed execution**. The architecture remains deep internally, but the default user experience must collapse around visible execution, durable outputs, proof, recovery, and operator trust.
 
 The operator-facing acceptance lens is defined in the [V8.3 Soma User Experience Contract](V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md): users work through Soma, deliverables matter more than responses, proof/recovery must be visible, and advanced Inspect is optional.
 
@@ -30,16 +30,15 @@ The product-manifestation review is defined in the [V8.3 Product Manifestation A
 The canonical operator path is:
 
 ```text
-Intent
+Outcome need
 -> Soma understanding
 -> governed proposal or direct answer
--> approved run when mutation/execution is required
--> durable output package
--> run receipt
--> proof, recovery, or follow-up
+-> approved work when mutation/execution is required
+-> deliverables and active lanes
+-> proof, recovery, or re-entry
 ```
 
-The default UI should not expose topology first. Advanced runtime detail belongs behind `Inspect`.
+The default UI should not expose topology first. Advanced runtime detail belongs behind `Inspect`; a user should not need Agent, MCP, NATS, Prompt, Context Window, Topology, Vector Store, Event Bus, Workflow, or Run vocabulary to complete the default path.
 
 Autonomy remains future-facing and control-first. The governing boundary is [V8.3 Autonomy Control Architecture](V8_3_AUTONOMY_CONTROL_ARCHITECTURE.md): autonomous work may supply intent, but it must not bypass Soma, ExecutionContract, policy, governed runs, capabilities, events, output/proof, review, or recovery. V8.3 should only add autonomy foundations when they strengthen the current MVP's observability, interruptibility, proof, recovery, capability boundaries, and budget/policy readiness.
 
@@ -48,6 +47,7 @@ Autonomy remains future-facing and control-first. The governing boundary is [V8.
 | Object | Operator Meaning | Release Requirement |
 | --- | --- | --- |
 | Soma | Singular operating surface and continuity layer | Ask, review, approve, recover, and re-enter work from one trusted surface |
+| Outcome | The thing the operator wants owned, completed, trusted, or revisited | Visible owner, active state, deliverables, proof, recovery, and next action |
 | Work Item | Something Soma or a team is doing, waiting on, or finished | Visible state, next action, output/proof links, and recovery path |
 | Run Receipt | User-readable record of what happened | Outcome, status, output, trust, proof, recovery, inspect |
 | Output Package | Durable generated result | Open file/app, open folder, open in Resources, proof, download/copy path where applicable |
@@ -75,6 +75,8 @@ Subsystems matter only insofar as they strengthen the journey. Output Packages s
 
 The MVP is complete when a non-technical user can complete the full journey without understanding agents, MCP, workflows, runs, topology, or infrastructure.
 
+The release gate is twofold: the Infrastructure Disappearance Index proves the default path works without infrastructure vocabulary, and the Outcome Ownership Index proves a returning user can identify active outcomes, delivered outcomes, incomplete outcomes, attention needed, trust state, and next step within 15 seconds.
+
 ## MVP Delivery Spine
 
 The release-candidate MVP should prove one excellent journey before broadening:
@@ -84,8 +86,8 @@ User asks Soma to create or review meaningful work
 -> Soma evaluates intent
 -> proposal appears when governed execution is required
 -> operator approves
--> execution creates a run/work item
--> output package appears
+-> execution creates owned work toward the outcome
+-> deliverable package appears
 -> proof/audit/recovery is visible
 -> user revisits and trusts the result later
 ```
@@ -155,7 +157,7 @@ The P0 order is now release-convergence order. Do not reorder it unless a blocke
 | P0.5 | Capability catalog | Trust | IN_REVIEW | Resources now opens as Capabilities for tool/search readiness, grouped can-use/needs-repair/can-request state, and MCP topology behind Inspect |
 | P0.6 | Run receipt standard | Trust | IN_REVIEW | Runs open to outcome, status, trust, proof, recovery, and outputs before raw logs |
 | P0.7 | Recovery queue | Recover | IN_REVIEW | Failure states show what failed, what remains trusted, what can retry, and what needs attention |
-| P0.8 | Trusted Outcome Journey proof | Full journey | IN_REVIEW | Deterministic and live smoke proof are green; live run-event reconstruction remains a follow-up gap |
+| P0.8 | Outcome journey proof | Full journey | IN_REVIEW | Deterministic and live smoke proof are green; remaining gate is Outcome Ownership plus live run-event reconstruction |
 | P0.9 | Documentation alignment | All journey steps | NEXT | State/docs explain proof and reality, not aspiration |
 
 ## P0.1 Current Implementation

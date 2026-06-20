@@ -1,15 +1,12 @@
 # Mycelis
-Mycelis is a governed cognitive operating environment for creating, operating, and evolving AI Organizations through a Soma-primary operator experience.
-
+Mycelis is a Soma-centered Outcome Management Engine for creating, operating, and revisiting trusted AI work through governed execution.
 This README is the development-swarm inception document. It points to current authority, defines the command and documentation contracts, and avoids duplicating the deeper architecture specs.
-
 Canonical ownership:
-- `README.md`: inception, navigation, and repo-wide working rules
-- `docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`, `docs/architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md`, `docs/architecture-library/V8_3_PRODUCT_MANIFESTATION_REVIEW.md`, `docs/architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md`, and `docs/architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md`: active release-candidate embodiment target, shareable delivery frame, product-value review, operator UX contract, and executable P0 delivery train; `architecture/v8-2.md` remains the stable full architecture baseline V8.3 concretizes
-- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`, `docs/architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`, and `docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md`: screen/API truth, team-work steering, and directed-execution alignment
-- `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md` and `docs/architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md`: capability, MCP/custom integration, proof, secret-reference, UI exposure, and rotation truth
-- `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`: V7-to-V8 bootstrap migration truth
-- `.state/V8_DEV_STATE.md`: live implementation scoreboard; read the active snapshot and immediate next actions before dated historical boards
+- `README.md`: inception, navigation, and repo-wide working rules.
+- V8.3 architecture-library docs: outcome-primary release target, shareable delivery frame, product-value review, operator UX contract, and executable P0 delivery train; `architecture/v8-2.md` remains the stable full architecture baseline V8.3 concretizes.
+- V8/V8.2 architecture-library contracts: screen/API truth, team-work steering, capability/MCP integration, secret boundaries, bootstrap migration, and directed-execution alignment.
+- `.state/V8_DEV_STATE.md`: live implementation scoreboard; read the active snapshot and immediate next actions before dated historical boards.
+
 ## README TOC
 - [Fresh Agent Start Here](#fresh-agent-start-here)
 - [User Guidance](#user-guidance)
@@ -32,11 +29,8 @@ Canonical ownership:
 - [Licensing And Releases](#licensing-and-releases)
 - [Documentation Responsibilities](#documentation-responsibilities)
 - [Status](#status)
-
 ## Fresh Agent Start Here
-
 Review these before planning or editing:
-
 1. [AGENTS.md](AGENTS.md)
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
 3. [V8 Development State](.state/V8_DEV_STATE.md)
@@ -79,7 +73,7 @@ Before changing runtime, API, operator workflow, governance, testing, or task be
 
 ## What Mycelis Is
 
-In operator language, Mycelis lets someone ask Soma to create or review meaningful work, see what happened, inspect the durable result, and recover when trust is broken.
+In operator language, Mycelis lets someone ask Soma for an outcome, see what happened, open the durable result, recover when trust is broken, and return later knowing what is active, delivered, incomplete, or needs attention.
 
 In architecture language, Mycelis is built around instantiated organizations as runtime truth, a Soma operational identity layer, governed execution, memory/continuity contracts, durable outputs, recoverable runs, and auditable automation.
 
@@ -89,7 +83,7 @@ The active delivery target is [V8.3 Operational Embodiment PRD](docs/architectur
 
 Delivery rule:
 - advance V8.3 slices only with a named boundary, proof lane, promotion rule, and documentation review
-- prefer operational embodiment over new doctrine: the canonical MVP workflow is intent -> Soma -> governed approval when needed -> execution -> run -> durable output -> proof/recovery
+- prefer operational embodiment over new doctrine: the canonical MVP workflow is outcome need -> Soma -> owned work -> deliverables -> proof/recovery -> revisit
 - do not grow historical V7/V8.1 docs with current release-candidate scope
 
 ## Compatibility Baseline
@@ -117,7 +111,7 @@ Default surfaces should read as product workflows, not raw system internals:
 Use [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) for screen/API expectations and [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for browser proof.
 
 Default Operator Surface:
-- the default UX must stay simple and intent-first
+- the default UX must stay simple and intent-first while making the outcome owner path obvious
 - Soma, AI Organizations, teams/groups, activity, memory, resources, and settings are the operator-visible product surfaces
 
 Advanced Architecture / Runtime Surface:
@@ -133,7 +127,7 @@ source-of-truth layers remain separate:
 
 managed exchange foundation: channels, threads, schemas, and normalized outputs remain the governed substrate. managed exchange is permissioned; normalization into managed exchange does not imply unrestricted trust. The free-node release now includes foundational security boundaries.
 capability manifest foundation: MCP tools, custom connectors, local scripts, external APIs, generated artifacts, and future plugins/modules must register as governed capabilities before Soma, teams, groups, or automations use them. Meaningful executions attach to runs; meaningful outputs normalize into exchange, artifacts, audit, or learning candidates instead of remaining raw tool side effects.
-directed execution foundation: default UX must show intent, Soma understanding, execution shape, capability/team use, outputs, proof, and next step. Runs, outputs, governance, capabilities, and deployment trust are product surfaces, not hidden diagnostics.
+directed execution foundation: default UX must show the outcome need, Soma understanding, owned work, deliverables, proof, recovery, and next step. Runs, teams, capabilities, and deployment trust are supporting surfaces, not default user vocabulary.
 finalization GUI posture: live Soma governance, team execution, first-demo project-package proof, proof opening/reload, Groups output, and degraded retry are green or in review. Cold-start Soma must not imply prior work, and runtime teams must not be presented as production delivery collaborators until bounded role-specific asks return within timeout with visible output/proof refs or actionable degradation.
 
 ## Architecture Terms To Operator Terms

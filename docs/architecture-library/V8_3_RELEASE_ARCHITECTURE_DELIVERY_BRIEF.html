@@ -92,7 +92,7 @@
   <h1>Mycelis V8.3 Release Architecture Delivery Brief</h1>
   <div class="meta">
     <strong>Status:</strong> ACTIVE<br />
-    <strong>Last Updated:</strong> 2026-06-14<br />
+    <strong>Last Updated:</strong> 2026-06-19<br />
     <strong>Purpose:</strong> Compact, shareable architecture delivery document for the current MVP-to-release path.
   </div>
   <div class="actions">
@@ -102,24 +102,24 @@
 
   <h2>Executive Summary</h2>
   <p>Mycelis V8.3 is converging from architecture expansion into operational embodiment. The product target is simple: I tell Soma what I want; Soma safely directs execution; I can see active work, outputs, proof, and recovery; I can trust what happened later.</p>
-  <p>Mycelis should now be described as a <strong>Soma-centered governed cognitive operating environment</strong>. The architecture remains deep internally, but the default user experience must collapse around visible execution, durable outputs, proof, recovery, and operator trust.</p>
+  <p>Mycelis should now be described as a <strong>Soma-centered Outcome Management Engine powered by governed execution</strong>. The architecture remains deep internally, but the default user experience must collapse around visible execution, durable outputs, proof, recovery, and operator trust.</p>
   <p>The operator-facing acceptance lens is defined in the V8.3 Soma User Experience Contract: users work through Soma, deliverables matter more than responses, proof and recovery must be visible, and advanced Inspect is optional.</p>
   <p>The product-manifestation review is defined in the V8.3 Product Manifestation Architecture Review: every subsystem must justify user value, visibility, MVP classification, and adoption risk before it expands the visible product surface.</p>
 
   <h2>Product Architecture Shape</h2>
-  <pre>Intent
+  <pre>Outcome need
 -> Soma understanding
 -> governed proposal or direct answer
--> approved run when mutation/execution is required
--> durable output package
--> run receipt
--> proof, recovery, or follow-up</pre>
-  <p>The default UI should not expose topology first. Advanced runtime detail belongs behind Inspect.</p>
+-> approved work when mutation/execution is required
+-> deliverables and active lanes
+-> proof, recovery, or re-entry</pre>
+  <p>The default UI should not expose topology first. Advanced runtime detail belongs behind Inspect; a user should not need Agent, MCP, NATS, Prompt, Context Window, Topology, Vector Store, Event Bus, Workflow, or Run vocabulary to complete the default path.</p>
 
   <h2>Current Release Architecture Objects</h2>
   <table>
     <tr><th>Object</th><th>Operator Meaning</th><th>Release Requirement</th></tr>
     <tr><td>Soma</td><td>Singular operating surface and continuity layer</td><td>Ask, review, approve, recover, and re-enter work from one trusted surface</td></tr>
+    <tr><td>Outcome</td><td>The thing the operator wants owned, completed, trusted, or revisited</td><td>Visible owner, active state, deliverables, proof, recovery, and next action</td></tr>
     <tr><td>Work Item</td><td>Something Soma or a team is doing, waiting on, or finished</td><td>Visible state, next action, output/proof links, and recovery path</td></tr>
     <tr><td>Run Receipt</td><td>User-readable record of what happened</td><td>Outcome, status, output, trust, proof, recovery, inspect</td></tr>
     <tr><td>Output Package</td><td>Durable generated result</td><td>Open file/app, open folder, open in Resources, proof, download/copy path where applicable</td></tr>
@@ -128,13 +128,25 @@
     <tr><td>Advanced Run Map</td><td>Technical reconstruction of execution</td><td>Stepper/timeline/graph behind Inspect only</td></tr>
   </table>
 
+  <h2>Trusted Outcome Journey</h2>
+  <pre>Ask
+-> Understand
+-> Approve
+-> Execute
+-> Deliver
+-> Trust
+-> Recover
+-> Revisit</pre>
+  <p>Subsystems matter only insofar as they strengthen the journey. The MVP is complete when a non-technical user can complete the path without understanding agents, MCP, workflows, runs, topology, or infrastructure.</p>
+  <p>The release gate is twofold: the Infrastructure Disappearance Index proves the default path works without infrastructure vocabulary, and the Outcome Ownership Index proves a returning user can identify active outcomes, delivered outcomes, incomplete outcomes, attention needed, trust state, and next step within 15 seconds.</p>
+
   <h2>MVP Delivery Spine</h2>
   <pre>User asks Soma to create or review meaningful work
 -> Soma evaluates intent
 -> proposal appears when governed execution is required
 -> operator approves
--> execution creates a run/work item
--> output package appears
+-> execution creates owned work toward the outcome
+-> deliverable package appears
 -> proof/audit/recovery is visible
 -> user revisits and trusts the result later</pre>
 
@@ -161,7 +173,7 @@
     <tr><td>P0.5</td><td>Capability catalog</td><td>NEXT</td><td>Resources answers what Soma can use, repair, or request</td></tr>
     <tr><td>P0.6</td><td>Run receipt standard</td><td>NEXT</td><td>Runs open to outcome, status, trust, proof, recovery, and outputs before raw logs</td></tr>
     <tr><td>P0.7</td><td>Recovery queue</td><td>NEXT</td><td>Failure states show what failed, what remains trusted, what can retry, and what needs attention</td></tr>
-    <tr><td>P0.8</td><td>Trusted Outcome Journey proof</td><td>IN_REVIEW</td><td>Deterministic and live smoke proof are green; live run-event reconstruction remains a follow-up gap</td></tr>
+    <tr><td>P0.8</td><td>Outcome journey proof</td><td>IN_REVIEW</td><td>Deterministic and live smoke proof are green; remaining gate is Outcome Ownership plus live run-event reconstruction</td></tr>
     <tr><td>P0.9</td><td>Documentation alignment</td><td>NEXT</td><td>State/docs explain proof and reality, not aspiration</td></tr>
   </table>
 
@@ -191,7 +203,7 @@
   <p>A slice is not accepted unless it reports the operator problem solved, files changed, runtime/API contract touched or reviewed, docs changed, tests run, headed/browser proof when visible UI changed, and remaining trust/recovery gaps.</p>
   <div class="callout">
     <strong>Decisive release question:</strong><br />
-    Can a user trust this system through visible execution and recovery?
+    Can the user complete the Trusted Outcome Journey and trust the result later?
   </div>
 </main>
 </body>

@@ -4,7 +4,6 @@
 > Status: ACTIVE
 > Last Updated: 2026-06-14
 > Purpose: Turn the V8.3 operational embodiment PRD and current agent-platform market patterns into executable UI/runtime delivery slices.
-
 ## Source Review
 
 This plan does not replace the [V8.3 Operational Embodiment PRD](V8_3_OPERATIONAL_EMBODIMENT_PRD.md). It details how to deliver the PRD's operator-visible threshold:
@@ -29,7 +28,7 @@ The release-candidate product should feel less like a topology console and more 
 Default operator shape:
 
 ```text
-Intent -> Soma -> Work Inbox -> Run Receipt -> Output Package -> Proof / Recovery
+Outcome need -> Soma -> Outcome workspace -> Deliverables -> Proof / Recovery -> Re-entry
 ```
 
 Advanced operator shape:
@@ -42,12 +41,12 @@ The runtime can keep deep concepts. The UI should translate them into a few stab
 
 | Object | Operator Meaning | Default Action |
 | --- | --- | --- |
-| Work Item | Something Soma is doing or needs reviewed | Review, open output, recover, clear |
+| Outcome | The thing the operator wants owned, completed, trusted, or revisited | Review state, open deliverables, recover, revisit |
+| Work Item | Active/review/recovery lane supporting an outcome | Review, open output, recover, clear |
 | Run Receipt | What happened and whether to trust it | Open output, view proof, retry |
 | Output Package | Durable result worth revisiting | Preview, Open file, Open folder, Open in Resources, download |
 | Capability | What Soma can use safely | Check availability, enable, inspect risk |
 | Recovery Item | A failed or degraded thing that can be handled | Retry, repair dependency, archive |
-| Run Map | Technical execution trace | Advanced inspect only |
 
 ## Current Product Review
 
@@ -77,7 +76,7 @@ Detailed route audits, simplification patterns, starter families, and target-sta
 
 Visible slices must still satisfy the same gate:
 
-- first viewport answers what the page does, what needs attention, and where output/proof lives
+- first viewport answers active outcomes, delivered outputs, attention needed, and where proof/re-entry lives
 - generated content opens directly and exposes folder/storage access
 - failures name what remains trusted, what is not trusted, and the safe next action
 - raw logs, bus subjects, MCP internals, JSON, and topology stay behind Inspect
@@ -250,7 +249,7 @@ Exit:
 ### P0.8 - Trusted Outcome Journey Proof
 
 Status: ACTIVE
-Run and record one stitched operator journey from clean committed state. This is not a subsystem sweep. It proves that a non-technical user can ask Soma for meaningful work, approve governed execution, open the delivered output, trust proof, recover from a controlled degraded state, and revisit the result later without understanding agents, MCP, runs, topology, or infrastructure.
+Run and record one stitched operator journey from clean committed state. This is not a subsystem sweep. It proves that a non-technical user can ask Soma for a meaningful outcome, approve governed execution, open deliverables, trust proof, recover from a controlled degraded state, and revisit the outcome later without understanding agents, MCP, workflows, runs, topology, or infrastructure.
 
 Execution architecture:
 
@@ -272,6 +271,7 @@ Exit:
 - headed GUI proof passes
 - release preflight passes
 - journey proof packet is filled with pass/fail/blocker status for each journey step
+- returning-user Outcome Ownership check answers active, delivered, incomplete, attention, trust, and next step within 15 seconds
 - live proof records exact environment skips instead of treating skipped gates as green
 - release handoff records the accepted proof result before promotion
 

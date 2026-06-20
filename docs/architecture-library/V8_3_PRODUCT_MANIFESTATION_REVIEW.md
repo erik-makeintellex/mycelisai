@@ -21,7 +21,7 @@ The controlling product test is:
 ```text
 I tell Soma what I need.
 Soma understands the goal.
-Soma organizes the work.
+Soma owns the outcome path.
 I approve anything risky.
 Useful deliverables appear.
 Proof exists.
@@ -33,10 +33,10 @@ I can trust what happened later.
 
 The architecture is aligned with the target product when it is judged by runtime capability. The remaining release risk is product manifestation: the same architecture must feel easier to trust, adopt, deploy, recover, and buy.
 
-The MVP must therefore stay deliverable-driven:
+The MVP must therefore stay outcome-driven:
 
 ```text
-User Goal
+Outcome Need
 -> Soma Understanding
 -> Proposal / Approval when needed
 -> Execution
@@ -53,10 +53,11 @@ Runtime terms such as Event Spine, Execution Contract, capability manifest, MCP 
 | Subsystem | Purpose | User Value | Runtime Value | Visibility | MVP | Risk If Removed |
 | --- | --- | --- | --- | --- | --- | --- |
 | Soma | Singular operating surface for intent, planning, execution, proof, and recovery. | The user can work through one counterpart instead of learning agents, tools, MCP, and topology. | Routes intent into governed plans, direct answers, work items, capabilities, and retained outputs. | Default | P0 | Product collapses into disconnected admin pages and tool consoles. |
+| Outcome | The user-owned thing being completed, trusted, recovered, or revisited. | The user can see what is active, delivered, incomplete, trusted, and next. | Binds work items, output refs, proof refs, recovery refs, and state into a product object. | Default | P0 | Work remains scattered across chat, runs, groups, and resources. |
 | Soma Understanding | Translate user language into goal, output shape, constraints, uncertainty, and approval posture. | The user sees what Soma understood before trusting or approving work. | Normalizes intent for contracts, teams, capabilities, and output selection. | Default | P0 | Users cannot tell whether Soma is doing the right work. |
 | Governed Proposal / Approval | Prevent hidden mutation and risky execution. | The user approves important actions with a clear expected outcome. | Creates durable authority boundary before execution. | Default for risky work | P0 | Trust breaks through silent mutation or ambiguous consent. |
 | Work Item / Work Inbox | Represent active, waiting, reviewable, failed, and completed work. | The user knows what needs attention and what happened next. | Projects run/team/capability state into operator-readable work state. | Default | P0 | Work disappears into chat history or logs. |
-| Deliverable / Output Package | Treat outputs as retained product objects. | The user can open, inspect, download, revisit, and trust generated work. | Normalizes files, apps, media, reports, datasets, and packages. | Default | P0 | Mycelis feels like chat instead of an operating environment. |
+| Deliverable / Output Package | Treat outputs as retained results for outcomes. | The user can open, inspect, download, revisit, and trust generated work. | Normalizes files, apps, media, reports, datasets, and packages. | Default | P0 | Mycelis feels like chat instead of an operating environment. |
 | Run Receipt | Summarize what happened, what was produced, trust, proof, and recovery. | The user can understand a run without reading timeline events. | Binds output refs, proof refs, status, recovery, and inspect links. | Default for runs | P0 | Runs remain engineering traces rather than trust objects. |
 | Proof Artifact | Explain why a result is trustworthy. | The user can answer "why should I trust this?" without logs. | Persists evidence, validation state, capability refs, and degradation refs. | Secondary by default, expandable | P0 | Deliverables become unverifiable claims. |
 | Recovery Action | Make failure actionable. | The user sees what failed, what remains trusted, and what to retry or repair. | Encodes retries, fallback, repair, resume, and target state. | Default when degraded | P0 | Degradation becomes dead-end error text. |
@@ -80,6 +81,7 @@ Runtime terms such as Event Spine, Execution Contract, capability manifest, MCP 
 | Architecture Component | MVP Classification | Product Decision |
 | --- | --- | --- |
 | Soma operating surface | Supports MVP directly | Default first surface. |
+| Outcome object | Supports MVP directly | The user should see ownership, state, deliverables, proof, recovery, and revisit paths. |
 | Soma understanding and proposal copy | Supports MVP directly | Must be concise and visible before approval. |
 | Approval/governance | Supports MVP directly | Required for mutation and risky execution. |
 | Work item and current work lane | Supports MVP directly | Must become inbox/list-detail rather than dense cards. |
@@ -115,7 +117,7 @@ Runtime terms such as Event Spine, Execution Contract, capability manifest, MCP 
 
 | Priority | Action | Product Reason | Exit Proof |
 | --- | --- | --- | --- |
-| P0.1 | Finish output package standard | Deliverables must be product objects, not chat residue. | Soma, Groups, and Resources open the same retained package with preview/open/download/proof/inspect/revisit and no raw HTML default. |
+| P0.1 | Finish output package standard | Deliverables must support owned outcomes, not chat residue. | Soma, Groups, and Resources open the same retained package with preview/open/download/proof/inspect/revisit and no raw HTML default. |
 | P0.2 | Prove service health and runtime readiness | The product cannot be trusted if startup is inconsistent. | Infrastructure, migrations, Core, Interface, and health reporting are clean and reachable. |
 | P0.3 | Run headed browser proof for generated package | Architecture must prove real local execution and adoption path. | Visible browser proof: ask Soma, approve, execute, open generated app/file, open folder, re-enter through Resources/Groups. |
 | P0.4 | Build review inbox/list-detail | Review work must become understandable. | Needs Review, Running, Outputs, Failed/Recovery, Archived have one obvious primary action. |
@@ -154,7 +156,7 @@ Does this make Mycelis easier to trust,
 easier to adopt,
 easier to deploy,
 easier to recover,
-and better at producing trusted deliverables?
+and better at owning trusted outcomes?
 ```
 
 If the answer is not clearly yes, reconsider the slice.

@@ -1,67 +1,42 @@
 # Mycelis V8.3 - Operational Embodiment PRD
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
-
 ## Status
-
 **Date:** 2026-05-23  
 **Phase:** Release Candidate Embodiment  
 **Target:** Governed operational cognition platform maturity  
 **Architecture posture:** Converged and entering operational refinement  
 **Primary focus:** Operator trust, async runtime execution, proof universality, recovery embodiment, and deployable runtime coherence
-
 ## Executive Summary
-
 Mycelis has reached a critical transition point. The architecture is no longer primarily blocked by conceptual design. The remaining challenges are operational embodiment, async execution coherence, runtime trust semantics, recovery systems, deployment reliability, proof universality, operator-visible execution, and reduction of cognitive load.
-
 The product is no longer proving that multi-agent orchestration is possible. It is now proving:
-
 ```text
 Governed cognition can safely direct meaningful operational execution.
 ```
-
 The next threshold is whether a fresh operator can log in, ask Soma for work, understand what is happening, approve governed execution, observe active work, inspect outputs and proof, recover from failure, and trust the result later without reading logs, understanding NATS, interpreting MCP topology, or manually debugging infrastructure.
-
 ## Product Truth
-
-Mycelis is a Soma-centered governed cognitive operating environment. It is not a chatbot, orchestration playground, topology console, MCP registry, AI dashboard pile, automation toy, or multi-agent roleplay environment.
-
+Mycelis is a Soma-centered Outcome Management Engine powered by governed execution. It is not a chatbot, orchestration playground, topology console, MCP registry, AI dashboard pile, automation toy, or multi-agent roleplay environment.
 The system exists to:
-
 ```text
-Transform operator intent into governed, inspectable, recoverable execution.
+Transform outcome needs into owned work, deliverables, proof, recovery, and revisit paths.
 ```
-
 Canonical loop:
-
 ```text
-I tell Soma what I want.
-Soma safely directs execution.
-I can see active work, outputs, proof, and recovery.
-I can trust what happened later.
+I tell Soma what outcome I need.
+Soma safely directs the work.
+I can see active work, deliverables, proof, and recovery.
+I can revisit and trust what happened later.
 ```
-
-The operator should never feel like they are operating an agent topology stack. They should feel like they are operating a governed cognitive operating environment.
-
+The operator should never feel like they are operating an agent topology stack. They should feel like they are owning outcomes through Soma.
 ## Core Principles
-
 Every decision must improve one or more of: observable, recoverable, governable, deployable, interruptible, inspectable, and trustworthy. If a feature does not improve those dimensions, defer it.
-
 ## Product Identity Doctrine
-
-The product category is `Governed Operational Cognition Infrastructure`, not artificial general intelligence, an autonomous agent society, a recursive autonomy framework, or a universal automation system.
-
+The product category is `Soma-centered Outcome Management Engine`, not artificial general intelligence, an autonomous agent society, a recursive autonomy framework, or a universal automation system.
 The architecture must stay disciplined around bounded cognition, governed execution, explicit authority, visible runtime state, durable proof, recoverable workflows, and operator trust.
-
 ### Autonomy Control Boundary
-
 Future autonomy is an operating mode, not an MVP bypass. The active boundary is defined in [V8.3 Autonomy Control Architecture](V8_3_AUTONOMY_CONTROL_ARCHITECTURE.md): autonomy may change the source of intent, but it must still pass through ExecutionContract, policy evaluation, governed run, capability invocation, event emission, output/proof, and review/recovery.
-
 V8.3 should prepare for autonomy only where the work strengthens observability, governance, interruption, proof, recovery, capability boundaries, policy, or budgets. It must not introduce silent mutation, hidden memory promotion, self-granted permissions, unbounded tool use, automatic policy changes, or self-improvement paths that mutate production behavior without review and rollback.
-
 ## Current Architectural Assessment
-
 Already implemented or substantially embodied:
-
 - Soma-centered operational surface
 - Event Spine runtime
 - durable outputs and proof-linked outputs
@@ -77,46 +52,38 @@ Already implemented or substantially embodied:
 - runtime team persistence
 - active work visibility
 - deployment trust posture
-
 The next risks are operational clarity, runtime cohesion, async execution, recovery embodiment, proof consistency, and release reliability.
-
 ## Primary Architectural Risks
-
 ### Risk 1 - Blocking Runtime Execution
-
 The current synchronous request posture for slow local-model execution is incompatible with local inference, media generation, multimodal workflows, orchestrated execution, long-running capabilities, and recoverable operational cognition.
-
 Resolution: Mycelis must become async-first through queued work, event-driven execution, resumable workflows, progressive output, streaming state, durable run progression, and non-blocking UI.
-
 ### Risk 2 - Recovery Is Still Informational
-
 Recovery currently exists too often as explanatory text. The operator must not leave Soma to manually repair runtime state.
-
 Resolution: recovery must become executable runtime objects.
-
 ### Risk 3 - Runtime Trust Is Too Diffuse
-
 Trust semantics exist conceptually but are not fully canonicalized.
-
 Resolution: canonical trust states, proof validity states, degraded execution semantics, recovery trust transitions, and output trust lineage must become runtime state.
-
 ### Risk 4 - Operator Mental Model Drift
-
 As topology becomes hidden behind Soma, the operator still needs to understand what is happening, why it is happening, whether it is safe, whether it succeeded, whether it degraded, and whether it can recover.
-
 Resolution: `ExpressionFrame` becomes the translation layer between internal topology and operator understanding.
-
 ### Risk 5 - Working Tree / Release Discipline
-
 Dirty working trees, incomplete proof chains, and unverifiable runtime state are now operational risks.
-
 Resolution: release-candidate proof must run only from explainable committed state.
-
 ## Canonical Runtime Doctrine
-
 All meaningful execution must become queued, stateful, recoverable, and event-driven. The UI must never depend on blocking runtime execution. Every meaningful run should support queued state, resumable state, degraded continuation, streaming outputs, partial completion, retry behavior, recovery actions, and proof linkage.
-
 ## Canonical Runtime Objects
+
+### Outcome
+
+```ts
+Outcome {
+  outcome_id, requested_by, source_surface, goal, owner_scope, active_state,
+  deliverable_refs, proof_refs, recovery_refs, trust_state, next_action,
+  created_at, updated_at
+}
+```
+
+Doctrine: `Outcome` is the primary product object. Execution contracts, runs, team work, capabilities, events, and output packages exist to make the outcome visible, trusted, recoverable, and revisitable.
 
 ### ExecutionContract
 
@@ -191,7 +158,7 @@ Current implementation state: run-linked `TeamStatusEvent` records mirror into `
 
 ## ExpressionFrame Doctrine
 
-`ExpressionFrame` is the canonical translation layer between internal topology and operator understanding. Every frame must show intent, current state, next action, approval posture, risk posture, outputs, proof, recovery, and inspectable advanced details. For governed actions, the default operator question should remain simple: "Run this now?" Risk, cost, affected resources, capability IDs, proof intent, and team/tool wiring remain available through review details unless they require immediate operator attention.
+`ExpressionFrame` is the canonical translation layer between internal topology and operator understanding. Every frame must show outcome need, current state, next action, approval posture, risk posture, deliverables, proof, recovery, and inspectable advanced details. For governed actions, the default operator question should remain simple: "Run this now?" Risk, cost, affected resources, capability IDs, proof intent, and team/tool wiring remain available through review details unless they require immediate operator attention.
 
 Canonical frame types: `DirectAnswerFrame`, `ProposalFrame`, `ActiveWorkFrame`, `OutputReadyFrame`, `ProofFrame`, `RecoveryFrame`, `BlockedFrame`, `DegradedFrame`.
 
@@ -277,7 +244,7 @@ Ask
 -> Revisit
 ```
 
-All P0 work must strengthen this Trusted Outcome Journey. Output Packages strengthen Deliver, Run Receipts strengthen Trust, Recovery Queue strengthens Recover, Review Inbox strengthens Understand and Approve, Capability Catalog strengthens Trust, and Resources/Groups convergence strengthens Revisit. Subsystems are not complete until they help a non-technical user complete the journey and trust the result later.
+All P0 work must strengthen this Trusted Outcome Journey. Output Packages strengthen Deliver, Run Receipts strengthen Trust, Recovery Queue strengthens Recover, Review Inbox strengthens Understand and Approve, Capability Catalog strengthens Trust, and Resources/Groups convergence strengthens Revisit. Subsystems are not complete until they help a non-technical user own the outcome and trust the result later.
 
 ## Delivery Priorities
 
@@ -304,7 +271,7 @@ Do not build recursive autonomy, self-modifying agents, public capability market
 
 ## Acceptance Gates
 
-A slice is acceptable only when code exists, runtime object exists, UI represents it, events emit correctly, proof exists, failure degrades safely, recovery is actionable, docs/state are updated, browser proof passed, and the slice names which Trusted Outcome Journey step it improves.
+A slice is acceptable only when code exists, runtime object exists, UI represents the outcome, events emit correctly, proof exists, failure degrades safely, recovery is actionable, docs/state are updated, browser proof passed, and the slice names which Trusted Outcome Journey step it improves.
 
 Every slice must answer: which journey step improved, what operator problem was solved, what runtime object changed, what UI surface changed, what proof exists, what recovery exists, what remains untrusted, and what should still be deferred.
 

@@ -866,25 +866,25 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             activeMode="Organization work"
                             evidenceItems={[
                                 {
-                                    title: "Activity",
-                                    detail: "What changed, why it changed, and which run or signal created the visible outcome.",
+                                    title: "Outcome history",
+                                    detail: "What changed, why it changed, and what proof supports the outcome.",
                                     href: "/activity",
                                     icon: <Activity className="h-4 w-4" />,
                                 },
                                 {
-                                    title: "Learning and context",
-                                    detail: "Reusable patterns and continuity cues Soma can use on later work.",
+                                    title: "Outcome context",
+                                    detail: "Reusable patterns and continuity cues Soma can use on later outcomes.",
                                     href: "/memory",
                                     icon: <BrainCircuit className="h-4 w-4" />,
                                 },
                                 {
-                                    title: "Teams and specialists",
-                                    detail: "Departments and specialist roles Soma can coordinate when intent needs structure.",
+                                    title: "Outcome lanes",
+                                    detail: "Focused groups Soma can coordinate when the outcome needs structure.",
                                     icon: <Users className="h-4 w-4" />,
                                 },
                                 {
-                                    title: "Tools and capabilities",
-                                    detail: "Connected tools, search readiness, and governed capability boundaries.",
+                                    title: "What Soma can use",
+                                    detail: "Connected capability readiness, repair paths, and governed boundaries.",
                                     href: "/resources?tab=tools",
                                     icon: <Blocks className="h-4 w-4" />,
                                 },
