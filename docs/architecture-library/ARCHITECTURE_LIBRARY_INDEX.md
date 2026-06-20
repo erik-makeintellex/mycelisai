@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-06-19
+> Last Updated: 2026-06-20
 > Purpose: Keep the active architecture surface small enough to use.
 
 ## TOC
@@ -28,6 +28,7 @@ The active architecture library keeps only documents that are directly used for 
 | [V8.3 Autonomy Control Architecture](V8_3_AUTONOMY_CONTROL_ARCHITECTURE.md) | control-first boundary for future autonomous, adaptive, and self-improving behavior without expanding the V8.3 MVP scope |
 | [V8.3 Product Manifestation Architecture Review](V8_3_PRODUCT_MANIFESTATION_REVIEW.md) | outcome-value review of each major subsystem, visibility boundary, MVP classification, and adoption risk |
 | [V8.3 Soma User Experience Contract](V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md) | operator-first product contract for working through Soma, outcomes, deliverables, proof, recovery, capabilities, and optional Inspect |
+| [V8.3 UI/UX Engineering Implementation Brief](V8_3_UI_UX_ENGINEERING_IMPLEMENTATION_BRIEF.md) | threaded Soma workspace, rich action cards, action library, outcome vault, zero-friction configuration, event binding, and target visual system |
 | [V8.3 MVP UI Runtime Delivery Plan](V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md) | executable delivery overlay for outcome workspace, run receipts, output packages, capability catalog, recovery queue, and Trusted Outcome Journey proof |
 | [V8.3 MVP UI Runtime Detail Checklist](V8_3_MVP_UI_RUNTIME_DETAIL_CHECKLIST.md) | route-level usability checks, simplification patterns, starter families, and target-state component notes for visible UI slices |
 | [V8.2 Soma UI Architecture Expression](V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md) | ideal Soma interaction model, one-window UI architecture, active work, outputs, proof, teams |

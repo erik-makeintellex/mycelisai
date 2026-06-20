@@ -16,6 +16,7 @@ import MissionControlMarkdown from "./MissionControlMarkdown";
 import ProposedActionBlock from "./ProposedActionBlock";
 import ExecutionSummaryCard from "@/components/soma/ExecutionSummaryCard";
 import ExecutionSummaryReceipt, { shouldUseExecutionSummaryReceipt } from "@/components/soma/ExecutionSummaryReceipt";
+import MissionControlThreadStateCard from "./MissionControlThreadStateCard";
 import {
     artifactResultSummary,
     askClassBadge,
@@ -227,6 +228,7 @@ export default function MissionControlMessageBubble({
                 }`}>
                     {isUser ? msg.content : <MissionControlMarkdown content={msg.content} />}
                 </div>
+                {!isUser && <MissionControlThreadStateCard msg={msg} />}
                 {!isUser && msg.consultations?.length ? (
                     <div className="px-3 pb-2">
                         <DelegationTrace consultations={msg.consultations} assistantName={assistantName} />

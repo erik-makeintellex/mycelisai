@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-06-19
+> Last Updated: 2026-06-20
 > Purpose: Provide a compact, shareable architecture delivery document for the current MVP-to-release path.
 > Printable HTML: [V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.html](V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.html)
 
@@ -24,6 +24,8 @@ Mycelis should now be described as a **Soma-centered Outcome Management Engine p
 The operator-facing acceptance lens is defined in the [V8.3 Soma User Experience Contract](V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md): users work through Soma, deliverables matter more than responses, proof/recovery must be visible, and advanced Inspect is optional.
 
 The product-manifestation review is defined in the [V8.3 Product Manifestation Architecture Review](V8_3_PRODUCT_MANIFESTATION_REVIEW.md): every subsystem must justify user value, visibility, MVP classification, and adoption risk before it expands the visible product surface.
+
+The frontend implementation mandate is defined in the [V8.3 UI/UX Engineering Implementation Brief](V8_3_UI_UX_ENGINEERING_IMPLEMENTATION_BRIEF.md): Dashboard becomes the threaded Soma workspace, runtime results render as typed action cards, saved actions and outcome vaults become product objects, system configuration reads as capability permissions, and raw infrastructure remains behind Inspect.
 
 ## Product Architecture Shape
 
@@ -213,9 +215,11 @@ Default routes must answer three questions in the first viewport:
 Complex surfaces should use:
 
 - bounded list-detail layouts
+- threaded Soma workspace cards for understanding, proposal, active work, output, proof, and recovery
 - tabs inside selected detail
 - receipts before logs
 - output packages before raw tool output
+- action shelves and saved actions before repeated prompt rewriting
 - one primary action per row/card
 - raw payloads, MCP internals, bus subjects, and topology behind Inspect
 

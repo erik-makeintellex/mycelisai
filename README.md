@@ -38,17 +38,18 @@ Review these before planning or editing:
 5. [V8.3 Release Architecture Delivery Brief](docs/architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md)
 6. [V8.3 Product Manifestation Architecture Review](docs/architecture-library/V8_3_PRODUCT_MANIFESTATION_REVIEW.md)
 7. [V8.3 Soma User Experience Contract](docs/architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md)
-8. [V8.3 MVP UI Runtime Delivery Plan](docs/architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md)
-9. [V8.2 Production Architecture Target](architecture/v8-2.md)
-10. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
-11. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
-12. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
-13. [Operations](docs/architecture/OPERATIONS.md)
-14. [Testing](docs/TESTING.md)
-15. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
-16. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
-17. [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
-18. [Docs Manifest](interface/lib/docsManifest.ts)
+8. [V8.3 UI/UX Engineering Implementation Brief](docs/architecture-library/V8_3_UI_UX_ENGINEERING_IMPLEMENTATION_BRIEF.md)
+9. [V8.3 MVP UI Runtime Delivery Plan](docs/architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md)
+10. [V8.2 Production Architecture Target](architecture/v8-2.md)
+11. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
+12. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
+13. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+14. [Operations](docs/architecture/OPERATIONS.md)
+15. [Testing](docs/TESTING.md)
+16. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
+17. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
+18. [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
+19. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
 - V8.3 docs own current release-candidate embodiment; V8.2 docs that remain in the active library are stable architecture and implementation contracts. Historical V7 state remains migration evidence only, not active product authority.
@@ -56,11 +57,9 @@ Fresh-agent rules:
 - Keep user-facing docs and engineering docs cross-linked but distinct.
 
 ## User Guidance
-
 For product use rather than implementation, start with [Docs Navigation](docs/README.md), then the user docs under `docs/user/`. The in-app `/docs` surface should expose the same canonical operator-facing documents through `interface/lib/docsManifest.ts`. When a docs-only slice requires a manifest change outside ownership, report it rather than editing interface files.
 
 ## Agent Guidance
-
 For implementation, review in this order:
 
 1. [AGENTS.md](AGENTS.md)
@@ -72,7 +71,6 @@ For implementation, review in this order:
 Before changing runtime, API, operator workflow, governance, testing, or task behavior, identify the owning doc and update or explicitly review it in the same slice.
 
 ## What Mycelis Is
-
 In operator language, Mycelis lets someone ask Soma for an outcome, see what happened, open the durable result, recover when trust is broken, and return later knowing what is active, delivered, incomplete, or needs attention.
 
 In architecture language, Mycelis is built around instantiated organizations as runtime truth, a Soma operational identity layer, governed execution, memory/continuity contracts, durable outputs, recoverable runs, and auditable automation.
@@ -80,6 +78,8 @@ In architecture language, Mycelis is built around instantiated organizations as 
 ## Active Delivery Target (V8.3 Embodiment)
 
 The active delivery target is [V8.3 Operational Embodiment PRD](docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md): make the converged V8 architecture operationally trustworthy through async execution, durable proof, recovery, local/private media proof, and fresh-user GUI validation. [V8.2 Production Architecture Target](architecture/v8-2.md) remains the stable full architecture baseline being concretized.
+
+The active UI expression target is [V8.3 UI/UX Engineering Implementation Brief](docs/architecture-library/V8_3_UI_UX_ENGINEERING_IMPLEMENTATION_BRIEF.md): the Dashboard becomes a threaded Soma workspace with typed action cards, operational alerts, saved actions, outcome vaults, capability-permission settings, and raw infrastructure behind Inspect.
 
 Delivery rule:
 - advance V8.3 slices only with a named boundary, proof lane, promotion rule, and documentation review

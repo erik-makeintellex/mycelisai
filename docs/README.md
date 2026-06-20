@@ -63,6 +63,7 @@ The active architecture library is intentionally small. It is not a holding area
 - **V8.3 Release Architecture Delivery Brief**: `./architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md`
 - **V8.3 Product Manifestation Architecture Review**: `./architecture-library/V8_3_PRODUCT_MANIFESTATION_REVIEW.md`
 - **V8.3 Soma User Experience Contract**: `./architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md`
+- **V8.3 UI/UX Engineering Implementation Brief**: `./architecture-library/V8_3_UI_UX_ENGINEERING_IMPLEMENTATION_BRIEF.md`
 - **V8.3 MVP UI Runtime Delivery Plan**: `./architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md`
 - **V8 New-User Acceptance Matrix**: `./architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md`
 - **V8.2 Soma UI Architecture Expression**: `./architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`

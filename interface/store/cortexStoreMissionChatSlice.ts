@@ -123,6 +123,7 @@ export function createCortexMissionChatSlice(
                         trust_score: envelope.trust_score,
                         timestamp: envelope.meta.timestamp,
                         artifacts: envelope.payload.artifacts,
+                        ui_response_state: envelope.payload?.ui_response_state ?? envelope.ui_response_state,
                         template_id: envelope.template_id || 'chat-to-answer',
                         mode: envelope.mode || 'answer',
                         provenance: envelope.payload?.provenance,

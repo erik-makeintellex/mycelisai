@@ -58,6 +58,8 @@ Open the review panel when you need more detail. Its tabs keep dense information
 
 When output is ready and recovery is also present, Soma should say that plainly, keep the output openable, and point you to the Work tab for recovery.
 
+Soma replies may also show small action-state cards inside the thread. These cards translate structured work state into user language such as `Waiting for approval`, `Current team route`, `Output ready`, or `Needs recovery` without exposing raw routing subjects or system payloads.
+
 ## Outputs
 
 Soma responses can include:
@@ -67,6 +69,7 @@ Soma responses can include:
 3. **Output package**: a retained file/app/package with `Open file`, `Open folder`, proof, and Resources re-entry.
 4. **Proposal block**: a clear `Run this now?` confirmation for actions that execute or change something.
 5. **Recovery/blocker card**: what failed, what remains trusted, what is not trusted, and what can safely happen next.
+6. **Action-state card**: the current status, route, capability use, or next step for structured Soma work.
 
 No mutation executes until you confirm. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Review run details` unless they require immediate attention.
 

@@ -7,6 +7,7 @@ V8_DEV_STATE = ROOT / ".state/V8_DEV_STATE.md"
 V8_3_OPERATIONAL_EMBODIMENT = ROOT / "docs" / "architecture-library" / "V8_3_OPERATIONAL_EMBODIMENT_PRD.md"
 V8_3_RELEASE_BRIEF = ROOT / "docs" / "architecture-library" / "V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md"
 V8_3_MVP_UI_RUNTIME_PLAN = ROOT / "docs" / "architecture-library" / "V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md"
+V8_3_UI_UX_BRIEF = ROOT / "docs" / "architecture-library" / "V8_3_UI_UX_ENGINEERING_IMPLEMENTATION_BRIEF.md"
 
 
 def test_v8_3_docs_track_trusted_outcome_recovery_ownership_gates():
@@ -26,6 +27,11 @@ def test_v8_3_docs_track_trusted_outcome_recovery_ownership_gates():
             "live confirm-action run events may still be empty",
             "default returned-output recovery ownership",
             "returning-user Outcome Ownership check answers active workflow, delivered output, incomplete/recovery work, attention/review count, trust/evidence, and next step within 15 seconds",
+        ],
+        V8_3_UI_UX_BRIEF: [
+            "All implementation is still judged through the Trusted Outcome Journey",
+            "Dashboard becomes the Soma threaded workspace.",
+            "Do not accept a UI slice that makes the user learn agents, MCP, NATS, workflows, runs, topology, or infrastructure",
         ],
         V8_DEV_STATE: [
             "deterministic P0.8 full journey plus Outcome Ownership/default recovery ownership proof",
