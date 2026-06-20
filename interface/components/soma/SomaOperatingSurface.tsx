@@ -20,6 +20,7 @@ import {
   teamOutputProjectPackages,
   teamOutputWorkbenchItems,
 } from "./OutputWorkbench";
+import { outputWorkbenchDigest } from "./OutputWorkbenchDigest";
 import { SomaActionShelf } from "./SomaActionShelf";
 import { SomaCausalSummary } from "./SomaCausalSummary";
 import { SomaEvidencePanel, type SomaEvidenceItem } from "./SomaEvidencePanel";
@@ -144,14 +145,12 @@ export function SomaOperatingSurface({
       />
     ) : undefined
   );
+  const latestOutputDigest = outputWorkbenchDigest({
+    outputs: mergedOutputItems,
+    projectPackages: mergedProjectPackages,
+  });
   const trustNode = trustSlot ?? (hasTrustReviewContent ? <SomaCausalSummary messages={missionChat} /> : undefined);
   const contextNode = contextSlot ?? (hasContextReviewContent ? <SomaEvidencePanel items={evidence} compact /> : undefined);
-  const lightWorkspaceTheme = {
-    "--color-cortex-bg": "#FFFFFF", "--color-cortex-surface": "#F9FAFB", "--color-cortex-surface-strong": "#FFFFFF",
-    "--color-cortex-border": "#D1D5DB", "--color-cortex-primary": "#2563EB", "--color-cortex-success": "#16A34A",
-    "--color-cortex-warning": "#F97316", "--color-cortex-danger": "#DC2626", "--color-cortex-info": "#2563EB",
-    "--color-cortex-text-main": "#111827", "--color-cortex-text-muted": "#6B7280",
-  } as React.CSSProperties;
 
   const clearFocusedContext = () => {
     selectTeam(null);
@@ -183,29 +182,29 @@ export function SomaOperatingSurface({
 
   return (
     <section
-      className="overflow-hidden rounded-[2rem] border border-[#E5E7EB] bg-[#F4F5F7] text-[#111827] shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+      className="overflow-hidden rounded-3xl border border-cortex-border bg-cortex-surface shadow-[0_18px_40px_rgba(0,0,0,0.18)]"
       data-testid="soma-operating-surface"
     >
       <SomaActionShelf onRunAction={handlePinnedAction} />
-      <div className="border-b border-[#E5E7EB] px-5 py-5 lg:px-6">
+      <div className="border-b border-cortex-border px-5 py-5 lg:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#99F6E4] bg-[#CCFBF1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#0F766E]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-cortex-primary">
               Soma
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[#111827]">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-cortex-text-main">
               What do you want Soma to do?
             </h1>
-            <p className="mt-1 text-base text-[#4B5563]">{scopeCopy}</p>
+            <p className="mt-1 text-base text-cortex-text-muted">{scopeCopy}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#D1D5DB] bg-[#FFFFFF] px-4 py-3 text-sm text-[#4B5563]">
-            <span className="font-semibold text-[#111827]">Ready</span>
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+            <span className="font-semibold text-cortex-text-main">Ready</span>
             {displayedMode ? <span>Mode: {displayedMode}</span> : null}
             <span>{governancePosture ?? "Governed execution enabled"}</span>
           </div>
         </div>
       </div>
-      <div className="p-4 lg:p-6" style={lightWorkspaceTheme}>
+      <div className="p-4 lg:p-6">
         {hasWorkContextChoices ? (
           <SomaTeamContextSwitcher
             teams={teamsDetail}
@@ -216,10 +215,10 @@ export function SomaOperatingSurface({
           />
         ) : null}
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="min-w-0 overflow-hidden rounded-[3rem] border border-[#E5E7EB] bg-[#FFFFFF] shadow-sm">
-            <div className="border-b border-[#E5E7EB] px-6 py-5">
-              <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Talk to Soma</h2>
-              <p className="mt-1 text-sm text-[#6B7280]">
+          <div className="min-w-0 overflow-hidden rounded-3xl border border-cortex-border bg-cortex-bg shadow-sm">
+            <div className="border-b border-cortex-border px-6 py-5">
+              <h2 className="text-xl font-semibold tracking-tight text-cortex-text-main">Talk to Soma</h2>
+              <p className="mt-1 text-sm text-cortex-text-muted">
                 Ask a question, trigger a workflow, review a proposal, or open the result.
               </p>
             </div>
@@ -228,7 +227,7 @@ export function SomaOperatingSurface({
                 expression={(
                   <div
                     data-testid="central-soma-chat-frame"
-                    className="h-[52vh] min-h-[320px] max-h-[560px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#FFFFFF]"
+                    className="h-[46vh] min-h-[180px] max-h-[520px] overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg"
                   >
                     <MissionControlChat
                       simpleMode
@@ -251,10 +250,9 @@ export function SomaOperatingSurface({
             </div>
           </div>
           <SomaOutcomeVaultPanel
-            activeWork={activeWorkNode}
-            output={outputNode}
-            hasOutputs={hasOutputReviewContent}
             operationCount={somaHomeWorkItems.length}
+            latestOutput={latestOutputDigest}
+            recoveryCount={unresolvedWorkReviewCount}
           />
         </div>
       </div>

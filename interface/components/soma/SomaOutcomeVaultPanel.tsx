@@ -2,76 +2,75 @@
 
 import Link from "next/link";
 import { FolderOpen, Radio } from "lucide-react";
-import type { ReactNode } from "react";
+import type { OutputWorkbenchDigest } from "./OutputWorkbenchDigest";
+import { OutputWorkbenchCompactDigest } from "./OutputWorkbenchDigest";
 
 export function SomaOutcomeVaultPanel({
-  output,
-  activeWork,
-  hasOutputs,
   operationCount,
+  latestOutput,
+  recoveryCount = 0,
 }: {
-  output?: ReactNode;
-  activeWork?: ReactNode;
-  hasOutputs: boolean;
   operationCount: number;
+  latestOutput?: OutputWorkbenchDigest | null;
+  recoveryCount?: number;
 }) {
   return (
     <aside
-      className="flex min-h-[620px] min-w-0 flex-col overflow-hidden rounded-[3rem] border border-[#E5E7EB] bg-[#FFFFFF] shadow-sm"
+      className="flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-3xl border border-cortex-border bg-cortex-surface shadow-[0_18px_40px_rgba(0,0,0,0.18)]"
       aria-label="Outcomes and Vault"
       data-testid="soma-outcome-vault"
     >
-      <div className="border-b border-[#E5E7EB] px-6 py-5">
-        <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Outcomes & Vault</h2>
+      <div className="border-b border-cortex-border px-5 py-4">
+        <h2 className="text-xl font-semibold tracking-tight text-cortex-text-main">Outcomes & Vault</h2>
+        <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
+          Background work and retained outputs stay here without crowding the Soma thread.
+        </p>
       </div>
-      <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-6 py-6">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
         <section>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-[#4B5563]">Running in background</h3>
+            <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-cortex-text-muted">Running in background</h3>
             {operationCount > 0 ? (
-              <span className="rounded-full bg-[#ECFDF5] px-2 py-0.5 text-xs font-semibold text-[#15803D]">
+              <span className="rounded-full border border-cortex-success/35 bg-cortex-success/10 px-2 py-0.5 text-xs font-semibold text-cortex-success">
                 {operationCount}
               </span>
             ) : null}
           </div>
-          <div className="space-y-3">
-            {operationCount > 0 && activeWork ? (
-              <div className="rounded-xl border border-[#E5E7EB] bg-[#FFFFFF] p-3 text-[#111827]">
-                {activeWork}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-[#D1D5DB] bg-[#FFFFFF] px-4 py-3">
-                <div className="flex items-center gap-2 font-semibold text-[#111827]">
-                  <Radio className="h-4 w-4 text-[#9CA3AF]" />
-                  No background work running
-                </div>
-                <p className="mt-1 text-sm leading-5 text-[#6B7280]">
-                  Quick actions and approved Soma work will appear here while they run.
-                </p>
-              </div>
-            )}
+          <div className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3">
+            <div className="flex items-center gap-2 font-semibold text-cortex-text-main">
+              <Radio className={`h-4 w-4 ${operationCount > 0 ? "text-cortex-success" : "text-cortex-text-muted"}`} />
+              {operationCount > 0
+                ? `${operationCount} item${operationCount === 1 ? " needs" : "s need"} review`
+                : "No background work running"}
+            </div>
+            <p className="mt-1 text-sm leading-5 text-cortex-text-muted">
+              {operationCount > 0
+                ? "Open the review lane in Soma to recover, approve, or inspect work."
+                : "Quick actions and approved Soma work will appear here while they run."}
+            </p>
+            {recoveryCount > 0 ? (
+              <p className="mt-2 text-xs font-semibold text-cortex-warning">
+                {recoveryCount} recovery item{recoveryCount === 1 ? "" : "s"} also need attention.
+              </p>
+            ) : null}
           </div>
         </section>
         <section>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-[#4B5563]">Recent deliverables</h3>
-            <Link href="/resources?tab=workspace" className="text-xs font-semibold text-[#2563EB] hover:underline">
+            <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-cortex-text-muted">Recent deliverables</h3>
+            <Link href="/resources?tab=workspace" className="text-xs font-semibold text-cortex-primary hover:underline">
               Open vault
             </Link>
           </div>
-          {hasOutputs && output ? (
-            <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-3 text-[#111827]">
-              {output}
-            </div>
+          {latestOutput ? (
+            <OutputWorkbenchCompactDigest digest={latestOutput} />
           ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-[#D1D5DB] bg-[#FFFFFF] px-4 py-3">
-                <div>
-                  <div className="font-semibold text-[#111827]">No retained deliverables yet</div>
-                  <div className="text-sm text-[#6B7280]">Ask Soma to create or review something and save the output.</div>
-                </div>
-                <FolderOpen className="h-5 w-5 shrink-0 text-[#9CA3AF]" />
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3">
+              <div>
+                <div className="font-semibold text-cortex-text-main">No retained deliverables yet</div>
+                <div className="text-sm text-cortex-text-muted">Ask Soma to create or review something and save the output.</div>
               </div>
+              <FolderOpen className="h-5 w-5 shrink-0 text-cortex-text-muted" />
             </div>
           )}
         </section>

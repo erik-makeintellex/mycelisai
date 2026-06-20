@@ -26,7 +26,7 @@ export function outputWorkbenchDigest({
   const primaryOutput = normalizedPrimaryIndex >= 0 ? outputs[normalizedPrimaryIndex] : null;
   const primaryPackage = packages[0];
 
-  if (primaryOutput && (!isGroupFolderOutput(primaryOutput) || !itemUrl(primaryPackage))) {
+  if (primaryOutput && (!isGroupFolderOutput(primaryOutput) || !primaryPackage || !itemUrl(primaryPackage))) {
     const storagePath = primaryOutput.storagePath ?? workspacePathFromOutputUrl(primaryOutput.url);
     return {
       text: primaryOutput.text,
