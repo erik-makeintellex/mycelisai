@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => {
   const handleActiveWorkAction = vi.fn();
   const handleTeamAsk = vi.fn();
   const missionControlChat = vi.fn();
+  const sendMissionChat = vi.fn();
   const useDurableTeamWork = vi.fn();
   const useTeamWorkActionHandler = vi.fn();
   const storeState = {
@@ -16,12 +17,14 @@ const mocks = vi.hoisted(() => {
     durableWorkRefreshVersion: 5,
     selectTeam,
     selectedTeamId: null as string | null,
+    sendMissionChat,
   };
   return {
     selectTeam,
     handleActiveWorkAction,
     handleTeamAsk,
     missionControlChat,
+    sendMissionChat,
     useDurableTeamWork,
     useTeamWorkActionHandler,
     storeState,
@@ -76,10 +79,6 @@ vi.mock("@/components/dashboard/MissionControlChat", () => ({
     mocks.missionControlChat(props);
     return <div data-testid="mission-chat" />;
   },
-}));
-
-vi.mock("@/components/soma/SomaHeader", () => ({
-  SomaHeader: () => <header data-testid="soma-header" />,
 }));
 
 vi.mock("@/components/soma/SomaWorkspaceFrame", () => ({
@@ -141,13 +140,8 @@ describe("SomaOperatingSurface active work actions", () => {
     render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
 
     expect(mocks.useTeamWorkActionHandler).toHaveBeenCalledWith(mocks.selectTeam);
-    expect(mocks.useDurableTeamWork).toHaveBeenCalledWith(expect.objectContaining({
-      focusedTeamId: "team-alpha",
-      refreshVersion: 12,
-    }));
-    expect(mocks.missionControlChat).toHaveBeenCalledWith(expect.objectContaining({
-      focusedTeamId: "team-alpha",
-    }));
+    expect(mocks.useDurableTeamWork).toHaveBeenCalledWith(expect.objectContaining({ focusedTeamId: "team-alpha", refreshVersion: 12 }));
+    expect(mocks.missionControlChat).toHaveBeenCalledWith(expect.objectContaining({ focusedTeamId: "team-alpha" }));
     expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Working in");
     expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Alpha");
     expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Team chat, work, outputs, and proof");
@@ -155,20 +149,19 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(screen.getByRole("button", { name: /Alpha/i }).getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("work");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("true");
-    expect(screen.getByText("Team action needs operator attention.")).toBeDefined();
-    expect(screen.getByText("Team ask queued. You can keep working.")).toBeDefined();
+    expect(screen.getByTestId("soma-action-shelf")).toBeDefined();
+    expect(screen.getByTestId("soma-outcome-vault")).toBeDefined();
+    expect(screen.getAllByText("Team action needs operator attention.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Team ask queued. You can keep working.").length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("button", { name: /pause work/i }));
-    fireEvent.click(screen.getByRole("button", { name: /ask team/i }));
+    const workspace = within(screen.getByTestId("mock-soma-workspace-frame"));
+    fireEvent.click(screen.getByRole("button", { name: /Run Expense Audit/i }));
+    fireEvent.click(workspace.getByRole("button", { name: /pause work/i }));
+    fireEvent.click(workspace.getByRole("button", { name: /ask team/i }));
 
-    expect(mocks.handleActiveWorkAction).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "work-1" }),
-      expect.objectContaining({ action: "pause" }),
-    );
-    expect(mocks.handleTeamAsk).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "work-1" }),
-      "Continue the proof",
-    );
+    expect(mocks.sendMissionChat).toHaveBeenCalledWith(expect.stringContaining("expense audit"));
+    expect(mocks.handleActiveWorkAction).toHaveBeenCalledWith(expect.objectContaining({ id: "work-1" }), expect.objectContaining({ action: "pause" }));
+    expect(mocks.handleTeamAsk).toHaveBeenCalledWith(expect.objectContaining({ id: "work-1" }), "Continue the proof");
   });
 
   it("lets operators switch the Soma surface into a team work context", () => {
@@ -248,13 +241,14 @@ describe("SomaOperatingSurface active work actions", () => {
 
     render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
 
-    const workbench = within(screen.getByTestId("output-workbench"));
+    const workspace = within(screen.getByTestId("mock-soma-workspace-frame"));
+    const workbench = within(workspace.getByTestId("output-workbench"));
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("true");
     expect(screen.queryByTestId("focused-team-output-dock")).toBeNull();
     expect(workbench.getByText("Comic page")).toBeDefined();
-    expect(screen.getByTestId("output-workbench").textContent?.indexOf("Comic page")).toBeLessThan(
-      screen.getByTestId("output-workbench").textContent?.indexOf("Old comic page") ?? 0,
+    expect(workspace.getByTestId("output-workbench").textContent?.indexOf("Comic page")).toBeLessThan(
+      workspace.getByTestId("output-workbench").textContent?.indexOf("Old comic page") ?? 0,
     );
   });
 
@@ -292,7 +286,8 @@ describe("SomaOperatingSurface active work actions", () => {
 
     render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
 
-    const workbench = within(screen.getByTestId("output-workbench"));
+    const workspace = within(screen.getByTestId("mock-soma-workspace-frame"));
+    const workbench = within(workspace.getByTestId("output-workbench"));
     expect(workbench.getByText("Latest output").closest("article")?.textContent).toContain("Newest focused brief");
     expect(workbench.getByText("More outputs and verification").closest("details")?.textContent).toContain("Older global brief");
   });

@@ -87,6 +87,7 @@ Goal: make repeated work start quickly without forcing the operator to rewrite p
 Current foundation:
 
 - Soma starter suggestions and workflow prompts
+- `SomaActionShelf` as the first pinned-action dashboard layer
 - proposal/confirm execution flow
 - persisted organization/team work contexts
 - Resources capability state
@@ -112,6 +113,7 @@ Goal: make outputs durable, associated with outcomes, and easy to revisit.
 
 Current foundation:
 
+- `SomaOutcomeVaultPanel` as the first persistent dashboard vault rail
 - `OutputWorkbench`
 - `OutputWorkbenchDigest`
 - `OutputAccessActions`

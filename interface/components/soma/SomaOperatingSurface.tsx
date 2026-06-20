@@ -20,9 +20,10 @@ import {
   teamOutputProjectPackages,
   teamOutputWorkbenchItems,
 } from "./OutputWorkbench";
+import { SomaActionShelf } from "./SomaActionShelf";
 import { SomaCausalSummary } from "./SomaCausalSummary";
 import { SomaEvidencePanel, type SomaEvidenceItem } from "./SomaEvidencePanel";
-import { SomaHeader } from "./SomaHeader";
+import { SomaOutcomeVaultPanel } from "./SomaOutcomeVaultPanel";
 import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "./SomaSuggestionBar";
 import { SomaTeamContextSwitcher } from "./SomaTeamContextSwitcher";
 import { SomaWorkspaceFrame } from "./SomaWorkspaceFrame";
@@ -67,6 +68,7 @@ export function SomaOperatingSurface({
   const durableWorkRefreshVersion = useCortexStore((state) => state.durableWorkRefreshVersion);
   const selectTeam = useCortexStore((state) => state.selectTeam);
   const selectedTeamId = useCortexStore((state) => state.selectedTeamId);
+  const sendMissionChat = useCortexStore((state) => state.sendMissionChat);
   const activeWorkActions = useTeamWorkActionHandler(selectTeam);
   const evidence = evidenceItems ?? defaultEvidence;
   const somaMessages = somaMessagesNewestFirst(missionChat);
@@ -94,10 +96,7 @@ export function SomaOperatingSurface({
   const mergedProjectPackages = preferFocusedOutputs
     ? [...teamProjectPackages, ...projectPackages]
     : [...projectPackages, ...teamProjectPackages];
-  const activeWorkItems = mergeTeamWorkItems(
-    teamWork.items,
-    activeWorkActions.submittedTeamWorkItems,
-  );
+  const activeWorkItems = mergeTeamWorkItems(teamWork.items, activeWorkActions.submittedTeamWorkItems);
   const somaHomeWorkItems = recoveryReviewQueueItems(activeWorkItems);
   const attentionWorkCount = somaHomeWorkItems.length;
   const unresolvedWorkReviewCount = somaHomeWorkItems.filter((item) => item.state !== "output_ready").length;
@@ -113,6 +112,46 @@ export function SomaOperatingSurface({
   const hasOutputReviewContent = mergedOutputItems.length > 0 || mergedProjectPackages.length > 0;
   const hasTrustReviewContent = missionChat.length > 0;
   const hasContextReviewContent = Boolean(effectiveFocusedTeamId) || hasWorkContextChoices;
+  const scopeCopy = organizationName ? `Ready to coordinate work for ${organizationName}` : "Ready to help create or resume an AI Organization";
+  const activeWorkNode = activeWorkSlot ?? (
+    hasWorkReviewContent ? (
+      <ActiveWorkLane
+        title="Recovery and review"
+        items={somaHomeWorkItems}
+        emptyMessage={displayedMode && teamWork.items.length === 0
+          ? `Soma is focused on ${displayedMode}. ${teamWork.emptyMessage}`
+          : teamWork.emptyMessage}
+        statusLabel={activeWorkActions.activeWorkActionNotice ?? teamWork.statusLabel}
+        degradedMessage={activeWorkActions.activeWorkActionError ?? teamWork.degradedMessage}
+        onAction={handleActiveWorkAction}
+        onTeamAsk={activeWorkActions.handleTeamAsk}
+        frame={false}
+        purpose="review"
+        maxVisibleItems={effectiveFocusedTeamId ? 6 : 3}
+        totalItemCount={somaHomeWorkItems.length}
+        moreItemsHref="/teams?view=work"
+      />
+    ) : undefined
+  );
+  const outputNode = outputSlot ?? (
+    hasOutputReviewContent ? (
+      <OutputWorkbench
+        outputs={mergedOutputItems}
+        projectPackages={mergedProjectPackages}
+        emptyMessage={teamWork.status === "loading"
+          ? "Checking for saved Soma and team outputs."
+          : "No finished output is ready yet."}
+      />
+    ) : undefined
+  );
+  const trustNode = trustSlot ?? (hasTrustReviewContent ? <SomaCausalSummary messages={missionChat} /> : undefined);
+  const contextNode = contextSlot ?? (hasContextReviewContent ? <SomaEvidencePanel items={evidence} compact /> : undefined);
+  const lightWorkspaceTheme = {
+    "--color-cortex-bg": "#FFFFFF", "--color-cortex-surface": "#F9FAFB", "--color-cortex-surface-strong": "#FFFFFF",
+    "--color-cortex-border": "#D1D5DB", "--color-cortex-primary": "#2563EB", "--color-cortex-success": "#16A34A",
+    "--color-cortex-warning": "#F97316", "--color-cortex-danger": "#DC2626", "--color-cortex-info": "#2563EB",
+    "--color-cortex-text-main": "#111827", "--color-cortex-text-muted": "#6B7280",
+  } as React.CSSProperties;
 
   const clearFocusedContext = () => {
     selectTeam(null);
@@ -128,7 +167,7 @@ export function SomaOperatingSurface({
     }
   };
 
-  const handleActiveWorkAction = async (item: TeamWorkItem, action: TeamInteraction) => {
+  async function handleActiveWorkAction(item: TeamWorkItem, action: TeamInteraction) {
     await activeWorkActions.handleActiveWorkAction(item, action);
     if (action.action === "inspect") {
       const teamId = item.teamIds[0] ?? item.id;
@@ -136,19 +175,37 @@ export function SomaOperatingSurface({
         window.history.replaceState(null, "", `/dashboard?team_id=${encodeURIComponent(teamId)}`);
       }
     }
+  }
+
+  const handlePinnedAction = (prompt: string) => {
+    void sendMissionChat(prompt);
   };
 
   return (
     <section
-      className="overflow-hidden rounded-3xl border border-cortex-border bg-cortex-surface shadow-[0_18px_40px_rgba(148,163,184,0.16)]"
+      className="overflow-hidden rounded-[2rem] border border-[#E5E7EB] bg-[#F4F5F7] text-[#111827] shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
       data-testid="soma-operating-surface"
     >
-      <SomaHeader
-        organizationName={organizationName}
-        activeMode={displayedMode}
-        governancePosture={governancePosture}
-      />
-      <div className="p-4 lg:p-5">
+      <SomaActionShelf onRunAction={handlePinnedAction} />
+      <div className="border-b border-[#E5E7EB] px-5 py-5 lg:px-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#99F6E4] bg-[#CCFBF1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#0F766E]">
+              Soma
+            </div>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[#111827]">
+              What do you want Soma to do?
+            </h1>
+            <p className="mt-1 text-base text-[#4B5563]">{scopeCopy}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#D1D5DB] bg-[#FFFFFF] px-4 py-3 text-sm text-[#4B5563]">
+            <span className="font-semibold text-[#111827]">Ready</span>
+            {displayedMode ? <span>Mode: {displayedMode}</span> : null}
+            <span>{governancePosture ?? "Governed execution enabled"}</span>
+          </div>
+        </div>
+      </div>
+      <div className="p-4 lg:p-6" style={lightWorkspaceTheme}>
         {hasWorkContextChoices ? (
           <SomaTeamContextSwitcher
             teams={teamsDetail}
@@ -158,59 +215,48 @@ export function SomaOperatingSurface({
             onTeamSelect={focusTeamContext}
           />
         ) : null}
-        <SomaWorkspaceFrame
-          expression={(
-            <div
-              data-testid="central-soma-chat-frame"
-              className="h-[64vh] min-h-[460px] overflow-hidden rounded-xl border border-cortex-border bg-cortex-bg lg:h-full lg:min-h-0"
-            >
-              <MissionControlChat
-                simpleMode
-                autoFocus
-                organizationId={organizationId}
-                focusedTeamId={effectiveFocusedTeamId}
-                suggestions={suggestions}
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_420px]">
+          <div className="min-w-0 overflow-hidden rounded-[3rem] border border-[#E5E7EB] bg-[#FFFFFF] shadow-sm">
+            <div className="border-b border-[#E5E7EB] px-6 py-5">
+              <h2 className="text-xl font-semibold tracking-tight text-[#111827]">Talk to Soma</h2>
+              <p className="mt-1 text-sm text-[#6B7280]">
+                Ask a question, trigger a workflow, review a proposal, or open the result.
+              </p>
+            </div>
+            <div className="p-4 lg:p-5">
+              <SomaWorkspaceFrame
+                expression={(
+                  <div
+                    data-testid="central-soma-chat-frame"
+                    className="h-[52vh] min-h-[320px] max-h-[560px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#FFFFFF]"
+                  >
+                    <MissionControlChat
+                      simpleMode
+                      autoFocus
+                      organizationId={organizationId}
+                      focusedTeamId={effectiveFocusedTeamId}
+                      suggestions={suggestions}
+                    />
+                  </div>
+                )}
+                activeWork={activeWorkNode}
+                trust={trustNode}
+                output={outputNode}
+                context={contextNode}
+                primaryPanel={attentionWorkCount > 0 && !hasOutputReviewContent ? "work" : undefined}
+                recoveryReviewCount={hasOutputReviewContent ? unresolvedWorkReviewCount : 0}
+                reviewCount={attentionWorkCount > 0 && !hasOutputReviewContent ? attentionWorkCount : undefined}
+                showOutputDigest
               />
             </div>
-          )}
-          activeWork={activeWorkSlot ?? (
-            hasWorkReviewContent ? (
-              <ActiveWorkLane
-                title="Recovery and review"
-                items={somaHomeWorkItems}
-                emptyMessage={displayedMode && teamWork.items.length === 0
-                  ? `Soma is focused on ${displayedMode}. ${teamWork.emptyMessage}`
-                  : teamWork.emptyMessage}
-                statusLabel={activeWorkActions.activeWorkActionNotice ?? teamWork.statusLabel}
-                degradedMessage={activeWorkActions.activeWorkActionError ?? teamWork.degradedMessage}
-                onAction={handleActiveWorkAction}
-                onTeamAsk={activeWorkActions.handleTeamAsk}
-                frame={false}
-                purpose="review"
-                maxVisibleItems={effectiveFocusedTeamId ? 6 : 3}
-                totalItemCount={somaHomeWorkItems.length}
-                moreItemsHref="/teams?view=work"
-              />
-            ) : undefined
-          )}
-          trust={trustSlot ?? (hasTrustReviewContent ? <SomaCausalSummary messages={missionChat} /> : undefined)}
-          output={outputSlot ?? (
-            hasOutputReviewContent ? (
-              <OutputWorkbench
-                outputs={mergedOutputItems}
-                projectPackages={mergedProjectPackages}
-                emptyMessage={teamWork.status === "loading"
-                  ? "Checking for saved Soma and team outputs."
-                  : "No finished output is ready yet."}
-              />
-            ) : undefined
-          )}
-          context={contextSlot ?? (hasContextReviewContent ? <SomaEvidencePanel items={evidence} compact /> : undefined)}
-          primaryPanel={attentionWorkCount > 0 && !hasOutputReviewContent ? "work" : undefined}
-          recoveryReviewCount={hasOutputReviewContent ? unresolvedWorkReviewCount : 0}
-          reviewCount={attentionWorkCount > 0 && !hasOutputReviewContent ? attentionWorkCount : undefined}
-          showOutputDigest
-        />
+          </div>
+          <SomaOutcomeVaultPanel
+            activeWork={activeWorkNode}
+            output={outputNode}
+            hasOutputs={hasOutputReviewContent}
+            operationCount={somaHomeWorkItems.length}
+          />
+        </div>
       </div>
     </section>
   );

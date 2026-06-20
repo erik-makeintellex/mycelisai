@@ -53,7 +53,7 @@ export function SomaSuggestionBar({
       <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
         Start with Soma
       </p>
-      <div className="mt-3 grid gap-2 md:grid-cols-5">
+      <div className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2">
         {suggestions.map((item) => {
           const Icon = item.icon ?? Sparkles;
           return (
@@ -61,10 +61,10 @@ export function SomaSuggestionBar({
               key={item.label}
               type="button"
               onClick={() => onSelect(item.prompt)}
-              className="rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-left transition hover:border-cortex-primary/30 hover:bg-cortex-primary/5"
+              className="min-w-0 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-left transition hover:border-cortex-primary/30 hover:bg-cortex-primary/5"
             >
-              <span className="flex items-center gap-2 text-xs font-semibold text-cortex-text-main">
-                <Icon className="h-3.5 w-3.5 text-cortex-primary" />
+              <span className="flex min-w-0 items-start gap-2 text-xs font-semibold leading-5 text-cortex-text-main">
+                <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cortex-primary" />
                 {item.label}
               </span>
               <span className="mt-2 block text-xs leading-5 text-cortex-text-muted">

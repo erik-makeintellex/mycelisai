@@ -7,6 +7,12 @@
 
 Open `Soma` (`/dashboard`) and type naturally. Soma receives the request first, uses the current organization/workspace context, and should return either a direct answer, a governed proposal, a retained output, or a clear blocker/recovery state.
 
+The dashboard is organized as a threaded workspace:
+
+- `Quick actions`: pinned outcome buttons for repeated work, such as audits, briefs, or media packages.
+- `Talk to Soma`: the primary conversation where you ask, approve, recover, and review.
+- `Outcomes & Vault`: a persistent side panel for active background work and retained deliverables.
+
 Basic path:
 
 ```text

@@ -12,7 +12,10 @@ test.describe('Soma Dashboard (/dashboard)', () => {
         await expect(errorOverlay).not.toBeVisible();
 
         await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
-        await expect(page.getByText(/Start with Soma/i)).toBeVisible();
+        await expect(page.getByTestId('soma-action-shelf')).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
+        await expect(page.getByTestId('soma-outcome-vault')).toBeVisible();
+        await expect(page.getByText(/Outcomes & Vault/i)).toBeVisible();
     });
 
     test('navigation rail is visible', async ({ page }) => {
