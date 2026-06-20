@@ -30,7 +30,6 @@ export const DOC_MANIFEST: DocSection[] = [
             { slug: "workflow-variants-plan-memory", label: "Workflow Variants + Plan Memory", path: "docs/user/workflow-variants-and-plan-memory.md", description: "Direct Soma, compact teams, multi-lane workflows, and durable plan memory" },
             { slug: "teams-guide", label: "Teams", path: "docs/user/teams.md", description: "Active team work, compact defaults, broad-ask splitting, and lead-centered workflows" },
             { slug: "resources-guide", label: "Outputs And Resources", path: "docs/user/resources.md", description: "Output files, group artifacts, capabilities, MCP structure review, AI engines, and governed context" },
-            { slug: "meta-agent-blueprint", label: "Blueprints And Mission Planning", path: "docs/user/meta-agent-blueprint.md", description: "Advanced blueprint and mission-planning language for graph-level planning" },
         ],
     },
     {
@@ -44,7 +43,13 @@ export const DOC_MANIFEST: DocSection[] = [
             { slug: "deployment-method-selection", label: "Deployment Method Selection", path: "docs/user/deployment-methods.md", description: "Choose Compose, Kubernetes, enterprise self-hosted, or edge deployment lanes" },
             { slug: "system-status-recovery", label: "System Status & Recovery", path: "docs/user/system-status-recovery.md", description: "Health signals, degraded recovery actions, and System Checks workflow" },
             { slug: "run-timeline", label: "Run Timeline", path: "docs/user/run-timeline.md", description: "Execution timelines, status changes, and run navigation paths" },
+        ],
+    },
+    {
+        section: "Advanced User Surfaces",
+        docs: [
             { slug: "automations-guide", label: "Automations", path: "docs/user/automations.md", description: "Event trigger rules, schedules, mission profiles, and approvals around automated work" },
+            { slug: "meta-agent-blueprint", label: "Blueprints And Mission Planning", path: "docs/user/meta-agent-blueprint.md", description: "Advanced blueprint and mission-planning language for graph-level planning" },
         ],
     },
     {

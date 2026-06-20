@@ -24,6 +24,12 @@ The Resources page keeps these resource types in a persistent menu and renders t
 
 ---
 
+## Connected Tools
+
+Connected Tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, what needs repair, and what can be requested, while raw MCP/server structure stays behind Inspect.
+
+---
+
 ## AI Engines
 
 AI engines define the curated model posture available to admin operators.

@@ -1,301 +1,145 @@
 # Using Soma Chat
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Workspace-first interaction model: you send intent, Soma orchestrates execution.
+> Soma-first interaction model: tell Soma the outcome, review the proposal or answer, open the output, and keep proof/recovery visible.
 
-## Overview
+## Start With Soma
 
-Open `Workspace` (`/dashboard`) and type naturally. Soma receives every message, coordinates the rest, and should execute deliverable outcomes rather than instruct you step-by-step on manual work.
-Workspace should open with Soma already active, so you should not need to manually switch to Soma just to begin a normal session.
+Open `Soma` (`/dashboard`) and type naturally. Soma receives the request first, uses the current organization/workspace context, and should return either a direct answer, a governed proposal, a retained output, or a clear blocker/recovery state.
 
-Display-name customization: open `Settings -> Profile`, set **Assistant Name**, and save to update Workspace/status labels that normally show "Soma".
+Basic path:
 
-`You type -> Soma reasons -> optional council consultation -> answer and/or governed proposal`
+```text
+You ask -> Soma understands -> optional proposal -> execution -> output/proof/recovery -> revisit
+```
 
-## Sending Messages
+Display-name customization lives in `Settings -> Profile -> Assistant Name`.
 
-1. Go to `Workspace` (`/dashboard`).
-2. Enter your intent in the bottom input.
-3. Press `Enter` or click send.
+## Good First Prompts
 
-Concrete central Soma phrases:
-
+- `Give me a short readiness check for this Mycelis environment.`
+- `Create a retained demo package I can open in the browser and include proof I can revisit.`
 - `Search the web for the latest changes in self-hosted AI agent products, summarize the top findings, and cite the sources you used.`
-- `Create a small temporary team to review the release-readiness risks, assign the right specialists, and bring the retained output back here for approval.`
-- `Ask the active delivery teams for current blockers, compare their answers, and tell me which workflow needs attention first.`
-- `Use the host data under workspace/shared-sources to answer this question, and tell me which files or records shaped the answer.`
-- `Review the current MCP tool structure, tell me which tools are available to Soma and teams, and recommend what should be connected next.`
-- `Review my latest request, match it to related prior commands and tool metadata, tell me the action you infer, and ask me to confirm before you execute.`
-- `Create the smallest useful team for this outcome, have Council help choose the specialists and outputs, include target MCP tools, and walk me through any missing MCP enablement.`
+- `Create the smallest useful team for this outcome and bring the retained output back here.`
+- `Ask the active delivery teams for current blockers and tell me which workflow needs attention first.`
+- `Use the host data under workspace/shared-sources and tell me which files shaped the answer.`
+- `Review current MCP servers, tools, and recent use, then tell me which agents should have which tools.`
 
-Live activity text indicates current steps such as thinking, consulting, searching memory, and invoking tools.
+## Understanding And Approval
 
-## Understanding Attunement
+Soma should infer the outcome, audience, output form, constraints, source boundary, and uncertainty before answering or proposing work. It should ask one concise clarifying question only when the missing detail would materially change the result.
 
-Soma should understand what you are trying to produce, not just parse the words in the request. For every meaningful ask, Soma should infer the intended outcome, audience, output form, constraints, and uncertainty before answering or proposing execution.
+Before creating teams, enabling MCP servers, assigning tools, changing capability bindings, using private services, or storing recurring behavior, Soma should:
 
-Expected behavior: use current workspace, organization, retained outputs, and deployment context before asking you to repeat information; use configured search/source capability when the request needs current, external, or researched knowledge; disclose the source boundary in the trust package; ask one concise clarifying question only when the missing detail would materially change the action or output quality; otherwise proceed with explicit assumptions.
+1. Review the latest request and relevant prior context.
+2. Name the action it infers.
+3. Name missing capability, MCP, credential, or private-data boundaries.
+4. Ask whether to proceed once or make the behavior recurring.
+5. Use the governed proposal/approval path when mutation or execution is required.
 
-For example, `create a comic book page with a small team` should be understood as a retained visual/media deliverable with roles, prompt/work product, output path, and proof. `research the latest media generation tools and write a report` should use the configured source path and treat external results as interpreted leads, not unquestioned truth.
+Confirming with `yes`, `confirm`, `proceed`, `do it`, or `one time` should bind to the prior inferred action instead of starting a new unrelated request.
 
-## Referential Review And Confirmation
+## Reading The Soma Workspace
 
-Soma should treat action-oriented requests as contextual, not isolated.
+The dashboard keeps Soma chat primary. A compact current-work lane above chat summarizes:
 
-Before creating teams, enabling MCP servers, assigning tools, or changing capability bindings, Soma should:
+- current workflow state
+- latest retained output
+- review count
+- unresolved recovery work when output is ready but some proof/work still needs attention
+- the next action: `Review output` or `Review work`
 
-1. review the latest user request
-2. match related prior conversation turns and command/action metadata
-3. review registered MCP servers, available tools, and relevant installable library entries
-4. state the action it infers
-5. ask whether to proceed once or make the behavior recurring for that workflow
+Open the review panel when you need more detail. Its tabs keep dense information out of the main chat:
 
-When you confirm with wording such as `yes`, `confirm`, `proceed`, `do it`, or `one time`, Soma should bind that confirmation to the prior inferred action and continue through the governed proposal/execution path.
+- `Work`: active, queued, degraded, or operator-needed items
+- `Output`: retained files, packages, media, and folder actions
+- `Trust`: what happened, evidence, run/proof links, and next step
+- `Context`: tools, saved context, and setup cues
 
-For team manifestation, Soma should use Council or specialist context to choose the smallest useful member set, expected outputs, and target MCP/tool bindings. If a needed MCP server is missing, Soma should name the server and required `.env` variable, then point you to `Resources -> Capabilities` to install, reapply, or enable it.
+When output is ready and recovery is also present, Soma should say that plainly, keep the output openable, and point you to the Work tab for recovery.
 
-## Protected Interaction Templates
-
-Some words should map to protected Soma behavior instead of ordinary chat.
-
-The basic theme layer recognizes common operator language:
-
-- team words: `create team`, `specialists`, `members`, `lanes`
-- tool words: `MCP`, `tools`, `web search`, `GitHub`, `fetch`, `host data`
-- private-service words: `private service`, `production service`, `private API`, `token`, `credential`
-- private-data words: `customer data`, `deployment context`, `company knowledge`, `sensitive`, `confidential`
-- recurring words: `always`, `every time`, `standing behavior`, `template`, `reuse`
-
-The template layer combines those themes with protection rules. Examples:
-
-- compact team with target tools
-- private service or credentialed action
-- private data review
-- reusable protected interaction
-- referential review before action
-
-Soma may explain these requests directly, but it must not create teams, bind tools, use credentials/private data, or store recurring behavior until it has confirmed the inferred action and the relevant proposal/approval path allows it.
-
-Good protected prompts:
-
-- `Use the private service only after you name the target service, credential boundary, allowed action, and approval needed.`
-- `Review customer data from deployment context, tell me the visibility scope, and ask before retaining any output.`
-- `Make this a reusable conversation template only after you summarize the trigger phrase, protected scope, and approval posture.`
-
-AI Organization home adds a guided Soma entrypoint: type a team/delivery request and choose `Start team design`, leave the field blank and use `Run a quick strategy check`, create or reshape teams from the root organization workspace, and use `AI Engine Settings` to set one shared model or detected output-type models for planning, research, code, and vision work.
-
-If you leave the organization workspace and come back later, the current guided Soma draft and the last successful guidance for that organization should still be there.
-
-Team workspaces are different from the root Soma workspace:
-- the root workspace is Soma-first and organization-wide
-- the dashboard uses a focus-first workbench: Soma conversation stays in the primary pane, while a compact current-work lane above it summarizes the current workflow, attention state, latest output, and next review action
-- Active Work, retained outputs, trust, context, and focused team details still open from the minimizable, tabbed Work panel overlay instead of crowding the conversation
-- the compact `Working in` picker switches the same workbench between `Soma root` and a team's focused lane, so the chat scope, active work, retained outputs, and proof move together without adding a growing row of team tabs
-- the Work panel is for quick review and action; its default cards should summarize the operator outcome, next step, output/proof state, and a few useful actions, while technical labels and fuller backlog details stay behind Advanced inspect or full-page links
-- when the Work panel needs more room, `Open page` routes to `/teams?view=work`, where active review work appears before broader team setup and roster management
-- `Clear from review` archives stale or test work so it leaves the active Dashboard/Teams review queues while retaining proof and history for later inspection
-- when a focused team has queued, running, degraded, or operator-needed work, the current-work lane keeps Work as the primary review action while still leaving the latest retained output openable when one exists
-- when review details are closed, Soma keeps the conversation readable and moves Work, Output, Trust, and Context details into the minimizable Work panel
-- focused team context switches the primary chat, active-work lane, and retained-output view to the selected team's scope, while Soma remains able to reference other teams, such as a story-writing team and a comic-visual team, when you ask
-- focused-team retained output access appears inside the current-work lane and review-drawer action, not as a separate pre-chat output dock
-- when Soma creates a team but has not yet created the first delegated work item, the Dashboard shows a compact first-deliverable launcher; choose a starter prompt, review it in the Soma input, then send it so execution still goes through the governed work-item path
-- the root Soma home keeps the live interaction stream collapsed by default so an admin can open it on demand without pushing Soma away from the first work surface
-- the root Soma chat should stay in a bounded panel and scroll message history internally, so long conversations do not push the live stream and review panels farther down the page
-- that stream can be filtered by multiple teams and by available output aspects such as status, results, artifacts, tools, governance, and errors
-- the `Teams` page is where admins review active work state, open focused lead workspaces, and define the reusable member templates Soma should apply when creating new team members
-- the dedicated guided team-creation workflow now lives at `/teams/create`, so detailed team creation is a step-by-step Soma lane instead of a dense roster-side form
-- when Soma returns a native execution path there, the same lane can now launch a temporary workflow group directly, hand you into `Groups`, and continue through archive/closure while keeping retained outputs reviewable
-- team defaults should start with one accountable lead, not a prefilled specialist roster
-- a single generic team should stay lead-only at creation; explicit specialist-output requests, such as a comic page that names artist, character, dialogue, layout, and proof roles, may create a bounded specialist roster in the same governed proposal
-- if more roles seem useful after generic team creation, the operator can add a member deliberately or the temporary team lead can request one temporary specialist after naming the missing capability, owned task, expected proof, and removal point
-- entering a created team should center the team's focused lead entity first
-- that team lead can still coordinate back through Soma using scoped memory, RAG retrieval, and broader organization context when needed
-- the team's lead and specialists inherit the organization output-model policy unless an admin changes it
-Groups are a separate workflow surface:
-- use `Groups` when you want a temporary or standing collaboration lane without cluttering the root Soma home
-- the Groups screen uses a compact list/detail layout: select a group from the left rail, then use the main pane for lane data, workflow-log review, broadcast/review, outputs, and retained artifacts
-- the group **Workflow Log** tab is the readable chat-pipeline view for that lane: it combines the brief, attached team work, retained output cues, run/proof references, latest group message, and recovery signals without making every agent conversation a separate window
-- each group should expose the focused lead context, runtime/config posture such as work mode, approval policy, capabilities, and current model-inheritance status, plus output/contributing-lead summaries
-- Soma remains the root reviewer that can summarize groups, pull forward outputs, and route you into the right team lead when needed
-
-## Output Model Routing
-
-Admins can configure how output models are assigned inside an AI Organization.
-
-Available modes:
-- `One model for everyone`: all team members use the same default model
-- `Detected by output type`: team leads and specialists inherit the best-fit model for the kind of work they are doing
-
-Current self-hosted starting points shown in product:
-- `Qwen3 8B`
-- `Llama 3.1 8B`
-- `Qwen3 14B` when installed and latency is acceptable
-- `Qwen2.5 Coder 14B` or `DeepSeek Coder V2 16B` for heavier code / website generation lanes
-- `BGE-M3` and `nomic-embed-text` remain retrieval/embedding candidates, not chat-output models
-
-Current detected output-type defaults:
-- general text -> `Qwen3 8B`
-- research and reasoning -> `Llama 3.1 8B`
-- code generation -> `Qwen2.5 Coder 7B`
-- vision analysis -> `LLaVA 7B`
-
-When an admin has not pinned a specific output type, Soma should choose from installed self-hosted models using explicit criteria: match the detected output type first, prefer higher-capacity local models when latency and memory allow, and be honest about engine boundaries. Ollama vision/text models can help plan, code, critique, or review media, but pixel or voice generation still requires the configured media engine.
-
-This routing is durable organization policy, so ordinary user chats should not silently rewrite it. Soma should ask the owner/admin before reviewing potential model behavior for a requested output or changing saved routing.
-
----
-
-## Reading Responses
+## Outputs
 
 Soma responses can include:
 
-1. **Primary answer**
-- markdown text, code blocks, links, and tables
+1. **Primary answer**: markdown text, code blocks, links, and tables.
+2. **Inline generated outputs**: images, audio, video, code, charts, briefs, data, documents, and media previews.
+3. **Output package**: a retained file/app/package with `Open file`, `Open folder`, proof, and Resources re-entry.
+4. **Proposal block**: a clear `Run this now?` confirmation for actions that execute or change something.
+5. **Recovery/blocker card**: what failed, what remains trusted, what is not trusted, and what can safely happen next.
 
-2. **Inline generated outputs**
-- images, audio, video, code, charts, briefs, data payloads, and documents can appear directly in the same Soma conversation turn
-- these outputs may be generated by Soma directly or by a specialist/council path Soma consulted for you
-- the operator should not need to leave the conversation or inspect team-delivery lanes just to review the generated result
-- non-binary outputs should render directly in chat whenever possible
-- binary or saved outputs should show a visible saved path or download link in the same conversation turn
+No mutation executes until you confirm. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Review run details` unless they require immediate attention.
 
-3. **Delegation Trace**
-- compact cards showing which council members were consulted
+Saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details. Use `Resources -> Output Files` for broader browsing later.
 
-4. **Proposal block (mutation paths)**
-- simple run confirmation for actions that will execute or change something
-- the default view should answer: **Run this now?**, what Soma will do, and what you should get back
-- risk, cost, resources, capability details, proof intent, and team/tool wiring stay behind **Review run details** unless they need immediate operator attention
-- after confirmation, Soma should show immediate run-started feedback, then a proof-linked result or a visible recovery/blocker state
-- direct answer, proposal, execution result, blocker, degradation, retry, and active team work states should stay understandable without reading internal runtime topology
+## Teams And Groups
 
-No mutation executes until you confirm.
+Root Soma is organization-wide. Focused team lanes keep chat, active work, retained outputs, and proof scoped together through the `Working in` picker.
 
-6. **Memory-backed continuity**
-- central Soma chat uses a scoped session id so backend conversation turns can be persisted and replayed for that same workspace/session when available
-- this session continuity is separate from semantic memory promotion: it helps Soma keep a conversation thread coherent, but it does not automatically promote raw interaction content into durable Soma memory or reflection memory
-- durable memory stays available for scoped recall when it has been intentionally promoted
-- ordinary draft planning and return-visit continuity can stay useful without automatically becoming long-term semantic memory
+Team defaults:
 
-5. **Inline image outputs**
-- if a response generates an image, it is rendered directly in chat
-- generated images are cache-first and expire after 60 minutes unless saved
-- use the inline `Save` action or ask Soma to save it (for example: "save this image to saved-media")
-- if you ask Soma to create a specialist media team and generate the first output, the proposal should include both the team creation and media deliverable steps, then return retained output/proof or a visible degraded recovery state
-- saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details; `Resources -> Output Files` is the broader browser for containing folders later
+- generic teams start with one accountable lead
+- explicit specialist-output requests may create a bounded specialist roster
+- temporary specialists require a named missing capability, owned task, expected proof, and removal point
+- broad work should split into smaller lead-owned lanes instead of one large roster
 
-## Execution-First Contract
+Groups are collaboration lanes. Use `Groups` when you want a temporary or standing lane with one selected-group workspace, Workflow Log, outputs, retained artifacts, and message/review context. The Workflow Log is the readable chat-pipeline view; it should not become raw bus logs or multiple little agent windows.
 
-Soma is expected to execute, not just explain, whenever execution is available.
+## Web, Search, And MCP
+
+Soma is expected to execute, not just explain, when execution is available.
 
 Preferred path:
-1. use internal capabilities
-2. use internal capabilities such as `web_search` for search intent, then onboarded MCP tools when they are the shortest safe path, including `fetch` for explicit URL retrieval and `brave-search` when that optional MCP server is installed
-3. propose/confirm for governed mutation paths
 
-If a tool call fails, Soma should recover inline (retry, reroute, or proposal fallback) without making you retype the request.
+1. Use internal capabilities.
+2. Use `web_search` for search intent.
+3. Use onboarded MCP tools when they are the shortest safe path, including `fetch` for explicit URLs and `brave-search` when that optional MCP server is installed.
+4. Propose/confirm governed mutation paths.
 
-Web/research behavior:
-- if you ask Soma whether it can search or make web requests, Soma should answer from current Mycelis Search capability status instead of falling back to provider boilerplate
-- if you ask a freshness-oriented question such as latest news, current updates, or recent releases, Soma should call the configured Mycelis `web_search` capability directly before falling back to MCP-specific guidance
-- `local_sources` is the default token-free provider and lets Soma search governed user-shared and deployment context without hosted search tokens
-- if semantic embeddings are unavailable, `local_sources` should fall back to bounded text search over retained Mycelis context instead of blocking the request outright
-- when Soma uses `web_search`, the Operator trust package should show the search source boundary, such as `Search source: Local Mycelis context` for default retained Mycelis context
-- the supported Compose release path starts a self-hosted SearXNG service by default, so `MYCELIS_SEARCH_PROVIDER=searxng` and `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080` let Soma use public web search without Brave tokens
-- `searxng` can also point at another operator-owned endpoint when configured through `MYCELIS_SEARXNG_ENDPOINT`
-- `local_api` lets Soma use an operator-owned HTTP search endpoint when configured through `MYCELIS_SEARCH_PROVIDER=local_api` and `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`
-- if `brave-search` is installed and configured with `BRAVE_API_KEY`, Soma and web-capable specialists may use it for search
-- if `fetch` is installed and you provide a URL, Soma and web-capable specialists may use it to retrieve page content
-- if the needed server or credential is missing, Soma should name the missing MCP server/env var and point you to Capabilities instead of claiming web requests are impossible
-- read-only tool posture prompts such as `show me currently configured tools` or `check available tools and walk me through enabling what is missing` should answer with current tool state and setup guidance, not create a runnable proposal
-- prompts that actually enable, install, connect, assign, or bind tools remain governed mutation requests and require confirmation/proof
+Search behavior:
 
-Direct drafting behavior:
-- if you ask for plain chat content such as a short letter, email, note, or message,
-  Soma should answer with the text directly in chat
-- it should not route that request through file tools, local commands, or council delegation
-  unless you explicitly ask to save, inspect, execute, or hand the work off
-- if you ask `what is your current state` or `what teams currently exist`,
-  Soma should answer from current runtime and team state directly instead of falling back to a generic provider apology
+- if you ask whether Soma can search or make web requests, Soma should answer from current Mycelis Search capability status
+- freshness-oriented prompts should call the configured Mycelis `web_search` capability before falling back to MCP-specific guidance
+- `local_sources` is the default token-free provider and lets Soma search governed Mycelis context
+- if semantic embeddings are unavailable, `local_sources` should fall back to bounded text search over retained Mycelis context
+- when Soma uses `web_search`, the Operator trust package should show a source boundary such as `Search source: Local Mycelis context`
+- the supported Compose path can use `searxng` with `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080`
+- `local_api` uses `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`
+- `brave-search` requires `BRAVE_API_KEY`
+- if a needed server or credential is missing, Soma should name the missing MCP server/env var and point you to `Resources -> Capabilities`
 
-Execution guardrail:
-- if Soma responds with planning-only language (for example "Step 1" / "we need to delegate") on an actionable request,
-  the runtime triggers one policy-correction pass to force a tool call or a concrete blocker response.
+Read-only tool posture prompts such as `show me currently configured tools` should answer with current tool state and setup guidance, not create a runnable proposal. Prompts that enable, install, connect, assign, or bind tools remain governed mutation requests.
 
-Root-admin configuration behavior:
-- if you ask Soma to configure Mycelis, it should execute against the relevant configuration surface
-  (brains/providers, profiles, governance policy, MCP, users/groups, runtime settings) rather than
-  limiting itself to "create a new team" flows.
-- governed mutations still use proposal/confirm gates where required.
+## Direct Drafting
 
----
+If you ask for plain chat content such as a short letter, note, email, or message, Soma should answer directly in chat. It should not route that request through file tools, local commands, or council delegation unless you ask to save, inspect, execute, or hand off the work.
 
-## Council Failure Recovery
+If you ask `what is your current state` or `what teams currently exist`, Soma should answer from current runtime and team state rather than giving a generic provider apology.
 
-If a council call fails, Workspace shows a structured error card instead of a raw error.
-The same rule applies to the central Soma path:
-- no raw `500` strings as the visible answer
-- no raw `tool_call` JSON
-- no raw structured runtime envelopes in the main conversation body
+## Recovery
 
-The card includes:
-- what failed
-- likely cause
-- next actions
+If execution fails, Soma should recover inline without making you retype the request. Recovery cards should avoid raw `500`, raw `tool_call` JSON, and raw runtime envelopes in the main conversation.
 
-Available actions:
+Useful actions:
+
 - `Retry`
-- `Switch to Soma`
+- `Switch to Soma`, when returning from a direct specialist route
 - `Continue with Soma Only`
 - `Copy Diagnostics`
-
-This keeps recovery inline without retyping or page switching.
-`Switch to Soma` is specifically a recovery path for when you were using a direct specialist route and want to return to the default orchestration path.
-
-## Direct Council Access
-
-1. Click `Direct` in chat header.
-2. Pick Architect, Coder, Creative, or Sentry.
-3. Send your message.
-4. Use `Soma` option to return to default orchestration.
-
-## Launch Crew Flow
-
-For multi-step execution:
-
-1. Open the AI Organization workspace you want Soma to coordinate.
-2. Open advanced team design from `/teams/create`.
-3. Click `Open crew launcher`.
-4. Provide mission intent.
-5. Review the generated proposal or blocker recovery guidance.
-6. Confirm execution when Soma returns a proposal.
-
-On success, a system message includes a run link (`/runs/{run_id}`).
-
-When generic crew creation is needed, Soma should start lead-only:
-
-1. Team Lead: owns the operator-facing state, handoffs, and final output summary.
-2. Temporary Specialist, only if needed: owns one named missing capability and returns the expected proof before removal.
-
-Soma can add a temporary specialist only when the operator or team lead names the missing capability, owned task, expected proof, and removal point. If the work needs multiple distinct roles but no concrete deliverable needs a shared roster immediately, Soma should split the request into multiple lead-owned lanes and explain what each lane will produce. If the operator explicitly asks for a concrete output with named roles, Soma may manifest the smallest bounded specialist roster and attach the first retained deliverable to the same governed execution.
-
-When specialized output is needed, Soma should prefer to:
-1. plan the need at the root workspace
-2. shape the right team or specialist lane
-3. let the team's lead inherit the configured output model policy
-4. only override delivery routing through governed admin configuration, not ad hoc user chat
+- `Clear from review`, when stale work should leave active queues while retaining history
 
 ## Operational Helpers
 
-While chatting, you can use:
-- **Status Drawer** (global health visibility)
-- **Degraded Mode Banner** actions
-- **Focus Mode** (`F`) to prioritize chat height
-- **Advanced Mode** toggle (Settings footer) to show/hide high-density telemetry surfaces
+- `Resources -> Capabilities`: what Soma can use, repair, or request
+- `Resources -> Output Files`: retained generated content and workspace folders
+- `Groups`: collaboration lanes, workflow logs, and group outputs
+- `Teams`: active work, team lead workspaces, and reusable member templates
+- `System -> Deployments`: runtime/workspace/artifact roots
+- `Advanced Mode`: high-density admin/telemetry routes when needed
 
 ## Good Prompting Practices
 
-- be explicit about desired outputs
-- reference recent context ("continue from step 2")
-- review delegation trace to understand specialist contributions
-- confirm only when proposal intent matches your goal
+- name the desired output
+- say whether you want a direct answer, retained file/package, or team output
+- confirm only when the proposal intent matches your goal
+- ask Soma to include proof and recovery notes for deliverables you will revisit later
