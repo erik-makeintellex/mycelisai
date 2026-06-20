@@ -89,6 +89,25 @@ function workItem(status: "completed" | "needs_recovery") {
   const j = trustedJourney;
   const degraded = status === "needs_recovery";
   return {
+    work_item_id: degraded ? j.degradedWorkItemId : j.workItemId,
+    team_id: j.teamId,
+    run_id: j.runId,
+    objective: degraded ? "Recovery sample for output dependency" : "Create trusted outcome kit",
+    owner: "Soma",
+    execution_shape: "deliverable",
+    state: degraded ? "degraded" : "output_ready",
+    last_event: {
+      headline: degraded ? "Preview dependency failed; retained output still exists." : "Trusted Outcome Kit produced with retained proof.",
+      details: degraded ? "Output and approval remain trusted, but preview proof needs recovery." : "Output package, run receipt, and proof artifact agree.",
+      next_action: degraded ? "Repair preview dependency, then retry proof capture." : "Open the output or proof receipt.",
+    },
+    needs_operator: degraded,
+    degradation_state: degraded ? "Preview dependency unavailable." : undefined,
+    recovery_options: degraded ? ["Repair dependency or retry proof capture."] : [],
+    expected_outputs: [j.entrypoint],
+    expected_proof: [j.proofArtifactId],
+    proof_refs: degraded ? [] : [j.proofArtifactId],
+    audit_refs: [`audit-${degraded ? "recovery" : "output"}-trusted-outcome`],
     id: degraded ? j.degradedWorkItemId : j.workItemId,
     title: degraded ? "Recovery sample for output dependency" : "Create trusted outcome kit",
     status,
@@ -102,19 +121,10 @@ function workItem(status: "completed" | "needs_recovery") {
       : "Trusted Outcome Kit produced with retained proof.",
     next_step: degraded ? "Repair preview dependency, then retry proof capture." : "Open the output or proof receipt.",
     outputs: degraded ? [] : [trustedOutput()],
-    proof: degraded
-      ? { status: "degraded", recovery: "Preview proof invalid until dependency is repaired." }
-      : { status: "verified", run_id: j.runId, artifact_id: j.proofArtifactId },
-    trust: degraded
-      ? "Output request remains trusted; preview proof is not reliable yet."
-      : "Output package, run receipt, and proof artifact agree.",
+    proof: degraded ? { status: "degraded", recovery: "Preview proof invalid until dependency is repaired." } : { status: "verified", run_id: j.runId, artifact_id: j.proofArtifactId },
+    trust: degraded ? "Output request remains trusted; preview proof is not reliable yet." : "Output package, run receipt, and proof artifact agree.",
     recovery: degraded
-      ? {
-          failed: "Preview dependency unavailable.",
-          still_trusted: "Approval, request intent, and retained output reference.",
-          not_trusted: "Preview screenshot proof for this attempt.",
-          safe_next: "Repair dependency or retry proof capture.",
-        }
+      ? { failed: "Preview dependency unavailable.", still_trusted: "Approval, request intent, and retained output reference.", not_trusted: "Preview screenshot proof for this attempt.", safe_next: "Repair dependency or retry proof capture." }
       : undefined,
   };
 }
@@ -126,6 +136,19 @@ function groupRecord(): GroupRecord {
     work_mode: "propose_only",
     status: "ready",
     team_ids: [trustedJourney.teamId],
+  };
+}
+
+function teamDetailRecord() {
+  const j = trustedJourney;
+  return {
+    id: j.teamId, name: "Trusted Outcome Team", role: "delivery", type: "mission", mission_id: "mission-trusted-outcome",
+    mission_intent: "Create retained outputs with proof and recovery ownership.",
+    inputs: ["operator request", "execution contract"],
+    deliveries: [j.entrypoint, `${j.folder}/PROOF.md`],
+    agents: [
+      { id: "trusted-outcome-lead", role: "lead", status: 2, last_heartbeat: "2026-06-19T12:03:00Z", tools: ["write_file", "store_artifact"], model: "balanced" },
+    ],
   };
 }
 
@@ -168,6 +191,7 @@ export async function installTrustedOutcomeJourneyMocks(page: Page) {
     ],
   }));
 
+  await page.route("**/api/v1/teams/detail", async (route) => fulfillJSON(route, 200, [teamDetailRecord()]));
   await page.route(`**/api/v1/teams/${j.teamId}/work/ask`, ok({ data: workItem("completed") }));
   await page.route(/\/api\/v1\/teams\/trusted-outcome-team\/work(?:\?.*)?$/, ok({ data: [workItem("completed"), workItem("needs_recovery")] }));
   await page.route(`**/api/v1/teams/${j.teamId}/status-events**`, ok({

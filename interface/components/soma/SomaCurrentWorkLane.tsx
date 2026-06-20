@@ -12,6 +12,7 @@ export function SomaCurrentWorkLane({
   onTogglePanel,
   panelId,
   primaryKind,
+  recoveryReviewCount = 0,
   reviewCount,
   reviewLabel,
   showOutputDigest,
@@ -21,12 +22,16 @@ export function SomaCurrentWorkLane({
   onTogglePanel: () => void;
   panelId: string;
   primaryKind: "work" | "output";
+  recoveryReviewCount?: number;
   reviewCount: number;
   reviewLabel: string;
   showOutputDigest: boolean;
 }) {
   const activeLabel = primaryKind === "work" ? "Work needs review" : "Output ready";
   const nextAction = primaryKind === "work" ? "Review work" : "Review output";
+  const recoveryHint = primaryKind === "output" && recoveryReviewCount > 0
+    ? `${recoveryReviewCount} recovery ${recoveryReviewCount === 1 ? "item" : "items"} also ${recoveryReviewCount === 1 ? "needs" : "need"} review.`
+    : null;
 
   return (
     <section
@@ -49,6 +54,11 @@ export function SomaCurrentWorkLane({
             {activeLabel}
           </span>
         </div>
+        {recoveryHint ? (
+          <p className="mt-1 truncate text-xs text-amber-200">
+            {recoveryHint}
+          </p>
+        ) : null}
       </div>
 
       <div className="min-w-0" data-testid="soma-current-output-slot">

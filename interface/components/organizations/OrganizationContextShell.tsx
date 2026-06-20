@@ -140,7 +140,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         let cancelled = false;
 
         const load = async () => {
-            setLoading(true);
+            void useCortexStore.getState().fetchTeamsDetail(); setLoading(true);
             setError(null);
             try {
                 const response = await fetch(`/api/v1/organizations/${organizationId}/home`, { cache: "no-store", signal: AbortSignal.timeout(20_000) });

@@ -262,7 +262,7 @@ Execution architecture:
 
 Current proof:
 
-`trusted-outcome-journey.spec.ts` covers Ask, Understand, Approve, Execute, Deliver, Trust, Recover, Revisit, and returning-user Outcome Ownership with deterministic run-event, proof, output, and recovery-path evidence. `trusted-outcome-journey-live.spec.ts` proves the source-stack ask -> approval -> retained package -> rendered output -> proof artifacts/contracts -> Resources/Groups/Runs re-entry path, while exposing that live confirm-action run events may still be empty for this route.
+`trusted-outcome-journey.spec.ts` covers Ask, Understand, Approve, Execute, Deliver, Trust, Recover, Revisit, returning-user Outcome Ownership, and default returned-output recovery ownership with deterministic run-event, proof, output, and recovery-path evidence. `trusted-outcome-journey-live.spec.ts` proves the source-stack ask -> approval -> retained package -> rendered output -> proof artifacts/contracts -> Resources/Groups/Runs re-entry path, while exposing that live confirm-action run events may still be empty for this route.
 
 Primary proof commands: deterministic `uv run inv interface.e2e --server-mode=dev --project=chromium --workers=1 --spec=e2e/specs/trusted-outcome-journey.spec.ts`; live `$env:PLAYWRIGHT_LIVE_BACKEND='1'; uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --workers=1 --spec=e2e/specs/trusted-outcome-journey-live.spec.ts`.
 
@@ -271,7 +271,7 @@ Exit:
 - headed GUI proof passes
 - release preflight passes
 - journey proof packet is filled with pass/fail/blocker status for each journey step
-- returning-user Outcome Ownership check answers active workflow, delivered output, attention/review count, trust/evidence, and next step within 15 seconds
+- returning-user Outcome Ownership check answers active workflow, delivered output, incomplete/recovery work, attention/review count, trust/evidence, and next step within 15 seconds
 - live proof records exact environment skips instead of treating skipped gates as green
 - release handoff records the accepted proof result before promotion
 

@@ -100,6 +100,7 @@ export function SomaOperatingSurface({
   );
   const somaHomeWorkItems = recoveryReviewQueueItems(activeWorkItems);
   const attentionWorkCount = somaHomeWorkItems.length;
+  const unresolvedWorkReviewCount = somaHomeWorkItems.filter((item) => item.state !== "output_ready").length;
   const displayedMode = activeMode ?? (focusedTeam ? focusedTeam.name : null);
   const hasWorkContextChoices = Boolean(effectiveFocusedTeamId)
     || activeWorkItems.length > 0
@@ -206,6 +207,7 @@ export function SomaOperatingSurface({
           )}
           context={contextSlot ?? (hasContextReviewContent ? <SomaEvidencePanel items={evidence} compact /> : undefined)}
           primaryPanel={attentionWorkCount > 0 && !hasOutputReviewContent ? "work" : undefined}
+          recoveryReviewCount={hasOutputReviewContent ? unresolvedWorkReviewCount : 0}
           reviewCount={attentionWorkCount > 0 && !hasOutputReviewContent ? attentionWorkCount : undefined}
           showOutputDigest
         />

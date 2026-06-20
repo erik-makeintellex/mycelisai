@@ -49,6 +49,7 @@ export function SomaWorkspaceFrame({
   trust,
   context,
   primaryPanel,
+  recoveryReviewCount = 0,
   reviewCount,
   showOutputDigest = true,
 }: {
@@ -58,6 +59,7 @@ export function SomaWorkspaceFrame({
   trust?: React.ReactNode;
   context?: React.ReactNode;
   primaryPanel?: Extract<PanelKey, "work" | "output">;
+  recoveryReviewCount?: number;
   reviewCount?: number;
   showOutputDigest?: boolean;
 }) {
@@ -108,10 +110,16 @@ export function SomaWorkspaceFrame({
   const primaryReviewPanel = panels.find((panel) => panel.key === primaryPanelKey) ?? outputPanel ?? panels[0];
   const selectedPanel = panels.find((panel) => panel.key === activePanel) ?? outputPanel ?? panels[0];
   const hasPanels = panels.length > 0;
-  const visibleReviewCount = reviewCount ?? outputDigest?.count ?? panels.length;
+  const baseReviewCount = reviewCount ?? outputDigest?.count ?? panels.length;
+  const visibleReviewCount = primaryReviewPanel?.key === "output"
+    ? baseReviewCount + recoveryReviewCount
+    : baseReviewCount;
   const reviewLabel = primaryReviewPanel?.key === "output" ? "Review output" : "Review work";
   const showClosedOutputDigest = Boolean(outputDigest && showOutputDigest);
   const isFocusedWorkReview = primaryReviewPanel?.key === "work";
+  const recoveryReviewCopy = recoveryReviewCount > 0
+    ? `${recoveryReviewCount} recovery ${recoveryReviewCount === 1 ? "item" : "items"} also ${recoveryReviewCount === 1 ? "needs" : "need"} review.`
+    : null;
 
   const togglePanel = () => {
     setIsPanelOpen((open) => {
@@ -137,6 +145,7 @@ export function SomaWorkspaceFrame({
               panelId={sideRailId}
               primaryKind={primaryReviewPanel.key === "work" ? "work" : "output"}
               reviewCount={visibleReviewCount}
+              recoveryReviewCount={recoveryReviewCount}
               reviewLabel={reviewLabel}
               showOutputDigest={showClosedOutputDigest}
             />
@@ -174,7 +183,9 @@ export function SomaWorkspaceFrame({
                       <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
                         {isFocusedWorkReview
                           ? "Understand the item, then recover, clear, or open the full inbox."
-                          : "Check the most useful details here. Open the full page for more."}
+                          : recoveryReviewCopy
+                            ? `Output is ready. ${recoveryReviewCopy} Use the Work tab for recovery, or Trust for proof.`
+                            : "Check the most useful details here. Open the full page for more."}
                       </p>
                     </div>
                     <button
