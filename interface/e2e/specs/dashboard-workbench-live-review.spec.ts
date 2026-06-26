@@ -84,7 +84,7 @@ test.describe("Dashboard workbench live review", () => {
     const chatRaw = await chat.text();
     expect(chat.ok(), chatRaw).toBeTruthy();
 
-    await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText("What I will do").last()).toBeVisible({ timeout: 45_000 });
 
     const confirmResponse = page.waitForResponse(
       (response) => response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
@@ -150,7 +150,7 @@ test.describe("Dashboard workbench live review", () => {
     const chat = await chatResponse;
     expect(chat.ok(), await chat.text()).toBeTruthy();
 
-    await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText("What I will do").last()).toBeVisible({ timeout: 45_000 });
     await page.screenshot({ path: testInfo.outputPath("dashboard-proposal.png"), fullPage: true });
 
     const confirmResponse = page.waitForResponse(

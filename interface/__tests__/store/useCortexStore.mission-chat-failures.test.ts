@@ -185,7 +185,7 @@ describe('useCortexStore mission chat failures', () => {
 
         expect(useCortexStore.getState().activeMode).toBe('blocker');
         expect(useCortexStore.getState().missionChatError).toBe('Soma hit a server-side failure while handling the request.');
-        expect(useCortexStore.getState().missionChat.at(-1)?.content).toBe('Soma hit a server-side failure while handling the request.');
+        expect(useCortexStore.getState().missionChat.at(-1)?.content).toBe('Workspace chat server error. Review the operational alert for the safe next step.');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).not.toContain('Internal Server Error');
     });
 });

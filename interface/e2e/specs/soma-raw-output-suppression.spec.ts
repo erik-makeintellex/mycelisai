@@ -35,7 +35,8 @@ test.describe("Soma raw output suppression", () => {
         await expect(page.getByText(/consult_council requires/i)).toHaveCount(0);
 
         await sendWorkspaceMessage(page, "Trigger the raw transport failure regression.");
-        await expect(page.getByText(/Soma Chat Blocked/i)).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Operational alert", { exact: true })).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Workspace chat server error", { exact: true })).toBeVisible();
         await expect(page.getByText(/Internal Server Error/i)).toHaveCount(0);
     });
 });

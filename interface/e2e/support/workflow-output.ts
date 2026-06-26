@@ -51,6 +51,7 @@ export async function gotoWithColdStartRetry(page: Page, path: string) {
             const message = error instanceof Error ? error.message : String(error);
             const canRetry =
                 message.includes("net::ERR_ABORTED") ||
+                message.includes("ERR_ADDRESS_IN_USE") ||
                 message.includes("frame was detached") ||
                 message.includes("net::ERR_NETWORK_CHANGED") ||
                 message.includes("interrupted by another navigation") ||
@@ -91,23 +92,32 @@ export async function installWorkflowOutputShell(page: Page) {
         });
     });
 
+    const organizationHome = {
+        id: organizationId,
+        name: "Northstar Labs",
+        purpose: "Run a product-ready Soma-first workflow with durable retained outputs.",
+        start_mode: "template",
+        team_lead_label: "Team Lead",
+        advisor_count: 1,
+        department_count: 2,
+        specialist_count: 4,
+        ai_engine_settings_summary: "Balanced",
+        response_contract_summary: "Clear and structured",
+        memory_personality_summary: "Stable continuity",
+        status: "ready",
+    };
+
+    await page.route(`**/api/v1/organizations/${organizationId}`, async (route) => {
+        await fulfillJSON(route, 200, {
+            ok: true,
+            data: organizationHome,
+        });
+    });
+
     await page.route(`**/api/v1/organizations/${organizationId}/home`, async (route) => {
         await fulfillJSON(route, 200, {
             ok: true,
-            data: {
-                id: organizationId,
-                name: "Northstar Labs",
-                purpose: "Run a product-ready Soma-first workflow with durable retained outputs.",
-                start_mode: "template",
-                team_lead_label: "Team Lead",
-                advisor_count: 1,
-                department_count: 2,
-                specialist_count: 4,
-                ai_engine_settings_summary: "Balanced",
-                response_contract_summary: "Clear and structured",
-                memory_personality_summary: "Stable continuity",
-                status: "ready",
-            },
+            data: organizationHome,
         });
     });
 }

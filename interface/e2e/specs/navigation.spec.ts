@@ -24,6 +24,7 @@ async function openDashboard(page: Page) {
             const message = error instanceof Error ? error.message : String(error);
             const canRetry =
                 message.includes('ERR_ABORTED') ||
+                message.includes('ERR_ADDRESS_IN_USE') ||
                 message.includes('ERR_NETWORK_CHANGED') ||
                 message.includes('frame was detached') ||
                 message.includes('interrupted by another navigation') ||

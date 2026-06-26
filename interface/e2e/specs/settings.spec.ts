@@ -120,8 +120,8 @@ test.describe('Settings Page (/settings)', () => {
     test('theme and assistant identity save and persist after reload', async ({ page }) => {
         const assistantInput = page.getByLabel('Assistant Name');
         const themeSelect = page.getByLabel('Theme');
-        const saveButtons = page.getByRole('button', { name: 'Save' });
-        const themeSaveButton = saveButtons.nth(1);
+        const assistantSaveButton = page.locator('#assistant-name + button');
+        const themeSaveButton = page.locator('#theme-select + button');
         await expect(assistantInput).toBeVisible();
         await expect(themeSelect).toBeVisible();
         const originalAssistantName = (await assistantInput.inputValue()).trim();
@@ -132,7 +132,7 @@ test.describe('Settings Page (/settings)', () => {
         const assistantSave = page.waitForResponse((response) =>
             response.url().includes('/api/v1/user/settings') && response.request().method() === 'PUT'
         );
-        await clickVisibleControl(page, saveButtons.nth(0));
+        await clickVisibleControl(page, assistantSaveButton);
         await assistantSave;
         await expect(page.getByText('Saved').first()).toBeVisible();
 
@@ -160,7 +160,7 @@ test.describe('Settings Page (/settings)', () => {
         await expect(page.locator('html')).toHaveAttribute('data-theme', updatedTheme);
 
         await page.getByLabel('Assistant Name').fill(originalAssistantName);
-        await clickVisibleControl(page, saveButtons.nth(0));
+        await clickVisibleControl(page, assistantSaveButton);
         await page.getByLabel('Theme').selectOption(originalTheme);
         if (await themeSaveButton.isEnabled()) {
             await clickVisibleControl(page, themeSaveButton);

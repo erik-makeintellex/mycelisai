@@ -26,8 +26,9 @@ describe("CouncilCallErrorCard", () => {
             />
         );
 
-        expect(screen.getByText("Council Call Failed")).toBeDefined();
-        expect(screen.getByText("timeout")).toBeDefined();
+        expect(screen.getByText("Operational alert")).toBeDefined();
+        expect(screen.getByText("Council member timeout")).toBeDefined();
+        expect(screen.getByText(/did not respond before the request deadline/i)).toBeDefined();
     });
 
     it("classifies mixed unreachable 500 errors as server errors", () => {
@@ -45,7 +46,7 @@ describe("CouncilCallErrorCard", () => {
             />
         );
 
-        expect(screen.getByText("server_error")).toBeDefined();
+        expect(screen.getByText("Council member server error")).toBeDefined();
         expect(screen.getByText(/returned an internal error/i)).toBeDefined();
     });
 
@@ -66,8 +67,7 @@ describe("CouncilCallErrorCard", () => {
             />
         );
 
-        expect(screen.getByText("Soma Chat Blocked")).toBeDefined();
-        expect(screen.getByText("server_error")).toBeDefined();
+        expect(screen.getByText("Workspace chat server error")).toBeDefined();
         expect(screen.getByText(/server-side failure/i)).toBeDefined();
         expect(screen.queryByText(rawMessage)).toBeNull();
     });
@@ -89,7 +89,7 @@ describe("CouncilCallErrorCard", () => {
             />
         );
 
-        expect(screen.getByText("Council Call Failed")).toBeDefined();
+        expect(screen.getByText("Council member server error")).toBeDefined();
         expect(screen.getByText(/internal error/i)).toBeDefined();
         expect(screen.queryByText(rawMessage)).toBeNull();
     });
@@ -136,7 +136,8 @@ describe("CouncilCallErrorCard", () => {
             />
         );
 
-        fireEvent.click(screen.getByText("Copy Diagnostics"));
+        fireEvent.click(screen.getByText("Details"));
+        fireEvent.click(screen.getByText("Copy"));
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith("failed to fetch");
     });
 

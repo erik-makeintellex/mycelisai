@@ -164,12 +164,15 @@ test.describe("Workflow output compact team package", () => {
 
         await expect(page.getByRole("heading", { name: "Release Readiness Team temporary workflow" })).toBeVisible();
         await expect(page.getByTestId("groups-output-summary")).toContainText("2 outputs");
+        await page.getByRole("tab", { name: /Outputs/i }).click();
         await expect(page.getByText("Validation checklist", { exact: true })).toBeVisible();
         await expect(page.getByText("Risk review", { exact: true })).toBeVisible();
+        await page.getByRole("tab", { name: /Overview/i }).click();
         await page.getByRole("button", { name: "Archive temporary group" }).click();
         await expect(page.getByText("Archived temporary group", { exact: true })).toBeVisible();
         await page.reload({ waitUntil: "domcontentloaded" });
         await expect(page.getByText("Archived temporary group", { exact: true })).toBeVisible();
+        await page.getByRole("tab", { name: /Outputs/i }).click();
         await expect(page.getByText("Validation checklist", { exact: true })).toBeVisible();
         await expect(page.getByText("Risk review", { exact: true })).toBeVisible();
     });

@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SomaOperatingSurface } from "@/components/soma/SomaOperatingSurface";
 
@@ -73,7 +73,7 @@ describe("SomaOperatingSurface output projection", () => {
     mocks.storeState.selectedTeamId = null;
   });
 
-  it("keeps focused team retained outputs in the workbench instead of stacking a pre-chat dock", () => {
+  it("keeps focused team retained outputs in the workbench and opens the vault only on request", () => {
     mocks.useDurableTeamWork.mockReturnValue({
       items: [{
         id: "work-1",
@@ -93,11 +93,15 @@ describe("SomaOperatingSurface output projection", () => {
 
     const workspace = within(screen.getByTestId("mock-soma-workspace-frame"));
     const workbench = within(workspace.getByTestId("output-workbench"));
-    const vault = within(screen.getByTestId("soma-outcome-vault"));
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("true");
     expect(screen.queryByTestId("focused-team-output-dock")).toBeNull();
+    expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
     expect(workbench.getByText("Comic page")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: /open outcomes and vault/i }));
+
+    const vault = within(screen.getByTestId("soma-outcome-vault"));
     expect(vault.getByRole("link", { name: /Open latest deliverable Comic page/i }).getAttribute("data-target-reference")).toContain("groups/team-alpha/media/comic-page.png");
     expect(workspace.getByTestId("output-workbench").textContent?.indexOf("Comic page")).toBeLessThan(
       workspace.getByTestId("output-workbench").textContent?.indexOf("Old comic page") ?? 0,

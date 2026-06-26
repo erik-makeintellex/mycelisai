@@ -50,7 +50,7 @@ test.describe("Live Soma P0 browser game delivery", () => {
     expect(proposal.response.ok(), proposal.body ? JSON.stringify(proposal.body) : proposal.raw).toBeTruthy();
     expect(proposal.body?.data?.mode).toBe("proposal");
     expect(proposal.body?.data?.payload?.tools_used).toEqual(["create_team", "write_file"]);
-    await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("What I will do").last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(teamID).last()).toBeVisible();
     await expect(page.getByText(entrypoint).last()).toBeVisible();
 

@@ -222,7 +222,7 @@ test.describe('Live team execution produces retained code outputs', () => {
                 `swarm.team.${teamID}.signal.result`,
             ]);
             expect(natsSubjects.some((subject) => subject.includes('admin-core'))).toBeFalsy();
-            await expect(page.getByText('RUN CONFIRMATION')).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByText('What I will do')).toBeVisible({ timeout: 30_000 });
             await expect(page.getByText(teamID).first()).toBeVisible();
             await expect(page.getByText(filePath).first()).toBeVisible();
             expect(targetExists(filePath)).toBeFalsy();

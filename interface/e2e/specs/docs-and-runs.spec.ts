@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-
+import { gotoWithColdStartRetry } from '../support/workflow-output';
 test.describe('Docs and Runs Route Coverage', () => {
     test('docs route renders manifest entry and markdown content', async ({ page }) => {
         await page.route('**/docs-api', async (route) => {
@@ -292,7 +292,7 @@ test.describe('Docs and Runs Route Coverage', () => {
         const runRow = page.getByRole('link', { name: new RegExp(runId) }).first();
         await expect(runRow).toBeVisible();
         await expect(runRow).toHaveAttribute('href', `/runs/${runId}`);
-        await page.goto(`/runs/${runId}`, { waitUntil: 'domcontentloaded' });
+        await gotoWithColdStartRetry(page, `/runs/${runId}`);
         await expect(page).toHaveURL(new RegExp(`/runs/${runId}$`));
         await expect(page.getByText('Soma is coordinating the active run.')).toBeVisible();
         await expect(page.getByText('Planner is preparing validation steps.')).toBeVisible();

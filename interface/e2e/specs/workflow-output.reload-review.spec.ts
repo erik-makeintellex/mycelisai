@@ -205,6 +205,7 @@ test.describe("Workflow output reload and retained review", () => {
         await expect(page.getByText("Archived temporary group", { exact: true })).toBeVisible();
         await page.reload({ waitUntil: "domcontentloaded" });
         await expect(page.getByText("Archived temporary group", { exact: true })).toBeVisible();
+        await page.getByRole("tab", { name: /Outputs/i }).click();
         await expect(page.getByText("Validation checklist", { exact: true })).toBeVisible();
         await expect(page.getByText("Risk review", { exact: true })).toBeVisible();
 

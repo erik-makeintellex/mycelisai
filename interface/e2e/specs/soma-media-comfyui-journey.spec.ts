@@ -162,23 +162,17 @@ test.describe("Soma ComfyUI media journey", () => {
     await openOrganization(page);
     await sendWorkspaceMessage(page, "Create a local/private ComfyUI media team output.");
 
-    await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /Approve & Execute|Execute|Run/i }).last().click();
+    await expect(page.getByText("What I will do").last()).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: /^(Start|Run)$/i }).last().click();
 
     const failureCard = page.getByTestId("execution-summary-card").last();
     await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
     await expect(failureCard.getByText("Details and proof")).toBeVisible();
     await failureCard.getByText("Details and proof").click();
-    await expect(failureCard.getByText("Failed: local/private ComfyUI gateway unavailable")).toBeVisible();
-    await expect(
-      failureCard.getByText("Still available: The approval, intent proof, failed run record, and audit event remain trusted."),
-    ).toBeVisible();
-    await expect(
-      failureCard.getByText("Not reliable: No generated media output or retained image should be trusted for this attempt."),
-    ).toBeVisible();
-    await expect(
-      failureCard.getByText("Safe next: Restore the local/private media gateway, confirm ComfyUI health, then retry the media proposal."),
-    ).toBeVisible();
+    await expect(failureCard).toContainText("Local media generation is not reachable, so Soma could not create the image output.");
+    await expect(failureCard).toContainText("Still available: The approval, request, failed run record, and audit trail remain available for review.");
+    await expect(failureCard).toContainText("Not reliable: No completed image output or execution proof should be trusted for this attempt.");
+    await expect(failureCard).toContainText("Safe next: Start or reconnect the configured ComfyUI upstream, then retry. If you only need text/files, ask Soma to rerun without image generation.");
     await expect(page.getByText("Run proof + retained output")).toHaveCount(0);
   });
 
@@ -212,7 +206,7 @@ test.describe("Soma ComfyUI media journey", () => {
     );
     expect(proposal.response.ok(), proposal.body ? JSON.stringify(proposal.body) : proposal.raw).toBeTruthy();
     expect(proposal.body?.data?.mode).toBe("proposal");
-    await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("What I will do").last()).toBeVisible({ timeout: 30_000 });
 
     const confirmed = await confirmProposal(page);
     expect(confirmed.response.ok(), confirmed.body ? JSON.stringify(confirmed.body) : confirmed.raw).toBeTruthy();

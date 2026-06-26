@@ -72,7 +72,7 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       expect(proposal.response.ok(), proposal.body ? JSON.stringify(proposal.body) : proposal.raw).toBeTruthy();
       expect(proposal.body?.data?.mode).toBe("proposal");
       await expect(page.getByRole("heading", { name: /Start this\?|Run this\?/ }).last()).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByRole("button", { name: /Start|Run/i }).last()).toBeVisible();
+      await expect(page.getByRole("button", { name: /^(Start|Run)$/i }).last()).toBeVisible();
       await expect(page.getByText(teamID).last()).toBeVisible();
       await expect(page.getByText(entrypoint).last()).toBeVisible();
       expect(targetExists(entrypoint)).toBeFalsy();

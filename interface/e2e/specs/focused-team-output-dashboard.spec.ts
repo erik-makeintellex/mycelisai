@@ -89,6 +89,31 @@ async function installFocusedTeamOutputMocks(page: Page) {
     });
   });
 
+  await page.route("**/api/v1/teams/detail**", async (route) => {
+    await fulfillJSON(route, 200, [
+      {
+        id: focusedTeamId,
+        name: focusedTeamName,
+        role: "builder",
+        type: "mission",
+        mission_id: "mission-focused-proof",
+        mission_intent: "Keep focused-team output visible from the Soma dashboard.",
+        inputs: ["operator request", "retained Soma context"],
+        deliveries: [focusedOutputPath],
+        agents: [
+          {
+            id: "focused-proof-lead",
+            role: "lead",
+            status: 2,
+            last_heartbeat: "2026-05-17T12:10:00Z",
+            tools: ["write_file", "store_artifact"],
+            model: "balanced",
+          },
+        ],
+      },
+    ]);
+  });
+
   await page.route("**/api/v1/teams/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === "/api/v1/teams/detail") {
@@ -185,6 +210,7 @@ async function expectFocusedDashboardLane(page: Page) {
   await expect(switcher).toContainText(focusedTeamName);
   await expect(switcher).toContainText("Team chat, work, outputs, and proof");
 
+  await page.getByRole("button", { name: /Open Outcomes and Vault/i }).click();
   const vault = page.getByTestId("soma-outcome-vault");
   await expect(vault).toContainText("Outcome project");
   await expect(vault).toContainText(`${focusedTeamName} outcome workspace`);
@@ -192,8 +218,10 @@ async function expectFocusedDashboardLane(page: Page) {
   await expect(vault).toContainText("Soma");
   await expect(vault).toContainText("TeamRegistry owner:");
   await expect(vault).toContainText(`${focusedTeamName} lead`);
-  await expect(vault.getByRole("link", { name: "Open work" })).toHaveAttribute("href", "/teams?view=work");
-  await expect(vault.getByRole("link", { name: "Open outputs" })).toHaveAttribute("href", "/resources?tab=workspace");
+  await expect(vault.getByRole("link", { name: "Open work", exact: true })).toHaveAttribute("href", "/teams?view=work");
+  await expect(vault.getByRole("link", { name: "Open outputs", exact: true })).toHaveAttribute("href", "/resources?tab=workspace");
+  await vault.getByRole("button", { name: /Close Outcomes and Vault/i }).click();
+  await expect(page.getByTestId("soma-outcome-vault")).toHaveCount(0);
 
   await switcher.getByRole("button", { name: /Focused Browser Proof Team/i }).click();
   await expect(page.getByRole("listbox", { name: "Choose current workflow" })).toBeVisible();

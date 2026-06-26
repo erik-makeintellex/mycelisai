@@ -202,21 +202,23 @@ test.describe('Guided Team Creation (/teams/create)', () => {
         await expect(page.getByText('Temporary group', { exact: true })).toBeVisible();
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
-        await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();
-        await expect(page.getByText('Asset Bundle', { exact: true })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Open Soma admin home' })).toHaveAttribute('href', '/dashboard');
+        await expect(page.getByRole('link', { name: 'Open Soma' }).first()).toHaveAttribute('href', '/dashboard');
         await expect(page.getByTitle('Open launch-lead lead')).toHaveAttribute('href', '/dashboard?team_id=launch-lead');
         await expect(page.getByTitle('Open design-lead lead')).toHaveAttribute('href', '/dashboard?team_id=design-lead');
+        await page.getByRole('tab', { name: /Outputs/i }).click();
+        await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();
+        await expect(page.getByText('Asset Bundle', { exact: true })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Download' }).last()).toHaveAttribute('href', '/api/v1/artifacts/artifact-asset-bundle/download');
 
+        await page.getByRole('tab', { name: /Overview/i }).click();
         await page.getByRole('button', { name: 'Archive temporary group' }).click();
 
         await expect(page.getByTestId('groups-notice')).toContainText('Temporary group archived.');
         await expect(page.getByText('Archived temporary group', { exact: true })).toBeVisible();
-        await expect(page.getByTestId('groups-archived-readonly-note')).toContainText('retained output review');
-        await expect(page.getByTestId('groups-retained-outputs-note')).toContainText('Downloads remain available');
+        await expect(page.getByText('Temporary group archived. Retained outputs are still available for review.')).toBeVisible();
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
+        await page.getByRole('tab', { name: /Outputs/i }).click();
         await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();
         await expect(page.getByText('Asset Bundle', { exact: true })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Broadcast to group' })).toHaveCount(0);
