@@ -42,6 +42,12 @@ func TestInsertTeamStatusEventDB_RunLinkedEmitsMissionEvent(t *testing.T) {
 	if event.Timestamp.IsZero() {
 		t.Fatal("expected status event timestamp to be populated")
 	}
+	if event.TargetRef == nil {
+		t.Fatal("expected target_ref")
+	}
+	if event.TargetRef.Type != "run" || event.TargetRef.ID != event.RunID {
+		t.Fatalf("target_ref = %#v, want run target", event.TargetRef)
+	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
 	}
@@ -69,6 +75,12 @@ func TestInsertTeamStatusEventDB_WithoutRunDoesNotEmitMissionEvent(t *testing.T)
 
 	if err := s.insertTeamStatusEventDB(t.Context(), &event); err != nil {
 		t.Fatalf("insertTeamStatusEventDB: %v", err)
+	}
+	if event.TargetRef == nil {
+		t.Fatal("expected target_ref")
+	}
+	if event.TargetRef.Type != "work" || event.TargetRef.ID != event.WorkItemID {
+		t.Fatalf("target_ref = %#v, want work target", event.TargetRef)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)

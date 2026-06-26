@@ -9,35 +9,17 @@ import WorkspaceFolderAccessCard from "./WorkspaceFolderAccessCard";
 import WorkspaceGroupOutputSelector, {
     artifactBrowsePath,
     artifactFilePath,
-    type OutputGroup,
 } from "./WorkspaceGroupOutputSelector";
-import WorkspaceMCPRecoveryCard from "./WorkspaceMCPRecoveryCard";
+import WorkspaceExplorerMainPane from "./WorkspaceExplorerMainPane";
 import {
-    WorkspaceBrowsePane,
-    WorkspaceCreatePane,
-    WorkspacePaneTabs,
-    WorkspacePreviewPane,
-} from "./WorkspaceExplorerPanes";
-import { joinPath, normalizePath, parseListOutput } from "./WorkspaceExplorerUtils";
+    initialWorkspacePath,
+    useWorkspaceOutputGroups,
+    WorkspaceFilesystemUnavailable,
+} from "./WorkspaceExplorerSupport";
+import { joinPath, parseListOutput } from "./WorkspaceExplorerUtils";
 
-const WORKSPACE_ROOT_PATH = "workspace";
 export type WorkspaceEntry = { name: string; path: string; type: "file" | "dir" };
 export type WorkspacePane = "browse" | "preview" | "create";
-
-type GroupRecord = {
-    group_id: string;
-    name: string;
-    workspace_folder?: string;
-};
-
-function initialWorkspacePath(path?: string | null) {
-    const normalized = normalizePath(path?.trim() || WORKSPACE_ROOT_PATH);
-    if (normalized === ".") return WORKSPACE_ROOT_PATH;
-    if (/^(groups|generated|outputs|reports|logs|saved-media)(\/|$)/i.test(normalized)) {
-        return `${WORKSPACE_ROOT_PATH}/${normalized}`;
-    }
-    return normalized;
-}
 
 export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { initialPath?: string | null; onOpenToolsTab: () => void }) {
     const mcpServers = useCortexStore((s) => s.mcpServers);
@@ -54,10 +36,14 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
     const [newFile, setNewFile] = useState("");
     const [newFileContent, setNewFileContent] = useState("");
     const [activePane, setActivePane] = useState<WorkspacePane>("browse");
-    const [outputGroups, setOutputGroups] = useState<OutputGroup[]>([]);
-    const [selectedOutputGroupID, setSelectedOutputGroupID] = useState("");
-    const [includeTeamSourceFiles, setIncludeTeamSourceFiles] = useState(false);
-    const [outputGroupStatus, setOutputGroupStatus] = useState("Loading group outputs...");
+    const {
+        outputGroups,
+        selectedOutputGroupID,
+        setSelectedOutputGroupID,
+        includeTeamSourceFiles,
+        setIncludeTeamSourceFiles,
+        outputGroupStatus,
+    } = useWorkspaceOutputGroups();
 
     useEffect(() => {
         fetchMCPServers();
@@ -73,65 +59,6 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
     }, [mcpServers]);
 
     const canBrowse = filesystemServer?.status === "connected";
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const loadOutputGroups = async () => {
-            setOutputGroupStatus("Loading group outputs...");
-            try {
-                const groupsRes = await fetch("/api/v1/groups", { cache: "no-store" });
-                if (!groupsRes.ok) {
-                    throw new Error("Could not load groups");
-                }
-                const groups = await responseData<GroupRecord[]>(groupsRes);
-                const loaded: Array<OutputGroup | null> = await Promise.all(
-                    groups.map(async (group) => {
-                        try {
-                            const outputsRes = await fetch(
-                                `/api/v1/groups/${encodeURIComponent(group.group_id)}/outputs?limit=20`,
-                                { cache: "no-store" },
-                            );
-                            if (!outputsRes.ok) return null;
-                            const outputs = await responseData<Artifact[]>(outputsRes);
-                            if (!Array.isArray(outputs) || outputs.length === 0) return null;
-                            return {
-                                group_id: group.group_id,
-                                name: group.name || group.group_id,
-                                workspace_folder: group.workspace_folder,
-                                outputs,
-                            } satisfies OutputGroup;
-                        } catch {
-                            return null;
-                        }
-                    }),
-                );
-
-                if (cancelled) return;
-                const withOutputs = loaded.filter((group): group is OutputGroup => Boolean(group));
-                setOutputGroups(withOutputs);
-                setSelectedOutputGroupID((current) => {
-                    if (current && withOutputs.some((group) => group.group_id === current)) return current;
-                    return withOutputs[0]?.group_id ?? "";
-                });
-                setOutputGroupStatus(
-                    withOutputs.length > 0
-                        ? `Loaded ${withOutputs.length} group${withOutputs.length === 1 ? "" : "s"} with outputs`
-                        : "No groups with retained user outputs yet",
-                );
-            } catch (error) {
-                if (cancelled) return;
-                setOutputGroups([]);
-                setSelectedOutputGroupID("");
-                setOutputGroupStatus(error instanceof Error ? error.message : "Could not load group outputs");
-            }
-        };
-
-        loadOutputGroups();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
 
     const callTool = useCallback(
         async (toolName: string, args: Record<string, unknown>): Promise<string> => {
@@ -293,9 +220,8 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
 
     if (!filesystemServer) {
         return (
-            <WorkspaceMCPRecoveryCard
-                title="Filesystem MCP not installed"
-                detail="Output Files needs the filesystem capability before Mycelis can browse generated files here. Install it from Capabilities, or view storage roots to confirm where generated content is mounted."
+            <WorkspaceFilesystemUnavailable
+                filesystemServer={filesystemServer}
                 onOpenToolsTab={onOpenToolsTab}
                 onRefresh={fetchMCPServers}
             />
@@ -304,15 +230,8 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
 
     if (filesystemServer.status !== "connected") {
         return (
-            <WorkspaceMCPRecoveryCard
-                title="Filesystem MCP not connected"
-                detail={(
-                    <>
-                        Current status: <span className="font-mono">{filesystemServer.status}</span>. Reconnect it
-                        from Capabilities, then retry. View storage roots if you need to find generated output while
-                        the MCP server is recovering.
-                    </>
-                )}
+            <WorkspaceFilesystemUnavailable
+                filesystemServer={filesystemServer}
                 onOpenToolsTab={onOpenToolsTab}
                 onRefresh={fetchMCPServers}
             />
@@ -321,7 +240,7 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
 
     return (
         <div className="grid h-full min-h-0 gap-3 p-4 sm:p-6 lg:grid-cols-[minmax(13rem,17rem)_minmax(19rem,1fr)]">
-            <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+            <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1">
                 <WorkspaceGroupOutputSelector
                     groups={outputGroups}
                     selectedGroupID={selectedOutputGroupID}
@@ -335,81 +254,29 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
                 <WorkspaceFolderAccessCard currentPath={currentPath} onStatus={setStatus} />
             </div>
 
-            <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface">
-                <div className="border-b border-cortex-border bg-cortex-bg/70 px-3 py-3">
-                    <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                        <div className="min-w-0">
-                            <p className="text-xs font-semibold text-cortex-text-main">Workspace output access</p>
-                            <p className="mt-1 text-[11px] leading-5 text-cortex-text-muted">
-                                Start with retained files, then open a preview or create a small handoff artifact when needed.
-                            </p>
-                        </div>
-                        <div className="flex min-w-0 items-center gap-2">
-                            <span className="text-[11px] font-mono text-cortex-text-muted">Path</span>
-                            <code className="max-w-full truncate rounded border border-cortex-border bg-cortex-surface px-2 py-1 text-xs font-mono text-cortex-primary md:max-w-[22rem]">
-                                {currentPath}
-                            </code>
-                        </div>
-                    </div>
-
-                    <WorkspacePaneTabs activePane={activePane} onSelect={setActivePane} />
-                </div>
-
-                <div className="min-h-0 flex-1 overflow-y-auto p-3">
-                    {activePane === "browse" && (
-                        <WorkspaceBrowsePane
-                            currentPath={currentPath}
-                            entries={entries}
-                            busy={busy}
-                            isFetchingMCPServers={isFetchingMCPServers}
-                            onUp={() =>
-                                setCurrentPath(
-                                    currentPath === WORKSPACE_ROOT_PATH
-                                        ? WORKSPACE_ROOT_PATH
-                                        : normalizePath(`${currentPath}/..`),
-                                )
-                            }
-                            onRefresh={refreshList}
-                            onOpenFolder={setCurrentPath}
-                            onOpenFile={openFile}
-                        />
-                    )}
-
-                    {activePane === "preview" && (
-                        <WorkspacePreviewPane
-                            selectedFile={selectedFile}
-                            preview={preview}
-                            onPreviewChange={setPreview}
-                        />
-                    )}
-
-                    {activePane === "create" && (
-                        <WorkspaceCreatePane
-                            newDir={newDir}
-                            newFile={newFile}
-                            newFileContent={newFileContent}
-                            onNewDirChange={setNewDir}
-                            onNewFileChange={setNewFile}
-                            onNewFileContentChange={setNewFileContent}
-                            onCreateDirectory={createDirectory}
-                            onCreateFile={createFile}
-                        />
-                    )}
-                </div>
-
-                <div className="border-t border-cortex-border bg-cortex-bg px-3 py-2 text-[11px] font-mono text-cortex-text-muted">
-                    <span className="block truncate">{status}</span>
-                </div>
-            </section>
+            <WorkspaceExplorerMainPane
+                activePane={activePane}
+                busy={busy}
+                currentPath={currentPath}
+                entries={entries}
+                isFetchingMCPServers={isFetchingMCPServers}
+                newDir={newDir}
+                newFile={newFile}
+                newFileContent={newFileContent}
+                preview={preview}
+                selectedFile={selectedFile}
+                status={status}
+                onActivePaneChange={setActivePane}
+                onCreateDirectory={createDirectory}
+                onCreateFile={createFile}
+                onCurrentPathChange={setCurrentPath}
+                onNewDirChange={setNewDir}
+                onNewFileChange={setNewFile}
+                onNewFileContentChange={setNewFileContent}
+                onOpenFile={openFile}
+                onPreviewChange={setPreview}
+                onRefresh={refreshList}
+            />
         </div>
     );
-}
-
-async function responseData<T>(res: Response): Promise<T> {
-    const payload = await res.json();
-    return (
-        payload && typeof payload === "object" && "data" in payload
-            ? (payload as { data: T }).data
-            : payload
-    ) as T;
 }

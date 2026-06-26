@@ -66,6 +66,7 @@ type TeamStatusEvent struct {
 	SourceChannel     string        `json:"source_channel,omitempty"`
 	PayloadKind       string        `json:"payload_kind,omitempty"`
 	AuditRefs         []string      `json:"audit_refs,omitempty"`
+	TargetRef         *TargetRef    `json:"target_ref,omitempty"`
 	Timestamp         time.Time     `json:"timestamp,omitempty"`
 	Version           string        `json:"version"`
 }
@@ -117,6 +118,7 @@ type TeamWorkItem struct {
 	OutputRefs             []TeamOutputRef    `json:"output_refs,omitempty"`
 	ProofRefs              []string           `json:"proof_refs,omitempty"`
 	AuditRefs              []string           `json:"audit_refs,omitempty"`
+	TargetRef              *TargetRef         `json:"target_ref,omitempty"`
 	CreatedAt              time.Time          `json:"created_at,omitempty"`
 	UpdatedAt              time.Time          `json:"updated_at,omitempty"`
 	Version                string             `json:"version"`
@@ -142,8 +144,12 @@ func NormalizeTeamWorkItem(raw TeamWorkItem) TeamWorkItem {
 	item.RecoveryOptions = compactStrings(item.RecoveryOptions)
 	item.ProofRefs = compactStrings(item.ProofRefs)
 	item.AuditRefs = compactStrings(item.AuditRefs)
+	item.TargetRef = NormalizeTargetRef(item.TargetRef)
 	if item.State == "" {
 		item.State = defaultTeamWorkState(item.ExecutionShape)
+	}
+	if item.TargetRef == nil {
+		item.TargetRef = TargetRefForTeamWork(item)
 	}
 	if item.Version == "" {
 		item.Version = "v1"

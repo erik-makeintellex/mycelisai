@@ -55,6 +55,48 @@ func TestNormalizeTeamWorkItem_DefaultsDelegatedWorkToQueued(t *testing.T) {
 	}
 }
 
+func TestNormalizeTeamWorkItemAddsQuietTargetRef(t *testing.T) {
+	item := NormalizeTeamWorkItem(TeamWorkItem{
+		WorkItemID:     "work-1",
+		TeamID:         "delivery-team",
+		Objective:      "Recover the output package",
+		ExecutionShape: TeamExecutionShapeDeliverable,
+		State:          TeamWorkStateDegraded,
+		NeedsOperator:  true,
+	})
+
+	if item.TargetRef == nil {
+		t.Fatal("expected target_ref")
+	}
+	if item.TargetRef.Type != "recovery" {
+		t.Fatalf("target type = %q, want recovery", item.TargetRef.Type)
+	}
+	if item.TargetRef.ID != "work-1" || item.TargetRef.WorkItemID != "work-1" {
+		t.Fatalf("target work identity = %#v", item.TargetRef)
+	}
+	if item.TargetRef.TeamID != "delivery-team" {
+		t.Fatalf("target team_id = %q, want delivery-team", item.TargetRef.TeamID)
+	}
+}
+
+func TestNormalizeTeamWorkItemAddsRunTargetRef(t *testing.T) {
+	item := NormalizeTeamWorkItem(TeamWorkItem{
+		WorkItemID:     "work-1",
+		TeamID:         "delivery-team",
+		RunID:          "run-1",
+		Objective:      "Deliver the output package",
+		ExecutionShape: TeamExecutionShapeDeliverable,
+		State:          TeamWorkStateOutputReady,
+	})
+
+	if item.TargetRef == nil {
+		t.Fatal("expected target_ref")
+	}
+	if item.TargetRef.Type != "run" || item.TargetRef.ID != "run-1" || item.TargetRef.RunID != "run-1" {
+		t.Fatalf("target_ref = %#v, want run target", item.TargetRef)
+	}
+}
+
 func TestValidateTeamWorkItem_AllowsManagedExecutionControlStates(t *testing.T) {
 	for _, state := range []TeamWorkState{
 		TeamWorkStateNeedsOperator,

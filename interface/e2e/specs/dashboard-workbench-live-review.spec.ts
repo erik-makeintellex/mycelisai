@@ -37,8 +37,8 @@ async function sideRailMetrics(page: Page) {
 
 async function expectFreshDashboardWithoutStaleContent(page: Page) {
   await page.goto("/dashboard?fresh=1", { waitUntil: "domcontentloaded" });
-  await expect(page.getByTestId("soma-environment-entry")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByTestId("soma-operating-surface")).toBeVisible();
+  await expect(page.getByTestId("soma-operating-surface")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("soma-environment-entry")).toHaveCount(0);
   await expect(page.getByTestId("central-soma-chat-frame")).toBeVisible();
   await expect(page.getByTestId("soma-conversation-thread").getByText(chatPlaceholder)).toBeVisible();
   await expect(page.getByTestId("output-workbench")).toHaveCount(0);
@@ -117,8 +117,8 @@ test.describe("Dashboard workbench live review", () => {
     const targetPath = `generated/workbench-review-${stamp}/operator-note.md`;
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("soma-environment-entry")).toBeVisible();
     await expect(page.getByTestId("soma-operating-surface")).toBeVisible();
+    await expect(page.getByTestId("soma-environment-entry")).toHaveCount(0);
     await expect(page.getByTestId("central-soma-chat-frame")).toBeVisible();
     const workPanelToggle = page.getByTestId("soma-workbench-panel-toggle");
     const rail = page.getByTestId("soma-workbench-side-rail");

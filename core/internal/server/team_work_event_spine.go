@@ -45,6 +45,10 @@ func (s *AdminServer) insertTeamWorkMissionEventExec(ctx context.Context, exec t
 }
 
 func teamWorkMissionEventPayload(event *protocol.TeamStatusEvent, emittedAt time.Time) map[string]any {
+	targetRef := event.TargetRef
+	if targetRef == nil {
+		targetRef = protocol.TargetRefForTeamStatusEvent(*event)
+	}
 	return map[string]any{
 		"team_status_event_id":    event.EventID,
 		"team_work_event_version": "v1",
@@ -64,6 +68,7 @@ func teamWorkMissionEventPayload(event *protocol.TeamStatusEvent, emittedAt time
 		"source_channel":          event.SourceChannel,
 		"payload_kind":            event.PayloadKind,
 		"audit_refs":              event.AuditRefs,
+		"target_ref":              targetRef,
 		"timestamp":               emittedAt,
 	}
 }

@@ -47,7 +47,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 
 	auditUser := auditUserLabelFromRequest(r)
 	actorIdentity := actorIdentitySnapshotFromRequest(r)
-	results, err := s.executePlannedToolCalls(r.Context(), scope, auditUser)
+	results, err := s.executePlannedToolCalls(r.Context(), scope, auditUser, runID, proofID, contractID)
 	if err != nil {
 		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, auditUser, actorIdentity, err)
 		return
@@ -80,11 +80,11 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		AuditUser:       auditUser,
 		Scope:           scope,
 	}
-	teamWorkRefs, err := s.persistConfirmedActionVisibility(r.Context(), link, results)
+	teamWorkRefs, outcomeProject, err := s.persistConfirmedActionVisibility(r.Context(), link, results)
 	if err != nil {
 		log.Printf("CE-1: confirm-action visibility persistence failed: %v", err)
 	}
-	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID, scope, results, teamWorkRefs)))
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID, scope, results, teamWorkRefs, outcomeProject)))
 }
 
 func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, string, *protocol.ScopeValidation, string, bool) {

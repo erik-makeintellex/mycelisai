@@ -1,14 +1,10 @@
 "use client";
 
 import type React from "react";
-import { Activity, CheckSquare, ListChecks, Wrench } from "lucide-react";
+import { useState } from "react";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
-import { recoveryReviewQueueItems } from "@/components/recovery/recoveryQueue";
 import { ActiveWorkLane } from "@/components/teams/ActiveWorkLane";
-import {
-  mergeTeamWorkItems,
-  useTeamWorkActionHandler,
-} from "@/components/teams/useTeamWorkActionHandler";
+import { mergeTeamWorkItems, useTeamWorkActionHandler } from "@/components/teams/useTeamWorkActionHandler";
 import type { ChatMessage, TeamInteraction, TeamWorkItem } from "@/store/useCortexStore";
 import { useCortexStore } from "@/store/useCortexStore";
 import {
@@ -24,11 +20,20 @@ import { outputWorkbenchDigest } from "./OutputWorkbenchDigest";
 import { SomaActionShelf } from "./SomaActionShelf";
 import { SomaCausalSummary } from "./SomaCausalSummary";
 import { SomaEvidencePanel, type SomaEvidenceItem } from "./SomaEvidencePanel";
-import { SomaOutcomeVaultPanel } from "./SomaOutcomeVaultPanel";
+import {
+  defaultSomaEvidence,
+  outcomeProjectSummaryFromWork,
+  prioritizeSomaHomeWorkItems,
+  railAlertsFromWorkItems,
+} from "./SomaOperatingSurfaceSupport";
+import { SomaOutcomeVaultHeaderButton, SomaOutcomeVaultOverlay } from "./SomaOutcomeVaultOverlay";
 import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "./SomaSuggestionBar";
 import { SomaTeamContextSwitcher } from "./SomaTeamContextSwitcher";
 import { SomaWorkspaceFrame } from "./SomaWorkspaceFrame";
 import { useDurableTeamWork } from "./useDurableTeamWork";
+import { useOutcomeProjectSummary } from "./useOutcomeProjects";
+
+export { prioritizeSomaHomeWorkItems } from "./SomaOperatingSurfaceSupport";
 
 function somaMessagesNewestFirst(messages: ChatMessage[]) {
   return [...messages]
@@ -71,7 +76,7 @@ export function SomaOperatingSurface({
   const selectedTeamId = useCortexStore((state) => state.selectedTeamId);
   const sendMissionChat = useCortexStore((state) => state.sendMissionChat);
   const activeWorkActions = useTeamWorkActionHandler(selectTeam);
-  const evidence = evidenceItems ?? defaultEvidence;
+  const evidence = evidenceItems ?? defaultSomaEvidence;
   const somaMessages = somaMessagesNewestFirst(missionChat);
   const effectiveFocusedTeamId = focusedTeamId || selectedTeamId || null;
   const focusedTeam = effectiveFocusedTeamId
@@ -98,7 +103,15 @@ export function SomaOperatingSurface({
     ? [...teamProjectPackages, ...projectPackages]
     : [...projectPackages, ...teamProjectPackages];
   const activeWorkItems = mergeTeamWorkItems(teamWork.items, activeWorkActions.submittedTeamWorkItems);
-  const somaHomeWorkItems = recoveryReviewQueueItems(activeWorkItems);
+  const somaHomeWorkItems = prioritizeSomaHomeWorkItems(activeWorkItems);
+  const outcomeVaultAlerts = railAlertsFromWorkItems(somaHomeWorkItems);
+  const projectedOutcomeProjectSummary = outcomeProjectSummaryFromWork({ teams: teamsDetail, focusedTeamId: effectiveFocusedTeamId, workItems: activeWorkItems, outputRefs: teamWork.outputRefs });
+  const durableOutcomeProjectSummary = useOutcomeProjectSummary({
+    teams: teamsDetail,
+    focusedTeamId: effectiveFocusedTeamId,
+    refreshKey: durableWorkRefreshVersion + activeWorkActions.activeWorkRefreshVersion,
+  });
+  const outcomeProjectSummary = durableOutcomeProjectSummary ?? projectedOutcomeProjectSummary;
   const attentionWorkCount = somaHomeWorkItems.length;
   const unresolvedWorkReviewCount = somaHomeWorkItems.filter((item) => item.state !== "output_ready").length;
   const displayedMode = activeMode ?? (focusedTeam ? focusedTeam.name : null);
@@ -151,6 +164,7 @@ export function SomaOperatingSurface({
   });
   const trustNode = trustSlot ?? (hasTrustReviewContent ? <SomaCausalSummary messages={missionChat} /> : undefined);
   const contextNode = contextSlot ?? (hasContextReviewContent ? <SomaEvidencePanel items={evidence} compact /> : undefined);
+  const [vaultOpen, setVaultOpen] = useState(false);
 
   const clearFocusedContext = () => {
     selectTeam(null);
@@ -182,29 +196,39 @@ export function SomaOperatingSurface({
 
   return (
     <section
-      className="overflow-hidden rounded-3xl border border-cortex-border bg-cortex-surface shadow-[0_18px_40px_rgba(0,0,0,0.18)]"
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-cortex-border bg-cortex-surface shadow-[0_18px_40px_rgba(0,0,0,0.18)]"
       data-testid="soma-operating-surface"
     >
       <SomaActionShelf onRunAction={handlePinnedAction} />
-      <div className="border-b border-cortex-border px-5 py-5 lg:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-cortex-primary">
+      <div className="border-b border-cortex-border bg-cortex-bg/65 px-4 py-2.5 lg:px-5">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-cortex-primary">
               Soma
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-cortex-text-main">
-              What do you want Soma to do?
-            </h1>
-            <p className="mt-1 text-base text-cortex-text-muted">{scopeCopy}</p>
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-semibold tracking-tight text-cortex-text-main">
+                What do you want Soma to do?
+              </h1>
+              <p className="truncate text-xs text-cortex-text-muted">{scopeCopy}</p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
-            <span className="font-semibold text-cortex-text-main">Ready</span>
-            {displayedMode ? <span>Mode: {displayedMode}</span> : null}
-            <span>{governancePosture ?? "Governed execution enabled"}</span>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-cortex-text-muted">
+            <span className="rounded-full border border-cortex-success/25 bg-cortex-success/10 px-2.5 py-1 font-semibold text-cortex-success">
+              Ready
+            </span>
+            {displayedMode ? (
+              <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">
+                Mode: {displayedMode}
+              </span>
+            ) : null}
+            <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">
+              {governancePosture ?? "Governed execution enabled"}
+            </span>
           </div>
         </div>
       </div>
-      <div className="p-4 lg:p-6">
+      <div className="min-h-0 flex-1 p-3 lg:p-4">
         {hasWorkContextChoices ? (
           <SomaTeamContextSwitcher
             teams={teamsDetail}
@@ -214,28 +238,34 @@ export function SomaOperatingSurface({
             onTeamSelect={focusTeamContext}
           />
         ) : null}
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="min-w-0 overflow-hidden rounded-3xl border border-cortex-border bg-cortex-bg shadow-sm">
-            <div className="border-b border-cortex-border px-6 py-5">
-              <h2 className="text-xl font-semibold tracking-tight text-cortex-text-main">Talk to Soma</h2>
-              <p className="mt-1 text-sm text-cortex-text-muted">
-                Ask a question, trigger a workflow, review a proposal, or open the result.
-              </p>
+        <div className="relative">
+          <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg shadow-sm">
+            <div className="flex flex-col gap-2 border-b border-cortex-border px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold tracking-tight text-cortex-text-main">Talk to Soma</h2>
+                <p className="truncate text-xs text-cortex-text-muted">
+                  Ask, approve, inspect proof, or turn an outcome into retained work.
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2 text-[11px] font-semibold text-cortex-text-muted">
+                <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">Threaded</span>
+                <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">Governed</span>
+                {!vaultOpen ? (
+                  <SomaOutcomeVaultHeaderButton
+                    attentionCount={attentionWorkCount + (hasOutputReviewContent ? 1 : 0)}
+                    onOpen={() => setVaultOpen(true)}
+                  />
+                ) : null}
+              </div>
             </div>
-            <div className="p-4 lg:p-5">
+            <div className="min-h-0 flex-1 p-2 lg:p-3">
               <SomaWorkspaceFrame
                 expression={(
                   <div
                     data-testid="central-soma-chat-frame"
-                    className="h-[46vh] min-h-[180px] max-h-[520px] overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg"
+                    className="h-[52vh] min-h-[300px] overflow-hidden rounded-xl border border-cortex-border bg-cortex-bg lg:h-full lg:min-h-[300px] 2xl:min-h-[500px]"
                   >
-                    <MissionControlChat
-                      simpleMode
-                      autoFocus
-                      organizationId={organizationId}
-                      focusedTeamId={effectiveFocusedTeamId}
-                      suggestions={suggestions}
-                    />
+                    <MissionControlChat simpleMode autoFocus organizationId={organizationId} focusedTeamId={effectiveFocusedTeamId} suggestions={suggestions} />
                   </div>
                 )}
                 activeWork={activeWorkNode}
@@ -249,44 +279,17 @@ export function SomaOperatingSurface({
               />
             </div>
           </div>
-          <SomaOutcomeVaultPanel
+          <SomaOutcomeVaultOverlay
+            open={vaultOpen}
             operationCount={somaHomeWorkItems.length}
             latestOutput={latestOutputDigest}
+            projectSummary={outcomeProjectSummary}
             recoveryCount={unresolvedWorkReviewCount}
+            alerts={outcomeVaultAlerts}
+            onClose={() => setVaultOpen(false)}
           />
         </div>
       </div>
     </section>
   );
-}
-
-const defaultEvidence: SomaEvidenceItem[] = [
-  {
-    title: "Outcome approvals",
-    detail: "Decide what Soma can run next.",
-    href: "/approvals",
-    icon: <CheckSquare className="h-4 w-4" />,
-  },
-  {
-    title: "Outcome history",
-    detail: "Review what happened and what changed.",
-    href: "/activity",
-    icon: <ListChecks className="h-4 w-4" />,
-  },
-  {
-    title: "Outcome context",
-    detail: "Review saved patterns that shape future work.",
-    href: "/memory",
-    icon: <Activity className="h-4 w-4" />,
-  },
-  {
-    title: "What Soma can use",
-    detail: "Check capability readiness and repair paths.",
-    href: "/resources?tab=tools",
-    icon: <Wrench className="h-4 w-4" />,
-  },
-];
-
-export function prioritizeSomaHomeWorkItems(items: TeamWorkItem[]) {
-  return recoveryReviewQueueItems(items);
 }

@@ -1,11 +1,9 @@
 # Mycelis
-Mycelis is a Soma-centered Outcome Management Engine for creating, operating, and revisiting trusted AI work through governed execution.
-This README is the development-swarm inception document. It points to current authority, defines the command and documentation contracts, and avoids duplicating the deeper architecture specs.
+Mycelis is a Soma-centered threaded workspace for shaping, executing, operating, and revisiting trusted AI outcomes through governed execution. This README is the development-swarm inception document. It points to current authority, defines the command and documentation contracts, and avoids duplicating the deeper architecture specs.
 Canonical ownership:
 - `README.md`: inception, navigation, and repo-wide working rules.
-- V8.3 architecture-library docs: outcome-primary release target, shareable delivery frame, product-value review, operator UX contract, and executable P0 delivery train; `architecture/v8-2.md` remains the stable full architecture baseline V8.3 concretizes.
-- V8/V8.2 architecture-library contracts: screen/API truth, team-work steering, capability/MCP integration, secret boundaries, bootstrap migration, and directed-execution alignment.
-- `.state/V8_DEV_STATE.md`: live implementation scoreboard; read the active snapshot and immediate next actions before dated historical boards.
+- `docs/architecture-library/MYCELIS_CANONICAL_PRD.md`: single product, architecture, UX, runtime, MVP, and release-gate authority.
+- `.state/V8_DEV_STATE.md`: live implementation scoreboard; read the active snapshot and immediate next actions before historical notes.
 
 ## README TOC
 - [Fresh Agent Start Here](#fresh-agent-start-here)
@@ -34,25 +32,14 @@ Review these before planning or editing:
 1. [AGENTS.md](AGENTS.md)
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
 3. [V8 Development State](.state/V8_DEV_STATE.md)
-4. [V8.3 Operational Embodiment PRD](docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md)
-5. [V8.3 Release Architecture Delivery Brief](docs/architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md)
-6. [V8.3 Product Manifestation Architecture Review](docs/architecture-library/V8_3_PRODUCT_MANIFESTATION_REVIEW.md)
-7. [V8.3 Soma User Experience Contract](docs/architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md)
-8. [V8.3 UI/UX Engineering Implementation Brief](docs/architecture-library/V8_3_UI_UX_ENGINEERING_IMPLEMENTATION_BRIEF.md)
-9. [V8.3 MVP UI Runtime Delivery Plan](docs/architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md)
-10. [V8.2 Production Architecture Target](architecture/v8-2.md)
-11. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
-12. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
-13. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
-14. [Operations](docs/architecture/OPERATIONS.md)
-15. [Testing](docs/TESTING.md)
-16. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
-17. [V8 Capability Manifest And Runtime Integration Standard](docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
-18. [V8.2 Soma Team Interaction Contract](docs/architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md)
-19. [Docs Manifest](interface/lib/docsManifest.ts)
+4. [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md)
+5. [Operations](docs/architecture/OPERATIONS.md)
+6. [Testing](docs/TESTING.md)
+7. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
+8. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
-- V8.3 docs own current release-candidate embodiment; V8.2 docs that remain in the active library are stable architecture and implementation contracts. Historical V7 state remains migration evidence only, not active product authority.
+- The canonical PRD owns current release-candidate embodiment. Historical V7/V8.2 split docs were removed from active documentation; use Git history only when archaeology is necessary.
 - `.state/V8_DEV_STATE.md` is the implementation truth for what is actually complete; use its active snapshot first and treat dated boards as evidence unless reactivated.
 - Keep user-facing docs and engineering docs cross-linked but distinct.
 
@@ -77,22 +64,22 @@ In architecture language, Mycelis is built around instantiated organizations as 
 
 ## Active Delivery Target (V8.3 Embodiment)
 
-The active delivery target is [V8.3 Operational Embodiment PRD](docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md): make the converged V8 architecture operationally trustworthy through async execution, durable proof, recovery, local/private media proof, and fresh-user GUI validation. [V8.2 Production Architecture Target](architecture/v8-2.md) remains the stable full architecture baseline being concretized.
+The active delivery target is [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md): make the architecture operationally trustworthy through natural Soma conversation, compact governance, async execution, durable outputs, proof, recovery, capability settings, and fresh-user GUI validation.
 
-The active UI expression target is [V8.3 UI/UX Engineering Implementation Brief](docs/architecture-library/V8_3_UI_UX_ENGINEERING_IMPLEMENTATION_BRIEF.md): the Dashboard becomes a threaded Soma workspace with typed action cards, operational alerts, saved actions, outcome vaults, capability-permission settings, and raw infrastructure behind Inspect.
+The active UI expression target is the threaded Soma workspace defined in the canonical PRD: users can talk with Soma before launching work, then see typed action cards, compact approval pauses, operational alerts, saved actions, outcome vaults, capability-permission settings, and raw infrastructure behind Inspect.
 
 Delivery rule:
 - advance V8.3 slices only with a named boundary, proof lane, promotion rule, and documentation review
-- prefer operational embodiment over new doctrine: the canonical MVP workflow is outcome need -> Soma -> owned work -> deliverables -> proof/recovery -> revisit
-- do not grow historical V7/V8.1 docs with current release-candidate scope
+- prefer operational embodiment over new doctrine: the canonical MVP workflow is natural Soma conversation -> shaped outcome -> approval when needed -> owned work -> deliverables -> proof/recovery -> revisit
+- do not create new split doctrine documents for current release-candidate scope
 
 ## Compatibility Baseline
 
-The Soma-primary compatibility baseline is now held in current V8.2 docs instead of an older versioned architecture file. The baseline remains: AI Organizations as governed work contexts, Soma as the primary operating surface, bounded teams/capabilities, response contracts, continuity, and inspectable governance. Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).
+The compatibility baseline is now inside the canonical PRD. Older versioned architecture docs were deleted from the active tree so current work does not split across historical doctrine. Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).
 
 ## Current Implementation State
 
-Use `.state/V8_DEV_STATE.md` for the active scoreboard. Its active snapshot and immediate next actions are the current execution truth; older dated boards remain historical evidence unless explicitly referenced by the active snapshot. Use `.state/V7_DEV_STATE.md` only as historical migration evidence.
+Use `.state/V8_DEV_STATE.md` for the active scoreboard. Its active snapshot and immediate next actions are the current execution truth; older dated boards remain historical evidence only through Git history unless explicitly copied into the active snapshot.
 
 Status changes in planning/state docs must use the canonical markers: `REQUIRED`, `NEXT`, `ACTIVE`, `IN_REVIEW`, `COMPLETE`, `BLOCKED`.
 
@@ -108,7 +95,7 @@ Default surfaces should read as product workflows, not raw system internals:
 - Teams and groups are visible when they help the operator review or steer work.
 - Advanced controls expose runtime depth, MCP/resources, deep memory, groups, runs, settings, auth, and docs without polluting first-run or default use; long topology surfaces should use focused menu/detail or list/detail panes rather than primary-page sprawl.
 
-Use [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) for screen/API expectations and [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for browser proof.
+Use the [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md) for screen/API expectations and browser-proof standards.
 
 Default Operator Surface:
 - the default UX must stay simple and intent-first while making the outcome owner path obvious
@@ -200,15 +187,15 @@ A slice is not complete unless:
 - documentation is updated where meaning changed
 - architecture alignment is verified across the layered truth surfaces
 
-`README.md` is the primary architecture inception document. `architecture/v8-2.md` is the canonical full architecture. `.state/V8_DEV_STATE.md` is the source of actual implementation truth. all slices must update these surfaces when implementation, release posture, or target meaning changes.
+`README.md` is the repo navigation document. `docs/architecture-library/MYCELIS_CANONICAL_PRD.md` is the canonical product and architecture authority. `.state/V8_DEV_STATE.md` is the source of actual implementation truth. all slices must update these surfaces when implementation, release posture, or target meaning changes.
 
 end-of-slice reporting must explicitly state which tests ran, which docs changed, and which scoped docs were reviewed but left unchanged.
 
 every implementation slice must include a docs review for the touched surface, even when the result is "reviewed, no content change required". Review `docs/API_REFERENCE.md` when API behavior, payload meaning, or endpoint contract changes.
 
-Go owns runtime, orchestration, API, NATS, and backend persistence-facing logic. TypeScript owns the interface and in-app docs browser. Python owns repo management, operator automation, CI orchestration, and local test harnesses. SQL owns migrations, and `db.migrate` compatibility gates include the current capability, proof, trust, team-work, and collaboration-group workspace-folder schema. `uv run inv db.clear-runtime-context` is the guarded source-mode reset for stale Soma/team runtime context before fresh UX proof. PowerShell may only be a thin host wrapper when the platform requires it.
+Go owns runtime, orchestration, API, NATS, and backend persistence-facing logic. TypeScript owns the interface and in-app docs browser. Python owns repo management, operator automation, CI orchestration, and local test harnesses. SQL owns migrations, and `db.migrate` compatibility gates include the current capability, proof, trust, team-work, collaboration-group workspace-folder, OutcomeProject, and TeamRegistry schema. `uv run inv db.clear-runtime-context` is the guarded source-mode reset for stale Soma/team runtime context before fresh UX proof. PowerShell may only be a thin host wrapper when the platform requires it.
 
-Keep secrets in `.env` or deployment secret backends. Use `.env.compose` for Compose topology and non-secret runtime shape. Runtime config and UI surfaces should carry env-var or `SecretRef` references, not raw secret values; see [V8 Secret Storage And Credential Boundary](docs/architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md).
+Keep secrets in `.env` or deployment secret backends. Use `.env.compose` for Compose topology and non-secret runtime shape. Runtime config and UI surfaces should carry env-var or `SecretRef` references, not raw secret values; see the settings and capability configuration section of the [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md).
 
 Env override contract: `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, `MYCELIS_MEDIA_*`, and `MYCELIS_MEDIA_GATEWAY_*` are supported deployment-time knobs. The local media gateway keeps Pinokio-hosted Forge/AUTOMATIC1111 generation private while exposing Core's OpenAI-compatible image endpoint; it returns `b64_json` and blocks public upstreams by default unless `MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1` is intentionally set. The retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` must not return. `Bundle -> Instantiated Organization -> Inheritance -> Routing` remains the runtime truth. env overrides are deployment-time infrastructure wiring, not runtime organization behavior and do not replace bundle-defined runtime organization truth.
 
@@ -232,7 +219,7 @@ Invoke-managed Playwright owns the local Next.js server lifecycle. Run `uv run i
 
 ## Testing Gate
 
-Canonical testing guidance lives in [Testing](docs/TESTING.md). Browser proof depth lives in the [V8 UI Testing Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) and [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md). Current RC proof and operator handoff evidence lives in [Release Handoff](docs/RELEASE_HANDOFF.md); `.state/V8_DEV_STATE.md` remains the detailed delivery scoreboard.
+Canonical testing guidance lives in [Testing](docs/TESTING.md). Browser proof depth and product acceptance live in the [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md). Current RC proof and operator handoff evidence lives in [Release Handoff](docs/RELEASE_HANDOFF.md); `.state/V8_DEV_STATE.md` remains the detailed delivery scoreboard.
 
 End-of-slice reporting should name evidence commands run, docs changed, touched docs reviewed unchanged, and any UI visual-expression review for surfaces the slice touched.
 
@@ -291,10 +278,10 @@ Every implementation slice that changes product behavior, runtime behavior, oper
 
 Keep documentation split into two layers:
 - **User help layer**: `docs/user/*` and the in-app `/docs` manifest should explain how a person uses Soma, groups, resources, outputs, proof, settings, and recovery. Lead with the task, the expected result, and the next action. Keep implementation contracts, raw topology, and historical doctrine out of the default path.
-- **Architecture and repo layer**: `README.md`, `docs/README.md`, `.state/V8_DEV_STATE.md`, and `docs/architecture-library/*` should define current delivery truth, proof gates, and engineering contracts. Update this layer only when the product meaning, workflow contract, or release target changes.
+- **Architecture and repo layer**: `README.md`, `docs/README.md`, `.state/V8_DEV_STATE.md`, and `docs/architecture-library/MYCELIS_CANONICAL_PRD.md` should define current delivery truth, proof gates, and engineering contracts. Update this layer only when the product meaning, workflow contract, or release target changes.
 
 After each subjective UI step, pair the code/test change with the matching docs cleanup: update the affected user guide if the operator experience changed, update the README/architecture layer if the product contract changed, update `interface/lib/docsManifest.ts` if the in-app help entry moved, and record the active state/proof in `.state/V8_DEV_STATE.md`.
 
 ## Status
 
-The repo is in active V8.3 operational embodiment with stable V8/V8.2 compatibility baselines. Treat this README as a compact navigation contract; do not re-expand it into a duplicate architecture monolith.
+The repo is in active V8.3 operational embodiment with one canonical PRD. Treat this README as a compact navigation contract; do not re-expand it into a duplicate architecture monolith.

@@ -183,6 +183,24 @@ async function expectFocusedDashboardLane(page: Page) {
   await expect(switcher).toBeVisible();
   await expect(switcher).toContainText("Working in");
   await expect(switcher).toContainText(focusedTeamName);
+  await expect(switcher).toContainText("Team chat, work, outputs, and proof");
+
+  const vault = page.getByTestId("soma-outcome-vault");
+  await expect(vault).toContainText("Outcome project");
+  await expect(vault).toContainText(`${focusedTeamName} outcome workspace`);
+  await expect(vault).toContainText("OutcomeProject owner:");
+  await expect(vault).toContainText("Soma");
+  await expect(vault).toContainText("TeamRegistry owner:");
+  await expect(vault).toContainText(`${focusedTeamName} lead`);
+  await expect(vault.getByRole("link", { name: "Open work" })).toHaveAttribute("href", "/teams?view=work");
+  await expect(vault.getByRole("link", { name: "Open outputs" })).toHaveAttribute("href", "/resources?tab=workspace");
+
+  await switcher.getByRole("button", { name: /Focused Browser Proof Team/i }).click();
+  await expect(page.getByRole("listbox", { name: "Choose current workflow" })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Soma root/i })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Focused Browser Proof Team/i })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("link", { name: /Manage teams/i })).toHaveAttribute("href", "/teams");
 
   const digest = page.getByTestId("soma-workbench-output-digest");
   await expect(digest).toBeVisible();

@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { useCortexStore } from "@/store/useCortexStore";
-import { mockFetch } from "../setup";
-
 vi.mock("@/lib/lastOrganization", () => ({
     readLastOrganization: () => ({ id: "org-1", name: "Northstar Labs" }),
     subscribeLastOrganizationChange: () => () => undefined,
@@ -36,22 +34,6 @@ import CentralSomaHome, { resolveDashboardRequestedTeamId } from "@/components/d
 
 describe("CentralSomaHome", () => {
     beforeEach(() => {
-        mockFetch.mockResolvedValue({
-            ok: true,
-            json: async () => ({
-                ok: true,
-                data: {
-                    authenticated: true,
-                    user: {
-                        email: "erik@mycelis.link",
-                        name: "Erik",
-                        role: "admin",
-                        provider: "google",
-                        hd: "mycelis.link",
-                    },
-                },
-            }),
-        });
         useCortexStore.setState({
             assistantName: "Soma",
             teamsDetail: [],
@@ -62,16 +44,13 @@ describe("CentralSomaHome", () => {
         });
     });
 
-    it("renders the central Soma chat and signed-in operating environment on the front page", async () => {
-        const { container } = render(<CentralSomaHome />);
+    it("renders the central Soma chat as the whole front-page operating surface", async () => {
+        render(<CentralSomaHome />);
 
         expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
         expect(screen.getByText("What do you want Soma to do?")).toBeDefined();
         expect(screen.getByText("Ready for your first request")).toBeDefined();
-        expect(screen.getByTestId("soma-environment-entry")).toBeDefined();
-        expect(await screen.findByText("erik@mycelis.link")).toBeDefined();
-        expect(screen.getByText("Google Workspace")).toBeDefined();
-        expect(screen.getByText("mycelis.link")).toBeDefined();
+        expect(screen.queryByTestId("soma-environment-entry")).toBeNull();
         expect(screen.queryByText("Start here")).toBeNull();
         expect(screen.queryByRole("button", { name: "Set up an AI Organization" })).toBeNull();
         expect(screen.queryByText("Soma just did this")).toBeNull();
@@ -84,10 +63,6 @@ describe("CentralSomaHome", () => {
         await waitFor(() => {
             expect(useCortexStore.getState().selectTeam).toHaveBeenCalledWith(null);
         });
-        const environment = screen.getByTestId("soma-environment-entry");
-        expect([...container.querySelectorAll("*")].indexOf(somaSurface)).toBeLessThan(
-            [...container.querySelectorAll("*")].indexOf(environment),
-        );
     }, 15000);
 
     it("resolves requested team focus only when the team exists", () => {

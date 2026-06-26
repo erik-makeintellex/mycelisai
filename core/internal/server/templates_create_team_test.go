@@ -29,7 +29,7 @@ func TestExecutePlannedToolCallsWiresSomaForCreateTeam(t *testing.T) {
 		CapabilityIDs: []string{"team_orchestration"},
 	}
 
-	results, err := s.executePlannedToolCalls(t.Context(), scope, "test-user")
+	results, err := s.executePlannedToolCalls(t.Context(), scope, "test-user", "", "", "")
 	if err != nil {
 		t.Fatalf("execute planned create_team: %v", err)
 	}

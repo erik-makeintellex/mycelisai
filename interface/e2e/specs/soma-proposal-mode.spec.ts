@@ -8,6 +8,22 @@ import {
 
 test.skip(({ browserName }) => browserName !== "chromium", "Deep UI testing coverage is stabilized in Chromium for the MVP audit.");
 
+function workIntentProposalEnvelope() {
+    const response = proposalEnvelope();
+    const proposal = ((response.body as Record<string, any>).data.payload.proposal as Record<string, any>);
+    proposal.execution_mode = "schedule_handoff";
+    proposal.work_intent = {
+        kind: "team_service",
+        objective: "Keep a media review lane running for the selected team.",
+        cadence: "continuous",
+        schedule_summary: "Watch the media inbox every 15 minutes.",
+        runtime_posture: "Leave the review lane active until the operator pauses it.",
+        bus_scope: "current_team",
+        nats_subjects: ["swarm.team.media.signal.status"],
+    };
+    return response;
+}
+
 test.describe("Soma proposal mode", () => {
     test("routes mutating requests through proposal mode and keeps cancel explicit", async ({ page }) => {
         const workspace = await mockOrganizationWorkspace(page, () => proposalEnvelope());
@@ -15,19 +31,40 @@ test.describe("Soma proposal mode", () => {
         await openOrganization(page);
         await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
 
-        await expect(page.getByText("RUN CONFIRMATION")).toBeVisible({ timeout: 20_000 });
-        await expect(page.getByText("Let Soma run this now?")).toBeVisible();
-        await expect(page.getByText("What Soma will do")).toBeVisible();
+        await expect(page.getByText("I can do that.")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Start this?")).toBeVisible();
+        await expect(page.getByText("What I will do")).toBeVisible();
         await expect(page.getByText("create a hello_world.py file in your workspace.")).toBeVisible();
         await expect(page.getByText("A new Python file will be saved to workspace/logs/hello_world.py after approval.")).toBeVisible();
         await expect(page.getByText("workspace/logs/hello_world.py", { exact: true })).toHaveCount(0);
-        await expect(page.getByText("Can run now")).toBeVisible();
+        await expect(page.getByText("Ready if you want")).toBeVisible();
         await expect(page.getByText(/RISK MEDIUM/i)).toHaveCount(0);
-        await expect(page.getByRole("button", { name: /Review run details/i })).toBeVisible();
+        await expect(page.getByRole("button", { name: /^Details$/i })).toBeVisible();
 
-        await page.getByRole("button", { name: /^Cancel$/i }).click();
+        await page.getByRole("button", { name: /^Adjust$/i }).click();
         await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 20_000 });
         await expect.poll(() => workspace.cancelCalls()).toBe(1);
+    });
+
+    test("keeps structured work intent understandable behind Details", async ({ page }) => {
+        await mockOrganizationWorkspace(page, () => workIntentProposalEnvelope());
+
+        await openOrganization(page);
+        await sendWorkspaceMessage(page, "Keep a media review lane running for this team.");
+
+        await expect(page.getByText("I can do that.")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Start this?")).toBeVisible();
+        await expect(page.getByText("swarm.team.media.signal.status")).toHaveCount(0);
+        await expect(page.getByText("Team connection")).toHaveCount(0);
+
+        await page.getByRole("button", { name: /^Details$/i }).click();
+
+        await expect(page.getByText("When it runs")).toBeVisible();
+        await expect(page.getByText("Keep running")).toBeVisible();
+        await expect(page.getByText("Watch the media inbox every 15 minutes.")).toBeVisible();
+        await expect(page.getByText("Team connection")).toBeVisible();
+        await expect(page.getByText("Current team", { exact: true })).toBeVisible();
+        await expect(page.getByText("swarm.team.media.signal.status")).toBeVisible();
     });
 
     test("keeps failed approved execution reviewable with run proof and recovery copy", async ({ page }) => {
@@ -90,8 +127,8 @@ test.describe("Soma proposal mode", () => {
         await openOrganization(page);
         await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
 
-        await expect(page.getByText("RUN CONFIRMATION")).toBeVisible({ timeout: 20_000 });
-        await page.getByRole("button", { name: /Run now/i }).click();
+        await expect(page.getByText("I can do that.")).toBeVisible({ timeout: 20_000 });
+        await page.getByRole("button", { name: /^Start$/i }).click();
 
         const failureCard = page.getByTestId("execution-summary-card").last();
         await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });

@@ -44,7 +44,8 @@ describe('MissionControlChat error states', () => {
         render(<MissionControlChat />);
         await settleMissionControlChat();
 
-        expect(screen.getByText('Soma Chat Blocked')).toBeDefined();
+        expect(screen.getByText('Operational alert')).toBeDefined();
+        expect(screen.getByText(/workspace chat server error/i)).toBeDefined();
         expect(screen.queryByText('Switch to Soma')).toBeNull();
     });
 
@@ -64,8 +65,8 @@ describe('MissionControlChat error states', () => {
             useCortexStore.getState().setCouncilTarget('council-architect');
         });
 
-        expect(screen.getByText('Council Call Failed')).toBeDefined();
-        expect(screen.getByText('Copy Diagnostics')).toBeDefined();
+        expect(screen.getByText('Operational alert')).toBeDefined();
+        expect(screen.getByRole('button', { name: /details/i })).toBeDefined();
     });
 
     it('records blocker mode when Soma chat request fails', async () => {
@@ -87,7 +88,8 @@ describe('MissionControlChat error states', () => {
         await waitFor(() => {
             expect(useCortexStore.getState().activeMode).toBe('blocker');
         });
-        expect(screen.getByText('Soma Chat Blocked')).toBeDefined();
+        expect(screen.getByText('Operational alert')).toBeDefined();
+        expect(screen.getByText(/review the operational alert for the safe next step/i)).toBeDefined();
     });
 
     it('renders a readable fallback instead of raw council tool JSON in Soma chat', async () => {
@@ -151,7 +153,8 @@ describe('MissionControlChat error states', () => {
         await waitFor(() => {
             expect(useCortexStore.getState().activeMode).toBe('blocker');
         });
-        expect(screen.getByText('Soma Chat Blocked')).toBeDefined();
+        expect(screen.getByText('Operational alert')).toBeDefined();
+        expect(screen.getAllByText(/workspace chat server error/i).length).toBeGreaterThan(0);
         expect(screen.queryByText('Switch to Soma')).toBeNull();
         expect(mockFetch.mock.calls.some((call: any[]) => requestUrl(call[0]).includes('/api/v1/chat'))).toBe(true);
     });
@@ -181,7 +184,7 @@ describe('MissionControlChat error states', () => {
         await waitFor(() => {
             expect(useCortexStore.getState().activeMode).toBe('blocker');
         });
-        expect(screen.getByText('Council Call Failed')).toBeDefined();
+        expect(screen.getByText('Operational alert')).toBeDefined();
         expect(screen.getByText('Switch to Soma')).toBeDefined();
         expect(screen.getByText('Continue with Soma Only')).toBeDefined();
         expect(mockFetch.mock.calls.some((call: any[]) => requestUrl(call[0]).includes('/api/v1/council/council-sentry/chat'))).toBe(true);
@@ -214,9 +217,36 @@ describe('MissionControlChat error states', () => {
         await waitFor(() => {
             expect(useCortexStore.getState().activeMode).toBe('blocker');
         });
-        expect(screen.getByText('Council Call Failed')).toBeDefined();
+        expect(screen.getByText('Operational alert')).toBeDefined();
         expect(screen.queryByText(rawCouncilFailure)).toBeNull();
         expect(screen.queryByText(/consult_council requires/i)).toBeNull();
+    });
+
+    it('keeps raw network errors out of the visible blocker thread', async () => {
+        mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+            const url = requestUrl(input);
+            if (url.includes('/api/v1/council/members')) {
+                return okJson({ ok: true, data: COUNCIL_MEMBERS });
+            }
+            if (url.includes('/api/v1/chat')) {
+                throw new Error('Failed to fetch: TypeError network stack detail');
+            }
+            return errorText(404, 'not found');
+        });
+
+        render(<MissionControlChat />);
+        await settleMissionControlChat();
+
+        const input = screen.getByPlaceholderText(/Ask Soma/i);
+        fireEvent.change(input, { target: { value: 'hello' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => {
+            expect(useCortexStore.getState().activeMode).toBe('blocker');
+        });
+        expect(screen.getByText('Operational alert')).toBeDefined();
+        expect(screen.getByText(/review the operational alert for the safe next step/i)).toBeDefined();
+        expect(screen.queryByText(/Failed to fetch: TypeError/i)).toBeNull();
     });
 
     it('shows error as chat bubble with source_node on API failure', async () => {

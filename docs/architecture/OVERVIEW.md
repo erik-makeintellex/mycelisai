@@ -3,7 +3,7 @@
 
 > Status: Current implementation overview
 > Last Updated: 2026-05-24
-> Purpose: Summarize the active architecture without preserving superseded V7 doctrine as operational authority.
+> Purpose: Summarize the active architecture without preserving superseded versioned doctrine as operational authority.
 
 ## TOC
 
@@ -17,7 +17,7 @@
 
 Mycelis is a Soma-centered governed cognitive operating environment. The product goal is not to expose every runtime subsystem by default; it is to let an operator ask Soma for meaningful work, watch governed execution, inspect durable outputs, and recover when trust breaks.
 
-The active delivery target is V8.3 release-candidate embodiment on top of the V8.2/B2+ full architecture baseline:
+The active delivery target is defined in the [Mycelis Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md):
 - visible runs
 - durable outputs
 - inspectable proof
@@ -66,10 +66,7 @@ Governance is runtime infrastructure:
 Use these documents for detailed authority:
 
 - [Architecture Library Index](../architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
-- [V8.2 Full Production Architecture](../../architecture/v8-2.md)
-- [V8.3 Operational Embodiment PRD](../architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md)
-- [V8.3 Release Architecture Delivery Brief](../architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md)
-- [V8.3 Soma User Experience Contract](../architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md)
+- [Mycelis Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md)
 - [Backend](BACKEND.md)
 - [Frontend](FRONTEND.md)
 - [Operations](OPERATIONS.md)

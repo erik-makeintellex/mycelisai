@@ -1,4 +1,4 @@
-import type { ModuleBindingData, ProposalData, TeamExpressionData } from '@/store/cortexStoreTypes';
+import type { ModuleBindingData, ProposalData, TeamExpressionData, WorkIntentData } from '@/store/cortexStoreTypes';
 
 function uniqueStrings(values: string[]): string[] {
     const seen = new Set<string>();
@@ -64,15 +64,36 @@ function pickString(rec: Record<string, unknown>, snake: string, camel: string):
     return trimmed || undefined;
 }
 
+function normalizeWorkIntent(raw: unknown): WorkIntentData | undefined {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const rec = raw as Record<string, unknown>;
+    const workIntent: WorkIntentData = {
+        kind: pickString(rec, 'kind', 'kind'),
+        objective: pickString(rec, 'objective', 'objective'),
+        cadence: pickString(rec, 'cadence', 'cadence') as WorkIntentData['cadence'],
+        schedule_summary: pickString(rec, 'schedule_summary', 'scheduleSummary'),
+        runtime_posture: pickString(rec, 'runtime_posture', 'runtimePosture'),
+        target_team_id: pickString(rec, 'target_team_id', 'targetTeamId'),
+        bus_scope: pickString(rec, 'bus_scope', 'busScope') as WorkIntentData['bus_scope'],
+        nats_subjects: normalizeStringArray(rec.nats_subjects ?? rec.natsSubjects),
+        service_refs: normalizeStringArray(rec.service_refs ?? rec.serviceRefs),
+        project_ref: pickString(rec, 'project_ref', 'projectRef'),
+    };
+    const hasValue = Object.values(workIntent).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value));
+    return hasValue ? workIntent : undefined;
+}
+
 export function normalizeProposalData(raw: unknown): ProposalData | undefined {
     if (!raw || typeof raw !== 'object') return undefined;
     const rec = raw as Record<string, unknown>;
     const approval = rec.approval as Record<string, unknown> | undefined;
     const teamExpressions = normalizeTeamExpressions(rec.team_expressions ?? rec.teamExpressions);
+    const workIntent = normalizeWorkIntent(rec.work_intent ?? rec.workIntent);
     const derivedTools = uniqueStrings(teamExpressions.flatMap((expr) => (expr.module_bindings ?? []).map((b) => b.module_id)));
     const derivedTeams = uniqueStrings(teamExpressions.map((expr) => expr.team_id ?? '')).length;
     const derivedAgents = teamExpressions.reduce((sum, expr) => sum + (expr.role_plan?.length ?? 0), 0);
     const rawTools = Array.isArray(rec.tools) ? rec.tools.filter((v): v is string => typeof v === 'string') : [];
+    const natsSubjects = normalizeStringArray(rec.nats_subjects ?? rec.natsSubjects) ?? workIntent?.nats_subjects;
 
     return {
         intent: typeof rec.intent === 'string' && rec.intent.trim() ? rec.intent : 'chat-action',
@@ -95,10 +116,12 @@ export function normalizeProposalData(raw: unknown): ProposalData | undefined {
         external_data_use: typeof approval?.external_data_use === 'boolean' ? Boolean(approval.external_data_use) : undefined,
         estimated_cost: typeof approval?.estimated_cost === 'number' ? Number(approval.estimated_cost) : undefined,
         team_expressions: teamExpressions.length > 0 ? teamExpressions : undefined,
-        task_cadence: pickString(rec, 'task_cadence', 'taskCadence') as ProposalData['task_cadence'],
-        schedule_summary: pickString(rec, 'schedule_summary', 'scheduleSummary'),
-        runtime_posture: pickString(rec, 'runtime_posture', 'runtimePosture'),
-        bus_scope: pickString(rec, 'bus_scope', 'busScope') as ProposalData['bus_scope'],
-        nats_subjects: normalizeStringArray(rec.nats_subjects ?? rec.natsSubjects),
+        task_cadence: (pickString(rec, 'task_cadence', 'taskCadence') ?? workIntent?.cadence) as ProposalData['task_cadence'],
+        schedule_summary: pickString(rec, 'schedule_summary', 'scheduleSummary') ?? workIntent?.schedule_summary,
+        runtime_posture: pickString(rec, 'runtime_posture', 'runtimePosture') ?? workIntent?.runtime_posture,
+        bus_scope: (pickString(rec, 'bus_scope', 'busScope') ?? workIntent?.bus_scope) as ProposalData['bus_scope'],
+        nats_subjects: natsSubjects,
+        work_intent: workIntent,
+        execution_mode: pickString(rec, 'execution_mode', 'executionMode') as ProposalData['execution_mode'],
     };
 }

@@ -39,6 +39,13 @@ describe("teamWorkProjection", () => {
           ],
           proof_refs: ["proof-1"],
           audit_refs: ["audit-1"],
+          target_ref: {
+            type: "recovery",
+            id: "recover-work-1",
+            team_id: "team-alpha",
+            work_item_id: "work-1",
+            label: "Recovery item",
+          },
           updated_at: "2026-05-17T18:00:00Z",
           version: "v1",
         },
@@ -56,11 +63,45 @@ describe("teamWorkProjection", () => {
       sourceLabel: "Durable team work",
       outputCount: 1,
       nextAction: "Review package",
+      targetRef: {
+        type: "recovery",
+        id: "recover-work-1",
+        team_id: "team-alpha",
+        work_item_id: "work-1",
+        label: "Recovery item",
+      },
     });
     expect(item?.interactions.find((action) => action.action === "inspect")?.label).toBe("Open run");
     expect(item?.interactions.find((action) => action.action === "archive")?.label).toBe("Clear from review");
     expect(item?.advanced?.expectedOutputs).toEqual(["reviewable package"]);
     expect(teamOutputRefsFromItems(item ? [item] : [])).toHaveLength(1);
+  });
+
+  it("falls back to the last event target ref when the work item does not carry one", () => {
+    const item = mapDurableTeamWorkItem({
+      work_item_id: "work-2",
+      team_id: "team-alpha",
+      objective: "Review retained proof",
+      execution_shape: "delegated_work",
+      state: "degraded",
+      last_event: {
+        headline: "Proof needs review",
+        target_ref: {
+          type: "run",
+          id: "run-from-event",
+          run_id: "run-from-event",
+          work_item_id: "work-2",
+          label: "Run receipt",
+        },
+      },
+    });
+
+    expect(item?.targetRef).toMatchObject({
+      type: "run",
+      id: "run-from-event",
+      run_id: "run-from-event",
+      work_item_id: "work-2",
+    });
   });
 
   it("marks roster-only projection as degraded and inspectable", () => {

@@ -9,7 +9,14 @@ describe("SomaWorkspaceFrame", () => {
       <SomaWorkspaceFrame
         expression={<div>Conversation transcript</div>}
         activeWork={<div>Active lane fallback</div>}
-        output={<div>Output package</div>}
+        output={(
+          <OutputWorkbench
+            outputs={[{
+              text: "Output package",
+              url: "/api/v1/workspace/files/view?path=generated%2Foutput-package.md",
+            }]}
+          />
+        )}
         trust={<div>Compact trust package</div>}
         context={<div>Context links</div>}
       />,
@@ -23,8 +30,9 @@ describe("SomaWorkspaceFrame", () => {
     expect(sideRail.getAttribute("aria-hidden")).toBe("true");
     expect(within(frame).queryByText("Expression")).toBeNull();
     expect(toggle.textContent).toContain("Review output");
-    expect(toggle.textContent).toContain("4");
-    expect(within(frame).queryByText("Output package")).toBeNull();
+    expect(toggle.textContent).toContain("1");
+    expect(screen.getByTestId("soma-workbench-output-digest")).toBeDefined();
+    expect(within(frame).queryByTestId("output-workbench")).toBeNull();
     expect(within(frame).queryByText("Active lane fallback")).toBeNull();
     expect(within(frame).queryByText("Compact trust package")).toBeNull();
     fireEvent.click(toggle);

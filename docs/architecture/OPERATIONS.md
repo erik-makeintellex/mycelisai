@@ -214,7 +214,7 @@ Provider/media env overrides are deployment-time infrastructure configuration on
 
 The Helm chart mounts this runtime config tree at `/core/config`.
 
-Runtime bootstrap follows [V8 Config and Bootstrap Model](../architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md): template inputs become instantiated organizations through inheritance, precedence, and policy checks.
+Runtime bootstrap follows the runtime architecture and settings sections of the [Mycelis Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md): template inputs become instantiated organizations through inheritance, precedence, and policy checks.
 
 Startup should select a valid bundle, instantiate the runtime organization from it, fail closed if no valid bundle is available, and require `MYCELIS_BOOTSTRAP_TEMPLATE_ID` when multiple bundles are mounted. `lifecycle.up` ensures the `cortex` database exists before Core starts.
 

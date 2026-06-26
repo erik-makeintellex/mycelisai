@@ -10,29 +10,15 @@ vi.mock("@/components/dashboard/CentralSomaHome", () => ({
     ),
 }));
 
-vi.mock("@/components/organizations/CreateOrganizationEntry", () => ({
-    __esModule: true,
-    default: () => <div data-testid="create-organization-entry">Create Organization Entry</div>,
-}));
-
 import DashboardPage from "@/app/(app)/dashboard/page";
 
 describe("DashboardPage", () => {
-    it("keeps the admin home centered on Soma and demotes organization setup", () => {
+    it("keeps the admin home centered on Soma without secondary setup chrome", () => {
         render(<DashboardPage />);
 
         expect(screen.getByTestId("central-soma-home")).toBeDefined();
         expect(screen.getByTestId("central-soma-home").getAttribute("data-has-team-promise")).toBe("no");
-        expect(screen.getByText("Create or open AI Organizations")).toBeDefined();
-        expect(screen.getByText(/Soma is the default place to begin/i)).toBeDefined();
-        expect(screen.getByTestId("create-organization-entry")).toBeDefined();
-    });
-
-    it("renders organization setup inside a secondary details section", () => {
-        const { container } = render(<DashboardPage />);
-        const details = container.querySelector("details#dashboard-organization-setup");
-        expect(details).not.toBeNull();
-        expect(details?.querySelector("[data-testid='create-organization-entry']")).not.toBeNull();
+        expect(screen.queryByText("Create or open AI Organizations")).toBeNull();
     });
 
     it("passes route team context through to the central Soma home", () => {

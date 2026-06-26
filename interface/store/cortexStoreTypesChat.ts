@@ -1,4 +1,5 @@
 import type { ExecutionSummaryData, UIResponseStateProjection } from '@/store/cortexStoreTypesExecutionSummary';
+import type { BusScope, TaskCadence, WorkExecutionMode, WorkIntentData } from '@/store/cortexStoreTypesWorkIntent';
 export type { ExecutionSummaryData, UIResponseStateProjection } from '@/store/cortexStoreTypesExecutionSummary';
 
 export interface ChatConsultation {
@@ -61,8 +62,7 @@ export interface TeamExpressionData {
     module_bindings?: ModuleBindingData[];
 }
 
-export type TaskCadence = 'run_once' | 'scheduled' | 'continuous' | 'event_driven';
-export type BusScope = 'none' | 'current_team' | 'multi_team' | 'global';
+export type { BusScope, TaskCadence, WorkExecutionMode, WorkIntentData } from '@/store/cortexStoreTypesWorkIntent';
 
 export interface ProposalData {
     intent: string;
@@ -88,6 +88,8 @@ export interface ProposalData {
     runtime_posture?: string;
     bus_scope?: BusScope;
     nats_subjects?: string[];
+    work_intent?: WorkIntentData;
+    execution_mode?: WorkExecutionMode;
 }
 
 export interface ConfirmProposalResult {
@@ -178,6 +180,8 @@ export interface CTSChatEnvelope {
             runtime_posture?: string;
             bus_scope?: BusScope;
             nats_subjects?: string[];
+            work_intent?: WorkIntentData;
+            execution_mode?: WorkExecutionMode;
         };
     };
 }

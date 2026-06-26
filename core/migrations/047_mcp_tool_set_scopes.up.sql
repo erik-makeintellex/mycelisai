@@ -13,6 +13,10 @@ SET scope_kind = 'all'
 WHERE scope_kind IS NULL OR scope_kind = '';
 
 ALTER TABLE mcp_tool_sets
+    DROP CONSTRAINT IF EXISTS chk_mcp_tool_sets_scope_kind,
+    DROP CONSTRAINT IF EXISTS chk_mcp_tool_sets_scope_ref;
+
+ALTER TABLE mcp_tool_sets
     ADD CONSTRAINT chk_mcp_tool_sets_scope_kind
     CHECK (scope_kind IN ('all', 'group', 'host'));
 

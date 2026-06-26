@@ -35,10 +35,11 @@ func scanTeamWorkItem(scanner interface{ Scan(dest ...any) error }) (protocol.Te
 	if len(lastEvent) > 0 && string(lastEvent) != "null" {
 		var event protocol.TeamStatusEvent
 		if err := json.Unmarshal(lastEvent, &event); err == nil {
+			event.TargetRef = protocol.TargetRefForTeamStatusEvent(event)
 			item.LastEvent = &event
 		}
 	}
-	return item, nil
+	return protocol.NormalizeTeamWorkItem(item), nil
 }
 
 func scanTeamInteraction(scanner interface{ Scan(dest ...any) error }) (protocol.TeamInteraction, error) {
@@ -74,6 +75,7 @@ func scanTeamStatusEvent(scanner interface{ Scan(dest ...any) error }) (protocol
 	item.State = protocol.TeamWorkState(state)
 	item.BlockedBy = decodeStringList(blockedBy)
 	item.AuditRefs = decodeStringList(auditRefs)
+	item.TargetRef = protocol.TargetRefForTeamStatusEvent(item)
 	return item, nil
 }
 

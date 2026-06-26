@@ -25,7 +25,7 @@ export function SomaIntentInput({
     const input = inputRef?.current;
     if (!input) return;
     input.style.height = "auto";
-    const nextHeight = Math.min(input.scrollHeight, 180);
+    const nextHeight = value ? Math.min(input.scrollHeight, 180) : 40;
     input.style.height = `${nextHeight}px`;
     input.style.overflowY = input.scrollHeight > nextHeight ? "auto" : "hidden";
   }, [inputRef, value]);
@@ -46,7 +46,7 @@ export function SomaIntentInput({
         autoFocus={autoFocus}
         disabled={disabled}
         rows={1}
-        className="max-h-[180px] min-h-10 flex-1 resize-none overflow-y-auto rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-sm leading-6 text-cortex-text-main placeholder-cortex-text-muted/60 focus:border-cortex-primary focus:outline-none focus:ring-1 focus:ring-cortex-primary/30 disabled:opacity-50"
+        className="max-h-[180px] min-h-10 min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-sm leading-6 text-cortex-text-main placeholder-cortex-text-muted/60 focus:border-cortex-primary focus:outline-none focus:ring-1 focus:ring-cortex-primary/30 disabled:opacity-50"
       />
       <button
         type="button"

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { mockFetch } from "../setup";
 
 vi.mock("@/components/teams/TeamDetailDrawer", () => ({
@@ -84,5 +84,23 @@ describe("TeamsPage review route", () => {
       pageText.indexOf("Team context"),
     );
     expect(screen.getByRole("link", { name: /Open all teams/i }).getAttribute("href")).toBe("/teams");
+  });
+
+  it("prioritizes a work item opened from the Outcomes and Vault rail", async () => {
+    window.history.pushState({}, "", "/teams?view=work&work_item_id=work-bravo-recover");
+    useCortexStore.setState({
+      teamsDetail: mockTeams,
+      catalogueAgents: mockTemplates,
+    });
+
+    render(<TeamsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Opened "Recover failed release notes" from Outcomes & Vault.')).toBeDefined();
+    });
+    expect(screen.getByLabelText("Review details for Recover failed release notes")).toBeDefined();
+    const reviewList = screen.getByRole("list", { name: "Review work items" });
+    const firstItem = within(reviewList).getAllByRole("listitem")[0];
+    expect(firstItem.getAttribute("data-work-item-id")).toBe("work-bravo-recover");
   });
 });

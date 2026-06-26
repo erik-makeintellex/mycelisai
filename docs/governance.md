@@ -113,6 +113,4 @@ not only as a raw allow/deny/intercept subsystem.
 Related references:
 - `docs/user/governance-trust.md`
 - `docs/licensing.md`
-- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
-- `docs/architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`
-- `docs/architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md`
+- `docs/architecture-library/MYCELIS_CANONICAL_PRD.md`

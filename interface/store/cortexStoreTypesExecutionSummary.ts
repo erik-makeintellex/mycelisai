@@ -1,3 +1,5 @@
+import type { WorkExecutionMode, WorkIntentData } from "@/store/cortexStoreTypesWorkIntent";
+
 export interface ExecutionSummaryLink {
     label?: string;
     title?: string;
@@ -113,6 +115,8 @@ export interface UIResponseStateProjection {
 
 export interface ExecutionSummaryData {
     ui_response_state?: UIResponseStateProjection;
+    work_intent?: WorkIntentData;
+    execution_mode?: WorkExecutionMode;
     intent?: string | ExecutionSummaryIntent;
     understanding?: string | ExecutionSummaryUnderstanding;
     execution?: ExecutionSummaryExecution;

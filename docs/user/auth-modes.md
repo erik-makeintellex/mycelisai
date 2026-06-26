@@ -112,7 +112,7 @@ Use Google Workspace through OIDC/OAuth for enterprise SSO.
 4. Set `MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN` and/or `MYCELIS_AUTH_ALLOWED_DOMAINS`.
 5. Set `MYCELIS_AUTH_ADMIN_EMAILS` for Mycelis admins; other allowed-domain users enter as standard users.
 6. Keep organization access and approval rights in Mycelis roles.
-7. Confirm `/dashboard` shows the signed-in Soma operating environment and Core audit/proof records use the signed web identity rather than the generic local API-key owner.
+7. Confirm `/dashboard` opens the Soma workspace and Core audit/proof records use the signed web identity rather than the generic local API-key owner.
 
 The login page shows the allowed Workspace domains when Google is configured. Google sign-in and restart links should use a full document navigation into `/auth/google/start` so the browser enters the OAuth redirect flow cleanly instead of treating the route as an in-app RSC transition. If Google account selection returns a domain error, choose an account from `MYCELIS_AUTH_ALLOWED_DOMAINS` or use the local owner login while correcting the deployment domain list.
 
@@ -168,4 +168,4 @@ Before accepting an auth-mode change:
 6. Approval authority follows internal role, not external group alone.
 7. Access-denied recovery points to Settings, System Status, and owner/admin action.
 8. `/login` explains the enabled path clearly: local owner login for self-hosted nodes, Google Workspace SSO only when configured, and allowed-domain guidance when domain restrictions are active.
-9. After login, `/dashboard` shows the signed-in Soma operating environment with Access, Identity, and Scope before the operator starts work.
+9. After login, `/dashboard` opens directly into Soma; Settings and System surfaces expose role, provider, and scope when the operator needs to inspect identity.

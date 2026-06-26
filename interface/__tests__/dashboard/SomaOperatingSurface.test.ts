@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { prioritizeSomaHomeWorkItems } from "@/components/soma/SomaOperatingSurface";
+import { railAlertsFromWorkItems } from "@/components/soma/SomaOperatingSurfaceSupport";
 import type { TeamWorkItem } from "@/store/useCortexStore";
 
 function item(
@@ -38,5 +39,38 @@ describe("prioritizeSomaHomeWorkItems", () => {
       "newer-output",
       "fallback",
     ]);
+  });
+});
+
+describe("railAlertsFromWorkItems", () => {
+  it("uses API target refs for quiet rail links while preserving work focus", () => {
+    const [alert] = railAlertsFromWorkItems([
+      item("work-1", "degraded", "2026-05-20T17:00:00Z", {
+        targetRef: {
+          type: "recovery",
+          id: "recovery-target-1",
+          team_id: "team-1",
+          work_item_id: "work-1",
+          label: "Recovery target",
+        },
+      }),
+    ]);
+
+    expect(alert.href).toBe("/teams?view=work&work_item_id=work-1");
+    expect(alert.targetReference).toBe("recovery:recovery-target-1");
+    expect(alert.target).toMatchObject({
+      type: "recovery",
+      id: "recovery-target-1",
+      label: "Recovery target",
+    });
+  });
+
+  it("falls back to run targets when no API target ref is present", () => {
+    const [alert] = railAlertsFromWorkItems([
+      item("work-2", "degraded", "2026-05-20T17:00:00Z", { runId: "run-2" }),
+    ]);
+
+    expect(alert.href).toBe("/runs/run-2");
+    expect(alert.targetReference).toBe("run:run-2");
   });
 });

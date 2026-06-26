@@ -26,9 +26,8 @@ test.describe('Authenticated front door', () => {
         await page.getByRole('button', { name: /Sign in as local admin/i }).click();
         await expect(page).toHaveURL(/\/dashboard$/);
         await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
-        await expect(page.getByTestId('soma-environment-entry')).toBeVisible();
-        await expect(page.getByText('Signed in').first()).toBeVisible();
-        await expect(page.getByText(/Soma environment/i).first()).toBeVisible();
+        await expect(page.getByTestId('soma-operating-surface')).toBeVisible();
+        await expect(page.getByTestId('soma-environment-entry')).toHaveCount(0);
         await context.close();
     });
 
@@ -36,7 +35,8 @@ test.describe('Authenticated front door', () => {
         await page.goto('/');
         await expect(page).toHaveURL(/\/dashboard$/);
         await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
-        await expect(page.getByTestId('soma-environment-entry')).toBeVisible();
+        await expect(page.getByTestId('soma-operating-surface')).toBeVisible();
+        await expect(page.getByTestId('soma-environment-entry')).toHaveCount(0);
     });
 
     test('dashboard first paint honors the stored workspace theme', async ({ page }) => {

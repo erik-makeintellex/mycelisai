@@ -208,4 +208,4 @@ Important boundary:
 Related references:
 - [Workflow Variants And Plan Memory](workflow-variants-and-plan-memory.md)
 - [Governance & Trust](governance-trust.md)
-- [V8 Runtime Contracts](../architecture-library/V8_RUNTIME_CONTRACTS.md)
+- [Mycelis Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md)

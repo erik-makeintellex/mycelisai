@@ -117,6 +117,15 @@ export function SomaWorkspaceFrame({
   const reviewLabel = primaryReviewPanel?.key === "output" ? "Review output" : "Review work";
   const showClosedOutputDigest = Boolean(outputDigest && showOutputDigest);
   const isFocusedWorkReview = primaryReviewPanel?.key === "work";
+  const showCurrentWorkLane = Boolean(
+    hasPanels
+      && primaryReviewPanel
+      && (
+        primaryReviewPanel.key === "work"
+        || showClosedOutputDigest
+        || recoveryReviewCount > 0
+      ),
+  );
   const recoveryReviewCopy = recoveryReviewCount > 0
     ? `${recoveryReviewCount} recovery ${recoveryReviewCount === 1 ? "item" : "items"} also ${recoveryReviewCount === 1 ? "needs" : "need"} review.`
     : null;
@@ -132,12 +141,12 @@ export function SomaWorkspaceFrame({
 
   return (
     <div
-      className="relative grid gap-3 lg:h-[calc(100vh-260px)] lg:min-h-[300px] 2xl:min-h-[560px]"
+      className="relative grid gap-2 lg:h-[calc(100vh-335px)] lg:min-h-[300px] 2xl:min-h-[500px]"
       data-testid="soma-workspace-frame"
     >
       <div className="flex h-full min-h-0 min-w-0 flex-col">
-        {hasPanels && primaryReviewPanel ? (
-          <div className="mb-3 shrink-0">
+        {showCurrentWorkLane && primaryReviewPanel ? (
+          <div className="mb-2 shrink-0">
             <SomaCurrentWorkLane
               digest={outputDigest}
               isPanelOpen={isPanelOpen}

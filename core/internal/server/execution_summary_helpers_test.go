@@ -17,7 +17,7 @@ func TestConfirmActionResponseDataIncludesTeamWorkRefs(t *testing.T) {
 		},
 	}
 
-	data := confirmActionResponseData("proof-1", "contract-1", "artifact-1", "run-1", "audit-1", &protocol.ScopeValidation{}, nil, refs)
+	data := confirmActionResponseData("proof-1", "contract-1", "artifact-1", "run-1", "audit-1", &protocol.ScopeValidation{}, nil, refs, nil)
 
 	if data["confirmed"] != true || data["verified"] != true {
 		t.Fatalf("response flags = confirmed:%v verified:%v", data["confirmed"], data["verified"])

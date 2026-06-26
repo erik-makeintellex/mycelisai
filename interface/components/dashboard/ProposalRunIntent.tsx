@@ -3,10 +3,15 @@
 import { Clock3, RadioTower, RefreshCcw } from "lucide-react";
 import type { ProposalData } from "@/store/useCortexStore";
 
+function proposalCadence(proposal: ProposalData): ProposalData["task_cadence"] {
+    return proposal.task_cadence ?? proposal.work_intent?.cadence;
+}
+
 function cadenceLabel(proposal: ProposalData): string {
-    if (proposal.task_cadence === "scheduled") return "Scheduled";
-    if (proposal.task_cadence === "continuous") return "Keep running";
-    if (proposal.task_cadence === "event_driven") return "Event-driven";
+    const cadence = proposalCadence(proposal);
+    if (cadence === "scheduled") return "Scheduled";
+    if (cadence === "continuous") return "Keep running";
+    if (cadence === "event_driven") return "Event-driven";
     if (proposal.tools.some((tool) => /schedule|trigger|review_loop/i.test(tool))) return "Scheduled";
     if (proposal.tools.some((tool) => /monitor|watch|listen/i.test(tool))) return "Keep running";
     return "Run once";
@@ -14,7 +19,9 @@ function cadenceLabel(proposal: ProposalData): string {
 
 function cadenceSummary(proposal: ProposalData): string {
     if (proposal.schedule_summary?.trim()) return proposal.schedule_summary.trim();
+    if (proposal.work_intent?.schedule_summary?.trim()) return proposal.work_intent.schedule_summary.trim();
     if (proposal.runtime_posture?.trim()) return proposal.runtime_posture.trim();
+    if (proposal.work_intent?.runtime_posture?.trim()) return proposal.work_intent.runtime_posture.trim();
     switch (cadenceLabel(proposal)) {
         case "Scheduled":
             return "Soma should create or update a scheduled automation only after approval.";
@@ -45,9 +52,11 @@ function proposalUsesTeamBus(proposal: ProposalData) {
 }
 
 export default function ProposalRunIntent({ proposal }: { proposal: ProposalData }) {
-    const subjects = proposal.nats_subjects ?? [];
+    const subjects = proposal.nats_subjects ?? proposal.work_intent?.nats_subjects ?? [];
     const busScope = proposal.bus_scope && proposal.bus_scope !== "none"
         ? proposal.bus_scope
+        : proposal.work_intent?.bus_scope && proposal.work_intent.bus_scope !== "none"
+            ? proposal.work_intent.bus_scope
         : proposalUsesTeamBus(proposal) ? "current_team" : undefined;
     const showBus = Boolean(busScope);
 

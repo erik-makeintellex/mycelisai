@@ -252,7 +252,7 @@ func TestExecutePlannedToolCalls_UsesMCPToolRef(t *testing.T) {
 		},
 	}
 
-	results, err := s.executePlannedToolCalls(t.Context(), scope, "test-user")
+	results, err := s.executePlannedToolCalls(t.Context(), scope, "test-user", "", "", "")
 	if err != nil {
 		t.Fatalf("executePlannedToolCalls: %v", err)
 	}

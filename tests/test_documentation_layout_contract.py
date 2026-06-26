@@ -12,6 +12,7 @@ def test_state_and_architecture_entrypoints_are_not_loose_at_root():
         "V7_DEV_STATE.md",
         "v8-2.md",
         "mycelis-architecture-v7.md",
+        "MYCELIS_CANONICAL_PRD.md",
     ]
 
     loose_files = [name for name in forbidden_root_files if (ROOT / name).exists()]
@@ -19,9 +20,8 @@ def test_state_and_architecture_entrypoints_are_not_loose_at_root():
 
     required_locations = [
         ROOT / ".state" / "V8_DEV_STATE.md",
-        ROOT / ".state" / "V7_DEV_STATE.md",
-        ROOT / "architecture" / "v8-2.md",
-        ROOT / "architecture" / "mycelis-architecture-v7.md",
+        ROOT / "architecture" / "README.md",
+        ROOT / "docs" / "architecture-library" / "MYCELIS_CANONICAL_PRD.md",
     ]
     missing = [str(path.relative_to(ROOT)) for path in required_locations if not path.exists()]
     assert not missing, f"State and architecture files are missing required locations: {missing}"

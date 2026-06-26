@@ -17,15 +17,7 @@ import { ReviewQueueSummary } from "./ReviewQueueSummary";
 import { TeamAskForm } from "./TeamAskForm";
 import { WorkTruthSummary } from "./WorkTruthSummary";
 
-const actionIcons = {
-  inspect: Eye,
-  steer: Send,
-  start_work: Play,
-  pause: Pause,
-  resume: Play,
-  recover: RefreshCw,
-  archive: Archive,
-};
+const actionIcons = { inspect: Eye, steer: Send, start_work: Play, pause: Pause, resume: Play, recover: RefreshCw, archive: Archive };
 
 export function WorkReviewInbox({
   title = "Work to review",
@@ -130,6 +122,7 @@ function ReviewListRow({
   return (
     <article
       role="listitem"
+      data-work-item-id={item.id}
       className={`rounded-lg border p-3 transition-colors ${
         selected ? "border-cortex-primary/45 bg-cortex-primary/10" : "border-cortex-border bg-cortex-surface"
       }`}

@@ -15,11 +15,10 @@ Use this page when you want to operate Mycelis through the product instead of re
 For most user testing and daily operation, start with Soma:
 
 1. Sign in through `/login` with the local owner credential or enabled enterprise SSO.
-2. Confirm `/dashboard` shows the signed-in Soma operating environment, including Access, Identity, and Scope.
-3. Open the Soma workspace.
-4. Ask for the outcome you want.
-5. Let Soma propose the smallest useful team or direct answer path.
-6. Review visible outputs in chat, team lead workspaces, or retained artifacts.
+2. Confirm `/dashboard` opens directly into the Soma workspace.
+3. Ask for the outcome you want.
+4. Let Soma propose the smallest useful team or direct answer path.
+5. Review visible outputs in chat, team lead workspaces, or retained artifacts.
 7. Use Settings, Resources, System, or Memory only when the workflow calls for them.
 
 The normal product path is not "configure every backend component first." It is "sign in, tell Soma the goal, review the proposed execution shape, and inspect outputs."

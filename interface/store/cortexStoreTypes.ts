@@ -4,3 +4,4 @@ export * from '@/store/cortexStoreTypesPlanning';
 export * from '@/store/cortexStoreTypesResources';
 export * from '@/store/cortexStoreTypesRuntime';
 export * from '@/store/cortexStoreTypesTeamWork';
+export * from '@/store/cortexStoreTypesWorkIntent';

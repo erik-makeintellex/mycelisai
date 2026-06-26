@@ -21,11 +21,10 @@ import {
 } from "./TeamsPageSections";
 import { useDurableTeamWork } from "@/components/soma/useDurableTeamWork";
 import { mergeTeamWorkItems, useTeamWorkActionHandler } from "./useTeamWorkActionHandler";
+import { prioritizeRequestedWorkItem } from "./teamsPageWorkReview";
 
 const FILTERS: { value: TeamsFilter; label: string }[] = [
-  { value: "all", label: "All Teams" },
-  { value: "standing", label: "Standing" },
-  { value: "mission", label: "Mission" },
+  { value: "all", label: "All Teams" }, { value: "standing", label: "Standing" }, { value: "mission", label: "Mission" },
 ];
 
 export default function TeamsPage() {
@@ -46,13 +45,12 @@ export default function TeamsPage() {
     (s) => s.durableWorkRefreshVersion,
   );
   const [isTemplateDrawerOpen, setIsTemplateDrawerOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<CatalogueAgent | null>(
-    null,
-  );
+  const [editingTemplate, setEditingTemplate] = useState<CatalogueAgent | null>(null);
   const activeWorkActions = useTeamWorkActionHandler(selectTeam);
-  const isWorkReviewView =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("view") === "work";
+  const teamsSearchParams =
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const isWorkReviewView = teamsSearchParams?.get("view") === "work";
+  const requestedWorkItemId = teamsSearchParams?.get("work_item_id") || null;
 
   useEffect(() => {
     fetchTeamsDetail();
@@ -85,17 +83,8 @@ export default function TeamsPage() {
   }, [selectedTeamId, teamsDetail]);
 
   const totalAgents = teamsDetail.reduce((sum, t) => sum + t.agents.length, 0);
-  const onlineAgents = teamsDetail.reduce(
-    (sum, t) => sum + t.agents.filter((a) => a.status >= 1).length,
-    0,
-  );
-  const sortedTemplates = useMemo(
-    () =>
-      [...catalogueAgents].sort(
-        (a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at),
-      ),
-    [catalogueAgents],
-  );
+  const onlineAgents = teamsDetail.reduce((sum, t) => sum + t.agents.filter((a) => a.status >= 1).length, 0);
+  const sortedTemplates = useMemo(() => [...catalogueAgents].sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)), [catalogueAgents]);
   const highlightedTemplates = sortedTemplates.slice(0, 4);
   const templateCoverage = useMemo(() => {
     const coverage = new Map<string, CatalogueAgent[]>();
@@ -123,7 +112,12 @@ export default function TeamsPage() {
     activeWorkActions.submittedTeamWorkItems,
   );
   const recoveryReviewItems = recoveryReviewQueueItems(activeWorkItems);
-  const laneItems = isWorkReviewView ? recoveryReviewItems : activeWorkItems;
+  const laneItems = isWorkReviewView
+    ? prioritizeRequestedWorkItem(recoveryReviewItems, requestedWorkItemId)
+    : activeWorkItems;
+  const requestedWorkItem = requestedWorkItemId
+    ? recoveryReviewItems.find((item) => item.id === requestedWorkItemId) ?? null
+    : null;
   const activeWorkLane = (
     <ActiveWorkLane
       title={isWorkReviewView ? "Recovery and review" : "Active work lane"}
@@ -131,7 +125,9 @@ export default function TeamsPage() {
       emptyMessage={isWorkReviewView && activeWorkItems.length > 0 && recoveryReviewItems.length === 0
         ? "No recovery or review items need operator attention right now."
         : activeTeamWork.emptyMessage}
-      statusLabel={activeWorkActions.activeWorkActionNotice ?? activeTeamWork.statusLabel}
+      statusLabel={requestedWorkItem
+        ? `Opened "${requestedWorkItem.title}" from Outcomes & Vault.`
+        : activeWorkActions.activeWorkActionNotice ?? activeTeamWork.statusLabel}
       degradedMessage={
         activeWorkActions.activeWorkActionError ?? activeTeamWork.degradedMessage
       }
@@ -284,12 +280,8 @@ export default function TeamsPage() {
         )}
       </div>
 
-      {/* Detail Drawer */}
       {isDrawerOpen && selectedTeam && (
-        <TeamDetailDrawer
-          team={selectedTeam}
-          onClose={() => selectTeam(null)}
-        />
+        <TeamDetailDrawer team={selectedTeam} onClose={() => selectTeam(null)} />
       )}
       {isTemplateDrawerOpen && (
         <AgentEditorDrawer

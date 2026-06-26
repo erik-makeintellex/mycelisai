@@ -67,7 +67,7 @@ export default function WorkspaceGroupOutputSelector({
 
     return (
         <section
-            className="max-h-[16rem] overflow-y-auto rounded-lg border border-cortex-border bg-cortex-surface p-2"
+            className="rounded-lg border border-cortex-border bg-cortex-surface p-3"
             data-testid="workspace-group-output-selector"
         >
             <div className="flex flex-wrap items-center gap-2">
@@ -83,7 +83,7 @@ export default function WorkspaceGroupOutputSelector({
                     </span>
                 </div>
 
-                <div className="min-w-[16rem] flex-1">
+                <div className="min-w-[12rem] flex-1">
                     <label
                         className="text-[11px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted"
                         htmlFor="workspace-output-group"
@@ -95,7 +95,7 @@ export default function WorkspaceGroupOutputSelector({
                         value={selectedGroupID}
                         onChange={(event) => onSelectGroup(event.target.value)}
                         disabled={groups.length === 0}
-                        className="rounded border border-cortex-border bg-cortex-bg px-3 py-1.5 text-sm text-cortex-text-main outline-none disabled:opacity-60"
+                        className="mt-1 w-full rounded border border-cortex-border bg-cortex-bg px-3 py-1.5 text-sm text-cortex-text-main outline-none disabled:opacity-60"
                     >
                         {groups.length === 0 ? (
                             <option value="">No group outputs</option>
@@ -147,7 +147,7 @@ export default function WorkspaceGroupOutputSelector({
             {selectedGroup ? (
                 <div className="mt-2 space-y-2">
                     <div
-                        className="flex gap-2 overflow-x-auto pb-1"
+                        className="grid grid-cols-3 gap-2"
                         role="tablist"
                         aria-label="Output contributor level"
                     >
@@ -164,21 +164,21 @@ export default function WorkspaceGroupOutputSelector({
                                     aria-label={`${level.label} ${count}`}
                                     aria-selected={selected}
                                     onClick={() => setSelectedLevel(level.id)}
-                                    className={`shrink-0 rounded border px-3 py-1.5 text-left text-xs transition-colors ${
+                                    className={`min-w-0 rounded border px-3 py-1.5 text-left text-xs transition-colors ${
                                         selected
                                             ? "border-cortex-primary/50 bg-cortex-primary/10 text-cortex-text-main"
                                             : "border-cortex-border bg-cortex-bg text-cortex-text-muted hover:bg-cortex-bg/80"
                                     }`}
                                 >
-                                    <span className="font-semibold">{level.label}</span>
-                                    <span className="ml-2 font-mono text-[10px]">{count}</span>
+                                    <span className="block truncate font-semibold">{level.label}</span>
+                                    <span className="font-mono text-[10px]">{count}</span>
                                 </button>
                             );
                         })}
                     </div>
 
                     <div
-                        className="max-h-28 overflow-y-auto rounded border border-cortex-border bg-cortex-bg"
+                        className="max-h-40 overflow-y-auto rounded border border-cortex-border bg-cortex-bg"
                         role="table"
                         aria-label="Retained output artifacts"
                     >
@@ -192,15 +192,15 @@ export default function WorkspaceGroupOutputSelector({
                                     key={artifact.id}
                                     type="button"
                                     onClick={() => onOpenArtifact(artifact)}
-                                    className="grid w-full grid-cols-[minmax(8rem,1.1fr)_8rem_minmax(9rem,1fr)] gap-2 border-b border-cortex-border/50 px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-cortex-primary/10"
+                                    className="block w-full border-b border-cortex-border/50 px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-cortex-primary/10"
                                 >
-                                    <span className="truncate text-sm font-semibold text-cortex-text-main">
+                                    <span className="block truncate text-sm font-semibold text-cortex-text-main">
                                         {artifact.title}
                                     </span>
-                                    <span className="truncate text-[11px] font-mono uppercase tracking-normal text-cortex-text-muted">
+                                    <span className="mt-1 block truncate text-[11px] font-mono uppercase tracking-normal text-cortex-text-muted">
                                         {artifactContributorLabel(artifact)} | {artifact.agent_id}
                                     </span>
-                                    <span className="truncate text-[11px] font-mono text-cortex-primary">
+                                    <span className="mt-1 block truncate text-[11px] font-mono text-cortex-primary">
                                         {artifactFilePath(artifact) || artifactBrowsePath(artifact) || "retained artifact"}
                                     </span>
                                 </button>

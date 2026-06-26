@@ -5,7 +5,6 @@ from pathlib import Path
 from invoke import task, Collection
 from .config import CORE_DIR, ROOT_DIR
 
-
 MIGRATIONS_DIR = CORE_DIR / "migrations"
 
 SCHEMA_COMPATIBILITY_CHECKS = (
@@ -59,9 +58,12 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("team_work_items table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_work_items';"),
     ("team_interactions table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_interactions';"),
     ("team_status_events table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_status_events';"),
+    ("outcome_projects table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'outcome_projects';"),
+    ("outcome_projects run_id text column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'outcome_projects' AND column_name = 'run_id' AND data_type = 'text';"),
+    ("outcome_projects intent_proof_id text column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'outcome_projects' AND column_name = 'intent_proof_id' AND data_type = 'text';"),
+    ("team_registry_entries table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_registry_entries';"),
     ("trigger_rules schedule columns", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'trigger_rules' AND column_name = 'trigger_kind';"),
 )
-
 
 def _load_env():
     try:
@@ -131,7 +133,6 @@ def _migration_files():
             selected.append(file)
     return selected
 
-
 def _require_postgres(dbname="postgres"):
     """Fail fast when the local PostgreSQL bridge is unavailable."""
     host, port, _user, _password, _db = _dsn(dbname)
@@ -155,7 +156,6 @@ def status(c):
     if rc != 0:
         print("Cannot connect. Is the bridge running? (inv k8s.bridge)")
         raise SystemExit(1)
-
 
 @task
 def create(c):

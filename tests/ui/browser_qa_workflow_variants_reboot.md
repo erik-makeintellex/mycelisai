@@ -18,7 +18,7 @@ It also proves that an important plan can survive a full environment reboot thro
 
 Use this together with:
 - `docs/user/workflow-variants-and-plan-memory.md`
-- `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
+- `docs/architecture-library/MYCELIS_CANONICAL_PRD.md`
 - `interface/e2e/specs/workflow-output.direct.spec.ts`
 - `interface/e2e/specs/workflow-output.compact-team.spec.ts`
 - `interface/e2e/specs/workflow-output.multi-lane.spec.ts`

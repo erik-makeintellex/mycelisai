@@ -1,9 +1,9 @@
 # Documentation
 > Navigation: [Project README](../README.md)
 
-Use this page as the repo documentation map. It separates product docs, repo/operator docs, architecture contracts, and retained compatibility evidence.
+Use this page as the repo documentation map. It separates product docs, repo/operator docs, the single architecture PRD, and release/testing support.
 
-The in-app Help area should stay user-first. Its default path should help someone act through Soma, groups, resources, outputs, proof, settings, and recovery before exposing contributor or architecture-review material.
+The in-app Help area should stay user-first. Its default path should help someone talk with Soma, shape a request, approve work when needed, open outcomes, recover failures, revisit outputs, and use groups/resources/settings before exposing contributor or architecture-review material.
 
 ## Docs TOC
 
@@ -12,7 +12,6 @@ The in-app Help area should stay user-first. Its default path should help someon
 - [Architecture Contracts](#architecture-contracts)
 - [Testing And Release](#testing-and-release)
 - [Agent And Maintainer Notes](#agent-and-maintainer-notes)
-- [Compatibility Boundary](#compatibility-boundary)
 
 ## User Guidance
 
@@ -35,6 +34,7 @@ These are the best entry points for someone using Mycelis through the product or
 
 User guidance rules:
 - lead with the action a user is trying to complete
+- preserve Soma as a conversational counterpart for shaping work, not just a launcher for registered jobs
 - keep proof, recovery, and output access close to the workflow they explain
 - move implementation contracts, API details, raw topology, and old planning language into repo or architecture docs instead of the default user path
 - when a UI slice changes an operator workflow, update the matching user doc and the in-app docs manifest in the same slice
@@ -55,25 +55,10 @@ These are the active authority surfaces for contributors changing or reviewing t
 
 ## Architecture Contracts
 
-The active architecture library is intentionally small. It is not a holding area for old version notes, doctrine fragments, or temporary execution plans.
+The active architecture library is intentionally singular. It is not a holding area for old version notes, doctrine fragments, or temporary execution plans.
 
 - **Architecture Docs Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
-- **V8.2 Production Architecture Target / B2+ Delivery Frame**: `../architecture/v8-2.md`
-- **V8.3 Operational Embodiment PRD**: `./architecture-library/V8_3_OPERATIONAL_EMBODIMENT_PRD.md`
-- **V8.3 Release Architecture Delivery Brief**: `./architecture-library/V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md`
-- **V8.3 Product Manifestation Architecture Review**: `./architecture-library/V8_3_PRODUCT_MANIFESTATION_REVIEW.md`
-- **V8.3 Soma User Experience Contract**: `./architecture-library/V8_3_SOMA_USER_EXPERIENCE_CONTRACT.md`
-- **V8.3 UI/UX Engineering Implementation Brief**: `./architecture-library/V8_3_UI_UX_ENGINEERING_IMPLEMENTATION_BRIEF.md`
-- **V8.3 MVP UI Runtime Delivery Plan**: `./architecture-library/V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md`
-- **V8 New-User Acceptance Matrix**: `./architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md`
-- **V8.2 Soma UI Architecture Expression**: `./architecture-library/V8_2_SOMA_UI_ARCHITECTURE_EXPRESSION.md`
-- **V8.2 Soma Team Interaction Contract**: `./architecture-library/V8_2_SOMA_TEAM_INTERACTION_CONTRACT.md`
-- **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`
-- **V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
-- **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
-- **V8 Capability Manifest And Runtime Integration Standard**: `./architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md`
-- **V8 Secret Storage And Credential Boundary**: `./architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md`
-- **V8 UI Team Full Test Set**: `./architecture-library/V8_UI_TEAM_FULL_TEST_SET.md`
+- **Mycelis Canonical PRD**: `./architecture-library/MYCELIS_CANONICAL_PRD.md`
 
 ## Testing And Release
 
@@ -81,8 +66,7 @@ Use these when the goal is verification, release proof, or workflow-complete val
 
 - **Testing Guide**: `./TESTING.md`
 - **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
-- **V8 New-User Acceptance Matrix**: `./architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md`
-- **V8 UI Testing Product Contract**: `./architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
+- **Mycelis Canonical PRD**: `./architecture-library/MYCELIS_CANONICAL_PRD.md`
 - **Release Handoff**: `./RELEASE_HANDOFF.md`
 - **Governance System**: `./governance.md`
 - **Licensing & Editions**: `./licensing.md`
@@ -93,24 +77,15 @@ These files are useful for Codex, maintainers, and architecture reviewers, but t
 
 - **Repository Standards**: `../AGENTS.md`
 - **Active Development State**: `../.state/V8_DEV_STATE.md`
-- **Legacy V7 Development State**: `../.state/V7_DEV_STATE.md`
-- **V8.3 Dev Agentry Operational Directive**: `./architecture-library/V8_3_DEV_AGENTRY_OPERATIONAL_DIRECTIVE.md`
-- **V8.3 Multi-Agentry Steering Doctrine**: `./architecture-library/V8_3_MULTI_AGENTRY_STEERING_DOCTRINE.md`
+- **Mycelis Canonical PRD**: `./architecture-library/MYCELIS_CANONICAL_PRD.md`
 
 Keep these out of the normal operator path unless the task is repo maintenance, architecture review, or delivery-state inspection.
-
-## Compatibility Boundary
-
-The active documentation surface does not retain superseded V7 or older V8 topical docs as readable authority. Historical state remains only where it is needed to explain migration evidence:
-
-- **V7 Architecture PRD Compatibility Entry Point**: `../architecture/mycelis-architecture-v7.md`
-- **Legacy V7 Development State**: `../.state/V7_DEV_STATE.md`
 
 Guidance rules:
 - user guidance should stay focused on using the product, visible outputs, and recovery paths, not implementation internals
 - repo guidance should point to operating and implementation contracts, not old planning notes
-- architecture guidance should remain small, current, and directly referenced
+- architecture guidance should remain singular, current, and directly referenced
 - agent/maintainer notes should stay out of the default in-app operator docs unless they are intentionally surfaced for architecture review
 - testing guidance should point to durable verification contracts rather than temporary execution notes
-- if a removed doc contains a still-needed requirement, promote that requirement into the nearest active contract instead of restoring the old doc
+- if a removed doc contains a still-needed requirement, promote that requirement into the canonical PRD instead of restoring the old doc
 - each subjective UI cleanup step should close with the docs touched, the docs reviewed unchanged, and the proof that the in-app Help entry still opens

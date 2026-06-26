@@ -43,6 +43,6 @@ describe("GroupManagementPanel long generated content", () => {
     expect(screen.queryByText("Dot Dodge")).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: /Outputs/i }));
-    expect(screen.getByText("Dot Dodge")).toBeDefined();
+    await waitFor(() => expect(screen.getByText("Dot Dodge")).toBeDefined());
   });
 });

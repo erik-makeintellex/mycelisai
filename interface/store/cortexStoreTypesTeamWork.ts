@@ -48,6 +48,17 @@ export interface TeamOutputRef {
     created_at?: string;
 }
 
+export interface TargetRef {
+    type: string;
+    id: string;
+    run_id?: string;
+    team_id?: string;
+    work_item_id?: string;
+    project_id?: string;
+    output_id?: string;
+    label?: string;
+}
+
 export interface TeamWorkItem {
     id: string;
     title: string;
@@ -69,6 +80,7 @@ export interface TeamWorkItem {
     needsOperator?: boolean;
     nextAction?: string;
     recoveryOptions?: string[];
+    targetRef?: TargetRef;
     advanced?: {
         inputs?: string[];
         deliveries?: string[];

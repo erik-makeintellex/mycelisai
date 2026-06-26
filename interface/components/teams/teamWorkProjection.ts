@@ -5,7 +5,19 @@ import {
   type TeamWorkItem,
   type TeamWorkItemState,
 } from "@/store/useCortexStore";
+import {
+  isRecord,
+  objectValue,
+  outputRefArray,
+  outputRefTime,
+  stringArray,
+  stringValue,
+  normalizeTargetRef,
+  unique,
+} from "./teamWorkProjectionUtils";
 import { durableInteractions } from "./teamWorkInteractions";
+
+export { normalizeTargetRef, targetRefHref, targetRefReference } from "./teamWorkProjectionUtils";
 
 type TeamWorkAPIRecord = {
   work_item_id?: unknown;
@@ -30,6 +42,7 @@ type TeamWorkAPIRecord = {
   output_refs?: unknown;
   proof_refs?: unknown;
   audit_refs?: unknown;
+  target_ref?: unknown;
   created_at?: unknown;
   updated_at?: unknown;
   version?: unknown;
@@ -39,6 +52,7 @@ type TeamStatusEventAPIRecord = {
   headline?: unknown;
   details?: unknown;
   next_action?: unknown;
+  target_ref?: unknown;
 };
 
 const durableStates = new Set<TeamWorkItemState>([
@@ -137,6 +151,7 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
   const proofRefs = stringArray(raw.proof_refs);
   const auditRefs = stringArray(raw.audit_refs);
   const nextAction = stringValue(lastEvent?.next_action);
+  const targetRef = normalizeTargetRef(raw.target_ref ?? lastEvent?.target_ref);
   const description = [
     stringValue(lastEvent?.headline),
     stringValue(lastEvent?.details),
@@ -171,6 +186,7 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
     needsOperator: raw.needs_operator === true,
     nextAction: nextAction ?? undefined,
     recoveryOptions,
+    targetRef,
     advanced: {
       expectedOutputs,
       expectedProof,
@@ -223,57 +239,10 @@ function executionShapeLabel(shape?: string | null) {
   return "Durable team work";
 }
 
-function outputRefArray(value: unknown, teamId: string, workItemId: string, fallbackCreatedAt?: string | null): TeamOutputRef[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter(isRecord).map((item, index) => ({
-    output_id: stringValue(item.output_id) ?? `${workItemId}-output-${index}`,
-    team_id: stringValue(item.team_id) ?? teamId,
-    work_item_id: stringValue(item.work_item_id) ?? workItemId,
-    run_id: stringValue(item.run_id) ?? undefined,
-    kind: stringValue(item.kind) ?? "file",
-    label: stringValue(item.label) ?? "Team output",
-    storage_ref: stringValue(item.storage_ref) ?? undefined,
-    entrypoint: stringValue(item.entrypoint) ?? undefined,
-    validation_ref: stringValue(item.validation_ref) ?? undefined,
-    proof_ref: stringValue(item.proof_ref) ?? undefined,
-    contract_id: stringValue(item.contract_id) ?? undefined,
-    proof_id: stringValue(item.proof_id) ?? undefined,
-    audit_refs: stringArray(item.audit_refs),
-    created_at: stringValue(item.created_at) ?? stringValue(item.updated_at) ?? fallbackCreatedAt ?? undefined,
-  }));
-}
-
-function outputRefTime(output: TeamOutputRef) {
-  const time = output.created_at ? Date.parse(output.created_at) : 0;
-  return Number.isFinite(time) ? time : 0;
-}
-
 function latestHeartbeat(team: TeamDetailEntry): string | null {
   const latest = team.agents
     .map((agent) => Date.parse(agent.last_heartbeat))
     .filter(Number.isFinite)
     .sort((a, b) => b - a)[0];
   return typeof latest === "number" ? new Date(latest).toISOString() : null;
-}
-
-function unique(values: string[]): string[] {
-  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
-}
-
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function stringArray(value: unknown): string[] {
-  return Array.isArray(value)
-    ? unique(value.map((item) => typeof item === "string" ? item : "").filter(Boolean))
-    : [];
-}
-
-function objectValue<T extends object>(value: unknown): T | null {
-  return isRecord(value) ? value as T : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

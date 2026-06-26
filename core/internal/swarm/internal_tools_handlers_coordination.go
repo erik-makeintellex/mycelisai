@@ -141,7 +141,7 @@ func normalizeDelegateTaskArgs(args map[string]any) (teamID string, ask protocol
 	}
 	if askRaw, ok := args["ask"].(map[string]any); ok {
 		ask = protocol.TeamAskFromMap(askRaw)
-		return teamID, ask.Normalize(), nil
+		return teamID, askWithDelegateContext(args, ask), nil
 	}
 	switch t := args["task"].(type) {
 	case string:
@@ -154,7 +154,7 @@ func normalizeDelegateTaskArgs(args map[string]any) (teamID string, ask protocol
 		}
 	}
 	if !ask.IsZero() {
-		return teamID, ask.Normalize(), nil
+		return teamID, askWithDelegateContext(args, ask), nil
 	}
 
 	ask = protocol.TeamAsk{

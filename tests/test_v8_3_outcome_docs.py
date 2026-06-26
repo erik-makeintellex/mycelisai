@@ -2,52 +2,36 @@ from __future__ import annotations
 
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parents[1]
+CANONICAL_PRD = ROOT / "docs" / "architecture-library" / "MYCELIS_CANONICAL_PRD.md"
 V8_DEV_STATE = ROOT / ".state/V8_DEV_STATE.md"
-V8_3_OPERATIONAL_EMBODIMENT = ROOT / "docs" / "architecture-library" / "V8_3_OPERATIONAL_EMBODIMENT_PRD.md"
-V8_3_RELEASE_BRIEF = ROOT / "docs" / "architecture-library" / "V8_3_RELEASE_ARCHITECTURE_DELIVERY_BRIEF.md"
-V8_3_MVP_UI_RUNTIME_PLAN = ROOT / "docs" / "architecture-library" / "V8_3_MVP_UI_RUNTIME_DELIVERY_PLAN.md"
-V8_3_UI_UX_BRIEF = ROOT / "docs" / "architecture-library" / "V8_3_UI_UX_ENGINEERING_IMPLEMENTATION_BRIEF.md"
 
 
-def test_v8_3_docs_track_trusted_outcome_recovery_ownership_gates():
-    surfaces = {
-        V8_3_OPERATIONAL_EMBODIMENT: [
-            "Ask\n-> Understand\n-> Approve\n-> Execute\n-> Deliver\n-> Trust\n-> Recover\n-> Revisit",
-            "help a non-technical user own the outcome and trust the result later",
-            "failure degrades safely, recovery is actionable",
-        ],
-        V8_3_RELEASE_BRIEF: [
-            "Outcome Ownership Index proves a returning user can identify active outcomes, delivered outcomes, incomplete outcomes, attention needed, trust state, and next step within 15 seconds",
-            "remaining gate is live run-event reconstruction",
-        ],
-        V8_3_MVP_UI_RUNTIME_PLAN: [
-            "trusted-outcome-journey.spec.ts",
-            "trusted-outcome-journey-live.spec.ts",
-            "live confirm-action run events may still be empty",
-            "default returned-output recovery ownership",
-            "returning-user Outcome Ownership check answers active workflow, delivered output, incomplete/recovery work, attention/review count, trust/evidence, and next step within 15 seconds",
-        ],
-        V8_3_UI_UX_BRIEF: [
-            "All implementation is still judged through the Trusted Outcome Journey",
-            "Dashboard becomes the Soma threaded workspace.",
-            "Do not accept a UI slice that makes the user learn agents, MCP, NATS, workflows, runs, topology, or infrastructure",
-        ],
-        V8_DEV_STATE: [
-            "deterministic P0.8 full journey plus Outcome Ownership/default recovery ownership proof",
-            "live confirm-action run events can still be empty",
-            "Default returned-output recovery ownership is green in deterministic P0.8",
-        ],
-    }
+def test_canonical_prd_tracks_trusted_outcome_recovery_ownership_gates():
+    prd = CANONICAL_PRD.read_text(encoding="utf-8")
+    state = V8_DEV_STATE.read_text(encoding="utf-8")
 
-    missing = [
-        f"{path.relative_to(ROOT)} missing `{snippet}`"
-        for path, snippets in surfaces.items()
-        for snippet in snippets
-        if snippet not in path.read_text(encoding="utf-8")
+    required_prd = [
+        "Ask\n-> Understand\n-> Approve\n-> Execute\n-> Deliver\n-> Trust\n-> Recover\n-> Revisit",
+        "OutcomeProject",
+        "TeamRegistryEntry",
+        "The defining product abstraction is the Outcome.",
+        "The Outcome never serves the runtime.",
+        "authority remains with approved Outcomes",
+        "Every user-facing output package should expose",
+        "what remains trusted",
+        "what proof is invalid",
+        "what requires operator attention",
+        "MVP is complete when one canonical workflow feels excellent",
+    ]
+    required_state = [
+        "deterministic P0.8 full journey plus Outcome Ownership/default recovery ownership proof",
+        "non-empty run-event readback green",
+        "MYCELIS_CANONICAL_PRD.md",
     ]
 
-    assert not missing, (
-        "V8.3 Trusted Outcome Journey docs/state are missing recovery ownership gates:\n"
-        + "\n".join(missing)
-    )
+    missing = [snippet for snippet in required_prd if snippet not in prd]
+    missing.extend([snippet for snippet in required_state if snippet not in state])
+
+    assert not missing, "Trusted Outcome Journey docs/state are missing recovery ownership gates: " + str(missing)

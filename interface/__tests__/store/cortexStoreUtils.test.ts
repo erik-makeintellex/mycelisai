@@ -150,6 +150,41 @@ describe('cortexStoreUtils', () => {
         });
     });
 
+    it('normalizes structured work intent into proposal execution posture', () => {
+        const proposal = normalizeProposalData({
+            intent: 'prepare weekly client brief',
+            risk_level: 'medium',
+            confirm_token: 'ct-brief',
+            intent_proof_id: 'ip-brief',
+            execution_mode: 'schedule_handoff',
+            work_intent: {
+                kind: 'scheduled_workflow',
+                objective: 'Generate the client brief each Monday.',
+                cadence: 'scheduled',
+                schedule_summary: 'Every Monday at 8 AM.',
+                runtime_posture: 'Wait for source updates, then run the brief workflow.',
+                bus_scope: 'current_team',
+                target_team_id: 'client-brief-team',
+                nats_subjects: ['swarm.team.client-brief.signal.status'],
+                service_refs: ['scheduler.weekly-client-brief'],
+                project_ref: 'client-briefs',
+            },
+        });
+
+        expect(proposal).toBeDefined();
+        expect(proposal?.execution_mode).toBe('schedule_handoff');
+        expect(proposal?.task_cadence).toBe('scheduled');
+        expect(proposal?.schedule_summary).toBe('Every Monday at 8 AM.');
+        expect(proposal?.runtime_posture).toBe('Wait for source updates, then run the brief workflow.');
+        expect(proposal?.bus_scope).toBe('current_team');
+        expect(proposal?.nats_subjects).toEqual(['swarm.team.client-brief.signal.status']);
+        expect(proposal?.work_intent).toMatchObject({
+            objective: 'Generate the client brief each Monday.',
+            target_team_id: 'client-brief-team',
+            project_ref: 'client-briefs',
+        });
+    });
+
     it('persists and reloads chat history from storage', () => {
         persistChat([
             { role: 'user', content: 'hello' },

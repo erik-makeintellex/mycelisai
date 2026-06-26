@@ -133,6 +133,9 @@ func (s *AdminServer) persistConfirmedDelegatedWorkItems(ctx context.Context, li
 			continue
 		}
 		item := baseConfirmedActionWorkItem(link, teamID, objectiveForPlannedTool(result.Name, result.Arguments))
+		if workID := confirmedDelegationWorkItemID(result.Arguments); workID != "" {
+			item.WorkItemID = workID
+		}
 		item.ExecutionShape = protocol.TeamExecutionShapeDelegatedWork
 		item.State = protocol.TeamWorkStateQueued
 		item.ExpectedOutputs = expectedOutputsFromDelegateArgs(result.Arguments)

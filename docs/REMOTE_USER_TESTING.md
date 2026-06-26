@@ -20,7 +20,7 @@ Use this runbook when a human tester validates Mycelis from a different browser,
 
 Remote user testing proves the delivered operator path, not only local code health. The tester should reach the UI through the same address a real user will use, interact through Soma, and verify governance, retained outputs, and recovery from the browser.
 
-Use [Testing](TESTING.md) for engineering gates and [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for the full browser matrix.
+Use [Testing](TESTING.md) for engineering gates and [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md) for the full browser matrix.
 
 ## Current Truth And Boundaries
 
@@ -239,4 +239,4 @@ Minimum:
 References:
 - [Testing](TESTING.md)
 - [Local Development Workflow](LOCAL_DEV_WORKFLOW.md)
-- [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md)
+- [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)

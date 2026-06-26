@@ -118,13 +118,16 @@ export function setMissionChatBlocker({
         statusCode,
         availability,
     });
+    const safeContent = content && !content.toLowerCase().startsWith("error:")
+        ? content
+        : `${failure.bannerLabel}. Review the operational alert for the safe next step.`;
     set((s) => ({
         isMissionChatting: false,
         missionChatError: failure.summary,
         missionChatFailure: failure,
         missionChat: [...s.missionChat, {
             role: "council",
-            content: content ?? failure.summary,
+            content: safeContent,
             source_node: targetId,
             mode: "blocker",
         }],

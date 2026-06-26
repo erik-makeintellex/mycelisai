@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
 import { ArrowLeft, Zap, MessageSquare, List, GitBranch } from 'lucide-react';
@@ -78,13 +79,13 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
             <div className="min-h-screen bg-cortex-bg text-cortex-text-main">
                 {/* Persistent tab bar above RunTimeline */}
                 <div className="sticky top-0 z-20 bg-cortex-bg border-b border-cortex-border px-4 py-2 flex items-center gap-3">
-                    <a
+                    <Link
                         href="/dashboard"
                         className="flex items-center gap-1.5 text-cortex-text-muted hover:text-cortex-primary transition-colors text-[11px] font-mono"
                     >
                         <ArrowLeft className="w-3.5 h-3.5" />
                         Workspace
-                    </a>
+                    </Link>
                     <div className="w-px h-4 bg-cortex-border" />
                     <div className="flex items-center gap-2">
                         <Zap className="w-3.5 h-3.5 text-cortex-primary" />
@@ -108,13 +109,13 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                             </button>
                         ))}
                     </div>
-                    <a
+                    <Link
                         href={`/runs/${id}/chain`}
                         className="flex items-center gap-1.5 rounded-md border border-cortex-border bg-cortex-surface px-3 py-1 text-[10px] font-mono font-bold text-cortex-text-muted hover:text-cortex-primary transition-colors"
                     >
                         <GitBranch className="w-3.5 h-3.5" />
                         Chain
-                    </a>
+                    </Link>
                 </div>
                 <RunTimeline runId={id} />
             </div>
@@ -126,13 +127,13 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
         <div className="min-h-screen bg-cortex-bg text-cortex-text-main">
             {/* Header with tab bar */}
             <div className="sticky top-0 z-10 bg-cortex-bg border-b border-cortex-border px-4 py-3 flex items-center gap-3">
-                <a
+                <Link
                     href="/dashboard"
                     className="flex items-center gap-1.5 text-cortex-text-muted hover:text-cortex-primary transition-colors text-[11px] font-mono"
                 >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     Workspace
-                </a>
+                </Link>
 
                 <div className="w-px h-4 bg-cortex-border" />
 
@@ -177,13 +178,13 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                     ))}
                 </div>
 
-                <a
+                <Link
                     href={`/runs/${id}/chain`}
                     className="flex items-center gap-1.5 rounded-md border border-cortex-border bg-cortex-surface px-3 py-1 text-[10px] font-mono font-bold text-cortex-text-muted hover:text-cortex-primary transition-colors"
                 >
                     <GitBranch className="w-3.5 h-3.5" />
                     Chain
-                </a>
+                </Link>
             </div>
 
             {/* Conversation content */}

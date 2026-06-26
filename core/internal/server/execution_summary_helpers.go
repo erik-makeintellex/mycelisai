@@ -126,7 +126,7 @@ func retentionClassForBool(retained bool) protocol.ExecutionRetentionClass {
 	return protocol.ExecutionRetentionClassNonRetained
 }
 
-func confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult, teamWorkRefs []confirmActionTeamWorkRef) map[string]any {
+func confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult, teamWorkRefs []confirmActionTeamWorkRef, outcomeProject *protocol.OutcomeProject) map[string]any {
 	data := map[string]any{
 		"confirmed":         true,
 		"verified":          true,
@@ -142,6 +142,9 @@ func confirmActionResponseData(proofID, contractID, proofArtifactID, runID, audi
 	}
 	if len(teamWorkRefs) > 0 {
 		data["team_work_refs"] = teamWorkRefs
+	}
+	if outcomeProject != nil {
+		data["outcome_project"] = outcomeProject
 	}
 	return data
 }

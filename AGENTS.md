@@ -27,13 +27,14 @@ This repository is Go-first for product/runtime work and Python-first for manage
 
 - Keep user-shared root-level architecture entrypoints under `architecture/`.
 - Put new canonical planning, target-delivery, UI-target, execution-model, and delivery-governance docs under `docs/architecture-library/`.
-- Treat `architecture/mycelis-architecture-v7.md` as the stable PRD index and compatibility entrypoint, not the place to grow another giant monolithic spec.
+- Treat `docs/architecture-library/MYCELIS_CANONICAL_PRD.md` as the single PRD, product, UX, runtime, MVP, and release-gate authority.
+- Do not restore old versioned V7, V8.2, or split V8.3 architecture files; promote current truth into the canonical PRD instead.
 - If a canonical doc is meant to be readable in the in-app `/docs` page, add or update its entry in `interface/lib/docsManifest.ts` in the same change.
 
 ## State Location
 
 - Keep mutable delivery state under `.state/`, with `.state/V8_DEV_STATE.md` as the active scoreboard.
-- Treat `.state/V7_DEV_STATE.md` as historical migration evidence only.
+- Historical migration evidence lives in Git history, not retained state docs.
 - `.state/` is ignored for new local/session artifacts, but tracked state files already under `.state/` remain part of the repository contract.
 - Do not add transient run logs, browser reports, kubeconfigs, temporary plans, or local service snapshots to root.
 

@@ -53,15 +53,27 @@ describe('useCortexStore confirm proposal pending proof', () => {
         expect(useCortexStore.getState().missionChat[0]).toMatchObject({
             proposal_status: 'confirmed_pending_execution',
             mode: 'proposal',
+            ui_response_state: {
+                kind: 'running',
+                label: 'Started',
+                detail: 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
+                tone: 'info',
+            },
         });
         expect(useCortexStore.getState().missionChat.at(-1)).toMatchObject({
             role: 'system',
             mode: 'proposal',
-            content: 'Proposal approved. Soma is waiting for execution proof.',
+            content: 'Proposal approved. Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
+            ui_response_state: {
+                kind: 'running',
+                label: 'Started',
+                detail: 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
+                tone: 'info',
+            },
         });
     });
 
-    it('marks the proposal pending while confirmation is still in flight', async () => {
+    it('exposes a conversational started state while confirmation is still in flight', async () => {
         useCortexStore.setState({
             pendingProposal: {
                 intent: 'Launch a docs crew',
@@ -100,6 +112,12 @@ describe('useCortexStore confirm proposal pending proof', () => {
         expect(useCortexStore.getState().missionChat[0]).toMatchObject({
             proposal_status: 'confirmed_pending_execution',
             mode: 'proposal',
+            ui_response_state: {
+                kind: 'running',
+                label: 'Started',
+                detail: 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
+                tone: 'info',
+            },
         });
 
         resolveFetch({

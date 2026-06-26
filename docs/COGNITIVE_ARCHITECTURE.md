@@ -1,7 +1,7 @@
 # Cognitive Architecture
 > Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
-> Back to [README](../README.md) | See also: [Architecture Overview](architecture/OVERVIEW.md) | [API Reference](API_REFERENCE.md) | [V8 Capability Manifest](architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md)
+> Back to [README](../README.md) | See also: [Architecture Overview](architecture/OVERVIEW.md) | [API Reference](API_REFERENCE.md) | [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
 
 ## TOC
 

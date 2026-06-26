@@ -175,7 +175,7 @@ func (s *AdminServer) markRunFailedTx(tx *sql.Tx, runID, proofID, reason string)
 	return err
 }
 
-func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protocol.ScopeValidation, auditUser string) ([]plannedToolExecutionResult, error) {
+func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protocol.ScopeValidation, auditUser, runID, proofID, contractID string) ([]plannedToolExecutionResult, error) {
 	if scope == nil || len(scope.PlannedToolCalls) == 0 {
 		return nil, fmt.Errorf("no approved execution plan was stored for this proposal")
 	}
@@ -194,6 +194,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 		PayloadKind:   protocol.PayloadKindCommand,
 		Timestamp:     time.Now(),
 		UserLabel:     auditUser,
+		RunID:         strings.TrimSpace(runID),
 		PlanningOnly:  false,
 	})
 
@@ -201,6 +202,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 	lastGeneratedImageArtifactID := ""
 	for _, planned := range scope.PlannedToolCalls {
 		planned = normalizePlannedToolCall(planned)
+		planned = annotateConfirmedDelegationCall(planned, runID, proofID, contractID, scope)
 		toolName := strings.TrimSpace(planned.Name)
 		if toolName == "" {
 			return results, fmt.Errorf("approved execution plan contained an empty tool name")

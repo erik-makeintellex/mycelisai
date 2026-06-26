@@ -71,7 +71,8 @@ test.describe("Trusted Outcome Journey live smoke", () => {
 
       expect(proposal.response.ok(), proposal.body ? JSON.stringify(proposal.body) : proposal.raw).toBeTruthy();
       expect(proposal.body?.data?.mode).toBe("proposal");
-      await expect(page.getByText("RUN CONFIRMATION").last()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole("heading", { name: /Start this\?|Run this\?/ }).last()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole("button", { name: /Start|Run/i }).last()).toBeVisible();
       await expect(page.getByText(teamID).last()).toBeVisible();
       await expect(page.getByText(entrypoint).last()).toBeVisible();
       expect(targetExists(entrypoint)).toBeFalsy();
@@ -130,8 +131,11 @@ async function expectProofAndRunReadback(page: import("@playwright/test").Page, 
 
   const eventResponse = await liveAPIGet(page, `/api/v1/runs/${encodeURIComponent(data.run_id!)}/events`);
   expect(eventResponse.ok(), await eventResponse.text()).toBeTruthy();
-  const events = ((await eventResponse.json()) as APIEnvelope<RunEvent[]>).data ?? [];
+  const eventBody = await eventResponse.json() as APIEnvelope<RunEvent[]> | RunEvent[];
+  const events = Array.isArray(eventBody) ? eventBody : eventBody.data ?? [];
   expect(Array.isArray(events), JSON.stringify(events)).toBeTruthy();
+  expect(events.length, JSON.stringify(events)).toBeGreaterThan(0);
+  expect(events.some((event) => event.event_type), JSON.stringify(events)).toBeTruthy();
 }
 
 async function expectGroupOutputReadback(

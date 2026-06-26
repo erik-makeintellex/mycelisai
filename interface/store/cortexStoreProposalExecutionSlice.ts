@@ -44,11 +44,22 @@ function mediaDependencyRecoveryCopy(diagnostics: string) {
     };
 }
 
+const proposalStartedDetail = 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.';
+
+function proposalStartedState(): NonNullable<ChatMessage['ui_response_state']> {
+    return {
+        kind: 'running',
+        label: 'Started',
+        detail: proposalStartedDetail,
+        tone: 'info',
+    };
+}
+
 function confirmedRunMessage(runId: string | null, summary?: string | null, teamWorkRefs: TeamWorkConfirmationRef[] = []) {
     const state = runId ? `Run ${runId.slice(0, 8)} started.` : 'Proposal approved.';
     const next = runId
         ? 'Review active work and latest output below as Soma records progress.'
-        : 'Soma is waiting for execution proof.';
+        : proposalStartedDetail;
     return [state, next, teamWorkMessage(teamWorkRefs), summary].filter(Boolean).join(' ');
 }
 
@@ -97,6 +108,7 @@ export function createCortexProposalExecutionSlice(
                 missionChatFailure: null,
                 missionChat: updateProposalLifecycle(s.missionChat, intentProofId, 'confirmed_pending_execution', {
                     mode: 'proposal',
+                    ui_response_state: proposalStartedState(),
                 }),
             }));
             try {
@@ -118,6 +130,7 @@ export function createCortexProposalExecutionSlice(
                         role: 'system',
                         content: confirmedRunMessage(runId, proofSummary, teamWorkRefs),
                         mode: runId ? 'execution_result' : 'proposal',
+                        ui_response_state: runId ? undefined : proposalStartedState(),
                         run_id: runId ?? undefined,
                         execution_summary: body?.data?.execution_summary,
                         timestamp: new Date().toISOString(),
@@ -131,6 +144,7 @@ export function createCortexProposalExecutionSlice(
                         missionChat: [
                             ...updateProposalLifecycle(s.missionChat, intentProofId, lifecycle, {
                                 mode: runId ? 'execution_result' : 'proposal',
+                                ui_response_state: runId ? undefined : proposalStartedState(),
                                 run_id: runId ?? undefined,
                             }),
                             systemMsg,

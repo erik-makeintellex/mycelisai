@@ -90,6 +90,27 @@ html[data-theme="aero-light"] {
     font-family: var(--font-mono);
   }
 
+  .scrollbar-thin {
+    scrollbar-color: var(--color-cortex-border) transparent;
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--color-cortex-border) 75%, transparent);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+
   /* Readability safety net: legacy micro text utilities are too small in ops UIs. */
   .text-\[9px\] {
     font-size: 11px !important;

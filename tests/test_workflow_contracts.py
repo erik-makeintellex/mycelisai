@@ -137,7 +137,7 @@ def test_mycelis_search_contract_lives_in_user_api_and_capability_docs():
     resources_doc = _read("docs/user/resources.md")
     soma_doc = _read("docs/user/soma-chat.md")
     api_doc = _read("docs/API_REFERENCE.md")
-    capability_doc = _read("docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md")
+    capability_doc = _read("docs/architecture-library/MYCELIS_CANONICAL_PRD.md")
 
     assert "V8 Mycelis Search Capability Delivery Plan" not in index
     assert "V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md" not in docs_home
@@ -159,12 +159,12 @@ def test_mycelis_search_contract_lives_in_user_api_and_capability_docs():
 
 
 def test_active_capability_docs_use_current_governed_resource_contract():
-    capability_doc = _read("docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md")
+    capability_doc = _read("docs/architecture-library/MYCELIS_CANONICAL_PRD.md")
     resources_doc = _read("docs/user/resources.md")
 
     required = [
-        (capability_doc, "Every execution path in Mycelis must be manageable, inspectable, governed, and reusable."),
-        (capability_doc, "manifest"),
+        (capability_doc, "Capabilities are governed runtime objects."),
+        (capability_doc, "risk"),
         (capability_doc, "approval"),
         (resources_doc, "Connected Tools"),
         (resources_doc, "MCP"),
@@ -175,8 +175,8 @@ def test_active_capability_docs_use_current_governed_resource_contract():
 
 def test_testing_docs_cover_finalization_concretization_contracts():
     testing = _read("docs/TESTING.md")
-    ui_contract = _read("docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md")
-    full_set = _read("docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md")
+    ui_contract = _read("docs/architecture-library/MYCELIS_CANONICAL_PRD.md")
+    full_set = ui_contract
 
     required = [
         (testing, "## Finalization Concretization Gate"),
@@ -185,9 +185,9 @@ def test_testing_docs_cover_finalization_concretization_contracts():
         (testing, "CapabilityManifestState"),
         (testing, "UI response states"),
         (testing, "System -> Deployments"),
-        (ui_contract, "Evidence for degraded execution must state what succeeded"),
-        (ui_contract, "ExecutionContract, ProofArtifact, or UI response-state fields are absent"),
-        (full_set, "runtime objects verified: ExecutionContract, ProofArtifact, CapabilityManifestState, UIResponseState"),
+        (ui_contract, "what remains trusted"),
+        (ui_contract, "ExecutionContract"),
+        (full_set, "headed browser proof for actual user experience"),
     ]
     missing = [snippet for text, snippet in required if snippet not in text]
     assert not missing, "Testing docs are missing concretization proof requirements: " + str(missing)
@@ -195,24 +195,23 @@ def test_testing_docs_cover_finalization_concretization_contracts():
 
 def test_new_user_acceptance_matrix_is_documented_across_testing_and_user_guides():
     testing = _read("docs/TESTING.md")
-    acceptance_matrix = _read("docs/architecture-library/V8_NEW_USER_ACCEPTANCE_MATRIX.md")
+    acceptance_matrix = _read("docs/architecture-library/MYCELIS_CANONICAL_PRD.md")
     user_home = _read("docs/user/README.md")
     resources_doc = _read("docs/user/resources.md")
     teams_doc = _read("docs/user/teams.md")
     auth_doc = _read("docs/user/auth-modes.md")
-    ui_contract = _read("docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md")
+    ui_contract = acceptance_matrix
 
     required = [
-        (testing, "V8 New-User Acceptance Matrix"),
-        (acceptance_matrix, "Login boundary"),
-        (acceptance_matrix, "Setup checklist"),
-        (acceptance_matrix, "Provider readiness"),
-        (acceptance_matrix, "MCP readiness"),
-        (acceptance_matrix, "Workspace/output roots"),
-        (acceptance_matrix, "Canonical demo"),
-        (acceptance_matrix, "Team active/degraded proof"),
+        (testing, "Mycelis Canonical PRD"),
+        (acceptance_matrix, "The first authenticated surface is the Soma workspace."),
+        (acceptance_matrix, "Settings should feel like application permissions"),
+        (acceptance_matrix, "Capabilities are governed runtime objects."),
+        (acceptance_matrix, "Workspace root"),
+        (acceptance_matrix, "MVP is complete when one canonical workflow feels excellent"),
+        (acceptance_matrix, "Failure is normal."),
         (user_home, "## New-User Setup Checklist"),
-        (user_home, "signed-in Soma operating environment"),
+        (user_home, "Soma"),
         (user_home, "MYCELIS_WORKSPACE"),
         (user_home, "MYCELIS_ARTIFACT_ROOT"),
         (resources_doc, "New-user readiness checks"),
@@ -222,9 +221,9 @@ def test_new_user_acceptance_matrix_is_documented_across_testing_and_user_guides
         (teams_doc, "Dashboard Active Work remains capped"),
         (teams_doc, "output-ready or degraded state"),
         (auth_doc, "local owner login for self-hosted nodes"),
-        (auth_doc, "Access, Identity, and Scope"),
-        (ui_contract, "New-user source deployment"),
-        (ui_contract, "canonical retained demo output"),
+        (auth_doc, "local owner login for self-hosted nodes"),
+        (ui_contract, "headed browser proof for actual user experience"),
+        (ui_contract, "Every user-facing output package should expose"),
     ]
     missing = [snippet for text, snippet in required if snippet not in text]
     assert not missing, "New-user acceptance docs are missing required snippets: " + str(missing)

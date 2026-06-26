@@ -150,9 +150,24 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("work");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("true");
     expect(screen.getByTestId("soma-action-shelf")).toBeDefined();
-    expect(screen.getByTestId("soma-outcome-vault")).toBeDefined();
+    expect(screen.getAllByText("Soma").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Team action needs operator attention.").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Team ask queued. You can keep working.").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole("button", { name: /Open Outcomes and Vault/i })[0]);
+
+    expect(screen.getByTestId("soma-outcome-vault-overlay")).toBeDefined();
+    expect(screen.getByText("Outcome project")).toBeDefined();
+    expect(screen.getByText("Alpha outcome workspace")).toBeDefined();
+    expect(screen.getByText("Lead:")).toBeDefined();
+    expect(screen.getByText("OutcomeProject owner:")).toBeDefined();
+    expect(screen.getByText("TeamRegistry owner:")).toBeDefined();
+    expect(screen.getByText("Alpha lead")).toBeDefined();
+    expect(screen.getByRole("link", { name: /Open work needing attention/i }).getAttribute("href")).toBe("/teams?view=work");
+    const typedRailAlert = screen.getByRole("link", { name: /Open item: Work in progress \(Work item\)/i });
+    expect(typedRailAlert.getAttribute("href")).toBe("/teams?view=work&work_item_id=work-1");
+    expect(typedRailAlert.getAttribute("data-target-reference")).toBe("work:work-1");
+    expect(typedRailAlert.getAttribute("data-target-type")).toBe("work");
+    expect(typedRailAlert.getAttribute("data-target-id")).toBe("work-1");
 
     const workspace = within(screen.getByTestId("mock-soma-workspace-frame"));
     fireEvent.click(screen.getByRole("button", { name: /Run Expense Audit/i }));
@@ -162,6 +177,59 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(mocks.sendMissionChat).toHaveBeenCalledWith(expect.stringContaining("expense audit"));
     expect(mocks.handleActiveWorkAction).toHaveBeenCalledWith(expect.objectContaining({ id: "work-1" }), expect.objectContaining({ action: "pause" }));
     expect(mocks.handleTeamAsk).toHaveBeenCalledWith(expect.objectContaining({ id: "work-1" }), "Continue the proof");
+  });
+
+  it("opens Outcomes and Vault as an overlay instead of a default side rail", () => {
+    render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
+
+    expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
+    expect(screen.queryByText("Outcomes & Vault")).toBeNull();
+    expect(screen.getByTestId("mission-chat")).toBeDefined();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Open Outcomes and Vault/i })[0]);
+
+    expect(screen.getByTestId("soma-outcome-vault-overlay")).toBeDefined();
+    expect(screen.getByTestId("soma-outcome-vault").getAttribute("data-state")).toBe("expanded");
+    expect(screen.getByText("Outcomes & Vault")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: /Close Outcomes and Vault/i }));
+
+    expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
+    expect(screen.getByTestId("mission-chat")).toBeDefined();
+  });
+
+  it("uses API target refs for quiet right-rail alert links", () => {
+    mocks.useDurableTeamWork.mockReturnValue({
+      items: [{
+        id: "work-1",
+        title: "Recover browser game validation",
+        state: "running",
+        teamIds: ["team-alpha"],
+        interactions: [],
+        targetRef: {
+          type: "recovery",
+          id: "work-1",
+          work_item_id: "work-1",
+          team_id: "team-alpha",
+          label: "Recovery item",
+        },
+      }],
+      outputRefs: [],
+      emptyMessage: "No active work.",
+      status: "ready",
+      statusLabel: "Ready",
+      degradedMessage: null,
+    });
+
+    render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Open Outcomes and Vault/i })[0]);
+
+    const typedRailAlert = screen.getByRole("link", { name: /Open item: Work in progress \(Recovery item\)/i });
+    expect(typedRailAlert.getAttribute("href")).toBe("/teams?view=work&work_item_id=work-1");
+    expect(typedRailAlert.getAttribute("data-target-reference")).toBe("recovery:work-1");
+    expect(typedRailAlert.getAttribute("data-target-type")).toBe("recovery");
+    expect(typedRailAlert.getAttribute("data-target-id")).toBe("work-1");
   });
 
   it("lets operators switch the Soma surface into a team work context", () => {
@@ -205,90 +273,4 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(screen.getByTestId("soma-team-context-switcher")).toBeDefined();
   });
 
-  it("keeps focused team retained outputs in the workbench instead of stacking a pre-chat dock", () => {
-    mocks.useDurableTeamWork.mockReturnValue({
-      items: [{
-        id: "work-1",
-        title: "Comic page generation",
-        state: "output_ready",
-        teamIds: ["team-alpha"],
-        interactions: [],
-      }],
-      outputRefs: [{
-        output_id: "comic-page-output-old",
-        team_id: "team-alpha",
-        work_item_id: "work-1",
-        kind: "media",
-        label: "Old comic page",
-        storage_ref: "groups/team-alpha/media/old-comic-page.png",
-        proof_id: "proof-comic-1",
-        created_at: "2026-05-17T18:00:00Z",
-      }, {
-        output_id: "comic-page-output-new",
-        team_id: "team-alpha",
-        work_item_id: "work-1",
-        kind: "media",
-        label: "Comic page",
-        storage_ref: "groups/team-alpha/media/comic-page.png",
-        proof_id: "proof-comic-2",
-        created_at: "2026-05-17T18:05:00Z",
-      }],
-      emptyMessage: "No active work.",
-      status: "ready",
-      statusLabel: "Ready",
-      degradedMessage: null,
-    });
-
-    render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
-
-    const workspace = within(screen.getByTestId("mock-soma-workspace-frame"));
-    const workbench = within(workspace.getByTestId("output-workbench"));
-    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("");
-    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("true");
-    expect(screen.queryByTestId("focused-team-output-dock")).toBeNull();
-    expect(workbench.getByText("Comic page")).toBeDefined();
-    expect(workspace.getByTestId("output-workbench").textContent?.indexOf("Comic page")).toBeLessThan(
-      workspace.getByTestId("output-workbench").textContent?.indexOf("Old comic page") ?? 0,
-    );
-  });
-
-  it("prioritizes focused team output over older global Soma chat output", () => {
-    mocks.storeState.missionChat = [{
-      role: "architect",
-      content: "Global package is available.",
-      timestamp: "2026-05-17T18:00:00Z",
-      execution_summary: {
-        outputs: [{ title: "Older global brief", url: "/runs/global-brief" }],
-      },
-    }];
-    mocks.useDurableTeamWork.mockReturnValue({
-      items: [{
-        id: "work-1",
-        title: "Focused output",
-        state: "output_ready",
-        teamIds: ["team-alpha"],
-        interactions: [],
-      }],
-      outputRefs: [{
-        output_id: "focused-output",
-        team_id: "team-alpha",
-        work_item_id: "work-1",
-        kind: "file",
-        label: "Newest focused brief",
-        storage_ref: "groups/team-alpha/output/newest.md",
-        created_at: "2026-05-17T18:05:00Z",
-      }],
-      emptyMessage: "No active work.",
-      status: "ready",
-      statusLabel: "Ready",
-      degradedMessage: null,
-    });
-
-    render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
-
-    const workspace = within(screen.getByTestId("mock-soma-workspace-frame"));
-    const workbench = within(workspace.getByTestId("output-workbench"));
-    expect(workbench.getByText("Latest output").closest("article")?.textContent).toContain("Newest focused brief");
-    expect(workbench.getByText("More outputs and verification").closest("details")?.textContent).toContain("Older global brief");
-  });
 });

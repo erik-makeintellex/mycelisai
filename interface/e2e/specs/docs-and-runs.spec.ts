@@ -14,7 +14,7 @@ test.describe('Docs and Runs Route Coverage', () => {
                                 {
                                     slug: 'ui-test-doc',
                                     label: 'UI Test Doc',
-                                    path: 'docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md',
+                                    path: 'docs/architecture-library/MYCELIS_CANONICAL_PRD.md',
                                     description: 'test doc',
                                 },
                                 {
@@ -53,7 +53,6 @@ test.describe('Docs and Runs Route Coverage', () => {
                 }),
             });
         });
-
         await page.goto('/docs?doc=ui-test-doc', { waitUntil: 'domcontentloaded' });
 
         await expect(page.locator('body')).toContainText('Documentation', { timeout: 20_000 });

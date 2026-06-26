@@ -178,7 +178,7 @@ describe("ActiveWorkLane", () => {
       />,
     );
 
-    expect(screen.getByText("Needs recovery")).toBeDefined();
+    expect(screen.getAllByText("Needs recovery").length).toBeGreaterThan(0);
     expect(screen.getByText("No retained output yet")).toBeDefined();
     expect(screen.getByText("Proof pending")).toBeDefined();
     expect(screen.getByText("Recovery: Retry with retained context")).toBeDefined();

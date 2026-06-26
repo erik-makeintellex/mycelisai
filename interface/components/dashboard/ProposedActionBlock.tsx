@@ -33,17 +33,17 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const approvalRequired = proposal.approval_required ?? true;
     const approvalMode = proposal.approval_mode ?? (approvalRequired ? "required" : "auto_allowed");
     const capabilityRisk = proposal.capability_risk ?? proposal.risk_level ?? "low";
-    const governanceSummary = approvalRequired ? "Confirmation needed" : approvalMode === "optional" ? "Can run now" : "Ready";
-    const actionLabel = "Run now";
+    const governanceSummary = approvalRequired ? "Needs your approval" : approvalMode === "optional" ? "Ready if you want" : "Ready";
+    const actionLabel = approvalRequired ? "Run" : "Start";
     const operatorSummary = plainExecutionText(proposal.operator_summary?.trim() || fallbackOperatorSummary(proposal));
     const expectedResult = plainExecutionText(proposal.expected_result?.trim() || fallbackExpectedResult(proposal));
     const affectedResources = (proposal.affected_resources ?? []).filter((value) => value.trim().length > 0);
     const visibleResources = (affectedResources.length > 0 ? affectedResources : fallbackAffectedResources(proposal)).map(plainExecutionText);
     const approvalExplanation = explainApprovalPosture(proposal, approvalRequired, approvalMode);
-    const runQuestion = approvalRequired ? "Run this now?" : "Let Soma run this now?";
+    const runQuestion = approvalRequired ? "Run this?" : "Start this?";
     const runHelp = approvalRequired
-        ? "Soma will start only after you confirm."
-        : "This is ready to run. You can still review the details first.";
+        ? "I will wait for your approval before changing anything."
+        : "This stays inside current policy. You can still adjust before I start.";
     const lifecycleTone = renderedLifecycle === "cancelled"
         ? "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted"
         : renderedLifecycle === "confirmed_pending_execution"
@@ -90,33 +90,37 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     };
 
     return (
-        <div className="mt-3 rounded-lg border border-amber-400/30 bg-cortex-surface/80 overflow-hidden">
-            <div className="px-4 py-2 bg-amber-400/5 border-b border-amber-400/20 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-amber-400" />
-                    <span className="text-amber-400 font-mono text-xs font-bold tracking-wider">RUN CONFIRMATION</span>
+        <div className="mt-3 max-w-[min(100%,760px)] overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface/90 shadow-sm">
+            <div className="border-b border-cortex-border px-4 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="text-xs font-semibold text-cortex-text-muted">Soma</div>
+                        <div className="mt-0.5 text-base font-semibold text-cortex-text-main">
+                            I can do that.
+                        </div>
+                    </div>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${lifecycleTone}`}>
+                        <LifecycleIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                        {lifecycleLabel}
+                    </span>
                 </div>
-                <span className="rounded border border-amber-400/30 px-2 py-0.5 text-[10px] font-mono text-amber-300">
-                    {governanceSummary.toUpperCase()}
+                <span className="mt-2 inline-flex rounded-full border border-cortex-border bg-cortex-bg px-2.5 py-1 text-[11px] font-semibold text-cortex-text-muted">
+                    {governanceSummary}
                 </span>
             </div>
 
-            <div className="px-4 py-3 space-y-3">
-                <div className={`inline-flex items-center gap-2 rounded border px-2.5 py-1.5 text-[10px] ${lifecycleTone}`}>
-                    <LifecycleIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span>{lifecycleLabel}</span>
-                </div>
+            <div className="space-y-3 px-4 py-4">
                 <ProposalLifecycleProof lifecycle={renderedLifecycle} runId={message.run_id} />
 
                 <div className="space-y-2">
                     {isActionable ? (
                         <div>
-                            <h3 className="text-lg font-semibold text-cortex-text-main">{runQuestion}</h3>
+                            <h3 className="text-base font-semibold text-cortex-text-main">{runQuestion}</h3>
                             <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{runHelp}</p>
                         </div>
                     ) : null}
                     <div>
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">What Soma will do</div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cortex-primary">What I will do</div>
                         <p className="mt-1 text-base leading-7 text-cortex-text-main">{operatorSummary}</p>
                     </div>
                     <p className="text-sm leading-6 text-cortex-text-muted">
@@ -127,11 +131,11 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                 <button
                     type="button"
                     onClick={() => setDetailsOpen((open) => !open)}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono text-cortex-primary hover:text-cortex-primary/80 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-cortex-primary transition-colors hover:text-cortex-primary/80"
                     aria-expanded={detailsOpen}
                 >
                     {detailsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                    {detailsOpen ? "Hide run details" : "Review run details"}
+                    {detailsOpen ? "Hide details" : "Details"}
                 </button>
 
                 {detailsOpen ? (
@@ -174,12 +178,12 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
             </div>
 
             {isActionable ? (
-                <div className="px-4 py-3 border-t border-cortex-border space-y-2">
+                <div className="space-y-2 border-t border-cortex-border px-4 py-3">
                     <div className="flex flex-wrap items-center gap-2">
                         <button
                             onClick={() => void handleConfirm()}
                             disabled={!canRunProposal || confirming}
-                            className="px-3 py-1.5 rounded bg-cortex-success/20 border border-cortex-success/40 text-cortex-success text-xs font-mono hover:bg-cortex-success/30 transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed disabled:border-cortex-border disabled:bg-cortex-bg/40 disabled:text-cortex-text-muted"
+                            className="flex items-center gap-1.5 rounded-lg border border-cortex-success/40 bg-cortex-success/15 px-3 py-1.5 text-sm font-semibold text-cortex-success transition-colors hover:bg-cortex-success/25 disabled:cursor-not-allowed disabled:border-cortex-border disabled:bg-cortex-bg/40 disabled:text-cortex-text-muted"
                         >
                             {confirming ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
                             {confirming ? "Running..." : canRunProposal ? actionLabel : "Cannot run yet"}
@@ -187,10 +191,10 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                         <button
                             onClick={handleCancel}
                             disabled={confirming}
-                            className="px-3 py-1.5 rounded text-red-400 text-xs font-mono hover:bg-red-400/10 transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed disabled:text-cortex-text-muted"
+                            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-cortex-text-muted transition-colors hover:bg-cortex-bg hover:text-red-300 disabled:cursor-not-allowed disabled:text-cortex-text-muted"
                         >
                             <XCircle className="w-3 h-3" />
-                            Cancel
+                            Adjust
                         </button>
                         {!canRunProposal ? (
                             <span className="text-[11px] text-cortex-text-muted">
