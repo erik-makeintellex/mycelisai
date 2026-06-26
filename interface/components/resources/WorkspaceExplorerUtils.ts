@@ -24,14 +24,14 @@ export function parseListOutput(raw: string, currentPath: string): WorkspaceEntr
     if (!text) return [];
 
     const parsedJson = parseJsonList(text, currentPath);
-    if (parsedJson) return parsedJson;
+    if (parsedJson) return normalizeEntries(parsedJson);
 
-    return text
+    return normalizeEntries(text
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter(Boolean)
         .map((line) => parseLineEntry(line, currentPath))
-        .filter((entry) => entry.name.length > 0);
+        .filter((entry) => entry.name.length > 0));
 }
 
 function parseJsonList(text: string, currentPath: string): WorkspaceEntry[] | null {
@@ -88,4 +88,25 @@ function parseLineEntry(line: string, currentPath: string): WorkspaceEntry {
         dirTagged || cleaned.endsWith("/") ? "dir" : fileTagged ? "file" : "file";
     const name = cleaned.endsWith("/") ? cleaned.slice(0, -1) : cleaned;
     return { name, path: joinPath(currentPath, name), type };
+}
+
+function normalizeEntries(entries: WorkspaceEntry[]): WorkspaceEntry[] {
+    const seen = new Set<string>();
+    const normalized: WorkspaceEntry[] = [];
+    for (const entry of entries) {
+        if (!isDisplayableEntryName(entry.name)) continue;
+        const key = `${entry.type}:${entry.path}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        normalized.push(entry);
+    }
+    return normalized;
+}
+
+function isDisplayableEntryName(name: string): boolean {
+    const value = name.trim();
+    if (!value) return false;
+    if (/^[{}\[\],]+$/.test(value)) return false;
+    if (/^"?[A-Za-z0-9_-]+"?\s*:/.test(value)) return false;
+    return true;
 }

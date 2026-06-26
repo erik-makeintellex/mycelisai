@@ -100,10 +100,10 @@ export function WorkspaceBrowsePane({
                         No retained outputs in this folder
                     </div>
                 ) : (
-                    entries.map((entry) => (
+                    entries.map((entry, index) => (
                         <button
                             type="button"
-                            key={`${entry.type}:${entry.path}`}
+                            key={`${entry.type}:${entry.path}:${index}`}
                             aria-label={
                                 entry.type === "dir"
                                     ? `Open folder ${entry.name}`
