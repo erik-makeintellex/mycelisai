@@ -77,6 +77,7 @@ Capability and MCP management lives in `Resources -> Capabilities`, while Settin
 Use Capabilities to inspect:
 
 - installed MCP servers
+- capability permission groups for Everyone, Group, or Host boundaries
 - each server's transport, command or endpoint, args, env/header references, and status
 - available tools
 - recent persisted MCP activity
@@ -84,7 +85,7 @@ Use Capabilities to inspect:
 
 Soma should use the Mycelis-owned `web_search` path when search is configured. Brave is optional; self-hosted SearXNG and local API search do not require Brave tokens.
 
-Use Library when you need to edit or reapply a curated MCP structure. Secrets stay in `.env` or the configured secret backend; the UI should show only references or redacted values.
+Use Capability permissions when you need to decide where Soma can use connected tools. Use Library when you need to edit or reapply a curated MCP structure. Secrets stay in `.env` or the configured secret backend; the UI should show only references or redacted values.
 
 Useful Soma prompts from this surface:
 

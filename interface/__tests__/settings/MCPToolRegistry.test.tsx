@@ -104,7 +104,8 @@ describe('MCPToolRegistry', () => {
         expect(fetchSearchCapability).toHaveBeenCalledTimes(1);
         expect(fetchCapabilities).toHaveBeenCalledTimes(1);
         expect(screen.getByText('What Soma Can Use')).toBeDefined();
-        expect(screen.getByText('MCP access layers')).toBeDefined();
+        expect(screen.getByText('Capability permissions')).toBeDefined();
+        expect(screen.getByText('Choose where Soma can use connected tools')).toBeDefined();
         expect(screen.getByText('Can use now')).toBeDefined();
         expect(screen.getByText('Needs repair')).toBeDefined();
         expect(screen.getByText('Can request/add')).toBeDefined();
@@ -206,7 +207,7 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText('filesystem-server: read_file')).toBeDefined();
         expect(screen.getByText('filesystem-server: write_file')).toBeDefined();
         expect(screen.getByText(/approval required/i)).toBeDefined();
-        expect(screen.getByText(/workspace files/i)).toBeDefined();
+        expect(screen.getAllByText(/workspace files/i).length).toBeGreaterThan(0);
         expect(screen.getAllByText(/Inspect capability binding/i).length).toBeGreaterThan(0);
         expect(screen.queryByText('MCP Server Drill-Down')).toBeNull();
         fireEvent.click(screen.getByText('Inspect MCP topology'));

@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
-import { Layers3, RefreshCw, Save } from "lucide-react";
+import { Layers3, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import type { MCPToolSet, MCPToolSetCreate, MCPToolSetScopeKind } from "@/store/useCortexStore";
 import { useCortexStore } from "@/store/useCortexStore";
 
@@ -16,10 +16,10 @@ type Props = {
     onCreate: (input: MCPToolSetCreate) => Promise<boolean>;
 };
 
-const scopes: Array<{ kind: MCPToolSetScopeKind; label: string; help: string }> = [
-    { kind: "all", label: "All", help: "Shared fallback for Soma and teams." },
-    { kind: "group", label: "Group", help: "Target one collaboration lane." },
-    { kind: "host", label: "Host", help: "Target one runtime host." },
+const scopes: Array<{ kind: MCPToolSetScopeKind; label: string; help: string; example: string }> = [
+    { kind: "all", label: "Everyone", help: "Default tools Soma may use across this workspace.", example: "Workspace files" },
+    { kind: "group", label: "Group", help: "Tools for one Outcome or collaboration lane.", example: "Marketing deliverables" },
+    { kind: "host", label: "Host", help: "Tools limited to one runtime machine or service host.", example: "Local media node" },
 ];
 
 export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, onCreate }: Props) {
@@ -47,15 +47,15 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
         const nextName = name.trim();
         const target = scopeRef.trim();
         if (!nextName) {
-            setFormError("Name the access layer before saving.");
+            setFormError("Name this permission group before saving.");
             return;
         }
         if (scopeKind !== "all" && !target) {
-            setFormError(`${scopeLabel(scopeKind)} layers need a target id.`);
+            setFormError(`${scopeLabel(scopeKind)} permissions need a target.`);
             return;
         }
         if (parsedRefs.length === 0) {
-            setFormError("Add at least one tool reference, such as mcp:filesystem/*.");
+            setFormError("Add at least one capability reference, such as mcp:filesystem/*.");
             return;
         }
         setFormError(null);
@@ -85,13 +85,13 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
                     </div>
                     <div>
                         <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                            MCP access layers
+                            Capability permissions
                         </p>
                         <p className="mt-1 text-sm font-semibold text-cortex-text-main">
-                            Shared defaults, group lanes, and host-targeted tools
+                            Choose where Soma can use connected tools
                         </p>
                         <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-                            Keep common tools in All, then narrow access for specific groups or runtime hosts when work needs a sharper boundary.
+                            Start with safe workspace defaults, then narrow sensitive tools to one group or runtime host when a tighter boundary is needed.
                         </p>
                     </div>
                 </div>
@@ -115,25 +115,26 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
                             </span>
                         </div>
                         <p className="mt-1 text-[11px] leading-4 text-cortex-text-muted">{scope.help}</p>
+                        <p className="mt-2 text-[10px] font-mono uppercase tracking-wider text-cortex-primary/80">{scope.example}</p>
                     </div>
                 ))}
             </div>
 
             {error && <Notice tone="warning" message={error} />}
             {formError && <Notice tone="danger" message={formError} />}
-            {saveState === "saved" && <Notice tone="success" message="Access layer saved and refreshed." />}
-            {saveState === "error" && <Notice tone="danger" message="Access layer could not be saved." />}
+            {saveState === "saved" && <Notice tone="success" message="Permission group saved and refreshed." />}
+            {saveState === "error" && <Notice tone="danger" message="Permission group could not be saved." />}
 
             <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
                 <div className="min-h-[160px] rounded-lg border border-cortex-border bg-cortex-bg/50 p-3">
                     <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                        Existing layers
+                        Current permission groups
                     </p>
                     {isLoading && toolSets.length === 0 ? (
-                        <p className="mt-3 text-xs text-cortex-text-muted">Loading MCP access layers...</p>
+                        <p className="mt-3 text-xs text-cortex-text-muted">Loading capability permissions...</p>
                     ) : toolSets.length === 0 ? (
                         <p className="mt-3 text-xs leading-5 text-cortex-text-muted">
-                            No reusable MCP access layers are visible yet. Save an All layer first, then add group or host overrides when needed.
+                            No reusable permission groups are visible yet. Save an Everyone group first, then add group or host limits for sensitive tools.
                         </p>
                     ) : (
                         <div className="mt-3 max-h-72 overflow-y-auto pr-1">
@@ -146,7 +147,7 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
 
                 <form onSubmit={handleSubmit} className="rounded-lg border border-cortex-border bg-cortex-bg/50 p-3">
                     <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                        Add layer
+                        Add permission group
                     </p>
                     <label className="mt-3 block text-[10px] font-mono uppercase tracking-wider text-cortex-text-muted">
                         Name
@@ -154,7 +155,7 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
                             value={name}
                             onChange={(event) => setName(event.target.value)}
                             className="mt-1 w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-sm normal-case tracking-normal text-cortex-text-main outline-none focus:border-cortex-primary"
-                            placeholder="workspace"
+                            placeholder="Workspace file access"
                         />
                     </label>
                     <div className="mt-3 grid grid-cols-3 gap-1 rounded-lg border border-cortex-border bg-cortex-surface p-1">
@@ -175,17 +176,17 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
                     </div>
                     {scopeKind !== "all" && (
                         <label className="mt-3 block text-[10px] font-mono uppercase tracking-wider text-cortex-text-muted">
-                            Target {scopeLabel(scopeKind)} id
+                            Target {scopeLabel(scopeKind)}
                             <input
                                 value={scopeRef}
                                 onChange={(event) => setScopeRef(event.target.value)}
                                 className="mt-1 w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-sm normal-case tracking-normal text-cortex-text-main outline-none focus:border-cortex-primary"
-                                placeholder={scopeKind === "group" ? "customer-review-lane" : "edge-node-1"}
+                                placeholder={scopeKind === "group" ? "marketing-outcome" : "local-media-host"}
                             />
                         </label>
                     )}
                     <label className="mt-3 block text-[10px] font-mono uppercase tracking-wider text-cortex-text-muted">
-                        Tool refs
+                        Capability refs
                         <textarea
                             value={toolRefsText}
                             onChange={(event) => setToolRefsText(event.target.value)}
@@ -199,7 +200,7 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
                             value={description}
                             onChange={(event) => setDescription(event.target.value)}
                             className="mt-1 w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-sm normal-case tracking-normal text-cortex-text-main outline-none focus:border-cortex-primary"
-                            placeholder="Tools this layer grants"
+                            placeholder="When Soma should be allowed to use these tools"
                         />
                     </label>
                     <button
@@ -208,7 +209,7 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
                         className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-[10px] font-mono font-bold uppercase text-cortex-primary hover:bg-cortex-primary/20 disabled:opacity-50"
                     >
                         <Save className="h-3.5 w-3.5" />
-                        {saveState === "saving" ? "Saving" : "Save layer"}
+                        {saveState === "saving" ? "Saving" : "Save permissions"}
                     </button>
                 </form>
             </div>
@@ -235,15 +236,20 @@ export function MCPToolSetLayersStorePanel() {
 }
 
 function ToolSetRow({ toolSet }: { toolSet: MCPToolSet }) {
+    const scope = scopeLabel(toolSet.scope_kind);
     return (
         <div className="mb-2 rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-cortex-text-main">{toolSet.name}</p>
                 <span className="rounded border border-cortex-border bg-cortex-bg px-2 py-0.5 text-[10px] font-mono uppercase text-cortex-text-muted">
-                    {scopeLabel(toolSet.scope_kind)}{toolSet.scope_ref ? `: ${toolSet.scope_ref}` : ""}
+                    {scope}{toolSet.scope_ref ? `: ${toolSet.scope_ref}` : ""}
                 </span>
             </div>
             {toolSet.description && <p className="mt-1 text-[11px] leading-4 text-cortex-text-muted">{toolSet.description}</p>}
+            <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-4 text-cortex-text-muted">
+                <ShieldCheck className="mt-0.5 h-3 w-3 flex-none text-cortex-primary" />
+                <span>{permissionSummary(toolSet)}</span>
+            </p>
             <p className="mt-2 break-words text-[11px] font-mono leading-4 text-cortex-primary">
                 {toolSet.tool_refs.length > 0 ? toolSet.tool_refs.join(", ") : "No tool refs"}
             </p>
@@ -265,8 +271,21 @@ function parseToolRefs(value: string): string[] {
 }
 
 function scopeLabel(scope: string): string {
-    if (scope === "all") return "All";
+    if (scope === "all") return "Everyone";
     if (scope === "group") return "Group";
     if (scope === "host") return "Host";
     return scope;
+}
+
+function permissionSummary(toolSet: MCPToolSet): string {
+    if (toolSet.scope_kind === "all") {
+        return "Soma can use these capabilities as the workspace default when work is approved.";
+    }
+    if (toolSet.scope_kind === "group") {
+        return "Soma can use these capabilities only inside the selected group or Outcome lane.";
+    }
+    if (toolSet.scope_kind === "host") {
+        return "Soma can use these capabilities only on the selected runtime host.";
+    }
+    return "Soma can use these capabilities inside this configured boundary.";
 }

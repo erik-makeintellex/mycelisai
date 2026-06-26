@@ -45,13 +45,16 @@ function renderPanel(overrides: Partial<ComponentProps<typeof MCPToolSetLayersPa
 }
 
 describe("MCPToolSetLayersPanel", () => {
-    it("shows shared, group, and host access layers", () => {
+    it("shows shared, group, and host permission groups", () => {
         renderPanel();
 
-        expect(screen.getByText("MCP access layers")).toBeDefined();
+        expect(screen.getByText("Capability permissions")).toBeDefined();
+        expect(screen.getByText("Choose where Soma can use connected tools")).toBeDefined();
         expect(screen.getByText("workspace")).toBeDefined();
         expect(screen.getByText("Group: alpha-lane")).toBeDefined();
         expect(screen.getByText("Host: edge-node-1")).toBeDefined();
+        expect(screen.getAllByText(/workspace default/i).length).toBeGreaterThan(0);
+        expect(screen.getByText(/only inside the selected group/i)).toBeDefined();
         expect(screen.getByText("mcp:filesystem/*")).toBeDefined();
     });
 
@@ -60,10 +63,10 @@ describe("MCPToolSetLayersPanel", () => {
 
         fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: "lane-tools" } });
         fireEvent.click(screen.getByRole("button", { name: "Group" }));
-        fireEvent.change(screen.getByLabelText(/Tool refs/i), { target: { value: "mcp:filesystem/*" } });
-        fireEvent.click(screen.getByRole("button", { name: "Save layer" }));
+        fireEvent.change(screen.getByLabelText(/Capability refs/i), { target: { value: "mcp:filesystem/*" } });
+        fireEvent.click(screen.getByRole("button", { name: "Save permissions" }));
 
-        expect(await screen.findByText("Group layers need a target id.")).toBeDefined();
+        expect(await screen.findByText("Group permissions need a target.")).toBeDefined();
         expect(onCreate).not.toHaveBeenCalled();
     });
 
@@ -72,12 +75,12 @@ describe("MCPToolSetLayersPanel", () => {
 
         fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: "deploy" } });
         fireEvent.click(screen.getByRole("button", { name: "Host" }));
-        fireEvent.change(screen.getByLabelText(/Target Host id/i), { target: { value: "edge-node-2" } });
-        fireEvent.change(screen.getByLabelText(/Tool refs/i), {
+        fireEvent.change(screen.getByLabelText(/Target Host/i), { target: { value: "edge-node-2" } });
+        fireEvent.change(screen.getByLabelText(/Capability refs/i), {
             target: { value: "mcp:ssh/*\ntoolset:workspace" },
         });
         fireEvent.change(screen.getByLabelText(/Description/i), { target: { value: "Deploy tools" } });
-        fireEvent.click(screen.getByRole("button", { name: "Save layer" }));
+        fireEvent.click(screen.getByRole("button", { name: "Save permissions" }));
 
         await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
         expect(onCreate).toHaveBeenCalledWith({
@@ -87,6 +90,6 @@ describe("MCPToolSetLayersPanel", () => {
             scope_kind: "host",
             scope_ref: "edge-node-2",
         });
-        expect(await screen.findByText("Access layer saved and refreshed.")).toBeDefined();
+        expect(await screen.findByText("Permission group saved and refreshed.")).toBeDefined();
     });
 });

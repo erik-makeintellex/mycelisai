@@ -97,28 +97,29 @@ async function mockSettingsApis(page: Page) {
     return () => savedPayload;
 }
 
-test.describe("MCP access layers settings", () => {
+test.describe("Capability permission settings", () => {
     test.skip(({ browserName }) => browserName !== "chromium", "Visible settings proof is stabilized in Chromium.");
 
-    test("creates a host-targeted MCP access layer from Resources", async ({ page }) => {
+    test("creates a host-targeted capability permission from Resources", async ({ page }) => {
         const getSavedPayload = await mockSettingsApis(page);
 
         await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
         await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
         await page.goto("/resources?tab=tools", { waitUntil: "domcontentloaded" });
 
-        await expect(page.getByText("MCP access layers", { exact: true })).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Capability permissions", { exact: true })).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Choose where Soma can use connected tools")).toBeVisible();
         await expect(page.getByText("Shared workspace file tools.")).toBeVisible();
         await expect(page.getByText("Group: market-research")).toBeVisible();
 
         await page.getByLabel("Name").fill("deploy");
         await clickVisibleControl(page, page.getByRole("button", { name: "Host", exact: true }));
-        await page.getByLabel("Target Host id").fill("edge-node-2");
-        await page.getByLabel("Tool refs").fill("mcp:ssh/*\ntoolset:workspace");
+        await page.getByLabel("Target Host").fill("edge-node-2");
+        await page.getByLabel("Capability refs").fill("mcp:ssh/*\ntoolset:workspace");
         await page.getByLabel("Description").fill("Deployment host tools");
-        await clickVisibleControl(page, page.getByRole("button", { name: "Save layer" }));
+        await clickVisibleControl(page, page.getByRole("button", { name: "Save permissions" }));
 
-        await expect(page.getByText("Access layer saved and refreshed.")).toBeVisible();
+        await expect(page.getByText("Permission group saved and refreshed.")).toBeVisible();
         await expect.poll(getSavedPayload).toEqual({
             name: "deploy",
             description: "Deployment host tools",

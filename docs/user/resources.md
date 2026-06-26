@@ -26,7 +26,7 @@ The Resources page keeps these resource types in a persistent menu and renders t
 
 ## Connected Tools
 
-Connected Tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, what needs repair, and what can be requested, while raw MCP/server structure stays behind Inspect.
+Connected tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, where that permission applies, what needs repair, and what can be requested. Raw MCP/server structure stays behind Inspect.
 
 ---
 
@@ -75,14 +75,14 @@ Capability manifest expectation:
 - every meaningful output should normalize into Managed Exchange, a retained artifact/output, audit evidence, or a learning candidate before it is treated as durable product state
 - raw MCP/custom output should not be the final unmanaged state
 
-MCP tool-set layering supports three configuration forms:
-- `all`: a shared tool set available across the organization, used as the fallback for plain `toolset:<name>` references
-- `group`: a grouped tool set targeted to a collaboration/team/group lane through `scope_ref`
-- `host`: a host-targeted tool set for a specific deployment/runtime host through `scope_ref`
+Capability permission groups support three configuration forms:
+- `Everyone`: shared defaults Soma may use across the workspace after normal governance and approval
+- `Group`: permissions limited to one Outcome, group, or collaboration lane
+- `Host`: permissions limited to one deployment/runtime host
 
-When the same tool-set name exists at multiple layers, scoped runtime resolution should prefer the group or host layer first, then fall back to the shared `all` layer. This lets operators keep a default capability posture while adding narrower MCP access for a project lane or a particular host.
+Under the hood these still save as MCP tool-set scopes (`all`, `group`, and `host`). When the same tool-set name exists at multiple layers, scoped runtime resolution should prefer the group or host layer first, then fall back to the shared `all` layer. This lets operators keep a default capability posture while adding narrower MCP access for a project lane or a particular host.
 
-The Capabilities page now exposes this as **MCP access layers**. Use **All** for organization-wide defaults, **Group** for a collaboration lane, and **Host** for a target runtime host. Group and Host layers require a target id before they can be saved, and saved layers should appear in the existing-layers list with their tool references visible for review.
+The Capabilities page exposes this as **Capability permissions**. Use **Everyone** for workspace defaults, **Group** for a collaboration lane, and **Host** for a target runtime host. Group and Host permissions require a target before they can be saved. Saved permission groups appear in the current-permissions list with a plain-language summary plus capability references for review.
 
 Review/edit expectation:
 - the installed server card should expand into an MCP structure view with transport, status, command or endpoint, arguments, env/header references, discovered tools, and recent use
