@@ -3,6 +3,7 @@ import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSlice
 import type { CTSEnvelope } from '@/store/cortexStoreTypes';
 import { dispatchSignalToNodes } from '@/store/cortexStoreUtils';
 import { normalizeIncomingSignal } from '@/lib/signalNormalize';
+import { chatMessageFromThreadSignal } from '@/store/cortexStoreThreadEvents';
 
 let eventSourceRef: EventSource | null = null;
 
@@ -31,10 +32,15 @@ export function createCortexStreamSlice(
                     const { nodes } = get();
                     const nextLogs = [signal, ...get().streamLogs].slice(0, 100);
                     const updatedNodes = dispatchSignalToNodes(signal, nodes);
+                    const threadMessage = chatMessageFromThreadSignal(signal);
 
                     const patch: Partial<CortexState> = updatedNodes
                         ? { streamLogs: nextLogs, nodes: updatedNodes }
                         : { streamLogs: nextLogs };
+
+                    if (threadMessage) {
+                        patch.missionChat = [...get().missionChat, threadMessage];
+                    }
 
                     if (signal.type === 'artifact' && signal.source) {
                         const envelope: CTSEnvelope = {

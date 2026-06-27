@@ -187,6 +187,7 @@ export default function MissionControlMessageBubble({
                             {msg.content}
                         </span>
                     )}
+                    <MissionControlThreadStateCard msg={msg} />
                     {msg.execution_summary && (
                         <div className="w-full">
                             {useReceipt ? (

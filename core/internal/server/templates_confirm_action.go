@@ -84,6 +84,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		log.Printf("CE-1: confirm-action visibility persistence failed: %v", err)
 	}
+	s.broadcastConfirmActionThreadEvent(runID, proofID, contractID, teamWorkRefs)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID, scope, results, teamWorkRefs, outcomeProject)))
 }
 

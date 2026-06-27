@@ -66,7 +66,7 @@ Open the review panel when you need more detail. Its tabs keep dense information
 
 When output is ready and recovery is also present, Soma should say that plainly, keep the output openable, and point you to the Work tab for recovery.
 
-Soma replies may also show small action-state cards inside the thread. These cards translate structured work state into user language such as `Waiting for approval`, `Current team route`, `Output ready`, or `Needs recovery` without exposing raw routing subjects or system payloads.
+Soma replies may also show small action-state cards inside the thread. These cards translate structured work state into user language such as `Approval sent`, `Execution started`, `Output ready`, or `Needs recovery` without exposing raw routing subjects or system payloads. When a handoff has a run receipt, the card should offer a plain `Open run receipt` link for proof and recovery review.
 
 ## Outputs
 

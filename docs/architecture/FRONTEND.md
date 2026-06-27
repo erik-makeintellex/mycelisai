@@ -47,6 +47,7 @@ Implementation note:
 - governed approval review is store-driven through `GovernanceModal.tsx` in advanced workspace contexts, not a legacy shell side rail
 - stream/telemetry surfaces are route-local, with `NatsWaterfall.tsx` and `SignalDetailDrawer.tsx` carrying the active advanced inspection path
 - Soma chat renders returned artifacts inline, including images, audio, video, charts, code, and documents; governed proposals surface whether work is one-shot, scheduled, continuous, event-driven, and whether it connects to current-team or multi-team NATS lanes
+- Soma chat may append compact system cards from typed `thread_event` stream payloads such as approval sent, execution started, output ready, or attention required; raw subjects and payload dumps stay in Inspect surfaces
 
 ---
 
@@ -177,7 +178,7 @@ Frontend API traffic primarily originates from:
 
 | Capability | Frontend endpoint | Backend route owner |
 | --- | --- | --- |
-| Stream events | `GET /api/v1/stream` (EventSource) | `signal.StreamHandler` |
+| Stream events | `GET /api/v1/stream` (EventSource) | `signal.StreamHandler`; typed `thread_event` payloads may append compact Soma-thread cards |
 | Services status | `GET /api/v1/services/status` | `AdminServer.HandleServicesStatus` |
 | Telemetry | `GET /api/v1/telemetry/compute` | `AdminServer.HandleTelemetry` |
 | Runs list/events | `GET /api/v1/runs`, `GET /api/v1/runs/{id}/events` | `AdminServer` run handlers |

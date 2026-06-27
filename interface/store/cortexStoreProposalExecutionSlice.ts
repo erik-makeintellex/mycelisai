@@ -5,6 +5,7 @@ import {
 } from '@/store/cortexStoreChatWorkflow';
 import { buildMissionChatFailure } from '@/lib/missionChatFailure';
 import type { ChatMessage, ConfirmProposalResult } from '@/store/cortexStoreTypes';
+import { approvalSentEvent, executionStartedEvent } from '@/store/cortexStoreProposalThreadEvents';
 import { extractTeamWorkRefs, teamWorkMessage, type TeamWorkConfirmationRef } from '@/store/cortexStoreProposalTeamWorkRefs';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { ProposalData } from '@/store/cortexStoreTypesChat';
@@ -109,6 +110,7 @@ export function createCortexProposalExecutionSlice(
                 missionChat: updateProposalLifecycle(s.missionChat, intentProofId, 'confirmed_pending_execution', {
                     mode: 'proposal',
                     ui_response_state: proposalStartedState(),
+                    thread_events: [approvalSentEvent()],
                 }),
             }));
             try {
@@ -132,6 +134,7 @@ export function createCortexProposalExecutionSlice(
                         mode: runId ? 'execution_result' : 'proposal',
                         ui_response_state: runId ? undefined : proposalStartedState(),
                         run_id: runId ?? undefined,
+                        thread_events: [executionStartedEvent(runId, teamWorkRefs)],
                         execution_summary: body?.data?.execution_summary,
                         timestamp: new Date().toISOString(),
                     };

@@ -107,6 +107,34 @@ export interface BrainProvenance {
     tokens_used?: number;
 }
 
+export type SomaThreadEventKind =
+    | 'execution_started'
+    | 'execution_update'
+    | 'result_ready'
+    | 'attention_required';
+
+export type SomaThreadEventTone = 'info' | 'success' | 'warning' | 'danger';
+
+export interface SomaThreadEvent {
+    id?: string;
+    kind: SomaThreadEventKind;
+    label: string;
+    title?: string;
+    detail?: string;
+    tone: SomaThreadEventTone;
+    timestamp?: string;
+    status?: string;
+    run_id?: string;
+    team_id?: string;
+    agent_id?: string;
+    source_kind?: string;
+    source_channel?: string;
+    payload_kind?: string;
+    href?: string;
+    href_label?: string;
+    target_reference?: string;
+}
+
 export interface ChatMessage {
     role: 'user' | 'architect' | 'admin' | 'council' | 'system';
     content: string;
@@ -126,6 +154,8 @@ export interface ChatMessage {
     execution_summary?: ExecutionSummaryData;
     brain?: BrainProvenance;
     run_id?: string;
+    thread_event?: SomaThreadEvent;
+    thread_events?: SomaThreadEvent[];
 }
 
 export interface CouncilMember {
@@ -153,6 +183,7 @@ export interface CTSChatEnvelope {
         consultations?: ChatConsultation[];
         tools_used?: string[];
         artifacts?: ChatArtifactRef[];
+        thread_events?: SomaThreadEvent[];
         ui_response_state?: UIResponseStateProjection;
         provenance?: AnswerProvenance;
         brain?: BrainProvenance;

@@ -97,7 +97,7 @@ Mutating or protected actions flow through policy checks, proposals, approvals, 
 
 ### Pipeline 6: SSE Real-Time Streaming
 
-Runtime events are streamed to the UI through normalized, route-safe state. High-volume telemetry must not substitute for operator status/result channels.
+Runtime events are streamed to the UI through normalized, route-safe state. High-volume telemetry must not substitute for operator status/result channels. Work handoffs that should appear in the Soma conversation use typed `thread_event` envelopes with operator-safe copy, run/work/proof targets, and source metadata; raw bus envelopes remain inspect-only.
 
 ## V. Data Contracts & Protocols
 

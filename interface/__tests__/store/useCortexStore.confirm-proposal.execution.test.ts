@@ -73,6 +73,16 @@ describe('useCortexStore confirm proposal execution', () => {
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Run run-123 started.');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Review active work and latest output below');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).not.toContain('Active Work');
+        expect(useCortexStore.getState().missionChat.at(-1)?.thread_events?.[0]).toMatchObject({
+            kind: 'execution_started',
+            label: 'Execution started',
+            href: '/runs/run-123',
+            href_label: 'Open run receipt',
+            target_reference: 'run:run-123',
+            source_kind: 'web_api',
+            source_channel: 'api.intent.confirm-action',
+            payload_kind: 'soma_thread_event',
+        });
         expect(useCortexStore.getState().missionChat.at(-1)?.execution_summary?.outputs).toEqual([
             {
                 id: 'workspace/logs/game.html',

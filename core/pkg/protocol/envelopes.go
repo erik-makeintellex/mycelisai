@@ -186,6 +186,7 @@ type APIResponse struct {
 
 // SignalSourceKind identifies where a governed product signal originated.
 type SignalSourceKind string
+
 const (
 	SourceKindWorkspaceUI       SignalSourceKind = "workspace_ui"
 	SourceKindWebAPI            SignalSourceKind = "web_api"
@@ -229,7 +230,6 @@ type SignalEnvelope struct {
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
-// NewAPISuccess creates a successful response envelope.
 func NewAPISuccess(data interface{}) APIResponse {
 	return APIResponse{OK: true, Data: data}
 }

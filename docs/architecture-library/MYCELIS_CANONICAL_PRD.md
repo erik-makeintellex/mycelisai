@@ -173,7 +173,7 @@ Required references on meaningful work:
 - `capability_id` or capability name when tools are used
 - `source_kind`, `source_channel`, `payload_kind`, and timestamp for bus payloads
 
-NATS or future WebSocket bridge events should produce typed thread events such as started, progress, proposal, needs approval, output ready, blocked, recovered, and archived. The UI must render an immediate "Started" card after a quick action or approval instead of waiting for completion.
+NATS, the current EventSource stream, or a future WebSocket bridge should produce typed thread events such as started, progress, proposal, needs approval, output ready, blocked, recovered, and archived. The UI must render an immediate "Approval sent" or "Started" card after a quick action or approval instead of waiting for completion. Only normalized `thread_event` payloads belong in the Soma thread by default; raw NATS subjects, runtime envelopes, and stack traces remain behind Inspect/Details.
 
 ## Settings And Capability Configuration
 

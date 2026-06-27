@@ -21,7 +21,7 @@ def test_canonical_prd_layers_threaded_workspace_mandate():
         "large Talk to Soma thread as the primary canvas",
         "header Outcomes button that opens Outcome Vault on demand",
         "No raw backend stack traces should reach the default UI.",
-        "NATS or future WebSocket bridge events should produce typed thread events",
+        "NATS, the current EventSource stream, or a future WebSocket bridge should produce typed thread events",
         "Ask\n-> Understand\n-> Approve\n-> Execute\n-> Deliver\n-> Trust\n-> Recover\n-> Revisit",
         "The dashboard should keep the composer reachable",
     ]

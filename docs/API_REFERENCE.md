@@ -58,7 +58,7 @@ Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity
 | `/api/v1/swarm/broadcast` | POST | Fan out directive to ALL active teams |
 | `/agents` | GET | List active agents with heartbeat status |
 | **Telemetry & Trust** | | |
-| `/api/v1/stream` | GET (SSE) | Real-time NATS signal stream |
+| `/api/v1/stream` | GET (SSE) | Normalized real-time signal stream. User-facing work handoffs may emit typed `thread_event` payloads with source metadata, run/work/proof targets, status, and operator-safe copy so the Interface can add compact Soma-thread cards without exposing raw NATS envelopes. |
 | `/api/v1/telemetry/compute` | GET | Goroutines, heap, system memory, LLM tokens/sec |
 | `/api/v1/audit` | GET | Inspect normalized audit records. Confirmed governed actions include `actor_identity` when the request arrived through a signed Interface web session, so proof review can distinguish local API-key execution from local web or Google Workspace SSO execution. |
 | `/api/v1/trust/threshold` | GET/PUT | Read/write autonomy threshold |

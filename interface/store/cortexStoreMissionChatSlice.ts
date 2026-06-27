@@ -128,6 +128,7 @@ export function createCortexMissionChatSlice(
                         mode: envelope.mode || 'answer',
                         provenance: envelope.payload?.provenance,
                         execution_summary: envelope.payload?.execution_summary,
+                        thread_events: envelope.payload?.thread_events,
                         brain: envelope.payload?.brain,
                         proposal: normalizeProposalData(envelope.payload?.proposal),
                         proposal_status: envelope.payload?.proposal ? 'active' : undefined,

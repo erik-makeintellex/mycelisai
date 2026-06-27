@@ -74,4 +74,38 @@ describe('MissionControlChat thread state cards', () => {
 
         expect(screen.queryByText('swarm.team.ops.internal.command')).toBeNull();
     });
+
+    it('renders compact typed thread events without exposing transport subjects', () => {
+        useCortexStore.setState({
+            missionChat: [{
+                role: 'system',
+                content: 'Execution started - Soma accepted the approved work.',
+                mode: 'execution_result',
+                run_id: 'run-thread-123',
+                thread_events: [{
+                    kind: 'execution_started',
+                    label: 'Execution started',
+                    detail: 'Soma accepted the approved work and saved the run receipt for proof.',
+                    tone: 'info',
+                    status: 'running',
+                    href: '/runs/run-thread-123',
+                    href_label: 'Open run receipt',
+                    source_kind: 'web_api',
+                    source_channel: 'api.intent.confirm-action',
+                    payload_kind: 'soma_thread_event',
+                }],
+            }],
+            councilMembers: COUNCIL_MEMBERS,
+            councilTarget: 'admin',
+        });
+
+        render(<MissionControlChat simpleMode />);
+
+        expect(screen.getByTestId('soma-thread-state-card')).toBeDefined();
+        expect(screen.getByText('Execution started')).toBeDefined();
+        expect(screen.getByText('running')).toBeDefined();
+        expect(screen.getByText('Soma accepted the approved work and saved the run receipt for proof.')).toBeDefined();
+        expect(screen.getByRole('link', { name: /Open run receipt/i }).getAttribute('href')).toBe('/runs/run-thread-123');
+        expect(screen.queryByText('api.intent.confirm-action')).toBeNull();
+    });
 });

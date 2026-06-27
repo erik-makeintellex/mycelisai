@@ -59,6 +59,16 @@ describe('useCortexStore confirm proposal pending proof', () => {
                 detail: 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
                 tone: 'info',
             },
+            thread_events: [{
+                kind: 'execution_update',
+                label: 'Approval sent',
+                detail: 'Soma is confirming the governed handoff.',
+                tone: 'info',
+                status: 'confirming',
+                source_kind: 'workspace_ui',
+                source_channel: 'soma.proposal.confirm',
+                payload_kind: 'soma_thread_event',
+            }],
         });
         expect(useCortexStore.getState().missionChat.at(-1)).toMatchObject({
             role: 'system',
@@ -70,6 +80,16 @@ describe('useCortexStore confirm proposal pending proof', () => {
                 detail: 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
                 tone: 'info',
             },
+            thread_events: [{
+                kind: 'execution_started',
+                label: 'Work approved',
+                detail: 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
+                tone: 'info',
+                status: 'running',
+                source_kind: 'web_api',
+                source_channel: 'api.intent.confirm-action',
+                payload_kind: 'soma_thread_event',
+            }],
         });
     });
 
