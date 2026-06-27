@@ -28,7 +28,7 @@ function teamDetailsFromPayload(payload: unknown): TeamDetail[] {
 }
 
 test.describe("Dashboard right-rail target live proof", () => {
-  test("opens API-backed recovery work from Outcomes and Vault", async ({ page }) => {
+  test("opens API-backed recovery work from Outcome Vault", async ({ page }) => {
     test.skip(
       !liveRailTargetProofRequested(),
       "BLOCKED: set PLAYWRIGHT_RAIL_TARGET_GUI_LIVE=1 with local Core, Interface, PostgreSQL, and at least one team.",
@@ -82,7 +82,7 @@ test.describe("Dashboard right-rail target live proof", () => {
       });
       await page.goto(`/dashboard?team_id=${encodeURIComponent(teamId)}`, { waitUntil: "domcontentloaded" });
       await expect(page.getByTestId("soma-outcome-vault")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText("Outcomes & Vault")).toBeVisible();
+      await expect(page.getByText("Outcome Vault")).toBeVisible();
 
       const targetReference = `recovery:${workItemId}`;
       const railLink = page.locator(`[data-target-reference="${targetReference}"]`).first();
@@ -100,7 +100,7 @@ test.describe("Dashboard right-rail target live proof", () => {
       await expect(page).toHaveURL(new RegExp(`/teams\\?view=work&work_item_id=${workItemId}`));
       await expect(page.getByRole("heading", { name: "Recovery and Review", exact: true })).toBeVisible();
       await expect(page.locator(`[data-work-item-id="${workItemId}"]`)).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByText(`Opened "${objective}" from Outcomes & Vault.`)).toBeVisible();
+      await expect(page.getByText(`Opened "${objective}" from Outcome Vault.`)).toBeVisible();
       await expect(page.getByLabel(`Review details for ${objective}`)).toBeVisible();
 
       const reviewText = await page.getByTestId("work-review-inbox").innerText();

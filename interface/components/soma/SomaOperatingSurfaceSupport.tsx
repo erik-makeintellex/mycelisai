@@ -4,7 +4,7 @@ import { Activity, CheckSquare, ListChecks, Wrench } from "lucide-react";
 import { recoveryReviewQueueItems } from "@/components/recovery/recoveryQueue";
 import { targetRefHref, targetRefReference } from "@/components/teams/teamWorkProjection";
 import type { TeamDetailEntry, TeamOutputRef, TeamWorkItem } from "@/store/useCortexStore";
-import type { OutcomeProjectSummary } from "./OutcomeProjectSummaryCard";
+import type { OutcomeProjectSummary } from "./OutcomeProjectSummary";
 import type { DashboardRailAlert, DashboardRailAlertTarget } from "./SomaOutcomeVaultPanel";
 import type { SomaEvidenceItem } from "./SomaEvidencePanel";
 
@@ -84,7 +84,7 @@ export function outcomeProjectSummaryFromWork({
     item.state === "degraded" || item.state === "needs_operator" || item.needsOperator
   )).length;
   return {
-    title: lead ? `${lead.name} outcome workspace` : "Outcome project workspace",
+    title: lead ? `${lead.name} outcome workspace` : "Outcome workspace",
     detail: outcomeProjectDetail(activeItems.length, outputRefs.length, recoveryCount),
     ownerLabel: "Soma",
     leadLabel: lead ? `${lead.name}${lead.role ? `, ${lead.role}` : ""}` : undefined,
@@ -172,7 +172,7 @@ function dashboardTargetLabel(type: DashboardRailAlertTarget["type"]) {
   if (type === "run") return "Run receipt";
   if (type === "recovery") return "Recovery item";
   if (type === "output") return "Output";
-  if (type === "outcome_project") return "Outcome project";
+  if (type === "outcome_project") return "Outcome";
   if (type === "capability") return "Capability";
   return "Work item";
 }

@@ -2,7 +2,7 @@
 
 import { FolderOpen } from "lucide-react";
 import { SomaOutcomeVaultPanel, type DashboardRailAlert } from "./SomaOutcomeVaultPanel";
-import type { OutcomeProjectSummary } from "./OutcomeProjectSummaryCard";
+import type { OutcomeProjectSummary } from "./OutcomeProjectSummary";
 import type { OutputWorkbenchDigest } from "./OutputWorkbenchDigest";
 
 export function SomaOutcomeVaultHeaderButton({
@@ -17,7 +17,7 @@ export function SomaOutcomeVaultHeaderButton({
       type="button"
       onClick={onOpen}
       className="inline-flex h-8 items-center gap-1.5 rounded-full border border-cortex-primary/35 bg-cortex-primary/10 px-3 text-xs font-semibold text-cortex-primary transition hover:border-cortex-primary/60 hover:bg-cortex-primary/15 focus:outline-none focus:ring-2 focus:ring-cortex-primary/40"
-      aria-label="Open Outcomes and Vault"
+      aria-label="Open Outcome Vault"
     >
       <FolderOpen className="h-3.5 w-3.5" />
       Outcomes
@@ -62,7 +62,7 @@ export function SomaOutcomeVaultOverlay({
         alerts={alerts}
         collapsed={false}
         onCollapsedChange={onClose}
-        closeLabel="Close Outcomes and Vault"
+        closeLabel="Close Outcome Vault"
       />
     </div>
   );

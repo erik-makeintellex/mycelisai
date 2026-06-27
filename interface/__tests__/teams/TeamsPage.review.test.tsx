@@ -86,7 +86,7 @@ describe("TeamsPage review route", () => {
     expect(screen.getByRole("link", { name: /Open all teams/i }).getAttribute("href")).toBe("/teams");
   });
 
-  it("prioritizes a work item opened from the Outcomes and Vault rail", async () => {
+  it("prioritizes a work item opened from Outcome Vault", async () => {
     window.history.pushState({}, "", "/teams?view=work&work_item_id=work-bravo-recover");
     useCortexStore.setState({
       teamsDetail: mockTeams,
@@ -96,7 +96,7 @@ describe("TeamsPage review route", () => {
     render(<TeamsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Opened "Recover failed release notes" from Outcomes & Vault.')).toBeDefined();
+      expect(screen.getByText('Opened "Recover failed release notes" from Outcome Vault.')).toBeDefined();
     });
     expect(screen.getByLabelText("Review details for Recover failed release notes")).toBeDefined();
     const reviewList = screen.getByRole("list", { name: "Review work items" });

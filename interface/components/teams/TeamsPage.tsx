@@ -126,7 +126,7 @@ export default function TeamsPage() {
         ? "No recovery or review items need operator attention right now."
         : activeTeamWork.emptyMessage}
       statusLabel={requestedWorkItem
-        ? `Opened "${requestedWorkItem.title}" from Outcomes & Vault.`
+        ? `Opened "${requestedWorkItem.title}" from Outcome Vault.`
         : activeWorkActions.activeWorkActionNotice ?? activeTeamWork.statusLabel}
       degradedMessage={
         activeWorkActions.activeWorkActionError ?? activeTeamWork.degradedMessage

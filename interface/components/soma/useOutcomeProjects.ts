@@ -5,7 +5,7 @@ import { normalizeTargetRef, targetRefHref, targetRefReference } from "@/compone
 import { extractApiData } from "@/lib/apiContracts";
 import { resourcesWorkspaceHref } from "@/lib/outputPackageModel";
 import type { TargetRef, TeamDetailEntry, TeamOutputRef } from "@/store/useCortexStore";
-import type { OutcomeProjectSummary } from "./OutcomeProjectSummaryCard";
+import type { OutcomeProjectSummary } from "./OutcomeProjectSummary";
 
 type OutcomeProjectStatus = "active" | "needs_attention" | "output_ready" | "archived";
 
@@ -77,7 +77,7 @@ export function outcomeProjectSummaryFromAPI(
   const recoveryCount = (project.recovery_refs ?? []).length
     || (project.status === "needs_attention" ? 1 : 0);
   return {
-    title: project.title || "Outcome project workspace",
+    title: project.title || "Outcome workspace",
     detail: durableOutcomeDetail(project, outputRefs.length, recoveryCount),
     ownerLabel: "Soma",
     leadLabel: lead ? `${lead.name}${lead.role ? `, ${lead.role}` : ""}` : undefined,

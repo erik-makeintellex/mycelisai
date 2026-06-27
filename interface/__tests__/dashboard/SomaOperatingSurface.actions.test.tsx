@@ -153,17 +153,15 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(screen.getAllByText("Soma").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Team action needs operator attention.").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Team ask queued. You can keep working.").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getAllByRole("button", { name: /Open Outcomes and Vault/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /Open Outcome Vault/i })[0]);
 
     expect(screen.getByTestId("soma-outcome-vault-overlay")).toBeDefined();
-    expect(screen.getByText("Outcome project")).toBeDefined();
+    expect(screen.getByText("Outcome ready to revisit")).toBeDefined();
     expect(screen.getByText("Alpha outcome workspace")).toBeDefined();
-    expect(screen.getByText("Lead:")).toBeDefined();
-    expect(screen.getByText("OutcomeProject owner:")).toBeDefined();
-    expect(screen.getByText("TeamRegistry owner:")).toBeDefined();
-    expect(screen.getByText("Alpha lead")).toBeDefined();
-    expect(screen.getByRole("link", { name: /Open work needing attention/i }).getAttribute("href")).toBe("/teams?view=work");
-    const typedRailAlert = screen.getByRole("link", { name: /Open item: Work in progress \(Work item\)/i });
+    expect(screen.queryByText("OutcomeProject owner:")).toBeNull();
+    expect(screen.queryByText("TeamRegistry owner:")).toBeNull();
+    expect(screen.getByRole("link", { name: /Review next step/i }).getAttribute("href")).toBe("/teams?view=work");
+    const typedRailAlert = screen.getByRole("link", { name: /Review background work: Work in progress/i });
     expect(typedRailAlert.getAttribute("href")).toBe("/teams?view=work&work_item_id=work-1");
     expect(typedRailAlert.getAttribute("data-target-reference")).toBe("work:work-1");
     expect(typedRailAlert.getAttribute("data-target-type")).toBe("work");
@@ -179,20 +177,20 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(mocks.handleTeamAsk).toHaveBeenCalledWith(expect.objectContaining({ id: "work-1" }), "Continue the proof");
   });
 
-  it("opens Outcomes and Vault as an overlay instead of a default side rail", () => {
+  it("opens Outcome Vault as an overlay instead of a default side rail", () => {
     render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
 
     expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
-    expect(screen.queryByText("Outcomes & Vault")).toBeNull();
+    expect(screen.queryByText("Outcome Vault")).toBeNull();
     expect(screen.getByTestId("mission-chat")).toBeDefined();
 
-    fireEvent.click(screen.getAllByRole("button", { name: /Open Outcomes and Vault/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /Open Outcome Vault/i })[0]);
 
     expect(screen.getByTestId("soma-outcome-vault-overlay")).toBeDefined();
     expect(screen.getByTestId("soma-outcome-vault").getAttribute("data-state")).toBe("expanded");
-    expect(screen.getByText("Outcomes & Vault")).toBeDefined();
+    expect(screen.getByText("Outcome Vault")).toBeDefined();
 
-    fireEvent.click(screen.getByRole("button", { name: /Close Outcomes and Vault/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Close Outcome Vault/i }));
 
     expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
     expect(screen.getByTestId("mission-chat")).toBeDefined();
@@ -223,9 +221,9 @@ describe("SomaOperatingSurface active work actions", () => {
 
     render(<SomaOperatingSurface focusedTeamId="team-alpha" />);
 
-    fireEvent.click(screen.getAllByRole("button", { name: /Open Outcomes and Vault/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /Open Outcome Vault/i })[0]);
 
-    const typedRailAlert = screen.getByRole("link", { name: /Open item: Work in progress \(Recovery item\)/i });
+    const typedRailAlert = screen.getByRole("link", { name: /Review background work: Work in progress/i });
     expect(typedRailAlert.getAttribute("href")).toBe("/teams?view=work&work_item_id=work-1");
     expect(typedRailAlert.getAttribute("data-target-reference")).toBe("recovery:work-1");
     expect(typedRailAlert.getAttribute("data-target-type")).toBe("recovery");

@@ -30,7 +30,7 @@ export const DEFAULT_PINNED_ACTIONS: SomaPinnedAction[] = [
   },
   {
     label: "Weekly Media Pack",
-    prompt: "Run the Weekly Media Pack. Gather assets, create a retained package, and show it in Outcomes and Vault.",
+    prompt: "Run the Weekly Media Pack. Gather assets, create a retained package, and show it in Outcome Vault.",
   },
 ];
 const SAVED_ACTIONS_KEY = "mycelis-soma-saved-actions";

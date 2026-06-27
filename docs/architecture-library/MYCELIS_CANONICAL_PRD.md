@@ -55,7 +55,7 @@ Required first-viewport composition:
 - compact Quick Actions shelf for pinned repeatable Soma asks
 - large Talk to Soma thread as the primary canvas
 - compact current-work summary only when there is meaningful work state
-- header Outcomes button that opens an overlay Vault on demand
+- header Outcomes button that opens Outcome Vault on demand
 - no default right rail squeezing Soma
 - no setup, identity, topology, or environment stack below the chat
 - Details and Inspect controls for depth, not always-visible technical panels
@@ -101,7 +101,7 @@ I created the workspace and handed the first task to the build team.
 I will keep this thread updated as work lands.
 ```
 
-## Outcomes And Vault
+## Outcome Vault
 
 The defining product abstraction is the Outcome. Deliverables, projects, operations, proof, recovery, history, continuity, and active lanes belong to Outcomes. Runs, teams, capabilities, transport, storage, and event correlation support Outcomes. The Outcome never serves the runtime. Outputs are durable product objects, not transient chat text. They may include apps, files, plans, reports, media, reviews, proof bundles, deployment results, or retained learning candidates.
 
@@ -114,7 +114,7 @@ Every user-facing output package should expose:
 - recovery state if degraded
 - source/intermediate-output visibility only as an opt-in
 
-The Vault is the persistent right-side concept, but it should open as an overlay by default. It should show active background work, scheduled/service work, recent deliverables, and recovery items without permanently taking layout width from Soma.
+Outcome Vault is the persistent delivery/revisit concept, but it should open as an overlay by default. It should show saved results, work in progress, scheduled/service work, and recovery items without permanently taking layout width from Soma.
 
 ## Projects Teams And Capability Use
 

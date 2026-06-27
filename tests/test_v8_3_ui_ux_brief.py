@@ -19,7 +19,7 @@ def test_canonical_prd_layers_threaded_workspace_mandate():
         "The first authenticated surface is the Soma workspace.",
         "compact Quick Actions shelf",
         "large Talk to Soma thread as the primary canvas",
-        "header Outcomes button that opens an overlay Vault on demand",
+        "header Outcomes button that opens Outcome Vault on demand",
         "No raw backend stack traces should reach the default UI.",
         "NATS or future WebSocket bridge events should produce typed thread events",
         "Ask\n-> Understand\n-> Approve\n-> Execute\n-> Deliver\n-> Trust\n-> Recover\n-> Revisit",

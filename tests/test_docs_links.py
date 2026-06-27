@@ -82,7 +82,7 @@ def test_canonical_prd_covers_full_product_architecture_and_release_contract():
         "Ask\n-> Understand\n-> Approve\n-> Execute\n-> Deliver\n-> Trust\n-> Recover\n-> Revisit",
         "compact Quick Actions shelf",
         "large Talk to Soma thread as the primary canvas",
-        "header Outcomes button that opens an overlay Vault on demand",
+        "header Outcomes button that opens Outcome Vault on demand",
         "Explore",
         "Shape",
         "Execute",

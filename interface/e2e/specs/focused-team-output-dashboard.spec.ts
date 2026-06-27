@@ -210,17 +210,15 @@ async function expectFocusedDashboardLane(page: Page) {
   await expect(switcher).toContainText(focusedTeamName);
   await expect(switcher).toContainText("Team chat, work, outputs, and proof");
 
-  await page.getByRole("button", { name: /Open Outcomes and Vault/i }).click();
+  await page.getByRole("button", { name: /Open Outcome Vault/i }).click();
   const vault = page.getByTestId("soma-outcome-vault");
-  await expect(vault).toContainText("Outcome project");
+  await expect(vault).toContainText("Outcome ready to revisit");
   await expect(vault).toContainText(`${focusedTeamName} outcome workspace`);
-  await expect(vault).toContainText("OutcomeProject owner:");
-  await expect(vault).toContainText("Soma");
-  await expect(vault).toContainText("TeamRegistry owner:");
-  await expect(vault).toContainText(`${focusedTeamName} lead`);
-  await expect(vault.getByRole("link", { name: "Open work", exact: true })).toHaveAttribute("href", "/teams?view=work");
-  await expect(vault.getByRole("link", { name: "Open outputs", exact: true })).toHaveAttribute("href", "/resources?tab=workspace");
-  await vault.getByRole("button", { name: /Close Outcomes and Vault/i }).click();
+  await expect(vault).not.toContainText("OutcomeProject owner:");
+  await expect(vault).not.toContainText("TeamRegistry owner:");
+  await expect(vault.getByRole("link", { name: "Revisit work", exact: true })).toHaveAttribute("href", "/teams?view=work");
+  await expect(vault.getByRole("link", { name: "Open saved outcomes", exact: true })).toHaveAttribute("href", "/resources?tab=workspace");
+  await vault.getByRole("button", { name: /Close Outcome Vault/i }).click();
   await expect(page.getByTestId("soma-outcome-vault")).toHaveCount(0);
 
   await switcher.getByRole("button", { name: /Focused Browser Proof Team/i }).click();

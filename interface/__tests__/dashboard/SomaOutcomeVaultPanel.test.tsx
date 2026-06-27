@@ -48,11 +48,15 @@ describe("SomaOutcomeVaultPanel", () => {
       />,
     );
 
-    const reviewItems = screen.getByRole("link", { name: "Open work needing attention" });
+    expect(screen.getByText("Saved results, work in progress, and anything that needs your attention.")).toBeDefined();
+    expect(screen.getByText("2 items need your attention")).toBeDefined();
+    expect(screen.getByText("1 item needs recovery attention.")).toBeDefined();
+
+    const reviewItems = screen.getByRole("link", { name: "Review next step" });
     expect(reviewItems.getAttribute("href")).toBe("/teams?view=work");
     expect(reviewItems.getAttribute("data-target-reference")).toBe("/teams?view=work");
 
-    const typedAlert = screen.getByRole("link", { name: "Open work item: Recover browser proof (Recovery item)" });
+    const typedAlert = screen.getByRole("link", { name: "Review recovery: Recover browser proof" });
     expect(typedAlert.getAttribute("href")).toBe("/teams?view=work&work_item_id=review-1");
     expect(typedAlert.getAttribute("data-alert-id")).toBe("work:review-1");
     expect(typedAlert.getAttribute("data-alert-kind")).toBe("recovery");
@@ -61,20 +65,21 @@ describe("SomaOutcomeVaultPanel", () => {
     expect(typedAlert.getAttribute("data-target-id")).toBe("review-1");
     expect(screen.queryByText("Recovery item")).toBeNull();
 
-    expect(screen.getByText("Outcome project")).toBeDefined();
+    expect(screen.getByText("Outcome ready to revisit")).toBeDefined();
     expect(screen.getByText("Media Pack outcome workspace")).toBeDefined();
-    expect(screen.getByText("Lead:")).toBeDefined();
-    expect(screen.getByText("Media Lead, coordinator")).toBeDefined();
-    expect(screen.getByText("OutcomeProject owner:")).toBeDefined();
-    expect(screen.getAllByText("Soma").length).toBeGreaterThan(0);
-    expect(screen.getByText("TeamRegistry owner:")).toBeDefined();
-    expect(screen.getByText("Media Lead lead")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Open work" }).getAttribute("href")).toBe("/teams?view=work");
-    expect(screen.getByRole("link", { name: "Open outputs" }).getAttribute("href")).toBe("/resources?tab=workspace");
+    expect(screen.getByText("Recovery attention")).toBeDefined();
+    expect(screen.queryByText("Lead:")).toBeNull();
+    expect(screen.queryByText("Media Lead, coordinator")).toBeNull();
+    expect(screen.queryByText("OutcomeProject owner:")).toBeNull();
+    expect(screen.queryByText("TeamRegistry owner:")).toBeNull();
+    expect(screen.queryByText("Media Lead lead")).toBeNull();
+    expect(screen.getByRole("link", { name: "Review recovery" }).getAttribute("href")).toBe("/teams?view=work");
+    expect(screen.getByRole("link", { name: "Open saved outcomes" }).getAttribute("href")).toBe("/resources?tab=workspace");
 
     const deliverable = screen.getByRole("link", { name: "Open latest deliverable Launch package" });
     expect(deliverable.getAttribute("href")).toBe("/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Flaunch%2Findex.html");
     expect(deliverable.getAttribute("data-target-reference")).toBe("workspace/generated/launch");
+    expect(screen.getByText("File details")).toBeDefined();
     expect(screen.getByRole("button", { name: /Open Launch package in a new browser window/i })).toBeDefined();
     expect(screen.getByRole("button", { name: /Open local folder for Launch package at workspace\/generated\/launch/i })).toBeDefined();
   });

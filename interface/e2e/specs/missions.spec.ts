@@ -15,7 +15,7 @@ test.describe('Soma Dashboard (/dashboard)', () => {
         await expect(page.getByTestId('soma-action-shelf')).toBeVisible();
         await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
         await expect(page.getByTestId('soma-outcome-vault')).toHaveCount(0);
-        await expect(page.getByRole('button', { name: /Open Outcomes and Vault/i }).first()).toBeVisible();
+        await expect(page.getByRole('button', { name: /Open Outcome Vault/i }).first()).toBeVisible();
     });
 
     test('navigation rail is visible', async ({ page }) => {
@@ -31,21 +31,21 @@ test.describe('Soma Dashboard (/dashboard)', () => {
         await expect(page.getByRole('button', { name: 'Start Empty', exact: true })).toHaveCount(0);
     });
 
-    test('Outcomes and Vault opens as an overlay without squeezing Soma', async ({ page }) => {
+    test('Outcome Vault opens as an overlay without squeezing Soma', async ({ page }) => {
         await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
         const chatBox = page.getByTestId('central-soma-chat-frame');
         const widthBefore = await chatBox.boundingBox().then((box) => box?.width ?? 0);
 
         await expect(page.getByTestId('soma-outcome-vault')).toHaveCount(0);
-        await page.getByRole('button', { name: /Open Outcomes and Vault/i }).first().click();
+        await page.getByRole('button', { name: /Open Outcome Vault/i }).first().click();
 
         await expect(page.getByTestId('soma-outcome-vault-overlay')).toBeVisible();
-        await expect(page.getByRole('heading', { name: /Outcomes & Vault/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Outcome Vault/i })).toBeVisible();
         await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
         const widthDuring = await chatBox.boundingBox().then((box) => box?.width ?? 0);
         expect(widthDuring).toBeGreaterThanOrEqual(widthBefore - 8);
 
-        await page.getByRole('button', { name: /Close Outcomes and Vault/i }).click();
+        await page.getByRole('button', { name: /Close Outcome Vault/i }).click();
 
         await expect(page.getByTestId('soma-outcome-vault')).toHaveCount(0);
     });
