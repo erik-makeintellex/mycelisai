@@ -2,10 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Bolt, Plus, X } from "lucide-react";
+import {
+  instantiateBackendAction,
+  isSavedAction,
+  loadBackendActions,
+  persistLocalActions,
+  saveBackendAction,
+} from "./somaActionPersistence";
 
 export type SomaPinnedAction = {
+  id?: string;
   label: string;
   prompt: string;
+  outputFormat?: string;
+  approvalBehavior?: string;
   userSaved?: boolean;
 };
 
@@ -38,6 +48,7 @@ export function SomaActionShelf({
   const visibleActions = useMemo(() => [...actions, ...savedActions].slice(0, 5), [actions, savedActions]);
 
   useEffect(() => {
+    let cancelled = false;
     try {
       const raw = window.localStorage.getItem(SAVED_ACTIONS_KEY);
       const parsed = raw ? JSON.parse(raw) : [];
@@ -48,13 +59,49 @@ export function SomaActionShelf({
       setSavedActions([]);
     }
     setIsClientReady(true);
+    loadBackendActions()
+      .then((actions) => {
+        if (!cancelled && actions.length > 0) {
+          setSavedActions(actions);
+          persistLocalActions(actions);
+        }
+      })
+      .catch(() => {
+        // Local saved actions remain available if the runtime is unavailable.
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const saveAction = (action: SomaPinnedAction) => {
+  const saveAction = async (action: SomaPinnedAction) => {
     const next = [action, ...savedActions.filter((item) => item.label !== action.label)].slice(0, 2);
     setSavedActions(next);
-    window.localStorage.setItem(SAVED_ACTIONS_KEY, JSON.stringify(next));
     setStudioOpen(false);
+    persistLocalActions(next);
+    try {
+      const saved = await saveBackendAction(action);
+      if (saved) {
+        const backendNext = [saved, ...savedActions.filter((item) => item.label !== saved.label)].slice(0, 2);
+        setSavedActions(backendNext);
+        persistLocalActions(backendNext);
+      }
+    } catch {
+      // Local fallback preserves the user's action when Core is unavailable.
+    }
+  };
+
+  const runAction = async (action: SomaPinnedAction) => {
+    if (!action.id) {
+      onRunAction(action.prompt);
+      return;
+    }
+    try {
+      const rendered = await instantiateBackendAction(action.id);
+      onRunAction(rendered || action.prompt);
+    } catch {
+      onRunAction(action.prompt);
+    }
   };
 
   return (
@@ -70,9 +117,9 @@ export function SomaActionShelf({
       <div className="flex w-full min-w-0 max-w-full flex-1 gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {visibleActions.map((action) => (
           <button
-            key={action.label}
+            key={`${action.id || (action.userSaved ? "saved" : "default")}:${action.label}`}
             type="button"
-            onClick={() => onRunAction(action.prompt)}
+            onClick={() => runAction(action)}
             className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-cortex-border bg-cortex-bg px-3 py-1.5 text-xs font-semibold text-cortex-text-main shadow-sm transition hover:border-cortex-primary/50 hover:bg-cortex-primary/10 focus:outline-none focus:ring-2 focus:ring-cortex-primary/30 sm:px-3.5"
           >
             <Bolt className="h-3.5 w-3.5 text-cortex-warning" />
@@ -124,6 +171,8 @@ function ButtonStudio({
         `Approval behavior: ${approval}.`,
         "Shape the request conversationally first if anything is unclear; keep outputs, proof, and recovery visible.",
       ].join(" "),
+      outputFormat: format.trim(),
+      approvalBehavior: approval,
     });
   };
 
@@ -214,8 +263,4 @@ function TextField({
   );
 }
 
-function isSavedAction(value: unknown): value is SomaPinnedAction {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<SomaPinnedAction>;
-  return typeof candidate.label === "string" && typeof candidate.prompt === "string";
-}
+export { SAVED_ACTIONS_KEY };

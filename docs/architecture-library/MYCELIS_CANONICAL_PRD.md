@@ -52,7 +52,7 @@ The first authenticated surface is the Soma workspace. It should feel like a foc
 
 Required first-viewport composition:
 
-- compact Quick Actions shelf for pinned repeatable work
+- compact Quick Actions shelf for pinned repeatable Soma asks
 - large Talk to Soma thread as the primary canvas
 - compact current-work summary only when there is meaningful work state
 - header Outcomes button that opens an overlay Vault on demand
@@ -61,6 +61,8 @@ Required first-viewport composition:
 - Details and Inspect controls for depth, not always-visible technical panels
 
 The dashboard should keep the composer reachable at common desktop, laptop, tablet, and mobile viewports. Long content belongs inside bounded panes, overlays, tabs, or detail drawers rather than growing the whole page.
+
+Quick Actions are saved conversational accelerators, not autonomous triggers. Button Studio should persist reusable Soma asks through the conversation-template path, keep a local fallback only for resilience, and run saved actions by sending the rendered prompt back into the Soma thread so understanding, approval, proof, and recovery stay intact.
 
 ## Conversation And Governance
 

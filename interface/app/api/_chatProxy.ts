@@ -41,11 +41,25 @@ function structuredTransportUnavailable(targetLabel: string) {
 }
 
 export async function proxyBackendPostRequest(req: Request, target: ProxyTarget): Promise<Response> {
-    const body = await req.text();
+    return proxyBackendRequest(req, target, 'POST');
+}
+
+export async function proxyBackendGetRequest(req: Request, target: ProxyTarget): Promise<Response> {
+    return proxyBackendRequest(req, target, 'GET');
+}
+
+export async function proxyBackendPatchRequest(req: Request, target: ProxyTarget): Promise<Response> {
+    return proxyBackendRequest(req, target, 'PATCH');
+}
+
+async function proxyBackendRequest(req: Request, target: ProxyTarget, method: 'GET' | 'POST' | 'PATCH'): Promise<Response> {
+    const body = method === 'GET' ? undefined : await req.text();
+    const sourceUrl = new URL(req.url);
+    const path = `${target.path}${sourceUrl.search}`;
 
     try {
-        const response = await fetch(backendURL(target.path), {
-            method: 'POST',
+        const response = await fetch(backendURL(path), {
+            method,
             headers: upstreamHeaders(req),
             body,
         });
