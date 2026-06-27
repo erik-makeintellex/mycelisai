@@ -85,7 +85,7 @@ test.describe.skip("V8 AI Organization entry flow - template creation", () => {
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByRole("heading", { name: createdTemplateOrganization.name, exact: true })).toBeVisible();
         await expect(page.getByText("Soma ready")).toBeVisible();
-        await expect(page.getByRole("heading", { name: "What do you want Soma to do?" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Talk to Soma" })).toBeVisible();
         await expect(page.getByRole("link", { name: "Start with Soma" })).toBeVisible();
         await expect(page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or (execute|run)/i)).toBeFocused();
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();

@@ -9,8 +9,8 @@ Open `Soma` (`/dashboard`) and type naturally. Soma receives the request first, 
 
 The dashboard is organized as a threaded workspace:
 
-- `Quick actions`: pinned outcome buttons for repeated work, such as audits, briefs, or media packages. Use `Create action` to save a repeated Soma ask as a reusable action; Mycelis stores it through the conversation-template path when Core is available and keeps a local fallback when it is not. Saved actions still enter the Soma conversation so you can adjust risky or unclear work before execution.
-- `Talk to Soma`: the primary conversation where you ask, approve, recover, and review.
+- `Quick actions`: compact pinned outcome buttons for repeated work, such as audits, briefs, or media packages. Use `Create action` to save a repeated Soma ask as a reusable action; Mycelis stores it through the conversation-template path when Core is available and keeps a local fallback when it is not. Saved actions still enter the Soma conversation so you can adjust risky or unclear work before execution.
+- `Talk to Soma`: the primary visible heading and conversation where you ask, approve, recover, and review.
 - `Outcome Vault`: a secondary overlay drawer for saved results, work in progress, and anything that needs attention. It stays closed by default so Soma keeps the main workspace, then opens over the thread when you need delivery, recovery, or revisit detail.
 
 The dashboard should not require you to scroll through setup panels before using Soma. Sign-in, role, provider, and scope details are available through Settings/System or proof details when you need to inspect them.

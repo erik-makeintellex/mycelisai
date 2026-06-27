@@ -54,6 +54,7 @@ Required first-viewport composition:
 
 - compact Quick Actions shelf for pinned repeatable Soma asks
 - large Talk to Soma thread as the primary canvas
+- no separate dashboard headline band above the thread; status and governance live in the Soma header
 - compact current-work summary only when there is meaningful work state
 - header Outcomes button that opens Outcome Vault on demand
 - no default right rail squeezing Soma

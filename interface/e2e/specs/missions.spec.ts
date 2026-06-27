@@ -11,7 +11,7 @@ test.describe('Soma Dashboard (/dashboard)', () => {
         const errorOverlay = page.locator('nextjs-portal');
         await expect(errorOverlay).not.toBeVisible();
 
-        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
         await expect(page.getByTestId('soma-action-shelf')).toBeVisible();
         await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
         await expect(page.getByTestId('soma-outcome-vault')).toHaveCount(0);

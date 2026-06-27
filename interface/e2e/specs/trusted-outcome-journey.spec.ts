@@ -16,7 +16,7 @@ test.describe("Trusted Outcome Journey", () => {
     await installTrustedOutcomeJourneyMocks(page);
 
     await openOrganization(page);
-    await expect(page.getByRole("heading", { name: /What do you want Soma to do/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Talk to Soma/i })).toBeVisible();
 
     await sendWorkspaceMessage(page, "Create a retained trusted outcome kit with proof and recovery notes.");
     await expect(page.getByText("I can create a retained journey kit after approval.")).toBeVisible();

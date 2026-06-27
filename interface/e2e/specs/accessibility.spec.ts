@@ -15,7 +15,7 @@ test.describe('Accessibility Baseline', () => {
 
     test('dashboard has no critical a11y violations', async ({ page }) => {
         await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
 
         const results = await analyzeAppWorkspace(page);
 

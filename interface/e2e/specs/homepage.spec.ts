@@ -25,7 +25,7 @@ test.describe('Authenticated front door', () => {
         await page.getByLabel(/Password or local API key/i).fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || 'playwright-admin');
         await page.getByRole('button', { name: /Sign in as local admin/i }).click();
         await expect(page).toHaveURL(/\/dashboard$/);
-        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
         await expect(page.getByTestId('soma-operating-surface')).toBeVisible();
         await expect(page.getByTestId('soma-environment-entry')).toHaveCount(0);
         await context.close();
@@ -34,7 +34,7 @@ test.describe('Authenticated front door', () => {
     test('authenticated root redirects into Soma instead of public marketing', async ({ page }) => {
         await page.goto('/');
         await expect(page).toHaveURL(/\/dashboard$/);
-        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
         await expect(page.getByTestId('soma-operating-surface')).toBeVisible();
         await expect(page.getByTestId('soma-environment-entry')).toHaveCount(0);
     });
@@ -99,7 +99,7 @@ test.describe('Authenticated front door', () => {
         await expect.poll(async () => page.evaluate(() =>
             window.getComputedStyle(document.documentElement).getPropertyValue('--color-cortex-bg').trim(),
         )).toBe('#0f1116');
-        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
         expect(hydrationMessages).toEqual([]);
     });
 });

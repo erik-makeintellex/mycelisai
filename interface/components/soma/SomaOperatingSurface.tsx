@@ -199,36 +199,9 @@ export function SomaOperatingSurface({
       className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-cortex-border bg-cortex-surface shadow-[0_18px_40px_rgba(0,0,0,0.18)]"
       data-testid="soma-operating-surface"
     >
+      <h1 className="sr-only">Soma workspace</h1>
       <SomaActionShelf onRunAction={handlePinnedAction} />
-      <div className="border-b border-cortex-border bg-cortex-bg/65 px-4 py-2.5 lg:px-5">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-cortex-primary">
-              Soma
-            </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold tracking-tight text-cortex-text-main">
-                What do you want Soma to do?
-              </h1>
-              <p className="truncate text-xs text-cortex-text-muted">{scopeCopy}</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-cortex-text-muted">
-            <span className="rounded-full border border-cortex-success/25 bg-cortex-success/10 px-2.5 py-1 font-semibold text-cortex-success">
-              Ready
-            </span>
-            {displayedMode ? (
-              <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">
-                Mode: {displayedMode}
-              </span>
-            ) : null}
-            <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">
-              {governancePosture ?? "Governed execution enabled"}
-            </span>
-          </div>
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 p-3 lg:p-4">
+      <div className="min-h-0 flex-1 p-2.5 lg:p-3">
         {hasWorkContextChoices ? (
           <SomaTeamContextSwitcher
             teams={teamsDetail}
@@ -240,16 +213,30 @@ export function SomaOperatingSurface({
         ) : null}
         <div className="relative">
           <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg shadow-sm">
-            <div className="flex flex-col gap-2 border-b border-cortex-border px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
+            <div className="flex flex-col gap-2 border-b border-cortex-border px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-2">
+                <div className="mt-0.5 inline-flex shrink-0 items-center rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-cortex-primary">
+                  Soma
+                </div>
+                <div className="min-w-0">
                 <h2 className="text-base font-semibold tracking-tight text-cortex-text-main">Talk to Soma</h2>
                 <p className="truncate text-xs text-cortex-text-muted">
-                  Ask, approve, inspect proof, or turn an outcome into retained work.
+                  {scopeCopy}
                 </p>
+                </div>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2 text-[11px] font-semibold text-cortex-text-muted">
-                <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">Threaded</span>
-                <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">Governed</span>
+              <div className="flex shrink-0 flex-wrap items-center gap-1.5 text-[11px] font-semibold text-cortex-text-muted">
+                <span className="rounded-full border border-cortex-success/25 bg-cortex-success/10 px-2.5 py-1 text-cortex-success">
+                  Ready
+                </span>
+                {displayedMode ? (
+                  <span className="max-w-[12rem] truncate rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">
+                    {displayedMode}
+                  </span>
+                ) : null}
+                <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">
+                  {governancePosture ?? "Governed"}
+                </span>
                 {!vaultOpen ? (
                   <SomaOutcomeVaultHeaderButton
                     attentionCount={attentionWorkCount + (hasOutputReviewContent ? 1 : 0)}

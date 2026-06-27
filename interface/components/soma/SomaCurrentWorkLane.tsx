@@ -29,13 +29,19 @@ export function SomaCurrentWorkLane({
 }) {
   const activeLabel = primaryKind === "work" ? "Work needs review" : "Output ready";
   const nextAction = primaryKind === "work" ? "Review work" : "Review output";
+  const visibleDigest = digest && showOutputDigest ? digest : null;
+  const hasOutputDigest = Boolean(visibleDigest);
   const recoveryHint = primaryKind === "output" && recoveryReviewCount > 0
     ? `${recoveryReviewCount} recovery ${recoveryReviewCount === 1 ? "item" : "items"} also ${recoveryReviewCount === 1 ? "needs" : "need"} review.`
     : null;
 
   return (
     <section
-      className="grid gap-2 rounded-xl border border-cortex-border bg-cortex-bg/85 p-2.5 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.2fr)_auto] md:items-center"
+      className={`grid gap-2 rounded-xl border border-cortex-border bg-cortex-bg/85 p-2.5 ${
+        hasOutputDigest
+          ? "md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.2fr)_auto]"
+          : "md:grid-cols-[minmax(0,1fr)_auto]"
+      } md:items-center`}
       data-testid="soma-current-work-lane"
       aria-label="Current work"
     >
@@ -61,20 +67,11 @@ export function SomaCurrentWorkLane({
         ) : null}
       </div>
 
-      <div className="min-w-0" data-testid="soma-current-output-slot">
-        {digest && showOutputDigest ? (
-          <OutputWorkbenchCompactDigest digest={digest} />
-        ) : (
-          <div className="rounded-lg border border-cortex-border bg-cortex-surface/75 px-3 py-2">
-            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cortex-text-muted">
-              Latest output
-            </div>
-            <div className="mt-0.5 truncate text-xs font-semibold text-cortex-text-main">
-              Not produced yet
-            </div>
-          </div>
-        )}
-      </div>
+      {visibleDigest ? (
+        <div className="min-w-0" data-testid="soma-current-output-slot">
+          <OutputWorkbenchCompactDigest digest={visibleDigest} />
+        </div>
+      ) : null}
 
       <button
         type="button"

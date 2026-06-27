@@ -22,7 +22,7 @@ vi.mock("@/components/soma/SomaOperatingSurface", () => ({
             data-focused-team-id={focusedTeamId ?? ""}
             data-organization-id={organizationId ?? ""}
         >
-            <h2>What do you want Soma to do?</h2>
+            <h2>Talk to Soma</h2>
             <p>Ready for your first request</p>
             <p>Evidence of Soma's work</p>
             <p>{organizationName ?? "No organization"}</p>
@@ -48,7 +48,7 @@ describe("CentralSomaHome", () => {
         render(<CentralSomaHome />);
 
         expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
-        expect(screen.getByText("What do you want Soma to do?")).toBeDefined();
+        expect(screen.getByText("Talk to Soma")).toBeDefined();
         expect(screen.getByText("Ready for your first request")).toBeDefined();
         expect(screen.queryByTestId("soma-environment-entry")).toBeNull();
         expect(screen.queryByText("Start here")).toBeNull();

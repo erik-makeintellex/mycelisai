@@ -36,7 +36,7 @@ describe("OrganizationPage home workspace slices", () => {
         expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
         expect(screen.getByText("Inspect the current organization")).toBeDefined();
         expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
-        expect(screen.getByRole("heading", { name: "What do you want Soma to do?" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Talk to Soma" })).toBeDefined();
         expect(screen.getByTestId("mission-chat")).toBeDefined();
         expect(screen.queryByRole("button", { name: "Work panel" })).toBeNull();
         expect(screen.queryByText("Direct")).toBeNull();
