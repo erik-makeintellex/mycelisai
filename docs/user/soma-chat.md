@@ -76,7 +76,7 @@ Soma responses can include:
 2. **Inline generated outputs**: images, audio, video, code, charts, briefs, data, documents, and media previews.
 3. **Output package**: a retained file/app/package with `Open file`, `Open folder`, proof, and Resources re-entry.
 4. **Proposal block**: a clear `Run this now?` confirmation for actions that execute or change something.
-5. **Recovery/blocker card**: what failed, what remains trusted, what is not trusted, and what can safely happen next.
+5. **Recovery/blocker card**: a compact trust boundary in the thread, with what failed, what remains trusted, what is not trusted, and what can safely happen next behind `Details and proof`.
 6. **Action-state card**: the current status, route, capability use, or next step for structured Soma work.
 
 No mutation executes until you confirm. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Review run details` unless they require immediate attention.

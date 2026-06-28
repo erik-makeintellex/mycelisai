@@ -11,7 +11,6 @@ core/config/mcp-library.yaml=342
 core/config/templates/v8-migration-standing-team-bridge.yaml=570
 core/internal/server/identity_test.go=324
 interface/__tests__/workspace/LaunchCrewModal.test.tsx=326
-interface/__tests__/dashboard/MissionControlChat.executionSummary.test.tsx=318
 interface/app/(app)/system/page.tsx=475
 interface/components/automations/ApprovalsTab.tsx=666
 interface/components/automations/TriggerRulesTab.tsx=502

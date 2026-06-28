@@ -254,7 +254,7 @@ Non-goals for MVP:
 | Priority | Slice | Status | Acceptance |
 | --- | --- | --- | --- |
 | P0.1 | Threaded Soma dashboard | IN_REVIEW | Compact quick actions, primary chat, no default Vault rail, no setup stack, reachable composer. |
-| P0.2 | Natural governance cards | NEXT | Proposal/running/done/blocked cards are small, conversational, and proof-linked. |
+| P0.2 | Natural governance cards | IN_REVIEW | Proposal/running/done/blocked cards are small, conversational, proof-linked, and keep deep recovery detail behind explicit review. |
 | P0.3 | WorkIntent and ExecutionMode | ACTIVE | One-shot, scheduled, service, project, and self-extension modes have typed contracts. |
 | P0.4 | Bus handoff and started feedback | IN_REVIEW | Approval or quick action immediately creates visible started state with correlation. |
 | P0.5 | OutcomeProject and TeamRegistry | IN_REVIEW | Confirmed work writes durable project/team ownership and Vault summaries. |
