@@ -164,7 +164,7 @@ Core runtime responsibilities:
 | Capabilities | Core manifests | Register risk, permission, scope, output types, and recovery behavior. |
 | UI state | Interface | Render typed events as rich cards, not raw logs or stack traces. |
 
-Execution modes must distinguish one-shot tasks, scheduled tasks, long-running service/watch tasks, multi-team project delivery, and Soma self-extension. Each mode needs stop/pause/retry/recover semantics. Continuity vectors are not Soma's mind, source of truth, or autonomous authority; they preserve long-running operational context while authority remains with approved Outcomes, deliverables, proof artifacts, run receipts, policies, audit, and operator decisions.
+Execution modes must distinguish one-shot tasks, scheduled tasks, long-running service/watch tasks, multi-team project delivery, and Soma self-extension. Each mode needs stop/pause/retry/recover semantics. Continuity vectors are not Soma's mind, source of truth, or autonomous authority; they preserve long-running operational context while authority remains with approved Outcomes, deliverables, proof artifacts, run receipts, policies, audit, and operator decisions. Soma may read a curated Core-owned documentation surface for help, API, testing, and architecture answers; this access is read-only, citable by slug/path, distinct from memory, Deployment Context, and vector continuity, and never promotes docs into durable context or doctrine without a governed Resources/Deployment Context action.
 
 ## API And Event Contracts
 

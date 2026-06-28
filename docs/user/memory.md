@@ -106,20 +106,19 @@ That means:
 
 ---
 
-## Storing a Memory
+## Storing Memory Or Governed Context
 
-Agents store memories automatically during runs (via the `remember` tool). For larger operator-provided docs and reference material, use **Resources → Deployment Context** instead of treating them as small facts.
+Agents store memories automatically during runs through governed runtime tools. For larger operator-provided docs and reference material, use **Resources -> Deployment Context** instead of treating them as small facts.
 
-Use the Memory page when you want to query what is already retained, or when a smaller deliberate fact/preference/promotion is the right tool.
+Use the Memory page when you want to query what is already retained. Use Deployment Context when you want new source material to influence future Soma reasoning with explicit provenance, sensitivity, and trust posture.
 
-For general stored facts:
+The user-facing distinction:
 
-1. Click **+ Store**
-2. Choose type: `fact`, `preference`, `goal`, or `observation`
-3. Enter content
-4. Click **Save**
+- Soma docs lookup is read-only and citable help/architecture reference
+- Deployment Context is durable governed source material for future reasoning
+- Memory is where already-retained facts, SitReps, artifacts, and continuity are inspected
 
-Stored facts are immediately available to agents for RAG recall within their allowed memory scope.
+Manual memory creation may appear through admin/runtime tooling where enabled, but it is not the default path for larger source documents. Stored facts or context are available to agents only within their allowed memory scope and trust boundary.
 
 General exploratory planning and routine conversation checkpoints are no longer promoted into semantic memory automatically. They stay in temporary continuity unless an agent deliberately promotes them.
 

@@ -143,9 +143,9 @@ Operators should be able to answer "what entered the system, how trusted is it, 
 
 ## Deployment Context
 
-Deployment Context is the governed intake surface for private/user-owned content and deployment-shaping knowledge that should influence future Soma reasoning without being treated as ordinary Soma memory.
+Deployment Context is the governed intake surface for private/user-owned content and deployment-shaping knowledge that should influence future Soma reasoning without being treated as ordinary Soma memory. In the product, this is the place to put **Context for Soma** when that context should persist, carry provenance, and stay inside an explicit trust boundary.
 
-It is not the same as team-shared execution memory. Team-shared continuity belongs in `AGENT_MEMORY`, while Deployment Context is for governed source material and promoted doctrine.
+It is not the same as team-shared execution memory. Team-shared continuity belongs in `AGENT_MEMORY`, while Deployment Context is for governed source material and promoted doctrine. It is also not the same as Soma reading Mycelis help docs: curated docs lookup is read-only and citable, while Deployment Context is an intentional durable intake lane for material you want Soma to reuse later.
 
 Typical inputs:
 - private records or diary/journal notes the user explicitly wants Soma to use

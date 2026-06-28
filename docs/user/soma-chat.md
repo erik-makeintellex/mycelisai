@@ -33,6 +33,7 @@ Display-name customization lives in `Settings -> Profile -> Assistant Name`.
 - `Create the smallest useful team for this outcome and bring the retained output back here.`
 - `Ask the active delivery teams for current blockers and tell me which workflow needs attention first.`
 - `Use the host data under workspace/shared-sources and tell me which files shaped the answer.`
+- `Use the Mycelis docs to explain how Deployment Context differs from Memory, and cite the docs you used.`
 - `Review current MCP servers, tools, and recent use, then tell me which agents should have which tools.`
 
 ## Understanding And Approval
@@ -128,6 +129,19 @@ Search behavior:
 Read-only tool posture prompts such as `show me currently configured tools` should answer with current tool state and setup guidance, not create a runnable proposal. Prompts that enable, install, connect, assign, or bind tools remain governed mutation requests.
 
 Plain service-inventory prompts such as `list of services?` should answer in user language: Soma workspace, AI engine, storage, team coordination, memory/context, status checks, and any repair-needed capability. Raw internal tool names, MCP server status, and tool IDs should appear only when you explicitly ask for technical inventory, such as `show internal tool names` or `debug MCP status`.
+
+## Docs, Context, And Memory
+
+Soma can read a curated set of Mycelis help, API, testing, and architecture docs through read-only documentation tools. This lets Soma answer questions like `which docs explain web access setup?` or `use the canonical PRD to explain the current Outcome model` with slug/path citations instead of guessing.
+
+Docs access is not the same as memory. Reading a doc does not promote it into durable memory, team-shared execution memory, or governed context. It is a citable help/source lookup.
+
+Use these boundaries:
+
+- ask Soma to use Mycelis docs when you want documentation explained or cited
+- use `Resources -> Deployment Context` when you want private, customer, company, or operating-context material to influence future Soma reasoning under a governed trust boundary
+- use Memory when you want to inspect retained recall, prior facts, SitReps, or continuity records already stored by the system
+- ask Soma to name which docs or context sources shaped an answer when trust matters
 
 ## Direct Drafting
 

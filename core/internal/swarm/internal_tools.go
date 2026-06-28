@@ -173,6 +173,7 @@ func (r *InternalToolRegistry) ListDescriptions() map[string]string {
 func (r *InternalToolRegistry) registerAll() {
 	r.registerCoordinationTools()
 	r.registerExchangeAndPlanningTools()
+	r.registerDocsTools()
 	r.registerMemoryAndArtifactTools()
 	r.registerExecutionAndMediaTools()
 }
