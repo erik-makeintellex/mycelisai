@@ -13,6 +13,8 @@ The dashboard is organized as a threaded workspace:
 - `Talk to Soma`: the primary visible heading and conversation where you ask, approve, recover, and review.
 - `Outcome Vault`: a secondary overlay drawer for saved results, work in progress, and anything that needs attention. It stays closed by default so Soma keeps the main workspace, then opens over the thread when you need delivery, recovery, or revisit detail.
 
+When the conversation is empty, Soma should help you enter naturally instead of presenting a stack of action cards. The empty thread should briefly cue the pattern: ask for the outcome, let Soma shape the path, and approve only when work should run. Compact starter phrases may fill the composer, but they remain examples rather than a separate workflow menu.
+
 The dashboard should not require you to scroll through setup panels before using Soma. Sign-in, role, provider, and scope details are available through Settings/System or proof details when you need to inspect them.
 
 Basic path:

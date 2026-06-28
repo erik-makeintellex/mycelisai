@@ -49,11 +49,11 @@ export function SomaSuggestionBar({
   onSelect: (prompt: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-cortex-border bg-cortex-bg/70 p-3">
-      <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
-        Start with Soma
+    <div className="w-full max-w-2xl rounded-xl border border-cortex-border bg-cortex-bg/60 px-3 py-2.5">
+      <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-primary">
+        Try a starting phrase
       </p>
-      <div className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2">
+      <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-cortex-border">
         {suggestions.map((item) => {
           const Icon = item.icon ?? Sparkles;
           return (
@@ -61,14 +61,12 @@ export function SomaSuggestionBar({
               key={item.label}
               type="button"
               onClick={() => onSelect(item.prompt)}
-              className="min-w-0 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-left transition hover:border-cortex-primary/30 hover:bg-cortex-primary/5"
+              className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full border border-cortex-border bg-cortex-surface px-3 py-1.5 text-left transition hover:border-cortex-primary/30 hover:bg-cortex-primary/5"
+              title={item.detail}
             >
-              <span className="flex min-w-0 items-start gap-2 text-xs font-semibold leading-5 text-cortex-text-main">
-                <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cortex-primary" />
+              <Icon className="h-3.5 w-3.5 shrink-0 text-cortex-primary" />
+              <span className="whitespace-nowrap text-xs font-semibold text-cortex-text-main">
                 {item.label}
-              </span>
-              <span className="mt-2 block text-xs leading-5 text-cortex-text-muted">
-                {item.detail}
               </span>
             </button>
           );

@@ -61,6 +61,8 @@ Required first-viewport composition:
 - no setup, identity, topology, or environment stack below the chat
 - Details and Inspect controls for depth, not always-visible technical panels
 
+The empty Soma thread should not be a stack of starter action cards. It should behave like the beginning of a conversation: one plain prompt for the outcome, one short cue that Soma can help shape the path, and compact optional starter phrases that fill the composer without implying that the user must choose a predefined workflow.
+
 The dashboard should keep the composer reachable at common desktop, laptop, tablet, and mobile viewports. Long content belongs inside bounded panes, overlays, tabs, or detail drawers rather than growing the whole page.
 
 Quick Actions are saved conversational accelerators, not autonomous triggers. Button Studio should persist reusable Soma asks through the conversation-template path, keep a local fallback only for resilience, and run saved actions by sending the rendered prompt back into the Soma thread so understanding, approval, proof, and recovery stay intact.

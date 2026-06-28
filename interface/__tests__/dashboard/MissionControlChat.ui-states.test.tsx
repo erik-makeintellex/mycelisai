@@ -144,15 +144,16 @@ describe('MissionControlChat UI states', () => {
         render(<MissionControlChat />);
         await settleMissionControlChat();
 
-        expect(screen.getByText(/Tell Soma what you want to plan, review, create, or run/i)).toBeDefined();
+        expect(screen.getByText(/Tell Soma what outcome you want/i)).toBeDefined();
+        expect(screen.getByText(/Start with the result you want/i)).toBeDefined();
     });
 
-    it('turns starter prompts into clickable guided actions in simple mode', async () => {
+    it('turns starter phrases into clickable examples in simple mode', async () => {
         render(<MissionControlChat simpleMode />);
         await settleMissionControlChat();
 
-        expect(screen.getByText('Start with Soma')).toBeDefined();
-        fireEvent.click(screen.getByRole('button', { name: /Research something.*Search or review sources/i }));
+        expect(screen.getByText('Try a starting phrase')).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: /Research something/i }));
         expect(screen.getByDisplayValue('Research this, cite sources, and tell me what changed.')).toBeDefined();
     });
 
@@ -177,8 +178,8 @@ describe('MissionControlChat UI states', () => {
         render(<MissionControlChat simpleMode />);
         await settleMissionControlChat();
 
-        expect(screen.getByRole('button', { name: /Plan this team.*Marketing/i })).toBeDefined();
-        fireEvent.click(screen.getByRole('button', { name: /Review state.*current risk/i }));
+        expect(screen.getByRole('button', { name: /Plan this team/i })).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: /Review state/i }));
         expect(screen.getByDisplayValue('Review the current state of Marketing')).toBeDefined();
     });
 

@@ -102,18 +102,32 @@ export function MissionControlEmptyState({
         ? `Direct message to ${councilLabel(directTarget, assistantName).name}...`
         : currentTeamName
         ? `Tell ${assistantName} what you want to plan, review, create, or run for ${currentTeamName}.`
-        : `Tell ${assistantName} what you want to plan, review, create, or run.`;
+        : `Tell ${assistantName} what outcome you want.`;
+
+    const engagementCue = currentTeamName
+        ? `Name the work for ${currentTeamName}. ${assistantName} will shape the request before anything runs.`
+        : `Ask naturally, like a business request. ${assistantName} will clarify, shape, or ask before running anything meaningful.`;
 
     return (
-        <div className="flex flex-col items-center justify-center h-full text-cortex-text-muted">
+        <div className="flex h-full flex-col items-center justify-center px-6 text-cortex-text-muted">
             {showAdvancedRouting && broadcastMode ? (
                 <Megaphone className="w-8 h-8 mb-2 opacity-20" />
             ) : (
                 <Brain className="w-8 h-8 mb-2 opacity-25 text-cortex-primary" />
             )}
-            <p className="max-w-md text-center text-sm leading-6">{message}</p>
+            <div className="max-w-2xl text-center">
+                <p className="text-base font-semibold text-cortex-text-main">{message}</p>
+                <p className="mt-1 text-sm leading-6">
+                    Start with the result you want, then let {assistantName} help shape the path.
+                </p>
+            </div>
+            <div className="mt-3 max-w-2xl rounded-xl border border-cortex-border/70 bg-cortex-bg/45 px-4 py-2 text-center text-xs leading-5 text-cortex-text-muted">
+                <span>{engagementCue}</span>
+                <span className="mx-2 text-cortex-border">|</span>
+                <span>Approve only when it should run.</span>
+            </div>
             {simpleMode ? (
-                <div className="mt-4 space-y-2">
+                <div className="mt-3 w-full max-w-2xl">
                     <SomaSuggestionBar suggestions={suggestions} onSelect={onStarterPrompt} />
                 </div>
             ) : null}
