@@ -28,6 +28,8 @@ The Resources page keeps these resource types in a persistent menu and renders t
 
 Connected tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, where that permission applies, what needs repair, and what can be requested. Raw MCP/server structure stays behind Inspect.
 
+For web access specifically, use `Resources -> Capabilities -> Web access setup`. That lane should show whether Soma currently has local-source search, public-web search, and direct `web_search` available. Use **Add web capability** from that lane to open the MCP library filtered toward `fetch`, SearXNG/local API, Brave, or other web/search providers.
+
 ---
 
 ## AI Engines

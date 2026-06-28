@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Activity, AlertTriangle, CheckCircle2, Globe, Radio, Search, Users, Wrench } from "lucide-react";
+import { Activity, AlertTriangle, BookOpen, CheckCircle2, Globe, Radio, Search, Users, Wrench } from "lucide-react";
 import type { SearchCapabilityStatus } from "@/store/useCortexStore";
 
 const somaToolPrompts = [
@@ -94,6 +94,80 @@ export function ConnectedToolsWorkflowCard({ isStreamConnected }: { isStreamConn
                     : "Live activity stream is reconnecting. Recent MCP use will appear once the stream is online."}
             </div>
         </div>
+    );
+}
+
+export function WebAccessSetupCard({
+    status,
+    isLoading,
+    error,
+    onAddWebCapability,
+}: {
+    status: SearchCapabilityStatus | null;
+    isLoading: boolean;
+    error: string | null;
+    onAddWebCapability: () => void;
+}) {
+    const hasLocalSearch = Boolean(status?.enabled && status?.configured && status?.supports_local_sources);
+    const hasPublicWeb = Boolean(status?.enabled && status?.configured && status?.supports_public_web);
+    const canAskSoma = Boolean(status?.direct_soma_interaction);
+    const heading = error
+        ? "Web access could not be checked"
+        : isLoading && !status
+        ? "Checking web access"
+        : hasPublicWeb
+        ? "Public web access is available"
+        : hasLocalSearch
+        ? "Local-source search is available"
+        : "Web access needs setup";
+    const explanation = error
+        ? error
+        : hasPublicWeb
+        ? "Soma can use the configured search provider for governed public web work. Explicit URL reading may still require fetch."
+        : hasLocalSearch
+        ? "Soma can search retained Mycelis sources. Add a public web provider or fetch when you need fresh internet pages or explicit URLs."
+        : status?.blocker?.message ?? status?.next_actions?.[0] ?? "Add or repair a web capability before asking Soma for fresh web research.";
+    const nextStep = hasPublicWeb
+        ? "Ask Soma to search the web, then inspect proof when the answer returns."
+        : "Open the MCP library already filtered for web tools. Choose fetch for explicit URLs, or a search provider such as SearXNG/local_api/Brave for public web search.";
+
+    return (
+        <section
+            id="web-access"
+            aria-label="Web access setup"
+            className="rounded-xl border border-cortex-primary/25 bg-cortex-primary/10 px-4 py-4 scroll-mt-20"
+        >
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 rounded-lg border p-2 ${hasPublicWeb ? "border-cortex-success/30 bg-cortex-success/10" : "border-cortex-warning/30 bg-cortex-warning/10"}`}>
+                        <Globe className={`h-4 w-4 ${hasPublicWeb ? "text-cortex-success" : "text-cortex-warning"}`} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-primary">
+                            Web access setup
+                        </p>
+                        <h3 className="mt-1 text-sm font-semibold text-cortex-text-main">{heading}</h3>
+                        <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{explanation}</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onClick={onAddWebCapability}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-surface px-3 py-2 text-xs font-semibold text-cortex-primary transition-colors hover:bg-cortex-primary/10"
+                >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    Add web capability
+                </button>
+            </div>
+            <div className="mt-4 grid gap-2 md:grid-cols-3">
+                <CapabilityPill active={canAskSoma} label={`Ask Soma: ${status?.soma_tool_name ?? "web_search"}`} />
+                <CapabilityPill active={hasLocalSearch} label="Local Mycelis sources" />
+                <CapabilityPill active={hasPublicWeb} label="Public web provider" />
+            </div>
+            <p className="mt-3 text-xs leading-5 text-cortex-text-main">
+                {nextStep}
+            </p>
+        </section>
     );
 }
 

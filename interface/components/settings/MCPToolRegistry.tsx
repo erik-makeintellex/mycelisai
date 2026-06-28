@@ -8,8 +8,9 @@ import { MCPLibraryBrowserBody } from "./MCPLibraryBrowser";
 import { CapabilityRegistryPanel } from "./MCPToolCapabilityRegistry";
 import { formatActivityScope, useMCPRecentActivity } from "./MCPToolRegistryActivity";
 import { deriveFallbackCapabilities } from "./MCPToolRegistryCapabilities";
-import { ConnectedToolsWorkflowCard, SearchCapabilityCard, SomaToolPromptCard } from "./MCPToolGuidance";
+import { ConnectedToolsWorkflowCard, SearchCapabilityCard, SomaToolPromptCard, WebAccessSetupCard } from "./MCPToolGuidance";
 import { MCPToolSetLayersStorePanel } from "./MCPToolSetLayersPanel";
+import { MCPInstallNotice, MCPRegistryEmptyBanner, MCPRegistryEmptyHero, MCPRegistryErrorBanner } from "./MCPToolRegistryNotices";
 
 type Tab = "installed" | "library";
 
@@ -37,6 +38,7 @@ export default function MCPToolRegistry() {
 
     const [activeTab, setActiveTab] = useState<Tab>("installed");
     const [installNotice, setInstallNotice] = useState<string | null>(null);
+    const [librarySearchQuery, setLibrarySearchQuery] = useState("");
     const [showTopology, setShowTopology] = useState(false);
     const isRegistryErrorState = !isFetching && Boolean(mcpServersError);
     const isEmptyInstalledState = !isFetching && !mcpServersError && mcpServers.length === 0;
@@ -76,6 +78,11 @@ export default function MCPToolRegistry() {
     function handleInstalled(name: string) {
         setInstallNotice(`Installed ${name}. Check the connected server card and live MCP activity below.`);
         setActiveTab("installed");
+    }
+
+    function handleAddWebCapability() {
+        setLibrarySearchQuery("fetch");
+        setActiveTab("library");
     }
 
     return (
@@ -132,6 +139,12 @@ export default function MCPToolRegistry() {
             <div className="flex-1 overflow-y-auto">
                 {activeTab === "installed" && (
                     <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">
+                        <WebAccessSetupCard
+                            status={searchCapability}
+                            isLoading={isFetchingSearchCapability}
+                            error={searchCapabilityError}
+                            onAddWebCapability={handleAddWebCapability}
+                        />
                         <SomaToolPromptCard />
                         <ConnectedToolsWorkflowCard isStreamConnected={isStreamConnected} />
                         <CapabilityRegistryPanel
@@ -148,39 +161,11 @@ export default function MCPToolRegistry() {
                             error={searchCapabilityError}
                         />
 
-                        {isEmptyInstalledState && (
-                            <div className="rounded-xl border border-cortex-warning/25 bg-cortex-warning/10 px-4 py-3">
-                                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-warning">
-                                    No MCP servers installed yet
-                                </p>
-                                <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
-                                    Default bootstrap is disabled in the compose home runtime, so Add MCP Server is the first activation step for connected capabilities.
-                                </p>
-                                <p className="mt-2 text-[10px] font-mono leading-5 text-cortex-text-muted">
-                                    Install a curated server such as filesystem or fetch, then return here to confirm the server card and recent activity appear.
-                                </p>
-                            </div>
-                        )}
+                        {isEmptyInstalledState && <MCPRegistryEmptyBanner />}
 
-                        {isRegistryErrorState && (
-                            <div className="rounded-xl border border-cortex-danger/25 bg-cortex-danger/10 px-4 py-3">
-                                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-danger">
-                                    MCP registry unreachable
-                                </p>
-                                <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
-                                    Capabilities could not confirm installed MCP servers, so this is not treated as an empty registry.
-                                </p>
-                                <p className="mt-2 text-[10px] font-mono leading-5 text-cortex-text-muted">
-                                    {mcpServersError}
-                                </p>
-                            </div>
-                        )}
+                        {isRegistryErrorState && <MCPRegistryErrorBanner error={mcpServersError} />}
 
-                        {installNotice && (
-                            <div className="rounded-xl border border-cortex-success/25 bg-cortex-success/10 px-4 py-3">
-                                <p className="text-xs font-mono leading-5 text-cortex-text-main">{installNotice}</p>
-                            </div>
-                        )}
+                        {installNotice && <MCPInstallNotice message={installNotice} />}
 
                         <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
                             <div className="flex items-center justify-between gap-2">
@@ -234,21 +219,7 @@ export default function MCPToolRegistry() {
                             </>
                         )}
 
-                        {isEmptyInstalledState && (
-                            <div className="flex flex-col items-center justify-center py-24 text-cortex-text-muted">
-                                <Wrench className="w-12 h-12 mb-3 opacity-20" />
-                                <p className="text-sm font-mono">No MCP servers installed.</p>
-                                <p className="text-[10px] font-mono mt-1 opacity-50">
-                                    Use Add MCP Server to install the first approved tool server for this group.
-                                </p>
-                                <button
-                                    onClick={() => setActiveTab("library")}
-                                    className="mt-4 rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1.5 text-[10px] font-mono font-bold text-cortex-primary transition-colors hover:bg-cortex-primary/20"
-                                >
-                                    REQUEST FIRST CAPABILITY
-                                </button>
-                            </div>
-                        )}
+                        {isEmptyInstalledState && <MCPRegistryEmptyHero onRequest={() => setActiveTab("library")} />}
 
                         {mcpServers.length > 0 && (
                             <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
@@ -293,7 +264,9 @@ export default function MCPToolRegistry() {
                     </div>
                 )}
 
-                {activeTab === "library" && <MCPLibraryBrowserBody onInstalled={handleInstalled} />}
+                {activeTab === "library" && (
+                    <MCPLibraryBrowserBody onInstalled={handleInstalled} initialSearchQuery={librarySearchQuery} />
+                )}
             </div>
         </div>
     );

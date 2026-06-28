@@ -85,11 +85,11 @@ const ADVANCED_WORKFLOW_CARDS: WorkflowCardDefinition[] = [
   },
   {
     id: "mcp-tools",
-    title: "Add MCP connected tools",
-    summary: "Install filesystem, fetch, search, or other curated tool servers from Resources.",
-    buttonLabel: "Add MCP",
+    title: "Enable Soma capabilities",
+    summary: "Open Resources for web access, filesystem, search providers, and other tools Soma may use.",
+    buttonLabel: "Open capabilities",
     icon: Wrench,
-    href: "/resources?tab=tools",
+    href: "/resources?tab=tools#web-access",
   },
   {
     id: "workspace-files",
@@ -128,7 +128,7 @@ export function SettingsGuidedWorkflow({
             Setup has four concrete checks
           </p>
           <p className="mt-1 leading-6">
-            Auth, AI provider, workspace/output roots, and Add MCP are linked directly
+            Auth, AI provider, workspace/output roots, and Soma capabilities are linked directly
             from this panel.
           </p>
         </div>

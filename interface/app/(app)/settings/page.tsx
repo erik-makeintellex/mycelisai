@@ -125,14 +125,14 @@ function ConnectedToolsRedirect() {
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-cortex-text-muted">
                 Resources is the operational home for what Soma can use, repair, or request,
-                plus web search readiness, recent tool activity, and workspace data boundaries. Settings keeps the
+                with a direct Web access setup lane for search providers, fetch, recent tool activity, and workspace data boundaries. Settings keeps the
                 admin setup path focused on preferences, people, engines, and auth.
             </p>
             <Link
-                href="/resources?tab=tools"
+                href="/resources?tab=tools#web-access"
                 className="mt-5 inline-flex rounded-xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10"
             >
-                Open Resources capabilities
+                Open web access setup
             </Link>
         </section>
     );

@@ -11,16 +11,17 @@ export default function MCPLibraryBrowser() {
 
 interface MCPLibraryBrowserProps {
     onInstalled?: (name: string) => void;
+    initialSearchQuery?: string;
 }
 
-export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = {}) {
+export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: MCPLibraryBrowserProps = {}) {
     const library = useCortexStore((s) => s.mcpLibrary);
     const isFetching = useCortexStore((s) => s.isFetchingMCPLibrary);
     const fetchLibrary = useCortexStore((s) => s.fetchMCPLibrary);
     const installFromLibrary = useCortexStore((s) => s.installFromLibrary);
     const mcpServers = useCortexStore((s) => s.mcpServers);
 
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
     const [installingName, setInstallingName] = useState<string | null>(null);
     const [envModalEntry, setEnvModalEntry] = useState<MCPLibraryEntry | null>(null);
     const [installMessage, setInstallMessage] = useState<string | null>(null);

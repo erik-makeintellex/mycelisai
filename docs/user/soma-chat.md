@@ -123,7 +123,7 @@ Search behavior:
 - the supported Compose path can use `searxng` with `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080`
 - `local_api` uses `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`
 - `brave-search` requires `BRAVE_API_KEY`
-- if a needed server or credential is missing, Soma should name the missing MCP server/env var and point you to `Resources -> Capabilities`
+- if a needed server or credential is missing, Soma should name the missing MCP server/env var and point you to `Resources -> Capabilities -> Web access setup` for web/search issues or the relevant capability lane for other tools
 
 Read-only tool posture prompts such as `show me currently configured tools` should answer with current tool state and setup guidance, not create a runnable proposal. Prompts that enable, install, connect, assign, or bind tools remain governed mutation requests.
 

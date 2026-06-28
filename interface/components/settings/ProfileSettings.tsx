@@ -50,6 +50,7 @@ export default function ProfileSettings() {
                     <div className="flex items-center gap-2">
                         <input
                             id="assistant-name"
+                            suppressHydrationWarning
                             value={nameDraft}
                             onChange={(e) => setNameDraft(e.target.value)}
                             placeholder="Soma"
