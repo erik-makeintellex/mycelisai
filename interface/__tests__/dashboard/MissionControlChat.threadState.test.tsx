@@ -108,4 +108,33 @@ describe('MissionControlChat thread state cards', () => {
         expect(screen.getByRole('link', { name: /Open run receipt/i }).getAttribute('href')).toBe('/runs/run-thread-123');
         expect(screen.queryByText('api.intent.confirm-action')).toBeNull();
     });
+
+    it('does not duplicate plain system text when a structured thread event is present', () => {
+        useCortexStore.setState({
+            missionChat: [{
+                role: 'system',
+                content: 'Execution started - Soma accepted the approved work.',
+                mode: 'execution_result',
+                thread_event: {
+                    kind: 'execution_started',
+                    label: 'Execution started',
+                    detail: 'Soma accepted the approved work.',
+                    tone: 'info',
+                    status: 'running',
+                    source_kind: 'web_api',
+                    source_channel: 'api.intent.confirm-action',
+                    payload_kind: 'soma_thread_event',
+                },
+            }],
+            councilMembers: COUNCIL_MEMBERS,
+            councilTarget: 'admin',
+        });
+
+        render(<MissionControlChat simpleMode />);
+
+        expect(screen.getByTestId('soma-thread-state-card')).toBeDefined();
+        expect(screen.getByText('Execution started')).toBeDefined();
+        expect(screen.getByText('Soma accepted the approved work.')).toBeDefined();
+        expect(screen.queryByText('Execution started - Soma accepted the approved work.')).toBeNull();
+    });
 });

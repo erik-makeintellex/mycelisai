@@ -174,16 +174,16 @@ export default function MissionControlMessageBubble({
 
     if (msg.role === "system") {
         return (
-            <div className="my-2 flex justify-center">
-                <div className="flex w-full max-w-[85%] flex-col items-center gap-2">
+            <div className="my-1.5 flex justify-center">
+                <div className="flex w-full max-w-[720px] flex-col items-center gap-1.5 px-2">
                     {msg.run_id ? (
-                        <a href={`/runs/${msg.run_id}`} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-cortex-success/30 bg-cortex-success/5 text-cortex-success text-[10px] font-mono hover:bg-cortex-success/10 transition-colors">
+                        <a href={`/runs/${msg.run_id}`} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-cortex-success/30 bg-cortex-success/5 text-cortex-success text-[9px] font-mono hover:bg-cortex-success/10 transition-colors">
                             <Zap className="w-3 h-3" />
                             Mission activated &mdash; {msg.run_id.slice(0, 8)}...
                             <ExternalLink className="w-2.5 h-2.5 opacity-60" />
                         </a>
-                    ) : (
-                        <span className="text-[9px] font-mono text-cortex-text-muted px-3 py-1 rounded-full border border-cortex-border">
+                    ) : msg.thread_event || msg.thread_events?.length ? null : (
+                        <span className="text-[9px] font-mono text-cortex-text-muted px-2.5 py-1 rounded-full border border-cortex-border">
                             {msg.content}
                         </span>
                     )}

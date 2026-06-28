@@ -33,51 +33,51 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
     );
 
     return (
-        <div className={`rounded-lg border px-3 py-2 ${responseStateToneClass(state?.tone)}`} data-testid="soma-thread-state-card">
+        <div className={`rounded-md border px-2.5 py-1.5 text-[11px] ${responseStateToneClass(state?.tone)}`} data-testid="soma-thread-state-card">
             {hasStateBlock ? (
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                         {state?.tone === "danger" || state?.tone === "warning" ? (
-                            <AlertTriangle className="h-3.5 w-3.5" />
+                            <AlertTriangle className="h-3 w-3" />
                         ) : (
-                            <Zap className="h-3.5 w-3.5" />
+                            <Zap className="h-3 w-3" />
                         )}
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-[0.16em]">
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-[0.14em]">
                             {label}
                         </span>
                     </div>
                     {route ? (
-                        <span className="rounded border border-current/20 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase">
+                        <span className="rounded border border-current/20 px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase">
                             {route}
                         </span>
                     ) : null}
                 </div>
             ) : null}
-            {hasStateBlock && detail ? <p className="mt-1 text-xs leading-5 text-cortex-text-main">{detail}</p> : null}
+            {hasStateBlock && detail ? <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-cortex-text-main">{detail}</p> : null}
             {proposalTools.length ? (
-                <p className="mt-1 text-[11px] leading-5 text-cortex-text-muted">
+                <p className="mt-0.5 line-clamp-1 text-[10px] leading-4 text-cortex-text-muted">
                     Uses {proposalTools.map(toolLabel).join(", ")} after approval.
                 </p>
             ) : null}
             {threadEvents.length ? (
-                <div className="mt-2 space-y-1">
+                <div className="mt-1.5 space-y-1">
                     {threadEvents.map((event, index) => (
-                        <div key={event.id ?? `${event.kind}-${index}`} className="rounded border border-current/15 bg-cortex-bg/35 px-2 py-1.5">
+                        <div key={event.id ?? `${event.kind}-${index}`} className="rounded-md border border-current/15 bg-cortex-bg/35 px-2 py-1">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                                 <span className="text-[10px] font-semibold text-cortex-text-main">
                                     {event.label || event.title}
                                 </span>
                                 {event.status ? (
-                                    <span className="rounded border border-current/20 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase">
+                                    <span className="rounded border border-current/20 px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase">
                                         {event.status}
                                     </span>
                                 ) : null}
                             </div>
-                            {event.detail ? <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-cortex-text-muted">{event.detail}</p> : null}
+                            {event.detail ? <p className="mt-0.5 line-clamp-1 text-[10px] leading-4 text-cortex-text-muted">{event.detail}</p> : null}
                             {event.href ? (
-                                <a href={event.href} className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-cortex-primary hover:underline">
+                                <a href={event.href} className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-cortex-primary hover:underline">
                                     {event.href_label ?? "Open proof"}
-                                    <ExternalLink className="h-3 w-3" />
+                                    <ExternalLink className="h-2.5 w-2.5" />
                                 </a>
                             ) : null}
                         </div>
