@@ -1,8 +1,7 @@
 "use client";
 
 import dynamic from 'next/dynamic';
-import { useCortexStore } from "@/store/useCortexStore";
-import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
+import AdvancedModeRoute from "@/components/shared/AdvancedModeRoute";
 
 const MemoryExplorer = dynamic(() => import('@/components/memory/MemoryExplorer'), {
     ssr: false,
@@ -14,16 +13,12 @@ const MemoryExplorer = dynamic(() => import('@/components/memory/MemoryExplorer'
 });
 
 export default function MemoryRoute() {
-    const advancedMode = useCortexStore((s) => s.advancedMode);
-
-    if (!advancedMode) {
-        return (
-            <AdvancedModeGate
-                title="Memory is in Admin tools"
-                summary="Soma should surface useful learning and artifacts in the work layer. Open Memory when an admin needs deeper retained-context inspection."
-            />
-        );
-    }
-
-    return <MemoryExplorer />;
+    return (
+        <AdvancedModeRoute
+            title="Memory is in Admin tools"
+            summary="Soma should surface useful learning and artifacts in the work layer. Open Memory when an admin needs deeper retained-context inspection."
+        >
+            <MemoryExplorer />
+        </AdvancedModeRoute>
+    );
 }

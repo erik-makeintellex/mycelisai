@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Activity, Server, Database, Loader2, LayoutGrid, CheckCircle, XCircle, AlertTriangle, RefreshCw, Copy, Check, ShieldCheck } from "lucide-react";
 import SystemDeploymentsPanel from "@/components/system/SystemDeploymentsPanel";
 import SystemQuickChecks from "@/components/system/SystemQuickChecks";
-import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
+import AdvancedModeRoute from "@/components/shared/AdvancedModeRoute";
 import { useCortexStore } from "@/store/useCortexStore";
 
 type TabId = "health" | "nats" | "database" | "services" | "deployments";
@@ -19,27 +19,22 @@ interface HealthStatus {
 }
 export default function SystemPage() {
     return (
-        <Suspense fallback={<div className="h-full bg-cortex-bg" />}>
-            <SystemContent />
-        </Suspense>
+        <AdvancedModeRoute
+            title="System diagnostics are in Admin tools"
+            summary="System health, service recovery, storage checks, and event-bus diagnostics stay behind Admin tools so the default workflow remains centered on your AI Organization."
+        >
+            <Suspense fallback={<div className="h-full bg-cortex-bg" />}>
+                <SystemContent />
+            </Suspense>
+        </AdvancedModeRoute>
     );
 }
 function SystemContent() {
     const searchParams = useSearchParams();
-    const advancedMode = useCortexStore((s) => s.advancedMode);
     const tabParam = (searchParams?.get("tab") as TabId | null) ?? null;
     const [activeTab, setActiveTab] = useState<TabId>(
         tabParam && VALID_TABS.includes(tabParam) ? tabParam : "health"
     );
-
-    if (!advancedMode) {
-        return (
-            <AdvancedModeGate
-                title="System diagnostics are in Admin tools"
-                summary="System health, service recovery, storage checks, and event-bus diagnostics stay behind Admin tools so the default workflow remains centered on your AI Organization."
-            />
-        );
-    }
 
     return (
         <div className="h-full flex flex-col bg-cortex-bg">
