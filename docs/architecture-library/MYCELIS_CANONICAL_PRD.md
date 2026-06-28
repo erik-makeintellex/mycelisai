@@ -61,7 +61,7 @@ Required first-viewport composition:
 - no setup, identity, topology, or environment stack below the chat
 - Details and Inspect controls for depth, not always-visible technical panels
 
-The empty Soma thread should not be a stack of starter action cards. It should behave like the beginning of a conversation: one plain prompt for the outcome, one short cue that Soma can help shape the path, and compact optional starter phrases that fill the composer without implying that the user must choose a predefined workflow.
+The empty Soma thread should not be a stack of starter action cards. It should behave like the beginning of a conversation: one plain prompt for the outcome, one short cue that Soma can help shape the path, and optional quoted examples of user asks. Those examples are readable language, not buttons, hidden launchers, or a predefined workflow menu.
 
 The dashboard should keep the composer reachable at common desktop, laptop, tablet, and mobile viewports. Long content belongs inside bounded panes, overlays, tabs, or detail drawers rather than growing the whole page.
 

@@ -195,7 +195,6 @@ export default function MissionControlChat({
                             broadcastMode={broadcastMode}
                             currentTeamName={currentTeam?.name}
                             directTarget={directTarget}
-                            onStarterPrompt={applyStarterPrompt}
                             showAdvancedRouting={showAdvancedRouting}
                             simpleMode={simpleMode}
                             suggestions={activeSuggestions}

@@ -43,34 +43,30 @@ export const DEFAULT_SOMA_SUGGESTIONS: SomaSuggestion[] = [
 
 export function SomaSuggestionBar({
   suggestions = DEFAULT_SOMA_SUGGESTIONS,
-  onSelect,
 }: {
   suggestions?: readonly SomaSuggestion[];
-  onSelect: (prompt: string) => void;
 }) {
+  const visibleSuggestions = suggestions.slice(0, 3);
+
   return (
-    <div className="w-full max-w-2xl rounded-xl border border-cortex-border bg-cortex-bg/60 px-3 py-2.5">
+    <div className="w-full max-w-2xl rounded-xl border border-cortex-border bg-cortex-bg/40 px-4 py-3">
       <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-primary">
-        Try a starting phrase
+        Example ways to ask
       </p>
-      <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-cortex-border">
-        {suggestions.map((item) => {
-          const Icon = item.icon ?? Sparkles;
-          return (
-            <button
-              key={item.label}
-              type="button"
-              onClick={() => onSelect(item.prompt)}
-              className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full border border-cortex-border bg-cortex-surface px-3 py-1.5 text-left transition hover:border-cortex-primary/30 hover:bg-cortex-primary/5"
-              title={item.detail}
-            >
-              <Icon className="h-3.5 w-3.5 shrink-0 text-cortex-primary" />
-              <span className="whitespace-nowrap text-xs font-semibold text-cortex-text-main">
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
+      <div className="mt-2 grid gap-2 md:grid-cols-3">
+        {visibleSuggestions.map((item) => (
+          <figure
+            key={item.label}
+            className="min-w-0 rounded-lg border border-cortex-border/70 bg-cortex-surface/55 px-3 py-2"
+          >
+            <blockquote className="text-xs leading-5 text-cortex-text-main">
+              &ldquo;{item.prompt}&rdquo;
+            </blockquote>
+            <figcaption className="mt-1 text-[10px] leading-4 text-cortex-text-muted">
+              {item.detail}
+            </figcaption>
+          </figure>
+        ))}
       </div>
     </div>
   );

@@ -30,11 +30,9 @@ test.describe("V8 UI testing agentry product contract", () => {
 
         await openOrganization(page);
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
-        await expect(page.getByTestId("soma-conversation-thread").getByText("Try a starting phrase")).toBeVisible();
-        await page.getByRole("button", { name: /Plan something/i }).click();
-        await expect(page.getByPlaceholder(chatPlaceholder)).toHaveValue(
-            "Help me plan the next useful step and show what you understood.",
-        );
+        await expect(page.getByTestId("soma-conversation-thread").getByText("Example ways to ask")).toBeVisible();
+        await expect(page.getByTestId("soma-conversation-thread").getByText(/Help me plan the next useful step/i)).toBeVisible();
+        await expect(page.getByRole("button", { name: /Plan something/i })).toHaveCount(0);
 
         await sendWorkspaceMessage(page, "Summarize the current Workspace V8 design objectives.");
         await expect(page.getByTestId("soma-conversation-thread").getByText(directAnswer)).toBeVisible({ timeout: 20_000 });

@@ -148,16 +148,17 @@ describe('MissionControlChat UI states', () => {
         expect(screen.getByText(/Start with the result you want/i)).toBeDefined();
     });
 
-    it('turns starter phrases into clickable examples in simple mode', async () => {
+    it('shows starter phrases as non-clickable quote examples in simple mode', async () => {
         render(<MissionControlChat simpleMode />);
         await settleMissionControlChat();
 
-        expect(screen.getByText('Try a starting phrase')).toBeDefined();
-        fireEvent.click(screen.getByRole('button', { name: /Research something/i }));
-        expect(screen.getByDisplayValue('Research this, cite sources, and tell me what changed.')).toBeDefined();
+        expect(screen.getByText('Example ways to ask')).toBeDefined();
+        expect(screen.getByText(/Research this, cite sources, and tell me what changed/i)).toBeDefined();
+        expect(screen.queryByRole('button', { name: /Research something/i })).toBeNull();
+        expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('');
     });
 
-    it('shows team-specific starter prompts in simple mode when a team is selected', async () => {
+    it('shows team-specific quote examples in simple mode when a team is selected', async () => {
         useCortexStore.setState({
             selectedTeamId: 'marketing-team',
             teamsDetail: [
@@ -178,9 +179,10 @@ describe('MissionControlChat UI states', () => {
         render(<MissionControlChat simpleMode />);
         await settleMissionControlChat();
 
-        expect(screen.getByRole('button', { name: /Plan this team/i })).toBeDefined();
-        fireEvent.click(screen.getByRole('button', { name: /Review state/i }));
-        expect(screen.getByDisplayValue('Review the current state of Marketing')).toBeDefined();
+        expect(screen.getByText(/Plan the next move for Marketing/i)).toBeDefined();
+        expect(screen.getByText(/Review the current state of Marketing/i)).toBeDefined();
+        expect(screen.queryByRole('button', { name: /Plan this team/i })).toBeNull();
+        expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('');
     });
 
     it('shows broadcast directive text in broadcast mode', async () => {

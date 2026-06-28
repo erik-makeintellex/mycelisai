@@ -76,11 +76,10 @@ describe("OrganizationPage home workspace slices", () => {
         expect(screen.getByText("Verbosity")).toBeDefined();
         expect(screen.getByText("Durable memory recall")).toBeDefined();
         expect(screen.getByText("Temporary planning continuity")).toBeDefined();
-        expect(screen.getByText("Plan something")).toBeDefined();
-        expect(screen.getByText("Research something")).toBeDefined();
-        expect(screen.getByText("Create something")).toBeDefined();
-        expect(screen.getByText("Review something")).toBeDefined();
-        expect(screen.getByText("Configure tools")).toBeDefined();
+        expect(screen.getByText("Example ways to ask")).toBeDefined();
+        expect(screen.getByText(/Help me plan the next useful step/i)).toBeDefined();
+        expect(screen.getByText(/Research this, cite sources/i)).toBeDefined();
+        expect(screen.getByText(/Create a first version/i)).toBeDefined();
         expect(screen.getAllByRole("button", { name: "Review Advisors" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Open Departments" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Review Automations" }).length).toBeGreaterThan(0);

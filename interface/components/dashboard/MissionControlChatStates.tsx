@@ -82,7 +82,6 @@ export function MissionControlEmptyState({
     broadcastMode,
     currentTeamName,
     directTarget,
-    onStarterPrompt,
     showAdvancedRouting,
     simpleMode,
     suggestions,
@@ -91,7 +90,6 @@ export function MissionControlEmptyState({
     broadcastMode: boolean;
     currentTeamName?: string;
     directTarget: string | null;
-    onStarterPrompt: (prompt: string) => void;
     showAdvancedRouting: boolean;
     simpleMode: boolean;
     suggestions: readonly SomaSuggestion[];
@@ -128,7 +126,7 @@ export function MissionControlEmptyState({
             </div>
             {simpleMode ? (
                 <div className="mt-3 w-full max-w-2xl">
-                    <SomaSuggestionBar suggestions={suggestions} onSelect={onStarterPrompt} />
+                    <SomaSuggestionBar suggestions={suggestions} />
                 </div>
             ) : null}
         </div>
