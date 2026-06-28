@@ -52,12 +52,22 @@ func (s *AdminServer) broadcastConfirmActionThreadEvent(runID, proofID, contract
 }
 
 func firstThreadEventTeamWorkRef(refs []confirmActionTeamWorkRef) (string, string, []protocol.TeamOutputRef) {
+	outputs := []protocol.TeamOutputRef{}
+	var fallbackTeamID, fallbackWorkItemID string
 	for _, ref := range refs {
-		if ref.TeamID != "" || ref.WorkItemID != "" || len(ref.OutputRefs) > 0 {
-			return ref.TeamID, ref.WorkItemID, ref.OutputRefs
+		if fallbackTeamID == "" && (ref.TeamID != "" || ref.WorkItemID != "") {
+			fallbackTeamID = ref.TeamID
+			fallbackWorkItemID = ref.WorkItemID
+		}
+		if len(ref.OutputRefs) > 0 {
+			if fallbackTeamID == "" {
+				fallbackTeamID = ref.TeamID
+				fallbackWorkItemID = ref.WorkItemID
+			}
+			outputs = append(outputs, ref.OutputRefs...)
 		}
 	}
-	return "", "", nil
+	return fallbackTeamID, fallbackWorkItemID, outputs
 }
 
 func threadKindForWorkItem(workItemID string) string {

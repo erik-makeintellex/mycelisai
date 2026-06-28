@@ -6,8 +6,7 @@ import {
   documentArtifact,
   installApprovalCreateFetch,
   installGroupsFetch,
-  standingGroup,
-  tempGroup,
+  standingGroup, tempGroup,
 } from "./GroupManagementPanel.testSupport";
 
 function fillRequiredCreateFields() {
@@ -28,7 +27,6 @@ describe("GroupManagementPanel", () => {
 
   it("shows approval-required state with confirm token", async () => {
     installApprovalCreateFetch();
-
     render(<GroupManagementPanel />);
     fillRequiredCreateFields();
     fireEvent.click(screen.getByTestId("groups-create-button"));
@@ -48,7 +46,6 @@ describe("GroupManagementPanel", () => {
   it("resubmits create request with confirm_token after approval prompt", async () => {
     const postBodies: Array<Record<string, unknown>> = [];
     installApprovalCreateFetch(postBodies);
-
     render(<GroupManagementPanel />);
     fillRequiredCreateFields();
     fireEvent.click(screen.getByTestId("groups-create-button"));
@@ -67,11 +64,8 @@ describe("GroupManagementPanel", () => {
     expect(postBodies[1].confirm_token).toBe("tok-123");
   });
 
-  it("archives temporary groups and keeps retained outputs reviewable", async () => {
-    const groups = [
-      standingGroup(),
-      tempGroup({ work_mode: "execute_with_approval" }),
-    ];
+  it("clears groups and keeps retained outputs unless included", async () => {
+    const groups = [standingGroup(), tempGroup({ work_mode: "execute_with_approval" })];
     installGroupsFetch({
       groups,
       monitor: {
@@ -95,13 +89,18 @@ describe("GroupManagementPanel", () => {
         "1 output",
       ),
     );
+    expect(screen.getByText(/retained files stay unless you include them/i)).toBeDefined();
+    const cleanupCheckbox = screen.getByRole("checkbox", {
+      name: /also remove retained output files/i,
+    }) as HTMLInputElement;
+    expect(cleanupCheckbox.checked).toBe(false);
     fireEvent.click(
-      screen.getByRole("button", { name: "Archive temporary group" }),
+      screen.getByRole("button", { name: "Clear group from active lanes" }),
     );
 
     await waitFor(() =>
       expect(screen.getByTestId("groups-notice").textContent).toContain(
-        "Temporary group archived",
+        "Group cleared from active lanes",
       ),
     );
     fireEvent.click(screen.getByTestId("groups-list-item-group-temp"));
@@ -263,9 +262,7 @@ describe("GroupManagementPanel", () => {
       ),
     );
     expect(screen.getByRole("tablist", { name: "Group workspace sections" })).toBeDefined();
-    expect(
-      screen.getByRole("tab", { name: /Overview/i }).getAttribute("aria-selected"),
-    ).toBe("true");
+    expect(screen.getByRole("tab", { name: /Overview/i }).getAttribute("aria-selected")).toBe("true");
     fireEvent.click(screen.getByRole("tab", { name: /Workflow Log/i }));
     await waitFor(() =>
       expect(screen.getByTestId("groups-workflow-log").textContent).toContain(

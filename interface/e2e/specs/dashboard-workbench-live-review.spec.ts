@@ -46,7 +46,7 @@ async function expectFreshDashboardWithoutStaleContent(page: Page) {
   await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveCount(0);
   await expect(page.getByTestId("focused-team-output-dock")).toHaveCount(0);
   await expect(page.getByRole("img", { name: /generated|retained|media|artifact/i })).toHaveCount(0);
-  await expect(page.getByText(/Latest output|Open file|Run proof \+ retained output/i)).toHaveCount(0);
+  await expect(page.getByText(/Latest:|Open file|Run proof \+ retained output/i)).toHaveCount(0);
 }
 
 function outputMatchesTarget(body: ConfirmActionBody, targetPath: string) {
@@ -84,14 +84,14 @@ test.describe("Dashboard workbench live review", () => {
     const chatRaw = await chat.text();
     expect(chat.ok(), chatRaw).toBeTruthy();
 
-    await expect(page.getByText("What I will do").last()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 45_000 });
 
     const confirmResponse = page.waitForResponse(
       (response) => response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
       { timeout: 120_000 },
     );
-    await page.getByRole("button", { name: /Run now|Run/i }).last().click();
-    await expect(page.getByText(/Running|Starting now|Action completed|Result saved/i).last()).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /Approve|Start/i }).last().click();
+    await expect(page.getByText(/Starting|Action completed|Result saved|work bus/i).last()).toBeVisible({ timeout: 15_000 });
     const confirmed = await confirmResponse;
     const confirmedRaw = await confirmed.text();
     const confirmedBody = JSON.parse(confirmedRaw) as ConfirmActionBody;
@@ -102,9 +102,9 @@ test.describe("Dashboard workbench live review", () => {
       outputMatchesTarget(confirmedBody, targetPath) || Boolean(confirmedBody.data?.proof_artifact_id),
       confirmedRaw,
     ).toBeTruthy();
-    await expect(page.getByText(/Action completed|Result saved|Latest output|retained output|verified/i).last()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText(/Action completed|Result saved|Latest:|retained output|verified/i).last()).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText(/owner-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(/Latest output/i).last()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Latest:/i).last()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: /Open file .*owner-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: /Open local folder .*owner-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
   });
@@ -150,15 +150,15 @@ test.describe("Dashboard workbench live review", () => {
     const chat = await chatResponse;
     expect(chat.ok(), await chat.text()).toBeTruthy();
 
-    await expect(page.getByText("What I will do").last()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 45_000 });
     await page.screenshot({ path: testInfo.outputPath("dashboard-proposal.png"), fullPage: true });
 
     const confirmResponse = page.waitForResponse(
       (response) => response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
       { timeout: 120_000 },
     );
-    await page.getByRole("button", { name: /Run now|Run/i }).last().click();
-    await expect(page.getByText(/Running|Starting now|Action completed|Result saved/i).last()).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /Approve|Start/i }).last().click();
+    await expect(page.getByText(/Starting|Action completed|Result saved|work bus/i).last()).toBeVisible({ timeout: 15_000 });
     const confirmed = await confirmResponse;
     const confirmedRaw = await confirmed.text();
     expect(confirmed.ok(), confirmedRaw).toBeTruthy();
@@ -189,13 +189,13 @@ test.describe("Dashboard workbench live review", () => {
     expect(outputRef?.proof?.checksum_algorithm).toBe("sha256");
     expect(outputRef?.proof?.checksum).toMatch(/^[a-f0-9]{64}$/);
 
-    await expect(page.getByText(/Result saved|Latest output/i).last()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText(/Result saved|Latest:/i).last()).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
     await expect(workPanelToggle).toBeVisible({ timeout: 15_000 });
     await expect(workPanelToggle).toContainText(/Review output/i);
     await expect(workPanelToggle).toContainText(/[1-9]/);
     await expect(workPanelToggle).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByText(/Latest output/i).last()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Latest:/i).last()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: /Open file .*operator-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
     const folderButton = page.getByRole("button", { name: /Open local folder .*operator-note\.md/i }).last();

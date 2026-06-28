@@ -13,7 +13,7 @@ import {
   splitList,
   summarizeOutputs,
   visibleGroupBroadcastResult,
-  type ApprovalPrompt,
+  type ApprovalPrompt, type ClearGroupResult,
   type Group,
   type GroupBroadcastResult,
   type GroupDraft,
@@ -46,6 +46,7 @@ export default function GroupManagementPanel({
   const [broadcasting, setBroadcasting] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [archivingExpired, setArchivingExpired] = useState(false);
+  const [clearOutputs, setClearOutputs] = useState(false);
   const [draft, setDraft] = useState<GroupDraft>(emptyGroupDraft);
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [lastBroadcastResult, setLastBroadcastResult] =
@@ -224,27 +225,24 @@ export default function GroupManagementPanel({
   };
 
   const archiveSelectedGroup = async () => {
-    if (
-      !selectedGroup ||
-      !selectedGroup.expiry ||
-      selectedGroup.status === "archived"
-    )
-      return;
+    if (!selectedGroup || selectedGroup.status === "archived") return;
+    const includeOutputs = clearOutputs;
     setArchiving(true);
     setNotice(null);
     setError(null);
     try {
       const res = await fetch(
-        `/api/v1/groups/${encodeURIComponent(selectedGroup.group_id)}/status`,
+        `/api/v1/groups/${encodeURIComponent(selectedGroup.group_id)}/clear`,
         {
-          method: "PATCH",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "archived" }),
+          body: JSON.stringify({ include_outputs: includeOutputs }),
         },
       );
       if (!res.ok)
-        throw new Error("Could not archive the selected temporary group.");
-      const archivedGroup = await getData<Group>(res);
+        throw new Error("Could not clear the selected group.");
+      const clearResult = await getData<ClearGroupResult>(res);
+      const archivedGroup = clearResult.group;
       setGroups((current) =>
         current.map((group) =>
           group.group_id === archivedGroup.group_id ? archivedGroup : group,
@@ -253,16 +251,15 @@ export default function GroupManagementPanel({
       setSelectedGroupId(archivedGroup.group_id);
       setBroadcastMessage("");
       setLastBroadcastResult(null);
-      setNotice(
-        "Temporary group archived. Retained outputs are still available for review.",
-      );
+      if (clearResult.outputs_cleared) setOutputs([]);
+      setClearOutputs(false);
+      const warningText = clearResult.warnings?.length
+        ? ` Cleanup warning: ${clearResult.warnings.join(" ")}`
+        : "";
+      setNotice(`${clearResult.operator_description ?? "Group cleared from active lanes."}${warningText}`);
+      await loadGroups();
     } catch (archiveError) {
-      setError(
-        errorMessage(
-          archiveError,
-          "Could not archive the selected temporary group.",
-        ),
-      );
+      setError(errorMessage(archiveError, "Could not clear the selected group."));
     } finally {
       setArchiving(false);
     }
@@ -290,9 +287,7 @@ export default function GroupManagementPanel({
       );
       await loadGroups();
     } catch (archiveError) {
-      setError(
-        errorMessage(archiveError, "Could not archive expired groups."),
-      );
+      setError(errorMessage(archiveError, "Could not archive expired groups."));
     } finally {
       setArchivingExpired(false);
     }
@@ -321,6 +316,7 @@ export default function GroupManagementPanel({
       broadcasting={broadcasting}
       archiving={archiving}
       archivingExpired={archivingExpired}
+      clearOutputs={clearOutputs}
       broadcastMessage={broadcastMessage}
       lastBroadcastResult={visibleBroadcastResult}
       onRefresh={() => void loadGroups()}
@@ -334,6 +330,7 @@ export default function GroupManagementPanel({
       onBroadcastMessageChange={setBroadcastMessage}
       onBroadcast={() => void broadcastToGroup()}
       onArchive={() => void archiveSelectedGroup()}
+      onClearOutputsChange={setClearOutputs}
     />
   );
 }

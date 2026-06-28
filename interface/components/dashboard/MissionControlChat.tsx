@@ -5,6 +5,7 @@ import { Brain, Megaphone } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import { SomaConversationThread } from "@/components/soma/SomaConversationThread";
 import { SomaIntentInput } from "@/components/soma/SomaIntentInput";
+import { useSomaOutputContinuation } from "@/components/soma/outputContinuation";
 import {
     DEFAULT_SOMA_SUGGESTIONS,
     type SomaSuggestion,
@@ -74,6 +75,7 @@ export default function MissionControlChat({
     const activeSuggestions = currentTeam ? teamSuggestions(currentTeam.name) : suggestions;
     const isLoading = isMissionChatting || isBroadcasting;
     const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
+    useSomaOutputContinuation({ disabled: isLoading, inputRef, setInput });
 
     useEffect(() => {
         setCouncilTarget("admin");

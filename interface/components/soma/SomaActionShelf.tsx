@@ -45,7 +45,7 @@ export function SomaActionShelf({
   const [savedActions, setSavedActions] = useState<SomaPinnedAction[]>([]);
   const [isClientReady, setIsClientReady] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
-  const visibleActions = useMemo(() => [...actions, ...savedActions].slice(0, 5), [actions, savedActions]);
+  const visibleActions = useMemo(() => [...savedActions, ...actions].slice(0, 3), [actions, savedActions]);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,7 +106,7 @@ export function SomaActionShelf({
 
   return (
     <section
-      className="flex flex-col gap-1.5 border-b border-cortex-border bg-cortex-surface/95 px-3 py-2 md:flex-row md:items-center lg:px-4"
+      className="grid gap-1.5 border-b border-cortex-border bg-cortex-surface/95 px-3 py-2 md:grid-cols-[auto_minmax(0,1fr)] md:items-center lg:px-4"
       aria-label="Pinned Soma actions"
       data-testid="soma-action-shelf"
       data-hydrated={isClientReady ? "true" : "false"}
@@ -114,26 +114,26 @@ export function SomaActionShelf({
       <div className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-cortex-text-muted">
         Quick actions:
       </div>
-      <div className="flex w-full min-w-0 max-w-full flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-[repeat(4,minmax(0,1fr))]">
         {visibleActions.map((action) => (
           <button
             key={`${action.id || (action.userSaved ? "saved" : "default")}:${action.label}`}
             type="button"
             onClick={() => runAction(action)}
-            className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-cortex-border bg-cortex-bg px-2.5 py-1 text-[11px] font-semibold text-cortex-text-main shadow-sm transition hover:border-cortex-primary/50 hover:bg-cortex-primary/10 focus:outline-none focus:ring-2 focus:ring-cortex-primary/30"
+            className="inline-flex min-h-8 min-w-0 items-center justify-center gap-1.5 rounded-lg border border-cortex-border bg-cortex-bg px-2.5 py-1 text-[11px] font-semibold text-cortex-text-main shadow-sm transition hover:border-cortex-primary/50 hover:bg-cortex-primary/10 focus:outline-none focus:ring-2 focus:ring-cortex-primary/30"
           >
-            <Bolt className="h-3 w-3 text-cortex-warning" />
-            {action.label}
+            <Bolt className="h-3 w-3 shrink-0 text-cortex-warning" />
+            <span className="truncate">{action.label}</span>
           </button>
         ))}
         <button
           type="button"
           onClick={() => setStudioOpen(true)}
-          className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-dashed border-cortex-border bg-cortex-bg px-2.5 py-1 text-[11px] font-semibold text-cortex-text-muted transition hover:border-cortex-primary/50 hover:text-cortex-text-main"
+          className="inline-flex min-h-8 min-w-0 items-center justify-center gap-1.5 rounded-lg border border-dashed border-cortex-border bg-cortex-bg px-2.5 py-1 text-[11px] font-semibold text-cortex-text-muted transition hover:border-cortex-primary/50 hover:text-cortex-text-main"
           aria-label="Create new quick action"
         >
-          <Plus className="h-3 w-3" />
-          Create action
+          <Plus className="h-3 w-3 shrink-0" />
+          <span className="truncate">Create action</span>
         </button>
       </div>
       {studioOpen ? (

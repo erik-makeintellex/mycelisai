@@ -1,7 +1,7 @@
 import type { ChatMessage } from '@/store/cortexStoreTypes';
 import type { TeamWorkConfirmationRef } from '@/store/cortexStoreProposalTeamWorkRefs';
 
-const proposalStartedDetail = 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.';
+const proposalStartedDetail = 'Soma handed this to the work bus. You can keep talking here while updates arrive.';
 
 export function executionStartedEvent(
     runId: string | null,
@@ -11,7 +11,7 @@ export function executionStartedEvent(
         kind: 'execution_started',
         label: runId ? 'Execution started' : 'Work approved',
         detail: runId
-            ? 'Soma accepted the approved work and saved the run receipt for proof.'
+            ? 'Soma handed this to the work bus and saved the run receipt.'
             : proposalStartedDetail,
         tone: 'info',
         status: teamWorkRefs.length ? 'team handoff' : 'running',
@@ -30,7 +30,7 @@ export function approvalSentEvent(): NonNullable<ChatMessage['thread_events']>[n
     return {
         kind: 'execution_update',
         label: 'Approval sent',
-        detail: 'Soma is confirming the governed handoff.',
+        detail: 'Soma is starting the handoff.',
         tone: 'info',
         status: 'confirming',
         source_kind: 'workspace_ui',

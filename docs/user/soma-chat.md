@@ -9,7 +9,7 @@ Open `Soma` (`/dashboard`) and type naturally. Soma receives the request first, 
 
 The dashboard is organized as a threaded workspace:
 
-- `Quick actions`: compact pinned outcome buttons for repeated work, such as audits, briefs, or media packages. Use `Create action` to save a repeated Soma ask as a reusable action; Mycelis stores it through the conversation-template path when Core is available and keeps a local fallback when it is not. Saved actions still enter the Soma conversation so you can adjust risky or unclear work before execution.
+- `Quick actions`: a compact pinned grid for repeated work, such as audits, briefs, or media packages. It stays bounded so it does not create a horizontal dashboard scrollbar. Use `Create action` to save a repeated Soma ask as a reusable action; Mycelis stores it through the conversation-template path when Core is available and keeps a local fallback when it is not. Saved actions still enter the Soma conversation so you can adjust risky or unclear work before execution.
 - `Talk to Soma`: the primary visible heading and conversation where you ask, approve, recover, and review.
 - `Outcome Vault`: a secondary overlay drawer for saved results, work in progress, and anything that needs attention. It stays closed by default so Soma keeps the main workspace, then opens over the thread when you need delivery, recovery, or revisit detail.
 
@@ -51,15 +51,15 @@ Confirming with `yes`, `confirm`, `proceed`, `do it`, or `one time` should bind 
 
 ## Reading The Soma Workspace
 
-The dashboard keeps Soma chat primary. A compact current-work lane above chat summarizes:
+The dashboard keeps Soma chat primary. A quiet current-work strip above chat summarizes:
 
 - current workflow state
-- latest retained output
+- latest retained output title and direct open/folder actions
 - review count
 - unresolved recovery work when output is ready but some proof/work still needs attention
 - the next action: `Review output` or `Review work`
 
-Open the review panel when you need more detail. Its tabs keep dense information out of the main chat:
+File paths and detailed proof stay out of the default strip unless needed. Open the review panel when you need more detail. Its tabs keep dense information out of the main chat:
 
 - `Work`: active, queued, degraded, or operator-needed items
 - `Output`: retained files, packages, media, and folder actions
@@ -77,13 +77,15 @@ Soma responses can include:
 1. **Primary answer**: markdown text, code blocks, links, and tables.
 2. **Inline generated outputs**: images, audio, video, code, charts, briefs, data, documents, and media previews.
 3. **Output package**: a retained file/app/package with `Open file`, `Open folder`, proof, and Resources re-entry.
-4. **Proposal block**: a clear `Run this now?` confirmation for actions that execute or change something.
+4. **Proposal block**: a compact `Approve this?` or `Start this?` conversational pause for actions that execute or change something.
 5. **Recovery/blocker card**: a compact trust boundary in the thread, with what failed, what remains trusted, what is not trusted, and what can safely happen next behind `Details and proof`.
 6. **Action-state card**: the current status, route, capability use, or next step for structured Soma work.
 
-No mutation executes until you confirm. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Review run details` unless they require immediate attention.
+No mutation executes until you confirm. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Details` unless they require immediate attention.
 
 Saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details. Use `Resources -> Output Files` for broader browsing later.
+
+Use **Reply** on a delivered output or project package when you want Soma to keep that exact output as context for the next request. Reply does not execute work by itself. It preloads the Soma composer with the output title, workspace reference, and proof id when available, then you can type the natural follow-up: update it, make an alternate version, generate downstream material from it, or ask another team to react to it.
 
 ## Teams And Groups
 
@@ -97,6 +99,8 @@ Team defaults:
 - broad work should split into smaller lead-owned lanes instead of one large roster
 
 Groups are collaboration lanes. Use `Groups` when you want a temporary or standing lane with one selected-group workspace, Workflow Log, outputs, retained artifacts, and message/review context. The Workflow Log is the readable chat-pipeline view; it should not become raw bus logs or multiple little agent windows.
+
+For multi-team work, ask in outcome language rather than agent wiring. For example: `Improve this app, retain examples of what changed, then let marketing create launch copy from those examples.` Soma should keep the source team, evidence examples, handoff, and downstream team output connected to the same Outcome. This applies across apps, games, media, documents, reports, and data products; games are only a difficult proof case, not a special product mode.
 
 ## Web, Search, And MCP
 

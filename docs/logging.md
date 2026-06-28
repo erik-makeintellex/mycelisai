@@ -1,8 +1,8 @@
-# Logging Standard (V8.2)
+# Logging Standard
 > Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
 > Status: Authoritative
-> Last Updated: 2026-03-22
+> Last Updated: 2026-06-28
 > Scope: Required logging and centralized review contract for all Mycelis services, Soma, and team-led execution
 
 ## 1. Purpose

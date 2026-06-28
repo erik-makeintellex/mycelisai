@@ -65,7 +65,7 @@ func TestBuildPlannedToolCalls_PrefersExplicitCreateTeamRequest(t *testing.T) {
 func TestBuildPlannedToolCalls_RecognizesPutTogetherTeamRequest(t *testing.T) {
 	calls := plannedCallsFromWrongBlueprint("Put together a team named QA Game Studio and get them to build a playable browser game.", []string{"generate_blueprint", "delegate"})
 
-	requirePlannedCallNames(t, calls, "create_team", "write_file")
+	requirePlannedCallNames(t, calls, "create_team")
 	if calls[0].Arguments["name"] != "QA Game Studio" {
 		t.Fatalf("name = %#v, want QA Game Studio", calls[0].Arguments["name"])
 	}
@@ -97,7 +97,7 @@ func TestBuildPlannedToolCalls_KeepsTeamAndConcreteCodeOutput(t *testing.T) {
 	}
 }
 
-func TestBuildPlannedToolCalls_StartsTeamGameDeliverable(t *testing.T) {
+func TestBuildPlannedToolCalls_StartsComplexTeamEvocationBrief(t *testing.T) {
 	request := "Create a team named SNES-Style Browser Game Team and get them to work on developing a detailed game"
 	calls := plannedCallsFromWrongBlueprint(request, []string{"generate_blueprint", "delegate"})
 
@@ -105,16 +105,23 @@ func TestBuildPlannedToolCalls_StartsTeamGameDeliverable(t *testing.T) {
 	if calls[0].Arguments["name"] != "SNES-Style Browser Game Team" {
 		t.Fatalf("name = %#v", calls[0].Arguments["name"])
 	}
+	teamID, _ := calls[0].Arguments["team_id"].(string)
+	if !strings.HasPrefix(teamID, "snes-style-browser-game-team-") || len(teamID) <= len("snes-style-browser-game-team-") {
+		t.Fatalf("team_id = %#v, want readable slug plus uuid suffix", calls[0].Arguments["team_id"])
+	}
 	path, _ := calls[1].Arguments["path"].(string)
-	if path != "groups/snes-style-browser-game-team/generated/first-game/index.html" {
-		t.Fatalf("path = %q, want group-scoped browser-game entrypoint", path)
+	if path != "groups/"+teamID+"/planning/TEAM_EVOCATION.md" {
+		t.Fatalf("path = %q, want group-scoped team evocation brief", path)
 	}
 	content, _ := calls[1].Arguments["content"].(string)
-	if !strings.Contains(content, "<canvas id=\"game\"") || !strings.Contains(content, "requestAnimationFrame(loop)") {
-		t.Fatalf("content does not look like a playable browser game: %.120q", content)
+	if !strings.Contains(content, "Team Evocation Brief") || !strings.Contains(content, "hardcoded domain template") {
+		t.Fatalf("content does not look like a team evocation brief: %.120q", content)
 	}
-	if calls[1].Arguments["package_kind"] != "project_package" {
-		t.Fatalf("package_kind = %#v, want project_package", calls[1].Arguments["package_kind"])
+	brief := strings.Join([]string{content, strings.Join(confirmedActionStringSlice(calls[1].Arguments["proof_required"]), "\n")}, "\n")
+	for _, want := range []string{"research", "council", "implementation strategy", "playable controls", "Soma repair-turn transcript", "Resources launch"} {
+		if !strings.Contains(brief, want) {
+			t.Fatalf("team evocation brief missing %q", want)
+		}
 	}
 	tools := toolsForPlannedCalls(calls, []string{"generate_blueprint", "delegate"})
 	if len(tools) != 2 || tools[0] != "create_team" || tools[1] != "write_file" {
@@ -122,7 +129,7 @@ func TestBuildPlannedToolCalls_StartsTeamGameDeliverable(t *testing.T) {
 	}
 }
 
-func TestBuildPlannedToolCalls_GameDeliverableIncludesReadmeWhenRequested(t *testing.T) {
+func TestBuildPlannedToolCalls_PackageAskCreatesEvocationBrief(t *testing.T) {
 	request := strings.Join([]string{
 		"Create a team named First Demo Game Team and get them to build a playable browser game.",
 		"The package metadata must include files index.html and README.md plus validation notes from opening the browser game.",
@@ -131,12 +138,12 @@ func TestBuildPlannedToolCalls_GameDeliverableIncludesReadmeWhenRequested(t *tes
 	calls := plannedCallsFromWrongBlueprint(request, []string{"generate_blueprint", "delegate"})
 
 	requirePlannedCallNames(t, calls, "create_team", "write_file")
-	files := confirmedActionStringSlice(calls[1].Arguments["package_files"])
-	if !containsString(files, "index.html") || !containsString(files, "README.md") {
-		t.Fatalf("package_files = %#v, want index.html and README.md", files)
+	content, _ := calls[1].Arguments["content"].(string)
+	if !strings.Contains(content, "Team Evocation Brief") || !strings.Contains(content, "Expected outputs") {
+		t.Fatalf("content = %.160q, want retained team evocation brief", content)
 	}
-	if calls[1].Arguments["package_kind"] != "project_package" {
-		t.Fatalf("package_kind = %#v, want project_package", calls[1].Arguments["package_kind"])
+	if calls[1].Arguments["package_kind"] != nil {
+		t.Fatalf("package_kind = %#v, should not use built-in project package template", calls[1].Arguments["package_kind"])
 	}
 }
 
@@ -220,7 +227,7 @@ func TestBuildPlannedToolCalls_CompletesPartialWriteFileToolCall(t *testing.T) {
 	}
 }
 
-func TestDeterministicGovernedMutationResult_BuildsFirstDemoTeamGameProposal(t *testing.T) {
+func TestDeterministicGovernedMutationResult_BuildsTeamEvocationProposal(t *testing.T) {
 	request := strings.Join([]string{
 		"Create a team with team_id first-demo-game-team named First Demo Game Team.",
 		"Ask Soma for the exact first demo deliverable: a playable browser game project package.",
@@ -240,12 +247,13 @@ func TestDeterministicGovernedMutationResult_BuildsFirstDemoTeamGameProposal(t *
 	if calls[0].Arguments["name"] != "First Demo Game Team" {
 		t.Fatalf("team name = %#v, want First Demo Game Team", calls[0].Arguments["name"])
 	}
-	if calls[1].Arguments["package_title"] != "First Demo Game Team First Playable" {
-		t.Fatalf("package_title = %#v, want human team name title", calls[1].Arguments["package_title"])
+	path, _ := calls[1].Arguments["path"].(string)
+	if path != "groups/first-demo-game-team/planning/TEAM_EVOCATION.md" {
+		t.Fatalf("path = %q, want team evocation brief", path)
 	}
-	files := confirmedActionStringSlice(calls[1].Arguments["package_files"])
-	if !containsString(files, "README.md") {
-		t.Fatalf("package_files = %#v, want README.md", files)
+	content, _ := calls[1].Arguments["content"].(string)
+	if !strings.Contains(content, "Team Evocation Brief") || !strings.Contains(content, "research, council review") {
+		t.Fatalf("content = %.160q, want team evocation brief", content)
 	}
 }
 
@@ -273,7 +281,10 @@ func TestInferCreateTeamPlanFromRequest_DefaultResearchTeam(t *testing.T) {
 		t.Fatal("expected create_team plan")
 	}
 	if call.Arguments["team_id"] != "ai-research-team" {
-		t.Fatalf("team_id = %#v", call.Arguments["team_id"])
+		teamID, _ := call.Arguments["team_id"].(string)
+		if !strings.HasPrefix(teamID, "ai-research-team-") || len(teamID) != len("ai-research-team-")+5 {
+			t.Fatalf("team_id = %#v", call.Arguments["team_id"])
+		}
 	}
 	if call.Arguments["role"] != "researcher" {
 		t.Fatalf("role = %#v", call.Arguments["role"])

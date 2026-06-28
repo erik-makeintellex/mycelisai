@@ -22,11 +22,11 @@ test.describe("Trusted Outcome Journey", () => {
     await expect(page.getByText("I can create a retained journey kit after approval.")).toBeVisible();
     await expect(page.getByText("A retained Trusted Outcome Kit will open from Soma")).toBeVisible();
 
-    await expect(page.getByText("I can do that.")).toBeVisible();
+    await expect(page.getByText("I can start that.")).toBeVisible();
     const confirmResponse = page.waitForResponse((response) =>
       response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
     );
-    await clickVisibleControl(page, page.getByRole("button", { name: /^(Run|Start)$/i }));
+    await clickVisibleControl(page, page.getByRole("button", { name: /^(Approve|Start)$/i }));
     const confirmBody = (await (await confirmResponse).json()) as Envelope<{ run_id?: string; verified?: boolean }>;
     expect(confirmBody.ok).toBeTruthy();
     expect(confirmBody.data?.run_id).toBe(j.runId);

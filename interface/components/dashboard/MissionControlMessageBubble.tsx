@@ -273,7 +273,7 @@ export default function MissionControlMessageBubble({
                         {msg.artifacts.map((artifact, i) => <InlineArtifact key={artifact.id || `art-${i}`} artifact={artifact} />)}
                     </div>
                 ) : null}
-                {!isUser && <ToolsUsed tools={msg.tools_used} />}
+                {!isUser && !msg.proposal && <ToolsUsed tools={msg.tools_used} />}
                 {!isUser && msg.tools_used && (msg.tools_used.includes("recall") || msg.tools_used.includes("search_memory")) && (
                     <div className="flex items-center gap-1 px-1 mt-0.5">
                         <span className="w-1 h-1 rounded-full bg-cortex-primary" />

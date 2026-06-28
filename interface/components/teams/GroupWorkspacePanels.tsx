@@ -47,6 +47,7 @@ type WorkspaceProps = {
   broadcasting: boolean;
   archiving: boolean;
   archivingExpired: boolean;
+  clearOutputs: boolean;
   broadcastMessage: string;
   lastBroadcastResult: GroupBroadcastResult | null;
   onRefresh: () => void;
@@ -58,6 +59,7 @@ type WorkspaceProps = {
   onBroadcastMessageChange: (message: string) => void;
   onBroadcast: () => void;
   onArchive: () => void;
+  onClearOutputsChange: (value: boolean) => void;
 };
 
 export function GroupWorkspacePanels(props: WorkspaceProps) {
@@ -82,6 +84,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     broadcasting,
     archiving,
     archivingExpired,
+    clearOutputs,
     broadcastMessage,
     lastBroadcastResult,
     onRefresh,
@@ -93,6 +96,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     onBroadcastMessageChange,
     onBroadcast,
     onArchive,
+    onClearOutputsChange,
   } = props;
   const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>(
     initialPanel ?? "overview",
@@ -171,7 +175,9 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
                   }
                   outputSummary={outputSummary}
                   archiving={archiving}
+                  clearOutputs={clearOutputs}
                   onArchive={onArchive}
+                  onClearOutputsChange={onClearOutputsChange}
                   onOpenOutputs={() => setActivePanel("outputs")}
                 />
               </div>

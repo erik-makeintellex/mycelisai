@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ExternalLink, Quote } from "lucide-react";
+import { Check, ExternalLink, MessageSquareReply, Quote } from "lucide-react";
 import { useState } from "react";
 import { sortTeamOutputRefsNewestFirst } from "@/components/teams/teamWorkProjection";
 import type { ChatArtifactRef, ExecutionSummaryData, ExecutionSummaryItem, OutputProofEnvelope, TeamOutputRef } from "@/store/useCortexStore";
@@ -17,6 +17,7 @@ import { itemWorkspacePath, outputWorkspacePath, OutputPathHint } from "./Output
 import { OutputProofBadges, OutputProofDetails } from "./OutputWorkbenchProofDetails";
 import { OutputWorkbenchProjectPackage } from "./OutputWorkbenchProjectPackage";
 import { OUTPUT_PACKAGE_OPEN_LABEL } from "@/lib/outputPackageModel";
+import { requestSomaOutputContinuation } from "./outputContinuation";
 
 export type OutputWorkbenchItem = {
   text: string;
@@ -116,6 +117,10 @@ function quotedOutputText(output: OutputWorkbenchItem) {
   return output.url ? `> ${output.text}\n${output.url}` : `> ${output.text}`;
 }
 
+function outputContinuationReference(output: OutputWorkbenchItem) {
+  return output.storagePath || output.url || output.text;
+}
+
 export function OutputWorkbench({
   outputs,
   projectPackages,
@@ -176,6 +181,20 @@ export function OutputWorkbench({
               <OutputAccessActions label={primaryOutput.text} url={primaryOutput.url} storagePath={primaryOutput.storagePath} openLabel="Open file" folderLabel="Open folder" />
               <button
                 type="button"
+                onClick={() => requestSomaOutputContinuation({
+                  title: primaryOutput.text,
+                  reference: outputContinuationReference(primaryOutput),
+                  proof: primaryOutput.proofArtifactId,
+                })}
+                className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"
+                title={`Reply to ${primaryOutput.text} in Soma`}
+                aria-label={`Reply to ${primaryOutput.text} in Soma`}
+              >
+                <MessageSquareReply className="h-3 w-3" />
+                Reply
+              </button>
+              <button
+                type="button"
                 onClick={() => void copyOutputQuote(primaryOutput, `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}`)}
                 className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
                 title={copiedOutputKey === `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}` ? "Copied output quote" : "Copy output quote"}
@@ -211,6 +230,20 @@ export function OutputWorkbench({
                     <OutputPathHint storagePath={output.storagePath} url={output.url} />
                   </span>
                   <OutputAccessActions label={output.text} url={output.url} storagePath={output.storagePath} openLabel="Open file" folderLabel="Open folder" />
+                  <button
+                    type="button"
+                    onClick={() => requestSomaOutputContinuation({
+                      title: output.text,
+                      reference: outputContinuationReference(output),
+                      proof: output.proofArtifactId,
+                    })}
+                    className="inline-flex h-6 items-center gap-1 rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-2 text-[10px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/55 hover:bg-cortex-primary/15"
+                    title={`Reply to ${output.text} in Soma`}
+                    aria-label={`Reply to ${output.text} in Soma`}
+                  >
+                    <MessageSquareReply className="h-3 w-3" />
+                    Reply
+                  </button>
                   <OutputProofBadges proof={output.proof} proofArtifactId={output.proofArtifactId} />
                   <button
                     type="button"

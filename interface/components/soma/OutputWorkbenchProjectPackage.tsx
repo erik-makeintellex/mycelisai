@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderOpen, ShieldCheck } from "lucide-react";
+import { FolderOpen, MessageSquareReply, ShieldCheck } from "lucide-react";
 import type { ExecutionSummaryItem } from "@/store/useCortexStore";
 import {
   OUTPUT_PACKAGE_FOLDER_LABEL,
@@ -13,6 +13,7 @@ import {
 import { itemText, itemUrl } from "./ExecutionSummaryCardModel";
 import OutputAccessActions from "./OutputAccessActions";
 import { OutputProofDetails } from "./OutputWorkbenchProofDetails";
+import { requestSomaOutputContinuation } from "./outputContinuation";
 
 export function OutputWorkbenchProjectPackage({
   project,
@@ -51,6 +52,20 @@ export function OutputWorkbenchProjectPackage({
             </a>
           ) : null}
           <OutputAccessActions label={title} url={href} storagePath={revealPath} openLabel={projectOpenLabel} folderLabel={OUTPUT_PACKAGE_FOLDER_LABEL} />
+          <button
+            type="button"
+            onClick={() => requestSomaOutputContinuation({
+              title,
+              reference: revealPath || href || folder,
+              proof: project.proof_artifact_id,
+            })}
+            className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"
+            title={`Reply to ${title} in Soma`}
+            aria-label={`Reply to ${title} in Soma`}
+          >
+            <MessageSquareReply className="h-3 w-3" />
+            Reply
+          </button>
         </span>
       </div>
       {(project.entrypoint || folder) ? (

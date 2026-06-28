@@ -50,6 +50,9 @@ func (s *AdminServer) listGroupOutputs(ctx context.Context, group *Collaboration
 			return nil, err
 		}
 		for _, item := range items {
+			if strings.EqualFold(strings.TrimSpace(item.Status), "archived") {
+				continue
+			}
 			merged[item.ID] = item
 		}
 	}

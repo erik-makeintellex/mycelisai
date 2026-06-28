@@ -189,6 +189,13 @@ user-facing outputs through `/api/v1/groups/{id}/outputs`; groups with no
 deliverable artifacts stay out of the output picker so operators do not have to
 scan abandoned or internal-only lanes.
 
+When a group is cleared from `Groups`, retained files stay visible here unless
+the operator explicitly included retained output cleanup. If cleanup included
+the group outputs, the group workspace folder is removed and those artifact rows
+are archived, so the cleared group no longer appears in the curated output
+selector. Transient message-bus handoff data is not part of this retained-file
+list.
+
 When an output group is selected, Resources links back to the same group in
 `Groups` for **Outputs**, **Workflow Log**, and **Message** review. Use those
 links when you need the collaboration history, group conversation, or workflow
@@ -249,6 +256,7 @@ New-user proof should verify both sides of this boundary:
 - `Resources -> Output Files` can browse/read/write only under the governed workspace boundary and can open the current local folder through the workspace-confined reveal endpoint.
 - `System -> Deployments` reports the deployment/workspace/artifact roots that explain where generated output will land.
 - A retained demo output or project package opened from Soma/Teams/Groups resolves to the same workspace root family instead of a hidden process working directory; team-owned packages and media should be inside the selected group folder unless the operator explicitly chose another workspace path.
+- A retained output or project package opened from Soma can be used as the source for the next Soma ask through **Reply**. Use this when the user wants an update, alternate, downstream generation, or another team to react to the delivered content without manually copying paths.
 
 Supported operator actions:
 - browse directories (`list_directory`)

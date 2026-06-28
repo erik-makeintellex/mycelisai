@@ -176,7 +176,15 @@ func (s *AdminServer) ensureGroupForCreatedTeam(ctx context.Context, auditID, au
 	if existing, err := s.getGroupByNameDB(ctx, name); err != nil {
 		return err
 	} else if existing != nil {
-		return s.ensureExistingGroupIncludesTeam(ctx, auditID, existing, teamID)
+		if containsToolName(existing.TeamIDs, teamID) {
+			return nil
+		}
+		name = generatedTeamGroupName(name, teamID)
+		if named, lookupErr := s.getGroupByNameDB(ctx, name); lookupErr != nil {
+			return lookupErr
+		} else if named != nil {
+			return s.ensureExistingGroupIncludesTeam(ctx, auditID, named, teamID)
+		}
 	}
 
 	workMode := firstNonEmptyString(merged["work_mode"], "propose_only")

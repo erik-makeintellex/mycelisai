@@ -10,15 +10,19 @@ import (
 func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
 	var planned []protocol.PlannedToolCall
 	parsedCall, hasParsedCall := parsePlannedToolCall(agentResult.Text)
+	if crossTeamCalls, ok := inferContentMarketingCrossTeamPlanFromRequest(latestRequest); ok {
+		planned = append(planned, crossTeamCalls...)
+		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
+	}
 	if inferredTeamCall, ok := inferCreateTeamPlanFromRequest(latestRequest); ok {
 		if hasParsedCall && strings.TrimSpace(parsedCall.Name) == "create_team" {
 			planned = append(planned, normalizePlannedToolCall(mergeMissingPlannedToolArguments(parsedCall, inferredTeamCall)))
 		} else {
 			planned = append(planned, normalizePlannedToolCall(inferredTeamCall))
 		}
-		if fileCall, ok := inferWriteFilePlanFromRequest(latestRequest); ok && containsToolName(mutTools, "write_file") && requestHasExplicitWriteFileContent(latestRequest) {
+		if fileCall, ok := inferWriteFilePlanFromRequest(latestRequest); ok && containsToolName(mutTools, "write_file") && shouldUseRequestedWriteFilePlan(latestRequest, fileCall) {
 			planned = append(planned, normalizePlannedToolCall(fileCall))
-		} else if fileCall, ok := inferFirstTeamGameDeliverablePlanFromRequest(latestRequest, planned[0]); ok {
+		} else if fileCall, ok := inferTeamPreparationBriefPlanFromRequest(latestRequest, planned[0]); ok {
 			planned = append(planned, normalizePlannedToolCall(fileCall))
 		} else if fileCall, ok := inferWriteFileExecutionPlan(agentResult, latestRequest); ok && containsToolName(mutTools, "write_file") {
 			planned = append(planned, normalizePlannedToolCall(fileCall))
@@ -29,6 +33,10 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 				planned = append(planned, normalizePlannedToolCall(saveCall))
 			}
 		}
+		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
+	}
+	if continuationCalls, ok := inferTeamEvocationContinuationPlanFromRequest(latestRequest); ok {
+		planned = append(planned, continuationCalls...)
 		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
 	}
 	if hasParsedCall {
@@ -113,7 +121,7 @@ func plannedCallsHaveWritableOutput(planned []protocol.PlannedToolCall) bool {
 func plannedCallsAreDeterministicProposalSafe(planned []protocol.PlannedToolCall) bool {
 	for _, call := range planned {
 		switch strings.TrimSpace(call.Name) {
-		case "create_team", "generate_image", "save_cached_image", "write_file":
+		case "create_team", "delegate_task", "generate_image", "save_cached_image", "write_file":
 			continue
 		default:
 			return false
@@ -225,6 +233,11 @@ func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []stri
 			}
 		case "create_team":
 			if teamID := firstNonEmptyString(call.Arguments["team_id"], call.Arguments["id"], call.Arguments["team_name"]); teamID != "" {
+				resources = append(resources, "team:"+teamID)
+				continue
+			}
+		case "delegate_task":
+			if teamID := firstNonEmptyString(call.Arguments["team_id"], call.Arguments["target_team"]); teamID != "" {
 				resources = append(resources, "team:"+teamID)
 				continue
 			}

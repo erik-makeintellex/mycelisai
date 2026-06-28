@@ -2,11 +2,9 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: Canonical
-> Last Updated: 2026-06-26
+> Last Updated: 2026-06-28
 > Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
-
 ## Product Thesis
-
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
 
 The default product language is:
@@ -22,7 +20,6 @@ I can trust or recover the result later.
 The architecture exists to protect confidence while making complexity disappear. Runs, agents, groups, capabilities, tools, continuity vectors, NATS, schemas, receipts, audit, and deployment topology serve Soma and the Outcome; they are supporting machinery, not default user concepts. When the architecture succeeds, users do not admire the runtime. They trust Soma.
 
 ## Release Goal
-
 The V8.3 release target is operational embodiment: prove Mycelis through visible execution, durable deliverables, recoverable work, understandable trust, and clean deployment reality. The risk is no longer insufficient architecture. The risk is doctrine expansion without product proof.
 
 Release success means a non-technical user can complete the journey from ask to trusted revisit without needing to understand agents, MCP, workflows, runs, topology, or infrastructure. A technical user can still inspect proof and runtime detail when needed. If runtime correctness improves but user trust or usability declines, the architecture moved in the wrong direction.
@@ -52,10 +49,10 @@ The first authenticated surface is the Soma workspace. It should feel like a foc
 
 Required first-viewport composition:
 
-- compact Quick Actions shelf for pinned repeatable Soma asks
+- compact Quick Actions shelf as a bounded grid for pinned repeatable Soma asks without a visible horizontal scrollbar
 - large Talk to Soma thread as the primary canvas
 - no separate dashboard headline band above the thread; status and governance live in the Soma header
-- compact current-work summary only when there is meaningful work state
+- quiet current-work strip only when there is meaningful work state
 - header Outcomes button that opens Outcome Vault on demand
 - no default right rail squeezing Soma
 - no setup, identity, topology, or environment stack below the chat
@@ -63,7 +60,7 @@ Required first-viewport composition:
 
 The empty Soma thread should not be a stack of starter action cards. It should behave like the beginning of a conversation: one plain prompt for the outcome, one short cue that Soma can help shape the path, and optional quoted examples of user asks. Those examples are readable language, not buttons, hidden launchers, or a predefined workflow menu.
 
-The dashboard should keep the composer reachable at common desktop, laptop, tablet, and mobile viewports. Long content belongs inside bounded panes, overlays, tabs, or detail drawers rather than growing the whole page.
+The dashboard should keep the composer reachable at common desktop, laptop, tablet, and mobile viewports. Long content belongs inside bounded panes, overlays, tabs, or detail drawers rather than growing the whole page. Default work/output summaries should not expose file paths, proof internals, or stacked cards before the operator asks for detail; the primary surface should show the title, safe action, and review entry point.
 
 Quick Actions are saved conversational accelerators, not autonomous triggers. Button Studio should persist reusable Soma asks through the conversation-template path, keep a local fallback only for resilience, and run saved actions by sending the rendered prompt back into the Soma thread so understanding, approval, proof, and recovery stay intact.
 
@@ -72,36 +69,35 @@ Quick Actions are saved conversational accelerators, not autonomous triggers. Bu
 Soma must support natural exploratory conversation before execution. Users can ask questions, refine goals, co-architect requirements, compare options, or shape an idea before asking Soma to run anything. Soma is the persistent operational identity of the workspace: it understands intent, shapes Outcomes, chooses execution strategies, coordinates capabilities, preserves continuity, maintains trust, guides recovery, and keeps long-running context. The user should increasingly think "I work through Soma," not "I operate an AI platform."
 
 Conversational phases:
-
 | Phase | User Experience | Runtime Meaning |
 | --- | --- | --- |
 | Explore | "Help me think this through." | No execution contract yet; Soma may ask questions, draft options, or reason over allowed context. |
 | Shape | "Turn this into a plan." | Soma forms WorkIntent, output shape, constraints, execution mode, and approval posture. |
 | Execute | "Run/build/schedule/start this." | Soma creates or uses an ExecutionContract, starts governed work, and updates the thread. |
 
-Governance is mandatory for mutation, durable execution, risky tool use, team/project instantiation, schedules, service mode, and Soma self-extension. The visible governance experience should be a small conversational pause, not a large compliance panel.
+Governance is mandatory for mutation, durable execution, risky tool use, team/project instantiation, schedules, service mode, and Soma self-extension. The visible governance experience should be a small conversational pause, not a large compliance panel: Soma gives a 1-3 sentence summary, a short bullet list of the intended team/work/output, and one approval choice while NATS/team routing, run proof, and recovery details stay available behind Details.
 
 Default approval frame:
 
 ```text
 Soma
-I can do that.
+I can start that.
+Approve this?
+I will hand this to the work bus after approval and keep this thread open.
 
-What I will do
-1. Create the project workspace.
-2. Assign the right specialists.
-3. Save the deliverable to Outcomes.
+- Shape the project workspace.
+- Hand the work to the right team.
+- Save the deliverable to Outcomes.
 
-Run this?
-[Run] [Adjust] [Details]
+[Approve] [Adjust] [Details]
 ```
 
 After approval, Soma should immediately acknowledge the handoff:
 
 ```text
 Started.
-I created the workspace and handed the first task to the build team.
-I will keep this thread updated as work lands.
+I handed this to the work bus and saved the receipt.
+You can keep talking here while updates arrive.
 ```
 
 ## Outcome Vault
@@ -113,6 +109,7 @@ Every user-facing output package should expose:
 - clear title and outcome state
 - primary open action for the deliverable
 - folder or data-root access where safe
+- conversational reply action that returns the output reference to Soma for updates, alternates, downstream generation, or team handoff
 - proof or receipt link
 - recovery state if degraded
 - source/intermediate-output visibility only as an opt-in
@@ -123,7 +120,11 @@ Outcome Vault is the persistent delivery/revisit concept, but it should open as 
 
 Soma is singular. Organizations, groups, projects, deployments, teams, tools, and outputs are scoped operational contexts, not separate assistant identities.
 
-Complex work may create an OutcomeProject and a TeamRegistryEntry. The user should see the outcome and team purpose, not a pile of agent internals. Minimal teams are preferred. Temporary teams should expire or archive unless they produce durable user-facing outputs. Team-created intermediate files belong in source/support folders and should be hidden from user output lists unless the user chooses to include team-source outputs. Teams are autonomous execution mechanisms, never sovereign authorities: authority flows Operator -> Policy -> Outcome -> ExecutionContract -> Team -> Capability.
+Complex work may create an OutcomeProject and a TeamRegistryEntry. The user should see the outcome and team purpose, not a pile of agent internals. Minimal teams are preferred. Temporary teams should expire or archive unless they produce durable user-facing outputs. Operators may explicitly name a team, but when they do not, Soma must infer the expected readable team name from intent, such as Temporary Game Delivery Team, Standing Content Steward Team, Media Generation Team, or Mixed Output Team. Generated team ids must mirror that purpose with obvious prefixes such as `temp-`, `standing-`, `game-delivery-team`, `media-generation-team`, or `mixed-output-team`, ending in a short uuid suffix rather than timestamp-like numbers. Team-created intermediate files belong in source/support folders and should be hidden from user output lists unless the user chooses to include team-source outputs. When Soma coordinates builder, watcher, and transaction teams, source content and requested output targets must remain distinct: a request to watch or react to one folder/file while saving another file must retain the saved target as the user-facing output.
+
+Hard domain tests, such as asking Soma to generate a substantial action game, media package, commercial data tool, deployable app, or mixed text/media/code output, are probes of generic complex-output orchestration. Mycelis must not become a game engine, media engine, website generator, or code framework by hardcoding one domain's implementation path. Instead, complex work should trigger a team-evocation phase that is never terminal by itself: Soma researches available external/current context or local sources when possible, exposes search/tool boundaries when research is unavailable, consults council/review before implementation, retains a research/council handoff, delegates implementation to the evoked delivery team, chooses the output format and stack that fit the operator's deployment target, and defines the smallest useful lead/specialist team with proof gates. Team plans must carry a content contract for the requested work type. Game-like probes require playable controls, rendered loop, collision/bounds, objective, win/fail, restart, appropriate audio when requested, direct launch/view access, and headed play-through proof; media requires prompt/constraint fit, saved artifact, provider boundary, and review notes; text requires requested structure, readable claims/assumptions, reopenable file output, and proof. If validation finds a defect in a requested output, the repair request should be reported back through Soma so Soma can preserve continuity, coordinate the producing team or a follow-up team, and keep the fix visible in the Outcome history instead of silently editing the artifact outside the conversation. Repeated temporary teams must not collapse into an older group lane merely because they share a display name; output ownership follows the actual team id and Outcome. Teams are autonomous execution mechanisms, never sovereign authorities: authority flows Operator -> Policy -> Outcome -> ExecutionContract -> Team -> Capability.
+
+Cross-functional delivery must also be generic. A game team handing evidence to a marketing team is only one stress case. The same pattern applies when an app delivery team hands usage proof to launch marketing, a media team hands asset examples to a campaign team, a data team hands validation notes to an analyst, or a documentation team hands release facts to support. Soma should coordinate source and downstream teams through the Outcome: the source team improves or produces the deliverable, retains proof examples in its group workspace, writes a concise handoff, and notifies the downstream team. The downstream team must ground claims, campaign copy, review notes, support instructions, or follow-up work in that retained evidence rather than inventing unsupported assertions. User-facing output lists should show the final deliverables by Outcome and producing team, with source/intermediate evidence available through an opt-in detail path.
 
 Capabilities are governed runtime objects. MCP servers, local scripts, APIs, filesystem access, media engines, search, and generated app builders should be presented as capabilities Soma can use. The user-facing question is "What can Soma use, and what needs repair?" not "Which server topology is installed?"
 

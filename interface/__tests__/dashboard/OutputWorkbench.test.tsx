@@ -296,4 +296,5 @@ describe("OutputWorkbench", () => {
       expect(screen.getByRole("button", { name: "Copied output quote" })).toBeDefined();
     });
   });
+
 });

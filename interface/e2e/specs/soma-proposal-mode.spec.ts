@@ -31,9 +31,9 @@ test.describe("Soma proposal mode", () => {
         await openOrganization(page);
         await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
 
-        await expect(page.getByText("I can do that.")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("I can start that.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText("Start this?")).toBeVisible();
-        await expect(page.getByText("What I will do")).toBeVisible();
+        await expect(page.getByText("Handoff starting. You can keep talking to Soma while the team works.")).toHaveCount(0);
         await expect(page.getByText("create a hello_world.py file in your workspace.")).toBeVisible();
         await expect(page.getByText("A new Python file will be saved to workspace/logs/hello_world.py after approval.")).toBeVisible();
         await expect(page.getByText("workspace/logs/hello_world.py", { exact: true })).toHaveCount(0);
@@ -52,7 +52,7 @@ test.describe("Soma proposal mode", () => {
         await openOrganization(page);
         await sendWorkspaceMessage(page, "Keep a media review lane running for this team.");
 
-        await expect(page.getByText("I can do that.")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("I can start that.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText("Start this?")).toBeVisible();
         await expect(page.getByText("swarm.team.media.signal.status")).toHaveCount(0);
         await expect(page.getByText("Team connection")).toHaveCount(0);
@@ -127,7 +127,7 @@ test.describe("Soma proposal mode", () => {
         await openOrganization(page);
         await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
 
-        await expect(page.getByText("I can do that.")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("I can start that.")).toBeVisible({ timeout: 20_000 });
         await page.getByRole("button", { name: /^Start$/i }).click();
 
         const failureCard = page.getByTestId("execution-summary-card").last();

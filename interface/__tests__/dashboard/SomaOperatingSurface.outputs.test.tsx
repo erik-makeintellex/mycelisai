@@ -99,7 +99,7 @@ describe("SomaOperatingSurface output projection", () => {
     expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
     expect(workbench.getByText("Comic page")).toBeDefined();
 
-    fireEvent.click(screen.getByRole("button", { name: /open outcomes and vault/i }));
+    fireEvent.click(screen.getByRole("button", { name: /open outcome vault/i }));
 
     const vault = within(screen.getByTestId("soma-outcome-vault"));
     expect(vault.getByRole("link", { name: /Open latest deliverable Comic page/i }).getAttribute("data-target-reference")).toContain("groups/team-alpha/media/comic-page.png");

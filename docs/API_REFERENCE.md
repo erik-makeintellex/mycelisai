@@ -153,6 +153,7 @@ Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity
 | `/api/v1/groups` | GET/POST | List/create root-admin collaboration groups (DB-backed, tenant scoped). Group records include `workspace_folder`, a workspace-relative folder under `groups/` used for standing/user-defined/Soma-defined group outputs. If omitted on create, Core derives a stable folder from the first `team_id` or the group name plus ID and creates it under `MYCELIS_WORKSPACE`. |
 | `/api/v1/groups/{id}` | PUT | Update root-admin collaboration group. Optional `workspace_folder` may move the group output lane to another workspace-confined `groups/...` path; omitted values preserve the existing folder. |
 | `/api/v1/groups/{id}/status` | PATCH | Archive, pause, or reactivate one collaboration group without deleting retained teams, outputs, proof, or audit history. |
+| `/api/v1/groups/{id}/clear` | POST | Clear one collaboration group from active/review lanes. Body accepts `{"include_outputs": true|false}`. Without `include_outputs`, the group is archived and retained output files remain reviewable. With `include_outputs=true`, Core also removes the group's workspace folder under `MYCELIS_WORKSPACE/groups/...` and archives output artifact rows for the group's teams/agents so cleared retained files no longer appear in the curated group-output picker. Message-bus handoff data is transient and is not treated as retained output. |
 | `/api/v1/groups/{id}/workflow-log` | GET | Return a canonical read-only workflow timeline for one collaboration group. Supports bounded `limit` capped at `100`, `include_outputs=true|false`, and `include_audit=true|false`. The response consolidates the group brief, lifecycle recommendation, durable team-work rows, retained artifact/output refs, proof/audit cues, latest group-broadcast monitor cue, and degraded output-storage recovery cues without requiring the UI to fan out across group, team-work, output, and bus endpoints. |
 | `/api/v1/groups/{id}/outputs` | GET | Return retained user-facing artifacts for one collaboration group. Supports bounded `limit`; callers use this for Groups retained-output review and Resources group-output selection. Internal/source files remain workspace-folder context unless the UI explicitly switches into source-file review. |
 | `/api/v1/groups/{id}/broadcast` | POST | Publish group coordination message to group + team NATS channels |
@@ -214,7 +215,7 @@ Conversation-template instantiation is non-executing by default. Quick Actions i
 
 ## Directed Execution Payloads
 
-`execution_summary` is the additive V8.2 directed-execution contract for Soma-facing runtime responses. It is optional for compatibility, but meaningful Soma actions should populate it as they move into the directed-execution model.
+`execution_summary` is the additive directed-execution contract for Soma-facing runtime responses. It is optional for compatibility, but meaningful Soma actions should populate it as they move into the directed-execution model.
 
 The object can include:
 - `intent`: original and resolved request classification

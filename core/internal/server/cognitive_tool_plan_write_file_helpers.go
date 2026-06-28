@@ -2,10 +2,13 @@ package server
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/mycelis/core/pkg/protocol"
 )
+
+var explicitOutputFilePathPattern = regexp.MustCompile(`(?i)(?:create|write|save|retain|store|produce)\b[^.\n]{0,140}?\b(?:at|to|as|path)\s+[` + "`" + `'\"]?([^` + "`" + `'\"\s]+)[` + "`" + `'\"]?`)
 
 func inferWriteFilePlanFromRequest(text string) (protocol.PlannedToolCall, bool) {
 	trimmed := strings.TrimSpace(text)
@@ -40,10 +43,21 @@ func inferWriteFilePlanFromRequest(text string) (protocol.PlannedToolCall, bool)
 	return protocol.PlannedToolCall{
 		Name: "write_file",
 		Arguments: map[string]any{
-			"path":    targetPath,
-			"content": content,
+			"path":       targetPath,
+			"content":    content,
+			"validation": textOutputValidationForRequest(trimmed, targetPath),
 		},
 	}, true
+}
+
+func textOutputValidationForRequest(request, targetPath string) string {
+	if requestAsksForTextOutput(strings.ToLower(request)) {
+		return "Retained text output must reopen from the workspace, match the requested structure, and separate assumptions or source claims when relevant."
+	}
+	if strings.EqualFold(filepathExt(targetPath), ".html") {
+		return "Retained browser output must open locally and expose the requested interactive behavior."
+	}
+	return "Retained file output must reopen from the workspace and match the requested operator intent."
 }
 
 func synthesizeRequestedFileContent(request, targetPath string) string {
@@ -65,6 +79,10 @@ func synthesizeRequestedFileContent(request, targetPath string) string {
 }
 
 func extractRequestedFilePath(text string) string {
+	if explicitTarget := extractExplicitOutputFilePath(text); explicitTarget != "" {
+		return explicitTarget
+	}
+	var candidates []string
 	matches := namedFilePattern.FindAllStringSubmatch(text, -1)
 	for _, match := range matches {
 		if len(match) < 2 {
@@ -72,13 +90,41 @@ func extractRequestedFilePath(text string) string {
 		}
 		candidate := strings.TrimSpace(match[1])
 		if looksLikeFilePath(candidate) {
-			return strings.Trim(candidate, `"'.,;`)
+			candidates = append(candidates, strings.Trim(candidate, `"'.,;`))
 		}
 	}
 	for _, field := range strings.Fields(text) {
 		candidate := strings.Trim(field, `"'.,;:()[]{}<>`)
 		if looksLikeFilePath(candidate) {
+			candidates = append(candidates, candidate)
+		}
+	}
+	return preferredRequestedFilePath(candidates)
+}
+
+func extractExplicitOutputFilePath(text string) string {
+	matches := explicitOutputFilePathPattern.FindAllStringSubmatch(text, -1)
+	for i := len(matches) - 1; i >= 0; i-- {
+		if len(matches[i]) < 2 {
+			continue
+		}
+		candidate := strings.Trim(matches[i][1], `"'.,;`)
+		if looksLikeFilePath(candidate) {
 			return candidate
+		}
+	}
+	return ""
+}
+
+func preferredRequestedFilePath(candidates []string) string {
+	for i := len(candidates) - 1; i >= 0; i-- {
+		if strings.TrimSpace(filepathExt(candidates[i])) != "" {
+			return candidates[i]
+		}
+	}
+	for i := len(candidates) - 1; i >= 0; i-- {
+		if strings.TrimSpace(candidates[i]) != "" {
+			return candidates[i]
 		}
 	}
 	return ""
@@ -207,6 +253,9 @@ func firstWords(text string, limit int) string {
 func looksLikeFilePath(value string) bool {
 	trimmed := strings.Trim(value, `"'.,;`)
 	if trimmed == "" {
+		return false
+	}
+	if strings.ContainsAny(trimmed, "<>=;") {
 		return false
 	}
 	return strings.ContainsAny(trimmed, `/\`) || filepathExt(trimmed) != ""

@@ -59,15 +59,16 @@ describe('ProposedActionBlock', () => {
     it('renders a compact natural approval pause by default and hides low-level mechanics', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        expect(screen.getByText(/i can do that/i)).toBeDefined();
-        expect(screen.getByText(/run this\?/i)).toBeDefined();
-        expect(screen.getByText(/i will wait for your approval before changing anything/i)).toBeDefined();
-        expect(screen.getByText(/what i will do/i)).toBeDefined();
+        expect(screen.getByText(/i can start that/i)).toBeDefined();
+        expect(screen.getByText(/approve this\?/i)).toBeDefined();
+        expect(screen.getByText(/hand this to the bus after approval/i)).toBeDefined();
+        expect(screen.queryByText(/what i will do/i)).toBeNull();
+        expect(screen.getByText(/hand the work to the right team through the team bus/i)).toBeDefined();
         expect(screen.getByText(/create a hello_world\.py file in your workspace\./i)).toBeDefined();
         expect(screen.getByText(/a new python file will be saved to workspace\/logs\/hello_world\.py after approval\./i)).toBeDefined();
-        expect(screen.getAllByText(/workspace\/logs\/hello_world\.py/i).length).toBe(1);
+        expect(screen.getAllByText(/workspace\/logs\/hello_world\.py/i).length).toBeGreaterThan(0);
         expect(screen.queryByText(/this action will change your workspace, so soma needs your approval before running it\./i)).toBeNull();
-        expect(screen.getByText(/needs your approval/i)).toBeDefined();
+        expect(screen.getAllByText(/needs approval/i).length).toBeGreaterThan(0);
         expect(screen.queryByText(/risk medium/i)).toBeNull();
         expect(screen.queryByText(/current team bus/i)).toBeNull();
         expect(screen.queryByText(/no bus connection/i)).toBeNull();
@@ -89,7 +90,7 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/execute delegate through tool step/i)).toBeDefined();
         expect(screen.getByText(/1 team plan step/i)).toBeDefined();
         expect(screen.getAllByText(/^delegate$/i).length).toBeGreaterThan(0);
-        expect(screen.getByText(/needs approval/i)).toBeDefined();
+        expect(screen.getAllByText(/needs approval/i).length).toBeGreaterThan(0);
         expect(screen.getByText(/file changes/i)).toBeDefined();
     });
 
@@ -100,7 +101,7 @@ describe('ProposedActionBlock', () => {
 
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        fireEvent.click(screen.getByRole('button', { name: /^run$/i }));
+        fireEvent.click(screen.getByRole('button', { name: /^approve$/i }));
 
         await waitFor(() => expect(confirmProposal).toHaveBeenCalledTimes(1));
         expect(confirmProposal).toHaveBeenCalledWith(expect.objectContaining({
@@ -121,13 +122,13 @@ describe('ProposedActionBlock', () => {
 
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        fireEvent.click(screen.getByRole('button', { name: /^run$/i }));
+        fireEvent.click(screen.getByRole('button', { name: /^approve$/i }));
 
-        expect(screen.getByRole('button', { name: /running/i })).toBeDefined();
-        expect(screen.getByText(/starting now/i)).toBeDefined();
+        expect(screen.getByRole('button', { name: /starting/i })).toBeDefined();
+        expect(screen.getByText(/handoff starting/i)).toBeDefined();
         resolveConfirm({ ok: true, runId: 'run-1' });
 
-        await waitFor(() => expect(screen.queryByRole('button', { name: /running/i })).toBeNull());
+        await waitFor(() => expect(screen.queryByRole('button', { name: /starting/i })).toBeNull());
     });
 
     it('renders terminal lifecycle messaging and hides actions for cancelled proposals', () => {
@@ -135,7 +136,7 @@ describe('ProposedActionBlock', () => {
 
         expect(screen.getByText(/cancelled/i)).toBeDefined();
         expect(screen.getByText(/no action executed/i)).toBeDefined();
-        expect(screen.queryByRole('button', { name: /^run$/i })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
         expect(screen.queryByRole('button', { name: /adjust/i })).toBeNull();
     });
 
@@ -144,7 +145,7 @@ describe('ProposedActionBlock', () => {
 
         expect(screen.getByText(/waiting for result/i)).toBeDefined();
         expect(screen.getByText(/approved, still running/i)).toBeDefined();
-        expect(screen.queryByRole('button', { name: /^run$/i })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
     });
 
     it('does not claim verification for an executed proposal until run proof exists', () => {
@@ -161,7 +162,7 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/action completed/i)).toBeDefined();
         expect(screen.getByText(/result saved/i)).toBeDefined();
         expect(screen.getByRole('link', { name: /open run details/i }).getAttribute('href')).toBe('/runs/run-123');
-        expect(screen.queryByRole('button', { name: /^run$/i })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
     });
 
     it('renders a failed lifecycle without offering approval actions', () => {
@@ -169,15 +170,15 @@ describe('ProposedActionBlock', () => {
 
         expect(screen.getAllByText(/could not run/i).length).toBeGreaterThan(0);
         expect(screen.getByText(/nothing changed/i)).toBeDefined();
-        expect(screen.queryByRole('button', { name: /^run$/i })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
         expect(screen.queryByRole('button', { name: /adjust/i })).toBeNull();
     });
 
     it('renders approval-required governance summary by default', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        expect(screen.getByText(/run this\?/i)).toBeDefined();
-        expect(screen.getByRole('button', { name: /^run$/i })).toBeDefined();
+        expect(screen.getByText(/approve this\?/i)).toBeDefined();
+        expect(screen.getByRole('button', { name: /^approve$/i })).toBeDefined();
     });
 
     it('shows scheduled or long-running task posture and bus scope after inspection', () => {

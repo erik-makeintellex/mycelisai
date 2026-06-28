@@ -152,15 +152,25 @@ export function installGroupsFetch({
           ok: true,
           data: { workspace_path: "workspace/generated/coin-runner" },
         });
-      if (
-        url === "/api/v1/groups/group-temp/status" &&
-        init?.method === "PATCH"
-      ) {
+      if (url === "/api/v1/groups/group-temp/clear" && init?.method === "POST") {
         const index = groups.findIndex(
           (group) => group.group_id === "group-temp",
         );
         groups[index] = { ...groups[index], status: "archived" };
-        return jsonResponse({ ok: true, data: groups[index] });
+        const body = init.body ? JSON.parse(String(init.body)) : {};
+        const includeOutputs = body.include_outputs === true;
+        return jsonResponse({
+          ok: true,
+          data: {
+            group: groups[index],
+            outputs_cleared: includeOutputs,
+            workspace_removed: includeOutputs,
+            artifacts_archived: includeOutputs ? 1 : 0,
+            operator_description: includeOutputs
+              ? "Group cleared from active lanes and retained output files were removed from the group workspace."
+              : "Group cleared from active lanes. Message-bus handoff data is transient; retained output files were kept.",
+          },
+        });
       }
       const match = url.match(/^\/api\/v1\/groups\/([^/]+)\/outputs\?limit=8$/);
       if (match)

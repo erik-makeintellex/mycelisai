@@ -60,12 +60,12 @@ func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, lat
 
 	if len(planned) > 0 {
 		if strings.TrimSpace(planned[0].Name) == "create_team" {
-			if path := plannedWriteFilePath(planned); path != "" {
+			if paths := plannedWriteFilePaths(planned); len(paths) > 0 {
 				teamID := firstStringArgument(planned[0].Arguments, "team_id")
 				name := firstStringArgument(planned[0].Arguments, "name")
 				label := firstNonEmptyString(name, teamID, "the requested team")
 				display.OperatorSummary = fmt.Sprintf("Create %s and start its first retained deliverable.", label)
-				display.ExpectedResult = fmt.Sprintf("%s will be created, then Soma will produce a reviewable output at %q with run proof.", label, path)
+				display.ExpectedResult = fmt.Sprintf("%s will be created, then Soma will produce reviewable outputs at %s with run proof.", label, quotedProposalPaths(paths))
 				return display
 			}
 		}
@@ -181,16 +181,25 @@ func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, lat
 	return display
 }
 
-func plannedWriteFilePath(planned []protocol.PlannedToolCall) string {
+func plannedWriteFilePaths(planned []protocol.PlannedToolCall) []string {
+	paths := []string{}
 	for _, call := range planned {
 		if strings.TrimSpace(call.Name) != "write_file" {
 			continue
 		}
 		if path := firstStringArgument(call.Arguments, "path"); path != "" {
-			return path
+			paths = append(paths, path)
 		}
 	}
-	return ""
+	return paths
+}
+
+func quotedProposalPaths(paths []string) string {
+	quoted := make([]string, 0, len(paths))
+	for _, path := range paths {
+		quoted = append(quoted, fmt.Sprintf("%q", path))
+	}
+	return strings.Join(quoted, " and ")
 }
 
 func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID string, rolePlan []string, approval *protocol.ApprovalPolicy, profile *protocol.GovernanceProfileSnapshot, display proposalDisplayContract) *protocol.ChatProposal {

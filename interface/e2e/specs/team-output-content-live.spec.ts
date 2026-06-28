@@ -142,7 +142,7 @@ async function executeTeamOutput(page: Page, ask: TeamOutputAsk) {
     expect(proposal.response.ok(), proposal.body ? JSON.stringify(proposal.body) : proposal.raw).toBeTruthy();
     expect(proposal.body?.data?.mode).toBe('proposal');
     expect(proposal.body?.data?.payload?.tools_used).toEqual(['create_team', 'write_file']);
-    await expect(page.getByText('What I will do').last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('I can start that.').last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(ask.teamID).last()).toBeVisible();
     await expect(page.getByText(ask.filePath).last()).toBeVisible();
 

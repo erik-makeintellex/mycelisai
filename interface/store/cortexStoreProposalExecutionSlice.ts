@@ -45,7 +45,7 @@ function mediaDependencyRecoveryCopy(diagnostics: string) {
     };
 }
 
-const proposalStartedDetail = 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.';
+const proposalStartedDetail = 'Soma handed this to the work bus. You can keep talking here while updates arrive.';
 
 function proposalStartedState(): NonNullable<ChatMessage['ui_response_state']> {
     return {
@@ -59,7 +59,7 @@ function proposalStartedState(): NonNullable<ChatMessage['ui_response_state']> {
 function confirmedRunMessage(runId: string | null, summary?: string | null, teamWorkRefs: TeamWorkConfirmationRef[] = []) {
     const state = runId ? `Run ${runId.slice(0, 8)} started.` : 'Proposal approved.';
     const next = runId
-        ? 'Review active work and latest output below as Soma records progress.'
+        ? 'Soma handed this to the work bus and saved the run receipt.'
         : proposalStartedDetail;
     return [state, next, teamWorkMessage(teamWorkRefs), summary].filter(Boolean).join(' ');
 }

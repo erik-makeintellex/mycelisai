@@ -83,9 +83,9 @@ describe("SomaWorkspaceFrame", () => {
     );
 
     const digest = within(screen.getByTestId("soma-workbench-output-digest"));
-    expect(digest.getByText("Latest output")).toBeDefined();
+    expect(digest.getByText("Latest:")).toBeDefined();
     expect(digest.getByText("Owner note")).toBeDefined();
-    expect(digest.getByText("generated/owner-note.md")).toBeDefined();
+    expect(digest.queryByText("generated/owner-note.md")).toBeNull();
     expect(digest.getByRole("button", { name: /Open file Owner note/i })).toBeDefined();
     expect(digest.getByRole("button", { name: /Open local folder for Owner note/i })).toBeDefined();
     expect(screen.queryByTestId("output-workbench")).toBeNull();
@@ -122,7 +122,6 @@ describe("SomaWorkspaceFrame", () => {
     );
 
     const lane = screen.getByTestId("soma-current-work-lane");
-    expect(within(lane).getByText("Current workflow")).toBeDefined();
     expect(within(lane).getByText("Work needs review")).toBeDefined();
     expect(within(lane).getByText("Generated page")).toBeDefined();
     expect(within(lane).getByRole("button", { name: /Open local folder for Generated page/i })).toBeDefined();

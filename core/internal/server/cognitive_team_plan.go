@@ -28,15 +28,15 @@ func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool
 	if name == "" {
 		if teamID != "" {
 			name = humanizeSlugID(teamID)
-		} else if strings.Contains(lower, "research") {
-			name = "AI Research Team"
 		} else {
-			name = "Soma Requested Team"
+			name = generatedTeamNameForRequest(lower)
 		}
 	}
 	if teamID == "" {
-		teamID = slugID(name)
+		teamID = generatedTeamIDForRequest(name, lower)
 	}
+	contentContract := contentContractForTeamRequest(trimmed)
+	teamEvocation := teamEvocationForRequest(trimmed, contentContract)
 	role := "worker"
 	if strings.Contains(lower, "research") {
 		role = "researcher"
@@ -59,11 +59,13 @@ func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool
 		"recommended_member_limit":    maxTeamMemberLimit(3, initialMemberCount),
 		"expansion_policy":            "operator_adds_members_or_team_lead_requests_temp_specialist_with_reason",
 		"temporary_addition_guidance": "Add specialists only after the lead names the missing capability, owned task, proof expected, and removal point.",
+		"content_contract":            contentContract,
+		"team_evocation":              teamEvocation,
 	}
 	if len(agents) > 0 {
 		args["agents"] = agents
-		args["required_capabilities"] = []string{"team_orchestration", "generate_image", "save_cached_image"}
 	}
+	args["required_capabilities"] = requiredCapabilitiesForContentContract(contentContract)
 
 	return protocol.PlannedToolCall{Name: "create_team", Arguments: args}, true
 }

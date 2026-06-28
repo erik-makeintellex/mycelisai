@@ -13,6 +13,36 @@ import {
     plainExecutionText,
 } from "./proposedActionCopy";
 
+function primaryTeamLabel(proposal: ChatMessage["proposal"]): string {
+    const affectedTeam = proposal?.affected_resources
+        ?.map((value) => value.trim())
+        .find((value) => value.toLowerCase().startsWith("team:"))
+        ?.slice("team:".length)
+        .trim();
+    if (affectedTeam) return plainExecutionText(affectedTeam);
+
+    const expression = proposal?.team_expressions?.find((item) => {
+        const teamId = item.team_id?.trim();
+        return (teamId && teamId !== "admin-core") || item.objective?.trim();
+    });
+    const teamId = expression?.team_id?.trim();
+    if (teamId && teamId !== "admin-core") return plainExecutionText(teamId);
+    return "the right team";
+}
+
+function approvalPlanBullets(proposal: ChatMessage["proposal"], operatorSummary: string, expectedResult: string): string[] {
+    const tools = proposal?.tools ?? [];
+    const teamLabel = primaryTeamLabel(proposal);
+    const bullets: string[] = [];
+    if (tools.some((tool) => /^(create_team|delegate|delegate_task)$/i.test(tool))) {
+        bullets.push(`Hand the work to ${teamLabel} through the team bus.`);
+    }
+    if (operatorSummary) bullets.push(operatorSummary);
+    if (expectedResult) bullets.push(expectedResult);
+    if (!bullets.length) bullets.push("Start the approved work and keep the result tied to this conversation.");
+    return [...new Set(bullets)].slice(0, 3);
+}
+
 export default function ProposedActionBlock({ message }: { message: ChatMessage }) {
     const confirmProposal = useCortexStore((s) => s.confirmProposal);
     const cancelProposal = useCortexStore((s) => s.cancelProposal);
@@ -33,17 +63,18 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const approvalRequired = proposal.approval_required ?? true;
     const approvalMode = proposal.approval_mode ?? (approvalRequired ? "required" : "auto_allowed");
     const capabilityRisk = proposal.capability_risk ?? proposal.risk_level ?? "low";
-    const governanceSummary = approvalRequired ? "Needs your approval" : approvalMode === "optional" ? "Ready if you want" : "Ready";
-    const actionLabel = approvalRequired ? "Run" : "Start";
+    const governanceSummary = approvalRequired ? "Needs approval" : approvalMode === "optional" ? "Ready if you want" : "Ready";
+    const actionLabel = approvalRequired ? "Approve" : "Start";
     const operatorSummary = plainExecutionText(proposal.operator_summary?.trim() || fallbackOperatorSummary(proposal));
     const expectedResult = plainExecutionText(proposal.expected_result?.trim() || fallbackExpectedResult(proposal));
     const affectedResources = (proposal.affected_resources ?? []).filter((value) => value.trim().length > 0);
     const visibleResources = (affectedResources.length > 0 ? affectedResources : fallbackAffectedResources(proposal)).map(plainExecutionText);
     const approvalExplanation = explainApprovalPosture(proposal, approvalRequired, approvalMode);
-    const runQuestion = approvalRequired ? "Run this?" : "Start this?";
+    const planBullets = approvalPlanBullets(proposal, operatorSummary, expectedResult);
+    const runQuestion = approvalRequired ? "Approve this?" : "Start this?";
     const runHelp = approvalRequired
-        ? "I will wait for your approval before changing anything."
-        : "This stays inside current policy. You can still adjust before I start.";
+        ? "I will hand this to the bus after approval and keep this thread open for questions while the team works."
+        : "This stays inside current policy. I will start the handoff and keep the thread live.";
     const lifecycleTone = renderedLifecycle === "cancelled"
         ? "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted"
         : renderedLifecycle === "confirmed_pending_execution"
@@ -90,13 +121,13 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     };
 
     return (
-        <div className="mt-3 max-w-[min(100%,760px)] overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface/90 shadow-sm">
-            <div className="border-b border-cortex-border px-4 py-3">
+        <div className="mt-3 max-w-[min(100%,680px)] overflow-hidden rounded-xl border border-cortex-border bg-cortex-surface/90 shadow-sm">
+            <div className="border-b border-cortex-border px-3.5 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                         <div className="text-xs font-semibold text-cortex-text-muted">Soma</div>
                         <div className="mt-0.5 text-base font-semibold text-cortex-text-main">
-                            I can do that.
+                            I can start that.
                         </div>
                     </div>
                     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${lifecycleTone}`}>
@@ -109,8 +140,8 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                 </span>
             </div>
 
-            <div className="space-y-3 px-4 py-4">
-                <ProposalLifecycleProof lifecycle={renderedLifecycle} runId={message.run_id} />
+            <div className="space-y-3 px-3.5 py-3.5">
+                {!isActionable ? <ProposalLifecycleProof lifecycle={renderedLifecycle} runId={message.run_id} /> : null}
 
                 <div className="space-y-2">
                     {isActionable ? (
@@ -119,13 +150,14 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                             <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{runHelp}</p>
                         </div>
                     ) : null}
-                    <div>
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-cortex-primary">What I will do</div>
-                        <p className="mt-1 text-base leading-7 text-cortex-text-main">{operatorSummary}</p>
-                    </div>
-                    <p className="text-sm leading-6 text-cortex-text-muted">
-                        You should get: <span className="text-cortex-text-main">{expectedResult}</span>
-                    </p>
+                    <ul className="space-y-1.5 text-sm leading-6 text-cortex-text-main">
+                        {planBullets.map((item) => (
+                            <li key={item} className="flex gap-2">
+                                <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-cortex-primary" />
+                                <span>{item}</span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
 
                 <button
@@ -178,7 +210,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
             </div>
 
             {isActionable ? (
-                <div className="space-y-2 border-t border-cortex-border px-4 py-3">
+                <div className="space-y-2 border-t border-cortex-border px-3.5 py-3">
                     <div className="flex flex-wrap items-center gap-2">
                         <button
                             onClick={() => void handleConfirm()}
@@ -186,7 +218,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                             className="flex items-center gap-1.5 rounded-lg border border-cortex-success/40 bg-cortex-success/15 px-3 py-1.5 text-sm font-semibold text-cortex-success transition-colors hover:bg-cortex-success/25 disabled:cursor-not-allowed disabled:border-cortex-border disabled:bg-cortex-bg/40 disabled:text-cortex-text-muted"
                         >
                             {confirming ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
-                            {confirming ? "Running..." : canRunProposal ? actionLabel : "Cannot run yet"}
+                            {confirming ? "Starting..." : canRunProposal ? actionLabel : "Cannot run yet"}
                         </button>
                         <button
                             onClick={handleCancel}
@@ -204,7 +236,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     </div>
                     {confirming ? (
                         <p className="text-[11px] leading-5 text-cortex-text-muted">
-                            Starting now. Soma will show the result below.
+                            Handoff starting. You can keep talking to Soma while the team works.
                         </p>
                     ) : null}
                     {confirmError ? (

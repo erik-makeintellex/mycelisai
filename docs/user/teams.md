@@ -85,6 +85,8 @@ Use `Groups` when you want to review a collaboration lane without opening every 
 
 Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
 
+Use **Clear group** when a group is done, stale, or test-only. Clearing archives the group so it leaves active/review lanes. Message-bus handoff data is transient and does not need separate cleanup. Retained output files stay available by default; choose **Also remove retained output files** only when the durable files in that group workspace should be removed too. When retained files are included, Mycelis removes the group workspace folder under `MYCELIS_WORKSPACE/groups/...` and archives the group's output artifact rows so the cleared deliverables no longer appear in Resources group outputs.
+
 Use `Automations` when you want event rules to actuate work, route proposals, require approval before execution, or author propose-only Schedule Rules for reviewable cadence.
 
 Use `Settings -> Capabilities` or `Resources -> Capabilities` when you need to confirm which tool refs, direct web search posture, or MCP servers are available before assigning them to a reusable agent template. Capability cards should show available/repair/request posture first, with MCP structure behind Inspect.
@@ -192,4 +194,5 @@ When testing team workflows, verify:
 - raw input/delivery subjects, models, prompts, and tool ids stay behind Advanced/Inspect instead of default team cards
 - retained outputs remain reviewable in `/groups` after a temporary collaboration is closed
 - the group **Workflow Log** shows work items, run/proof cues, retained output cues, and recovery/degraded fetch guidance without exposing raw bus subjects by default
+- completed, stale, or test groups have a visible **Clear group** action, and retained output files are removed only when the operator explicitly includes them
 - event-driven actuation is configured through `/automations` Trigger Rules, not through the team workspace itself

@@ -56,13 +56,13 @@ describe('useCortexStore confirm proposal pending proof', () => {
             ui_response_state: {
                 kind: 'running',
                 label: 'Started',
-                detail: 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
+                detail: 'Soma handed this to the work bus. You can keep talking here while updates arrive.',
                 tone: 'info',
             },
             thread_events: [{
                 kind: 'execution_update',
                 label: 'Approval sent',
-                detail: 'Soma is confirming the governed handoff.',
+                detail: 'Soma is starting the handoff.',
                 tone: 'info',
                 status: 'confirming',
                 source_kind: 'workspace_ui',
@@ -73,17 +73,17 @@ describe('useCortexStore confirm proposal pending proof', () => {
         expect(useCortexStore.getState().missionChat.at(-1)).toMatchObject({
             role: 'system',
             mode: 'proposal',
-            content: 'Proposal approved. Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
+            content: 'Proposal approved. Soma handed this to the work bus. You can keep talking here while updates arrive.',
             ui_response_state: {
                 kind: 'running',
                 label: 'Started',
-                detail: 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
+                detail: 'Soma handed this to the work bus. You can keep talking here while updates arrive.',
                 tone: 'info',
             },
             thread_events: [{
                 kind: 'execution_started',
                 label: 'Work approved',
-                detail: 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
+                detail: 'Soma handed this to the work bus. You can keep talking here while updates arrive.',
                 tone: 'info',
                 status: 'running',
                 source_kind: 'web_api',
@@ -135,7 +135,7 @@ describe('useCortexStore confirm proposal pending proof', () => {
             ui_response_state: {
                 kind: 'running',
                 label: 'Started',
-                detail: 'Soma started the approved handoff. I will keep watching for execution proof before calling it complete.',
+                detail: 'Soma handed this to the work bus. You can keep talking here while updates arrive.',
                 tone: 'info',
             },
         });

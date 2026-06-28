@@ -55,16 +55,20 @@ func mediaDeliverableCalls(text, teamID, titleSeed string) (protocol.PlannedTool
 	}
 	prompt := mediaPromptForRequest(trimmed)
 	imageArgs := map[string]any{
-		"prompt":      prompt,
-		"size":        mediaSizeForRequest(trimmed),
-		"goal":        trimmed,
-		"description": "Generate the requested media artifact with the configured local/private media provider.",
+		"prompt":                prompt,
+		"size":                  mediaSizeForRequest(trimmed),
+		"goal":                  trimmed,
+		"description":           "Generate the requested media artifact with the configured local/private media provider.",
+		"validation":            mediaValidationForRequest(trimmed),
+		"acceptance_criteria":   mediaAcceptanceCriteria(trimmed),
+		"requires_media_review": true,
 	}
 	saveArgs := map[string]any{
 		"folder":      "saved-media",
 		"filename":    slug + ".png",
 		"goal":        "Persist generated media output to the governed workspace saved-media folder.",
 		"description": "Save the latest cached generated image so the operator can open the local output folder.",
+		"validation":  "Saved media must have a workspace path, provider proof, and review note before it is treated as user-ready.",
 	}
 	if strings.TrimSpace(teamID) != "" {
 		imageArgs["team_id"] = teamID
@@ -84,6 +88,20 @@ func mediaPromptForRequest(request string) string {
 		return "Create a polished vertical comic book page from this operator request. Use clear panel composition, readable visual storytelling, expressive characters, and leave speech balloon space for lettering. Local/private generation only. Request: " + request
 	}
 	return "Create a polished visual media artifact from this operator request. Local/private generation only. Request: " + request
+}
+
+func mediaValidationForRequest(request string) string {
+	if strings.Contains(strings.ToLower(request), "comic") {
+		return "Validate readable panel composition, character consistency, speech-balloon space, saved artifact path, and provider proof."
+	}
+	return "Validate subject match, requested style/constraints, saved artifact path, and provider proof."
+}
+
+func mediaAcceptanceCriteria(request string) []string {
+	if strings.Contains(strings.ToLower(request), "comic") {
+		return []string{"panel composition", "character consistency", "visual storytelling", "lettering space", "saved artifact proof"}
+	}
+	return []string{"subject match", "style match", "artifact saved", "provider proof", "visual review note"}
 }
 
 func mediaSizeForRequest(request string) string {

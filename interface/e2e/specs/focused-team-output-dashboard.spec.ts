@@ -230,7 +230,7 @@ async function expectFocusedDashboardLane(page: Page) {
 
   const digest = page.getByTestId("soma-workbench-output-digest");
   await expect(digest).toBeVisible();
-  await expect(digest).toContainText("Latest output");
+  await expect(digest).toContainText("Latest:");
   await expect(digest).toContainText(focusedOutputLabel);
   await expect(digest).toContainText(focusedOutputPath);
   await expect(digest).not.toContainText(olderSomaOutputLabel);

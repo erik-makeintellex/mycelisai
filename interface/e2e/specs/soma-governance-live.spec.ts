@@ -65,7 +65,7 @@ test.describe('Soma governed mutation live contract', () => {
         expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
         expect(mutation.body?.data?.mode).toBe('proposal');
         expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
-        await expect(page.getByText('What I will do')).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByText('I can start that.')).toBeVisible({ timeout: 30_000 });
         await expect(page.getByText(/Awaiting approval/i)).toBeVisible();
     });
 
@@ -84,7 +84,7 @@ test.describe('Soma governed mutation live contract', () => {
             expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
             expect(mutation.body?.data?.mode).toBe('proposal');
             expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
-            await expect(page.getByText('What I will do')).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByText('I can start that.')).toBeVisible({ timeout: 30_000 });
             expect(anyTargetExists(targetPaths)).toBeFalsy();
 
             await page.getByRole('button', { name: /^Cancel$/i }).click();
@@ -115,7 +115,7 @@ test.describe('Soma governed mutation live contract', () => {
             expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
             expect(mutation.body?.data?.mode).toBe('proposal');
             expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
-            await expect(page.getByText('What I will do')).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByText('I can start that.')).toBeVisible({ timeout: 30_000 });
             expect(anyTargetExists(targetPaths)).toBeFalsy();
 
             const confirmed = await waitForConfirmAction(page);

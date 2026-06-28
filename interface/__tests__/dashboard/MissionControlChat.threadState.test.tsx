@@ -23,7 +23,7 @@ describe('MissionControlChat thread state cards', () => {
         mockFetch.mockResolvedValue(okJson({ ok: true, data: COUNCIL_MEMBERS }));
     });
 
-    it('renders structured thread state without exposing raw routing subjects', async () => {
+    it('keeps proposal route metadata inside the approval card details', async () => {
         useCortexStore.setState({ councilMembers: COUNCIL_MEMBERS, councilTarget: 'admin' });
 
         mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
@@ -66,10 +66,9 @@ describe('MissionControlChat thread state cards', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         await waitFor(() => {
-            expect(screen.getByTestId('soma-thread-state-card')).toBeDefined();
-            expect(screen.getByText('Waiting for executive review')).toBeDefined();
-            expect(screen.getByText('Current team route')).toBeDefined();
-            expect(screen.getByText('Review the generated action card before Soma starts the background work.')).toBeDefined();
+            expect(screen.getByText('I can start that.')).toBeDefined();
+            expect(screen.queryByTestId('soma-thread-state-card')).toBeNull();
+            expect(screen.queryByText('Current team route')).toBeNull();
         });
 
         expect(screen.queryByText('swarm.team.ops.internal.command')).toBeNull();
@@ -85,7 +84,7 @@ describe('MissionControlChat thread state cards', () => {
                 thread_events: [{
                     kind: 'execution_started',
                     label: 'Execution started',
-                    detail: 'Soma accepted the approved work and saved the run receipt for proof.',
+                    detail: 'Soma handed this to the work bus and saved the run receipt.',
                     tone: 'info',
                     status: 'running',
                     href: '/runs/run-thread-123',
@@ -104,7 +103,7 @@ describe('MissionControlChat thread state cards', () => {
         expect(screen.getByTestId('soma-thread-state-card')).toBeDefined();
         expect(screen.getByText('Execution started')).toBeDefined();
         expect(screen.getByText('running')).toBeDefined();
-        expect(screen.getByText('Soma accepted the approved work and saved the run receipt for proof.')).toBeDefined();
+        expect(screen.getByText('Soma handed this to the work bus and saved the run receipt.')).toBeDefined();
         expect(screen.getByRole('link', { name: /Open run receipt/i }).getAttribute('href')).toBe('/runs/run-thread-123');
         expect(screen.queryByText('api.intent.confirm-action')).toBeNull();
     });
@@ -118,7 +117,7 @@ describe('MissionControlChat thread state cards', () => {
                 thread_event: {
                     kind: 'execution_started',
                     label: 'Execution started',
-                    detail: 'Soma accepted the approved work.',
+                    detail: 'Soma handed this to the work bus.',
                     tone: 'info',
                     status: 'running',
                     source_kind: 'web_api',
@@ -134,7 +133,7 @@ describe('MissionControlChat thread state cards', () => {
 
         expect(screen.getByTestId('soma-thread-state-card')).toBeDefined();
         expect(screen.getByText('Execution started')).toBeDefined();
-        expect(screen.getByText('Soma accepted the approved work.')).toBeDefined();
+        expect(screen.getByText('Soma handed this to the work bus.')).toBeDefined();
         expect(screen.queryByText('Execution started - Soma accepted the approved work.')).toBeNull();
     });
 });

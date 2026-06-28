@@ -37,20 +37,13 @@ export function SomaCurrentWorkLane({
 
   return (
     <section
-      className={`grid gap-2 rounded-xl border border-cortex-border bg-cortex-bg/85 p-2.5 ${
-        hasOutputDigest
-          ? "md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.2fr)_auto]"
-          : "md:grid-cols-[minmax(0,1fr)_auto]"
-      } md:items-center`}
+      className="flex min-w-0 flex-col gap-2 rounded-xl border border-cortex-border bg-cortex-bg/80 px-3 py-2 md:flex-row md:items-center md:justify-between"
       data-testid="soma-current-work-lane"
       aria-label="Current work"
     >
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cortex-primary">
-          <Route className="h-3.5 w-3.5" />
-          Current workflow
-        </div>
-        <div className="mt-1 flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1 md:flex-row md:items-center md:gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Route className="h-3.5 w-3.5 shrink-0 text-cortex-primary" />
           {primaryKind === "work" ? (
             <Radio className="h-3.5 w-3.5 shrink-0 text-amber-300" />
           ) : (
@@ -61,17 +54,17 @@ export function SomaCurrentWorkLane({
           </span>
         </div>
         {recoveryHint ? (
-          <p className="mt-1 truncate text-xs text-amber-200">
+          <p className="truncate text-xs text-amber-200 md:max-w-[18rem]">
             {recoveryHint}
           </p>
         ) : null}
-      </div>
 
-      {visibleDigest ? (
-        <div className="min-w-0" data-testid="soma-current-output-slot">
-          <OutputWorkbenchCompactDigest digest={visibleDigest} />
-        </div>
-      ) : null}
+        {visibleDigest ? (
+          <div className="min-w-0 md:max-w-[28rem]" data-testid="soma-current-output-slot">
+            <OutputWorkbenchCompactDigest digest={visibleDigest} />
+          </div>
+        ) : null}
+      </div>
 
       <button
         type="button"
@@ -79,7 +72,7 @@ export function SomaCurrentWorkLane({
         aria-expanded={isPanelOpen}
         data-testid="soma-workbench-panel-toggle"
         onClick={onTogglePanel}
-        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-cortex-primary/30 bg-cortex-surface px-3 py-2 text-xs font-semibold text-cortex-text-main transition-colors hover:border-cortex-primary/60"
+        className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-cortex-primary/30 bg-cortex-surface px-3 py-1.5 text-xs font-semibold text-cortex-text-main transition-colors hover:border-cortex-primary/60"
       >
         <PanelRightOpen className="h-3.5 w-3.5 text-cortex-primary" />
         <span>{isPanelOpen ? "Hide review" : nextAction}</span>

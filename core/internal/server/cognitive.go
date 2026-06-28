@@ -60,22 +60,6 @@ func hasMutationTools(tools []string) (bool, []string) {
 	return len(mutations) > 0, mutations
 }
 
-// chatToolRisk estimates risk level from mutation tools used.
-func chatToolRisk(tools []string) string {
-	for _, t := range tools {
-		if t == "publish_signal" || t == "broadcast" {
-			return "high"
-		}
-		if t == "generate_blueprint" || t == "delegate" || t == "create_team" || t == "delegate_task" || t == "write_file" {
-			return "medium"
-		}
-		if t == "promote_deployment_context" {
-			return "high"
-		}
-	}
-	return "low"
-}
-
 func uniqueOrderedTools(tools []string) []string {
 	seen := make(map[string]struct{}, len(tools))
 	out := make([]string, 0, len(tools))
@@ -162,6 +146,9 @@ func inferMutationToolsFromText(text string) []string {
 
 	var tools []string
 
+	tools = append(tools, teamEvocationContinuationMutationTools(text, lower)...)
+	tools = append(tools, contentMarketingCrossTeamMutationTools(text, lower)...)
+
 	teamMention := requestContainsAny(lower, []string{"team", "teams", "specialist", "members", "lane", "lanes"})
 	fileActions := []string{"create", "write", "update", "edit", "modify", "replace", "append", "save", "persist", "store", "generate", "draft"}
 	strongFileTargets := []string{"file", "folder", "directory", "workspace", "path", "script", "config", "json", "yaml", "yml", "toml", "markdown", "repo", "repository", "codebase"}
@@ -184,9 +171,12 @@ func inferMutationToolsFromText(text string) []string {
 		tools = append(tools, "generate_blueprint")
 	}
 
-	delegationActions := []string{"delegate", "assign", "route", "hand off", "handoff", "send to", "consult"}
+	delegationActions := []string{"delegate", "assign", "route", "hand off", "handoff", "send to", "consult", "notify", "inform"}
 	delegationTargets := []string{"team", "agent", "council", "member", "task"}
 	if requestContainsAny(lower, delegationActions) && requestContainsAny(lower, delegationTargets) {
+		tools = append(tools, "delegate")
+	}
+	if strings.Contains(lower, "let") && strings.Contains(lower, "know") && requestContainsAny(lower, delegationTargets) {
 		tools = append(tools, "delegate")
 	}
 

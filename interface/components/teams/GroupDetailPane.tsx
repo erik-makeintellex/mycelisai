@@ -14,14 +14,18 @@ export function GroupDetailPane({
   lifecycleItem,
   outputSummary,
   archiving,
+  clearOutputs,
   onArchive,
+  onClearOutputsChange,
   onOpenOutputs,
 }: {
   selectedGroup: Group | null;
   lifecycleItem?: GroupLifecycleItem;
   outputSummary: OutputSummary;
   archiving: boolean;
+  clearOutputs: boolean;
   onArchive: () => void;
+  onClearOutputsChange: (value: boolean) => void;
   onOpenOutputs: () => void;
 }) {
   if (!selectedGroup) {
@@ -88,18 +92,39 @@ export function GroupDetailPane({
             <Link href="/dashboard" className={linkClassName}>
               Open Soma
             </Link>
-            {selectedGroup.expiry && !archived ? (
+            {!archived ? (
               <button
                 type="button"
-                aria-label="Archive temporary group"
+                aria-label="Clear group from active lanes"
                 onClick={onArchive}
                 disabled={archiving}
                 className={compactButtonClassName}
               >
-                {archiving ? "Archiving..." : "Archive"}
+                {archiving ? "Clearing..." : "Clear group"}
               </button>
             ) : null}
           </div>
+          {!archived ? (
+            <div className="mt-3 rounded-lg border border-cortex-border bg-cortex-surface p-3">
+              <p className="text-xs leading-5 text-cortex-text-muted">
+                Clear removes this group from active lanes. Bus handoff data is
+                transient already; retained files stay unless you include them.
+              </p>
+              <label className="mt-2 flex items-start gap-2 text-xs text-cortex-text-main">
+                <input
+                  type="checkbox"
+                  checked={clearOutputs}
+                  onChange={(event) =>
+                    onClearOutputsChange(event.currentTarget.checked)
+                  }
+                  className="mt-0.5 h-4 w-4 rounded border-cortex-border bg-cortex-bg accent-cortex-primary"
+                />
+                <span>
+                  Also remove retained output files in this group workspace.
+                </span>
+              </label>
+            </div>
+          ) : null}
         </div>
       </div>
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.75fr)]">

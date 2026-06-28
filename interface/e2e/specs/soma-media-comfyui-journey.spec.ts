@@ -162,8 +162,8 @@ test.describe("Soma ComfyUI media journey", () => {
     await openOrganization(page);
     await sendWorkspaceMessage(page, "Create a local/private ComfyUI media team output.");
 
-    await expect(page.getByText("What I will do").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Start|Run)$/i }).last().click();
+    await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
 
     const failureCard = page.getByTestId("execution-summary-card").last();
     await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
@@ -206,7 +206,7 @@ test.describe("Soma ComfyUI media journey", () => {
     );
     expect(proposal.response.ok(), proposal.body ? JSON.stringify(proposal.body) : proposal.raw).toBeTruthy();
     expect(proposal.body?.data?.mode).toBe("proposal");
-    await expect(page.getByText("What I will do").last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 30_000 });
 
     const confirmed = await confirmProposal(page);
     expect(confirmed.response.ok(), confirmed.body ? JSON.stringify(confirmed.body) : confirmed.raw).toBeTruthy();

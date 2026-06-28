@@ -84,6 +84,13 @@ export type GroupBroadcastResult = {
   execution_summary?: ExecutionSummaryData;
 };
 
+export type ClearGroupResult = {
+  group: Group;
+  operator_description?: string;
+  outputs_cleared?: boolean;
+  warnings?: string[];
+};
+
 export type GroupBucket = {
   id: string;
   title: string;
@@ -107,7 +114,7 @@ export const buildGroupBuckets = (groups: Group[]): GroupBucket[] => [
   {
     id: "standing",
     title: "Standing groups",
-    groups: groups.filter((group) => !group.expiry),
+    groups: groups.filter((group) => !group.expiry && !isCompleteGroup(group)),
   },
   {
     id: "temporary",
@@ -207,8 +214,8 @@ export const relativeTime = (value?: string | null) => {
 };
 
 export const groupKindLabel = (group: Group) => {
-  if (group.status === "archived" && group.expiry)
-    return "Archived temporary group";
+  if (group.status === "archived")
+    return group.expiry ? "Archived temporary group" : "Cleared standing group";
   if (group.expiry) return "Temporary group";
   return "Standing group";
 };
