@@ -18,7 +18,6 @@ type GroupRecord = {
   created_by: string;
   created_at: string;
 };
-
 type ArtifactRecord = {
   id: string;
   team_id?: string;
@@ -32,13 +31,11 @@ type ArtifactRecord = {
   status: "pending" | "approved" | "rejected" | "archived";
   created_at: string;
 };
-
 function isoDaysFromNow(days: number): string {
   const date = new Date(Date.now() + days * 86_400_000);
   date.setUTCHours(12, 0, 0, 0);
   return date.toISOString();
 }
-
 async function fulfillJson(
   route: {
     fulfill: (options: {
@@ -56,7 +53,6 @@ async function fulfillJson(
     body: JSON.stringify(body),
   });
 }
-
 export async function mockGroupsWorkspace(page: Page) {
   const createdAt = isoDaysFromNow(-1);
   const activeExpiry = isoDaysFromNow(7);
@@ -374,14 +370,18 @@ export async function mockGroupsWorkspace(page: Page) {
     await fulfillJson(route, 200, { ok: true, data: { queued: true } });
   });
 
-  await page.route("**/api/v1/groups/group-temp-launch/status", async (route) => {
+  await page.route("**/api/v1/groups/group-temp-launch/clear", async (route) => {
     const body = (route.request().postDataJSON() ?? {}) as Record<string, unknown>;
-    statusBodies.push(body);
-    groups[1] = {
-      ...groups[1],
-      status: String(body.status ?? "archived") as GroupRecord["status"],
-    };
-    await fulfillJson(route, 200, { ok: true, data: groups[1] });
+    statusBodies.push({ status: "archived", ...body });
+    groups[1] = { ...groups[1], status: "archived" };
+    await fulfillJson(route, 200, {
+      ok: true,
+      data: {
+        group: groups[1],
+        outputs_cleared: Boolean(body.include_outputs),
+        operator_description: "Group cleared from active lanes. Retained outputs remain reviewable.",
+      },
+    });
   });
 
   return {

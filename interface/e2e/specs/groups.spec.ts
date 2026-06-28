@@ -74,15 +74,17 @@ test.describe("Groups workspace (/groups)", () => {
     await openGroups(page);
 
     await page.getByTestId("groups-list-item-group-temp-launch").click();
-    await page.getByRole("button", { name: "Archive temporary group" }).click();
+    await expect(page.getByRole("heading", { name: "Temporary Launch Sprint" })).toBeVisible();
+    await page.getByRole("button", { name: "Clear group from active lanes" }).click();
 
     await expect(page.getByTestId("groups-notice")).toContainText(
-      "Temporary group archived.",
+      "Group cleared from active lanes.",
     );
     await expect.poll(() => harness.readStatusBodies().length).toBe(1);
     await expect.poll(() => String(harness.readStatusBodies()[0]?.status ?? "")).toBe(
       "archived",
     );
+    await expect.poll(() => Boolean(harness.readStatusBodies()[0]?.include_outputs)).toBe(false);
     await expect(
       page.getByText("Archived temporary group", { exact: true }),
     ).toBeVisible();
