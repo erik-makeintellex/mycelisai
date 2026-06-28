@@ -57,12 +57,16 @@ func TestHandleChat_ServiceInventoryUsesUserLanguage(t *testing.T) {
 		"Soma workspace",
 		"System status checks",
 		"Needs attention",
-		"Web and URL access is not available right now.",
-		"Open Settings -> Connected Tools and repair Fetch.",
+		"Explicit URL retrieval through the Fetch MCP needs attention.",
+		"Built-in Soma search still uses Mycelis web_search when configured",
+		"Resources -> Capabilities -> Web access setup",
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("answer missing %q:\n%s", want, text)
 		}
+	}
+	if strings.Contains(text, "Web and URL access is not available right now") {
+		t.Fatalf("answer incorrectly made Fetch required for web access:\n%s", text)
 	}
 	for _, raw := range []string{"list_teams", "delegate_task", "publish_signal", "read_text_file", "filesystem (connected)", "fetch (error)"} {
 		if strings.Contains(text, raw) {

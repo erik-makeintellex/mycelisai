@@ -28,7 +28,7 @@ The Resources page keeps these resource types in a persistent menu and renders t
 
 Connected tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, where that permission applies, what needs repair, and what can be requested. Raw MCP/server structure stays behind Inspect.
 
-For web access specifically, use `Resources -> Capabilities -> Web access setup`. That lane should show whether Soma currently has local-source search, public-web search, and direct `web_search` available. Use **Add web capability** from that lane to open the MCP library filtered toward `fetch`, SearXNG/local API, Brave, or other web/search providers.
+For web access specifically, use `Resources -> Capabilities -> Web access setup`. That lane should show whether Soma currently has local-source search, public-web search, and direct `web_search` available. Use **Add web capability** from that lane to open the MCP library filtered toward `fetch`, SearXNG/local API, Brave, or other web/search providers. Built-in Mycelis `web_search` does not depend on `fetch`; add or repair `fetch` when users need Soma or a team to retrieve a specific supplied URL.
 
 ---
 
@@ -102,7 +102,7 @@ Current posture:
 - local-first current-group configuration can install directly when policy allows
 - remote or higher-risk entries can return an explicit approval boundary instead of silently installing
 - credentialed external SaaS entries such as Slack, GitHub, hosted search, and hosted media should now be expected to require approval rather than behaving like low-risk local tools
-- `brave-search` provides governed web search when installed with `BRAVE_API_KEY`; `fetch` retrieves explicit URLs for analysis, and together they form the default curated research toolset without making web access unrestricted trust
+- `brave-search` provides optional MCP-governed web search when installed with `BRAVE_API_KEY`; `fetch` retrieves explicit URLs for analysis, while built-in Mycelis `web_search` remains the default Soma search path when configured
 - `Mycelis Search Capability` shows the active Soma search posture directly in Capabilities: the selected provider, whether Soma can call `web_search`, whether local shared sources or public web are supported, and whether the current path needs hosted Brave credentials
 - Soma's Operator trust package also names the active search source boundary for `web_search` results, such as `Search source: Local Mycelis context`, so operators can distinguish retained Mycelis context from public-web providers
 - self-hosted search does not have to depend on Brave tokens: `local_sources` is the default token-free provider for governed Mycelis context and falls back to bounded text search when embeddings are unavailable, `local_api` can call an operator-owned HTTP search endpoint, and the supported Compose release path starts SearXNG for public web search through an operator-owned endpoint

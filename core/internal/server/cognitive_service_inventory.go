@@ -87,7 +87,7 @@ func (s *AdminServer) serviceInventoryAttention(r *http.Request) []string {
 		if name != "fetch" || (status != "error" && status != "offline" && status != "degraded") {
 			continue
 		}
-		attention = append(attention, "Web and URL access is not available right now. Open Settings -> Connected Tools and repair Fetch.")
+		attention = append(attention, "Explicit URL retrieval through the Fetch MCP needs attention. Built-in Soma search still uses Mycelis web_search when configured; use Resources -> Capabilities -> Web access setup to repair Fetch for supplied URLs.")
 		break
 	}
 	sort.Strings(attention)

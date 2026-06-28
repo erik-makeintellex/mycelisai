@@ -83,7 +83,7 @@ Use Capabilities to inspect:
 - recent persisted MCP activity
 - active search posture, including `local_sources`, self-hosted `searxng`, operator-owned `local_api`, optional `brave`, and disabled blockers
 
-Soma should use the Mycelis-owned `web_search` path when search is configured. Brave is optional; self-hosted SearXNG and local API search do not require Brave tokens.
+Soma should use the Mycelis-owned `web_search` path when search is configured. Brave is optional; self-hosted SearXNG and local API search do not require Brave tokens. The `fetch` MCP is also optional: add or repair it when Soma needs to retrieve a specific supplied URL, not as a prerequisite for built-in search.
 
 Use Capability permissions when you need to decide where Soma can use connected tools. Use Library when you need to edit or reapply a curated MCP structure. Secrets stay in `.env` or the configured secret backend; the UI should show only references or redacted values.
 

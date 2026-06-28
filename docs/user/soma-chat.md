@@ -110,8 +110,8 @@ Soma is expected to execute, not just explain, when execution is available.
 Preferred path:
 
 1. Use internal capabilities.
-2. Use `web_search` for search intent.
-3. Use onboarded MCP tools when they are the shortest safe path, including `fetch` for explicit URLs and `brave-search` when that optional MCP server is installed.
+2. Use built-in Mycelis `web_search` for search intent when configured.
+3. Use onboarded MCP tools when they are the shortest safe path, including `fetch` for explicit user-supplied URLs and `brave-search` when that optional MCP server is installed.
 4. Propose/confirm governed mutation paths.
 
 Search behavior:
@@ -124,7 +124,8 @@ Search behavior:
 - the supported Compose path can use `searxng` with `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080`
 - `local_api` uses `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`
 - `brave-search` requires `BRAVE_API_KEY`
-- if a needed server or credential is missing, Soma should name the missing MCP server/env var and point you to `Resources -> Capabilities -> Web access setup` for web/search issues or the relevant capability lane for other tools
+- `fetch` is useful for retrieving a specific URL the user supplies, but it is not required for built-in Mycelis `web_search`
+- if a needed search provider, MCP server, or credential is missing, Soma should name the missing provider/server/env var and point you to `Resources -> Capabilities -> Web access setup` for web/search issues or the relevant capability lane for other tools
 
 Read-only tool posture prompts such as `show me currently configured tools` should answer with current tool state and setup guidance, not create a runnable proposal. Prompts that enable, install, connect, assign, or bind tools remain governed mutation requests.
 
