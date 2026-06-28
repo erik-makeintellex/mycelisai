@@ -123,6 +123,8 @@ Search behavior:
 
 Read-only tool posture prompts such as `show me currently configured tools` should answer with current tool state and setup guidance, not create a runnable proposal. Prompts that enable, install, connect, assign, or bind tools remain governed mutation requests.
 
+Plain service-inventory prompts such as `list of services?` should answer in user language: Soma workspace, AI engine, storage, team coordination, memory/context, status checks, and any repair-needed capability. Raw internal tool names, MCP server status, and tool IDs should appear only when you explicitly ask for technical inventory, such as `show internal tool names` or `debug MCP status`.
+
 ## Direct Drafting
 
 If you ask for plain chat content such as a short letter, note, email, or message, Soma should answer directly in chat. It should not route that request through file tools, local commands, or council delegation unless you ask to save, inspect, execute, or hand off the work.

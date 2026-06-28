@@ -127,6 +127,8 @@ Complex work may create an OutcomeProject and a TeamRegistryEntry. The user shou
 
 Capabilities are governed runtime objects. MCP servers, local scripts, APIs, filesystem access, media engines, search, and generated app builders should be presented as capabilities Soma can use. The user-facing question is "What can Soma use, and what needs repair?" not "Which server topology is installed?"
 
+Default capability and service-inventory answers must use user language. When a user asks `list of services?`, `what can Soma use?`, or similar, Soma should summarize available workspace services, AI engine posture, storage/output access, team coordination, memory/context, status checks, and any repair-needed capability. It should not list raw internal tool names, MCP server status strings, subjects, IDs, or topology unless the user explicitly asks for a technical inventory such as `show internal tool names` or `debug MCP status`.
+
 Capability configuration must support three scopes:
 
 - available to all Soma work
