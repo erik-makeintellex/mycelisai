@@ -8,7 +8,6 @@
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
 
 The default product language is:
-
 ```text
 I tell Soma what I want.
 Soma helps shape it.
@@ -136,10 +135,11 @@ Capability configuration must support three scopes:
 - grouped for a capability set or environment
 - targeted to a specific host/provider/tool endpoint
 
+The default configuration path should start from common capability choices rather than raw tool references. Operators should be able to choose readable intents such as Workspace files, Web research, Team coordination, or Local host/media, then set whether the permission applies to everyone, one Outcome/group lane, or one host. Raw MCP/tool refs remain visible for inspection and advanced editing, but they are not the first thing a user must understand.
+
 ## Runtime Architecture
 
 The canonical execution spine is:
-
 ```text
 Intent
 -> Soma understanding
@@ -264,7 +264,7 @@ Non-goals for MVP:
 | P0.4 | Bus handoff and started feedback | IN_REVIEW | Approval or quick action immediately creates visible started state with correlation. |
 | P0.5 | OutcomeProject and TeamRegistry | IN_REVIEW | Confirmed work writes durable project/team ownership and Vault summaries. |
 | P0.6 | Output packages and Vault | IN_REVIEW | Deliverables open cleanly; source/intermediate outputs are opt-in. |
-| P0.7 | Capability settings | NEXT | Capabilities can be all-work, grouped, or targeted-host scoped with repair paths. |
+| P0.7 | Capability settings | ACTIVE | Capabilities can be all-work, grouped, or targeted-host scoped with common choices, inspectable refs, and repair paths. |
 | P0.8 | Run receipts and recovery | IN_REVIEW | Receipts explain outcome, proof, failure, trusted state, and next safe action. |
 | P0.9 | Full journey proof | IN_REVIEW | Headed and headless proof cover ask through revisit. |
 | P0.10 | Docs cleanup | ACTIVE | This PRD is the single architecture authority; stale docs are deleted. |

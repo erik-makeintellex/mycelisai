@@ -92,4 +92,22 @@ describe("MCPToolSetLayersPanel", () => {
         });
         expect(await screen.findByText("Permission group saved and refreshed.")).toBeDefined();
     });
+
+    it("lets users choose common capabilities without typing raw refs first", async () => {
+        const { onCreate } = renderPanel();
+
+        fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: "research lane" } });
+        fireEvent.click(screen.getByRole("button", { name: /Web research/i }));
+        fireEvent.change(screen.getByLabelText(/Target Group/i), { target: { value: "market-research" } });
+        fireEvent.click(screen.getByRole("button", { name: "Save permissions" }));
+
+        await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+        expect(onCreate).toHaveBeenCalledWith({
+            name: "research lane",
+            description: undefined,
+            tool_refs: ["mcp:fetch/fetch", "tool:web_search"],
+            scope_kind: "group",
+            scope_ref: "market-research",
+        });
+    });
 });

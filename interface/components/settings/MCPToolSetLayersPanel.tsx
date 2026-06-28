@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Layers3, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import type { MCPToolSet, MCPToolSetCreate, MCPToolSetScopeKind } from "@/store/useCortexStore";
 import { useCortexStore } from "@/store/useCortexStore";
+import { MCPToolSetCommonChoices } from "./MCPToolSetCommonChoices";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -15,7 +16,6 @@ type Props = {
     onRefresh: () => void;
     onCreate: (input: MCPToolSetCreate) => Promise<boolean>;
 };
-
 const scopes: Array<{ kind: MCPToolSetScopeKind; label: string; help: string; example: string }> = [
     { kind: "all", label: "Everyone", help: "Default tools Soma may use across this workspace.", example: "Workspace files" },
     { kind: "group", label: "Group", help: "Tools for one Outcome or collaboration lane.", example: "Marketing deliverables" },
@@ -30,7 +30,6 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
     const [toolRefsText, setToolRefsText] = useState("");
     const [formError, setFormError] = useState<string | null>(null);
     const [saveState, setSaveState] = useState<SaveState>("idle");
-
     const counts = useMemo(() => {
         const result = { all: 0, group: 0, host: 0 };
         for (const toolSet of toolSets) {
@@ -40,7 +39,6 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
         }
         return result;
     }, [toolSets]);
-
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const parsedRefs = parseToolRefs(toolRefsText);
@@ -75,7 +73,17 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
             setToolRefsText("");
         }
     }
-
+    const applyChoice = (refs: string[], recommendedScope: MCPToolSetScopeKind) => {
+        const existingRefs = parseToolRefs(toolRefsText);
+        const nextRefs = [...existingRefs];
+        for (const ref of refs) {
+            if (!nextRefs.includes(ref)) nextRefs.push(ref);
+        }
+        setToolRefsText(nextRefs.join("\n"));
+        if (!scopeRef.trim() && scopeKind === "all" && recommendedScope !== "all") {
+            setScopeKind(recommendedScope);
+        }
+    };
     return (
         <section className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -194,6 +202,7 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
                             placeholder={"mcp:filesystem/*\ntoolset:research"}
                         />
                     </label>
+                    <MCPToolSetCommonChoices onChoose={applyChoice} />
                     <label className="mt-3 block text-[10px] font-mono uppercase tracking-wider text-cortex-text-muted">
                         Description
                         <input

@@ -84,6 +84,8 @@ Under the hood these still save as MCP tool-set scopes (`all`, `group`, and `hos
 
 The Capabilities page exposes this as **Capability permissions**. Use **Everyone** for workspace defaults, **Group** for a collaboration lane, and **Host** for a target runtime host. Group and Host permissions require a target before they can be saved. Saved permission groups appear in the current-permissions list with a plain-language summary plus capability references for review.
 
+Use **Common choices** when you do not want to type raw capability references. The current choices cover Workspace files, Web research, Team coordination, and Local host/media. Choosing one fills the matching capability refs and, when appropriate, nudges the form toward Group or Host scope so sensitive access does not accidentally become a workspace default. Advanced operators can still edit the refs before saving.
+
 Review/edit expectation:
 - the installed server card should expand into an MCP structure view with transport, status, command or endpoint, arguments, env/header references, discovered tools, and recent use
 - the capability view should show manifest identity, input/output schema posture, risk, approval, availability, fallback, allowed roles, and output destinations

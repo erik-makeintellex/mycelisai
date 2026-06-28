@@ -100,7 +100,7 @@ async function mockSettingsApis(page: Page) {
 test.describe("Capability permission settings", () => {
     test.skip(({ browserName }) => browserName !== "chromium", "Visible settings proof is stabilized in Chromium.");
 
-    test("creates a host-targeted capability permission from Resources", async ({ page }) => {
+    test("creates a group capability permission from common choices", async ({ page }) => {
         const getSavedPayload = await mockSettingsApis(page);
 
         await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
@@ -111,22 +111,21 @@ test.describe("Capability permission settings", () => {
         await expect(page.getByText("Choose where Soma can use connected tools")).toBeVisible();
         await expect(page.getByText("Shared workspace file tools.")).toBeVisible();
         await expect(page.getByText("Group: market-research")).toBeVisible();
+        await expect(page.getByText("Common choices")).toBeVisible();
+        await expect(page.getByRole("button", { name: /Web research/i })).toBeVisible();
 
-        await page.getByLabel("Name").fill("deploy");
-        await clickVisibleControl(page, page.getByRole("button", { name: "Host", exact: true }));
-        await page.getByLabel("Target Host").fill("edge-node-2");
-        await page.getByLabel("Capability refs").fill("mcp:ssh/*\ntoolset:workspace");
-        await page.getByLabel("Description").fill("Deployment host tools");
+        await page.getByLabel("Name").fill("market research lane");
+        await clickVisibleControl(page, page.getByRole("button", { name: /Web research/i }));
+        await page.getByLabel("Target Group").fill("market-research");
         await clickVisibleControl(page, page.getByRole("button", { name: "Save permissions" }));
 
         await expect(page.getByText("Permission group saved and refreshed.")).toBeVisible();
         await expect.poll(getSavedPayload).toEqual({
-            name: "deploy",
-            description: "Deployment host tools",
-            tool_refs: ["mcp:ssh/*", "toolset:workspace"],
-            scope_kind: "host",
-            scope_ref: "edge-node-2",
+            name: "market research lane",
+            tool_refs: ["mcp:fetch/fetch", "tool:web_search"],
+            scope_kind: "group",
+            scope_ref: "market-research",
         });
-        await expect(page.getByText("Host: edge-node-2")).toBeVisible();
+        await expect(page.getByText("market research lane")).toBeVisible();
     });
 });
