@@ -21,12 +21,17 @@ export default function SettingsPage() {
 function SettingsContent() {
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
+    const fetchUserSettings = useCortexStore((s) => s.fetchUserSettings);
     const validTabs: TabId[] = ["profile", "profiles", "users", "engines", "auth", "tools"];
     const [requestedTab, setRequestedTab] = useState<TabId | null>(null);
     const requestedAdvancedTab = requestedTab && ["engines", "auth", "tools"].includes(requestedTab) ? requestedTab : null;
     const [activeTab, setActiveTab] = useState<TabId>("profile");
     const [webRole, setWebRole] = useState<"admin" | "standard">("admin");
     const isAdmin = webRole === "admin";
+
+    useEffect(() => {
+        void fetchUserSettings();
+    }, [fetchUserSettings]);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -132,7 +137,7 @@ function ConnectedToolsRedirect() {
                 href="/resources?tab=tools#web-access"
                 className="mt-5 inline-flex rounded-xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10"
             >
-                Open web access setup
+                Open Resources capabilities
             </Link>
         </section>
     );

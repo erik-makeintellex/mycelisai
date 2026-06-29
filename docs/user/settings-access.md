@@ -15,9 +15,12 @@ Settings is the administrative surface for account posture and operator preferen
 - what recovery action is needed when access is denied
 
 For a new admin, the guided setup panel should make four checks obvious:
-SSO/auth, AI provider, workspace/output roots, and capability/MCP setup.
-Workspace/output roots are confirmed from `System -> Deployments`, while MCP
-install and filesystem workspace browsing remain in `Resources`.
+SSO/auth, AI provider, workspace/output roots, and Soma capability setup.
+Workspace/output roots are confirmed from `System -> Deployments`, while
+capability install, web-access setup, and filesystem workspace browsing remain
+in `Resources`. Settings includes a direct **Open web access setup** shortcut so
+an operator who asked Soma how to enable web access does not have to discover
+the Resources path by trial and error.
 
 Settings is not the default Soma workspace. Use Soma for normal work, groups, and execution requests; use Settings when you need account, provider, or access posture.
 
@@ -72,7 +75,7 @@ Mode summary:
 
 ## Capabilities And MCP
 
-Capability and MCP management lives in `Resources -> Capabilities`, while Settings may expose related deep links.
+Capability and MCP management lives in `Resources -> Capabilities`, while Settings exposes related deep links for setup tasks.
 
 Use Capabilities to inspect:
 

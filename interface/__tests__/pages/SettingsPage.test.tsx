@@ -33,6 +33,7 @@ vi.mock('@/components/settings/MCPToolRegistry', () => ({
 const mockSearchParams = new URLSearchParams();
 const mockAdvancedMode = vi.fn(() => true);
 const mockToggleAdvancedMode = vi.fn();
+const mockFetchUserSettings = vi.fn(async () => undefined);
 const mockUpdateAssistantName = vi.fn(async () => true);
 const mockUpdateTheme = vi.fn(async () => true);
 vi.mock('next/navigation', () => ({
@@ -45,6 +46,7 @@ vi.mock('@/store/useCortexStore', async (importOriginal) => {
         useCortexStore: (selector: any) => selector({
             advancedMode: mockAdvancedMode(),
             toggleAdvancedMode: mockToggleAdvancedMode,
+            fetchUserSettings: mockFetchUserSettings,
             assistantName: 'Soma',
             theme: 'aero-light',
             updateAssistantName: mockUpdateAssistantName,
@@ -103,6 +105,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         mockUpdateAssistantName.mockClear();
         mockUpdateTheme.mockClear();
         mockToggleAdvancedMode.mockClear();
+        mockFetchUserSettings.mockClear();
         for (const key of [...mockSearchParams.keys()]) {
             mockSearchParams.delete(key);
         }
@@ -148,9 +151,11 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.getByText('Set login and SSO')).toBeDefined();
         expect(screen.getByText('Choose the AI provider')).toBeDefined();
         expect(screen.getByText('Check workspace and output roots')).toBeDefined();
-        expect(screen.getByText('Add MCP connected tools')).toBeDefined();
+        expect(screen.getByText('Enable Soma capabilities')).toBeDefined();
+        expect(screen.getByText('Need web access?')).toBeDefined();
         expect(screen.getByRole('link', { name: 'Open Deployments' }).getAttribute('href')).toBe('/system?tab=deployments');
-        expect(screen.getByRole('link', { name: 'Add MCP' }).getAttribute('href')).toBe('/resources?tab=tools');
+        expect(screen.getByRole('link', { name: 'Open capabilities' }).getAttribute('href')).toBe('/resources?tab=tools#web-access');
+        expect(screen.getByRole('link', { name: 'Open web access setup' }).getAttribute('href')).toBe('/resources?tab=tools#web-access');
         expect(screen.getByRole('link', { name: 'Open Workspace Files' }).getAttribute('href')).toBe('/resources?tab=workspace');
         expect(screen.getByRole('option', { name: 'Aero Light' })).toBeDefined();
         expect(screen.getByRole('option', { name: 'Midnight Cortex' })).toBeDefined();
@@ -169,6 +174,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.queryByText('Capabilities')).toBeNull();
         expect(screen.getByText('Admin tools unlock the full setup checklist')).toBeDefined();
         expect(screen.queryByText('Admin tools are open')).toBeNull();
+        expect(screen.getByRole('link', { name: 'Open web access setup' }).getAttribute('href')).toBe('/resources?tab=tools#web-access');
     });
 
     it('lets the guided workflow cards switch the active section', async () => {
@@ -209,7 +215,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         });
 
         expect(screen.getByText('Manage capabilities, MCP, and search from Resources.')).toBeDefined();
-        expect(screen.getByRole('link', { name: 'Open Resources capabilities' }).getAttribute('href')).toBe('/resources?tab=tools');
+        expect(screen.getByRole('link', { name: 'Open Resources capabilities' }).getAttribute('href')).toBe('/resources?tab=tools#web-access');
     });
 
     it('opens the enterprise auth provider scaffold from advanced settings', async () => {

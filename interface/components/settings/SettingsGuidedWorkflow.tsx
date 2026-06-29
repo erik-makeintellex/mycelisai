@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Brain,
   FolderOpen,
+  Globe,
   KeyRound,
   Layers,
   ServerCog,
@@ -119,7 +120,7 @@ export function SettingsGuidedWorkflow({
           </p>
           <h2 className="text-xl font-semibold text-cortex-text-main">New admin setup checklist</h2>
           <p className="text-sm leading-6 text-cortex-text-muted">
-            Make login, AI provider, storage roots, and connected tools obvious before handing
+            Make login, AI provider, storage roots, and Soma capabilities obvious before handing
             the workspace to operators.
           </p>
         </div>
@@ -142,6 +143,28 @@ export function SettingsGuidedWorkflow({
             onSelect={() => card.selectTabId ? onSelect(card.selectTabId) : undefined}
           />
         ))}
+      </div>
+      <div className="mt-5 rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-lg border border-cortex-primary/25 bg-cortex-surface p-2 text-cortex-primary">
+              <Globe className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-cortex-text-main">Need web access?</p>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-cortex-text-muted">
+                Open the Capabilities lane to check Soma search, public web providers, and optional Fetch MCP for specific URLs.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/resources?tab=tools#web-access"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/10"
+          >
+            Open web access setup
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
       {advancedMode ? (
         <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
@@ -166,7 +189,7 @@ export function SettingsGuidedWorkflow({
           </p>
           <p className="mt-1 leading-6">
             Turn on Admin tools to configure SSO/auth, AI providers, workspace/output
-            roots, and MCP connected tools.
+            roots, and deeper capability controls.
           </p>
         </div>
       )}

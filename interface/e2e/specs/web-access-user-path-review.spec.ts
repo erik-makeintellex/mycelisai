@@ -18,16 +18,8 @@ test.describe("Web access setup user path", () => {
       contentType: "image/png",
     });
 
-    const capabilityTab = page.getByRole("tab", { name: /Capabilities/i });
-    if ((await capabilityTab.count()) === 0) {
-      const adminToggle = page.getByRole("button", { name: /Admin tools/i });
-      if ((await adminToggle.count()) > 0) await adminToggle.click();
-    }
-
-    await expect(page.getByRole("tab", { name: /Capabilities/i })).toBeVisible();
-    await page.getByRole("tab", { name: /Capabilities/i }).click();
     await expect(page.getByRole("link", { name: /Open web access setup/i })).toBeVisible();
-    await testInfo.attach("settings-capabilities-redirect", {
+    await testInfo.attach("settings-web-access-shortcut", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     });
