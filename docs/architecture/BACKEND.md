@@ -15,7 +15,7 @@ Public packages expose reusable contracts and helpers. Keep product runtime beha
 
 ### Private Implementation (`internal/` - packages)
 
-Private packages own API handlers, persistence, cognitive routing, governance, MCP integration, NATS orchestration, memory, and service glue.
+Private packages own API handlers, persistence, cognitive routing, governance, MCP integration, NATS orchestration, memory, worker execution backends, and service glue. `internal/workers` defines the normalized worker-library interface, central default backend, and Hermes-compatible adapter boundary used after policy allows delegated execution.
 
 ### Go Dependencies (Direct)
 

@@ -30,6 +30,7 @@ Supporting docs are allowed when they serve implementation or user operation wit
 - [Architecture Overview](../architecture/OVERVIEW.md)
 - [API Reference](../API_REFERENCE.md)
 - [Testing](../TESTING.md)
+- [Worker Library / Hermes-Compatible Execution Source Map](WORKER_LIBRARY_SOURCE_MAP.md)
 - [User Docs Home](../user/README.md)
 - [Active Development State](../../.state/V8_DEV_STATE.md)
 

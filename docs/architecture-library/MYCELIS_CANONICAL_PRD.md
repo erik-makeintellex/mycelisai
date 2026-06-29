@@ -164,7 +164,7 @@ Core runtime responsibilities:
 | Capabilities | Core manifests | Register risk, permission, scope, output types, and recovery behavior. |
 | UI state | Interface | Render typed events as rich cards, not raw logs or stack traces. |
 
-Execution modes must distinguish one-shot tasks, scheduled tasks, long-running service/watch tasks, multi-team project delivery, and Soma self-extension. Each mode needs stop/pause/retry/recover semantics. Continuity vectors are not Soma's mind, source of truth, or autonomous authority; they preserve long-running operational context while authority remains with approved Outcomes, deliverables, proof artifacts, run receipts, policies, audit, and operator decisions. Soma may read a curated Core-owned documentation surface for help, API, testing, and architecture answers; this access is read-only, citable by slug/path, distinct from memory, Deployment Context, and vector continuity, and never promotes docs into durable context or doctrine without a governed Resources/Deployment Context action.
+Execution modes must distinguish one-shot tasks, scheduled tasks, long-running service/watch tasks, multi-team project delivery, and Soma self-extension. Each mode needs stop/pause/retry/recover semantics. The worker library is the focused execution package that lets approved agentry decisions become executed work without adding a new orchestration layer. Its default backend is `central`: Mycelis-owned workers, credentials, policies, logs, usage accounting, and operational responsibility. Hermes-compatible execution is additive through an adapter backend (`hermes_api` or compatible `hermes_like`) selected by configuration after Mycelis policy permits delegation. The normalized lifecycle is create run, stream/poll events, request approval if needed, continue or deny, complete/fail/cancel, then retain result, usage, and audit. Continuity vectors are not Soma's mind, source of truth, or autonomous authority; they preserve long-running operational context while authority remains with approved Outcomes, deliverables, proof artifacts, run receipts, policies, audit, and operator decisions. Soma may read a curated Core-owned documentation surface for help, API, testing, and architecture answers; this access is read-only, citable by slug/path, distinct from memory, Deployment Context, and vector continuity, and never promotes docs into durable context or doctrine without a governed Resources/Deployment Context action.
 
 ## API And Event Contracts
 
@@ -255,7 +255,6 @@ Non-goals for MVP:
 - architecture docs proliferating into separate doctrine systems
 
 ## P0 Delivery Plan
-
 | Priority | Slice | Status | Acceptance |
 | --- | --- | --- | --- |
 | P0.1 | Threaded Soma dashboard | IN_REVIEW | Compact quick actions, primary chat, no default Vault rail, no setup stack, reachable composer. |
@@ -267,7 +266,8 @@ Non-goals for MVP:
 | P0.7 | Capability settings | ACTIVE | Capabilities can be all-work, grouped, or targeted-host scoped with common choices, inspectable refs, and repair paths. |
 | P0.8 | Run receipts and recovery | IN_REVIEW | Receipts explain outcome, proof, failure, trusted state, and next safe action. |
 | P0.9 | Full journey proof | IN_REVIEW | Headed and headless proof cover ask through revisit. |
-| P0.10 | Docs cleanup | ACTIVE | This PRD is the single architecture authority; stale docs are deleted. |
+| P0.10 | Worker execution library | ACTIVE | Agentry can call one worker interface while central execution remains default and Hermes-compatible execution stays adapter-based. |
+| P0.11 | Docs cleanup | ACTIVE | This PRD is the single architecture authority; stale docs are deleted. |
 
 ## Testing And Release Gates
 
