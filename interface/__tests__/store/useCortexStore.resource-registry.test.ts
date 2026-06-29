@@ -132,6 +132,7 @@ describe('useCortexStore resource registry', () => {
                     scope_kind: 'host',
                     scope_ref: 'edge-node-1',
                 },
+                { id: 'set-group', name: 'research', tool_refs: ['mcp:fetch/fetch', 'tool:web_search'], scope_kind: 'group', scope_ref: 'market-research' },
             ];
             mockFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true, data: toolSets }) });
 
@@ -139,6 +140,7 @@ describe('useCortexStore resource registry', () => {
 
             expect(mockFetch).toHaveBeenCalledWith('/api/v1/mcp/toolsets');
             expect(useCortexStore.getState().mcpToolSets).toEqual(toolSets);
+            expect(useCortexStore.getState().mcpToolSets.map((set) => set.scope_kind)).toEqual(['all', 'host', 'group']);
             expect(useCortexStore.getState().mcpToolSetsError).toBeNull();
         });
 

@@ -78,6 +78,34 @@ func TestToolSetService_ResolveRefsForScope_UsesScopedThenFallback(t *testing.T)
 	}
 }
 
+func TestToolSetService_ResolveRefsForScope_UsesGroupLayerBeforeSharedDefault(t *testing.T) {
+	svc, mock := newTestToolSetService(t)
+	now := time.Now()
+
+	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets WHERE name").
+		WithArgs("research", "group", "market-research").
+		WillReturnRows(sqlmock.NewRows(toolSetColumns()).
+			AddRow(tsID1, "research", "Market lane research", `["mcp:private-search/*"]`, "group", "market-research", "default", now, now))
+	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets WHERE name").
+		WithArgs("workspace", "group", "market-research").
+		WillReturnError(sql.ErrNoRows)
+	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets WHERE name").
+		WithArgs("workspace", "all", "").
+		WillReturnRows(sqlmock.NewRows(toolSetColumns()).
+			AddRow(tsID2, "workspace", "Shared workspace", `["mcp:filesystem/*"]`, "all", "", "default", now, now))
+
+	resolved, err := svc.ResolveRefsForScope(context.Background(), []string{"toolset:research", "toolset:workspace"}, "group", "market-research")
+	if err != nil {
+		t.Fatalf("ResolveRefsForScope: %v", err)
+	}
+	want := []string{"mcp:private-search/*", "mcp:filesystem/*"}
+	for i, expected := range want {
+		if resolved[i] != expected {
+			t.Fatalf("resolved[%d] = %q, want %q", i, resolved[i], expected)
+		}
+	}
+}
+
 func TestToolSetService_ResolveRefs_NoToolSets(t *testing.T) {
 	svc, _ := newTestToolSetService(t)
 

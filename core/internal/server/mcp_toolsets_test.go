@@ -37,7 +37,8 @@ func TestHandleListToolSets_HappyPath(t *testing.T) {
 
 	rows := sqlmock.NewRows(toolSetColumns()).
 		AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "workspace", "File I/O", `["mcp:filesystem/*"]`, "all", "", "default", now, now).
-		AddRow("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "research", "Web tools", `["mcp:fetch/*"]`, "group", "research-lane", "default", now, now)
+		AddRow("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "research", "Web tools", `["mcp:fetch/*"]`, "group", "research-lane", "default", now, now).
+		AddRow("cccccccc-cccc-cccc-cccc-cccccccccccc", "deploy", "Host tools", `["mcp:ssh/*"]`, "host", "edge-node-1", "default", now, now)
 	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets").WillReturnRows(rows)
 
 	mux := setupMux(t, "GET /api/v1/mcp/toolsets", s.handleListToolSets)
@@ -50,8 +51,17 @@ func TestHandleListToolSets_HappyPath(t *testing.T) {
 		t.Errorf("expected ok=true, got %v", resp["ok"])
 	}
 	data := resp["data"].([]interface{})
-	if len(data) != 2 {
-		t.Errorf("expected 2 tool sets, got %d", len(data))
+	if len(data) != 3 {
+		t.Errorf("expected 3 tool sets, got %d", len(data))
+	}
+	if data[0].(map[string]interface{})["scope_kind"] != "all" {
+		t.Errorf("expected all scope in first row")
+	}
+	if data[1].(map[string]interface{})["scope_ref"] != "research-lane" {
+		t.Errorf("expected group scope_ref in second row")
+	}
+	if data[2].(map[string]interface{})["scope_kind"] != "host" || data[2].(map[string]interface{})["scope_ref"] != "edge-node-1" {
+		t.Errorf("expected host scope in third row")
 	}
 }
 
