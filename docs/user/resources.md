@@ -30,6 +30,8 @@ Connected tools are reviewed through `Resources -> Capabilities`: the user-facin
 
 For web access specifically, use `Resources -> Capabilities -> Web access setup`. That lane should show whether Soma currently has local-source search, public-web search, and direct `web_search` available. Use **Add web capability** from that lane to open the MCP library filtered toward `fetch`, SearXNG/local API, Brave, or other web/search providers. Built-in Mycelis `web_search` does not depend on `fetch`; add or repair `fetch` when users need Soma or a team to retrieve a specific supplied URL.
 
+Search sources should also support client-owned data. A configured client source is not just "the web"; it can be a private docs site, customer portal, repository, issue tracker, file store, intranet search endpoint, or SaaS knowledge base that Soma may search only under its configured scope. The operator-facing path should be **Add search source**: name the source, choose source type, provide a base URL or endpoint, choose the auth scheme, select a secret reference, set whether the source applies to Everyone, one Group, or one Host, then confirm sensitivity and trust defaults. Raw tokens must stay in `.env` or the configured secret backend.
+
 ---
 
 ## AI Engines
@@ -107,6 +109,8 @@ Current posture:
 - `Mycelis Search Capability` shows the active Soma search posture directly in Capabilities: the selected provider, whether Soma can call `web_search`, whether local shared sources or public web are supported, and whether the current path needs hosted Brave credentials
 - Soma's Operator trust package also names the active search source boundary for `web_search` results, such as `Search source: Local Mycelis context`, so operators can distinguish retained Mycelis context from public-web providers
 - self-hosted search does not have to depend on Brave tokens: `local_sources` is the default token-free provider for governed Mycelis context and falls back to bounded text search when embeddings are unavailable, `local_api` can call an operator-owned HTTP search endpoint, and the supported Compose release path starts SearXNG for public web search through an operator-owned endpoint
+- client-owned search sources should support standard token-authenticated web endpoints: bearer token or API-token headers first, service-required header/query placement only when necessary, and OAuth2/client-credential metadata where supported. Each configured source should carry allowed domain/path boundaries, scope, sensitivity, trust defaults, live-vs-indexed mode, and recovery guidance.
+- when Soma searches configured sources, the answer should name the source boundary in plain language, cite or reference the consulted sources where possible, and distinguish public web leads from private/customer/contextual sources before asking the operator to trust the result
 - the same Capabilities surface should make the workflow legible end to end: choose **Add MCP Server**, confirm the capability is available, and inspect recent persisted MCP activity plus live in-session usage showing which server/tool agents are using, including team, agent, and run labels when the runtime supplies them
 - the curated MCP library is now being standardized around the MCP registry `server.json` concepts so future registrations stay recognizable outside Mycelis too: each entry should carry a canonical server name, version, published package + transport metadata, repository/homepage metadata when known, and typed environment-variable declarations instead of only a local command block
 - curated MCP install is repeat-safe by server name; reapplying an allowed entry updates and reconnects the existing server instead of creating duplicate registry state
@@ -116,6 +120,8 @@ Current posture:
 Useful Soma prompts from this surface:
 - `Search the web for "<topic>", summarize the strongest sources, and cite them.`
 - `Use host data under workspace/shared-sources and list the files that shaped the answer.`
+- `Search the approved customer portal and company docs for the current onboarding policy, then tell me which source each claim came from.`
+- `Add an authenticated search source for this internal docs URL using the configured token reference, limited to this group, and ask me to approve before Soma uses it.`
 - `Review current MCP servers, tools, and recent use, then tell me which agents should have which tools.`
 - `Review the private-service or private-data boundary for this action, name the needed MCP server and .env variables, and ask me to confirm before enabling or assigning tools.`
 

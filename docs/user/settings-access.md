@@ -85,8 +85,11 @@ Use Capabilities to inspect:
 - available tools
 - recent persisted MCP activity
 - active search posture, including `local_sources`, self-hosted `searxng`, operator-owned `local_api`, optional `brave`, and disabled blockers
+- configured search sources, including public web providers, local/shared sources, explicit URL retrieval, and private or client-owned authenticated data sources
 
 Soma should use the Mycelis-owned `web_search` path when search is configured. Brave is optional; self-hosted SearXNG and local API search do not require Brave tokens. The `fetch` MCP is also optional: add or repair it when Soma needs to retrieve a specific supplied URL, not as a prerequisite for built-in search.
+
+Private or client-owned data sources should be configured as governed search sources rather than pasted into chat. Use standard token-based web auth where possible: bearer token or API-token header first, service-required query/header placement only when necessary, and OAuth2/client-credential metadata when supported. Store the actual secret in `.env` or the configured secret backend, then select the secret reference in the UI. Scope the source to Everyone, one Group, or one Host so Soma searches it only where the operator intended.
 
 Use Capability permissions when you need to decide where Soma can use connected tools. Use Library when you need to edit or reapply a curated MCP structure. Secrets stay in `.env` or the configured secret backend; the UI should show only references or redacted values.
 
@@ -94,6 +97,8 @@ Useful Soma prompts from this surface:
 
 - `Search the web for "<topic>", summarize the strongest sources, and cite them.`
 - `Use host data under workspace/shared-sources and list the files that shaped the answer.`
+- `Search the approved customer portal and company docs for the current onboarding policy, then tell me which source each claim came from.`
+- `Add an authenticated search source for this internal docs URL using the configured token reference, limited to this group, and ask me to approve before Soma uses it.`
 - `Review current MCP servers, tools, and recent use, then tell me which agents should have which tools.`
 - `Review my latest team request, match it to prior action context, name the MCP servers needed, and ask me to confirm before enabling or assigning tools.`
 

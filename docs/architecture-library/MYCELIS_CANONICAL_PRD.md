@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: Canonical
-> Last Updated: 2026-06-28
+> Last Updated: 2026-06-30
 > Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
@@ -137,6 +137,16 @@ Capability configuration must support three scopes:
 
 The default configuration path should start from common capability choices rather than raw tool references. Operators should be able to choose readable intents such as Workspace files, Web research, Team coordination, or Local host/media, then set whether the permission applies to everyone, one Outcome/group lane, or one host. Raw MCP/tool refs remain visible for inspection and advanced editing, but they are not the first thing a user must understand.
 
+Search is a governed capability family, not only public web search. Mycelis must support a Search Source Registry where operators can add sources that Soma may search when allowed:
+
+- built-in Mycelis/local source search
+- public web search through configured providers such as self-hosted SearXNG, operator-owned local APIs, or optional hosted providers
+- explicit URL retrieval through a governed fetch capability
+- authenticated URL/API sources such as documentation sites, customer portals, SaaS knowledge bases, issue trackers, repositories, file stores, or internal search endpoints
+- future dedicated connectors for systems such as GitHub, Slack, Notion, Confluence, SharePoint, Google Drive, Postgres, CRM, accounting, or ticketing systems
+
+Authenticated sources must use secret references, not raw tokens in UI, logs, state files, docs, or capability manifests. The first supported shape should be standard web token authentication: bearer token or API-token header, optional query/header token placement when the service requires it, and OAuth2/client-credential style metadata when available. Each source needs a plain name, source type, base URL or endpoint, allowed domains/path boundary, auth scheme, secret reference, scope (`Everyone`, `Group`, or `Host`), sensitivity/trust defaults, index/live-search mode, and recovery posture. Soma should explain which configured sources it used, cite or reference them in the trust package, and ask for approval before searching sensitive/private sources when policy requires it.
+
 ## Runtime Architecture
 
 The canonical execution spine is:
@@ -192,6 +202,7 @@ Required settings model:
 - capability cards such as "Connect filesystem", "Connect search", "Connect media engine", or "Connect accounting software"
 - grouped capability sets for environments
 - targeted host/provider configuration for specific MCP or API endpoints
+- searchable data-source cards such as "Connect company docs", "Connect GitHub repository", "Connect customer portal", or "Connect internal search API"
 - raw server auth, vector index, topology, and schema details behind Inspect
 
 ## Trust Recovery And Confidence
@@ -264,6 +275,7 @@ Non-goals for MVP:
 | P0.5 | OutcomeProject and TeamRegistry | IN_REVIEW | Confirmed work writes durable project/team ownership and Vault summaries. |
 | P0.6 | Output packages and Vault | IN_REVIEW | Deliverables open cleanly; source/intermediate outputs are opt-in. |
 | P0.7 | Capability settings | ACTIVE | Capabilities can be all-work, grouped, or targeted-host scoped with common choices, inspectable refs, and repair paths. |
+| P0.7a | Search source registry | NEXT | Web, local, and client-owned authenticated data sources can be registered, scoped, searched, cited, and recovered through Soma without exposing raw credentials. |
 | P0.8 | Run receipts and recovery | IN_REVIEW | Receipts explain outcome, proof, failure, trusted state, and next safe action. |
 | P0.9 | Full journey proof | IN_REVIEW | Headed and headless proof cover ask through revisit. |
 | P0.10 | Worker execution library | ACTIVE | Agentry can call one worker interface while central execution remains default and Hermes-compatible execution stays adapter-based. |
