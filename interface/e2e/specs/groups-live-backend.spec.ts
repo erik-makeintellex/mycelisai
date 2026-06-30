@@ -142,9 +142,9 @@ test.describe('Groups retained outputs live backend contract', () => {
         await expect(page.getByRole('link', { name: 'Download' }).first()).toHaveAttribute('href', new RegExp('/api/v1/artifacts/.+/download'));
 
         await page.getByRole('tab', { name: /Overview/i }).click();
-        await page.getByRole('button', { name: 'Archive temporary group' }).click();
+        await page.getByRole('button', { name: 'Clear group from active lanes' }).click();
 
-        await expect(page.getByTestId('groups-notice')).toContainText('Temporary group archived.');
+        await expect(page.getByTestId('groups-notice')).toContainText('Group cleared from active lanes');
         await expect(page.getByText('Archived temporary group', { exact: true })).toBeVisible();
         await page.getByRole('tab', { name: /Message/i }).click();
         await expect(page.getByTestId('groups-archived-readonly-note')).toContainText('retained output review');

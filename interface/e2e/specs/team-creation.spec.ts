@@ -127,16 +127,24 @@ test.describe('Guided Team Creation (/teams/create)', () => {
             });
         });
 
-        await page.route('**/api/v1/groups/group-temp-launch/status', async (route) => {
-            if (route.request().method() !== 'PATCH') {
+        await page.route('**/api/v1/groups/group-temp-launch/clear', async (route) => {
+            if (route.request().method() !== 'POST') {
                 await fulfillJSON(route, 405, { ok: false, error: 'method not allowed' });
                 return;
             }
+            const body = route.request().postDataJSON() ?? {};
             groups[0] = {
                 ...groups[0],
                 status: 'archived',
             };
-            await fulfillJSON(route, 200, { ok: true, data: groups[0] });
+            await fulfillJSON(route, 200, {
+                ok: true,
+                data: {
+                    group: groups[0],
+                    outputs_cleared: Boolean((body as { include_outputs?: boolean }).include_outputs),
+                    operator_description: 'Group cleared from active lanes. Retained outputs remain reviewable.',
+                },
+            });
         });
 
         await page.route('**/api/v1/groups/group-temp-launch/outputs?limit=8', async (route) => {
@@ -211,11 +219,11 @@ test.describe('Guided Team Creation (/teams/create)', () => {
         await expect(page.getByRole('link', { name: 'Download' }).last()).toHaveAttribute('href', '/api/v1/artifacts/artifact-asset-bundle/download');
 
         await page.getByRole('tab', { name: /Overview/i }).click();
-        await page.getByRole('button', { name: 'Archive temporary group' }).click();
+        await page.getByRole('button', { name: 'Clear group from active lanes' }).click();
 
-        await expect(page.getByTestId('groups-notice')).toContainText('Temporary group archived.');
+        await expect(page.getByTestId('groups-notice')).toContainText('Group cleared from active lanes.');
         await expect(page.getByText('Archived temporary group', { exact: true })).toBeVisible();
-        await expect(page.getByText('Temporary group archived. Retained outputs are still available for review.')).toBeVisible();
+        await expect(page.getByText('Group cleared from active lanes. Retained outputs remain reviewable.')).toBeVisible();
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
         await page.getByRole('tab', { name: /Outputs/i }).click();

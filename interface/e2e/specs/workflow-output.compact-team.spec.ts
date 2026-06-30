@@ -117,19 +117,27 @@ test.describe("Workflow output compact team package", () => {
             });
         });
 
-        await page.route(/\/api\/v1\/groups\/([^/]+)\/status$/, async (route) => {
-            if (route.request().method() !== "PATCH") {
+        await page.route(/\/api\/v1\/groups\/([^/]+)\/clear$/, async (route) => {
+            if (route.request().method() !== "POST") {
                 await fulfillJSON(route, 405, { ok: false, error: "method not allowed" });
                 return;
             }
-            const groupId = route.request().url().match(/\/api\/v1\/groups\/([^/]+)\/status$/)?.[1];
+            const groupId = route.request().url().match(/\/api\/v1\/groups\/([^/]+)\/clear$/)?.[1];
             const target = groups.find((group) => group.group_id === groupId);
             if (!target) {
                 await fulfillJSON(route, 404, { ok: false, error: "group not found" });
                 return;
             }
             target.status = "archived";
-            await fulfillJSON(route, 200, { ok: true, data: target });
+            const body = route.request().postDataJSON() ?? {};
+            await fulfillJSON(route, 200, {
+                ok: true,
+                data: {
+                    group: target,
+                    outputs_cleared: Boolean((body as { include_outputs?: boolean }).include_outputs),
+                    operator_description: "Group cleared from active lanes. Retained outputs remain reviewable.",
+                },
+            });
         });
 
         await page.route(/\/api\/v1\/groups\/([^/]+)\/outputs\?limit=8$/, async (route) => {
@@ -168,7 +176,7 @@ test.describe("Workflow output compact team package", () => {
         await expect(page.getByText("Validation checklist", { exact: true })).toBeVisible();
         await expect(page.getByText("Risk review", { exact: true })).toBeVisible();
         await page.getByRole("tab", { name: /Overview/i }).click();
-        await page.getByRole("button", { name: "Archive temporary group" }).click();
+        await page.getByRole("button", { name: "Clear group from active lanes" }).click();
         await expect(page.getByText("Archived temporary group", { exact: true })).toBeVisible();
         await page.reload({ waitUntil: "domcontentloaded" });
         await expect(page.getByText("Archived temporary group", { exact: true })).toBeVisible();

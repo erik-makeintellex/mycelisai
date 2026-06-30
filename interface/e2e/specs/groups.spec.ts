@@ -42,6 +42,12 @@ test.describe("Groups workspace (/groups)", () => {
       "run run-launch-proof",
     );
     await page.getByRole("tab", { name: /Outputs/i }).click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("panel"))
+      .toBe("outputs");
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("group_id"))
+      .toBe("group-temp-launch");
     await expect(page.getByText("Launch Brief", { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Download" }).first()).toHaveAttribute(
       "href",
@@ -49,6 +55,12 @@ test.describe("Groups workspace (/groups)", () => {
     );
 
     await page.getByTestId("groups-list-item-group-temp-archived").click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("group_id"))
+      .toBe("group-temp-archived");
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("panel"))
+      .toBe("overview");
     await expect(
       page.getByText("Archived temporary group", { exact: true }),
     ).toBeVisible();

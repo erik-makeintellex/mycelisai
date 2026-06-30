@@ -26,9 +26,9 @@ export async function reviewArchivedOutputs(
     await retryUntilGroupVisible(page, group, groupHeading);
   }
   await assertOutputSummary(page, artifactTitles, contributingLeads);
-  await page.getByRole("button", { name: "Archive temporary group" }).click();
+  await page.getByRole("button", { name: "Clear group from active lanes" }).click();
   await expect(page.getByTestId("groups-notice")).toContainText(
-    "Temporary group archived.",
+    "Group cleared from active lanes",
   );
   await expect(
     page.getByText("Archived temporary group", { exact: true }),

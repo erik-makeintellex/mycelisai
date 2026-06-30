@@ -64,8 +64,6 @@ function GroupWorkspaceTab({
       aria-selected={selected}
       aria-controls={`groups-${panel.id}-panel`}
       id={`groups-${panel.id}-tab`}
-      onPointerDown={() => onSelect(panel.id)}
-      onFocus={() => onSelect(panel.id)}
       onClick={() => onSelect(panel.id)}
       className={`rounded-xl border px-3 py-2 text-left transition-colors ${
         selected

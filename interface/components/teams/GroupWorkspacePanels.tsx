@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { CreateGroupPane } from "./CreateGroupPane";
 import { GroupCommunicationPanel } from "./GroupCommunicationPanel";
@@ -101,9 +101,19 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
   const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>(
     initialPanel ?? "overview",
   );
+
+  useEffect(() => {
+    if (initialPanel) setActivePanel(initialPanel);
+  }, [initialPanel]);
+
+  const selectPanel = (panel: GroupWorkspacePanel, groupId = selectedGroupId) => {
+    setActivePanel(panel);
+    updateRouteState(groupId, panel);
+  };
+
   const selectGroup = (groupId: string) => {
     onSelectGroup(groupId);
-    setActivePanel("overview");
+    selectPanel("overview", groupId);
   };
 
   return (
@@ -117,7 +127,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
         refreshing={refreshing}
         archivingExpired={archivingExpired}
         onArchiveExpired={onArchiveExpired}
-        onCreate={() => setActivePanel("create")}
+        onCreate={() => selectPanel("create")}
         onRefresh={onRefresh}
       />
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3 lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]">
@@ -134,7 +144,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
           <GroupWorkspaceTabs
             activePanel={activePanel}
             outputCount={outputSummary.artifactCount}
-            onSelect={setActivePanel}
+            onSelect={selectPanel}
           />
           {notice || error ? (
             <div className="border-b border-cortex-border px-3 py-2">
@@ -178,7 +188,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
                   clearOutputs={clearOutputs}
                   onArchive={onArchive}
                   onClearOutputsChange={onClearOutputsChange}
-                  onOpenOutputs={() => setActivePanel("outputs")}
+                  onOpenOutputs={() => selectPanel("outputs")}
                 />
               </div>
             ) : null}
@@ -211,8 +221,8 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
                   outputs={outputs}
                   monitor={monitor}
                   lastBroadcastResult={lastBroadcastResult}
-                  onOpenOutputs={() => setActivePanel("outputs")}
-                  onOpenMessage={() => setActivePanel("message")}
+                  onOpenOutputs={() => selectPanel("outputs")}
+                  onOpenMessage={() => selectPanel("message")}
                 />
               </div>
             ) : null}
@@ -263,5 +273,18 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
         </div>
       </div>
     </section>
+  );
+}
+
+function updateRouteState(groupId: string | null, panel: GroupWorkspacePanel) {
+  if (typeof window === "undefined") return;
+  const nextUrl = new URL(window.location.href);
+  if (groupId) nextUrl.searchParams.set("group_id", groupId);
+  else nextUrl.searchParams.delete("group_id");
+  nextUrl.searchParams.set("panel", panel);
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`,
   );
 }

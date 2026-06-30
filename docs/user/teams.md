@@ -81,7 +81,7 @@ Ask Team is non-blocking. When you queue a follow-on ask, the row should close t
 
 `Clear from review` archives a durable work item so it leaves active review queues while retained outputs, proof refs, audit refs, and history remain inspectable. Use it for stale failed proposals or old test data after confirming nothing useful is waiting to be recovered.
 
-Use `Groups` when you want to review a collaboration lane without opening every team surface. The selected group includes a **Workflow Log** tab that combines the group brief, lifecycle recommendation, attached team-work rows, retained output cues, latest broadcast result, and bus/recovery signal into one operator-readable stream. It is workflow context, not a final deliverable folder and not raw NATS/bus logs.
+Use `Groups` when you want to review a collaboration lane without opening every team surface. The selected group includes a **Workflow Log** tab that combines the group brief, lifecycle recommendation, attached team-work rows, retained output cues, latest broadcast result, and bus/recovery signal into one operator-readable stream. It is workflow context, not a final deliverable folder and not raw NATS/bus logs. Group workspace tabs keep the selected group and panel in the URL, so an operator can return directly to `overview`, `workflow`, `outputs`, `message`, `settings`, or `create` during review handoff.
 
 Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
 
@@ -194,5 +194,6 @@ When testing team workflows, verify:
 - raw input/delivery subjects, models, prompts, and tool ids stay behind Advanced/Inspect instead of default team cards
 - retained outputs remain reviewable in `/groups` after a temporary collaboration is closed
 - the group **Workflow Log** shows work items, run/proof cues, retained output cues, and recovery/degraded fetch guidance without exposing raw bus subjects by default
+- group tab changes are deliberate clicks or keyboard tab navigation, and the current group/panel can be reopened from the URL during handoff
 - completed, stale, or test groups have a visible **Clear group** action, and retained output files are removed only when the operator explicitly includes them
 - event-driven actuation is configured through `/automations` Trigger Rules, not through the team workspace itself
