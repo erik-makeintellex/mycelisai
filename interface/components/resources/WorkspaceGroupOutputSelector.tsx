@@ -147,7 +147,7 @@ export default function WorkspaceGroupOutputSelector({
             {selectedGroup ? (
                 <div className="mt-2 space-y-2">
                     <div
-                        className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-cortex-border"
+                        className="grid grid-cols-2 gap-2"
                         role="tablist"
                         aria-label="Output contributor level"
                     >
@@ -164,7 +164,7 @@ export default function WorkspaceGroupOutputSelector({
                                     aria-label={`${level.label} ${count}`}
                                     aria-selected={selected}
                                     onClick={() => setSelectedLevel(level.id)}
-                                    className={`min-w-[7.25rem] shrink-0 rounded border px-3 py-1.5 text-left text-xs transition-colors ${
+                                    className={`min-w-0 rounded border px-3 py-1.5 text-left text-xs transition-colors ${
                                         selected
                                             ? "border-cortex-primary/50 bg-cortex-primary/10 text-cortex-text-main"
                                             : "border-cortex-border bg-cortex-bg text-cortex-text-muted hover:bg-cortex-bg/80"

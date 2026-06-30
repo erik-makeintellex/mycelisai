@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { BookOpen, ShieldCheck, Wrench } from "lucide-react";
+import { BookOpen, Wrench } from "lucide-react";
 import MCPServerCard, { type MCPRecentActivity } from "./MCPServerCard";
 import { useCortexStore } from "@/store/useCortexStore";
 import { MCPLibraryBrowserBody } from "./MCPLibraryBrowser";
@@ -12,7 +12,7 @@ import { ConnectedToolsWorkflowCard, SearchCapabilityCard, SomaToolPromptCard, W
 import { MCPToolSetLayersStorePanel } from "./MCPToolSetLayersPanel";
 import { MCPInstallNotice, MCPRegistryEmptyBanner, MCPRegistryEmptyHero, MCPRegistryErrorBanner } from "./MCPToolRegistryNotices";
 
-type Tab = "installed" | "library";
+type Tab = "overview" | "servers" | "library";
 
 export default function MCPToolRegistry() {
     const mcpServers = useCortexStore((s) => s.mcpServers);
@@ -36,10 +36,9 @@ export default function MCPToolRegistry() {
     const fetchCapabilities = useCortexStore((s) => s.fetchCapabilities);
     const fetchMCPToolSets = useCortexStore((s) => s.fetchMCPToolSets);
 
-    const [activeTab, setActiveTab] = useState<Tab>("installed");
+    const [activeTab, setActiveTab] = useState<Tab>("overview");
     const [installNotice, setInstallNotice] = useState<string | null>(null);
     const [librarySearchQuery, setLibrarySearchQuery] = useState("");
-    const [showTopology, setShowTopology] = useState(false);
     const isRegistryErrorState = !isFetching && Boolean(mcpServersError);
     const isEmptyInstalledState = !isFetching && !mcpServersError && mcpServers.length === 0;
 
@@ -77,7 +76,7 @@ export default function MCPToolRegistry() {
 
     function handleInstalled(name: string) {
         setInstallNotice(`Installed ${name}. Check the connected server card and live MCP activity below.`);
-        setActiveTab("installed");
+        setActiveTab("servers");
     }
 
     function handleAddWebCapability() {
@@ -97,14 +96,24 @@ export default function MCPToolRegistry() {
                     </div>
                     <div className="flex items-center gap-1 bg-cortex-bg rounded-lg p-0.5 border border-cortex-border">
                         <button
-                            onClick={() => setActiveTab("installed")}
+                            onClick={() => setActiveTab("overview")}
                             className={`px-3 py-1 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider transition-colors ${
-                                activeTab === "installed"
+                                activeTab === "overview"
                                     ? "bg-cortex-surface text-cortex-text-main shadow-sm"
                                     : "text-cortex-text-muted hover:text-cortex-text-main"
                             }`}
                         >
-                            Installed
+                            Overview
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("servers")}
+                            className={`px-3 py-1 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider transition-colors ${
+                                activeTab === "servers"
+                                    ? "bg-cortex-surface text-cortex-text-main shadow-sm"
+                                    : "text-cortex-text-muted hover:text-cortex-text-main"
+                            }`}
+                        >
+                            Servers
                             {mcpServers.length > 0 && (
                                 <span className="ml-1.5 text-[9px] px-1 py-0.5 rounded bg-cortex-info/10 text-cortex-info">
                                     {mcpServers.length}
@@ -125,7 +134,7 @@ export default function MCPToolRegistry() {
                     </div>
                 </div>
 
-                {activeTab === "installed" && (
+                {activeTab !== "library" && (
                     <button
                         onClick={() => setActiveTab("library")}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cortex-primary/10 border border-cortex-primary/30 text-xs font-mono font-bold text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
@@ -137,7 +146,7 @@ export default function MCPToolRegistry() {
             </div>
 
             <div className="flex-1 overflow-y-auto">
-                {activeTab === "installed" && (
+                {activeTab === "overview" && (
                     <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">
                         <WebAccessSetupCard
                             status={searchCapability}
@@ -145,14 +154,14 @@ export default function MCPToolRegistry() {
                             error={searchCapabilityError}
                             onAddWebCapability={handleAddWebCapability}
                         />
-                        <SomaToolPromptCard />
-                        <ConnectedToolsWorkflowCard isStreamConnected={isStreamConnected} />
                         <CapabilityRegistryPanel
                             capabilities={visibleCapabilities}
                             isLoading={isFetchingCapabilities}
                             error={capabilitiesError}
                             usingFallback={usingCapabilityFallback}
                         />
+                        <SomaToolPromptCard />
+                        <ConnectedToolsWorkflowCard isStreamConnected={isStreamConnected} />
                         <MCPToolSetLayersStorePanel />
 
                         <SearchCapabilityCard
@@ -160,12 +169,59 @@ export default function MCPToolRegistry() {
                             isLoading={isFetchingSearchCapability}
                             error={searchCapabilityError}
                         />
+                    </div>
+                )}
 
+                {activeTab === "servers" && (
+                    <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">
                         {isEmptyInstalledState && <MCPRegistryEmptyBanner />}
 
                         {isRegistryErrorState && <MCPRegistryErrorBanner error={mcpServersError} />}
 
                         {installNotice && <MCPInstallNotice message={installNotice} />}
+
+                        <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                                        Installed MCP servers
+                                    </p>
+                                    <p className="mt-1 text-sm font-semibold text-cortex-text-main">
+                                        {mcpServers.length} connected server{mcpServers.length === 1 ? "" : "s"}
+                                    </p>
+                                    <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
+                                        Server inventory is separate from capability count. Open a server when you need transport, command, secret refs, discovered tools, and recent use.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab("library")}
+                                    className="rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-xs font-semibold text-cortex-primary transition hover:bg-cortex-primary/20"
+                                >
+                                    Add MCP
+                                </button>
+                            </div>
+                            {isFetching && mcpServers.length === 0 && (
+                                <div className="mt-4 grid gap-3">
+                                    {[1, 2, 3].map((i) => (
+                                        <div key={i} className="h-16 rounded-xl bg-cortex-bg border border-cortex-border animate-pulse" />
+                                    ))}
+                                </div>
+                            )}
+                            {!isFetching && mcpServers.length > 0 && (
+                                <div className="mt-4 space-y-3">
+                                    {mcpServers.map((server) => (
+                                        <MCPServerCard
+                                            key={server.id}
+                                            server={server}
+                                            onDelete={deleteMCPServer}
+                                            onEdit={() => setActiveTab("library")}
+                                            recentActivity={recentActivityByServer.get(server.id) ?? []}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
                         <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
                             <div className="flex items-center justify-between gap-2">
@@ -211,56 +267,7 @@ export default function MCPToolRegistry() {
                             )}
                         </div>
 
-                        {isFetching && mcpServers.length === 0 && (
-                            <>
-                                {[1, 2, 3].map((i) => (
-                                    <div key={i} className="h-16 rounded-xl bg-cortex-surface border border-cortex-border animate-pulse" />
-                                ))}
-                            </>
-                        )}
-
                         {isEmptyInstalledState && <MCPRegistryEmptyHero onRequest={() => setActiveTab("library")} />}
-
-                        {mcpServers.length > 0 && (
-                            <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <ShieldCheck className="h-4 w-4 text-cortex-primary" />
-                                        <div>
-                                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                                                Advanced Inspect
-                                            </p>
-                                            <p className="mt-1 text-xs text-cortex-text-muted">
-                                                Raw MCP topology is available when you need transport, command, secret refs, tools, and activity detail.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowTopology((value) => !value)}
-                                        className="rounded border border-cortex-border bg-cortex-bg px-3 py-1.5 text-[10px] font-mono font-bold uppercase text-cortex-text-muted hover:text-cortex-text-main"
-                                    >
-                                        {showTopology ? "Hide topology" : "Inspect MCP topology"}
-                                    </button>
-                                </div>
-                                {showTopology && (
-                                    <div className="mt-3 space-y-3">
-                                        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                                            MCP Server Drill-Down
-                                        </p>
-                                        {mcpServers.map((server) => (
-                                            <MCPServerCard
-                                                key={server.id}
-                                                server={server}
-                                                onDelete={deleteMCPServer}
-                                                onEdit={() => setActiveTab("library")}
-                                                recentActivity={recentActivityByServer.get(server.id) ?? []}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
                     </div>
                 )}
 

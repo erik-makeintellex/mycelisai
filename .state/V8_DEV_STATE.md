@@ -1,7 +1,7 @@
 # Mycelis V8 - Active Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-06-28
+> Updated: 2026-06-29
 > Canonical active scoreboard for V8 delivery. Historical V7/V8 migration evidence now lives in Git history; active architecture truth lives in `docs/architecture-library/MYCELIS_CANONICAL_PRD.md`.
 
 ## Current Checkpoint
@@ -324,7 +324,7 @@ Known non-blocking warnings:
 | UX Surface | `ACTIVE` | Replace advanced configuration density with user-readable capability-permission cards in Settings/Resources: what Soma can use, where it applies, and whether it is available, degraded, or needs attention. Common choices now cover Workspace files, Web research, Team coordination, and Local host/media. | Headed browser proof that a non-technical user can find capability status and the next action without reading MCP/topology language. |
 | API/Runtime | `IN_REVIEW` | Capability/tool scope data now has focused proof for Everyone, Group, and Host configuration. Runtime resolution checks group/host scoped toolsets before the shared default, the API list response preserves scope_kind/scope_ref for all three forms, and the browser store keeps scoped permission rows distinct for Resources/Settings rendering. | Focused Go MCP/server tests, store/UI tests, typecheck, docs tests, max-lines, diff hygiene, and headed Resources capability proof are green. |
 | Docs/Help | `NEXT` | Update user help and README pointers only where behavior changes; keep the canonical PRD as the single source for the target experience. | Docs contract tests and in-app docs manifest review. |
-| QA/Proof | `NEXT` | Run focused unit/type tests plus live windowed UX inspection for Settings, Resources, Dashboard quick return to Soma, and any affected output/recovery paths. | `npx tsc --noEmit`, focused Vitest/Go tests, docs tests, max-lines, and headed Playwright evidence. |
+| QA/Proof | `IN_REVIEW` | 2026-06-29 live windowed UX inspection covered Dashboard, Resources, Settings, Groups, Docs, Runs, Activity, Memory, and System on the live stack. Resources contributor filters now wrap into readable contained tabs instead of a tiny horizontal strip, and Resources/Capabilities now uses a real `Overview` / `Servers` / `Add MCP` split so server inventory count no longer appears to label the long capability list. The capability overview now appears before optional Soma-command/workflow guidance, with capability details collapsed unless repair guidance matters. The route sweep reports no horizontal overflow, page errors, or failed HTTP responses. Full `interface.test` and direct Vitest suite still hang silently past 5 minutes, so focused Resources/Settings unit proof is accepted for this slice while the global unit harness remains a separate cleanup target. | `uv run inv interface.typecheck`, `uv run inv interface.e2e --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/resources-workspace-files.spec.ts`, `uv run inv interface.e2e --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/mcp-connected-tools.spec.ts`, focused Resources/Settings Vitest, headed `node workspace/tmp/ui_live_review.mjs`, headed `node workspace/tmp/resources_tools_review.mjs`, and `uv run inv interface.restart` route health pass. |
 
 ## Documentation Map
 

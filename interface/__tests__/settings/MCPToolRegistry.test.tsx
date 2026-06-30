@@ -69,7 +69,7 @@ describe('MCPToolRegistry', () => {
         });
     });
 
-    it('renders the installed server list', () => {
+    it('renders capability overview and keeps server inventory behind the Servers tab', () => {
         const initializeStream = vi.fn();
         const fetchMCPActivity = vi.fn();
         const fetchMCPToolSets = vi.fn();
@@ -103,7 +103,7 @@ describe('MCPToolRegistry', () => {
         expect(fetchMCPToolSets).toHaveBeenCalledTimes(1);
         expect(fetchSearchCapability).toHaveBeenCalledTimes(1);
         expect(fetchCapabilities).toHaveBeenCalledTimes(1);
-        expect(screen.getByText('What Soma Can Use')).toBeDefined();
+        expect(screen.getByText('Capability overview')).toBeDefined();
         expect(screen.getByText('Capability permissions')).toBeDefined();
         expect(screen.getByText('Choose where Soma can use connected tools')).toBeDefined();
         expect(screen.getByText('Can use now')).toBeDefined();
@@ -113,15 +113,15 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText(/risk medium/i)).toBeDefined();
         expect(screen.getByText(/approval optional/i)).toBeDefined();
         expect(screen.getByText(/exchange.browser.research.results/i)).toBeDefined();
-        expect(screen.getAllByText(/Inspect capability binding/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Details and binding/i).length).toBeGreaterThan(0);
         expect(screen.getByText('Mycelis Search Capability')).toBeDefined();
         expect(screen.getByText('Soma search is ready')).toBeDefined();
         expect(screen.getByText(/No hosted Brave token required/i)).toBeDefined();
         expect(screen.getByText(/local_api/i)).toBeDefined();
 
-        // "Installed" tab should be active by default, showing server count badge
+        // Overview is active by default; server inventory count is visible on the Servers tab.
         expect(screen.getByText('2')).toBeDefined();
-        fireEvent.click(screen.getByText('Inspect MCP topology'));
+        fireEvent.click(screen.getByRole('button', { name: /Servers\s*2/i }));
         expect(screen.getByTestId('server-card-srv-001')).toBeDefined();
         expect(screen.getByTestId('server-card-srv-002')).toBeDefined();
         expect(screen.getByText('filesystem-server')).toBeDefined();
@@ -148,6 +148,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
+        fireEvent.click(screen.getByRole('button', { name: /^Servers$/i }));
         expect(screen.getByText('MCP registry unreachable')).toBeDefined();
         expect(screen.queryByText('No MCP servers installed.')).toBeNull();
     });
@@ -175,6 +176,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
+        fireEvent.click(screen.getByRole('button', { name: /Servers\s*2/i }));
         expect(screen.getByText(/Recent MCP Activity/i)).toBeDefined();
         expect(screen.getByText(/filesystem-server · read_file/i)).toBeDefined();
         expect(screen.getByText(/Read workspace brief successfully/i)).toBeDefined();
@@ -208,10 +210,10 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText('filesystem-server: write_file')).toBeDefined();
         expect(screen.getByText(/approval required/i)).toBeDefined();
         expect(screen.getAllByText(/workspace files/i).length).toBeGreaterThan(0);
-        expect(screen.getAllByText(/Inspect capability binding/i).length).toBeGreaterThan(0);
-        expect(screen.queryByText('MCP Server Drill-Down')).toBeNull();
-        fireEvent.click(screen.getByText('Inspect MCP topology'));
-        expect(screen.getByText('MCP Server Drill-Down')).toBeDefined();
+        expect(screen.getAllByText(/Details and binding/i).length).toBeGreaterThan(0);
+        expect(screen.queryByTestId('server-card-srv-001')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /Servers\s*2/i }));
+        expect(screen.getByTestId('server-card-srv-001')).toBeDefined();
     });
 
     it('keeps degraded capabilities in the repair queue with recovery guidance', () => {
@@ -284,7 +286,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getByText('Inspect MCP topology'));
+        fireEvent.click(screen.getByRole('button', { name: /Servers\s*2/i }));
         fireEvent.click(screen.getByTestId('delete-srv-001'));
 
         expect(deleteFn).toHaveBeenCalledTimes(1);

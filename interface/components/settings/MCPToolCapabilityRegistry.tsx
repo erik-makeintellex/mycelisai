@@ -27,7 +27,7 @@ export function CapabilityRegistryPanel({
                     </div>
                     <div>
                         <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                            What Soma Can Use
+                            Capability overview
                         </p>
                         <p className="mt-1 text-sm font-semibold text-cortex-text-main">
                             Can use, needs repair, and can request
@@ -40,8 +40,9 @@ export function CapabilityRegistryPanel({
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <SummaryChip label={`${capabilities.length} visible`} />
-                    <SummaryChip label={`${mutatingCount} with writes`} />
+                    <SummaryChip label={`${availableCount} can use now`} />
+                    <SummaryChip label={`${repairCapabilities.length} need repair`} />
+                    <SummaryChip label={`${mutatingCount} can write`} />
                 </div>
             </div>
 
@@ -58,7 +59,7 @@ export function CapabilityRegistryPanel({
                     No capabilities are visible yet.
                 </p>
             ) : (
-                <div className="mt-4 grid gap-3">
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
                     <CapabilitySection title="Can use now" count={availableCapabilities.length}>
                         {availableCapabilities.map((capability) => (
                             <CapabilityCard key={capability.id} capability={capability} />
@@ -108,7 +109,7 @@ function CapabilityCard({ capability }: { capability: CapabilityManifest }) {
 
     return (
         <div className="rounded-lg border border-cortex-border bg-cortex-bg/60 px-3 py-3">
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="flex flex-col gap-2">
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                         <span className={`h-2 w-2 rounded-full ${available ? "bg-cortex-success" : "bg-cortex-warning"}`} />
@@ -129,24 +130,19 @@ function CapabilityCard({ capability }: { capability: CapabilityManifest }) {
                 </div>
             </div>
 
-            <div className="mt-3 grid gap-2 md:grid-cols-3">
-                <CapabilityDetail icon={<Route className="h-3.5 w-3.5" />} label="Outputs" value={outputs.length ? outputs.join(", ") : "ToolResult"} />
-                <CapabilityDetail icon={<Database className="h-3.5 w-3.5" />} label="Destinations / writes" value={writes.length ? writes.join(", ") : "Managed Exchange, run evidence"} />
-                <CapabilityDetail icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Audit" value={capability.audit ?? "required"} />
-            </div>
-
-            <div className="mt-3 grid gap-2 md:grid-cols-3">
-                <CapabilityDetail label="Soma use" value={roles.length === 0 || roles.includes("soma") ? "allowed" : roles.join(", ")} />
-                <CapabilityDetail label="Fallback" value={capability.fallback_behavior ?? "Report a capability blocker and keep the run recoverable."} />
-                <div className="rounded-lg border border-cortex-border bg-cortex-surface px-2.5 py-2">
-                    <details>
-                        <summary className="cursor-pointer text-[9px] font-mono uppercase tracking-wider text-cortex-text-muted">
-                            Inspect capability binding
-                        </summary>
-                        <p className="mt-1 break-words text-[11px] leading-4 text-cortex-text-main">{binding}</p>
-                    </details>
+            <details className="mt-2 rounded-lg border border-cortex-border bg-cortex-surface px-2.5 py-2" open={!available}>
+                <summary className="cursor-pointer text-[9px] font-mono uppercase tracking-wider text-cortex-text-muted">
+                    Details and binding
+                </summary>
+                <div className="mt-2 grid gap-2">
+                    <CapabilityDetail icon={<Route className="h-3.5 w-3.5" />} label="Outputs" value={outputs.length ? outputs.join(", ") : "ToolResult"} />
+                    <CapabilityDetail icon={<Database className="h-3.5 w-3.5" />} label="Writes" value={writes.length ? writes.join(", ") : "Managed Exchange, run evidence"} />
+                    <CapabilityDetail icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Audit" value={capability.audit ?? "required"} />
+                    <CapabilityDetail label="Soma use" value={roles.length === 0 || roles.includes("soma") ? "allowed" : roles.join(", ")} />
+                    <CapabilityDetail label="Fallback" value={capability.fallback_behavior ?? "Report a capability blocker and keep the run recoverable."} />
+                    <CapabilityDetail label="Binding" value={binding} />
                 </div>
-            </div>
+            </details>
         </div>
     );
 }

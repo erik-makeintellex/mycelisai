@@ -56,10 +56,11 @@ Resources is the primary place to inspect what Soma can use, repair missing capa
 
 New-user readiness checks:
 - Capabilities should tell you what Soma can use now, what needs repair, and what can be requested.
-- Installed should tell you whether any MCP servers are connected or whether the first step is **Add MCP Server**.
+- The default Overview tab should tell you what Soma can use now, what needs repair, and what can be requested.
+- Servers should tell you whether any MCP servers are connected or whether the first step is **Add MCP Server**. Its count is server inventory, not the number of capabilities Soma can use.
 - **Add MCP Server** should open the curated library, not a raw JSON/config paste box.
 - Curated entries must name required environment variables without exposing secret values.
-- After install or reapply, return to Installed and confirm the server card, tool list, capability binding, and recent MCP activity are visible.
+- After install or reapply, return to Servers and confirm the server card, tool list, capability binding, and recent MCP activity are visible.
 - If the registry is unreachable, the UI should say that capability/tool readiness could not be confirmed and must not pretend the registry is truly empty.
 
 Current baseline posture:
@@ -69,7 +70,7 @@ Current baseline posture:
 - `artifact-renderer` remains planned
 
 Key outcome:
-Operators should be able to determine "what Soma can currently use" directly from this tab, including what each capability is for, whether it is available, what risk level it has, what outputs it can produce, and where its results appear.
+Operators should be able to determine "what Soma can currently use" directly from this tab. The default view should put web-access status and the capability overview ahead of examples or workflow education. The capability list should stay compact: capability name, purpose, availability, risk, and approval posture first; output destinations, bindings, fallback behavior, and audit details belong behind **Details and binding** unless the capability needs repair. Command examples and workflow education may remain available as expandable guidance, but they should not crowd the main status readout.
 
 Capability manifest expectation:
 - every built-in MCP, external tool, local script, custom connector, or plugin must register as a governed capability before Soma or a team can use it
@@ -93,7 +94,7 @@ Review/edit expectation:
 - the capability view should show manifest identity, input/output schema posture, risk, approval, availability, fallback, allowed roles, and output destinations
 - secrets should appear only as references or redacted values; set or rotate values in `.env` or the configured secret backend
 - use **Add MCP Server** to install, reapply, or edit the curated server shape instead of pasting raw MCP config into the UI
-- after changing structure or secrets, return to Installed and confirm the server card, tool list, and recent MCP activity match the expected shape
+- after changing structure or secrets, return to Servers and confirm the server card, tool list, and recent MCP activity match the expected shape
 
 Current posture:
 - curated library installs are the default path

@@ -34,12 +34,12 @@ const somaToolPrompts = [
 
 export function SomaToolPromptCard() {
     return (
-        <div className="rounded-xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-4">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-primary">
+        <details className="rounded-xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-3">
+            <summary className="cursor-pointer text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-primary">
                 Concrete Soma Commands
-            </p>
-            <p className="mt-1 text-xs leading-5 text-cortex-text-main">
-                These are the phrases the central agent should understand. Answers may run directly; private data, private services, tool assignment, and team launch should ask for confirmation or approval first.
+            </summary>
+            <p className="mt-2 text-xs leading-5 text-cortex-text-main">
+                Optional examples for talking to Soma. Private data, private services, tool assignment, and team launch should ask for confirmation or approval first.
             </p>
             <div className="mt-3 grid gap-2 md:grid-cols-5">
                 {somaToolPrompts.map((item) => {
@@ -63,19 +63,19 @@ export function SomaToolPromptCard() {
                     );
                 })}
             </div>
-        </div>
+        </details>
     );
 }
 
 export function ConnectedToolsWorkflowCard({ isStreamConnected }: { isStreamConnected: boolean }) {
     return (
-        <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
-            <div className="flex items-center gap-2">
+        <details className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-3">
+            <summary className="flex cursor-pointer items-center gap-2">
                 <Activity className="w-4 h-4 text-cortex-primary" />
-                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
                     Capability Workflow
-                </p>
-            </div>
+                </span>
+            </summary>
             <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <WorkflowStep title="1. Add">
                     Install a curated MCP server from Library instead of wiring raw config by hand.
@@ -93,7 +93,7 @@ export function ConnectedToolsWorkflowCard({ isStreamConnected }: { isStreamConn
                     ? "Live activity stream connected."
                     : "Live activity stream is reconnecting. Recent MCP use will appear once the stream is online."}
             </div>
-        </div>
+        </details>
     );
 }
 

@@ -444,11 +444,12 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByText("Mycelis Search Capability")).toBeVisible();
         await expect(page.getByText("Soma search is ready")).toBeVisible();
         await expect(page.getByText("Soma direct: web_search")).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("button", { name: /Servers\s*1/i }));
+        await expect(page.getByText("Installed MCP servers")).toBeVisible();
         await expect(page.getByText("Recent MCP Activity", { exact: true })).toBeVisible();
         await expect(page.getByText("filesystem · read_file")).toBeVisible();
         await expect(page.getByText("Soma used filesystem.read_file while preparing the launch brief.").first()).toBeVisible();
         await expect(page.getByText("Team soma-launch-lane · Agent soma · Run run-launch-brief").first()).toBeVisible();
-        await clickVisibleControl(page, page.getByRole("button", { name: "Inspect MCP topology" }));
         await expect(page.getByText("filesystem").first()).toBeVisible();
         await expect(page.getByText("2 tools")).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /filesystem.*2 tools/i }));
@@ -486,8 +487,8 @@ test.describe("Capabilities MCP workflow", () => {
         expect(activity.server_id || activity.server_name).toBeTruthy();
 
         await openConnectedTools(page);
+        await clickVisibleControl(page, page.getByRole("button", { name: /Servers/i }));
         await expect(page.getByText("Recent MCP Activity", { exact: true })).toBeVisible();
-        await clickVisibleControl(page, page.getByRole("button", { name: "Inspect MCP topology" }));
         await expect(page.getByText(/filesystem · read_file/).first()).toBeVisible({ timeout: 30_000 });
         await expect(page.getByText(`Team ${teamID} · Agent ${agentID}`).first()).toBeVisible();
     });
@@ -517,6 +518,7 @@ test.describe("Capabilities MCP workflow", () => {
 
         await expect(page.getByText("Soma search needs configuration")).toBeVisible();
         await expect(page.getByText("Mycelis Search is disabled.").first()).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("button", { name: /^Servers$/i }));
         await expect(page.getByText("No MCP servers installed.", { exact: true })).toBeVisible({ timeout: 20_000 });
         await expect(page.getByRole("button", { name: "Request capability" })).toBeVisible();
 
