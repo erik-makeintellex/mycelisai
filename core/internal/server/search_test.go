@@ -50,6 +50,14 @@ func TestHandleSearchStatusReportsDirectSomaPath(t *testing.T) {
 	if data["requires_hosted_api_token"] != false {
 		t.Fatalf("requires_hosted_api_token = %v, want false", data["requires_hosted_api_token"])
 	}
+	sources := data["sources"].([]any)
+	if len(sources) != 1 {
+		t.Fatalf("sources = %+v, want one configured source", sources)
+	}
+	source := sources[0].(map[string]any)
+	if source["name"] != "Self-hosted public web" || source["scope_kind"] != "all" || source["auth_scheme"] != "none" {
+		t.Fatalf("source = %+v, want user-readable SearXNG source", source)
+	}
 }
 
 func TestHandleSearchRejectsBadJSON(t *testing.T) {

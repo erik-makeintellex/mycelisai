@@ -232,6 +232,22 @@ export interface SearchCapabilityBlocker {
     next_action: string;
 }
 
+export interface SearchCapabilitySource {
+    id: string;
+    name: string;
+    source_type: string;
+    scope_kind: 'all' | 'group' | 'host' | string;
+    scope_ref?: string;
+    boundary: string;
+    auth_scheme: string;
+    secret_ref?: string;
+    mode: string;
+    sensitivity_class: string;
+    trust_class: string;
+    status: string;
+    recovery?: string;
+}
+
 export interface SearchCapabilityStatus {
     provider: 'disabled' | 'local_sources' | 'searxng' | 'brave' | string;
     enabled: boolean;
@@ -245,4 +261,5 @@ export interface SearchCapabilityStatus {
     max_results: number;
     blocker?: SearchCapabilityBlocker;
     next_actions?: string[];
+    sources?: SearchCapabilitySource[];
 }

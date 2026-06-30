@@ -30,7 +30,7 @@ Connected tools are reviewed through `Resources -> Capabilities`: the user-facin
 
 For web access specifically, use `Resources -> Capabilities -> Web access setup`. That lane should show whether Soma currently has local-source search, public-web search, and direct `web_search` available. Use **Add web capability** from that lane to open the MCP library filtered toward `fetch`, SearXNG/local API, Brave, or other web/search providers. Built-in Mycelis `web_search` does not depend on `fetch`; add or repair `fetch` when users need Soma or a team to retrieve a specific supplied URL.
 
-Search sources should also support client-owned data: private docs, customer portals, repositories, issue trackers, file stores, intranet search, or SaaS knowledge bases. Use **Add search source** to name the source, choose type, provide the base URL/endpoint, choose auth scheme, select a secret reference, scope it to Everyone/Group/Host, and confirm sensitivity/trust defaults. Raw tokens stay in `.env` or the configured secret backend.
+Search sources should also support client-owned data: private docs, customer portals, repositories, issue trackers, file stores, intranet search, or SaaS knowledge bases. Current Capabilities can show registry-preview sources Soma may use, including source boundary, scope, auth scheme, sensitivity/trust, status, and recovery. The next full registry step is **Add search source**: name the source, choose type, provide the base URL/endpoint, choose auth scheme, select a secret reference, scope it to Everyone/Group/Host, and confirm sensitivity/trust defaults. Raw tokens stay in `.env` or the configured secret backend.
 
 ---
 

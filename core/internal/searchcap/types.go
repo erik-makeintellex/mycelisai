@@ -68,12 +68,29 @@ type Status struct {
 	DisclosureMode            string   `json:"disclosure_mode"`
 	Blocker                   *Blocker `json:"blocker,omitempty"`
 	NextActions               []string `json:"next_actions,omitempty"`
+	Sources                   []Source `json:"sources,omitempty"`
 }
 
 type Blocker struct {
 	Code       string `json:"code"`
 	Message    string `json:"message"`
 	NextAction string `json:"next_action"`
+}
+
+type Source struct {
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	SourceType       string `json:"source_type"`
+	ScopeKind        string `json:"scope_kind"`
+	ScopeRef         string `json:"scope_ref,omitempty"`
+	Boundary         string `json:"boundary"`
+	AuthScheme       string `json:"auth_scheme"`
+	SecretRef        string `json:"secret_ref,omitempty"`
+	Mode             string `json:"mode"`
+	SensitivityClass string `json:"sensitivity_class"`
+	TrustClass       string `json:"trust_class"`
+	Status           string `json:"status"`
+	Recovery         string `json:"recovery,omitempty"`
 }
 
 type Result struct {

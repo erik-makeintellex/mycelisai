@@ -118,6 +118,9 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText('Soma search is ready')).toBeDefined();
         expect(screen.getByText(/No hosted Brave token required/i)).toBeDefined();
         expect(screen.getByText(/local_api/i)).toBeDefined();
+        expect(screen.getByText('Search sources Soma can use')).toBeDefined();
+        expect(screen.getByText('Self-hosted public web')).toBeDefined();
+        expect(screen.getByText(/self-hosted SearXNG endpoint/i)).toBeDefined();
 
         // Overview is active by default; server inventory count is visible on the Servers tab.
         expect(screen.getByText('2')).toBeDefined();

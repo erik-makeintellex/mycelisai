@@ -41,12 +41,12 @@ User guidance rules:
 
 ## Repo Guidance
 
-These are the active authority surfaces for contributors changing or reviewing the repo:
+These are the active contributor support surfaces for changing or reviewing the repo. Product and architecture authority stays in the Canonical PRD unless a support doc is explicitly referenced from it.
 
 - **Repository Entry Point**: `../README.md`
 - **Operations**: `./architecture/OPERATIONS.md`
 - **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
-- **Cognitive Architecture**: `./COGNITIVE_ARCHITECTURE.md`
+- **Cognitive Architecture Reference**: `./COGNITIVE_ARCHITECTURE.md`
 - **API Reference**: `./API_REFERENCE.md`
 - **Logging Standard**: `./logging.md`
 - **Ops README**: `../ops/README.md`

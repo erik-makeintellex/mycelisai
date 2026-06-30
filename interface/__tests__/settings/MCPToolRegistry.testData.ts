@@ -55,4 +55,16 @@ export const readySearchCapability: SearchCapabilityStatus = {
     requires_hosted_api_token: false,
     max_results: 8,
     next_actions: ['Ask Soma to search the public web through the self-hosted SearXNG provider.'],
+    sources: [{
+        id: 'searxng',
+        name: 'Self-hosted public web',
+        source_type: 'public_web',
+        scope_kind: 'all',
+        boundary: 'self-hosted SearXNG endpoint',
+        auth_scheme: 'none',
+        mode: 'live',
+        sensitivity_class: 'public',
+        trust_class: 'bounded_external',
+        status: 'available',
+    }],
 };

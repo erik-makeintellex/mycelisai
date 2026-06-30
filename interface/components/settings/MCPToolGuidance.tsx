@@ -164,6 +164,7 @@ export function WebAccessSetupCard({
                 <CapabilityPill active={hasLocalSearch} label="Local Mycelis sources" />
                 <CapabilityPill active={hasPublicWeb} label="Public web provider" />
             </div>
+            <SearchSourceList sources={status?.sources ?? []} />
             <p className="mt-3 text-xs leading-5 text-cortex-text-main">
                 {nextStep}
             </p>
@@ -238,6 +239,32 @@ function CapabilityPill({ active, label }: { active: boolean; label: string }) {
     return (
         <div className={`rounded-lg border px-3 py-2 text-[11px] font-mono ${active ? "border-cortex-success/25 bg-cortex-success/10 text-cortex-text-main" : "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted"}`}>
             {label}
+        </div>
+    );
+}
+
+function SearchSourceList({ sources }: { sources: NonNullable<SearchCapabilityStatus["sources"]> }) {
+    if (sources.length === 0) return null;
+    return (
+        <div className="mt-3 rounded-lg border border-cortex-border bg-cortex-bg/60 p-3">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                Search sources Soma can use
+            </p>
+            <div className="mt-2 grid gap-2">
+                {sources.slice(0, 2).map((source) => (
+                    <div key={source.id} className="rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-cortex-text-main">{source.name}</span>
+                            <span className="rounded-full border border-cortex-border bg-cortex-bg px-2 py-0.5 text-[10px] font-mono uppercase text-cortex-text-muted">
+                                {source.status}
+                            </span>
+                        </div>
+                        <p className="mt-1 text-[11px] leading-4 text-cortex-text-muted">
+                            {source.boundary} · {source.scope_kind === "all" ? "Everyone" : source.scope_kind} · auth: {source.auth_scheme}
+                        </p>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

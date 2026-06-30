@@ -261,7 +261,7 @@ Non-goals for MVP:
 | P0.5 | OutcomeProject and TeamRegistry | IN_REVIEW | Confirmed work writes durable project/team ownership and Vault summaries. |
 | P0.6 | Output packages and Vault | IN_REVIEW | Deliverables open cleanly; source/intermediate outputs are opt-in. |
 | P0.7 | Capability settings | ACTIVE | Capabilities can be all-work, grouped, or targeted-host scoped with common choices, inspectable refs, and repair paths. |
-| P0.7a | Search source registry | NEXT | Web, local, and client-owned authenticated data sources can be registered, scoped, searched, cited, and recovered through Soma without exposing raw credentials. |
+| P0.7a | Search source registry | ACTIVE | Registry-preview sources are visible in search status and Resources; persisted add/edit for web, local, and authenticated client-owned sources is next. |
 | P0.8 | Run receipts and recovery | IN_REVIEW | Receipts explain outcome, proof, failure, trusted state, and next safe action. |
 | P0.9 | Full journey proof | IN_REVIEW | Headed and headless proof cover ask through revisit. |
 | P0.10 | Worker execution library | ACTIVE | Agentry can call one worker interface while central execution remains default and Hermes-compatible execution stays adapter-based. |
