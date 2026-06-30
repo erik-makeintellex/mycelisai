@@ -104,7 +104,7 @@ Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity
 | **Agent Catalogue** | | |
 | `/api/v1/catalogue/agents` | GET/POST | List/create agent blueprints |
 | `/api/v1/catalogue/agents/{id}` | PUT/DELETE | Update/delete agent blueprint |
-| **Template Marketplace (Planned V7.x)** | | |
+| **Template Marketplace (Planned)** | | |
 | `/api/v1/template-market/sources` | GET/POST | List/register marketplace sources (clawhub/private hubs) |
 | `/api/v1/template-market/sources/{source_id}` | PATCH | Update source credentials/status |
 | `/api/v1/template-market/sources/{source_id}/probe` | POST | Probe source connectivity/auth |
@@ -196,7 +196,7 @@ Memory/governance note:
 | `/api/v1/host/status` | GET | Local host actuation status (OS/arch/workspace + effective local command allowlist) |
 | `/api/v1/host/actions` | GET | List host actions available for invocation (currently `local-command`) |
 | `/api/v1/host/actions/{id}/invoke` | POST | Invoke host action by ID. V0 supports allowlisted no-shell local commands only |
-| **Mission Runs & Events (V7)** | | |
+| **Mission Runs & Events** | | |
 | `/api/v1/runs` | GET | List recent runs across all missions — status, timing, trigger source |
 | `/api/v1/runs/{id}/events` | GET | Full event timeline for a run (MissionEventEnvelope records) |
 | `/api/v1/runs/{id}/chain` | GET | Causal chain — parent run → event → trigger → child run traversal |

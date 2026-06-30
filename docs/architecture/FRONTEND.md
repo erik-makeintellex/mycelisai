@@ -33,8 +33,8 @@
 Primary app layout is implemented in `interface/app/(app)/layout.tsx` and `interface/components/shell/ShellLayout.tsx`.
 
 Release-candidate MVP note:
-- default operator navigation keeps the natural work-support paths visible: `Soma`, `Groups`, `Resources`, `Docs`, `Status`, and `Settings` stay visible by default, while `Activity/Runs`, `Memory`, and `System` remain Admin tools
-- direct visits to Admin tools routes must show an explicit Admin tools gate when Admin tools are off, and the gate must provide a reliable same-route release path rather than trapping the operator behind hidden navigation
+- default operator navigation keeps the natural work-support paths visible: `Soma`, `Groups`, `Resources`, and `Docs`; `Status` and `Settings` remain reachable support controls
+- `Activity/Runs`, `Memory`, `System`, and deeper inspect routes remain Admin tools; direct visits must show an explicit same-route release gate when Admin tools are off
 
 | Shell area | Component | Purpose |
 | --- | --- | --- |
@@ -240,7 +240,7 @@ Required proof for UI-affecting changes:
 3. Playwright flow proof for user-critical paths (Workspace, automations, degraded/recovery)
 4. live-backend Playwright proof when proxy/back-end contract is touched
 
----
+Use focused component and browser proof for the touched surface when the global Interface unit harness is under active cleanup or hangs on unrelated legacy suites. Do not use a focused pass to hide a touched failure: record the global harness issue in `.state/V8_DEV_STATE.md`, keep the focused proof named, and schedule harness cleanup as its own slice.
 
 ## 10. Development Strategy (Frontend-Facing)
 
@@ -264,10 +264,7 @@ Scope:
 - keep MCP tool registry surfaces aligned to the curated-library install contract and disabled raw-admin boundary
 - keep API endpoint usage aligned with backend route ownership
 
-Proof targets:
-- `uv run inv interface.test`
-- `cd interface && npx vitest run --reporter=dot`
-- `uv run inv interface.build`
+Proof targets: focused Vitest for touched store/API slices; `uv run inv interface.test` and `cd interface && npx vitest run --reporter=dot` when the global harness is healthy; `uv run inv interface.build`.
 
 ### 10.3 Stream C - Slice 4 complexity reduction (`REQUIRED`)
 
