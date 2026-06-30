@@ -39,7 +39,8 @@ core/bin/
 # Project specific
 *.db
 *.sqlite3
-.state/
+.state/*
+!.state/V8_DEV_STATE.md
 postgres-data/
 nats-data/
 .build/

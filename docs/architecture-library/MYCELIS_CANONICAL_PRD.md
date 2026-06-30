@@ -103,15 +103,7 @@ You can keep talking here while updates arrive.
 
 The defining product abstraction is the Outcome. Deliverables, projects, operations, proof, recovery, history, continuity, and active lanes belong to Outcomes. Runs, teams, capabilities, transport, storage, and event correlation support Outcomes. The Outcome never serves the runtime. Outputs are durable product objects, not transient chat text. They may include apps, files, plans, reports, media, reviews, proof bundles, deployment results, or retained learning candidates.
 
-Every user-facing output package should expose:
-
-- clear title and outcome state
-- primary open action for the deliverable
-- folder or data-root access where safe
-- conversational reply action that returns the output reference to Soma for updates, alternates, downstream generation, or team handoff
-- proof or receipt link
-- recovery state if degraded
-- source/intermediate-output visibility only as an opt-in
+Every user-facing output package should expose clear title/state, primary open action, safe folder or data-root access, conversational reply action for updates/alternates/downstream team handoff, proof or receipt link, degraded recovery state, and source/intermediate-output visibility only as an opt-in.
 
 Outcome Vault is the persistent delivery/revisit concept, but it should open as an overlay by default. It should show saved results, work in progress, scheduled/service work, and recovery items without permanently taking layout width from Soma.
 
@@ -137,15 +129,9 @@ Capability configuration must support three scopes:
 
 The default configuration path should start from common capability choices rather than raw tool references. Operators should be able to choose readable intents such as Workspace files, Web research, Team coordination, or Local host/media, then set whether the permission applies to everyone, one Outcome/group lane, or one host. Raw MCP/tool refs remain visible for inspection and advanced editing, but they are not the first thing a user must understand.
 
-Search is a governed capability family, not only public web search. Mycelis must support a Search Source Registry where operators can add sources that Soma may search when allowed:
+Search is a governed capability family, not only public web search. Mycelis must support a Search Source Registry where operators can add sources Soma may search when allowed: built-in Mycelis/local search; public web through self-hosted SearXNG, operator-owned local APIs, or optional hosted providers; explicit URL retrieval through governed fetch; authenticated URL/API sources such as docs sites, customer portals, SaaS knowledge bases, issue trackers, repositories, file stores, or internal search endpoints; and future dedicated connectors such as GitHub, Slack, Notion, Confluence, SharePoint, Google Drive, Postgres, CRM, accounting, or ticketing systems.
 
-- built-in Mycelis/local source search
-- public web search through configured providers such as self-hosted SearXNG, operator-owned local APIs, or optional hosted providers
-- explicit URL retrieval through a governed fetch capability
-- authenticated URL/API sources such as documentation sites, customer portals, SaaS knowledge bases, issue trackers, repositories, file stores, or internal search endpoints
-- future dedicated connectors for systems such as GitHub, Slack, Notion, Confluence, SharePoint, Google Drive, Postgres, CRM, accounting, or ticketing systems
-
-Authenticated sources must use secret references, not raw tokens in UI, logs, state files, docs, or capability manifests. The first supported shape should be standard web token authentication: bearer token or API-token header, optional query/header token placement when the service requires it, and OAuth2/client-credential style metadata when available. Each source needs a plain name, source type, base URL or endpoint, allowed domains/path boundary, auth scheme, secret reference, scope (`Everyone`, `Group`, or `Host`), sensitivity/trust defaults, index/live-search mode, and recovery posture. Soma should explain which configured sources it used, cite or reference them in the trust package, and ask for approval before searching sensitive/private sources when policy requires it.
+Authenticated sources must use secret references, not raw tokens in UI, logs, state files, docs, or capability manifests. The first supported shape should be bearer/API-token headers, service-required query/header token placement only when necessary, and OAuth2/client-credential metadata where available. Each source needs a plain name, source type, endpoint, domain/path boundary, auth scheme, secret reference, scope (`Everyone`, `Group`, or `Host`), sensitivity/trust defaults, index/live-search mode, and recovery posture. Soma should name configured sources used, cite or reference them in the trust package, and ask for approval before searching sensitive/private sources when policy requires it.
 
 ## Runtime Architecture
 

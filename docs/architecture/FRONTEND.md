@@ -53,17 +53,22 @@ Implementation note:
 
 ## 3. Full GUI Route Set
 
-Current `page.tsx` route count: `22`.
+Current `page.tsx` route count: `28`.
 
 ### 3.1 Primary workflow routes
 
 | Route | Source | Primary surface |
 | --- | --- | --- |
-| `/` | `app/(marketing)/page.tsx` | Product landing |
-| `/dashboard` | `app/(app)/dashboard/page.tsx` | Soma intent start and AI Organization entry flow |
+| `/` | `app/(marketing)/page.tsx` | Redirect to Soma workspace |
+| `/login` | `app/login/page.tsx` | Authentication entry |
+| `/access-denied` | `app/(app)/access-denied/page.tsx` | Access recovery guidance |
+| `/dashboard` | `app/(app)/dashboard/page.tsx` | Soma threaded workspace |
 | `/organizations/[id]` | `app/(app)/organizations/[id]/page.tsx` | Soma-primary AI Organization workspace |
 | `/automations` | `app/(app)/automations/page.tsx` | Automation hub + tabs |
 | `/resources` | `app/(app)/resources/page.tsx` | Resources (output files, capabilities, exchange, context, AI engines, roles) |
+| `/groups` | `app/(app)/groups/page.tsx` | Collaboration lanes, workflow logs, retained outputs |
+| `/teams` | `app/(app)/teams/page.tsx` | Team workspace and review queue |
+| `/teams/create` | `app/(app)/teams/create/page.tsx` | Guided Soma team creation |
 | `/memory` | `app/(app)/memory/page.tsx` | Advanced memory explorer |
 | `/docs` | `app/(app)/docs/page.tsx` | In-app markdown docs browser |
 | `/system` | `app/(app)/system/page.tsx` | Advanced diagnostics and quick checks |
@@ -73,19 +78,16 @@ Current `page.tsx` route count: `22`.
 
 | Route | Source | Primary surface |
 | --- | --- | --- |
-| `/groups` | `app/(app)/groups/page.tsx` | Group operations and retained collaboration outputs |
+| `/activity` | `app/(app)/activity/page.tsx` | Advanced activity stream |
 | `/runs` | `app/(app)/runs/page.tsx` | Run list and status summary |
 | `/runs/[id]` | `app/(app)/runs/[id]/page.tsx` | Run conversation/events tabs |
+| `/runs/[id]/chain` | `app/(app)/runs/[id]/chain/page.tsx` | Run chain visualization |
 | `/missions/[id]/teams` | `app/(app)/missions/[id]/teams/page.tsx` | Mission team actuation view |
 | `/settings/tools` | `app/(app)/settings/tools/page.tsx` | Redirect into Settings tools tab |
 
 ### 3.3 In-app docs API routes
 
-| Route | Source | Purpose |
-| --- | --- | --- |
-| `/docs-api` | `app/docs-api/route.ts` | Docs manifest for in-app browser |
-| `/docs-api/[slug]` | `app/docs-api/[slug]/route.ts` | Slug-validated doc content |
-| `/api/chat` | `app/(app)/api/chat/route.ts` | Secondary proxy path to `/api/v1/chat` |
+Docs and proxy support routes live outside the `page.tsx` count: `/docs-api`, `/docs-api/[slug]`, and `/api/chat`.
 
 ### 3.4 Legacy redirect routes (still shipped)
 

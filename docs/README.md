@@ -59,6 +59,7 @@ The active architecture library is intentionally singular. It is not a holding a
 
 - **Architecture Docs Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **Mycelis Canonical PRD**: `./architecture-library/MYCELIS_CANONICAL_PRD.md`
+- **Worker Library Source Map**: `./architecture-library/WORKER_LIBRARY_SOURCE_MAP.md`
 
 ## Testing And Release
 

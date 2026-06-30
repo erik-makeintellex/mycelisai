@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-06-28
+> Last Updated: 2026-06-30
 > Purpose: Keep architecture authority singular and current.
 
 ## TOC

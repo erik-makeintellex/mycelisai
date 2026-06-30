@@ -70,7 +70,7 @@ def test_user_workflow_specs_match_current_shared_trial_expectations():
     assert "Use the self-hosted Kubernetes lane with an explicit Windows AI endpoint" not in workflow_specs["direct"]
 
     assert "Create temporary workflow group" in workflow_specs["compact"]
-    assert "Archive temporary group" in workflow_specs["compact"]
+    assert "Clear group from active lanes" in workflow_specs["compact"]
     assert "Validation checklist" in workflow_specs["compact"]
     assert "Risk review" in workflow_specs["compact"]
 
@@ -111,7 +111,7 @@ def test_soma_web_capability_contract_uses_governed_mycelis_search_and_fetch():
     assert 'tool_set: "research"' in library
     assert "BRAVE_API_KEY" in library
 
-    assert "`brave-search` provides governed web search" in resources_doc
+    assert "`brave-search` provides optional MCP-governed web search" in resources_doc
     assert "`web_search` for search intent" in soma_doc
     assert "MYCELIS_SEARCH_LOCAL_API_ENDPOINT" in soma_doc
 

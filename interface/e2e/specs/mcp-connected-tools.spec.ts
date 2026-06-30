@@ -456,12 +456,10 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByText("Live Usage")).toBeVisible();
         await expect(page.getByText("list_directory", { exact: true }).last()).toBeVisible();
         await expect(page.getByText("read_file", { exact: true }).last()).toBeVisible();
-
         await clickVisibleControl(page, page.getByRole("button", { name: "Request capability" }));
         await expect(page.getByText("Add MCP Server")).toBeVisible();
         await expect(page.getByText("Fetch", { exact: true })).toBeVisible();
         await expect(page.getByText("Fetch web pages for research-backed agent work.")).toBeVisible();
-
         await clickVisibleControl(page, page.getByRole("button", { name: "INSTALL", exact: true }));
         await expect(page.getByText("Installed fetch. Check the connected server card and live MCP activity below.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText("fetch").first()).toBeVisible();

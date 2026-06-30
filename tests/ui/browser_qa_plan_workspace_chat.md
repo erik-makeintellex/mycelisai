@@ -4,7 +4,7 @@
 Mycelis Cortex V8 Workspace (`/dashboard`)
 
 ## Context and Strategy
-Existing Playwright suites (`workspace-live-backend`, `proposals`, `error-scenarios`, `v7-operational-ux`) already cover Launch Crew proposal flows, degraded-state UI, and proxy regressions. V8 delivery now expects governed inline chat behavior backed by the same template → instantiation → inheritance → precedence contract, so this manual pass concentrates on the **inline Soma chat** happy paths and edge cases that the automated suites only sample.
+Existing Playwright suites (`workspace-live-backend`, `proposals`, `error-scenarios`, `desktop-mobile-compression`, and `soma-proposal-mode`) already cover retained output review, proposal flows, degraded-state UI, layout reachability, and proxy regressions. Current delivery expects governed inline chat behavior backed by the same template → instantiation → inheritance → precedence contract, so this manual pass concentrates on the **inline Soma chat** happy paths and edge cases that the automated suites only sample.
 
 The focus is validating the four canonical terminal states (`answer`, `proposal`, `execution_result`, `blocker`) and confirming Soma remains direct-first unless the operator explicitly triggers a council consultation.
 
