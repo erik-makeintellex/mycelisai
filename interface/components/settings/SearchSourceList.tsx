@@ -117,8 +117,11 @@ function sourceReadinessLabel(source: SearchCapabilitySource): string {
     if (!sourceIsReady(source.status)) {
         return source.recovery || "Repair this source before Soma can use it.";
     }
+    if (sourceUsesResolvableToken(source)) {
+        return "Ready after Core resolves the saved secret reference.";
+    }
     if (sourceAuthNeedsAdapter(source)) {
-        return "Registered safely. Soma needs a governed auth adapter before it can search this source.";
+        return "Registered safely. Soma needs a matching auth adapter before it can search this source.";
     }
     return "Ready for Soma to use when this scope is allowed.";
 }
@@ -133,7 +136,11 @@ function sourceIsReady(status: string): boolean {
 }
 
 function sourceAuthNeedsAdapter(source: SearchCapabilitySource): boolean {
-    return source.auth_scheme !== "none" && source.auth_scheme !== "service_managed";
+    return source.auth_scheme !== "none" && source.auth_scheme !== "service_managed" && !sourceUsesResolvableToken(source);
+}
+
+function sourceUsesResolvableToken(source: SearchCapabilitySource): boolean {
+    return source.auth_scheme === "api_token" || source.auth_scheme === "bearer_token";
 }
 
 function scopeLabel(source: SearchCapabilitySource): string {

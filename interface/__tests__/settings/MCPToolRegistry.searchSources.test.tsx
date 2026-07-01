@@ -102,7 +102,7 @@ describe('MCPToolRegistry search sources', () => {
 
         await waitFor(() => expect(screen.getByText(/Added Team research API/i)).toBeDefined());
         await waitFor(() => expect(screen.getByText('Team research API')).toBeDefined());
-        expect(screen.getByText(/Soma needs a governed auth adapter before it can search this source/i)).toBeDefined();
+        expect(screen.getByText(/Ready after Core resolves the saved secret reference/i)).toBeDefined();
 
         const postCall = mockFetch.mock.calls.find(([url, init]) => (
             url === '/api/v1/search/sources' && (init as RequestInit | undefined)?.method === 'POST'

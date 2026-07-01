@@ -17,10 +17,10 @@ func (s *Service) searchLocalAPI(ctx context.Context, req Request, resp Response
 		resp.Blocker = &Blocker{Code: "missing_local_api_endpoint", Message: "Local API search is selected but MYCELIS_SEARCH_LOCAL_API_ENDPOINT is not configured.", NextAction: "Set MYCELIS_SEARCH_LOCAL_API_ENDPOINT to the self-hosted HTTP search endpoint."}
 		return resp, nil
 	}
-	return s.searchLocalAPIEndpoint(ctx, req, resp, s.cfg.LocalAPIEndpoint)
+	return s.searchLocalAPIEndpoint(ctx, req, resp, s.cfg.LocalAPIEndpoint, nil)
 }
 
-func (s *Service) searchLocalAPIEndpoint(ctx context.Context, req Request, resp Response, rawEndpoint string) (Response, error) {
+func (s *Service) searchLocalAPIEndpoint(ctx context.Context, req Request, resp Response, rawEndpoint string, source *Source) (Response, error) {
 	endpoint, err := url.Parse(rawEndpoint)
 	if err != nil {
 		return resp, fmt.Errorf("invalid local API search endpoint: %w", err)
@@ -54,6 +54,15 @@ func (s *Service) searchLocalAPIEndpoint(ctx context.Context, req Request, resp 
 	setHeader(httpReq, "X-Mycelis-Team-ID", req.TeamID)
 	setHeader(httpReq, "X-Mycelis-Agent-ID", req.AgentID)
 	setHeader(httpReq, "X-Mycelis-Run-ID", req.RunID)
+	if source != nil && selectedSourceUsesBearerToken(*source) {
+		if token, blocker := resolveSelectedSourceBearerToken(*source); blocker != nil {
+			resp.Status = "blocked"
+			resp.Blocker = blocker
+			return resp, nil
+		} else if token != "" {
+			httpReq.Header.Set("Authorization", "Bearer "+token)
+		}
+	}
 	res, err := s.client.Do(httpReq)
 	if err != nil {
 		resp.Status = "blocked"

@@ -53,7 +53,7 @@ func TestServiceSelectedSourceRoutesToRegisteredLocalAPIEndpoint(t *testing.T) {
 	}
 }
 
-func TestServiceSelectedSourceBlocksOutOfScopeAndAuthAdapter(t *testing.T) {
+func TestServiceSelectedSourceBlocksOutOfScopeAndMissingSecret(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
 	groupSource, err := svc.AddSource(SourceInput{
 		Name:       "Group docs",
@@ -89,6 +89,76 @@ func TestServiceSelectedSourceBlocksOutOfScopeAndAuthAdapter(t *testing.T) {
 		t.Fatalf("AddSource auth: %v", err)
 	}
 	resp, err = svc.Search(context.Background(), Request{Query: "docs", SourceID: authSource.ID})
+	if err != nil {
+		t.Fatalf("Search auth: %v", err)
+	}
+	if resp.Blocker == nil || resp.Blocker.Code != "search_source_secret_missing" {
+		t.Fatalf("auth blocker = %+v", resp.Blocker)
+	}
+}
+
+func TestServiceSelectedSourceAppliesBearerSecretRefForLocalAPI(t *testing.T) {
+	t.Setenv("PRIVATE_SEARCH_TOKEN", "test-private-token")
+	svc := NewService(Config{Provider: ProviderDisabled, MaxResults: 5}, nil, nil)
+	source, err := svc.AddSource(SourceInput{
+		Name:       "Private API",
+		Provider:   "local_api",
+		Endpoint:   "http://private.example.test/api",
+		Boundary:   "private search",
+		AuthScheme: "api_token",
+		SecretRef:  "env:PRIVATE_SEARCH_TOKEN",
+		Status:     "available",
+	})
+	if err != nil {
+		t.Fatalf("AddSource auth: %v", err)
+	}
+	svc.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if got := r.Header.Get("Authorization"); got != "Bearer test-private-token" {
+			t.Fatalf("Authorization = %q", got)
+		}
+		if strings.Contains(r.URL.String(), "test-private-token") {
+			t.Fatalf("secret leaked into url: %s", r.URL.String())
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader(`{"results":[{"title":"Private","url":"https://example.test/private","snippet":"Private result"}]}`)),
+		}, nil
+	})}
+
+	resp, err := svc.Search(context.Background(), Request{Query: "private docs", SourceID: source.ID})
+	if err != nil {
+		t.Fatalf("Search auth: %v", err)
+	}
+	if resp.Status != "ok" || resp.Count != 1 {
+		t.Fatalf("resp = %+v", resp)
+	}
+	if body := strings.Join([]string{resp.Results[0].Title, resp.Results[0].URL, resp.Results[0].Snippet}, " "); strings.Contains(body, "test-private-token") {
+		t.Fatalf("secret leaked into response: %s", body)
+	}
+}
+
+func TestServiceSelectedSourceBlocksBearerSecretRefForSearXNG(t *testing.T) {
+	t.Setenv("PRIVATE_SEARCH_TOKEN", "test-private-token")
+	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
+	source, err := svc.AddSource(SourceInput{
+		Name:       "Private SearXNG",
+		Provider:   "searxng",
+		Endpoint:   "http://searxng.example.test",
+		Boundary:   "private web search",
+		AuthScheme: "bearer_token",
+		SecretRef:  "PRIVATE_SEARCH_TOKEN",
+		Status:     "available",
+	})
+	if err != nil {
+		t.Fatalf("AddSource auth: %v", err)
+	}
+	svc.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		t.Fatalf("SearXNG should not be called when source auth is unsupported")
+		return nil, nil
+	})}
+
+	resp, err := svc.Search(context.Background(), Request{Query: "private docs", SourceID: source.ID})
 	if err != nil {
 		t.Fatalf("Search auth: %v", err)
 	}
