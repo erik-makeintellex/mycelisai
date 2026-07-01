@@ -1,13 +1,18 @@
 import React from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import type { SearchCapabilitySource } from "@/store/useCortexStore";
 
 export function SearchSourceList({
     sources,
     compact = false,
+    onDeleteSource,
+    onEditSource,
     title = "Search sources Soma can use",
 }: {
     sources: SearchCapabilitySource[];
     compact?: boolean;
+    onDeleteSource?: (sourceId: string, sourceName: string) => Promise<boolean>;
+    onEditSource?: (source: SearchCapabilitySource) => void;
     title?: string;
 }) {
     if (sources.length === 0) return null;
@@ -21,9 +26,31 @@ export function SearchSourceList({
                     <div key={source.id} className="rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <span className="text-xs font-semibold text-cortex-text-main">{source.name}</span>
-                            <span className="rounded-full border border-cortex-border bg-cortex-bg px-2 py-0.5 text-[10px] font-mono uppercase text-cortex-text-muted">
-                                {sourceStatusLabel(source.status)}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                {source.managed && !compact && onEditSource && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onEditSource(source)}
+                                        className="inline-flex items-center gap-1 rounded-full border border-cortex-border bg-cortex-bg px-2 py-0.5 text-[10px] font-semibold text-cortex-text-muted transition hover:text-cortex-primary"
+                                    >
+                                        <Pencil className="h-3 w-3" />
+                                        Edit
+                                    </button>
+                                )}
+                                {source.managed && !compact && onDeleteSource && (
+                                    <button
+                                        type="button"
+                                        onClick={() => void onDeleteSource(source.id, source.name)}
+                                        className="inline-flex items-center gap-1 rounded-full border border-cortex-warning/30 bg-cortex-warning/10 px-2 py-0.5 text-[10px] font-semibold text-cortex-warning transition hover:bg-cortex-warning/20"
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                        Remove
+                                    </button>
+                                )}
+                                <span className="rounded-full border border-cortex-border bg-cortex-bg px-2 py-0.5 text-[10px] font-mono uppercase text-cortex-text-muted">
+                                    {sourceStatusLabel(source.status)}
+                                </span>
+                            </div>
                         </div>
                         <p className="mt-1 text-[11px] leading-4 text-cortex-text-muted">
                             {sourceTypeLabel(source.source_type)} · {scopeLabel(source)} · {authLabel(source)}

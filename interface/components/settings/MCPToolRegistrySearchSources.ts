@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { extractApiData } from "@/lib/apiContracts";
 import { normalizeSearchSourcesPayload } from "@/store/cortexStoreMcpCapabilities";
 import type { SearchCapabilitySource, SearchCapabilityStatus } from "@/store/useCortexStore";
-import type { SearchSourceDraft } from "./SearchSourceRegistryCard";
+import type { SearchSourceDraft } from "./SearchSourceForm";
 
 export function useSearchSourceRegistry(
     searchSources: SearchCapabilityStatus["sources"] | undefined,
@@ -71,6 +71,56 @@ export function useSearchSourceRegistry(
         return false;
     }, [fetchOptionalSearchSources, fetchSearchCapability]);
 
+    const updateSearchSource = useCallback(async (sourceId: string, input: SearchSourceDraft): Promise<boolean> => {
+        setIsAddingSearchSource(true);
+        setSearchSourcesError(null);
+        setSearchSourceNotice(null);
+        try {
+            const res = await fetch(`/api/v1/search/sources/${encodeURIComponent(sourceId)}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(input),
+            });
+            if (res.ok) {
+                setSearchSourceNotice(`Updated ${input.name}.`);
+                await fetchOptionalSearchSources();
+                await fetchSearchCapability();
+                return true;
+            }
+            setSearchSourcesError(await responseText(res) || `Search source was not updated (HTTP ${res.status})`);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "network error";
+            setSearchSourcesError(`Search source could not be updated (${message})`);
+        } finally {
+            setIsAddingSearchSource(false);
+        }
+        return false;
+    }, [fetchOptionalSearchSources, fetchSearchCapability]);
+
+    const deleteSearchSource = useCallback(async (sourceId: string, sourceName: string): Promise<boolean> => {
+        setIsAddingSearchSource(true);
+        setSearchSourcesError(null);
+        setSearchSourceNotice(null);
+        try {
+            const res = await fetch(`/api/v1/search/sources/${encodeURIComponent(sourceId)}`, {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                setSearchSourceNotice(`Removed ${sourceName}.`);
+                await fetchOptionalSearchSources();
+                await fetchSearchCapability();
+                return true;
+            }
+            setSearchSourcesError(await responseText(res) || `Search source was not removed (HTTP ${res.status})`);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "network error";
+            setSearchSourcesError(`Search source could not be removed (${message})`);
+        } finally {
+            setIsAddingSearchSource(false);
+        }
+        return false;
+    }, [fetchOptionalSearchSources, fetchSearchCapability]);
+
     const visibleSearchSources = useMemo(
         () => mergeSearchSources(searchSources ?? [], registrySearchSources),
         [registrySearchSources, searchSources],
@@ -78,12 +128,14 @@ export function useSearchSourceRegistry(
 
     return {
         addSearchSource,
+        deleteSearchSource,
         fetchOptionalSearchSources,
         isAddingSearchSource,
         isFetchingSearchSources,
         searchSourceNotice,
         searchSourceRegistrySupported,
         searchSourcesError,
+        updateSearchSource,
         visibleSearchSources,
     };
 }

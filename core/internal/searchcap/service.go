@@ -99,6 +99,9 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 	if s == nil {
 		return disabledResponse(resp), nil
 	}
+	if routed, handled, err := s.routeSelectedSource(ctx, req, resp); handled || err != nil {
+		return routed, err
+	}
 	if isPublicWebProvider(s.cfg.Provider) && normalizeSourceScope(req.SourceScope) != "local_sources" && !s.cfg.OnlineAllowed {
 		resp.Status = "blocked"
 		resp.Blocker = &Blocker{Code: "online_search_not_allowed", Message: "Online search is disabled by config.", NextAction: "Set MYCELIS_SEARCH_ONLINE_ALLOWED=true to allow configured web_search without confirmation."}

@@ -86,3 +86,43 @@ func TestServiceSearchSourceRegistryAcceptsSecretRefAuthAlias(t *testing.T) {
 		t.Fatalf("source auth = %+v, want api_token with secret ref", source)
 	}
 }
+
+func TestServiceSearchSourceRegistryUpdatesAndDeletesManagedSources(t *testing.T) {
+	svc := NewService(Config{Provider: ProviderSearXNG, SearXNGEndpoint: "http://searxng.local"}, nil, nil)
+	source, err := svc.AddSource(SourceInput{
+		Name:       "Docs Search",
+		Provider:   "local_api",
+		Endpoint:   "https://docs.example.test/search",
+		Boundary:   "docs index",
+		AuthScheme: "none",
+	})
+	if err != nil {
+		t.Fatalf("AddSource: %v", err)
+	}
+	updated, err := svc.UpdateSourceWithContext(t.Context(), source.ID, SourceInput{
+		Name:       "Docs Search v2",
+		Provider:   "local_api",
+		Endpoint:   "https://docs.example.test/v2",
+		Boundary:   "approved docs index",
+		AuthScheme: "none",
+		Status:     "available",
+		Mode:       "live",
+	})
+	if err != nil {
+		t.Fatalf("UpdateSourceWithContext: %v", err)
+	}
+	if updated.ID != source.ID || updated.Name != "Docs Search v2" || !updated.Managed {
+		t.Fatalf("updated = %+v", updated)
+	}
+
+	if err := svc.DeleteSourceWithContext(t.Context(), source.ID); err != nil {
+		t.Fatalf("DeleteSourceWithContext: %v", err)
+	}
+	sources := svc.ListSources()
+	if len(sources) != 1 || sources[0].ID != "searxng" {
+		t.Fatalf("sources after delete = %+v", sources)
+	}
+	if err := svc.DeleteSourceWithContext(t.Context(), "searxng"); err == nil {
+		t.Fatalf("expected configured source delete to fail")
+	}
+}

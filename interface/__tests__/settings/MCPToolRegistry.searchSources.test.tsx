@@ -119,4 +119,63 @@ describe('MCPToolRegistry search sources', () => {
         expect(JSON.stringify(body)).not.toContain('sk-');
         expect(JSON.stringify(body)).not.toContain('=secret');
     });
+
+    it('updates and removes operator-managed search sources', async () => {
+        mockFetch
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ ok: true, data: [{
+                    id: 'team-api',
+                    name: 'Team research API',
+                    managed: true,
+                    source_type: 'local_api',
+                    endpoint: 'https://search.example.test/api',
+                    scope_kind: 'group',
+                    scope_ref: 'research',
+                    boundary: 'Approved research API',
+                    auth_scheme: 'none',
+                    mode: 'live',
+                    sensitivity_class: 'governed',
+                    trust_class: 'bounded_internal',
+                    status: 'available',
+                }] }),
+            })
+            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: { id: 'team-api' } }) })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ ok: true, data: [{
+                    id: 'team-api',
+                    name: 'Team research API v2',
+                    managed: true,
+                    source_type: 'local_api',
+                    endpoint: 'https://search.example.test/v2',
+                    scope_kind: 'group',
+                    scope_ref: 'research',
+                    boundary: 'Approved research API v2',
+                    auth_scheme: 'none',
+                    mode: 'live',
+                    sensitivity_class: 'governed',
+                    trust_class: 'bounded_internal',
+                    status: 'available',
+                }] }),
+            })
+            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: { deleted: true } }) })
+            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: [] }) });
+
+        render(<MCPToolRegistry />);
+
+        await waitFor(() => expect(screen.getByText('Team research API')).toBeDefined());
+        fireEvent.click(screen.getByRole('button', { name: /Edit/i }));
+        fireEvent.change(screen.getByLabelText('Source name'), { target: { value: 'Team research API v2' } });
+        fireEvent.change(screen.getByLabelText('Endpoint for web/API'), { target: { value: 'https://search.example.test/v2' } });
+        fireEvent.change(screen.getByLabelText('Boundary'), { target: { value: 'Approved research API v2' } });
+        fireEvent.click(screen.getByRole('button', { name: /^Update search source$/i }));
+
+        await waitFor(() => expect(screen.getByText(/Updated Team research API v2/i)).toBeDefined());
+        fireEvent.click(screen.getByRole('button', { name: /Remove/i }));
+
+        await waitFor(() => expect(screen.getByText(/Removed Team research API v2/i)).toBeDefined());
+        expect(mockFetch).toHaveBeenCalledWith('/api/v1/search/sources/team-api', expect.objectContaining({ method: 'PATCH' }));
+        expect(mockFetch).toHaveBeenCalledWith('/api/v1/search/sources/team-api', expect.objectContaining({ method: 'DELETE' }));
+    });
 });

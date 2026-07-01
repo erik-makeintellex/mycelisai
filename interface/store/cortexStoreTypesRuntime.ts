@@ -235,6 +235,7 @@ export interface SearchCapabilityBlocker {
 export interface SearchCapabilitySource {
     id: string;
     name: string;
+    managed?: boolean;
     provider?: string;
     source_type: string;
     endpoint?: string;

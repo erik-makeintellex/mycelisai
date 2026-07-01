@@ -30,12 +30,14 @@ type Config struct {
 
 type Request struct {
 	Query          string   `json:"query"`
+	SourceID       string   `json:"source_id,omitempty"`
 	SourceScope    string   `json:"source_scope,omitempty"`
 	MaxResults     int      `json:"max_results,omitempty"`
 	TimeRange      string   `json:"time_range,omitempty"`
 	AllowedDomains []string `json:"allowed_domains,omitempty"`
 	BlockedDomains []string `json:"blocked_domains,omitempty"`
 	TeamID         string   `json:"team_id,omitempty"`
+	HostID         string   `json:"host_id,omitempty"`
 	AgentID        string   `json:"agent_id,omitempty"`
 	RunID          string   `json:"run_id,omitempty"`
 	Visibility     string   `json:"visibility,omitempty"`
@@ -80,6 +82,7 @@ type Blocker struct {
 type Source struct {
 	ID               string `json:"id"`
 	Name             string `json:"name"`
+	Managed          bool   `json:"managed,omitempty"`
 	Provider         string `json:"provider,omitempty"`
 	SourceType       string `json:"source_type"`
 	Endpoint         string `json:"endpoint,omitempty"`

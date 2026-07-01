@@ -165,6 +165,8 @@ export default function MCPToolRegistry() {
                             addNotice={searchSourceRegistry.searchSourceNotice}
                             isAdding={searchSourceRegistry.isAddingSearchSource}
                             onAddSearchSource={searchSourceRegistry.addSearchSource}
+                            onDeleteSearchSource={searchSourceRegistry.deleteSearchSource}
+                            onUpdateSearchSource={searchSourceRegistry.updateSearchSource}
                         />
                         <CapabilityRegistryPanel
                             capabilities={visibleCapabilities}

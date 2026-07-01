@@ -18,10 +18,12 @@ func (r *InternalToolRegistry) handleWebSearch(ctx context.Context, args map[str
 	}
 	req := searchcap.Request{
 		Query:       query,
+		SourceID:    stringValue(args["source_id"]),
 		SourceScope: stringValue(args["source_scope"]),
 		MaxResults:  intValue(args["max_results"]),
 		TimeRange:   stringValue(args["time_range"]),
 		TeamID:      stringValue(args["team_id"]),
+		HostID:      stringValue(args["host_id"]),
 		AgentID:     stringValue(args["agent_id"]),
 		Visibility:  stringValue(args["visibility"]),
 		Types:       stringSlice(args["types"]),

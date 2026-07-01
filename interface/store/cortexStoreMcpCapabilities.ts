@@ -47,6 +47,7 @@ function normalizeSearchSource(value: unknown): SearchCapabilitySource | null {
     return {
         id,
         name,
+        managed: booleanField(raw.managed),
         provider: stringField(raw.provider),
         source_type: stringField(raw.source_type) ?? stringField(raw.type) ?? 'unknown',
         endpoint: stringField(raw.endpoint),

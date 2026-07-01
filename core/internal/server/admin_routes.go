@@ -124,6 +124,8 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/search/status", s.HandleSearchStatus)
 	mux.HandleFunc("GET /api/v1/search/sources", s.HandleSearchSources)
 	mux.HandleFunc("POST /api/v1/search/sources", s.HandleSearchSources)
+	mux.HandleFunc("PATCH /api/v1/search/sources/{id}", s.HandleSearchSource)
+	mux.HandleFunc("DELETE /api/v1/search/sources/{id}", s.HandleSearchSource)
 	mux.HandleFunc("POST /api/v1/search", s.HandleSearch)
 	mux.HandleFunc("GET /api/v1/capabilities", s.HandleListCapabilities)
 	mux.HandleFunc("GET /api/v1/capabilities/{id}", s.HandleGetCapability)

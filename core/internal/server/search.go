@@ -81,3 +81,40 @@ func (s *AdminServer) HandleSearchSources(w http.ResponseWriter, r *http.Request
 		respondError(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+func (s *AdminServer) HandleSearchSource(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	switch r.Method {
+	case http.MethodPatch:
+		var req searchcap.SourceInput
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&req); err != nil {
+			respondError(w, "invalid search source request", http.StatusBadRequest)
+			return
+		}
+		source, err := s.searchService().UpdateSourceWithContext(r.Context(), id, req)
+		if err != nil {
+			respondError(w, err.Error(), searchcap.SourceErrorStatus(err))
+			return
+		}
+		respondJSON(w, map[string]any{
+			"ok":   true,
+			"data": source,
+		})
+	case http.MethodDelete:
+		if err := s.searchService().DeleteSourceWithContext(r.Context(), id); err != nil {
+			respondError(w, err.Error(), searchcap.SourceErrorStatus(err))
+			return
+		}
+		respondJSON(w, map[string]any{
+			"ok": true,
+			"data": map[string]any{
+				"id":      id,
+				"deleted": true,
+			},
+		})
+	default:
+		respondError(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}

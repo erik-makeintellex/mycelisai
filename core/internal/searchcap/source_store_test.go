@@ -56,6 +56,29 @@ func TestSourceStoreListAndCreate(t *testing.T) {
 		t.Fatalf("created = %+v", created)
 	}
 
+	mock.ExpectExec("UPDATE search_sources").
+		WithArgs(
+			"research_api", "Research API v2", "local_api", "local_api", "https://search.example.test/v2",
+			"group", "research", "Approved research index v2", "none", "",
+			"live", "governed", "bounded_internal", "available", "",
+		).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	if err := store.Update(context.Background(), Source{
+		ID: "research_api", Name: "Research API v2", Provider: "local_api", SourceType: "local_api",
+		Endpoint: "https://search.example.test/v2", ScopeKind: "group", ScopeRef: "research",
+		Boundary: "Approved research index v2", AuthScheme: "none", Mode: "live",
+		SensitivityClass: "governed", TrustClass: "bounded_internal", Status: "available",
+	}); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	mock.ExpectExec("DELETE FROM search_sources").
+		WithArgs("research_api").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	if err := store.Delete(context.Background(), "research_api"); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet expectations: %v", err)
 	}

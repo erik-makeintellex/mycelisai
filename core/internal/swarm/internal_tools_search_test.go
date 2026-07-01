@@ -31,3 +31,23 @@ func TestInternalToolRegistryWebSearchDisabledBlocker(t *testing.T) {
 		t.Fatalf("resp = %+v", resp)
 	}
 }
+
+func TestInternalToolRegistryWebSearchForwardsSourceID(t *testing.T) {
+	r := NewInternalToolRegistry(InternalToolDeps{
+		Search: searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil),
+	})
+	out, err := r.handleWebSearch(context.Background(), map[string]any{
+		"query":     "release notes",
+		"source_id": "missing-source",
+	})
+	if err != nil {
+		t.Fatalf("handleWebSearch: %v", err)
+	}
+	var resp searchcap.Response
+	if err := json.Unmarshal([]byte(out), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.Blocker == nil || resp.Blocker.Code != "search_source_not_found" {
+		t.Fatalf("resp = %+v", resp)
+	}
+}

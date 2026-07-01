@@ -17,11 +17,15 @@ func (s *Service) searchLocalAPI(ctx context.Context, req Request, resp Response
 		resp.Blocker = &Blocker{Code: "missing_local_api_endpoint", Message: "Local API search is selected but MYCELIS_SEARCH_LOCAL_API_ENDPOINT is not configured.", NextAction: "Set MYCELIS_SEARCH_LOCAL_API_ENDPOINT to the self-hosted HTTP search endpoint."}
 		return resp, nil
 	}
-	endpoint, err := url.Parse(s.cfg.LocalAPIEndpoint)
+	return s.searchLocalAPIEndpoint(ctx, req, resp, s.cfg.LocalAPIEndpoint)
+}
+
+func (s *Service) searchLocalAPIEndpoint(ctx context.Context, req Request, resp Response, rawEndpoint string) (Response, error) {
+	endpoint, err := url.Parse(rawEndpoint)
 	if err != nil {
 		return resp, fmt.Errorf("invalid local API search endpoint: %w", err)
 	}
-	if !isAbsoluteHTTPURL(s.cfg.LocalAPIEndpoint) {
+	if !isAbsoluteHTTPURL(rawEndpoint) {
 		return resp, fmt.Errorf("invalid local API search endpoint: endpoint must be an absolute http(s) URL")
 	}
 	max := limitFor(req.MaxResults, s.cfg.MaxResults)

@@ -45,6 +45,7 @@ func (s *SourceStore) List(ctx context.Context) ([]Source, error) {
 			return nil, fmt.Errorf("scan search source: %w", err)
 		}
 		source.BaseURL = source.Endpoint
+		source.Managed = true
 		sources = append(sources, source)
 	}
 	return sources, rows.Err()
@@ -69,4 +70,48 @@ func (s *SourceStore) Create(ctx context.Context, source Source) (Source, error)
 		return Source{}, fmt.Errorf("create search source: %w", err)
 	}
 	return source, nil
+}
+
+func (s *SourceStore) Update(ctx context.Context, source Source) error {
+	if s == nil || s.DB == nil {
+		return nil
+	}
+	res, err := s.DB.ExecContext(ctx, `
+		UPDATE search_sources
+		SET name = $2, provider = $3, source_type = $4, endpoint = NULLIF($5, ''),
+		    scope_kind = $6, scope_ref = NULLIF($7, ''), boundary = $8,
+		    auth_scheme = $9, secret_ref = NULLIF($10, ''), mode = $11,
+		    sensitivity_class = $12, trust_class = $13, status = $14,
+		    recovery = NULLIF($15, ''), updated_at = CURRENT_TIMESTAMP
+		WHERE tenant_id = 'default' AND id = $1`,
+		source.ID, source.Name, source.Provider, source.SourceType, source.Endpoint,
+		source.ScopeKind, source.ScopeRef, source.Boundary, source.AuthScheme,
+		source.SecretRef, source.Mode, source.SensitivityClass, source.TrustClass,
+		source.Status, source.Recovery,
+	)
+	if err != nil {
+		return fmt.Errorf("update search source: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err == nil && affected == 0 {
+		return errSourceNotFound
+	}
+	return nil
+}
+
+func (s *SourceStore) Delete(ctx context.Context, id string) error {
+	if s == nil || s.DB == nil {
+		return nil
+	}
+	res, err := s.DB.ExecContext(ctx, `
+		DELETE FROM search_sources
+		WHERE tenant_id = 'default' AND id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete search source: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err == nil && affected == 0 {
+		return errSourceNotFound
+	}
+	return nil
 }

@@ -52,8 +52,12 @@ export async function proxyBackendPatchRequest(req: Request, target: ProxyTarget
     return proxyBackendRequest(req, target, 'PATCH');
 }
 
-async function proxyBackendRequest(req: Request, target: ProxyTarget, method: 'GET' | 'POST' | 'PATCH'): Promise<Response> {
-    const body = method === 'GET' ? undefined : await req.text();
+export async function proxyBackendDeleteRequest(req: Request, target: ProxyTarget): Promise<Response> {
+    return proxyBackendRequest(req, target, 'DELETE');
+}
+
+async function proxyBackendRequest(req: Request, target: ProxyTarget, method: 'GET' | 'POST' | 'PATCH' | 'DELETE'): Promise<Response> {
+    const body = method === 'GET' || method === 'DELETE' ? undefined : await req.text();
     const sourceUrl = new URL(req.url);
     const path = `${target.path}${sourceUrl.search}`;
 

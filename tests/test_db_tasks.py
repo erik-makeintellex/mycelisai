@@ -236,6 +236,13 @@ def test_schema_bootstrapped_requires_outcome_ownership_tables():
     assert "team_registry_entries" in checks["team_registry_entries table"]
 
 
+def test_schema_bootstrapped_requires_search_source_registry_table():
+    checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
+
+    assert "search_sources table" in checks
+    assert "search_sources" in checks["search_sources table"]
+
+
 def test_schema_bootstrapped_accepts_current_runtime_schema(monkeypatch):
     monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
     monkeypatch.setattr(

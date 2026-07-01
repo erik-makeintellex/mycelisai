@@ -63,6 +63,7 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("outcome_projects intent_proof_id text column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'outcome_projects' AND column_name = 'intent_proof_id' AND data_type = 'text';"),
     ("team_registry_entries table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_registry_entries';"),
     ("trigger_rules schedule columns", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'trigger_rules' AND column_name = 'trigger_kind';"),
+    ("search_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'search_sources';"),
 )
 
 def _load_env():
@@ -132,7 +133,6 @@ def _migration_files():
         if name.endswith(".up.sql") or name == "001_init_memory.sql":
             selected.append(file)
     return selected
-
 def _require_postgres(dbname="postgres"):
     """Fail fast when the local PostgreSQL bridge is unavailable."""
     host, port, _user, _password, _db = _dsn(dbname)

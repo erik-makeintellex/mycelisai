@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -15,7 +16,11 @@ func (s *Service) searchSearXNG(ctx context.Context, req Request, resp Response)
 		resp.Blocker = &Blocker{Code: "missing_searxng_endpoint", Message: "SearXNG search is selected but MYCELIS_SEARXNG_ENDPOINT is not configured.", NextAction: "Set MYCELIS_SEARXNG_ENDPOINT to the self-hosted SearXNG base URL."}
 		return resp, nil
 	}
-	endpoint, err := url.Parse(s.cfg.SearXNGEndpoint + "/search")
+	return s.searchSearXNGEndpoint(ctx, req, resp, s.cfg.SearXNGEndpoint)
+}
+
+func (s *Service) searchSearXNGEndpoint(ctx context.Context, req Request, resp Response, baseEndpoint string) (Response, error) {
+	endpoint, err := url.Parse(strings.TrimRight(baseEndpoint, "/") + "/search")
 	if err != nil {
 		return resp, fmt.Errorf("invalid SearXNG endpoint: %w", err)
 	}

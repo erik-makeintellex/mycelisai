@@ -120,6 +120,50 @@ func TestHandleSearchSourcesAddsGovernedSourceWithoutRawToken(t *testing.T) {
 	}
 }
 
+func TestHandleSearchSourceUpdatesAndDeletesGovernedSource(t *testing.T) {
+	s := newTestServer(func(s *AdminServer) {
+		s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil)
+	})
+	source, err := s.Search.AddSource(searchcap.SourceInput{
+		Name:       "Team Search",
+		Provider:   "local_api",
+		Endpoint:   "https://search.example.test/api",
+		Boundary:   "approved team search",
+		AuthScheme: "none",
+	})
+	if err != nil {
+		t.Fatalf("AddSource: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("PATCH /api/v1/search/sources/{id}", s.HandleSearchSource)
+	mux.HandleFunc("DELETE /api/v1/search/sources/{id}", s.HandleSearchSource)
+	rr := doRequest(t, mux, http.MethodPatch, "/api/v1/search/sources/"+source.ID, `{
+		"name":"Team Search v2",
+		"provider":"local_api",
+		"endpoint":"https://search.example.test/v2",
+		"boundary":"approved team search v2",
+		"auth_scheme":"none",
+		"mode":"live",
+		"status":"available"
+	}`)
+	assertStatus(t, rr, http.StatusOK)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	updated := resp["data"].(map[string]any)
+	if updated["id"] != source.ID || updated["name"] != "Team Search v2" || updated["managed"] != true {
+		t.Fatalf("updated = %+v", updated)
+	}
+
+	rr = doRequest(t, mux, http.MethodDelete, "/api/v1/search/sources/"+source.ID, "")
+	assertStatus(t, rr, http.StatusOK)
+	assertJSON(t, rr, &resp)
+	deleted := resp["data"].(map[string]any)
+	if deleted["id"] != source.ID || deleted["deleted"] != true {
+		t.Fatalf("deleted = %+v", deleted)
+	}
+}
+
 func TestHandleSearchSourcesRejectsRawCredentialFields(t *testing.T) {
 	s := newTestServer(func(s *AdminServer) {
 		s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil)
