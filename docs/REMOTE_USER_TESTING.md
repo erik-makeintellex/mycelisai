@@ -12,7 +12,7 @@ Use this runbook when a human tester validates Mycelis from a different browser,
 - [Windows Self-Hosted Operator Lane](#windows-self-hosted-operator-lane)
 - [Walkthrough](#walkthrough)
 - [Pass Criteria](#pass-criteria)
-- [Initial Release Handoff](#initial-release-handoff)
+- [Initial Release Review Packet](#initial-release-review-packet)
 - [Failure Notes To Capture](#failure-notes-to-capture)
 - [Recommended Evidence Capture](#recommended-evidence-capture)
 
@@ -203,7 +203,7 @@ The run passes only when:
 - the AI endpoint was explicit and reachable from runtime
 - failures surfaced in user-readable form
 
-## Initial Release Handoff
+## Initial Release Review Packet
 
 Provide:
 - UI URL

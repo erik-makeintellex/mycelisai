@@ -68,7 +68,6 @@ Use these when the goal is verification, release proof, or workflow-complete val
 - **Testing Guide**: `./TESTING.md`
 - **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
 - **Mycelis Canonical PRD**: `./architecture-library/MYCELIS_CANONICAL_PRD.md`
-- **Release Handoff**: `./RELEASE_HANDOFF.md`
 - **Governance System**: `./governance.md`
 - **Licensing & Editions**: `./licensing.md`
 

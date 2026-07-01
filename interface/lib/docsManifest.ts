@@ -62,7 +62,6 @@ export const DOC_MANIFEST: DocSection[] = [
             { slug: "testing", label: "Testing", path: "docs/TESTING.md", description: "Unit, integration, browser, and release validation guidance" },
             { slug: "api-reference", label: "API Reference", path: "docs/API_REFERENCE.md", description: "Endpoint table with request and response shapes" },
             { slug: "cognitive-architecture", label: "Cognitive Architecture", path: "docs/COGNITIVE_ARCHITECTURE.md", description: "Provider routing, AI engines, local media gateway, and model/embedding configuration" },
-            { slug: "release-handoff", label: "Release Handoff", path: "docs/RELEASE_HANDOFF.md", description: "Current release handoff, deployment lanes, GUI proof commands, and packaging commands" },
             { slug: "licensing-editions", label: "Licensing & Editions", path: "docs/licensing.md", description: "Product-edition posture for self-hosted, enterprise, and hosted layering" },
             { slug: "governance", label: "Governance System", path: "docs/governance.md", description: "Policy enforcement, approval posture, and audit-linked governance model" },
             { slug: "logging-schema", label: "Logging Standard", path: "docs/logging.md", description: "Mission-events and memory-stream logging contract and taxonomy" },

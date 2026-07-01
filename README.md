@@ -219,7 +219,7 @@ Invoke-managed Playwright owns the local Next.js server lifecycle. Run `uv run i
 
 ## Testing Gate
 
-Canonical testing guidance lives in [Testing](docs/TESTING.md). Browser proof depth and product acceptance live in the [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md). Current RC proof and operator handoff evidence lives in [Release Handoff](docs/RELEASE_HANDOFF.md); `.state/V8_DEV_STATE.md` remains the detailed delivery scoreboard.
+Canonical testing guidance lives in [Testing](docs/TESTING.md). Browser proof depth and product acceptance live in the [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md). `.state/V8_DEV_STATE.md` remains the detailed delivery scoreboard and current proof index.
 
 End-of-slice reporting should name evidence commands run, docs changed, touched docs reviewed unchanged, and any UI visual-expression review for surfaces the slice touched.
 
