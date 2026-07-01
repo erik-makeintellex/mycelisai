@@ -79,6 +79,8 @@ func eventFromMap(raw map[string]any, fallbackRunID string, backend BackendKind)
 	}
 	if result := mapValue(raw["result"]); result != nil {
 		event.Result = resultFromMap(result)
+	} else if hasOutputFields(raw) {
+		event.Result = resultFromMap(raw)
 	}
 	if errMap := mapValue(raw["error"]); errMap != nil {
 		event.Error = errorFromMap(errMap)
@@ -114,9 +116,87 @@ func approvalFromMap(raw map[string]any) *WorkerApprovalRequest {
 func resultFromMap(raw map[string]any) *WorkerResult {
 	return &WorkerResult{
 		Summary:    stringValue(raw["summary"]),
+		Outputs:    outputsFromMap(raw),
 		Metadata:   mapValue(raw["metadata"]),
 		FinishedAt: time.Now().UTC(),
 	}
+}
+
+func outputsFromMap(raw map[string]any) []WorkerOutput {
+	outputs := workerOutputsFromAny(raw["outputs"])
+	outputRefs := workerOutputsFromAny(raw["output_refs"])
+	if len(outputRefs) == 0 {
+		return outputs
+	}
+	return append(outputs, outputRefs...)
+}
+
+func workerOutputsFromAny(value any) []WorkerOutput {
+	switch items := value.(type) {
+	case []WorkerOutput:
+		return items
+	case []string:
+		outputs := make([]WorkerOutput, 0, len(items))
+		for _, item := range items {
+			if output := workerOutputFromAny(item); output != nil {
+				outputs = append(outputs, *output)
+			}
+		}
+		return outputs
+	case []map[string]any:
+		outputs := make([]WorkerOutput, 0, len(items))
+		for _, item := range items {
+			if output := workerOutputFromMap(item); output != nil {
+				outputs = append(outputs, *output)
+			}
+		}
+		return outputs
+	case []any:
+		outputs := make([]WorkerOutput, 0, len(items))
+		for _, item := range items {
+			if output := workerOutputFromAny(item); output != nil {
+				outputs = append(outputs, *output)
+			}
+		}
+		return outputs
+	default:
+		return nil
+	}
+}
+
+func workerOutputFromAny(value any) *WorkerOutput {
+	if output, ok := value.(WorkerOutput); ok {
+		return &output
+	}
+	if raw := mapValue(value); raw != nil {
+		return workerOutputFromMap(raw)
+	}
+	if ref := stringValue(value); ref != "" {
+		return &WorkerOutput{Kind: "reference", URI: ref}
+	}
+	return nil
+}
+
+func workerOutputFromMap(raw map[string]any) *WorkerOutput {
+	output := WorkerOutput{
+		ID:          stringValue(first(raw, "id", "output_id", "artifact_id", "proof_artifact_id")),
+		Kind:        stringValue(first(raw, "kind", "type")),
+		Name:        stringValue(first(raw, "name", "label", "title")),
+		URI:         stringValue(first(raw, "uri", "url", "href", "open_url", "storage_ref", "entrypoint")),
+		ContentType: stringValue(first(raw, "content_type", "mime_type")),
+		Metadata:    mapValue(raw["metadata"]),
+	}
+	if output.Kind == "" {
+		output.Kind = "reference"
+	}
+	if output.ID == "" && output.Name == "" && output.URI == "" {
+		return nil
+	}
+	return &output
+}
+
+func hasOutputFields(raw map[string]any) bool {
+	return first(raw, "outputs", "output_refs") != nil
 }
 
 func errorFromMap(raw map[string]any) *WorkerError {

@@ -1,6 +1,7 @@
 import {
   type TeamDetailEntry,
   type TeamOutputRef,
+  type OutputProofEnvelope,
   type TeamInteraction,
   type TeamWorkItem,
   type TeamWorkItemState,
@@ -137,12 +138,16 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
   if (!workItemId || !teamId || !objective) return null;
 
   const state = teamWorkState(raw.state);
+  const rawOutputRefs = rawOutputRefRecords(raw.output_refs);
   const outputRefs = outputRefArray(
     raw.output_refs,
     teamId,
     workItemId,
     stringValue(raw.updated_at) ?? stringValue(raw.created_at),
-  );
+  ).map((output, index) => {
+    const proof = objectValue<OutputProofEnvelope>(rawOutputRefs[index]?.proof);
+    return proof ? { ...output, proof } : output;
+  });
   const lastEvent = objectValue<TeamStatusEventAPIRecord>(raw.last_event);
   const runId = stringValue(raw.run_id);
   const expectedOutputs = stringArray(raw.expected_outputs);
@@ -225,6 +230,10 @@ export function sortTeamOutputRefsNewestFirst(outputRefs: TeamOutputRef[]): Team
 export function parseTeamWorkAPIItems(payload: unknown): TeamWorkAPIRecord[] {
   const data = objectValue<{ data?: unknown }>(payload)?.data ?? payload;
   return Array.isArray(data) ? data.filter(isRecord) : [];
+}
+
+function rawOutputRefRecords(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
 function teamWorkState(value: unknown): TeamWorkItemState {

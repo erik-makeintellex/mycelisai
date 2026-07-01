@@ -2,7 +2,7 @@
 > Navigation: [Architecture Docs Index](ARCHITECTURE_LIBRARY_INDEX.md) | [Canonical PRD](MYCELIS_CANONICAL_PRD.md)
 
 > Status: Supporting implementation source map
-> Last Updated: 2026-06-29
+> Last Updated: 2026-07-01
 > Purpose: Define the focused worker-library execution package without creating a parallel architecture doctrine.
 
 ## Delivery Boundary
@@ -66,6 +66,13 @@ Normalized objects:
 - `WorkerCapabilities`
 - `WorkerUsage`
 - `WorkerAuditRecord`
+
+Result normalization:
+
+- completed worker results must preserve `outputs[]` and `output_refs[]`
+- events that carry top-level output references must still produce a normalized `WorkerResult`
+- retained output metadata must survive into downstream TeamWork/Outcome surfaces so Dashboard, Groups, Resources, Runs, and proof review can refer to the same output spine
+- string-only output references are allowed as minimal references, but structured output refs should carry kind, label/name, URI or storage reference, content type, and metadata when available
 
 Backend names:
 
@@ -147,7 +154,7 @@ Selection levels:
 
 | Phase | Scope | Gate |
 | --- | --- | --- |
-| Phase 1 | Worker package, central backend, Hermes adapter skeleton, health/capability discovery, run/event/stop/approval normalization, mocked Hermes-compatible tests. | Unit tests with mocked central and Hermes-like backends. |
+| Phase 1 | Worker package, central backend, Hermes adapter skeleton, health/capability discovery, run/event/stop/approval/result/output normalization, mocked Hermes-compatible tests. | Unit tests with mocked central and Hermes-like backends. |
 | Phase 2 | Wire documented Hermes endpoints for health, capabilities, submit, status, stream, stop, approval, result. | Integration proof against a real Hermes-compatible runtime or pinned mock matching official docs. |
 | Phase 3 | Backend fallback and policy controls across org/project/run selection. | Policy tests for fallback vs fail-closed and audit records. |
 
@@ -159,4 +166,5 @@ Selection levels:
 - Capabilities are discovered before execution.
 - Unsupported Hermes features degrade gracefully.
 - Runs can be submitted, streamed/polled, cancelled, approved/denied, completed, failed, and audited through one normalized interface.
+- Completed worker outputs remain attributable and revisit-ready after adapter normalization.
 - No secrets appear in model-visible context, logs, transcripts, events, or audit text.

@@ -35,6 +35,13 @@ describe("teamWorkProjection", () => {
               storage_ref: "generated/launch",
               entrypoint: "index.html",
               proof_ref: "proof-1",
+              proof: {
+                proof_id: "proof-envelope-1",
+                path_boundary_status: "verified",
+                readback_status: "verified",
+                checksum: "b94d27b9934d3e08a52e52d7da7dabfadebf1fde558f6ad0845e1274f7f9cde9",
+                checksum_algorithm: "sha256",
+              },
             },
           ],
           proof_refs: ["proof-1"],
@@ -74,6 +81,11 @@ describe("teamWorkProjection", () => {
     expect(item?.interactions.find((action) => action.action === "inspect")?.label).toBe("Open run");
     expect(item?.interactions.find((action) => action.action === "archive")?.label).toBe("Clear from review");
     expect(item?.advanced?.expectedOutputs).toEqual(["reviewable package"]);
+    expect(item?.outputRefs?.[0]?.proof).toMatchObject({
+      proof_id: "proof-envelope-1",
+      path_boundary_status: "verified",
+      readback_status: "verified",
+    });
     expect(teamOutputRefsFromItems(item ? [item] : [])).toHaveLength(1);
   });
 

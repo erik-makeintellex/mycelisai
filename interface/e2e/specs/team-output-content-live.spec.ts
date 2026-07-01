@@ -128,7 +128,7 @@ async function confirmProposal(page: Page) {
         (response) => response.url().includes('/api/v1/intent/confirm-action') && response.request().method() === 'POST',
         { timeout: 120_000 },
     );
-    await page.getByRole('button', { name: /Approve & Execute|Execute|Run/i }).last().click();
+    await page.getByRole('button', { name: /^(Start|Approve & Execute|Execute|Run)$/i }).last().click();
     const response = await responsePromise;
     const parsed = await parseJSONIfPossible<ConfirmEnvelope>(response);
     return { response, raw: parsed.raw, body: parsed.body };
