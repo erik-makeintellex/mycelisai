@@ -47,11 +47,14 @@ export function SearchSourceList({
                                         Remove
                                     </button>
                                 )}
-                                <span className="rounded-full border border-cortex-border bg-cortex-bg px-2 py-0.5 text-[10px] font-mono uppercase text-cortex-text-muted">
+                                <span className={sourceStatusClass(source)}>
                                     {sourceStatusLabel(source.status)}
                                 </span>
                             </div>
                         </div>
+                        <p className={`mt-1 text-[11px] font-semibold leading-4 ${sourceReadinessClass(source)}`}>
+                            {sourceReadinessLabel(source)}
+                        </p>
                         <p className="mt-1 text-[11px] leading-4 text-cortex-text-muted">
                             {sourceTypeLabel(source.source_type)} · {scopeLabel(source)} · {authLabel(source)}
                         </p>
@@ -100,6 +103,37 @@ function sourceStatusLabel(status: string): string {
     if (status === "degraded") return "Needs repair";
     if (status === "disabled") return "Disabled";
     return status.replace(/_/g, " ");
+}
+
+function sourceStatusClass(source: SearchCapabilitySource): string {
+    const base = "rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase";
+    if (!sourceIsReady(source.status) || sourceAuthNeedsAdapter(source)) {
+        return `${base} border-cortex-warning/30 bg-cortex-warning/10 text-cortex-warning`;
+    }
+    return `${base} border-cortex-success/30 bg-cortex-success/10 text-cortex-success`;
+}
+
+function sourceReadinessLabel(source: SearchCapabilitySource): string {
+    if (!sourceIsReady(source.status)) {
+        return source.recovery || "Repair this source before Soma can use it.";
+    }
+    if (sourceAuthNeedsAdapter(source)) {
+        return "Registered safely. Soma needs a governed auth adapter before it can search this source.";
+    }
+    return "Ready for Soma to use when this scope is allowed.";
+}
+
+function sourceReadinessClass(source: SearchCapabilitySource): string {
+    if (!sourceIsReady(source.status) || sourceAuthNeedsAdapter(source)) return "text-cortex-warning";
+    return "text-cortex-success";
+}
+
+function sourceIsReady(status: string): boolean {
+    return ["available", "ready", "online"].includes(status);
+}
+
+function sourceAuthNeedsAdapter(source: SearchCapabilitySource): boolean {
+    return source.auth_scheme !== "none" && source.auth_scheme !== "service_managed";
 }
 
 function scopeLabel(source: SearchCapabilitySource): string {
