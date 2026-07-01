@@ -8,11 +8,15 @@ import (
 )
 
 func (s *AdminServer) searchCapabilityStatus() searchcap.Status {
-	searchSvc := s.Search
-	if searchSvc == nil {
-		searchSvc = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil)
+	return s.searchService().Status()
+}
+
+func (s *AdminServer) searchService() *searchcap.Service {
+	if s.Search != nil {
+		return s.Search
 	}
-	return searchSvc.Status()
+	s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil)
+	return s.Search
 }
 
 func (s *AdminServer) HandleSearch(w http.ResponseWriter, r *http.Request) {
@@ -25,11 +29,7 @@ func (s *AdminServer) HandleSearch(w http.ResponseWriter, r *http.Request) {
 		respondError(w, "invalid search request", http.StatusBadRequest)
 		return
 	}
-	searchSvc := s.Search
-	if searchSvc == nil {
-		searchSvc = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil)
-	}
-	resp, err := searchSvc.Search(r.Context(), req)
+	resp, err := s.searchService().Search(r.Context(), req)
 	if err != nil {
 		respondError(w, "search failed", http.StatusInternalServerError)
 		return
@@ -49,4 +49,35 @@ func (s *AdminServer) HandleSearchStatus(w http.ResponseWriter, r *http.Request)
 		"ok":   true,
 		"data": s.searchCapabilityStatus(),
 	})
+}
+
+func (s *AdminServer) HandleSearchSources(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		respondJSON(w, map[string]any{
+			"ok":   true,
+			"data": s.searchService().ListSources(),
+		})
+	case http.MethodPost:
+		var req searchcap.SourceInput
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&req); err != nil {
+			respondError(w, "invalid search source request", http.StatusBadRequest)
+			return
+		}
+		source, err := s.searchService().AddSourceWithContext(r.Context(), req)
+		if err != nil {
+			respondError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]any{
+			"ok":   true,
+			"data": source,
+		})
+	default:
+		respondError(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 }

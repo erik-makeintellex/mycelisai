@@ -4,16 +4,20 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mycelis/core/internal/memory"
 )
 
 type Service struct {
-	cfg      Config
-	embedder Embedder
-	mem      *memory.Service
-	client   *http.Client
+	cfg        Config
+	embedder   Embedder
+	mem        *memory.Service
+	client     *http.Client
+	sourceDB   *SourceStore
+	registryMu sync.RWMutex
+	registry   []Source
 }
 
 func NewService(cfg Config, embedder Embedder, mem *memory.Service) *Service {
@@ -35,6 +39,24 @@ func NewService(cfg Config, embedder Embedder, mem *memory.Service) *Service {
 			Transport: &http.Transport{Proxy: nil},
 		},
 	}
+}
+
+func (s *Service) UseSourceStore(ctx context.Context, store *SourceStore) error {
+	if s == nil {
+		return nil
+	}
+	s.sourceDB = store
+	if store == nil {
+		return nil
+	}
+	sources, err := store.List(ctx)
+	if err != nil {
+		return err
+	}
+	s.registryMu.Lock()
+	s.registry = sources
+	s.registryMu.Unlock()
+	return nil
 }
 
 func (s *Service) Provider() string {

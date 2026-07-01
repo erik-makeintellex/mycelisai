@@ -1,5 +1,5 @@
 import { extractApiData } from '@/lib/apiContracts';
-import { isSearchCapabilityStatus, normalizeCapabilitiesPayload } from '@/store/cortexStoreMcpCapabilities';
+import { normalizeCapabilitiesPayload, normalizeSearchCapabilityStatus } from '@/store/cortexStoreMcpCapabilities';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type {
     CapabilityManifest,
@@ -185,10 +185,11 @@ export function createCortexMcpSlice(
                 if (res.ok) {
                     const payload = await res.json();
                     const data = extractApiData<SearchCapabilityStatus | unknown>(payload);
+                    const status = normalizeSearchCapabilityStatus(data);
                     set({
-                        searchCapability: isSearchCapabilityStatus(data) ? data : null,
+                        searchCapability: status,
                         isFetchingSearchCapability: false,
-                        searchCapabilityError: isSearchCapabilityStatus(data) ? null : 'Search capability status was not readable.',
+                        searchCapabilityError: status ? null : 'Search capability status was not readable.',
                     });
                 } else {
                     set({

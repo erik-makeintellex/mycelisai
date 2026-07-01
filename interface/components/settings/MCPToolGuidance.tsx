@@ -3,6 +3,7 @@
 import React from "react";
 import { Activity, AlertTriangle, BookOpen, CheckCircle2, Globe, Radio, Search, Users, Wrench } from "lucide-react";
 import type { SearchCapabilityStatus } from "@/store/useCortexStore";
+import { SearchSourceList } from "./SearchSourceList";
 
 const somaToolPrompts = [
     {
@@ -164,7 +165,7 @@ export function WebAccessSetupCard({
                 <CapabilityPill active={hasLocalSearch} label="Local Mycelis sources" />
                 <CapabilityPill active={hasPublicWeb} label="Public web provider" />
             </div>
-            <SearchSourceList sources={status?.sources ?? []} />
+            <SearchSourceList sources={status?.sources ?? []} compact />
             <p className="mt-3 text-xs leading-5 text-cortex-text-main">
                 {nextStep}
             </p>
@@ -197,7 +198,7 @@ export function SearchCapabilityCard({
         ?? "Soma can route governed search through the configured Mycelis Search provider.";
     const tokenText = status?.requires_hosted_api_token
         ? "Brave MCP requires BRAVE_API_KEY."
-        : "No hosted Brave token required for local_sources, local_api, or self-hosted SearXNG.";
+        : "No hosted Brave token required for local sources, local API, or self-hosted SearXNG.";
 
     return (
         <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
@@ -215,7 +216,7 @@ export function SearchCapabilityCard({
                     </div>
                 </div>
                 <span className="self-start rounded-full border border-cortex-border bg-cortex-bg px-2 py-1 text-[10px] font-mono uppercase text-cortex-text-muted">
-                    {provider}
+                    {searchProviderLabel(provider)}
                 </span>
             </div>
             <div className="mt-4 grid gap-2 md:grid-cols-3">
@@ -231,6 +232,15 @@ export function SearchCapabilityCard({
                 )}
                 {tokenText}
             </div>
+            <details className="mt-3 rounded-lg border border-cortex-border bg-cortex-bg/60 px-3 py-2">
+                <summary className="cursor-pointer text-[9px] font-mono uppercase tracking-wider text-cortex-text-muted">
+                    Inspect provider refs
+                </summary>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <SourceDetail label="Provider ref" value={provider} />
+                    <SourceDetail label="Result limit" value={`${status?.max_results ?? 0}`} />
+                </div>
+            </details>
         </div>
     );
 }
@@ -243,30 +253,22 @@ function CapabilityPill({ active, label }: { active: boolean; label: string }) {
     );
 }
 
-function SearchSourceList({ sources }: { sources: NonNullable<SearchCapabilityStatus["sources"]> }) {
-    if (sources.length === 0) return null;
+function SourceDetail({ label, value }: { label: string; value: string }) {
     return (
-        <div className="mt-3 rounded-lg border border-cortex-border bg-cortex-bg/60 p-3">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                Search sources Soma can use
-            </p>
-            <div className="mt-2 grid gap-2">
-                {sources.slice(0, 2).map((source) => (
-                    <div key={source.id} className="rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="text-xs font-semibold text-cortex-text-main">{source.name}</span>
-                            <span className="rounded-full border border-cortex-border bg-cortex-bg px-2 py-0.5 text-[10px] font-mono uppercase text-cortex-text-muted">
-                                {source.status}
-                            </span>
-                        </div>
-                        <p className="mt-1 text-[11px] leading-4 text-cortex-text-muted">
-                            {source.boundary} · {source.scope_kind === "all" ? "Everyone" : source.scope_kind} · auth: {source.auth_scheme}
-                        </p>
-                    </div>
-                ))}
-            </div>
+        <div className="rounded-lg border border-cortex-border bg-cortex-surface px-2.5 py-2">
+            <p className="text-[9px] font-mono uppercase tracking-wider text-cortex-text-muted">{label}</p>
+            <p className="mt-1 break-words text-[11px] leading-4 text-cortex-text-main">{value}</p>
         </div>
     );
+}
+
+function searchProviderLabel(provider: string): string {
+    if (provider === "local_sources") return "Local sources";
+    if (provider === "local_api") return "Local API";
+    if (provider === "searxng") return "Self-hosted web";
+    if (provider === "brave") return "Brave MCP";
+    if (provider === "disabled") return "Disabled";
+    return provider;
 }
 
 function WorkflowStep({ title, children }: { title: string; children: React.ReactNode }) {

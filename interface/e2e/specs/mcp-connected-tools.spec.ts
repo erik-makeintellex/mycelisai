@@ -1,16 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 import { clickVisibleControl } from "../support/click-visible-control";
 type RouteLike = {
-    fulfill: (options: { status: number; contentType: string; body: string }) => Promise<void>;
-    request: () => { method: () => string };
+    fulfill: (options: { status: number; contentType: string; body: string }) => Promise<void>; request: () => { method: () => string };
 };
 
 async function fulfillJSON(route: RouteLike, status: number, body: unknown) {
-    await route.fulfill({
-        status,
-        contentType: "application/json",
-        body: JSON.stringify(body),
-    });
+    await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 }
 
 type MockConnectedToolsOptions = {
@@ -49,6 +44,7 @@ type MockConnectedToolsOptions = {
         direct_soma_interaction: boolean;
         requires_hosted_api_token: boolean;
         max_results: number;
+        sources?: Array<Record<string, string | undefined>>;
         blocker?: {
             code: string;
             message: string;
@@ -117,6 +113,7 @@ async function mockConnectedToolsApis(page: Page, options: MockConnectedToolsOpt
         direct_soma_interaction: true,
         requires_hosted_api_token: false,
         max_results: 8,
+        sources: [{ id: "searxng", name: "Self-hosted public web", provider: "searxng", source_type: "public_web", endpoint: "http://searxng.local", base_url: "http://searxng.local", scope_kind: "all", boundary: "operator-owned public web search", auth_scheme: "none", mode: "live", sensitivity_class: "public", trust_class: "bounded_external", status: "available" }],
         next_actions: ["Ask Soma to search the public web through the self-hosted SearXNG provider."],
     };
     const library = [
@@ -444,6 +441,9 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByText("Mycelis Search Capability")).toBeVisible();
         await expect(page.getByText("Soma search is ready")).toBeVisible();
         await expect(page.getByText("Soma direct: web_search")).toBeVisible();
+        await expect(page.getByText("Search sources Soma can use")).toBeVisible();
+        await expect(page.getByText("Self-hosted public web").first()).toBeVisible();
+        await expect(page.getByText("operator-owned public web search").first()).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /Servers\s*1/i }));
         await expect(page.getByText("Installed MCP servers")).toBeVisible();
         await expect(page.getByText("Recent MCP Activity", { exact: true })).toBeVisible();

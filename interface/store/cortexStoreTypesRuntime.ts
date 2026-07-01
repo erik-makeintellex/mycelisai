@@ -235,7 +235,10 @@ export interface SearchCapabilityBlocker {
 export interface SearchCapabilitySource {
     id: string;
     name: string;
+    provider?: string;
     source_type: string;
+    endpoint?: string;
+    base_url?: string;
     scope_kind: 'all' | 'group' | 'host' | string;
     scope_ref?: string;
     boundary: string;

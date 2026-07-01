@@ -80,7 +80,10 @@ type Blocker struct {
 type Source struct {
 	ID               string `json:"id"`
 	Name             string `json:"name"`
+	Provider         string `json:"provider,omitempty"`
 	SourceType       string `json:"source_type"`
+	Endpoint         string `json:"endpoint,omitempty"`
+	BaseURL          string `json:"base_url,omitempty"`
 	ScopeKind        string `json:"scope_kind"`
 	ScopeRef         string `json:"scope_ref,omitempty"`
 	Boundary         string `json:"boundary"`

@@ -143,6 +143,11 @@ func startProductServices(ctx context.Context, core *coreRuntime) productService
 		log.Println("Archivist Engine Active.")
 	}
 	if sharedDB != nil {
+		if services.Search != nil {
+			if err := services.Search.UseSourceStore(ctx, searchcap.NewSourceStore(sharedDB)); err != nil {
+				log.Printf("WARN: Mycelis Search source registry disabled: %v", err)
+			}
+		}
 		services.Registry = registry.NewService(sharedDB)
 		services.Catalogue = catalogue.NewService(sharedDB)
 		services.Inception = inception.NewStore(sharedDB)

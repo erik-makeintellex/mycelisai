@@ -9,6 +9,8 @@ import { CapabilityRegistryPanel } from "./MCPToolCapabilityRegistry";
 import { formatActivityScope, useMCPRecentActivity } from "./MCPToolRegistryActivity";
 import { deriveFallbackCapabilities } from "./MCPToolRegistryCapabilities";
 import { ConnectedToolsWorkflowCard, SearchCapabilityCard, SomaToolPromptCard, WebAccessSetupCard } from "./MCPToolGuidance";
+import { SearchSourceRegistryCard } from "./SearchSourceRegistryCard";
+import { useSearchSourceRegistry } from "./MCPToolRegistrySearchSources";
 import { MCPToolSetLayersStorePanel } from "./MCPToolSetLayersPanel";
 import { MCPInstallNotice, MCPRegistryEmptyBanner, MCPRegistryEmptyHero, MCPRegistryErrorBanner } from "./MCPToolRegistryNotices";
 
@@ -41,14 +43,16 @@ export default function MCPToolRegistry() {
     const [librarySearchQuery, setLibrarySearchQuery] = useState("");
     const isRegistryErrorState = !isFetching && Boolean(mcpServersError);
     const isEmptyInstalledState = !isFetching && !mcpServersError && mcpServers.length === 0;
+    const searchSourceRegistry = useSearchSourceRegistry(searchCapability?.sources, fetchSearchCapability);
 
     useEffect(() => {
         fetchMCPServers();
         fetchMCPActivity();
         fetchSearchCapability();
+        searchSourceRegistry.fetchOptionalSearchSources();
         fetchCapabilities();
         fetchMCPToolSets();
-    }, [fetchCapabilities, fetchMCPActivity, fetchMCPServers, fetchMCPToolSets, fetchSearchCapability]);
+    }, [fetchCapabilities, fetchMCPActivity, fetchMCPServers, fetchMCPToolSets, fetchSearchCapability, searchSourceRegistry.fetchOptionalSearchSources]);
 
     useEffect(() => {
         initializeStream();
@@ -73,7 +77,6 @@ export default function MCPToolRegistry() {
     );
     const visibleCapabilities = capabilities.length > 0 ? capabilities : fallbackCapabilities;
     const usingCapabilityFallback = capabilities.length === 0 && fallbackCapabilities.length > 0;
-
     function handleInstalled(name: string) {
         setInstallNotice(`Installed ${name}. Check the connected server card and live MCP activity below.`);
         setActiveTab("servers");
@@ -153,6 +156,15 @@ export default function MCPToolRegistry() {
                             isLoading={isFetchingSearchCapability}
                             error={searchCapabilityError}
                             onAddWebCapability={handleAddWebCapability}
+                        />
+                        <SearchSourceRegistryCard
+                            sources={searchSourceRegistry.visibleSearchSources}
+                            isLoading={searchSourceRegistry.isFetchingSearchSources}
+                            addSupported={searchSourceRegistry.searchSourceRegistrySupported}
+                            error={searchSourceRegistry.searchSourcesError}
+                            addNotice={searchSourceRegistry.searchSourceNotice}
+                            isAdding={searchSourceRegistry.isAddingSearchSource}
+                            onAddSearchSource={searchSourceRegistry.addSearchSource}
                         />
                         <CapabilityRegistryPanel
                             capabilities={visibleCapabilities}
