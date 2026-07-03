@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: Canonical
-> Last Updated: 2026-06-30
+> Last Updated: 2026-07-02
 > Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
@@ -117,7 +117,7 @@ Hard domain tests, such as asking Soma to generate a substantial action game, me
 
 Cross-functional delivery must also be generic. A game team handing evidence to a marketing team is only one stress case. The same pattern applies when an app delivery team hands usage proof to launch marketing, a media team hands asset examples to a campaign team, a data team hands validation notes to an analyst, or a documentation team hands release facts to support. Soma should coordinate source and downstream teams through the Outcome: the source team improves or produces the deliverable, retains proof examples in its group workspace, writes a concise handoff, and notifies the downstream team. The downstream team must ground claims, campaign copy, review notes, support instructions, or follow-up work in that retained evidence rather than inventing unsupported assertions. User-facing output lists should show the final deliverables by Outcome and producing team, with source/intermediate evidence available through an opt-in detail path.
 
-Capabilities are governed runtime objects. MCP servers, local scripts, APIs, filesystem access, media engines, search, and generated app builders should be presented as capabilities Soma can use. The user-facing question is "What can Soma use, and what needs repair?" not "Which server topology is installed?"
+Capabilities are governed runtime objects. MCP servers, local scripts, APIs, filesystem access, user-owned data mounts, infrastructure shared folders, media engines, search, and generated app builders should be presented as capabilities Soma can use. The user-facing question is "What can Soma use, and what needs repair?" not "Which server topology is installed?"
 
 Default capability and service-inventory answers must use user language. When a user asks `list of services?`, `what can Soma use?`, or similar, Soma should summarize available workspace services, AI engine posture, storage/output access, team coordination, memory/context, status checks, and any repair-needed capability. It should not list raw internal tool names, MCP server status strings, subjects, IDs, or topology unless the user explicitly asks for a technical inventory such as `show internal tool names` or `debug MCP status`.
 
@@ -127,11 +127,13 @@ Capability configuration must support three scopes:
 - grouped for a capability set or environment
 - targeted to a specific host/provider/tool endpoint
 
-The default configuration path should start from common capability choices rather than raw tool references. Operators should be able to choose readable intents such as Workspace files, Web research, Team coordination, or Local host/media, then set whether the permission applies to everyone, one Outcome/group lane, or one host. Raw MCP/tool refs remain visible for inspection and advanced editing, but they are not the first thing a user must understand.
+The default configuration path should start from common capability choices rather than raw tool references. Operators should be able to choose readable intents such as Workspace files, User data mounts, Web research, Team coordination, or Local host/media, then set whether the permission applies to everyone, one Outcome/group lane, or one host. Raw MCP/tool refs remain visible for inspection and advanced editing, but they are not the first thing a user must understand.
 
-Search is a governed capability family, not only public web search. Mycelis must support a Search Source Registry where operators can add sources Soma may search when allowed: built-in Mycelis/local search; public web through self-hosted SearXNG, operator-owned local APIs, or optional hosted providers; explicit URL retrieval through governed fetch; authenticated URL/API sources such as docs sites, customer portals, SaaS knowledge bases, issue trackers, repositories, file stores, or internal search endpoints; and future dedicated connectors such as GitHub, Slack, Notion, Confluence, SharePoint, Google Drive, Postgres, CRM, accounting, or ticketing systems.
+Search is a governed capability family, not only public web search. Mycelis must support a Search Source Registry where operators can add sources Soma may search when allowed: built-in Mycelis/local search; public web through self-hosted SearXNG, operator-owned local APIs, or optional hosted providers; explicit URL retrieval through governed fetch; authenticated URL/API sources such as docs sites, customer portals, SaaS knowledge bases, issue trackers, repositories, file stores, mounted user folders, infrastructure shared folders, or internal search endpoints; and future dedicated connectors such as GitHub, Slack, Notion, Confluence, SharePoint, Google Drive, Postgres, CRM, accounting, or ticketing systems.
 
 Authenticated sources must use secret references, not raw tokens in UI, logs, state files, docs, or capability manifests. The first supported shape is bearer/API-token env references for local API search sources, applied as an Authorization bearer header only after scope/status checks pass. Service-required query/header token placement, OAuth2/client-credential metadata, and non-env secret backends remain follow-on adapters. Each source needs a plain name, source type, endpoint, domain/path boundary, auth scheme, secret reference, scope (`Everyone`, `Group`, or `Host`), sensitivity/trust defaults, index/live-search mode, and recovery posture. Soma should name configured sources used, cite or reference them in the trust package, and ask for approval before searching sensitive/private sources when policy requires it.
+
+Reticulum is an install-time and future capability substrate, not a default user concept. The supported install now provides `rns` import access and verifies `uvx --from rns rnstatus --help`; next Reticulum capabilities should be prioritized as status/health (`rnstatus`/daemon), LXMF-compatible messaging and offline notifications, retained-output/file sync, Nomad/RNS page publishing and browsing, then governed remote shell/admin, monitoring, and low-priority voice/live chat; each must enter Resources as a governed capability with scope, proof, recovery, and clear boundaries before Soma can use it.
 
 ## Runtime Architecture
 
@@ -156,7 +158,7 @@ Core runtime responsibilities:
 | Governance | Core | Persist proposal, approval, execution contract, and audit boundary. |
 | Work handoff | Core + NATS | Correlate run, work item, team, project, capability, and output references. |
 | Persistence | PostgreSQL | Store projects, teams, work items, interactions, runs, receipts, outputs, and recovery. |
-| Files | Workspace root | Store generated content under governed workspace/project/group folders. |
+| Files | Workspace root and named mounts | Store generated content under governed workspace/project/group folders; read user-owned or infrastructure shared folders only through named mount records with scope, boundary, mode, and proof. |
 | Capabilities | Core manifests | Register risk, permission, scope, output types, and recovery behavior. |
 | UI state | Interface | Render typed events as rich cards, not raw logs or stack traces. |
 
@@ -188,7 +190,7 @@ Required settings model:
 - capability cards such as "Connect filesystem", "Connect search", "Connect media engine", or "Connect accounting software"
 - grouped capability sets for environments
 - targeted host/provider configuration for specific MCP or API endpoints
-- searchable data-source cards such as "Connect company docs", "Connect GitHub repository", "Connect customer portal", or "Connect internal search API"
+- searchable data-source and mount cards such as "Connect company docs", "Connect GitHub repository", "Connect customer portal", "Connect internal search API", or "Add local data folder"
 - raw server auth, vector index, topology, and schema details behind Inspect
 
 ## Trust Recovery And Confidence
@@ -261,7 +263,7 @@ Non-goals for MVP:
 | P0.5 | OutcomeProject and TeamRegistry | IN_REVIEW | Confirmed work writes durable project/team ownership and Vault summaries. |
 | P0.6 | Output packages and Vault | IN_REVIEW | Deliverables open cleanly; source/intermediate outputs are opt-in. |
 | P0.7 | Capability settings | ACTIVE | Capabilities can be all-work, grouped, or targeted-host scoped with common choices, inspectable refs, and repair paths. |
-| P0.7a | Search source registry | IN_REVIEW | Search status and Resources show configured sources; `/api/v1/search/sources` can add, edit, and remove persisted governed sources with endpoint, scope, boundary, auth, secret-ref, sensitivity, trust, and recovery metadata; `source_id` selection routes local-source, local-API, and SearXNG-compatible searches through status/scope guardrails while authenticated-source adapters remain next. |
+| P0.7a | Search and data-source registry | IN_REVIEW | Search status and Resources show configured sources and named mounts; `/api/v1/search/sources` can add, edit, and remove persisted governed sources with endpoint/path, scope, boundary, auth or mount mode, secret-ref when needed, sensitivity, trust, and recovery metadata; `source_id` selection routes local-source, mounted-folder, local-API, and SearXNG-compatible searches through status/scope guardrails while richer authenticated-source adapters remain next. |
 | P0.8 | Run receipts and recovery | IN_REVIEW | Receipts explain outcome, proof, failure, trusted state, and next safe action. |
 | P0.9 | Full journey proof | IN_REVIEW | Headed and headless proof cover ask through revisit. |
 | P0.10 | Worker execution library | ACTIVE | Agentry can call one worker interface while central execution remains default and Hermes-compatible execution stays adapter-based. |

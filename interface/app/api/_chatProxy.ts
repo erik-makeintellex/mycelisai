@@ -6,7 +6,7 @@ type ProxyTarget = {
 };
 
 function backendURL(path: string): string {
-    const host = process.env.MYCELIS_API_HOST ?? 'localhost';
+    const host = process.env.MYCELIS_API_HOST ?? '127.0.0.1';
     const port = process.env.MYCELIS_API_PORT ?? '8081';
     return `http://${host}:${port}${path}`;
 }

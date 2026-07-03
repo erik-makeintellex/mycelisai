@@ -69,6 +69,25 @@ func TestServiceSearchSourceRegistryRejectsRawCredentialShape(t *testing.T) {
 	}
 }
 
+func TestServiceSearchSourceRegistryAcceptsMountedFolderPath(t *testing.T) {
+	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
+
+	source, err := svc.AddSource(SourceInput{
+		Name:       "Local client docs",
+		Provider:   "mounted_folder",
+		SourceType: "mounted_folder",
+		Endpoint:   "workspace/client-docs",
+		Boundary:   "operator-approved client documents",
+		AuthScheme: "none",
+	})
+	if err != nil {
+		t.Fatalf("AddSource mounted folder: %v", err)
+	}
+	if source.Endpoint != "workspace/client-docs" || source.SourceType != "mounted_folder" {
+		t.Fatalf("mounted source = %+v", source)
+	}
+}
+
 func TestServiceSearchSourceRegistryAcceptsSecretRefAuthAlias(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
 

@@ -33,6 +33,9 @@ func (s *Service) routeSelectedSource(ctx context.Context, req Request, resp Res
 		req.SourceScope = "local_sources"
 		routed, err := s.searchLocalSources(ctx, req, resp)
 		return routed, true, err
+	case ProviderMountedFolder:
+		routed, err := s.searchMountedFolder(ctx, req, resp, source)
+		return routed, true, err
 	case ProviderLocalAPI:
 		if source.Endpoint == "" {
 			resp.Status = "blocked"
@@ -158,6 +161,8 @@ func sourceProvider(source Source) string {
 	switch {
 	case provider == ProviderLocalSources || sourceType == ProviderLocalSources || sourceType == "knowledge_collection":
 		return ProviderLocalSources
+	case provider == ProviderMountedFolder || isMountedFolderSourceType(sourceType):
+		return ProviderMountedFolder
 	case provider == ProviderLocalAPI || sourceType == ProviderLocalAPI || sourceType == "private_api" || sourceType == "authenticated_api" || sourceType == "client_or_public_api":
 		return ProviderLocalAPI
 	case provider == ProviderSearXNG || source.ID == "searxng":

@@ -4,6 +4,7 @@ export const CHAT_STORAGE_KEY = 'mycelis-workspace-chat';
 export const CHAT_SESSION_STORAGE_KEY = 'mycelis-workspace-chat-session';
 const CHAT_STORAGE_KEY_LEGACY = 'mycelis-mission-chat';
 const CHAT_MAX_PERSISTED = 200;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function buildChatStorageKey(scope?: string | null): string {
     const normalizedScope = typeof scope === 'string' ? scope.trim() : '';
@@ -37,13 +38,18 @@ function createChatSessionId(): string {
     return fallbackUUID();
 }
 
+function isValidChatSessionId(value: string): boolean {
+    return UUID_PATTERN.test(value.trim());
+}
+
 export function loadOrCreateChatSessionId(scope?: string | null): string | null {
     if (typeof window === 'undefined') return null;
     try {
         const key = buildChatSessionStorageKey(scope);
         const existing = localStorage.getItem(key);
-        if (existing && existing.trim()) {
-            return existing.trim();
+        const normalizedExisting = existing?.trim();
+        if (normalizedExisting && isValidChatSessionId(normalizedExisting)) {
+            return normalizedExisting;
         }
         const next = createChatSessionId();
         localStorage.setItem(key, next);

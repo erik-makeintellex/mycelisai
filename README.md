@@ -159,6 +159,8 @@ uvx --from invoke inv -l
 
 Do not use bare `uvx inv ...`.
 
+The root install path also provisions Reticulum as part of the default app substrate. `uv run inv install` installs the `rns` Python package into the managed project environment and verifies the Reticulum utility path through `uvx --from rns rnstatus --help`, so Mycelis can immediately import Reticulum and operators can reach the standard Reticulum CLI tools from the same setup lane.
+
 Common commands:
 
 ```bash
@@ -175,6 +177,8 @@ uv run inv ci.baseline
 uv run inv api.delivery-proof
 uv run inv lifecycle.memory-restart && uv run inv team.architecture-sync && uv run inv quality.max-lines --limit 300
 ```
+
+`uv run inv install` includes Reticulum bootstrap: it syncs the locked `rns` package through `uv`, then warms/verifies `uvx --from rns rnstatus --help` before continuing with Go, Interface, and Playwright setup.
 
 Task boundary: repo Invoke tasks manage Mycelis tools, app services, data-plane dependencies, and proof lanes. `native-infra.*` owns the Windows/source-mode PostgreSQL + NATS dependency path. Host runtimes such as WSL distros, Rancher Desktop itself, Docker Desktop itself, and OS-level VM resets are operator/platform responsibilities outside the task registry; use repo tasks to probe, validate, and run Mycelis on those tools, not to manage the whole host environment.
 

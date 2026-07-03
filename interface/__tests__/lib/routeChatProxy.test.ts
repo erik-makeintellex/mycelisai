@@ -42,7 +42,7 @@ describe('chat proxy routes', () => {
             data: { code: 'transport_unavailable' },
         });
         expect(fetch).toHaveBeenCalledWith(
-            'http://localhost:8081/api/v1/chat',
+            'http://127.0.0.1:8081/api/v1/chat',
             expect.objectContaining({
                 method: 'POST',
                 headers: expect.any(Headers),

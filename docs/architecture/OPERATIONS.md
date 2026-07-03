@@ -23,7 +23,7 @@ Operational lanes use:
 - Go, Node.js, and Python for source-mode development
 - PostgreSQL, NATS, and a reachable AI endpoint for live runtime proof
 
-Use `uv run inv ...` for real tasks. Use `uvx --from invoke inv -l` only as a compatibility probe.
+Use `uv run inv ...` for real tasks. Use `uvx --from invoke inv -l` only as a compatibility probe. The root `install` task runs `uv sync --all-packages --dev`, verifies Reticulum import access with `uv run python`, and warms/verifies `uvx --from rns rnstatus --help` before Go, Interface, Playwright, and optional cognitive setup.
 
 ## II. Task Automation
 

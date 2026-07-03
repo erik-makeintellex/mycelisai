@@ -94,6 +94,7 @@ function sourceTypeLabel(type: string): string {
     if (type === "public_web") return "Public web";
     if (type === "local_sources") return "Retained Mycelis context";
     if (type === "local_api") return "Private search API";
+    if (type === "mounted_folder") return "Mounted folder";
     if (type === "knowledge_collection") return "Knowledge collection";
     return type.replace(/_/g, " ");
 }

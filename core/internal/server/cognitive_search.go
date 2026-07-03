@@ -212,7 +212,7 @@ func directSearchNotice(resp searchcap.Response) string {
 		mode = "confirmation required"
 	}
 	if provider == searchcap.ProviderLocalSources {
-		return fmt.Sprintf("Notice: web_search via %s; %s; governed local-source results come from retained Mycelis context, not the public web.", provider, mode)
+		return fmt.Sprintf("Notice: web_search via %s; %s; governed local-source results come from retained Mycelis context and approved data mounts, not the public web.", provider, mode)
 	}
 	return fmt.Sprintf("Notice: web_search via %s; %s; external results are leads, verify before relying.", provider, mode)
 }

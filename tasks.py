@@ -22,6 +22,8 @@ from ops import wsl_runtime
 
 ns = Collection()
 
+RETICULUM_UVX_PROBE = "uvx --from rns rnstatus --help"
+
 
 @task(
     help={
@@ -41,6 +43,10 @@ def install(c, optional_engines=False):
     ensure_disk_headroom(min_free_gb=12, reason="install")
     env = managed_cache_env()
     c.run("uv sync --all-packages --dev", env=env)
+
+    print("Verifying Reticulum package and CLI access...")
+    c.run('uv run python -c "import RNS; print(RNS.__version__)"', env=env)
+    c.run(RETICULUM_UVX_PROBE, env=env)
 
     print("Installing Go module dependencies...")
     with c.cd("core"):

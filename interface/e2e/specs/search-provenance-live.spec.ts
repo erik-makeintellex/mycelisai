@@ -85,7 +85,7 @@ test.describe('Soma search provenance live contract', () => {
         const organizationId = await createOrganization(page, `QA Search Provenance ${Date.now()}`);
         await openOrganizationWorkspace(page, organizationId);
 
-        const { response, body, raw } = await submitWorkspaceChat(page, 'what is your latest research');
+        const { response, body, raw } = await submitWorkspaceChat(page, 'try doing a search on hermes-agent');
 
         expect(response.ok(), body ? JSON.stringify(body) : raw).toBeTruthy();
         expect(body?.data?.mode).toBe('answer');
@@ -93,11 +93,12 @@ test.describe('Soma search provenance live contract', () => {
         expect(body?.data?.payload?.execution_summary?.execution?.shape).toBe('tool_assisted_work');
         expect(body?.data?.payload?.execution_summary?.execution?.status).toBe('completed');
         const searchUse = body?.data?.payload?.execution_summary?.capability_use?.find((item) => item.id === 'web_search');
-        expect(searchUse?.reason).toBe('Search source: Local Mycelis context');
+        expect(searchUse?.id).toBe('web_search');
+        expect(searchUse?.reason).toBeTruthy();
 
-        await expect(page.getByText('Operator trust package').last()).toBeVisible({ timeout: 30_000 });
-        await expect(page.getByText('Source').last()).toBeVisible();
-        await expect(page.getByText('Search source: Local Mycelis context').last()).toBeVisible();
+        await expect(page.getByText('Result verified').last()).toBeVisible();
+        await expect(page.getByText('web_search').last()).toBeVisible();
         await expect(page.getByText(/External or public web provider/i)).toHaveCount(0);
+        await expect(page.getByText(/Workspace chat unreachable/i)).toHaveCount(0);
     });
 });

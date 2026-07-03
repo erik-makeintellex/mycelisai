@@ -73,11 +73,12 @@ export function SearchSourceAddForm({
                         <option value="public_web">Public web</option>
                         <option value="local_sources">Retained Mycelis context</option>
                         <option value="local_api">Private search API</option>
+                        <option value="mounted_folder">Mounted folder</option>
                         <option value="knowledge_collection">Knowledge collection</option>
                     </select>
                 </SourceField>
-                <SourceField label="Endpoint for web/API">
-                    <input value={draft.endpoint ?? ""} onChange={(event) => setDraft((current) => ({ ...current, endpoint: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder="https://search.example.com/api" />
+                <SourceField label={isMountedFolderSource(draft.source_type) ? "Local/shared folder path" : "Endpoint for web/API"}>
+                    <input value={draft.endpoint ?? ""} onChange={(event) => setDraft((current) => ({ ...current, endpoint: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder={isMountedFolderSource(draft.source_type) ? "workspace/client-docs" : "https://search.example.com/api"} />
                 </SourceField>
                 <SourceField label="Boundary">
                     <input value={draft.boundary} onChange={(event) => setDraft((current) => ({ ...current, boundary: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder="Approved company knowledge index" />
@@ -149,8 +150,9 @@ export function emptySourceLabel(addSupported: boolean): string {
 
 function validateSearchSourceDraft(draft: SearchSourceDraft): string | null {
     if (!draft.name.trim()) return "Name the search source.";
-    if (requiresEndpoint(draft.source_type) && !draft.endpoint?.trim()) return "Add the search endpoint Soma may use for this source.";
-    if (draft.endpoint?.trim() && !/^https?:\/\/[^/\s]+/i.test(draft.endpoint.trim())) return "Use a full http(s) endpoint.";
+    if (requiresEndpoint(draft.source_type) && !draft.endpoint?.trim()) return isMountedFolderSource(draft.source_type) ? "Add the mounted folder path Soma may search." : "Add the search endpoint Soma may use for this source.";
+    if (draft.endpoint?.trim() && !isMountedFolderSource(draft.source_type) && !/^https?:\/\/[^/\s]+/i.test(draft.endpoint.trim())) return "Use a full http(s) endpoint.";
+    if (draft.endpoint?.trim() && isMountedFolderSource(draft.source_type) && /^https?:\/\//i.test(draft.endpoint.trim())) return "Use a local or shared folder path, not an http(s) URL.";
     if (!draft.boundary.trim()) return "Describe the boundary Soma may search.";
     if (draft.scope_kind !== "all" && !draft.scope_ref?.trim()) return "Add the group or host reference for this source.";
     if (draft.auth_scheme !== "none") {
@@ -162,5 +164,9 @@ function validateSearchSourceDraft(draft: SearchSourceDraft): string | null {
 }
 
 function requiresEndpoint(sourceType: string): boolean {
-    return sourceType === "public_web" || sourceType === "local_api";
+    return sourceType === "public_web" || sourceType === "local_api" || isMountedFolderSource(sourceType);
+}
+
+function isMountedFolderSource(sourceType: string): boolean {
+    return sourceType === "mounted_folder";
 }

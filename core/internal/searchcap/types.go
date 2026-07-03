@@ -6,11 +6,12 @@ import (
 )
 
 const (
-	ProviderDisabled     = "disabled"
-	ProviderLocalSources = "local_sources"
-	ProviderSearXNG      = "searxng"
-	ProviderLocalAPI     = "local_api"
-	ProviderBrave        = "brave"
+	ProviderDisabled      = "disabled"
+	ProviderLocalSources  = "local_sources"
+	ProviderSearXNG       = "searxng"
+	ProviderLocalAPI      = "local_api"
+	ProviderBrave         = "brave"
+	ProviderMountedFolder = "mounted_folder"
 )
 
 type Embedder interface {

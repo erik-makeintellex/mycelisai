@@ -59,6 +59,7 @@ Deployment selection rule:
 
 - Use `uv run inv install --optional-engines` when you also want the local `cognitive/` extras.
 - Use `uv run inv cognitive.install` if you want only the optional local engine dependencies.
+- Reticulum is part of the default install substrate: `uv sync` installs locked `rns`, then the task verifies `uv run python` import access and warms/verifies the standard utility path with `uvx --from rns rnstatus --help`.
 - Interface dependencies are installed with `npm ci` so clean WSL/CI-style checkouts do not rewrite
   `interface/package-lock.json` during proof bootstrap.
 - The supported install path now also provisions the managed Playwright Chromium binary so fresh checkouts can run the repo-owned browser proof lane without a separate manual browser install step.

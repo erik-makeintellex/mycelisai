@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -164,5 +166,74 @@ func TestServiceSelectedSourceBlocksBearerSecretRefForSearXNG(t *testing.T) {
 	}
 	if resp.Blocker == nil || resp.Blocker.Code != "search_source_auth_adapter_required" {
 		t.Fatalf("auth blocker = %+v", resp.Blocker)
+	}
+}
+
+func TestServiceSelectedMountedFolderSearchesLiveFiles(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "client-notes.md"), []byte("Hermes agent design requires offline message handoff proof."), 0o600); err != nil {
+		t.Fatalf("write mounted file: %v", err)
+	}
+	svc := NewService(Config{Provider: ProviderDisabled, MaxResults: 5}, nil, nil)
+	source, err := svc.AddSource(SourceInput{
+		Name:             "Client docs mount",
+		Provider:         "mounted_folder",
+		SourceType:       "mounted_folder",
+		Endpoint:         root,
+		Boundary:         "operator-approved client docs folder",
+		AuthScheme:       "none",
+		Mode:             "live",
+		SensitivityClass: "restricted",
+		TrustClass:       "trusted_internal",
+		Status:           "available",
+	})
+	if err != nil {
+		t.Fatalf("AddSource mount: %v", err)
+	}
+
+	resp, err := svc.Search(context.Background(), Request{Query: "Hermes offline proof", SourceID: source.ID})
+	if err != nil {
+		t.Fatalf("Search mount: %v", err)
+	}
+	if resp.Status != "ok" || resp.Count != 1 {
+		t.Fatalf("resp = %+v", resp)
+	}
+	if resp.Results[0].SourceKind != "mounted_folder" || resp.Results[0].Title != "client-notes.md" {
+		t.Fatalf("mounted result = %+v", resp.Results[0])
+	}
+	if !strings.Contains(resp.Results[0].Snippet, "offline message handoff") {
+		t.Fatalf("snippet = %q", resp.Results[0].Snippet)
+	}
+	if resp.Metadata["selected_source_boundary"] != "operator-approved client docs folder" {
+		t.Fatalf("metadata = %+v", resp.Metadata)
+	}
+}
+
+func TestServiceLocalSourcesIncludesAvailableMountedFolders(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "research.txt"), []byte("Mounted data search should be live to Soma."), 0o600); err != nil {
+		t.Fatalf("write mounted file: %v", err)
+	}
+	svc := NewService(Config{Provider: ProviderLocalSources, MaxResults: 5}, nil, nil)
+	if _, err := svc.AddSource(SourceInput{
+		Name:       "Shared research mount",
+		Provider:   "mounted_folder",
+		SourceType: "mounted_folder",
+		Endpoint:   root,
+		Boundary:   "approved shared research folder",
+		Status:     "available",
+	}); err != nil {
+		t.Fatalf("AddSource mount: %v", err)
+	}
+
+	resp, err := svc.Search(context.Background(), Request{Query: "mounted data search"})
+	if err != nil {
+		t.Fatalf("Search default local sources: %v", err)
+	}
+	if resp.Status != "ok" || resp.Count != 1 {
+		t.Fatalf("resp = %+v", resp)
+	}
+	if resp.Results[0].SourceKind != "mounted_folder" {
+		t.Fatalf("source kind = %+v", resp.Results[0])
 	}
 }

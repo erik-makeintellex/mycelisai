@@ -180,4 +180,56 @@ describe('MCPToolRegistry search sources', () => {
         expect(mockFetch).toHaveBeenCalledWith('/api/v1/search/sources/team-api', expect.objectContaining({ method: 'PATCH' }));
         expect(mockFetch).toHaveBeenCalledWith('/api/v1/search/sources/team-api', expect.objectContaining({ method: 'DELETE' }));
     });
+
+    it('adds mounted folder sources with local paths instead of HTTP endpoints', async () => {
+        mockFetch
+            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: [] }) })
+            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: { id: 'client-docs' } }) })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ ok: true, data: [{
+                    id: 'client-docs',
+                    name: 'Client docs mount',
+                    managed: true,
+                    source_type: 'mounted_folder',
+                    endpoint: 'workspace/client-docs',
+                    scope_kind: 'host',
+                    scope_ref: 'workstation-1',
+                    boundary: 'Operator-approved client docs folder',
+                    auth_scheme: 'none',
+                    mode: 'live',
+                    sensitivity_class: 'restricted',
+                    trust_class: 'trusted_internal',
+                    status: 'available',
+                }] }),
+            });
+
+        render(<MCPToolRegistry />);
+
+        await waitFor(() => expect(screen.getByText(/No configured sources reported/i)).toBeDefined());
+        fireEvent.click(screen.getByRole('button', { name: /Add search source/i }));
+        fireEvent.change(screen.getByLabelText('Source name'), { target: { value: 'Client docs mount' } });
+        fireEvent.change(screen.getByLabelText('Kind'), { target: { value: 'mounted_folder' } });
+        fireEvent.change(screen.getByLabelText('Local/shared folder path'), { target: { value: 'workspace/client-docs' } });
+        fireEvent.change(screen.getByLabelText('Boundary'), { target: { value: 'Operator-approved client docs folder' } });
+        fireEvent.change(screen.getByLabelText('Visible to'), { target: { value: 'host' } });
+        fireEvent.change(screen.getByLabelText('Scope reference'), { target: { value: 'workstation-1' } });
+        fireEvent.click(screen.getAllByRole('button', { name: /^Add search source$/i }).at(-1)!);
+
+        await waitFor(() => expect(screen.getByText(/Added Client docs mount/i)).toBeDefined());
+        await waitFor(() => expect(screen.getByText('Client docs mount')).toBeDefined());
+        expect(screen.getByText(/Mounted folder/i)).toBeDefined();
+        const postCall = mockFetch.mock.calls.find(([url, init]) => (
+            url === '/api/v1/search/sources' && (init as RequestInit | undefined)?.method === 'POST'
+        ));
+        const body = JSON.parse(((postCall?.[1] as RequestInit).body ?? '{}') as string);
+        expect(body).toMatchObject({
+            name: 'Client docs mount',
+            source_type: 'mounted_folder',
+            endpoint: 'workspace/client-docs',
+            scope_kind: 'host',
+            scope_ref: 'workstation-1',
+            auth_scheme: 'none',
+        });
+    });
 });

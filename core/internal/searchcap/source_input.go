@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -47,10 +48,11 @@ func normalizeSourceInput(input SourceInput) (Source, error) {
 		return Source{}, fmt.Errorf("endpoint is required for source_type %q", sourceType)
 	}
 	if endpoint != "" {
-		if err := validateRegistryEndpoint(endpoint); err != nil {
+		var err error
+		endpoint, err = normalizeRegistryEndpoint(sourceType, endpoint)
+		if err != nil {
 			return Source{}, err
 		}
-		endpoint = strings.TrimRight(endpoint, "/")
 	}
 
 	scopeKind, scopeRef, err := normalizeRegistryScope(firstString(input.ScopeKind, input.Scope), input.ScopeRef)
@@ -85,6 +87,16 @@ func normalizeSourceInput(input SourceInput) (Source, error) {
 	}, nil
 }
 
+func normalizeRegistryEndpoint(sourceType, raw string) (string, error) {
+	if isMountedFolderSourceType(sourceType) {
+		return normalizeMountedFolderPath(raw)
+	}
+	if err := validateRegistryEndpoint(raw); err != nil {
+		return "", err
+	}
+	return strings.TrimRight(strings.TrimSpace(raw), "/"), nil
+}
+
 func validateRegistryEndpoint(raw string) error {
 	parsed, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
@@ -94,6 +106,20 @@ func validateRegistryEndpoint(raw string) error {
 		return errors.New("endpoint must not include credentials")
 	}
 	return nil
+}
+
+func normalizeMountedFolderPath(raw string) (string, error) {
+	path := strings.TrimSpace(raw)
+	if path == "" {
+		return "", errors.New("path is required for mounted folder sources")
+	}
+	if strings.ContainsRune(path, '\x00') {
+		return "", errors.New("path must not contain null bytes")
+	}
+	if isAbsoluteHTTPURL(path) {
+		return "", errors.New("mounted folder source path must be a local or shared filesystem path, not an HTTP URL")
+	}
+	return filepath.ToSlash(filepath.Clean(path)), nil
 }
 
 func normalizeRegistryScope(raw, scopeRef string) (string, string, error) {
@@ -135,6 +161,9 @@ func normalizeRegistryAuthScheme(raw string) string {
 }
 
 func requiresRegistryEndpoint(sourceType string) bool {
+	if isMountedFolderSourceType(sourceType) {
+		return true
+	}
 	switch sourceType {
 	case "public_web", "local_api", "client_or_public_api", "private_api", "authenticated_api":
 		return true
@@ -175,6 +204,15 @@ func normalizeRegistryValue(raw, fallback string) string {
 		return fallback
 	}
 	return normalized
+}
+
+func isMountedFolderSourceType(sourceType string) bool {
+	switch normalizeSourceToken(sourceType) {
+	case ProviderMountedFolder, "local_mount", "data_mount", "shared_folder", "mounted_files":
+		return true
+	default:
+		return false
+	}
 }
 
 func normalizeSourceToken(raw string) string {

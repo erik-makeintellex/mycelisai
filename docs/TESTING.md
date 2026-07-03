@@ -19,7 +19,7 @@
 - [Adding New Tests](#adding-new-tests)
 ## Current Validation Contract
 - Feature work is not done until relevant tests run against the final branch state, touched docs are reviewed and updated where meaning changed, and close-out names evidence plus docs changed/reviewed.
-- Use `uv run inv ...` for real task execution.
+- Use `uv run inv ...` for real task execution. Install-contract proof includes Reticulum checks: `uv run python -c "import RNS; print(RNS.__version__)"` and `uvx --from rns rnstatus --help`.
 - `uv run inv ci.baseline` is the default branch-readiness gate.
 - Use `uv run inv ci.baseline --no-e2e` only for intentionally narrower debugging.
 - GitHub Actions are manual-only through `workflow_dispatch`; source-mode local gates are first, native PostgreSQL/NATS support live proof, and full Docker/Compose/K8s app proof starts only after local run/build/test evidence is acceptable.

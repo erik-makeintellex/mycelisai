@@ -219,6 +219,16 @@ describe('cortexStoreUtils', () => {
         expect(localStorage.getItem(buildChatSessionStorageKey('org-b'))).toBe(otherScope);
     });
 
+    it('repairs legacy non-UUID chat session ids before sending workspace chat', () => {
+        localStorage.setItem(buildChatSessionStorageKey('org-a'), 'session-1');
+
+        const repaired = loadOrCreateChatSessionId('org-a');
+
+        expect(repaired).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+        expect(repaired).not.toBe('session-1');
+        expect(localStorage.getItem(buildChatSessionStorageKey('org-a'))).toBe(repaired);
+    });
+
     it('clears only the requested scoped chat history', () => {
         persistChat([{ role: 'user', content: 'scoped' }] as any, 'org-1');
         persistChat([{ role: 'user', content: 'global' }] as any);
