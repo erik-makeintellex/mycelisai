@@ -20,6 +20,7 @@
 ## Current Validation Contract
 - Feature work is not done until relevant tests run against the final branch state, touched docs are reviewed and updated where meaning changed, and close-out names evidence plus docs changed/reviewed.
 - Use `uv run inv ...` for real task execution. Install-contract proof includes Reticulum checks: `uv run python -c "import RNS; print(RNS.__version__)"` and `uvx --from rns rnstatus --help`.
+- Cleanup-task proof should account for active runtimes: `clean.generated`, `clean.wsl-handoff`, and `clean.windows-dev-residue` skip the current Python environment when invoked from it, then report the skip instead of failing while deleting `.venv`.
 - `uv run inv ci.baseline` is the default branch-readiness gate.
 - Use `uv run inv ci.baseline --no-e2e` only for intentionally narrower debugging.
 - GitHub Actions are manual-only through `workflow_dispatch`; source-mode local gates are first, native PostgreSQL/NATS support live proof, and full Docker/Compose/K8s app proof starts only after local run/build/test evidence is acceptable.
@@ -190,7 +191,6 @@ For output block, media readiness, and team-managed review, use:
 
 If the media engine is offline, record a blocker instead of treating missing media as passed. Gateway unit proof uses `uv run pytest tests/test_media_gateway.py -q` and does not require Pinokio to be running.
 ## Tier 1: Backend Unit Tests
-
 Run:
 
 ```bash

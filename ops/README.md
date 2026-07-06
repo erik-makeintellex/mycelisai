@@ -33,6 +33,7 @@ Recommended host posture:
 - Windows native: run Core/Interface from source against Windows PostgreSQL and a local NATS server first; use Compose or Kubernetes only after local evidence is acceptable
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
+- cleanup tasks that include `.venv` skip the active Python runtime when invoked through `uv run inv`, then report the skipped path; remove the active environment from an external shell only when that is intentionally needed
 
 WSL Compose proof-checkout contract:
 - use the Windows repo to edit, review, and push; use Rancher Desktop K3s for Windows local Kubernetes parity and WSL when guarded Compose proof is required

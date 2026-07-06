@@ -1,4 +1,4 @@
-import shutil
+import os, shutil, stat
 from pathlib import Path
 
 WORKTREE_REVIEW_TARGETS = (
@@ -18,7 +18,6 @@ WORKTREE_BASELINE_COMMANDS = (
     "uv run inv ci.entrypoint-check",
     "uv run inv ci.baseline",
 )
-
 WORKTREE_AREA_RULES = (
     {
         "name": "Core runtime",
@@ -48,7 +47,7 @@ WORKTREE_AREA_RULES = (
         "exact_paths": ("pyproject.toml", "tasks.py"),
         "installs": ("uv sync --all-packages --dev",),
         "commands": (
-            "$env:PYTHONPATH='.'; uv run pytest tests/test_core_tasks.py tests/test_ci_tasks.py tests/test_interface_tasks.py tests/test_interface_e2e_tasks.py tests/test_interface_command_tasks.py tests/test_k8s_tasks.py tests/test_lifecycle_tasks.py tests/test_misc_tasks.py -q",
+            "$env:PYTHONPATH='.'; uv run pytest tests/test_core_tasks.py tests/test_ci_pipeline_tasks.py tests/test_ci_preflight_tasks.py tests/test_ci_runtime_posture_tasks.py tests/test_ci_service_tasks.py tests/test_interface_tasks.py tests/test_interface_e2e_tasks.py tests/test_interface_command_tasks.py tests/test_k8s_tasks.py tests/test_lifecycle_tasks.py tests/test_misc_tasks.py tests/test_cleanup_tasks.py -q",
             "uv run inv ci.build",
         ),
     },
@@ -97,7 +96,6 @@ def architecture_sync_directives():
         }
         for team_id, message in messages.items()
     }
-
 def repo_relative(path: Path, root_dir: Path) -> str:
     try:
         return str(path.resolve().relative_to(root_dir.resolve())).replace("\\", "/")
@@ -112,7 +110,6 @@ def assert_repo_managed_target(path: Path, root_dir: Path) -> Path:
     except ValueError as exc:
         raise SystemExit(f"CLEANUP FAILED: refusing to touch non-repo path: {path}") from exc
     return resolved
-
 def artifact_size_bytes(path: Path) -> int:
     if not path.exists():
         return 0
@@ -136,7 +133,6 @@ def format_size_bytes(size_bytes: int) -> str:
             return f"{value:.1f} {unit}"
         value /= 1024
     return f"{size_bytes} B"
-
 def remove_repo_targets(
     targets: tuple[Path, ...], root_dir: Path
 ) -> tuple[list[str], list[str]]:
@@ -151,10 +147,14 @@ def remove_repo_targets(
         if managed_target.is_file():
             managed_target.unlink()
         else:
-            shutil.rmtree(managed_target)
+            shutil.rmtree(managed_target, onexc=_retry_remove_readonly)
         removed.append(label)
     return removed, missing
-
+def _retry_remove_readonly(function, path, excinfo) -> None:
+    if not isinstance(excinfo, PermissionError):
+        raise excinfo
+    os.chmod(path, stat.S_IWRITE | stat.S_IREAD | stat.S_IEXEC)
+    function(path)
 def report_repo_targets(
     targets: tuple[Path, ...], root_dir: Path
 ) -> list[dict[str, object]]:

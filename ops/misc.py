@@ -2,6 +2,7 @@ from pathlib import Path
 
 from invoke import Collection, task
 
+from .cleanup_support import filter_active_runtime_targets, print_active_runtime_skip
 from .config import ROOT_DIR, is_windows
 from .misc_support import (
     WORKTREE_BASELINE_INSTALLS,
@@ -42,9 +43,11 @@ WSL_HANDOFF_TARGETS = (
 @task(name="generated")
 def clean_generated(c):
     """Remove repo-local generated artifacts that should not persist across host boundaries."""
-    removed, missing = remove_repo_targets(GENERATED_ARTIFACT_TARGETS, ROOT_DIR)
+    targets, skipped = filter_active_runtime_targets(GENERATED_ARTIFACT_TARGETS, ROOT_DIR)
+    removed, missing = remove_repo_targets(tuple(targets), ROOT_DIR)
     print("=== CLEAN GENERATED ===")
     print_cleanup_summary(removed, missing)
+    print_active_runtime_skip(skipped)
     print("Runtime data note:")
     print("  - workspace/docker-compose/data is intentionally untouched.")
     print("Workflow note:")
@@ -62,9 +65,11 @@ def clean_reports(c):
 @task(name="wsl-handoff")
 def clean_wsl_handoff(c):
     """Reset cross-host generated artifacts before handing the repo off to WSL."""
-    removed, missing = remove_repo_targets(WSL_HANDOFF_TARGETS, ROOT_DIR)
+    targets, skipped = filter_active_runtime_targets(WSL_HANDOFF_TARGETS, ROOT_DIR)
+    removed, missing = remove_repo_targets(tuple(targets), ROOT_DIR)
     print("=== CLEAN WSL HANDOFF ===")
     print_cleanup_summary(removed, missing)
+    print_active_runtime_skip(skipped)
     print("Next step:")
     print("  - use a WSL-native checkout for uv/npm/build/test/compose work.")
 
@@ -76,9 +81,11 @@ def clean_windows_dev_residue(c):
         raise SystemExit(
             "clean.windows-dev-residue is Windows-only. Use clean.generated from the WSL checkout instead."
         )
-    removed, missing = remove_repo_targets(GENERATED_ARTIFACT_TARGETS, ROOT_DIR)
+    targets, skipped = filter_active_runtime_targets(GENERATED_ARTIFACT_TARGETS, ROOT_DIR)
+    removed, missing = remove_repo_targets(tuple(targets), ROOT_DIR)
     print("=== CLEAN WINDOWS DEV RESIDUE ===")
     print_cleanup_summary(removed, missing)
+    print_active_runtime_skip(skipped)
     print("Windows source-only reminder:")
     print("  - edit and commit here if needed, but run install/build/test/compose from the WSL checkout.")
 
@@ -101,7 +108,6 @@ def clean_disk_status(c):
     print("  - Docker image/volume usage and WSL VHD slack space are outside repo cleanup.")
     print("Low-disk reminder:")
     print("  - run clean.generated first, then `wsl --shutdown`, then compact the WSL VHD from an elevated PowerShell when needed.")
-
 
 ns_clean = Collection("clean")
 ns_clean.add_task(clean_generated)
