@@ -1,9 +1,7 @@
 # Mycelis Canonical PRD
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
-> Status: Canonical
-> Last Updated: 2026-07-02
-> Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
+> Status: Canonical | Last Updated: 2026-07-06 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
 
@@ -128,6 +126,8 @@ Capability configuration must support three scopes:
 - targeted to a specific host/provider/tool endpoint
 
 The default configuration path should start from common capability choices rather than raw tool references. Operators should be able to choose readable intents such as Workspace files, User data mounts, Web research, Team coordination, or Local host/media, then set whether the permission applies to everyone, one Outcome/group lane, or one host. Raw MCP/tool refs remain visible for inspection and advanced editing, but they are not the first thing a user must understand.
+
+Built-in Soma commands are runtime capabilities, not hidden prompt affordances. Their handler execution stays in Go, but their user-facing title, quoted ask language, scope, governance posture, delivery shape, proof expectation, recovery posture, and UI label must come from command manifests under `core/config/soma-commands/`. The runtime must validate those manifests against the registered handler set so new or removed built-ins cannot silently drift away from user-facing capability language. Capability and service-inventory surfaces should use this metadata first and expose raw handler names only in Inspect or explicit technical inventory requests.
 
 Search is a governed capability family, not only public web search. Mycelis must support a Search Source Registry where operators can add sources Soma may search when allowed: built-in Mycelis/local search; public web through self-hosted SearXNG, operator-owned local APIs, or optional hosted providers; explicit URL retrieval through governed fetch; authenticated URL/API sources such as docs sites, customer portals, SaaS knowledge bases, issue trackers, repositories, file stores, mounted user folders, infrastructure shared folders, or internal search endpoints; and future dedicated connectors such as GitHub, Slack, Notion, Confluence, SharePoint, Google Drive, Postgres, CRM, accounting, or ticketing systems.
 

@@ -10,6 +10,7 @@ import (
 	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/searchcap"
+	"github.com/mycelis/core/internal/somacommands"
 )
 
 type fakeMCPRegistry struct {
@@ -29,6 +30,19 @@ type fakeToolLister map[string]string
 
 func (f fakeToolLister) ListDescriptions() map[string]string {
 	return map[string]string(f)
+}
+
+type fakeManifestToolLister struct {
+	descriptions map[string]string
+	commands     []somacommands.Command
+}
+
+func (f fakeManifestToolLister) ListDescriptions() map[string]string {
+	return f.descriptions
+}
+
+func (f fakeManifestToolLister) ListCommandManifests() []somacommands.Command {
+	return f.commands
 }
 
 type fakeSearchStatusProvider struct {
@@ -122,6 +136,65 @@ func TestServiceDerivesCapabilityManifestSnapshot(t *testing.T) {
 	}
 	if mcpTool.FailurePosture == "" || mcpTool.RecoveryPosture == "" {
 		t.Fatalf("failure/recovery posture missing: %+v", mcpTool)
+	}
+}
+
+func TestServiceProjectsInternalToolCommandManifest(t *testing.T) {
+	now := time.Date(2026, 5, 10, 12, 0, 0, 0, time.UTC)
+	svc := NewService(Dependencies{
+		ExchangeCapabilities: []exchange.CapabilityDefinition{},
+		InternalTools: fakeManifestToolLister{
+			descriptions: map[string]string{"web_search": "Fallback description."},
+			commands: []somacommands.Command{{
+				ID:              "search.web",
+				Handler:         "web_search",
+				Title:           "Web and source search",
+				Summary:         "Search configured sources.",
+				UserQuote:       "Research this for me.",
+				Category:        "Search",
+				CapabilityID:    "web_search",
+				InputSchemaRef:  "internal_tool.web_search.input",
+				OutputSchemaRef: "search_results.v1",
+				Scope: somacommands.Scope{
+					Default: "workspace",
+					Roles:   []string{"soma", "team_lead"},
+					Groups:  []string{"configured_sources"},
+				},
+				Governance: somacommands.Governance{
+					RiskClass:       "medium-risk",
+					ApprovalPosture: "not_required",
+					AuditRequired:   true,
+				},
+				Delivery: somacommands.Delivery{
+					OutputKinds:     []string{"search_results"},
+					ProofRequired:   true,
+					RecoveryPosture: "configure_source_or_retry_local",
+				},
+			}},
+		},
+		HostCommands: func() []string { return nil },
+		Now:          func() time.Time { return now },
+	})
+
+	snap, err := svc.Refresh(context.Background())
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	manifest := assertManifest(t, snap, "internal_tool:web_search", "internal_tool", "available")
+	if manifest.DisplayName != "Web and source search" {
+		t.Fatalf("display_name = %q", manifest.DisplayName)
+	}
+	if manifest.CapabilityID != "web_search" {
+		t.Fatalf("capability_id = %q", manifest.CapabilityID)
+	}
+	if manifest.InputSchemaRef != "internal_tool.web_search.input" {
+		t.Fatalf("input_schema_ref = %q", manifest.InputSchemaRef)
+	}
+	if manifest.RecoveryPosture != "configure_source_or_retry_local" {
+		t.Fatalf("recovery_posture = %q", manifest.RecoveryPosture)
+	}
+	if manifest.Metadata["user_quote"] != "Research this for me." {
+		t.Fatalf("metadata = %#v", manifest.Metadata)
 	}
 }
 

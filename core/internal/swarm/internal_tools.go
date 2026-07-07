@@ -16,6 +16,7 @@ import (
 	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/searchcap"
+	"github.com/mycelis/core/internal/somacommands"
 	"github.com/nats-io/nats.go"
 )
 
@@ -90,6 +91,7 @@ type InternalTool struct {
 	Description string
 	InputSchema map[string]any
 	Handler     func(ctx context.Context, args map[string]any) (string, error)
+	Manifest    *somacommands.Command
 }
 
 // InternalToolRegistry holds all built-in tools and their dependencies.
@@ -106,6 +108,7 @@ type InternalToolRegistry struct {
 	exchange  *exchange.Service
 	search    *searchcap.Service
 	somaRef   *Soma
+	manifests map[string]somacommands.Command
 }
 
 // InternalToolDeps bundles all optional dependencies for the internal tools.
@@ -138,6 +141,7 @@ func NewInternalToolRegistry(deps InternalToolDeps) *InternalToolRegistry {
 		search:    deps.Search,
 	}
 	r.registerAll()
+	r.applyCommandManifests()
 	return r
 }
 
@@ -169,6 +173,14 @@ func (r *InternalToolRegistry) ListDescriptions() map[string]string {
 	return m
 }
 
+func (r *InternalToolRegistry) ListCommandManifests() []somacommands.Command {
+	commands := make([]somacommands.Command, 0, len(r.manifests))
+	for _, command := range r.manifests {
+		commands = append(commands, command)
+	}
+	return commands
+}
+
 // registerAll keeps registration grouped by operator-facing capability families.
 func (r *InternalToolRegistry) registerAll() {
 	r.registerCoordinationTools()
@@ -176,4 +188,21 @@ func (r *InternalToolRegistry) registerAll() {
 	r.registerDocsTools()
 	r.registerMemoryAndArtifactTools()
 	r.registerExecutionAndMediaTools()
+}
+
+func (r *InternalToolRegistry) applyCommandManifests() {
+	registry, err := somacommands.LoadDefault()
+	if err != nil {
+		return
+	}
+	if err := registry.ValidateHandlers(r.ListNames()); err != nil {
+		return
+	}
+	r.manifests = registry.ByHandler()
+	for name, command := range r.manifests {
+		if tool := r.tools[name]; tool != nil {
+			cmd := command
+			tool.Manifest = &cmd
+		}
+	}
 }

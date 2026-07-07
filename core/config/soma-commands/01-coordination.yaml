@@ -1,0 +1,107 @@
+version: soma_commands.v1
+commands:
+  - id: council.consult
+    handler: consult_council
+    title: Consult council
+    summary: Ask a named specialist for bounded advice before Soma acts.
+    user_quote: "Ask a specialist to review this first."
+    category: Team coordination
+    capability_id: team_coordination
+    input_schema_ref: internal_tool.consult_council.input
+    output_schema_ref: council_advice.v1
+    scope: {default: workspace, roles: [soma, team_lead]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [guidance], proof_required: false, recovery_posture: retry_with_clearer_question}
+    context_assertions: [advisory_only, no_mutation]
+    ui_visibility: {default_surface: soma_thread, operator_label: Specialist advice}
+    availability: {mode: builtin}
+  - id: team.delegate
+    handler: delegate_task
+    title: Delegate work
+    summary: Hand a structured ask to a selected team with proof expectations.
+    user_quote: "Have the right team work on this."
+    category: Team coordination
+    capability_id: team_coordination
+    input_schema_ref: internal_tool.delegate_task.input
+    output_schema_ref: team_ask_receipt.v1
+    scope: {default: workspace, roles: [soma, team_lead, automation]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [team_work_item, run_receipt], proof_required: true, recovery_posture: recover_or_reroute_team_ask}
+    context_assertions: [team_scoped, governed_execution]
+    ui_visibility: {default_surface: soma_thread, operator_label: Team handoff}
+    availability: {mode: builtin}
+  - id: team.create
+    handler: create_team
+    title: Create team
+    summary: Create a minimal runtime team, starting with a lead and adding specialists only when justified.
+    user_quote: "Create a team for this outcome."
+    category: Team coordination
+    capability_id: team_coordination
+    input_schema_ref: internal_tool.create_team.input
+    output_schema_ref: team_created.v1
+    scope: {default: workspace, roles: [soma, admin]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [team_record], proof_required: true, recovery_posture: remove_or_recreate_team}
+    context_assertions: [lead_only_start, temporary_specialists_require_reason]
+    ui_visibility: {default_surface: soma_thread, operator_label: Team setup}
+    availability: {mode: builtin}
+  - id: team.list
+    handler: list_teams
+    title: List teams
+    summary: Show active teams and member counts.
+    user_quote: "Show me the teams."
+    category: Team coordination
+    capability_id: team_visibility
+    input_schema_ref: internal_tool.list_teams.input
+    output_schema_ref: team_roster.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [status], proof_required: false, recovery_posture: retry_roster_read}
+    context_assertions: [read_only]
+    ui_visibility: {default_surface: inspect, operator_label: Team roster}
+    availability: {mode: builtin}
+  - id: runtime.missions
+    handler: list_missions
+    title: List missions
+    summary: Show active mission and runtime participation counts.
+    user_quote: "What work is active?"
+    category: Runtime visibility
+    capability_id: runtime_visibility
+    input_schema_ref: internal_tool.list_missions.input
+    output_schema_ref: mission_status.v1
+    scope: {default: workspace, roles: [soma, team_lead, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [status], proof_required: false, recovery_posture: retry_status_read}
+    context_assertions: [read_only]
+    ui_visibility: {default_surface: inspect, operator_label: Active work}
+    availability: {mode: builtin}
+  - id: runtime.status
+    handler: get_system_status
+    title: System status
+    summary: Read runtime telemetry for health and degraded-mode explanation.
+    user_quote: "Check whether the system is healthy."
+    category: Runtime visibility
+    capability_id: runtime_visibility
+    input_schema_ref: internal_tool.get_system_status.input
+    output_schema_ref: runtime_status.v1
+    scope: {default: workspace, roles: [soma, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [status], proof_required: false, recovery_posture: retry_status_read}
+    context_assertions: [read_only]
+    ui_visibility: {default_surface: inspect, operator_label: Runtime status}
+    availability: {mode: builtin}
+  - id: tools.list
+    handler: list_available_tools
+    title: List available tools
+    summary: Explain configured internal and MCP tools in user-facing terms.
+    user_quote: "What can Soma use right now?"
+    category: Capability visibility
+    capability_id: capability_visibility
+    input_schema_ref: internal_tool.list_available_tools.input
+    output_schema_ref: capability_inventory.v1
+    scope: {default: workspace, roles: [soma, team_lead, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [inventory], proof_required: false, recovery_posture: repair_blocked_tool_or_retry}
+    context_assertions: [read_only]
+    ui_visibility: {default_surface: resources, operator_label: Available tools}
+    availability: {mode: builtin}

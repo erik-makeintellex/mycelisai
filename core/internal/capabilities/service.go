@@ -13,6 +13,7 @@ import (
 	"github.com/mycelis/core/internal/hostcmd"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/searchcap"
+	"github.com/mycelis/core/internal/somacommands"
 )
 
 type MCPRegistry interface {
@@ -22,6 +23,10 @@ type MCPRegistry interface {
 
 type InternalToolLister interface {
 	ListDescriptions() map[string]string
+}
+
+type InternalToolManifestLister interface {
+	ListCommandManifests() []somacommands.Command
 }
 
 type SearchStatusProvider interface {
@@ -178,7 +183,17 @@ func (s *Service) derive(ctx context.Context, derivedAt time.Time) []Manifest {
 		}))
 	}
 	if s.deps.InternalTools != nil {
+		commandManifests := map[string]somacommands.Command{}
+		if lister, ok := s.deps.InternalTools.(InternalToolManifestLister); ok {
+			for _, command := range lister.ListCommandManifests() {
+				commandManifests[command.Handler] = command
+			}
+		}
 		for name, desc := range s.deps.InternalTools.ListDescriptions() {
+			if command, ok := commandManifests[name]; ok {
+				add(manifestFromInternalCommand(command, desc))
+				continue
+			}
 			add(Manifest{
 				ID:          "internal_tool:" + name,
 				DisplayName: name,

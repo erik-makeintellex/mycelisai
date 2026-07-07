@@ -7,6 +7,7 @@ import (
 	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/searchcap"
+	"github.com/mycelis/core/internal/somacommands"
 )
 
 func manifestFromExchangeCapability(cap exchange.CapabilityDefinition) Manifest {
@@ -144,6 +145,57 @@ func manifestFromMCPLibraryEntry(category string, entry mcp.LibraryEntry) Manife
 			"repository":          entry.Repository,
 			"homepage":            entry.Homepage,
 		},
+	}
+}
+
+func manifestFromInternalCommand(command somacommands.Command, fallbackDesc string) Manifest {
+	name := strings.TrimSpace(command.Handler)
+	description := strings.TrimSpace(command.Summary)
+	if description == "" {
+		description = fallbackDesc
+	}
+	risk := strings.TrimSpace(command.Governance.RiskClass)
+	if risk == "" {
+		risk = riskForInternalTool(name)
+	}
+	roles := append([]string(nil), command.Scope.Roles...)
+	if len(roles) == 0 {
+		roles = []string{"soma", "team_lead", "specialist", "automation"}
+	}
+	metadata := map[string]any{
+		"registry":           "soma_command_manifest",
+		"command_id":         command.ID,
+		"category":           command.Category,
+		"user_quote":         command.UserQuote,
+		"scope":              command.Scope,
+		"delivery":           command.Delivery,
+		"context_assertions": command.ContextAssertions,
+		"ui_visibility":      command.UIVisibility,
+		"availability":       command.Availability,
+	}
+	for k, v := range command.Metadata {
+		metadata[k] = v
+	}
+	return Manifest{
+		ID:                  "internal_tool:" + name,
+		CapabilityID:        firstNonEmpty(command.CapabilityID, "internal_tool:"+name),
+		DisplayName:         displayName(command.Title, name),
+		Kind:                "internal_tool",
+		Source:              "internal_tool",
+		Status:              "available",
+		RiskClass:           risk,
+		Description:         description,
+		Purpose:             description,
+		ToolRefs:            []string{name},
+		DefaultAllowedRoles: roles,
+		AuditRequired:       command.Governance.AuditRequired,
+		ApprovalRequired:    command.Governance.ApprovalPosture == "required",
+		ApprovalPosture:     command.Governance.ApprovalPosture,
+		InputSchemaRef:      command.InputSchemaRef,
+		OutputSchemaRef:     command.OutputSchemaRef,
+		RecoveryPosture:     command.Delivery.RecoveryPosture,
+		FailurePosture:      "surface_operational_alert",
+		Metadata:            metadata,
 	}
 }
 

@@ -1,0 +1,122 @@
+version: soma_commands.v1
+commands:
+  - id: exchange.channels
+    handler: list_exchange_channels
+    title: List exchange channels
+    summary: Show governed handoff lanes for outputs, review, learning, and tool results.
+    user_quote: "Show the work lanes."
+    category: Exchange and handoff
+    capability_id: exchange_visibility
+    input_schema_ref: internal_tool.list_exchange_channels.input
+    output_schema_ref: exchange_channels.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [inventory], proof_required: false, recovery_posture: retry_exchange_read}
+    context_assertions: [read_only]
+    ui_visibility: {default_surface: resources, operator_label: Work lanes}
+    availability: {mode: builtin}
+  - id: exchange.threads
+    handler: list_exchange_threads
+    title: List exchange threads
+    summary: Read managed work threads by channel or status.
+    user_quote: "Show the threads for this lane."
+    category: Exchange and handoff
+    capability_id: exchange_visibility
+    input_schema_ref: internal_tool.list_exchange_threads.input
+    output_schema_ref: exchange_threads.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [inventory], proof_required: false, recovery_posture: retry_exchange_read}
+    context_assertions: [read_only]
+    ui_visibility: {default_surface: resources, operator_label: Work threads}
+    availability: {mode: builtin}
+  - id: exchange.search
+    handler: search_exchange_items
+    title: Search exchange
+    summary: Find prior managed outputs and continuity context.
+    user_quote: "Find related work we already have."
+    category: Exchange and handoff
+    capability_id: exchange_search
+    input_schema_ref: internal_tool.search_exchange_items.input
+    output_schema_ref: exchange_search_results.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [search_results], proof_required: false, recovery_posture: retry_with_narrower_query}
+    context_assertions: [read_only, continuity_assist_only]
+    ui_visibility: {default_surface: soma_thread, operator_label: Prior work search}
+    availability: {mode: builtin}
+  - id: exchange.create_thread
+    handler: create_exchange_thread
+    title: Create exchange thread
+    summary: Open a governed work, review, escalation, planning, or learning thread.
+    user_quote: "Start a work thread for this."
+    category: Exchange and handoff
+    capability_id: exchange_write
+    input_schema_ref: internal_tool.create_exchange_thread.input
+    output_schema_ref: exchange_thread_created.v1
+    scope: {default: workspace, roles: [soma, team_lead, automation]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [thread_record], proof_required: true, recovery_posture: close_or_recreate_thread}
+    context_assertions: [mutates_exchange]
+    ui_visibility: {default_surface: soma_thread, operator_label: Work thread}
+    availability: {mode: builtin}
+  - id: exchange.publish_item
+    handler: publish_exchange_item
+    title: Publish exchange item
+    summary: Publish a structured item into a governed work lane.
+    user_quote: "Share this with the right lane."
+    category: Exchange and handoff
+    capability_id: exchange_write
+    input_schema_ref: internal_tool.publish_exchange_item.input
+    output_schema_ref: exchange_item_published.v1
+    scope: {default: workspace, roles: [soma, team_lead, automation]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [exchange_item], proof_required: true, recovery_posture: correct_or_supersede_item}
+    context_assertions: [mutates_exchange, structured_payload_required]
+    ui_visibility: {default_surface: soma_thread, operator_label: Work item}
+    availability: {mode: builtin}
+  - id: planning.blueprint
+    handler: generate_blueprint
+    title: Generate blueprint
+    summary: Turn natural language intent into a governed mission blueprint.
+    user_quote: "Turn this into a plan."
+    category: Planning
+    capability_id: planning
+    input_schema_ref: internal_tool.generate_blueprint.input
+    output_schema_ref: mission_blueprint.v1
+    scope: {default: workspace, roles: [soma, team_lead]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [plan], proof_required: false, recovery_posture: revise_plan}
+    context_assertions: [no_mutation_until_approved]
+    ui_visibility: {default_surface: soma_thread, operator_label: Plan}
+    availability: {mode: builtin}
+  - id: planning.research_blueprint
+    handler: research_for_blueprint
+    title: Research for blueprint
+    summary: Gather context before shaping a mission blueprint.
+    user_quote: "Research this before planning."
+    category: Planning
+    capability_id: research_planning
+    input_schema_ref: internal_tool.research_for_blueprint.input
+    output_schema_ref: research_brief.v1
+    scope: {default: workspace, roles: [soma, team_lead]}
+    governance: {risk_class: medium-risk, approval_posture: not_required, audit_required: true}
+    delivery: {output_kinds: [research_brief, plan_inputs], proof_required: true, recovery_posture: retry_or_limit_sources}
+    context_assertions: [sources_are_leads_until_verified]
+    ui_visibility: {default_surface: soma_thread, operator_label: Research plan}
+    availability: {mode: builtin}
+  - id: planning.catalogue
+    handler: list_catalogue
+    title: List role catalogue
+    summary: Show reusable agent templates available for team shaping.
+    user_quote: "What kinds of specialists can Soma use?"
+    category: Planning
+    capability_id: role_library
+    input_schema_ref: internal_tool.list_catalogue.input
+    output_schema_ref: role_catalogue.v1
+    scope: {default: workspace, roles: [soma, team_lead, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [inventory], proof_required: false, recovery_posture: retry_catalogue_read}
+    context_assertions: [read_only]
+    ui_visibility: {default_surface: resources, operator_label: Role library}
+    availability: {mode: builtin}

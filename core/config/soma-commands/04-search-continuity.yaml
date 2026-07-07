@@ -1,0 +1,167 @@
+version: soma_commands.v1
+commands:
+  - id: memory.search
+    handler: search_memory
+    title: Search continuity
+    summary: Search durable continuity with optional team, agent, visibility, and type scope.
+    user_quote: "Search what we already know."
+    category: Continuity
+    capability_id: continuity_search
+    input_schema_ref: internal_tool.search_memory.input
+    output_schema_ref: continuity_search_results.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: medium-risk, approval_posture: not_required, audit_required: true, private_data_touch: true}
+    delivery: {output_kinds: [search_results], proof_required: true, recovery_posture: narrow_scope_or_mount}
+    context_assertions: [continuity_assist_only, authority_remains_with_proof]
+    ui_visibility: {default_surface: soma_thread, operator_label: Continuity search}
+    availability: {mode: builtin}
+  - id: search.web
+    handler: web_search
+    title: Web and source search
+    summary: Search governed Mycelis Search sources, including local sources and configured web access.
+    user_quote: "Research this for me."
+    category: Search
+    capability_id: web_search
+    input_schema_ref: internal_tool.web_search.input
+    output_schema_ref: search_results.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist], groups: [configured_sources]}
+    governance: {risk_class: medium-risk, approval_posture: not_required, audit_required: true, private_data_touch: true}
+    delivery: {output_kinds: [search_results, citations], proof_required: true, recovery_posture: configure_source_or_retry_local}
+    context_assertions: [external_results_are_leads, local_mounts_require_user_scope]
+    ui_visibility: {default_surface: soma_thread, operator_label: Research}
+    availability: {mode: builtin, requires: [search_provider_or_local_sources]}
+  - id: context.load
+    handler: load_deployment_context
+    title: Load context
+    summary: Add governed user, company, or Soma operating context with provenance.
+    user_quote: "Use this context going forward."
+    category: Continuity
+    capability_id: deployment_context
+    input_schema_ref: internal_tool.load_deployment_context.input
+    output_schema_ref: context_loaded.v1
+    scope: {default: workspace, roles: [soma, admin], groups: [configured_context_scopes]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true, private_data_touch: true}
+    delivery: {output_kinds: [context_record], proof_required: true, recovery_posture: correct_context_class_or_visibility}
+    context_assertions: [context_is_not_authority, provenance_required]
+    ui_visibility: {default_surface: soma_thread, operator_label: Context load}
+    availability: {mode: builtin}
+  - id: context.promote
+    handler: promote_deployment_context
+    title: Promote context
+    summary: Promote an approved context entry into company knowledge with lineage.
+    user_quote: "Promote this into approved knowledge."
+    category: Continuity
+    capability_id: deployment_context
+    input_schema_ref: internal_tool.promote_deployment_context.input
+    output_schema_ref: context_promoted.v1
+    scope: {default: workspace, roles: [soma, admin]}
+    governance: {risk_class: high-risk, approval_posture: required, audit_required: true, private_data_touch: true}
+    delivery: {output_kinds: [context_record, lineage], proof_required: true, recovery_posture: reverse_or_supersede_promotion}
+    context_assertions: [authority_changes, approval_required]
+    ui_visibility: {default_surface: soma_thread, operator_label: Knowledge promotion}
+    availability: {mode: builtin}
+  - id: memory.remember
+    handler: remember
+    title: Remember
+    summary: Store a learned fact, preference, goal, decision, or lesson.
+    user_quote: "Remember this."
+    category: Continuity
+    capability_id: continuity_write
+    input_schema_ref: internal_tool.remember.input
+    output_schema_ref: memory_write_receipt.v1
+    scope: {default: workspace, roles: [soma, team_lead], groups: [visibility_scope]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true, private_data_touch: true}
+    delivery: {output_kinds: [memory_record], proof_required: true, recovery_posture: edit_or_forget_memory}
+    context_assertions: [memory_is_not_authority, visibility_required]
+    ui_visibility: {default_surface: soma_thread, operator_label: Memory update}
+    availability: {mode: builtin}
+  - id: memory.recall
+    handler: recall
+    title: Recall
+    summary: Recall stored memories by semantic similarity and structured filters.
+    user_quote: "Recall what matters here."
+    category: Continuity
+    capability_id: continuity_search
+    input_schema_ref: internal_tool.recall.input
+    output_schema_ref: memory_recall_results.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: medium-risk, approval_posture: not_required, audit_required: true, private_data_touch: true}
+    delivery: {output_kinds: [search_results], proof_required: true, recovery_posture: narrow_scope_or_retry}
+    context_assertions: [memory_is_not_authority]
+    ui_visibility: {default_surface: soma_thread, operator_label: Recall}
+    availability: {mode: builtin}
+  - id: temp_memory.write
+    handler: temp_memory_write
+    title: Write working checkpoint
+    summary: Persist a temporary restart-safe working checkpoint.
+    user_quote: "Keep this working note for the team."
+    category: Working memory
+    capability_id: temp_memory
+    input_schema_ref: internal_tool.temp_memory_write.input
+    output_schema_ref: temp_memory_write_receipt.v1
+    scope: {default: team, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: medium-risk, approval_posture: not_required, audit_required: true}
+    delivery: {output_kinds: [checkpoint], proof_required: true, recovery_posture: rewrite_checkpoint}
+    context_assertions: [temporary_scope, restart_safe]
+    ui_visibility: {default_surface: inspect, operator_label: Working checkpoint}
+    availability: {mode: builtin}
+  - id: temp_memory.read
+    handler: temp_memory_read
+    title: Read working checkpoint
+    summary: Read recent temporary checkpoints for a channel.
+    user_quote: "Check the team's working notes."
+    category: Working memory
+    capability_id: temp_memory
+    input_schema_ref: internal_tool.temp_memory_read.input
+    output_schema_ref: temp_memory_batch.v1
+    scope: {default: team, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [checkpoint_batch], proof_required: false, recovery_posture: retry_checkpoint_read}
+    context_assertions: [temporary_scope, read_only]
+    ui_visibility: {default_surface: inspect, operator_label: Working notes}
+    availability: {mode: builtin}
+  - id: temp_memory.clear
+    handler: temp_memory_clear
+    title: Clear working checkpoint
+    summary: Clear a temporary working-memory channel.
+    user_quote: "Clear those temporary working notes."
+    category: Working memory
+    capability_id: temp_memory
+    input_schema_ref: internal_tool.temp_memory_clear.input
+    output_schema_ref: temp_memory_clear_receipt.v1
+    scope: {default: team, roles: [soma, team_lead]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [clear_receipt], proof_required: true, recovery_posture: recreate_checkpoint_if_needed}
+    context_assertions: [temporary_scope, destructive_within_channel]
+    ui_visibility: {default_surface: inspect, operator_label: Clear working notes}
+    availability: {mode: builtin}
+  - id: memory.summarize_conversation
+    handler: summarize_conversation
+    title: Summarize conversation
+    summary: Summarize recent conversation into deliberate persistent memory.
+    user_quote: "Summarize this conversation for later."
+    category: Continuity
+    capability_id: continuity_write
+    input_schema_ref: internal_tool.summarize_conversation.input
+    output_schema_ref: conversation_summary.v1
+    scope: {default: workspace, roles: [soma, team_lead]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true, private_data_touch: true}
+    delivery: {output_kinds: [summary, memory_record], proof_required: true, recovery_posture: revise_or_delete_summary}
+    context_assertions: [memory_is_not_authority, summary_may_omit_details]
+    ui_visibility: {default_surface: soma_thread, operator_label: Conversation summary}
+    availability: {mode: builtin}
+  - id: artifact.store
+    handler: store_artifact
+    title: Store artifact
+    summary: Persist a generated or imported output as a typed, revisitable artifact.
+    user_quote: "Save this as an output."
+    category: Outputs
+    capability_id: artifact_output
+    input_schema_ref: internal_tool.store_artifact.input
+    output_schema_ref: artifact_stored.v1
+    scope: {default: outcome, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [artifact, deliverable], proof_required: true, recovery_posture: repair_or_supersede_artifact}
+    context_assertions: [durable_output, revisit_supported]
+    ui_visibility: {default_surface: soma_thread, operator_label: Output}
+    availability: {mode: builtin}

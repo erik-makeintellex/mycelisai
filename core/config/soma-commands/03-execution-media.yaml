@@ -1,0 +1,197 @@
+version: soma_commands.v1
+commands:
+  - id: signals.publish
+    handler: publish_signal
+    title: Publish signal
+    summary: Send a governed message onto a bus subject.
+    user_quote: "Notify that lane."
+    category: Runtime signaling
+    capability_id: bus_signal
+    input_schema_ref: internal_tool.publish_signal.input
+    output_schema_ref: bus_signal_receipt.v1
+    scope: {default: workspace, roles: [soma, team_lead, automation]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [signal_receipt], proof_required: true, recovery_posture: retry_or_publish_correction}
+    context_assertions: [mutates_bus, metadata_required]
+    ui_visibility: {default_surface: inspect, operator_label: Bus signal}
+    availability: {mode: builtin}
+  - id: signals.broadcast
+    handler: broadcast
+    title: Broadcast to teams
+    summary: Send an operator-readable message to active teams.
+    user_quote: "Tell all active teams this."
+    category: Runtime signaling
+    capability_id: team_broadcast
+    input_schema_ref: internal_tool.broadcast.input
+    output_schema_ref: team_broadcast_receipt.v1
+    scope: {default: workspace, roles: [soma, admin]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [broadcast_receipt], proof_required: true, recovery_posture: resend_or_target_specific_team}
+    context_assertions: [fanout]
+    ui_visibility: {default_surface: soma_thread, operator_label: Team update}
+    availability: {mode: builtin}
+  - id: comms.external_message
+    handler: send_external_message
+    title: Send external message
+    summary: Send a message through a configured external communication provider.
+    user_quote: "Send this outside Mycelis."
+    category: External communication
+    capability_id: external_comms
+    input_schema_ref: internal_tool.send_external_message.input
+    output_schema_ref: external_message_receipt.v1
+    scope: {default: workspace, roles: [soma, admin]}
+    governance: {risk_class: high-risk, approval_posture: required, audit_required: true, private_data_touch: true}
+    delivery: {output_kinds: [message_receipt], proof_required: true, recovery_posture: confirm_recipient_and_retry}
+    context_assertions: [external_side_effect, approval_required]
+    ui_visibility: {default_surface: soma_thread, operator_label: External message}
+    availability: {mode: builtin, requires: [comms_gateway]}
+  - id: signals.read
+    handler: read_signals
+    title: Read signals
+    summary: Read live or checkpointed bus messages for bounded diagnostics.
+    user_quote: "Check the recent bus messages."
+    category: Runtime signaling
+    capability_id: bus_visibility
+    input_schema_ref: internal_tool.read_signals.input
+    output_schema_ref: bus_signal_batch.v1
+    scope: {default: workspace, roles: [soma, team_lead, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [diagnostics], proof_required: false, recovery_posture: retry_with_latest_checkpoint}
+    context_assertions: [read_only]
+    ui_visibility: {default_surface: inspect, operator_label: Bus diagnostics}
+    availability: {mode: builtin}
+  - id: files.read
+    handler: read_file
+    title: Read workspace file
+    summary: Read an allowed file inside the workspace sandbox.
+    user_quote: "Read this workspace file."
+    category: Workspace files
+    capability_id: workspace_file_read
+    input_schema_ref: internal_tool.read_file.input
+    output_schema_ref: workspace_file_content.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true, private_data_touch: true}
+    delivery: {output_kinds: [file_content], proof_required: true, recovery_posture: choose_allowed_mount_or_file}
+    context_assertions: [workspace_sandbox_required]
+    ui_visibility: {default_surface: resources, operator_label: File read}
+    availability: {mode: builtin}
+  - id: files.write
+    handler: write_file
+    title: Write workspace file
+    summary: Write bounded content inside the workspace sandbox.
+    user_quote: "Save this as a file."
+    category: Workspace files
+    capability_id: workspace_file_write
+    input_schema_ref: internal_tool.write_file.input
+    output_schema_ref: workspace_file_write_receipt.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [file, write_receipt], proof_required: true, recovery_posture: retry_with_safe_path}
+    context_assertions: [workspace_sandbox_required, max_write_size_enforced]
+    ui_visibility: {default_surface: soma_thread, operator_label: File output}
+    availability: {mode: builtin}
+  - id: host.local_command
+    handler: local_command
+    title: Run local command
+    summary: Execute one allowlisted host command without shell interpolation.
+    user_quote: "Run this approved local command."
+    category: Host actions
+    capability_id: host_command
+    input_schema_ref: internal_tool.local_command.input
+    output_schema_ref: host_command_receipt.v1
+    scope: {default: host, roles: [admin], hosts: [configured_host]}
+    governance: {risk_class: high-risk, approval_posture: required, audit_required: true}
+    delivery: {output_kinds: [command_output, receipt], proof_required: true, recovery_posture: adjust_allowlist_or_arguments}
+    context_assertions: [allowlist_required, no_shell_interpolation]
+    ui_visibility: {default_surface: inspect, operator_label: Host command}
+    availability: {mode: builtin, requires: [MYCELIS_LOCAL_COMMAND_ALLOWLIST]}
+  - id: media.generate_image
+    handler: generate_image
+    title: Generate image
+    summary: Generate an image with the configured local or private media provider.
+    user_quote: "Generate an image."
+    category: Media generation
+    capability_id: media_generation
+    input_schema_ref: internal_tool.generate_image.input
+    output_schema_ref: media_generation_result.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [image, media_artifact], proof_required: true, recovery_posture: retry_media_capability}
+    context_assertions: [generated_media_requires_artifact]
+    ui_visibility: {default_surface: soma_thread, operator_label: Image generation}
+    availability: {mode: builtin, requires: [media_provider]}
+  - id: media.save_cached_image
+    handler: save_cached_image
+    title: Save generated image
+    summary: Persist a cached image into the workspace saved-media folder.
+    user_quote: "Save that image."
+    category: Media generation
+    capability_id: media_output
+    input_schema_ref: internal_tool.save_cached_image.input
+    output_schema_ref: media_save_receipt.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [image_file, receipt], proof_required: true, recovery_posture: retry_with_valid_cached_image}
+    context_assertions: [workspace_sandbox_required]
+    ui_visibility: {default_surface: soma_thread, operator_label: Saved media}
+    availability: {mode: builtin}
+  - id: inception.store_recipe
+    handler: store_inception_recipe
+    title: Store recipe
+    summary: Save a reusable request recipe for future work shaping.
+    user_quote: "Remember this as a reusable way to ask."
+    category: Reusable workflows
+    capability_id: recipe_library
+    input_schema_ref: internal_tool.store_inception_recipe.input
+    output_schema_ref: recipe_stored.v1
+    scope: {default: workspace, roles: [soma, team_lead, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [recipe], proof_required: false, recovery_posture: edit_or_replace_recipe}
+    context_assertions: [non_executing_template]
+    ui_visibility: {default_surface: resources, operator_label: Request recipe}
+    availability: {mode: builtin}
+  - id: inception.recall_recipe
+    handler: recall_inception_recipes
+    title: Recall recipes
+    summary: Search reusable request recipes by keyword or category.
+    user_quote: "Find a reusable way to ask for this."
+    category: Reusable workflows
+    capability_id: recipe_library
+    input_schema_ref: internal_tool.recall_inception_recipes.input
+    output_schema_ref: recipe_search_results.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [search_results], proof_required: false, recovery_posture: retry_with_narrower_query}
+    context_assertions: [read_only]
+    ui_visibility: {default_surface: soma_thread, operator_label: Request recipes}
+    availability: {mode: builtin}
+  - id: templates.store_conversation
+    handler: store_conversation_template
+    title: Store conversation template
+    summary: Save a reusable non-executing conversation or team ask template.
+    user_quote: "Save this as a reusable conversation pattern."
+    category: Reusable workflows
+    capability_id: conversation_templates
+    input_schema_ref: internal_tool.store_conversation_template.input
+    output_schema_ref: conversation_template_stored.v1
+    scope: {default: workspace, roles: [soma, team_lead, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [template], proof_required: false, recovery_posture: edit_or_replace_template}
+    context_assertions: [non_executing_template]
+    ui_visibility: {default_surface: resources, operator_label: Conversation template}
+    availability: {mode: builtin}
+  - id: templates.instantiate_conversation
+    handler: instantiate_conversation_template
+    title: Instantiate conversation template
+    summary: Render a stored template into an ask package without executing it.
+    user_quote: "Use that template to draft the ask."
+    category: Reusable workflows
+    capability_id: conversation_templates
+    input_schema_ref: internal_tool.instantiate_conversation_template.input
+    output_schema_ref: conversation_ask_package.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [ask_package], proof_required: false, recovery_posture: correct_template_variables}
+    context_assertions: [non_executing_template]
+    ui_visibility: {default_surface: soma_thread, operator_label: Draft ask}
+    availability: {mode: builtin}

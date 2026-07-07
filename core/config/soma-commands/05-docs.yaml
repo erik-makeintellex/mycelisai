@@ -1,0 +1,47 @@
+version: soma_commands.v1
+commands:
+  - id: docs.list
+    handler: list_docs
+    title: List docs
+    summary: List curated help and architecture docs Soma can cite.
+    user_quote: "What docs can you use?"
+    category: Documentation
+    capability_id: docs_read
+    input_schema_ref: internal_tool.list_docs.input
+    output_schema_ref: docs_index.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [inventory], proof_required: false, recovery_posture: retry_docs_read}
+    context_assertions: [read_only, citable]
+    ui_visibility: {default_surface: docs, operator_label: Docs index}
+    availability: {mode: builtin}
+  - id: docs.read
+    handler: read_doc
+    title: Read doc
+    summary: Read one curated documentation page by slug with citation metadata.
+    user_quote: "Read that help page."
+    category: Documentation
+    capability_id: docs_read
+    input_schema_ref: internal_tool.read_doc.input
+    output_schema_ref: doc_content.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [doc_excerpt], proof_required: false, recovery_posture: choose_valid_doc_slug}
+    context_assertions: [read_only, citable]
+    ui_visibility: {default_surface: docs, operator_label: Documentation}
+    availability: {mode: builtin}
+  - id: docs.search
+    handler: search_docs
+    title: Search docs
+    summary: Search curated docs by meaning or keyword and return citable excerpts.
+    user_quote: "Search the docs for this."
+    category: Documentation
+    capability_id: docs_search
+    input_schema_ref: internal_tool.search_docs.input
+    output_schema_ref: docs_search_results.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [search_results, doc_excerpt], proof_required: false, recovery_posture: retry_with_narrower_query}
+    context_assertions: [read_only, citable]
+    ui_visibility: {default_surface: docs, operator_label: Docs search}
+    availability: {mode: builtin}
