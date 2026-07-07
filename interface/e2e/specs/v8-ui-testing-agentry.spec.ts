@@ -30,7 +30,7 @@ test.describe("V8 UI testing agentry product contract", () => {
 
         await openOrganization(page);
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
-        await expect(page.getByTestId("soma-conversation-thread").getByText("Example ways to ask")).toBeVisible();
+        await expect(page.getByTestId("soma-conversation-thread").getByText(/Ask in plain language/i)).toBeVisible();
         await expect(page.getByTestId("soma-conversation-thread").getByText(/Help me plan the next useful step/i)).toBeVisible();
         await expect(page.getByRole("button", { name: /Plan something/i })).toHaveCount(0);
 

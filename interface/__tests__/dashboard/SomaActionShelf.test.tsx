@@ -8,6 +8,16 @@ describe("SomaActionShelf", () => {
     vi.restoreAllMocks();
   });
 
+  it("renders saved asks as a compact conversational shelf", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(apiResponse([])));
+
+    render(<SomaActionShelf onRunAction={vi.fn()} />);
+
+    expect(screen.getByTestId("soma-action-shelf").textContent).toContain("Quick asks");
+    expect(screen.queryByText("Quick actions:")).toBeNull();
+    expect(screen.getByRole("button", { name: /Create new quick action/i }).textContent).toContain("Create ask");
+  });
+
   it("saves a reusable quick action without sending a chat prompt immediately", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(apiResponse([]))

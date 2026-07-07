@@ -202,27 +202,30 @@ export function SomaOperatingSurface({
       <h1 className="sr-only">Soma workspace</h1>
       <SomaActionShelf onRunAction={handlePinnedAction} />
       <div className="min-h-0 flex-1 p-2.5 lg:p-3">
-        {hasWorkContextChoices ? (
-          <SomaTeamContextSwitcher
-            teams={teamsDetail}
-            workItems={teamWork.items}
-            focusedTeamId={effectiveFocusedTeamId}
-            onRootSelect={clearFocusedContext}
-            onTeamSelect={focusTeamContext}
-          />
-        ) : null}
         <div className="relative">
           <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg shadow-sm">
-            <div className="flex flex-col gap-2 border-b border-cortex-border px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-start gap-2">
+            <div className="flex flex-col gap-2 border-b border-cortex-border px-4 py-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 flex-1 items-start gap-2">
                 <div className="mt-0.5 inline-flex shrink-0 items-center rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-cortex-primary">
                   Soma
                 </div>
                 <div className="min-w-0">
-                <h2 className="text-base font-semibold tracking-tight text-cortex-text-main">Talk to Soma</h2>
-                <p className="truncate text-xs text-cortex-text-muted">
-                  {scopeCopy}
-                </p>
+                  <h2 className="text-base font-semibold tracking-tight text-cortex-text-main">Talk to Soma</h2>
+                  <p className="truncate text-xs text-cortex-text-muted">
+                    {scopeCopy}
+                  </p>
+                  {hasWorkContextChoices ? (
+                    <div className="mt-1.5">
+                      <SomaTeamContextSwitcher
+                        teams={teamsDetail}
+                        workItems={teamWork.items}
+                        focusedTeamId={effectiveFocusedTeamId}
+                        onRootSelect={clearFocusedContext}
+                        onTeamSelect={focusTeamContext}
+                        compact
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-1.5 text-[11px] font-semibold text-cortex-text-muted">

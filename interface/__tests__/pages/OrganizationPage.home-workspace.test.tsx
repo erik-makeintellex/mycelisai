@@ -76,7 +76,7 @@ describe("OrganizationPage home workspace slices", () => {
         expect(screen.getByText("Verbosity")).toBeDefined();
         expect(screen.getByText("Durable memory recall")).toBeDefined();
         expect(screen.getByText("Temporary planning continuity")).toBeDefined();
-        expect(screen.getByText("Example ways to ask")).toBeDefined();
+        expect(screen.getByText(/Ask in plain language/i)).toBeDefined();
         expect(screen.getByText(/Help me plan the next useful step/i)).toBeDefined();
         expect(screen.getByText(/Research this, cite sources/i)).toBeDefined();
         expect(screen.getByText(/Create a first version/i)).toBeDefined();

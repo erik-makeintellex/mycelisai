@@ -45,17 +45,17 @@ The release question is not "Did we finish the subsystem?" The release question 
 The first authenticated surface is the Soma workspace. It should feel like a focused threaded workspace, not a dense admin console.
 
 Required first-viewport composition:
-
-- compact Quick Actions shelf as a bounded grid for pinned repeatable Soma asks without a visible horizontal scrollbar
+- compact Quick Actions shelf as a bounded row/wrap of pinned repeatable Soma asks without a visible horizontal scrollbar
 - large Talk to Soma thread as the primary canvas
 - no separate dashboard headline band above the thread; status and governance live in the Soma header
+- focused work/team context inside the Soma header when needed, not as another full-width pre-chat panel
 - quiet current-work strip only when there is meaningful work state
 - header Outcomes button that opens Outcome Vault on demand
 - no default right rail squeezing Soma
 - no setup, identity, topology, or environment stack below the chat
 - Details and Inspect controls for depth, not always-visible technical panels
 
-The empty Soma thread should not be a stack of starter action cards. It should behave like the beginning of a conversation: one plain prompt for the outcome, one short cue that Soma can help shape the path, and optional quoted examples of user asks. Those examples are readable language, not buttons, hidden launchers, or a predefined workflow menu.
+The empty Soma thread should not be a stack of starter action cards. It should behave like the beginning of a conversation: one plain prompt for the outcome, one short cue that Soma can help shape the path, and optional quoted examples of user asks. Those examples are readable language in a compact quote strip, not buttons, hidden launchers, framed cards, or a predefined workflow menu.
 
 The dashboard should keep the composer reachable at common desktop, laptop, tablet, and mobile viewports. Long content belongs inside bounded panes, overlays, tabs, or detail drawers rather than growing the whole page. Default work/output summaries should not expose file paths, proof internals, or stacked cards before the operator asks for detail; the primary surface should show the title, safe action, and review entry point.
 

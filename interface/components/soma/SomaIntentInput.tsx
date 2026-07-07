@@ -46,6 +46,7 @@ export function SomaIntentInput({
         autoFocus={autoFocus}
         disabled={disabled}
         rows={1}
+        suppressHydrationWarning
         className="max-h-[180px] min-h-10 min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-sm leading-6 text-cortex-text-main placeholder-cortex-text-muted/60 focus:border-cortex-primary focus:outline-none focus:ring-1 focus:ring-cortex-primary/30 disabled:opacity-50"
       />
       <button

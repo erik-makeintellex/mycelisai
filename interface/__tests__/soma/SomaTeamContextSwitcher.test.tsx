@@ -78,6 +78,23 @@ describe("SomaTeamContextSwitcher", () => {
     expect(onRootSelect).toHaveBeenCalledTimes(1);
   });
 
+  it("can render as a compact header control without exposing another full dashboard band", () => {
+    render(
+      <SomaTeamContextSwitcher
+        teams={[makeTeam(1)]}
+        workItems={[makeWorkItem(1)]}
+        focusedTeamId={null}
+        onRootSelect={vi.fn()}
+        onTeamSelect={vi.fn()}
+        compact
+      />,
+    );
+
+    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Working in");
+    expect(screen.getByRole("link", { name: /Manage teams/i }).textContent).toContain("Teams");
+    expect(screen.getByRole("button", { name: /Soma root/i }).className).toContain("rounded-full");
+  });
+
   it("hydrates from no visible teams into the workflow picker without changing hook order", () => {
     const onTeamSelect = vi.fn();
     const { rerender } = render(

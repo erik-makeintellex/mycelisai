@@ -152,7 +152,7 @@ describe('MissionControlChat UI states', () => {
         render(<MissionControlChat simpleMode />);
         await settleMissionControlChat();
 
-        expect(screen.getByText('Example ways to ask')).toBeDefined();
+        expect(screen.getByText(/Ask in plain language/i)).toBeDefined();
         expect(screen.getByText(/Research this, cite sources, and tell me what changed/i)).toBeDefined();
         expect(screen.queryByRole('button', { name: /Research something/i })).toBeNull();
         expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('');
