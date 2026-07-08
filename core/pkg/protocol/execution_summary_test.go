@@ -32,6 +32,7 @@ func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 			Outputs: []ExecutionOutput{{
 				ID:             "artifact-1",
 				Kind:           "document",
+				OutputClass:    OutputClassUserDeliverable,
 				Title:          "Brief",
 				Retained:       &verified,
 				RetentionClass: ExecutionRetentionClassRetained,
@@ -93,6 +94,9 @@ func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 	output := outputs[0].(map[string]any)
 	if output["retention_class"] != string(ExecutionRetentionClassRetained) {
 		t.Fatalf("output retention_class = %v", output["retention_class"])
+	}
+	if output["output_class"] != string(OutputClassUserDeliverable) {
+		t.Fatalf("output_class = %v", output["output_class"])
 	}
 	auditRecovery := summary["audit_recovery"].(map[string]any)
 	degradation := auditRecovery["degradation"].(map[string]any)

@@ -1,6 +1,7 @@
-import { useLayoutEffect } from "react";
+import { useRef } from "react";
 import { Loader2, Send } from "lucide-react";
 import type React from "react";
+import { resizeSomaComposer, useAutoResizeSomaComposer } from "@/components/soma/somaComposerResize";
 
 export function SomaIntentInput({
   value,
@@ -21,21 +22,19 @@ export function SomaIntentInput({
   onChange: (value: string) => void;
   onSubmit: () => void;
 }) {
-  useLayoutEffect(() => {
-    const input = inputRef?.current;
-    if (!input) return;
-    input.style.height = "auto";
-    const nextHeight = value ? Math.min(input.scrollHeight, 180) : 40;
-    input.style.height = `${nextHeight}px`;
-    input.style.overflowY = input.scrollHeight > nextHeight ? "auto" : "hidden";
-  }, [inputRef, value]);
+  const localInputRef = useRef<HTMLTextAreaElement>(null);
+  const resolvedInputRef = inputRef ?? localInputRef;
+  useAutoResizeSomaComposer(resolvedInputRef, value);
 
   return (
     <div className="flex items-end gap-2">
       <textarea
-        ref={inputRef}
+        ref={resolvedInputRef}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          resizeSomaComposer(event.currentTarget);
+          onChange(event.target.value);
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();

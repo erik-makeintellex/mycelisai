@@ -101,6 +101,8 @@ Team defaults:
 
 Groups are collaboration lanes. Use `Groups` when you want a temporary or standing lane with one selected-group workspace, Workflow Log, outputs, retained artifacts, and message/review context. The Workflow Log is the readable chat-pipeline view; it should not become raw bus logs or multiple little agent windows.
 
+When Soma evokes teams, planning and handoff files are working context, not final delivery. Ask Soma to continue until the group has a real user-facing output, then use Workflow Log or internal/source review only when you need the evidence trail behind that result.
+
 For multi-team work, ask in outcome language rather than agent wiring. For example: `Improve this app, retain examples of what changed, then let marketing create launch copy from those examples.` Soma should keep the source team, evidence examples, handoff, and downstream team output connected to the same Outcome. This applies across apps, games, media, documents, reports, and data products; games are only a difficult proof case, not a special product mode.
 
 ## Web, Search, And MCP
@@ -118,7 +120,8 @@ Search behavior:
 
 - if you ask whether Soma can search or make web requests, Soma should answer from current Mycelis Search capability status
 - freshness-oriented prompts should call the configured Mycelis `web_search` capability before falling back to MCP-specific guidance
-- `local_sources` is the default token-free provider and lets Soma search governed Mycelis context
+- `builtin_web` is the default token-free provider for ordinary web search
+- `local_sources` lets Soma search governed Mycelis context when the user asks for local, retained, internal, mounted, or shared sources
 - if semantic embeddings are unavailable, `local_sources` should fall back to bounded text search over retained Mycelis context
 - when Soma uses `web_search`, the Operator trust package should show a source boundary such as `Search source: Local Mycelis context`
 - the supported Compose path can use `searxng` with `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080`

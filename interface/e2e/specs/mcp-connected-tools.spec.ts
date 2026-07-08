@@ -508,7 +508,7 @@ test.describe("Capabilities MCP workflow", () => {
                 blocker: {
                     code: "search_provider_disabled",
                     message: "Mycelis Search is disabled.",
-                    next_action: "Set MYCELIS_SEARCH_PROVIDER=local_sources for governed local-source search or searxng for self-hosted web search.",
+                    next_action: "Set MYCELIS_SEARCH_PROVIDER=builtin_web for built-in web search, local_sources for governed local-source search, or searxng for self-hosted web search.",
                 },
             },
         });

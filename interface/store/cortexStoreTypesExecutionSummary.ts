@@ -33,6 +33,7 @@ export interface ExecutionSummaryItem {
     type?: string;
     status?: string;
     kind?: string;
+    output_class?: string;
     retained?: boolean;
     risk?: string;
     reason?: string;

@@ -6,8 +6,11 @@ import {
   linkClassName,
   type Group,
   type GroupLifecycleItem,
-  type OutputSummary,
 } from "./groupWorkspaceTypes";
+import {
+  groupDeliveryStatusLabel,
+  type OutputSummary,
+} from "./groupOutputClassification";
 
 export function GroupDetailPane({
   selectedGroup,
@@ -36,6 +39,7 @@ export function GroupDetailPane({
     );
   }
   const archived = selectedGroup.status === "archived";
+  const deliveryStatus = groupDeliveryStatusLabel(lifecycleItem, outputSummary);
   return (
     <section className="min-h-0 min-w-0 rounded-2xl border border-cortex-border bg-cortex-surface p-4">
       <div className="grid gap-4 border-b border-cortex-border pb-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.55fr)]">
@@ -60,8 +64,7 @@ export function GroupDetailPane({
             data-testid="groups-output-summary"
           >
             <Badge muted>
-              {outputSummary.artifactCount} output
-              {outputSummary.artifactCount === 1 ? "" : "s"}
+              {outputSummary.deliveredCount} delivered
             </Badge>
             <Badge muted>
               {outputSummary.agentCount} contributing lead
@@ -72,6 +75,7 @@ export function GroupDetailPane({
                 {lifecycleSummaryLabel(lifecycleItem)}
               </Badge>
             ) : null}
+            <Badge muted>{deliveryStatus}</Badge>
           </div>
           {lifecycleItem ? (
             <p className="mt-3 rounded-lg border border-cortex-border bg-cortex-surface p-3 text-xs leading-5 text-cortex-text-muted">
@@ -87,7 +91,9 @@ export function GroupDetailPane({
               onClick={onOpenOutputs}
               className={compactButtonClassName}
             >
-              Review outputs
+              {outputSummary.deliveredCount > 0
+                ? "Review outputs"
+                : "Review output state"}
             </button>
             <Link href="/dashboard" className={linkClassName}>
               Open Soma
@@ -175,8 +181,9 @@ export function GroupDetailPane({
 function lifecycleSummaryLabel(item: GroupLifecycleItem) {
   if (item.active_or_blocked_work_count > 0)
     return `${item.active_or_blocked_work_count} work waiting`;
-  if (item.output_ready_work_count > 0 || item.output_count > 0)
+  if (item.output_count > 0)
     return "output retained";
+  if (item.output_ready_work_count > 0) return "internal records only";
   if (item.expired) return "expired";
   return item.recommendation.replaceAll("_", " ");
 }

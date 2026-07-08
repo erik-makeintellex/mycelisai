@@ -85,8 +85,11 @@ func groupLifecycleRecommendation(group CollaborationGroup, stats groupTeamWorkS
 	if stats.ActiveOrBlocked > 0 {
 		return "review_work", "Linked team work still needs output, recovery, or operator review."
 	}
-	if outputCount > 0 || stats.OutputReady > 0 {
+	if outputCount > 0 {
 		return "archive_completed", "Outputs are retained and no linked team work is active."
+	}
+	if stats.OutputReady > 0 {
+		return "review_work", "Linked team work has retained internal material but no user-facing deliverable yet."
 	}
 	if group.Expiry == nil && group.Status == groupStatusActive && isGroupStale(group, stats, now) {
 		return "review_standing", "Standing group has no expiry and has not produced retained output recently."

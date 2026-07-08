@@ -147,6 +147,7 @@ func teamWorkAskTextOutputRef(item protocol.TeamWorkItem, eventID, interactionID
 		WorkItemID:    item.WorkItemID,
 		RunID:         item.RunID,
 		Kind:          "text_reply",
+		OutputClass:   protocol.OutputClassInternalHandoff,
 		Label:         "Team text reply",
 		StorageRef:    interactionRef,
 		ValidationRef: "readable_team_reply",

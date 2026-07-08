@@ -80,7 +80,7 @@ Common runtime variables:
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
 - `MYCELIS_K8S_TEXT_MODEL_ID`: Kubernetes/Helm text model override
 - `MYCELIS_MEDIA_ENDPOINT`, `MYCELIS_MEDIA_MODEL_ID`, `MYCELIS_MEDIA_GATEWAY_*`, `OPENAI_API_KEY`: local/private media gateway overrides and optional hosted OpenAI proof credential
-- `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, `MYCELIS_SEARCH_MAX_RESULTS`: governed search posture; default native Core search is `local_sources`, while Compose defaults to self-hosted `searxng`
+- `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, `MYCELIS_SEARCH_MAX_RESULTS`: governed search posture; default native Core search is `builtin_web`, while Compose can use self-hosted `searxng`, `local_api`, or explicit `local_sources`
 
 Provider override pattern:
 - `MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID`

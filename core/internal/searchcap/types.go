@@ -7,6 +7,7 @@ import (
 
 const (
 	ProviderDisabled      = "disabled"
+	ProviderBuiltinWeb    = "builtin_web"
 	ProviderLocalSources  = "local_sources"
 	ProviderSearXNG       = "searxng"
 	ProviderLocalAPI      = "local_api"

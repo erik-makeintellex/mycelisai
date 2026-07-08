@@ -110,12 +110,14 @@ export function installGroupsFetch({
   teamWork = {},
   workflowLogs = {},
   monitor = { status: "online", published_count: 0 },
+  lifecycle,
 }: {
   groups: TestGroup[];
   outputs?: Record<string, unknown[]>;
   teamWork?: Record<string, unknown[]>;
   workflowLogs?: Record<string, unknown>;
   monitor?: Record<string, unknown>;
+  lifecycle?: Record<string, unknown>;
 }) {
   mockFetch.mockImplementation(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -130,7 +132,7 @@ export function installGroupsFetch({
       if (url === "/api/v1/groups/lifecycle")
         return jsonResponse({
           ok: true,
-          data: emptyLifecycleReport(groups),
+          data: lifecycle ?? emptyLifecycleReport(groups),
         });
       if (
         url === "/api/v1/groups/lifecycle/archive-expired" &&
@@ -152,10 +154,13 @@ export function installGroupsFetch({
           ok: true,
           data: { workspace_path: "workspace/generated/coin-runner" },
         });
-      if (url === "/api/v1/groups/group-temp/clear" && init?.method === "POST") {
+      const clearMatch = url.match(/^\/api\/v1\/groups\/([^/]+)\/clear$/);
+      if (clearMatch && init?.method === "POST") {
+        const groupId = decodeURIComponent(clearMatch[1]);
         const index = groups.findIndex(
-          (group) => group.group_id === "group-temp",
+          (group) => group.group_id === groupId,
         );
+        if (index < 0) return jsonResponse({ error: "not found" }, false, 404);
         groups[index] = { ...groups[index], status: "archived" };
         const body = init.body ? JSON.parse(String(init.body)) : {};
         const includeOutputs = body.include_outputs === true;
@@ -172,12 +177,19 @@ export function installGroupsFetch({
           },
         });
       }
-      const match = url.match(/^\/api\/v1\/groups\/([^/]+)\/outputs\?limit=8$/);
-      if (match)
+      const match = url.match(
+        /^\/api\/v1\/groups\/([^/]+)\/outputs\?limit=8(?:&include_internal=true)?$/,
+      );
+      if (match) {
+        const groupOutputs = outputs[decodeURIComponent(match[1])] ?? [];
+        const includeInternal = url.includes("include_internal=true");
         return jsonResponse({
           ok: true,
-          data: outputs[decodeURIComponent(match[1])] ?? [],
+          data: includeInternal
+            ? groupOutputs
+            : groupOutputs.filter(isUserDeliverableTestArtifact),
         });
+      }
       const workflowLogMatch = url.match(
         /^\/api\/v1\/groups\/([^/]+)\/workflow-log\?limit=50&include_outputs=true&include_audit=true$/,
       );
@@ -201,6 +213,30 @@ export function installGroupsFetch({
         });
       return jsonResponse({ error: "not found" }, false, 404);
     },
+  );
+}
+
+function isUserDeliverableTestArtifact(item: unknown) {
+  if (!item || typeof item !== "object") return true;
+  const artifact = item as Record<string, unknown>;
+  const metadata =
+    artifact.metadata && typeof artifact.metadata === "object"
+      ? (artifact.metadata as Record<string, unknown>)
+      : {};
+  const explicit = String(
+    metadata.output_class ?? metadata.delivery_status ?? metadata.visibility ?? "",
+  ).toLowerCase();
+  if (["planning", "proof", "internal", "internal_handoff"].includes(explicit))
+    return false;
+  const path = String(artifact.file_path ?? artifact.title ?? "")
+    .replaceAll("\\", "/")
+    .toLowerCase();
+  return !(
+    path.includes("/planning/") ||
+    path.includes("/proof/") ||
+    path.includes("/watch/") ||
+    path.endsWith("team_evocation.md") ||
+    path.endsWith("research_council_handoff.md")
   );
 }
 

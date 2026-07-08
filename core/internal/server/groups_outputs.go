@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/artifacts"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func parseLimit(raw string, fallback int) int {
@@ -26,6 +28,10 @@ func parseLimit(raw string, fallback int) int {
 }
 
 func (s *AdminServer) listGroupOutputs(ctx context.Context, group *CollaborationGroup, limit int) ([]artifacts.Artifact, error) {
+	return s.listGroupOutputsWithOptions(ctx, group, limit, false)
+}
+
+func (s *AdminServer) listGroupOutputsWithOptions(ctx context.Context, group *CollaborationGroup, limit int, includeInternal bool) ([]artifacts.Artifact, error) {
 	if s.Artifacts == nil {
 		return nil, errors.New("artifacts not initialized")
 	}
@@ -53,6 +59,9 @@ func (s *AdminServer) listGroupOutputs(ctx context.Context, group *Collaboration
 			if strings.EqualFold(strings.TrimSpace(item.Status), "archived") {
 				continue
 			}
+			if !includeInternal && !isUserFacingGroupOutput(item) {
+				continue
+			}
 			merged[item.ID] = item
 		}
 	}
@@ -68,4 +77,34 @@ func (s *AdminServer) listGroupOutputs(ctx context.Context, group *Collaboration
 		outputs = outputs[:limit]
 	}
 	return outputs, nil
+}
+
+func isUserFacingGroupOutput(item artifacts.Artifact) bool {
+	return groupOutputClass(item) == string(protocol.OutputClassUserDeliverable)
+}
+
+func groupOutputClass(item artifacts.Artifact) string {
+	if class := protocol.NormalizeOutputClass(artifactMetadataString(item.Metadata, "output_class")); class != "" {
+		return string(class)
+	}
+	return string(protocol.InferOutputClass(string(item.ArtifactType), item.FilePath, item.Title))
+}
+
+func artifactMetadataString(raw json.RawMessage, key string) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var metadata map[string]any
+	if err := json.Unmarshal(raw, &metadata); err != nil {
+		return ""
+	}
+	value, ok := metadata[key]
+	if !ok {
+		return ""
+	}
+	text, ok := value.(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(text)
 }

@@ -15,7 +15,7 @@ func ConfigFromEnv() Config {
 	}
 	provider := normalizeProvider(os.Getenv("MYCELIS_SEARCH_PROVIDER"))
 	if strings.TrimSpace(os.Getenv("MYCELIS_SEARCH_PROVIDER")) == "" {
-		provider = ProviderLocalSources
+		provider = ProviderBuiltinWeb
 	}
 	return Config{
 		Provider:         provider,

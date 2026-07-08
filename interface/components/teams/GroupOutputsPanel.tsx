@@ -2,6 +2,11 @@ import { Download, FolderOpen, ShieldCheck } from "lucide-react";
 import OutputAccessActions from "@/components/soma/OutputAccessActions";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import {
+  classifyGroupArtifact,
+  type OutputSummary,
+} from "./groupOutputClassification";
+import { relativeTime } from "./groupWorkspaceTypes";
+import {
   OUTPUT_PACKAGE_FOLDER_LABEL,
   OUTPUT_PACKAGE_OPEN_LABEL,
   OUTPUT_PACKAGE_RESOURCES_LABEL,
@@ -10,17 +15,20 @@ import {
   projectPackageRevealPath,
   workspaceFileHref,
 } from "@/lib/outputPackageModel";
-import { relativeTime, type OutputSummary } from "./groupWorkspaceTypes";
 import { Badge } from "./GroupDetailPane";
 
 export function OutputsPanel({
   archived,
   outputs,
   outputSummary,
+  includeInternalOutputs,
+  onIncludeInternalOutputsChange,
 }: {
   archived?: boolean;
   outputs: Artifact[];
   outputSummary: OutputSummary;
+  includeInternalOutputs: boolean;
+  onIncludeInternalOutputsChange: (value: boolean) => void;
 }) {
   return (
     <section className="rounded-xl border border-cortex-border bg-cortex-bg p-4">
@@ -32,14 +40,31 @@ export function OutputsPanel({
         data-testid="groups-output-summary"
       >
         <Badge muted>
-          {outputSummary.artifactCount} output
-          {outputSummary.artifactCount === 1 ? "" : "s"}
+          {outputSummary.deliveredCount} delivered
         </Badge>
+        {includeInternalOutputs ? (
+          <Badge muted>
+            {outputSummary.internalCount} internal
+          </Badge>
+        ) : null}
         <Badge muted>
           {outputSummary.agentCount} contributing lead
           {outputSummary.agentCount === 1 ? "" : "s"}
         </Badge>
       </div>
+      <label className="mt-3 flex items-start gap-2 rounded-lg border border-cortex-border bg-cortex-surface p-3 text-xs text-cortex-text-main">
+        <input
+          type="checkbox"
+          checked={includeInternalOutputs}
+          onChange={(event) =>
+            onIncludeInternalOutputsChange(event.currentTarget.checked)
+          }
+          className="mt-0.5 h-4 w-4 rounded border-cortex-border bg-cortex-bg accent-cortex-primary"
+        />
+        <span>
+          Show planning, proof, and team source records.
+        </span>
+      </label>
       {archived ? (
         <p
           className="mt-2 text-sm leading-6 text-cortex-text-muted"
@@ -53,7 +78,8 @@ export function OutputsPanel({
       <div className="mt-3 max-h-[calc(100vh-24rem)] min-h-[16rem] space-y-3 overflow-y-auto pr-1">
         {outputs.length === 0 ? (
           <p className="text-sm text-cortex-text-muted">
-            No recent team outputs found for this group yet.
+            No delivered outputs yet. Planning and internal records are hidden
+            by default.
           </p>
         ) : (
           outputs
@@ -68,6 +94,7 @@ export function OutputsPanel({
 }
 
 function ArtifactRow({ artifact }: { artifact: Artifact }) {
+  const outputClass = classifyGroupArtifact(artifact);
   const projectPackage = artifact.artifact_type === "project_package";
   const entrypoint = stringMetadata(artifact.metadata, "entrypoint");
   const folder = stringMetadata(artifact.metadata, "folder");
@@ -91,7 +118,7 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
             {artifact.title}
           </p>
           <p className="mt-1 text-[11px] font-mono uppercase tracking-[0.12em] text-cortex-text-muted">
-            {artifact.artifact_type} | {artifact.agent_id} |{" "}
+            {artifact.artifact_type} | {outputClass.replaceAll("_", " ")} | {artifact.agent_id} |{" "}
             {relativeTime(artifact.created_at)}
           </p>
         </div>

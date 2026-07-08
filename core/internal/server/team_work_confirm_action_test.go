@@ -117,11 +117,12 @@ func TestOutputRefsForTeamWork_NormalizesViewerURLFolderForDeliverable(t *testin
 	link := testConfirmedActionTeamWorkLink(&protocol.ScopeValidation{})
 
 	refs := outputRefsForTeamWork(link, "work-1", "qa-team", []protocol.ExecutionOutput{{
-		ID:     "workspace/logs/generated.html",
-		Kind:   "code",
-		Title:  "Generated HTML",
-		Folder: "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fgenerated.html",
-		Href:   "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fgenerated.html",
+		ID:          "workspace/logs/generated.html",
+		Kind:        "code",
+		OutputClass: protocol.OutputClassUserDeliverable,
+		Title:       "Generated HTML",
+		Folder:      "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fgenerated.html",
+		Href:        "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fgenerated.html",
 	}})
 
 	if len(refs) != 1 {
@@ -132,6 +133,9 @@ func TestOutputRefsForTeamWork_NormalizesViewerURLFolderForDeliverable(t *testin
 	}
 	if strings.HasPrefix(refs[0].StorageRef, "/api/v1/workspace/files/view") {
 		t.Fatalf("storage_ref retained viewer URL: %q", refs[0].StorageRef)
+	}
+	if refs[0].OutputClass != protocol.OutputClassUserDeliverable {
+		t.Fatalf("output_class = %q, want user deliverable", refs[0].OutputClass)
 	}
 }
 

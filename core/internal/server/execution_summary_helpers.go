@@ -106,6 +106,7 @@ func executionOutputsFromArtifacts(artifacts []protocol.ChatArtifactRef) []proto
 		outputs = append(outputs, protocol.ExecutionOutput{
 			ID:             artifact.ID,
 			Kind:           firstNonEmptyString(artifact.Type, "artifact"),
+			OutputClass:    firstNonEmptyOutputClass(artifact.OutputClass, protocol.InferOutputClass(artifact.Type, artifact.SavedPath, artifact.Folder, artifact.Entrypoint, artifact.Title)),
 			Title:          title,
 			Href:           href,
 			Entrypoint:     artifact.Entrypoint,

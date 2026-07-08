@@ -74,8 +74,8 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		s.respondSearchCapabilitySummary(w, r)
 		return
 	}
-	if query, ok := shouldHandleDirectSearch(latestUserText); ok {
-		s.respondDirectSearchAnswer(w, r, query)
+	if searchRequest, ok := shouldHandleDirectSearchRequest(latestUserText); ok {
+		s.respondDirectSearchAnswer(w, r, searchRequest)
 		return
 	}
 

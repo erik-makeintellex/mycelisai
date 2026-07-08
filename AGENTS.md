@@ -23,6 +23,16 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - When adding, removing, or renaming major README sections, update the TOC links in the same change.
 - Treat the README TOC as the stable navigation contract that future development agents should use before scanning the full file.
 
+## Feature Branch And Merge Quality Contract
+
+- Product/runtime feature work must start from an intentionally named feature branch unless the user explicitly asks for a different branch shape.
+- Keep each branch scoped to one reviewable slice. If work expands, split follow-on work into a new branch instead of letting one branch become a mixed backlog.
+- Do not treat local green tests as enough for merge readiness. A slice reaches merge quality only after code, docs/state, focused tests, typecheck/build gates, and any required live GUI proof pass together.
+- Before merging to `main`, review `git status --short --branch`, `git diff --check`, branch divergence, untracked files, temporary proof artifacts, and affected docs. Resolve or record every item.
+- Merge only when the branch is clean enough that `main` can be released or handed to another agent without hidden local assumptions, stale temp files, or unexplained generated output.
+- After merge, delete local feature branches that are fully merged and explicitly review remote branches before deletion. Keep unmerged/archive branches only with a named purpose.
+- If urgent work must happen directly on `main`, the close-out must still follow the same branch-quality checklist before commit, push, or handoff.
+
 ## Canonical Docs Location
 
 - Keep user-shared root-level architecture entrypoints under `architecture/`.

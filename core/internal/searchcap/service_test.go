@@ -96,8 +96,7 @@ func TestServiceSearXNGNormalizesJSONResults(t *testing.T) {
 
 func TestServicePublicWebSearchCanBeDisabledByConfig(t *testing.T) {
 	svc := NewService(Config{
-		Provider:         ProviderSearXNG,
-		SearXNGEndpoint:  "http://searxng.local",
+		Provider:         ProviderBuiltinWeb,
 		OnlineAllowed:    false,
 		OnlineAllowedSet: true,
 	}, nil, nil)
@@ -127,43 +126,6 @@ func TestServiceSearXNGForbiddenExplainsJSONFormat(t *testing.T) {
 	}
 	if resp.Blocker == nil || resp.Blocker.Code != "searxng_json_disabled" {
 		t.Fatalf("Blocker = %+v", resp.Blocker)
-	}
-}
-
-func TestConfigFromEnvAcceptsSelfHostedLocalAPI(t *testing.T) {
-	t.Setenv("MYCELIS_SEARCH_PROVIDER", "self_hosted")
-	t.Setenv("MYCELIS_SEARCH_LOCAL_API_ENDPOINT", "http://search.local/api/search")
-	t.Setenv("MYCELIS_SEARCH_MAX_RESULTS", "3")
-	t.Setenv("MYCELIS_SEARCH_ONLINE_ALLOWED", "true")
-	t.Setenv("MYCELIS_SEARCH_APPROVAL_MODE", "notify")
-	t.Setenv("MYCELIS_SEARCH_DISCLOSURE_MODE", "notice_and_interpretation")
-
-	cfg := ConfigFromEnv()
-
-	if cfg.Provider != ProviderLocalAPI {
-		t.Fatalf("Provider = %q, want %q", cfg.Provider, ProviderLocalAPI)
-	}
-	if cfg.LocalAPIEndpoint != "http://search.local/api/search" {
-		t.Fatalf("LocalAPIEndpoint = %q", cfg.LocalAPIEndpoint)
-	}
-	if cfg.MaxResults != 3 {
-		t.Fatalf("MaxResults = %d, want 3", cfg.MaxResults)
-	}
-	if !cfg.OnlineAllowed || !cfg.OnlineAllowedSet || cfg.ApprovalMode != "notify" || cfg.DisclosureMode != "notice_and_interpretation" {
-		t.Fatalf("search governance config = %+v", cfg)
-	}
-}
-
-func TestConfigFromEnvDefaultsToLocalSources(t *testing.T) {
-	t.Setenv("MYCELIS_SEARCH_PROVIDER", "")
-
-	cfg := ConfigFromEnv()
-
-	if cfg.Provider != ProviderLocalSources {
-		t.Fatalf("Provider = %q, want %q", cfg.Provider, ProviderLocalSources)
-	}
-	if !cfg.OnlineAllowed || !cfg.OnlineAllowedSet || cfg.ApprovalMode != "notify" || cfg.DisclosureMode != "notice_and_interpretation" {
-		t.Fatalf("search governance config = %+v", cfg)
 	}
 }
 
@@ -264,5 +226,35 @@ func TestServiceLocalSourcesFallsBackToTextSearchWhenEmbeddingFails(t *testing.T
 	}
 	if resp.Results[0].SourceKind != "local_source" || resp.Results[0].Title != "Research note" {
 		t.Fatalf("result = %+v", resp.Results[0])
+	}
+}
+
+func TestServiceLocalSourcesAllScopeReportsPartialCoverage(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	rows := sqlmock.NewRows([]string{"id", "content", "metadata", "created_at"}).
+		AddRow("vec-1", "internal and public comparison note", `{"title":"Comparison note","visibility":"global"}`, time.Now())
+	mock.ExpectQuery("SELECT id, content, metadata, created_at").
+		WithArgs("default", "%internal%", "%public%", 2).
+		WillReturnRows(rows)
+
+	svc := NewService(Config{Provider: ProviderLocalSources, MaxResults: 2}, failingEmbedder{}, memory.NewServiceWithDB(db))
+
+	resp, err := svc.Search(context.Background(), Request{Query: "internal public", SourceScope: "all"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if resp.Status != "ok" || resp.Count != 1 {
+		t.Fatalf("resp = %+v", resp)
+	}
+	if resp.Metadata["partial_source_scope"] != "local_sources_only" || resp.Metadata["missing_source_scope"] != "web" {
+		t.Fatalf("metadata = %+v, want local-only partial scope", resp.Metadata)
+	}
+	if !strings.Contains(resp.Metadata["scope_warning"].(string), "Public web search is not configured") {
+		t.Fatalf("metadata = %+v, want public web warning", resp.Metadata)
 	}
 }

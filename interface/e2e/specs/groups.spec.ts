@@ -21,7 +21,7 @@ test.describe("Groups workspace (/groups)", () => {
 
     await page.getByTestId("groups-list-item-group-temp-launch").click();
     await expect(page.getByText("Temporary group", { exact: true })).toBeVisible();
-    await expect(page.getByTestId("groups-output-summary")).toContainText("1 output");
+    await expect(page.getByTestId("groups-output-summary")).toContainText("1 delivered");
     await expect(page.getByTestId("groups-output-summary")).toContainText(
       "1 contributing lead",
     );
@@ -164,7 +164,7 @@ test.describe("Groups workspace (/groups)", () => {
       "Broadcast queued for the selected group.",
     );
     await page.getByRole("tab", { name: /Overview/i }).click();
-    await expect(page.getByTestId("groups-output-summary")).toContainText("1 output");
+    await expect(page.getByTestId("groups-output-summary")).toContainText("1 delivered");
     await expect.poll(() => harness.readBroadcastBodies().length).toBe(1);
     await expect
       .poll(() => String(harness.readBroadcastBodies()[0]?.message ?? ""))

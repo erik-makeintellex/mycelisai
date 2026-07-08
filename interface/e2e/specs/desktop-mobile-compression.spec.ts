@@ -88,7 +88,14 @@ test.describe("Desktop/mobile compression proof", () => {
     await expect(page.getByTestId("soma-current-work-lane")).toBeVisible({ timeout: 20_000 });
     const input = page.getByTestId("central-soma-chat-frame").locator("textarea").first();
     await input.click();
-    await input.fill("Verify the dashboard composer remains reachable.");
+    await input.fill(
+      [
+        "Verify the dashboard composer remains reachable.",
+        "Add enough detail that the input should grow naturally.",
+        "Keep growing until the capped composer height takes over.",
+        "Then rely on internal scrolling instead of pushing over the page.",
+      ].join("\n"),
+    );
     const reachability = await input.evaluate((node) => {
       const rect = node.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
@@ -97,12 +104,19 @@ test.describe("Desktop/mobile compression proof", () => {
       return {
         bottom: rect.bottom,
         centerReceivesInput: target === node || Boolean(target?.closest("textarea")),
+        height: rect.height,
+        scrollHeight: node.scrollHeight,
+        overflowY: window.getComputedStyle(node).overflowY,
         viewportHeight: window.innerHeight,
       };
     });
 
     expect(reachability.bottom).toBeLessThanOrEqual(reachability.viewportHeight);
     expect(reachability.centerReceivesInput).toBe(true);
+    expect(reachability.height).toBeGreaterThan(40);
+    expect(reachability.height).toBeLessThanOrEqual(180);
+    expect(["auto", "hidden"]).toContain(reachability.overflowY);
+    expect(reachability.scrollHeight).toBeGreaterThanOrEqual(reachability.height);
     await expectNoHorizontalOverflow(page);
   });
 

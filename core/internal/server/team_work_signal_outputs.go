@@ -58,6 +58,7 @@ func outputRefFromMap(item protocol.TeamWorkItem, env protocol.SignalEnvelope, d
 		WorkItemID:    firstNonEmptyString(stringField(data, "work_item_id"), item.WorkItemID),
 		RunID:         firstNonEmptyString(stringField(data, "run_id"), env.Meta.RunID, item.RunID),
 		Kind:          kind,
+		OutputClass:   firstNonEmptyOutputClass(outputClassFromRawMap(data), protocol.InferOutputClass(kind, storageRef, entrypoint, label, outputID)),
 		Label:         label,
 		StorageRef:    storageRef,
 		Entrypoint:    entrypoint,

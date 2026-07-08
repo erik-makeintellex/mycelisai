@@ -123,11 +123,12 @@ func TestOutputRefFromMapNormalizesViewerURLToWorkspaceStorageRef(t *testing.T) 
 	}
 
 	ref, ok := outputRefFromMap(item, env, map[string]any{
-		"id":          "playable-package",
-		"kind":        "project_package",
-		"title":       "Playable package",
-		"storage_ref": "/api/v1/workspace/files/view?path=groups%2Ffirst-demo-game-team%2Fgenerated%2Ffirst-game%2Findex.html",
-		"entrypoint":  "groups/first-demo-game-team/generated/first-game/index.html",
+		"id":           "playable-package",
+		"kind":         "project_package",
+		"output_class": "user_deliverable",
+		"title":        "Playable package",
+		"storage_ref":  "/api/v1/workspace/files/view?path=groups%2Ffirst-demo-game-team%2Fgenerated%2Ffirst-game%2Findex.html",
+		"entrypoint":   "groups/first-demo-game-team/generated/first-game/index.html",
 	})
 	if !ok {
 		t.Fatal("outputRefFromMap returned no ref")
@@ -137,6 +138,9 @@ func TestOutputRefFromMapNormalizesViewerURLToWorkspaceStorageRef(t *testing.T) 
 	}
 	if ref.Entrypoint != "index.html" {
 		t.Fatalf("entrypoint = %q, want relative package entrypoint", ref.Entrypoint)
+	}
+	if ref.OutputClass != protocol.OutputClassUserDeliverable {
+		t.Fatalf("output_class = %q, want user_deliverable", ref.OutputClass)
 	}
 }
 
@@ -172,13 +176,14 @@ func expectProjectedTeamWorkUpdateWithOutputs(mock sqlmock.Sqlmock, workID strin
 }
 
 type outputRefsMatch struct {
-	TeamID     string
-	WorkItemID string
-	Kind       string
-	Label      string
-	StorageRef string
-	Entrypoint string
-	ProofRef   string
+	TeamID      string
+	WorkItemID  string
+	Kind        string
+	Label       string
+	StorageRef  string
+	Entrypoint  string
+	ProofRef    string
+	OutputClass protocol.OutputClass
 }
 
 func (m outputRefsMatch) Match(value driver.Value) bool {
@@ -214,6 +219,9 @@ func (m outputRefsMatch) Match(value driver.Value) bool {
 			continue
 		}
 		if m.ProofRef != "" && ref.ProofRef != m.ProofRef {
+			continue
+		}
+		if m.OutputClass != "" && ref.OutputClass != m.OutputClass {
 			continue
 		}
 		return true

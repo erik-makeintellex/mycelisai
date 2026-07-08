@@ -21,6 +21,9 @@ func executionOutputsFromToolResults(results []plannedToolExecutionResult) []pro
 		if len(result.Artifacts) > 0 {
 			for _, output := range executionOutputsFromArtifacts(mergeArtifactRefsWithArgs(result.Artifacts, result.Arguments)) {
 				output.Summary = firstNonEmptyString(output.Summary, result.Output, toolName+" completed.")
+				if output.OutputClass == "" {
+					output.OutputClass = outputClassForToolResult(toolName, output.Kind, output.Title, output.Href, result.Arguments)
+				}
 				outputs = append(outputs, output)
 			}
 			if toolName == "store_artifact" {
@@ -64,6 +67,7 @@ func executionOutputsFromToolResults(results []plannedToolExecutionResult) []pro
 		outputs = append(outputs, protocol.ExecutionOutput{
 			ID:             id,
 			Kind:           kind,
+			OutputClass:    outputClassForToolResult(toolName, kind, title, href, result.Arguments),
 			Title:          title,
 			Summary:        firstNonEmptyString(result.Output, toolName+" completed."),
 			Href:           href,
@@ -127,14 +131,15 @@ func projectPackageOutputFromArgs(args map[string]any) *protocol.ExecutionOutput
 	title := firstNonEmptyString(args["package_title"], args["title"], folder, entrypoint, "Generated project package")
 	id := firstNonEmptyString(args["package_id"], args["id"], folder, entrypoint, title)
 	return &protocol.ExecutionOutput{
-		ID:         id,
-		Kind:       "project_package",
-		Title:      title,
-		Href:       workspaceFileOutputHref(entrypoint),
-		Entrypoint: entrypoint,
-		Folder:     folder,
-		Files:      projectPackageFilesFromArgs(args),
-		Validation: firstNonEmptyString(args["validation"], args["validation_summary"], args["proof_summary"]),
+		ID:          id,
+		Kind:        "project_package",
+		OutputClass: protocol.OutputClassUserDeliverable,
+		Title:       title,
+		Href:        workspaceFileOutputHref(entrypoint),
+		Entrypoint:  entrypoint,
+		Folder:      folder,
+		Files:       projectPackageFilesFromArgs(args),
+		Validation:  firstNonEmptyString(args["validation"], args["validation_summary"], args["proof_summary"]),
 	}
 }
 

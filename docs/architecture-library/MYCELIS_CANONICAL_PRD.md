@@ -1,10 +1,8 @@
 # Mycelis Canonical PRD
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
-
 > Status: Canonical | Last Updated: 2026-07-06 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
-
 The default product language is:
 ```text
 I tell Soma what I want.
@@ -103,6 +101,8 @@ The defining product abstraction is the Outcome. Deliverables, projects, operati
 
 Every user-facing output package should expose clear title/state, primary open action, safe folder or data-root access, conversational reply action for updates/alternates/downstream team handoff, proof or receipt link, degraded recovery state, and source/intermediate-output visibility only as an opt-in.
 
+Output ownership must distinguish final user deliverables from team working material. The canonical output classes are `user_deliverable`, `planning`, `internal_handoff`, `proof`, and `source_material`. Outcome Vault, Resources output pickers, and the default Groups Outputs tab show `user_deliverable` records by default. Planning files such as `TEAM_EVOCATION.md`, council/research handoffs, proof notes, support files, and source records remain inspectable through Workflow Log, Details, or an explicit include-internal control, but they must not make a group appear complete or delivered on their own.
+
 Outcome Vault is the persistent delivery/revisit concept, but it should open as an overlay by default. It should show saved results, work in progress, scheduled/service work, and recovery items without permanently taking layout width from Soma.
 
 ## Projects Teams And Capability Use
@@ -131,7 +131,7 @@ Built-in Soma commands are runtime capabilities, not hidden prompt affordances. 
 
 Search is a governed capability family, not only public web search. Mycelis must support a Search Source Registry where operators can add sources Soma may search when allowed: built-in Mycelis/local search; public web through self-hosted SearXNG, operator-owned local APIs, or optional hosted providers; explicit URL retrieval through governed fetch; authenticated URL/API sources such as docs sites, customer portals, SaaS knowledge bases, issue trackers, repositories, file stores, mounted user folders, infrastructure shared folders, or internal search endpoints; and future dedicated connectors such as GitHub, Slack, Notion, Confluence, SharePoint, Google Drive, Postgres, CRM, accounting, or ticketing systems.
 
-Authenticated sources must use secret references, not raw tokens in UI, logs, state files, docs, or capability manifests. The first supported shape is bearer/API-token env references for local API search sources, applied as an Authorization bearer header only after scope/status checks pass. Service-required query/header token placement, OAuth2/client-credential metadata, and non-env secret backends remain follow-on adapters. Each source needs a plain name, source type, endpoint, domain/path boundary, auth scheme, secret reference, scope (`Everyone`, `Group`, or `Host`), sensitivity/trust defaults, index/live-search mode, and recovery posture. Soma should name configured sources used, cite or reference them in the trust package, and ask for approval before searching sensitive/private sources when policy requires it.
+Authenticated sources must use secret references, not raw tokens in UI, logs, state files, docs, or capability manifests. The first supported shape is bearer/API-token env references for local API search sources, applied as an Authorization bearer header only after scope/status checks pass. Service-required query/header token placement, OAuth2/client-credential metadata, and non-env secret backends remain follow-on adapters. Each source needs a plain name, source type, endpoint, domain/path boundary, auth scheme, secret reference, scope (`Everyone`, `Group`, or `Host`), sensitivity/trust defaults, index/live-search mode, and recovery posture. Soma should name configured sources used, cite or reference them in the trust package, and ask for approval before searching sensitive/private sources when policy requires it. Search scope is part of trust: ordinary search phrasing should use the configured web path by default, local/internal/shared asks request local-source scope, and mixed local-plus-web requests must state which boundary was searched and which boundary is missing or partial. Local-source search must never be presented as public research.
 
 Reticulum is an install-time and future capability substrate, not a default user concept. The supported install now provides `rns` import access and verifies `uvx --from rns rnstatus --help`; next Reticulum capabilities should be prioritized as status/health (`rnstatus`/daemon), LXMF-compatible messaging and offline notifications, retained-output/file sync, Nomad/RNS page publishing and browsing, then governed remote shell/admin, monitoring, and low-priority voice/live chat; each must enter Resources as a governed capability with scope, proof, recovery, and clear boundaries before Soma can use it.
 

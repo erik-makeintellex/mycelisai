@@ -77,6 +77,12 @@ func applySearchSourceReason(capabilityUse []protocol.CapabilityUse, replyText s
 
 func searchSourceReason(replyText string) string {
 	lower := strings.ToLower(replyText)
+	if strings.Contains(lower, "public web was requested") || strings.Contains(lower, "public web research is not configured") {
+		return "Search source: Public web requested; no public-web provider configured"
+	}
+	if strings.Contains(lower, "requested local and web sources") {
+		return "Search source: Mixed local/web request; current provider returned local-source coverage only"
+	}
 	if strings.Contains(lower, "web_search via local_sources") {
 		return "Search source: Local Mycelis context"
 	}

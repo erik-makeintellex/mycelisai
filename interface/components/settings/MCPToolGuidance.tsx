@@ -124,13 +124,13 @@ export function WebAccessSetupCard({
     const explanation = error
         ? error
         : hasPublicWeb
-        ? "Soma can use the configured search provider for governed public web work. Explicit URL reading may still require fetch."
+        ? "Soma can use the configured web search provider for governed research. Explicit URL reading may still require fetch."
         : hasLocalSearch
         ? "Soma can search retained Mycelis sources. Add a public web provider or fetch when you need fresh internet pages or explicit URLs."
         : status?.blocker?.message ?? status?.next_actions?.[0] ?? "Add or repair a web capability before asking Soma for fresh web research.";
     const nextStep = hasPublicWeb
         ? "Ask Soma to search the web, then inspect proof when the answer returns."
-        : "Open the MCP library already filtered for web tools. Choose fetch for explicit URLs, or a search provider such as SearXNG/local_api/Brave for public web search.";
+        : "Open the MCP library already filtered for web tools. Choose fetch for explicit URLs, or a search provider such as built-in web, SearXNG, local_api, or Brave.";
 
     return (
         <section
@@ -198,7 +198,7 @@ export function SearchCapabilityCard({
         ?? "Soma can route governed search through the configured Mycelis Search provider.";
     const tokenText = status?.requires_hosted_api_token
         ? "Brave MCP requires BRAVE_API_KEY."
-        : "No hosted Brave token required for local sources, local API, or self-hosted SearXNG.";
+        : "No hosted Brave token required for built-in web, local sources, local API, or self-hosted SearXNG.";
 
     return (
         <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
@@ -263,6 +263,7 @@ function SourceDetail({ label, value }: { label: string; value: string }) {
 }
 
 function searchProviderLabel(provider: string): string {
+    if (provider === "builtin_web") return "Built-in web";
     if (provider === "local_sources") return "Local sources";
     if (provider === "local_api") return "Local API";
     if (provider === "searxng") return "Self-hosted web";

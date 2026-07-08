@@ -31,20 +31,21 @@ const (
 
 // TeamOutputRef links team work to retained product objects.
 type TeamOutputRef struct {
-	OutputID      string    `json:"output_id"`
-	TeamID        string    `json:"team_id"`
-	WorkItemID    string    `json:"work_item_id"`
-	RunID         string    `json:"run_id,omitempty"`
-	Kind          string    `json:"kind"`
-	Label         string    `json:"label"`
-	StorageRef    string    `json:"storage_ref,omitempty"`
-	Entrypoint    string    `json:"entrypoint,omitempty"`
-	ValidationRef string    `json:"validation_ref,omitempty"`
-	ProofRef      string    `json:"proof_ref,omitempty"`
-	ContractID    string    `json:"contract_id,omitempty"`
-	ProofID       string    `json:"proof_id,omitempty"`
-	AuditRefs     []string  `json:"audit_refs,omitempty"`
-	CreatedAt     time.Time `json:"created_at,omitempty"`
+	OutputID      string      `json:"output_id"`
+	TeamID        string      `json:"team_id"`
+	WorkItemID    string      `json:"work_item_id"`
+	RunID         string      `json:"run_id,omitempty"`
+	Kind          string      `json:"kind"`
+	OutputClass   OutputClass `json:"output_class,omitempty"`
+	Label         string      `json:"label"`
+	StorageRef    string      `json:"storage_ref,omitempty"`
+	Entrypoint    string      `json:"entrypoint,omitempty"`
+	ValidationRef string      `json:"validation_ref,omitempty"`
+	ProofRef      string      `json:"proof_ref,omitempty"`
+	ContractID    string      `json:"contract_id,omitempty"`
+	ProofID       string      `json:"proof_id,omitempty"`
+	AuditRefs     []string    `json:"audit_refs,omitempty"`
+	CreatedAt     time.Time   `json:"created_at,omitempty"`
 }
 
 // TeamStatusEvent is the normalized operator-readable projection of team communication.

@@ -16,6 +16,9 @@ func isSearchCapabilityQuestion(text string) bool {
 	if lower == "" {
 		return false
 	}
+	if hasConcreteSearchRequest(lower) {
+		return false
+	}
 	searchTerms := []string{"web request", "web requests", "web search", "make requests", "browse", "internet", "brave", "searxng", "shared sources"}
 	capabilityTerms := []string{"can you", "are you able", "able to", "do you have", "current", "status", "instantiate", "own api", "tokens", "token"}
 	return (hasExactWord(lower, "search") || requestContainsAny(lower, searchTerms)) && requestContainsAny(lower, capabilityTerms)
@@ -30,52 +33,6 @@ func hasExactWord(text, word string) bool {
 		}
 	}
 	return false
-}
-
-func directSearchQuery(text string) (string, bool) {
-	trimmed := strings.TrimSpace(text)
-	lower := strings.ToLower(strings.Join(strings.Fields(trimmed), " "))
-	if trimmed == "" || lower == "" {
-		return "", false
-	}
-	if query, ok := quotedSearchQuery(trimmed); ok {
-		return query, true
-	}
-	explicit := []string{"web_search(", "search the web", "web search", "look up", "lookup", "find current", "find recent"}
-	freshness := []string{"latest", "today", "recent", "news", "real-time", "up to date"}
-	if requestContainsAny(lower, explicit) || requestContainsAny(lower, freshness) {
-		return trimmed, true
-	}
-	return "", false
-}
-
-func shouldHandleDirectSearch(text string) (string, bool) {
-	if len(inferMutationToolsFromText(text)) > 0 {
-		return "", false
-	}
-	return directSearchQuery(text)
-}
-
-func quotedSearchQuery(text string) (string, bool) {
-	lower := strings.ToLower(text)
-	queryIndex := strings.Index(lower, "query=")
-	if queryIndex < 0 {
-		return "", false
-	}
-	rest := strings.TrimSpace(text[queryIndex+len("query="):])
-	if rest == "" {
-		return "", false
-	}
-	quote := rest[0]
-	if quote != '"' && quote != '\'' {
-		return "", false
-	}
-	end := strings.IndexRune(rest[1:], rune(quote))
-	if end < 0 {
-		return "", false
-	}
-	query := strings.TrimSpace(rest[1 : 1+end])
-	return query, query != ""
 }
 
 func (s *AdminServer) buildSearchCapabilityAnswer() string {
@@ -97,12 +54,14 @@ func (s *AdminServer) buildSearchCapabilityAnswer() string {
 	}
 	if status.SupportsPublicWeb {
 		lines = append(lines, "- Public web search is available when the selected provider is configured.")
+	} else {
+		lines = append(lines, "- Public web research is not configured on the current provider.")
 	}
 	if status.DirectSomaInteraction {
 		lines = append(lines, fmt.Sprintf("- Soma direct interaction: ask Soma to use %s for governed search requests.", status.SomaToolName))
 	}
 	if !status.RequiresHostedAPIToken {
-		lines = append(lines, "- Hosted Brave tokens are not required for the Mycelis-owned path; use local_sources or self-hosted SearXNG.")
+		lines = append(lines, "- Hosted Brave tokens are not required for local search or self-hosted SearXNG/local API search.")
 	} else {
 		lines = append(lines, "- Brave still requires the curated brave-search MCP server and BRAVE_API_KEY.")
 	}
@@ -121,14 +80,15 @@ func (s *AdminServer) respondSearchCapabilitySummary(w http.ResponseWriter, r *h
 	s.respondSearchChatPayload(w, r, "Search capability summary", "Search capability summary", s.buildSearchCapabilityAnswer(), nil, protocol.ExecutionStatusCompleted, "", nil)
 }
 
-func (s *AdminServer) respondDirectSearchAnswer(w http.ResponseWriter, r *http.Request, query string) {
+func (s *AdminServer) respondDirectSearchAnswer(w http.ResponseWriter, r *http.Request, request directSearchRequest) {
 	searchSvc := s.Search
 	if searchSvc == nil {
 		searchSvc = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil)
 	}
-	sourceScope := "web"
-	if searchSvc.Provider() == searchcap.ProviderLocalSources {
-		sourceScope = "local_sources"
+	query := strings.TrimSpace(request.Query)
+	sourceScope := strings.TrimSpace(request.SourceScope)
+	if sourceScope == "" {
+		sourceScope = inferDirectSearchSourceScope(query)
 	}
 	resp, err := searchSvc.Search(r.Context(), searchcap.Request{
 		Query:       query,
@@ -152,6 +112,14 @@ func (s *AdminServer) respondDirectSearchAnswer(w http.ResponseWriter, r *http.R
 			blocker = resp.Status
 			degradation = searchDegradation("search_blocked", blocker, "Retry after search capability configuration is corrected.")
 		}
+	} else if directSearchMissingWebScope(resp) {
+		status = protocol.ExecutionStatusBlocked
+		blocker = "Public web search is not configured; only local-source coverage was available for this mixed search."
+		degradation = searchDegradation(
+			"partial_web_provider_not_configured",
+			blocker,
+			"Configure public web search, or rely only on the disclosed local-source result boundary.",
+		)
 	}
 	s.respondSearchChatPayload(w, r, "Direct web search", query, buildDirectSearchAnswer(resp, err), []string{"web_search"}, status, blocker, degradation)
 }
@@ -162,9 +130,13 @@ func buildDirectSearchAnswer(resp searchcap.Response, err error) string {
 		return strings.Join([]string{notice, fmt.Sprintf("Blocked: search failed before results were available: %v", err)}, "\n")
 	}
 	if resp.Blocker != nil {
+		blockedLine := "Blocked: web_search unavailable."
+		if resp.Blocker.Code == "web_provider_not_configured" {
+			blockedLine = "Blocked: public web research is not configured."
+		}
 		lines := []string{
 			notice,
-			"Blocked: web_search unavailable.",
+			blockedLine,
 			fmt.Sprintf("- Blocker: %s", resp.Blocker.Message),
 		}
 		if strings.TrimSpace(resp.Blocker.NextAction) != "" {
@@ -207,14 +179,33 @@ func directSearchNotice(resp searchcap.Response) string {
 	if provider == "" {
 		provider = "configured provider"
 	}
+	sourceScope := ""
+	if value, ok := resp.Metadata["source_scope"].(string); ok {
+		sourceScope = strings.TrimSpace(value)
+	}
 	mode := "no confirmation"
 	if value, ok := resp.Metadata["approval_mode"].(string); ok && strings.TrimSpace(value) == "require_confirmation" {
 		mode = "confirmation required"
 	}
 	if provider == searchcap.ProviderLocalSources {
+		if sourceScope == "web" {
+			return fmt.Sprintf("Notice: public web was requested through web_search, but %s only searches retained Mycelis context and approved data mounts.", provider)
+		}
+		if sourceScope == "all" {
+			return fmt.Sprintf("Notice: web_search requested local and web sources; %s can only return governed local-source results until public web search is configured.", provider)
+		}
 		return fmt.Sprintf("Notice: web_search via %s; %s; governed local-source results come from retained Mycelis context and approved data mounts, not the public web.", provider, mode)
 	}
+	if sourceScope == "all" {
+		return fmt.Sprintf("Notice: web_search via %s; %s; local and web scope was requested, but this provider may only cover its configured source boundary. Verify source coverage before relying.", provider, mode)
+	}
 	return fmt.Sprintf("Notice: web_search via %s; %s; external results are leads, verify before relying.", provider, mode)
+}
+
+func directSearchMissingWebScope(resp searchcap.Response) bool {
+	missing, _ := resp.Metadata["missing_source_scope"].(string)
+	partial, _ := resp.Metadata["partial_source_scope"].(string)
+	return strings.TrimSpace(missing) == "web" && strings.TrimSpace(partial) != ""
 }
 
 func (s *AdminServer) respondSearchChatPayload(w http.ResponseWriter, r *http.Request, summary, originalIntent, text string, tools []string, resultStatus protocol.ExecutionStatus, blocker string, degradation *protocol.ExecutionDegradation) {

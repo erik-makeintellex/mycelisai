@@ -15,14 +15,16 @@ func disabledResponse(resp Response) Response {
 }
 
 func disabledBlocker() *Blocker {
-	return &Blocker{Code: "search_provider_disabled", Message: "Mycelis Search is disabled.", NextAction: "Set MYCELIS_SEARCH_PROVIDER=local_sources for governed local-source search, searxng, or local_api for a self-hosted HTTP search provider."}
+	return &Blocker{Code: "search_provider_disabled", Message: "Mycelis Search is disabled.", NextAction: "Set MYCELIS_SEARCH_PROVIDER=builtin_web for built-in web search, local_sources for governed local-source search, searxng, or local_api for a self-hosted HTTP search provider."}
 }
 
 func normalizeProvider(raw string) string {
 	normalized := strings.ToLower(strings.TrimSpace(raw))
 	switch normalized {
-	case ProviderLocalSources, ProviderSearXNG, ProviderLocalAPI, ProviderBrave:
+	case ProviderBuiltinWeb, ProviderLocalSources, ProviderSearXNG, ProviderLocalAPI, ProviderBrave:
 		return normalized
+	case "web", "local_web", "builtin", "duckduckgo", "ddg":
+		return ProviderBuiltinWeb
 	case "self_hosted":
 		return ProviderLocalAPI
 	default:

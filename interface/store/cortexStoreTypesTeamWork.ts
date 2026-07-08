@@ -36,6 +36,7 @@ export interface TeamOutputRef {
     work_item_id: string;
     run_id?: string;
     kind: string;
+    output_class?: string;
     label: string;
     storage_ref?: string;
     entrypoint?: string;

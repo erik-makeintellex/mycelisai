@@ -138,6 +138,7 @@ type ExecutionOutput struct {
 	ArtifactID      string                  `json:"artifact_id,omitempty"`
 	ProofArtifactID string                  `json:"proof_artifact_id,omitempty"`
 	Kind            string                  `json:"kind"`
+	OutputClass     OutputClass             `json:"output_class,omitempty"`
 	Title           string                  `json:"title"`
 	Summary         string                  `json:"summary,omitempty"`
 	Href            string                  `json:"href,omitempty"`

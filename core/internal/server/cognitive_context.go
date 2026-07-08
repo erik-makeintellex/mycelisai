@@ -116,6 +116,9 @@ func (s *AdminServer) latestTeamOutputContext(ctx context.Context, teamID string
 	outputs := make([]string, 0, 3)
 	for _, item := range items {
 		for _, output := range item.OutputRefs {
+			if !isUserDeliverableTeamOutputRef(output) {
+				continue
+			}
 			label := normalizeChatWorkspaceName(output.Label)
 			ref := normalizeChatWorkspaceName(firstNonEmptyString(output.Entrypoint, output.StorageRef))
 			if label == "" && ref == "" {

@@ -52,6 +52,7 @@ export function outputRefArray(value: unknown, teamId: string, workItemId: strin
     work_item_id: stringValue(item.work_item_id) ?? workItemId,
     run_id: stringValue(item.run_id) ?? undefined,
     kind: stringValue(item.kind) ?? "file",
+    output_class: stringValue(item.output_class) ?? undefined,
     label: stringValue(item.label) ?? "Team output",
     storage_ref: stringValue(item.storage_ref) ?? undefined,
     entrypoint: stringValue(item.entrypoint) ?? undefined,

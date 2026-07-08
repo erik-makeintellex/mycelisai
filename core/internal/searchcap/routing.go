@@ -29,6 +29,10 @@ func (s *Service) routeSelectedSource(ctx context.Context, req Request, resp Res
 		return resp, true, nil
 	}
 	switch sourceProvider(source) {
+	case ProviderBuiltinWeb:
+		req.SourceScope = "web"
+		routed, err := s.searchBuiltinWeb(ctx, req, resp)
+		return routed, true, err
 	case ProviderLocalSources:
 		req.SourceScope = "local_sources"
 		routed, err := s.searchLocalSources(ctx, req, resp)
@@ -165,6 +169,8 @@ func sourceProvider(source Source) string {
 		return ProviderMountedFolder
 	case provider == ProviderLocalAPI || sourceType == ProviderLocalAPI || sourceType == "private_api" || sourceType == "authenticated_api" || sourceType == "client_or_public_api":
 		return ProviderLocalAPI
+	case provider == ProviderBuiltinWeb || source.ID == "builtin_web":
+		return ProviderBuiltinWeb
 	case provider == ProviderSearXNG || source.ID == "searxng":
 		return ProviderSearXNG
 	default:

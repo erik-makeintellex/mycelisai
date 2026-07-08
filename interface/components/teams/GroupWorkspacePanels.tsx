@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { CreateGroupPane } from "./CreateGroupPane";
 import { GroupCommunicationPanel } from "./GroupCommunicationPanel";
 import { GroupConfigPane } from "./GroupConfigPane";
@@ -12,57 +11,9 @@ import {
   GroupWorkspaceTabs,
   type GroupWorkspacePanel,
 } from "./GroupWorkspaceTabs";
-import {
-  type ApprovalPrompt,
-  type Group,
-  type GroupBucket,
-  type GroupDraft,
-  type GroupBroadcastResult,
-  type GroupLifecycleItem,
-  type GroupLifecycleReport,
-  type GroupRecordFilters,
-  type Monitor,
-  type OutputSummary,
-} from "./groupWorkspaceTypes";
+import type { GroupWorkspacePanelsProps } from "./GroupWorkspacePanels.types";
 
-type WorkspaceProps = {
-  buckets: GroupBucket[];
-  monitor: Monitor | null;
-  lifecycleReport: GroupLifecycleReport | null;
-  lifecycleByGroupId: Map<string, GroupLifecycleItem>;
-  recordFilters: GroupRecordFilters;
-  selectedGroup: Group | null;
-  hiddenSelectedGroup: Group | null;
-  selectedGroupId: string | null;
-  initialSelectedGroupId: string | null;
-  initialPanel: GroupWorkspacePanel | null;
-  outputs: Artifact[];
-  outputSummary: OutputSummary;
-  draft: GroupDraft;
-  notice: string | null;
-  error: string | null;
-  approvalPrompt: ApprovalPrompt | null;
-  refreshing: boolean;
-  saving: boolean;
-  broadcasting: boolean;
-  archiving: boolean;
-  archivingExpired: boolean;
-  clearOutputs: boolean;
-  broadcastMessage: string;
-  lastBroadcastResult: GroupBroadcastResult | null;
-  onRefresh: () => void;
-  onArchiveExpired: () => void;
-  onRecordFiltersChange: (patch: Partial<GroupRecordFilters>) => void;
-  onSelectGroup: (groupId: string) => void;
-  onDraftChange: (patch: Partial<GroupDraft>) => void;
-  onCreateGroup: () => void;
-  onBroadcastMessageChange: (message: string) => void;
-  onBroadcast: () => void;
-  onArchive: () => void;
-  onClearOutputsChange: (value: boolean) => void;
-};
-
-export function GroupWorkspacePanels(props: WorkspaceProps) {
+export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
   const {
     buckets,
     monitor,
@@ -75,6 +26,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     initialPanel,
     outputs,
     outputSummary,
+    includeInternalOutputs,
     draft,
     notice,
     error,
@@ -87,9 +39,17 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     clearOutputs,
     broadcastMessage,
     lastBroadcastResult,
+    bulkMode,
+    bulkSelectedGroupIds,
+    bulkActionPending,
     onRefresh,
     onArchiveExpired,
     onRecordFiltersChange,
+    onToggleBulkMode,
+    onToggleBulkGroup,
+    onSelectAllVisibleBulkGroups,
+    onClearBulkSelection,
+    onClearSelectedGroups,
     onSelectGroup,
     onDraftChange,
     onCreateGroup,
@@ -97,6 +57,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     onBroadcast,
     onArchive,
     onClearOutputsChange,
+    onIncludeInternalOutputsChange,
   } = props;
   const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>(
     initialPanel ?? "overview",
@@ -136,9 +97,17 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
           filters={recordFilters}
           hiddenSelectedGroup={hiddenSelectedGroup}
           lifecycleByGroupId={lifecycleByGroupId}
+          bulkMode={bulkMode}
+          selectedBulkGroupIds={bulkSelectedGroupIds}
+          bulkActionPending={bulkActionPending}
           selectedGroupId={selectedGroupId}
           onFiltersChange={onRecordFiltersChange}
           onSelectGroup={selectGroup}
+          onToggleBulkMode={onToggleBulkMode}
+          onToggleBulkGroup={onToggleBulkGroup}
+          onSelectAllVisible={onSelectAllVisibleBulkGroups}
+          onClearBulkSelection={onClearBulkSelection}
+          onBulkClearGroups={onClearSelectedGroups}
         />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg/30">
           <GroupWorkspaceTabs
@@ -202,6 +171,10 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
                   archived={selectedGroup?.status === "archived"}
                   outputs={outputs}
                   outputSummary={outputSummary}
+                  includeInternalOutputs={includeInternalOutputs}
+                  onIncludeInternalOutputsChange={
+                    onIncludeInternalOutputsChange
+                  }
                 />
               </div>
             ) : null}

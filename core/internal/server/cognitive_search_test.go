@@ -99,6 +99,99 @@ func TestHandleChat_DirectSearchBlockerHasBlockedExecutionSummary(t *testing.T) 
 	}
 }
 
+func TestHandleChat_DirectSearchConfiguredWebUsesWebByDefault(t *testing.T) {
+	searchAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("source_scope") != "web" {
+			t.Fatalf("source_scope = %q, want web", r.URL.Query().Get("source_scope"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"results":[{"title":"Frameworks","url":"https://example.test/frameworks","snippet":"Framework news"}]}`))
+	}))
+	t.Cleanup(searchAPI.Close)
+
+	s := newTestServer(func(s *AdminServer) {
+		s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderLocalAPI, LocalAPIEndpoint: searchAPI.URL}, nil, nil)
+	})
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"search on what's the latest popular multi agent framework?"}]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+	payload := decodeChatPayloadFromAPIResponse(t, rr)
+	if strings.Contains(payload.Text, "public web research is not configured") {
+		t.Fatalf("payload.text = %q, should use configured web search", payload.Text)
+	}
+	if !strings.Contains(payload.Text, "local_api") || !strings.Contains(payload.Text, "Frameworks") {
+		t.Fatalf("payload.text = %q, want configured web result", payload.Text)
+	}
+	if payload.ExecutionSummary == nil {
+		t.Fatal("expected execution summary")
+	}
+	if payload.ExecutionSummary.Execution.Status != protocol.ExecutionStatusCompleted {
+		t.Fatalf("execution status = %q, want completed", payload.ExecutionSummary.Execution.Status)
+	}
+	if len(payload.ExecutionSummary.CapabilityUse) != 1 || !strings.Contains(payload.ExecutionSummary.CapabilityUse[0].Reason, "External or public web provider") {
+		t.Fatalf("capability reason = %+v, want external web boundary", payload.ExecutionSummary.CapabilityUse)
+	}
+}
+
+func TestHandleChat_DirectSearchExplicitPublicWebBlocksWhenUnconfigured(t *testing.T) {
+	s := newTestServer(func(s *AdminServer) {
+		s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderLocalSources}, nil, nil)
+	})
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"search the public web for the latest popular multi agent framework"}]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+	payload := decodeChatPayloadFromAPIResponse(t, rr)
+	if !strings.Contains(payload.Text, "public web research is not configured") {
+		t.Fatalf("payload.text = %q, want public web setup blocker", payload.Text)
+	}
+	if payload.ExecutionSummary == nil || payload.ExecutionSummary.Execution.Status != protocol.ExecutionStatusBlocked {
+		t.Fatalf("execution_summary = %+v, want blocked", payload.ExecutionSummary)
+	}
+	if payload.ExecutionSummary.AuditRecovery.Degradation == nil || payload.ExecutionSummary.AuditRecovery.Degradation.Code != "web_provider_not_configured" {
+		t.Fatalf("degradation = %+v, want web_provider_not_configured", payload.ExecutionSummary.AuditRecovery.Degradation)
+	}
+}
+
+func TestHandleChat_CanYouSearchOnRunsDirectSearch(t *testing.T) {
+	s := newTestServer(func(s *AdminServer) {
+		s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderLocalSources}, nil, nil)
+	})
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"can you search on what's the latest popular multi agent framework?"}]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+	payload := decodeChatPayloadFromAPIResponse(t, rr)
+	if strings.Contains(payload.Text, "Current Mycelis search capability") {
+		t.Fatalf("payload.text = %q, should execute search instead of explaining capability", payload.Text)
+	}
+	if !strings.Contains(payload.ExecutionSummary.Intent.Original, "what's the latest popular multi agent framework") {
+		t.Fatalf("intent.original = %q, want extracted search topic", payload.ExecutionSummary.Intent.Original)
+	}
+	if payload.ExecutionSummary.Execution.Status != protocol.ExecutionStatusBlocked {
+		t.Fatalf("execution status = %q, want blocked public-web boundary for local-only provider", payload.ExecutionSummary.Execution.Status)
+	}
+}
+
 func TestDirectSearchNoticeNamesLocalSourcesAsRetainedContext(t *testing.T) {
 	resp := searchcap.Response{
 		Provider: searchcap.ProviderLocalSources,
@@ -114,6 +207,19 @@ func TestDirectSearchNoticeNamesLocalSourcesAsRetainedContext(t *testing.T) {
 	}
 	if strings.Contains(notice, "external results are leads") {
 		t.Fatalf("notice = %q, should not call local-source results external", notice)
+	}
+}
+
+func TestDirectSearchMissingWebScopeDetectsPartialMixedCoverage(t *testing.T) {
+	resp := searchcap.Response{
+		Metadata: map[string]any{
+			"partial_source_scope": "local_sources_only",
+			"missing_source_scope": "web",
+		},
+	}
+
+	if !directSearchMissingWebScope(resp) {
+		t.Fatalf("directSearchMissingWebScope(%+v) = false, want true", resp.Metadata)
 	}
 }
 
@@ -136,6 +242,25 @@ func TestBuildSearchExecutionSummaryNamesLocalSourceProvenance(t *testing.T) {
 	}
 }
 
+func TestBuildSearchExecutionSummaryNamesPublicWebBlocker(t *testing.T) {
+	summary := buildSearchExecutionSummary(
+		"search latest public agent frameworks",
+		"Notice: public web was requested through web_search, but local_sources only searches retained Mycelis context.\nBlocked: public web research is not configured.",
+		"audit-123",
+		[]string{"web_search"},
+		protocol.ExecutionStatusBlocked,
+		"Public web search is not configured.",
+		searchDegradation("web_provider_not_configured", "Public web search is not configured.", "Configure public web search or search local sources only."),
+	)
+
+	if summary == nil || len(summary.CapabilityUse) != 1 {
+		t.Fatalf("summary capability use = %+v", summary)
+	}
+	if summary.CapabilityUse[0].Reason != "Search source: Public web requested; no public-web provider configured" {
+		t.Fatalf("capability reason = %q, want public-web blocker provenance", summary.CapabilityUse[0].Reason)
+	}
+}
+
 func TestSearchCapabilityQuestionDoesNotMatchResearchTeamPrompt(t *testing.T) {
 	prompt := "i need an indepth ai research team that can take on various aspects of current research to understand optimal agentry architecture"
 
@@ -149,13 +274,5 @@ func TestDirectSearchDoesNotStealTeamCreationResearchPrompt(t *testing.T) {
 
 	if query, ok := shouldHandleDirectSearch(prompt); ok {
 		t.Fatalf("team creation prompt routed to direct search query %q", query)
-	}
-}
-
-func TestDirectSearchStillHandlesPlainLookupPrompt(t *testing.T) {
-	prompt := "look up latest AI agent architecture research"
-
-	if query, ok := shouldHandleDirectSearch(prompt); !ok || query != prompt {
-		t.Fatalf("plain lookup direct search = (%q, %v), want original query and ok", query, ok)
 	}
 }

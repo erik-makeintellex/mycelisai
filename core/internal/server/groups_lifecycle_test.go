@@ -58,7 +58,7 @@ func TestHandleGroupLifecycleReport_ClassifiesGroupReviewState(t *testing.T) {
 	want := map[string]string{
 		"group-expired":     "archive_expired",
 		"group-work":        "review_work",
-		"group-idle-output": "archive_completed",
+		"group-idle-output": "review_work",
 		"group-stale":       "review_standing",
 	}
 	for _, item := range payload.Data.Items {
@@ -69,6 +69,39 @@ func TestHandleGroupLifecycleReport_ClassifiesGroupReviewState(t *testing.T) {
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestGroupLifecycleRecommendationRequiresUserFacingDeliverable(t *testing.T) {
+	now := time.Now().UTC()
+	group := CollaborationGroup{
+		ID:        "group-output",
+		Name:      "Output team",
+		Status:    groupStatusActive,
+		CreatedAt: now.Add(-time.Hour),
+		UpdatedAt: now.Add(-time.Hour),
+	}
+
+	recommendation, reason := groupLifecycleRecommendation(
+		group,
+		groupTeamWorkStats{OutputReady: 1},
+		0,
+		false,
+		now,
+	)
+	if recommendation != "review_work" {
+		t.Fatalf("recommendation = %q, want review_work; reason=%s", recommendation, reason)
+	}
+
+	recommendation, reason = groupLifecycleRecommendation(
+		group,
+		groupTeamWorkStats{OutputReady: 1},
+		1,
+		false,
+		now,
+	)
+	if recommendation != "archive_completed" {
+		t.Fatalf("recommendation = %q, want archive_completed; reason=%s", recommendation, reason)
 	}
 }
 

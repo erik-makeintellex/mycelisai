@@ -83,9 +83,13 @@ Ask Team is non-blocking. When you queue a follow-on ask, the row should close t
 
 Use `Groups` when you want to review a collaboration lane without opening every team surface. The selected group includes a **Workflow Log** tab that combines the group brief, lifecycle recommendation, attached team-work rows, retained output cues, latest broadcast result, and bus/recovery signal into one operator-readable stream. It is workflow context, not a final deliverable folder and not raw NATS/bus logs. Group workspace tabs keep the selected group and panel in the URL, so an operator can return directly to `overview`, `workflow`, `outputs`, `message`, `settings`, or `create` during review handoff.
 
+The **Outputs** tab is curated for user-facing deliverables. It hides planning, proof, source/support files, and team handoff records by default so a planned team does not look like it delivered real work. Use the include-internal checkbox when you intentionally need to inspect planning records such as `TEAM_EVOCATION.md`, proof files, research handoffs, or source material. A group labeled **Planned only** has retained working material but still needs a delivered output before it should be treated as complete.
+
 Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
 
 Use **Clear group** when a group is done, stale, or test-only. Clearing archives the group so it leaves active/review lanes. Message-bus handoff data is transient and does not need separate cleanup. Retained output files stay available by default; choose **Also remove retained output files** only when the durable files in that group workspace should be removed too. When retained files are included, Mycelis removes the group workspace folder under `MYCELIS_WORKSPACE/groups/...` and archives the group's output artifact rows so the cleared deliverables no longer appear in Resources group outputs.
+
+For repeated cleanup, use **Select** in the Groups record rail. Select mode lets an operator choose multiple active groups from the currently filtered list and clear them together. Bulk clear keeps retained output files by default and is meant for old test lanes, completed temporary lanes, or stale active records that no longer need attention. Archived groups are shown for review but are not selectable for bulk active-lane actions.
 
 Use `Automations` when you want event rules to actuate work, route proposals, require approval before execution, or author propose-only Schedule Rules for reviewable cadence.
 

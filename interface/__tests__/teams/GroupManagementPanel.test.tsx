@@ -86,7 +86,7 @@ describe("GroupManagementPanel", () => {
 
     await waitFor(() =>
       expect(screen.getByTestId("groups-output-summary").textContent).toContain(
-        "1 output",
+        "1 delivered",
       ),
     );
     expect(screen.getByText(/retained files stay unless you include them/i)).toBeDefined();
@@ -116,7 +116,7 @@ describe("GroupManagementPanel", () => {
     ).toContain("Downloads remain available");
     expect(screen.getByText("Campaign summary")).toBeDefined();
     expect(screen.getByTestId("groups-output-summary").textContent).toContain(
-      "1 output",
+      "1 delivered",
     );
     expect(
       screen.getByRole("link", { name: /Download/i }).getAttribute("href"),
@@ -258,7 +258,7 @@ describe("GroupManagementPanel", () => {
 
     await waitFor(() =>
       expect(screen.getByTestId("groups-output-summary").textContent).toContain(
-        "2 outputs",
+        "2 delivered",
       ),
     );
     expect(screen.getByRole("tablist", { name: "Group workspace sections" })).toBeDefined();
@@ -286,7 +286,7 @@ describe("GroupManagementPanel", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Outputs/i }));
     expect(screen.getByText("Launch Brief")).toBeDefined();
     expect(screen.getByTestId("groups-output-summary").textContent).toContain(
-      "2 outputs",
+      "2 delivered",
     );
     expect(screen.getByTestId("groups-output-summary").textContent).toContain(
       "2 contributing leads",

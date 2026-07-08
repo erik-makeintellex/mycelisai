@@ -10,6 +10,7 @@ export interface ChatConsultation {
 export interface ChatArtifactRef {
     id?: string;
     type: string;
+    output_class?: string;
     title: string;
     content_type?: string;
     content?: string;

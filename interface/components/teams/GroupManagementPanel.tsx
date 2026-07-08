@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { GroupWorkspacePanels } from "./GroupWorkspacePanels";
 import type { GroupWorkspacePanel } from "./GroupWorkspaceTabs";
+import { useArchiveExpiredGroups } from "./useArchiveExpiredGroups";
+import { useGroupBulkActions } from "./useGroupBulkActions";
+import { loadGroupOutputs } from "./groupOutputsApi";
 import {
   buildGroupBuckets,
   emptyGroupDraft,
@@ -11,15 +14,16 @@ import {
   getData,
   groupHiddenByFilters,
   splitList,
-  summarizeOutputs,
   visibleGroupBroadcastResult,
-  type ApprovalPrompt, type ClearGroupResult,
+  type ApprovalPrompt,
+  type ClearGroupResult,
   type Group,
   type GroupBroadcastResult,
   type GroupDraft,
   type GroupLifecycleReport,
   type Monitor,
 } from "./groupWorkspaceTypes";
+import { summarizeOutputs } from "./groupOutputClassification";
 import { pickSelectedGroupId } from "./groupSelection";
 import { filterGroups, useGroupRecordFilters } from "./useGroupRecordFilters";
 
@@ -32,20 +36,17 @@ export default function GroupManagementPanel({
 }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [monitor, setMonitor] = useState<Monitor | null>(null);
-  const [lifecycleReport, setLifecycleReport] =
-    useState<GroupLifecycleReport | null>(null);
+  const [lifecycleReport, setLifecycleReport] = useState<GroupLifecycleReport | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [outputs, setOutputs] = useState<Artifact[]>([]);
+  const [includeInternalOutputs, setIncludeInternalOutputs] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [approvalPrompt, setApprovalPrompt] = useState<ApprovalPrompt | null>(
-    null,
-  );
+  const [approvalPrompt, setApprovalPrompt] = useState<ApprovalPrompt | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [broadcasting, setBroadcasting] = useState(false);
   const [archiving, setArchiving] = useState(false);
-  const [archivingExpired, setArchivingExpired] = useState(false);
   const [clearOutputs, setClearOutputs] = useState(false);
   const [draft, setDraft] = useState<GroupDraft>(emptyGroupDraft);
   const [broadcastMessage, setBroadcastMessage] = useState("");
@@ -53,8 +54,7 @@ export default function GroupManagementPanel({
     useState<GroupBroadcastResult | null>(null);
   const { recordFilters, updateRecordFilters } = useGroupRecordFilters();
 
-  const selectedGroup =
-    groups.find((group) => group.group_id === selectedGroupId) ?? null;
+  const selectedGroup = groups.find((group) => group.group_id === selectedGroupId) ?? null;
   const filteredGroups = filterGroups(groups, recordFilters);
   const selectedGroupHiddenByFilters = groupHiddenByFilters(
     selectedGroup,
@@ -131,24 +131,19 @@ export default function GroupManagementPanel({
       return;
     }
     let cancelled = false;
-    const loadOutputs = async () => {
-      const res = await fetch(
-        `/api/v1/groups/${encodeURIComponent(selectedGroup.group_id)}/outputs?limit=8`,
-        { cache: "no-store" },
-      );
-      if (cancelled) return;
-      if (!res.ok) {
-        setOutputs([]);
-        return;
-      }
-      const items = await getData<Artifact[]>(res);
-      if (!cancelled) setOutputs(Array.isArray(items) ? items : []);
-    };
-    void loadOutputs();
+    const loadOutputs = async () =>
+      loadGroupOutputs(selectedGroup.group_id, includeInternalOutputs);
+    loadOutputs()
+      .then((items) => {
+        if (!cancelled) setOutputs(items);
+      })
+      .catch(() => {
+        if (!cancelled) setOutputs([]);
+      });
     return () => {
       cancelled = true;
     };
-  }, [selectedGroup]);
+  }, [selectedGroup, includeInternalOutputs]);
 
   const createGroup = async () => {
     setSaving(true);
@@ -264,34 +259,28 @@ export default function GroupManagementPanel({
       setArchiving(false);
     }
   };
-
-  const archiveExpiredGroups = async () => {
-    setArchivingExpired(true);
-    setNotice(null);
-    setError(null);
-    try {
-      const res = await fetch("/api/v1/groups/lifecycle/archive-expired", {
-        method: "POST",
-      });
-      const payload = await getData<{
-        archived_count?: number;
-        report?: GroupLifecycleReport;
-      }>(res);
-      if (!res.ok) throw new Error("Could not archive expired groups.");
-      const archivedCount = payload.archived_count ?? 0;
-      if (payload.report) setLifecycleReport(payload.report);
-      setNotice(
-        archivedCount > 0
-          ? `${archivedCount} expired temporary group${archivedCount === 1 ? "" : "s"} archived. Retained outputs remain reviewable.`
-          : "No expired temporary groups needed cleanup.",
-      );
-      await loadGroups();
-    } catch (archiveError) {
-      setError(errorMessage(archiveError, "Could not archive expired groups."));
-    } finally {
-      setArchivingExpired(false);
-    }
-  };
+  const {
+    bulkMode,
+    bulkClearing,
+    bulkSelectedGroupIds,
+    toggleBulkMode,
+    toggleBulkGroup,
+    selectAllVisibleBulkGroups,
+    clearBulkSelection,
+    clearSelectedGroups,
+  } = useGroupBulkActions({
+    groups,
+    filteredGroups,
+    loadGroups,
+    setNotice,
+    setError,
+  });
+  const { archivingExpired, archiveExpiredGroups } = useArchiveExpiredGroups({
+    loadGroups,
+    setLifecycleReport,
+    setNotice,
+    setError,
+  });
 
   return (
     <GroupWorkspacePanels
@@ -300,6 +289,9 @@ export default function GroupManagementPanel({
       lifecycleReport={lifecycleReport}
       lifecycleByGroupId={lifecycleByGroupId}
       recordFilters={recordFilters}
+      bulkMode={bulkMode}
+      bulkSelectedGroupIds={bulkSelectedGroupIds}
+      bulkActionPending={bulkClearing}
       selectedGroup={selectedGroup}
       hiddenSelectedGroup={selectedGroupHiddenByFilters ? selectedGroup : null}
       selectedGroupId={selectedGroupId}
@@ -307,6 +299,7 @@ export default function GroupManagementPanel({
       initialPanel={initialPanel}
       outputs={outputs}
       outputSummary={summarizeOutputs(outputs)}
+      includeInternalOutputs={includeInternalOutputs}
       draft={draft}
       notice={notice}
       error={error}
@@ -322,6 +315,11 @@ export default function GroupManagementPanel({
       onRefresh={() => void loadGroups()}
       onArchiveExpired={() => void archiveExpiredGroups()}
       onRecordFiltersChange={updateRecordFilters}
+      onToggleBulkMode={toggleBulkMode}
+      onToggleBulkGroup={toggleBulkGroup}
+      onSelectAllVisibleBulkGroups={selectAllVisibleBulkGroups}
+      onClearBulkSelection={clearBulkSelection}
+      onClearSelectedGroups={() => void clearSelectedGroups()}
       onSelectGroup={setSelectedGroupId}
       onDraftChange={(patch) =>
         setDraft((current) => ({ ...current, ...patch }))
@@ -331,6 +329,7 @@ export default function GroupManagementPanel({
       onBroadcast={() => void broadcastToGroup()}
       onArchive={() => void archiveSelectedGroup()}
       onClearOutputsChange={setClearOutputs}
+      onIncludeInternalOutputsChange={setIncludeInternalOutputs}
     />
   );
 }

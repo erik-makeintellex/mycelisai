@@ -226,7 +226,8 @@ func (s *AdminServer) HandleGroupOutputs(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	outputs, err := s.listGroupOutputs(r.Context(), group, parseLimit(r.URL.Query().Get("limit"), 20))
+	includeInternal := parseBoolQuery(r.URL.Query().Get("include_internal"))
+	outputs, err := s.listGroupOutputsWithOptions(r.Context(), group, parseLimit(r.URL.Query().Get("limit"), 20), includeInternal)
 	if err != nil {
 		respondAPIError(w, "Failed to list group outputs: "+err.Error(), http.StatusServiceUnavailable)
 		return
@@ -235,4 +236,13 @@ func (s *AdminServer) HandleGroupOutputs(w http.ResponseWriter, r *http.Request)
 		outputs = []artifacts.Artifact{}
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(outputs))
+}
+
+func parseBoolQuery(raw string) bool {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "1", "true", "yes", "on", "include", "internal", "all":
+		return true
+	default:
+		return false
+	}
 }

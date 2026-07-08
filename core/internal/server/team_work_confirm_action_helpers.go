@@ -85,6 +85,7 @@ func outputRefsForTeamWork(link confirmedActionTeamWorkLink, workItemID, teamID 
 			WorkItemID:    workItemID,
 			RunID:         link.RunID,
 			Kind:          firstNonEmptyString(output.Kind, "output"),
+			OutputClass:   outputClassForExecutionOutput(output),
 			Label:         firstNonEmptyString(output.Title, output.ID, "Team output"),
 			StorageRef:    storageRef,
 			Entrypoint:    relativeTeamOutputEntrypoint(storageRef, output.Entrypoint),

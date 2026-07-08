@@ -102,6 +102,10 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 	if routed, handled, err := s.routeSelectedSource(ctx, req, resp); handled || err != nil {
 		return routed, err
 	}
+	if normalizeSourceScope(req.SourceScope) == "local_sources" && s.cfg.Provider != ProviderLocalSources {
+		resp.Provider = ProviderLocalSources
+		return s.searchLocalSources(ctx, req, resp)
+	}
 	if isPublicWebProvider(s.cfg.Provider) && normalizeSourceScope(req.SourceScope) != "local_sources" && !s.cfg.OnlineAllowed {
 		resp.Status = "blocked"
 		resp.Blocker = &Blocker{Code: "online_search_not_allowed", Message: "Online search is disabled by config.", NextAction: "Set MYCELIS_SEARCH_ONLINE_ALLOWED=true to allow configured web_search without confirmation."}
@@ -109,6 +113,8 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 	}
 
 	switch s.cfg.Provider {
+	case ProviderBuiltinWeb:
+		return s.searchBuiltinWeb(ctx, req, resp)
 	case ProviderLocalSources:
 		return s.searchLocalSources(ctx, req, resp)
 	case ProviderSearXNG:
@@ -125,5 +131,5 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 }
 
 func isPublicWebProvider(provider string) bool {
-	return provider == ProviderSearXNG || provider == ProviderLocalAPI || provider == ProviderBrave
+	return provider == ProviderBuiltinWeb || provider == ProviderSearXNG || provider == ProviderLocalAPI || provider == ProviderBrave
 }

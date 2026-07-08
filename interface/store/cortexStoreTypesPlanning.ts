@@ -112,6 +112,7 @@ export interface Artifact {
     agent_id: string;
     trace_id?: string;
     artifact_type: ArtifactType;
+    output_class?: string;
     title: string;
     content_type: string;
     content?: string;

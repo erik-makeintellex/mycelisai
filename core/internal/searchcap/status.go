@@ -13,7 +13,7 @@ func (s *Service) Status() Status {
 			ApprovalMode:          "notify",
 			DisclosureMode:        "notice_and_interpretation",
 			Blocker:               disabledBlocker(),
-			NextActions:           []string{"Set MYCELIS_SEARCH_PROVIDER=local_sources, searxng, or local_api."},
+			NextActions:           []string{"Set MYCELIS_SEARCH_PROVIDER=builtin_web, local_sources, searxng, or local_api."},
 		}
 	}
 	status := Status{
@@ -26,6 +26,12 @@ func (s *Service) Status() Status {
 		DisclosureMode:        s.cfg.DisclosureMode,
 	}
 	switch s.cfg.Provider {
+	case ProviderBuiltinWeb:
+		status.Enabled = true
+		status.Configured = true
+		status.SupportsPublicWeb = true
+		status.NextActions = []string{"Ask Soma to search the web through the built-in token-free web provider."}
+		status.Sources = []Source{searchSource("builtin_web", "Built-in web search", "public_web", builtinWebEndpoint, "token-free public web search endpoint", "none", "live", "public", "bounded_external", availability(status.Configured))}
 	case ProviderLocalSources:
 		status.Enabled = true
 		status.Configured = s.mem != nil

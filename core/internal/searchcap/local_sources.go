@@ -13,8 +13,13 @@ func (s *Service) searchLocalSources(ctx context.Context, req Request, resp Resp
 	scope := normalizeSourceScope(req.SourceScope)
 	if scope == "web" {
 		resp.Status = "blocked"
-		resp.Blocker = &Blocker{Code: "web_provider_not_configured", Message: "Public web search is not configured. Local-source search is available only for governed Mycelis context.", NextAction: "Set MYCELIS_SEARCH_PROVIDER=searxng for self-hosted web search or configure the brave-search MCP server."}
+		resp.Blocker = &Blocker{Code: "web_provider_not_configured", Message: "Public web search is not configured. Local-source search is available only for governed Mycelis context.", NextAction: "Configure SearXNG or a local_api web provider for public research, or ask Soma to search local/shared sources only."}
 		return resp, nil
+	}
+	if scope == "all" {
+		resp.Metadata["partial_source_scope"] = "local_sources_only"
+		resp.Metadata["missing_source_scope"] = "web"
+		resp.Metadata["scope_warning"] = "Public web search is not configured; returning only governed local-source results."
 	}
 	mounts := s.availableMountedSources(req)
 	if s.mem == nil && len(mounts) == 0 {

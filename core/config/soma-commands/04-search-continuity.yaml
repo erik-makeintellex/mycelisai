@@ -18,7 +18,7 @@ commands:
   - id: search.web
     handler: web_search
     title: Web and source search
-    summary: Search governed Mycelis Search sources, including local sources and configured web access.
+    summary: Search governed Mycelis Search sources, distinguishing local retained sources, public web providers, and mixed-scope requests.
     user_quote: "Research this for me."
     category: Search
     capability_id: web_search
@@ -26,8 +26,8 @@ commands:
     output_schema_ref: search_results.v1
     scope: {default: workspace, roles: [soma, team_lead, specialist], groups: [configured_sources]}
     governance: {risk_class: medium-risk, approval_posture: not_required, audit_required: true, private_data_touch: true}
-    delivery: {output_kinds: [search_results, citations], proof_required: true, recovery_posture: configure_source_or_retry_local}
-    context_assertions: [external_results_are_leads, local_mounts_require_user_scope]
+    delivery: {output_kinds: [search_results, citations, source_boundary_notice], proof_required: true, recovery_posture: configure_source_or_retry_local}
+    context_assertions: [external_results_are_leads, local_sources_are_not_public_web, mixed_scope_may_be_partial, local_mounts_require_user_scope]
     ui_visibility: {default_surface: soma_thread, operator_label: Research}
     availability: {mode: builtin, requires: [search_provider_or_local_sources]}
   - id: context.load

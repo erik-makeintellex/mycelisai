@@ -1,4 +1,3 @@
-import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import type { ExecutionSummaryData } from "@/store/cortexStoreTypesChat";
 
 export type WorkMode =
@@ -139,11 +138,6 @@ export type GroupRecordFilters = {
   retentionDays: number;
 };
 
-export type OutputSummary = {
-  artifactCount: number;
-  agentCount: number;
-};
-
 export type GroupDraft = {
   name: string;
   goalStatement: string;
@@ -239,14 +233,4 @@ export const isGroupWithinRetention = (
   const referenceTime = new Date(reference).getTime();
   if (!Number.isFinite(referenceTime)) return true;
   return now - referenceTime <= days * 86_400_000;
-};
-
-export const summarizeOutputs = (outputs: Artifact[]): OutputSummary => {
-  const uniqueAgents = new Set(
-    outputs.map((artifact) => artifact.agent_id).filter(Boolean),
-  );
-  return {
-    artifactCount: outputs.length,
-    agentCount: uniqueAgents.size,
-  };
 };
