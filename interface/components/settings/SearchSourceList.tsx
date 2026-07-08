@@ -7,7 +7,7 @@ export function SearchSourceList({
     compact = false,
     onDeleteSource,
     onEditSource,
-    title = "Search sources Soma can use",
+    title = "Places Soma Can Search",
 }: {
     sources: SearchCapabilitySource[];
     compact?: boolean;
@@ -20,6 +20,9 @@ export function SearchSourceList({
         <div className="mt-3 rounded-lg border border-cortex-border bg-cortex-bg/60 p-3">
             <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
                 {title}
+            </p>
+            <p className="mt-1 text-[11px] leading-4 text-cortex-text-muted">
+                Approved places Soma may search: public web, approved local or mounted data, and private APIs.
             </p>
             <div className="mt-2 grid gap-2">
                 {sources.slice(0, compact ? 2 : undefined).map((source) => (
@@ -62,7 +65,7 @@ export function SearchSourceList({
                         {!compact && (
                             <details className="mt-2 rounded-lg border border-cortex-border bg-cortex-bg/60 px-2.5 py-2">
                                 <summary className="cursor-pointer text-[9px] font-mono uppercase tracking-wider text-cortex-text-muted">
-                                    Inspect source refs
+                                    Inspect technical refs
                                 </summary>
                                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                                     <SourceDetail label="Source ref" value={source.id} />
@@ -92,10 +95,10 @@ function SourceDetail({ label, value }: { label: string; value: string }) {
 
 function sourceTypeLabel(type: string): string {
     if (type === "public_web") return "Public web";
-    if (type === "local_sources") return "Retained Mycelis context";
-    if (type === "local_api") return "Private search API";
-    if (type === "mounted_folder") return "Mounted folder";
-    if (type === "knowledge_collection") return "Knowledge collection";
+    if (type === "local_sources") return "Approved Mycelis data";
+    if (type === "local_api") return "Private API";
+    if (type === "mounted_folder") return "Approved local or mounted data";
+    if (type === "knowledge_collection") return "Approved knowledge collection";
     return type.replace(/_/g, " ");
 }
 
@@ -119,7 +122,7 @@ function sourceReadinessLabel(source: SearchCapabilitySource): string {
         return source.recovery || "Repair this source before Soma can use it.";
     }
     if (sourceUsesResolvableToken(source)) {
-        return "Ready after Core resolves the saved secret reference.";
+        return "Ready once saved access is available.";
     }
     if (sourceAuthNeedsAdapter(source)) {
         return "Registered safely. Soma needs a matching auth adapter before it can search this source.";
@@ -146,13 +149,13 @@ function sourceUsesResolvableToken(source: SearchCapabilitySource): boolean {
 
 function scopeLabel(source: SearchCapabilitySource): string {
     if (source.scope_kind === "all") return "Visible to everyone";
-    if (source.scope_kind === "group") return source.scope_ref ? `Group ${source.scope_ref}` : "Group-scoped";
-    if (source.scope_kind === "host") return source.scope_ref ? `Host ${source.scope_ref}` : "Host-scoped";
-    return source.scope_ref ? `${source.scope_kind} ${source.scope_ref}` : source.scope_kind;
+    if (source.scope_kind === "group") return "Visible to one group";
+    if (source.scope_kind === "host") return "Visible to one host";
+    return "Limited visibility";
 }
 
 function authLabel(source: SearchCapabilitySource): string {
     if (source.auth_scheme === "none") return "No secret needed";
-    if (source.secret_ref) return `Uses secret reference ${source.secret_ref}`;
+    if (sourceUsesResolvableToken(source)) return "Uses a saved secret";
     return "Uses saved authentication";
 }

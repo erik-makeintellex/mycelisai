@@ -440,8 +440,8 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByText("Capability Workflow")).toBeVisible();
         await expect(page.getByText("Mycelis Search Capability")).toBeVisible();
         await expect(page.getByText("Soma search is ready")).toBeVisible();
-        await expect(page.getByText("Soma direct: web_search")).toBeVisible();
-        await expect(page.getByText("Search sources Soma can use")).toBeVisible();
+        await expect(page.getByText("Ask Soma to search", { exact: true })).toBeVisible();
+        await expect(page.getByText("Places Soma Can Search")).toBeVisible();
         await expect(page.getByText("Self-hosted public web").first()).toBeVisible();
         await expect(page.getByText("operator-owned public web search").first()).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /Servers\s*1/i }));

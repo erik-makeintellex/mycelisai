@@ -1,7 +1,7 @@
 # Mycelis V8 - Active Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-07-06
+> Updated: 2026-07-08
 > Canonical active scoreboard for V8 delivery. Historical V7/V8 migration evidence now lives in Git history; active architecture truth lives in `docs/architecture-library/MYCELIS_CANONICAL_PRD.md`.
 
 ## Current Checkpoint
@@ -406,6 +406,8 @@ Known non-blocking warnings:
 - `IN_REVIEW` runtime output-class propagation slice: `output_class` is now a first-class protocol field on execution outputs, chat artifact refs, and durable team output refs, with normalized values `user_deliverable`, `planning`, `internal_handoff`, `proof`, and `source_material`. Confirm-action output refs, signal-projected refs, sync team text replies, group output filtering, and latest focused-team Soma context now preserve or infer the class instead of relying only on UI path heuristics. Proof: focused protocol/server/searchcap Go tests, focused Groups Vitest suites, `uv run inv interface.typecheck`, docs link/help tests, `uv run inv quality.max-lines --limit 300`, and `git diff --check` pass. Live Groups/Resources/search GUI proof remains the next acceptance gate after search-source language is simplified.
 
 - `IN_REVIEW` Soma Search presentation slice: default Soma replies, execution-summary capability chips, and Resources/Settings capability pills now use natural labels such as `Soma Search`, `approved local data`, `mounted sources`, and `public web` instead of exposing `web_search`, provider IDs, `fetch`, or MCP language in the default path. Raw tool/provider refs remain available through Inspect/API details. Proof: focused Go search tests, focused Dashboard/Settings Vitest suites, `uv run inv interface.typecheck`, docs link/help tests, `uv run inv quality.max-lines --limit 300`, and `git diff --check` pass. Follow-up live headed proof now also passes with Core/Frontend/PostgreSQL/NATS/Ollama running: `uv run inv interface.e2e --server-mode=external --project=chromium --workers=1 --headed --spec=e2e/specs/search-provenance-live.spec.ts` and `uv run inv interface.e2e --server-mode=external --project=chromium --workers=1 --headed --spec=e2e/specs/web-access-user-path-review.spec.ts`.
+
+- `IN_REVIEW` search-source configuration language slice: Resources/Settings now presents configured search inputs as plain-language places Soma may search: public web, approved Mycelis data, approved local or mounted data, approved knowledge collections, and private APIs. Default copy no longer exposes `Core` resolution language, raw `web_search` labels, or saved secret names; those identifiers remain behind Inspect technical refs. Proof: focused Settings Vitest, `uv run inv interface.typecheck`, docs link/help tests, `git diff --check`, headed `mcp-connected-tools.spec.ts`, and headed `web-access-user-path-review.spec.ts` pass on the live stack.
 
 ## Documentation Map
 

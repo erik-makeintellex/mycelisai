@@ -60,6 +60,18 @@ describe('MCPToolRegistry search sources', () => {
                     sensitivity_class: 'governed',
                     trust_class: 'trusted_internal',
                     status: 'available',
+                }, {
+                    id: 'public-web',
+                    name: 'Public web research',
+                    source_type: 'public_web',
+                    endpoint: 'https://web-search.example.test',
+                    scope_kind: 'all',
+                    boundary: 'Approved public web search',
+                    auth_scheme: 'none',
+                    mode: 'live',
+                    sensitivity_class: 'public',
+                    trust_class: 'bounded_external',
+                    status: 'available',
                 }] } }),
             })
             .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: { id: 'team-api' } }) })
@@ -84,25 +96,33 @@ describe('MCPToolRegistry search sources', () => {
         render(<MCPToolRegistry />);
 
         await waitFor(() => expect(screen.getByText('Approved docs')).toBeDefined());
-        expect(screen.getByText(/Knowledge collection/i)).toBeDefined();
-        expect(screen.getByText(/Visible to everyone/i)).toBeDefined();
-        expect(screen.getByText(/No secret needed/i)).toBeDefined();
-        expect(screen.getByText(/Ready for Soma to use when this scope is allowed/i)).toBeDefined();
+        expect(screen.getByText(/Approved places Soma may search: public web, approved local or mounted data, and private APIs/i)).toBeDefined();
+        expect(screen.getByText(/Approved knowledge collection/i)).toBeDefined();
+        expect(screen.getByText('Public web research')).toBeDefined();
+        expect(screen.getAllByText(/Public web/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Visible to everyone/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/No secret needed/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Ready for Soma to use when this scope is allowed/i).length).toBeGreaterThan(0);
 
         fireEvent.click(screen.getByRole('button', { name: /Add search source/i }));
         fireEvent.change(screen.getByLabelText('Source name'), { target: { value: 'Team research API' } });
-        fireEvent.change(screen.getByLabelText('Kind'), { target: { value: 'local_api' } });
-        fireEvent.change(screen.getByLabelText('Endpoint for web/API'), { target: { value: 'https://search.example.test/api' } });
-        fireEvent.change(screen.getByLabelText('Boundary'), { target: { value: 'Approved research API' } });
+        expect(screen.getByText(/Add a place Soma may search after the configured scope allows it/i)).toBeDefined();
+        fireEvent.change(screen.getByLabelText('Source kind'), { target: { value: 'local_api' } });
+        fireEvent.change(screen.getByLabelText('Private API address'), { target: { value: 'https://search.example.test/api' } });
+        fireEvent.change(screen.getByLabelText('Search boundary'), { target: { value: 'Approved research API' } });
         fireEvent.change(screen.getByLabelText('Visible to'), { target: { value: 'group' } });
-        fireEvent.change(screen.getByLabelText('Scope reference'), { target: { value: 'research' } });
+        fireEvent.change(screen.getByLabelText('Group name'), { target: { value: 'research' } });
         fireEvent.change(screen.getByLabelText('Authentication'), { target: { value: 'secret_ref' } });
+        expect(screen.getByPlaceholderText('SOMA_SEARCH_SECRET')).toBeDefined();
         fireEvent.change(screen.getByLabelText(/Secret reference/i), { target: { value: 'SEARCH_API_KEY' } });
         fireEvent.click(screen.getAllByRole('button', { name: /^Add search source$/i }).at(-1)!);
 
         await waitFor(() => expect(screen.getByText(/Added Team research API/i)).toBeDefined());
         await waitFor(() => expect(screen.getByText('Team research API')).toBeDefined());
-        expect(screen.getByText(/Ready after Core resolves the saved secret reference/i)).toBeDefined();
+        expect(screen.getAllByText(/Private API/i).length).toBeGreaterThan(0);
+        expect(screen.getByText(/Visible to one group/i)).toBeDefined();
+        expect(screen.getByText(/Uses a saved secret/i)).toBeDefined();
+        expect(screen.getByText(/Ready once saved access is available/i)).toBeDefined();
 
         const postCall = mockFetch.mock.calls.find(([url, init]) => (
             url === '/api/v1/search/sources' && (init as RequestInit | undefined)?.method === 'POST'
@@ -169,8 +189,8 @@ describe('MCPToolRegistry search sources', () => {
         await waitFor(() => expect(screen.getByText('Team research API')).toBeDefined());
         fireEvent.click(screen.getByRole('button', { name: /Edit/i }));
         fireEvent.change(screen.getByLabelText('Source name'), { target: { value: 'Team research API v2' } });
-        fireEvent.change(screen.getByLabelText('Endpoint for web/API'), { target: { value: 'https://search.example.test/v2' } });
-        fireEvent.change(screen.getByLabelText('Boundary'), { target: { value: 'Approved research API v2' } });
+        fireEvent.change(screen.getByLabelText('Private API address'), { target: { value: 'https://search.example.test/v2' } });
+        fireEvent.change(screen.getByLabelText('Search boundary'), { target: { value: 'Approved research API v2' } });
         fireEvent.click(screen.getByRole('button', { name: /^Update search source$/i }));
 
         await waitFor(() => expect(screen.getByText(/Updated Team research API v2/i)).toBeDefined());
@@ -209,16 +229,17 @@ describe('MCPToolRegistry search sources', () => {
         await waitFor(() => expect(screen.getByText(/No configured sources reported/i)).toBeDefined());
         fireEvent.click(screen.getByRole('button', { name: /Add search source/i }));
         fireEvent.change(screen.getByLabelText('Source name'), { target: { value: 'Client docs mount' } });
-        fireEvent.change(screen.getByLabelText('Kind'), { target: { value: 'mounted_folder' } });
-        fireEvent.change(screen.getByLabelText('Local/shared folder path'), { target: { value: 'workspace/client-docs' } });
-        fireEvent.change(screen.getByLabelText('Boundary'), { target: { value: 'Operator-approved client docs folder' } });
+        fireEvent.change(screen.getByLabelText('Source kind'), { target: { value: 'mounted_folder' } });
+        fireEvent.change(screen.getByLabelText('Approved folder path'), { target: { value: 'workspace/client-docs' } });
+        fireEvent.change(screen.getByLabelText('Search boundary'), { target: { value: 'Operator-approved client docs folder' } });
         fireEvent.change(screen.getByLabelText('Visible to'), { target: { value: 'host' } });
-        fireEvent.change(screen.getByLabelText('Scope reference'), { target: { value: 'workstation-1' } });
+        fireEvent.change(screen.getByLabelText('Host name'), { target: { value: 'workstation-1' } });
         fireEvent.click(screen.getAllByRole('button', { name: /^Add search source$/i }).at(-1)!);
 
         await waitFor(() => expect(screen.getByText(/Added Client docs mount/i)).toBeDefined());
         await waitFor(() => expect(screen.getByText('Client docs mount')).toBeDefined());
-        expect(screen.getByText(/Mounted folder/i)).toBeDefined();
+        expect(screen.getAllByText(/Approved local or mounted data/i).length).toBeGreaterThan(0);
+        expect(screen.getByText(/Visible to one host/i)).toBeDefined();
         const postCall = mockFetch.mock.calls.find(([url, init]) => (
             url === '/api/v1/search/sources' && (init as RequestInit | undefined)?.method === 'POST'
         ));

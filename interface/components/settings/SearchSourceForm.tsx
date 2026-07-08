@@ -64,24 +64,27 @@ export function SearchSourceAddForm({
 
     return (
         <form onSubmit={submit} className="mt-4 rounded-lg border border-cortex-border bg-cortex-bg/60 p-3">
+            <p className="mb-3 text-[11px] leading-4 text-cortex-text-muted">
+                Add a place Soma may search after the configured scope allows it: public web, approved local or mounted data, or a private API.
+            </p>
             <div className="grid gap-3 md:grid-cols-2">
                 <SourceField label="Source name">
-                    <input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder="Company knowledge search" />
+                    <input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder="Approved research library" />
                 </SourceField>
-                <SourceField label="Kind">
+                <SourceField label="Source kind">
                     <select value={draft.source_type} onChange={(event) => setDraft((current) => ({ ...current, source_type: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50">
                         <option value="public_web">Public web</option>
-                        <option value="local_sources">Retained Mycelis context</option>
-                        <option value="local_api">Private search API</option>
-                        <option value="mounted_folder">Mounted folder</option>
-                        <option value="knowledge_collection">Knowledge collection</option>
+                        <option value="local_sources">Approved Mycelis data</option>
+                        <option value="mounted_folder">Approved local or mounted data</option>
+                        <option value="knowledge_collection">Approved knowledge collection</option>
+                        <option value="local_api">Private API</option>
                     </select>
                 </SourceField>
-                <SourceField label={isMountedFolderSource(draft.source_type) ? "Local/shared folder path" : "Endpoint for web/API"}>
-                    <input value={draft.endpoint ?? ""} onChange={(event) => setDraft((current) => ({ ...current, endpoint: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder={isMountedFolderSource(draft.source_type) ? "workspace/client-docs" : "https://search.example.com/api"} />
+                <SourceField label={sourceAddressLabel(draft.source_type)}>
+                    <input value={draft.endpoint ?? ""} onChange={(event) => setDraft((current) => ({ ...current, endpoint: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder={sourceAddressPlaceholder(draft.source_type)} />
                 </SourceField>
-                <SourceField label="Boundary">
-                    <input value={draft.boundary} onChange={(event) => setDraft((current) => ({ ...current, boundary: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder="Approved company knowledge index" />
+                <SourceField label="Search boundary">
+                    <input value={draft.boundary} onChange={(event) => setDraft((current) => ({ ...current, boundary: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder="Only approved company research material" />
                 </SourceField>
                 <SourceField label="Visible to">
                     <select value={draft.scope_kind} onChange={(event) => setDraft((current) => ({ ...current, scope_kind: event.target.value, scope_ref: event.target.value === "all" ? "" : current.scope_ref }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50">
@@ -91,7 +94,7 @@ export function SearchSourceAddForm({
                     </select>
                 </SourceField>
                 {draft.scope_kind !== "all" && (
-                    <SourceField label="Scope reference">
+                    <SourceField label={draft.scope_kind === "group" ? "Group name" : "Host name"}>
                         <input value={draft.scope_ref ?? ""} onChange={(event) => setDraft((current) => ({ ...current, scope_ref: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder={draft.scope_kind === "group" ? "research-team" : "workstation-1"} />
                     </SourceField>
                 )}
@@ -103,8 +106,8 @@ export function SearchSourceAddForm({
                 </SourceField>
                 {draft.auth_scheme !== "none" && (
                     <SourceField label="Secret reference">
-                        <input value={draft.secret_ref ?? ""} onChange={(event) => setDraft((current) => ({ ...current, secret_ref: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder="SEARCH_PROVIDER_API_KEY" />
-                        <span className="text-[10px] leading-4 text-cortex-text-muted">Use a saved reference name, not the token value.</span>
+                        <input value={draft.secret_ref ?? ""} onChange={(event) => setDraft((current) => ({ ...current, secret_ref: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder="SOMA_SEARCH_SECRET" />
+                        <span className="text-[10px] leading-4 text-cortex-text-muted">Enter the saved reference name only. Do not paste the secret value.</span>
                     </SourceField>
                 )}
             </div>
@@ -150,11 +153,11 @@ export function emptySourceLabel(addSupported: boolean): string {
 
 function validateSearchSourceDraft(draft: SearchSourceDraft): string | null {
     if (!draft.name.trim()) return "Name the search source.";
-    if (requiresEndpoint(draft.source_type) && !draft.endpoint?.trim()) return isMountedFolderSource(draft.source_type) ? "Add the mounted folder path Soma may search." : "Add the search endpoint Soma may use for this source.";
+    if (requiresEndpoint(draft.source_type) && !draft.endpoint?.trim()) return isMountedFolderSource(draft.source_type) ? "Add the approved folder path Soma may search." : "Add the address Soma may use for this source.";
     if (draft.endpoint?.trim() && !isMountedFolderSource(draft.source_type) && !/^https?:\/\/[^/\s]+/i.test(draft.endpoint.trim())) return "Use a full http(s) endpoint.";
     if (draft.endpoint?.trim() && isMountedFolderSource(draft.source_type) && /^https?:\/\//i.test(draft.endpoint.trim())) return "Use a local or shared folder path, not an http(s) URL.";
     if (!draft.boundary.trim()) return "Describe the boundary Soma may search.";
-    if (draft.scope_kind !== "all" && !draft.scope_ref?.trim()) return "Add the group or host reference for this source.";
+    if (draft.scope_kind !== "all" && !draft.scope_ref?.trim()) return "Add the group or host name allowed to use this source.";
     if (draft.auth_scheme !== "none") {
         const secretRef = draft.secret_ref?.trim() ?? "";
         if (!secretRef) return "Use a secret reference name, not a secret value.";
@@ -169,4 +172,18 @@ function requiresEndpoint(sourceType: string): boolean {
 
 function isMountedFolderSource(sourceType: string): boolean {
     return sourceType === "mounted_folder";
+}
+
+function sourceAddressLabel(sourceType: string): string {
+    if (isMountedFolderSource(sourceType)) return "Approved folder path";
+    if (sourceType === "local_api") return "Private API address";
+    if (sourceType === "public_web") return "Public web search address";
+    return "Search address";
+}
+
+function sourceAddressPlaceholder(sourceType: string): string {
+    if (isMountedFolderSource(sourceType)) return "workspace/client-docs";
+    if (sourceType === "local_api") return "https://private-search.example.test/api";
+    if (sourceType === "public_web") return "https://web-search.example.test";
+    return "Optional search address";
 }

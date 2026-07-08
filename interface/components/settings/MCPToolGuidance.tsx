@@ -220,7 +220,7 @@ export function SearchCapabilityCard({
                 </span>
             </div>
             <div className="mt-4 grid gap-2 md:grid-cols-3">
-                <CapabilityPill active={Boolean(status?.direct_soma_interaction)} label="Soma direct: Search" />
+                <CapabilityPill active={Boolean(status?.direct_soma_interaction)} label="Ask Soma to search" />
                 <CapabilityPill active={Boolean(status?.supports_local_sources)} label="Approved local data" />
                 <CapabilityPill active={Boolean(status?.supports_public_web)} label="Public web" />
             </div>
