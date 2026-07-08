@@ -21,7 +21,7 @@ func TestRespondSearchChatPayload_DirectSearchIncludesCompletedExecutionSummary(
 		req,
 		"Direct web search",
 		"latest news updates regarding ai agent products",
-		"Notice: web_search via local_api; no confirmation; external results are leads, verify before relying.\nResults:\n1. Agent product release",
+		"Notice: Soma Search checked the public web. External results are leads; verify before relying.\nResults:\n1. Agent product release",
 		[]string{"web_search"},
 		protocol.ExecutionStatusCompleted,
 		"",
@@ -38,8 +38,11 @@ func TestRespondSearchChatPayload_DirectSearchIncludesCompletedExecutionSummary(
 	if !strings.Contains(payload.Text, "Agent product release") {
 		t.Fatalf("payload.text = %q, want search result", payload.Text)
 	}
-	if !strings.Contains(payload.Text, "no confirmation") {
-		t.Fatalf("payload.text = %q, want no-confirm disclosure", payload.Text)
+	if strings.Contains(payload.Text, "local_api") || strings.Contains(payload.Text, "web_search via") {
+		t.Fatalf("payload.text = %q, should keep provider IDs out of the default reply", payload.Text)
+	}
+	if !strings.Contains(payload.Text, "Soma Search checked the public web") {
+		t.Fatalf("payload.text = %q, want user-readable search boundary", payload.Text)
 	}
 	if payload.ExecutionSummary == nil {
 		t.Fatal("expected execution_summary")
@@ -123,10 +126,10 @@ func TestHandleChat_DirectSearchConfiguredWebUsesWebByDefault(t *testing.T) {
 		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
 	}
 	payload := decodeChatPayloadFromAPIResponse(t, rr)
-	if strings.Contains(payload.Text, "public web research is not configured") {
+	if strings.Contains(payload.Text, "public web research is not enabled") {
 		t.Fatalf("payload.text = %q, should use configured web search", payload.Text)
 	}
-	if !strings.Contains(payload.Text, "local_api") || !strings.Contains(payload.Text, "Frameworks") {
+	if !strings.Contains(payload.Text, "Soma Search checked the public web") || !strings.Contains(payload.Text, "Frameworks") {
 		t.Fatalf("payload.text = %q, want configured web result", payload.Text)
 	}
 	if payload.ExecutionSummary == nil {
@@ -155,7 +158,7 @@ func TestHandleChat_DirectSearchExplicitPublicWebBlocksWhenUnconfigured(t *testi
 		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
 	}
 	payload := decodeChatPayloadFromAPIResponse(t, rr)
-	if !strings.Contains(payload.Text, "public web research is not configured") {
+	if !strings.Contains(payload.Text, "public web research is not enabled") {
 		t.Fatalf("payload.text = %q, want public web setup blocker", payload.Text)
 	}
 	if payload.ExecutionSummary == nil || payload.ExecutionSummary.Execution.Status != protocol.ExecutionStatusBlocked {
@@ -181,7 +184,7 @@ func TestHandleChat_CanYouSearchOnRunsDirectSearch(t *testing.T) {
 		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
 	}
 	payload := decodeChatPayloadFromAPIResponse(t, rr)
-	if strings.Contains(payload.Text, "Current Mycelis search capability") {
+	if strings.Contains(payload.Text, "Soma Search is available") {
 		t.Fatalf("payload.text = %q, should execute search instead of explaining capability", payload.Text)
 	}
 	if !strings.Contains(payload.ExecutionSummary.Intent.Original, "what's the latest popular multi agent framework") {
@@ -202,7 +205,7 @@ func TestDirectSearchNoticeNamesLocalSourcesAsRetainedContext(t *testing.T) {
 
 	notice := directSearchNotice(resp)
 
-	if !strings.Contains(notice, "governed local-source results") {
+	if !strings.Contains(notice, "approved local data and mounted sources") {
 		t.Fatalf("notice = %q, want local-source trust boundary", notice)
 	}
 	if strings.Contains(notice, "external results are leads") {
@@ -226,7 +229,7 @@ func TestDirectSearchMissingWebScopeDetectsPartialMixedCoverage(t *testing.T) {
 func TestBuildSearchExecutionSummaryNamesLocalSourceProvenance(t *testing.T) {
 	summary := buildSearchExecutionSummary(
 		"what is your latest research",
-		"Notice: web_search via local_sources; no confirmation; governed local-source results come from retained Mycelis context, not the public web.",
+		"Notice: Soma Search checked approved local data and mounted sources.",
 		"audit-123",
 		[]string{"web_search"},
 		protocol.ExecutionStatusCompleted,
@@ -245,7 +248,7 @@ func TestBuildSearchExecutionSummaryNamesLocalSourceProvenance(t *testing.T) {
 func TestBuildSearchExecutionSummaryNamesPublicWebBlocker(t *testing.T) {
 	summary := buildSearchExecutionSummary(
 		"search latest public agent frameworks",
-		"Notice: public web was requested through web_search, but local_sources only searches retained Mycelis context.\nBlocked: public web research is not configured.",
+		"Notice: public web research was requested, but Soma Search is currently limited to approved local data and mounted sources.\nBlocked: public web research is not enabled for this workspace.",
 		"audit-123",
 		[]string{"web_search"},
 		protocol.ExecutionStatusBlocked,

@@ -161,8 +161,8 @@ export function WebAccessSetupCard({
                 </button>
             </div>
             <div className="mt-4 grid gap-2 md:grid-cols-3">
-                <CapabilityPill active={canAskSoma} label={`Ask Soma: ${status?.soma_tool_name ?? "web_search"}`} />
-                <CapabilityPill active={hasLocalSearch} label="Local Mycelis sources" />
+                <CapabilityPill active={canAskSoma} label="Ask Soma: research or search" />
+                <CapabilityPill active={hasLocalSearch} label="Approved local data" />
                 <CapabilityPill active={hasPublicWeb} label="Public web provider" />
             </div>
             <SearchSourceList sources={status?.sources ?? []} compact />
@@ -198,7 +198,7 @@ export function SearchCapabilityCard({
         ?? "Soma can route governed search through the configured Mycelis Search provider.";
     const tokenText = status?.requires_hosted_api_token
         ? "Brave MCP requires BRAVE_API_KEY."
-        : "No hosted Brave token required for built-in web, local sources, local API, or self-hosted SearXNG.";
+        : "Brave tokens are not required for built-in web, approved local data, mounted sources, local API, or self-hosted SearXNG.";
 
     return (
         <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
@@ -220,8 +220,8 @@ export function SearchCapabilityCard({
                 </span>
             </div>
             <div className="mt-4 grid gap-2 md:grid-cols-3">
-                <CapabilityPill active={Boolean(status?.direct_soma_interaction)} label={`Soma direct: ${status?.soma_tool_name ?? "web_search"}`} />
-                <CapabilityPill active={Boolean(status?.supports_local_sources)} label="Shared sources" />
+                <CapabilityPill active={Boolean(status?.direct_soma_interaction)} label="Soma direct: Search" />
+                <CapabilityPill active={Boolean(status?.supports_local_sources)} label="Approved local data" />
                 <CapabilityPill active={Boolean(status?.supports_public_web)} label="Public web" />
             </div>
             <div className="mt-3 flex items-center gap-2 text-[11px] text-cortex-text-muted">
@@ -238,6 +238,7 @@ export function SearchCapabilityCard({
                 </summary>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     <SourceDetail label="Provider ref" value={provider} />
+                    <SourceDetail label="Tool ref" value={status?.soma_tool_name ?? "web_search"} />
                     <SourceDetail label="Result limit" value={`${status?.max_results ?? 0}`} />
                 </div>
             </details>

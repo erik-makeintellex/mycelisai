@@ -151,7 +151,8 @@ describe('MissionControlChat execution summary', () => {
             expect(screen.getByText('Result verified')).toBeDefined();
             expect(screen.getByRole('link', { name: /Run search-r/i }).getAttribute('href')).toBe('/runs/search-run-123');
             expect(screen.getByText('Tool-assisted work')).toBeDefined();
-            expect(screen.getAllByText('web_search').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Soma Search').length).toBeGreaterThan(0);
+            expect(screen.queryByText('web_search')).toBeNull();
             expect(screen.getByText('Source')).toBeDefined();
             expect(screen.getByText('Search source: Local Mycelis context')).toBeDefined();
             expect(screen.getByText(/completed/i)).toBeDefined();

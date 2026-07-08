@@ -8,6 +8,7 @@ import type {
 import { mediaDependencyRecovery, type DegradationShape } from "./ExecutionSummaryRecoveryModel";
 import { recoveryTrustLines } from "@/lib/deliveryRuntimeLanguage";
 import { projectPackageOpenPath } from "@/lib/outputPackageModel";
+import { toolLabel } from "@/lib/labels";
 
 type SummaryValue = string | ExecutionSummaryItem;
 
@@ -49,6 +50,7 @@ export function itemText(item: SummaryValue): string | null {
         ?? compactText(item.id)
         ?? null;
 }
+
 export function itemUrl(item: SummaryValue): string | null {
     if (typeof item === "string") return null;
     const id = compactText(item.id);
@@ -145,7 +147,7 @@ export function linkRunId(link: string | ExecutionSummaryLink): string | null {
 export function capabilityGroups(capabilityUse: ExecutionSummaryData["capability_use"]) {
     if (!capabilityUse) return [];
     if (Array.isArray(capabilityUse)) {
-        const values = capabilityUse.map(itemText).filter(Boolean) as string[];
+        const values = capabilityUse.map(itemText).filter((value): value is string => Boolean(value)).map(toolLabel);
         return values.length ? [{ label: "Used", values }] : [];
     }
 
@@ -160,7 +162,7 @@ export function capabilityGroups(capabilityUse: ExecutionSummaryData["capability
     ];
 
     for (const [key, label] of candidates) {
-        const values = source[key]?.map(itemText).filter(Boolean) as string[] | undefined;
+        const values = source[key]?.map(itemText).filter((value): value is string => Boolean(value)).map(toolLabel);
         if (values?.length) groups.push({ label, values });
     }
     return groups;
@@ -222,11 +224,7 @@ export function artifactOutputItems(artifacts?: ChatArtifactRef[]) {
 }
 
 export type TrustVerdictTone = "trusted" | "review" | "attention";
-export interface TrustVerdict {
-    label: string;
-    detail: string;
-    tone: TrustVerdictTone;
-}
+export type TrustVerdict = { label: string; detail: string; tone: TrustVerdictTone };
 
 function proofObjects(proof: ExecutionSummaryData["proof"]) {
     return proofLinks(proof).filter((item): item is ExecutionSummaryLink => typeof item !== "string");

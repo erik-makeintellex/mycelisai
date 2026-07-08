@@ -90,7 +90,7 @@ func TestHandleChat_AnswersSearchCapabilityWithoutNATS(t *testing.T) {
 	if !strings.Contains(payload.Text, "SearXNG") && !strings.Contains(payload.Text, "searxng") {
 		t.Fatalf("payload.text = %q, want searxng capability", payload.Text)
 	}
-	if !strings.Contains(payload.Text, "Hosted Brave tokens are not required") {
+	if !strings.Contains(payload.Text, "Brave tokens are not required") {
 		t.Fatalf("payload.text = %q, want token-free path", payload.Text)
 	}
 }

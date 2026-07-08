@@ -116,7 +116,7 @@ describe('MCPToolRegistry', () => {
         expect(screen.getAllByText(/Details and binding/i).length).toBeGreaterThan(0);
         expect(screen.getByText('Mycelis Search Capability')).toBeDefined();
         expect(screen.getByText('Soma search is ready')).toBeDefined();
-        expect(screen.getByText(/No hosted Brave token required/i)).toBeDefined();
+        expect(screen.getByText(/Brave tokens are not required/i)).toBeDefined();
         expect(screen.getByText(/local API/i)).toBeDefined();
         expect(screen.getByText('Search sources Soma can use')).toBeDefined();
         expect(screen.getByText('Search sources')).toBeDefined();
@@ -270,7 +270,7 @@ describe('MCPToolRegistry', () => {
 
         expect(screen.getByText('Soma search needs configuration')).toBeDefined();
         expect(screen.getAllByText('Mycelis Search is disabled.').length).toBeGreaterThan(0);
-        expect(screen.getByText(/Soma direct: web_search/i)).toBeDefined();
+        expect(screen.getByText(/Soma direct: Search/i)).toBeDefined();
     });
 
     it('returns to installed view with guidance after library install', () => {

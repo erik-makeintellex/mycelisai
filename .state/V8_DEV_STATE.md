@@ -405,6 +405,8 @@ Known non-blocking warnings:
 
 - `IN_REVIEW` runtime output-class propagation slice: `output_class` is now a first-class protocol field on execution outputs, chat artifact refs, and durable team output refs, with normalized values `user_deliverable`, `planning`, `internal_handoff`, `proof`, and `source_material`. Confirm-action output refs, signal-projected refs, sync team text replies, group output filtering, and latest focused-team Soma context now preserve or infer the class instead of relying only on UI path heuristics. Proof: focused protocol/server/searchcap Go tests, focused Groups Vitest suites, `uv run inv interface.typecheck`, docs link/help tests, `uv run inv quality.max-lines --limit 300`, and `git diff --check` pass. Live Groups/Resources/search GUI proof remains the next acceptance gate after search-source language is simplified.
 
+- `IN_REVIEW` Soma Search presentation slice: default Soma replies, execution-summary capability chips, and Resources/Settings capability pills now use natural labels such as `Soma Search`, `approved local data`, `mounted sources`, and `public web` instead of exposing `web_search`, provider IDs, `fetch`, or MCP language in the default path. Raw tool/provider refs remain available through Inspect/API details. Proof: focused Go search tests, focused Dashboard/Settings Vitest suites, `uv run inv interface.typecheck`, docs link/help tests, `uv run inv quality.max-lines --limit 300`, and `git diff --check` pass. Live headed search proof remains the next acceptance gate after services are brought up.
+
 ## Documentation Map
 
 | Topic | Canonical Location |

@@ -8,6 +8,7 @@ export const TOOL_LABELS: Record<string, string> = {
   consult_council: "Ask Specialist",
   delegate_task: "Assign to Team",
   search_memory: "Search Memory",
+  web_search: "Soma Search",
   load_deployment_context: "Load Governed Context",
   promote_deployment_context: "Promote Company Knowledge",
   list_teams: "View Teams",

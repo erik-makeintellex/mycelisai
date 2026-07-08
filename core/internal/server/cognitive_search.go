@@ -37,7 +37,7 @@ func hasExactWord(text, word string) bool {
 
 func (s *AdminServer) buildSearchCapabilityAnswer() string {
 	status := s.searchCapabilityStatus()
-	lines := []string{"Current Mycelis search capability:"}
+	lines := []string{"Soma Search is available for governed research and workspace lookup."}
 	provider := strings.TrimSpace(status.Provider)
 	if provider == "" {
 		provider = "disabled"
@@ -48,22 +48,22 @@ func (s *AdminServer) buildSearchCapabilityAnswer() string {
 	} else if !status.Configured {
 		availability = "selected but not fully configured"
 	}
-	lines = append(lines, fmt.Sprintf("- Provider: %s (%s).", provider, availability))
+	lines = append(lines, fmt.Sprintf("- Current search mode: %s.", searchModeLabel(provider, availability)))
 	if status.SupportsLocalSources {
-		lines = append(lines, "- Local shared-source search is available through Soma's web_search tool.")
+		lines = append(lines, "- Approved local data and mounted sources can be searched when they are configured.")
 	}
 	if status.SupportsPublicWeb {
-		lines = append(lines, "- Public web search is available when the selected provider is configured.")
+		lines = append(lines, "- Public web research is available through the workspace search provider.")
 	} else {
-		lines = append(lines, "- Public web research is not configured on the current provider.")
+		lines = append(lines, "- Public web research is not enabled for this workspace yet.")
 	}
 	if status.DirectSomaInteraction {
-		lines = append(lines, fmt.Sprintf("- Soma direct interaction: ask Soma to use %s for governed search requests.", status.SomaToolName))
+		lines = append(lines, "- Ask Soma naturally, for example: \"research this\" or \"search our mounted files for this.\"")
 	}
 	if !status.RequiresHostedAPIToken {
-		lines = append(lines, "- Hosted Brave tokens are not required for local search or self-hosted SearXNG/local API search.")
+		lines = append(lines, "- Brave tokens are not required for built-in search, approved local data, mounted sources, SearXNG, or local API search.")
 	} else {
-		lines = append(lines, "- Brave still requires the curated brave-search MCP server and BRAVE_API_KEY.")
+		lines = append(lines, "- Brave search requires a configured Brave capability and secret reference.")
 	}
 	if status.Blocker != nil {
 		lines = append(lines, fmt.Sprintf("- Current blocker: %s", status.Blocker.Message))
@@ -74,6 +74,25 @@ func (s *AdminServer) buildSearchCapabilityAnswer() string {
 		lines = append(lines, fmt.Sprintf("- Next action: %s", status.NextActions[0]))
 	}
 	return strings.Join(lines, "\n")
+}
+
+func searchModeLabel(provider, availability string) string {
+	switch provider {
+	case searchcap.ProviderBuiltinWeb:
+		return "built-in public web search (" + availability + ")"
+	case searchcap.ProviderLocalSources:
+		return "approved local data and mounted sources (" + availability + ")"
+	case searchcap.ProviderSearXNG:
+		return "SearXNG public web search (" + availability + ")"
+	case searchcap.ProviderLocalAPI:
+		return "operator-owned search API (" + availability + ")"
+	case searchcap.ProviderBrave:
+		return "Brave capability search (" + availability + ")"
+	case searchcap.ProviderDisabled:
+		return "disabled"
+	default:
+		return provider + " (" + availability + ")"
+	}
 }
 
 func (s *AdminServer) respondSearchCapabilitySummary(w http.ResponseWriter, r *http.Request) {
@@ -130,9 +149,9 @@ func buildDirectSearchAnswer(resp searchcap.Response, err error) string {
 		return strings.Join([]string{notice, fmt.Sprintf("Blocked: search failed before results were available: %v", err)}, "\n")
 	}
 	if resp.Blocker != nil {
-		blockedLine := "Blocked: web_search unavailable."
+		blockedLine := "Blocked: Soma Search is unavailable."
 		if resp.Blocker.Code == "web_provider_not_configured" {
-			blockedLine = "Blocked: public web research is not configured."
+			blockedLine = "Blocked: public web research is not enabled for this workspace."
 		}
 		lines := []string{
 			notice,
@@ -145,7 +164,7 @@ func buildDirectSearchAnswer(resp searchcap.Response, err error) string {
 		return strings.Join(lines, "\n")
 	}
 	if len(resp.Results) == 0 {
-		return strings.Join([]string{notice, fmt.Sprintf("No results: %q via %s.", resp.Query, resp.Provider)}, "\n")
+		return strings.Join([]string{notice, fmt.Sprintf("No matching results found for %q in %s.", resp.Query, searchResultBoundaryLabel(resp))}, "\n")
 	}
 	lines := []string{notice, fmt.Sprintf("Results for %q:", resp.Query)}
 	for i, result := range resp.Results {
@@ -183,23 +202,34 @@ func directSearchNotice(resp searchcap.Response) string {
 	if value, ok := resp.Metadata["source_scope"].(string); ok {
 		sourceScope = strings.TrimSpace(value)
 	}
-	mode := "no confirmation"
-	if value, ok := resp.Metadata["approval_mode"].(string); ok && strings.TrimSpace(value) == "require_confirmation" {
-		mode = "confirmation required"
-	}
 	if provider == searchcap.ProviderLocalSources {
 		if sourceScope == "web" {
-			return fmt.Sprintf("Notice: public web was requested through web_search, but %s only searches retained Mycelis context and approved data mounts.", provider)
+			return "Notice: public web research was requested, but Soma Search is currently limited to approved local data and mounted sources."
 		}
 		if sourceScope == "all" {
-			return fmt.Sprintf("Notice: web_search requested local and web sources; %s can only return governed local-source results until public web search is configured.", provider)
+			return "Notice: Soma Search checked approved local data and mounted sources; public web coverage is not enabled for this workspace yet."
 		}
-		return fmt.Sprintf("Notice: web_search via %s; %s; governed local-source results come from retained Mycelis context and approved data mounts, not the public web.", provider, mode)
+		return "Notice: Soma Search checked approved local data and mounted sources."
 	}
 	if sourceScope == "all" {
-		return fmt.Sprintf("Notice: web_search via %s; %s; local and web scope was requested, but this provider may only cover its configured source boundary. Verify source coverage before relying.", provider, mode)
+		return "Notice: Soma Search was asked to check local and web sources; verify the source boundary before relying on the result."
 	}
-	return fmt.Sprintf("Notice: web_search via %s; %s; external results are leads, verify before relying.", provider, mode)
+	return "Notice: Soma Search checked the public web. External results are leads; verify before relying."
+}
+
+func searchResultBoundaryLabel(resp searchcap.Response) string {
+	provider := strings.TrimSpace(resp.Provider)
+	sourceScope := ""
+	if value, ok := resp.Metadata["source_scope"].(string); ok {
+		sourceScope = strings.TrimSpace(value)
+	}
+	if provider == searchcap.ProviderLocalSources || sourceScope == "local_sources" {
+		return "approved local data and mounted sources"
+	}
+	if sourceScope == "all" {
+		return "the configured local/web source boundary"
+	}
+	return "public web search"
 }
 
 func directSearchMissingWebScope(resp searchcap.Response) bool {
