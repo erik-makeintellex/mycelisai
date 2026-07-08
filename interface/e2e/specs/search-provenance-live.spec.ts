@@ -99,8 +99,10 @@ test.describe('Soma search provenance live contract', () => {
         expect(searchUse?.reason).toBeTruthy();
 
         await expect(page.getByText('Result verified').last()).toBeVisible();
-        await expect(page.getByText('web_search').last()).toBeVisible();
-        await expect(page.getByText(/via builtin_web/i).last()).toBeVisible();
+        await expect(page.getByText('Soma Search').last()).toBeVisible();
+        await expect(page.getByText(/public web/i).last()).toBeVisible();
+        await expect(page.getByText('web_search')).toHaveCount(0);
+        await expect(page.getByText(/via builtin_web/i)).toHaveCount(0);
         await expect(page.getByText(/Workspace chat unreachable/i)).toHaveCount(0);
     });
 
@@ -120,7 +122,9 @@ test.describe('Soma search provenance live contract', () => {
 
         await expect(page.getByText('Result verified').last()).toBeVisible();
         await expect(page.getByText(/public web research is not configured/i)).toHaveCount(0);
-        await expect(page.getByText(/via builtin_web/i).last()).toBeVisible();
+        await expect(page.getByText('Soma Search').last()).toBeVisible();
+        await expect(page.getByText(/public web/i).last()).toBeVisible();
+        await expect(page.getByText(/via builtin_web/i)).toHaveCount(0);
         await expect(page.getByText(/Workspace chat unreachable/i)).toHaveCount(0);
     });
 });
