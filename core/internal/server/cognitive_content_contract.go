@@ -25,11 +25,17 @@ func contentContractForTeamRequest(request string) map[string]any {
 		)
 		proof = append(proof, "table schema or column rationale", "source/assumption notes")
 	}
-	if requestAsksForCodeOrApp(lower) && !strings.Contains(lower, "game") {
+	if requestAsksForApplicationPackage(lower) && !strings.Contains(lower, "game") {
+		types = append(types, "application_package")
+		outputs = append(outputs, "openable application package")
+		criteria = append(criteria, applicationPackageAcceptanceCriteria()...)
+		proof = append(proof, applicationPackageProofRequirements()...)
+	}
+	if requestAsksForCodeArtifact(lower) && !strings.Contains(lower, "game") {
 		types = append(types, "code_app")
-		outputs = append(outputs, "openable code or app package")
+		outputs = append(outputs, "reviewable code or script package")
 		criteria = append(criteria,
-			"code/app package matches the requested deployment target",
+			"code/script package matches the requested deployment target",
 			"launch or usage path is provided for the operator or another agent",
 			"validation notes state what was run or what remains unverified",
 		)
@@ -122,6 +128,27 @@ func gameValidationSummary() string {
 	return "Retained as a self-contained browser adventure with movement, collision, hazards, enemies, key, door, win/fail states, restart, matching generated music/action audio, documented winning route, play-tested route proof from start to win, Soma-mediated repair notes for any discovered defect, and a direct launch path for the user or another agent."
 }
 
+func applicationPackageAcceptanceCriteria() []string {
+	return []string{
+		"direct open or launch path is provided in chat and retained output metadata",
+		"primary user workflows are named and validated, including create/read/update or equivalent interactions when requested",
+		"data/table views render with readable columns, empty states, and source or assumption boundaries when relevant",
+		"package includes operator-readable usage notes and any setup limits",
+		"browser or runtime validation notes state console/runtime errors, unsupported capabilities, and remaining uncertainty",
+		"follow-up changes can be requested through Soma against the same Outcome or team output",
+	}
+}
+
+func applicationPackageProofRequirements() []string {
+	return []string{
+		"application entrypoint or launch reference",
+		"headed browser or runtime interaction proof for the primary workflow",
+		"file/folder readback proof for retained package contents",
+		"validation report with pass/fail findings and repair notes",
+		"chat, Outcome, or Resources reference for reopening the generated application",
+	}
+}
+
 func requestAsksForTextOutput(lower string) bool {
 	if strings.TrimSpace(lower) == "" {
 		return false
@@ -137,11 +164,23 @@ func requestAsksForTableOrData(lower string) bool {
 	})
 }
 
-func requestAsksForCodeOrApp(lower string) bool {
+func requestAsksForApplicationPackage(lower string) bool {
 	if requestContainsAny(lower, []string{"browser app", "web app", "mobile app"}) {
 		return true
 	}
-	for _, word := range []string{"code", "app", "application", "executable", "script", "repository", "package", "deployable"} {
+	for _, word := range []string{"app", "application", "executable", "package", "deployable", "tool"} {
+		if hasExactWord(lower, word) {
+			return true
+		}
+	}
+	return false
+}
+
+func requestAsksForCodeArtifact(lower string) bool {
+	if requestContainsAny(lower, []string{"source code"}) {
+		return true
+	}
+	for _, word := range []string{"code", "script", "repository"} {
 		if hasExactWord(lower, word) {
 			return true
 		}
@@ -153,7 +192,7 @@ func requiredCapabilitiesForContentContract(contract map[string]any) []string {
 	capabilities := []string{"team_orchestration"}
 	for _, kind := range confirmedActionStringSlice(contract["content_types"]) {
 		switch kind {
-		case "game", "text", "table_data", "code_app":
+		case "game", "text", "table_data", "application_package", "code_app":
 			capabilities = append(capabilities, "write_file", "store_artifact")
 		case "media":
 			capabilities = append(capabilities, "generate_image", "save_cached_image", "store_artifact")

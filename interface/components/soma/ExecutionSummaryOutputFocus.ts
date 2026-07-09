@@ -5,7 +5,8 @@ export type OutputFocus = { label: string; detail: string };
 
 const OUTPUT_LABELS: Record<string, OutputFocus> = {
     table: { label: "Table / report", detail: "Use clear columns, rows, and source/assumption notes where relevant." },
-    code_app: { label: "Code / app", detail: "Return openable files or a package with launch and validation notes." },
+    app_package: { label: "App / package", detail: "Return an openable package with launch, validation, folder, and follow-up support." },
+    code_app: { label: "Code / script", detail: "Return reviewable files with usage and validation notes." },
     media: { label: "Media", detail: "Save the artifact, show a preview when possible, and state provider/proof boundaries." },
     document: { label: "Document", detail: "Use the requested structure and keep assumptions, sources, and next steps readable." },
     data: { label: "Dataset", detail: "Keep schema, source boundary, and validation/recovery notes visible." },
@@ -25,12 +26,13 @@ export function outputFocus(summary: ExecutionSummaryData): OutputFocus | null {
     ].map((value) => compactText(value)).filter(Boolean).join(" ").toLowerCase();
     const text = `${outputText} ${requestText}`;
 
+    if (/\b(application_package|project_package|browser app|web app|mobile app|executable|launch)\b/.test(text)) return outputType("app_package");
     if (/\b(table|spreadsheet|csv|matrix|row|columns?|dataset|data extract)\b/.test(text)) return outputType("table");
-    if (/\b(project_package|package|browser app|application|executable|code|script|repository|launch)\b/.test(text)) return outputType("code_app");
+    if (/\b(source code|code|script|repository)\b/.test(text)) return outputType("code_app");
     if (/\b(image|audio|video|media|music|sprite|sound)\b/.test(text)) return outputType("media");
     if (/\b(json|schema|records?|dataset|data file)\b/.test(text)) return outputType("data");
     if (/\b(markdown|document|report|brief|readme|plan|proposal|copy)\b/.test(text)) return outputType("document");
-    return outputs.some((item) => typeof item !== "string" && (item.entrypoint || item.folder)) ? outputType("package") : null;
+    return outputs.some((item) => typeof item !== "string" && (item.entrypoint || item.folder)) ? outputType("app_package") : null;
 }
 
 function outputSignal(item: string | ExecutionSummaryItem) {

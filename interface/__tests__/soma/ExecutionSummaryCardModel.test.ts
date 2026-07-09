@@ -48,7 +48,7 @@ describe("ExecutionSummaryCardModel", () => {
       outputs: [{ kind: "file", title: "customer-risk.csv", content_type: "text/csv" }],
     })?.label).toBe("Table / report");
     expect(outputFocus({
-      outputs: [{ kind: "project_package", title: "Browser tool", entrypoint: "index.html" }],
-    })?.label).toBe("Code / app");
+      outputs: [{ kind: "project_package", title: "Browser tool", content_type: "application_package", entrypoint: "index.html" }],
+    })?.label).toBe("App / package");
   });
 });

@@ -86,7 +86,7 @@ No mutation executes until you confirm. Risk, cost, resources, capability detail
 
 Saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details. Use `Resources -> Output Files` for broader browsing later.
 
-When Soma is planning or reporting work, the visible plan should name the expected output shape first: table/report, code/app, media, document, dataset, project package, or mixed output. The plan should state the smallest useful support needed for that output type without forcing the operator to read internal team/tool topology.
+When Soma is planning or reporting work, the visible plan should name the expected output shape first: table/report, app/package, code/script, media, document, dataset, or mixed output. App/package work should include a direct open path, usage notes, validation status, folder access, proof, and a way to ask Soma for follow-up changes without forcing the operator to read internal team/tool topology.
 
 Use **Reply** on a delivered output or project package when you want Soma to keep that exact output as context for the next request. Reply does not execute work by itself. It preloads the Soma composer with the output title, workspace reference, and proof id when available, then you can type the natural follow-up: update it, make an alternate version, generate downstream material from it, or ask another team to react to it.
 

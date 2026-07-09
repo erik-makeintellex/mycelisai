@@ -53,6 +53,9 @@ func generatedTeamNameBase(lower string) string {
 	if requestAsksForMedia(lower) {
 		matches++
 	}
+	if !strings.Contains(lower, "game") && (requestAsksForApplicationPackage(lower) || requestAsksForTableOrData(lower)) {
+		matches++
+	}
 	if requestAsksForTextOutput(lower) {
 		matches++
 	}
@@ -62,6 +65,10 @@ func generatedTeamNameBase(lower string) string {
 	switch {
 	case strings.Contains(lower, "game"):
 		return "Game Delivery Team"
+	case requestAsksForApplicationPackage(lower):
+		return "Application Delivery Team"
+	case requestAsksForTableOrData(lower):
+		return "Data Delivery Team"
 	case requestAsksForMedia(lower):
 		return "Media Generation Team"
 	case requestContainsAny(lower, []string{"watch", "watcher", "monitor", "steward", "react to", "reaction"}):
@@ -83,6 +90,9 @@ func generatedTeamIDBase(lower string) string {
 	if requestAsksForMedia(lower) {
 		matches++
 	}
+	if !strings.Contains(lower, "game") && (requestAsksForApplicationPackage(lower) || requestAsksForTableOrData(lower)) {
+		matches++
+	}
 	if requestAsksForTextOutput(lower) {
 		matches++
 	}
@@ -92,6 +102,10 @@ func generatedTeamIDBase(lower string) string {
 	switch {
 	case strings.Contains(lower, "game"):
 		return "game-team"
+	case requestAsksForApplicationPackage(lower):
+		return "application-delivery-team"
+	case requestAsksForTableOrData(lower):
+		return "data-delivery-team"
 	case requestAsksForMedia(lower):
 		return "media-team"
 	case strings.Contains(lower, "research"):

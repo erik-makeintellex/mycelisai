@@ -105,26 +105,50 @@ func TestInferCreateTeamPlanFromRequest_ContentContractCoversTableAndAppOutputs(
 	if !ok {
 		t.Fatal("expected create_team plan")
 	}
+	name, _ := call.Arguments["name"].(string)
+	if name != "Application Delivery Team" {
+		t.Fatalf("name = %q, want application delivery team", name)
+	}
+	teamID, _ := call.Arguments["team_id"].(string)
+	if !regexp.MustCompile(`^application-delivery-team-[0-9a-f]{5}$`).MatchString(teamID) {
+		t.Fatalf("team_id = %q, want application delivery prefix plus five-char uuid suffix", teamID)
+	}
 	contract, ok := call.Arguments["content_contract"].(map[string]any)
 	if !ok {
 		t.Fatalf("content_contract = %#v", call.Arguments["content_contract"])
 	}
 	contentTypes := confirmedActionStringSlice(contract["content_types"])
-	for _, want := range []string{"table_data", "code_app"} {
+	for _, want := range []string{"table_data", "application_package"} {
 		if !containsString(contentTypes, want) {
 			t.Fatalf("content_types = %#v, missing %q", contentTypes, want)
 		}
 	}
 	criteria := strings.Join(confirmedActionStringSlice(contract["acceptance_criteria"]), "\n")
-	for _, want := range []string{"columns and rows", "deployment target", "launch or usage path"} {
+	for _, want := range []string{"columns and rows", "direct open or launch path", "primary user workflows", "browser or runtime validation"} {
 		if !strings.Contains(criteria, want) {
 			t.Fatalf("criteria = %q, missing %q", criteria, want)
+		}
+	}
+	proof := strings.Join(confirmedActionStringSlice(contract["proof_required"]), "\n")
+	for _, want := range []string{"application entrypoint", "headed browser", "validation report", "Resources reference"} {
+		if !strings.Contains(proof, want) {
+			t.Fatalf("proof = %q, missing %q", proof, want)
 		}
 	}
 	capabilities := confirmedActionStringSlice(call.Arguments["required_capabilities"])
 	for _, want := range []string{"write_file", "store_artifact", "research_for_blueprint", "consult_council"} {
 		if !containsString(capabilities, want) {
 			t.Fatalf("capabilities = %#v, missing %q", capabilities, want)
+		}
+	}
+	evocation, ok := call.Arguments["team_evocation"].(map[string]any)
+	if !ok {
+		t.Fatalf("team_evocation = %#v", call.Arguments["team_evocation"])
+	}
+	workstreams := strings.Join(confirmedActionStringSlice(evocation["suggested_workstreams"]), "\n")
+	for _, want := range []string{"product/application lead", "browser/runtime QA lead", "data model lead"} {
+		if !strings.Contains(workstreams, want) {
+			t.Fatalf("workstreams = %q, missing %q", workstreams, want)
 		}
 	}
 }

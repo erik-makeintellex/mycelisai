@@ -51,6 +51,12 @@ func suggestedWorkstreamsForContentContract(contract map[string]any) []string {
 		switch kind {
 		case "game":
 			workstreams = append(workstreams, "interaction/design lead", "implementation lead", "audio/media lead")
+		case "application_package":
+			workstreams = append(workstreams, "product/application lead", "implementation lead", "browser/runtime QA lead")
+		case "table_data":
+			workstreams = append(workstreams, "data model lead", "table/report reviewer")
+		case "code_app":
+			workstreams = append(workstreams, "code/package lead", "validation lead")
 		case "media":
 			workstreams = append(workstreams, "visual/media lead", "prompt/constraint reviewer")
 		case "text":
