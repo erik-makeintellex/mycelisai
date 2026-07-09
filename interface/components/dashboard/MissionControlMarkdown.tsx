@@ -52,18 +52,20 @@ export default function MissionControlMarkdown({ content }: { content: string })
                 ol: ({ children }) => <ol className="list-decimal list-inside space-y-0.5 mb-1.5 ml-1">{children}</ol>,
                 li: ({ children }) => <li className="text-cortex-text-main">{children}</li>,
                 table: ({ children }) => (
-                    <div className="overflow-x-auto my-2 border border-cortex-border rounded-lg">
-                        <table className="w-full text-[10px] font-mono">{children}</table>
+                    <div className="my-2 overflow-x-auto rounded-lg border border-cortex-border bg-cortex-bg/70 shadow-sm">
+                        <table className="w-full min-w-[360px] border-collapse text-left text-[12px] leading-5">
+                            {children}
+                        </table>
                     </div>
                 ),
                 thead: ({ children }) => (
-                    <thead className="bg-cortex-surface/50 border-b border-cortex-border">{children}</thead>
+                    <thead className="border-b border-cortex-border bg-cortex-surface/80">{children}</thead>
                 ),
                 th: ({ children }) => (
-                    <th className="px-2 py-1.5 text-left font-bold text-cortex-text-muted uppercase tracking-wider">{children}</th>
+                    <th className="whitespace-nowrap px-3 py-2 text-left text-[10px] font-bold uppercase tracking-[0.14em] text-cortex-text-muted">{children}</th>
                 ),
                 td: ({ children }) => (
-                    <td className="px-2 py-1.5 border-t border-cortex-border/50 text-cortex-text-main">{children}</td>
+                    <td className="border-t border-cortex-border/50 px-3 py-2 align-top text-cortex-text-main">{children}</td>
                 ),
                 blockquote: ({ children }) => (
                     <blockquote className="border-l-2 border-cortex-primary/40 pl-3 my-1.5 text-cortex-text-muted italic">

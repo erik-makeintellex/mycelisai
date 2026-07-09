@@ -24,6 +24,14 @@ function readInitialAdvancedMode(): boolean {
         : false;
 }
 
+function readInitialRailCollapsed(): boolean {
+    return typeof window !== 'undefined'
+        && typeof localStorage !== 'undefined'
+        && typeof localStorage.getItem === 'function'
+        ? localStorage.getItem('mycelis-rail-collapsed') === 'true'
+        : false;
+}
+
 function readInitialTheme(): CortexState['theme'] {
     if (
         typeof window === 'undefined'
@@ -162,6 +170,7 @@ const initialAutomationRunsState: StripActions<CortexAutomationRunsContract> = {
 
 const initialProfilesSettingsState: StripActions<CortexProfilesSettingsContract> = {
     advancedMode: readInitialAdvancedMode(),
+    railCollapsed: readInitialRailCollapsed(),
     theme: readInitialTheme(),
     missionProfiles: [],
     activeProfileId: null,

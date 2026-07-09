@@ -251,11 +251,13 @@ export interface CortexAutomationRunsContract {
 
 export interface CortexProfilesSettingsContract {
     advancedMode: boolean;
+    railCollapsed: boolean;
     theme: 'aero-light' | 'midnight-cortex' | 'system';
     missionProfiles: MissionProfile[];
     activeProfileId: string | null;
     contextSnapshots: ContextSnapshot[];
     toggleAdvancedMode: () => void;
+    toggleRailCollapsed: () => void;
     fetchUserSettings: () => Promise<void>;
     updateAssistantName: (name: string) => Promise<boolean>;
     updateTheme: (theme: 'aero-light' | 'midnight-cortex' | 'system') => Promise<boolean>;

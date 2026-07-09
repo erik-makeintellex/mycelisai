@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users, Radio, LogOut } from 'lucide-react';
+import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users, Radio, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { readLastOrganization, subscribeLastOrganizationChange } from '@/lib/lastOrganization';
 import { useCortexStore } from '@/store/useCortexStore';
 
@@ -11,7 +11,9 @@ export function ZoneA() {
     const pathname = usePathname();
     const router = useRouter();
     const advancedMode = useCortexStore((s) => s.advancedMode);
+    const railCollapsed = useCortexStore((s) => s.railCollapsed);
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
+    const toggleRailCollapsed = useCortexStore((s) => s.toggleRailCollapsed);
     const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
     const [isHydrated, setIsHydrated] = useState(false);
     const [lastOrganization, setLastOrganization] = useState<{ id: string; name: string } | null>(null);
@@ -71,16 +73,40 @@ export function ZoneA() {
     ];
 
     return (
-        <div className="w-16 md:w-64 bg-cortex-surface text-cortex-text-main flex flex-col border-r border-cortex-border z-50 flex-shrink-0 transition-all duration-300">
+        <div
+            className={`bg-cortex-surface text-cortex-text-main flex flex-col border-r border-cortex-border z-50 flex-shrink-0 transition-all duration-300 ${
+                railCollapsed ? 'w-16' : 'w-16 md:w-64'
+            }`}
+            data-testid="zone-a-rail"
+            data-collapsed={railCollapsed ? 'true' : 'false'}
+        >
             {/* 1. Identity / Logo → Home */}
-            <Link href="/" className="h-14 flex items-center justify-center md:justify-start md:px-4 border-b border-cortex-border hover:bg-cortex-bg/50 transition-colors">
-                <div className="w-8 h-8 bg-cortex-primary rounded-lg flex items-center justify-center shadow-[0_4px_14px_0_rgba(75,78,109,0.28)]">
-                    <Network className="w-5 h-5 text-white" />
-                </div>
-                <span className="hidden md:block ml-3 font-bold text-sm tracking-widest uppercase text-cortex-text-muted">
-                    Mycelis
-                </span>
-            </Link>
+            <div className="h-14 flex items-center gap-1 border-b border-cortex-border px-2">
+                <Link
+                    href="/"
+                    className={`flex min-w-0 flex-1 items-center rounded-lg transition-colors hover:bg-cortex-bg/50 ${
+                        railCollapsed ? 'justify-center px-0 py-1' : 'justify-center md:justify-start md:px-2 py-1'
+                    }`}
+                    title="Mycelis home"
+                >
+                    <div className="w-8 h-8 bg-cortex-primary rounded-lg flex items-center justify-center shadow-[0_4px_14px_0_rgba(75,78,109,0.28)]">
+                        <Network className="w-5 h-5 text-white" />
+                    </div>
+                    <span className={`${railCollapsed ? 'hidden' : 'hidden md:block'} ml-3 font-bold text-sm tracking-widest uppercase text-cortex-text-muted`}>
+                        Mycelis
+                    </span>
+                </Link>
+                <button
+                    type="button"
+                    onClick={toggleRailCollapsed}
+                    className="hidden h-8 w-8 items-center justify-center rounded-lg text-cortex-text-muted transition-colors hover:bg-cortex-bg hover:text-cortex-text-main md:flex"
+                    title={railCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+                    aria-label={railCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+                    data-testid="rail-collapse-toggle"
+                >
+                    {railCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                </button>
+            </div>
 
             {/* 2. Soma-primary Navigation */}
             <div className="flex-1 flex flex-col py-4 gap-1 px-2">
@@ -93,16 +119,17 @@ export function ZoneA() {
                         title={item.title}
                         description={item.description}
                         testId={item.testId}
+                        collapsed={railCollapsed}
                         onClick={item.href === currentOrganizationHref ? () => router.push(item.href) : undefined}
                     />
                 ))}
                 {effectiveAdvancedMode && (
                     <div className="mt-3 space-y-1">
-                        <div className="hidden px-2 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-cortex-text-muted/70 md:block">
+                        <div className={`${railCollapsed ? 'hidden' : 'hidden md:block'} px-2 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-cortex-text-muted/70`}>
                             Admin tools
                         </div>
                         {advancedNav.map((item) => (
-                            <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} testId={item.testId} />
+                            <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} testId={item.testId} collapsed={railCollapsed} />
                         ))}
                     </div>
                 )}
@@ -113,7 +140,7 @@ export function ZoneA() {
                 {isAdmin && (
                     <button
                         onClick={toggleAdvancedMode}
-                        className="flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg"
+                        className={`flex items-center justify-center ${railCollapsed ? '' : 'md:justify-start'} w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg`}
                         title={effectiveAdvancedMode ? 'Hide advanced panels' : 'Show advanced panels'}
                     >
                         {effectiveAdvancedMode ? (
@@ -121,7 +148,7 @@ export function ZoneA() {
                         ) : (
                             <Eye className="w-5 h-5 flex-shrink-0" />
                         )}
-                        <span className="hidden md:block ml-3 text-sm font-medium">
+                        <span className={`${railCollapsed ? 'hidden' : 'hidden md:block'} ml-3 text-sm font-medium`}>
                             {effectiveAdvancedMode ? 'Admin tools: On' : 'Admin tools: Off'}
                         </span>
                     </button>
@@ -129,21 +156,21 @@ export function ZoneA() {
                 <button
                     type="button"
                     onClick={() => setStatusDrawerOpen(true)}
-                    className="flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg"
+                    className={`flex items-center justify-center ${railCollapsed ? '' : 'md:justify-start'} w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg`}
                     title="Open status drawer"
                 >
                     <Activity className="w-5 h-5 flex-shrink-0" />
-                    <span className="hidden md:block ml-3 text-sm font-medium">Status</span>
+                    <span className={`${railCollapsed ? 'hidden' : 'hidden md:block'} ml-3 text-sm font-medium`}>Status</span>
                 </button>
-                <NavItem href="/settings" icon={Settings} label="Settings" testId="nav-settings" />
+                <NavItem href="/settings" icon={Settings} label="Settings" testId="nav-settings" collapsed={railCollapsed} />
                 <form action="/auth/logout" method="post">
                     <button
                         type="submit"
-                        className="flex w-full items-center justify-center rounded-lg p-2.5 text-cortex-text-muted transition-all duration-200 hover:bg-cortex-bg hover:text-cortex-text-main md:justify-start"
+                        className={`flex w-full items-center justify-center rounded-lg p-2.5 text-cortex-text-muted transition-all duration-200 hover:bg-cortex-bg hover:text-cortex-text-main ${railCollapsed ? '' : 'md:justify-start'}`}
                         title="Sign out"
                     >
                         <LogOut className="h-5 w-5 flex-shrink-0" />
-                        <span className="ml-3 hidden text-sm font-medium md:block">Sign out</span>
+                        <span className={`${railCollapsed ? 'hidden' : 'hidden md:block'} ml-3 text-sm font-medium`}>Sign out</span>
                     </button>
                 </form>
             </div>
@@ -151,11 +178,11 @@ export function ZoneA() {
     );
 }
 
-function NavItem({ icon: Icon, label, href, title, description, onClick, testId }: { icon: any; label: string; href: string; title?: string; description?: string; onClick?: () => void; testId?: string }) {
+function NavItem({ icon: Icon, label, href, title, description, onClick, testId, collapsed = false }: { icon: any; label: string; href: string; title?: string; description?: string; onClick?: () => void; testId?: string; collapsed?: boolean }) {
     const pathname = usePathname();
     const isActive = pathname === href || pathname?.startsWith(href + '/') === true;
     const classes = `
-        flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200
+        flex items-center justify-center ${collapsed ? '' : 'md:justify-start'} w-full p-2.5 rounded-lg transition-all duration-200
         ${isActive
             ? 'bg-cortex-primary text-cortex-bg shadow-[0_4px_14px_0_rgba(75,78,109,0.28)]'
             : 'text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg'
@@ -165,7 +192,7 @@ function NavItem({ icon: Icon, label, href, title, description, onClick, testId 
     const content = (
         <>
             <Icon className="w-5 h-5 flex-shrink-0" />
-            <span className="hidden md:block ml-3 min-w-0">
+            <span className={`${collapsed ? 'hidden' : 'hidden md:block'} ml-3 min-w-0`}>
                 <span className="block truncate text-sm font-medium">{label}</span>
                 {description ? (
                     <span className={`block truncate text-xs ${isActive ? 'text-cortex-bg/80' : 'text-cortex-text-muted/80'}`}>{description}</span>

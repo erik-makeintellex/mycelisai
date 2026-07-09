@@ -22,6 +22,7 @@ export function createCortexGraphUiSlice(
     | 'fetchTrustThreshold'
     | 'toggleBlueprintDrawer'
     | 'toggleAdvancedMode'
+    | 'toggleRailCollapsed'
     | 'toggleToolsPalette'
     | 'setStatusDrawerOpen'
     | 'saveBlueprint'
@@ -193,6 +194,16 @@ export function createCortexGraphUiSlice(
                     localStorage.setItem('mycelis-advanced-mode', String(next));
                 }
                 return { advancedMode: next };
+            });
+        },
+
+        toggleRailCollapsed: () => {
+            set((s) => {
+                const next = !s.railCollapsed;
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('mycelis-rail-collapsed', String(next));
+                }
+                return { railCollapsed: next };
             });
         },
 

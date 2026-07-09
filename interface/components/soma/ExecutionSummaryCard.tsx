@@ -29,6 +29,7 @@ import {
     understandingLines,
 } from "./ExecutionSummaryCardModel";
 import ExecutionSummaryCompactCard from "./ExecutionSummaryCompactCard";
+import { outputFocus } from "./ExecutionSummaryOutputFocus";
 
 function SummaryRow({
     icon,
@@ -93,7 +94,7 @@ export default function ExecutionSummaryCard({
     const intent = intentLines(summary.intent);
     const understanding = understandingLines(summary.understanding);
     const projectPackages = projectPackageOutputs(summary.outputs);
-  const allOutputs = actionableOutputWorkbenchItems(outputWorkbenchItems(summary, artifacts));
+    const allOutputs = actionableOutputWorkbenchItems(outputWorkbenchItems(summary, artifacts));
     const proofs = proofLinks(summary.proof)
         .map((proof) => ({ text: linkLabel(proof), url: linkHref(proof) }))
         .filter((proof): proof is { text: string; url: string | null } => Boolean(proof.text));
@@ -102,6 +103,7 @@ export default function ExecutionSummaryCard({
     const degradation = degradationLines(summary.audit_recovery);
     const nextStep = nextStepText(summary.next_step);
     const trust = trustVerdict(summary, summaryRunId ?? runId, artifacts);
+    const outputShape = outputFocus(summary);
     const hasReviewDetails = intent.length
         || understanding.length
         || executionShape
@@ -162,6 +164,14 @@ export default function ExecutionSummaryCard({
                 {(allOutputs.length > 0 || projectPackages.length > 0) && (
                     <SummaryRow icon={<FileText className="h-3.5 w-3.5" />} label="Outputs">
                         <OutputWorkbench outputs={allOutputs} projectPackages={projectPackages} projectOpenLabel={OUTPUT_PACKAGE_OPEN_LABEL} />
+                    </SummaryRow>
+                )}
+                {outputShape && (
+                    <SummaryRow icon={<FileText className="h-3.5 w-3.5" />} label="Output plan">
+                        <div>
+                            <span className="font-semibold text-cortex-text-main">{outputShape.label}</span>
+                            <span className="text-cortex-text-muted"> - {outputShape.detail}</span>
+                        </div>
                     </SummaryRow>
                 )}
                 <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Trust">

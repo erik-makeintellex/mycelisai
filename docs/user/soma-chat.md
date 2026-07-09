@@ -75,7 +75,7 @@ Soma replies may also show small action-state cards inside the thread. These com
 
 Soma responses can include:
 
-1. **Primary answer**: markdown text, code blocks, links, and tables.
+1. **Primary answer**: markdown text, code blocks, links, and tables. Table-like data should render as a real table, not as pasted aligned text.
 2. **Inline generated outputs**: images, audio, video, code, charts, briefs, data, documents, and media previews.
 3. **Output package**: a retained file/app/package with `Open file`, `Open folder`, proof, and Resources re-entry.
 4. **Proposal block**: a compact `Approve this?` or `Start this?` conversational pause for actions that execute or change something.
@@ -85,6 +85,8 @@ Soma responses can include:
 No mutation executes until you confirm. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Details` unless they require immediate attention.
 
 Saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details. Use `Resources -> Output Files` for broader browsing later.
+
+When Soma is planning or reporting work, the visible plan should name the expected output shape first: table/report, code/app, media, document, dataset, project package, or mixed output. The plan should state the smallest useful support needed for that output type without forcing the operator to read internal team/tool topology.
 
 Use **Reply** on a delivered output or project package when you want Soma to keep that exact output as context for the next request. Reply does not execute work by itself. It preloads the Soma composer with the output title, workspace reference, and proof id when available, then you can type the natural follow-up: update it, make an alternate version, generate downstream material from it, or ask another team to react to it.
 

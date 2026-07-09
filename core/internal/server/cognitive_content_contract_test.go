@@ -100,6 +100,35 @@ func TestInferCreateTeamPlanFromRequest_ContentContractCoversMixedGameMediaText(
 	}
 }
 
+func TestInferCreateTeamPlanFromRequest_ContentContractCoversTableAndAppOutputs(t *testing.T) {
+	call, ok := inferCreateTeamPlanFromRequest("Create a team to build a commercial data app with a customer risk table and CSV export.")
+	if !ok {
+		t.Fatal("expected create_team plan")
+	}
+	contract, ok := call.Arguments["content_contract"].(map[string]any)
+	if !ok {
+		t.Fatalf("content_contract = %#v", call.Arguments["content_contract"])
+	}
+	contentTypes := confirmedActionStringSlice(contract["content_types"])
+	for _, want := range []string{"table_data", "code_app"} {
+		if !containsString(contentTypes, want) {
+			t.Fatalf("content_types = %#v, missing %q", contentTypes, want)
+		}
+	}
+	criteria := strings.Join(confirmedActionStringSlice(contract["acceptance_criteria"]), "\n")
+	for _, want := range []string{"columns and rows", "deployment target", "launch or usage path"} {
+		if !strings.Contains(criteria, want) {
+			t.Fatalf("criteria = %q, missing %q", criteria, want)
+		}
+	}
+	capabilities := confirmedActionStringSlice(call.Arguments["required_capabilities"])
+	for _, want := range []string{"write_file", "store_artifact", "research_for_blueprint", "consult_council"} {
+		if !containsString(capabilities, want) {
+			t.Fatalf("capabilities = %#v, missing %q", capabilities, want)
+		}
+	}
+}
+
 func TestInferWriteFilePlanFromRequest_TextValidationMetadata(t *testing.T) {
 	call, ok := inferWriteFilePlanFromRequest("Write a markdown report at workspace/logs/review.md about the game proof.")
 	if !ok {

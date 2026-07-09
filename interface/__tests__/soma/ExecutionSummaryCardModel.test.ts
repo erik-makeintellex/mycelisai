@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { auditText, degradationLines, executionSummaryHeading, trustVerdict } from "@/components/soma/ExecutionSummaryCardModel";
+import { outputFocus } from "@/components/soma/ExecutionSummaryOutputFocus";
 import type { ExecutionSummaryData } from "@/store/useCortexStore";
 
 describe("ExecutionSummaryCardModel", () => {
@@ -39,5 +40,15 @@ describe("ExecutionSummaryCardModel", () => {
     expect(executionSummaryHeading({ execution: { status: "proposed" } })).toBe("Proposal ready");
     expect(executionSummaryHeading({ execution: { status: "failed" } })).toBe("Could not run");
     expect(executionSummaryHeading({ execution: { status: "completed" } }, 1)).toBe("Output ready");
+  });
+
+  it("infers table-like and app-like output focus for Soma plans", () => {
+    expect(outputFocus({
+      intent: "Create a commercial data app with a customer risk table",
+      outputs: [{ kind: "file", title: "customer-risk.csv", content_type: "text/csv" }],
+    })?.label).toBe("Table / report");
+    expect(outputFocus({
+      outputs: [{ kind: "project_package", title: "Browser tool", entrypoint: "index.html" }],
+    })?.label).toBe("Code / app");
   });
 });

@@ -15,6 +15,26 @@ func contentContractForTeamRequest(request string) map[string]any {
 		criteria = append(criteria, gameAcceptanceCriteria()...)
 		proof = append(proof, gameProofRequirements()...)
 	}
+	if requestAsksForTableOrData(lower) {
+		types = append(types, "table_data")
+		outputs = append(outputs, "structured table or data report")
+		criteria = append(criteria,
+			"columns and rows match the operator's comparison or data-management goal",
+			"source boundary, assumptions, and missing data are separated from table rows",
+			"table can be read in Soma chat and retained as a reviewable file when requested",
+		)
+		proof = append(proof, "table schema or column rationale", "source/assumption notes")
+	}
+	if requestAsksForCodeOrApp(lower) && !strings.Contains(lower, "game") {
+		types = append(types, "code_app")
+		outputs = append(outputs, "openable code or app package")
+		criteria = append(criteria,
+			"code/app package matches the requested deployment target",
+			"launch or usage path is provided for the operator or another agent",
+			"validation notes state what was run or what remains unverified",
+		)
+		proof = append(proof, "launch or build instructions", "code/package validation notes")
+	}
 	if requestAsksForMedia(lower) {
 		types = append(types, "media")
 		outputs = append(outputs, "saved media artifact")
@@ -111,11 +131,29 @@ func requestAsksForTextOutput(lower string) bool {
 	})
 }
 
+func requestAsksForTableOrData(lower string) bool {
+	return requestContainsAny(lower, []string{
+		"table", "spreadsheet", "csv", "matrix", "columns", "rows", "dataset", "data management", "data table",
+	})
+}
+
+func requestAsksForCodeOrApp(lower string) bool {
+	if requestContainsAny(lower, []string{"browser app", "web app", "mobile app"}) {
+		return true
+	}
+	for _, word := range []string{"code", "app", "application", "executable", "script", "repository", "package", "deployable"} {
+		if hasExactWord(lower, word) {
+			return true
+		}
+	}
+	return false
+}
+
 func requiredCapabilitiesForContentContract(contract map[string]any) []string {
 	capabilities := []string{"team_orchestration"}
 	for _, kind := range confirmedActionStringSlice(contract["content_types"]) {
 		switch kind {
-		case "game", "text":
+		case "game", "text", "table_data", "code_app":
 			capabilities = append(capabilities, "write_file", "store_artifact")
 		case "media":
 			capabilities = append(capabilities, "generate_image", "save_cached_image", "store_artifact")

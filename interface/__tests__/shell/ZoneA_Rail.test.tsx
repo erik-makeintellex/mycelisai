@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 // Mock next/navigation with a configurable pathname
 const mockPathname = vi.fn(() => '/dashboard');
@@ -15,13 +15,17 @@ vi.mock('next/navigation', () => ({
 
 // Mock Zustand store
 const mockAdvancedMode = vi.fn(() => false);
+const mockRailCollapsed = vi.fn(() => false);
 const mockToggleAdvancedMode = vi.fn();
+const mockToggleRailCollapsed = vi.fn();
 const mockSetStatusDrawerOpen = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
     useCortexStore: (selector: any) => {
         const state = {
             advancedMode: mockAdvancedMode(),
+            railCollapsed: mockRailCollapsed(),
             toggleAdvancedMode: mockToggleAdvancedMode,
+            toggleRailCollapsed: mockToggleRailCollapsed,
             setStatusDrawerOpen: mockSetStatusDrawerOpen,
         };
         return selector(state);
@@ -41,6 +45,8 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     beforeEach(() => {
         mockPathname.mockReturnValue('/dashboard');
         mockAdvancedMode.mockReturnValue(false);
+        mockRailCollapsed.mockReturnValue(false);
+        mockToggleRailCollapsed.mockReset();
         mockSetStatusDrawerOpen.mockReset();
         localStorage.clear();
     });
@@ -131,6 +137,20 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     it('renders Advanced toggle button', () => {
         render(<ZoneA />);
         expect(screen.getByText('Admin tools: Off')).toBeDefined();
+    });
+
+    it('collapses the desktop navigation rail on request', () => {
+        render(<ZoneA />);
+        fireEvent.click(screen.getByTestId('rail-collapse-toggle'));
+        expect(mockToggleRailCollapsed).toHaveBeenCalled();
+    });
+
+    it('hides rail labels when collapsed while keeping icon navigation available', () => {
+        mockRailCollapsed.mockReturnValue(true);
+        const { container } = render(<ZoneA />);
+        expect(screen.getByTestId('zone-a-rail').dataset.collapsed).toBe('true');
+        expect(container.querySelector('span')?.className).toContain('hidden');
+        expect(screen.getByTitle('Soma')).toBeDefined();
     });
 
     it('does not use bg-white', () => {

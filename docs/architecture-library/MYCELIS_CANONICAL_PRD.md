@@ -11,7 +11,6 @@ Soma directs the work safely.
 I can see what happened.
 I can trust or recover the result later.
 ```
-
 The architecture exists to protect confidence while making complexity disappear. Runs, agents, groups, capabilities, tools, continuity vectors, NATS, schemas, receipts, audit, and deployment topology serve Soma and the Outcome; they are supporting machinery, not default user concepts. When the architecture succeeds, users do not admire the runtime. They trust Soma.
 
 ## Release Goal
@@ -37,7 +36,6 @@ Ask
 Subsystems matter only when they strengthen the journey. Output Packages strengthen Deliver. Run Receipts strengthen Trust. Recovery Queue strengthens Recover. Review Inbox strengthens Understand and Approve. Capability Catalog strengthens Trust. Resources, Groups, and Vault strengthen Revisit.
 
 The release question is not "Did we finish the subsystem?" The release question is "Can the user complete the journey and trust the result later?" Every screen should strengthen one journey step; every subsystem should exist only because it improves this journey.
-
 ## Primary User Experience
 
 The first authenticated surface is the Soma workspace. It should feel like a focused threaded workspace, not a dense admin console.
@@ -55,7 +53,7 @@ Required first-viewport composition:
 
 The empty Soma thread should not be a stack of starter action cards. It should behave like the beginning of a conversation: one plain prompt for the outcome, one short cue that Soma can help shape the path, and optional quoted examples of user asks. Those examples are readable language in a compact quote strip, not buttons, hidden launchers, framed cards, or a predefined workflow menu.
 
-The dashboard should keep the composer reachable at common desktop, laptop, tablet, and mobile viewports. Long content belongs inside bounded panes, overlays, tabs, or detail drawers rather than growing the whole page. Default work/output summaries should not expose file paths, proof internals, or stacked cards before the operator asks for detail; the primary surface should show the title, safe action, and review entry point.
+The dashboard should keep the composer reachable at common desktop, laptop, tablet, and mobile viewports. The left navigation rail must be collapsible on desktop so Soma has more horizontal workspace when the operator is reading outputs, tables, or generated plans. Long content belongs inside bounded panes, overlays, tabs, or detail drawers rather than growing the whole page. Default work/output summaries should not expose file paths, proof internals, or stacked cards before the operator asks for detail; the primary surface should show the title, safe action, and review entry point.
 
 Quick Actions are saved conversational accelerators, not autonomous triggers. Button Studio should persist reusable Soma asks through the conversation-template path, keep a local fallback only for resilience, and run saved actions by sending the rendered prompt back into the Soma thread so understanding, approval, proof, and recovery stay intact.
 
@@ -102,6 +100,8 @@ The defining product abstraction is the Outcome. Deliverables, projects, operati
 Every user-facing output package should expose clear title/state, primary open action, safe folder or data-root access, conversational reply action for updates/alternates/downstream team handoff, proof or receipt link, degraded recovery state, and source/intermediate-output visibility only as an opt-in.
 
 Output ownership must distinguish final user deliverables from team working material. The canonical output classes are `user_deliverable`, `planning`, `internal_handoff`, `proof`, and `source_material`. Outcome Vault, Resources output pickers, and the default Groups Outputs tab show `user_deliverable` records by default. Planning files such as `TEAM_EVOCATION.md`, council/research handoffs, proof notes, support files, and source records remain inspectable through Workflow Log, Details, or an explicit include-internal control, but they must not make a group appear complete or delivered on their own.
+
+Soma output plans must name the expected output shape before details: table/report, document, code/app package, media, dataset, project package, or mixed output. The visible plan should explain the minimum support/proof needed for that shape in user language. Table-like information should render as actual compact tables in the Soma thread, not as monospaced aligned text.
 
 Outcome Vault is the persistent delivery/revisit concept, but it should open as an overlay by default. It should show saved results, work in progress, scheduled/service work, and recovery items without permanently taking layout width from Soma.
 

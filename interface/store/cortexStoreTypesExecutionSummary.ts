@@ -31,6 +31,7 @@ export interface ExecutionSummaryItem {
     artifact_id?: string;
     proof_artifact_id?: string;
     type?: string;
+    content_type?: string;
     status?: string;
     kind?: string;
     output_class?: string;
