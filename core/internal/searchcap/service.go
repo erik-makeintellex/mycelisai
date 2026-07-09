@@ -68,6 +68,7 @@ func (s *Service) Provider() string {
 
 func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 	query := strings.TrimSpace(req.Query)
+	req.SourceScope = requestSourceScope(req)
 	onlineAllowed := true
 	approvalMode := "notify"
 	disclosureMode := "notice_and_interpretation"
@@ -82,7 +83,7 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 		Status:   "ok",
 		Results:  []Result{},
 		Metadata: map[string]any{
-			"source_scope":    normalizeSourceScope(req.SourceScope),
+			"source_scope":    req.SourceScope,
 			"online_allowed":  onlineAllowed,
 			"approval_mode":   approvalMode,
 			"disclosure_mode": disclosureMode,

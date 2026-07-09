@@ -33,6 +33,9 @@ func TestServiceSelectedSourceRoutesToRegisteredLocalAPIEndpoint(t *testing.T) {
 		if r.URL.Query().Get("q") != "release research" {
 			t.Fatalf("query params = %q", r.URL.RawQuery)
 		}
+		if r.URL.Query().Get("source_scope") != "" {
+			t.Fatalf("selected source unexpectedly inherited source_scope = %q", r.URL.Query().Get("source_scope"))
+		}
 		if r.Header.Get("X-Mycelis-Team-ID") != "research-team" {
 			t.Fatalf("team header = %q", r.Header.Get("X-Mycelis-Team-ID"))
 		}

@@ -132,11 +132,11 @@ ai:
   # Optional explicit media endpoint for self-hosted image or voice generation.
   mediaEndpoint: ""
 
-# Governed search provider wiring. Default to local_sources so Soma can search
-# retained Mycelis context without hosted search tokens; use searxng or
-# local_api with an operator-owned endpoint for public web search.
+# Governed search provider wiring. Default to built-in token-free public web.
+# Use local_sources for retained Mycelis context, searxng for self-hosted web,
+# or local_api with an operator-owned endpoint.
 search:
-  provider: local_sources
+  provider: builtin_web
   searxngEndpoint: ""
   localApiEndpoint: ""
   maxResults: 8

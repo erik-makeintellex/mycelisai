@@ -41,6 +41,61 @@ func normalizeSourceScope(raw string) string {
 	}
 }
 
+func inferSourceScope(query string) string {
+	lower := strings.ToLower(strings.Join(strings.Fields(strings.TrimSpace(query)), " "))
+	if lower == "" {
+		return "web"
+	}
+	localTerms := []string{
+		"local source", "local sources", "local data", "local files", "retained", "mycelis context",
+		"shared source", "shared sources", "uploaded", "mount", "mounted", "workspace",
+		"company docs", "internal docs", "customer docs", "intranet", "approved data",
+	}
+	webTerms := []string{
+		"public web", "internet", "online", "web research", "search the web", "browse the web",
+	}
+	allTerms := []string{
+		"all sources", "both local and web", "both web and local", "local and web",
+		"web and local", "shared sources and web", "web and shared sources",
+		"internal and public", "public and internal", "compare local", "compare internal",
+	}
+	freshnessTerms := []string{"latest", "today", "recent", "news", "real-time", "up to date", "current", "popular"}
+	hasLocal := containsAny(lower, localTerms)
+	hasWeb := containsAny(lower, webTerms)
+	if containsAny(lower, allTerms) || (hasLocal && hasWeb) {
+		return "all"
+	}
+	if hasLocal {
+		return "local_sources"
+	}
+	if hasWeb || containsAny(lower, freshnessTerms) {
+		return "web"
+	}
+	return "web"
+}
+
+func requestSourceScope(req Request) string {
+	if strings.TrimSpace(req.SourceID) != "" {
+		if strings.TrimSpace(req.SourceScope) == "" {
+			return ""
+		}
+		return normalizeSourceScope(req.SourceScope)
+	}
+	if strings.TrimSpace(req.SourceScope) == "" {
+		return inferSourceScope(req.Query)
+	}
+	return normalizeSourceScope(req.SourceScope)
+}
+
+func containsAny(text string, terms []string) bool {
+	for _, term := range terms {
+		if strings.Contains(text, term) {
+			return true
+		}
+	}
+	return false
+}
+
 func parseBoolDefault(raw string, fallback bool) bool {
 	if strings.TrimSpace(raw) == "" {
 		return fallback

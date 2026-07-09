@@ -30,6 +30,33 @@ func TestHandleSearchDisabledProvider(t *testing.T) {
 	}
 }
 
+func TestHandleSearchInfersPublicWebScopeWhenOmitted(t *testing.T) {
+	s := newTestServer(func(s *AdminServer) {
+		s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderLocalSources}, nil, nil)
+	})
+	mux := setupMux(t, "POST /api/v1/search", s.HandleSearch)
+	rr := doRequest(t, mux, http.MethodPost, "/api/v1/search", `{"query":"latest popular multi agent framework"}`)
+
+	assertStatus(t, rr, http.StatusOK)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["ok"] != false {
+		t.Fatalf("ok = %v, want false for missing public-web provider", resp["ok"])
+	}
+	data := resp["data"].(map[string]any)
+	if data["status"] != "blocked" {
+		t.Fatalf("status = %v, want blocked", data["status"])
+	}
+	blocker := data["blocker"].(map[string]any)
+	if blocker["code"] != "web_provider_not_configured" {
+		t.Fatalf("blocker = %+v, want web_provider_not_configured", blocker)
+	}
+	metadata := data["metadata"].(map[string]any)
+	if metadata["source_scope"] != "web" {
+		t.Fatalf("metadata = %+v, want inferred web scope", metadata)
+	}
+}
+
 func TestHandleSearchStatusReportsDirectSomaPath(t *testing.T) {
 	s := newTestServer(func(s *AdminServer) {
 		s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderSearXNG, SearXNGEndpoint: "http://searxng.local", MaxResults: 6}, nil, nil)

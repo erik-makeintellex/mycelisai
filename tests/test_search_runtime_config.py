@@ -22,6 +22,10 @@ def test_search_runtime_env_projects_through_compose_and_helm():
             "MYCELIS_SEARCH_LOCAL_API_ENDPOINT=",
             "MYCELIS_SEARCH_MAX_RESULTS=8",
         ],
+        ".env.example": [
+            "MYCELIS_SEARCH_PROVIDER=builtin_web",
+            "MYCELIS_SEARCH_MAX_RESULTS=8",
+        ],
         "ops/compose_env.py": [
             '"MYCELIS_SEARCH_PROVIDER"',
             '"MYCELIS_SEARXNG_ENDPOINT"',
@@ -30,7 +34,7 @@ def test_search_runtime_env_projects_through_compose_and_helm():
         ],
         "charts/mycelis-core/values.yaml": [
             "search:",
-            "provider: local_sources",
+            "provider: builtin_web",
             'searxngEndpoint: ""',
             'localApiEndpoint: ""',
             "maxResults: 8",
@@ -40,7 +44,7 @@ def test_search_runtime_env_projects_through_compose_and_helm():
             "MYCELIS_SEARXNG_ENDPOINT",
             "MYCELIS_SEARCH_LOCAL_API_ENDPOINT",
             "MYCELIS_SEARCH_MAX_RESULTS",
-            'value: {{ default "local_sources" .provider | quote }}',
+            'value: {{ default "builtin_web" .provider | quote }}',
             'value: {{ default "" .searxngEndpoint | quote }}',
             'value: {{ default "" .localApiEndpoint | quote }}',
             "value: {{ default 8 .maxResults | quote }}",

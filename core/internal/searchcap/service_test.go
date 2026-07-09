@@ -110,6 +110,55 @@ func TestServicePublicWebSearchCanBeDisabledByConfig(t *testing.T) {
 	}
 }
 
+func TestServiceInfersPublicWebScopeWhenRequestOmitsSourceScope(t *testing.T) {
+	svc := NewService(Config{Provider: ProviderBuiltinWeb, MaxResults: 2}, nil, nil)
+	svc.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Query().Get("q") != "latest popular multi agent framework" {
+			t.Fatalf("q = %q", r.URL.Query().Get("q"))
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     make(http.Header),
+			Body: io.NopCloser(strings.NewReader(`
+				<a class="result__a" href="https://example.test/framework">Framework result</a>
+				<a class="result__snippet">Framework snippet</a>
+			`)),
+		}, nil
+	})}
+
+	resp, err := svc.Search(context.Background(), Request{Query: "latest popular multi agent framework"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if resp.Status != "ok" || resp.Count != 1 {
+		t.Fatalf("resp = %+v", resp)
+	}
+	if resp.Metadata["source_scope"] != "web" {
+		t.Fatalf("metadata = %+v, want inferred web scope", resp.Metadata)
+	}
+	if resp.Results[0].SourceKind != ProviderBuiltinWeb {
+		t.Fatalf("result = %+v, want built-in web", resp.Results[0])
+	}
+}
+
+func TestServiceInfersWebScopeAndBlocksWhenOnlyLocalSourcesConfigured(t *testing.T) {
+	svc := NewService(Config{Provider: ProviderLocalSources, MaxResults: 2}, nil, nil)
+
+	resp, err := svc.Search(context.Background(), Request{Query: "latest popular multi agent framework"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if resp.Status != "blocked" {
+		t.Fatalf("status = %q, want blocked", resp.Status)
+	}
+	if resp.Blocker == nil || resp.Blocker.Code != "web_provider_not_configured" {
+		t.Fatalf("blocker = %+v, want web_provider_not_configured", resp.Blocker)
+	}
+	if resp.Metadata["source_scope"] != "web" {
+		t.Fatalf("metadata = %+v, want inferred web scope", resp.Metadata)
+	}
+}
+
 func TestServiceSearXNGForbiddenExplainsJSONFormat(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderSearXNG, SearXNGEndpoint: "http://searxng.local"}, nil, nil)
 	svc.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
@@ -214,7 +263,7 @@ func TestServiceLocalSourcesFallsBackToTextSearchWhenEmbeddingFails(t *testing.T
 
 	svc := NewService(Config{Provider: ProviderLocalSources, MaxResults: 2}, failingEmbedder{}, memory.NewServiceWithDB(db))
 
-	resp, err := svc.Search(context.Background(), Request{Query: "latest research"})
+	resp, err := svc.Search(context.Background(), Request{Query: "latest research", SourceScope: "local_sources"})
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
