@@ -125,6 +125,17 @@ type ConsultationEntry struct {
 	Summary string `json:"summary"`
 }
 
+// ResponseDepth describes the intended density of Soma's visible answer.
+// It is presentation guidance only and must not grant execution authority.
+type ResponseDepth string
+
+const (
+	ResponseDepthQuickBox          ResponseDepth = "quick_box"
+	ResponseDepthStructuredSummary ResponseDepth = "structured_summary"
+	ResponseDepthDecisionBrief     ResponseDepth = "decision_brief"
+	ResponseDepthExecutionProposal ResponseDepth = "execution_proposal"
+)
+
 // ChatResponsePayload is the CTS payload for Soma or council chat responses.
 // Any endpoint returning operator-facing generated content wraps it in this
 // struct inside a CTSEnvelope so the main conversation surface can carry text,
@@ -132,6 +143,7 @@ type ConsultationEntry struct {
 type ChatResponsePayload struct {
 	Text          string              `json:"text"`
 	AskClass      AskClass            `json:"ask_class,omitempty"`
+	ResponseDepth ResponseDepth       `json:"response_depth,omitempty"`
 	Consultations []ConsultationEntry `json:"consultations,omitempty"`
 	ToolsUsed     []string            `json:"tools_used,omitempty"`
 	Artifacts     []ChatArtifactRef   `json:"artifacts,omitempty"`

@@ -166,9 +166,9 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	replyText := readableChatText(agentResult, isMutation)
 	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, focusedTeamID, sessionTurnIndex+1, "assistant", replyText, agentResult)
-
 	chatPayload := protocol.ChatResponsePayload{
 		Text:          replyText,
+		ResponseDepth: inferResponseDepthFromRequest(latestUserText, isMutation),
 		ToolsUsed:     chatResponseTools(isMutation, agentResult.ToolsUsed, mutTools),
 		Artifacts:     agentResult.Artifacts,
 		Consultations: agentResult.Consultations,

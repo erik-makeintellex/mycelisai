@@ -59,7 +59,7 @@ Every finalization slice must prove the concrete runtime contract it touches, no
 | ExecutionContract | API/unit proof for contract id, execution shape, governance posture, capabilities, expected output/proof, recovery/degradation, run linkage, version/timestamps | `IN_REVIEW` |
 | ProofArtifact | API/UI proof for proof id, run id, status, evidence/output/audit refs, validation source, proof quality, degradation, recovery options, confidence provenance | `IN_REVIEW` |
 | TeamWorkItem/TeamInteraction/TeamStatusEvent | Go/API proof for non-active team creation, durable async work, output/degraded transitions, action transitions, Event Spine status events, and archived-row hiding | `IN_REVIEW` |
-| UI response states | component/browser proof for direct answer, proposal, result, blocker, recovery, degraded execution, approval wait, retry, and partial completion | `REQUIRED` |
+| UI response states | component/browser proof for direct answer, adaptive answer depth (`quick_box`, `structured_summary`, `decision_brief`), proposal, result, blocker, recovery, degraded execution, approval wait, retry, and partial completion | `REQUIRED` |
 | TeamWorkItem UI state | component/browser proof for durable Active Work rows, Ask Team/Respond controls, review escalation, clear-from-review language, output refs, and first-deliverable launcher | `IN_REVIEW` |
 | Tool posture chat | read-only tool prompts answer directly; enable/install/connect/bind requests stay governed mutations | `IN_REVIEW` |
 | CapabilityManifestState | durable Go/SQL/API proof for id, health, probe, risk, approval, roles, schemas, recovery, audit/secret policy, owner, updated time, and version | `IN_REVIEW`; UI proof `REQUIRED` |

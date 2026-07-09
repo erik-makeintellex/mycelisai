@@ -110,8 +110,9 @@ func (s *AdminServer) respondServiceInventorySummary(w http.ResponseWriter, r *h
 
 	text := s.buildServiceInventoryAnswer(r)
 	chatPayload := protocol.ChatResponsePayload{
-		Text:     text,
-		AskClass: protocol.AskClassDirectAnswer,
+		Text:          text,
+		AskClass:      protocol.AskClassDirectAnswer,
+		ResponseDepth: protocol.ResponseDepthQuickBox,
 		Provenance: &protocol.AnswerProvenance{
 			ResolvedIntent:  "service_inventory",
 			PermissionCheck: "pass",

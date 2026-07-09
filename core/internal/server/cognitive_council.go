@@ -158,6 +158,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 	// Wrap response in CTS envelope with trust score, provenance, and tool metadata
 	chatPayload := protocol.ChatResponsePayload{
 		Text:          readableChatText(agentResult, isMutation),
+		ResponseDepth: inferResponseDepthFromRequest(latestUserText, isMutation),
 		ToolsUsed:     mutTools,
 		Artifacts:     agentResult.Artifacts,
 		Consultations: agentResult.Consultations,

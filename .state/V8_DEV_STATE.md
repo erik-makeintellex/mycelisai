@@ -419,6 +419,8 @@ Known non-blocking warnings:
 
 - `IN_REVIEW` complex application delivery planning slice: compact trusted Soma receipts already treat `project_package` outputs as app/package deliverables, and Soma now plans complex team/app asks as team creation plus retained evocation, research/council handoff, and delegated implementation work with a `project_package` result contract. Next runtime slice is correlated async completion: team result signals should close the approved run/work item with package output, validation proof, and repair-through-Soma when QA finds defects.
 
+- `IN_REVIEW` adaptive output depth slice: Soma now treats answer density as a first-class runtime/UI hint separate from execution intent. Chat responses carry `response_depth` values (`quick_box`, `structured_summary`, `decision_brief`, `execution_proposal`) so simple lists, tables, source boxes, summaries, and recommendations can stay lightweight without becoming governed work. Mutation, durable execution, risky tools, team/project creation, schedules, service mode, and self-extension still require explicit governance regardless of response depth. Proof target: focused chat/protocol tests plus future compact thread rendering proof for Quick Result, Summary, Decision Brief, and Proposal.
+
 ## Documentation Map
 
 | Topic | Canonical Location |

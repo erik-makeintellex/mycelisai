@@ -271,9 +271,10 @@ func (s *AdminServer) respondSearchChatPayload(w http.ResponseWriter, r *http.Re
 		},
 	)
 	chatPayload := protocol.ChatResponsePayload{
-		Text:      text,
-		ToolsUsed: tools,
-		AskClass:  protocol.AskClassDirectAnswer,
+		Text:          text,
+		ResponseDepth: inferResponseDepthFromRequest(originalIntent, false),
+		ToolsUsed:     tools,
+		AskClass:      protocol.AskClassDirectAnswer,
 		Provenance: &protocol.AnswerProvenance{
 			ResolvedIntent:  "answer",
 			PermissionCheck: "pass",

@@ -8,8 +8,9 @@ import (
 func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 	verified := true
 	payload := ChatResponsePayload{
-		Text:      "Readable answer",
-		Artifacts: []ChatArtifactRef{{ID: "artifact-1", Type: "document", Title: "Brief"}},
+		Text:          "Readable answer",
+		ResponseDepth: ResponseDepthQuickBox,
+		Artifacts:     []ChatArtifactRef{{ID: "artifact-1", Type: "document", Title: "Brief"}},
 		Provenance: &AnswerProvenance{
 			ResolvedIntent:  "answer",
 			PermissionCheck: "pass",
@@ -69,10 +70,13 @@ func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 	if err := json.Unmarshal(raw, &decoded); err != nil {
 		t.Fatalf("decode payload: %v", err)
 	}
-	for _, key := range []string{"text", "artifacts", "provenance", "execution_summary"} {
+	for _, key := range []string{"text", "response_depth", "artifacts", "provenance", "execution_summary"} {
 		if _, ok := decoded[key]; !ok {
 			t.Fatalf("missing additive payload key %q in %s", key, string(raw))
 		}
+	}
+	if decoded["response_depth"] != string(ResponseDepthQuickBox) {
+		t.Fatalf("response_depth = %v, want %q", decoded["response_depth"], ResponseDepthQuickBox)
 	}
 
 	summary := decoded["execution_summary"].(map[string]any)

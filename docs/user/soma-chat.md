@@ -40,6 +40,8 @@ Display-name customization lives in `Settings -> Profile -> Assistant Name`.
 
 Soma should infer the outcome, audience, output form, constraints, source boundary, and uncertainty before answering or proposing work. It should ask one concise clarifying question only when the missing detail would materially change the result.
 
+Soma should choose the lightest useful answer depth for the ask. A request for a quick list, links, a table, a summary, or a recommendation changes how much detail Soma returns; it does not mean work should run. If you want more, ask Soma to expand, turn the answer into a brief, or turn it into governed work.
+
 Before creating teams, enabling MCP servers, assigning tools, changing capability bindings, using private services, or storing recurring behavior, Soma should:
 
 1. Review the latest request and relevant prior context.
@@ -82,7 +84,7 @@ Soma responses can include:
 5. **Recovery/blocker card**: a compact trust boundary in the thread, with what failed, what remains trusted, what is not trusted, and what can safely happen next behind `Details and proof`.
 6. **Action-state card**: the current status, route, capability use, or next step for structured Soma work.
 
-No mutation executes until you confirm. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Details` unless they require immediate attention.
+No mutation executes until you confirm. Opening `Details`, asking for more explanation, or requesting a deeper brief is not approval. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Details` unless they require immediate attention.
 
 Saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details. Use `Resources -> Output Files` for broader browsing later.
 

@@ -60,7 +60,7 @@ Quick Actions are saved conversational accelerators, not autonomous triggers. Bu
 ## Conversation And Governance
 
 Soma must support natural exploratory conversation before execution. Users can ask questions, refine goals, co-architect requirements, compare options, or shape an idea before asking Soma to run anything. Soma is the persistent operational identity of the workspace: it understands intent, shapes Outcomes, chooses execution strategies, coordinates capabilities, preserves continuity, maintains trust, guides recovery, and keeps long-running context. The user should increasingly think "I work through Soma," not "I operate an AI platform."
-
+Soma must infer response depth separately from execution intent. A user asking for a quick list, source box, compact table, summary, comparison, or recommendation is choosing answer density, not approving work. The canonical depths are `quick_box`, `structured_summary`, `decision_brief`, and `execution_proposal`. Soma should default to the lightest useful response and offer expansion rather than turning every request into a decision brief or work proposal.
 Conversational phases:
 | Phase | User Experience | Runtime Meaning |
 | --- | --- | --- |
@@ -68,7 +68,7 @@ Conversational phases:
 | Shape | "Turn this into a plan." | Soma forms WorkIntent, output shape, constraints, execution mode, and approval posture. |
 | Execute | "Run/build/schedule/start this." | Soma creates or uses an ExecutionContract, starts governed work, and updates the thread. |
 
-Governance is mandatory for mutation, durable execution, risky tool use, team/project instantiation, schedules, service mode, and Soma self-extension. The visible governance experience should be a small conversational pause, not a large compliance panel: Soma gives a 1-3 sentence summary, a short bullet list of the intended team/work/output, and one approval choice while NATS/team routing, run proof, and recovery details stay available behind Details.
+Governance is mandatory for mutation, durable execution, risky tool use, team/project instantiation, schedules, service mode, and Soma self-extension regardless of requested response depth. A deeper explanation, expanded details, or decision brief never grants execution authority. The visible governance experience should be a small conversational pause, not a large compliance panel: Soma gives a 1-3 sentence summary, a short bullet list of the intended team/work/output, and one approval choice while NATS/team routing, run proof, and recovery details stay available behind Details.
 
 Default approval frame:
 

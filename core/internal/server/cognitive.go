@@ -260,8 +260,10 @@ func normalizeChatRequestMessages(messages []chatRequestMessage) ([]chatRequestM
 	normalized := make([]chatRequestMessage, len(messages))
 	copy(normalized, messages)
 	if len(mutTools) == 0 {
+		depth := inferResponseDepthFromRequest(trimmed, false)
 		normalized[idx].Content = directAnswerRoutePrefix + "\n" +
 			"Answer the latest request directly in readable text. Do not call mutating tools, do not emit tool_call JSON, and do not route work unless the user explicitly asked to change something.\n\n" +
+			"Match the user's requested answer depth (" + string(depth) + "). Use the lightest useful response, and offer expansion instead of turning the answer into a proposal.\n\n" +
 			"Original request:\n" + trimmed
 		return normalized, nil
 	}

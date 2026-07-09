@@ -146,8 +146,9 @@ func (s *AdminServer) respondRuntimeStateSummary(w http.ResponseWriter, r *http.
 	)
 
 	chatPayload := protocol.ChatResponsePayload{
-		Text:     s.buildRuntimeStateAnswer(organizationID, teamID, teamName),
-		AskClass: protocol.AskClassDirectAnswer,
+		Text:          s.buildRuntimeStateAnswer(organizationID, teamID, teamName),
+		AskClass:      protocol.AskClassDirectAnswer,
+		ResponseDepth: protocol.ResponseDepthStructuredSummary,
 		Provenance: &protocol.AnswerProvenance{
 			ResolvedIntent:  "answer",
 			PermissionCheck: "pass",

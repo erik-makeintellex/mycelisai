@@ -18,6 +18,7 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 		name                 string
 		messages             []chatRequestMessage
 		wantMode             protocol.ExecutionMode
+		wantResponseDepth    protocol.ResponseDepth
 		wantProposalTool     string
 		wantRouteHintApplied bool
 		wantBypassAgent      bool
@@ -28,6 +29,16 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 				{Role: "user", Content: "Summarize the current Workspace V8 design objectives."},
 			},
 			wantMode:             protocol.ModeAnswer,
+			wantResponseDepth:    protocol.ResponseDepthStructuredSummary,
+			wantRouteHintApplied: false,
+		},
+		{
+			name: "detailed table request stays answer mode",
+			messages: []chatRequestMessage{
+				{Role: "user", Content: "Give me a detailed comparison table of the current options."},
+			},
+			wantMode:             protocol.ModeAnswer,
+			wantResponseDepth:    protocol.ResponseDepthStructuredSummary,
 			wantRouteHintApplied: false,
 		},
 		{
@@ -38,6 +49,7 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 				{Role: "user", Content: "Create a simple python file named workspace/logs/qa_browser_mutation_test.py that prints hello world."},
 			},
 			wantMode:             protocol.ModeProposal,
+			wantResponseDepth:    protocol.ResponseDepthExecutionProposal,
 			wantProposalTool:     "write_file",
 			wantRouteHintApplied: false,
 			wantBypassAgent:      true,
@@ -50,6 +62,7 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 				{Role: "user", Content: "Please write a new python file named workspace/logs/rephrased_mutation_test.py that prints hello world."},
 			},
 			wantMode:             protocol.ModeProposal,
+			wantResponseDepth:    protocol.ResponseDepthExecutionProposal,
 			wantProposalTool:     "write_file",
 			wantRouteHintApplied: false,
 			wantBypassAgent:      true,
@@ -60,6 +73,7 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 				{Role: "user", Content: "Create a simple python file named workspace/logs/first_turn_mutation_test.py that prints hello world."},
 			},
 			wantMode:             protocol.ModeProposal,
+			wantResponseDepth:    protocol.ResponseDepthExecutionProposal,
 			wantProposalTool:     "write_file",
 			wantRouteHintApplied: false,
 			wantBypassAgent:      true,
@@ -135,10 +149,12 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 			if envelope.Mode != tc.wantMode {
 				t.Fatalf("mode = %q, want %q", envelope.Mode, tc.wantMode)
 			}
-
 			var payload protocol.ChatResponsePayload
 			if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
 				t.Fatalf("decode payload: %v", err)
+			}
+			if payload.ResponseDepth != tc.wantResponseDepth {
+				t.Fatalf("response_depth = %q, want %q", payload.ResponseDepth, tc.wantResponseDepth)
 			}
 			if tc.wantMode == protocol.ModeProposal {
 				if payload.Proposal == nil {
@@ -182,7 +198,6 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 					t.Fatalf("did not expect proposal payload: %+v", payload.Proposal)
 				}
 			}
-
 			select {
 			case turns := <-forwarded:
 				if tc.wantBypassAgent {
