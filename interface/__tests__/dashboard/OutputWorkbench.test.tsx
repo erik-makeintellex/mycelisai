@@ -175,7 +175,7 @@ describe("OutputWorkbench", () => {
         title: "Owner package",
         folder: "generated/owner-package",
       }],
-    })).toEqual({
+    })).toMatchObject({
       text: "Owner package",
       url: null,
       storagePath: "generated/owner-package",
@@ -185,7 +185,7 @@ describe("OutputWorkbench", () => {
     expect(outputWorkbenchDigest({
       outputs: [{ text: "Game team folder", url: "/api/v1/workspace/files/view?path=groups%2Fgame-team", storagePath: "groups/game-team" }],
       projectPackages: [{ kind: "project_package", title: "Playable game", folder: "groups/game-team/generated/first-game", entrypoint: "groups/game-team/generated/first-game/index.html" }],
-    })).toEqual({
+    })).toMatchObject({
       text: "Playable game",
       url: "/api/v1/workspace/files/view?path=groups%2Fgame-team%2Fgenerated%2Ffirst-game%2Findex.html",
       storagePath: "groups/game-team/generated/first-game",
@@ -195,7 +195,7 @@ describe("OutputWorkbench", () => {
     expect(outputWorkbenchDigest({
       outputs: [],
       projectPackages: [{ kind: "project_package", title: "Nested game", folder: "workspace/generated/nested-game", entrypoint: "dist/index.html" }],
-    })).toEqual({
+    })).toMatchObject({
       text: "Nested game",
       url: "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Fnested-game%2Fdist%2Findex.html",
       storagePath: "workspace/generated/nested-game",

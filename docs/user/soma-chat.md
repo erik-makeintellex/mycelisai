@@ -88,6 +88,8 @@ Saved media and file outputs should appear in the same Soma output workbench wit
 
 When Soma is planning or reporting work, the visible plan should name the expected output shape first: table/report, app/package, code/script, media, document, dataset, or mixed output. App/package work should include a direct open path, usage notes, validation status, folder access, proof, and a way to ask Soma for follow-up changes without forcing the operator to read internal team/tool topology.
 
+Trusted compact receipts in the Soma thread should expose app/package outputs without requiring a full panel: **Open app**, **Open folder**, **Open in Resources**, validation status when available, and **Reply** for follow-up changes.
+
 Use **Reply** on a delivered output or project package when you want Soma to keep that exact output as context for the next request. Reply does not execute work by itself. It preloads the Soma composer with the output title, workspace reference, and proof id when available, then you can type the natural follow-up: update it, make an alternate version, generate downstream material from it, or ask another team to react to it.
 
 ## Teams And Groups

@@ -206,7 +206,7 @@ export async function expectProjectPackageVisible(page: Page, expected: {
   // Compact package surfaces should prove the retained output is usable without
   // forcing raw entrypoint metadata into the primary work lane.
   await expect(page.getByText(expected.folder).last()).toBeVisible();
-  await expect(page.getByRole("button", { name: new RegExp(`Open file .*${expected.title}`, "i") }).last()).toBeVisible();
+  await expect(page.getByRole("button", { name: new RegExp(`Open app .*${expected.title}`, "i") }).last()).toBeVisible();
   await expect(page.getByRole("button", { name: /Open .*folder/i }).last()).toBeVisible();
 }
 

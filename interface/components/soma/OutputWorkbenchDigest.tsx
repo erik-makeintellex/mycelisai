@@ -1,16 +1,29 @@
 "use client";
 
+import { FolderOpen, MessageSquareReply, ShieldCheck } from "lucide-react";
 import type { ExecutionSummaryItem } from "@/store/useCortexStore";
 import { itemText, itemUrl } from "./ExecutionSummaryCardModel";
 import OutputAccessActions, { workspacePathFromOutputUrl } from "./OutputAccessActions";
 import type { OutputWorkbenchItem } from "./OutputWorkbench";
-import { projectPackageOpenPath, projectPackageRevealPath, workspaceFileHref } from "@/lib/outputPackageModel";
+import {
+  OUTPUT_PACKAGE_RESOURCES_LABEL,
+  projectPackageOpenPath,
+  projectPackageResourcesHref,
+  projectPackageRevealPath,
+  workspaceFileHref,
+} from "@/lib/outputPackageModel";
+import { requestSomaOutputContinuation } from "./outputContinuation";
 
 export type OutputWorkbenchDigest = {
   text: string;
   url: string | null;
   storagePath?: string | null;
   count: number;
+  isProjectPackage?: boolean;
+  resourcesHref?: string | null;
+  validation?: string | null;
+  proofArtifactId?: string | null;
+  replyReference?: string | null;
 };
 
 export function outputWorkbenchDigest({
@@ -37,6 +50,11 @@ export function outputWorkbenchDigest({
   }
 
   if (!primaryPackage) return null;
+  const storagePath = projectPackageRevealPath({
+    folder: primaryPackage.folder,
+    entrypoint: primaryPackage.entrypoint,
+    filePath: primaryPackage.path,
+  });
 
   return {
     text: itemText(primaryPackage) ?? "Project package",
@@ -45,11 +63,16 @@ export function outputWorkbenchDigest({
       entrypoint: primaryPackage.entrypoint,
       filePath: primaryPackage.path,
     })),
-    storagePath: projectPackageRevealPath({
+    storagePath,
+    isProjectPackage: true,
+    resourcesHref: projectPackageResourcesHref({
       folder: primaryPackage.folder,
       entrypoint: primaryPackage.entrypoint,
       filePath: primaryPackage.path,
     }),
+    validation: primaryPackage.validation ?? null,
+    proofArtifactId: primaryPackage.proof_artifact_id ?? null,
+    replyReference: storagePath ?? itemUrl(primaryPackage) ?? null,
     count: outputs.length + packages.length,
   };
 }
@@ -76,6 +99,8 @@ function isGroupFolderOutput(output: OutputWorkbenchItem) {
 
 export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkbenchDigest }) {
   const workspacePath = digest.storagePath?.trim() || workspacePathFromOutputUrl(digest.url);
+  const label = digest.isProjectPackage ? "App/package" : "Latest";
+  const openLabel = digest.isProjectPackage ? "Open app" : "Open file";
 
   return (
     <aside
@@ -84,20 +109,55 @@ export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkben
       aria-label="Latest output"
     >
       <div className="flex min-w-0 items-center justify-between gap-2">
-        <div className="min-w-0 text-xs">
-          <span className="font-semibold text-cortex-text-main">Latest: </span>
+        <div className="min-w-0 text-xs leading-5">
+          <span className="font-semibold text-cortex-text-main">{label}: </span>
           <span className="font-semibold text-cortex-text-main">{digest.text}</span>
           {workspacePath && workspacePath !== digest.text ? (
             <span className="sr-only"> Workspace path: {workspacePath}</span>
           ) : null}
+          {digest.validation ? (
+            <span className="mt-0.5 flex items-start gap-1 text-[11px] text-cortex-success">
+              <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0" />
+              <span className="line-clamp-2">{digest.validation}</span>
+            </span>
+          ) : null}
         </div>
-        <OutputAccessActions
-          label={digest.text}
-          url={digest.url}
-          storagePath={digest.storagePath}
-          openLabel="Open file"
-          folderLabel="Open folder"
-        />
+        <span className="inline-flex shrink-0 flex-wrap items-center gap-1">
+          {digest.resourcesHref ? (
+            <a
+              href={digest.resourcesHref}
+              className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-border/80 bg-cortex-bg/70 px-2.5 text-[11px] font-semibold text-cortex-text-main transition-colors hover:border-cortex-primary/45 hover:bg-cortex-primary/10 hover:text-cortex-primary"
+              title={`Browse ${digest.text} in Resources`}
+              aria-label={`Open ${digest.text} in Resources`}
+            >
+              <FolderOpen className="h-3 w-3" />
+              {OUTPUT_PACKAGE_RESOURCES_LABEL}
+            </a>
+          ) : null}
+          <OutputAccessActions
+            label={digest.text}
+            url={digest.url}
+            storagePath={digest.storagePath}
+            openLabel={openLabel}
+            folderLabel="Open folder"
+          />
+          {digest.isProjectPackage ? (
+            <button
+              type="button"
+              onClick={() => requestSomaOutputContinuation({
+                title: digest.text,
+                reference: digest.replyReference ?? workspacePath ?? digest.url,
+                proof: digest.proofArtifactId,
+              })}
+              className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"
+              title={`Reply to ${digest.text} in Soma`}
+              aria-label={`Reply to ${digest.text} in Soma`}
+            >
+              <MessageSquareReply className="h-3 w-3" />
+              Reply
+            </button>
+          ) : null}
+        </span>
       </div>
     </aside>
   );

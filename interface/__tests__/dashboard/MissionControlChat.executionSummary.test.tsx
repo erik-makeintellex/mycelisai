@@ -259,11 +259,11 @@ describe('MissionControlChat execution summary', () => {
         render(<MissionControlChat simpleMode />);
 
         expect(await screen.findByText('Coin Runner Game')).toBeDefined();
-        expect(screen.getByText('Latest output')).toBeDefined();
+        expect(screen.getByText('App/package:')).toBeDefined();
         expect(screen.queryByText('entry: workspace/generated/coin-runner/index.html')).toBeNull();
         expect(screen.queryByText('game.js')).toBeNull();
 
-        fireEvent.click(screen.getByRole('button', { name: /Open file Coin Runner Game in a new browser window/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Open app Coin Runner Game in a new browser window/i }));
         expect(openWindow).toHaveBeenCalledWith(href, '_blank', 'noopener,noreferrer');
 
         fireEvent.click(screen.getByRole('button', { name: /Open local folder for Coin Runner Game/i }));
