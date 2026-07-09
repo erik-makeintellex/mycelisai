@@ -28,6 +28,9 @@ func teamEvocationForRequest(request string, contract map[string]any) map[string
 }
 
 func requestNeedsTeamEvocationReview(lower string, contract map[string]any) bool {
+	if requestAsksTeamToDeliver(lower) || contentContractNeedsResearch(contract) {
+		return true
+	}
 	if len(confirmedActionStringSlice(contract["content_types"])) == 1 &&
 		containsToolName(confirmedActionStringSlice(contract["content_types"]), "work_product") &&
 		!contentContractNeedsResearch(contract) {

@@ -24,6 +24,11 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 			planned = append(planned, normalizePlannedToolCall(fileCall))
 		} else if fileCall, ok := inferTeamPreparationBriefPlanFromRequest(latestRequest, planned[0]); ok {
 			planned = append(planned, normalizePlannedToolCall(fileCall))
+			if deliveryCalls, ok := inferInitialComplexDeliveryPlanFromRequest(latestRequest, planned[0], fileCall); ok {
+				for _, deliveryCall := range deliveryCalls {
+					planned = append(planned, normalizePlannedToolCall(deliveryCall))
+				}
+			}
 		} else if fileCall, ok := inferWriteFileExecutionPlan(agentResult, latestRequest); ok && containsToolName(mutTools, "write_file") {
 			planned = append(planned, normalizePlannedToolCall(fileCall))
 		}

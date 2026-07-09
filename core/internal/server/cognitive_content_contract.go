@@ -87,6 +87,9 @@ func contentContractForTeamRequest(request string) map[string]any {
 }
 
 func requestNeedsTeamPreparation(lower string, types []string) bool {
+	if requestAsksTeamToDeliver(lower) {
+		return true
+	}
 	if len(types) == 1 && types[0] == "work_product" {
 		return requestContainsAny(lower, []string{
 			"complex", "advanced", "production", "deploy", "deployable", "executable", "application", "app", "package",
@@ -159,9 +162,15 @@ func requestAsksForTextOutput(lower string) bool {
 }
 
 func requestAsksForTableOrData(lower string) bool {
-	return requestContainsAny(lower, []string{
-		"table", "spreadsheet", "csv", "matrix", "columns", "rows", "dataset", "data management", "data table",
-	})
+	if requestContainsAny(lower, []string{"data management", "data table", "data review", "structured data"}) {
+		return true
+	}
+	for _, word := range []string{"table", "spreadsheet", "csv", "matrix", "columns", "rows", "dataset"} {
+		if hasExactWord(lower, word) {
+			return true
+		}
+	}
+	return false
 }
 
 func requestAsksForApplicationPackage(lower string) bool {

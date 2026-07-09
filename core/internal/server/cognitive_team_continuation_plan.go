@@ -85,6 +85,90 @@ func inferTeamEvocationContinuationPlanFromRequest(text string) ([]protocol.Plan
 	return []protocol.PlannedToolCall{researchCall, delegateCall}, true
 }
 
+func inferInitialComplexDeliveryPlanFromRequest(text string, teamCall, briefCall protocol.PlannedToolCall) ([]protocol.PlannedToolCall, bool) {
+	trimmed := strings.TrimSpace(text)
+	lower := strings.ToLower(trimmed)
+	if trimmed == "" || !requestAsksTeamToDeliver(lower) {
+		return nil, false
+	}
+	teamID := firstNonEmptyString(teamCall.Arguments["team_id"], teamCall.Arguments["id"], teamCall.Arguments["team_name"])
+	if teamID == "" {
+		return nil, false
+	}
+	briefPath := firstNonEmptyString(briefCall.Arguments["path"], groupWorkspaceFolderForTeamID(teamID)+"/planning/TEAM_EVOCATION.md")
+	if !strings.Contains(strings.ToLower(briefPath), "team_evocation.md") {
+		return nil, false
+	}
+	contract := mapArgument(briefCall.Arguments["content_contract"])
+	if len(contract) == 0 {
+		contract = contentContractForTeamRequest(trimmed)
+	}
+	evocation := mapArgument(briefCall.Arguments["team_evocation"])
+	if len(evocation) == 0 {
+		evocation = teamEvocationForRequest(trimmed, contract)
+	}
+	if fmt.Sprint(evocation["mode"]) != "research_council_then_staff" {
+		return nil, false
+	}
+	return buildTeamEvocationDeliveryPlan(trimmed, teamID, briefPath, contract), true
+}
+
+func buildTeamEvocationDeliveryPlan(request, teamID, briefPath string, contract map[string]any) []protocol.PlannedToolCall {
+	researchPath := groupWorkspaceFolderForTeamID(teamID) + "/planning/RESEARCH_COUNCIL_HANDOFF.md"
+	researchCall := protocol.PlannedToolCall{
+		Name: "write_file",
+		Arguments: map[string]any{
+			"path":                researchPath,
+			"content":             teamResearchHandoffMarkdown(request, teamID, briefPath, contract),
+			"validation":          "Retained research/council handoff must make the implementation strategy, team responsibilities, output contract, proof gates, and unknowns clear before delegated build work starts.",
+			"content_contract":    contract,
+			"acceptance_criteria": confirmedActionStringSlice(contract["acceptance_criteria"]),
+			"proof_required":      confirmedActionStringSlice(contract["proof_required"]),
+			"evocation_brief":     briefPath,
+		},
+	}
+	delegateCall := protocol.PlannedToolCall{
+		Name: "delegate_task",
+		Arguments: map[string]any{
+			"team_id": teamID,
+			"task":    teamEvocationDelegationGoal(request, contract),
+			"ask": map[string]any{
+				"ask_kind":              string(protocol.TeamAskKindImplementation),
+				"lane_role":             string(protocol.TeamLaneRoleImplementer),
+				"goal":                  teamEvocationDelegationGoal(request, contract),
+				"operation":             "continue_from_research_handoff",
+				"approval_posture":      string(protocol.ApprovalPostureRequired),
+				"owned_scope":           []string{groupWorkspaceFolderForTeamID(teamID)},
+				"constraints":           teamEvocationDelegationConstraints(),
+				"required_capabilities": requiredCapabilitiesForContentContract(contract),
+				"exit_criteria":         confirmedActionStringSlice(contract["acceptance_criteria"]),
+				"evidence_required":     confirmedActionStringSlice(contract["proof_required"]),
+				"context": map[string]any{
+					"operator_request":             request,
+					"team_evocation_brief":         briefPath,
+					"research_council_handoff":     researchPath,
+					"research_team_responsibility": "Prepare domain/stack/options review, unknowns, and specialist recommendations before implementation.",
+					"delivery_team_responsibility": "Use the handoff to produce the retained user-facing output package and proof.",
+					"result_contract":              projectPackageResultContract(teamID, contract),
+				},
+			},
+			"expected_outputs":      confirmedActionStringSlice(contract["expected_outputs"]),
+			"expected_proof":        confirmedActionStringSlice(contract["proof_required"]),
+			"required_capabilities": requiredCapabilitiesForContentContract(contract),
+			"evocation_brief":       briefPath,
+			"research_handoff":      researchPath,
+		},
+	}
+	return []protocol.PlannedToolCall{researchCall, delegateCall}
+}
+
+func requestAsksTeamToDeliver(lower string) bool {
+	if !requestContainsAny(lower, []string{"team", "teams"}) {
+		return false
+	}
+	return requestContainsAny(lower, []string{"have that team", "get them to", "ask them to", "team build", "team create", "team generate", "team produce"})
+}
+
 func requestAsksToContinueTeamEvocation(lower string) bool {
 	if !requestContainsAny(lower, []string{"brief", "evocation", "handoff", "retained", "research", "council"}) {
 		return false
@@ -160,5 +244,22 @@ func teamEvocationDelegationConstraints() []string {
 		"Keep team-generated internal scratch separate from user-facing retained outputs.",
 		"Provide a direct launch, view, or open path for every user-facing deliverable.",
 		"Report validation defects back through Soma as repair work instead of silently editing outside the approved scope.",
+	}
+}
+
+func projectPackageResultContract(teamID string, contract map[string]any) map[string]any {
+	return map[string]any{
+		"kind":                 "project_package",
+		"entrypoint_required":  true,
+		"folder_required":      true,
+		"files_required":       []string{"README.md", "PROOF.md", "project-package.json"},
+		"validation_required":  true,
+		"proof_ref_required":   true,
+		"repair_channel":       "soma",
+		"team_id":              teamID,
+		"expected_outputs":     confirmedActionStringSlice(contract["expected_outputs"]),
+		"acceptance_criteria":  confirmedActionStringSlice(contract["acceptance_criteria"]),
+		"proof_required":       confirmedActionStringSlice(contract["proof_required"]),
+		"source_material_mode": "internal_sources_hidden_until_requested",
 	}
 }

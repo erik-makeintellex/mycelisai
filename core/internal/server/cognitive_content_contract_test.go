@@ -153,6 +153,19 @@ func TestInferCreateTeamPlanFromRequest_ContentContractCoversTableAndAppOutputs(
 	}
 }
 
+func TestContentContract_PackageMetadataDoesNotImplyTableData(t *testing.T) {
+	contract := contentContractForTeamRequest("Build a browser game package. The package metadata must include index.html, README.md, and validation notes.")
+	contentTypes := confirmedActionStringSlice(contract["content_types"])
+	if containsString(contentTypes, "table_data") {
+		t.Fatalf("content_types = %#v, package metadata should not imply table_data", contentTypes)
+	}
+	for _, want := range []string{"game", "text"} {
+		if !containsString(contentTypes, want) {
+			t.Fatalf("content_types = %#v, missing %q", contentTypes, want)
+		}
+	}
+}
+
 func TestInferWriteFilePlanFromRequest_TextValidationMetadata(t *testing.T) {
 	call, ok := inferWriteFilePlanFromRequest("Write a markdown report at workspace/logs/review.md about the game proof.")
 	if !ok {

@@ -65,7 +65,7 @@ func TestBuildPlannedToolCalls_PrefersExplicitCreateTeamRequest(t *testing.T) {
 func TestBuildPlannedToolCalls_RecognizesPutTogetherTeamRequest(t *testing.T) {
 	calls := plannedCallsFromWrongBlueprint("Put together a team named QA Game Studio and get them to build a playable browser game.", []string{"generate_blueprint", "delegate"})
 
-	requirePlannedCallNames(t, calls, "create_team")
+	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
 	if calls[0].Arguments["name"] != "QA Game Studio" {
 		t.Fatalf("name = %#v, want QA Game Studio", calls[0].Arguments["name"])
 	}
@@ -101,7 +101,7 @@ func TestBuildPlannedToolCalls_StartsComplexTeamEvocationBrief(t *testing.T) {
 	request := "Create a team named SNES-Style Browser Game Team and get them to work on developing a detailed game"
 	calls := plannedCallsFromWrongBlueprint(request, []string{"generate_blueprint", "delegate"})
 
-	requirePlannedCallNames(t, calls, "create_team", "write_file")
+	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
 	if calls[0].Arguments["name"] != "SNES-Style Browser Game Team" {
 		t.Fatalf("name = %#v", calls[0].Arguments["name"])
 	}
@@ -124,8 +124,8 @@ func TestBuildPlannedToolCalls_StartsComplexTeamEvocationBrief(t *testing.T) {
 		}
 	}
 	tools := toolsForPlannedCalls(calls, []string{"generate_blueprint", "delegate"})
-	if len(tools) != 2 || tools[0] != "create_team" || tools[1] != "write_file" {
-		t.Fatalf("effective tools = %#v, want create_team + write_file", tools)
+	if len(tools) != 3 || tools[0] != "create_team" || tools[1] != "write_file" || tools[2] != "delegate_task" {
+		t.Fatalf("effective tools = %#v, want create_team + write_file + delegate_task", tools)
 	}
 }
 
@@ -137,7 +137,7 @@ func TestBuildPlannedToolCalls_PackageAskCreatesEvocationBrief(t *testing.T) {
 	}, " ")
 	calls := plannedCallsFromWrongBlueprint(request, []string{"generate_blueprint", "delegate"})
 
-	requirePlannedCallNames(t, calls, "create_team", "write_file")
+	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
 	content, _ := calls[1].Arguments["content"].(string)
 	if !strings.Contains(content, "Team Evocation Brief") || !strings.Contains(content, "Expected outputs") {
 		t.Fatalf("content = %.160q, want retained team evocation brief", content)
