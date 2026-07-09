@@ -1,6 +1,6 @@
 # Mycelis Canonical PRD
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
-> Status: Canonical | Last Updated: 2026-07-06 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
+> Status: Canonical | Last Updated: 2026-07-09 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
 The default product language is:
@@ -18,8 +18,8 @@ The V8.3 release target is operational embodiment: prove Mycelis through visible
 
 Release success means a non-technical user can complete the journey from ask to trusted revisit without needing to understand agents, MCP, workflows, runs, topology, or infrastructure. A technical user can still inspect proof and runtime detail when needed. If runtime correctness improves but user trust or usability declines, the architecture moved in the wrong direction.
 
+Architecture stability rule: the architecture is stable, not frozen. Future work should extend, refine, harden, and express the current Outcome/Soma/execution-spine model instead of replacing it or creating parallel concepts. Outcome is the organizing identity across Soma conversations, deliverables, active work, recovery, proof, history, and continuity; the existing Soma, Groups, Resources, Runs, Recovery, and Administration surfaces should become progressively Outcome-aware rather than Outcome-replaced. Runtime machinery translates machine work into user work, so ExecutionContracts, runs, teams, capabilities, MCP, NATS, vector retrieval, storage, event routing, autonomy, adaptive teams, providers, and new capability types should compose through the existing spine and remain primarily behind Details or Inspect unless surfacing them directly improves Outcome, Deliverable, Trust, Recovery, or Continuity value.
 ## Trusted Outcome Journey
-
 All P0 work is judged through this journey:
 
 ```text
@@ -211,11 +211,11 @@ Confidence provenance is an emerging layer. The architecture should prepare for 
 
 ## Information Architecture
 
-Default navigation:
+Preserve the existing navigation and make it progressively Outcome-aware:
 
-- Soma: ask, shape, approve, execute, review, recover, revisit
-- Groups: focused collaboration lanes and retained team outputs
-- Resources: generated outputs, workspace folders, capabilities, and connected tools
+- Soma: ask, shape, approve, execute, review, recover, and revisit Outcome work
+- Groups: focused collaboration lanes, active work, and retained team outputs
+- Resources: generated deliverables, workspace folders, capabilities, and connected tools
 - Docs: user help and contributor docs
 
 Admin/deep navigation:
