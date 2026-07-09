@@ -29,16 +29,24 @@ test.describe("Web access setup user path", () => {
     await expect(page.getByText("Capabilities", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("region", { name: /Web access setup/i })).toBeVisible();
     await expect(page.getByText(/Public web|Local-source search|Web access needs setup|Checking web access/i).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /Add web capability/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Add URL reader|Add web search provider|Set up web search/i })).toBeVisible();
     await expect(page.getByText(/Mycelis Search Capability/i)).toBeVisible();
     await testInfo.attach("resources-capabilities", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     });
 
-    await page.getByRole("button", { name: /Add web capability/i }).click();
-    await expect(page.getByPlaceholder(/Search MCP servers/i)).toHaveValue("fetch");
-    await expect(page.getByText(/Add MCP Server/i)).toBeVisible();
+    const addUrlReader = page.getByRole("button", { name: /Add URL reader/i });
+    if (await addUrlReader.count()) {
+      await addUrlReader.click();
+      await expect(page.getByPlaceholder(/Search MCP servers/i)).toHaveValue("fetch");
+      await expect(page.getByText(/Add MCP Server/i)).toBeVisible();
+    } else {
+      await page.getByRole("button", { name: /Add web search provider|Set up web search/i }).click();
+      await expect(page.getByLabel("Source kind")).toHaveValue("public_web");
+      await expect(page.getByLabel("Public web search address")).toBeVisible();
+      await expect(page.getByText(/Approved public web research/i)).toBeVisible();
+    }
     await testInfo.attach("resources-web-library-filter", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",

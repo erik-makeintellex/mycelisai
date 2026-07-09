@@ -13,6 +13,7 @@ export function SearchSourceRegistryCard({
     error,
     addNotice,
     isAdding,
+    openCreateRequest,
     onAddSearchSource,
     onUpdateSearchSource,
     onDeleteSearchSource,
@@ -23,12 +24,21 @@ export function SearchSourceRegistryCard({
     error: string | null;
     addNotice: string | null;
     isAdding: boolean;
+    openCreateRequest?: { nonce: number; sourceType?: string } | null;
     onAddSearchSource: (input: SearchSourceDraft) => Promise<boolean>;
     onUpdateSearchSource: (sourceId: string, input: SearchSourceDraft) => Promise<boolean>;
     onDeleteSearchSource: (sourceId: string, sourceName: string) => Promise<boolean>;
 }) {
     const [isFormOpen, setIsFormOpen] = React.useState(false);
     const [editingSource, setEditingSource] = React.useState<SearchCapabilitySource | null>(null);
+    const [intentDraft, setIntentDraft] = React.useState<SearchSourceDraft | undefined>(undefined);
+
+    React.useEffect(() => {
+        if (!openCreateRequest) return;
+        setEditingSource(null);
+        setIntentDraft(createIntentDraft(openCreateRequest.sourceType));
+        setIsFormOpen(true);
+    }, [openCreateRequest]);
 
     return (
         <section className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
@@ -76,13 +86,14 @@ export function SearchSourceRegistryCard({
             )}
             {(isFormOpen || editingSource) && (
                 <SearchSourceAddForm
-                    key={editingSource?.id ?? "new-search-source"}
+                    key={editingSource?.id ?? openCreateRequest?.nonce ?? "new-search-source"}
                     isAdding={isAdding}
-                    initialDraft={editingSource ? sourceToDraft(editingSource) : undefined}
+                    initialDraft={editingSource ? sourceToDraft(editingSource) : intentDraft}
                     submitLabel={editingSource ? "Update search source" : "Add search source"}
                     onCancel={() => {
                         setIsFormOpen(false);
                         setEditingSource(null);
+                        setIntentDraft(undefined);
                     }}
                     onSubmit={async (input) => {
                         const ok = editingSource
@@ -91,6 +102,7 @@ export function SearchSourceRegistryCard({
                         if (ok) {
                             setIsFormOpen(false);
                             setEditingSource(null);
+                            setIntentDraft(undefined);
                         }
                         return ok;
                     }}
@@ -103,8 +115,24 @@ export function SearchSourceRegistryCard({
                 onEditSource={(source) => {
                     setIsFormOpen(false);
                     setEditingSource(source);
+                    setIntentDraft(undefined);
                 }}
             />
         </section>
     );
+}
+
+function createIntentDraft(sourceType = "public_web"): SearchSourceDraft {
+    const source_type = sourceType || "public_web";
+    return {
+        name: "",
+        source_type,
+        endpoint: "",
+        boundary: source_type === "mounted_folder" ? "Approved local or mounted data" : "Approved public web research",
+        scope_kind: "all",
+        auth_scheme: "none",
+        mode: "live",
+        sensitivity_class: source_type === "public_web" ? "public" : "governed",
+        trust_class: source_type === "public_web" ? "bounded_external" : "bounded_internal",
+    };
 }

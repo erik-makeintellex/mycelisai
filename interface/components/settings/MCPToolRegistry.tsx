@@ -41,6 +41,7 @@ export default function MCPToolRegistry() {
     const [activeTab, setActiveTab] = useState<Tab>("overview");
     const [installNotice, setInstallNotice] = useState<string | null>(null);
     const [librarySearchQuery, setLibrarySearchQuery] = useState("");
+    const [searchSourceCreateRequest, setSearchSourceCreateRequest] = useState<{ nonce: number; sourceType?: string } | null>(null);
     const isRegistryErrorState = !isFetching && Boolean(mcpServersError);
     const isEmptyInstalledState = !isFetching && !mcpServersError && mcpServers.length === 0;
     const searchSourceRegistry = useSearchSourceRegistry(searchCapability?.sources, fetchSearchCapability);
@@ -83,8 +84,13 @@ export default function MCPToolRegistry() {
     }
 
     function handleAddWebCapability() {
-        setLibrarySearchQuery("fetch");
-        setActiveTab("library");
+        if (searchCapability?.supports_public_web) {
+            setLibrarySearchQuery("fetch");
+            setActiveTab("library");
+            return;
+        }
+        setSearchSourceCreateRequest({ nonce: Date.now(), sourceType: "public_web" });
+        setActiveTab("overview");
     }
 
     return (
@@ -164,6 +170,7 @@ export default function MCPToolRegistry() {
                             error={searchSourceRegistry.searchSourcesError}
                             addNotice={searchSourceRegistry.searchSourceNotice}
                             isAdding={searchSourceRegistry.isAddingSearchSource}
+                            openCreateRequest={searchSourceCreateRequest}
                             onAddSearchSource={searchSourceRegistry.addSearchSource}
                             onDeleteSearchSource={searchSourceRegistry.deleteSearchSource}
                             onUpdateSearchSource={searchSourceRegistry.updateSearchSource}

@@ -124,13 +124,20 @@ export function WebAccessSetupCard({
     const explanation = error
         ? error
         : hasPublicWeb
-        ? "Soma can use the configured web search provider for governed research. Explicit URL reading may still require fetch."
+        ? "Soma can search the public web now. Add fetch only when Soma or a team needs to open a specific URL you provide."
         : hasLocalSearch
-        ? "Soma can search retained Mycelis sources. Add a public web provider or fetch when you need fresh internet pages or explicit URLs."
+        ? "Soma can search retained Mycelis sources. Add a public web search provider when you need fresh internet research, or fetch when you need explicit URL reading."
         : status?.blocker?.message ?? status?.next_actions?.[0] ?? "Add or repair a web capability before asking Soma for fresh web research.";
     const nextStep = hasPublicWeb
-        ? "Ask Soma to search the web, then inspect proof when the answer returns."
-        : "Open the MCP library already filtered for web tools. Choose fetch for explicit URLs, or a search provider such as built-in web, SearXNG, local_api, or Brave.";
+        ? "Ask Soma naturally for research. Use the button only when you want explicit URL reading or another optional web tool."
+        : hasLocalSearch
+        ? "Add or configure a web search provider for public internet research. Keep local-source search for retained Mycelis context and approved mounts."
+        : "Set up web search for public research, or add local/mounted sources when Soma should search approved private data.";
+    const actionLabel = hasPublicWeb
+        ? "Add URL reader"
+        : hasLocalSearch
+        ? "Add web search provider"
+        : "Set up web search";
 
     return (
         <section
@@ -157,7 +164,7 @@ export function WebAccessSetupCard({
                     className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-surface px-3 py-2 text-xs font-semibold text-cortex-primary transition-colors hover:bg-cortex-primary/10"
                 >
                     <BookOpen className="h-3.5 w-3.5" />
-                    Add web capability
+                    {actionLabel}
                 </button>
             </div>
             <div className="mt-4 grid gap-2 md:grid-cols-3">

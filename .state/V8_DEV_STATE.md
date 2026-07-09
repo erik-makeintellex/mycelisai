@@ -409,6 +409,8 @@ Known non-blocking warnings:
 
 - `IN_REVIEW` search-source configuration language slice: Resources/Settings now presents configured search inputs as plain-language places Soma may search: public web, approved Mycelis data, approved local or mounted data, approved knowledge collections, and private APIs. Default copy no longer exposes `Core` resolution language, raw `web_search` labels, or saved secret names; those identifiers remain behind Inspect technical refs. Proof: focused Settings Vitest, `uv run inv interface.typecheck`, docs link/help tests, `git diff --check`, headed `mcp-connected-tools.spec.ts`, and headed `web-access-user-path-review.spec.ts` pass on the live stack.
 
+- `IN_REVIEW` web-access setup clarity slice: Resources/Capabilities now treats built-in public web search as already usable when configured, shows `Add URL reader` only for optional explicit supplied-URL retrieval, and opens the governed Search Source form for missing public-web setup instead of dropping non-technical users into the generic MCP library. The search-source form can be launched with a public-web intent while URL-reader setup still filters the MCP library to `fetch`. User Resources docs now match this split. Proof: focused Settings Vitest, `uv run inv interface.typecheck`, headed live `web-access-user-path-review.spec.ts`, headed live `search-provenance-live.spec.ts`, and service health pass. Runtime follow-up: implement true composite `source_scope=all` so mixed local/web asks search both available boundaries instead of provider-dominant partial coverage.
+
 ## Documentation Map
 
 | Topic | Canonical Location |
