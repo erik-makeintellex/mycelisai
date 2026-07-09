@@ -197,6 +197,48 @@ describe('cortexStoreUtils', () => {
         expect(loaded[1]).toMatchObject({ role: 'council', content: 'world' });
     });
 
+    it('sanitizes malformed legacy chat history before rehydrating the dashboard', () => {
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([
+            { role: 'user', content: { text: 'legacy object prompt' } },
+            {
+                role: 'architect',
+                content: null,
+                tools_used: ['web_search', 'web_search', 12],
+                response_depth: 'definitely_not_real',
+                proposal: {
+                    intent: 'legacy proposal',
+                    risk_level: 'medium',
+                    confirm_token: 123,
+                    intent_proof_id: 'proof-1',
+                    tools: 'delegate_task',
+                },
+                execution_summary: {
+                    outputs: { label: 'not an array' },
+                    understanding: { assumptions: 'not an array' },
+                },
+            },
+            { role: 'unknown', content: 'drop me' },
+        ]));
+
+        const loaded = loadPersistedChat();
+
+        expect(loaded).toHaveLength(2);
+        expect(loaded[0]).toMatchObject({
+            role: 'user',
+            content: '{"text":"legacy object prompt"}',
+        });
+        expect(loaded[1].content).toBe('');
+        expect(loaded[1].tools_used).toEqual(['web_search', '12']);
+        expect(loaded[1].response_depth).toBeUndefined();
+        expect(loaded[1].proposal).toMatchObject({
+            intent: 'legacy proposal',
+            risk_level: 'medium',
+            confirm_token: '123',
+            intent_proof_id: 'proof-1',
+        });
+        expect(loaded[1].proposal?.tools).toEqual(['delegate_task']);
+    });
+
     it('scopes persisted chat by organization key', () => {
         persistChat([{ role: 'user', content: 'org-a' }] as any, 'org-a');
         persistChat([{ role: 'user', content: 'org-b' }] as any, 'org-b');

@@ -52,6 +52,56 @@ describe('MissionControlChat header and routing chrome', () => {
         expect(screen.getByText('Persisted org message')).toBeDefined();
     });
 
+    it('renders malformed persisted chat without crashing or emitting React key warnings', async () => {
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        localStorage.setItem('mycelis-workspace-chat:org-123', JSON.stringify([
+            { role: 'user', content: { text: 'legacy object prompt' } },
+            {
+                role: 'architect',
+                source_node: 'admin',
+                content: 'Legacy result with duplicate fields',
+                tools_used: ['web_search', 'web_search'],
+                proposal: {
+                    intent: 'legacy proposal',
+                    risk_level: 'medium',
+                    confirm_token: 'token-1',
+                    intent_proof_id: 'proof-1',
+                    tools: ['delegate_task', 'delegate_task'],
+                    affected_resources: ['team:Game Team', 'team:Game Team'],
+                },
+                execution_summary: {
+                    execution: { status: 'complete', shape: 'team_execution', summary: 'legacy complete' },
+                    understanding: { summary: 'legacy', assumptions: 'not an array' },
+                    outputs: { label: 'not an array' },
+                    proof: [
+                        { label: 'Audit', run_id: 'run-1' },
+                        { label: 'Audit', run_id: 'run-1' },
+                    ],
+                    capability_use: {
+                        tools: 'not an array',
+                        used: ['web_search', 'web_search'],
+                    },
+                },
+            },
+            { role: 'not-a-role', content: 'drop me' },
+        ]));
+
+        try {
+            render(<MissionControlChat simpleMode organizationId="org-123" />);
+            await settleMissionControlChat();
+
+            expect(screen.getByText(/legacy object prompt/i)).toBeDefined();
+            expect(screen.getByText(/Legacy result with duplicate fields/i)).toBeDefined();
+            expect(screen.queryByText('drop me')).toBeNull();
+            expect(consoleError).not.toHaveBeenCalled();
+            expect(consoleWarn).not.toHaveBeenCalled();
+        } finally {
+            consoleError.mockRestore();
+            consoleWarn.mockRestore();
+        }
+    });
+
     it('rehydrates team-scoped chat history when a focused team is provided', async () => {
         localStorage.setItem('mycelis-workspace-chat:org-123::team::team-alpha', JSON.stringify([
             { role: 'user', content: 'Persisted focused team message' },

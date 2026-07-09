@@ -53,13 +53,14 @@ function normalizeTeamExpressions(raw: unknown): TeamExpressionData[] {
 }
 
 function normalizeStringArray(raw: unknown): string[] | undefined {
-    if (!Array.isArray(raw)) return undefined;
-    const values = uniqueStrings(raw.filter((value): value is string => typeof value === 'string'));
+    const source = Array.isArray(raw) ? raw : typeof raw === 'string' ? [raw] : [];
+    const values = uniqueStrings(source.filter((value): value is string => typeof value === 'string'));
     return values.length > 0 ? values : undefined;
 }
 
 function pickString(rec: Record<string, unknown>, snake: string, camel: string): string | undefined {
-    const value = typeof rec[snake] === 'string' ? rec[snake] : typeof rec[camel] === 'string' ? rec[camel] : '';
+    const raw = rec[snake] ?? rec[camel];
+    const value = typeof raw === 'string' ? raw : typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : '';
     const trimmed = value.trim();
     return trimmed || undefined;
 }
@@ -92,7 +93,7 @@ export function normalizeProposalData(raw: unknown): ProposalData | undefined {
     const derivedTools = uniqueStrings(teamExpressions.flatMap((expr) => (expr.module_bindings ?? []).map((b) => b.module_id)));
     const derivedTeams = uniqueStrings(teamExpressions.map((expr) => expr.team_id ?? '')).length;
     const derivedAgents = teamExpressions.reduce((sum, expr) => sum + (expr.role_plan?.length ?? 0), 0);
-    const rawTools = Array.isArray(rec.tools) ? rec.tools.filter((v): v is string => typeof v === 'string') : [];
+    const rawTools = normalizeStringArray(rec.tools) ?? [];
     const natsSubjects = normalizeStringArray(rec.nats_subjects ?? rec.natsSubjects) ?? workIntent?.nats_subjects;
 
     return {
@@ -106,8 +107,8 @@ export function normalizeProposalData(raw: unknown): ProposalData | undefined {
         agents: typeof rec.agents === 'number' ? rec.agents : derivedAgents,
         tools: uniqueStrings(rawTools.length > 0 ? rawTools : derivedTools),
         risk_level: typeof rec.risk_level === 'string' && rec.risk_level.trim() ? rec.risk_level : 'medium',
-        confirm_token: typeof rec.confirm_token === 'string' ? rec.confirm_token : '',
-        intent_proof_id: typeof rec.intent_proof_id === 'string' ? rec.intent_proof_id : '',
+        confirm_token: pickString(rec, 'confirm_token', 'confirmToken') ?? '',
+        intent_proof_id: pickString(rec, 'intent_proof_id', 'intentProofId') ?? '',
         approval_required: typeof approval?.approval_required === 'boolean' ? Boolean(approval.approval_required) : undefined,
         approval_reason: typeof approval?.approval_reason === 'string' ? String(approval.approval_reason) : undefined,
         approval_mode: typeof approval?.approval_mode === 'string' ? String(approval.approval_mode) : undefined,

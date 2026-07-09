@@ -423,6 +423,8 @@ Known non-blocking warnings:
 
 - `IN_REVIEW` adaptive output depth slice: Soma now treats answer density as a first-class runtime/UI hint separate from execution intent. Chat responses carry `response_depth` values (`quick_box`, `structured_summary`, `decision_brief`, `execution_proposal`) so simple lists, tables, source boxes, summaries, and recommendations can stay lightweight without becoming governed work. The Interface preserves that field into chat state and uses it to keep quick answers, summaries, and decision briefs inside the normal conversation without approval controls, neutral status cards, execution summaries, or tool-chip stacks. Mutation, durable execution, risky tools, team/project creation, schedules, service mode, and self-extension still require explicit governance regardless of response depth. Proof: focused Go/protocol tests, focused `MissionControlChat.threadState` UI tests, docs/help tests, typecheck, max-lines, diff check, service status/health, and headed Chromium `soma-output-workspace.spec.ts`.
 
+- `ACTIVE` dashboard persisted-state robustness slice: browser-persisted Soma chat is now treated as untrusted upgrade/session input. The Interface sanitizes legacy chat messages before rehydration, drops invalid roles, coerces text-like content, normalizes legacy proposals, validates response-depth/status enums, and makes execution-summary/proposal/detail lists tolerate duplicate or malformed values without React key warnings. Proof in progress: focused persistence/dashboard Vitest, typecheck, max-lines, diff check, and Chromium `dashboard-persisted-chat-regression.spec.ts`; broader live dashboard proof follows before commit.
+
 ## Documentation Map
 
 | Topic | Canonical Location |

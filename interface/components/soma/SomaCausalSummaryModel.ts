@@ -51,7 +51,8 @@ export function intentText(intent: ExecutionSummaryData["intent"]) {
 export function understandingText(understanding: ExecutionSummaryData["understanding"]) {
   if (!understanding) return null;
   if (typeof understanding === "string") return compactText(understanding);
-  const assumptions = understanding.assumptions?.filter(Boolean).join("; ");
+  const assumptionValues = Array.isArray(understanding.assumptions) ? understanding.assumptions : [];
+  const assumptions = assumptionValues.filter(Boolean).join("; ");
   const summary = compactText(understanding.summary);
   return [summary, assumptions ? `Assumptions: ${assumptions}` : null].filter(Boolean).join(" ") || null;
 }
@@ -59,7 +60,7 @@ export function understandingText(understanding: ExecutionSummaryData["understan
 export function asItems(value: ExecutionSummaryData["outputs"]): SummaryValue[] {
   if (!value) return [];
   if (typeof value === "string") return [value];
-  return value;
+  return Array.isArray(value) ? value : [];
 }
 
 export function linkLabel(link: string | ExecutionSummaryLink): string | null {
@@ -96,10 +97,8 @@ export function capabilityText(capabilityUse: ExecutionSummaryData["capability_u
     ["Tools", source.tools],
     ["Used", source.used],
   ].flatMap(([label, values]) => {
-    const text = (values as Array<string | ExecutionSummaryItem> | undefined)
-      ?.map(itemText)
-      .filter(Boolean)
-      .join(", ");
+    const items = Array.isArray(values) ? values as Array<string | ExecutionSummaryItem> : [];
+    const text = items.map(itemText).filter(Boolean).join(", ");
     return text ? [`${label}: ${text}`] : [];
   });
 

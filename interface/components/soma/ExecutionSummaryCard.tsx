@@ -54,9 +54,9 @@ function SummaryRow({
 function ChipList({ values }: { values: string[] }) {
     return (
         <div className="flex flex-wrap gap-1">
-            {values.map((value) => (
+            {values.map((value, index) => (
                 <span
-                    key={value}
+                    key={`${value}-${index}`}
                     className="max-w-full truncate rounded border border-cortex-info/20 bg-cortex-info/10 px-1.5 py-0.5 text-[9px] font-mono text-cortex-info"
                     title={value}
                 >
@@ -187,14 +187,14 @@ export default function ExecutionSummaryCard({
                             {intent.length > 0 && (
                                 <SummaryRow icon={<Route className="h-3.5 w-3.5" />} label="Request">
                                     <div className="space-y-1">
-                                        {intent.map((line) => <div key={line}>{line}</div>)}
+                                        {intent.map((line, index) => <div key={`${line}-${index}`}>{line}</div>)}
                                     </div>
                                 </SummaryRow>
                             )}
                             {understanding.length > 0 && (
                                 <SummaryRow icon={<Sparkles className="h-3.5 w-3.5" />} label="Understood">
                                     <div className="space-y-1">
-                                        {understanding.map((line) => <div key={line}>{line}</div>)}
+                                        {understanding.map((line, index) => <div key={`${line}-${index}`}>{line}</div>)}
                                     </div>
                                 </SummaryRow>
                             )}
@@ -209,8 +209,8 @@ export default function ExecutionSummaryCard({
                             {capabilities.length > 0 && (
                                 <SummaryRow icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="Used">
                                     <div className="space-y-1.5">
-                                        {capabilities.map((group) => (
-                                            <div key={group.label} className="flex flex-wrap items-center gap-1.5">
+                                    {capabilities.map((group, index) => (
+                                            <div key={`${group.label}-${index}`} className="flex flex-wrap items-center gap-1.5">
                                                 <span className="text-[9px] font-mono uppercase text-cortex-text-muted">{group.label}</span>
                                                 <ChipList values={group.values} />
                                             </div>
@@ -221,21 +221,21 @@ export default function ExecutionSummaryCard({
                             {searchSources.length > 0 && (
                                 <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Source">
                                     <div className="space-y-1">
-                                        {searchSources.map((line) => <div key={line}>{line}</div>)}
+                                        {searchSources.map((line, index) => <div key={`${line}-${index}`}>{line}</div>)}
                                     </div>
                                 </SummaryRow>
                             )}
                             {proofs.length > 0 && (
                                 <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Evidence">
                                     <div className="flex flex-wrap gap-x-3 gap-y-1">
-                                        {proofs.map((proof) => (
+                                        {proofs.map((proof, index) => (
                                             proof.url ? (
-                                                <a key={`${proof.text}-${proof.url}`} href={proof.url} className="inline-flex items-center gap-1 text-cortex-primary hover:underline">
+                                                <a key={`${proof.text}-${proof.url}-${index}`} href={proof.url} className="inline-flex items-center gap-1 text-cortex-primary hover:underline">
                                                     {proof.text}
                                                     <ExternalLink className="h-3 w-3" />
                                                 </a>
                                             ) : (
-                                                <span key={proof.text}>{proof.text}</span>
+                                                <span key={`${proof.text}-${index}`}>{proof.text}</span>
                                             )
                                         ))}
                                     </div>
@@ -249,7 +249,7 @@ export default function ExecutionSummaryCard({
                             {degradation.length > 0 && (
                                 <SummaryRow icon={<RotateCcw className="h-3.5 w-3.5" />} label="Degraded">
                                     <div className="space-y-1">
-                                        {degradation.map((line) => <div key={line}>{line}</div>)}
+                                        {degradation.map((line, index) => <div key={`${line}-${index}`}>{line}</div>)}
                                     </div>
                                 </SummaryRow>
                             )}

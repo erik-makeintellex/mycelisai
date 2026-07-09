@@ -41,8 +41,8 @@ export default function ProposedActionDetails({
                 <div className="flex items-start gap-4">
                     <span className="text-cortex-text-muted w-16 pt-0.5">Can use</span>
                     <div className="flex flex-wrap gap-1">
-                        {proposal.tools.map((t) => (
-                            <span key={t} className="px-1.5 py-0.5 rounded bg-cortex-primary/10 text-cortex-primary text-[10px] border border-cortex-primary/20">
+                        {proposal.tools.map((t, index) => (
+                            <span key={`${t}-${index}`} className="px-1.5 py-0.5 rounded bg-cortex-primary/10 text-cortex-primary text-[10px] border border-cortex-primary/20">
                                 {toolLabel(t)}
                             </span>
                         ))}
@@ -65,9 +65,9 @@ export default function ProposedActionDetails({
                 <div className="flex items-start gap-4">
                     <span className="text-cortex-text-muted w-16 pt-0.5">Allowed</span>
                     <div className="flex flex-wrap gap-1">
-                        {capabilityIDs.map((capability) => (
+                        {capabilityIDs.map((capability, index) => (
                             <span
-                                key={capability}
+                                key={`${capability}-${index}`}
                                 className="px-1.5 py-0.5 rounded border text-[10px] bg-cortex-bg/60 text-cortex-text-main border-cortex-border"
                             >
                                 {humanizeLabel(capability)}

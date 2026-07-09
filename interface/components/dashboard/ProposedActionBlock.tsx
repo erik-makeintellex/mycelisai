@@ -151,8 +151,8 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                         </div>
                     ) : null}
                     <ul className="space-y-1.5 text-sm leading-6 text-cortex-text-main">
-                        {planBullets.map((item) => (
-                            <li key={item} className="flex gap-2">
+                        {planBullets.map((item, index) => (
+                            <li key={`${item}-${index}`} className="flex gap-2">
                                 <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-cortex-primary" />
                                 <span>{item}</span>
                             </li>
@@ -188,9 +188,9 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                             {visibleResources.length > 0 || proposal.external_data_use ? (
                                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
                                     <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Will touch</span>
-                                    {visibleResources.map((resource) => (
+                                    {visibleResources.map((resource, index) => (
                                         <span
-                                            key={resource}
+                                            key={`${resource}-${index}`}
                                             className="rounded border border-cortex-border bg-cortex-bg/70 px-2 py-1 text-xs text-cortex-text-main"
                                         >
                                             {resource}

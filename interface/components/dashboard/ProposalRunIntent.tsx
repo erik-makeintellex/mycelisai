@@ -81,8 +81,8 @@ export default function ProposalRunIntent({ proposal }: { proposal: ProposalData
                 </p>
                 {subjects.length > 0 ? (
                     <div className="mt-2 flex flex-wrap gap-1">
-                        {subjects.slice(0, 3).map((subject) => (
-                            <span key={subject} className="rounded border border-cortex-primary/20 bg-cortex-primary/10 px-1.5 py-0.5 text-[9px] font-mono text-cortex-primary">
+                        {subjects.slice(0, 3).map((subject, index) => (
+                            <span key={`${subject}-${index}`} className="rounded border border-cortex-primary/20 bg-cortex-primary/10 px-1.5 py-0.5 text-[9px] font-mono text-cortex-primary">
                                 {subject}
                             </span>
                         ))}

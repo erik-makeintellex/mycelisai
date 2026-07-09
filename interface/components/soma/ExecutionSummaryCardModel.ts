@@ -1,10 +1,4 @@
-import type {
-    ChatArtifactRef,
-    ExecutionSummaryCapabilityUse,
-    ExecutionSummaryData,
-    ExecutionSummaryItem,
-    ExecutionSummaryLink,
-} from "@/store/useCortexStore";
+import type { ChatArtifactRef, ExecutionSummaryCapabilityUse, ExecutionSummaryData, ExecutionSummaryItem, ExecutionSummaryLink } from "@/store/useCortexStore";
 import { mediaDependencyRecovery, type DegradationShape } from "./ExecutionSummaryRecoveryModel";
 import { recoveryTrustLines } from "@/lib/deliveryRuntimeLanguage";
 import { projectPackageOpenPath } from "@/lib/outputPackageModel";
@@ -99,16 +93,17 @@ export function intentLines(intent: ExecutionSummaryData["intent"]): string[] {
 export function understandingLines(understanding: ExecutionSummaryData["understanding"]): string[] {
     if (!understanding) return [];
     if (typeof understanding === "string") return compactText(understanding) ? [understanding] : [];
+    const assumptions = Array.isArray(understanding.assumptions) ? understanding.assumptions : [];
     return [
         compactText(understanding.summary),
-        ...(understanding.assumptions ?? []).map((item) => `Assumption: ${item}`),
+        ...assumptions.map((item) => `Assumption: ${item}`),
     ].filter(Boolean) as string[];
 }
 
 export function asItems(value: ExecutionSummaryData["outputs"]): SummaryValue[] {
     if (!value) return [];
     if (typeof value === "string") return [value];
-    return value;
+    return Array.isArray(value) ? value : [];
 }
 
 export function linkLabel(link: string | ExecutionSummaryLink): string | null {
@@ -162,7 +157,10 @@ export function capabilityGroups(capabilityUse: ExecutionSummaryData["capability
     ];
 
     for (const [key, label] of candidates) {
-        const values = source[key]?.map(itemText).filter((value): value is string => Boolean(value)).map(toolLabel);
+        const candidate = source[key];
+        const values = Array.isArray(candidate)
+            ? candidate.map(itemText).filter((value): value is string => Boolean(value)).map(toolLabel)
+            : [];
         if (values?.length) groups.push({ label, values });
     }
     return groups;

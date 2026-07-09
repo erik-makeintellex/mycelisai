@@ -140,13 +140,13 @@ export default function ExecutionSummaryCompactCard({
               {proofs.length > 0 ? (
                 <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Evidence">
                   <div className="flex flex-wrap gap-x-3 gap-y-1">
-                    {proofs.map((proof) => (
+                    {proofs.map((proof, index) => (
                       proof.url ? (
-                        <a key={`${proof.text}-${proof.url}`} href={proof.url} className="inline-flex items-center gap-1 text-cortex-primary hover:underline">
+                        <a key={`${proof.text}-${proof.url}-${index}`} href={proof.url} className="inline-flex items-center gap-1 text-cortex-primary hover:underline">
                           {proof.text}
                           <ExternalLink className="h-3 w-3" />
                         </a>
-                      ) : <span key={proof.text}>{proof.text}</span>
+                      ) : <span key={`${proof.text}-${index}`}>{proof.text}</span>
                     ))}
                   </div>
                 </SummaryRow>
@@ -155,7 +155,7 @@ export default function ExecutionSummaryCompactCard({
               {degradation.length > 0 ? (
                 <SummaryRow icon={<RotateCcw className="h-3.5 w-3.5" />} label="Blocked">
                   <div className="space-y-1">
-                    {degradation.map((line) => <div key={line}>{line}</div>)}
+                    {degradation.map((line, index) => <div key={`${line}-${index}`}>{line}</div>)}
                   </div>
                 </SummaryRow>
               ) : null}
