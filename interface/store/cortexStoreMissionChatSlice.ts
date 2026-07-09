@@ -126,6 +126,7 @@ export function createCortexMissionChatSlice(
                         ui_response_state: envelope.payload?.ui_response_state ?? envelope.ui_response_state,
                         template_id: envelope.template_id || 'chat-to-answer',
                         mode: envelope.mode || 'answer',
+                        response_depth: envelope.payload?.response_depth ?? envelope.response_depth,
                         provenance: envelope.payload?.provenance,
                         execution_summary: envelope.payload?.execution_summary,
                         thread_events: envelope.payload?.thread_events,

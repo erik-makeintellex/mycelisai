@@ -42,6 +42,8 @@ Soma should infer the outcome, audience, output form, constraints, source bounda
 
 Soma should choose the lightest useful answer depth for the ask. A request for a quick list, links, a table, a summary, or a recommendation changes how much detail Soma returns; it does not mean work should run. If you want more, ask Soma to expand, turn the answer into a brief, or turn it into governed work.
 
+Lightweight answers stay inside the normal conversation. A quick table, summary, or decision brief should not add approval buttons, tool-chip stacks, or run receipts unless Soma is actually proposing or reporting work. Ask `turn this into work` when you want Soma to move from answer to execution.
+
 Before creating teams, enabling MCP servers, assigning tools, changing capability bindings, using private services, or storing recurring behavior, Soma should:
 
 1. Review the latest request and relevant prior context.
@@ -77,7 +79,7 @@ Soma replies may also show small action-state cards inside the thread. These com
 
 Soma responses can include:
 
-1. **Primary answer**: markdown text, code blocks, links, and tables. Table-like data should render as a real table, not as pasted aligned text.
+1. **Primary answer**: markdown text, code blocks, links, and tables. Table-like data should render as a real table, not as pasted aligned text. Compact labels such as `Quick answer`, `Summary`, or `Decision brief` may appear only to clarify answer depth.
 2. **Inline generated outputs**: images, audio, video, code, charts, briefs, data, documents, and media previews.
 3. **Output package**: a retained file/app/package with `Open file`, `Open folder`, proof, and Resources re-entry.
 4. **Proposal block**: a compact `Approve this?` or `Start this?` conversational pause for actions that execute or change something.

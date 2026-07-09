@@ -5,18 +5,17 @@ import {
     sourceNodeLabel,
     trustBadge,
     trustTooltip,
-    toolLabel,
     brainBadge,
     MODE_LABELS,
-    toolOrigin,
 } from "@/lib/labels";
 import { useCortexStore, type ChatConsultation, type ChatMessage } from "@/store/useCortexStore";
 import InlineArtifact from "./InlineArtifact";
-import MissionControlMarkdown from "./MissionControlMarkdown";
 import ProposedActionBlock from "./ProposedActionBlock";
 import ExecutionSummaryCard from "@/components/soma/ExecutionSummaryCard";
 import ExecutionSummaryReceipt, { shouldUseExecutionSummaryReceipt } from "@/components/soma/ExecutionSummaryReceipt";
 import MissionControlThreadStateCard from "./MissionControlThreadStateCard";
+import MissionControlResponseDepth from "./MissionControlResponseDepth";
+import MissionControlToolsUsed from "./MissionControlToolsUsed";
 import {
     artifactResultSummary,
     askClassBadge,
@@ -121,31 +120,15 @@ function MessageMeta({ msg, assistantName }: { msg: ChatMessage; assistantName: 
     );
 }
 
-function ToolsUsed({ tools }: { tools?: string[] }) {
-    if (!tools?.length) return null;
-    return (
-        <div className="flex flex-wrap gap-1 px-1 mt-0.5">
-            {tools.map((tool) => {
-                const origin = toolOrigin(tool);
-                return (
-                    <span
-                        key={tool}
-                        className={`text-[7px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 ${
-                            origin === "external"
-                                ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
-                                : origin === "sandboxed"
-                                ? "bg-cortex-success/10 text-cortex-success border-cortex-success/20"
-                                : "bg-cortex-primary/10 text-cortex-primary border-cortex-primary/20"
-                        }`}
-                        title={tool}
-                    >
-                        {toolLabel(tool)}
-                        {origin === "external" && <span className="text-[6px] uppercase font-bold opacity-80">Ext</span>}
-                        {origin === "sandboxed" && <span className="text-[6px] uppercase font-bold opacity-80">Box</span>}
-                    </span>
-                );
-            })}
-        </div>
+function isAnswerOnlyDepth(msg: ChatMessage) {
+    return Boolean(
+        !msg.proposal
+        && msg.mode !== "execution_result"
+        && (
+            msg.response_depth === "quick_box"
+            || msg.response_depth === "structured_summary"
+            || msg.response_depth === "decision_brief"
+        ),
     );
 }
 
@@ -161,16 +144,25 @@ export default function MissionControlMessageBubble({
     const assistantName = useCortexStore((s) => s.assistantName);
     const artifactSummary = artifactResultSummary(msg.artifacts);
     const consultationSummary = consultationResultSummary(msg.consultations);
-    const useReceipt = compactResult && msg.execution_summary
+    const answerOnlyDepth = isAnswerOnlyDepth(msg);
+    const showExecutionSummary = Boolean(
+        msg.execution_summary
+        && !answerOnlyDepth
+        && (
+            msg.mode === "execution_result"
+            || msg.run_id
+            || msg.artifacts?.length
+            || msg.ask_class === "execution_blocker"
+        ),
+    );
+    const showAnswerExtras = !answerOnlyDepth;
+    const useReceipt = compactResult && showExecutionSummary && msg.execution_summary
         ? shouldUseExecutionSummaryReceipt({
             summary: msg.execution_summary,
             runId: msg.run_id,
             artifacts: msg.artifacts,
         })
         : false;
-    const assistantContentClass = compactResult && !isUser
-        ? "max-h-[420px] overflow-y-auto scrollbar-thin scrollbar-thumb-cortex-border"
-        : "";
 
     if (msg.role === "system") {
         return (
@@ -188,7 +180,7 @@ export default function MissionControlMessageBubble({
                         </span>
                     )}
                     <MissionControlThreadStateCard msg={msg} />
-                    {msg.execution_summary && (
+                    {showExecutionSummary && msg.execution_summary && (
                         <div className="w-full">
                             {useReceipt ? (
                                 <ExecutionSummaryReceipt
@@ -220,22 +212,19 @@ export default function MissionControlMessageBubble({
             )}
             <div className="max-w-[85%] flex flex-col gap-0.5">
                 {!isUser && <MessageMeta msg={msg} assistantName={assistantName} />}
-                <div className={`px-3 py-2 rounded-lg text-sm font-mono leading-relaxed ${assistantContentClass} ${
-                    isBroadcast
-                        ? "bg-cortex-warning/10 text-cortex-text-main border border-cortex-warning/30"
-                        : isUser
-                        ? "bg-cortex-bg text-cortex-text-main border border-cortex-border"
-                        : "bg-cortex-info/5 text-cortex-text-main border border-cortex-info/20"
-                }`}>
-                    {isUser ? msg.content : <MissionControlMarkdown content={msg.content} />}
-                </div>
-                {!isUser && <MissionControlThreadStateCard msg={msg} />}
+                <MissionControlResponseDepth
+                    msg={msg}
+                    isBroadcast={isBroadcast}
+                    isUser={isUser}
+                    compactResult={compactResult}
+                />
+                {!isUser && showAnswerExtras && <MissionControlThreadStateCard msg={msg} />}
                 {!isUser && msg.consultations?.length ? (
                     <div className="px-3 pb-2">
                         <DelegationTrace consultations={msg.consultations} assistantName={assistantName} />
                     </div>
                 ) : null}
-                {!isUser && msg.execution_summary && (
+                {!isUser && showExecutionSummary && msg.execution_summary && (
                     useReceipt ? (
                         <ExecutionSummaryReceipt
                             summary={msg.execution_summary}
@@ -252,7 +241,7 @@ export default function MissionControlMessageBubble({
                     )
                 )}
                 {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}
-                {!isUser && artifactSummary && (
+                {!isUser && showAnswerExtras && artifactSummary && (
                     <div className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/5 px-3 py-2">
                         <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-primary">
                             Returned output
@@ -260,7 +249,7 @@ export default function MissionControlMessageBubble({
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">{artifactSummary}</p>
                     </div>
                 )}
-                {!isUser && msg.ask_class === "specialist_consultation" && consultationSummary && (
+                {!isUser && showAnswerExtras && msg.ask_class === "specialist_consultation" && consultationSummary && (
                     <div className="rounded-lg border border-cortex-warning/20 bg-cortex-warning/5 px-3 py-2">
                         <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-warning">
                             Specialist context
@@ -268,13 +257,13 @@ export default function MissionControlMessageBubble({
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">{consultationSummary}</p>
                     </div>
                 )}
-                {!isUser && msg.artifacts?.length ? (
+                {!isUser && showAnswerExtras && msg.artifacts?.length ? (
                     <div className="space-y-1">
                         {msg.artifacts.map((artifact, i) => <InlineArtifact key={artifact.id || `art-${i}`} artifact={artifact} />)}
                     </div>
                 ) : null}
-                {!isUser && !msg.proposal && <ToolsUsed tools={msg.tools_used} />}
-                {!isUser && msg.tools_used && (msg.tools_used.includes("recall") || msg.tools_used.includes("search_memory")) && (
+                {!isUser && showAnswerExtras && !msg.proposal && <MissionControlToolsUsed tools={msg.tools_used} />}
+                {!isUser && showAnswerExtras && msg.tools_used && (msg.tools_used.includes("recall") || msg.tools_used.includes("search_memory")) && (
                     <div className="flex items-center gap-1 px-1 mt-0.5">
                         <span className="w-1 h-1 rounded-full bg-cortex-primary" />
                         <span className="text-[8px] font-mono text-cortex-primary/70 italic">recalled from memory</span>

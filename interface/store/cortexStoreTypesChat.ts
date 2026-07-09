@@ -33,6 +33,7 @@ export type AskClass =
 
 export type TemplateID = 'chat-to-answer' | 'chat-to-proposal';
 export type ExecutionMode = 'answer' | 'proposal' | 'execution_result' | 'blocker';
+export type ResponseDepth = 'quick_box' | 'structured_summary' | 'decision_brief' | 'execution_proposal';
 export type ProposalLifecycleStatus =
     | 'active'
     | 'cancelled'
@@ -148,6 +149,7 @@ export interface ChatMessage {
     ask_class?: AskClass;
     template_id?: TemplateID;
     mode?: ExecutionMode;
+    response_depth?: ResponseDepth;
     ui_response_state?: UIResponseStateProjection;
     provenance?: AnswerProvenance;
     proposal?: ProposalData;
@@ -177,9 +179,11 @@ export interface CTSChatEnvelope {
     trust_score: number;
     template_id?: TemplateID;
     mode?: ExecutionMode;
+    response_depth?: ResponseDepth;
     ui_response_state?: UIResponseStateProjection;
     payload: {
         text: string;
+        response_depth?: ResponseDepth;
         ask_class?: AskClass;
         consultations?: ChatConsultation[];
         tools_used?: string[];

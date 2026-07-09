@@ -1,7 +1,7 @@
 # Mycelis V8 - Active Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-07-08
+> Updated: 2026-07-09
 > Canonical active scoreboard for V8 delivery. Historical V7/V8 migration evidence now lives in Git history; active architecture truth lives in `docs/architecture-library/MYCELIS_CANONICAL_PRD.md`.
 
 ## Current Checkpoint
@@ -419,7 +419,7 @@ Known non-blocking warnings:
 
 - `IN_REVIEW` complex application delivery planning slice: compact trusted Soma receipts already treat `project_package` outputs as app/package deliverables, and Soma now plans complex team/app asks as team creation plus retained evocation, research/council handoff, and delegated implementation work with a `project_package` result contract. Next runtime slice is correlated async completion: team result signals should close the approved run/work item with package output, validation proof, and repair-through-Soma when QA finds defects.
 
-- `IN_REVIEW` adaptive output depth slice: Soma now treats answer density as a first-class runtime/UI hint separate from execution intent. Chat responses carry `response_depth` values (`quick_box`, `structured_summary`, `decision_brief`, `execution_proposal`) so simple lists, tables, source boxes, summaries, and recommendations can stay lightweight without becoming governed work. Mutation, durable execution, risky tools, team/project creation, schedules, service mode, and self-extension still require explicit governance regardless of response depth. Proof target: focused chat/protocol tests plus future compact thread rendering proof for Quick Result, Summary, Decision Brief, and Proposal.
+- `IN_REVIEW` adaptive output depth slice: Soma now treats answer density as a first-class runtime/UI hint separate from execution intent. Chat responses carry `response_depth` values (`quick_box`, `structured_summary`, `decision_brief`, `execution_proposal`) so simple lists, tables, source boxes, summaries, and recommendations can stay lightweight without becoming governed work. The Interface preserves that field into chat state and uses it to keep quick answers, summaries, and decision briefs inside the normal conversation without approval controls, neutral status cards, execution summaries, or tool-chip stacks. Mutation, durable execution, risky tools, team/project creation, schedules, service mode, and self-extension still require explicit governance regardless of response depth. Proof: focused Go/protocol tests, focused `MissionControlChat.threadState` UI tests, docs/help tests, typecheck, max-lines, diff check, service status/health, and headed Chromium `soma-output-workspace.spec.ts`.
 
 ## Documentation Map
 
