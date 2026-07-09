@@ -292,9 +292,7 @@ export default function MCPToolRegistry() {
                     </div>
                 )}
 
-                {activeTab === "library" && (
-                    <MCPLibraryBrowserBody onInstalled={handleInstalled} initialSearchQuery={librarySearchQuery} />
-                )}
+                {activeTab === "library" && <MCPLibraryBrowserBody onInstalled={handleInstalled} initialSearchQuery={librarySearchQuery} />}
             </div>
         </div>
     );

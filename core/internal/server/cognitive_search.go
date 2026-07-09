@@ -145,6 +145,8 @@ func (s *AdminServer) respondDirectSearchAnswer(w http.ResponseWriter, r *http.R
 
 func buildDirectSearchAnswer(resp searchcap.Response, err error) string {
 	notice := directSearchNotice(resp)
+	warning, _ := resp.Metadata["scope_warning"].(string)
+	warning = strings.TrimSpace(warning)
 	if err != nil {
 		return strings.Join([]string{notice, fmt.Sprintf("Blocked: search failed before results were available: %v", err)}, "\n")
 	}
@@ -164,9 +166,17 @@ func buildDirectSearchAnswer(resp searchcap.Response, err error) string {
 		return strings.Join(lines, "\n")
 	}
 	if len(resp.Results) == 0 {
-		return strings.Join([]string{notice, fmt.Sprintf("No matching results found for %q in %s.", resp.Query, searchResultBoundaryLabel(resp))}, "\n")
+		lines := []string{notice}
+		if warning != "" {
+			lines = append(lines, "Coverage warning: "+warning)
+		}
+		lines = append(lines, fmt.Sprintf("No matching results found for %q in %s.", resp.Query, searchResultBoundaryLabel(resp)))
+		return strings.Join(lines, "\n")
 	}
 	lines := []string{notice, fmt.Sprintf("Results for %q:", resp.Query)}
+	if warning != "" {
+		lines = append(lines, "Coverage warning: "+warning)
+	}
 	for i, result := range resp.Results {
 		title := strings.TrimSpace(result.Title)
 		if title == "" {
@@ -212,6 +222,16 @@ func directSearchNotice(resp searchcap.Response) string {
 		return "Notice: Soma Search checked approved local data and mounted sources."
 	}
 	if sourceScope == "all" {
+		coverage, _ := resp.Metadata["source_coverage"].(string)
+		if coverage == "local_sources_and_web" {
+			return "Notice: Soma Search checked approved local data, mounted sources, and the public web."
+		}
+		if coverage == "web_only" {
+			return "Notice: Soma Search checked the public web; approved local data and mounted-source coverage was unavailable for this mixed search."
+		}
+		if coverage == "local_sources_only" {
+			return "Notice: Soma Search checked approved local data and mounted sources; public web coverage was unavailable for this mixed search."
+		}
 		return "Notice: Soma Search was asked to check local and web sources; verify the source boundary before relying on the result."
 	}
 	return "Notice: Soma Search checked the public web. External results are leads; verify before relying."

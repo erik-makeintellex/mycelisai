@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/mycelis/core/internal/searchcap"
@@ -54,6 +55,44 @@ func TestHandleSearchInfersPublicWebScopeWhenOmitted(t *testing.T) {
 	metadata := data["metadata"].(map[string]any)
 	if metadata["source_scope"] != "web" {
 		t.Fatalf("metadata = %+v, want inferred web scope", metadata)
+	}
+}
+
+func TestHandleSearchAllScopeReportsCoverageMetadata(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/search" {
+			t.Fatalf("path = %q, want /search", r.URL.Path)
+		}
+		if r.URL.Query().Get("q") != "internal and public" || r.URL.Query().Get("format") != "json" {
+			t.Fatalf("query = %q", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"results":[{"title":"Public result","url":"https://example.test/public","content":"Public snippet"}]}`))
+	}))
+	t.Cleanup(upstream.Close)
+
+	s := newTestServer(func(s *AdminServer) {
+		s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderSearXNG, SearXNGEndpoint: upstream.URL}, nil, nil)
+	})
+	mux := setupMux(t, "POST /api/v1/search", s.HandleSearch)
+	rr := doRequest(t, mux, http.MethodPost, "/api/v1/search", `{"query":"internal and public","source_scope":"all"}`)
+
+	assertStatus(t, rr, http.StatusOK)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["ok"] != true {
+		t.Fatalf("ok = %v, want true", resp["ok"])
+	}
+	data := resp["data"].(map[string]any)
+	if data["status"] != "ok" || data["count"].(float64) != 1 {
+		t.Fatalf("data = %+v, want one partial result", data)
+	}
+	metadata := data["metadata"].(map[string]any)
+	if metadata["source_scope"] != "all" || metadata["partial_source_scope"] != "web_only" || metadata["missing_source_scope"] != "local_sources" {
+		t.Fatalf("metadata = %+v, want web-only partial coverage", metadata)
+	}
+	if metadata["source_coverage"] != "web_only" {
+		t.Fatalf("metadata = %+v, want source_coverage=web_only", metadata)
 	}
 }
 

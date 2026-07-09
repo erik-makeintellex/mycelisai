@@ -122,6 +122,7 @@ Search behavior:
 - freshness-oriented prompts should call the configured Mycelis `web_search` capability before falling back to MCP-specific guidance
 - `builtin_web` is the default token-free provider for ordinary web search
 - `local_sources` lets Soma search governed Mycelis context when the user asks for local, retained, internal, mounted, or shared sources
+- mixed local-plus-web prompts should search both approved local/mounted sources and the configured public-web path when both are available; if only one boundary is available, Soma should keep the useful result but show a coverage warning
 - if semantic embeddings are unavailable, `local_sources` should fall back to bounded text search over retained Mycelis context
 - when Soma uses `web_search`, the Operator trust package should show a source boundary such as `Search source: Public web` for public research or `Search source: Local Mycelis context` for retained/local data
 - the supported Compose path can use `searxng` with `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080`

@@ -103,6 +103,9 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 	if routed, handled, err := s.routeSelectedSource(ctx, req, resp); handled || err != nil {
 		return routed, err
 	}
+	if normalizeSourceScope(req.SourceScope) == "all" && s.cfg.Provider != ProviderLocalSources {
+		return s.searchAllSources(ctx, req, resp)
+	}
 	if normalizeSourceScope(req.SourceScope) == "local_sources" && s.cfg.Provider != ProviderLocalSources {
 		resp.Provider = ProviderLocalSources
 		return s.searchLocalSources(ctx, req, resp)

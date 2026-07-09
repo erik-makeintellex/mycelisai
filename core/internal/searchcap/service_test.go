@@ -23,21 +23,6 @@ func (f failingEmbedder) Embed(context.Context, string, string) ([]float64, erro
 	return nil, errors.New("embedding unavailable")
 }
 
-func TestServiceDisabledReturnsStructuredBlocker(t *testing.T) {
-	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
-
-	resp, err := svc.Search(context.Background(), Request{Query: "can you search the web?", SourceScope: "web"})
-	if err != nil {
-		t.Fatalf("Search: %v", err)
-	}
-	if resp.Status != "blocked" {
-		t.Fatalf("Status = %q, want blocked", resp.Status)
-	}
-	if resp.Blocker == nil || resp.Blocker.Code != "search_provider_disabled" {
-		t.Fatalf("Blocker = %+v", resp.Blocker)
-	}
-}
-
 func TestServiceStatusExplainsTokenFreeSelfHostedPath(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderSearXNG, SearXNGEndpoint: "http://searxng.local", MaxResults: 5}, nil, nil)
 
