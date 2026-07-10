@@ -1,6 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 import { fulfillJSON, type ArtifactRecord, type GroupRecord } from "./finalization-browser-package";
-import { mockOrganizationWorkspace, type RouteResponse } from "./soma-ui-testing";
+import { answerEnvelope, lastUserMessage, mockOrganizationWorkspace, type RouteResponse } from "./soma-ui-testing";
 
 type BrowserFetchOptions = { method?: string; headers?: Record<string, string>; body?: string };
 
@@ -170,7 +170,11 @@ function artifactRecord(): ArtifactRecord {
 
 export async function installTrustedOutcomeJourneyMocks(page: Page) {
   const j = trustedJourney;
-  await mockOrganizationWorkspace(page, () => proposalEnvelope());
+  await mockOrganizationWorkspace(page, (requestBody) => {
+    const message = lastUserMessage(requestBody);
+    if (message.includes(`Use delivered output "${j.packageTitle}" as context.`)) return answerEnvelope("Inspect the launch page first, then review PROOF.md and recovery notes before asking Soma for changes.", { askClass: "output_continuation" });
+    return proposalEnvelope();
+  });
   await page.route("**/api/v1/services/status", ok({ data: [{ name: "core", status: "online" }] }));
   await page.route("**/api/v1/intent/confirm-action", ok({
     data: {
@@ -217,9 +221,7 @@ export async function installTrustedOutcomeJourneyMocks(page: Page) {
       summary: "Output package, run events, and group log reconstruct the same result.",
     },
   }));
-  await page.route(`**/api/v1/trust/execution-contracts/${j.executionContractId}`, ok({
-    data: { id: j.executionContractId, run_id: j.runId, approved: true, capability_ids: ["write_file"], output_refs: [j.entrypoint] },
-  }));
+  await page.route(`**/api/v1/trust/execution-contracts/${j.executionContractId}`, ok({ data: { id: j.executionContractId, run_id: j.runId, approved: true, capability_ids: ["write_file"], output_refs: [j.entrypoint] } }));
 
   await page.route(/\/api\/v1\/runs(?:\?.*)?$/, ok({ data: [{ id: j.runId, status: "completed", title: "Trusted Outcome Kit run" }] }));
   await page.route(`**/api/v1/runs/${j.runId}`, ok({

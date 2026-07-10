@@ -45,6 +45,8 @@ export function outputWorkbenchDigest({
       text: primaryOutput.text,
       url: primaryOutput.url,
       ...(storagePath ? { storagePath } : {}),
+      proofArtifactId: primaryOutput.proofArtifactId ?? null,
+      replyReference: storagePath ?? primaryOutput.url ?? null,
       count: outputs.length + packages.length,
     };
   }
@@ -141,7 +143,7 @@ export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkben
             openLabel={openLabel}
             folderLabel="Open folder"
           />
-          {digest.isProjectPackage ? (
+          {digest.replyReference || digest.url || workspacePath ? (
             <button
               type="button"
               onClick={() => requestSomaOutputContinuation({

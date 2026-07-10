@@ -45,4 +45,36 @@ describe("ExecutionSummaryReceipt", () => {
     });
     window.removeEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
   });
+
+  it("lets file deliverables continue back into Soma from the compact receipt", () => {
+    const continuation = vi.fn();
+    window.addEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
+    const summary: ExecutionSummaryData = {
+      execution: {
+        shape: "tool_execution",
+        status: "verified",
+        summary: "Created a retained launch brief.",
+      },
+      outputs: [{
+        kind: "file",
+        title: "Launch brief",
+        url: "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Flaunch%2Fbrief.md",
+        path: "workspace/generated/launch/brief.md",
+        proof_artifact_id: "proof-brief-1",
+      }],
+      proof: [{ run_id: "run-brief-1" }],
+    };
+
+    render(<ExecutionSummaryReceipt summary={summary} runId="run-brief-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Reply to Launch brief in Soma/i }));
+
+    expect(continuation).toHaveBeenCalled();
+    expect(continuation.mock.calls[0][0].detail).toMatchObject({
+      title: "Launch brief",
+      reference: "workspace/generated/launch/brief.md",
+      proof: "proof-brief-1",
+    });
+    window.removeEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
+  });
 });

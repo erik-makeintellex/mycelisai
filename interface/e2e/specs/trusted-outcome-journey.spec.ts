@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { expectProjectPackageVisible } from "../support/finalization-browser-package";
 import { clickVisibleControl } from "../support/click-visible-control";
-import { openOrganization, sendWorkspaceMessage } from "../support/soma-ui-testing";
+import { chatPlaceholder, openOrganization, sendWorkspaceMessage } from "../support/soma-ui-testing";
 import {
   apiFetch,
   installTrustedOutcomeJourneyMocks,
@@ -40,7 +40,7 @@ test.describe("Trusted Outcome Journey", () => {
     });
 
     const popupPromise = page.waitForEvent("popup", { timeout: 5_000 }).catch(() => null);
-    await clickVisibleControl(page, page.getByRole("button", { name: new RegExp(`Open file .*${j.packageTitle}`, "i") }).last());
+    await clickVisibleControl(page, page.getByRole("button", { name: new RegExp(`Open (file|app) .*${j.packageTitle}`, "i") }).last());
     const outputPage = (await popupPromise) ?? page;
     if (!outputPage.url().includes("/api/v1/workspace/files/view")) {
       await outputPage.goto(`/api/v1/workspace/files/view?path=${encodeURIComponent(j.entrypoint)}`);
@@ -92,8 +92,8 @@ test.describe("Trusted Outcome Journey", () => {
     await expect(page.getByTestId("soma-current-work-lane")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Output ready").first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("1 recovery item also needs review.")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByLabel("Latest output")).toContainText(j.packageTitle, { timeout: 15_000 });
-    await expect(page.getByRole("button", { name: new RegExp(`Open file .*${j.packageTitle}`, "i") }).last()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("soma-current-output-slot").getByLabel("Latest output")).toContainText(j.packageTitle, { timeout: 15_000 });
+    await expect(page.getByRole("button", { name: new RegExp(`Open (file|app) .*${j.packageTitle}`, "i") }).last()).toBeVisible({ timeout: 15_000 });
 
     const reviewToggle = page.getByTestId("soma-workbench-panel-toggle");
     await expect(reviewToggle).toContainText("Review output", { timeout: 15_000 });
@@ -119,6 +119,16 @@ test.describe("Trusted Outcome Journey", () => {
       entrypoint: j.entrypoint,
       folder: j.folder,
     });
+
+    await clickVisibleControl(page, page.getByRole("button", { name: new RegExp(`Reply to ${j.packageTitle} in Soma`, "i") }).last());
+    const composer = page.getByPlaceholder(chatPlaceholder);
+    await expect(composer).toHaveValue(new RegExp(`Use delivered output "${j.packageTitle}" as context\\.`));
+    await expect(composer).toHaveValue(new RegExp(`Reference: ${j.folder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.`));
+    await expect(composer).toHaveValue(/I want an update, alternate version, or follow-up generation:/);
+    await composer.fill(`${await composer.inputValue()}Summarize what I should inspect first.`);
+    await composer.press("Enter");
+    await expect(page.getByText(/Inspect the launch page first/i)).toBeVisible();
+    await expect(page.getByTestId("soma-current-output-slot").getByLabel("Latest output")).toContainText(j.packageTitle);
 
     await page.goto("/resources?tab=outputs");
     await expect(page.getByRole("heading", { name: /Resources/i })).toBeVisible();

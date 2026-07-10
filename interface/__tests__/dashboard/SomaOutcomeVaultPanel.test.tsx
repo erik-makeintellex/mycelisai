@@ -1,9 +1,12 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { SomaOutcomeVaultPanel } from "@/components/soma/SomaOutcomeVaultPanel";
+import { OUTPUT_CONTINUATION_EVENT } from "@/components/soma/outputContinuation";
 
 describe("SomaOutcomeVaultPanel", () => {
   it("renders active operations, recovery alerts, and deliverables as accessible links when targets exist", () => {
+    const continuation = vi.fn();
+    window.addEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
     render(
       <SomaOutcomeVaultPanel
         operationCount={2}
@@ -82,6 +85,13 @@ describe("SomaOutcomeVaultPanel", () => {
     expect(screen.getByText("File details")).toBeDefined();
     expect(screen.getByRole("button", { name: /Open Launch package in a new browser window/i })).toBeDefined();
     expect(screen.getByRole("button", { name: /Open local folder for Launch package at workspace\/generated\/launch/i })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: /Reply to Launch package in Soma/i }));
+    expect(continuation).toHaveBeenCalled();
+    expect(continuation.mock.calls[0][0].detail).toMatchObject({
+      title: "Launch package",
+      reference: "workspace/generated/launch",
+    });
+    window.removeEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
   });
 
   it("opens a storage-only deliverable in the workspace vault", () => {
