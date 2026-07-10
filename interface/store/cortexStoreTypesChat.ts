@@ -161,6 +161,17 @@ export interface ChatMessage {
     thread_events?: SomaThreadEvent[];
 }
 
+export interface MissionChatContinuationContext {
+    kind: 'output';
+    title: string;
+    reference?: string;
+    proof?: string;
+}
+
+export interface MissionChatSendOptions {
+    continuation_context?: MissionChatContinuationContext;
+}
+
 export interface CouncilMember {
     id: string;
     role: string;

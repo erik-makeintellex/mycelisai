@@ -25,6 +25,7 @@ import type {
     MCPTool,
     Mission,
     MissionBlueprint,
+    MissionChatSendOptions,
     MissionEvent,
     MissionProfile,
     MissionProfileCreate,
@@ -167,7 +168,7 @@ export interface CortexMissionChatContract {
     activeMode: ExecutionMode;
     activeRole: string;
     governanceMode: 'passive' | 'active' | 'strict';
-    sendMissionChat: (message: string) => Promise<void>;
+    sendMissionChat: (message: string, options?: MissionChatSendOptions) => Promise<void>;
     clearMissionChat: () => void;
     setMissionChatScope: (scope: string | null) => void;
     setCouncilTarget: (id: string) => void;

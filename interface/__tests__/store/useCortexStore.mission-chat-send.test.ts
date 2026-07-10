@@ -275,4 +275,5 @@ describe('useCortexStore mission chat send', () => {
         expect(body.team_id).toBe('team-alpha');
         expect(body.team_name).toBe('Alpha Team');
     });
+
 });

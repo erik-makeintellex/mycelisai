@@ -16,25 +16,21 @@ import (
 // The Admin agent has its full system prompt, tools, and council access.
 // No raw LLM fallback — if the swarm is offline, the endpoint returns an error.
 //
-// The full conversation history is forwarded as JSON so the admin agent can
-// maintain multi-turn context. The NATS payload is a JSON array of
-// {role, content} objects; the agent's handleDirectRequest detects JSON arrays
-// and reconstructs prior turns.
+// The full conversation history is forwarded as JSON so the admin agent can maintain context.
 func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var req struct {
-		Messages       []chatRequestMessage `json:"messages"`
-		SessionID      string               `json:"session_id,omitempty"`
-		OrganizationID string               `json:"organization_id,omitempty"`
-		TeamID         string               `json:"team_id,omitempty"`
-		TeamName       string               `json:"team_name,omitempty"`
-	}
+	var req chatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Bad JSON", http.StatusBadRequest)
+		return
+	}
+	continuationContext, err := normalizeChatContinuationContext(req.ContinuationContext)
+	if err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -92,6 +88,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, focusedTeamID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
 
 	req.Messages = prependReferentialReviewContext(req.Messages, referentialReview)
+	req.Messages = prependContinuationContext(req.Messages, continuationContext)
 	req.Messages = prependChatWorkspaceContext(
 		req.Messages,
 		s.buildChatWorkspaceContext(r.Context(), req.OrganizationID, req.TeamID, req.TeamName),
@@ -202,17 +199,18 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 			protocol.TemplateChatToProposal, "admin",
 			"Chat mutation detected",
 			attachActorIdentity(map[string]any{
-				"tools":           effectiveTools,
-				"agent_tools":     agentResult.ToolsUsed,
-				"requested_tools": requestMutationTools,
-				"actor":           "Soma",
-				"user":            auditUserLabelFromRequest(r),
-				"ask_class":       string(askContract.AskClass),
-				"action":          "proposal_generated",
-				"result_status":   "pending",
-				"approval_status": approvalStatusValue(approval),
-				"approval_reason": approvalReasonValue(approval),
-				"capability_used": strings.Join(scope.CapabilityIDs, ","),
+				"tools":                effectiveTools,
+				"agent_tools":          agentResult.ToolsUsed,
+				"requested_tools":      requestMutationTools,
+				"actor":                "Soma",
+				"user":                 auditUserLabelFromRequest(r),
+				"ask_class":            string(askContract.AskClass),
+				"action":               "proposal_generated",
+				"result_status":        "pending",
+				"approval_status":      approvalStatusValue(approval),
+				"approval_reason":      approvalReasonValue(approval),
+				"capability_used":      strings.Join(scope.CapabilityIDs, ","),
+				"continuation_context": continuationContextAuditMap(continuationContext),
 			}, r),
 		)
 
@@ -248,12 +246,13 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 			protocol.TemplateChatToAnswer, "admin",
 			"Admin chat",
 			attachActorIdentity(map[string]any{
-				"tools":         agentResult.ToolsUsed,
-				"actor":         "Soma",
-				"user":          auditUserLabelFromRequest(r),
-				"ask_class":     string(askContract.AskClass),
-				"action":        "answer_delivered",
-				"result_status": "completed",
+				"tools":                agentResult.ToolsUsed,
+				"actor":                "Soma",
+				"user":                 auditUserLabelFromRequest(r),
+				"ask_class":            string(askContract.AskClass),
+				"action":               "answer_delivered",
+				"result_status":        "completed",
+				"continuation_context": continuationContextAuditMap(continuationContext),
 			}, r),
 		)
 		chatPayload.Provenance = &protocol.AnswerProvenance{

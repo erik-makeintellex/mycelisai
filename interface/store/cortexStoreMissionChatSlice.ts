@@ -5,7 +5,12 @@ import {
     fallbackChatContent,
     isRetryableWorkspaceChatFailure,
 } from '@/store/cortexStoreChatWorkflow';
-import type { APIResponse, ChatMessage, CTSChatEnvelope } from '@/store/cortexStoreTypes';
+import type {
+    APIResponse,
+    ChatMessage,
+    CTSChatEnvelope,
+    MissionChatSendOptions,
+} from '@/store/cortexStoreTypes';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import { clearPersistedChat, loadOrCreateChatSessionId, loadPersistedChat, normalizeProposalData } from '@/store/cortexStoreUtils';
 import {
@@ -24,7 +29,7 @@ export function createCortexMissionChatSlice(
     'sendMissionChat' | 'clearMissionChat' | 'setMissionChatScope' | 'broadcastToSwarm'
 > {
     return {
-        sendMissionChat: async (message: string) => {
+        sendMissionChat: async (message: string, options?: MissionChatSendOptions) => {
             const trimmed = message.trim();
             if (!trimmed) return;
 
@@ -59,6 +64,7 @@ export function createCortexMissionChatSlice(
                             organization_id: organizationIdFromMissionChatScope(get().workspaceChatScope) ?? undefined,
                             team_id: teamContext?.id,
                             team_name: teamContext?.name,
+                            continuation_context: options?.continuation_context,
                         }),
                     });
 

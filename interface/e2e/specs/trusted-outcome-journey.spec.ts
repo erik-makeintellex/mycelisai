@@ -13,7 +13,7 @@ type Envelope<T> = { ok?: boolean; data?: T };
 test.describe("Trusted Outcome Journey", () => {
   test("proves Ask, Understand, Approve, Execute, Deliver, Trust, Recover, and Revisit", async ({ page }) => {
     const j = trustedJourney;
-    await installTrustedOutcomeJourneyMocks(page);
+    const { chatRequests } = await installTrustedOutcomeJourneyMocks(page);
 
     await openOrganization(page);
     await expect(page.getByRole("heading", { name: /Talk to Soma/i })).toBeVisible();
@@ -128,6 +128,14 @@ test.describe("Trusted Outcome Journey", () => {
     await composer.fill(`${await composer.inputValue()}Summarize what I should inspect first.`);
     await composer.press("Enter");
     await expect(page.getByText(/Inspect the launch page first/i)).toBeVisible();
+    const continuationRequest = chatRequests.find(
+      (request) => Boolean((request as { continuation_context?: unknown }).continuation_context),
+    ) as { continuation_context?: Record<string, unknown> } | undefined;
+    expect(continuationRequest?.continuation_context).toMatchObject({
+      title: j.packageTitle,
+      reference: j.folder,
+      proof: j.proofArtifactId,
+    });
     await expect(page.getByTestId("soma-current-output-slot").getByLabel("Latest output")).toContainText(j.packageTitle);
 
     await page.goto("/resources?tab=outputs");

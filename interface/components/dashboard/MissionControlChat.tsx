@@ -5,7 +5,8 @@ import { Brain, Megaphone } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import { SomaConversationThread } from "@/components/soma/SomaConversationThread";
 import { SomaIntentInput } from "@/components/soma/SomaIntentInput";
-import { useSomaOutputContinuation } from "@/components/soma/outputContinuation";
+import { outputContinuationPrompt, useSomaOutputContinuation } from "@/components/soma/outputContinuation";
+import type { MissionChatContinuationContext } from "@/store/cortexStoreTypes";
 import {
     DEFAULT_SOMA_SUGGESTIONS,
     type SomaSuggestion,
@@ -58,6 +59,7 @@ export default function MissionControlChat({
     const teamsDetail = useCortexStore((s) => s.teamsDetail);
 
     const [input, setInput] = useState("");
+    const [pendingContinuationContext, setPendingContinuationContext] = useState<MissionChatContinuationContext | null>(null);
     const [broadcastMode, setBroadcastMode] = useState(false);
     const [fetchedMembers, setFetchedMembers] = useState(false);
     const [directTarget, setDirectTarget] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export default function MissionControlChat({
     const activeSuggestions = currentTeam ? teamSuggestions(currentTeam.name) : suggestions;
     const isLoading = isMissionChatting || isBroadcasting;
     const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
-    useSomaOutputContinuation({ disabled: isLoading, inputRef, setInput });
+    useSomaOutputContinuation({ disabled: isLoading, inputRef, setInput, setContinuationContext: setPendingContinuationContext });
 
     useEffect(() => {
         setCouncilTarget("admin");
@@ -134,16 +136,26 @@ export default function MissionControlChat({
         if (!content) return;
         if (isBroadcast) {
             broadcastToSwarm(content);
+            setPendingContinuationContext(null);
         } else {
-            sendMissionChat(content);
+            sendMissionChat(content, pendingContinuationContext ? { continuation_context: pendingContinuationContext } : undefined);
+            setPendingContinuationContext(null);
         }
         setInput("");
     };
 
     const applyStarterPrompt = (prompt: string) => {
         if (isLoading) return;
+        setPendingContinuationContext(null);
         setInput(prompt);
         inputRef.current?.focus();
+    };
+
+    const updateInput = (value: string) => {
+        if (pendingContinuationContext && !value.startsWith(outputContinuationPrompt(pendingContinuationContext))) {
+            setPendingContinuationContext(null);
+        }
+        setInput(value);
     };
 
     const retryCouncilMembers = () => {
@@ -245,7 +257,7 @@ export default function MissionControlChat({
                 {simpleMode ? (
                     <SomaIntentInput
                         value={input}
-                        onChange={setInput}
+                        onChange={updateInput}
                         onSubmit={handleSubmit}
                         inputRef={inputRef}
                         autoFocus={autoFocus}
@@ -263,7 +275,7 @@ export default function MissionControlChat({
                 ) : (
                     <MissionControlAdvancedInput
                         value={input}
-                        onChange={setInput}
+                        onChange={updateInput}
                         onSubmit={handleSubmit}
                         inputRef={inputRef}
                         autoFocus={autoFocus}

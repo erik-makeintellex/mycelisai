@@ -1,4 +1,5 @@
 import { useEffect, type RefObject } from "react";
+import type { MissionChatContinuationContext } from "@/store/cortexStoreTypes";
 
 export type OutputContinuationDetail = {
   title: string;
@@ -24,14 +25,25 @@ export function requestSomaOutputContinuation(detail: OutputContinuationDetail) 
   window.dispatchEvent(new CustomEvent<OutputContinuationDetail>(OUTPUT_CONTINUATION_EVENT, { detail }));
 }
 
+export function outputContinuationContext(detail: OutputContinuationDetail): MissionChatContinuationContext {
+  return {
+    kind: "output",
+    title: detail.title.trim() || "Delivered output",
+    reference: detail.reference?.trim() || undefined,
+    proof: detail.proof?.trim() || undefined,
+  };
+}
+
 export function useSomaOutputContinuation({
   disabled,
   inputRef,
   setInput,
+  setContinuationContext,
 }: {
   disabled: boolean;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   setInput: (value: string) => void;
+  setContinuationContext?: (value: MissionChatContinuationContext) => void;
 }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -39,6 +51,7 @@ export function useSomaOutputContinuation({
       if (disabled) return;
       const detail = (event as CustomEvent<OutputContinuationDetail>).detail;
       setInput(outputContinuationPrompt(detail));
+      setContinuationContext?.(outputContinuationContext(detail));
       window.setTimeout(() => {
         const input = inputRef.current;
         input?.focus();
@@ -47,5 +60,5 @@ export function useSomaOutputContinuation({
     };
     window.addEventListener(OUTPUT_CONTINUATION_EVENT, handleContinuation);
     return () => window.removeEventListener(OUTPUT_CONTINUATION_EVENT, handleContinuation);
-  }, [disabled, inputRef, setInput]);
+  }, [disabled, inputRef, setContinuationContext, setInput]);
 }

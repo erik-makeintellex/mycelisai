@@ -38,6 +38,7 @@ export function trustedOutput() {
     retained: true,
     entrypoint: j.entrypoint,
     folder: j.folder,
+    proof_artifact_id: j.proofArtifactId,
     files: ["index.html", "README.md", "PROOF.md"],
     validation: "Opened in browser and verified with retained proof.",
   };
@@ -170,7 +171,9 @@ function artifactRecord(): ArtifactRecord {
 
 export async function installTrustedOutcomeJourneyMocks(page: Page) {
   const j = trustedJourney;
+  const chatRequests: unknown[] = [];
   await mockOrganizationWorkspace(page, (requestBody) => {
+    chatRequests.push(requestBody);
     const message = lastUserMessage(requestBody);
     if (message.includes(`Use delivered output "${j.packageTitle}" as context.`)) return answerEnvelope("Inspect the launch page first, then review PROOF.md and recovery notes before asking Soma for changes.", { askClass: "output_continuation" });
     return proposalEnvelope();
@@ -289,6 +292,7 @@ export async function installTrustedOutcomeJourneyMocks(page: Page) {
     });
   });
   await page.route("**/api/v1/workspace/files/reveal**", ok({ data: { opened: true, path: j.folder } }));
+  return { chatRequests };
 }
 
 function ok(body: Record<string, unknown>) {

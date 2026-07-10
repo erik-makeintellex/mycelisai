@@ -8,6 +8,7 @@ vi.mock('reactflow', async () => {
 });
 
 import MissionControlChat from '@/components/dashboard/MissionControlChat';
+import { outputContinuationPrompt, requestSomaOutputContinuation } from '@/components/soma/outputContinuation';
 import { useCortexStore } from '@/store/useCortexStore';
 import {
     COUNCIL_MEMBERS,
@@ -109,6 +110,44 @@ describe('MissionControlChat flow contracts', () => {
             expect(body.organization_id).toBe('org-123');
             expect(body.team_id).toBe('marketing-team');
             expect(body.team_name).toBe('Marketing');
+        });
+    });
+
+    it('submits typed continuation context when replying to delivered output', async () => {
+        mockFetch.mockImplementation(async () => okJson({
+            ok: true,
+            data: {
+                ...CTS_CHAT_RESPONSE.data,
+                meta: { ...CTS_CHAT_RESPONSE.data.meta, source_node: 'admin' },
+            },
+        }));
+
+        render(<MissionControlChat simpleMode />);
+        await settleMissionControlChat();
+
+        const detail = {
+            title: 'Trusted Outcome Kit',
+            reference: 'workspace/generated/trusted-outcome-kit',
+            proof: 'proof-artifact-trusted-outcome',
+        };
+        act(() => requestSomaOutputContinuation(detail));
+
+        const input = screen.getByRole('textbox') as HTMLTextAreaElement;
+        const prompt = outputContinuationPrompt(detail);
+        expect(input.value).toContain('Trusted Outcome Kit');
+        fireEvent.change(input, { target: { value: `${prompt}Make the launch page clearer.` } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => {
+            const chatCall = mockFetch.mock.calls.find((call: any[]) => requestUrl(call[0]).includes('/api/v1/chat'));
+            expect(chatCall).toBeDefined();
+            const body = JSON.parse(String(chatCall?.[1]?.body ?? '{}'));
+            expect(body.continuation_context).toEqual({
+                kind: 'output',
+                title: 'Trusted Outcome Kit',
+                reference: 'workspace/generated/trusted-outcome-kit',
+                proof: 'proof-artifact-trusted-outcome',
+            });
         });
     });
 
