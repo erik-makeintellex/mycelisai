@@ -27,6 +27,7 @@ export function GroupRecordFilterControls({
             value={filters.query}
             onChange={(event) => onFiltersChange({ query: event.target.value })}
             placeholder="Name, goal, team..."
+            suppressHydrationWarning
             className={`${inputClassName} mt-2`}
           />
         </label>
@@ -61,6 +62,7 @@ export function GroupRecordFilterControls({
               min={1}
               max={3650}
               value={filters.retentionDays}
+              suppressHydrationWarning
               onChange={(event) =>
                 onFiltersChange({ retentionDays: Number(event.target.value) })
               }

@@ -93,6 +93,15 @@ function RunsContent() {
 
             {/* Body */}
             <div className="max-w-2xl mx-auto px-4 py-6">
+                <div className="mb-5 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                    <h1 className="text-2xl font-semibold tracking-tight text-cortex-text-main">
+                        Run history
+                    </h1>
+                    <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
+                        Review execution proof after Soma has produced or attempted work. Start in the workspace unless you need a specific run receipt.
+                    </p>
+                </div>
+
                 {isFetchingRuns && recentRuns.length === 0 && (
                     <div className="flex items-center justify-center py-12 gap-2 text-cortex-text-muted">
                         <Loader2 className="w-4 h-4 animate-spin" />

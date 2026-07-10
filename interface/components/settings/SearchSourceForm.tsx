@@ -83,9 +83,14 @@ export function SearchSourceAddForm({
                 <SourceField label={sourceAddressLabel(draft.source_type)}>
                     <input value={draft.endpoint ?? ""} onChange={(event) => setDraft((current) => ({ ...current, endpoint: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder={sourceAddressPlaceholder(draft.source_type)} />
                 </SourceField>
-                <SourceField label="Search boundary">
-                    <input value={draft.boundary} onChange={(event) => setDraft((current) => ({ ...current, boundary: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder="Only approved company research material" />
-                </SourceField>
+                <div className="grid gap-1">
+                    <SourceField label="Search boundary">
+                        <input value={draft.boundary} onChange={(event) => setDraft((current) => ({ ...current, boundary: event.target.value }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50" placeholder="Only approved company research material" />
+                    </SourceField>
+                    <span className="text-[10px] leading-4 text-cortex-text-muted">
+                        Example: Approved public web research. This tells Soma what the source may be used for.
+                    </span>
+                </div>
                 <SourceField label="Visible to">
                     <select value={draft.scope_kind} onChange={(event) => setDraft((current) => ({ ...current, scope_kind: event.target.value, scope_ref: event.target.value === "all" ? "" : current.scope_ref }))} className="w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs text-cortex-text-main outline-none focus:border-cortex-primary/50">
                         <option value="all">Everyone</option>

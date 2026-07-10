@@ -47,9 +47,9 @@ export default function MemoryExplorer() {
         <div className="flex items-center gap-2.5">
           <Brain className="w-4 h-4 text-cortex-success" />
           <div>
-            <span className="font-mono font-bold text-sm text-cortex-text-main">
+            <h1 className="font-mono font-bold text-sm text-cortex-text-main">
               Memory
-            </span>
+            </h1>
             <span className="hidden md:inline text-[10px] font-mono text-cortex-text-muted ml-3">
               Retained knowledge and conversations from your swarm
             </span>
