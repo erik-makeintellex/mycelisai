@@ -122,10 +122,10 @@ test.describe("Trusted Outcome Journey", () => {
 
     await clickVisibleControl(page, page.getByRole("button", { name: new RegExp(`Reply to ${j.packageTitle} in Soma`, "i") }).last());
     const composer = page.getByPlaceholder(chatPlaceholder);
-    await expect(composer).toHaveValue(new RegExp(`Use delivered output "${j.packageTitle}" as context\\.`));
-    await expect(composer).toHaveValue(new RegExp(`Reference: ${j.folder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.`));
-    await expect(composer).toHaveValue(/I want an update, alternate version, or follow-up generation:/);
-    await composer.fill(`${await composer.inputValue()}Summarize what I should inspect first.`);
+    await expect(page.getByText("Continuing from")).toBeVisible();
+    await expect(page.getByText(j.packageTitle).last()).toBeVisible();
+    await expect(composer).toHaveValue("");
+    await composer.fill("Summarize what I should inspect first.");
     await composer.press("Enter");
     await expect(page.getByText(/Inspect the launch page first/i)).toBeVisible();
     const continuationRequest = chatRequests.find(

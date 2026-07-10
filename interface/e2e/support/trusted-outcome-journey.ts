@@ -175,7 +175,7 @@ export async function installTrustedOutcomeJourneyMocks(page: Page) {
   await mockOrganizationWorkspace(page, (requestBody) => {
     chatRequests.push(requestBody);
     const message = lastUserMessage(requestBody);
-    if (message.includes(`Use delivered output "${j.packageTitle}" as context.`)) return answerEnvelope("Inspect the launch page first, then review PROOF.md and recovery notes before asking Soma for changes.", { askClass: "output_continuation" });
+    if ((requestBody as { continuation_context?: unknown }).continuation_context) return answerEnvelope("Inspect the launch page first, then review PROOF.md and recovery notes before asking Soma for changes.", { askClass: "output_continuation" });
     return proposalEnvelope();
   });
   await page.route("**/api/v1/services/status", ok({ data: [{ name: "core", status: "online" }] }));

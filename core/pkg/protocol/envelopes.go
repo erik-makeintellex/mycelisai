@@ -154,7 +154,8 @@ type ChatResponsePayload struct {
 	// Chat proposal (when agent uses mutation tools)
 	Proposal *ChatProposal `json:"proposal,omitempty"`
 	// ExecutionSummary is an additive operator contract for directed execution.
-	ExecutionSummary *ExecutionSummary `json:"execution_summary,omitempty"`
+	ExecutionSummary   *ExecutionSummary       `json:"execution_summary,omitempty"`
+	ContinuationIntent *ChatContinuationIntent `json:"continuation_intent,omitempty"`
 }
 
 // DelegationHint carries optional scoring metadata for task delegation.

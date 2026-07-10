@@ -50,8 +50,12 @@ export function useSomaOutputContinuation({
     const handleContinuation = (event: Event) => {
       if (disabled) return;
       const detail = (event as CustomEvent<OutputContinuationDetail>).detail;
-      setInput(outputContinuationPrompt(detail));
-      setContinuationContext?.(outputContinuationContext(detail));
+      if (setContinuationContext) {
+        setInput("");
+        setContinuationContext(outputContinuationContext(detail));
+      } else {
+        setInput(outputContinuationPrompt(detail));
+      }
       window.setTimeout(() => {
         const input = inputRef.current;
         input?.focus();

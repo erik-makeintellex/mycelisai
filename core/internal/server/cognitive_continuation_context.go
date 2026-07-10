@@ -3,6 +3,8 @@ package server
 import (
 	"fmt"
 	"strings"
+
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 const continuationContextHeader = "[OUTPUT CONTINUATION CONTEXT]"
@@ -12,6 +14,7 @@ type chatContinuationContext struct {
 	Title     string `json:"title,omitempty"`
 	Reference string `json:"reference,omitempty"`
 	Proof     string `json:"proof,omitempty"`
+	Intent    string `json:"intent,omitempty"`
 }
 
 type chatRequest struct {
@@ -50,6 +53,80 @@ func normalizeChatContinuationContext(input *chatContinuationContext) (*chatCont
 	return out, nil
 }
 
+func applyContinuationIntent(ctx *chatContinuationContext, latestRequest string) *chatContinuationContext {
+	if ctx == nil {
+		return nil
+	}
+	out := *ctx
+	out.Intent = inferContinuationIntent(latestRequest)
+	return &out
+}
+
+func chatContinuationIntent(ctx *chatContinuationContext) *protocol.ChatContinuationIntent {
+	if ctx == nil {
+		return nil
+	}
+	kind := protocol.ContinuationIntentKind(firstNonEmptyString(ctx.Intent, "follow_up"))
+	requiresProposal := kind == protocol.ContinuationIntentUpdate ||
+		kind == protocol.ContinuationIntentFork ||
+		kind == protocol.ContinuationIntentRoute
+	return &protocol.ChatContinuationIntent{
+		Kind:             kind,
+		ContextKind:      ctx.Kind,
+		TargetTitle:      ctx.Title,
+		Reference:        ctx.Reference,
+		Proof:            ctx.Proof,
+		RequiresProposal: requiresProposal,
+		Reason:           continuationIntentReason(kind),
+	}
+}
+
+func continuationIntentMutationTools(intent *protocol.ChatContinuationIntent) []string {
+	if intent == nil || !intent.RequiresProposal {
+		return nil
+	}
+	switch intent.Kind {
+	case protocol.ContinuationIntentUpdate, protocol.ContinuationIntentFork:
+		if intent.Reference != "" || intent.Proof != "" {
+			return []string{"write_file"}
+		}
+	case protocol.ContinuationIntentRoute:
+		return []string{"delegate"}
+	}
+	return nil
+}
+
+func continuationIntentReason(kind protocol.ContinuationIntentKind) string {
+	switch kind {
+	case protocol.ContinuationIntentUpdate:
+		return "The user is asking to change the referenced output."
+	case protocol.ContinuationIntentFork:
+		return "The user is asking for an alternate version of the referenced output."
+	case protocol.ContinuationIntentRoute:
+		return "The user is asking to route the referenced output into follow-up work."
+	case protocol.ContinuationIntentInspect:
+		return "The user is asking to inspect or verify the referenced output."
+	default:
+		return "The user is continuing conversation from the referenced output."
+	}
+}
+
+func inferContinuationIntent(text string) string {
+	lower := normalizeIntentText(text)
+	switch {
+	case requestContainsAny(lower, []string{"inspect", "review", "check", "verify", "validate", "what should i look"}):
+		return "inspect"
+	case requestContainsAny(lower, []string{"alternate", "alternative", "variant", "version", "fork", "different take"}):
+		return "fork"
+	case requestContainsAny(lower, []string{"send to", "route", "handoff", "hand off", "ask another team", "marketing team", "support team"}):
+		return "route"
+	case requestContainsAny(lower, []string{"update", "revise", "change", "improve", "fix", "modify", "add ", "remove "}):
+		return "update"
+	default:
+		return "follow_up"
+	}
+}
+
 func cleanContinuationField(value string, maxLen int) string {
 	cleaned := strings.Join(strings.Fields(value), " ")
 	if len(cleaned) <= maxLen {
@@ -83,6 +160,9 @@ func prependContinuationContext(messages []chatRequestMessage, ctx *chatContinua
 	if ctx.Proof != "" {
 		lines = append(lines, "Proof: "+ctx.Proof+".")
 	}
+	if ctx.Intent != "" {
+		lines = append(lines, "Continuation intent: "+ctx.Intent+".")
+	}
 	lines = append(lines, "Use this as grounding context only; it does not authorize execution, file writes, team handoff, or proof changes.")
 
 	out := make([]chatRequestMessage, 0, len(messages)+1)
@@ -100,5 +180,21 @@ func continuationContextAuditMap(ctx *chatContinuationContext) map[string]any {
 		"title":     ctx.Title,
 		"reference": ctx.Reference,
 		"proof":     ctx.Proof,
+		"intent":    ctx.Intent,
+	}
+}
+
+func continuationIntentAuditMap(intent *protocol.ChatContinuationIntent) map[string]any {
+	if intent == nil {
+		return nil
+	}
+	return map[string]any{
+		"kind":              intent.Kind,
+		"context_kind":      intent.ContextKind,
+		"target_title":      intent.TargetTitle,
+		"reference":         intent.Reference,
+		"proof":             intent.Proof,
+		"requires_proposal": intent.RequiresProposal,
+		"reason":            intent.Reason,
 	}
 }

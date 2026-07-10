@@ -159,6 +159,7 @@ export interface ChatMessage {
     run_id?: string;
     thread_event?: SomaThreadEvent;
     thread_events?: SomaThreadEvent[];
+    continuation_intent?: ChatContinuationIntent;
 }
 
 export interface MissionChatContinuationContext {
@@ -166,6 +167,16 @@ export interface MissionChatContinuationContext {
     title: string;
     reference?: string;
     proof?: string;
+}
+
+export interface ChatContinuationIntent {
+    kind: 'follow_up' | 'update' | 'fork' | 'route' | 'inspect';
+    context_kind?: string;
+    target_title?: string;
+    reference?: string;
+    proof?: string;
+    requires_proposal: boolean;
+    reason?: string;
 }
 
 export interface MissionChatSendOptions {
@@ -204,6 +215,7 @@ export interface CTSChatEnvelope {
         provenance?: AnswerProvenance;
         brain?: BrainProvenance;
         execution_summary?: ExecutionSummaryData;
+        continuation_intent?: ChatContinuationIntent;
         proposal?: {
             intent: string;
             tools: string[];

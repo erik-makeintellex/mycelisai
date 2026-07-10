@@ -8,7 +8,7 @@ vi.mock('reactflow', async () => {
 });
 
 import MissionControlChat from '@/components/dashboard/MissionControlChat';
-import { outputContinuationPrompt, requestSomaOutputContinuation } from '@/components/soma/outputContinuation';
+import { requestSomaOutputContinuation } from '@/components/soma/outputContinuation';
 import { useCortexStore } from '@/store/useCortexStore';
 import {
     COUNCIL_MEMBERS,
@@ -132,10 +132,11 @@ describe('MissionControlChat flow contracts', () => {
         };
         act(() => requestSomaOutputContinuation(detail));
 
+        expect(screen.getByText(/Continuing from/i)).toBeDefined();
+        expect(screen.getByText('Trusted Outcome Kit')).toBeDefined();
         const input = screen.getByRole('textbox') as HTMLTextAreaElement;
-        const prompt = outputContinuationPrompt(detail);
-        expect(input.value).toContain('Trusted Outcome Kit');
-        fireEvent.change(input, { target: { value: `${prompt}Make the launch page clearer.` } });
+        expect(input.value).toBe('');
+        fireEvent.change(input, { target: { value: 'Make the launch page clearer.' } });
         fireEvent.keyDown(input, { key: 'Enter' });
 
         await waitFor(() => {
@@ -148,6 +149,29 @@ describe('MissionControlChat flow contracts', () => {
                 reference: 'workspace/generated/trusted-outcome-kit',
                 proof: 'proof-artifact-trusted-outcome',
             });
+        });
+    });
+
+    it('lets the operator clear delivered-output continuation context', async () => {
+        mockFetch.mockResolvedValue(okJson({
+            ok: true,
+            data: {
+                ...CTS_CHAT_RESPONSE.data,
+                meta: { ...CTS_CHAT_RESPONSE.data.meta, source_node: 'admin' },
+            },
+        }));
+        render(<MissionControlChat simpleMode />);
+        await settleMissionControlChat();
+
+        act(() => requestSomaOutputContinuation({ title: 'Trusted Outcome Kit', reference: 'workspace/generated/trusted-outcome-kit' }));
+        fireEvent.click(screen.getByRole('button', { name: /Clear continuation from Trusted Outcome Kit/i }));
+        fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Ordinary follow-up.' } });
+        fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
+
+        await waitFor(() => {
+            const chatCall = mockFetch.mock.calls.find((call: any[]) => requestUrl(call[0]).includes('/api/v1/chat'));
+            const body = JSON.parse(String(chatCall?.[1]?.body ?? '{}'));
+            expect(body).not.toHaveProperty('continuation_context');
         });
     });
 

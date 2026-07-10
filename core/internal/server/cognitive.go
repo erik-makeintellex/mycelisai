@@ -249,14 +249,15 @@ func isRuntimeStateQuestion(text string) bool {
 	return false
 }
 
-func normalizeChatRequestMessages(messages []chatRequestMessage) ([]chatRequestMessage, []string) {
+func normalizeChatRequestMessages(messages []chatRequestMessage, extraMutationTools ...string) ([]chatRequestMessage, []string) {
 	idx := latestUserMessageIndex(messages)
 	if idx < 0 {
 		return messages, nil
 	}
 
 	trimmed := strings.TrimSpace(messages[idx].Content)
-	mutTools := inferMutationToolsFromText(messages[idx].Content)
+	mutTools := append(inferMutationToolsFromText(messages[idx].Content), extraMutationTools...)
+	mutTools = uniqueOrderedTools(mutTools)
 	normalized := make([]chatRequestMessage, len(messages))
 	copy(normalized, messages)
 	if len(mutTools) == 0 {

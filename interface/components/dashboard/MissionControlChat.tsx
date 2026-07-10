@@ -5,24 +5,15 @@ import { Brain, Megaphone } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import { SomaConversationThread } from "@/components/soma/SomaConversationThread";
 import { SomaIntentInput } from "@/components/soma/SomaIntentInput";
-import { outputContinuationPrompt, useSomaOutputContinuation } from "@/components/soma/outputContinuation";
+import { useSomaOutputContinuation } from "@/components/soma/outputContinuation";
 import type { MissionChatContinuationContext } from "@/store/cortexStoreTypes";
-import {
-    DEFAULT_SOMA_SUGGESTIONS,
-    type SomaSuggestion,
-} from "@/components/soma/SomaSuggestionBar";
+import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "@/components/soma/SomaSuggestionBar";
 import CouncilCallErrorCard from "./CouncilCallErrorCard";
-import {
-    BroadcastModeIndicator,
-    MissionControlEmptyState,
-    SomaOfflineGuide,
-} from "./MissionControlChatStates";
-import {
-    MissionControlChatHeader,
-    SomaActivityIndicator,
-} from "./MissionControlChatChrome";
+import { BroadcastModeIndicator, MissionControlEmptyState, SomaOfflineGuide } from "./MissionControlChatStates";
+import { MissionControlChatHeader, SomaActivityIndicator } from "./MissionControlChatChrome";
 import MissionControlMessageBubble from "./MissionControlMessageBubble";
 import { MissionControlAdvancedInput } from "./MissionControlAdvancedInput";
+import { MissionControlContinuationChip } from "./MissionControlContinuationChip";
 import MissionControlTeamContinuationPrompt from "./MissionControlTeamContinuationPrompt";
 import OrchestrationInspector from "./OrchestrationInspector";
 import { somaPlaceholder, teamSuggestions } from "./missionControlChatUi";
@@ -151,11 +142,16 @@ export default function MissionControlChat({
         inputRef.current?.focus();
     };
 
-    const updateInput = (value: string) => {
-        if (pendingContinuationContext && !value.startsWith(outputContinuationPrompt(pendingContinuationContext))) {
-            setPendingContinuationContext(null);
-        }
-        setInput(value);
+    const updateInput = (value: string) => setInput(value);
+
+    const clearContinuation = () => {
+        setPendingContinuationContext(null);
+        inputRef.current?.focus();
+    };
+
+    const clearChat = () => {
+        setPendingContinuationContext(null);
+        clearMissionChat();
     };
 
     const retryCouncilMembers = () => {
@@ -168,7 +164,7 @@ export default function MissionControlChat({
             <MissionControlChatHeader
                 assistantName={assistantName}
                 broadcastMode={broadcastMode}
-                clearMissionChat={clearMissionChat}
+                clearMissionChat={clearChat}
                 councilMembers={councilMembers}
                 directTarget={directTarget}
                 focusedTeamName={currentTeam?.name}
@@ -254,6 +250,9 @@ export default function MissionControlChat({
                     disabled={isLoading}
                     onStarterPrompt={applyStarterPrompt}
                 />
+                {pendingContinuationContext ? (
+                    <MissionControlContinuationChip context={pendingContinuationContext} onClear={clearContinuation} />
+                ) : null}
                 {simpleMode ? (
                     <SomaIntentInput
                         value={input}

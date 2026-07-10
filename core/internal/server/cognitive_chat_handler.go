@@ -11,12 +11,7 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-// POST /api/v1/chat
-// Routes user messages exclusively through the Admin agent via NATS request-reply.
-// The Admin agent has its full system prompt, tools, and council access.
-// No raw LLM fallback — if the swarm is offline, the endpoint returns an error.
-//
-// The full conversation history is forwarded as JSON so the admin agent can maintain context.
+// POST /api/v1/chat routes Soma messages through the governed Admin-agent path.
 func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -58,6 +53,8 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	req.Messages = normalizeRetryRequest(req.Messages)
 	latestUserText := latestUserMessageContent(req.Messages)
+	continuationContext = applyContinuationIntent(continuationContext, latestUserText)
+	continuationIntent := chatContinuationIntent(continuationContext)
 	if isRuntimeStateQuestion(latestUserText) {
 		s.respondRuntimeStateSummary(w, r, req.OrganizationID, req.TeamID, req.TeamName)
 		return
@@ -114,7 +111,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile := userGovernanceProfileFromRequest(r)
-	normalizedMessages, requestMutationTools := normalizeChatRequestMessages(req.Messages)
+	normalizedMessages, requestMutationTools := normalizeChatRequestMessages(req.Messages, continuationIntentMutationTools(continuationIntent)...)
 	normalizedMessages = applyGovernanceProfileToLatestMessage(normalizedMessages, profile)
 	if len(normalizedMessages) > 0 {
 		req.Messages = normalizedMessages
@@ -164,11 +161,12 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	replyText := readableChatText(agentResult, isMutation)
 	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, focusedTeamID, sessionTurnIndex+1, "assistant", replyText, agentResult)
 	chatPayload := protocol.ChatResponsePayload{
-		Text:          replyText,
-		ResponseDepth: inferResponseDepthFromRequest(latestUserText, isMutation),
-		ToolsUsed:     chatResponseTools(isMutation, agentResult.ToolsUsed, mutTools),
-		Artifacts:     agentResult.Artifacts,
-		Consultations: agentResult.Consultations,
+		Text:               replyText,
+		ResponseDepth:      inferResponseDepthFromRequest(latestUserText, isMutation),
+		ToolsUsed:          chatResponseTools(isMutation, agentResult.ToolsUsed, mutTools),
+		Artifacts:          agentResult.Artifacts,
+		Consultations:      agentResult.Consultations,
+		ContinuationIntent: continuationIntent,
 	}
 
 	applyBrainProvenance(s, &chatPayload, agentResult)
@@ -211,6 +209,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 				"approval_reason":      approvalReasonValue(approval),
 				"capability_used":      strings.Join(scope.CapabilityIDs, ","),
 				"continuation_context": continuationContextAuditMap(continuationContext),
+				"continuation_intent":  continuationIntentAuditMap(continuationIntent),
 			}, r),
 		)
 
@@ -253,6 +252,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 				"action":               "answer_delivered",
 				"result_status":        "completed",
 				"continuation_context": continuationContextAuditMap(continuationContext),
+				"continuation_intent":  continuationIntentAuditMap(continuationIntent),
 			}, r),
 		)
 		chatPayload.Provenance = &protocol.AnswerProvenance{
