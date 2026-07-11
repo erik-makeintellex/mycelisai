@@ -145,10 +145,12 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
         expect(mockToggleRailCollapsed).toHaveBeenCalled();
     });
 
-    it('hides rail labels when collapsed while keeping icon navigation available', () => {
+    it('hides rail labels when collapsed while keeping icon navigation available', async () => {
         mockRailCollapsed.mockReturnValue(true);
         const { container } = render(<ZoneA />);
-        expect(screen.getByTestId('zone-a-rail').dataset.collapsed).toBe('true');
+        await waitFor(() => {
+            expect(screen.getByTestId('zone-a-rail').dataset.collapsed).toBe('true');
+        });
         expect(container.querySelector('span')?.className).toContain('hidden');
         expect(screen.getByTitle('Soma')).toBeDefined();
     });

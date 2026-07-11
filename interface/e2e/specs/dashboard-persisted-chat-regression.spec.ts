@@ -40,17 +40,22 @@ async function seedMalformedPersistedChat(page: Page) {
   });
 }
 
+async function captureDashboardErrors(page: Page) {
+  const consoleIssues: string[] = [];
+  const pageErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleIssues.push(message.text());
+    if (message.type() === "warning" && /same key|unique key|hydrated but some attributes/i.test(message.text())) {
+      consoleIssues.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  return { consoleIssues, pageErrors };
+}
+
 test.describe("Dashboard persisted chat regression", () => {
   test("dirty legacy chat state cannot crash the Soma dashboard", async ({ page }) => {
-    const consoleIssues: string[] = [];
-    const pageErrors: string[] = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleIssues.push(message.text());
-      if (message.type() === "warning" && /same key|unique key/i.test(message.text())) {
-        consoleIssues.push(message.text());
-      }
-    });
-    page.on("pageerror", (error) => pageErrors.push(error.message));
+    const { consoleIssues, pageErrors } = await captureDashboardErrors(page);
 
     await seedMalformedPersistedChat(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
@@ -60,6 +65,22 @@ test.describe("Dashboard persisted chat regression", () => {
     await expect(page.getByText(/Legacy result with duplicate fields/i)).toBeVisible();
     await expect(page.getByText("drop me")).toHaveCount(0);
     await expect(page.getByPlaceholder(/Tell Soma what you want/i)).toBeVisible();
+
+    expect(pageErrors).toEqual([]);
+    expect(consoleIssues).toEqual([]);
+  });
+
+  test("persisted collapsed navigation does not cause hydration mismatch", async ({ page }) => {
+    const { consoleIssues, pageErrors } = await captureDashboardErrors(page);
+    await page.addInitScript(() => {
+      window.localStorage.setItem("mycelis-rail-collapsed", "true");
+    });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+
+    const rail = page.getByTestId("zone-a-rail");
+    await expect(rail).toBeVisible({ timeout: 20_000 });
+    await expect(rail).toHaveAttribute("data-collapsed", "true", { timeout: 20_000 });
+    await expect(page.getByRole("button", { name: /Expand navigation/i })).toBeVisible();
 
     expect(pageErrors).toEqual([]);
     expect(consoleIssues).toEqual([]);

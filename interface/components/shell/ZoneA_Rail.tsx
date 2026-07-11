@@ -48,6 +48,7 @@ export function ZoneA() {
 
     const isAdmin = webRole === 'admin';
     const effectiveAdvancedMode = isHydrated && isAdmin ? advancedMode : false;
+    const effectiveRailCollapsed = isHydrated ? railCollapsed : false;
     const currentOrganizationHref = lastOrganization ? `/organizations/${lastOrganization.id}` : null;
     const isCurrentOrganizationRoute =
         !!currentOrganizationHref &&
@@ -75,24 +76,24 @@ export function ZoneA() {
     return (
         <div
             className={`bg-cortex-surface text-cortex-text-main flex flex-col border-r border-cortex-border z-50 flex-shrink-0 transition-all duration-300 ${
-                railCollapsed ? 'w-16' : 'w-16 md:w-64'
+                effectiveRailCollapsed ? 'w-16' : 'w-16 md:w-64'
             }`}
             data-testid="zone-a-rail"
-            data-collapsed={railCollapsed ? 'true' : 'false'}
+            data-collapsed={effectiveRailCollapsed ? 'true' : 'false'}
         >
             {/* 1. Identity / Logo → Home */}
             <div className="h-14 flex items-center gap-1 border-b border-cortex-border px-2">
                 <Link
                     href="/"
                     className={`flex min-w-0 flex-1 items-center rounded-lg transition-colors hover:bg-cortex-bg/50 ${
-                        railCollapsed ? 'justify-center px-0 py-1' : 'justify-center md:justify-start md:px-2 py-1'
+                        effectiveRailCollapsed ? 'justify-center px-0 py-1' : 'justify-center md:justify-start md:px-2 py-1'
                     }`}
                     title="Mycelis home"
                 >
                     <div className="w-8 h-8 bg-cortex-primary rounded-lg flex items-center justify-center shadow-[0_4px_14px_0_rgba(75,78,109,0.28)]">
                         <Network className="w-5 h-5 text-white" />
                     </div>
-                    <span className={`${railCollapsed ? 'hidden' : 'hidden md:block'} ml-3 font-bold text-sm tracking-widest uppercase text-cortex-text-muted`}>
+                    <span className={`${effectiveRailCollapsed ? 'hidden' : 'hidden md:block'} ml-3 font-bold text-sm tracking-widest uppercase text-cortex-text-muted`}>
                         Mycelis
                     </span>
                 </Link>
@@ -100,11 +101,11 @@ export function ZoneA() {
                     type="button"
                     onClick={toggleRailCollapsed}
                     className="hidden h-8 w-8 items-center justify-center rounded-lg text-cortex-text-muted transition-colors hover:bg-cortex-bg hover:text-cortex-text-main md:flex"
-                    title={railCollapsed ? 'Expand navigation' : 'Collapse navigation'}
-                    aria-label={railCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+                    title={effectiveRailCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+                    aria-label={effectiveRailCollapsed ? 'Expand navigation' : 'Collapse navigation'}
                     data-testid="rail-collapse-toggle"
                 >
-                    {railCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                    {effectiveRailCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
                 </button>
             </div>
 
@@ -119,17 +120,17 @@ export function ZoneA() {
                         title={item.title}
                         description={item.description}
                         testId={item.testId}
-                        collapsed={railCollapsed}
+                        collapsed={effectiveRailCollapsed}
                         onClick={item.href === currentOrganizationHref ? () => router.push(item.href) : undefined}
                     />
                 ))}
                 {effectiveAdvancedMode && (
                     <div className="mt-3 space-y-1">
-                        <div className={`${railCollapsed ? 'hidden' : 'hidden md:block'} px-2 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-cortex-text-muted/70`}>
+                        <div className={`${effectiveRailCollapsed ? 'hidden' : 'hidden md:block'} px-2 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-cortex-text-muted/70`}>
                             Admin tools
                         </div>
                         {advancedNav.map((item) => (
-                            <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} testId={item.testId} collapsed={railCollapsed} />
+                            <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} testId={item.testId} collapsed={effectiveRailCollapsed} />
                         ))}
                     </div>
                 )}
@@ -140,7 +141,7 @@ export function ZoneA() {
                 {isAdmin && (
                     <button
                         onClick={toggleAdvancedMode}
-                        className={`flex items-center justify-center ${railCollapsed ? '' : 'md:justify-start'} w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg`}
+                        className={`flex items-center justify-center ${effectiveRailCollapsed ? '' : 'md:justify-start'} w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg`}
                         title={effectiveAdvancedMode ? 'Hide advanced panels' : 'Show advanced panels'}
                     >
                         {effectiveAdvancedMode ? (
@@ -148,7 +149,7 @@ export function ZoneA() {
                         ) : (
                             <Eye className="w-5 h-5 flex-shrink-0" />
                         )}
-                        <span className={`${railCollapsed ? 'hidden' : 'hidden md:block'} ml-3 text-sm font-medium`}>
+                        <span className={`${effectiveRailCollapsed ? 'hidden' : 'hidden md:block'} ml-3 text-sm font-medium`}>
                             {effectiveAdvancedMode ? 'Admin tools: On' : 'Admin tools: Off'}
                         </span>
                     </button>
@@ -156,21 +157,21 @@ export function ZoneA() {
                 <button
                     type="button"
                     onClick={() => setStatusDrawerOpen(true)}
-                    className={`flex items-center justify-center ${railCollapsed ? '' : 'md:justify-start'} w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg`}
+                    className={`flex items-center justify-center ${effectiveRailCollapsed ? '' : 'md:justify-start'} w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg`}
                     title="Open status drawer"
                 >
                     <Activity className="w-5 h-5 flex-shrink-0" />
-                    <span className={`${railCollapsed ? 'hidden' : 'hidden md:block'} ml-3 text-sm font-medium`}>Status</span>
+                    <span className={`${effectiveRailCollapsed ? 'hidden' : 'hidden md:block'} ml-3 text-sm font-medium`}>Status</span>
                 </button>
-                <NavItem href="/settings" icon={Settings} label="Settings" testId="nav-settings" collapsed={railCollapsed} />
+                <NavItem href="/settings" icon={Settings} label="Settings" testId="nav-settings" collapsed={effectiveRailCollapsed} />
                 <form action="/auth/logout" method="post">
                     <button
                         type="submit"
-                        className={`flex w-full items-center justify-center rounded-lg p-2.5 text-cortex-text-muted transition-all duration-200 hover:bg-cortex-bg hover:text-cortex-text-main ${railCollapsed ? '' : 'md:justify-start'}`}
+                        className={`flex w-full items-center justify-center rounded-lg p-2.5 text-cortex-text-muted transition-all duration-200 hover:bg-cortex-bg hover:text-cortex-text-main ${effectiveRailCollapsed ? '' : 'md:justify-start'}`}
                         title="Sign out"
                     >
                         <LogOut className="h-5 w-5 flex-shrink-0" />
-                        <span className={`${railCollapsed ? 'hidden' : 'hidden md:block'} ml-3 text-sm font-medium`}>Sign out</span>
+                        <span className={`${effectiveRailCollapsed ? 'hidden' : 'hidden md:block'} ml-3 text-sm font-medium`}>Sign out</span>
                     </button>
                 </form>
             </div>
