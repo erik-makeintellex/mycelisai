@@ -37,7 +37,7 @@ export default function WorkspaceFolderAccessCard({
     };
 
     return (
-        <div className="mb-3 rounded-lg border border-cortex-primary/25 bg-cortex-primary/10 p-3">
+        <div className="rounded-lg border border-cortex-primary/25 bg-cortex-primary/10 p-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                     <p className="text-xs font-semibold text-cortex-text-main">Open generated output on this machine</p>

@@ -227,7 +227,9 @@ The workspace explorer is organized around three operator steps:
 - `Preview` reads the selected generated file without leaving the Resources surface.
 - `Create` keeps small handoff-folder and handoff-file writes available without making write controls the default browse path.
 
-The top of the panel includes **Open folder** for the current workspace path.
+Output Files should read top-to-bottom: choose retained group output/source scope, optionally open the current folder, then browse, preview, or create from the full-width workspace panel below.
+
+The upper access card includes **Open folder** for the current workspace path.
 Use it when an operator wants to grab generated files, media proof, project
 packages, or browser-game output from the local machine without decoding the
 storage configuration. Retained output cards in Soma, Teams, and Groups should

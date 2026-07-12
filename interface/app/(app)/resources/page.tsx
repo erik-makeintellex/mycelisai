@@ -104,25 +104,20 @@ function ResourcesContent() {
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-cortex-bg">
-            <header className="flex-shrink-0 border-b border-cortex-border px-6 py-5">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <header className="flex-shrink-0 border-b border-cortex-border px-6 py-4">
+                <div className="flex min-w-0 flex-col gap-1">
                     <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase text-cortex-text-muted">Operator support systems</p>
                         <h1 className="text-2xl font-bold text-cortex-text-main tracking-tight">
                             Resources
                         </h1>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-cortex-text-muted">
-                            Open generated work first, then use focused panes for capabilities, context, exchange
-                            channels, and advanced configuration.
+                            Open generated work, manage Soma capabilities, and review trusted workspace context.
                         </p>
-                    </div>
-                    <div className="rounded border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-xs text-cortex-primary">
-                        {RESOURCE_TABS.length} resource types
                     </div>
                 </div>
             </header>
 
-            <div className="grid min-h-0 flex-1 gap-4 p-4 lg:grid-cols-[19rem_minmax(0,1fr)]">
+            <div className="grid min-h-0 flex-1 gap-4 p-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
                 <nav
                     className="min-h-0 overflow-y-auto rounded-lg border border-cortex-border bg-cortex-surface/70 p-2"
                     aria-label="Resource type menu"
@@ -172,7 +167,7 @@ function ResourceMenuButton({ active, onClick, tab }: { active: boolean; onClick
             type="button"
             onClick={onClick}
             aria-current={active ? "page" : undefined}
-            className={`flex w-full items-start gap-3 rounded border px-3 py-2.5 text-left transition-colors ${
+            className={`flex w-full items-start gap-3 rounded border px-3 py-2 text-left transition-colors ${
                 active
                     ? "border-cortex-primary/50 bg-cortex-primary/10 text-cortex-text-main"
                     : "border-transparent text-cortex-text-muted hover:border-cortex-border hover:bg-cortex-bg"

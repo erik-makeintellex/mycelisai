@@ -28,7 +28,7 @@ export function initialWorkspacePath(path?: string | null) {
     return normalized;
 }
 
-export function useWorkspaceOutputGroups() {
+export function useWorkspaceOutputGroups(enabled = true) {
     const [outputGroups, setOutputGroups] = useState<OutputGroup[]>([]);
     const [selectedOutputGroupID, setSelectedOutputGroupID] = useState("");
     const [includeTeamSourceFiles, setIncludeTeamSourceFiles] = useState(false);
@@ -38,6 +38,14 @@ export function useWorkspaceOutputGroups() {
         let cancelled = false;
 
         const loadOutputGroups = async () => {
+            if (!enabled) {
+                setOutputGroups([]);
+                setSelectedOutputGroupID("");
+                setIncludeTeamSourceFiles(false);
+                setOutputGroupStatus("Output browsing is available after filesystem connects");
+                return;
+            }
+
             setOutputGroupStatus("Loading group outputs...");
             try {
                 const groupsRes = await fetch("/api/v1/groups", { cache: "no-store" });
@@ -65,7 +73,7 @@ export function useWorkspaceOutputGroups() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [enabled]);
 
     return {
         outputGroups,

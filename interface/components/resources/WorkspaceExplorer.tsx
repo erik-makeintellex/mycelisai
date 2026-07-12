@@ -36,15 +36,6 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
     const [newFile, setNewFile] = useState("");
     const [newFileContent, setNewFileContent] = useState("");
     const [activePane, setActivePane] = useState<WorkspacePane>("browse");
-    const {
-        outputGroups,
-        selectedOutputGroupID,
-        setSelectedOutputGroupID,
-        includeTeamSourceFiles,
-        setIncludeTeamSourceFiles,
-        outputGroupStatus,
-    } = useWorkspaceOutputGroups();
-
     useEffect(() => {
         fetchMCPServers();
     }, [fetchMCPServers]);
@@ -59,6 +50,14 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
     }, [mcpServers]);
 
     const canBrowse = filesystemServer?.status === "connected";
+    const {
+        outputGroups,
+        selectedOutputGroupID,
+        setSelectedOutputGroupID,
+        includeTeamSourceFiles,
+        setIncludeTeamSourceFiles,
+        outputGroupStatus,
+    } = useWorkspaceOutputGroups(canBrowse);
 
     const callTool = useCallback(
         async (toolName: string, args: Record<string, unknown>): Promise<string> => {
@@ -239,8 +238,8 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
     }
 
     return (
-        <div className="grid h-full min-h-0 gap-3 p-4 sm:p-6 lg:grid-cols-[minmax(13rem,17rem)_minmax(19rem,1fr)]">
-            <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1">
+        <div className="flex h-full min-h-0 flex-col gap-3 p-4 sm:p-5">
+            <div className="flex flex-shrink-0 flex-col gap-3">
                 <WorkspaceGroupOutputSelector
                     groups={outputGroups}
                     selectedGroupID={selectedOutputGroupID}
@@ -254,29 +253,31 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
                 <WorkspaceFolderAccessCard currentPath={currentPath} onStatus={setStatus} />
             </div>
 
-            <WorkspaceExplorerMainPane
-                activePane={activePane}
-                busy={busy}
-                currentPath={currentPath}
-                entries={entries}
-                isFetchingMCPServers={isFetchingMCPServers}
-                newDir={newDir}
-                newFile={newFile}
-                newFileContent={newFileContent}
-                preview={preview}
-                selectedFile={selectedFile}
-                status={status}
-                onActivePaneChange={setActivePane}
-                onCreateDirectory={createDirectory}
-                onCreateFile={createFile}
-                onCurrentPathChange={setCurrentPath}
-                onNewDirChange={setNewDir}
-                onNewFileChange={setNewFile}
-                onNewFileContentChange={setNewFileContent}
-                onOpenFile={openFile}
-                onPreviewChange={setPreview}
-                onRefresh={refreshList}
-            />
+            <div className="min-h-[24rem] flex-1">
+                <WorkspaceExplorerMainPane
+                    activePane={activePane}
+                    busy={busy}
+                    currentPath={currentPath}
+                    entries={entries}
+                    isFetchingMCPServers={isFetchingMCPServers}
+                    newDir={newDir}
+                    newFile={newFile}
+                    newFileContent={newFileContent}
+                    preview={preview}
+                    selectedFile={selectedFile}
+                    status={status}
+                    onActivePaneChange={setActivePane}
+                    onCreateDirectory={createDirectory}
+                    onCreateFile={createFile}
+                    onCurrentPathChange={setCurrentPath}
+                    onNewDirChange={setNewDir}
+                    onNewFileChange={setNewFile}
+                    onNewFileContentChange={setNewFileContent}
+                    onOpenFile={openFile}
+                    onPreviewChange={setPreview}
+                    onRefresh={refreshList}
+                />
+            </div>
         </div>
     );
 }
