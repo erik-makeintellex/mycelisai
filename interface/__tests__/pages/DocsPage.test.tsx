@@ -134,7 +134,7 @@ describe('DocsPage', () => {
 
         render(<DocsPage />);
 
-        expect(await screen.findByText('Failed to load doc manifest')).toBeDefined();
+        expect(await screen.findByText(/Failed to load doc manifest/)).toBeDefined();
     });
 
     it('shows a readable doc-load error when a selected doc fetch fails', async () => {

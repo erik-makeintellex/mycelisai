@@ -71,8 +71,14 @@ function DocsContent() {
   useEffect(() => {
     const requestedSlug = searchParams?.get("doc") ?? null;
     fetch("/docs-api")
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
       .then((data: ManifestResponse) => {
+        if (!Array.isArray(data.sections)) {
+          throw new Error("manifest response did not include sections");
+        }
         setSections(data.sections);
         const allDocs = data.sections.flatMap((section) => section.docs);
         const target = requestedSlug
@@ -80,7 +86,7 @@ function DocsContent() {
           : allDocs[0];
         if (target) loadDoc(target);
       })
-      .catch(() => setError("Failed to load doc manifest"))
+      .catch((err) => setError(`Failed to load doc manifest: ${err instanceof Error ? err.message : String(err)}`))
       .finally(() => setLoadingManifest(false));
     // Load the initial manifest once; document clicks call loadDoc directly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,9 +123,9 @@ function DocsHeader({ docLabel }: { docLabel: string }) {
   return (
     <div className="flex items-center gap-3 px-4 py-2.5 border-b border-cortex-border bg-cortex-surface flex-shrink-0">
       <BookOpen className="w-4 h-4 text-cortex-primary flex-shrink-0" />
-      <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-cortex-text-muted">
+      <h1 className="text-[11px] font-mono font-bold uppercase tracking-widest text-cortex-text-muted">
         Documentation and guidance
-      </span>
+      </h1>
       {docLabel ? (
         <>
           <span className="text-cortex-border">.</span>

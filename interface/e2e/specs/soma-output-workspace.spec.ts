@@ -101,7 +101,7 @@ test.describe("Soma output workspace UX", () => {
     const before = await visualLayoutMetrics(page);
     await page.getByTestId("rail-collapse-toggle").click();
     await expect(page.getByTestId("zone-a-rail")).toHaveAttribute("data-collapsed", "true");
-    await expect(page.getByTitle("Soma")).toBeVisible();
+    await expect(page.getByTestId("nav-dashboard")).toBeVisible();
     await expect.poll(async () => (await visualLayoutMetrics(page)).railWidth).toBeLessThan(before.railWidth);
     const after = await visualLayoutMetrics(page);
     expect(after.railWidth).toBeLessThan(before.railWidth);
