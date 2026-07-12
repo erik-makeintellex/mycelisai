@@ -446,6 +446,8 @@ Known non-blocking warnings:
 
 - `IN_REVIEW` Resources Output Files readability slice: Output Files now uses a top-to-bottom review path instead of a squeezed two-column inner layout. Operators choose retained group output/source scope first, see local folder access next, then browse, preview, or create in a full-width workspace panel where file names, paths, and previews have room to breathe. Docs updated: Resources user help and this state file. Proof: focused Resources page/WorkspaceExplorer Vitest, interface typecheck, and headed Chromium `resources-workspace-files.spec.ts`.
 
+- `IN_REVIEW` file/content handoff clarity slice: Soma, Teams, Resources, Memory, Workflow Variants, and the canonical PRD now distinguish one-run draft/input handoffs, team/Outcome source material, long-lived governed context sources, and retained user-facing deliverables. Resources copy now frames Output Files as delivered work and Deployment Context as long-term scoped context for Soma. Proof target: focused Resources/DeploymentContext tests, docs links, typecheck, max-lines, diff check, and live Resources UX proof.
+
 ## Documentation Map
 
 | Topic | Canonical Location |

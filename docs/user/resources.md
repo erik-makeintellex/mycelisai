@@ -16,7 +16,7 @@ Current resource menu:
 | Output Files | Open generated content folders and browse filesystem MCP-backed files inside workspace boundary |
 | Capabilities | What Soma can use now, what needs repair, and what can be requested |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
-| Deployment Context | Load governed private/user records, customer context, approved company knowledge, Soma operating context, and reflection/synthesis observations into separate governed context lanes |
+| Deployment Context | Save files or notes Soma should reuse as long-lived, scoped source context |
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
 
@@ -155,9 +155,9 @@ Operators should be able to answer "what entered the system, how trusted is it, 
 
 ## Deployment Context
 
-Deployment Context is the governed intake surface for private/user-owned content and deployment-shaping knowledge that should influence future Soma reasoning without being treated as ordinary Soma memory. In the product, this is the place to put **Context for Soma** when that context should persist, carry provenance, and stay inside an explicit trust boundary.
+Deployment Context is the governed intake surface for files, notes, private/user-owned content, and deployment-shaping knowledge that should influence future Soma or team reasoning beyond one draft. In the product, this is the place to put **Context for Soma** when the material should persist, carry provenance, stay scoped, and remain inside an explicit trust boundary.
 
-It is not the same as team-shared execution memory. Team-shared continuity belongs in `AGENT_MEMORY`, while Deployment Context is for governed source material and promoted doctrine. It is also not the same as Soma reading Mycelis help docs: curated docs lookup is read-only and citable, while Deployment Context is an intentional durable intake lane for material you want Soma to reuse later.
+It is not the same as team working files, generated outputs, or team-shared execution memory. Team working files are current Outcome inputs/support material, generated outputs live in Output Files, and team continuity belongs in `AGENT_MEMORY`; Deployment Context is for governed source material you want Soma to reuse later. It is also not the same as Soma reading Mycelis help docs: curated docs lookup is read-only and citable.
 
 Typical inputs:
 - private records or diary/journal notes the user explicitly wants Soma to use

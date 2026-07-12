@@ -34,9 +34,9 @@ type SelectOption = { value: string; label: string };
 type IntakeTab = "content" | "classification" | "scope";
 
 const INTAKE_TABS: Array<{ id: IntakeTab; label: string; summary: string }> = [
-    { id: "content", label: "Content", summary: "Title, source, upload, and text body" },
-    { id: "classification", label: "Classification", summary: "Knowledge lane and origin type" },
-    { id: "scope", label: "Scope", summary: "Visibility, trust, goals, and tags" },
+    { id: "content", label: "Content", summary: "File, note, or pasted source material" },
+    { id: "classification", label: "Use as", summary: "How Soma may treat this source" },
+    { id: "scope", label: "Access", summary: "Who can use it and for which goals" },
 ];
 
 const KNOWLEDGE_CLASS_OPTIONS = [
@@ -248,10 +248,10 @@ export default function DeploymentContextPanel() {
                         <div className="min-w-0 px-5 pt-5">
                             <div className="flex items-center gap-2">
                                 <BookOpenText className="w-4 h-4 text-cortex-primary" />
-                                <h2 className="text-sm font-semibold text-cortex-text-main">Deployment Context Intake</h2>
+                                <h2 className="text-sm font-semibold text-cortex-text-main">Long-term context for Soma</h2>
                             </div>
                             <p className="text-xs text-cortex-text-muted mt-2 max-w-2xl">
-                                Start with the material Soma should remember, then refine classification and scope only when the defaults are not enough.
+                                Add files or notes that should influence future Soma/team work. Use Output Files for delivered artifacts and this lane for reusable source context.
                             </p>
                         </div>
                         <button
@@ -299,7 +299,7 @@ export default function DeploymentContextPanel() {
                                         <input
                                             value={form.title}
                                             onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))}
-                                            placeholder="Deployment architecture brief"
+                                            placeholder="Customer onboarding brief"
                                             className={INPUT_CLASS}
                                         />
                                     </Field>
@@ -307,7 +307,7 @@ export default function DeploymentContextPanel() {
                                         <input
                                             value={form.source_label}
                                             onChange={(e) => setForm((current) => ({ ...current, source_label: e.target.value }))}
-                                            placeholder="customer handoff doc"
+                                            placeholder="approved client source"
                                             className={INPUT_CLASS}
                                         />
                                     </Field>
@@ -324,7 +324,7 @@ export default function DeploymentContextPanel() {
                                     <textarea
                                         value={form.content}
                                         onChange={(e) => setForm((current) => ({ ...current, content: e.target.value }))}
-                                        placeholder="Paste private records, diary notes, finance references, customer docs, approved company guidance, reflection/synthesis observations, security requirements, provider constraints, or other governed context here."
+                                        placeholder="Paste or upload source material Soma should use later, such as customer requirements, private records, company guidance, research notes, security rules, or operating constraints."
                                         className={`${INPUT_CLASS} min-h-[260px] resize-y`}
                                     />
                                 </Field>
@@ -368,10 +368,10 @@ export default function DeploymentContextPanel() {
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 text-cortex-text-main">
                                 <ShieldCheck className="w-4 h-4 text-cortex-success" />
-                                <span className="text-xs font-semibold">Governed knowledge store</span>
+                                <span className="text-xs font-semibold">Saved for future Soma use</span>
                             </div>
                             <p className="text-[11px] text-cortex-text-muted mt-1">
-                                Stored as an approved document artifact plus governed pgvector chunks with visibility, sensitivity, trust, and knowledge-class metadata.
+                                Stored with visibility, sensitivity, trust, goal scope, and source classification so Soma can cite the right boundary later.
                             </p>
                             <p className="text-[11px] font-mono text-cortex-text-muted mt-1">{status}</p>
                         </div>
@@ -381,7 +381,7 @@ export default function DeploymentContextPanel() {
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-cortex-primary text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-105"
                         >
                             <Upload className="w-4 h-4" />
-                            Load Context
+                            Save context
                         </button>
                     </div>
 
@@ -396,9 +396,9 @@ export default function DeploymentContextPanel() {
                 <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface">
                     <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-cortex-border px-5 py-4">
                         <div>
-                            <h2 className="text-sm font-semibold text-cortex-text-main">Loaded Governed Context</h2>
+                            <h2 className="text-sm font-semibold text-cortex-text-main">Saved Context Sources</h2>
                             <p className="text-xs text-cortex-text-muted mt-1">
-                                Recent governed context entries Soma can recall separately from Soma memory during planning and answer generation.
+                                Durable source material Soma can recall separately from chat memory and generated output files.
                             </p>
                         </div>
                         <span className="text-[11px] font-mono text-cortex-text-muted">{entries.length} entries</span>
@@ -409,7 +409,7 @@ export default function DeploymentContextPanel() {
                             <p className="text-xs font-mono text-cortex-text-muted animate-pulse">Loading deployment context…</p>
                         ) : entries.length === 0 ? (
                             <div className="rounded-xl border border-dashed border-cortex-border p-4 text-xs text-cortex-text-muted">
-                                No deployment context loaded yet.
+                                No long-term context sources saved yet.
                             </div>
                         ) : (
                             entries.map((entry) => (

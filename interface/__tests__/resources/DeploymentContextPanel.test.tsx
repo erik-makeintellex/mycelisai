@@ -23,7 +23,7 @@ describe("DeploymentContextPanel", () => {
         render(<DeploymentContextPanel />);
 
         await waitFor(() => {
-            expect(screen.getByText(/No deployment context loaded yet/i)).toBeDefined();
+            expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined();
         });
 
         expect(screen.getByRole("tablist", { name: "Deployment context intake steps" })).toBeDefined();
@@ -34,13 +34,13 @@ describe("DeploymentContextPanel", () => {
         expect(screen.queryByLabelText("Visibility")).toBeNull();
         expect(screen.getByRole("region", { name: "Loaded governed context list" })).toBeDefined();
 
-        fireEvent.click(screen.getByRole("tab", { name: /Classification/i }));
-        expect(screen.getByRole("tab", { name: /Classification/i }).getAttribute("aria-selected")).toBe("true");
+        fireEvent.click(screen.getByRole("tab", { name: /Use as/i }));
+        expect(screen.getByRole("tab", { name: /Use as/i }).getAttribute("aria-selected")).toBe("true");
         expect(screen.getByLabelText("Knowledge Class")).toBeDefined();
         expect(screen.queryByLabelText("Content")).toBeNull();
 
-        fireEvent.click(screen.getByRole("tab", { name: /Scope/i }));
-        expect(screen.getByRole("tab", { name: /Scope/i }).getAttribute("aria-selected")).toBe("true");
+        fireEvent.click(screen.getByRole("tab", { name: /Access/i }));
+        expect(screen.getByRole("tab", { name: /Access/i }).getAttribute("aria-selected")).toBe("true");
         expect(screen.getByLabelText("Visibility")).toBeDefined();
         expect(screen.getByLabelText("Target Goal Sets")).toBeDefined();
     });
@@ -119,15 +119,15 @@ describe("DeploymentContextPanel", () => {
         render(<DeploymentContextPanel />);
 
         await waitFor(() => {
-            expect(screen.getByText(/No deployment context loaded yet/i)).toBeDefined();
+            expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined();
         });
 
         fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Security Notes" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Classification/i }));
+        fireEvent.click(screen.getByRole("tab", { name: /Use as/i }));
         fireEvent.change(screen.getByLabelText("Knowledge Class"), { target: { value: "company_knowledge" } });
         fireEvent.click(screen.getByRole("tab", { name: /Content/i }));
         fireEvent.change(screen.getByLabelText("Content"), { target: { value: "Restrict web access by trust class." } });
-        fireEvent.click(screen.getByRole("button", { name: /Load Context/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Save context/i }));
 
         await waitFor(() => {
             expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -165,13 +165,13 @@ describe("DeploymentContextPanel", () => {
         render(<DeploymentContextPanel />);
 
         await waitFor(() => {
-            expect(screen.getByText(/No deployment context loaded yet/i)).toBeDefined();
+            expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined();
         });
 
-        fireEvent.click(screen.getByRole("tab", { name: /Classification/i }));
+        fireEvent.click(screen.getByRole("tab", { name: /Use as/i }));
         fireEvent.change(screen.getByLabelText("Source Kind"), { target: { value: "finance_record" } });
         fireEvent.change(screen.getByLabelText("Content Domain"), { target: { value: "finance" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Scope/i }));
+        fireEvent.click(screen.getByRole("tab", { name: /Access/i }));
         fireEvent.change(screen.getByLabelText("Target Goal Sets"), { target: { value: "tax planning, cash flow" } });
         fireEvent.click(screen.getByRole("tab", { name: /Content/i }));
         const file = new File(["Invoice timing and savings goals."], "Finance Notes.md", { type: "text/markdown" });
@@ -179,7 +179,7 @@ describe("DeploymentContextPanel", () => {
         await waitFor(() => {
             expect(screen.getAllByDisplayValue("Finance Notes.md").length).toBeGreaterThan(0);
         });
-        fireEvent.click(screen.getByRole("button", { name: /Load Context/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Save context/i }));
 
         await waitFor(() => {
             expect(screen.getByText(/Loaded Finance Notes as private user content/i)).toBeDefined();
@@ -218,18 +218,18 @@ describe("DeploymentContextPanel", () => {
         render(<DeploymentContextPanel />);
 
         await waitFor(() => {
-            expect(screen.getByText(/No deployment context loaded yet/i)).toBeDefined();
+            expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined();
         });
 
         fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Investor Workflow Shift" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Classification/i }));
+        fireEvent.click(screen.getByRole("tab", { name: /Use as/i }));
         fireEvent.change(screen.getByLabelText("Knowledge Class"), { target: { value: "reflection_synthesis" } });
         fireEvent.change(screen.getByLabelText("Source Kind"), { target: { value: "trajectory_shift" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Scope/i }));
+        fireEvent.click(screen.getByRole("tab", { name: /Access/i }));
         fireEvent.change(screen.getByLabelText("Target Goal Sets"), { target: { value: "investor review" } });
         fireEvent.click(screen.getByRole("tab", { name: /Content/i }));
         fireEvent.change(screen.getByLabelText("Content"), { target: { value: "The user trajectory shifted toward team-managed media output demos." } });
-        fireEvent.click(screen.getByRole("button", { name: /Load Context/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Save context/i }));
 
         await waitFor(() => {
             expect(screen.getByText(/Loaded Investor Workflow Shift as reflection \/ synthesis memory/i)).toBeDefined();

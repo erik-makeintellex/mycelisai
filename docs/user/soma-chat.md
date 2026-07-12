@@ -94,7 +94,7 @@ When Soma is planning or reporting work, the visible plan should name the expect
 
 Trusted compact receipts in the Soma thread should expose app/package outputs without requiring a full panel: **Open app**, **Open folder**, **Open in Resources**, validation status when available, and **Reply** for follow-up changes.
 
-Use **Reply** on a delivered output or project package when you want Soma to keep that exact output as context for the next request. Reply does not execute work by itself. It keeps the output visible, shows a compact `Continuing from` indicator, leaves the composer ready for your natural follow-up, and sends typed continuation context with the output title, workspace reference, and proof id when available. You can ask to update it, make an alternate version, generate downstream material from it, inspect it, or route it to another team; Soma classifies that follow-up separately from whether approval is required.
+Use **Reply** on a delivered output or project package when you want Soma to keep that exact output as context for the next request. Reply does not execute work by itself. It keeps the output visible, shows a compact `Continuing from` indicator, leaves the composer ready for your natural follow-up, and sends typed continuation context with the output title, workspace reference, and proof id when available. You can ask to update it, make an alternate version, generate downstream material from it, inspect it, or route it to another team; Soma classifies that follow-up separately from whether approval is required. If a file should become reusable long-term source material rather than just a one-request handoff, ask Soma to save it as governed context or use `Resources -> Deployment Context`.
 
 ## Teams And Groups
 
@@ -109,7 +109,7 @@ Team defaults:
 
 Groups are collaboration lanes. Use `Groups` when you want a temporary or standing lane with one selected-group workspace, Workflow Log, outputs, retained artifacts, and message/review context. The Workflow Log is the readable chat-pipeline view; it should not become raw bus logs or multiple little agent windows.
 
-When Soma evokes teams, planning and handoff files are working context, not final delivery. Ask Soma to continue until the group has a real user-facing output, then use Workflow Log or internal/source review only when you need the evidence trail behind that result.
+When Soma evokes teams, planning and handoff files are working context, not final delivery. Ask Soma to continue until the group has a real user-facing output, then use Workflow Log or internal/source review only when you need the evidence trail behind that result. For long-running teams, tell Soma which files or mounted sources are standing context, which folder the team may watch or reuse, and which folder/file should count as the delivered output.
 
 For multi-team work, ask in outcome language rather than agent wiring. For example: `Improve this app, retain examples of what changed, then let marketing create launch copy from those examples.` Soma should keep the source team, evidence examples, handoff, and downstream team output connected to the same Outcome. This applies across apps, games, media, documents, reports, and data products; games are only a difficult proof case, not a special product mode.
 
@@ -152,6 +152,7 @@ Docs access is not the same as memory. Reading a doc does not promote it into du
 Use these boundaries:
 
 - ask Soma to use Mycelis docs when you want documentation explained or cited
+- use Reply or a team handoff when a file should guide this next draft or follow-up only
 - use `Resources -> Deployment Context` when you want private, customer, company, or operating-context material to influence future Soma reasoning under a governed trust boundary
 - use Memory when you want to inspect retained recall, prior facts, SitReps, or continuity records already stored by the system
 - ask Soma to name which docs or context sources shaped an answer when trust matters

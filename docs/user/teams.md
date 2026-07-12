@@ -83,7 +83,7 @@ Ask Team is non-blocking. When you queue a follow-on ask, the row should close t
 
 Use `Groups` when you want to review a collaboration lane without opening every team surface. The selected group includes a **Workflow Log** tab that combines the group brief, lifecycle recommendation, attached team-work rows, retained output cues, latest broadcast result, and bus/recovery signal into one operator-readable stream. It is workflow context, not a final deliverable folder and not raw NATS/bus logs. Group workspace tabs keep the selected group and panel in the URL, so an operator can return directly to `overview`, `workflow`, `outputs`, `message`, `settings`, or `create` during review handoff.
 
-The **Outputs** tab is curated for user-facing deliverables. It hides planning, proof, source/support files, and team handoff records by default so a planned team does not look like it delivered real work. Use the include-internal checkbox when you intentionally need to inspect planning records such as `TEAM_EVOCATION.md`, proof files, research handoffs, or source material. A group labeled **Planned only** has retained working material but still needs a delivered output before it should be treated as complete.
+The **Outputs** tab is curated for user-facing deliverables. It hides planning, proof, source/support files, and team handoff records by default so a planned team does not look like it delivered real work. Use the include-internal checkbox when you intentionally need to inspect planning records such as `TEAM_EVOCATION.md`, proof files, research handoffs, or source material. A group labeled **Planned only** has retained working material but still needs a delivered output before it should be treated as complete. When you hand a file to a team, say whether it is a one-run draft/input, standing context for that team, or a final output target; Soma should keep those roles separate in the work item.
 
 Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
 
@@ -151,7 +151,7 @@ The team lead is the user-facing counterpart for that team, not a hidden extra m
 
 After a temporary collaboration is archived, use `/groups` to review the workflow log, retained output package, and collaboration record.
 
-For permanent or standing groups, keep deliverables inside the group folder instead of the general output folders. Soma-owned team media defaults to `groups/<team-id>/media`, and Soma-owned team project packages default to `groups/<team-id>/generated/...`. Explicit operator paths are still respected when you intentionally name a different workspace-confined target.
+For permanent or standing groups, keep deliverables inside the group folder instead of the general output folders. Soma-owned team media defaults to `groups/<team-id>/media`, and Soma-owned team project packages default to `groups/<team-id>/generated/...`. Explicit operator paths are still respected when you intentionally name a different workspace-confined target. Long-running teams should also name approved input mounts or Deployment Context sources they may reuse so they do not treat every old working file as current truth.
 
 ## Team Creation
 
@@ -162,6 +162,8 @@ Tell Soma:
 - how broad the request is
 - whether the work should stay as one compact team or split into multiple lanes
 - what outputs you want visible at the end
+- what source files, mounted folders, or saved context the team may use
+- whether those sources are one-time handoff material or long-lived context
 - whether this is a temporary group whose logs can be reviewed and whose outputs should remain after closure
 - whether the group workflow log should show only final user-facing outputs or include deeper team-work/source context during review
 

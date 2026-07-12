@@ -45,8 +45,8 @@ const RESOURCE_TABS: ResourceTab[] = [
     {
         id: "workspace",
         label: "Output Files",
-        summary: "Find, open, and inspect generated output retained in the governed workspace.",
-        detail: "Find generated work",
+        summary: "Open delivered files, packages, media, and team outputs retained for the user.",
+        detail: "Delivered work",
         icon: FolderOpen,
     },
     {
@@ -59,15 +59,15 @@ const RESOURCE_TABS: ResourceTab[] = [
     {
         id: "exchange",
         label: "Exchange",
-        summary: "Channels, threads, and normalized outputs crossing teams and tools.",
-        detail: "Managed output lanes",
+        summary: "Review normalized handoffs and evidence moving between teams and tools.",
+        detail: "Team handoffs",
         icon: GitBranch,
     },
     {
         id: "deployment-context",
         label: "Deployment Context",
-        summary: "Governed intake for deployment knowledge and private context lanes.",
-        detail: "Context loading",
+        summary: "Save files or notes Soma should reuse as long-lived, scoped source context.",
+        detail: "Long-term context",
         icon: BookMarked,
     },
     {
@@ -111,7 +111,7 @@ function ResourcesContent() {
                             Resources
                         </h1>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-cortex-text-muted">
-                            Open generated work, manage Soma capabilities, and review trusted workspace context.
+                            Open delivered work, connect Soma to sources, and save context for future use.
                         </p>
                     </div>
                 </div>

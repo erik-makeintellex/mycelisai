@@ -11,6 +11,7 @@ Use this page when you want to decide whether a request should stay as a direct 
 - [Variant 3: Compact Team](#variant-3-compact-team)
 - [Variant 4: Multi-Lane Workflow](#variant-4-multi-lane-workflow)
 - [When Teams Truly Win](#when-teams-truly-win)
+- [File And Context Handoff](#file-and-context-handoff)
 - [How To Keep A Plan Through A Reboot](#how-to-keep-a-plan-through-a-reboot)
 - [Good Operator Habit](#good-operator-habit)
 
@@ -98,6 +99,23 @@ Teams show a real advantage when:
 
 Teams are not automatically better.
 They are better when the structure of the work matters.
+
+## File And Context Handoff
+
+When you give Soma a file, folder, source, or generated output, be explicit about its job:
+
+- **This draft only**: use it as input for the current answer, rewrite, or team task.
+- **This Outcome/team**: keep it as source/support material for one group or long-running team.
+- **Future Soma context**: save it through `Resources -> Deployment Context` so Soma can reuse it later with scope, provenance, sensitivity, and trust metadata.
+- **Delivered output**: save it as a retained artifact/package that appears in Soma, Groups, Resources, and Outcome review.
+
+Good prompt:
+
+```text
+Use this file as standing context for the marketing team, but save the generated launch brief as the user-facing output.
+```
+
+If Soma is unsure, it should ask which role the file should play before starting governed work.
 
 ## How To Keep A Plan Through A Reboot
 

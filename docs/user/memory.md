@@ -51,6 +51,7 @@ Rule of thumb:
 - if customer context needs to become durable company reference, promote it through a governed approval path instead of silently reclassifying the original entry
 - if it is a durable lesson, inferred pattern, contradiction, trajectory shift, or meta-observation that Soma should remember about how work is changing, first publish a classified Managed Exchange `LearningCandidate` with confidence and review posture, then promote it into `reflection_synthesis` only through the governed path
 - if it is only useful for the current planning cycle, keep it in temporary continuity
+- if it is a file handed to one team for one deliverable, keep it as source/support material on that Outcome rather than promoting it into durable memory
 - if it exists to explain what happened, treat it as trace or audit
 
 ---
@@ -115,6 +116,7 @@ Use the Memory page when you want to query what is already retained. Use Deploym
 The user-facing distinction:
 
 - Soma docs lookup is read-only and citable help/architecture reference
+- Team/source files are handoff material for the current Outcome unless promoted
 - Deployment Context is durable governed source material for future reasoning
 - Memory is where already-retained facts, SitReps, artifacts, and continuity are inspected
 

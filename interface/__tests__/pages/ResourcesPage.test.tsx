@@ -101,7 +101,7 @@ describe('Resources Page (operator support)', () => {
         await waitFor(() => {
             expect(screen.getByRole('button', { name: /Output Files/i }).getAttribute('aria-current')).toBe('page');
         });
-        expect(screen.getByText(/Find, open, and inspect generated output/i)).toBeDefined();
+        expect(screen.getByText(/Open delivered files, packages, media, and team outputs/i)).toBeDefined();
     });
 
     it('keeps tab=tools as the capability catalog deep link', async () => {

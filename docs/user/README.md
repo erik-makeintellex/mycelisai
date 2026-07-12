@@ -41,7 +41,7 @@ Good first prompts:
 - "Create a retained demo package I can open in the browser and include proof I can revisit."
 - "Ask the active delivery team for one bounded status update; if it times out, show the degraded proof and recovery path."
 
-Generated project packages, browser games, workspace files, and filesystem MCP writes land under the configured `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`. Open **Resources -> Output Files** to browse generated content or use **Open folder** on an output card to open its local folder directly. Open **System -> Deployments** from Admin tools when you need to confirm the exact runtime paths before or after execution.
+Generated project packages, browser games, workspace files, and filesystem MCP writes land under the configured `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`. Open **Resources -> Output Files** to browse generated content or use **Open folder** on an output card to open its local folder directly. Use **Resources -> Deployment Context** when a file or note should become long-lived source context for future Soma/team work rather than just a one-run handoff. Open **System -> Deployments** from Admin tools when you need to confirm the exact runtime paths before or after execution.
 
 Concrete requests Soma should understand when the matching capability is configured:
 
@@ -49,6 +49,8 @@ Concrete requests Soma should understand when the matching capability is configu
 - "Create a small temporary team for this review and bring the retained output back here."
 - "Ask the active teams for blockers and tell me which workflow needs attention first."
 - "Use host data under `workspace/shared-sources` and list which files shaped the answer."
+- "Use this folder only for the current draft, then save the final brief as the retained output."
+- "Save this customer handoff as long-term context for this Outcome before asking the delivery team to use it."
 - "Use the Mycelis docs to explain how governed context differs from memory, and cite the doc paths you used."
 - "Review the current MCP tool structure and recommend which agents should have which tools."
 - "Review my request against prior context, infer the action, and ask me to confirm before you execute."
