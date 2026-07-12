@@ -17,16 +17,14 @@ func TestServiceAllScopeWithBuiltinWebIncludesMountedFolderAndWebResults(t *test
 		t.Fatalf("write mount: %v", err)
 	}
 	svc := NewService(Config{Provider: ProviderBuiltinWeb, MaxResults: 4}, nil, nil)
-	if _, err := svc.AddSource(SourceInput{
+	seedManagedSource(t, svc, SourceInput{
 		Name:       "Mounted research",
 		Provider:   ProviderMountedFolder,
 		SourceType: ProviderMountedFolder,
 		Endpoint:   root,
 		Boundary:   "approved mounted research",
 		Status:     "available",
-	}); err != nil {
-		t.Fatalf("AddSource: %v", err)
-	}
+	})
 	svc.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		if r.URL.Query().Get("q") != "internal public architecture" {
 			t.Fatalf("q = %q", r.URL.Query().Get("q"))
@@ -99,16 +97,14 @@ func TestServiceAllScopeWithPublicProviderReportsLocalOnlyWhenWebBlocked(t *test
 		OnlineAllowed:    false,
 		OnlineAllowedSet: true,
 	}, nil, nil)
-	if _, err := svc.AddSource(SourceInput{
+	seedManagedSource(t, svc, SourceInput{
 		Name:       "Mounted research",
 		Provider:   ProviderMountedFolder,
 		SourceType: ProviderMountedFolder,
 		Endpoint:   root,
 		Boundary:   "approved mounted research",
 		Status:     "available",
-	}); err != nil {
-		t.Fatalf("AddSource: %v", err)
-	}
+	})
 
 	resp, err := svc.Search(context.Background(), Request{Query: "internal public", SourceScope: "all"})
 	if err != nil {

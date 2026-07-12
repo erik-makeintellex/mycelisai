@@ -182,5 +182,8 @@ func SourceErrorStatus(err error) int {
 	if errors.Is(err, errSourceNotFound) {
 		return http.StatusNotFound
 	}
+	if errors.Is(err, errSourceStoreUnavailable) {
+		return http.StatusServiceUnavailable
+	}
 	return http.StatusBadRequest
 }

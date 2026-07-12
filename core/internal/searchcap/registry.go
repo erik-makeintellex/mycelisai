@@ -8,6 +8,7 @@ import (
 )
 
 var errSourceNotFound = errors.New("search source not found")
+var errSourceStoreUnavailable = errors.New("search source persistence requires PostgreSQL")
 
 func (s *Service) ListSources() []Source {
 	if s == nil {
@@ -28,18 +29,19 @@ func (s *Service) AddSourceWithContext(ctx context.Context, input SourceInput) (
 	if err != nil {
 		return Source{}, err
 	}
+	if s.sourceDB == nil {
+		return Source{}, errSourceStoreUnavailable
+	}
 	source.Managed = true
 
 	s.registryMu.Lock()
 	defer s.registryMu.Unlock()
 	source.ID = s.uniqueSourceIDLocked(source)
-	if s.sourceDB != nil {
-		created, err := s.sourceDB.Create(ctx, source)
-		if err != nil {
-			return Source{}, err
-		}
-		source = created
+	created, err := s.sourceDB.Create(ctx, source)
+	if err != nil {
+		return Source{}, err
 	}
+	source = created
 	s.registry = append(s.registry, source)
 	return source, nil
 }
@@ -47,6 +49,9 @@ func (s *Service) AddSourceWithContext(ctx context.Context, input SourceInput) (
 func (s *Service) UpdateSourceWithContext(ctx context.Context, id string, input SourceInput) (Source, error) {
 	if s == nil {
 		return Source{}, errors.New("search service unavailable")
+	}
+	if s.sourceDB == nil {
+		return Source{}, errSourceStoreUnavailable
 	}
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -65,10 +70,8 @@ func (s *Service) UpdateSourceWithContext(ctx context.Context, id string, input 
 	if idx < 0 {
 		return Source{}, errSourceNotFound
 	}
-	if s.sourceDB != nil {
-		if err := s.sourceDB.Update(ctx, source); err != nil {
-			return Source{}, err
-		}
+	if err := s.sourceDB.Update(ctx, source); err != nil {
+		return Source{}, err
 	}
 	s.registry[idx] = source
 	return source, nil
@@ -77,6 +80,9 @@ func (s *Service) UpdateSourceWithContext(ctx context.Context, id string, input 
 func (s *Service) DeleteSourceWithContext(ctx context.Context, id string) error {
 	if s == nil {
 		return errors.New("search service unavailable")
+	}
+	if s.sourceDB == nil {
+		return errSourceStoreUnavailable
 	}
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -88,10 +94,8 @@ func (s *Service) DeleteSourceWithContext(ctx context.Context, id string) error 
 	if idx < 0 {
 		return errSourceNotFound
 	}
-	if s.sourceDB != nil {
-		if err := s.sourceDB.Delete(ctx, id); err != nil {
-			return err
-		}
+	if err := s.sourceDB.Delete(ctx, id); err != nil {
+		return err
 	}
 	s.registry = append(s.registry[:idx], s.registry[idx+1:]...)
 	return nil

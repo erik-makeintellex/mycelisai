@@ -68,7 +68,7 @@ func (s *AdminServer) HandleSearchSources(w http.ResponseWriter, r *http.Request
 		}
 		source, err := s.searchService().AddSourceWithContext(r.Context(), req)
 		if err != nil {
-			respondError(w, err.Error(), http.StatusBadRequest)
+			respondError(w, err.Error(), searchcap.SourceErrorStatus(err))
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

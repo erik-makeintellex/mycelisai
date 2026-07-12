@@ -12,7 +12,7 @@ import (
 
 func TestServiceSelectedSourceRoutesToRegisteredLocalAPIEndpoint(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderDisabled, MaxResults: 5}, nil, nil)
-	source, err := svc.AddSource(SourceInput{
+	source := seedManagedSource(t, svc, SourceInput{
 		Name:       "Team research",
 		Provider:   "local_api",
 		Endpoint:   "http://selected-search.local/query",
@@ -23,9 +23,6 @@ func TestServiceSelectedSourceRoutesToRegisteredLocalAPIEndpoint(t *testing.T) {
 		Status:     "available",
 		Mode:       "live",
 	})
-	if err != nil {
-		t.Fatalf("AddSource: %v", err)
-	}
 	svc.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		if r.URL.Host != "selected-search.local" || r.URL.Path != "/query" {
 			t.Fatalf("selected endpoint = %s", r.URL.String())
@@ -60,7 +57,7 @@ func TestServiceSelectedSourceRoutesToRegisteredLocalAPIEndpoint(t *testing.T) {
 
 func TestServiceSelectedSourceBlocksOutOfScopeAndMissingSecret(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
-	groupSource, err := svc.AddSource(SourceInput{
+	groupSource := seedManagedSource(t, svc, SourceInput{
 		Name:       "Group docs",
 		Provider:   "local_api",
 		Endpoint:   "https://search.example.test/api",
@@ -70,9 +67,6 @@ func TestServiceSelectedSourceBlocksOutOfScopeAndMissingSecret(t *testing.T) {
 		AuthScheme: "none",
 		Status:     "available",
 	})
-	if err != nil {
-		t.Fatalf("AddSource group: %v", err)
-	}
 	resp, err := svc.Search(context.Background(), Request{Query: "docs", SourceID: groupSource.ID, TeamID: "marketing-team"})
 	if err != nil {
 		t.Fatalf("Search scope: %v", err)
@@ -81,7 +75,7 @@ func TestServiceSelectedSourceBlocksOutOfScopeAndMissingSecret(t *testing.T) {
 		t.Fatalf("scope blocker = %+v", resp.Blocker)
 	}
 
-	authSource, err := svc.AddSource(SourceInput{
+	authSource := seedManagedSource(t, svc, SourceInput{
 		Name:       "Private API",
 		Provider:   "local_api",
 		Endpoint:   "https://private.example.test/api",
@@ -90,9 +84,6 @@ func TestServiceSelectedSourceBlocksOutOfScopeAndMissingSecret(t *testing.T) {
 		SecretRef:  "PRIVATE_SEARCH_TOKEN",
 		Status:     "available",
 	})
-	if err != nil {
-		t.Fatalf("AddSource auth: %v", err)
-	}
 	resp, err = svc.Search(context.Background(), Request{Query: "docs", SourceID: authSource.ID})
 	if err != nil {
 		t.Fatalf("Search auth: %v", err)
@@ -105,7 +96,7 @@ func TestServiceSelectedSourceBlocksOutOfScopeAndMissingSecret(t *testing.T) {
 func TestServiceSelectedSourceAppliesBearerSecretRefForLocalAPI(t *testing.T) {
 	t.Setenv("PRIVATE_SEARCH_TOKEN", "test-private-token")
 	svc := NewService(Config{Provider: ProviderDisabled, MaxResults: 5}, nil, nil)
-	source, err := svc.AddSource(SourceInput{
+	source := seedManagedSource(t, svc, SourceInput{
 		Name:       "Private API",
 		Provider:   "local_api",
 		Endpoint:   "http://private.example.test/api",
@@ -114,9 +105,6 @@ func TestServiceSelectedSourceAppliesBearerSecretRefForLocalAPI(t *testing.T) {
 		SecretRef:  "env:PRIVATE_SEARCH_TOKEN",
 		Status:     "available",
 	})
-	if err != nil {
-		t.Fatalf("AddSource auth: %v", err)
-	}
 	svc.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-private-token" {
 			t.Fatalf("Authorization = %q", got)
@@ -146,7 +134,7 @@ func TestServiceSelectedSourceAppliesBearerSecretRefForLocalAPI(t *testing.T) {
 func TestServiceSelectedSourceBlocksBearerSecretRefForSearXNG(t *testing.T) {
 	t.Setenv("PRIVATE_SEARCH_TOKEN", "test-private-token")
 	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
-	source, err := svc.AddSource(SourceInput{
+	source := seedManagedSource(t, svc, SourceInput{
 		Name:       "Private SearXNG",
 		Provider:   "searxng",
 		Endpoint:   "http://searxng.example.test",
@@ -155,9 +143,6 @@ func TestServiceSelectedSourceBlocksBearerSecretRefForSearXNG(t *testing.T) {
 		SecretRef:  "PRIVATE_SEARCH_TOKEN",
 		Status:     "available",
 	})
-	if err != nil {
-		t.Fatalf("AddSource auth: %v", err)
-	}
 	svc.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		t.Fatalf("SearXNG should not be called when source auth is unsupported")
 		return nil, nil
@@ -178,7 +163,7 @@ func TestServiceSelectedMountedFolderSearchesLiveFiles(t *testing.T) {
 		t.Fatalf("write mounted file: %v", err)
 	}
 	svc := NewService(Config{Provider: ProviderDisabled, MaxResults: 5}, nil, nil)
-	source, err := svc.AddSource(SourceInput{
+	source := seedManagedSource(t, svc, SourceInput{
 		Name:             "Client docs mount",
 		Provider:         "mounted_folder",
 		SourceType:       "mounted_folder",
@@ -190,9 +175,6 @@ func TestServiceSelectedMountedFolderSearchesLiveFiles(t *testing.T) {
 		TrustClass:       "trusted_internal",
 		Status:           "available",
 	})
-	if err != nil {
-		t.Fatalf("AddSource mount: %v", err)
-	}
 
 	resp, err := svc.Search(context.Background(), Request{Query: "Hermes offline proof", SourceID: source.ID})
 	if err != nil {
@@ -218,16 +200,14 @@ func TestServiceLocalSourcesIncludesAvailableMountedFolders(t *testing.T) {
 		t.Fatalf("write mounted file: %v", err)
 	}
 	svc := NewService(Config{Provider: ProviderLocalSources, MaxResults: 5}, nil, nil)
-	if _, err := svc.AddSource(SourceInput{
+	seedManagedSource(t, svc, SourceInput{
 		Name:       "Shared research mount",
 		Provider:   "mounted_folder",
 		SourceType: "mounted_folder",
 		Endpoint:   root,
 		Boundary:   "approved shared research folder",
 		Status:     "available",
-	}); err != nil {
-		t.Fatalf("AddSource mount: %v", err)
-	}
+	})
 
 	resp, err := svc.Search(context.Background(), Request{Query: "mounted data search"})
 	if err != nil {

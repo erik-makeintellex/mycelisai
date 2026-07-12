@@ -5,7 +5,7 @@ import "testing"
 func TestServiceSearchSourceRegistryListsConfiguredAndAddedSources(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderSearXNG, SearXNGEndpoint: "http://searxng.local", MaxResults: 5}, nil, nil)
 
-	added, err := svc.AddSource(SourceInput{
+	added := seedManagedSource(t, svc, SourceInput{
 		Name:             "Research Team Search",
 		Provider:         "local_api",
 		Endpoint:         "http://search.local/api/search",
@@ -19,9 +19,6 @@ func TestServiceSearchSourceRegistryListsConfiguredAndAddedSources(t *testing.T)
 		TrustClass:       "bounded_external",
 		Status:           "available",
 	})
-	if err != nil {
-		t.Fatalf("AddSource: %v", err)
-	}
 	if added.SecretRef != "MYCELIS_RESEARCH_SEARCH_TOKEN" || added.ScopeKind != "group" || added.ScopeRef != "research-team" {
 		t.Fatalf("added source = %+v", added)
 	}
@@ -72,7 +69,7 @@ func TestServiceSearchSourceRegistryRejectsRawCredentialShape(t *testing.T) {
 func TestServiceSearchSourceRegistryAcceptsMountedFolderPath(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
 
-	source, err := svc.AddSource(SourceInput{
+	source := seedManagedSource(t, svc, SourceInput{
 		Name:       "Local client docs",
 		Provider:   "mounted_folder",
 		SourceType: "mounted_folder",
@@ -80,9 +77,6 @@ func TestServiceSearchSourceRegistryAcceptsMountedFolderPath(t *testing.T) {
 		Boundary:   "operator-approved client documents",
 		AuthScheme: "none",
 	})
-	if err != nil {
-		t.Fatalf("AddSource mounted folder: %v", err)
-	}
 	if source.Endpoint != "workspace/client-docs" || source.SourceType != "mounted_folder" {
 		t.Fatalf("mounted source = %+v", source)
 	}
@@ -91,33 +85,37 @@ func TestServiceSearchSourceRegistryAcceptsMountedFolderPath(t *testing.T) {
 func TestServiceSearchSourceRegistryAcceptsSecretRefAuthAlias(t *testing.T) {
 	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
 
-	source, err := svc.AddSource(SourceInput{
+	source := seedManagedSource(t, svc, SourceInput{
 		Name:       "Docs Search",
 		Provider:   "local_api",
 		Endpoint:   "https://docs.example.test/search",
 		AuthScheme: "secret_ref",
 		SecretRef:  "DOCS_SEARCH_TOKEN",
 	})
-	if err != nil {
-		t.Fatalf("AddSource: %v", err)
-	}
 	if source.AuthScheme != "api_token" || source.SecretRef != "DOCS_SEARCH_TOKEN" {
 		t.Fatalf("source auth = %+v, want api_token with secret ref", source)
 	}
 }
 
-func TestServiceSearchSourceRegistryUpdatesAndDeletesManagedSources(t *testing.T) {
-	svc := NewService(Config{Provider: ProviderSearXNG, SearXNGEndpoint: "http://searxng.local"}, nil, nil)
-	source, err := svc.AddSource(SourceInput{
+func TestServiceSearchSourceRegistryRequiresPostgresStoreForMutations(t *testing.T) {
+	svc := NewService(Config{Provider: ProviderDisabled}, nil, nil)
+	if _, err := svc.AddSource(SourceInput{
+		Name:       "Docs Search",
+		Provider:   "local_api",
+		Endpoint:   "https://docs.example.test/search",
+		Boundary:   "docs index",
+		AuthScheme: "none",
+	}); err != errSourceStoreUnavailable {
+		t.Fatalf("AddSource error = %v, want errSourceStoreUnavailable", err)
+	}
+
+	source := seedManagedSource(t, svc, SourceInput{
 		Name:       "Docs Search",
 		Provider:   "local_api",
 		Endpoint:   "https://docs.example.test/search",
 		Boundary:   "docs index",
 		AuthScheme: "none",
 	})
-	if err != nil {
-		t.Fatalf("AddSource: %v", err)
-	}
 	updated, err := svc.UpdateSourceWithContext(t.Context(), source.ID, SourceInput{
 		Name:       "Docs Search v2",
 		Provider:   "local_api",
@@ -127,21 +125,18 @@ func TestServiceSearchSourceRegistryUpdatesAndDeletesManagedSources(t *testing.T
 		Status:     "available",
 		Mode:       "live",
 	})
-	if err != nil {
-		t.Fatalf("UpdateSourceWithContext: %v", err)
+	if err != errSourceStoreUnavailable {
+		t.Fatalf("UpdateSourceWithContext error = %v, want errSourceStoreUnavailable", err)
 	}
-	if updated.ID != source.ID || updated.Name != "Docs Search v2" || !updated.Managed {
+	if updated.ID != "" {
 		t.Fatalf("updated = %+v", updated)
 	}
 
-	if err := svc.DeleteSourceWithContext(t.Context(), source.ID); err != nil {
-		t.Fatalf("DeleteSourceWithContext: %v", err)
+	if err := svc.DeleteSourceWithContext(t.Context(), source.ID); err != errSourceStoreUnavailable {
+		t.Fatalf("DeleteSourceWithContext error = %v, want errSourceStoreUnavailable", err)
 	}
 	sources := svc.ListSources()
-	if len(sources) != 1 || sources[0].ID != "searxng" {
-		t.Fatalf("sources after delete = %+v", sources)
-	}
-	if err := svc.DeleteSourceWithContext(t.Context(), "searxng"); err == nil {
-		t.Fatalf("expected configured source delete to fail")
+	if len(sources) != 1 {
+		t.Fatalf("sources after failed delete = %+v", sources)
 	}
 }

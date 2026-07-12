@@ -1,10 +1,12 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/searchcap"
 )
 
@@ -151,7 +153,29 @@ func TestHandleSearchSourcesListsConfiguredSource(t *testing.T) {
 
 func TestHandleSearchSourcesAddsGovernedSourceWithoutRawToken(t *testing.T) {
 	s := newTestServer(func(s *AdminServer) {
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("sqlmock: %v", err)
+		}
+		t.Cleanup(func() { db.Close() })
+		mock.ExpectQuery("SELECT id, name, provider, source_type").WillReturnRows(searchSourceRows())
+		mock.ExpectExec("INSERT INTO search_sources").
+			WithArgs(
+				"local_api", "Group Research Search", "local_api", "local_api",
+				"http://search.local/api/search", "group", "research-team",
+				"operator-owned research index", "api_token", "MYCELIS_RESEARCH_SEARCH_TOKEN",
+				"live", "configured", "bounded_external", "available", "",
+			).
+			WillReturnResult(sqlmock.NewResult(0, 1))
 		s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil)
+		if err := s.Search.UseSourceStore(context.Background(), searchcap.NewSourceStore(db)); err != nil {
+			t.Fatalf("UseSourceStore: %v", err)
+		}
+		t.Cleanup(func() {
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Fatalf("unmet expectations: %v", err)
+			}
+		})
 	})
 	mux := setupMux(t, "POST /api/v1/search/sources", s.HandleSearchSources)
 	rr := doRequest(t, mux, http.MethodPost, "/api/v1/search/sources", `{
@@ -187,24 +211,46 @@ func TestHandleSearchSourcesAddsGovernedSourceWithoutRawToken(t *testing.T) {
 }
 
 func TestHandleSearchSourceUpdatesAndDeletesGovernedSource(t *testing.T) {
+	var sourceID string
 	s := newTestServer(func(s *AdminServer) {
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("sqlmock: %v", err)
+		}
+		t.Cleanup(func() { db.Close() })
+		sourceID = "local_api"
+		rows := searchSourceRows().AddRow(
+			sourceID, "Team Search", "local_api", "local_api", "https://search.example.test/api",
+			"all", "", "approved team search", "none", "", "preview", "public",
+			"bounded_external", "available", "",
+		)
+		mock.ExpectQuery("SELECT id, name, provider, source_type").WillReturnRows(rows)
+		mock.ExpectExec("UPDATE search_sources").
+			WithArgs(
+				sourceID, "Team Search v2", "local_api", "local_api",
+				"https://search.example.test/v2", "all", "",
+				"approved team search v2", "none", "", "live", "public",
+				"bounded_external", "available", "",
+			).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+		mock.ExpectExec("DELETE FROM search_sources").
+			WithArgs(sourceID).
+			WillReturnResult(sqlmock.NewResult(0, 1))
 		s.Search = searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil)
+		if err := s.Search.UseSourceStore(context.Background(), searchcap.NewSourceStore(db)); err != nil {
+			t.Fatalf("UseSourceStore: %v", err)
+		}
+		t.Cleanup(func() {
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Fatalf("unmet expectations: %v", err)
+			}
+		})
 	})
-	source, err := s.Search.AddSource(searchcap.SourceInput{
-		Name:       "Team Search",
-		Provider:   "local_api",
-		Endpoint:   "https://search.example.test/api",
-		Boundary:   "approved team search",
-		AuthScheme: "none",
-	})
-	if err != nil {
-		t.Fatalf("AddSource: %v", err)
-	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/search/sources/{id}", s.HandleSearchSource)
 	mux.HandleFunc("DELETE /api/v1/search/sources/{id}", s.HandleSearchSource)
-	rr := doRequest(t, mux, http.MethodPatch, "/api/v1/search/sources/"+source.ID, `{
+	rr := doRequest(t, mux, http.MethodPatch, "/api/v1/search/sources/"+sourceID, `{
 		"name":"Team Search v2",
 		"provider":"local_api",
 		"endpoint":"https://search.example.test/v2",
@@ -217,15 +263,15 @@ func TestHandleSearchSourceUpdatesAndDeletesGovernedSource(t *testing.T) {
 	var resp map[string]any
 	assertJSON(t, rr, &resp)
 	updated := resp["data"].(map[string]any)
-	if updated["id"] != source.ID || updated["name"] != "Team Search v2" || updated["managed"] != true {
+	if updated["id"] != sourceID || updated["name"] != "Team Search v2" || updated["managed"] != true {
 		t.Fatalf("updated = %+v", updated)
 	}
 
-	rr = doRequest(t, mux, http.MethodDelete, "/api/v1/search/sources/"+source.ID, "")
+	rr = doRequest(t, mux, http.MethodDelete, "/api/v1/search/sources/"+sourceID, "")
 	assertStatus(t, rr, http.StatusOK)
 	assertJSON(t, rr, &resp)
 	deleted := resp["data"].(map[string]any)
-	if deleted["id"] != source.ID || deleted["deleted"] != true {
+	if deleted["id"] != sourceID || deleted["deleted"] != true {
 		t.Fatalf("deleted = %+v", deleted)
 	}
 }

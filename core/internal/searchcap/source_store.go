@@ -18,7 +18,7 @@ func NewSourceStore(db *sql.DB) *SourceStore {
 
 func (s *SourceStore) List(ctx context.Context) ([]Source, error) {
 	if s == nil || s.DB == nil {
-		return []Source{}, nil
+		return nil, errSourceStoreUnavailable
 	}
 	rows, err := s.DB.QueryContext(ctx, `
 		SELECT id, name, provider, source_type, COALESCE(endpoint, ''), COALESCE(scope_kind, 'all'),
@@ -53,7 +53,7 @@ func (s *SourceStore) List(ctx context.Context) ([]Source, error) {
 
 func (s *SourceStore) Create(ctx context.Context, source Source) (Source, error) {
 	if s == nil || s.DB == nil {
-		return source, nil
+		return Source{}, errSourceStoreUnavailable
 	}
 	_, err := s.DB.ExecContext(ctx, `
 		INSERT INTO search_sources (
@@ -74,7 +74,7 @@ func (s *SourceStore) Create(ctx context.Context, source Source) (Source, error)
 
 func (s *SourceStore) Update(ctx context.Context, source Source) error {
 	if s == nil || s.DB == nil {
-		return nil
+		return errSourceStoreUnavailable
 	}
 	res, err := s.DB.ExecContext(ctx, `
 		UPDATE search_sources
@@ -101,7 +101,7 @@ func (s *SourceStore) Update(ctx context.Context, source Source) error {
 
 func (s *SourceStore) Delete(ctx context.Context, id string) error {
 	if s == nil || s.DB == nil {
-		return nil
+		return errSourceStoreUnavailable
 	}
 	res, err := s.DB.ExecContext(ctx, `
 		DELETE FROM search_sources
