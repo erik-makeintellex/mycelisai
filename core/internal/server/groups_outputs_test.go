@@ -71,6 +71,7 @@ func TestHandleGroupOutputs_ReturnsRetainedArtifacts(t *testing.T) {
 				"approved",
 				now,
 			))
+	expectEmptyGroupTeamWorkOutputs(mock, teamID.String(), 8)
 
 	rr := doAuthenticatedRequest(t, mux, "GET", "/api/v1/groups/group-temp/outputs?limit=8", "")
 	assertStatus(t, rr, http.StatusOK)
@@ -157,6 +158,7 @@ func TestHandleGroupOutputs_ReturnsArtifactsForArchivedGroup(t *testing.T) {
 				"approved",
 				now.Add(-2*time.Minute),
 			))
+	expectEmptyGroupTeamWorkOutputs(mock, teamID1.String(), 3)
 
 	mock.ExpectQuery("SELECT .+ FROM artifacts\\s+WHERE team_id = \\$1").
 		WithArgs(teamID2, 3).
@@ -178,6 +180,7 @@ func TestHandleGroupOutputs_ReturnsArtifactsForArchivedGroup(t *testing.T) {
 				"approved",
 				now.Add(-1*time.Minute),
 			))
+	expectEmptyGroupTeamWorkOutputs(mock, teamID2.String(), 3)
 
 	rr := doAuthenticatedRequest(t, mux, "GET", "/api/v1/groups/group-temp/outputs?limit=3", "")
 	assertStatus(t, rr, http.StatusOK)
@@ -265,6 +268,7 @@ func TestHandleGroupOutputs_ReturnsArtifactsForSlugTeamIDs(t *testing.T) {
 				"approved",
 				now,
 			))
+	expectEmptyGroupTeamWorkOutputs(mock, "qa-game-studio", 5)
 
 	rr := doAuthenticatedRequest(t, mux, "GET", "/api/v1/groups/group-slug/outputs?limit=5", "")
 	assertStatus(t, rr, http.StatusOK)

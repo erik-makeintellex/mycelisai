@@ -199,9 +199,9 @@ The browser starts at the MCP-safe `workspace` root rather than the Core
 process working directory, so ordinary browse/read/write actions stay inside
 the configured mounted data boundary.
 
-Output Files now starts with a **Group outputs** selector when retained group artifacts exist. The selector only lists groups that produced retained user-facing outputs through `/api/v1/groups/{id}/outputs`; groups with no deliverable artifacts stay out of the output picker so operators do not have to scan abandoned or internal-only lanes.
+Output Files now starts with a **Group outputs** selector when retained group deliverables exist. The selector only lists groups that produced retained user-facing outputs through `/api/v1/groups/{id}/outputs`; that endpoint includes artifact rows and durable team-work `output_refs` for real deliverables. Groups with no delivered output stay out of the output picker so operators do not have to scan abandoned, planning-only, or internal-only lanes.
 
-Resources treats delivered work and team working material differently. Final documents, packages, media, generated files, and other user-facing deliverables appear in the output picker. Planning files, source/support files, proof notes, and handoffs stay available through the group's Workflow Log or explicit source/internal controls, but they do not make a group appear in the delivered-output picker by themselves.
+Resources treats delivered work and team working material differently. Final documents, packages, media, generated files, and other user-facing deliverables appear in the output picker whether they were stored as artifacts or returned as durable team output refs. Planning files, source/support files, proof notes, and handoffs stay available through the group's Workflow Log or explicit source/internal controls, but they do not make a group appear in the delivered-output picker by themselves.
 
 When a group is cleared from `Groups`, retained files stay visible here unless the operator explicitly included retained output cleanup. If cleanup included the group outputs, the group workspace folder is removed and those artifact rows are archived, so the cleared group no longer appears in the curated output selector. Transient message-bus handoff data is not part of this retained-file list.
 
@@ -224,7 +224,7 @@ level when present and falls back to the artifact agent id, title, and type.
 
 The workspace explorer is organized around three operator steps:
 - `Find outputs` lists retained files and folders and opens file selections into preview.
-- `Preview` reads the selected generated file without leaving the Resources surface.
+- `Preview` reads the selected generated file without leaving the Resources surface and offers **Ask Soma with this** when you want the selected file to ground the next Soma follow-up.
 - `Create` keeps small handoff-folder and handoff-file writes available without making write controls the default browse path.
 
 Output Files should read top-to-bottom: choose retained group output/source scope, optionally open the current folder, then browse, preview, or create from the full-width workspace panel below.
@@ -260,6 +260,8 @@ New-user proof should verify both sides of this boundary:
 - `System -> Deployments` reports the deployment/workspace/artifact roots that explain where generated output will land.
 - A retained demo output or project package opened from Soma/Teams/Groups resolves to the same workspace root family instead of a hidden process working directory; team-owned packages and media should be inside the selected group folder unless the operator explicitly chose another workspace path.
 - A retained output or project package opened from Soma can be used as the source for the next Soma ask through **Reply**. Use this when the user wants an update, alternate, downstream generation, or another team to react to the delivered content without manually copying paths.
+- A selected file in `Resources -> Output Files -> Preview` can be used for the next Soma ask through **Ask Soma with this**. The action opens Soma with the file title and workspace reference attached as one-shot continuation context; it does not approve execution or promote the file into long-term context.
+- A saved entry in `Resources -> Deployment Context` can also use **Ask Soma with this** when the next chat turn should reference that durable context source directly. The context remains governed by its saved visibility, sensitivity, trust, and goal-scope metadata.
 
 Supported operator actions:
 - browse directories (`list_directory`)

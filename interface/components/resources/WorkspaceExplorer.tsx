@@ -5,6 +5,7 @@ import { useCortexStore, type MCPServerWithTools } from "@/store/useCortexStore"
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { extractApiError, formatMCPToolResult, type ResourceCallRequest } from "@/lib/apiContracts";
 import { workspaceBrowserPath } from "@/lib/outputPackageModel";
+import { requestSomaOutputContinuation } from "@/components/soma/outputContinuation";
 import WorkspaceFolderAccessCard from "./WorkspaceFolderAccessCard";
 import WorkspaceGroupOutputSelector, {
     artifactBrowsePath,
@@ -184,6 +185,19 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
         }
     };
 
+    const askSomaWithSelectedFile = () => {
+        if (!selectedFile) return;
+        const title = selectedFile.split("/").filter(Boolean).at(-1) ?? selectedFile;
+        requestSomaOutputContinuation(
+            {
+                title,
+                reference: selectedFile,
+                sourceLabel: "selected file",
+            },
+            { persist: true, openSoma: true },
+        );
+    };
+
     const createDirectory = async () => {
         if (!newDir.trim()) return;
         setBusy(true);
@@ -273,6 +287,7 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
                     onNewDirChange={setNewDir}
                     onNewFileChange={setNewFile}
                     onNewFileContentChange={setNewFileContent}
+                    onAskSomaWithSelectedFile={askSomaWithSelectedFile}
                     onOpenFile={openFile}
                     onPreviewChange={setPreview}
                     onRefresh={refreshList}

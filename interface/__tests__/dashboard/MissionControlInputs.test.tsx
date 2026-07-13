@@ -3,7 +3,11 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MissionControlAdvancedInput } from "@/components/dashboard/MissionControlAdvancedInput";
 import { SomaIntentInput } from "@/components/soma/SomaIntentInput";
-import { requestSomaOutputContinuation, useSomaOutputContinuation } from "@/components/soma/outputContinuation";
+import {
+  requestSomaOutputContinuation,
+  savePendingSomaOutputContinuation,
+  useSomaOutputContinuation,
+} from "@/components/soma/outputContinuation";
 import { SOMA_COMPOSER_MAX_HEIGHT } from "@/components/soma/somaComposerResize";
 
 describe("Soma input composers", () => {
@@ -95,6 +99,36 @@ describe("Soma input composers", () => {
     expect(textarea.value).toContain('Use delivered output "Launch brief" as context.');
     expect(textarea.value).toContain("Reference: generated/launch/brief.md.");
     expect(textarea.value).toContain("I want an update, alternate version, or follow-up generation:");
+  });
+
+  it("consumes a pending Resources handoff when Soma opens", () => {
+    function ContinuationComposer() {
+      const [value, setValue] = useState("");
+      const inputRef = useRef<HTMLTextAreaElement>(null);
+      useSomaOutputContinuation({ disabled: false, inputRef, setInput: setValue });
+      return (
+        <SomaIntentInput
+          value={value}
+          placeholder="Ask Soma"
+          inputRef={inputRef}
+          onChange={setValue}
+          onSubmit={vi.fn()}
+        />
+      );
+    }
+
+    savePendingSomaOutputContinuation({
+      title: "market-plan.md",
+      reference: "workspace/groups/marketing/generated/market-plan.md",
+      sourceLabel: "selected file",
+    });
+
+    render(<ContinuationComposer />);
+
+    const textarea = screen.getByPlaceholderText("Ask Soma") as HTMLTextAreaElement;
+    expect(textarea.value).toContain('Use selected file "market-plan.md" as context.');
+    expect(textarea.value).toContain("Reference: workspace/groups/marketing/generated/market-plan.md.");
+    expect(sessionStorage.getItem("mycelis:pending-soma-output-continuation")).toBeNull();
   });
 
   it("expands the composer with user text until it reaches the scroll cap", () => {

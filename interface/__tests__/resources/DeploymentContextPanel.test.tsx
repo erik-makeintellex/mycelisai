@@ -7,6 +7,7 @@ describe("DeploymentContextPanel", () => {
 
     beforeEach(() => {
         vi.stubGlobal("fetch", fetchMock);
+        sessionStorage.clear();
     });
 
     afterEach(() => {
@@ -46,6 +47,7 @@ describe("DeploymentContextPanel", () => {
     });
 
     it("renders existing deployment context entries", async () => {
+        window.history.pushState(null, "", "/dashboard");
         fetchMock.mockResolvedValueOnce({
             ok: true,
             json: async () => ({
@@ -76,6 +78,15 @@ describe("DeploymentContextPanel", () => {
             expect(screen.getByText(/governed MCP access/i)).toBeDefined();
             expect(screen.getByText(/2 vectors/i)).toBeDefined();
             expect(screen.getByText(/goal: deployment readiness/i)).toBeDefined();
+        });
+
+        fireEvent.click(screen.getByRole("button", { name: /Ask Soma with this/i }));
+        const pending = JSON.parse(sessionStorage.getItem("mycelis:pending-soma-output-continuation") ?? "{}");
+        expect(pending).toMatchObject({
+            title: "Deployment Brief",
+            reference: "memory/deployment-context/ctx-1",
+            proof: "user_provided",
+            sourceLabel: "saved context source",
         });
     });
 

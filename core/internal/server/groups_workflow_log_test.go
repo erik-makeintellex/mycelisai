@@ -69,6 +69,7 @@ func TestHandleGroupWorkflowLog_ReturnsNormalizedTimeline(t *testing.T) {
 				"approved",
 				now,
 			))
+	expectEmptyGroupTeamWorkOutputs(mock, "game-team", 20)
 
 	rr := doAuthenticatedRequest(t, mux, http.MethodGet, "/api/v1/groups/group-game/workflow-log?limit=20&include_outputs=true&include_audit=true", "")
 	assertStatus(t, rr, http.StatusOK)

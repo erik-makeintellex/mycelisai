@@ -39,6 +39,7 @@ func TestHandleGroupOutputs_FiltersPlanningArtifactsByDefault(t *testing.T) {
 				nil, []byte(`{"output_class":"user_deliverable"}`), nil,
 				"approved", now,
 			))
+	expectEmptyGroupTeamWorkOutputs(mock, teamID.String(), 8)
 
 	rr := doAuthenticatedRequest(
 		t,
@@ -82,6 +83,7 @@ func TestHandleGroupOutputs_IncludeInternalReturnsPlanningArtifacts(t *testing.T
 			"groups/mixed-output-team/planning/TEAM_EVOCATION.md",
 			nil, []byte(`{"output_class":"planning"}`), nil, "approved", now,
 		))
+	expectEmptyGroupTeamWorkOutputs(mock, teamID.String(), 8)
 
 	rr := doAuthenticatedRequest(
 		t,

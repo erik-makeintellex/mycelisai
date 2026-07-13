@@ -32,6 +32,7 @@ export default function WorkspaceExplorerMainPane({
     onNewFileContentChange,
     onOpenFile,
     onPreviewChange,
+    onAskSomaWithSelectedFile,
     onRefresh,
 }: {
     activePane: WorkspacePane;
@@ -54,6 +55,7 @@ export default function WorkspaceExplorerMainPane({
     onNewFileContentChange: (value: string) => void;
     onOpenFile: (path: string) => void;
     onPreviewChange: (value: string) => void;
+    onAskSomaWithSelectedFile: () => void;
     onRefresh: () => void;
 }) {
     return (
@@ -102,6 +104,7 @@ export default function WorkspaceExplorerMainPane({
                         selectedFile={selectedFile}
                         preview={preview}
                         onPreviewChange={onPreviewChange}
+                        onAskSoma={onAskSomaWithSelectedFile}
                     />
                 )}
 

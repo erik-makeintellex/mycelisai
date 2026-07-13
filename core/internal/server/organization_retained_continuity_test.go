@@ -196,6 +196,7 @@ func TestHandleTeamLeadGuidedAction_ResumeRetainedPackageUsesLatestGroupOutputs(
 				"approved",
 				groupUpdatedAt.Add(-30*time.Minute),
 			))
+	expectEmptyGroupTeamWorkOutputs(mock, teamID.String(), 8)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)

@@ -3,8 +3,9 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { BookOpenText, RefreshCw, ShieldCheck, Upload } from "lucide-react";
+import DeploymentContextSavedEntries from "./DeploymentContextSavedEntries";
 
-type DeploymentContextEntry = {
+export type DeploymentContextEntry = {
     artifact_id: string;
     knowledge_class: string;
     title: string;
@@ -393,55 +394,7 @@ export default function DeploymentContextPanel() {
                     ) : null}
                 </section>
 
-                <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface">
-                    <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-cortex-border px-5 py-4">
-                        <div>
-                            <h2 className="text-sm font-semibold text-cortex-text-main">Saved Context Sources</h2>
-                            <p className="text-xs text-cortex-text-muted mt-1">
-                                Durable source material Soma can recall separately from chat memory and generated output files.
-                            </p>
-                        </div>
-                        <span className="text-[11px] font-mono text-cortex-text-muted">{entries.length} entries</span>
-                    </div>
-
-                    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5" role="region" aria-label="Loaded governed context list">
-                        {loading ? (
-                            <p className="text-xs font-mono text-cortex-text-muted animate-pulse">Loading deployment context…</p>
-                        ) : entries.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-cortex-border p-4 text-xs text-cortex-text-muted">
-                                No long-term context sources saved yet.
-                            </div>
-                        ) : (
-                            entries.map((entry) => (
-                                <article key={entry.artifact_id} className="rounded-xl border border-cortex-border bg-cortex-bg/60 p-4 space-y-2">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-cortex-text-main">{entry.title}</h3>
-                                            <p className="text-[11px] text-cortex-text-muted mt-1">
-                                                {entry.source_label} · {entry.source_kind.replaceAll("_", " ")}
-                                            </p>
-                                        </div>
-                                        <span className="text-[10px] font-mono uppercase px-2 py-1 rounded bg-cortex-primary/10 text-cortex-primary">
-                                            {entry.vector_count} vectors
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-cortex-text-main leading-relaxed">{entry.content_preview}</p>
-                                    <div className="flex flex-wrap gap-2 text-[10px] font-mono text-cortex-text-muted">
-                                        <Badge>{entry.knowledge_class.replaceAll("_", " ")}</Badge>
-                                        <Badge>{entry.visibility}</Badge>
-                                        <Badge>{entry.sensitivity_class}</Badge>
-                                        <Badge>{entry.trust_class}</Badge>
-                                        {entry.content_domain ? <Badge>{entry.content_domain.replaceAll("_", " ")}</Badge> : null}
-                                        {(entry.target_goal_sets ?? []).map((goal) => (
-                                            <Badge key={`${entry.artifact_id}-${goal}`}>goal: {goal}</Badge>
-                                        ))}
-                                        <Badge>{entry.chunk_count} chunks</Badge>
-                                    </div>
-                                </article>
-                            ))
-                        )}
-                    </div>
-                </section>
+                <DeploymentContextSavedEntries entries={entries} loading={loading} />
             </div>
         </div>
     );
@@ -495,8 +448,4 @@ function SelectField({ label, value, options, onChange }: { label: string; value
             </select>
         </Field>
     );
-}
-
-function Badge({ children }: { children: ReactNode }) {
-    return <span className="px-2 py-1 rounded border border-cortex-border bg-cortex-surface/70">{children}</span>;
 }

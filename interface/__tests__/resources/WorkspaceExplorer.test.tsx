@@ -127,12 +127,14 @@ function mockToolFetch() {
 describe("WorkspaceExplorer", () => {
     beforeEach(() => {
         vi.restoreAllMocks();
+        sessionStorage.clear();
         mockFetchMCPServers.mockReset();
         mockMCPServers = [connectedFilesystemServer];
     });
 
     it("uses current filesystem MCP tool names with the arguments envelope", async () => {
         const { calls, revealCalls } = mockToolFetch();
+        window.history.pushState(null, "", "/dashboard");
 
         render(<WorkspaceExplorer onOpenToolsTab={vi.fn()} />);
 
@@ -169,6 +171,13 @@ describe("WorkspaceExplorer", () => {
         });
         expect(screen.getByRole("tab", { name: /Preview/i }).getAttribute("aria-selected")).toBe("true");
         expect(screen.getByDisplayValue(/Readable through filesystem MCP/i)).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: /Ask Soma with this/i }));
+        const pending = JSON.parse(sessionStorage.getItem("mycelis:pending-soma-output-continuation") ?? "{}");
+        expect(pending).toMatchObject({
+            title: "proof.md",
+            reference: "workspace/proof.md",
+            sourceLabel: "selected file",
+        });
 
         fireEvent.click(screen.getByRole("tab", { name: /Create/i }));
         expect(screen.getByRole("tabpanel", { name: /Create/i })).toBeDefined();

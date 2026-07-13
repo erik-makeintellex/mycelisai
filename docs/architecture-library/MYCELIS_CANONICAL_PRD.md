@@ -1,6 +1,6 @@
 # Mycelis Canonical PRD
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
-> Status: Canonical | Last Updated: 2026-07-09 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
+> Status: Canonical | Last Updated: 2026-07-13 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
 The default product language is:
@@ -254,20 +254,21 @@ Non-goals for MVP:
 - architecture docs proliferating into separate doctrine systems
 
 ## P0 Delivery Plan
-| Priority | Slice | Status | Acceptance |
-| --- | --- | --- | --- |
-| P0.1 | Threaded Soma dashboard | IN_REVIEW | Compact quick actions, primary chat, no default Vault rail, no setup stack, reachable composer. |
-| P0.2 | Natural governance cards | IN_REVIEW | Proposal/running/done/blocked cards are small, conversational, proof-linked, and keep deep recovery detail behind explicit review. |
-| P0.3 | WorkIntent and ExecutionMode | ACTIVE | One-shot, scheduled, service, project, and self-extension modes have typed contracts. |
-| P0.4 | Bus handoff and started feedback | IN_REVIEW | Approval or quick action immediately creates visible started state with correlation. |
-| P0.5 | OutcomeProject and TeamRegistry | IN_REVIEW | Confirmed work writes durable project/team ownership and Vault summaries. |
-| P0.6 | Output packages and Vault | IN_REVIEW | Deliverables open cleanly; source/intermediate outputs are opt-in. |
-| P0.7 | Capability settings | ACTIVE | Capabilities can be all-work, grouped, or targeted-host scoped with common choices, inspectable refs, and repair paths. |
-| P0.7a | Search and data-source registry | IN_REVIEW | Search status and Resources show configured sources and named mounts; `/api/v1/search/sources` can add, edit, and remove persisted governed sources with endpoint/path, scope, boundary, auth or mount mode, secret-ref when needed, sensitivity, trust, and recovery metadata; `source_id` selection routes local-source, mounted-folder, local-API, and SearXNG-compatible searches through status/scope guardrails while richer authenticated-source adapters remain next. |
-| P0.8 | Run receipts and recovery | IN_REVIEW | Receipts explain outcome, proof, failure, trusted state, and next safe action. |
-| P0.9 | Full journey proof | IN_REVIEW | Headed and headless proof cover ask through revisit. |
-| P0.10 | Worker execution library | ACTIVE | Agentry can call one worker interface while central execution remains default and Hermes-compatible execution stays adapter-based. |
-| P0.11 | Docs cleanup | ACTIVE | This PRD is the single architecture authority; stale docs are deleted. |
+| Priority | Slice | Status | Journey Step | Acceptance |
+| --- | --- | --- | --- | --- |
+| P0.1 | Threaded Soma workspace | IN_REVIEW | Ask, Understand | Compact quick asks, primary chat, no default Vault rail, no setup stack, collapsible rail, reachable expanding composer, and headed route sweep without console/page errors. |
+| P0.2 | Natural governance cards | IN_REVIEW | Approve, Trust | Proposal/running/done/blocked cards stay small and conversational, show one obvious next action, and keep risk/proof/recovery detail behind Details or Inspect. |
+| P0.3 | WorkIntent and ExecutionMode | ACTIVE | Understand, Execute | One-shot, scheduled, service/watch, project, and Soma self-extension modes have typed contracts, stop/retry/recover semantics, output-shape expectations, and approval posture. |
+| P0.4 | Bus handoff and started feedback | IN_REVIEW | Execute, Recover | Approval or quick action immediately creates visible started state, correlation, durable work linkage, and actionable degradation when NATS/team dispatch cannot complete. |
+| P0.5 | OutcomeProject and TeamRegistry | IN_REVIEW | Deliver, Revisit | Confirmed work writes durable project/team ownership, Vault summaries, target refs, and producing-team identity without exposing agent internals by default. |
+| P0.6 | Output packages, Resources, and Vault | IN_REVIEW | Deliver, Revisit | Deliverables open cleanly from Soma, Groups, Resources, and Vault. Artifact rows and durable team `output_refs` both appear as retained deliverables; planning/source/internal material remains opt-in; selected files/context can re-enter Soma as one-shot continuation context. |
+| P0.7 | Capability settings | IN_REVIEW | Trust, Recover | Capabilities can be all-work, grouped, or targeted-host scoped with common choices, inspectable refs, repair paths, and user-language service inventory. |
+| P0.7a | Search and data-source registry | IN_REVIEW | Ask, Trust | Search status and Resources show public web, approved local/mounted data, private/API sources, and named mounts; persisted sources carry endpoint/path, scope, boundary, auth or mount mode, secret-ref when needed, sensitivity, trust, and recovery metadata; mixed local-plus-web asks state coverage clearly. |
+| P0.8 | Run receipts and recovery | IN_REVIEW | Trust, Recover | Receipts explain outcome, proof, failure, trusted state, invalidated proof, next safe action, and recovery/clear controls without leading with raw logs. |
+| P0.9 | Full journey proof | IN_REVIEW | Ask through Revisit | Headed and headless proof cover ask, understand, approve, execute, deliver, trust, recover, and revisit; latest GUI sweep covers primary/admin routes and critical workflows with no console/page errors or horizontal overflow. |
+| P0.10 | Worker execution library | ACTIVE | Execute, Deliver | Agentry can call one worker interface while central execution remains default and Hermes-compatible execution stays adapter-based with retained outputs, usage, audit, and recovery. |
+| P0.11 | Docs cleanup and release discipline | ACTIVE | Trust, Revisit | This PRD remains the single architecture authority, old doctrine is deleted instead of archived into active docs, user help matches current UI, and implementation slices update docs/state in the same change. |
+| P0.12 | Release hygiene and promotion proof | NEXT | Trust | Keep main/dev branches clean, commit coherent tested slices, run release proof from committed state, and verify PostgreSQL/NATS-backed runtime paths rather than stale local/test-only state. |
 
 ## Testing And Release Gates
 

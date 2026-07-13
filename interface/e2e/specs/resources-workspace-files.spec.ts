@@ -14,7 +14,14 @@ async function enableAdvancedMode(page: Page) {
 
 async function openWorkspaceFiles(page: Page) {
     await enableAdvancedMode(page);
-    await page.goto("/resources?tab=workspace", { waitUntil: "domcontentloaded" });
+    try {
+        await page.goto("/resources?tab=workspace", { waitUntil: "domcontentloaded" });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes("net::ERR_ABORTED")) {
+            throw error;
+        }
+    }
     await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: /Output Files/i })).toBeVisible();
 }
@@ -263,6 +270,12 @@ test.describe("Resources workspace files", () => {
 
         await browsePane.getByRole("button", { name: "Preview output file generated-proof.md" }).click();
         await expect(page.locator("textarea").first()).toHaveValue(/Created from the Workspace Files GUI/i);
+
+        await clickVisibleControl(page, page.getByRole("button", { name: /Ask Soma with this/i }));
+        await expect(page).toHaveURL(/\/dashboard$/);
+        await expect(page.getByText(/Continuing from/i)).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByText("generated-proof.md")).toBeVisible();
+        await expect(page.getByPlaceholder(/Tell Soma/i)).toBeVisible();
     });
 
     test("writes a retained workspace output through the live filesystem MCP", async ({ page }) => {

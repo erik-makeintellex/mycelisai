@@ -1,4 +1,4 @@
-import { ChevronUp, File, Folder, FolderPlus, RefreshCw, Save } from "lucide-react";
+import { ChevronUp, File, Folder, FolderPlus, MessageSquareText, RefreshCw, Save } from "lucide-react";
 import type { WorkspaceEntry, WorkspacePane } from "./WorkspaceExplorer";
 
 const WORKSPACE_PANES: Array<{ id: WorkspacePane; label: string; summary: string }> = [
@@ -139,10 +139,12 @@ export function WorkspacePreviewPane({
     selectedFile,
     preview,
     onPreviewChange,
+    onAskSoma,
 }: {
     selectedFile: string | null;
     preview: string;
     onPreviewChange: (value: string) => void;
+    onAskSoma: () => void;
 }) {
     return (
         <div
@@ -151,11 +153,22 @@ export function WorkspacePreviewPane({
             aria-labelledby="workspace-preview-tab"
             className="flex h-full min-h-0 flex-col"
         >
-            <div className="mb-2 min-w-0">
-                <p className="text-xs font-semibold text-cortex-text-main">Selected output</p>
-                <code className="mt-1 block truncate text-[11px] font-mono text-cortex-primary">
-                    {selectedFile ?? "(no output selected)"}
-                </code>
+            <div className="mb-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                    <p className="text-xs font-semibold text-cortex-text-main">Selected output</p>
+                    <code className="mt-1 block truncate text-[11px] font-mono text-cortex-primary">
+                        {selectedFile ?? "(no output selected)"}
+                    </code>
+                </div>
+                <button
+                    type="button"
+                    onClick={onAskSoma}
+                    disabled={!selectedFile}
+                    className="inline-flex items-center justify-center gap-1.5 rounded border border-cortex-primary/40 px-2.5 py-1.5 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <MessageSquareText className="h-3.5 w-3.5" />
+                    Ask Soma with this
+                </button>
             </div>
             <textarea
                 value={preview}

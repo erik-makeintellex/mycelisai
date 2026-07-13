@@ -96,6 +96,8 @@ Trusted compact receipts in the Soma thread should expose app/package outputs wi
 
 Use **Reply** on a delivered output or project package when you want Soma to keep that exact output as context for the next request. Reply does not execute work by itself. It keeps the output visible, shows a compact `Continuing from` indicator, leaves the composer ready for your natural follow-up, and sends typed continuation context with the output title, workspace reference, and proof id when available. You can ask to update it, make an alternate version, generate downstream material from it, inspect it, or route it to another team; Soma classifies that follow-up separately from whether approval is required. If a file should become reusable long-term source material rather than just a one-request handoff, ask Soma to save it as governed context or use `Resources -> Deployment Context`.
 
+Resources can start the same one-shot continuation flow. Use **Ask Soma with this** from `Resources -> Output Files -> Preview` when a selected workspace file should ground the next message, or from a saved Deployment Context entry when durable governed context should be referenced in the next turn. Soma opens with a compact `Continuing from` indicator and waits for your natural instruction; the handoff is context only, not approval to mutate, run, or promote data.
+
 ## Teams And Groups
 
 Root Soma is organization-wide. Focused team lanes keep chat, active work, retained outputs, and proof scoped together through the `Working in` picker.
@@ -153,6 +155,7 @@ Use these boundaries:
 
 - ask Soma to use Mycelis docs when you want documentation explained or cited
 - use Reply or a team handoff when a file should guide this next draft or follow-up only
+- use `Resources -> Output Files -> Preview -> Ask Soma with this` when you found a workspace file outside the current thread and want it attached to the next Soma turn
 - use `Resources -> Deployment Context` when you want private, customer, company, or operating-context material to influence future Soma reasoning under a governed trust boundary
 - use Memory when you want to inspect retained recall, prior facts, SitReps, or continuity records already stored by the system
 - ask Soma to name which docs or context sources shaped an answer when trust matters
