@@ -179,11 +179,14 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	if isMutation {
 		effectiveTools := toolsForPlannedCalls(plannedToolCalls, mutTools)
 		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
+		display := buildProposalDisplayContractForTeam(plannedToolCalls, latestUserText, effectiveTools, focusedTeamID)
 		scope := &protocol.ScopeValidation{
 			Tools:             effectiveTools,
 			AffectedResources: affectedResourcesForPlannedCalls(plannedToolCalls),
 			RiskLevel:         chatToolRisk(effectiveTools),
 			PlannedToolCalls:  plannedToolCalls,
+			WorkIntent:        display.WorkIntent,
+			ExecutionMode:     proposalExecutionMode(display.WorkIntent),
 			Approval:          approval,
 			GovernanceProfile: profile.snapshot(),
 		}
@@ -229,7 +232,6 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		if confirmToken != nil {
 			token = confirmToken.Token
 		}
-		display := buildProposalDisplayContractForTeam(plannedToolCalls, latestUserText, effectiveTools, focusedTeamID)
 		chatPayload.ToolsUsed = chatResponseTools(isMutation, agentResult.ToolsUsed, effectiveTools)
 		chatPayload.Proposal = buildMutationChatProposal(effectiveTools, proofID, token, focusedTeamID, []string{"admin"}, approval, profile.snapshot(), display)
 		chatPayload.ExecutionSummary = buildProposalExecutionSummary(latestUserText, plannedToolCalls, effectiveTools, display, proofID, contractID, auditEventID, approval)

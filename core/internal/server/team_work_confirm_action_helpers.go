@@ -48,6 +48,13 @@ func confirmedActionStatusEvent(link confirmedActionTeamWorkLink, item protocol.
 }
 
 func confirmedActionInteraction(link confirmedActionTeamWorkLink, item protocol.TeamWorkItem, verb, summary, toolName string, args map[string]any) protocol.TeamInteraction {
+	payload := map[string]any{
+		"tool":      strings.TrimSpace(toolName),
+		"arguments": args,
+	}
+	if link.Scope != nil && link.Scope.WorkIntent != nil {
+		payload["work_intent"] = link.Scope.WorkIntent
+	}
 	return protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
 		InteractionID: uuid.NewString(),
 		TeamID:        item.TeamID,
@@ -62,12 +69,9 @@ func confirmedActionInteraction(link confirmedActionTeamWorkLink, item protocol.
 		Verb:          verb,
 		Summary:       summary,
 		PayloadKind:   string(protocol.PayloadKindCommand),
-		Payload: map[string]any{
-			"tool":      strings.TrimSpace(toolName),
-			"arguments": args,
-		},
-		ApprovalRef: link.ProofID,
-		AuditRefs:   compactProofRefs(link.AuditID),
+		Payload:       payload,
+		ApprovalRef:   link.ProofID,
+		AuditRefs:     compactProofRefs(link.AuditID),
 	})
 }
 
@@ -168,6 +172,30 @@ func expectedOutputsFromDeliverableResult(result plannedToolExecutionResult, out
 		items = append(items, firstNonEmptyString(result.Name, "Deliverable output"))
 	}
 	return normalizeStringSlice(items)
+}
+
+func expectedOutputsFromWorkIntent(scope *protocol.ScopeValidation) []string {
+	if scope == nil || scope.WorkIntent == nil || scope.WorkIntent.OutputContract == nil {
+		return nil
+	}
+	contract := scope.WorkIntent.OutputContract
+	items := []string{}
+	if strings.TrimSpace(contract.PrimaryDeliverable) != "" {
+		items = append(items, contract.PrimaryDeliverable)
+	}
+	for _, validation := range contract.Validation {
+		if strings.TrimSpace(validation) != "" {
+			items = append(items, validation)
+		}
+	}
+	return normalizeStringSlice(items)
+}
+
+func mergeExpectedOutputs(primary []string, contract []string) []string {
+	if len(primary) == 0 {
+		return normalizeStringSlice(contract)
+	}
+	return normalizeStringSlice(append(primary, contract...))
 }
 
 func expectedOutputsFromDelegateArgs(args map[string]any) []string {

@@ -237,3 +237,35 @@ func TestBuildProposalDisplayContractInfersServiceWorkIntent(t *testing.T) {
 		t.Fatalf("execution_mode = %q, want team_async", mode)
 	}
 }
+
+func TestBuildProposalExecutionSummaryCarriesWorkIntent(t *testing.T) {
+	display := buildProposalDisplayContract([]protocol.PlannedToolCall{
+		{
+			Name: "write_file",
+			Arguments: map[string]any{
+				"path": "workspace/generated/client-brief/index.html",
+			},
+		},
+	}, "Create a client brief app", []string{"write_file"})
+
+	summary := buildProposalExecutionSummary(
+		"Create a client brief app",
+		nil,
+		[]string{"write_file"},
+		display,
+		"proof-1",
+		"contract-1",
+		"audit-1",
+		nil,
+	)
+
+	if summary.WorkIntent == nil {
+		t.Fatal("expected execution summary work_intent")
+	}
+	if summary.ExecutionMode != proposalExecutionMode(display.WorkIntent) {
+		t.Fatalf("execution_mode = %q, want %q", summary.ExecutionMode, proposalExecutionMode(display.WorkIntent))
+	}
+	if summary.WorkIntent.OutputContract == nil || summary.WorkIntent.OutputContract.PrimaryDeliverable == "" {
+		t.Fatalf("output_contract = %+v, want retained primary deliverable", summary.WorkIntent.OutputContract)
+	}
+}

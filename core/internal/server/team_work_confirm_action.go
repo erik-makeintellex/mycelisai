@@ -75,20 +75,22 @@ type confirmedActionTeamWorkLink struct {
 }
 
 type confirmActionTeamWorkRef struct {
-	WorkItemID string                   `json:"work_item_id"`
-	TeamID     string                   `json:"team_id"`
-	State      protocol.TeamWorkState   `json:"state"`
-	RunID      string                   `json:"run_id,omitempty"`
-	OutputRefs []protocol.TeamOutputRef `json:"output_refs,omitempty"`
+	WorkItemID      string                   `json:"work_item_id"`
+	TeamID          string                   `json:"team_id"`
+	State           protocol.TeamWorkState   `json:"state"`
+	RunID           string                   `json:"run_id,omitempty"`
+	ExpectedOutputs []string                 `json:"expected_outputs,omitempty"`
+	OutputRefs      []protocol.TeamOutputRef `json:"output_refs,omitempty"`
 }
 
 func confirmActionTeamWorkRefForItem(item protocol.TeamWorkItem) confirmActionTeamWorkRef {
 	return confirmActionTeamWorkRef{
-		WorkItemID: item.WorkItemID,
-		TeamID:     item.TeamID,
-		State:      item.State,
-		RunID:      item.RunID,
-		OutputRefs: item.OutputRefs,
+		WorkItemID:      item.WorkItemID,
+		TeamID:          item.TeamID,
+		State:           item.State,
+		RunID:           item.RunID,
+		ExpectedOutputs: item.ExpectedOutputs,
+		OutputRefs:      item.OutputRefs,
 	}
 }
 
@@ -138,7 +140,7 @@ func (s *AdminServer) persistConfirmedDelegatedWorkItems(ctx context.Context, li
 		}
 		item.ExecutionShape = protocol.TeamExecutionShapeDelegatedWork
 		item.State = protocol.TeamWorkStateQueued
-		item.ExpectedOutputs = expectedOutputsFromDelegateArgs(result.Arguments)
+		item.ExpectedOutputs = mergeExpectedOutputs(expectedOutputsFromDelegateArgs(result.Arguments), expectedOutputsFromWorkIntent(link.Scope))
 		item.ExpectedProof = expectedProofFromDelegateArgs(result.Arguments)
 		item.CapabilityRequirements = requiredCapabilitiesFromDelegateArgs(result.Arguments)
 		item.LastEvent = confirmedActionStatusEvent(link, item, protocol.TeamWorkStateQueued, "Team work queued", "Soma delegated the confirmed ask to the team command channel.", "pending_team_response", "Wait for team status or result output.")
@@ -168,7 +170,7 @@ func (s *AdminServer) persistConfirmedDeliverableWorkItems(ctx context.Context, 
 		item := baseConfirmedActionWorkItem(link, teamID, objectiveForDeliverableResult(result))
 		item.ExecutionShape = protocol.TeamExecutionShapeDeliverable
 		item.State = protocol.TeamWorkStateOutputReady
-		item.ExpectedOutputs = expectedOutputsFromDeliverableResult(result, outputs)
+		item.ExpectedOutputs = mergeExpectedOutputs(expectedOutputsFromDeliverableResult(result, outputs), expectedOutputsFromWorkIntent(link.Scope))
 		item.ExpectedProof = []string{"Confirmed execution run", "Retained output reference"}
 		item.OutputRefs = outputRefsForTeamWork(link, item.WorkItemID, teamID, outputs)
 		item.LastEvent = confirmedActionStatusEvent(link, item, protocol.TeamWorkStateOutputReady, "Team output ready", "The confirmed deliverable request completed and produced retained output proof.", "verified", "Review the retained output and proof package.")

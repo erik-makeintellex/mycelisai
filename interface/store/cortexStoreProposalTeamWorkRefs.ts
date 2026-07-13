@@ -8,6 +8,8 @@ export type TeamWorkConfirmationRef = {
     status?: string;
     output_count?: number;
     outputCount?: number;
+    expected_outputs?: unknown[];
+    expectedOutputs?: unknown[];
     output_refs?: unknown[];
     outputRefs?: unknown[];
 };
@@ -47,6 +49,21 @@ function teamWorkStateLabel(refs: TeamWorkConfirmationRef[]): string {
     return "queued";
 }
 
+function firstExpectedOutput(refs: TeamWorkConfirmationRef[]): string | null {
+    for (const ref of refs) {
+        const values = Array.isArray(ref.expected_outputs)
+            ? ref.expected_outputs
+            : Array.isArray(ref.expectedOutputs)
+                ? ref.expectedOutputs
+                : [];
+        for (const value of values) {
+            const text = trimToNonEmpty(value);
+            if (text) return text;
+        }
+    }
+    return null;
+}
+
 export function teamWorkMessage(refs: TeamWorkConfirmationRef[]): string | null {
     if (refs.length === 0) return null;
     const identifiers = refs
@@ -54,5 +71,7 @@ export function teamWorkMessage(refs: TeamWorkConfirmationRef[]): string | null 
         .filter(Boolean);
     const uniqueIdentifiers = Array.from(new Set(identifiers)).slice(0, 2);
     const workLabel = uniqueIdentifiers.length > 0 ? `Work ${uniqueIdentifiers.join(", ")}` : "Team work";
-    return `${workLabel} is ${teamWorkStateLabel(refs)}. Review Active Work and the latest output.`;
+    const expected = firstExpectedOutput(refs);
+    const outputHint = expected ? ` Expected output: ${expected}.` : "";
+    return `${workLabel} is ${teamWorkStateLabel(refs)}.${outputHint} Review Active Work and the latest output.`;
 }

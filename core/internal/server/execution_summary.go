@@ -70,7 +70,9 @@ func buildProposalExecutionSummary(originalIntent string, planned []protocol.Pla
 	blocker := approvalReasonValue(approval)
 
 	return &protocol.ExecutionSummary{
-		ContractID: contractID,
+		ContractID:    contractID,
+		WorkIntent:    display.WorkIntent,
+		ExecutionMode: proposalExecutionMode(display.WorkIntent),
 		Intent: protocol.ExecutionIntent{
 			Original: strings.TrimSpace(originalIntent),
 			Resolved: "chat-action",
@@ -149,8 +151,10 @@ func buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, ru
 	}
 
 	return &protocol.ExecutionSummary{
-		ContractID: contractID,
-		ProofID:    proofArtifactID,
+		ContractID:    contractID,
+		ProofID:       proofArtifactID,
+		WorkIntent:    scopeWorkIntent(scope),
+		ExecutionMode: scopeExecutionMode(scope),
 		Intent: protocol.ExecutionIntent{
 			Resolved: "chat-action",
 		},
@@ -181,6 +185,23 @@ func buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, ru
 		},
 		NextStep: nextStep,
 	}
+}
+
+func scopeWorkIntent(scope *protocol.ScopeValidation) *protocol.WorkIntent {
+	if scope == nil {
+		return nil
+	}
+	return scope.WorkIntent
+}
+
+func scopeExecutionMode(scope *protocol.ScopeValidation) string {
+	if scope == nil {
+		return ""
+	}
+	if strings.TrimSpace(scope.ExecutionMode) != "" {
+		return scope.ExecutionMode
+	}
+	return proposalExecutionMode(scope.WorkIntent)
 }
 
 func toolResultExists(results []plannedToolExecutionResult, name string) bool {

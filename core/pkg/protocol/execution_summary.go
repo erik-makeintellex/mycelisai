@@ -99,6 +99,8 @@ const (
 type ExecutionSummary struct {
 	ContractID    string                 `json:"contract_id,omitempty"`
 	ProofID       string                 `json:"proof_id,omitempty"`
+	WorkIntent    *WorkIntent            `json:"work_intent,omitempty"`
+	ExecutionMode string                 `json:"execution_mode,omitempty"`
 	Intent        ExecutionIntent        `json:"intent"`
 	Understanding ExecutionUnderstanding `json:"understanding"`
 	Execution     ExecutionState         `json:"execution"`

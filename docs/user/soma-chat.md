@@ -92,7 +92,7 @@ Saved media and file outputs should appear in the same Soma output workbench wit
 
 When Soma is planning or reporting work, the visible plan should name the expected output shape first: table/report, app/package, code/script, media, document, dataset, or mixed output. App/package work should include a direct open path, usage notes, validation status, folder access, proof, and a way to ask Soma for follow-up changes without forcing the operator to read internal team/tool topology.
 
-Proposal details may show an `Expected output` cue. This is not a separate action to approve; it is Soma's contract for what the team or capability must bring back, such as an app/package with an openable entrypoint, a table, a document, media, code, or a dataset. The main approval card stays short, while output shape, launch hint, validation, bus/team wiring, and proof expectations stay behind `Details`.
+Proposal details may show an `Expected output` cue. This is not a separate action to approve; it is Soma's contract for what the team or capability must bring back, such as an app/package with an openable entrypoint, a table, a document, media, code, or a dataset. The same expected output follows the approval into the run receipt and team handoff, so the work can be reviewed later against what Soma said it would deliver. The main approval card stays short, while output shape, launch hint, validation, bus/team wiring, and proof expectations stay behind `Details`.
 
 Trusted compact receipts in the Soma thread should expose app/package outputs without requiring a full panel: **Open app**, **Open folder**, **Open in Resources**, validation status when available, and **Reply** for follow-up changes.
 

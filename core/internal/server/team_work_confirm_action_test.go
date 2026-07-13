@@ -53,6 +53,14 @@ func TestPersistConfirmedActionTeamWork_DeliverableOutputReadyHasRefs(t *testing
 	s := newTestServer(opt)
 	now := time.Now().UTC()
 	link := testConfirmedActionTeamWorkLink(&protocol.ScopeValidation{
+		WorkIntent: &protocol.WorkIntent{
+			Kind: "project",
+			OutputContract: &protocol.WorkOutputContract{
+				Shape:              "app_package",
+				PrimaryDeliverable: "Playable browser game",
+				Validation:         []string{"Launchable by the user from chat"},
+			},
+		},
 		PlannedToolCalls: []protocol.PlannedToolCall{
 			{
 				Name:      "create_team",
@@ -108,6 +116,12 @@ func TestPersistConfirmedActionTeamWork_DeliverableOutputReadyHasRefs(t *testing
 	}
 	assertTeamWorkRef(t, refs[:1], "qa-team", protocol.TeamWorkStateNew, 0)
 	assertTeamWorkRef(t, refs[1:], "qa-team", protocol.TeamWorkStateOutputReady, 1)
+	if !containsString(refs[1].ExpectedOutputs, "Playable browser game") {
+		t.Fatalf("expected_outputs = %#v, want output contract deliverable", refs[1].ExpectedOutputs)
+	}
+	if !containsString(refs[1].ExpectedOutputs, "Launchable by the user from chat") {
+		t.Fatalf("expected_outputs = %#v, want output contract validation", refs[1].ExpectedOutputs)
+	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
 	}

@@ -94,6 +94,8 @@ type ScopeValidation struct {
 	AffectedResources []string                   `json:"affected_resources"`           // e.g. ["missions", "teams", "service_manifests"]
 	RiskLevel         string                     `json:"risk_level"`                   // "low", "medium", "high"
 	PlannedToolCalls  []PlannedToolCall          `json:"planned_tool_calls,omitempty"` // governed mutation actions to execute only after confirmation
+	WorkIntent        *WorkIntent                `json:"work_intent,omitempty"`
+	ExecutionMode     string                     `json:"execution_mode,omitempty"`
 	Approval          *ApprovalPolicy            `json:"approval,omitempty"`
 	CapabilityIDs     []string                   `json:"capability_ids,omitempty"`
 	ExternalDataUse   bool                       `json:"external_data_use,omitempty"`
