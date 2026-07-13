@@ -45,6 +45,7 @@ function teamWorkStateLabel(refs: TeamWorkConfirmationRef[]): string {
         || (Array.isArray(ref.outputRefs) && ref.outputRefs.length > 0)
     ));
     if (hasOutput || states.some((state) => state === "output_ready" || state === "output-ready")) return "output-ready";
+    if (states.some((state) => state === "degraded" || state === "needs_operator" || state === "needs-operator")) return "needs recovery";
     if (states.includes("running")) return "running";
     return "queued";
 }
@@ -73,5 +74,8 @@ export function teamWorkMessage(refs: TeamWorkConfirmationRef[]): string | null 
     const workLabel = uniqueIdentifiers.length > 0 ? `Work ${uniqueIdentifiers.join(", ")}` : "Team work";
     const expected = firstExpectedOutput(refs);
     const outputHint = expected ? ` Expected output: ${expected}.` : "";
-    return `${workLabel} is ${teamWorkStateLabel(refs)}.${outputHint} Review Active Work and the latest output.`;
+    const state = teamWorkStateLabel(refs);
+    const destination = state === "needs recovery" ? "Review Current Work for recovery." : "Review Current Work and the latest output.";
+    const stateCopy = state === "needs recovery" ? "needs recovery" : `is ${state}`;
+    return `${workLabel} ${stateCopy}.${outputHint} ${destination}`;
 }

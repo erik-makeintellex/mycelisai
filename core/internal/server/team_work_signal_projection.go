@@ -78,16 +78,22 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	if payloadKind == "" {
 		payloadKind = payloadKindFromSignalSubject(subject)
 	}
-	projectedState := projectedSignalState(item, payloadKind, payload)
+	incomingOutputRefs := projectedSignalOutputRefs(item, env, payload)
+	projectedState := projectedSignalState(item, payloadKind, payload, incomingOutputRefs)
 	item.State = projectedState
 	item.NeedsOperator = projectedState == protocol.TeamWorkStateNeedsOperator || projectedState == protocol.TeamWorkStateDegraded
 	if projectedState == protocol.TeamWorkStateDegraded {
 		item.DegradationState = firstNonEmptyString(stringField(payload, "degradation_state"), stringField(payload, "degradation"), item.DegradationState)
+		if item.DegradationState == "" && deliverableResultMissingOutputs(item, payloadKind, incomingOutputRefs) {
+			item.DegradationState = "missing_retained_output"
+		}
 	} else {
 		item.DegradationState = ""
 	}
-	item.OutputRefs = mergeTeamOutputRefs(item.OutputRefs, projectedSignalOutputRefs(item, env, payload))
-	event := projectedSignalStatusEvent(item, env, subject, payloadKind, payload)
+	item.OutputRefs = mergeTeamOutputRefs(item.OutputRefs, incomingOutputRefs)
+	item.ProofRefs = mergeTeamSignalStrings(item.ProofRefs, proofRefsFromTeamOutputRefs(incomingOutputRefs))
+	item.AuditRefs = mergeTeamSignalStrings(item.AuditRefs, auditRefsFromTeamOutputRefs(incomingOutputRefs))
+	event := projectedSignalStatusEvent(item, env, subject, payloadKind, payload, incomingOutputRefs)
 	if err := p.server.insertTeamStatusEventDB(ctx, &event); err != nil {
 		return fmt.Errorf("insert projected team status event: %w", err)
 	}
@@ -128,17 +134,30 @@ func signalWorkItemID(payload map[string]any) string {
 	return ""
 }
 
-func projectedSignalState(item protocol.TeamWorkItem, payloadKind protocol.SignalPayloadKind, payload map[string]any) protocol.TeamWorkState {
+func projectedSignalState(item protocol.TeamWorkItem, payloadKind protocol.SignalPayloadKind, payload map[string]any, outputRefs []protocol.TeamOutputRef) protocol.TeamWorkState {
 	if state := protocol.TeamWorkState(stringField(payload, "state")); protocol.IsTeamExecutionState(state) {
+		if state == protocol.TeamWorkStateOutputReady && deliverableResultMissingOutputs(item, payloadKind, outputRefs) {
+			return protocol.TeamWorkStateDegraded
+		}
 		return state
 	}
 	if payloadKind == protocol.PayloadKindResult {
+		if deliverableResultMissingOutputs(item, payloadKind, outputRefs) {
+			return protocol.TeamWorkStateDegraded
+		}
 		return protocol.TeamWorkStateOutputReady
 	}
 	return item.State
 }
 
-func projectedSignalStatusEvent(item protocol.TeamWorkItem, env protocol.SignalEnvelope, subject string, payloadKind protocol.SignalPayloadKind, payload map[string]any) protocol.TeamStatusEvent {
+func deliverableResultMissingOutputs(item protocol.TeamWorkItem, payloadKind protocol.SignalPayloadKind, outputRefs []protocol.TeamOutputRef) bool {
+	return payloadKind == protocol.PayloadKindResult &&
+		item.ExecutionShape == protocol.TeamExecutionShapeDeliverable &&
+		len(item.ExpectedOutputs) > 0 &&
+		len(outputRefs) == 0
+}
+
+func projectedSignalStatusEvent(item protocol.TeamWorkItem, env protocol.SignalEnvelope, subject string, payloadKind protocol.SignalPayloadKind, payload map[string]any, outputRefs []protocol.TeamOutputRef) protocol.TeamStatusEvent {
 	return protocol.TeamStatusEvent{
 		EventID:           uuid.NewString(),
 		TeamID:            item.TeamID,
@@ -148,11 +167,14 @@ func projectedSignalStatusEvent(item protocol.TeamWorkItem, env protocol.SignalE
 		ContractID:        item.ContractID,
 		ProofID:           item.ProofID,
 		State:             item.State,
-		Headline:          projectedHeadline(payloadKind, payload),
-		Details:           projectedDetails(payload),
+		Headline:          projectedHeadlineForItem(item, payloadKind, payload),
+		Details:           projectedDetailsForItem(item, payload),
 		ConfidencePosture: stringField(payload, "confidence_posture"),
 		BlockedBy:         stringSliceField(payload, "blocked_by"),
-		NextAction:        stringField(payload, "next_action"),
+		NextAction:        projectedNextActionForItem(item, payload),
+		ExpectedOutputs:   item.ExpectedOutputs,
+		ExpectedProof:     item.ExpectedProof,
+		OutputRefs:        outputRefs,
 		SourceKind:        string(env.Meta.SourceKind),
 		SourceChannel:     firstNonEmptyString(env.Meta.SourceChannel, subject),
 		PayloadKind:       string(payloadKind),
@@ -167,6 +189,7 @@ func projectedSignalInteraction(item protocol.TeamWorkItem, env protocol.SignalE
 	} else if payloadKind == protocol.PayloadKindResult {
 		verb = "output_ready"
 	}
+	interactionPayload := projectedInteractionPayload(item, payload)
 	return protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
 		InteractionID: uuid.NewString(),
 		TeamID:        item.TeamID,
@@ -181,9 +204,23 @@ func projectedSignalInteraction(item protocol.TeamWorkItem, env protocol.SignalE
 		Verb:          verb,
 		Summary:       projectedSummary(payloadKind, payload),
 		PayloadKind:   string(payloadKind),
-		Payload:       payload,
+		Payload:       interactionPayload,
 		Version:       "v1",
 	})
+}
+
+func projectedInteractionPayload(item protocol.TeamWorkItem, payload map[string]any) map[string]any {
+	copied := map[string]any{}
+	for key, value := range payload {
+		copied[key] = value
+	}
+	if len(item.ExpectedOutputs) > 0 {
+		copied["expected_outputs"] = item.ExpectedOutputs
+	}
+	if len(item.ExpectedProof) > 0 {
+		copied["expected_proof"] = item.ExpectedProof
+	}
+	return copied
 }
 
 func teamIDFromSignalSubject(subject string) string {
@@ -213,8 +250,29 @@ func projectedHeadline(kind protocol.SignalPayloadKind, payload map[string]any) 
 	return "Team status update"
 }
 
+func projectedHeadlineForItem(item protocol.TeamWorkItem, kind protocol.SignalPayloadKind, payload map[string]any) string {
+	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "missing_retained_output" {
+		return "Team result missing retained output"
+	}
+	return projectedHeadline(kind, payload)
+}
+
 func projectedDetails(payload map[string]any) string {
 	return firstNonEmptyString(stringField(payload, "details"), stringField(payload, "message"), stringField(payload, "text"), stringField(payload, "summary"))
+}
+
+func projectedDetailsForItem(item protocol.TeamWorkItem, payload map[string]any) string {
+	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "missing_retained_output" {
+		return "The team reported completion, but did not include retained output references for the expected deliverable."
+	}
+	return projectedDetails(payload)
+}
+
+func projectedNextActionForItem(item protocol.TeamWorkItem, payload map[string]any) string {
+	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "missing_retained_output" {
+		return "Ask Soma to have the team attach or regenerate the retained deliverable."
+	}
+	return stringField(payload, "next_action")
 }
 
 func projectedSummary(kind protocol.SignalPayloadKind, payload map[string]any) string {

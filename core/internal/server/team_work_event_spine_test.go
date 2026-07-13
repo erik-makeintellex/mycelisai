@@ -87,6 +87,48 @@ func TestInsertTeamStatusEventDB_WithoutRunDoesNotEmitMissionEvent(t *testing.T)
 	}
 }
 
+func TestTeamWorkMissionEventPayloadIncludesOutputContractContext(t *testing.T) {
+	now := time.Now().UTC()
+	event := protocol.TeamStatusEvent{
+		EventID:         "11111111-1111-1111-1111-111111111111",
+		TeamID:          "qa-team",
+		WorkItemID:      "22222222-2222-2222-2222-222222222222",
+		RunID:           "33333333-3333-3333-3333-333333333333",
+		ContractID:      "contract-1",
+		State:           protocol.TeamWorkStateOutputReady,
+		Headline:        "Team result ready",
+		ExpectedOutputs: []string{"Playable browser app"},
+		ExpectedProof:   []string{"Launch smoke proof"},
+		OutputRefs: []protocol.TeamOutputRef{{
+			OutputID:   "package-1",
+			TeamID:     "qa-team",
+			WorkItemID: "22222222-2222-2222-2222-222222222222",
+			Kind:       "project_package",
+			Label:      "Playable package",
+			StorageRef: "groups/qa-team/generated/app",
+			Entrypoint: "index.html",
+			ProofRef:   "proof-artifact-1",
+		}},
+		Version: "v1",
+	}
+
+	payload := teamWorkMissionEventPayload(&event, now)
+
+	if got := payload["expected_outputs"].([]string); len(got) != 1 || got[0] != "Playable browser app" {
+		t.Fatalf("expected_outputs = %#v", payload["expected_outputs"])
+	}
+	if got := payload["expected_proof"].([]string); len(got) != 1 || got[0] != "Launch smoke proof" {
+		t.Fatalf("expected_proof = %#v", payload["expected_proof"])
+	}
+	outputRefs, ok := payload["output_refs"].([]protocol.TeamOutputRef)
+	if !ok || len(outputRefs) != 1 {
+		t.Fatalf("output_refs = %#v", payload["output_refs"])
+	}
+	if outputRefs[0].StorageRef != "groups/qa-team/generated/app" || outputRefs[0].Entrypoint != "index.html" {
+		t.Fatalf("output ref = %#v", outputRefs[0])
+	}
+}
+
 func TestTeamWorkMissionEventSeverity(t *testing.T) {
 	cases := []struct {
 		name  string

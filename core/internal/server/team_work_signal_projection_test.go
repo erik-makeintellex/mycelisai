@@ -9,16 +9,16 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func TestTeamWorkSignalProjection_ResultMapsToOutputReady(t *testing.T) {
+func TestTeamWorkSignalProjection_ResultWithoutRetainedOutputsDegradesDeliverable(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)
 	now := time.Now().UTC()
 	workID := "11111111-1111-1111-1111-111111111111"
 	mock.MatchExpectationsInOrder(true)
 	mockTeamWorkItem(mock, "research-team", workID, protocol.TeamWorkStateRunning, false, "", now)
-	expectProjectedStatusEvent(mock, "research-team", workID, protocol.TeamWorkStateOutputReady, protocol.PayloadKindResult, now)
-	expectProjectedTeamWorkUpdate(mock, workID, protocol.TeamWorkStateOutputReady, false, "")
-	expectProjectedInteraction(mock, "research-team", workID, "output_ready", protocol.PayloadKindResult, now)
+	expectProjectedStatusEvent(mock, "research-team", workID, protocol.TeamWorkStateDegraded, protocol.PayloadKindResult, now)
+	expectProjectedTeamWorkUpdate(mock, workID, protocol.TeamWorkStateDegraded, true, "missing_retained_output")
+	expectProjectedInteraction(mock, "research-team", workID, "degraded", protocol.PayloadKindResult, now)
 
 	raw := mustSignalEnvelope(t, protocol.SignalEnvelope{
 		Meta: protocol.SignalMeta{
@@ -29,7 +29,7 @@ func TestTeamWorkSignalProjection_ResultMapsToOutputReady(t *testing.T) {
 			TeamID:        "research-team",
 			AgentID:       "builder",
 		},
-		Payload: json.RawMessage(`{"context":{"work_item_id":"` + workID + `"},"summary":"Draft ready","details":"Output passed local checks."}`),
+		Payload: json.RawMessage(`{"context":{"work_item_id":"` + workID + `"},"state":"output_ready","summary":"Draft ready","details":"Output passed local checks."}`),
 	})
 
 	projection := &teamWorkSignalProjection{server: s}

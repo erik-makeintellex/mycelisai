@@ -50,26 +50,29 @@ type TeamOutputRef struct {
 
 // TeamStatusEvent is the normalized operator-readable projection of team communication.
 type TeamStatusEvent struct {
-	EventID           string        `json:"event_id"`
-	TeamID            string        `json:"team_id"`
-	WorkItemID        string        `json:"work_item_id"`
-	RunID             string        `json:"run_id,omitempty"`
-	IntentProofID     string        `json:"intent_proof_id,omitempty"`
-	ContractID        string        `json:"contract_id,omitempty"`
-	ProofID           string        `json:"proof_id,omitempty"`
-	State             TeamWorkState `json:"state"`
-	Headline          string        `json:"headline"`
-	Details           string        `json:"details,omitempty"`
-	ConfidencePosture string        `json:"confidence_posture,omitempty"`
-	BlockedBy         []string      `json:"blocked_by,omitempty"`
-	NextAction        string        `json:"next_action,omitempty"`
-	SourceKind        string        `json:"source_kind,omitempty"`
-	SourceChannel     string        `json:"source_channel,omitempty"`
-	PayloadKind       string        `json:"payload_kind,omitempty"`
-	AuditRefs         []string      `json:"audit_refs,omitempty"`
-	TargetRef         *TargetRef    `json:"target_ref,omitempty"`
-	Timestamp         time.Time     `json:"timestamp,omitempty"`
-	Version           string        `json:"version"`
+	EventID           string          `json:"event_id"`
+	TeamID            string          `json:"team_id"`
+	WorkItemID        string          `json:"work_item_id"`
+	RunID             string          `json:"run_id,omitempty"`
+	IntentProofID     string          `json:"intent_proof_id,omitempty"`
+	ContractID        string          `json:"contract_id,omitempty"`
+	ProofID           string          `json:"proof_id,omitempty"`
+	State             TeamWorkState   `json:"state"`
+	Headline          string          `json:"headline"`
+	Details           string          `json:"details,omitempty"`
+	ConfidencePosture string          `json:"confidence_posture,omitempty"`
+	BlockedBy         []string        `json:"blocked_by,omitempty"`
+	NextAction        string          `json:"next_action,omitempty"`
+	ExpectedOutputs   []string        `json:"expected_outputs,omitempty"`
+	ExpectedProof     []string        `json:"expected_proof,omitempty"`
+	OutputRefs        []TeamOutputRef `json:"output_refs,omitempty"`
+	SourceKind        string          `json:"source_kind,omitempty"`
+	SourceChannel     string          `json:"source_channel,omitempty"`
+	PayloadKind       string          `json:"payload_kind,omitempty"`
+	AuditRefs         []string        `json:"audit_refs,omitempty"`
+	TargetRef         *TargetRef      `json:"target_ref,omitempty"`
+	Timestamp         time.Time       `json:"timestamp,omitempty"`
+	Version           string          `json:"version"`
 }
 
 // TeamInteraction is the durable record of a Soma, Council, operator, or team-lead exchange.

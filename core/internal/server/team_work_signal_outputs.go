@@ -12,10 +12,51 @@ import (
 func projectedSignalOutputRefs(item protocol.TeamWorkItem, env protocol.SignalEnvelope, payload map[string]any) []protocol.TeamOutputRef {
 	refs := outputRefsFromRaw(item, env, payload["output_refs"])
 	refs = append(refs, outputRefsFromRaw(item, env, payload["outputs"])...)
-	if ref, ok := outputRefFromMap(item, env, payload); ok {
+	if hasInlineOutputRefPayload(payload) {
+		ref, ok := outputRefFromMap(item, env, payload)
+		if !ok {
+			return refs
+		}
 		refs = append(refs, ref)
 	}
 	return refs
+}
+
+func hasInlineOutputRefPayload(payload map[string]any) bool {
+	for _, key := range []string{
+		"output_id", "id", "artifact_id", "storage_ref", "folder", "path",
+		"file_path", "target_path", "entrypoint", "href", "open_url",
+	} {
+		if strings.TrimSpace(stringField(payload, key)) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func mergeTeamSignalStrings(existing []string, incoming []string) []string {
+	return normalizeStringSlice(append(existing, incoming...))
+}
+
+func proofRefsFromTeamOutputRefs(refs []protocol.TeamOutputRef) []string {
+	values := []string{}
+	for _, ref := range refs {
+		if strings.TrimSpace(ref.ProofRef) != "" {
+			values = append(values, ref.ProofRef)
+		}
+		if strings.TrimSpace(ref.ProofID) != "" {
+			values = append(values, ref.ProofID)
+		}
+	}
+	return values
+}
+
+func auditRefsFromTeamOutputRefs(refs []protocol.TeamOutputRef) []string {
+	values := []string{}
+	for _, ref := range refs {
+		values = append(values, ref.AuditRefs...)
+	}
+	return values
 }
 
 func outputRefsFromRaw(item protocol.TeamWorkItem, env protocol.SignalEnvelope, raw any) []protocol.TeamOutputRef {
