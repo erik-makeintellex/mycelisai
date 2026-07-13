@@ -51,8 +51,30 @@ function proposalUsesTeamBus(proposal: ProposalData) {
     return proposal.tools.some((tool) => /^(create_team|delegate|delegate_task)$/i.test(tool));
 }
 
+function outputShapeLabel(shape?: string) {
+    switch (shape) {
+        case "app_package":
+            return "App or package";
+        case "code_script":
+            return "Code or script";
+        case "mixed_output":
+            return "Mixed output";
+        case "media":
+            return "Media";
+        case "table":
+            return "Table";
+        case "dataset":
+            return "Dataset";
+        case "document":
+            return "Document";
+        default:
+            return "Deliverable";
+    }
+}
+
 export default function ProposalRunIntent({ proposal }: { proposal: ProposalData }) {
     const subjects = proposal.nats_subjects ?? proposal.work_intent?.nats_subjects ?? [];
+    const output = proposal.work_intent?.output_contract;
     const busScope = proposal.bus_scope && proposal.bus_scope !== "none"
         ? proposal.bus_scope
         : proposal.work_intent?.bus_scope && proposal.work_intent.bus_scope !== "none"
@@ -61,7 +83,7 @@ export default function ProposalRunIntent({ proposal }: { proposal: ProposalData
     const showBus = Boolean(busScope);
 
     return (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
                 <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
                     {cadenceLabel(proposal) === "Run once" ? <Clock3 className="h-3 w-3" /> : <RefreshCcw className="h-3 w-3" />}
@@ -87,6 +109,18 @@ export default function ProposalRunIntent({ proposal }: { proposal: ProposalData
                             </span>
                         ))}
                     </div>
+                ) : null}
+            </div>
+            <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
+                <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
+                    Expected output
+                </div>
+                <p className="mt-1.5 text-sm font-medium text-cortex-text-main">{outputShapeLabel(output?.shape)}</p>
+                <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
+                    {output?.primary_deliverable || proposal.expected_result || "Soma should return a retained deliverable with proof."}
+                </p>
+                {output?.launch_hint ? (
+                    <p className="mt-1 text-[11px] leading-5 text-cortex-primary">{output.launch_hint}</p>
                 ) : null}
             </div>
         </div>

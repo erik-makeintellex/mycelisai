@@ -190,11 +190,17 @@ describe('ProposedActionBlock', () => {
                     schedule_summary: 'Watch the incident channel every 5 minutes.',
                     bus_scope: 'current_team',
                     nats_subjects: ['swarm.team.ops.signal.status'],
+                    output_contract: {
+                        shape: 'app_package',
+                        primary_deliverable: 'Playable browser package with proof.',
+                        launch_hint: 'Return an openable entrypoint and folder access.',
+                    },
                 },
             },
         })} />);
 
         expect(screen.queryByText(/when it runs/i)).toBeNull();
+        expect(screen.queryByText(/expected output/i)).toBeNull();
         fireEvent.click(screen.getByRole('button', { name: /^details$/i }));
 
         expect(screen.getByText(/when it runs/i)).toBeDefined();
@@ -203,6 +209,10 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/team connection/i)).toBeDefined();
         expect(screen.getByText(/current team/i)).toBeDefined();
         expect(screen.getByText('swarm.team.ops.signal.status')).toBeDefined();
+        expect(screen.getByText(/expected output/i)).toBeDefined();
+        expect(screen.getByText(/app or package/i)).toBeDefined();
+        expect(screen.getByText(/playable browser package with proof/i)).toBeDefined();
+        expect(screen.getByText(/openable entrypoint/i)).toBeDefined();
     });
 
     it('shows no-approval-needed posture for low-risk actions with plain detail labels', () => {

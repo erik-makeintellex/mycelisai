@@ -203,4 +203,37 @@ func TestBuildProposalDisplayContractExplainsTeamDeliverable(t *testing.T) {
 	if len(display.AffectedResources) != 2 {
 		t.Fatalf("affected_resources = %#v, want team and file path", display.AffectedResources)
 	}
+	if display.WorkIntent == nil {
+		t.Fatal("expected work_intent")
+	}
+	if display.WorkIntent.Kind != "project" || display.WorkIntent.Cadence != "run_once" {
+		t.Fatalf("work_intent = %+v, want project run_once", display.WorkIntent)
+	}
+	if display.WorkIntent.OutputContract == nil || display.WorkIntent.OutputContract.Shape != "app_package" {
+		t.Fatalf("output_contract = %+v, want app_package", display.WorkIntent.OutputContract)
+	}
+	if display.WorkIntent.OutputContract.LaunchHint == "" {
+		t.Fatalf("expected launch hint for app package output")
+	}
+}
+
+func TestBuildProposalDisplayContractInfersServiceWorkIntent(t *testing.T) {
+	display := buildProposalDisplayContractForTeam([]protocol.PlannedToolCall{
+		{
+			Name: "delegate_task",
+			Arguments: map[string]any{
+				"team_id": "ops-watch",
+			},
+		},
+	}, "watch the incident folder and keep running as a service", []string{"delegate_task"}, "ops-watch")
+
+	if display.WorkIntent == nil {
+		t.Fatal("expected work_intent")
+	}
+	if display.WorkIntent.Kind != "service" || display.WorkIntent.Cadence != "continuous" {
+		t.Fatalf("work_intent = %+v, want service continuous", display.WorkIntent)
+	}
+	if mode := proposalExecutionMode(display.WorkIntent); mode != "team_async" {
+		t.Fatalf("execution_mode = %q, want team_async", mode)
+	}
 }

@@ -114,6 +114,8 @@ type ChatProposal struct {
 	TeamExpressions   []ChatTeamExpression       `json:"team_expressions,omitempty"`
 	BusScope          string                     `json:"bus_scope,omitempty"`
 	NATSSubjects      []string                   `json:"nats_subjects,omitempty"`
+	WorkIntent        *WorkIntent                `json:"work_intent,omitempty"`
+	ExecutionMode     string                     `json:"execution_mode,omitempty"`
 	Approval          *ApprovalPolicy            `json:"approval,omitempty"`
 	GovernanceProfile *GovernanceProfileSnapshot `json:"governance_profile,omitempty"`
 }

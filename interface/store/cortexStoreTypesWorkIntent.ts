@@ -9,6 +9,14 @@ export type WorkExecutionMode =
     | "schedule_handoff"
     | "team_async";
 
+export interface WorkOutputContractData {
+    shape?: string;
+    primary_deliverable?: string;
+    retention?: string;
+    launch_hint?: string;
+    validation?: string[];
+}
+
 export interface WorkIntentData {
     kind?: string;
     objective?: string;
@@ -20,4 +28,5 @@ export interface WorkIntentData {
     nats_subjects?: string[];
     service_refs?: string[];
     project_ref?: string;
+    output_contract?: WorkOutputContractData;
 }

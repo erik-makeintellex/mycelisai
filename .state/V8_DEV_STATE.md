@@ -458,6 +458,8 @@ Known non-blocking warnings:
 
 - `IN_REVIEW` delivery-team orchestration proof refresh: the current slice is being managed as four lanes: Runtime Output Integrity, Soma/Resources UX, Docs/State, and QA/Release. Core server tests, focused Resources/Soma Vitest suites, interface typecheck, docs/help tests, max-lines at 330, lifecycle health, and live headed `resources-workspace-files.spec.ts` pass. The Resources E2E navigation helper now tolerates Chromium's route-level `net::ERR_ABORTED` only when the intended Resources page is visible, keeping the proof strict for blank or broken page loads while avoiding a false navigation failure during live UI review.
 
+- `ACTIVE` P0.3 WorkIntent output-contract slice: proposal payloads now include `work_intent.output_contract` and `execution_mode` so Soma can distinguish one-shot, scheduled, service/watch, project/package, and self-extension posture from answer depth while also naming expected output shape, primary deliverable, retention, launch hint, and validation expectations. The Interface normalizes the new contract and shows a concise `Expected output` card only inside proposal `Details`, preserving the compact natural approval pause. Proof so far: focused Go proposal tests, focused `ProposedActionBlock` Vitest, and interface typecheck pass.
+
 ## Documentation Map
 
 | Topic | Canonical Location |

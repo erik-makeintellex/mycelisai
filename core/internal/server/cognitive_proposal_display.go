@@ -13,6 +13,7 @@ type proposalDisplayContract struct {
 	AffectedResources []string
 	BusScope          string
 	NATSSubjects      []string
+	WorkIntent        *protocol.WorkIntent
 }
 
 func firstStringArgument(arguments map[string]any, key string) string {
@@ -45,12 +46,15 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 	return buildProposalDisplayContractForTeam(planned, latestRequest, mutTools, "admin-core")
 }
 
-func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, latestRequest string, mutTools []string, fallbackTeamID string) proposalDisplayContract {
-	display := proposalDisplayContract{
+func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, latestRequest string, mutTools []string, fallbackTeamID string) (display proposalDisplayContract) {
+	display = proposalDisplayContract{
 		OperatorSummary: "Carry out the requested governed action.",
 		ExpectedResult:  "Soma will perform the approved action and return durable execution proof.",
 	}
 	display.BusScope, display.NATSSubjects = proposalBusWiring(planned, mutTools, resolveFocusedSomaTeamID(fallbackTeamID))
+	defer func() {
+		display.WorkIntent = buildProposalWorkIntent(planned, latestRequest, mutTools, display)
+	}()
 
 	for _, resource := range affectedResourcesForPlannedCalls(planned) {
 		if formatted := formatProposalResource(resource); formatted != "" {
@@ -216,6 +220,8 @@ func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID 
 		TeamExpressions:   buildTeamExpressionsFromTools(deduped, teamID, rolePlan),
 		BusScope:          firstNonEmptyString(display.BusScope, "current_team"),
 		NATSSubjects:      defaultProposalNATSSubjects(display.NATSSubjects, teamID),
+		WorkIntent:        display.WorkIntent,
+		ExecutionMode:     proposalExecutionMode(display.WorkIntent),
 		Approval:          approval,
 		GovernanceProfile: profile,
 	}

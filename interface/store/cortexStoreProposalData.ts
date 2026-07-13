@@ -58,6 +58,20 @@ function normalizeStringArray(raw: unknown): string[] | undefined {
     return values.length > 0 ? values : undefined;
 }
 
+function normalizeOutputContract(raw: unknown): WorkIntentData['output_contract'] {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const rec = raw as Record<string, unknown>;
+    const output = {
+        shape: pickString(rec, 'shape', 'shape'),
+        primary_deliverable: pickString(rec, 'primary_deliverable', 'primaryDeliverable'),
+        retention: pickString(rec, 'retention', 'retention'),
+        launch_hint: pickString(rec, 'launch_hint', 'launchHint'),
+        validation: normalizeStringArray(rec.validation),
+    };
+    const hasValue = Object.values(output).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value));
+    return hasValue ? output : undefined;
+}
+
 function pickString(rec: Record<string, unknown>, snake: string, camel: string): string | undefined {
     const raw = rec[snake] ?? rec[camel];
     const value = typeof raw === 'string' ? raw : typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : '';
@@ -79,6 +93,7 @@ function normalizeWorkIntent(raw: unknown): WorkIntentData | undefined {
         nats_subjects: normalizeStringArray(rec.nats_subjects ?? rec.natsSubjects),
         service_refs: normalizeStringArray(rec.service_refs ?? rec.serviceRefs),
         project_ref: pickString(rec, 'project_ref', 'projectRef'),
+        output_contract: normalizeOutputContract(rec.output_contract ?? rec.outputContract),
     };
     const hasValue = Object.values(workIntent).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value));
     return hasValue ? workIntent : undefined;
