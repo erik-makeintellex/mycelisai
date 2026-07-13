@@ -98,6 +98,57 @@ func TestRecordProofArtifactLinksContractAndUpdatesContract(t *testing.T) {
 	}
 }
 
+func TestRecordProofArtifactHonorsTeamSignalArtifactKind(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	mock.ExpectQuery("INSERT INTO proof_artifacts").
+		WithArgs(
+			sqlmock.AnyArg(),
+			"11111111-1111-1111-1111-111111111111",
+			"22222222-2222-2222-2222-222222222222",
+			"55555555-5555-5555-5555-555555555555",
+			"team_signal_result",
+			string(protocol.ProofArtifactStatusSuccess),
+			string(protocol.ExecutionProofClassRunAudit),
+			string(protocol.TrustValidationSourceTeamSignal),
+			string(protocol.TrustEvidenceStrengthRunAudit),
+			string(protocol.TrustProofQualityVerified),
+			sqlmock.AnyArg(),
+			sqlmock.AnyArg(),
+			sqlmock.AnyArg(),
+			sqlmock.AnyArg(),
+			sqlmock.AnyArg(),
+			sqlmock.AnyArg(),
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("44444444-4444-4444-4444-444444444444"))
+	mock.ExpectExec("UPDATE execution_contracts").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	id, err := NewStore(db).RecordProofArtifact(context.Background(), ProofArtifactInput{
+		ID:               "44444444-4444-4444-4444-444444444444",
+		ArtifactKind:     "team_signal_result",
+		ContractID:       "11111111-1111-1111-1111-111111111111",
+		IntentProofID:    "22222222-2222-2222-2222-222222222222",
+		RunID:            "55555555-5555-5555-5555-555555555555",
+		Status:           protocol.ProofArtifactStatusSuccess,
+		ValidationSource: protocol.TrustValidationSourceTeamSignal,
+		OutputRefs:       []protocol.ExecutionOutput{{ID: "game-package", Kind: "project_package", Title: "Game"}},
+	})
+	if err != nil {
+		t.Fatalf("record proof artifact: %v", err)
+	}
+	if id != "44444444-4444-4444-4444-444444444444" {
+		t.Fatalf("id = %q", id)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestListExecutionContractsReturnsDurableContractRecords(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

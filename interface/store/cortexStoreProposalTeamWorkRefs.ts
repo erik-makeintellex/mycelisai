@@ -6,12 +6,20 @@ export type TeamWorkConfirmationRef = {
     work_id?: string;
     state?: string;
     status?: string;
+    run_id?: string;
+    runId?: string;
     output_count?: number;
     outputCount?: number;
     expected_outputs?: unknown[];
     expectedOutputs?: unknown[];
+    expected_proof?: unknown[];
+    expectedProof?: unknown[];
     output_refs?: unknown[];
     outputRefs?: unknown[];
+    proof_refs?: unknown[];
+    proofRefs?: unknown[];
+    audit_refs?: unknown[];
+    auditRefs?: unknown[];
 };
 
 export function extractTeamWorkRefs(raw: unknown): TeamWorkConfirmationRef[] {
@@ -65,6 +73,34 @@ function firstExpectedOutput(refs: TeamWorkConfirmationRef[]): string | null {
     return null;
 }
 
+function refArray(...values: unknown[]): unknown[] {
+    for (const value of values) {
+        if (Array.isArray(value) && value.length > 0) return value;
+    }
+    return [];
+}
+
+function hasProofOrReceipt(refs: TeamWorkConfirmationRef[]): boolean {
+    return refs.some((ref) => {
+        const outputRefs = refArray(ref.output_refs, ref.outputRefs);
+        const proofRefs = refArray(ref.proof_refs, ref.proofRefs);
+        const auditRefs = refArray(ref.audit_refs, ref.auditRefs);
+        return Boolean(trimToNonEmpty(ref.run_id) ?? trimToNonEmpty(ref.runId))
+            || proofRefs.length > 0
+            || auditRefs.length > 0
+            || outputRefs.some((output) => (
+                !!output
+                && typeof output === "object"
+                && (
+                    Boolean(trimToNonEmpty((output as Record<string, unknown>).proof_ref))
+                    || Boolean(trimToNonEmpty((output as Record<string, unknown>).proofRef))
+                    || Boolean(trimToNonEmpty((output as Record<string, unknown>).proof_id))
+                    || Boolean(trimToNonEmpty((output as Record<string, unknown>).proofId))
+                )
+            ));
+    });
+}
+
 export function teamWorkMessage(refs: TeamWorkConfirmationRef[]): string | null {
     if (refs.length === 0) return null;
     const identifiers = refs
@@ -77,5 +113,6 @@ export function teamWorkMessage(refs: TeamWorkConfirmationRef[]): string | null 
     const state = teamWorkStateLabel(refs);
     const destination = state === "needs recovery" ? "Review Current Work for recovery." : "Review Current Work and the latest output.";
     const stateCopy = state === "needs recovery" ? "needs recovery" : `is ${state}`;
-    return `${workLabel} ${stateCopy}.${outputHint} ${destination}`;
+    const proofHint = hasProofOrReceipt(refs) ? " Proof/receipt is available in Current Work." : "";
+    return `${workLabel} ${stateCopy}.${outputHint} ${destination}${proofHint}`;
 }

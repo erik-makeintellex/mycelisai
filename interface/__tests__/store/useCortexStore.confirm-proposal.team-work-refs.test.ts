@@ -44,7 +44,12 @@ describe("useCortexStore confirm proposal team work refs", () => {
             json: async () => ({
                 data: {
                     run_id: "run-work-123456",
-                    team_work_refs: [{ work_item_id: "work-alpha-123456", state: "running", run_id: "run-work-123456" }],
+                    team_work_refs: [{
+                        work_item_id: "work-alpha-123456",
+                        state: "running",
+                        run_id: "run-work-123456",
+                        proof_refs: ["proof-alpha"],
+                    }],
                 },
             }),
         }).mockResolvedValueOnce({ ok: true, json: async () => ([]) });
@@ -56,6 +61,7 @@ describe("useCortexStore confirm proposal team work refs", () => {
         expect(message?.content).toContain("Run run-work started.");
         expect(message?.content).toContain("Work work-alp is running.");
         expect(message?.content).toContain("Review Current Work and the latest output.");
+        expect(message?.content).toContain("Proof/receipt is available in Current Work.");
         expect(message?.content).not.toContain("work-alpha-123456");
     });
 

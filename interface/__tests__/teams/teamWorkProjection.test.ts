@@ -116,6 +116,57 @@ describe("teamWorkProjection", () => {
     });
   });
 
+  it("uses last event evidence when durable work refs have not caught up yet", () => {
+    const item = mapDurableTeamWorkItem({
+      work_item_id: "work-3",
+      team_id: "team-charlie",
+      objective: "Package the game build",
+      execution_shape: "deliverable",
+      state: "output_ready",
+      updated_at: "2026-05-17T19:00:00Z",
+      last_event: {
+        headline: "Game package retained",
+        details: "Proof and output refs arrived with the latest bus event.",
+        expected_outputs: ["Playable browser package"],
+        expected_proof: ["Launchable index.html smoke proof"],
+        output_refs: [{
+          output_id: "output-event-1",
+          kind: "project_package",
+          label: "Playable game",
+          storage_ref: "groups/game-team/generated/playable-game",
+          entrypoint: "index.html",
+          proof_ref: "proof-event-1",
+          proof: {
+            proof_id: "proof-event-1",
+            path_boundary_status: "verified",
+            readback_status: "verified",
+          },
+        }],
+        proof_refs: ["proof-event-1"],
+        audit_refs: ["audit-event-1"],
+      },
+    });
+
+    expect(item).toMatchObject({
+      id: "work-3",
+      state: "output_ready",
+      outputCount: 1,
+      proofRefs: ["proof-event-1"],
+      auditRefs: ["audit-event-1"],
+    });
+    expect(item?.advanced?.expectedOutputs).toEqual(["Playable browser package"]);
+    expect(item?.advanced?.expectedProof).toEqual(["Launchable index.html smoke proof"]);
+    expect(item?.outputRefs?.[0]).toMatchObject({
+      output_id: "output-event-1",
+      label: "Playable game",
+      proof_ref: "proof-event-1",
+      proof: {
+        proof_id: "proof-event-1",
+        path_boundary_status: "verified",
+      },
+    });
+  });
+
   it("marks roster-only projection as degraded and inspectable", () => {
     const item = projectTeamWorkItem({
       id: "team-bravo",

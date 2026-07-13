@@ -60,6 +60,7 @@ type TrustValidationSource string
 const (
 	TrustValidationSourceIntentProof   TrustValidationSource = "intent_proof"
 	TrustValidationSourceConfirmAction TrustValidationSource = "confirm_action"
+	TrustValidationSourceTeamSignal    TrustValidationSource = "team_signal"
 )
 
 type TrustEvidenceStrength string

@@ -73,6 +73,60 @@ func TestTeamWorkSignalProjection_StatusUsesExplicitState(t *testing.T) {
 	}
 }
 
+func TestTeamWorkSignalProjection_ResultWithRetainedOutputRecordsCompletionProof(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	workID := "11111111-1111-1111-1111-111111111111"
+	runID := "22222222-2222-2222-2222-222222222222"
+	intentProofID := "33333333-3333-3333-3333-333333333333"
+	contractID := "44444444-4444-4444-4444-444444444444"
+	mock.MatchExpectationsInOrder(true)
+	mockLinkedTeamWorkItem(mock, "game-team", workID, runID, intentProofID, contractID, now)
+	mock.ExpectBegin()
+	mock.ExpectQuery("INSERT INTO proof_artifacts").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("55555555-5555-5555-5555-555555555555"))
+	mock.ExpectExec("UPDATE execution_contracts").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	expectProjectedStatusEventInsertOnly(mock, "game-team", workID, protocol.TeamWorkStateOutputReady, protocol.PayloadKindResult, now)
+	mock.ExpectExec("INSERT INTO mission_events").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	expectProjectedTeamWorkUpdate(mock, workID, protocol.TeamWorkStateOutputReady, false, "")
+	expectProjectedInteractionInsertOnly(mock, "game-team", workID, "output_ready", protocol.PayloadKindResult, now)
+	mock.ExpectCommit()
+
+	raw := mustSignalEnvelope(t, protocol.SignalEnvelope{
+		Meta: protocol.SignalMeta{
+			Timestamp:     now,
+			SourceKind:    protocol.SourceKindInternalTool,
+			SourceChannel: "swarm.team.game-team.internal.trigger",
+			PayloadKind:   protocol.PayloadKindResult,
+			TeamID:        "game-team",
+			RunID:         runID,
+		},
+		Payload: json.RawMessage(`{
+			"context":{"work_item_id":"` + workID + `"},
+			"summary":"Playable package ready",
+			"outputs":[{
+				"output_id":"game-package",
+				"kind":"project_package",
+				"label":"Playable game package",
+				"storage_ref":"groups/game-team/generated/game",
+				"entrypoint":"index.html",
+				"output_class":"user_deliverable"
+			}]
+		}`),
+	})
+
+	projection := &teamWorkSignalProjection{server: s}
+	if err := projection.project(t.Context(), "swarm.team.game-team.signal.result", raw); err != nil {
+		t.Fatalf("project: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestTeamWorkSignalProjection_ResultHonorsExplicitDegradedState(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)
@@ -102,6 +156,17 @@ func TestTeamWorkSignalProjection_ResultHonorsExplicitDegradedState(t *testing.T
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
 	}
+}
+
+func mockLinkedTeamWorkItem(mock sqlmock.Sqlmock, teamID, workID, runID, intentProofID, contractID string, now time.Time) {
+	mock.ExpectQuery("SELECT id::text, team_id").
+		WithArgs(teamID, workID).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			workID, teamID, runID, intentProofID, contractID, "", "Build playable game", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDeliverable), []byte(`["playable app package"]`), []byte(`["launch smoke proof"]`), []byte(`[]`),
+			"approved", string(protocol.TeamWorkStateRunning), []byte(`null`), false, "",
+			[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`[]`), now, now, "v1",
+		))
 }
 
 func TestTeamWorkSignalProjection_IgnoresArchivedWork(t *testing.T) {
@@ -163,6 +228,15 @@ func expectProjectedStatusEvent(mock sqlmock.Sqlmock, teamID, workID string, sta
 }
 
 func expectProjectedStatusEventWithSource(mock sqlmock.Sqlmock, teamID, workID string, state protocol.TeamWorkState, kind protocol.SignalPayloadKind, sourceKind, sourceChannel string, now time.Time) {
+	mock.ExpectBegin()
+	expectProjectedStatusEventInsertWithSource(mock, teamID, workID, state, kind, sourceKind, sourceChannel, now)
+}
+
+func expectProjectedStatusEventInsertOnly(mock sqlmock.Sqlmock, teamID, workID string, state protocol.TeamWorkState, kind protocol.SignalPayloadKind, now time.Time) {
+	expectProjectedStatusEventInsertWithSource(mock, teamID, workID, state, kind, string(protocol.SourceKindInternalTool), "swarm.team."+teamID+".internal.trigger", now)
+}
+
+func expectProjectedStatusEventInsertWithSource(mock sqlmock.Sqlmock, teamID, workID string, state protocol.TeamWorkState, kind protocol.SignalPayloadKind, sourceKind, sourceChannel string, now time.Time) {
 	mock.ExpectQuery("INSERT INTO team_status_events").
 		WithArgs(
 			sqlmock.AnyArg(), teamID, workID, sqlmock.AnyArg(),
@@ -188,6 +262,15 @@ func expectProjectedInteraction(mock sqlmock.Sqlmock, teamID, workID, verb strin
 }
 
 func expectProjectedInteractionWithSource(mock sqlmock.Sqlmock, teamID, workID, verb string, kind protocol.SignalPayloadKind, sourceKind, sourceChannel string, now time.Time) {
+	expectProjectedInteractionInsertWithSource(mock, teamID, workID, verb, kind, sourceKind, sourceChannel, now)
+	mock.ExpectCommit()
+}
+
+func expectProjectedInteractionInsertOnly(mock sqlmock.Sqlmock, teamID, workID, verb string, kind protocol.SignalPayloadKind, now time.Time) {
+	expectProjectedInteractionInsertWithSource(mock, teamID, workID, verb, kind, string(protocol.SourceKindInternalTool), "swarm.team."+teamID+".internal.trigger", now)
+}
+
+func expectProjectedInteractionInsertWithSource(mock sqlmock.Sqlmock, teamID, workID, verb string, kind protocol.SignalPayloadKind, sourceKind, sourceChannel string, now time.Time) {
 	mock.ExpectQuery("INSERT INTO team_interactions").
 		WithArgs(
 			sqlmock.AnyArg(), teamID, workID, sqlmock.AnyArg(),

@@ -59,6 +59,23 @@ func auditRefsFromTeamOutputRefs(refs []protocol.TeamOutputRef) []string {
 	return values
 }
 
+func stampTeamOutputRefsWithProof(refs []protocol.TeamOutputRef, proofArtifactID string) []protocol.TeamOutputRef {
+	if strings.TrimSpace(proofArtifactID) == "" {
+		return refs
+	}
+	out := make([]protocol.TeamOutputRef, 0, len(refs))
+	for _, ref := range refs {
+		if strings.TrimSpace(ref.ProofRef) == "" {
+			ref.ProofRef = proofArtifactID
+		}
+		if strings.TrimSpace(ref.ProofID) == "" {
+			ref.ProofID = proofArtifactID
+		}
+		out = append(out, ref)
+	}
+	return out
+}
+
 func outputRefsFromRaw(item protocol.TeamWorkItem, env protocol.SignalEnvelope, raw any) []protocol.TeamOutputRef {
 	values, ok := raw.([]any)
 	if !ok {

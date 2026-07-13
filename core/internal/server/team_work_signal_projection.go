@@ -90,19 +90,36 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	} else {
 		item.DegradationState = ""
 	}
+	db := p.server.getDB()
+	if db == nil {
+		return fmt.Errorf("team work signal projection requires database")
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin projected team work transaction: %w", err)
+	}
+	defer tx.Rollback()
+	proofArtifactID, err := p.recordAsyncCompletionProof(ctx, tx, item, payloadKind, incomingOutputRefs)
+	if err != nil {
+		return err
+	}
+	incomingOutputRefs = stampTeamOutputRefsWithProof(incomingOutputRefs, proofArtifactID)
 	item.OutputRefs = mergeTeamOutputRefs(item.OutputRefs, incomingOutputRefs)
 	item.ProofRefs = mergeTeamSignalStrings(item.ProofRefs, proofRefsFromTeamOutputRefs(incomingOutputRefs))
 	item.AuditRefs = mergeTeamSignalStrings(item.AuditRefs, auditRefsFromTeamOutputRefs(incomingOutputRefs))
 	event := projectedSignalStatusEvent(item, env, subject, payloadKind, payload, incomingOutputRefs)
-	if err := p.server.insertTeamStatusEventDB(ctx, &event); err != nil {
+	if err := p.server.insertTeamStatusEventExec(ctx, tx, &event); err != nil {
 		return fmt.Errorf("insert projected team status event: %w", err)
 	}
-	if err := p.server.updateTeamWorkItemLastEventDB(ctx, &item, event); err != nil {
+	if err := p.server.updateTeamWorkItemLastEventExec(ctx, tx, &item, event); err != nil {
 		return fmt.Errorf("update projected team work item: %w", err)
 	}
 	interaction := projectedSignalInteraction(item, env, subject, payloadKind, payload)
-	if err := p.server.insertTeamInteractionDB(ctx, &interaction); err != nil {
+	if err := p.server.insertTeamInteractionExec(ctx, tx, &interaction); err != nil {
 		return fmt.Errorf("insert projected team interaction: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit projected team work transaction: %w", err)
 	}
 	return nil
 }

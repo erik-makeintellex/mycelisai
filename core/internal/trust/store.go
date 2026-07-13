@@ -36,6 +36,7 @@ type ContractInput struct {
 
 type ProofArtifactInput struct {
 	ID               string
+	ArtifactKind     string
 	ContractID       string
 	IntentProofID    string
 	RunID            string
@@ -147,6 +148,10 @@ func RecordProofArtifact(ctx context.Context, exec SQLExecutor, input ProofArtif
 	if proofQuality == "" {
 		proofQuality = proofQualityForStatus(status)
 	}
+	artifactKind := strings.TrimSpace(input.ArtifactKind)
+	if artifactKind == "" {
+		artifactKind = "confirm_action"
+	}
 	auditRefsValue := input.AuditRefs
 	if auditRefsValue == nil {
 		auditRefsValue = auditRefs(input.AuditEventID)
@@ -163,7 +168,7 @@ func RecordProofArtifact(ctx context.Context, exec SQLExecutor, input ProofArtif
 		nullableUUID(input.ContractID),
 		nullableUUID(input.IntentProofID),
 		nullableUUID(input.RunID),
-		"confirm_action",
+		artifactKind,
 		string(status),
 		string(proofClass),
 		string(validationSource),

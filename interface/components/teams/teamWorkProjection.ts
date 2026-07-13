@@ -54,6 +54,11 @@ type TeamStatusEventAPIRecord = {
   details?: unknown;
   next_action?: unknown;
   target_ref?: unknown;
+  expected_outputs?: unknown;
+  expected_proof?: unknown;
+  output_refs?: unknown;
+  proof_refs?: unknown;
+  audit_refs?: unknown;
 };
 
 const durableStates = new Set<TeamWorkItemState>([
@@ -138,9 +143,11 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
   if (!workItemId || !teamId || !objective) return null;
 
   const state = teamWorkState(raw.state);
-  const rawOutputRefs = rawOutputRefRecords(raw.output_refs);
+  const lastEvent = objectValue<TeamStatusEventAPIRecord>(raw.last_event);
+  const outputRefSource = hasArrayItems(raw.output_refs) ? raw.output_refs : lastEvent?.output_refs;
+  const rawOutputRefs = rawOutputRefRecords(outputRefSource);
   const outputRefs = outputRefArray(
-    raw.output_refs,
+    outputRefSource,
     teamId,
     workItemId,
     stringValue(raw.updated_at) ?? stringValue(raw.created_at),
@@ -148,13 +155,12 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
     const proof = objectValue<OutputProofEnvelope>(rawOutputRefs[index]?.proof);
     return proof ? { ...output, proof } : output;
   });
-  const lastEvent = objectValue<TeamStatusEventAPIRecord>(raw.last_event);
   const runId = stringValue(raw.run_id);
-  const expectedOutputs = stringArray(raw.expected_outputs);
-  const expectedProof = stringArray(raw.expected_proof);
+  const expectedOutputs = firstNonEmptyStringArray(raw.expected_outputs, lastEvent?.expected_outputs);
+  const expectedProof = firstNonEmptyStringArray(raw.expected_proof, lastEvent?.expected_proof);
   const recoveryOptions = stringArray(raw.recovery_options);
-  const proofRefs = stringArray(raw.proof_refs);
-  const auditRefs = stringArray(raw.audit_refs);
+  const proofRefs = firstNonEmptyStringArray(raw.proof_refs, lastEvent?.proof_refs);
+  const auditRefs = firstNonEmptyStringArray(raw.audit_refs, lastEvent?.audit_refs);
   const nextAction = stringValue(lastEvent?.next_action);
   const targetRef = normalizeTargetRef(raw.target_ref ?? lastEvent?.target_ref);
   const description = [
@@ -234,6 +240,15 @@ export function parseTeamWorkAPIItems(payload: unknown): TeamWorkAPIRecord[] {
 
 function rawOutputRefRecords(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function hasArrayItems(value: unknown): value is unknown[] {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function firstNonEmptyStringArray(primary: unknown, fallback: unknown): string[] {
+  const primaryValues = stringArray(primary);
+  return primaryValues.length > 0 ? primaryValues : stringArray(fallback);
 }
 
 function teamWorkState(value: unknown): TeamWorkItemState {
