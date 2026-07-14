@@ -95,16 +95,19 @@ export function MCPToolRegistryOverview({
                         error={searchCapabilityError}
                         onAddWebCapability={onAddWebCapability}
                     />
-                    <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
-                        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                            Next checks
-                        </p>
-                        <div className="mt-3 grid gap-2 md:grid-cols-3">
-                            <SmallStep title="Catalog" detail="Review what Soma can use now and what needs repair." />
-                            <SmallStep title="Access" detail="Add approved places Soma may search or tool scopes." />
-                            <SmallStep title="Inspect" detail="Open raw refs, bindings, and example command shapes only when needed." />
-                        </div>
-                    </div>
+                    <SearchCapabilityCard
+                        status={searchCapability}
+                        isLoading={isFetchingSearchCapability}
+                        error={searchCapabilityError}
+                    />
+                    <CapabilityReadinessSummary
+                        capabilities={capabilities}
+                        isLoading={isFetchingCapabilities}
+                        error={capabilitiesError}
+                        usingFallback={usingCapabilityFallback}
+                        onOpenCatalog={() => setActiveFocus("catalog")}
+                        onOpenAccess={() => setActiveFocus("access")}
+                    />
                 </div>
             )}
 
@@ -182,12 +185,129 @@ function FocusButton({
     );
 }
 
-function SmallStep({ detail, title }: { detail: string; title: string }) {
+function CapabilityReadinessSummary({
+    capabilities,
+    error,
+    isLoading,
+    onOpenAccess,
+    onOpenCatalog,
+    usingFallback,
+}: {
+    capabilities: CapabilityManifest[];
+    error: string | null;
+    isLoading: boolean;
+    onOpenAccess: () => void;
+    onOpenCatalog: () => void;
+    usingFallback: boolean;
+}) {
+    const ready = capabilities.filter(isCapabilityReady);
+    const repair = capabilities.filter((capability) => !isCapabilityReady(capability));
+    const readyNames = ready.slice(0, 4).map((capability) => capability.name);
+    const repairNames = repair.slice(0, 3).map((capability) => capability.name);
+
     return (
-        <div className="rounded-lg border border-cortex-border bg-cortex-bg/60 px-3 py-3">
-            <p className="text-xs font-semibold text-cortex-text-main">{title}</p>
-            <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{detail}</p>
+        <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                        Capability overview
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-cortex-text-main">
+                        What Soma can use right now
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
+                        {usingFallback
+                            ? "Using connected tools and search status because the capability registry is unavailable."
+                            : "Open Catalog only when you need full cards, bindings, and repair detail."}
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={onOpenCatalog}
+                    className="self-start rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-xs font-semibold text-cortex-text-muted transition hover:text-cortex-text-main"
+                >
+                    Open catalog
+                </button>
+            </div>
+            {error ? (
+                <p className="mt-3 rounded-lg border border-cortex-warning/25 bg-cortex-warning/10 px-3 py-2 text-xs text-cortex-warning">
+                    {error}
+                </p>
+            ) : null}
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <ReadinessLane
+                    title="Can use now"
+                    count={ready.length}
+                    empty={isLoading ? "Checking capabilities..." : "No ready capabilities visible yet."}
+                    items={readyNames}
+                />
+                <ReadinessLane
+                    title="Needs repair"
+                    count={repair.length}
+                    empty="No capability blockers visible."
+                    items={repairNames}
+                    tone={repair.length ? "warning" : "success"}
+                />
+                <div className="rounded-lg border border-cortex-border bg-cortex-bg/60 px-3 py-3">
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                        Can request/add
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
+                        Add MCP Server opens the curated library. Use Access for search sources, data mounts, and scoped tool permissions.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={onOpenAccess}
+                        className="mt-3 rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-xs font-semibold text-cortex-primary transition hover:bg-cortex-primary/20"
+                    >
+                        Open access
+                    </button>
+                </div>
+            </div>
         </div>
+    );
+}
+
+function ReadinessLane({
+    count,
+    empty,
+    items,
+    title,
+    tone = "neutral",
+}: {
+    count: number;
+    empty: string;
+    items: string[];
+    title: string;
+    tone?: "neutral" | "success" | "warning";
+}) {
+    const toneClass = tone === "warning"
+        ? "border-cortex-warning/25 bg-cortex-warning/10"
+        : tone === "success"
+        ? "border-cortex-success/25 bg-cortex-success/10"
+        : "border-cortex-border bg-cortex-bg/60";
+    return (
+        <section className={`rounded-lg border px-3 py-3 ${toneClass}`}>
+            <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                    {title}
+                </p>
+                <span className="rounded-full border border-cortex-border bg-cortex-bg px-2 py-1 text-[10px] font-mono text-cortex-text-muted">
+                    {count}
+                </span>
+            </div>
+            {items.length ? (
+                <ul className="mt-2 space-y-1">
+                    {items.map((item) => (
+                        <li key={item} className="truncate text-xs font-semibold text-cortex-text-main">
+                            {item}
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="mt-2 text-xs leading-5 text-cortex-text-muted">{empty}</p>
+            )}
+        </section>
     );
 }
 

@@ -40,7 +40,7 @@ test.describe("Web access setup user path", () => {
     if (await addUrlReader.count()) {
       await addUrlReader.click();
       await expect(page.getByPlaceholder(/Search MCP servers/i)).toHaveValue("fetch");
-      await expect(page.getByText(/Add MCP Server/i)).toBeVisible();
+      await expect(page.getByRole("button", { name: /Add MCP Server/i })).toBeVisible();
     } else {
       await page.getByRole("button", { name: /Add web search provider|Set up web search/i }).click();
       await expect(page.getByLabel("Source kind")).toHaveValue("public_web");

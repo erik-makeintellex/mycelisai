@@ -81,7 +81,7 @@ export function CapabilityRegistryPanel({
                             Can request/add
                         </p>
                         <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-                            Use Add MCP to request another approved tool server, then return here to confirm availability and repair guidance.
+                            Use Add MCP Server to request another approved tool server, then return here to confirm availability and repair guidance.
                         </p>
                     </div>
                 </div>

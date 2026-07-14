@@ -95,15 +95,22 @@ describe('MCPToolRegistry', () => {
 
         expect(screen.getByText('Capability focus')).toBeDefined();
         expect(screen.getByText('Readiness')).toBeDefined();
-        expect(screen.getByRole('button', { name: /Catalog/i })).toBeDefined();
-        expect(screen.getByRole('button', { name: /Access/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /^Catalog/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /^Access/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Inspect/i })).toBeDefined();
+        expect(screen.getByText('Mycelis Search Capability')).toBeDefined();
+        expect(screen.getByText('Soma search is ready')).toBeDefined();
+        expect(screen.getByText('Capability overview')).toBeDefined();
+        expect(screen.getByText('Can use now')).toBeDefined();
+        expect(screen.getByText('Needs repair')).toBeDefined();
+        expect(screen.getByText('Can request/add')).toBeDefined();
+        expect(screen.getByText('Web Research')).toBeDefined();
         expect(initializeStream).toHaveBeenCalledTimes(1);
         expect(fetchMCPActivity).toHaveBeenCalledTimes(1);
         expect(fetchMCPToolSets).toHaveBeenCalledTimes(1);
         expect(fetchSearchCapability).toHaveBeenCalledTimes(1);
         expect(fetchCapabilities).toHaveBeenCalledTimes(1);
-        fireEvent.click(screen.getByRole('button', { name: /Catalog/i }));
+        fireEvent.click(screen.getByRole('button', { name: /^Catalog/i }));
         expect(screen.getByText('Capability overview')).toBeDefined();
         expect(screen.getByText('Can use now')).toBeDefined();
         expect(screen.getByText('Needs repair')).toBeDefined();
@@ -113,8 +120,6 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText(/approval optional/i)).toBeDefined();
         expect(screen.getAllByText(/Inspect capability details/i).length).toBeGreaterThan(0);
         fireEvent.click(screen.getByRole('button', { name: /Inspect/i }));
-        expect(screen.getByText('Mycelis Search Capability')).toBeDefined();
-        expect(screen.getByText('Soma search is ready')).toBeDefined();
         expect(screen.getByText(/Brave tokens are not required/i)).toBeDefined();
         expect(screen.getByText(/local API/i)).toBeDefined();
         expect(screen.getByText(/Concrete Soma Commands/i)).toBeDefined();
@@ -145,7 +150,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getByText('Request capability'));
+        fireEvent.click(screen.getAllByText('Add MCP Server')[0]);
 
         expect(screen.getByTestId('library-browser')).toBeDefined();
     });
@@ -213,7 +218,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getByRole('button', { name: /Catalog/i }));
+        fireEvent.click(screen.getByRole('button', { name: /^Catalog/i }));
         expect(screen.getByText(/Capability registry unreachable/i)).toBeDefined();
         expect(screen.getByText(/Using connected tools and search status/i)).toBeDefined();
         expect(screen.getByText('Mycelis Search')).toBeDefined();
@@ -243,7 +248,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getByRole('button', { name: /Catalog/i }));
+        fireEvent.click(screen.getByRole('button', { name: /^Catalog/i }));
         expect(screen.getByText('Needs repair')).toBeDefined();
         expect(screen.getByText('Local Media Generation')).toBeDefined();
         expect(screen.getByText('degraded')).toBeDefined();
@@ -282,7 +287,7 @@ describe('MCPToolRegistry', () => {
     it('returns to installed view with guidance after library install', () => {
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getByText('Request capability'));
+        fireEvent.click(screen.getAllByText('Add MCP Server')[0]);
         fireEvent.click(screen.getByText('Mock Install'));
 
         expect(screen.getByText(/Installed filesystem/i)).toBeDefined();

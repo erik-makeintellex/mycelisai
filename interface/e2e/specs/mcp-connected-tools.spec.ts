@@ -432,7 +432,7 @@ test.describe("Capabilities MCP workflow", () => {
         await openConnectedTools(page);
         await expect(page.getByRole("button", { name: /Capabilities/i })).toBeVisible();
         await expect(page.getByText("Choose what you want to check.")).toBeVisible();
-        await clickVisibleControl(page, page.getByRole("button", { name: /Catalog/i }));
+        await clickVisibleControl(page, page.getByRole("button", { name: /^Catalog/i }));
         await expect(page.getByText("What Soma can use right now").first()).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /Access/i }));
         await expect(page.getByText("Search sources")).toBeVisible();
@@ -455,8 +455,8 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByText("Live Usage")).toBeVisible();
         await expect(page.getByText("list_directory", { exact: true }).last()).toBeVisible();
         await expect(page.getByText("read_file", { exact: true }).last()).toBeVisible();
-        await clickVisibleControl(page, page.getByRole("button", { name: "Request capability" }));
-        await expect(page.getByText("Add MCP Server")).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("button", { name: "Add MCP Server" }).first());
+        await expect(page.getByPlaceholder(/Search MCP servers/i)).toBeVisible();
         await expect(page.getByText("Fetch", { exact: true })).toBeVisible();
         await expect(page.getByText("Fetch web pages for research-backed agent work.")).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: "INSTALL", exact: true }));
@@ -516,10 +516,10 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByText("Mycelis Search is disabled.").first()).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /^Servers$/i }));
         await expect(page.getByText("No MCP servers installed.", { exact: true })).toBeVisible({ timeout: 20_000 });
-        await expect(page.getByRole("button", { name: "Request capability" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Add MCP Server" }).first()).toBeVisible();
 
-        await clickVisibleControl(page, page.getByRole("button", { name: "Request capability" }));
-        await expect(page.getByText("Add MCP Server")).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("button", { name: "Add MCP Server" }).first());
+        await expect(page.getByPlaceholder(/Search MCP servers/i)).toBeVisible();
         await expect(page.getByText("Fetch", { exact: true })).toBeVisible();
     });
 });
