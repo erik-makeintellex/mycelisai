@@ -5,13 +5,10 @@ import { BookOpen, Wrench } from "lucide-react";
 import MCPServerCard, { type MCPRecentActivity } from "./MCPServerCard";
 import { useCortexStore } from "@/store/useCortexStore";
 import { MCPLibraryBrowserBody } from "./MCPLibraryBrowser";
-import { CapabilityRegistryPanel } from "./MCPToolCapabilityRegistry";
 import { formatActivityScope, useMCPRecentActivity } from "./MCPToolRegistryActivity";
 import { deriveFallbackCapabilities } from "./MCPToolRegistryCapabilities";
-import { ConnectedToolsWorkflowCard, SearchCapabilityCard, SomaToolPromptCard, WebAccessSetupCard } from "./MCPToolGuidance";
-import { SearchSourceRegistryCard } from "./SearchSourceRegistryCard";
+import { MCPToolRegistryOverview } from "./MCPToolRegistryOverview";
 import { useSearchSourceRegistry } from "./MCPToolRegistrySearchSources";
-import { MCPToolSetLayersStorePanel } from "./MCPToolSetLayersPanel";
 import { MCPInstallNotice, MCPRegistryEmptyBanner, MCPRegistryEmptyHero, MCPRegistryErrorBanner } from "./MCPToolRegistryNotices";
 
 type Tab = "overview" | "servers" | "library";
@@ -156,54 +153,19 @@ export default function MCPToolRegistry() {
 
             <div className="flex-1 overflow-y-auto">
                 {activeTab === "overview" && (
-                    <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">
-                        <WebAccessSetupCard
-                            status={searchCapability}
-                            isLoading={isFetchingSearchCapability}
-                            error={searchCapabilityError}
-                            onAddWebCapability={handleAddWebCapability}
-                        />
-                        <CapabilityRegistryPanel
-                            capabilities={visibleCapabilities}
-                            isLoading={isFetchingCapabilities}
-                            error={capabilitiesError}
-                            usingFallback={usingCapabilityFallback}
-                        />
-                        <details className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-3">
-                            <summary className="cursor-pointer text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                                Configure access
-                            </summary>
-                            <div className="mt-4 grid gap-4">
-                                <SearchSourceRegistryCard
-                                    sources={searchSourceRegistry.visibleSearchSources}
-                                    isLoading={searchSourceRegistry.isFetchingSearchSources}
-                                    addSupported={searchSourceRegistry.searchSourceRegistrySupported}
-                                    error={searchSourceRegistry.searchSourcesError}
-                                    addNotice={searchSourceRegistry.searchSourceNotice}
-                                    isAdding={searchSourceRegistry.isAddingSearchSource}
-                                    openCreateRequest={searchSourceCreateRequest}
-                                    onAddSearchSource={searchSourceRegistry.addSearchSource}
-                                    onDeleteSearchSource={searchSourceRegistry.deleteSearchSource}
-                                    onUpdateSearchSource={searchSourceRegistry.updateSearchSource}
-                                />
-                                <MCPToolSetLayersStorePanel />
-                            </div>
-                        </details>
-                        <details className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-3">
-                            <summary className="cursor-pointer text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                                Inspect details and examples
-                            </summary>
-                            <div className="mt-4 grid gap-4">
-                                <SearchCapabilityCard
-                                    status={searchCapability}
-                                    isLoading={isFetchingSearchCapability}
-                                    error={searchCapabilityError}
-                                />
-                                <SomaToolPromptCard />
-                                <ConnectedToolsWorkflowCard isStreamConnected={isStreamConnected} />
-                            </div>
-                        </details>
-                    </div>
+                    <MCPToolRegistryOverview
+                        capabilities={visibleCapabilities}
+                        isFetchingCapabilities={isFetchingCapabilities}
+                        capabilitiesError={capabilitiesError}
+                        usingCapabilityFallback={usingCapabilityFallback}
+                        searchCapability={searchCapability}
+                        isFetchingSearchCapability={isFetchingSearchCapability}
+                        searchCapabilityError={searchCapabilityError}
+                        searchSourceRegistry={searchSourceRegistry}
+                        searchSourceCreateRequest={searchSourceCreateRequest}
+                        isStreamConnected={isStreamConnected}
+                        onAddWebCapability={handleAddWebCapability}
+                    />
                 )}
 
                 {activeTab === "servers" && (

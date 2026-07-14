@@ -93,14 +93,17 @@ describe('MCPToolRegistry', () => {
         expect(screen.queryByTestId('server-card-srv-001')).toBeNull();
         expect(screen.queryByTestId('server-card-srv-002')).toBeNull();
 
-        expect(screen.getByText(/Capability Workflow/i)).toBeDefined();
-        expect(screen.getByText('Configure access')).toBeDefined();
-        expect(screen.getByText('Inspect details and examples')).toBeDefined();
+        expect(screen.getByText('Capability focus')).toBeDefined();
+        expect(screen.getByText('Readiness')).toBeDefined();
+        expect(screen.getByRole('button', { name: /Catalog/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Access/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Inspect/i })).toBeDefined();
         expect(initializeStream).toHaveBeenCalledTimes(1);
         expect(fetchMCPActivity).toHaveBeenCalledTimes(1);
         expect(fetchMCPToolSets).toHaveBeenCalledTimes(1);
         expect(fetchSearchCapability).toHaveBeenCalledTimes(1);
         expect(fetchCapabilities).toHaveBeenCalledTimes(1);
+        fireEvent.click(screen.getByRole('button', { name: /Catalog/i }));
         expect(screen.getByText('Capability overview')).toBeDefined();
         expect(screen.getByText('Can use now')).toBeDefined();
         expect(screen.getByText('Needs repair')).toBeDefined();
@@ -109,7 +112,7 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText(/risk medium/i)).toBeDefined();
         expect(screen.getByText(/approval optional/i)).toBeDefined();
         expect(screen.getAllByText(/Inspect capability details/i).length).toBeGreaterThan(0);
-        fireEvent.click(screen.getByText('Inspect details and examples'));
+        fireEvent.click(screen.getByRole('button', { name: /Inspect/i }));
         expect(screen.getByText('Mycelis Search Capability')).toBeDefined();
         expect(screen.getByText('Soma search is ready')).toBeDefined();
         expect(screen.getByText(/Brave tokens are not required/i)).toBeDefined();
@@ -118,10 +121,9 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText(/Search web/i)).toBeDefined();
         expect(screen.getAllByText(/Create team/i).length).toBeGreaterThan(0);
         expect(screen.getAllByText(/Read host data/i).length).toBeGreaterThan(0);
-        fireEvent.click(screen.getByText('Configure access'));
+        fireEvent.click(screen.getByRole('button', { name: /Access/i }));
         expect(screen.getByText('Capability permissions')).toBeDefined();
         expect(screen.getByText('Choose where Soma can use connected tools')).toBeDefined();
-        expect(screen.getByText('Places Soma Can Search')).toBeDefined();
         expect(screen.getByText('Search sources')).toBeDefined();
         expect(screen.getByText('Configured source details')).toBeDefined();
         expect(screen.getAllByText('Self-hosted public web').length).toBeGreaterThan(0);
@@ -211,6 +213,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
+        fireEvent.click(screen.getByRole('button', { name: /Catalog/i }));
         expect(screen.getByText(/Capability registry unreachable/i)).toBeDefined();
         expect(screen.getByText(/Using connected tools and search status/i)).toBeDefined();
         expect(screen.getByText('Mycelis Search')).toBeDefined();
@@ -240,6 +243,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
+        fireEvent.click(screen.getByRole('button', { name: /Catalog/i }));
         expect(screen.getByText('Needs repair')).toBeDefined();
         expect(screen.getByText('Local Media Generation')).toBeDefined();
         expect(screen.getByText('degraded')).toBeDefined();
@@ -271,9 +275,8 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        expect(screen.getByText('Soma search needs configuration')).toBeDefined();
+        expect(screen.getByText('Web access needs setup')).toBeDefined();
         expect(screen.getAllByText('Mycelis Search is disabled.').length).toBeGreaterThan(0);
-        expect(screen.getByText(/Ask Soma to search/i)).toBeDefined();
     });
 
     it('returns to installed view with guidance after library install', () => {
