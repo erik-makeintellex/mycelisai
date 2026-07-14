@@ -48,6 +48,7 @@ export default function GroupManagementPanel({
   const [broadcasting, setBroadcasting] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [clearOutputs, setClearOutputs] = useState(false);
+  const [bulkClearOutputs, setBulkClearOutputs] = useState(false);
   const [draft, setDraft] = useState<GroupDraft>(emptyGroupDraft);
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [lastBroadcastResult, setLastBroadcastResult] =
@@ -56,18 +57,9 @@ export default function GroupManagementPanel({
 
   const selectedGroup = groups.find((group) => group.group_id === selectedGroupId) ?? null;
   const filteredGroups = filterGroups(groups, recordFilters);
-  const selectedGroupHiddenByFilters = groupHiddenByFilters(
-    selectedGroup,
-    filteredGroups,
-  );
-  const visibleBroadcastResult = visibleGroupBroadcastResult(
-    lastBroadcastResult,
-    selectedGroup,
-  );
-  const buckets = useMemo(
-    () => buildGroupBuckets(filteredGroups),
-    [filteredGroups],
-  );
+  const selectedGroupHiddenByFilters = groupHiddenByFilters(selectedGroup, filteredGroups);
+  const visibleBroadcastResult = visibleGroupBroadcastResult(lastBroadcastResult, selectedGroup);
+  const buckets = useMemo(() => buildGroupBuckets(filteredGroups), [filteredGroups]);
   const lifecycleByGroupId = useMemo(() => {
     const byID = new Map<string, GroupLifecycleReport["items"][number]>();
     lifecycleReport?.items.forEach((item) => byID.set(item.group_id, item));
@@ -281,6 +273,10 @@ export default function GroupManagementPanel({
     setNotice,
     setError,
   });
+  const clearSelectedGroupsWithOutputChoice = async () => {
+    const cleared = await clearSelectedGroups(bulkClearOutputs);
+    if (cleared) setBulkClearOutputs(false);
+  };
 
   return (
     <GroupWorkspacePanels
@@ -292,6 +288,7 @@ export default function GroupManagementPanel({
       bulkMode={bulkMode}
       bulkSelectedGroupIds={bulkSelectedGroupIds}
       bulkActionPending={bulkClearing}
+      bulkClearOutputs={bulkClearOutputs}
       selectedGroup={selectedGroup}
       hiddenSelectedGroup={selectedGroupHiddenByFilters ? selectedGroup : null}
       selectedGroupId={selectedGroupId}
@@ -319,7 +316,8 @@ export default function GroupManagementPanel({
       onToggleBulkGroup={toggleBulkGroup}
       onSelectAllVisibleBulkGroups={selectAllVisibleBulkGroups}
       onClearBulkSelection={clearBulkSelection}
-      onClearSelectedGroups={() => void clearSelectedGroups()}
+      onBulkClearOutputsChange={setBulkClearOutputs}
+      onClearSelectedGroups={() => void clearSelectedGroupsWithOutputChoice()}
       onSelectGroup={setSelectedGroupId}
       onDraftChange={(patch) =>
         setDraft((current) => ({ ...current, ...patch }))

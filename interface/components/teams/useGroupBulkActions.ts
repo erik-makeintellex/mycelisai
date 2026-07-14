@@ -56,13 +56,13 @@ export function useGroupBulkActions({
     setBulkSelectedGroupIds(new Set());
   };
 
-  const clearSelectedGroups = async () => {
+  const clearSelectedGroups = async (includeOutputs = false) => {
     const groupIds = [...bulkSelectedGroupIds].filter((groupId) =>
       groups.some(
         (group) => group.group_id === groupId && group.status !== "archived",
       ),
     );
-    if (groupIds.length === 0) return;
+    if (groupIds.length === 0) return false;
     setBulkClearing(true);
     setNotice(null);
     setError(null);
@@ -74,7 +74,7 @@ export function useGroupBulkActions({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ include_outputs: false }),
+            body: JSON.stringify({ include_outputs: includeOutputs }),
           },
         );
         if (!res.ok) throw new Error("Could not clear selected groups.");
@@ -82,12 +82,15 @@ export function useGroupBulkActions({
       }
       setBulkSelectedGroupIds(new Set());
       setBulkMode(false);
-      setNotice(
-        `${cleared} selected group${cleared === 1 ? "" : "s"} cleared from active lanes. Retained outputs stayed available.`,
-      );
+      const outputCopy = includeOutputs
+        ? "Retained output files were also cleared where available."
+        : "Retained outputs stayed available.";
+      setNotice(`${cleared} selected group${cleared === 1 ? "" : "s"} cleared from active lanes. ${outputCopy}`);
       await loadGroups();
+      return true;
     } catch (bulkError) {
       setError(errorMessage(bulkError, "Could not clear selected groups."));
+      return false;
     } finally {
       setBulkClearing(false);
     }

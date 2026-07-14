@@ -42,6 +42,7 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
     bulkMode,
     bulkSelectedGroupIds,
     bulkActionPending,
+    bulkClearOutputs,
     onRefresh,
     onArchiveExpired,
     onRecordFiltersChange,
@@ -49,6 +50,7 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
     onToggleBulkGroup,
     onSelectAllVisibleBulkGroups,
     onClearBulkSelection,
+    onBulkClearOutputsChange,
     onClearSelectedGroups,
     onSelectGroup,
     onDraftChange,
@@ -100,6 +102,7 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
           bulkMode={bulkMode}
           selectedBulkGroupIds={bulkSelectedGroupIds}
           bulkActionPending={bulkActionPending}
+          bulkClearOutputs={bulkClearOutputs}
           selectedGroupId={selectedGroupId}
           onFiltersChange={onRecordFiltersChange}
           onSelectGroup={selectGroup}
@@ -107,6 +110,7 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
           onToggleBulkGroup={onToggleBulkGroup}
           onSelectAllVisible={onSelectAllVisibleBulkGroups}
           onClearBulkSelection={onClearBulkSelection}
+          onBulkClearOutputsChange={onBulkClearOutputsChange}
           onBulkClearGroups={onClearSelectedGroups}
         />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg/30">

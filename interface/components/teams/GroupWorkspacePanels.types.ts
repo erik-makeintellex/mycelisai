@@ -22,6 +22,7 @@ export type GroupWorkspacePanelsProps = {
   bulkMode: boolean;
   bulkSelectedGroupIds: Set<string>;
   bulkActionPending: boolean;
+  bulkClearOutputs: boolean;
   selectedGroup: Group | null;
   hiddenSelectedGroup: Group | null;
   selectedGroupId: string | null;
@@ -49,6 +50,7 @@ export type GroupWorkspacePanelsProps = {
   onToggleBulkGroup: (groupId: string) => void;
   onSelectAllVisibleBulkGroups: () => void;
   onClearBulkSelection: () => void;
+  onBulkClearOutputsChange: (value: boolean) => void;
   onClearSelectedGroups: () => void;
   onSelectGroup: (groupId: string) => void;
   onDraftChange: (patch: Partial<GroupDraft>) => void;

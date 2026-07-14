@@ -14,6 +14,7 @@ export function GroupRail({
   bulkMode,
   selectedBulkGroupIds,
   bulkActionPending,
+  bulkClearOutputs,
   selectedGroupId,
   onFiltersChange,
   onSelectGroup,
@@ -21,6 +22,7 @@ export function GroupRail({
   onToggleBulkGroup,
   onSelectAllVisible,
   onClearBulkSelection,
+  onBulkClearOutputsChange,
   onBulkClearGroups,
 }: {
   buckets: GroupBucket[];
@@ -30,6 +32,7 @@ export function GroupRail({
   bulkMode: boolean;
   selectedBulkGroupIds: Set<string>;
   bulkActionPending: boolean;
+  bulkClearOutputs: boolean;
   selectedGroupId: string | null;
   onFiltersChange: (patch: Partial<GroupRecordFilters>) => void;
   onSelectGroup: (groupId: string) => void;
@@ -37,6 +40,7 @@ export function GroupRail({
   onToggleBulkGroup: (groupId: string) => void;
   onSelectAllVisible: () => void;
   onClearBulkSelection: () => void;
+  onBulkClearOutputsChange: (value: boolean) => void;
   onBulkClearGroups: () => void;
 }) {
   const total = buckets.reduce(
@@ -106,8 +110,27 @@ export function GroupRail({
           </div>
           <p className="mt-2 text-xs leading-5 text-cortex-text-muted">
             Bulk actions apply to selected active groups. Retained output files
-            stay available unless a future action explicitly says otherwise.
+            stay available unless you choose to remove them here.
           </p>
+          <label className="mt-3 flex items-start gap-2 rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2">
+            <input
+              type="checkbox"
+              aria-label="Also delete retained output files for selected groups"
+              checked={bulkClearOutputs}
+              onChange={(event) =>
+                onBulkClearOutputsChange(event.currentTarget.checked)
+              }
+              className="mt-1 h-4 w-4 rounded border-cortex-border bg-cortex-bg accent-cortex-warning"
+            />
+            <span className="min-w-0">
+              <span className="block text-xs font-semibold text-cortex-text-main">
+                Also delete retained output files
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-cortex-text-muted">
+                Keep this off when you only want old groups out of active lanes.
+              </span>
+            </span>
+          </label>
           <button
             type="button"
             onClick={onBulkClearGroups}

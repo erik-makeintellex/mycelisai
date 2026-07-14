@@ -63,4 +63,48 @@ describe("GroupManagementPanel bulk actions", () => {
     );
     expect(screen.queryByTestId("groups-bulk-actions")).toBeNull();
   });
+
+  it("bulk clear can explicitly remove retained output files", async () => {
+    const groups = [
+      standingGroup(),
+      tempGroup({ work_mode: "execute_with_approval" }),
+    ];
+    installGroupsFetch({ groups });
+
+    render(<GroupManagementPanel />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /Temp Campaign/i }),
+      ).toBeDefined(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Select" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Select visible active" }),
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "Also delete retained output files for selected groups",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Clear selected groups" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("groups-notice").textContent).toContain(
+        "Retained output files were also cleared",
+      ),
+    );
+    const clearRequests = mockFetch.mock.calls.filter(([input, init]) => {
+      const url = typeof input === "string" ? input : String(input);
+      return url.endsWith("/clear") && init?.method === "POST";
+    });
+    clearRequests.forEach(([, init]) =>
+      expect(JSON.parse(String(init?.body))).toEqual({
+        include_outputs: true,
+      }),
+    );
+  });
 });

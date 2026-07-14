@@ -1,7 +1,7 @@
 # Mycelis V8 - Active Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-07-13
+> Updated: 2026-07-14
 > Canonical active scoreboard for V8 delivery. Historical V7/V8 migration evidence now lives in Git history; active architecture truth lives in `docs/architecture-library/MYCELIS_CANONICAL_PRD.md`.
 
 ## Current Checkpoint
@@ -355,7 +355,7 @@ Latest green proof through next-phase native-services engagement:
 
 210. Soma composer auto-grow is `IN_REVIEW`: the Dashboard advanced composer and simplified Soma composer now share the same resize helper, grow immediately with multiline user input, cap at 180px, and switch to internal scrolling after the cap instead of pushing the workspace or hiding the send control. Proof: focused `MissionControlInputs.test.tsx`, Interface typecheck, and external Chromium `desktop-mobile-compression.spec.ts` with the multiline composer reachability assertion.
 
-211. Groups multi-select action mode is `IN_REVIEW`: the Groups record rail now has a deliberate `Select` mode for batch operations without making normal group review busier. Operators can select visible active group records, clear the selection, or bulk clear selected groups through the existing governed clear endpoint while retained output files stay available by default. Archived groups remain visible for review but are not selectable for active-lane bulk actions. Proof: focused `GroupManagementPanel.test.tsx` and Interface typecheck; browser proof follows in `groups.spec.ts`.
+211. Groups multi-select action mode is `IN_REVIEW`: the Groups record rail now has a deliberate `Select` mode for batch operations without making normal group review busier. Operators can select visible active group records, clear the selection, or bulk clear selected groups through the existing governed clear endpoint while retained output files stay available by default. Bulk clear now has an explicit **Also delete retained output files** checkbox that sends `include_outputs=true` only when the operator chooses storage cleanup; otherwise selected groups leave active lanes while their deliverables remain reviewable from Resources. Archived groups remain visible for review but are not selectable for active-lane bulk actions. Proof: focused `GroupManagementPanel.bulk.test.tsx`, Interface typecheck, docs tests, max-lines, diff check, service health, and headed external Chromium `groups.spec.ts`.
 
 Known non-blocking warnings:
 
