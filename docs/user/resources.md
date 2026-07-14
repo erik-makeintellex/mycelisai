@@ -91,7 +91,9 @@ Capability permission groups support three configuration forms:
 
 Under the hood these still save as MCP tool-set scopes (`all`, `group`, and `host`). When the same tool-set name exists at multiple layers, scoped runtime resolution should prefer the group or host layer first, then fall back to the shared `all` layer. This lets operators keep a default capability posture while adding narrower MCP access for a project lane or a particular host.
 
-The Capabilities page exposes this as **Capability permissions**. Use **Everyone** for workspace defaults, **Group** for a collaboration lane, and **Host** for a target runtime host. Group and Host permissions require a target before they can be saved. Saved permission groups appear in the current-permissions list with a plain-language summary plus capability references for review.
+The Capabilities page opens as a readiness view, not as raw MCP configuration. The first screen shows web/search readiness and a short **Can use now / Needs repair / Can request** capability view. Raw capability refs, output/write channels, provider bindings, and longer examples stay behind **Inspect capability details** or **Inspect details and examples**. Use **Configure access** when you intentionally need to add search sources or edit capability permission groups.
+
+Capability permissions use **Everyone** for workspace defaults, **Group** for a collaboration lane, and **Host** for a target runtime host. Group and Host permissions require a target before they can be saved. Saved permission groups appear in the current-permissions list with a plain-language summary plus capability references for review.
 
 Use **Common choices** when you do not want to type raw capability references. The current choices cover Workspace files, User data mounts, Web research, Team coordination, and Local host/media. Choosing one fills the matching capability refs and, when appropriate, nudges the form toward Group or Host scope so sensitive access does not accidentally become a workspace default. Advanced operators can still edit the refs before saving.
 
@@ -134,12 +136,12 @@ When the request includes private services, credentials, production systems, cus
 
 ## Exchange
 
-Exchange is the inspectable context-security surface for advanced operators.
+Exchange is the handoff review surface for evidence moving between Soma, teams, tools, and retained outputs. The default view should answer what was handed off most recently and whether it needs review. Work threads and source lanes remain available as focused tabs for advanced review, but the page should not force users to compare channels, threads, and items in three dense columns.
 
 What you can inspect:
-- normalized channels such as research/result outputs
-- active review threads
-- recent exchange items
+- recent handoffs and normalized outputs that another team or Soma may use next
+- active work threads for planning, review, escalation, and learning
+- source lanes/channels that explain where handoffs are allowed to move
 - trust and sensitivity posture on outputs
 
 Typical labels:

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ExchangeInspector from '@/components/resources/ExchangeInspector';
 
 describe('ExchangeInspector', () => {
@@ -32,13 +32,16 @@ describe('ExchangeInspector', () => {
         render(<ExchangeInspector />);
 
         await waitFor(() => {
-            expect(screen.getAllByText('browser.research.results').length).toBeGreaterThan(0);
-            expect(screen.getByText('Research pass')).toBeDefined();
+            expect(screen.getByText('Team handoffs')).toBeDefined();
             expect(screen.getByText('Fetch returned market notes.')).toBeDefined();
             expect(screen.getAllByText(/team_scoped/i).length).toBeGreaterThan(0);
             expect(screen.getByText(/bounded_external/i)).toBeDefined();
-            expect(screen.getByText(/review required/i)).toBeDefined();
+            expect(screen.getAllByText(/Review/i).length).toBeGreaterThan(0);
         });
+        fireEvent.click(screen.getByRole('button', { name: /Work threads/i }));
+        expect(screen.getByText('Research pass')).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: /Source lanes/i }));
+        expect(screen.getAllByText('browser.research.results').length).toBeGreaterThan(0);
     });
 
     it('shows an error state when exchange loading fails', async () => {

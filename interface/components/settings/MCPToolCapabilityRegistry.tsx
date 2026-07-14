@@ -17,6 +17,7 @@ export function CapabilityRegistryPanel({
     const mutatingCount = capabilities.filter((capability) => capability.writes && capability.writes.length > 0).length;
     const availableCapabilities = capabilities.filter(isCapabilityAvailable);
     const repairCapabilities = capabilities.filter((capability) => !isCapabilityAvailable(capability));
+    const visibleAvailable = availableCapabilities.slice(0, 6);
 
     return (
         <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
@@ -30,12 +31,12 @@ export function CapabilityRegistryPanel({
                             Capability overview
                         </p>
                         <p className="mt-1 text-sm font-semibold text-cortex-text-main">
-                            Can use, needs repair, and can request
+                            What Soma can use right now
                         </p>
                         <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
                             {usingFallback
-                                ? "Capability API data is unavailable, so this view is derived from MCP servers and search status."
-                                : "Capability manifests are loaded from /api/v1/capabilities."}
+                                ? "Using connected tools and search status because the capability registry is unavailable."
+                                : "Use this first for readiness. Configure access or inspect raw bindings only when needed."}
                         </p>
                     </div>
                 </div>
@@ -61,9 +62,14 @@ export function CapabilityRegistryPanel({
             ) : (
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">
                     <CapabilitySection title="Can use now" count={availableCapabilities.length}>
-                        {availableCapabilities.map((capability) => (
+                        {visibleAvailable.map((capability) => (
                             <CapabilityCard key={capability.id} capability={capability} />
                         ))}
+                        {availableCapabilities.length > visibleAvailable.length && (
+                            <p className="text-xs text-cortex-text-muted">
+                                {availableCapabilities.length - visibleAvailable.length} more ready capabilities are available through Inspect details.
+                            </p>
+                        )}
                     </CapabilitySection>
                     <CapabilitySection title="Needs repair" count={repairCapabilities.length}>
                         {repairCapabilities.map((capability) => (
@@ -114,14 +120,16 @@ function CapabilityCard({ capability }: { capability: CapabilityManifest }) {
                     <div className="flex flex-wrap items-center gap-2">
                         <span className={`h-2 w-2 rounded-full ${available ? "bg-cortex-success" : "bg-cortex-warning"}`} />
                         <p className="text-sm font-semibold text-cortex-text-main">{capability.name}</p>
-                        <span className="rounded border border-cortex-border bg-cortex-surface px-1.5 py-0.5 text-[9px] font-mono uppercase text-cortex-text-muted">
-                            {capability.id}
-                        </span>
                     </div>
                     {capability.description && (
                         <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{capability.description}</p>
                     )}
                 </div>
+                {!available && capability.fallback_behavior && (
+                    <p className="rounded-lg border border-cortex-warning/25 bg-cortex-warning/10 px-3 py-2 text-xs leading-5 text-cortex-text-main">
+                        {capability.fallback_behavior}
+                    </p>
+                )}
                 <div className="flex flex-wrap gap-1.5">
                     <CapabilityBadge tone={available ? "success" : "warning"} label={capability.availability_status ?? (available ? "available" : "needs attention")} />
                     <CapabilityBadge label={capability.category} />
@@ -130,11 +138,12 @@ function CapabilityCard({ capability }: { capability: CapabilityManifest }) {
                 </div>
             </div>
 
-            <details className="mt-2 rounded-lg border border-cortex-border bg-cortex-surface px-2.5 py-2" open={!available}>
+            <details className="mt-2 rounded-lg border border-cortex-border bg-cortex-surface px-2.5 py-2">
                 <summary className="cursor-pointer text-[9px] font-mono uppercase tracking-wider text-cortex-text-muted">
-                    Details and binding
+                    Inspect capability details
                 </summary>
                 <div className="mt-2 grid gap-2">
+                    <CapabilityDetail label="Capability ref" value={capability.id} />
                     <CapabilityDetail icon={<Route className="h-3.5 w-3.5" />} label="Outputs" value={outputs.length ? outputs.join(", ") : "ToolResult"} />
                     <CapabilityDetail icon={<Database className="h-3.5 w-3.5" />} label="Writes" value={writes.length ? writes.join(", ") : "Managed Exchange, run evidence"} />
                     <CapabilityDetail icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Audit" value={capability.audit ?? "required"} />

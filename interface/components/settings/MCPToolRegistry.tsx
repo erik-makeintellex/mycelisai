@@ -163,33 +163,46 @@ export default function MCPToolRegistry() {
                             error={searchCapabilityError}
                             onAddWebCapability={handleAddWebCapability}
                         />
-                        <SearchSourceRegistryCard
-                            sources={searchSourceRegistry.visibleSearchSources}
-                            isLoading={searchSourceRegistry.isFetchingSearchSources}
-                            addSupported={searchSourceRegistry.searchSourceRegistrySupported}
-                            error={searchSourceRegistry.searchSourcesError}
-                            addNotice={searchSourceRegistry.searchSourceNotice}
-                            isAdding={searchSourceRegistry.isAddingSearchSource}
-                            openCreateRequest={searchSourceCreateRequest}
-                            onAddSearchSource={searchSourceRegistry.addSearchSource}
-                            onDeleteSearchSource={searchSourceRegistry.deleteSearchSource}
-                            onUpdateSearchSource={searchSourceRegistry.updateSearchSource}
-                        />
                         <CapabilityRegistryPanel
                             capabilities={visibleCapabilities}
                             isLoading={isFetchingCapabilities}
                             error={capabilitiesError}
                             usingFallback={usingCapabilityFallback}
                         />
-                        <SomaToolPromptCard />
-                        <ConnectedToolsWorkflowCard isStreamConnected={isStreamConnected} />
-                        <MCPToolSetLayersStorePanel />
-
-                        <SearchCapabilityCard
-                            status={searchCapability}
-                            isLoading={isFetchingSearchCapability}
-                            error={searchCapabilityError}
-                        />
+                        <details className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                            <summary className="cursor-pointer text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                                Configure access
+                            </summary>
+                            <div className="mt-4 grid gap-4">
+                                <SearchSourceRegistryCard
+                                    sources={searchSourceRegistry.visibleSearchSources}
+                                    isLoading={searchSourceRegistry.isFetchingSearchSources}
+                                    addSupported={searchSourceRegistry.searchSourceRegistrySupported}
+                                    error={searchSourceRegistry.searchSourcesError}
+                                    addNotice={searchSourceRegistry.searchSourceNotice}
+                                    isAdding={searchSourceRegistry.isAddingSearchSource}
+                                    openCreateRequest={searchSourceCreateRequest}
+                                    onAddSearchSource={searchSourceRegistry.addSearchSource}
+                                    onDeleteSearchSource={searchSourceRegistry.deleteSearchSource}
+                                    onUpdateSearchSource={searchSourceRegistry.updateSearchSource}
+                                />
+                                <MCPToolSetLayersStorePanel />
+                            </div>
+                        </details>
+                        <details className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                            <summary className="cursor-pointer text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                                Inspect details and examples
+                            </summary>
+                            <div className="mt-4 grid gap-4">
+                                <SearchCapabilityCard
+                                    status={searchCapability}
+                                    isLoading={isFetchingSearchCapability}
+                                    error={searchCapabilityError}
+                                />
+                                <SomaToolPromptCard />
+                                <ConnectedToolsWorkflowCard isStreamConnected={isStreamConnected} />
+                            </div>
+                        </details>
                     </div>
                 )}
 

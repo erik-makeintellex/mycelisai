@@ -1,8 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { clickVisibleControl } from "../support/click-visible-control";
-type RouteLike = {
-    fulfill: (options: { status: number; contentType: string; body: string }) => Promise<void>; request: () => { method: () => string };
-};
+type RouteLike = { fulfill: (options: { status: number; contentType: string; body: string }) => Promise<void>; request: () => { method: () => string } };
 
 async function fulfillJSON(route: RouteLike, status: number, body: unknown) {
     await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
@@ -411,7 +409,6 @@ async function gotoWithColdStartRetry(page: Page, path: string) {
         await page.goto(path, { waitUntil: "domcontentloaded" });
     }
 }
-
 async function openConnectedTools(page: Page) {
     for (let attempt = 0; attempt < 2; attempt += 1) {
         await gotoWithColdStartRetry(page, "/dashboard");
@@ -427,23 +424,25 @@ async function openConnectedTools(page: Page) {
     await gotoWithColdStartRetry(page, "/resources?tab=tools");
     await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 20_000 });
 }
-
 test.describe("Capabilities MCP workflow", () => {
     test.skip(({ browserName }) => browserName !== "chromium", "Capabilities browser workflow proof is stabilized in Chromium for MVP review.");
 
     test("shows active MCP usage and installs a curated server from the library", async ({ page }) => {
         await mockConnectedToolsApis(page);
         await openConnectedTools(page);
-
         await expect(page.getByRole("button", { name: /Capabilities/i })).toBeVisible();
-        await expect(page.getByText("Can use, needs repair, and can request").first()).toBeVisible();
+        await expect(page.getByText("What Soma can use right now").first()).toBeVisible();
+        await expect(page.getByText("Configure access", { exact: true })).toBeVisible();
+        await expect(page.getByText("Inspect details and examples", { exact: true })).toBeVisible();
+        await clickVisibleControl(page, page.getByText("Configure access", { exact: true }));
+        await expect(page.getByText("Places Soma Can Search")).toBeVisible();
+        await expect(page.getByText("Self-hosted public web").first()).toBeVisible();
+        await expect(page.getByText("operator-owned public web search").first()).toBeVisible();
+        await clickVisibleControl(page, page.getByText("Inspect details and examples", { exact: true }));
         await expect(page.getByText("Capability Workflow")).toBeVisible();
         await expect(page.getByText("Mycelis Search Capability")).toBeVisible();
         await expect(page.getByText("Soma search is ready")).toBeVisible();
         await expect(page.getByText("Ask Soma to search", { exact: true })).toBeVisible();
-        await expect(page.getByText("Places Soma Can Search")).toBeVisible();
-        await expect(page.getByText("Self-hosted public web").first()).toBeVisible();
-        await expect(page.getByText("operator-owned public web search").first()).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /Servers\s*1/i }));
         await expect(page.getByText("Installed MCP servers")).toBeVisible();
         await expect(page.getByText("Recent MCP Activity", { exact: true })).toBeVisible();
@@ -513,8 +512,7 @@ test.describe("Capabilities MCP workflow", () => {
             },
         });
         await openConnectedTools(page);
-
-        await expect(page.getByText("Soma search needs configuration")).toBeVisible();
+        await expect(page.getByText("Web access needs setup")).toBeVisible();
         await expect(page.getByText("Mycelis Search is disabled.").first()).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /^Servers$/i }));
         await expect(page.getByText("No MCP servers installed.", { exact: true })).toBeVisible({ timeout: 20_000 });
