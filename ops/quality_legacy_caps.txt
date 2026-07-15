@@ -7,7 +7,6 @@
 # - Remove the cap entry once a file reaches 300 lines or less.
 
 charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml=570
-core/config/mcp-library.yaml=342
 core/config/templates/v8-migration-standing-team-bridge.yaml=570
 interface/app/(app)/system/page.tsx=470
 interface/components/automations/ApprovalsTab.tsx=666

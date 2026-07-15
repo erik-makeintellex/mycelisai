@@ -135,7 +135,7 @@ export default function MCPToolRegistry() {
                             }`}
                         >
                             <BookOpen className="w-3 h-3" />
-                            Add MCP Server
+                            Add connector
                         </button>
                     </div>
                 </div>
@@ -177,7 +177,7 @@ export default function MCPToolRegistry() {
                                         {mcpServers.length} connected server{mcpServers.length === 1 ? "" : "s"}
                                     </p>
                                     <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-                                        Server inventory is separate from capability count. Open a server when you need transport, command, secret refs, discovered tools, and recent use.
+                                    Server inventory is separate from capability count. Open a server when you need status, secret refs, discovered tools, recent use, or configuration repair.
                                     </p>
                                 </div>
                                 <button
@@ -185,7 +185,7 @@ export default function MCPToolRegistry() {
                                     onClick={() => setActiveTab("library")}
                                     className="rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-xs font-semibold text-cortex-primary transition hover:bg-cortex-primary/20"
                                 >
-                                    Add MCP Server
+                                    Add connector
                                 </button>
                             </div>
                             {isFetching && mcpServers.length === 0 && (

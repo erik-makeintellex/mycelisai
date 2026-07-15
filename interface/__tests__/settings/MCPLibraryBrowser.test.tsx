@@ -43,13 +43,14 @@ describe('MCPLibraryBrowser', () => {
         });
     });
 
-    it('explains the current-group auto-install posture', () => {
+    it('explains connector installation and configuration posture', () => {
         render(<MCPLibraryBrowser />);
 
-        expect(screen.getByText(/Add MCP Server/i)).toBeDefined();
-        expect(screen.getByText(/Local-first curated entries install directly without another approval step/i)).toBeDefined();
+        expect(screen.getByText(/Add capability connector/i)).toBeDefined();
+        expect(screen.getByText(/connectors add explicit URL reading/i)).toBeDefined();
         expect(screen.getByText(/@modelcontextprotocol\/server-filesystem/i)).toBeDefined();
         expect(screen.getByText(/Version policy: latest \(curated upstream tracking\)/i)).toBeDefined();
+        expect(screen.getByText(/Ready to install with default configuration/i)).toBeDefined();
         expect(screen.getByText(/Capability binding: filesystem/i)).toBeDefined();
         expect(screen.getByText(/outputs normalize through Managed Exchange/i)).toBeDefined();
         expect((screen.getByRole('link', { name: 'Repository' }) as HTMLAnchorElement).href).toBe('https://github.com/modelcontextprotocol/servers');
@@ -117,5 +118,51 @@ describe('MCPLibraryBrowser', () => {
 
         expect(await screen.findByText(/GitHub personal access token used for repository access/i)).toBeDefined();
         expect((screen.getByLabelText(/GITHUB_PERSONAL_ACCESS_TOKEN \*/i) as HTMLInputElement).type).toBe('password');
+    });
+
+    it('shows installed service connectors as configurable connection profiles', () => {
+        useCortexStore.setState({
+            mcpServers: [{
+                id: 'postgres-1',
+                name: 'postgres',
+                transport: 'stdio',
+                command: 'npx',
+                args: ['-y', '@modelcontextprotocol/server-postgres'],
+                status: 'connected',
+                created_at: '2026-07-15T00:00:00Z',
+                tools: [],
+            }],
+            mcpLibrary: [{
+                name: 'Data & Search',
+                servers: [{
+                    name: 'postgres',
+                    title: 'PostgreSQL',
+                    description: 'Connect named PostgreSQL data sources for governed Soma/team querying',
+                    version: 'latest',
+                    transport: 'stdio',
+                    command: 'npx',
+                    args: ['-y', '@modelcontextprotocol/server-postgres'],
+                    environment_variables: [{
+                        name: 'POSTGRES_URL',
+                        description: 'Connection string for one named PostgreSQL data source.',
+                        required: true,
+                        secret: true,
+                    }],
+                    tags: ['database', 'sql', 'data-source'],
+                    tool_set: 'data_access',
+                    configuration_kind: 'connection_profiles',
+                    connection_resource: 'postgresql_database',
+                    multiple_connections: true,
+                    configuration_hint: 'Use named connections for user or customer data sources.',
+                }],
+            }],
+        });
+
+        render(<MCPLibraryBrowser />);
+
+        expect(screen.getByRole('button', { name: /configure/i })).toBeDefined();
+        expect(screen.getByText(/Use named data-source connections/i)).toBeDefined();
+        expect(screen.getByText(/multiple named connections/i)).toBeDefined();
+        expect(screen.getByText(/postgresql_database/i)).toBeDefined();
     });
 });

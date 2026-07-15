@@ -95,6 +95,10 @@ export interface MCPLibraryEntry {
     homepage?: string;
     tags: string[];
     tool_set?: string;
+    configuration_kind?: string;
+    configuration_hint?: string;
+    connection_resource?: string;
+    multiple_connections?: boolean;
 }
 
 export interface MCPLibraryCategory {

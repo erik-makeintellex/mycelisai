@@ -48,6 +48,10 @@ type LibraryEntry struct {
 	Tags                 []string          `json:"tags" yaml:"tags"`
 	ToolSet              string            `json:"tool_set,omitempty" yaml:"tool_set,omitempty"` // suggested tool set name
 	DeploymentBoundary   string            `json:"deployment_boundary,omitempty" yaml:"deployment_boundary,omitempty"`
+	ConfigurationKind    string            `json:"configuration_kind,omitempty" yaml:"configuration_kind,omitempty"`
+	ConfigurationHint    string            `json:"configuration_hint,omitempty" yaml:"configuration_hint,omitempty"`
+	ConnectionResource   string            `json:"connection_resource,omitempty" yaml:"connection_resource,omitempty"`
+	MultipleConnections  bool              `json:"multiple_connections,omitempty" yaml:"multiple_connections,omitempty"`
 }
 
 // LibraryCategory groups related MCP servers.

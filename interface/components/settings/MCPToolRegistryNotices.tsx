@@ -7,7 +7,7 @@ export function MCPRegistryEmptyBanner() {
                 No MCP servers installed yet
             </p>
             <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
-                Default bootstrap is disabled in the compose home runtime, so Add MCP Server is the first activation step for connected capabilities.
+                Default bootstrap is disabled in the compose home runtime, so Add connector is the first activation step for optional connected capabilities.
             </p>
             <p className="mt-2 text-[10px] font-mono leading-5 text-cortex-text-muted">
                 Install a curated server such as filesystem or fetch, then return here to confirm the server card and recent activity appear.
@@ -44,7 +44,7 @@ export function MCPRegistryEmptyHero({ onRequest }: { onRequest: () => void }) {
             <Wrench className="w-12 h-12 mb-3 opacity-20" />
             <p className="text-sm font-mono">No MCP servers installed.</p>
             <p className="text-[10px] font-mono mt-1 opacity-50">
-                Use Add MCP Server to install the first approved tool server for this group.
+                Use Add connector to install the first approved tool or service connector for this group.
             </p>
             <button
                 onClick={onRequest}

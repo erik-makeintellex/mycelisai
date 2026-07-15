@@ -8,12 +8,7 @@ categories:
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-filesystem", "./workspace"]
-        packages:
-          - registry_type: npm
-            identifier: "@modelcontextprotocol/server-filesystem"
-            version: "latest"
-            transport:
-              type: stdio
+        packages: [{registry_type: npm, identifier: "@modelcontextprotocol/server-filesystem", version: "latest", transport: {type: stdio}}]
         repository: "https://github.com/modelcontextprotocol/servers"
         homepage: "https://modelcontextprotocol.io"
         tags: ["files", "code", "local"]
@@ -48,27 +43,27 @@ categories:
     servers:
       - name: "postgres"
         title: "PostgreSQL"
-        description: "Query PostgreSQL databases with read/write SQL access"
+        description: "Connect named PostgreSQL data sources for governed Soma/team querying"
         version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-postgres"]
-        packages:
-          - registry_type: npm
-            identifier: "@modelcontextprotocol/server-postgres"
-            version: "latest"
-            transport:
-              type: stdio
+        packages: [{registry_type: npm, identifier: "@modelcontextprotocol/server-postgres", version: "latest", transport: {type: stdio}}]
         repository: "https://github.com/modelcontextprotocol/servers"
         homepage: "https://modelcontextprotocol.io"
         env:
           POSTGRES_URL: ""
         environment_variables:
           - name: "POSTGRES_URL"
-            description: "Connection string for the PostgreSQL database this MCP server should query."
+            description: "Connection string for one named PostgreSQL data source. Use a secret reference or deployment env value; do not paste production credentials into chat."
             required: true
             secret: true
-        tags: ["database", "sql"]
+        tags: ["database", "sql", "data-source"]
+        tool_set: "data_access"
+        configuration_kind: "connection_profiles"
+        connection_resource: "postgresql_database"
+        multiple_connections: true
+        configuration_hint: "Use named connections for user or customer data sources. The Mycelis application database is system-owned and should stay reserved unless an operator creates an explicit read-only profile."
       - name: "sqlite"
         title: "SQLite"
         description: "Local SQLite database querying and management"
@@ -76,28 +71,18 @@ categories:
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-sqlite"]
-        packages:
-          - registry_type: npm
-            identifier: "@modelcontextprotocol/server-sqlite"
-            version: "latest"
-            transport:
-              type: stdio
+        packages: [{registry_type: npm, identifier: "@modelcontextprotocol/server-sqlite", version: "latest", transport: {type: stdio}}]
         repository: "https://github.com/modelcontextprotocol/servers"
         homepage: "https://modelcontextprotocol.io"
         tags: ["database", "sql", "local"]
       - name: "brave-search"
         title: "Brave Search"
-        description: "Web search via Brave Search API"
+        description: "Optional hosted public web search provider using the Brave Search API"
         version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-brave-search"]
-        packages:
-          - registry_type: npm
-            identifier: "@modelcontextprotocol/server-brave-search"
-            version: "latest"
-            transport:
-              type: stdio
+        packages: [{registry_type: npm, identifier: "@modelcontextprotocol/server-brave-search", version: "latest", transport: {type: stdio}}]
         repository: "https://github.com/modelcontextprotocol/servers"
         homepage: "https://modelcontextprotocol.io"
         env:
@@ -110,23 +95,23 @@ categories:
         deployment_boundary: "external_saas"
         tags: ["search", "web"]
         tool_set: "research"
+        configuration_kind: "secret_env"
+        configuration_hint: "Optional public web provider. Built-in Soma web search does not require this token."
       - name: "fetch"
         title: "Fetch"
-        description: "Fetch and convert web pages to markdown for analysis"
+        description: "Read a specific URL Soma or a team has been given and convert it for analysis"
         version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-fetch"]
-        packages:
-          - registry_type: npm
-            identifier: "@modelcontextprotocol/server-fetch"
-            version: "latest"
-            transport:
-              type: stdio
+        packages: [{registry_type: npm, identifier: "@modelcontextprotocol/server-fetch", version: "latest", transport: {type: stdio}}]
         repository: "https://github.com/modelcontextprotocol/servers"
         homepage: "https://modelcontextprotocol.io"
         tags: ["web", "scraping"]
         tool_set: "research"
+        configuration_kind: "none"
+        connection_resource: "explicit_url"
+        configuration_hint: "Use Fetch for explicit URL reading. It is not required for ordinary public web search."
 
   - name: "Communication"
     servers:

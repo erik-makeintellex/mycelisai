@@ -35,8 +35,15 @@ export function EnvConfigModal({ entry, onInstall, onClose }: EnvModalProps) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="bg-cortex-surface border border-cortex-border rounded-xl w-full max-w-md p-6 shadow-2xl">
-                <h3 className="text-sm font-mono font-bold text-cortex-text-main mb-1">Configure {entry.name}</h3>
-                <p className="text-[10px] font-mono text-cortex-text-muted mb-4">Set required environment variables before installing.</p>
+                <h3 className="text-sm font-mono font-bold text-cortex-text-main mb-1">Configure {entry.title ?? entry.name}</h3>
+                <p className="text-[10px] font-mono text-cortex-text-muted mb-4">
+                    Apply the required configuration values. Secret values should come from your deployment secret store or `.env`.
+                </p>
+                {entry.configuration_hint && (
+                    <p className="mb-4 rounded-lg border border-cortex-primary/20 bg-cortex-primary/10 px-3 py-2 text-[10px] leading-4 text-cortex-text-main">
+                        {entry.configuration_hint}
+                    </p>
+                )}
 
                 <div className="flex flex-col gap-3 mb-5">
                     {declaredEnv.map((spec) => (
@@ -71,7 +78,7 @@ export function EnvConfigModal({ entry, onInstall, onClose }: EnvModalProps) {
                         onClick={() => onInstall(envValues)}
                         className="px-4 py-1.5 rounded-lg bg-cortex-success/10 border border-cortex-success/30 text-xs font-mono font-bold text-cortex-success hover:bg-cortex-success/20 transition-colors"
                     >
-                        Install
+                        Apply
                     </button>
                 </div>
             </div>

@@ -78,11 +78,11 @@ export function ConnectedToolsWorkflowCard({ isStreamConnected }: { isStreamConn
                 </span>
             </summary>
             <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <WorkflowStep title="1. Add">
-                    Install a curated MCP server from Library instead of wiring raw config by hand.
+                <WorkflowStep title="1. Connect">
+                    Install or configure a curated connector instead of wiring raw server config by hand.
                 </WorkflowStep>
-                <WorkflowStep title="2. Review/edit">
-                    Expand an installed server to inspect command, args, env/header references, discovered tools, and recent use.
+                <WorkflowStep title="2. Configure">
+                    Use named sources or connection profiles for private data, databases, URL readers, and scoped tool permissions.
                 </WorkflowStep>
                 <WorkflowStep title="3. Use">
                     Ask Soma directly to search, read host data, create teams, or talk with teams, then watch MCP activity here.
@@ -124,17 +124,17 @@ export function WebAccessSetupCard({
     const explanation = error
         ? error
         : hasPublicWeb
-        ? "Soma can search the public web now. Add fetch only when Soma or a team needs to open a specific URL you provide."
+        ? "Soma can search the public web now. Add a URL reader only when Soma or a team needs to open a specific URL you provide."
         : hasLocalSearch
-        ? "Soma can search retained Mycelis sources. Add a public web search provider when you need fresh internet research, or fetch when you need explicit URL reading."
+        ? "Soma can search retained Mycelis sources. Add a public web search provider when you need fresh internet research, or a URL reader when you need explicit URL reading."
         : status?.blocker?.message ?? status?.next_actions?.[0] ?? "Add or repair a web capability before asking Soma for fresh web research.";
     const nextStep = hasPublicWeb
-        ? "Ask Soma naturally for research. Use the button only when you want explicit URL reading or another optional web tool."
+        ? "Ask Soma naturally for research. Use the button only when you want explicit URL reading through an optional connector."
         : hasLocalSearch
         ? "Add or configure a web search provider for public internet research. Keep local-source search for retained Mycelis context and approved mounts."
-        : "Set up web search for public research, or add local/mounted sources when Soma should search approved private data.";
+        : "Set up public web search, or add local/mounted sources when Soma should search approved private data.";
     const actionLabel = hasPublicWeb
-        ? "Add URL reader"
+        ? "Add URL reader MCP"
         : hasLocalSearch
         ? "Add web search provider"
         : "Set up web search";
@@ -152,7 +152,7 @@ export function WebAccessSetupCard({
                     </div>
                     <div>
                         <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-primary">
-                            Web access setup
+                            Soma research access
                         </p>
                         <h3 className="mt-1 text-sm font-semibold text-cortex-text-main">{heading}</h3>
                         <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{explanation}</p>
@@ -169,8 +169,8 @@ export function WebAccessSetupCard({
             </div>
             <div className="mt-4 grid gap-2 md:grid-cols-3">
                 <CapabilityPill active={canAskSoma} label="Ask Soma: research or search" />
-                <CapabilityPill active={hasLocalSearch} label="Approved local data" />
-                <CapabilityPill active={hasPublicWeb} label="Public web provider" />
+                <CapabilityPill active={hasLocalSearch} label="Approved local or mounted sources" />
+                <CapabilityPill active={hasPublicWeb} label="Public web search" />
             </div>
             <SearchSourceList sources={status?.sources ?? []} compact />
             <p className="mt-3 text-xs leading-5 text-cortex-text-main">
@@ -216,7 +216,7 @@ export function SearchCapabilityCard({
                     </div>
                     <div>
                         <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                            Mycelis Search Capability
+                            Search provider details
                         </p>
                         <p className="mt-1 text-sm font-semibold text-cortex-text-main">{headline}</p>
                         <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{detail}</p>

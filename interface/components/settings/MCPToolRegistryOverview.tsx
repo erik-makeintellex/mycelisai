@@ -8,6 +8,7 @@ import { ConnectedToolsWorkflowCard, SearchCapabilityCard, SomaToolPromptCard, W
 import { SearchSourceRegistryCard } from "./SearchSourceRegistryCard";
 import { useSearchSourceRegistry } from "./MCPToolRegistrySearchSources";
 import { MCPToolSetLayersStorePanel } from "./MCPToolSetLayersPanel";
+import { MCPServiceConnectionGuide } from "./MCPServiceConnectionGuide";
 
 type OverviewFocus = "readiness" | "catalog" | "access" | "inspect";
 
@@ -73,7 +74,7 @@ export function MCPToolRegistryOverview({
                             active={activeFocus === "access"}
                             icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
                             label="Access"
-                            detail="Sources and scopes"
+                            detail="Sources, scopes, data"
                             onClick={() => setActiveFocus("access")}
                         />
                         <FocusButton
@@ -94,11 +95,6 @@ export function MCPToolRegistryOverview({
                         isLoading={isFetchingSearchCapability}
                         error={searchCapabilityError}
                         onAddWebCapability={onAddWebCapability}
-                    />
-                    <SearchCapabilityCard
-                        status={searchCapability}
-                        isLoading={isFetchingSearchCapability}
-                        error={searchCapabilityError}
                     />
                     <CapabilityReadinessSummary
                         capabilities={capabilities}
@@ -134,6 +130,7 @@ export function MCPToolRegistryOverview({
                         onDeleteSearchSource={searchSourceRegistry.deleteSearchSource}
                         onUpdateSearchSource={searchSourceRegistry.updateSearchSource}
                     />
+                    <MCPServiceConnectionGuide />
                     <MCPToolSetLayersStorePanel />
                 </div>
             )}
@@ -253,7 +250,7 @@ function CapabilityReadinessSummary({
                         Can request/add
                     </p>
                     <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-                        Add MCP Server opens the curated library. Use Access for search sources, data mounts, and scoped tool permissions.
+                        Add connector opens the curated library. Use Access for search sources, service connections, data mounts, and scoped permissions.
                     </p>
                     <button
                         type="button"

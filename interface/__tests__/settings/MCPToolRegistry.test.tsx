@@ -98,8 +98,8 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByRole('button', { name: /^Catalog/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /^Access/i })).toBeDefined();
         expect(screen.getByRole('button', { name: /Inspect/i })).toBeDefined();
-        expect(screen.getByText('Mycelis Search Capability')).toBeDefined();
-        expect(screen.getByText('Soma search is ready')).toBeDefined();
+        expect(screen.getByText('Soma research access')).toBeDefined();
+        expect(screen.getByText('Public web access is available')).toBeDefined();
         expect(screen.getByText('Capability overview')).toBeDefined();
         expect(screen.getByText('Can use now')).toBeDefined();
         expect(screen.getByText('Needs repair')).toBeDefined();
@@ -120,6 +120,7 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText(/approval optional/i)).toBeDefined();
         expect(screen.getAllByText(/Inspect capability details/i).length).toBeGreaterThan(0);
         fireEvent.click(screen.getByRole('button', { name: /Inspect/i }));
+        expect(screen.getByText('Search provider details')).toBeDefined();
         expect(screen.getByText(/Brave tokens are not required/i)).toBeDefined();
         expect(screen.getByText(/local API/i)).toBeDefined();
         expect(screen.getByText(/Concrete Soma Commands/i)).toBeDefined();
@@ -131,6 +132,8 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText('Choose where Soma can use connected tools')).toBeDefined();
         expect(screen.getByText('Search sources')).toBeDefined();
         expect(screen.getByText('Configured source details')).toBeDefined();
+        expect(screen.getByText('Service data connections')).toBeDefined();
+        expect(screen.getByText(/Give Soma named access to databases and private services/i)).toBeDefined();
         expect(screen.getAllByText('Self-hosted public web').length).toBeGreaterThan(0);
         expect(screen.getAllByText(/self-hosted SearXNG endpoint/i).length).toBeGreaterThan(0);
 
@@ -150,7 +153,7 @@ describe('MCPToolRegistry', () => {
 
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getAllByText('Add MCP Server')[0]);
+        fireEvent.click(screen.getAllByText('Add connector')[0]);
 
         expect(screen.getByTestId('library-browser')).toBeDefined();
     });
@@ -287,7 +290,7 @@ describe('MCPToolRegistry', () => {
     it('returns to installed view with guidance after library install', () => {
         render(<MCPToolRegistry />);
 
-        fireEvent.click(screen.getAllByText('Add MCP Server')[0]);
+        fireEvent.click(screen.getAllByText('Add connector')[0]);
         fireEvent.click(screen.getByText('Mock Install'));
 
         expect(screen.getByText(/Installed filesystem/i)).toBeDefined();

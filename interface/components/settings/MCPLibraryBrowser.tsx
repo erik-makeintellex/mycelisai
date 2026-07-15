@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Download, Search, Tag, Loader2 } from "lucide-react";
+import { Download, Search, Tag, Loader2, Settings2 } from "lucide-react";
 import { useCortexStore, type MCPLibraryEntry, type MCPLibraryCategory } from "@/store/useCortexStore";
 import { EnvConfigModal } from "./MCPLibraryEnvConfigModal";
 
@@ -32,10 +32,12 @@ export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: 
 
     const installedNames = new Set(mcpServers.map((s) => s.name));
 
-    const handleInstallClick = (entry: MCPLibraryEntry) => {
+    const handleInstallClick = (entry: MCPLibraryEntry, isInstalled = false) => {
         const hasRequiredEnv = (entry.environment_variables && entry.environment_variables.length > 0) || (entry.env && Object.keys(entry.env).length > 0);
         if (hasRequiredEnv) {
             setEnvModalEntry(entry);
+        } else if (isInstalled) {
+            setInstallMessage(`${entry.title ?? entry.name} has no required fields here. Use Servers for status, Access for scopes, and this Library entry to reapply the curated shape when needed.`);
         } else {
             doInstall(entry.name);
         }
@@ -73,11 +75,11 @@ export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: 
         <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">
             <div className="rounded-xl border border-cortex-success/25 bg-cortex-success/10 px-4 py-3">
                 <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-success">
-                    Add MCP Server
+                    Add capability connector
                 </p>
-                <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
-                    Installs from this page are treated as MCP configuration for your current user-owned group.
-                    Local-first curated entries install directly without another approval step.
+                <p className="mt-1 text-xs leading-5 text-cortex-text-main">
+                    Choose an optional connector Soma can use. Search itself may already be built in; connectors add explicit URL reading,
+                    service access, private data sources, or team tools. Installed connectors can be configured or reapplied from their cards.
                 </p>
             </div>
 
@@ -133,18 +135,18 @@ export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: 
                                             </p>
                                         </div>
                                         <button
-                                            onClick={() => handleInstallClick(entry)}
-                                            disabled={isInstalled || isInstalling}
+                                            onClick={() => handleInstallClick(entry, isInstalled)}
+                                            disabled={isInstalling}
                                             className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-colors ${
                                                 isInstalled
-                                                    ? "bg-cortex-success/10 text-cortex-success/60 border border-cortex-success/20 cursor-default"
+                                                    ? "bg-cortex-success/10 text-cortex-success border border-cortex-success/20 hover:bg-cortex-success/20"
                                                     : isInstalling
                                                     ? "bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/20 cursor-wait"
                                                     : "bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/30 hover:bg-cortex-primary/20"
                                             }`}
                                         >
                                             {isInstalled ? (
-                                                "INSTALLED"
+                                                <><Settings2 className="w-3 h-3" /> CONFIGURE</>
                                             ) : isInstalling ? (
                                                 <><Loader2 className="w-3 h-3 animate-spin" /> INSTALLING</>
                                             ) : (
@@ -175,6 +177,7 @@ export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: 
                                             Version policy: {versionPolicy === "latest" ? "latest (curated upstream tracking)" : versionPolicy}
                                         </div>
                                     )}
+                                    <ConfigurationSummary entry={entry} isInstalled={isInstalled} />
                                     <div className="text-[9px] font-mono text-cortex-text-muted leading-relaxed">
                                         Capability binding: {entry.tool_set ?? entry.name} · source mcp · outputs normalize through Managed Exchange.
                                     </div>
@@ -230,4 +233,62 @@ export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: 
             )}
         </div>
     );
+}
+
+function ConfigurationSummary({ entry, isInstalled }: { entry: MCPLibraryEntry; isInstalled: boolean }) {
+    const hasEnv = Boolean((entry.environment_variables && entry.environment_variables.length > 0) || (entry.env && Object.keys(entry.env).length > 0));
+    const title = configurationTitle(entry, hasEnv);
+    const detail = configurationDetail(entry, hasEnv, isInstalled);
+    return (
+        <div className="rounded-lg border border-cortex-border bg-cortex-bg/60 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                    Configure
+                </span>
+                {entry.multiple_connections && (
+                    <span className="rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-2 py-0.5 text-[9px] font-mono text-cortex-primary">
+                        multiple named connections
+                    </span>
+                )}
+                {entry.connection_resource && (
+                    <span className="rounded-full border border-cortex-border bg-cortex-surface px-2 py-0.5 text-[9px] font-mono text-cortex-text-muted">
+                        {entry.connection_resource}
+                    </span>
+                )}
+            </div>
+            <p className="mt-1 text-[10px] font-semibold text-cortex-text-main">{title}</p>
+            <p className="mt-1 text-[10px] leading-4 text-cortex-text-muted">{detail}</p>
+            {entry.configuration_hint && (
+                <p className="mt-2 text-[10px] leading-4 text-cortex-text-muted">{entry.configuration_hint}</p>
+            )}
+        </div>
+    );
+}
+
+function configurationTitle(entry: MCPLibraryEntry, hasEnv: boolean): string {
+    if (entry.configuration_kind === "connection_profiles") {
+        return "Use named data-source connections";
+    }
+    if (entry.name === "fetch") {
+        return "No provider setup required";
+    }
+    if (hasEnv) {
+        return "Requires configuration before use";
+    }
+    return "Ready to install with default configuration";
+}
+
+function configurationDetail(entry: MCPLibraryEntry, hasEnv: boolean, isInstalled: boolean): string {
+    if (entry.configuration_kind === "connection_profiles") {
+        return isInstalled
+            ? "Configure adds or reapplies one connection profile. Use a distinct profile per database and scope it in Access."
+            : "Install/configure one connection profile at a time; each profile should be named and scoped so Soma knows which database it may use.";
+    }
+    if (entry.name === "fetch") {
+        return "Fetch reads a URL the user or team already supplied. It is separate from Soma public web search.";
+    }
+    if (hasEnv) {
+        return "Secret values are entered as deployment-managed references or local environment values, then redacted from normal UI.";
+    }
+    return "Use Servers to inspect status and Access to grant this connector to Everyone, a Group, or a Host.";
 }
