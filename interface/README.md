@@ -30,7 +30,7 @@ The frontend for the current Soma-first Mycelis operator product. Built with Nex
 The current frontend is organized around three primary operator surfaces:
 
 - **Login** (`/login`): required entry for every edition; local owner and Google Workspace SSO create signed web sessions
-- **Dashboard** (`/dashboard`): Central Soma home plus AI Organization creation/re-entry
+- **Dashboard** (`/dashboard`): Soma-first threaded workspace for asking, approving, reviewing outputs, and returning to Outcomes
 - **Organization workspace** (`/organizations/[id]`): Soma-led governed interaction inside a chosen AI Organization
 - **Automations advanced workspace** (`/automations?tab=wiring`): wiring, graph editing, launch flow, and deeper execution controls
 
@@ -49,9 +49,9 @@ Route-local telemetry and signal inspection now live in advanced workspace surfa
 
 The default operator path is no longer a generic architect console. The current delivery model is:
 
-1. **Central Soma home** (`CentralSomaHome.tsx`) teaches one persistent Soma across governed contexts.
-2. **AI Organization entry** (`CreateOrganizationEntry.tsx`) opens or creates the scoped working context.
-3. **Organization workspace** (`OrganizationContextShell.tsx`) keeps the operator in one Soma-led panel while details, support views, and advanced execution remain reachable without taking over the default experience.
+1. **Central Soma home** (`CentralSomaHome.tsx`) keeps the operator in one persistent Soma conversation.
+2. **Soma chat** (`MissionControlChat.tsx`) handles quick answers, proposal pauses, approved execution, output replies, and recovery prompts without exposing runtime topology first.
+3. **Organization workspace** (`OrganizationContextShell.tsx`) remains a scoped compatibility/detail surface for existing organization contexts while details, support views, and advanced execution stay reachable without taking over the default experience.
 
 ### Advanced Wiring Surface
 
@@ -77,7 +77,6 @@ The older graph-centric workflow still exists as an advanced surface rather than
 | :--- | :--- |
 | `lib/webAuth.ts` | Signed web-session, local-login, and Google Workspace role helpers |
 | `components/dashboard/CentralSomaHome.tsx` | Dashboard entry framing for one persistent Soma |
-| `components/organizations/CreateOrganizationEntry.tsx` | AI Organization creation and recent-organization return path |
 | `components/organizations/OrganizationContextShell.tsx` | Main Soma-led organization workspace |
 | `components/dashboard/MissionControlChat.tsx` | Soma-first governed chat, proposal, and execution surface |
 | `components/organizations/TeamLeadInteractionPanel.tsx` | Guided first-run and organization-support actions |
@@ -116,7 +115,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the Mycelis Interface
 | :--- | :--- |
 | `/login` | Local owner login and Google Workspace SSO entry |
 | `/` | Authenticated redirect into `/dashboard`; unauthenticated users are sent to `/login` |
-| `/dashboard` | Central Soma home + AI Organization entry flow |
+| `/dashboard` | Soma threaded workspace, proposal/execution flow, output review, and Outcome re-entry |
 | `/organizations/[id]` | Soma-primary AI Organization workspace |
 | `/automations` | Automation hub with approvals, trigger rules, teams, and advanced wiring |
 | `/docs` | In-app docs browser |

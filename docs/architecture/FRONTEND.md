@@ -146,7 +146,7 @@ Generated file outputs should present the retained user outcome first. HTML/code
 
 | Route / tab | Decision | Team Lead-first reason |
 | --- | --- | --- |
-| `/dashboard` | keep | first-run entry and AI Organization creation remain the primary operator start |
+| `/dashboard` | keep | first-run entry is the Soma threaded workspace for natural asking, approval, output review, and Outcome re-entry |
 | `/organizations/[id]` | keep | Team Lead workspace is the compatibility-protected Soma-primary operating surface |
 | `/automations` `active`, `triggers`, `approvals` | keep | directly support guided operation, recurring work, and governed decisions |
 | `/automations` `teams`, `wiring` | revise | keep available, but only in advanced mode so the default workflow stays simpler |
