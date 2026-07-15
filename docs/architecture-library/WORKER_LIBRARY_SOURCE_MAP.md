@@ -2,7 +2,7 @@
 > Navigation: [Architecture Docs Index](ARCHITECTURE_LIBRARY_INDEX.md) | [Canonical PRD](MYCELIS_CANONICAL_PRD.md)
 
 > Status: Supporting implementation source map
-> Last Updated: 2026-07-01
+> Last Updated: 2026-07-15
 > Purpose: Define the focused worker-library execution package without creating a parallel architecture doctrine.
 
 ## Delivery Boundary
@@ -39,6 +39,14 @@ Public lifecycle:
 ```text
 createRun -> accepted/run_id -> events/progress -> approval_needed? -> continue/deny -> completed|failed|cancelled -> result/audit
 ```
+
+Current runtime integration:
+
+- confirmed Soma proposals create a normalized worker run before the durable `mission_runs` row is inserted
+- the default central backend provides the worker `run_id`, which is then reused as the durable run id for existing proof, receipts, team work, and Outcome references
+- existing planned-tool execution remains the central governed behavior for this slice
+- central worker runs are explicitly completed or failed after approved execution, while durable database rows, mission events, execution contracts, proof artifacts, and team-work rows remain the authority users can trust later
+- Hermes-compatible backends remain adapter/config-selected and are not exposed as a default user concept
 
 Required interface:
 
@@ -154,7 +162,7 @@ Selection levels:
 
 | Phase | Scope | Gate |
 | --- | --- | --- |
-| Phase 1 | Worker package, central backend, Hermes adapter skeleton, health/capability discovery, run/event/stop/approval/result/output normalization, mocked Hermes-compatible tests. | Unit tests with mocked central and Hermes-like backends. |
+| Phase 1 | Worker package, central backend, Hermes adapter skeleton, health/capability discovery, run/event/stop/approval/result/output normalization, central confirm-action lifecycle wiring, mocked Hermes-compatible tests. | Unit tests with mocked central and Hermes-like backends, plus confirm-action run/proof preservation tests. |
 | Phase 2 | Wire documented Hermes endpoints for health, capabilities, submit, status, stream, stop, approval, result. | Integration proof against a real Hermes-compatible runtime or pinned mock matching official docs. |
 | Phase 3 | Backend fallback and policy controls across org/project/run selection. | Policy tests for fallback vs fail-closed and audit records. |
 

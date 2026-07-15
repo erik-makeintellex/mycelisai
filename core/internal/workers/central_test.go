@@ -73,6 +73,63 @@ func TestCentralBackendApprovalDecision(t *testing.T) {
 	}
 }
 
+func TestCentralBackendCompleteRun(t *testing.T) {
+	backend := NewCentralBackend()
+	handle, err := backend.CreateRun(context.Background(), WorkerRunRequest{Intent: "create output"})
+	if err != nil {
+		t.Fatalf("CreateRun: %v", err)
+	}
+
+	err = backend.CompleteRun(context.Background(), handle.RunID, WorkerResult{
+		Summary: "Output ready.",
+		Outputs: []WorkerOutput{{
+			ID:   "out-1",
+			Kind: "file",
+			Name: "report.md",
+			URI:  "workspace/report.md",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("CompleteRun: %v", err)
+	}
+
+	run, err := backend.GetRun(context.Background(), handle.RunID)
+	if err != nil {
+		t.Fatalf("GetRun: %v", err)
+	}
+	if run.Status != StatusCompleted || run.Result == nil || len(run.Result.Outputs) != 1 {
+		t.Fatalf("run status/result = %s/%+v", run.Status, run.Result)
+	}
+	if run.Result.FinishedAt.IsZero() {
+		t.Fatal("expected finished timestamp")
+	}
+}
+
+func TestCentralBackendFailRun(t *testing.T) {
+	backend := NewCentralBackend()
+	handle, err := backend.CreateRun(context.Background(), WorkerRunRequest{Intent: "create output"})
+	if err != nil {
+		t.Fatalf("CreateRun: %v", err)
+	}
+
+	err = backend.FailRun(context.Background(), handle.RunID, &WorkerError{
+		Code:        "tool_failed",
+		Message:     "tool unavailable",
+		Recoverable: true,
+	})
+	if err != nil {
+		t.Fatalf("FailRun: %v", err)
+	}
+
+	run, err := backend.GetRun(context.Background(), handle.RunID)
+	if err != nil {
+		t.Fatalf("GetRun: %v", err)
+	}
+	if run.Status != StatusFailed || run.Error == nil || run.Error.Code != "tool_failed" || !run.Error.Recoverable {
+		t.Fatalf("run status/error = %s/%+v", run.Status, run.Error)
+	}
+}
+
 func TestCentralBackendRejectsEmptyIntent(t *testing.T) {
 	_, err := NewCentralBackend().CreateRun(context.Background(), WorkerRunRequest{})
 	if err == nil {

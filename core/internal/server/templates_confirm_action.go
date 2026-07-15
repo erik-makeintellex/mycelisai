@@ -52,6 +52,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, auditUser, actorIdentity, err)
 		return
 	}
+	s.completeConfirmedActionWorkerRun(r.Context(), runID, results)
 
 	if err := s.markRunCompletedTx(tx, runID, proofID); err != nil {
 		log.Printf("CE-1: confirm-action run completion failed: %v", err)
@@ -102,7 +103,7 @@ func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Requ
 		return "", "", nil, "", false
 	}
 
-	runID, err := s.createExecutionRunTx(tx, proofID)
+	runID, err := s.createExecutionRunTx(r.Context(), tx, proofID, scope, auditUserLabelFromRequest(r))
 	if err != nil {
 		log.Printf("CE-1: confirm-action run creation failed: %v", err)
 		respondAPIError(w, "failed to create execution record", http.StatusInternalServerError)
@@ -120,6 +121,7 @@ func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Requ
 }
 
 func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, r *http.Request, tx *sql.Tx, proofID, contractID, runID, auditUser string, actorIdentity map[string]any, err error) {
+	s.failConfirmedActionWorkerRun(r.Context(), runID, err)
 	if failErr := s.failChatProofTx(tx, proofID); failErr != nil {
 		log.Printf("CE-1: confirm-action proof failure update failed: %v", failErr)
 	}

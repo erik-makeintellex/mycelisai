@@ -50,6 +50,13 @@ type WorkerBackend interface {
 	HealthCheck(context.Context) (WorkerHealth, error)
 }
 
+// RunFinalizer is implemented by backends that allow Mycelis to mark a run
+// terminal after local governed execution has completed.
+type RunFinalizer interface {
+	CompleteRun(context.Context, string, WorkerResult) error
+	FailRun(context.Context, string, *WorkerError) error
+}
+
 type WorkerConfig struct {
 	Backend            BackendKind   `json:"backend"`
 	BaseURL            string        `json:"base_url,omitempty"`

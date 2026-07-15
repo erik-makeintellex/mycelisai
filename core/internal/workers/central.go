@@ -90,6 +90,30 @@ func (b *CentralBackend) StopRun(_ context.Context, runID string) error {
 	return b.setStatus(runID, StatusCancelled)
 }
 
+func (b *CentralBackend) CompleteRun(_ context.Context, runID string, result WorkerResult) error {
+	if result.FinishedAt.IsZero() {
+		result.FinishedAt = time.Now().UTC()
+	}
+	return b.setResult(runID, result)
+}
+
+func (b *CentralBackend) FailRun(_ context.Context, runID string, workerErr *WorkerError) error {
+	if workerErr == nil {
+		workerErr = &WorkerError{Code: "worker_failed", Message: "Worker run failed.", Recoverable: true}
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	run, ok := b.runs[runID]
+	if !ok {
+		return fmt.Errorf("worker run not found: %s", runID)
+	}
+	run.Status = StatusFailed
+	run.Error = workerErr
+	run.UpdatedAt = time.Now().UTC()
+	b.runs[runID] = run
+	return nil
+}
+
 func (b *CentralBackend) SubmitApproval(_ context.Context, runID string, decision WorkerApprovalDecision) error {
 	if decision.Decision != DecisionApprove && decision.Decision != DecisionDeny {
 		return fmt.Errorf("unsupported approval decision %q", decision.Decision)

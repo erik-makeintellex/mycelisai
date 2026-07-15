@@ -54,7 +54,7 @@ func (s *AdminServer) loadIntentProofScopeTx(tx *sql.Tx, proofID string) (*proto
 
 // createExecutionRunTx persists a durable execution record before the approved
 // action is executed so later status updates have a stable identity to target.
-func (s *AdminServer) createExecutionRunTx(tx *sql.Tx, proofID string) (string, error) {
+func (s *AdminServer) createExecutionRunTx(ctx context.Context, tx *sql.Tx, proofID string, scope *protocol.ScopeValidation, auditUser string) (string, error) {
 	if tx == nil {
 		return "", errDBUnavailable
 	}
@@ -62,9 +62,16 @@ func (s *AdminServer) createExecutionRunTx(tx *sql.Tx, proofID string) (string, 
 		return "", fmt.Errorf("proof_id is required")
 	}
 
-	runID := uuid.New().String()
+	workerRun, err := s.confirmedActionWorkerBackend().CreateRun(ctx, buildConfirmedActionWorkerRunRequest(proofID, scope, auditUser))
+	if err != nil {
+		return "", err
+	}
+	runID := strings.TrimSpace(workerRun.RunID)
+	if runID == "" {
+		return "", fmt.Errorf("worker backend returned empty run_id")
+	}
 	now := time.Now()
-	_, err := tx.Exec(
+	_, err = tx.Exec(
 		`INSERT INTO mission_runs (id, mission_id, tenant_id, status, run_depth, started_at)
 		 VALUES ($1, $2, $3, $4, $5, $6)`,
 		runID, proofID, "default", runs.StatusRunning, 0, now,
