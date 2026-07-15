@@ -85,6 +85,33 @@ describe('MissionControlChat metadata contracts', () => {
         expect(screen.getByText('View Teams')).toBeDefined();
     });
 
+    it('hides engine trace chrome in the simplified Soma dashboard mode', async () => {
+        useCortexStore.setState({
+            missionChat: [
+                {
+                    role: 'council',
+                    content: 'Here is the concise answer a new user should read first.',
+                    source_node: 'admin',
+                    trust_score: 0.5,
+                    ask_class: 'specialist_consultation',
+                    tools_used: ['search_memory', 'list_teams'],
+                    consultations: [
+                        { member: 'council-architect', summary: 'Prefer a calmer first screen.' },
+                    ],
+                },
+            ],
+        });
+
+        render(<MissionControlChat simpleMode />);
+        await settleMissionControlChat();
+
+        expect(screen.getByText('Here is the concise answer a new user should read first.')).toBeDefined();
+        expect(screen.queryByText('C:0.5')).toBeNull();
+        expect(screen.queryByText('Search Memory')).toBeNull();
+        expect(screen.queryByText('View Teams')).toBeNull();
+        expect(screen.queryByText(/Soma checked with Architect/i)).toBeNull();
+    });
+
     it('does not render tools pills when tools_used is empty', async () => {
         useCortexStore.setState({
             missionChat: [

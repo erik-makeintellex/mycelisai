@@ -61,6 +61,7 @@ describe("Soma input composers", () => {
     expect((textarea as HTMLTextAreaElement).value).toBe("Create a team\nThen generate proof");
     expect(textarea.className).toContain("max-h-[180px]");
     expect(textarea.className).toContain("overflow-y-auto");
+    expect(screen.getByText("Enter sends. Shift+Enter adds a line. Soma will ask before running governed work.")).toBeDefined();
 
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: true });
     expect(onSubmit).not.toHaveBeenCalled();

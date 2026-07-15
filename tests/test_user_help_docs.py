@@ -26,7 +26,7 @@ def test_user_help_start_here_stays_operator_first():
     for slug in ["user-docs-home", "soma-chat", "teams-guide", "resources-guide"]:
         assert slug in start_here
     assert "meta-agent-blueprint" not in start_here
-    assert "meta-agent-blueprint" in advanced
+    assert "meta-agent-blueprint" not in advanced
 
 
 def test_soma_chat_doc_matches_current_outcome_workspace():

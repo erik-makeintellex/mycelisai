@@ -28,9 +28,9 @@ The normal product path is not "configure every backend component first." It is 
 Before accepting a new-user browser pass, verify these from the product:
 
 1. Login is clear: local owner login works, SSO availability or domain restriction copy is understandable, and failures are actionable.
-2. Dashboard orientation is clear: Soma input is primary, Active Work is compact by default, and any backlog opens through `Teams`.
+2. Dashboard orientation is clear: Soma input is primary, starter asks are generic conversation shapes, Active Work is compact by default, and any backlog opens through `Teams`.
 3. Provider/search readiness is visible: Settings, Resources, or System tells the operator whether Soma can use the intended local or hosted engine/search path.
-4. Capabilities are understandable: `Resources -> Capabilities` shows what Soma can use, what needs repair, **Add MCP Server**, required env vars by name, and recent MCP activity when tools are used.
+4. Capabilities are understandable: `Resources -> Capabilities` shows what Soma can use, what needs repair, and what can be connected next before exposing raw MCP/server detail.
 5. Output roots are known: `MYCELIS_WORKSPACE` is where generated files, project packages, browser games, and filesystem MCP writes land; `MYCELIS_ARTIFACT_ROOT` is where file-backed artifacts and cached media land.
 6. Canonical demo is repeatable: a retained demo output, such as a project package, opens from the browser, survives refresh/reload, and links to run/proof evidence.
 7. Team proof is honest: one bounded team ask reaches readable `output_ready` or a visible `degraded` timeout/offline/unreadable state with recovery guidance.
@@ -52,7 +52,7 @@ Concrete requests Soma should understand when the matching capability is configu
 - "Use this folder only for the current draft, then save the final brief as the retained output."
 - "Save this customer handoff as long-term context for this Outcome before asking the delivery team to use it."
 - "Use the Mycelis docs to explain how governed context differs from memory, and cite the doc paths you used."
-- "Review the current MCP tool structure and recommend which agents should have which tools."
+- "Tell me what Soma can currently use, what needs repair, and what I should connect next."
 - "Review my request against prior context, infer the action, and ask me to confirm before you execute."
 - "Review private service or private data boundaries, name the protection reason, and ask before using credentials, customer data, or recurring behavior."
 
@@ -62,7 +62,7 @@ Concrete requests Soma should understand when the matching capability is configu
 - [Workflow Variants And Plan Memory](workflow-variants-and-plan-memory.md): when direct Soma is enough, when a team matters, and how to keep plans through a reboot.
 - [Teams](teams.md): compact team creation, lead-centered workflow, and broad-ask lane splitting.
 - [Core Concepts](core-concepts.md): operator-language explanation of Soma, Council, teams, memory, and governance.
-- [Resources](resources.md): private/context content, capability readiness, MCP tool structure, output files, AI engines, deployment context, and tool activity.
+- [Resources](resources.md): output files, governed context, capability readiness, tool repair, AI engines, and advanced tool activity when needed.
 - [Memory](memory.md): semantic search, retained knowledge, reflection context, and continuity boundaries.
 - [Settings And Access](settings-access.md): profile, People & Access, auth-provider posture, access-denied recovery, and connected-tool/search management boundaries.
 - [Authentication Modes](auth-modes.md): local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM enablement.
@@ -77,4 +77,3 @@ Concrete requests Soma should understand when the matching capability is configu
 ## Advanced User Surfaces
 
 - [Automations](automations.md): inspect active reviews, checks, triggers, and approval-facing automation behavior.
-- [Meta-Agent & Blueprints](meta-agent-blueprint.md): advanced blueprint and mission planning language when you need graph-level detail.

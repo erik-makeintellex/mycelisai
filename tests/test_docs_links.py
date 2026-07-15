@@ -80,7 +80,7 @@ def test_canonical_prd_covers_full_product_architecture_and_release_contract():
         "The prime architecture rule is twofold",
         "protect confidence while making complexity disappear",
         "Ask\n-> Understand\n-> Approve\n-> Execute\n-> Deliver\n-> Trust\n-> Recover\n-> Revisit",
-        "compact Quick Actions shelf",
+        "compact Start with shelf",
         "large Talk to Soma thread as the primary canvas",
         "header Outcomes button that opens Outcome Vault on demand",
         "Explore",

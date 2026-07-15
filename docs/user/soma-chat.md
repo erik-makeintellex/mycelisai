@@ -9,11 +9,13 @@ Open `Soma` (`/dashboard`) and type naturally. Soma receives the request first, 
 
 The dashboard is organized as a threaded workspace:
 
-- `Quick actions`: a compact pinned grid for repeated work, such as audits, briefs, or media packages. It stays bounded so it does not create a horizontal dashboard scrollbar. Use `Create action` to save a repeated Soma ask as a reusable action; Mycelis stores it through the conversation-template path when Core is available and keeps a local fallback when it is not. Saved actions still enter the Soma conversation so you can adjust risky or unclear work before execution.
+- `Start with`: a compact pinned row for common conversation shapes: plan next step, create output, or review work. Saved asks can still appear here, but the defaults stay generic so a new user sees how to talk to Soma instead of seeing a domain-specific workflow menu. Use `Create ask` to save a repeated Soma request; Mycelis stores it through the conversation-template path when Core is available and keeps a local fallback when it is not. Saved asks still enter the Soma conversation so you can adjust risky or unclear work before execution.
 - `Talk to Soma`: the primary visible heading and conversation where you ask, approve, recover, and review.
 - `Outcome Vault`: a secondary overlay drawer for saved results, work in progress, and anything that needs attention. It stays closed by default so Soma keeps the main workspace, then opens over the thread when you need delivery, recovery, or revisit detail.
 
 When the conversation is empty, Soma should help you enter naturally instead of presenting a stack of action cards. The empty thread should briefly cue the pattern: ask for the outcome, let Soma shape the path, and approve only when work should run. Example asks are shown as quoted language only; they are not buttons or a separate workflow menu.
+
+The default dashboard hides engine trace details for ordinary answers. Source/model badges, tool chips, consultation traces, and raw capability labels belong in advanced views, proof/review panels, Activity, or Inspect. The chat thread should show the answer first, then surface compact proposal, blocker, receipt, or recovery cards only when they change what the user can safely do next.
 
 The dashboard should not require you to scroll through setup panels before using Soma. Sign-in, role, provider, and scope details are available through Settings/System or proof details when you need to inspect them.
 
@@ -34,7 +36,7 @@ Display-name customization lives in `Settings -> Profile -> Assistant Name`.
 - `Ask the active delivery teams for current blockers and tell me which workflow needs attention first.`
 - `Use the host data under workspace/shared-sources and tell me which files shaped the answer.`
 - `Use the Mycelis docs to explain how Deployment Context differs from Memory, and cite the docs you used.`
-- `Review current MCP servers, tools, and recent use, then tell me which agents should have which tools.`
+- `Tell me what Soma can currently use, what needs repair, and what I should connect next.`
 
 ## Understanding And Approval
 

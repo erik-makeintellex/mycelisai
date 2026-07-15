@@ -132,6 +132,18 @@ function isAnswerOnlyDepth(msg: ChatMessage) {
     );
 }
 
+function shouldShowSimpleThreadState(msg: ChatMessage) {
+    const state = msg.ui_response_state ?? msg.execution_summary?.ui_response_state;
+    const hasThreadEvents = Boolean(msg.thread_event || msg.thread_events?.length);
+    return Boolean(
+        msg.proposal
+        || msg.ask_class === "execution_blocker"
+        || state?.tone === "danger"
+        || state?.tone === "warning"
+        || hasThreadEvents
+    );
+}
+
 export default function MissionControlMessageBubble({
     msg,
     compactResult = false,
@@ -156,6 +168,9 @@ export default function MissionControlMessageBubble({
         ),
     );
     const showAnswerExtras = !answerOnlyDepth;
+    const showMeta = !isUser && !compactResult;
+    const showTraceExtras = !isUser && showAnswerExtras && !compactResult;
+    const showThreadState = !isUser && showAnswerExtras && (!compactResult || shouldShowSimpleThreadState(msg));
     const useReceipt = compactResult && showExecutionSummary && msg.execution_summary
         ? shouldUseExecutionSummaryReceipt({
             summary: msg.execution_summary,
@@ -211,15 +226,15 @@ export default function MissionControlMessageBubble({
                 </div>
             )}
             <div className="max-w-[85%] flex flex-col gap-0.5">
-                {!isUser && <MessageMeta msg={msg} assistantName={assistantName} />}
+                {showMeta && <MessageMeta msg={msg} assistantName={assistantName} />}
                 <MissionControlResponseDepth
                     msg={msg}
                     isBroadcast={isBroadcast}
                     isUser={isUser}
                     compactResult={compactResult}
                 />
-                {!isUser && showAnswerExtras && <MissionControlThreadStateCard msg={msg} />}
-                {!isUser && msg.consultations?.length ? (
+                {showThreadState && <MissionControlThreadStateCard msg={msg} />}
+                {showTraceExtras && msg.consultations?.length ? (
                     <div className="px-3 pb-2">
                         <DelegationTrace consultations={msg.consultations} assistantName={assistantName} />
                     </div>
@@ -241,7 +256,7 @@ export default function MissionControlMessageBubble({
                     )
                 )}
                 {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}
-                {!isUser && showAnswerExtras && artifactSummary && (
+                {showTraceExtras && artifactSummary && (
                     <div className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/5 px-3 py-2">
                         <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-primary">
                             Returned output
@@ -249,7 +264,7 @@ export default function MissionControlMessageBubble({
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">{artifactSummary}</p>
                     </div>
                 )}
-                {!isUser && showAnswerExtras && msg.ask_class === "specialist_consultation" && consultationSummary && (
+                {showTraceExtras && msg.ask_class === "specialist_consultation" && consultationSummary && (
                     <div className="rounded-lg border border-cortex-warning/20 bg-cortex-warning/5 px-3 py-2">
                         <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-warning">
                             Specialist context
@@ -257,13 +272,13 @@ export default function MissionControlMessageBubble({
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">{consultationSummary}</p>
                     </div>
                 )}
-                {!isUser && showAnswerExtras && msg.artifacts?.length ? (
+                {showTraceExtras && msg.artifacts?.length ? (
                     <div className="space-y-1">
                         {msg.artifacts.map((artifact, i) => <InlineArtifact key={artifact.id || `art-${i}`} artifact={artifact} />)}
                     </div>
                 ) : null}
-                {!isUser && showAnswerExtras && !msg.proposal && <MissionControlToolsUsed tools={msg.tools_used} />}
-                {!isUser && showAnswerExtras && msg.tools_used && (msg.tools_used.includes("recall") || msg.tools_used.includes("search_memory")) && (
+                {showTraceExtras && !msg.proposal && <MissionControlToolsUsed tools={msg.tools_used} />}
+                {showTraceExtras && msg.tools_used && (msg.tools_used.includes("recall") || msg.tools_used.includes("search_memory")) && (
                     <div className="flex items-center gap-1 px-1 mt-0.5">
                         <span className="w-1 h-1 rounded-full bg-cortex-primary" />
                         <span className="text-[8px] font-mono text-cortex-primary/70 italic">recalled from memory</span>

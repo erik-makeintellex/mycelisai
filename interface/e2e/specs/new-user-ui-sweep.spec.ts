@@ -12,7 +12,7 @@ const primaryRoutes: RouteCheck[] = [
     path: "/dashboard?fresh=1",
     name: "soma",
     heading: /Talk to Soma/i,
-    affordances: [/Quick asks/i, /Tell Soma what outcome you want/i, /Outcomes/i],
+    affordances: [/Start with/i, /Tell Soma what outcome you want/i, /Outcomes/i],
   },
   {
     path: "/groups",

@@ -21,16 +21,16 @@ export type SomaPinnedAction = {
 
 export const DEFAULT_PINNED_ACTIONS: SomaPinnedAction[] = [
   {
-    label: "Run Expense Audit",
-    prompt: "Run the expense audit workflow. Summarize exceptions, proof, and safe next actions before changing anything.",
+    label: "Plan next step",
+    prompt: "Help me turn this goal into a clear next step. Keep it lightweight, show what you understood, and ask before running work.",
   },
   {
-    label: "Generate Client Brief",
-    prompt: "Generate a client brief as a retained output with proof, source notes, and next-step recommendations.",
+    label: "Create output",
+    prompt: "Create a useful first version, tell me where it will be saved, and keep proof visible if work is run.",
   },
   {
-    label: "Weekly Media Pack",
-    prompt: "Run the Weekly Media Pack. Gather assets, create a retained package, and show it in Outcome Vault.",
+    label: "Review work",
+    prompt: "Review this work, summarize what matters, identify risks, and ask before taking action.",
   },
 ];
 const SAVED_ACTIONS_KEY = "mycelis-soma-saved-actions";
@@ -113,7 +113,7 @@ export function SomaActionShelf({
     >
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         <div className="mr-0.5 shrink-0 text-[9px] font-bold uppercase tracking-[0.12em] text-cortex-text-muted">
-          Quick asks
+          Start with
         </div>
         {visibleActions.map((action) => (
           <button

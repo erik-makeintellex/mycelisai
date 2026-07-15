@@ -13,7 +13,10 @@ describe("SomaActionShelf", () => {
 
     render(<SomaActionShelf onRunAction={vi.fn()} />);
 
-    expect(screen.getByTestId("soma-action-shelf").textContent).toContain("Quick asks");
+    expect(screen.getByTestId("soma-action-shelf").textContent).toContain("Start with");
+    expect(screen.getByRole("button", { name: /Plan next step/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Create output/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Review work/i })).toBeDefined();
     expect(screen.queryByText("Quick actions:")).toBeNull();
     expect(screen.getByRole("button", { name: /Create new quick action/i }).textContent).toContain("Create ask");
   });
