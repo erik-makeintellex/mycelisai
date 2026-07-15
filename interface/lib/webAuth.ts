@@ -29,6 +29,13 @@ export interface WebAuthConfig {
     adminEmails: string[];
 }
 
+export interface GoogleWorkspacePolicy {
+    hostedDomain: string;
+    allowedDomains: string[];
+    displayDomains: string[];
+    domainLabel: string;
+}
+
 export interface ForwardedWebIdentity {
     sub: string;
     email: string;
@@ -61,6 +68,18 @@ export function getWebAuthConfig(): WebAuthConfig {
 
 export function googleConfigured(config = getWebAuthConfig()): boolean {
     return Boolean(config.googleClientId && config.googleClientSecret && config.googleRedirectUri);
+}
+
+export function googleWorkspacePolicy(config = getWebAuthConfig()): GoogleWorkspacePolicy {
+    const allowedDomains = [...config.allowedDomains];
+    const hostedDomain = config.googleHostedDomain.trim().toLowerCase();
+    const displayDomains = allowedDomains.length ? allowedDomains : (hostedDomain ? [hostedDomain] : []);
+    return {
+        hostedDomain,
+        allowedDomains,
+        displayDomains,
+        domainLabel: displayDomains.join(", "),
+    };
 }
 
 export function roleForEmail(email: string, config = getWebAuthConfig()): WebUserRole {

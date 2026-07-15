@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createForwardedWebIdentityHeaders, createSessionToken, decodeOAuthStateCookie, encodeOAuthStateCookie, roleForEmail, sha256Hex, splitList, verifySessionToken, webAuthRedirectURL, type WebSession } from "@/lib/webAuth";
+import { createForwardedWebIdentityHeaders, createSessionToken, decodeOAuthStateCookie, encodeOAuthStateCookie, googleWorkspacePolicy, roleForEmail, sha256Hex, splitList, verifySessionToken, webAuthRedirectURL, type WebSession } from "@/lib/webAuth";
 
 describe("webAuth", () => {
     it("signs and verifies web sessions", async () => {
@@ -33,6 +33,28 @@ describe("webAuth", () => {
         };
         expect(roleForEmail("owner@example.com", config)).toBe("admin");
         expect(roleForEmail("user@example.com", config)).toBe("standard");
+    });
+
+    it("derives Google Workspace display and enforcement policy from one config object", () => {
+        const config = {
+            sessionSecret: "secret",
+            localUsername: "admin",
+            localPassword: "pw",
+            localPasswordSha256: "",
+            googleClientId: "client",
+            googleClientSecret: "secret",
+            googleRedirectUri: "http://127.0.0.1:3000/auth/google/callback",
+            googleHostedDomain: "Primary.Example",
+            allowedDomains: splitList("primary.example,secondary.example"),
+            adminEmails: [],
+        };
+
+        expect(googleWorkspacePolicy(config)).toEqual({
+            hostedDomain: "primary.example",
+            allowedDomains: ["primary.example", "secondary.example"],
+            displayDomains: ["primary.example", "secondary.example"],
+            domainLabel: "primary.example, secondary.example",
+        });
     });
 
     it("supports hashed local admin password comparison material", async () => {

@@ -4,6 +4,7 @@ import {
     createSessionToken,
     decodeOAuthStateCookie,
     getWebAuthConfig,
+    googleWorkspacePolicy,
     roleForEmail,
     sessionCookieOptions,
     webAuthRedirectURL,
@@ -24,6 +25,7 @@ interface GoogleTokenInfo {
 
 export async function GET(request: NextRequest) {
     const config = getWebAuthConfig();
+    const workspacePolicy = googleWorkspacePolicy(config);
     const code = request.nextUrl.searchParams.get("code");
     const state = request.nextUrl.searchParams.get("state");
     const saved = decodeOAuthStateCookie(request.cookies.get(STATE_COOKIE)?.value);
@@ -59,7 +61,7 @@ export async function GET(request: NextRequest) {
             return redirectToLogin(request, "google_identity");
         }
         const domain = (info.hd || info.email.split("@")[1] || "").toLowerCase();
-        if (config.allowedDomains.length && !config.allowedDomains.includes(domain)) return redirectToLogin(request, "domain");
+        if (workspacePolicy.allowedDomains.length && !workspacePolicy.allowedDomains.includes(domain)) return redirectToLogin(request, "domain");
 
         const now = Math.floor(Date.now() / 1000);
         const session: WebSession = {

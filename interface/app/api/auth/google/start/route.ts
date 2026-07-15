@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { encodeOAuthStateCookie, getWebAuthConfig, googleConfigured, secureCookieEnabled, webAuthRedirectURL } from "@/lib/webAuth";
+import { encodeOAuthStateCookie, getWebAuthConfig, googleConfigured, googleWorkspacePolicy, secureCookieEnabled, webAuthRedirectURL } from "@/lib/webAuth";
 
 const STATE_COOKIE = "mycelis_google_state";
 
@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     if (!config.sessionSecret || !googleConfigured(config)) return redirectToLogin(request, "config");
     const canonical = canonicalGoogleStartURL(request, config.googleRedirectUri);
     if (canonical) return NextResponse.redirect(canonical);
+    const workspacePolicy = googleWorkspacePolicy(config);
 
     const state = crypto.randomUUID();
     const authURL = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     authURL.searchParams.set("state", state);
     authURL.searchParams.set("access_type", "online");
     authURL.searchParams.set("prompt", "select_account");
-    if (config.googleHostedDomain) authURL.searchParams.set("hd", config.googleHostedDomain);
+    if (workspacePolicy.hostedDomain) authURL.searchParams.set("hd", workspacePolicy.hostedDomain);
 
     const response = NextResponse.redirect(authURL);
     response.cookies.set(STATE_COOKIE, encodeOAuthStateCookie(state, safeNext(request.nextUrl.searchParams.get("next")) || "/dashboard"), {
@@ -44,7 +45,8 @@ function safeNext(value: string | null): string {
 function canonicalGoogleStartURL(request: NextRequest, redirectUri: string): URL | null {
     const redirectOrigin = new URL(redirectUri).origin;
     if (currentRequestOrigin(request) === redirectOrigin) return null;
-    const url = new URL(request.nextUrl.pathname + request.nextUrl.search, redirectOrigin);
+    const url = new URL("/auth/google/start", redirectOrigin);
+    url.search = request.nextUrl.search;
     return url;
 }
 

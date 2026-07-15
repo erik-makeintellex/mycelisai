@@ -483,6 +483,8 @@ Known non-blocking warnings:
 
 - `IN_REVIEW` Soma-first simple-mode UI slice: the Dashboard now treats `simpleMode` as the human-first surface. The top shelf uses generic `Start with` conversation shapes before user-saved asks, the simplified composer states the Enter/Shift+Enter/approval contract, and ordinary answers hide engine trace chrome such as source/model badges, tool chips, consultation traces, memory tags, and raw capability labels while preserving proposals, blockers, execution receipts, and recovery states. The old blueprint/mission-planning doc is no longer advertised in the in-app Help manifest. Docs updated: canonical PRD, Soma chat guide, user docs home, in-app docs manifest, docs contract tests, and this state file. Proof: focused Dashboard Vitest, `uv run inv interface.typecheck`, docs/help tests, `uv run inv quality.max-lines --limit 330`, `git diff --check`, service health, and headed `new-user-ui-sweep.spec.ts` pass.
 
+- `IN_REVIEW` Google SSO login repair slice: Google Workspace sign-in now shares one Google Workspace policy object for the visible accepted-domain copy, OAuth hosted-domain request hint, and callback domain enforcement. The start route canonicalization now preserves the public `/auth/google/start` path when the API re-export handles a request from a non-public bind origin, preventing the SSO link from bouncing through `/api/auth/google/start`. Login copy was updated to describe Soma-first access plus local-owner recovery. Proof: focused auth/lib Vitest, docs/help tests, `uv run inv interface.typecheck`, `uv run inv quality.max-lines --limit 330`, `git diff --check`, frontend/Core stack restart, headed `homepage.spec.ts`, and service health pass.
+
 ## Documentation Map
 
 | Topic | Canonical Location |

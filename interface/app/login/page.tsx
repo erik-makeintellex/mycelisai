@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { ArrowRight, Building2, KeyRound, ShieldCheck, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { ThemeSync } from "@/components/shell/ThemeSync";
-import { WEB_SESSION_COOKIE, getWebAuthConfig, googleConfigured, verifySessionToken } from "@/lib/webAuth";
+import { WEB_SESSION_COOKIE, getWebAuthConfig, googleConfigured, googleWorkspacePolicy, verifySessionToken } from "@/lib/webAuth";
 
 interface LoginPageProps {
     searchParams?: Promise<{ error?: string; next?: string }>;
@@ -21,8 +21,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     const next = safeNext(params?.next) || "/dashboard";
     const localReady = Boolean(config.sessionSecret && config.localPassword);
     const googleReady = Boolean(config.sessionSecret && googleConfigured(config));
-    const allowedDomains = config.allowedDomains;
-    const errorText = errorMessage(params?.error, allowedDomains);
+    const googlePolicy = googleWorkspacePolicy(config);
+    const errorText = errorMessage(params?.error, googlePolicy.displayDomains);
 
     return (
         <main className="min-h-screen bg-cortex-bg text-cortex-text-main">
@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                     <div>
                         <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">Sign in to operate Mycelis.</h1>
                         <p className="mt-4 max-w-xl text-lg leading-8 text-cortex-text-muted">
-                            Every edition starts behind an identity boundary. Free nodes use a local owner login; enterprise deployments can add Google Workspace SSO without changing the Soma workflow.
+                            Sign in, then start with Soma. Local owner access keeps self-hosted nodes recoverable, and configured Google Workspace SSO lets approved workspace accounts enter the same governed Soma workflow.
                         </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -87,9 +87,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                                 <KeyRound className="h-4 w-4" />
                                 Sign in with Google Workspace
                             </a>
-                            {allowedDomains.length ? (
+                            {googlePolicy.displayDomains.length ? (
                                 <p className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 text-xs leading-5 text-cortex-text-muted">
-                                    Use a Google account from: <span className="font-mono text-cortex-text-main">{allowedDomains.join(", ")}</span>.
+                                    Accepted Google account domain{googlePolicy.displayDomains.length === 1 ? "" : "s"}: <span className="font-mono text-cortex-text-main">{googlePolicy.domainLabel}</span>.
                                     Personal Gmail accounts are rejected for this deployment.
                                 </p>
                             ) : null}

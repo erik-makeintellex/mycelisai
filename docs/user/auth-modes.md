@@ -114,7 +114,7 @@ Use Google Workspace through OIDC/OAuth for enterprise SSO.
 6. Keep organization access and approval rights in Mycelis roles.
 7. Confirm `/dashboard` opens the Soma workspace and Core audit/proof records use the signed web identity rather than the generic local API-key owner.
 
-The login page shows the allowed Workspace domains when Google is configured. Google sign-in and restart links should use a full document navigation into `/auth/google/start` so the browser enters the OAuth redirect flow cleanly instead of treating the route as an in-app RSC transition. If Google account selection returns a domain error, choose an account from `MYCELIS_AUTH_ALLOWED_DOMAINS` or use the local owner login while correcting the deployment domain list.
+The login page shows the accepted Workspace domain list from the same Google Workspace policy used to build the OAuth `hd` request hint and callback domain validation. Google sign-in and restart links should use a full document navigation into `/auth/google/start` so the browser enters the OAuth redirect flow cleanly instead of treating the route as an in-app RSC transition. If Google account selection returns a domain error, choose an account from the displayed accepted domain list or use the local owner login while correcting `MYCELIS_AUTH_ALLOWED_DOMAINS` / `MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN`.
 
 For local source development, keep the Google values in repo-root `.env`. The Interface auth server also reads that file when Next runs from `interface/`, so `/login` should still show **Sign in with Google Workspace** without duplicating secrets into `interface/.env.local`.
 
