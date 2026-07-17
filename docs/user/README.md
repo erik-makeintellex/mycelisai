@@ -30,7 +30,7 @@ Before accepting a new-user browser pass, verify these from the product:
 1. Login is clear: local owner login works, SSO availability or domain restriction copy is understandable, and failures are actionable.
 2. Dashboard orientation is clear: Soma input is primary, starter asks are generic conversation shapes, Active Work is compact by default, and any backlog opens through `Teams`.
 3. Provider/search readiness is visible: Settings, Resources, or System tells the operator whether Soma can use the intended local or hosted engine/search path.
-4. Capabilities are understandable: `Resources -> Capabilities` shows what Soma can use, what needs repair, and what can be connected next before exposing raw MCP/server detail.
+4. Capabilities are understandable: `Resources -> Capabilities` shows what Soma can use, what needs attention, and what can be connected next before exposing raw MCP/server detail.
 5. Output roots are known: `MYCELIS_WORKSPACE` is where generated files, project packages, browser games, and filesystem MCP writes land; `MYCELIS_ARTIFACT_ROOT` is where file-backed artifacts and cached media land.
 6. Canonical demo is repeatable: a retained demo output, such as a project package, opens from the browser, survives refresh/reload, and links to run/proof evidence.
 7. Team proof is honest: one bounded team ask reaches readable `output_ready` or a visible `degraded` timeout/offline/unreadable state with recovery guidance.
@@ -52,7 +52,7 @@ Concrete requests Soma should understand when the matching capability is configu
 - "Use this folder only for the current draft, then save the final brief as the retained output."
 - "Save this customer handoff as long-term context for this Outcome before asking the delivery team to use it."
 - "Use the Mycelis docs to explain how governed context differs from memory, and cite the doc paths you used."
-- "Tell me what Soma can currently use, what needs repair, and what I should connect next."
+- "Tell me what Soma can currently use, what needs attention, and what I should connect next."
 - "Review my request against prior context, infer the action, and ask me to confirm before you execute."
 - "Review private service or private data boundaries, name the protection reason, and ask before using credentials, customer data, or recurring behavior."
 

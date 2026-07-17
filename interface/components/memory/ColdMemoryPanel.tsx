@@ -80,12 +80,19 @@ interface ColdMemoryPanelProps {
   onSelectResult?: (result: SearchResult) => void;
 }
 
+interface MemorySearchDegraded {
+  code?: string;
+  summary?: string;
+  recommended_action?: string;
+}
+
 export default function ColdMemoryPanel({
   searchQuery,
   onSelectResult,
 }: ColdMemoryPanelProps) {
   const [query, setQuery] = useState(searchQuery ?? "");
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [degraded, setDegraded] = useState<MemorySearchDegraded | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -102,6 +109,7 @@ export default function ColdMemoryPanel({
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
+      setDegraded(null);
       setHasSearched(false);
       setIsSearching(false);
       return;
@@ -121,12 +129,23 @@ export default function ColdMemoryPanel({
           const data = await res.json();
           if (controller.signal.aborted) return;
           setResults(data.results ?? []);
+          setDegraded(data.degraded ?? null);
         } else {
           setResults([]);
+          setDegraded({
+            code: "memory_search_unavailable",
+            summary: "Memory search is unavailable right now.",
+            recommended_action: "Check the Memory service or try again later.",
+          });
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setResults([]);
+        setDegraded({
+          code: "memory_search_unreachable",
+          summary: "Memory search could not be reached from this browser session.",
+          recommended_action: "Check service health, then retry the search.",
+        });
       }
       if (!controller.signal.aborted) setIsSearching(false);
     }, 500);
@@ -170,6 +189,23 @@ export default function ColdMemoryPanel({
             <span className="text-[10px] font-mono text-cortex-text-muted animate-pulse">
               Searching vectors...
             </span>
+          </div>
+        ) : degraded ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
+            <Snowflake className="h-8 w-8 text-cortex-warning opacity-60" />
+            <div className="max-w-sm rounded-xl border border-cortex-warning/30 bg-cortex-warning/10 px-4 py-3 text-left">
+              <p className="text-xs font-semibold text-cortex-warning">
+                Memory search needs attention
+              </p>
+              <p className="mt-2 text-xs leading-5 text-cortex-text-main">
+                {degraded.summary ??
+                  "Semantic memory search needs an embedding-capable AI engine before vector recall can be trusted."}
+              </p>
+              <p className="mt-2 text-[11px] leading-5 text-cortex-text-muted">
+                {degraded.recommended_action ??
+                  "Configure an embedding-capable AI engine, then retry this search."}
+              </p>
+            </div>
           </div>
         ) : hasSearched && results.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2">

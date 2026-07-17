@@ -85,19 +85,20 @@ describe("MemoryExplorer", () => {
     mockAdvancedMode.mockReturnValue(false);
   });
 
-  it("renders the Memory header and section labels", () => {
+  it("renders the Memory header and focused view tabs", () => {
     render(<MemoryExplorer />);
 
     // Header displays "Memory"
     expect(screen.getByText("Memory")).toBeDefined();
 
-    // Section headers for the two-column layout
+    // Focused tab layout avoids compressed columns.
     expect(screen.getByText("Recent Work")).toBeDefined();
     expect(screen.getByText("Search Memory")).toBeDefined();
+    expect(screen.getByText("Details")).toBeDefined();
 
-    // Warm and Cold panels should be mounted
+    // Warm panel is the default view.
     expect(screen.getByTestId("warm-panel")).toBeDefined();
-    expect(screen.getByTestId("cold-panel")).toBeDefined();
+    expect(screen.queryByTestId("cold-panel")).toBeNull();
   });
 
   it("does not show Signal Stream when advancedMode is off", () => {
@@ -122,11 +123,13 @@ describe("MemoryExplorer", () => {
 
     // Initially no search query passed to cold panel
     expect(screen.queryByTestId("cold-query")).toBeNull();
+    expect(screen.queryByTestId("cold-panel")).toBeNull();
 
     // Trigger a "search related" action from the warm panel
     fireEvent.click(screen.getByTestId("warm-search-btn"));
 
-    // The cold panel should now receive the search query
+    // The search view should open and receive the query.
+    expect(screen.getByTestId("cold-panel")).toBeDefined();
     expect(screen.getByTestId("cold-query")).toBeDefined();
     expect(screen.getByText("test query")).toBeDefined();
   });
@@ -136,16 +139,19 @@ describe("MemoryExplorer", () => {
 
     render(<MemoryExplorer />);
 
+    fireEvent.click(screen.getByRole("tab", { name: /Details/i }));
     expect(
       screen.getByText(/Select a memory search result or artifact/i),
     ).toBeDefined();
 
+    fireEvent.click(screen.getByRole("tab", { name: /Search memory/i }));
     fireEvent.click(screen.getByTestId("search-result-select-btn"));
     expect(
       screen.getByText("Full memory content for inspection."),
     ).toBeDefined();
     expect(screen.getByText("91% relevance")).toBeDefined();
 
+    fireEvent.click(screen.getByRole("tab", { name: /Recent work/i }));
     fireEvent.click(screen.getByTestId("artifact-select-btn"));
     expect(screen.getByRole("heading", { name: "Launch Plan" })).toBeDefined();
     expect(screen.getByText("# Launch Plan")).toBeDefined();

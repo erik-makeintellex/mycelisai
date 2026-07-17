@@ -56,8 +56,24 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 	// 1. Embed the query text
 	vec, err := s.Cognitive.Embed(r.Context(), query, "")
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"embedding failed — no embed provider available"}`, http.StatusBadGateway)
+		respondJSON(w, map[string]any{
+			"query": query,
+			"scope": map[string]any{
+				"tenant_id":  "default",
+				"team_id":    teamID,
+				"agent_id":   agentID,
+				"run_id":     runID,
+				"visibility": visibility,
+				"types":      searchTypes,
+			},
+			"results": []memory.VectorResult{},
+			"count":   0,
+			"degraded": map[string]any{
+				"code":               "embedding_unavailable",
+				"summary":            "Semantic memory search is unavailable because no embedding provider is available.",
+				"recommended_action": "Configure an embedding-capable AI engine before relying on vector memory recall.",
+			},
+		})
 		return
 	}
 

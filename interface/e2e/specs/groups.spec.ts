@@ -137,17 +137,25 @@ test.describe("Groups workspace (/groups)", () => {
     await openGroups(page);
 
     await page.getByRole("button", { name: "Create group" }).click();
+    await expect(page.getByRole("tablist", { name: "Create group sections" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Basics" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     await page.getByLabel("Name").fill("Regional Expansion Sprint");
     await page
       .getByLabel("Goal Statement")
       .fill("Prepare outreach, pricing notes, and launch assets for a new region.");
+    await page.getByRole("tab", { name: "Policy", exact: true }).click();
     await page.getByLabel("Work Mode").selectOption("execute_with_approval");
-    await page.getByLabel("Expiry").fill("2026-04-15T09:30");
-    await page.getByLabel("Team IDs").fill("launch-lead, design-lead");
-    await page.getByLabel("Member IDs").fill("owner, marketing-lead");
-    await page.getByLabel("Coordinator Profile").fill("Regional expansion lead");
     await page.getByLabel("Allowed Capabilities").fill("write_file, publish_signal");
     await page.getByLabel("Approval Policy Ref").fill("regional-expansion");
+    await page.getByRole("tab", { name: "People", exact: true }).click();
+    await page.getByLabel("Team IDs").fill("launch-lead, design-lead");
+    await page.getByLabel("Member IDs").fill("owner, marketing-lead");
+    await page.getByLabel("Expiry").fill("2026-04-15T09:30");
+    await page.getByRole("tab", { name: "Advanced", exact: true }).click();
+    await page.getByLabel("Coordinator Profile").fill("Regional expansion lead");
     await page.getByTestId("groups-create-button").click();
     await expect(page.getByTestId("groups-notice")).toContainText(
       "Group created successfully.",

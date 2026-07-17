@@ -7,11 +7,17 @@ import { memoryResultScore, type MemorySelection, type SearchResult } from "./me
 
 export default function MemoryDetailPanel({
   selection,
+  embedded = false,
 }: {
   selection: MemorySelection | null;
+  embedded?: boolean;
 }) {
   return (
-    <aside className="flex h-full min-h-0 flex-col border-l border-cortex-border bg-cortex-surface/40">
+    <aside
+      className={`flex h-full min-h-0 flex-col bg-cortex-surface/40 ${
+        embedded ? "" : "border-l border-cortex-border"
+      }`}
+    >
       <div className="flex h-8 flex-shrink-0 items-center border-b border-cortex-border/50 bg-cortex-surface/30 px-3">
         <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-text-muted">
           Memory Details

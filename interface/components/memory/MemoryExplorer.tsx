@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Brain, ChevronDown, ChevronRight, Radio } from "lucide-react";
+import {
+  Brain,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Radio,
+  Search,
+} from "lucide-react";
 import HotMemoryPanel from "./HotMemoryPanel";
 import WarmMemoryPanel from "./WarmMemoryPanel";
 import ColdMemoryPanel from "./ColdMemoryPanel";
@@ -10,6 +17,34 @@ import type { MemorySelection } from "./memorySelection";
 import { useCortexStore } from "@/store/useCortexStore";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 
+type MemoryView = "work" | "search" | "details";
+
+const MEMORY_VIEWS: Array<{
+  id: MemoryView;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  {
+    id: "work",
+    label: "Recent Work",
+    description: "Warm records",
+    icon: FileText,
+  },
+  {
+    id: "search",
+    label: "Search Memory",
+    description: "Cold recall",
+    icon: Search,
+  },
+  {
+    id: "details",
+    label: "Details",
+    description: "Inspect record",
+    icon: Brain,
+  },
+];
+
 // ── MemoryExplorer ────────────────────────────────────────────
 
 export default function MemoryExplorer() {
@@ -17,6 +52,7 @@ export default function MemoryExplorer() {
   const [coldSearchQuery, setColdSearchQuery] = useState<string | undefined>(
     undefined,
   );
+  const [activeView, setActiveView] = useState<MemoryView>("work");
   const [selection, setSelection] = useState<MemorySelection | null>(null);
   const [signalExpanded, setSignalExpanded] = useState(false);
   const getArtifactDetail = useCortexStore((s) => s.getArtifactDetail);
@@ -24,11 +60,13 @@ export default function MemoryExplorer() {
 
   const handleSearchRelated = useCallback((query: string) => {
     setColdSearchQuery(query);
+    setActiveView("search");
   }, []);
 
   const handleSelectArtifact = useCallback(
     (artifact: Artifact) => {
       setSelection({ kind: "artifact", artifact });
+      setActiveView("details");
       void getArtifactDetail(artifact.id);
     },
     [getArtifactDetail],
@@ -57,52 +95,60 @@ export default function MemoryExplorer() {
         </div>
       </header>
 
-      {/* Main layout: Recent Work | Search | Details */}
-      <div
-        className="flex-1 min-h-0"
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "minmax(280px, 1.4fr) minmax(360px, 2fr) minmax(320px, 1.2fr)",
-          gap: 0,
-          overflow: "hidden",
-        }}
-      >
-        {/* Col 1: Recent Work (Warm — sitreps + artifacts) */}
-        <div className="h-full overflow-hidden border-r border-cortex-border flex flex-col">
-          <div className="h-8 flex items-center px-3 border-b border-cortex-border/50 bg-cortex-surface/30 flex-shrink-0">
-            <span className="text-[9px] font-mono uppercase tracking-widest text-cortex-text-muted font-bold">
-              Recent Work
-            </span>
-          </div>
-          <div className="flex-1 overflow-hidden">
+      {/* Main layout: focused tabs instead of compressed columns */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <nav
+          aria-label="Memory views"
+          className="flex flex-wrap gap-2 border-b border-cortex-border bg-cortex-surface/30 px-3 py-2"
+          role="tablist"
+        >
+          {MEMORY_VIEWS.map((view) => {
+            const Icon = view.icon;
+            const isActive = activeView === view.id;
+            return (
+              <button
+                key={view.id}
+                type="button"
+                role="tab"
+                aria-label={view.label}
+                aria-selected={isActive}
+                onClick={() => setActiveView(view.id)}
+                className={`flex min-w-[160px] items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
+                  isActive
+                    ? "border-cortex-primary/40 bg-cortex-primary/15 text-cortex-text-main"
+                    : "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted hover:border-cortex-primary/30 hover:text-cortex-text-main"
+                }`}
+              >
+                <Icon className="h-4 w-4 text-cortex-primary" />
+                <span>
+                  <span className="block text-sm font-bold">{view.label}</span>
+                  <span className="block text-[10px] text-cortex-text-muted">
+                    {view.description}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {activeView === "work" ? (
             <WarmMemoryPanel
               onSearchRelated={handleSearchRelated}
-              onSelectArtifact={(artifact) =>
-                handleSelectArtifact(artifact)
-              }
+              onSelectArtifact={(artifact) => handleSelectArtifact(artifact)}
             />
-          </div>
-        </div>
-
-        {/* Col 2: Semantic Search (Cold — pgvector) */}
-        <div className="h-full overflow-hidden flex flex-col">
-          <div className="h-8 flex items-center px-3 border-b border-cortex-border/50 bg-cortex-surface/30 flex-shrink-0">
-            <span className="text-[9px] font-mono uppercase tracking-widest text-cortex-text-muted font-bold">
-              Search Memory
-            </span>
-          </div>
-          <div className="flex-1 overflow-hidden">
+          ) : activeView === "search" ? (
             <ColdMemoryPanel
               searchQuery={coldSearchQuery}
-              onSelectResult={(result) =>
-                setSelection({ kind: "search", result })
-              }
+              onSelectResult={(result) => {
+                setSelection({ kind: "search", result });
+                setActiveView("details");
+              }}
             />
-          </div>
+          ) : (
+            <MemoryDetailPanel selection={selection} embedded />
+          )}
         </div>
-
-        <MemoryDetailPanel selection={selection} />
       </div>
 
       {/* Advanced Mode only: Signal Stream (collapsible) */}

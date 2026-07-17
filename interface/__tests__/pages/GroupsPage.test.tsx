@@ -38,4 +38,12 @@ describe("GroupsPage", () => {
             undefined,
         );
     });
+
+    it("passes a requested groups panel into the workspace", async () => {
+        render(await GroupsPage({ searchParams: Promise.resolve({ panel: "create" }) }));
+        expect(mocks.groupPanelMock).toHaveBeenCalledWith(
+            expect.objectContaining({ initialPanel: "create" }),
+            undefined,
+        );
+    });
 });

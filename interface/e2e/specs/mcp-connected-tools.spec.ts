@@ -426,14 +426,14 @@ async function openConnectedTools(page: Page) {
 }
 test.describe("Capabilities MCP workflow", () => {
     test.skip(({ browserName }) => browserName !== "chromium", "Capabilities browser workflow proof is stabilized in Chromium for MVP review.");
-
     test("shows active MCP usage and installs a curated server from the library", async ({ page }) => {
         await mockConnectedToolsApis(page);
         await openConnectedTools(page);
         await expect(page.getByRole("button", { name: /Capabilities/i })).toBeVisible();
         await expect(page.getByText("Choose what you want to check.")).toBeVisible();
-        await clickVisibleControl(page, page.getByRole("button", { name: /^Catalog/i }));
         await expect(page.getByText("What Soma can use right now").first()).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("button", { name: /^Catalog/i }));
+        await expect(page.getByText(/risk medium/i).first()).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /Access/i }));
         await expect(page.getByText("Search sources")).toBeVisible();
         await expect(page.getByText("Self-hosted public web").first()).toBeVisible();

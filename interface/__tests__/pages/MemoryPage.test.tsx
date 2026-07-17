@@ -11,6 +11,7 @@ vi.mock('next/dynamic', () => ({
                     <span>Memory</span>
                     <span>Recent Work</span>
                     <span>Search Memory</span>
+                    <span>Details</span>
                 </div>
             );
         };
@@ -53,7 +54,7 @@ describe('Memory Page (app/memory/page.tsx)', () => {
         expect(screen.getByText('Memory')).toBeDefined();
     });
 
-    it('renders section headers for two-column layout', async () => {
+    it('renders section headers for the focused memory tabs', async () => {
         await act(async () => {
             render(<MemoryRoute />);
         });
@@ -61,6 +62,7 @@ describe('Memory Page (app/memory/page.tsx)', () => {
         expect(screen.getByTestId('memory-route-content')).toBeDefined();
         expect(screen.getByText('Recent Work')).toBeDefined();
         expect(screen.getByText('Search Memory')).toBeDefined();
+        expect(screen.getByText('Details')).toBeDefined();
     });
 
     it('shows the advanced gate when advanced mode is off', async () => {

@@ -1,9 +1,45 @@
-import { Plus } from "lucide-react";
+import { useState, type ComponentType, type ReactNode } from "react";
+import {
+  FolderKanban,
+  Plus,
+  ShieldCheck,
+  SlidersHorizontal,
+  Users,
+} from "lucide-react";
 import {
   type ApprovalPrompt,
   type GroupDraft,
   type WorkMode,
 } from "./groupWorkspaceTypes";
+
+type CreateStep = "basics" | "policy" | "people" | "advanced";
+
+const CREATE_STEPS: Array<{
+  id: CreateStep;
+  label: string;
+  summary: string;
+  icon: ComponentType<{ className?: string }>;
+}> = [
+  {
+    id: "basics",
+    label: "Basics",
+    summary: "Name and goal",
+    icon: FolderKanban,
+  },
+  {
+    id: "policy",
+    label: "Policy",
+    summary: "Mode and approvals",
+    icon: ShieldCheck,
+  },
+  { id: "people", label: "People", summary: "Teams and members", icon: Users },
+  {
+    id: "advanced",
+    label: "Advanced",
+    summary: "Workspace and coordinator",
+    icon: SlidersHorizontal,
+  },
+];
 
 export function CreateGroupPane({
   draft,
@@ -18,6 +54,7 @@ export function CreateGroupPane({
   onDraftChange: (patch: Partial<GroupDraft>) => void;
   onCreateGroup: () => void;
 }) {
+  const [activeStep, setActiveStep] = useState<CreateStep>("basics");
   const compactInputClassName =
     "w-full rounded-lg border border-cortex-border bg-cortex-bg px-3 py-1.5 text-sm text-cortex-text-main outline-none placeholder:text-cortex-text-muted";
 
@@ -44,100 +81,116 @@ export function CreateGroupPane({
               : "Create group"}
         </button>
       </div>
-      <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)_minmax(0,1fr)]">
-        <FormSection title="Identity">
-          <Field label="Name">
-            <input
-              aria-label="Name"
-              value={draft.name}
-              onChange={(event) => onDraftChange({ name: event.target.value })}
-              className={compactInputClassName}
-            />
-          </Field>
-          <Field label="Goal Statement">
-            <textarea
-              aria-label="Goal Statement"
-              rows={2}
-              value={draft.goalStatement}
-              onChange={(event) =>
-                onDraftChange({ goalStatement: event.target.value })
-              }
-              className={`${compactInputClassName} resize-y`}
-            />
-          </Field>
-        </FormSection>
-        <FormSection title="Action policy">
-          <Field label="Work Mode">
-            <select
-              aria-label="Work Mode"
-              value={draft.workMode}
-              onChange={(event) =>
-                onDraftChange({ workMode: event.target.value as WorkMode })
-              }
-              className={compactInputClassName}
+      <div
+        className="mt-4 flex flex-wrap gap-2"
+        role="tablist"
+        aria-label="Create group sections"
+      >
+        {CREATE_STEPS.map((step) => {
+          const Icon = step.icon;
+          const selected = activeStep === step.id;
+          return (
+            <button
+              key={step.id}
+              type="button"
+              role="tab"
+              aria-label={step.label}
+              aria-selected={selected}
+              onClick={() => setActiveStep(step.id)}
+              className={`min-w-[10rem] flex-1 rounded-xl border px-3 py-2 text-left transition-colors sm:flex-none ${
+                selected
+                  ? "border-cortex-primary/45 bg-cortex-primary/10 text-cortex-text-main"
+                  : "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted hover:text-cortex-text-main"
+              }`}
             >
-              <option value="read_only">read_only</option>
-              <option value="propose_only">propose_only</option>
-              <option value="execute_with_approval">
-                execute_with_approval
-              </option>
-              <option value="execute_bounded">execute_bounded</option>
-            </select>
-          </Field>
-          <Field label="Approval Policy Ref">
-            <input
-              aria-label="Approval Policy Ref"
-              value={draft.approvalPolicyRef}
-              onChange={(event) =>
-                onDraftChange({ approvalPolicyRef: event.target.value })
-              }
-              className={compactInputClassName}
-            />
-          </Field>
-          <Field label="Allowed Capabilities">
-            <input
-              aria-label="Allowed Capabilities"
-              value={draft.allowedCapabilities}
-              onChange={(event) =>
-                onDraftChange({ allowedCapabilities: event.target.value })
-              }
-              className={compactInputClassName}
-            />
-          </Field>
-        </FormSection>
-        <FormSection title="People and duration">
-          <Field label="Team IDs">
-            <input
-              aria-label="Team IDs"
-              value={draft.teamIDs}
-              onChange={(event) =>
-                onDraftChange({ teamIDs: event.target.value })
-              }
-              className={compactInputClassName}
-            />
-          </Field>
-          <Field label="Workspace Folder">
-            <input
-              aria-label="Workspace Folder"
-              placeholder="auto: groups/team-id"
-              value={draft.workspaceFolder}
-              onChange={(event) =>
-                onDraftChange({ workspaceFolder: event.target.value })
-              }
-              className={compactInputClassName}
-            />
-          </Field>
-          <Field label="Coordinator Profile">
-            <input
-              aria-label="Coordinator Profile"
-              value={draft.coordinatorProfile}
-              onChange={(event) =>
-                onDraftChange({ coordinatorProfile: event.target.value })
-              }
-              className={compactInputClassName}
-            />
-          </Field>
-          <div className="grid gap-3 sm:grid-cols-2">
+              <span className="flex items-center gap-2 text-sm font-bold">
+                <Icon className="h-4 w-4 text-cortex-primary" />
+                {step.label}
+              </span>
+              <span className="mt-1 block text-[11px] leading-4 text-cortex-text-muted">
+                {step.summary}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-3 min-w-0">
+        {activeStep === "basics" ? (
+          <FormSection title="Identity">
+            <Field label="Name">
+              <input
+                aria-label="Name"
+                value={draft.name}
+                onChange={(event) => onDraftChange({ name: event.target.value })}
+                className={compactInputClassName}
+              />
+            </Field>
+            <Field label="Goal Statement">
+              <textarea
+                aria-label="Goal Statement"
+                rows={2}
+                value={draft.goalStatement}
+                onChange={(event) =>
+                  onDraftChange({ goalStatement: event.target.value })
+                }
+                className={`${compactInputClassName} resize-y`}
+              />
+            </Field>
+          </FormSection>
+        ) : null}
+        {activeStep === "policy" ? (
+          <FormSection title="Action policy">
+            <Field label="Work Mode">
+              <select
+                aria-label="Work Mode"
+                value={draft.workMode}
+                onChange={(event) =>
+                  onDraftChange({ workMode: event.target.value as WorkMode })
+                }
+                className={compactInputClassName}
+              >
+                <option value="read_only">read_only</option>
+                <option value="propose_only">propose_only</option>
+                <option value="execute_with_approval">
+                  execute_with_approval
+                </option>
+                <option value="execute_bounded">execute_bounded</option>
+              </select>
+            </Field>
+            <Field label="Approval Policy Ref">
+              <input
+                aria-label="Approval Policy Ref"
+                value={draft.approvalPolicyRef}
+                onChange={(event) =>
+                  onDraftChange({ approvalPolicyRef: event.target.value })
+                }
+                className={compactInputClassName}
+              />
+            </Field>
+            <Field label="Allowed Capabilities">
+              <input
+                aria-label="Allowed Capabilities"
+                value={draft.allowedCapabilities}
+                onChange={(event) =>
+                  onDraftChange({ allowedCapabilities: event.target.value })
+                }
+                className={compactInputClassName}
+              />
+            </Field>
+          </FormSection>
+        ) : null}
+        {activeStep === "people" ? (
+          <FormSection title="People and duration">
+            <Field label="Team IDs">
+              <input
+                aria-label="Team IDs"
+                value={draft.teamIDs}
+                onChange={(event) =>
+                  onDraftChange({ teamIDs: event.target.value })
+                }
+                className={compactInputClassName}
+              />
+            </Field>
             <Field label="Member IDs">
               <input
                 aria-label="Member IDs"
@@ -159,8 +212,33 @@ export function CreateGroupPane({
                 className={compactInputClassName}
               />
             </Field>
-          </div>
-        </FormSection>
+          </FormSection>
+        ) : null}
+        {activeStep === "advanced" ? (
+          <FormSection title="Workspace and coordination">
+            <Field label="Workspace Folder">
+              <input
+                aria-label="Workspace Folder"
+                placeholder="auto: groups/team-id"
+                value={draft.workspaceFolder}
+                onChange={(event) =>
+                  onDraftChange({ workspaceFolder: event.target.value })
+                }
+                className={compactInputClassName}
+              />
+            </Field>
+            <Field label="Coordinator Profile">
+              <input
+                aria-label="Coordinator Profile"
+                value={draft.coordinatorProfile}
+                onChange={(event) =>
+                  onDraftChange({ coordinatorProfile: event.target.value })
+                }
+                className={compactInputClassName}
+              />
+            </Field>
+          </FormSection>
+        ) : null}
       </div>
       {approvalPrompt ? (
         <div
@@ -187,7 +265,7 @@ function Field({
   children,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <label className="flex min-w-0 flex-col gap-1 text-xs">
@@ -202,7 +280,7 @@ function FormSection({
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="grid min-w-0 content-start gap-2 rounded-xl border border-cortex-border bg-cortex-bg p-2.5">

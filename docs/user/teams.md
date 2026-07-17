@@ -83,6 +83,8 @@ Ask Team is non-blocking. When you queue a follow-on ask, the row should close t
 
 Use `Groups` when you want to review a collaboration lane without opening every team surface. The selected group includes a **Workflow Log** tab that combines the group brief, lifecycle recommendation, attached team-work rows, retained output cues, latest broadcast result, and bus/recovery signal into one operator-readable stream. It is workflow context, not a final deliverable folder and not raw NATS/bus logs. Group workspace tabs keep the selected group and panel in the URL, so an operator can return directly to `overview`, `workflow`, `outputs`, `message`, `settings`, or `create` during review handoff.
 
+The **Create** tab is sectioned as **Basics**, **Policy**, **People**, and **Advanced** so the operator can define one part of the collaboration lane at a time instead of reading a compressed multi-column form. Start with the name and goal, then add work mode/approval posture, team or member ids, and only then any workspace/coordinator detail that matters.
+
 The **Outputs** tab is curated for user-facing deliverables. It hides planning, proof, source/support files, and team handoff records by default so a planned team does not look like it delivered real work. Use the include-internal checkbox when you intentionally need to inspect planning records such as `TEAM_EVOCATION.md`, proof files, research handoffs, or source material. A group labeled **Planned only** has retained working material but still needs a delivered output before it should be treated as complete. When you hand a file to a team, say whether it is a one-run draft/input, standing context for that team, or a final output target; Soma should keep those roles separate in the work item.
 
 Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
@@ -91,9 +93,11 @@ Use **Clear group** when a group is done, stale, or test-only. Clearing archives
 
 For repeated cleanup, use **Select** in the Groups record rail. Select mode lets an operator choose multiple active groups from the currently filtered list and clear them together. Bulk clear keeps retained output files by default and is meant for old test lanes, completed temporary lanes, or stale active records that no longer need attention. Turn on **Also delete retained output files** only when the selected group folders and curated output artifacts should be removed too. Archived groups are shown for review but are not selectable for bulk active-lane actions.
 
+When a group is meant to react to service, device, API, or sensor traffic, register that traffic as an input source first. Soma or the group should describe whether it needs an append log, latest-state view, or windowed summary. Teams should work from those buffered source references instead of raw real-time traffic, so fast streams remain useful without overwhelming agentry or hiding proof.
+
 Use `Automations` when you want event rules to actuate work, route proposals, require approval before execution, or author propose-only Schedule Rules for reviewable cadence.
 
-Use `Settings -> Capabilities` or `Resources -> Capabilities` when you need to confirm which tool refs, direct web search posture, or MCP servers are available before assigning them to a reusable agent template. Capability cards should show available/repair/request posture first, with MCP structure behind Inspect.
+Use `Resources -> Capabilities` when you need to confirm which tool refs, direct web search posture, or MCP servers are available before assigning them to a reusable agent template. Settings may deep-link into this setup path, but the operator-facing capability view lives in Resources. Capability cards should show available, needs-attention, and request posture first, with MCP structure behind Inspect.
 
 If Soma recommends tools that are not installed yet, it should walk you through the enablement path before launch: name the missing MCP server, name required `.env` variables without exposing secret values, point to Capabilities and the MCP library, and then bind the resulting tool refs to the team or reusable member template after you confirm.
 

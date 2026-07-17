@@ -200,7 +200,7 @@ async function installFocusedTeamOutputMocks(page: Page) {
 
 async function expectFocusedDashboardLane(page: Page) {
   await expect(page.getByTestId("soma-operating-surface")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText(`Mode: ${focusedTeamName}`)).toBeVisible();
+  await expect(page.getByText(focusedTeamName).first()).toBeVisible();
 
   await expect(page.getByTestId("soma-context-focus-bar")).toHaveCount(0);
   await expect(page.getByTestId("focused-team-output-dock")).toHaveCount(0);

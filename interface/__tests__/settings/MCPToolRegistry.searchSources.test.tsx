@@ -94,6 +94,7 @@ describe('MCPToolRegistry search sources', () => {
             });
 
         render(<MCPToolRegistry />);
+        openAccessFocus();
 
         await waitFor(() => expect(screen.getByText('Approved docs')).toBeDefined());
         expect(screen.getByText(/Approved places Soma may search: public web, approved local or mounted data, and private APIs/i)).toBeDefined();
@@ -185,6 +186,7 @@ describe('MCPToolRegistry search sources', () => {
             .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: [] }) });
 
         render(<MCPToolRegistry />);
+        openAccessFocus();
 
         await waitFor(() => expect(screen.getByText('Team research API')).toBeDefined());
         fireEvent.click(screen.getByRole('button', { name: /Edit/i }));
@@ -225,6 +227,7 @@ describe('MCPToolRegistry search sources', () => {
             });
 
         render(<MCPToolRegistry />);
+        openAccessFocus();
 
         await waitFor(() => expect(screen.getByText(/No configured sources reported/i)).toBeDefined());
         fireEvent.click(screen.getByRole('button', { name: /Add search source/i }));
@@ -254,3 +257,7 @@ describe('MCPToolRegistry search sources', () => {
         });
     });
 });
+
+function openAccessFocus() {
+    fireEvent.click(screen.getAllByRole('button', { name: /Access/i })[0]);
+}

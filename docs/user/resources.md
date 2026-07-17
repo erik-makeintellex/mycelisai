@@ -14,7 +14,7 @@ Current resource menu:
 | Resource Type | Purpose |
 |-----|---------|
 | Output Files | Open generated content folders and browse filesystem MCP-backed files inside workspace boundary |
-| Capabilities | What Soma can use now, what needs repair, and what can be requested |
+| Capabilities | What Soma can use now, what needs attention, and what can be requested |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
 | Deployment Context | Save files or notes Soma should reuse as long-lived, scoped source context |
 | AI Engines | Global AI engine configuration and health |
@@ -26,9 +26,11 @@ The Resources page keeps these resource types in a persistent menu and renders t
 
 ## Connected Tools
 
-Connected tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, where that permission applies, what needs repair, and what can be requested. Raw MCP/server structure stays behind Inspect.
+Connected tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, where that permission applies, what needs attention, and what can be requested. The default readiness view should be a compact status strip and row summary, not three large inventory tiles. Raw MCP/server structure stays behind Inspect.
 
 For web access specifically, use `Resources -> Capabilities -> Soma research access`. That lane should show whether Soma currently has approved local data, mounted-source search, public-web search, and direct Soma Search available. When public web is already available, the lane should say Soma can search now and offer **Add URL reader MCP** only for explicit supplied-URL retrieval through tools such as `fetch`. When public web is missing, it should offer **Add web search provider** or **Set up web search** and guide the operator toward a safe search provider such as built-in web, SearXNG/local API, or Brave. Built-in Mycelis Soma Search does not depend on `fetch`; add or repair `fetch` when users need Soma or a team to retrieve a specific supplied URL. The default UI should say **Soma Search** or **Research**; raw tool IDs such as `web_search` belong in Inspect/API details only.
+
+The web/search setup action should keep the user on the Capabilities surface and open the **Access** lane with the matching search-source form ready. Users should not have to discover that form manually after asking to add public web, mounted data, or private API search.
 
 Search scope must stay honest without making ordinary asks feel like configuration work. Natural phrasing such as "can you search on this topic" or "search for this topic" runs the configured web search path; in the default release posture that means built-in token-free web search through `builtin_web`. Explicit local wording such as "search local sources", "search internal docs", "search mounted data", or "search retained context" uses governed `local_sources` instead. Only setup/status questions such as "can you search the web?" should return capability guidance. If the active provider is only `local_sources` and the user asks for web research, Soma should explain that public-web research is not configured and offer either web-source setup or a local/shared-source search instead. When a user asks for both internal/local context and public research, Soma requests `all`; if both boundaries are available, it searches approved local/mounted sources and public web together, and if only one side is available, the answer should say which source boundary was searched and which boundary is still missing.
 
@@ -61,8 +63,8 @@ The Dashboard readiness strip summarizes search/tool posture for Soma, but
 Resources is the primary place to inspect what Soma can use, repair missing capability, request MCP servers, check web search readiness, and review recent tool activity.
 
 New-user readiness checks:
-- Capabilities should tell you what Soma can use now, what needs repair, and what can be requested.
-- The default Overview tab should tell you what Soma can use now, what needs repair, and what can be requested.
+- Capabilities should tell you what Soma can use now, what needs attention, and what can be requested.
+- The default Overview tab should tell you what Soma can use now, what needs attention, and what can be requested without making large overview tiles dominate the first viewport.
 - Servers should tell you whether any MCP servers are connected or whether the first step is **Add connector**. Its count is server inventory, not the number of capabilities Soma can use.
 - **Add connector** should open the curated library, not a raw JSON/config paste box.
 - Curated entries must name required environment variables without exposing secret values.
@@ -76,7 +78,7 @@ Current baseline posture:
 - `artifact-renderer` remains planned
 
 Key outcome:
-Operators should be able to determine "what Soma can currently use" directly from this tab. The default view should put web-access status and the capability overview ahead of examples or workflow education. The capability list should stay compact: capability name, purpose, availability, risk, and approval posture first; output destinations, bindings, fallback behavior, and audit details belong behind **Details and binding** unless the capability needs repair. Command examples and workflow education may remain available as expandable guidance, but they should not crowd the main status readout.
+Operators should be able to determine "what Soma can currently use" directly from this tab. The default view should put web-access status and the compact capability overview ahead of examples or workflow education. The readiness summary should use small **Ready**, **Needs attention**, and **Available to add** controls plus short rows with one clear next action. The capability list should stay compact: capability name, purpose, availability, risk, and approval posture first; output destinations, bindings, fallback behavior, and audit details belong behind **Details and binding** unless the capability needs attention. Command examples and workflow education may remain available as expandable guidance, but they should not crowd the main status readout.
 
 Capability manifest expectation:
 - every built-in MCP, external tool, local script, custom connector, or plugin must register as a governed capability before Soma or a team can use it
@@ -91,7 +93,7 @@ Capability permission groups support three configuration forms:
 
 Under the hood these still save as MCP tool-set scopes (`all`, `group`, and `host`). When the same tool-set name exists at multiple layers, scoped runtime resolution should prefer the group or host layer first, then fall back to the shared `all` layer. This lets operators keep a default capability posture while adding narrower MCP access for a project lane or a particular host.
 
-The Capabilities page opens as a focused readiness surface, not as one long MCP configuration document. Use the focus buttons to choose the current job: **Readiness** for web/search setup, **Catalog** for what Soma can use now or what needs repair, **Access** for search sources and permission scopes, and **Inspect** for raw refs, provider bindings, workflow examples, and deeper technical evidence. Raw capability refs, output/write channels, provider bindings, and longer examples stay behind **Inspect capability details** or the **Inspect** focus.
+The Capabilities page opens as a focused readiness surface, not as one long MCP configuration document. Use the focus buttons to choose the current job: **Readiness** for web/search setup, **Catalog** for what Soma can use now or what needs attention, **Access** for search sources and permission scopes, and **Inspect** for raw refs, provider bindings, workflow examples, and deeper technical evidence. Raw capability refs, output/write channels, provider bindings, and longer examples stay behind **Inspect capability details** or the **Inspect** focus.
 
 Capability permissions use **Everyone** for workspace defaults, **Group** for a collaboration lane, and **Host** for a target runtime host. Group and Host permissions require a target before they can be saved. Saved permission groups appear in the current-permissions list with a plain-language summary plus capability references for review.
 
@@ -130,6 +132,8 @@ Useful Soma prompts from this surface:
 - `List the local data mounts Soma can read, then use the approved customer-docs mount for this research.`
 - `Search the approved customer portal and company docs for the current onboarding policy, then tell me which source each claim came from.`
 - `Add an authenticated search source for this internal docs URL using the configured token reference, limited to this group, and ask me to approve before Soma uses it.`
+- `Register this local device feed as a latest-state input for the facilities group, then have Soma summarize changes every hour.`
+- `Register this webhook as an append-log input for the support Outcome and route only review-worthy events to the team.`
 - `Review current MCP servers, tools, and recent use, then tell me which agents should have which tools.`
 - `Review the private-service or private-data boundary for this action, name the needed MCP server and .env variables, and ask me to confirm before enabling or assigning tools.`
 
@@ -153,6 +157,8 @@ Typical labels:
 
 Key outcome:
 Operators should be able to answer "what entered the system, how trusted is it, and does it need review?" without reading raw logs.
+
+Event-producing services and devices should appear as registered input sources, not as raw bus subjects. The setup path should name the source, choose its scope, choose a buffer mode, and bind it to an Outcome/group only when a team is expected to react. Fast sources should usually use latest-state or windowed summaries; audit-worthy callbacks should use append logs. Soma should tell the operator which buffer it used before asking a team to act.
 
 ---
 

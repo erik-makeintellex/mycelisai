@@ -17,6 +17,12 @@ COLD  → Semantic vector store (long-term, searchable by meaning)
 
 All three tiers are populated automatically as agents work. They are separate from the memory-layer model below, and the HOT/WARM/COLD temperature view is operational storage posture rather than the governing authority model.
 
+The Memory page presents this as focused tabs so records do not compete for horizontal space:
+
+- **Recent Work** opens the warm memory lanes. Use **Warm** for a combined recent view, **SitReps** for structured summaries, and **Artifacts** for retained records.
+- **Search Memory** opens cold semantic recall. Use it when you want to search prior meaning rather than browse recent work.
+- **Details** opens the selected search result or artifact for inspection, download, and provenance review.
+
 You can also intentionally load governed private records, customer/deployment knowledge, approved company guidance, admin-shaped Soma operating context, and reflection/synthesis observations through **Resources → Deployment Context** so Soma has durable goal-relevant context to reuse later without mixing it into ordinary remembered facts.
 
 ---
@@ -58,7 +64,7 @@ Rule of thumb:
 
 ## Semantic Search
 
-The primary interface on the Memory page is the **semantic search bar**.
+The primary recall interface on the Memory page is the **Search Memory** tab.
 
 Type a natural-language query — not exact keywords, but the *meaning* of what you're looking for:
 
@@ -77,6 +83,8 @@ Each result card shows:
 - **Timestamp** — when it was stored
 
 Semantic search can also be scoped for teams and planning lanes through the API when a narrower recall boundary is required.
+
+If the embedding-capable AI engine is unavailable, Memory should degrade cleanly instead of showing a raw backend failure. The API returns an empty result set with a `degraded.code` such as `embedding_unavailable`, and the UI should explain that vector recall needs an embedding-capable engine before the result can be trusted.
 
 Governed deployment knowledge is stored under dedicated vector types:
 

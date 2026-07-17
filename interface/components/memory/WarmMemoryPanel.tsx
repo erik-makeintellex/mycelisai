@@ -12,8 +12,6 @@ import {
 import { useCortexStore, type Artifact } from "@/store/useCortexStore";
 import WarmArtifactRow from "./WarmArtifactRow";
 
-// ── Types ────────────────────────────────────────────────────
-
 interface SitRep {
   id: string;
   mission_id: string;
@@ -22,9 +20,15 @@ interface SitRep {
   created_at: string;
 }
 
-type TabId = "sitreps" | "artifacts";
+type TabId = "warm" | "sitreps" | "artifacts";
 
-// ── Timestamp Formatting ─────────────────────────────────────
+const WARM_TABS: Array<
+  [TabId, string, string, React.ComponentType<{ className?: string }>]
+> = [
+  ["warm", "Warm", "Recent work", Database],
+  ["sitreps", "SitReps", "Summaries", FileText],
+  ["artifacts", "Artifacts", "Outputs", Package],
+];
 
 function formatTimestamp(ts: string): string {
   try {
@@ -40,8 +44,6 @@ function formatTimestamp(ts: string): string {
     return ts;
   }
 }
-
-// ── SitRep Card ──────────────────────────────────────────────
 
 function SitRepCard({
   sitrep,
@@ -101,8 +103,6 @@ function SitRepCard({
   );
 }
 
-// ── WarmMemoryPanel ──────────────────────────────────────────
-
 interface WarmMemoryPanelProps {
   onSearchRelated?: (query: string) => void;
   onSelectArtifact?: (artifact: Artifact) => void;
@@ -112,7 +112,7 @@ export default function WarmMemoryPanel({
   onSearchRelated,
   onSelectArtifact,
 }: WarmMemoryPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabId>("sitreps");
+  const [activeTab, setActiveTab] = useState<TabId>("warm");
   const [sitreps, setSitreps] = useState<SitRep[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -120,7 +120,6 @@ export default function WarmMemoryPanel({
   const isFetchingArtifacts = useCortexStore((s) => s.isFetchingArtifacts);
   const fetchArtifacts = useCortexStore((s) => s.fetchArtifacts);
 
-  // Fetch sitreps when tab activates
   const loadSitreps = useCallback(async () => {
     setLoading(true);
     try {
@@ -138,54 +137,55 @@ export default function WarmMemoryPanel({
   }, []);
 
   useEffect(() => {
-    if (activeTab === "sitreps") {
+    if (activeTab === "warm") {
+      loadSitreps();
+      fetchArtifacts({ limit: 50 });
+    } else if (activeTab === "sitreps") {
       loadSitreps();
     } else if (activeTab === "artifacts") {
       fetchArtifacts({ limit: 50 });
     }
   }, [activeTab, loadSitreps, fetchArtifacts]);
 
-  const isLoading = activeTab === "sitreps" ? loading : isFetchingArtifacts;
+  const isLoading = activeTab === "warm"
+    ? loading || isFetchingArtifacts
+    : activeTab === "sitreps" ? loading : isFetchingArtifacts;
 
   return (
     <div className="h-full flex flex-col">
-      {/* Sub-header */}
-      <div className="h-10 flex items-center px-3 border-b border-cortex-border bg-cortex-surface/50 flex-shrink-0">
-        <div className="flex items-center gap-2 mr-4">
-          <Database className="w-3.5 h-3.5 text-cortex-warning" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-cortex-text-muted">
-            Warm
-          </span>
-        </div>
-
-        {/* Tab buttons */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setActiveTab("sitreps")}
-            className={`text-[9px] font-mono uppercase px-2 py-1 rounded transition-colors flex items-center gap-1 ${
-              activeTab === "sitreps"
-                ? "bg-cortex-warning/20 text-cortex-warning"
-                : "text-cortex-text-muted hover:text-cortex-text-main"
-            }`}
-          >
-            <FileText className="w-3 h-3" />
-            SitReps
-          </button>
-          <button
-            onClick={() => setActiveTab("artifacts")}
-            className={`text-[9px] font-mono uppercase px-2 py-1 rounded transition-colors flex items-center gap-1 ${
-              activeTab === "artifacts"
-                ? "bg-cortex-warning/20 text-cortex-warning"
-                : "text-cortex-text-muted hover:text-cortex-text-main"
-            }`}
-          >
-            <Package className="w-3 h-3" />
-            Artifacts
-          </button>
+      <div className="border-b border-cortex-border bg-cortex-surface/50 px-3 py-2 flex-shrink-0">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Warm memory lanes">
+          {WARM_TABS.map(([id, label, description, Icon]) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-label={label}
+                aria-selected={isActive}
+                onClick={() => setActiveTab(id)}
+                className={`flex min-w-[120px] items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+                  isActive
+                    ? "border-cortex-warning/40 bg-cortex-warning/15 text-cortex-text-main"
+                    : "border-cortex-border bg-cortex-bg/50 text-cortex-text-muted hover:border-cortex-warning/30 hover:text-cortex-text-main"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 text-cortex-warning" />
+                <span>
+                  <span className="block text-xs font-bold uppercase tracking-widest">
+                    {label}
+                  </span>
+                  <span className="block text-[9px] text-cortex-text-muted">
+                    {description}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Tab content */}
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-cortex-border min-h-0">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
@@ -193,32 +193,20 @@ export default function WarmMemoryPanel({
               Loading...
             </span>
           </div>
+        ) : activeTab === "warm" ? (
+          <WarmOverview
+            sitreps={sitreps}
+            artifacts={artifacts}
+            onSearchRelated={onSearchRelated}
+            onSelectArtifact={onSelectArtifact}
+          />
         ) : activeTab === "sitreps" ? (
-          sitreps.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-2">
-              <FileText className="w-8 h-8 text-cortex-text-muted opacity-20" />
-              <span className="text-[10px] font-mono text-cortex-text-muted">
-                No sitreps recorded yet.
-              </span>
-            </div>
-          ) : (
-            <div className="p-3 space-y-2">
-              {sitreps.map((sitrep) => (
-                <SitRepCard
-                  key={sitrep.id}
-                  sitrep={sitrep}
-                  onSearchRelated={onSearchRelated}
-                />
-              ))}
-            </div>
-          )
+          <SitRepList sitreps={sitreps} onSearchRelated={onSearchRelated} />
         ) : artifacts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2">
-            <Package className="w-8 h-8 text-cortex-text-muted opacity-20" />
-            <span className="text-[10px] font-mono text-cortex-text-muted">
-              No artifacts stored.
-            </span>
-          </div>
+          <EmptyWarmState
+            icon={<Package className="w-8 h-8 text-cortex-text-muted opacity-20" />}
+            label="No artifacts stored."
+          />
         ) : (
           <div>
             {artifacts.map((artifact) => (
@@ -231,6 +219,106 @@ export default function WarmMemoryPanel({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function WarmOverview({
+  sitreps,
+  artifacts,
+  onSearchRelated,
+  onSelectArtifact,
+}: {
+  sitreps: SitRep[];
+  artifacts: Artifact[];
+  onSearchRelated?: (query: string) => void;
+  onSelectArtifact?: (artifact: Artifact) => void;
+}) {
+  if (sitreps.length === 0 && artifacts.length === 0) {
+    return (
+      <EmptyWarmState
+        icon={<Database className="w-8 h-8 text-cortex-text-muted opacity-20" />}
+        label="No recent warm records yet."
+      />
+    );
+  }
+  return (
+    <div className="p-3 space-y-4">
+      {sitreps.length > 0 ? (
+        <section className="space-y-2">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-cortex-text-muted">
+            Latest SitReps
+          </h2>
+          {sitreps.slice(0, 5).map((sitrep) => (
+            <SitRepCard
+              key={sitrep.id}
+              sitrep={sitrep}
+              onSearchRelated={onSearchRelated}
+            />
+          ))}
+        </section>
+      ) : null}
+      {artifacts.length > 0 ? (
+        <section>
+          <h2 className="px-1 pb-2 text-[10px] font-bold uppercase tracking-widest text-cortex-text-muted">
+            Recent Artifacts
+          </h2>
+          <div className="overflow-hidden rounded-xl border border-cortex-border">
+            {artifacts.slice(0, 8).map((artifact) => (
+              <WarmArtifactRow
+                key={artifact.id}
+                artifact={artifact}
+                onSelect={(next) => onSelectArtifact?.(next)}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function SitRepList({
+  sitreps,
+  onSearchRelated,
+}: {
+  sitreps: SitRep[];
+  onSearchRelated?: (query: string) => void;
+}) {
+  if (sitreps.length === 0) {
+    return (
+      <EmptyWarmState
+        icon={<FileText className="w-8 h-8 text-cortex-text-muted opacity-20" />}
+        label="No sitreps recorded yet."
+      />
+    );
+  }
+  return (
+    <div className="p-3 space-y-2">
+      {sitreps.map((sitrep) => (
+        <SitRepCard
+          key={sitrep.id}
+          sitrep={sitrep}
+          onSearchRelated={onSearchRelated}
+        />
+      ))}
+    </div>
+  );
+}
+
+function EmptyWarmState({
+  icon,
+  label,
+}: {
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-2">
+      {icon}
+      <span className="text-[10px] font-mono text-cortex-text-muted">
+        {label}
+      </span>
     </div>
   );
 }

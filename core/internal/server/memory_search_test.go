@@ -3,6 +3,9 @@ package server
 import (
 	"net/http"
 	"testing"
+
+	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/memory"
 )
 
 // ── GET /api/v1/memory/search ──────────────────────────────────────
@@ -18,6 +21,27 @@ func TestHandleMemorySearch_NilCognitive(t *testing.T) {
 	s := newTestServer()
 	rr := doRequest(t, http.HandlerFunc(s.HandleMemorySearch), "GET", "/api/v1/memory/search?q=hello", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
+}
+
+func TestHandleMemorySearch_EmbeddingUnavailableDegradesCleanly(t *testing.T) {
+	s := newTestServer()
+	s.Cognitive = &cognitive.Router{
+		Config:   &cognitive.BrainConfig{Profiles: map[string]string{}},
+		Adapters: map[string]cognitive.LLMProvider{},
+	}
+	s.Mem = &memory.Service{}
+
+	rr := doRequest(t, http.HandlerFunc(s.HandleMemorySearch), "GET", "/api/v1/memory/search?q=hello", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var result map[string]any
+	assertJSON(t, rr, &result)
+	if result["degraded"] == nil {
+		t.Fatalf("expected degraded payload when embeddings are unavailable")
+	}
+	if count := result["count"].(float64); count != 0 {
+		t.Fatalf("expected zero results, got %v", count)
+	}
 }
 
 func TestHandleMemorySearch_MethodNotAllowed(t *testing.T) {

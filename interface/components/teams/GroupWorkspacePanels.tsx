@@ -235,7 +235,7 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
                 role="tabpanel"
                 id="groups-create-panel"
                 aria-labelledby="groups-create-tab"
-                className="rounded-2xl border border-cortex-border bg-cortex-surface p-3"
+                className="min-w-0"
               >
                 <CreateGroupPane
                   draft={draft}

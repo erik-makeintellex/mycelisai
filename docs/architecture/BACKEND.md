@@ -157,6 +157,17 @@ Council calls use bounded request-reply subjects for specialist/member interacti
 
 Sensor/IoT input must identify device/feed origin and stay separate until normalized.
 
+Registered external input sources are the durable ingress boundary for MCP
+callbacks, webhooks, local APIs, service buses, UDP/sensor feeds, hardware
+devices, schedulers, file-watchers, and host probes. Producers may publish only
+to registered ingress subjects. Core validates source status, scope, auth
+posture, and schema; persists either an append buffer, latest-state buffer, or
+append-with-latest buffer; then dispatches bounded references to team
+command/status/result lanes only when a binding exists. Agents and teams do not
+subscribe to raw high-volume subjects. For real-time feeds, the buffer owns
+backpressure, sampling, rollups, and dropped-count proof while teams receive
+summaries, latest state, anomaly refs, or approved window reads.
+
 ### Mission DAG
 
 Mission events are run-linked and persistent when tied to mutating or auditable work.

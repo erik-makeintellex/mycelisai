@@ -36,7 +36,7 @@ Display-name customization lives in `Settings -> Profile -> Assistant Name`.
 - `Ask the active delivery teams for current blockers and tell me which workflow needs attention first.`
 - `Use the host data under workspace/shared-sources and tell me which files shaped the answer.`
 - `Use the Mycelis docs to explain how Deployment Context differs from Memory, and cite the docs you used.`
-- `Tell me what Soma can currently use, what needs repair, and what I should connect next.`
+- `Tell me what Soma can currently use, what needs attention, and what I should connect next.`
 
 ## Understanding And Approval
 
@@ -143,7 +143,7 @@ Search behavior:
 - `local_api` uses `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`
 - `brave-search` requires `BRAVE_API_KEY`
 - `fetch` is useful for retrieving a specific URL the user supplies, but it is not required for built-in Mycelis `web_search`
-- if a needed search provider, MCP server, or credential is missing, Soma should name the missing provider/server/env var and point you to `Resources -> Capabilities -> Web access setup` for web/search issues or the relevant capability lane for other tools
+- if a needed search provider, MCP server, or credential is missing, Soma should name the missing provider/server/env var and point you to `Resources -> Capabilities -> Access` for web/search sources or the relevant capability lane for other tools
 
 Read-only tool posture prompts such as `show me currently configured tools` should answer with current tool state and setup guidance, not create a runnable proposal. Prompts that enable, install, connect, assign, or bind tools remain governed mutation requests.
 

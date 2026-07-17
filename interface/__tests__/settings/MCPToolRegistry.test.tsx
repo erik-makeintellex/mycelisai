@@ -101,10 +101,14 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText('Soma research access')).toBeDefined();
         expect(screen.getByText('Public web access is available')).toBeDefined();
         expect(screen.getByText('Capability overview')).toBeDefined();
-        expect(screen.getByText('Can use now')).toBeDefined();
-        expect(screen.getByText('Needs repair')).toBeDefined();
-        expect(screen.getByText('Can request/add')).toBeDefined();
+        expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Needs attention').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Available to add').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('View catalog').length).toBeGreaterThan(0);
+        expect(screen.getByText('Open access')).toBeDefined();
         expect(screen.getByText('Web Research')).toBeDefined();
+        expect(screen.queryByText(/risk medium/i)).toBeNull();
+        expect(screen.queryByText(/Inspect capability details/i)).toBeNull();
         expect(initializeStream).toHaveBeenCalledTimes(1);
         expect(fetchMCPActivity).toHaveBeenCalledTimes(1);
         expect(fetchMCPToolSets).toHaveBeenCalledTimes(1);
@@ -112,9 +116,6 @@ describe('MCPToolRegistry', () => {
         expect(fetchCapabilities).toHaveBeenCalledTimes(1);
         fireEvent.click(screen.getByRole('button', { name: /^Catalog/i }));
         expect(screen.getByText('Capability overview')).toBeDefined();
-        expect(screen.getByText('Can use now')).toBeDefined();
-        expect(screen.getByText('Needs repair')).toBeDefined();
-        expect(screen.getByText('Can request/add')).toBeDefined();
         expect(screen.getByText('Web Research')).toBeDefined();
         expect(screen.getByText(/risk medium/i)).toBeDefined();
         expect(screen.getByText(/approval optional/i)).toBeDefined();

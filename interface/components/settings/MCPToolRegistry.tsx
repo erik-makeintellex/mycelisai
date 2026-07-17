@@ -92,15 +92,15 @@ export default function MCPToolRegistry() {
 
     return (
         <div className="h-full flex flex-col bg-cortex-bg">
-            <div className="h-12 border-b border-cortex-border bg-cortex-surface/50 backdrop-blur-sm flex items-center justify-between px-6 flex-shrink-0">
-                <div className="flex items-center gap-4">
+            <div className="min-h-12 border-b border-cortex-border bg-cortex-surface/50 backdrop-blur-sm flex items-center justify-between gap-3 px-4 py-2 sm:px-6 flex-shrink-0">
+                <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2.5">
                         <Wrench className="w-4 h-4 text-cortex-success" />
                         <span className="text-xs font-mono font-bold text-cortex-text-muted uppercase tracking-wider">
                             Capabilities
                         </span>
                     </div>
-                    <div className="flex items-center gap-1 bg-cortex-bg rounded-lg p-0.5 border border-cortex-border">
+                    <div className="flex flex-wrap items-center gap-1 bg-cortex-bg rounded-lg p-0.5 border border-cortex-border">
                         <button
                             onClick={() => setActiveTab("overview")}
                             className={`px-3 py-1 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider transition-colors ${

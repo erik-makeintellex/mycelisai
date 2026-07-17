@@ -50,4 +50,26 @@ describe("GroupManagementPanel workspace tabs", () => {
       screen.getByRole("tab", { name: /Overview/i }).getAttribute("aria-selected"),
     ).toBe("true");
   });
+
+  it("keeps create fields in focused sections instead of one compressed form", async () => {
+    installGroupsFetch({ groups: [tempGroup()] });
+    render(<GroupManagementPanel initialSelectedGroupId="group-temp" />);
+
+    await waitFor(() => expect(screen.getByRole("tab", { name: /Create/i })).toBeDefined());
+    await act(async () => {
+      fireEvent.click(screen.getByRole("tab", { name: /Create/i }));
+    });
+    expect(screen.getByRole("tablist", { name: "Create group sections" })).toBeDefined();
+
+    for (const [tab, field] of [
+      ["Policy", "Work Mode"],
+      ["People", "Team IDs"],
+      ["Advanced", "Workspace Folder"],
+    ]) {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("tab", { name: tab }));
+      });
+      expect(screen.getByLabelText(field)).toBeDefined();
+    }
+  });
 });
