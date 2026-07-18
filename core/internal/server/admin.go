@@ -16,6 +16,7 @@ import (
 	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/inception"
+	"github.com/mycelis/core/internal/inputs"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/overseer"
@@ -74,6 +75,7 @@ type AdminServer struct {
 	LoopScheduler       *LoopScheduler
 	TemplateBundlesPath string
 	Search              *searchcap.Service
+	Inputs              *inputs.Service
 	Capabilities        *capabilities.Service
 	MCPToolExecutor     swarm.MCPToolExecutor
 	WorkerBackend       workers.WorkerBackend

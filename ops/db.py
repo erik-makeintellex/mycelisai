@@ -64,6 +64,7 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("team_registry_entries table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_registry_entries';"),
     ("trigger_rules schedule columns", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'trigger_rules' AND column_name = 'trigger_kind';"),
     ("search_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'search_sources';"),
+    ("input_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'input_sources';"),
 )
 
 def _load_env():

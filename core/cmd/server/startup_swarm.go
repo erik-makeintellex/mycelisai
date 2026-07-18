@@ -166,6 +166,7 @@ func loadMCPLibrary(ctx context.Context, mcpService *mcp.Service, mcpPool *mcp.C
 func wireAdminServices(ctx context.Context, mux *http.ServeMux, core *coreRuntime, adminSrv *server.AdminServer, services productServices) {
 	adminSrv.Comms = services.Comms
 	adminSrv.Search = services.Search
+	adminSrv.Inputs = services.Inputs
 	adminSrv.Conversations = services.ConversationLog
 	adminSrv.Inception = services.Inception
 	adminSrv.MCPToolSets = services.MCPToolSets

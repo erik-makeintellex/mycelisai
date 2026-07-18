@@ -167,6 +167,12 @@ command/status/result lanes only when a binding exists. Agents and teams do not
 subscribe to raw high-volume subjects. For real-time feeds, the buffer owns
 backpressure, sampling, rollups, and dropped-count proof while teams receive
 summaries, latest state, anomaly refs, or approved window reads.
+The current backend contract persists these registrations in
+`input_sources`, stores evidence in `input_source_events`,
+`input_source_latest`, and `input_source_windows`, and exposes the guarded
+management/read API through `/api/v1/input-sources` and
+`/api/v1/input-sources/{id}/buffer`. Live ingress subscribers must build on
+that registry rather than adding raw NATS listeners to teams.
 
 ### Mission DAG
 

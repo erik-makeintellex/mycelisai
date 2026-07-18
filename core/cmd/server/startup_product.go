@@ -17,6 +17,7 @@ import (
 	"github.com/mycelis/core/internal/events"
 	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/inception"
+	"github.com/mycelis/core/internal/inputs"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/provisioning"
@@ -45,6 +46,7 @@ type productServices struct {
 	Inception       *inception.Store
 	Comms           *comms.Gateway
 	Search          *searchcap.Service
+	Inputs          *inputs.Service
 	InternalTools   *swarm.InternalToolRegistry
 	EventStore      *events.Store
 	RunsManager     *runs.Manager
@@ -137,6 +139,7 @@ func startProductServices(ctx context.Context, core *coreRuntime) productService
 		Stream:       mycelisSignal.NewStreamHandler(),
 		Comms:        comms.NewGatewayFromEnv(),
 		Search:       searchcap.NewService(searchcap.ConfigFromEnv(), cogRouter, memService),
+		Inputs:       inputs.NewService(),
 	}
 	if memService != nil && cogRouter != nil {
 		services.Archivist = memory.NewArchivist(memService, cogRouter)
@@ -146,6 +149,11 @@ func startProductServices(ctx context.Context, core *coreRuntime) productService
 		if services.Search != nil {
 			if err := services.Search.UseSourceStore(ctx, searchcap.NewSourceStore(sharedDB)); err != nil {
 				log.Printf("WARN: Mycelis Search source registry disabled: %v", err)
+			}
+		}
+		if services.Inputs != nil {
+			if err := services.Inputs.UseStore(ctx, inputs.NewStore(sharedDB)); err != nil {
+				log.Printf("WARN: Registered input source registry disabled: %v", err)
 			}
 		}
 		services.Registry = registry.NewService(sharedDB)
