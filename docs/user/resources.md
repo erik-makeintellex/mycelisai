@@ -93,7 +93,15 @@ Capability permission groups support three configuration forms:
 
 Under the hood these still save as MCP tool-set scopes (`all`, `group`, and `host`). When the same tool-set name exists at multiple layers, scoped runtime resolution should prefer the group or host layer first, then fall back to the shared `all` layer. This lets operators keep a default capability posture while adding narrower MCP access for a project lane or a particular host.
 
-The Capabilities page opens as a focused readiness surface, not as one long MCP configuration document. Use the focus buttons to choose the current job: **Readiness** for web/search setup, **Catalog** for what Soma can use now or what needs attention, **Access** for search sources and permission scopes, and **Inspect** for raw refs, provider bindings, workflow examples, and deeper technical evidence. Raw capability refs, output/write channels, provider bindings, and longer examples stay behind **Inspect capability details** or the **Inspect** focus.
+The Capabilities page opens as a focused readiness surface, not as one long MCP configuration document. Use the focus buttons to choose the current job: **Readiness** for web/search setup, **Catalog** for what Soma can use now or what needs attention, **Access** for sources/scopes/data, and **Inspect** for raw refs, provider bindings, workflow examples, and deeper technical evidence. Raw capability refs, output/write channels, provider bindings, and longer examples stay behind **Inspect capability details** or the **Inspect** focus.
+
+Inside **Access**, choose the job you are doing instead of scrolling one mixed setup page:
+
+- **Search sources**: governed places Soma can search, such as public web, local sources, mounted folders, private APIs, or client-owned knowledge systems.
+- **Live inputs**: buffered service, device, webhook, scheduler, database/event, or workflow feeds that Soma and teams may reference while working.
+- **Service connections**: named tool/service access, connector scopes, and MCP/tool-set layering.
+
+Live inputs should show only the source name, status, adapter kind, buffer mode, and scope by default. The operator can preview a small bounded buffer before routing the feed into Soma or a team. Raw ingress subjects, secret refs, and transport details stay behind **Inspect source**.
 
 Capability permissions use **Everyone** for workspace defaults, **Group** for a collaboration lane, and **Host** for a target runtime host. Group and Host permissions require a target before they can be saved. Saved permission groups appear in the current-permissions list with a plain-language summary plus capability references for review.
 
@@ -158,7 +166,7 @@ Typical labels:
 Key outcome:
 Operators should be able to answer "what entered the system, how trusted is it, and does it need review?" without reading raw logs.
 
-Event-producing services and devices should appear as registered input sources, not as raw bus subjects. The setup path should name the source, choose its scope, choose a buffer mode, and bind it to an Outcome/group only when a team is expected to react. Fast sources should usually use latest-state or windowed summaries; audit-worthy callbacks should use append logs. Soma should tell the operator which buffer it used before asking a team to act.
+Event-producing services and devices should appear as registered input sources, not as raw bus subjects. The setup path should name the source, choose its scope, choose a buffer mode, and bind it to an Outcome/group only when a team is expected to react. Fast sources should usually use latest-state or windowed summaries; audit-worthy callbacks should use append logs. Soma should tell the operator which buffer it used before asking a team to act. In the UI, these appear at `Resources -> Capabilities -> Access -> Live inputs`.
 
 ---
 

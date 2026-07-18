@@ -4,6 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Database, Search, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import type { CapabilityManifest, SearchCapabilityStatus } from "@/store/useCortexStore";
 import { CapabilityRegistryPanel } from "./MCPToolCapabilityRegistry";
+import { InputSourceRegistryCard } from "./InputSourceRegistryCard";
+import type { useInputSourceRegistry } from "./InputSourceRegistry";
 import { ConnectedToolsWorkflowCard, SearchCapabilityCard, SomaToolPromptCard, WebAccessSetupCard } from "./MCPToolGuidance";
 import { SearchSourceRegistryCard } from "./SearchSourceRegistryCard";
 import { useSearchSourceRegistry } from "./MCPToolRegistrySearchSources";
@@ -12,8 +14,10 @@ import { MCPServiceConnectionGuide } from "./MCPServiceConnectionGuide";
 import { CapabilityReadinessSummary, isCapabilityReady } from "./MCPToolReadinessSummary";
 
 type OverviewFocus = "readiness" | "catalog" | "access" | "inspect";
+type AccessFocus = "search" | "inputs" | "services";
 
 type SearchSourceRegistryController = ReturnType<typeof useSearchSourceRegistry>;
+type InputSourceRegistryController = ReturnType<typeof useInputSourceRegistry>;
 
 export function MCPToolRegistryOverview({
     capabilities,
@@ -24,6 +28,7 @@ export function MCPToolRegistryOverview({
     isFetchingSearchCapability,
     searchCapabilityError,
     searchSourceRegistry,
+    inputSourceRegistry,
     searchSourceCreateRequest,
     isStreamConnected,
     onAddWebCapability,
@@ -36,11 +41,13 @@ export function MCPToolRegistryOverview({
     isFetchingSearchCapability: boolean;
     searchCapabilityError: string | null;
     searchSourceRegistry: SearchSourceRegistryController;
+    inputSourceRegistry: InputSourceRegistryController;
     searchSourceCreateRequest: { nonce: number; sourceType?: string } | null;
     isStreamConnected: boolean;
     onAddWebCapability: () => void;
 }) {
     const [activeFocus, setActiveFocus] = useState<OverviewFocus>("readiness");
+    const [activeAccessFocus, setActiveAccessFocus] = useState<AccessFocus>("search");
     const availableCount = capabilities.filter(isCapabilityReady).length;
     const repairCount = capabilities.length - availableCount;
 
@@ -123,20 +130,75 @@ export function MCPToolRegistryOverview({
 
             {activeFocus === "access" && (
                 <div className="grid gap-4">
-                    <SearchSourceRegistryCard
-                        sources={searchSourceRegistry.visibleSearchSources}
-                        isLoading={searchSourceRegistry.isFetchingSearchSources}
-                        addSupported={searchSourceRegistry.searchSourceRegistrySupported}
-                        error={searchSourceRegistry.searchSourcesError}
-                        addNotice={searchSourceRegistry.searchSourceNotice}
-                        isAdding={searchSourceRegistry.isAddingSearchSource}
-                        openCreateRequest={searchSourceCreateRequest}
-                        onAddSearchSource={searchSourceRegistry.addSearchSource}
-                        onDeleteSearchSource={searchSourceRegistry.deleteSearchSource}
-                        onUpdateSearchSource={searchSourceRegistry.updateSearchSource}
-                    />
-                    <MCPServiceConnectionGuide />
-                    <MCPToolSetLayersStorePanel />
+                    <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                                    Capability permissions
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-cortex-text-main">
+                                    Choose the access job.
+                                </p>
+                                <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
+                                    Search sources, live event feeds, and service connections stay separate so setup does not become one long form.
+                                </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <AccessButton
+                                    active={activeAccessFocus === "search"}
+                                    label="Search sources"
+                                    detail={`${searchSourceRegistry.visibleSearchSources.length} configured`}
+                                    onClick={() => setActiveAccessFocus("search")}
+                                />
+                                <AccessButton
+                                    active={activeAccessFocus === "inputs"}
+                                    label="Live inputs"
+                                    detail={`${inputSourceRegistry.sources.length} feeds`}
+                                    onClick={() => setActiveAccessFocus("inputs")}
+                                />
+                                <AccessButton
+                                    active={activeAccessFocus === "services"}
+                                    label="Service connections"
+                                    detail="Tools and scopes"
+                                    onClick={() => setActiveAccessFocus("services")}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    {activeAccessFocus === "search" && (
+                        <SearchSourceRegistryCard
+                            sources={searchSourceRegistry.visibleSearchSources}
+                            isLoading={searchSourceRegistry.isFetchingSearchSources}
+                            addSupported={searchSourceRegistry.searchSourceRegistrySupported}
+                            error={searchSourceRegistry.searchSourcesError}
+                            addNotice={searchSourceRegistry.searchSourceNotice}
+                            isAdding={searchSourceRegistry.isAddingSearchSource}
+                            openCreateRequest={searchSourceCreateRequest}
+                            onAddSearchSource={searchSourceRegistry.addSearchSource}
+                            onDeleteSearchSource={searchSourceRegistry.deleteSearchSource}
+                            onUpdateSearchSource={searchSourceRegistry.updateSearchSource}
+                        />
+                    )}
+                    {activeAccessFocus === "inputs" && (
+                        <InputSourceRegistryCard
+                            bufferError={inputSourceRegistry.bufferError}
+                            bufferView={inputSourceRegistry.bufferView}
+                            isFetchingBuffer={inputSourceRegistry.isFetchingBuffer}
+                            isLoading={inputSourceRegistry.isFetchingSources}
+                            registrySupported={inputSourceRegistry.registrySupported}
+                            selectedSourceId={inputSourceRegistry.selectedSourceId}
+                            sources={inputSourceRegistry.sources}
+                            sourcesError={inputSourceRegistry.sourcesError}
+                            onRefresh={inputSourceRegistry.fetchInputSources}
+                            onSelectSource={inputSourceRegistry.fetchSourceBuffer}
+                        />
+                    )}
+                    {activeAccessFocus === "services" && (
+                        <>
+                            <MCPServiceConnectionGuide />
+                            <MCPToolSetLayersStorePanel />
+                        </>
+                    )}
                 </div>
             )}
 
@@ -152,6 +214,33 @@ export function MCPToolRegistryOverview({
                 </div>
             )}
         </div>
+    );
+}
+
+function AccessButton({
+    active,
+    detail,
+    label,
+    onClick,
+}: {
+    active: boolean;
+    detail: string;
+    label: string;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`rounded-lg border px-3 py-2 text-left transition ${
+                active
+                    ? "border-cortex-primary/40 bg-cortex-primary/10 text-cortex-text-main"
+                    : "border-cortex-border bg-cortex-bg text-cortex-text-muted hover:text-cortex-text-main"
+            }`}
+        >
+            <span className="block text-xs font-semibold">{label}</span>
+            <span className="block text-[10px] leading-4">{detail}</span>
+        </button>
     );
 }
 

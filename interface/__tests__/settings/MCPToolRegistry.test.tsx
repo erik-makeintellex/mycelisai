@@ -130,13 +130,17 @@ describe('MCPToolRegistry', () => {
         expect(screen.getAllByText(/Read host data/i).length).toBeGreaterThan(0);
         fireEvent.click(screen.getByRole('button', { name: /Access/i }));
         expect(screen.getByText('Capability permissions')).toBeDefined();
-        expect(screen.getByText('Choose where Soma can use connected tools')).toBeDefined();
-        expect(screen.getByText('Search sources')).toBeDefined();
+        expect(screen.getByText('Choose the access job.')).toBeDefined();
+        expect(screen.getAllByText('Search sources').length).toBeGreaterThan(0);
+        expect(screen.getByRole('button', { name: /Live inputs/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Service connections/i })).toBeDefined();
         expect(screen.getByText('Configured source details')).toBeDefined();
-        expect(screen.getByText('Service data connections')).toBeDefined();
-        expect(screen.getByText(/Give Soma named access to databases and private services/i)).toBeDefined();
         expect(screen.getAllByText('Self-hosted public web').length).toBeGreaterThan(0);
         expect(screen.getAllByText(/self-hosted SearXNG endpoint/i).length).toBeGreaterThan(0);
+        expect(screen.queryByText('Service data connections')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /Service connections/i }));
+        expect(screen.getByText('Service data connections')).toBeDefined();
+        expect(screen.getByText(/Give Soma named access to databases and private services/i)).toBeDefined();
 
         // Overview is active by default; server inventory count is visible on the Servers tab.
         expect(screen.getByText('2')).toBeDefined();

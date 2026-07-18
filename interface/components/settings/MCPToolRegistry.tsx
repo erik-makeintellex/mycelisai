@@ -8,6 +8,7 @@ import { MCPLibraryBrowserBody } from "./MCPLibraryBrowser";
 import { formatActivityScope, useMCPRecentActivity } from "./MCPToolRegistryActivity";
 import { deriveFallbackCapabilities } from "./MCPToolRegistryCapabilities";
 import { MCPToolRegistryOverview } from "./MCPToolRegistryOverview";
+import { useInputSourceRegistry } from "./InputSourceRegistry";
 import { useSearchSourceRegistry } from "./MCPToolRegistrySearchSources";
 import { MCPInstallNotice, MCPRegistryEmptyBanner, MCPRegistryEmptyHero, MCPRegistryErrorBanner } from "./MCPToolRegistryNotices";
 
@@ -42,15 +43,17 @@ export default function MCPToolRegistry() {
     const isRegistryErrorState = !isFetching && Boolean(mcpServersError);
     const isEmptyInstalledState = !isFetching && !mcpServersError && mcpServers.length === 0;
     const searchSourceRegistry = useSearchSourceRegistry(searchCapability?.sources, fetchSearchCapability);
+    const inputSourceRegistry = useInputSourceRegistry();
 
     useEffect(() => {
         fetchMCPServers();
         fetchMCPActivity();
         fetchSearchCapability();
         searchSourceRegistry.fetchOptionalSearchSources();
+        inputSourceRegistry.fetchInputSources();
         fetchCapabilities();
         fetchMCPToolSets();
-    }, [fetchCapabilities, fetchMCPActivity, fetchMCPServers, fetchMCPToolSets, fetchSearchCapability, searchSourceRegistry.fetchOptionalSearchSources]);
+    }, [fetchCapabilities, fetchMCPActivity, fetchMCPServers, fetchMCPToolSets, fetchSearchCapability, inputSourceRegistry.fetchInputSources, searchSourceRegistry.fetchOptionalSearchSources]);
 
     useEffect(() => {
         initializeStream();
@@ -153,6 +156,7 @@ export default function MCPToolRegistry() {
                         isFetchingSearchCapability={isFetchingSearchCapability}
                         searchCapabilityError={searchCapabilityError}
                         searchSourceRegistry={searchSourceRegistry}
+                        inputSourceRegistry={inputSourceRegistry}
                         searchSourceCreateRequest={searchSourceCreateRequest}
                         isStreamConnected={isStreamConnected}
                         onAddWebCapability={handleAddWebCapability}
