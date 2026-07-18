@@ -171,8 +171,11 @@ The current backend contract persists these registrations in
 `input_sources`, stores evidence in `input_source_events`,
 `input_source_latest`, and `input_source_windows`, and exposes the guarded
 management/read API through `/api/v1/input-sources` and
-`/api/v1/input-sources/{id}/buffer`. Live ingress subscribers must build on
-that registry rather than adding raw NATS listeners to teams.
+`/api/v1/input-sources/{id}/buffer`. The live registered-input projection
+subscribes to the global input ingress lane, ignores unregistered subjects,
+normalizes envelope/header/raw payload metadata, and persists matched messages
+into the selected append/latest/window buffer. New service/device integrations
+must build on this registry rather than adding raw NATS listeners to teams.
 
 ### Mission DAG
 

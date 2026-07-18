@@ -77,6 +77,21 @@ type BufferEvent struct {
 	TenantID        string          `json:"tenant_id"`
 }
 
+type IngestEvent struct {
+	SourceID        string
+	ChannelKey      string
+	Payload         json.RawMessage
+	PayloadHash     string
+	SourceTimestamp *time.Time
+	RunID           string
+	TeamID          string
+	AgentID         string
+	SourceKind      string
+	SourceChannel   string
+	PayloadKind     string
+	TenantID        string
+}
+
 type LatestValue struct {
 	SourceID        string          `json:"source_id"`
 	ChannelKey      string          `json:"channel_key"`

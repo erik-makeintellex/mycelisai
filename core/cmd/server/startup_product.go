@@ -110,8 +110,13 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 		} else {
 			log.Println("Team work signal projection active.")
 		}
+		if err := server.StartRegisteredInputProjection(ctx, adminSrv); err != nil {
+			log.Printf("WARN: Registered input projection disabled: %v", err)
+		} else {
+			log.Println("Registered input projection active.")
+		}
 	} else {
-		log.Println("WARN: Team work signal projection disabled (database or NATS unavailable).")
+		log.Println("WARN: Runtime projections disabled (database or NATS unavailable).")
 	}
 
 	return &productRuntime{Admin: adminSrv, Soma: soma, MCPPool: services.MCPPool}
