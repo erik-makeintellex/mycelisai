@@ -15,6 +15,9 @@ func TestNormalizeOutcomeProjectDefaultsOwnershipFields(t *testing.T) {
 	if item.Status != OutcomeProjectStatusActive {
 		t.Fatalf("status = %q, want active", item.Status)
 	}
+	if item.OutcomeHealth != OutcomeHealthHealthy {
+		t.Fatalf("outcome_health = %q, want healthy", item.OutcomeHealth)
+	}
 	if item.RetentionPolicy != "retained" {
 		t.Fatalf("retention_policy = %q, want retained", item.RetentionPolicy)
 	}

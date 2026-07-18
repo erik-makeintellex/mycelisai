@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink, MessageSquareReply } from "lucide-react";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 import { resourcesWorkspaceHref } from "@/lib/outputPackageModel";
 import type { OutputWorkbenchDigest } from "./OutputWorkbenchDigest";
 import OutputAccessActions, { workspacePathFromOutputUrl } from "./OutputAccessActions";
@@ -15,21 +16,24 @@ export function SomaOutcomeVaultDeliverableCard({ output }: { output: OutputWork
     <div className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3" aria-label="Recent deliverable">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          {target ? (
-            <a
-              href={target.href}
-              data-target-reference={target.reference}
-              target={target.external ? "_blank" : undefined}
-              rel={target.external ? "noopener noreferrer" : undefined}
-              className="inline-flex max-w-full items-center gap-1.5 font-semibold text-cortex-primary hover:underline focus:outline-none focus:ring-2 focus:ring-cortex-primary/40"
-              aria-label={`Open latest deliverable ${output.text}`}
-            >
-              <span className="truncate">{output.text}</span>
-              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-            </a>
-          ) : (
-            <div className="font-semibold text-cortex-text-main">{output.text}</div>
-          )}
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {target ? (
+              <a
+                href={target.href}
+                data-target-reference={target.reference}
+                target={target.external ? "_blank" : undefined}
+                rel={target.external ? "noopener noreferrer" : undefined}
+                className="inline-flex max-w-full items-center gap-1.5 font-semibold text-cortex-primary hover:underline focus:outline-none focus:ring-2 focus:ring-cortex-primary/40"
+                aria-label={`Open latest deliverable ${output.text}`}
+              >
+                <span className="truncate">{output.text}</span>
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              </a>
+            ) : (
+              <div className="font-semibold text-cortex-text-main">{output.text}</div>
+            )}
+            <OutcomeHealthBadge health={output.health ?? (output.proofArtifactId ? "healthy" : "completed")} />
+          </div>
           {path ? (
             <details className="mt-1 text-xs text-cortex-text-muted">
               <summary className="inline-flex cursor-pointer list-none font-semibold text-cortex-primary hover:underline">

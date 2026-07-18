@@ -14,6 +14,7 @@ describe("SomaOutcomeVaultPanel", () => {
         projectSummary={{
           title: "Media Pack outcome workspace",
           detail: "Soma has assigned work toward this outcome and will keep the thread updated.",
+          health: "blocked",
           ownerLabel: "Soma",
           leadLabel: "Media Lead, coordinator",
           registryOwnerLabel: "Media Lead lead",
@@ -70,7 +71,7 @@ describe("SomaOutcomeVaultPanel", () => {
 
     expect(screen.getByText("Outcome ready to revisit")).toBeDefined();
     expect(screen.getByText("Media Pack outcome workspace")).toBeDefined();
-    expect(screen.getByText("Recovery attention")).toBeDefined();
+    expect(screen.getByLabelText("Outcome health: Needs recovery")).toBeDefined();
     expect(screen.queryByText("Lead:")).toBeNull();
     expect(screen.queryByText("Media Lead, coordinator")).toBeNull();
     expect(screen.queryByText("OutcomeProject owner:")).toBeNull();
@@ -83,6 +84,7 @@ describe("SomaOutcomeVaultPanel", () => {
     expect(deliverable.getAttribute("href")).toBe("/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Flaunch%2Findex.html");
     expect(deliverable.getAttribute("data-target-reference")).toBe("workspace/generated/launch");
     expect(screen.getByText("File details")).toBeDefined();
+    expect(screen.getByLabelText("Outcome health: Ready")).toBeDefined();
     expect(screen.getByRole("button", { name: /Open Launch package in a new browser window/i })).toBeDefined();
     expect(screen.getByRole("button", { name: /Open local folder for Launch package at workspace\/generated\/launch/i })).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: /Reply to Launch package in Soma/i }));

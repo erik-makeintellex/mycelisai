@@ -145,6 +145,9 @@ describe("OutputWorkbench", () => {
       text: "Owner note",
       url: "/api/v1/workspace/files/view?path=generated%2Fowner-note.md",
       storagePath: "generated/owner-note.md",
+      replyReference: "generated/owner-note.md",
+      proofArtifactId: null,
+      health: "completed",
       count: 3,
     });
 
@@ -165,6 +168,9 @@ describe("OutputWorkbench", () => {
       text: "Playable output",
       url: "/api/v1/workspace/files/view?path=workspace%2Flogs%2Fplayable.html",
       storagePath: "workspace/logs/playable.html",
+      replyReference: "workspace/logs/playable.html",
+      proofArtifactId: null,
+      health: "completed",
       count: 2,
     });
 
@@ -272,6 +278,7 @@ describe("OutputWorkbench", () => {
     expect(screen.getAllByText("dist/index.html").length).toBeGreaterThan(0);
     expect(screen.getByText("Smoke test passed")).toBeDefined();
     expect(screen.getByText("Latest output")).toBeDefined();
+    expect(screen.getAllByLabelText("Outcome health: Healthy").length).toBeGreaterThan(0);
     expect(screen.getByText("Use Open file to view it, or Open folder to show it in the workspace.")).toBeDefined();
     expect(screen.getByRole("link", { name: /Open Launch microsite in Resources/i }).getAttribute("href")).toBe("/resources?tab=workspace&path=workspace%2Fgenerated%2Flaunch");
     const verificationDetails = screen.getByText("Verification details").closest("details");

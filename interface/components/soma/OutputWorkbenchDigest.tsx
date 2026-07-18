@@ -1,6 +1,8 @@
 "use client";
 
 import { FolderOpen, MessageSquareReply, ShieldCheck } from "lucide-react";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
+import type { OutcomeHealthState } from "@/lib/outcomeHealth";
 import type { ExecutionSummaryItem } from "@/store/useCortexStore";
 import { itemText, itemUrl } from "./ExecutionSummaryCardModel";
 import OutputAccessActions, { workspacePathFromOutputUrl } from "./OutputAccessActions";
@@ -24,6 +26,7 @@ export type OutputWorkbenchDigest = {
   validation?: string | null;
   proofArtifactId?: string | null;
   replyReference?: string | null;
+  health?: OutcomeHealthState;
 };
 
 export function outputWorkbenchDigest({
@@ -47,6 +50,7 @@ export function outputWorkbenchDigest({
       ...(storagePath ? { storagePath } : {}),
       proofArtifactId: primaryOutput.proofArtifactId ?? null,
       replyReference: storagePath ?? primaryOutput.url ?? null,
+      health: primaryOutput.proofArtifactId ? "healthy" : "completed",
       count: outputs.length + packages.length,
     };
   }
@@ -75,6 +79,7 @@ export function outputWorkbenchDigest({
     validation: primaryPackage.validation ?? null,
     proofArtifactId: primaryPackage.proof_artifact_id ?? null,
     replyReference: storagePath ?? itemUrl(primaryPackage) ?? null,
+    health: primaryPackage.validation || primaryPackage.proof_artifact_id ? "healthy" : "completed",
     count: outputs.length + packages.length,
   };
 }
@@ -114,6 +119,7 @@ export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkben
         <div className="min-w-0 text-xs leading-5">
           <span className="font-semibold text-cortex-text-main">{label}: </span>
           <span className="font-semibold text-cortex-text-main">{digest.text}</span>
+          <OutcomeHealthBadge health={digest.health ?? "completed"} className="ml-2 align-middle" />
           {workspacePath && workspacePath !== digest.text ? (
             <span className="sr-only"> Workspace path: {workspacePath}</span>
           ) : null}

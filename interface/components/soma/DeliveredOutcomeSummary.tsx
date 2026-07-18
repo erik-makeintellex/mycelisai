@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ExternalLink, FolderOpen } from "lucide-react";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 import type { OutcomeProjectSummary } from "./OutcomeProjectSummary";
 
 export function DeliveredOutcomeSummary({ summary }: { summary: OutcomeProjectSummary }) {
@@ -8,11 +9,7 @@ export function DeliveredOutcomeSummary({ summary }: { summary: OutcomeProjectSu
     <section aria-label="Delivered outcome">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-cortex-text-muted">Outcome ready to revisit</h3>
-        {summary.recoveryCount > 0 ? (
-          <span className="rounded-full border border-cortex-warning/45 bg-cortex-warning/10 px-2 py-0.5 text-xs font-semibold text-cortex-warning">
-            Recovery attention
-          </span>
-        ) : null}
+        <OutcomeHealthBadge health={summary.health} />
       </div>
       <div className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3">
         <div className="font-semibold text-cortex-text-main">{summary.title}</div>

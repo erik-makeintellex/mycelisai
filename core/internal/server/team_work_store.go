@@ -87,6 +87,7 @@ func (s *AdminServer) insertTeamWorkItemExec(ctx context.Context, exec teamWorkS
 	if item.TargetRef == nil {
 		item.TargetRef = protocol.TargetRefForTeamWork(*item)
 	}
+	item.OutcomeHealth = protocol.OutcomeHealthForTeamWork(*item)
 	if err := validateTeamWorkUUIDLinks(*item); err != nil {
 		return err
 	}
@@ -127,15 +128,9 @@ func (s *AdminServer) insertTeamStatusEventExec(ctx context.Context, exec teamWo
 	if strings.TrimSpace(event.EventID) == "" {
 		event.EventID = uuid.NewString()
 	}
+	*event = protocol.NormalizeTeamStatusEvent(*event)
 	if err := validateTeamStatusEventUUIDLinks(*event); err != nil {
 		return err
-	}
-	if strings.TrimSpace(event.Version) == "" {
-		event.Version = "v1"
-	}
-	event.TargetRef = protocol.NormalizeTargetRef(event.TargetRef)
-	if event.TargetRef == nil {
-		event.TargetRef = protocol.TargetRefForTeamStatusEvent(*event)
 	}
 	if err := exec.QueryRowContext(ctx, `
 		INSERT INTO team_status_events (
@@ -186,6 +181,8 @@ func (s *AdminServer) updateTeamWorkItemLastEventExec(ctx context.Context, exec 
 	if event.TargetRef == nil {
 		event.TargetRef = protocol.TargetRefForTeamStatusEvent(event)
 	}
+	event = protocol.NormalizeTeamStatusEvent(event)
+	item.OutcomeHealth = protocol.OutcomeHealthForTeamWork(*item)
 	eventJSON, err := json.Marshal(event)
 	if err != nil {
 		return err

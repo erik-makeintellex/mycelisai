@@ -50,29 +50,30 @@ type TeamOutputRef struct {
 
 // TeamStatusEvent is the normalized operator-readable projection of team communication.
 type TeamStatusEvent struct {
-	EventID           string          `json:"event_id"`
-	TeamID            string          `json:"team_id"`
-	WorkItemID        string          `json:"work_item_id"`
-	RunID             string          `json:"run_id,omitempty"`
-	IntentProofID     string          `json:"intent_proof_id,omitempty"`
-	ContractID        string          `json:"contract_id,omitempty"`
-	ProofID           string          `json:"proof_id,omitempty"`
-	State             TeamWorkState   `json:"state"`
-	Headline          string          `json:"headline"`
-	Details           string          `json:"details,omitempty"`
-	ConfidencePosture string          `json:"confidence_posture,omitempty"`
-	BlockedBy         []string        `json:"blocked_by,omitempty"`
-	NextAction        string          `json:"next_action,omitempty"`
-	ExpectedOutputs   []string        `json:"expected_outputs,omitempty"`
-	ExpectedProof     []string        `json:"expected_proof,omitempty"`
-	OutputRefs        []TeamOutputRef `json:"output_refs,omitempty"`
-	SourceKind        string          `json:"source_kind,omitempty"`
-	SourceChannel     string          `json:"source_channel,omitempty"`
-	PayloadKind       string          `json:"payload_kind,omitempty"`
-	AuditRefs         []string        `json:"audit_refs,omitempty"`
-	TargetRef         *TargetRef      `json:"target_ref,omitempty"`
-	Timestamp         time.Time       `json:"timestamp,omitempty"`
-	Version           string          `json:"version"`
+	EventID           string             `json:"event_id"`
+	TeamID            string             `json:"team_id"`
+	WorkItemID        string             `json:"work_item_id"`
+	RunID             string             `json:"run_id,omitempty"`
+	IntentProofID     string             `json:"intent_proof_id,omitempty"`
+	ContractID        string             `json:"contract_id,omitempty"`
+	ProofID           string             `json:"proof_id,omitempty"`
+	State             TeamWorkState      `json:"state"`
+	OutcomeHealth     OutcomeHealthState `json:"outcome_health,omitempty"`
+	Headline          string             `json:"headline"`
+	Details           string             `json:"details,omitempty"`
+	ConfidencePosture string             `json:"confidence_posture,omitempty"`
+	BlockedBy         []string           `json:"blocked_by,omitempty"`
+	NextAction        string             `json:"next_action,omitempty"`
+	ExpectedOutputs   []string           `json:"expected_outputs,omitempty"`
+	ExpectedProof     []string           `json:"expected_proof,omitempty"`
+	OutputRefs        []TeamOutputRef    `json:"output_refs,omitempty"`
+	SourceKind        string             `json:"source_kind,omitempty"`
+	SourceChannel     string             `json:"source_channel,omitempty"`
+	PayloadKind       string             `json:"payload_kind,omitempty"`
+	AuditRefs         []string           `json:"audit_refs,omitempty"`
+	TargetRef         *TargetRef         `json:"target_ref,omitempty"`
+	Timestamp         time.Time          `json:"timestamp,omitempty"`
+	Version           string             `json:"version"`
 }
 
 // TeamInteraction is the durable record of a Soma, Council, operator, or team-lead exchange.
@@ -115,6 +116,7 @@ type TeamWorkItem struct {
 	CapabilityRequirements []string           `json:"capability_requirements,omitempty"`
 	GovernancePosture      ApprovalPosture    `json:"governance_posture,omitempty"`
 	State                  TeamWorkState      `json:"state"`
+	OutcomeHealth          OutcomeHealthState `json:"outcome_health,omitempty"`
 	LastEvent              *TeamStatusEvent   `json:"last_event,omitempty"`
 	NeedsOperator          bool               `json:"needs_operator"`
 	DegradationState       string             `json:"degradation_state,omitempty"`
@@ -152,9 +154,13 @@ func NormalizeTeamWorkItem(raw TeamWorkItem) TeamWorkItem {
 	if item.State == "" {
 		item.State = defaultTeamWorkState(item.ExecutionShape)
 	}
+	if item.LastEvent != nil {
+		item.LastEvent.OutcomeHealth = OutcomeHealthForTeamStatusEvent(*item.LastEvent)
+	}
 	if item.TargetRef == nil {
 		item.TargetRef = TargetRefForTeamWork(item)
 	}
+	item.OutcomeHealth = OutcomeHealthForTeamWork(item)
 	if item.Version == "" {
 		item.Version = "v1"
 	}
@@ -201,6 +207,34 @@ func NormalizeTeamInteraction(raw TeamInteraction) TeamInteraction {
 	item.PayloadRef = strings.TrimSpace(item.PayloadRef)
 	item.ApprovalRef = strings.TrimSpace(item.ApprovalRef)
 	item.AuditRefs = compactStrings(item.AuditRefs)
+	if item.Version == "" {
+		item.Version = "v1"
+	}
+	return item
+}
+
+func NormalizeTeamStatusEvent(raw TeamStatusEvent) TeamStatusEvent {
+	item := raw
+	item.EventID = strings.TrimSpace(item.EventID)
+	item.TeamID = strings.TrimSpace(item.TeamID)
+	item.WorkItemID = strings.TrimSpace(item.WorkItemID)
+	item.RunID = strings.TrimSpace(item.RunID)
+	item.IntentProofID = strings.TrimSpace(item.IntentProofID)
+	item.ContractID = strings.TrimSpace(item.ContractID)
+	item.ProofID = strings.TrimSpace(item.ProofID)
+	item.Headline = strings.TrimSpace(item.Headline)
+	item.Details = strings.TrimSpace(item.Details)
+	item.ConfidencePosture = strings.TrimSpace(item.ConfidencePosture)
+	item.BlockedBy = compactStrings(item.BlockedBy)
+	item.NextAction = strings.TrimSpace(item.NextAction)
+	item.ExpectedOutputs = compactStrings(item.ExpectedOutputs)
+	item.ExpectedProof = compactStrings(item.ExpectedProof)
+	item.AuditRefs = compactStrings(item.AuditRefs)
+	item.TargetRef = NormalizeTargetRef(item.TargetRef)
+	if item.TargetRef == nil {
+		item.TargetRef = TargetRefForTeamStatusEvent(item)
+	}
+	item.OutcomeHealth = OutcomeHealthForTeamStatusEvent(item)
 	if item.Version == "" {
 		item.Version = "v1"
 	}

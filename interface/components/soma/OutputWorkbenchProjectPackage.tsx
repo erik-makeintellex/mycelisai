@@ -1,6 +1,7 @@
 "use client";
 
 import { FolderOpen, MessageSquareReply, ShieldCheck } from "lucide-react";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 import type { ExecutionSummaryItem } from "@/store/useCortexStore";
 import {
   OUTPUT_PACKAGE_FOLDER_LABEL,
@@ -36,7 +37,10 @@ export function OutputWorkbenchProjectPackage({
     <article key={`${title}-${index}`} className="rounded-lg border border-cortex-border/70 bg-cortex-bg px-3 py-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-cortex-text-main">{title}</div>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="truncate text-sm font-semibold text-cortex-text-main">{title}</span>
+            <OutcomeHealthBadge health={project.validation || project.proof_artifact_id ? "healthy" : "completed"} />
+          </div>
           {project.summary ? <div className="text-xs leading-5 text-cortex-text-muted">{project.summary}</div> : null}
         </div>
         <span className="inline-flex shrink-0 flex-wrap items-center gap-1">

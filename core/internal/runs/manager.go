@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 // RunStatus classifies the lifecycle state of a mission run.
@@ -26,15 +27,16 @@ const (
 // MissionRun is a single execution instance of a mission.
 // One mission definition → many runs (each activation = new run).
 type MissionRun struct {
-	ID          string                 `json:"id"`
-	MissionID   string                 `json:"mission_id"`
-	TenantID    string                 `json:"tenant_id"`
-	Status      RunStatus              `json:"status"`
-	RunDepth    int                    `json:"run_depth"`
-	ParentRunID string                 `json:"parent_run_id,omitempty"`
-	StartedAt   time.Time              `json:"started_at"`
-	CompletedAt *time.Time             `json:"completed_at,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	ID            string                      `json:"id"`
+	MissionID     string                      `json:"mission_id"`
+	TenantID      string                      `json:"tenant_id"`
+	Status        RunStatus                   `json:"status"`
+	OutcomeHealth protocol.OutcomeHealthState `json:"outcome_health,omitempty"`
+	RunDepth      int                         `json:"run_depth"`
+	ParentRunID   string                      `json:"parent_run_id,omitempty"`
+	StartedAt     time.Time                   `json:"started_at"`
+	CompletedAt   *time.Time                  `json:"completed_at,omitempty"`
+	Metadata      map[string]interface{}      `json:"metadata,omitempty"`
 }
 
 // Manager creates and manages mission_run records.
@@ -147,6 +149,7 @@ func (m *Manager) GetRun(ctx context.Context, runID string) (*MissionRun, error)
 		t := completedAt.Time
 		run.CompletedAt = &t
 	}
+	run.OutcomeHealth = protocol.OutcomeHealthForRunStatus(run.Status)
 	return &run, nil
 }
 
@@ -192,6 +195,7 @@ func (m *Manager) ListRunsForMission(ctx context.Context, missionID string, limi
 			t := completedAt.Time
 			run.CompletedAt = &t
 		}
+		run.OutcomeHealth = protocol.OutcomeHealthForRunStatus(run.Status)
 		runs = append(runs, run)
 	}
 
@@ -246,6 +250,7 @@ func (m *Manager) ListRecentRuns(ctx context.Context, tenantID string, limit int
 			t := completedAt.Time
 			run.CompletedAt = &t
 		}
+		run.OutcomeHealth = protocol.OutcomeHealthForRunStatus(run.Status)
 		recentRuns = append(recentRuns, run)
 	}
 

@@ -6,6 +6,7 @@ import {
   type TeamWorkItem,
   type TeamWorkItemState,
 } from "@/store/useCortexStore";
+import { normalizeOutcomeHealth } from "@/lib/outcomeHealth";
 import {
   isRecord,
   objectValue,
@@ -36,6 +37,7 @@ type TeamWorkAPIRecord = {
   capability_requirements?: unknown;
   governance_posture?: unknown;
   state?: unknown;
+  outcome_health?: unknown;
   last_event?: unknown;
   needs_operator?: unknown;
   degradation_state?: unknown;
@@ -118,6 +120,7 @@ export function projectTeamWorkItem(team: TeamDetailEntry): TeamWorkItem {
         ? `${team.mission_intent} This is an inspectable roster projection until durable team-work state loads.`
         : `${team.name} exists, but durable team-work state is not loaded here yet.`,
     state,
+    outcomeHealth: "degraded",
     ownerLabel: `${team.name} lead`,
     scopeLabel: "Projection fallback",
     updatedAt: latestHeartbeat(team),
@@ -175,6 +178,7 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
     title: objective,
     description: description || expectedOutputs.map((item) => `Output: ${item}`).join(" "),
     state,
+    outcomeHealth: normalizeOutcomeHealth(raw.outcome_health),
     ownerLabel: stringValue(raw.owner) || (team ? `${team.name} lead` : "Team lead"),
     scopeLabel: executionShapeLabel(stringValue(raw.execution_shape)),
     updatedAt: stringValue(raw.updated_at) ?? stringValue(raw.created_at),

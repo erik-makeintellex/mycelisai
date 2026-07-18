@@ -1,4 +1,5 @@
 import type { OutputProofEnvelope } from "./cortexStoreTypesExecutionSummary";
+import type { OutcomeHealthState } from "@/lib/outcomeHealth";
 
 export type TeamWorkItemState =
     | 'new'
@@ -65,6 +66,7 @@ export interface TeamWorkItem {
     title: string;
     description?: string;
     state: TeamWorkItemState;
+    outcomeHealth?: OutcomeHealthState;
     ownerLabel: string;
     scopeLabel: string;
     updatedAt?: string | null;

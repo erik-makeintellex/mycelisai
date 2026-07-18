@@ -37,6 +37,7 @@ describe("outcomeProjectSummaryFromAPI", () => {
 
     expect(summary.title).toBe("Weekly Media Pack");
     expect(summary.detail).toContain("durable project");
+    expect(summary.health).toBe("completed");
     expect(summary.ownerLabel).toBe("Soma");
     expect(summary.leadLabel).toBe("Media Team, coordinator");
     expect(summary.registryOwnerLabel).toBe("Media Team lead");
@@ -61,9 +62,40 @@ describe("outcomeProjectSummaryFromAPI", () => {
     }, []);
 
     expect(summary.detail).toContain("recovery work");
+    expect(summary.health).toBe("degraded");
     expect(summary.registryOwnerLabel).toBe("Registered team lead");
     expect(summary.recoveryCount).toBe(1);
     expect(summary.href).toBe("/teams?view=work");
+  });
+
+  it("keeps active and archived outcome health distinct", () => {
+    const active = outcomeProjectSummaryFromAPI({
+      project_id: "project-active",
+      outcome_id: "outcome-active",
+      title: "Active outcome",
+      status: "active",
+    }, []);
+    const archived = outcomeProjectSummaryFromAPI({
+      project_id: "project-archived",
+      outcome_id: "outcome-archived",
+      title: "Archived outcome",
+      status: "archived",
+    }, []);
+
+    expect(active.health).toBe("healthy");
+    expect(archived.health).toBe("archived");
+  });
+
+  it("prefers backend outcome health when present", () => {
+    const summary = outcomeProjectSummaryFromAPI({
+      project_id: "project-running",
+      outcome_id: "outcome-running",
+      title: "Running outcome",
+      status: "active",
+      outcome_health: "running",
+    }, []);
+
+    expect(summary.health).toBe("running");
   });
 
   it("uses target refs for the primary outcome link when provided", () => {

@@ -1,6 +1,6 @@
 # Mycelis Canonical PRD
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
-> Status: Canonical | Last Updated: 2026-07-17 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
+> Status: Canonical | Last Updated: 2026-07-18 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
 The default product language is:
@@ -12,13 +12,46 @@ I can see what happened.
 I can trust or recover the result later.
 ```
 The architecture exists to protect confidence while making complexity disappear. Runs, agents, groups, capabilities, tools, continuity vectors, NATS, schemas, receipts, audit, and deployment topology serve Soma and the Outcome; they are supporting machinery, not default user concepts. When the architecture succeeds, users do not admire the runtime. They trust Soma.
-
 ## Release Goal
 The V8.3 release target is operational embodiment: prove Mycelis through visible execution, durable deliverables, recoverable work, understandable trust, and clean deployment reality. The risk is no longer insufficient architecture. The risk is doctrine expansion without product proof.
-
 Release success means a non-technical user can complete the journey from ask to trusted revisit without needing to understand agents, MCP, workflows, runs, topology, or infrastructure. A technical user can still inspect proof and runtime detail when needed. If runtime correctness improves but user trust or usability declines, the architecture moved in the wrong direction.
+Architecture stability rule: the architecture is stable, not frozen. Future work should extend, refine, harden, and express the current Workspace/Outcome/Soma/execution-spine model instead of replacing it or creating parallel concepts. Outcome is the organizing identity across Soma conversations, deliverables, active work, recovery, proof, history, and continuity; Workspace is the user-owned container that can hold one Outcome or hundreds. The existing Soma, Groups, Resources, Runs, Recovery, and Administration surfaces should become progressively Workspace-aware and Outcome-aware rather than Outcome-replaced. Runtime machinery translates machine work into user work, so ExecutionContracts, runs, teams, capabilities, MCP, NATS, vector retrieval, storage, event routing, autonomy, adaptive teams, providers, and new capability types should compose through the existing spine and remain primarily behind Details or Inspect unless surfacing them directly improves Outcome, Deliverable, Trust, Recovery, or Continuity value.
+## Workspace Outcome Hierarchy
+The operator lives inside a Workspace. A Workspace contains Outcomes. Each Outcome contains deliverables, active lanes, proof, recovery, history, and continuity. Runs, teams, capabilities, WorkIntent, ExecutionContracts, transport, storage, and infrastructure are runtime implementation unless the operator intentionally opens Details or Inspect.
+The canonical abstraction stack is:
 
-Architecture stability rule: the architecture is stable, not frozen. Future work should extend, refine, harden, and express the current Outcome/Soma/execution-spine model instead of replacing it or creating parallel concepts. Outcome is the organizing identity across Soma conversations, deliverables, active work, recovery, proof, history, and continuity; the existing Soma, Groups, Resources, Runs, Recovery, and Administration surfaces should become progressively Outcome-aware rather than Outcome-replaced. Runtime machinery translates machine work into user work, so ExecutionContracts, runs, teams, capabilities, MCP, NATS, vector retrieval, storage, event routing, autonomy, adaptive teams, providers, and new capability types should compose through the existing spine and remain primarily behind Details or Inspect unless surfacing them directly improves Outcome, Deliverable, Trust, Recovery, or Continuity value.
+```text
+Operator
+-> Soma
+-> Workspace
+-> Outcome
+-> Deliverables
+-> Execution
+-> Capabilities
+-> Infrastructure
+```
+`WorkIntent` is transitional. It transforms conversation into governed execution:
+
+```text
+Conversation
+-> WorkIntent
+-> ExecutionContract
+-> Outcome
+```
+Once execution begins, the Outcome becomes the durable product object. WorkIntent must not become another permanent user-facing artifact. It may remain inspectable for proof, governance reconstruction, and debugging, but the default user experience should return to Outcome state, deliverables, proof, recovery, and next action.
+Every Outcome exposes one clear health state:
+
+| Health | Meaning |
+| --- | --- |
+| `healthy` | The Outcome is usable and does not need attention. |
+| `waiting` | Soma is waiting for approval, user input, a schedule, a dependency, or another next action. |
+| `running` | Work is active and expected to continue safely. |
+| `degraded` | Some work failed or is uncertain, but trusted parts remain and recovery can proceed. |
+| `blocked` | Soma cannot safely progress until an operator or dependency acts. |
+| `completed` | A deliverable is retained with sufficient proof for revisit. |
+| `archived` | The Outcome is inactive but retained for history, proof, or outputs. |
+
+Every screen should derive its visual language from these states. The operator owns the Outcome. The operator never owns execution. Soma owns execution. The runtime should preserve trust while making execution disappear.
 ## Trusted Outcome Journey
 All P0 work is judged through this journey:
 
@@ -95,7 +128,7 @@ You can keep talking here while updates arrive.
 
 ## Outcome Vault
 
-The defining product abstraction is the Outcome. Deliverables, projects, operations, proof, recovery, history, continuity, and active lanes belong to Outcomes. Runs, teams, capabilities, transport, storage, and event correlation support Outcomes. The Outcome never serves the runtime. Outputs are durable product objects, not transient chat text. They may include apps, files, plans, reports, media, reviews, proof bundles, deployment results, or retained learning candidates.
+The defining product abstraction is the Outcome inside a Workspace. Deliverables, projects, operations, proof, recovery, history, continuity, and active lanes belong to Outcomes. Runs, teams, capabilities, WorkIntent, transport, storage, and event correlation support Outcomes. The Outcome never serves the runtime. Outputs are durable product objects, not transient chat text. They may include apps, files, plans, reports, media, reviews, proof bundles, deployment results, or retained learning candidates.
 
 Every user-facing output package should expose clear title/state, primary open action, safe folder or data-root access, conversational reply action for updates/alternates/downstream team handoff, proof or receipt link, degraded recovery state, and source/intermediate-output visibility only as an opt-in. File/content handoff has three product meanings: a current Outcome input for this team or draft, a delivered output to retain and revisit, or a long-lived context source Soma may use again under scope/trust rules. Soma should name which meaning it inferred before governed execution, and Output/Reply must carry typed continuation context so updates, forks, downstream routes, and ordinary follow-ups preserve Outcome/source/proof identity without relying only on natural-language quotes.
 
@@ -103,7 +136,7 @@ Output ownership must distinguish final user deliverables from team working mate
 
 Soma output plans must name the expected output shape before details: table/report, document, app/package, code/script, media, dataset, or mixed output. The visible plan should explain the minimum support/proof needed for that shape in user language. Table-like information should render as actual compact tables in the Soma thread, not as monospaced aligned text.
 
-Outcome Vault is the persistent delivery/revisit concept, but it should open as an overlay by default. It should show saved results, work in progress, scheduled/service work, and recovery items without permanently taking layout width from Soma.
+Outcome Vault is the persistent delivery/revisit concept, but it should open as an overlay by default. It should show saved results, Outcome Health, work in progress, scheduled/service work, and recovery items without permanently taking layout width from Soma.
 
 ## Projects Teams And Capability Use
 
@@ -217,28 +250,21 @@ No raw backend stack traces should reach the default UI. Backend failures, MCP t
 Confidence provenance is an emerging layer. The architecture should prepare for validation source, evidence strength, cross-model agreement, review lineage, and proof quality without overbuilding scores before the MVP journey works.
 
 ## Information Architecture
-
 Preserve the existing navigation and make it progressively Outcome-aware:
-
 - Soma: ask, shape, approve, execute, review, recover, and revisit Outcome work
 - Groups: focused collaboration lanes, active work, and retained team outputs
 - Resources: generated deliverables, workspace folders, capabilities, and connected tools
 - Docs: user help and contributor docs
-
 Admin/deep navigation:
-
 - Activity/Runs
 - Memory
 - System
 - Settings
 - Inspect/details surfaces
-
 Documentation and UI should use tabs, list/detail layouts, overlays, and bounded panes for deep content. Avoid page-length stacks of unrelated cards.
 
 ## MVP Scope
-
 MVP is complete when one canonical workflow feels excellent:
-
 ```text
 User asks Soma to create or review meaningful work
 -> Soma explores and shapes the request
@@ -252,7 +278,6 @@ User asks Soma to create or review meaningful work
 ```
 
 Non-goals for MVP:
-
 - marketplace abstraction
 - broad recursive autonomy
 - user-facing topology management
@@ -268,6 +293,7 @@ Non-goals for MVP:
 | P0.3 | WorkIntent and ExecutionMode | ACTIVE | Understand, Execute, Trust | One-shot, scheduled, service/watch, project, and Soma self-extension modes have typed contracts, stop/retry/recover semantics, output-shape expectations, validation/launch hints, and approval posture without expanding the default approval card. Confirmed runs and durable team-work refs must retain the same output contract so proof/recovery can compare delivered work to the approved expectation, including treating deliverable completion without retained output refs as recoverable rather than trusted output. |
 | P0.4 | Bus handoff and started feedback | IN_REVIEW | Execute, Recover, Trust | Approval or quick action immediately creates visible started state, correlation, durable work linkage, expected-output/proof context in run-linked events, proof-linked retained output refs when async team results arrive, and actionable degradation when NATS/team dispatch or retained-output completion cannot complete. |
 | P0.5 | OutcomeProject and TeamRegistry | IN_REVIEW | Deliver, Revisit | Confirmed work writes durable project/team ownership, Vault summaries, target refs, and producing-team identity without exposing agent internals by default. |
+| P0.5a | Workspace/Outcome Health | ACTIVE | Trust, Recover, Revisit | OutcomeProject, team-work, run, group-output, Resources, and Vault surfaces expose one normalized health state (`healthy`, `waiting`, `running`, `degraded`, `blocked`, `completed`, `archived`) while keeping WorkIntent transitional and runtime details behind Inspect. |
 | P0.6 | Output packages, Resources, and Vault | IN_REVIEW | Deliver, Revisit | Deliverables open cleanly from Soma, Groups, Resources, and Vault. Artifact rows and durable team `output_refs` both appear as retained deliverables; planning/source/internal material remains opt-in; selected files/context can re-enter Soma as one-shot continuation context. |
 | P0.7 | Capability settings | IN_REVIEW | Trust, Recover | Capabilities default to a focused readiness surface with selectable Readiness, Catalog, Access, and Inspect lanes; all-work, grouped, targeted-host scopes, inspectable refs, raw bindings, and examples stay behind deliberate Access/Inspect controls instead of one long capability document. |
 | P0.7a | Search and data-source registry | IN_REVIEW | Ask, Trust | Search status and Resources show public web, approved local/mounted data, private/API sources, and named mounts; persisted sources carry endpoint/path, scope, boundary, auth or mount mode, secret-ref when needed, sensitivity, trust, and recovery metadata; mixed local-plus-web asks state coverage clearly. |
@@ -278,11 +304,8 @@ Non-goals for MVP:
 | P0.12 | Release hygiene and promotion proof | NEXT | Trust | Keep main/dev branches clean, commit coherent tested slices, run release proof from committed state, and verify PostgreSQL/NATS-backed runtime paths rather than stale local/test-only state. |
 
 ## Testing And Release Gates
-
 Visible UI changes require both functional tests and live user-experience review. The reviewer must inspect layout density, scroll behavior, text-field reachability, panel overlap, card size, plain-language copy, and whether the screen matches the target Soma workspace concept.
-
 Required proof lanes:
-
 - unit tests for typed state, cards, projections, and API adapters
 - Go tests for runtime, persistence, governance, and event correlation
 - docs tests for live links and canonical PRD coverage
@@ -291,11 +314,8 @@ Required proof lanes:
 - release preflight from a clean committed state before production deployment
 
 ## Documentation Contract
-
 This PRD is the canonical architecture/product document. Keep support docs, but do not recreate split doctrine.
-
 Allowed supporting docs:
-
 - `README.md` for repo entry, command contract, and contributor navigation
 - `.state/V8_DEV_STATE.md` for active implementation state
 - `docs/README.md` for docs navigation

@@ -147,7 +147,6 @@ async function mockConnectedToolsApis(page: Page, options: MockConnectedToolsOpt
             },
         });
     });
-
     await page.route("**/api/v1/services/status", async (route) => {
         await fulfillJSON(route, 200, {
             ok: true,
@@ -471,7 +470,6 @@ test.describe("Capabilities MCP workflow", () => {
         test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires a live Core backend");
         test.slow();
         test.setTimeout(180_000);
-
         await ensureFilesystemMCP(page);
         const stamp = `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
         const teamID = `slice3-mcp-${stamp}`;

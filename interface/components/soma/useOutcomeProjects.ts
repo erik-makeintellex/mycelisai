@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { normalizeTargetRef, targetRefHref, targetRefReference } from "@/components/teams/teamWorkProjection";
 import { extractApiData } from "@/lib/apiContracts";
+import { normalizeOutcomeHealth, type OutcomeHealthState } from "@/lib/outcomeHealth";
 import { resourcesWorkspaceHref } from "@/lib/outputPackageModel";
 import type { TargetRef, TeamDetailEntry, TeamOutputRef } from "@/store/useCortexStore";
 import type { OutcomeProjectSummary } from "./OutcomeProjectSummary";
@@ -17,6 +18,7 @@ type OutcomeProject = {
   execution_mode?: string;
   workspace_folder?: string;
   status?: OutcomeProjectStatus;
+  outcome_health?: OutcomeHealthState;
   run_id?: string;
   work_item_refs?: string[];
   output_refs?: TeamOutputRef[];
@@ -76,9 +78,11 @@ export function outcomeProjectSummaryFromAPI(
   const lead = knownTeams[0] ?? null;
   const recoveryCount = (project.recovery_refs ?? []).length
     || (project.status === "needs_attention" ? 1 : 0);
+  const health = outcomeProjectHealth(project, outputRefs.length, recoveryCount);
   return {
     title: project.title || "Outcome workspace",
     detail: durableOutcomeDetail(project, outputRefs.length, recoveryCount),
+    health,
     ownerLabel: "Soma",
     leadLabel: lead ? `${lead.name}${lead.role ? `, ${lead.role}` : ""}` : undefined,
     registryOwnerLabel: lead
@@ -132,4 +136,12 @@ function durableOutcomeDetail(project: OutcomeProject, outputCount: number, reco
     return "Soma retained this outcome as a durable project with outputs ready to revisit.";
   }
   return "Soma retained this outcome as active background work.";
+}
+
+function outcomeProjectHealth(project: OutcomeProject, outputCount: number, recoveryCount: number): OutcomeHealthState {
+  if (project.outcome_health) return normalizeOutcomeHealth(project.outcome_health);
+  if (project.status === "archived") return "archived";
+  if (recoveryCount > 0 || project.status === "needs_attention") return "degraded";
+  if (project.status === "output_ready" || outputCount > 0) return "completed";
+  return "healthy";
 }

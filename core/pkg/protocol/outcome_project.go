@@ -24,6 +24,7 @@ type OutcomeProject struct {
 	ExecutionMode    string               `json:"execution_mode"`
 	WorkspaceFolder  string               `json:"workspace_folder,omitempty"`
 	Status           OutcomeProjectStatus `json:"status"`
+	OutcomeHealth    OutcomeHealthState   `json:"outcome_health,omitempty"`
 	RunID            string               `json:"run_id,omitempty"`
 	IntentProofID    string               `json:"intent_proof_id,omitempty"`
 	ContractID       string               `json:"contract_id,omitempty"`
@@ -86,6 +87,7 @@ func NormalizeOutcomeProject(raw OutcomeProject) OutcomeProject {
 	if item.TargetRef == nil {
 		item.TargetRef = TargetRefForOutcomeProject(item)
 	}
+	item.OutcomeHealth = OutcomeHealthForProject(item)
 	if item.Version == "" {
 		item.Version = "v1"
 	}

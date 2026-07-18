@@ -3,6 +3,7 @@
 import { Check, ExternalLink, MessageSquareReply, Quote } from "lucide-react";
 import { useState } from "react";
 import { sortTeamOutputRefsNewestFirst } from "@/components/teams/teamWorkProjection";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 import type { ChatArtifactRef, ExecutionSummaryData, ExecutionSummaryItem, OutputProofEnvelope, TeamOutputRef } from "@/store/useCortexStore";
 import ExecutionSummaryMediaPreview from "./ExecutionSummaryMediaPreview";
 import {
@@ -173,7 +174,10 @@ export function OutputWorkbench({
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-primary">Latest output</div>
-              <div className="mt-1 truncate text-sm font-semibold text-cortex-text-main">{primaryOutput.text}</div>
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+                <span className="truncate text-sm font-semibold text-cortex-text-main">{primaryOutput.text}</span>
+                <OutcomeHealthBadge health={primaryOutput.proof || primaryOutput.proofArtifactId ? "healthy" : "completed"} />
+              </div>
               <p className="mt-1 text-xs leading-5 text-cortex-text-muted">Use Open file to view it, or Open folder to show it in the workspace.</p>
               <OutputPathHint storagePath={primaryOutput.storagePath} url={primaryOutput.url} />
             </div>

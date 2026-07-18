@@ -168,11 +168,11 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(typedRailAlert.getAttribute("data-target-id")).toBe("work-1");
 
     const workspace = within(screen.getByTestId("mock-soma-workspace-frame"));
-    fireEvent.click(screen.getByRole("button", { name: /Run Expense Audit/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Plan next step/i }));
     fireEvent.click(workspace.getByRole("button", { name: /pause work/i }));
     fireEvent.click(workspace.getByRole("button", { name: /ask team/i }));
 
-    expect(mocks.sendMissionChat).toHaveBeenCalledWith(expect.stringContaining("expense audit"));
+    expect(mocks.sendMissionChat).toHaveBeenCalledWith(expect.stringContaining("clear next step"));
     expect(mocks.handleActiveWorkAction).toHaveBeenCalledWith(expect.objectContaining({ id: "work-1" }), expect.objectContaining({ action: "pause" }));
     expect(mocks.handleTeamAsk).toHaveBeenCalledWith(expect.objectContaining({ id: "work-1" }), "Continue the proof");
   });

@@ -27,11 +27,20 @@ This repository is Go-first for product/runtime work and Python-first for manage
 
 - Product/runtime feature work must start from an intentionally named feature branch unless the user explicitly asks for a different branch shape.
 - Keep each branch scoped to one reviewable slice. If work expands, split follow-on work into a new branch instead of letting one branch become a mixed backlog.
+- Before engaging teams or implementing a substantial next slice, review current branch state, the active scoreboard, canonical PRD alignment, and likely proof gates. Write down the execution shape before spawning or redirecting agents.
+- Before spawning new sub-agents for any work, review existing open agentry for reuse or closure. Reuse relevant active agents when their context matches the slice; close completed, stale, duplicate, or no-longer-relevant agents before adding more background work.
 - Do not treat local green tests as enough for merge readiness. A slice reaches merge quality only after code, docs/state, focused tests, typecheck/build gates, and any required live GUI proof pass together.
 - Before merging to `main`, review `git status --short --branch`, `git diff --check`, branch divergence, untracked files, temporary proof artifacts, and affected docs. Resolve or record every item.
 - Merge only when the branch is clean enough that `main` can be released or handed to another agent without hidden local assumptions, stale temp files, or unexplained generated output.
 - After merge, delete local feature branches that are fully merged and explicitly review remote branches before deletion. Keep unmerged/archive branches only with a named purpose.
 - If urgent work must happen directly on `main`, the close-out must still follow the same branch-quality checklist before commit, push, or handoff.
+
+## Team Orchestration And Messaging Contract
+
+- The lead agent is the messaging avatar for team execution. It coordinates intent, decisions, dependencies, and proof across sub-agents and Mycelis teams instead of letting background work drift into disconnected threads.
+- When the local NATS-backed Mycelis stack is intentionally running and relevant to the slice, prefer using the product's bus-facing workflows for team coordination proof, status, and handoff checks. If the bus is unavailable or unnecessary, record that explicitly and keep coordination in the Codex thread.
+- Team communication should mirror the product architecture: concise intent, assigned ownership, expected output, proof gate, status updates, blockers, and handoff notes. Avoid spawning parallel teams without a clear owner, bounded deliverable, and cleanup path.
+- Close-out must include what teams or agents were reused, spawned, messaged, closed, or intentionally skipped.
 
 ## Canonical Docs Location
 
