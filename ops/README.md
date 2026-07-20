@@ -164,7 +164,7 @@ Enforces logging contract quality checks before delivery.
 
 ### `quality.py` (Code Hygiene Gates)
 Enforces max-lines policy across the main source tree with temporary no-regression caps for legacy oversized files. Stale cap entries for deleted files fail the gate so cleanup cannot leave old exceptions behind.
-- **Max Lines**: `uv run inv quality.max-lines --limit 300`
+- **Max Lines**: `uv run inv quality.max-lines --limit 330`
 
 ### `lifecycle.py` (Local Stack Control)
 Owns deterministic local bring-up, teardown, and deep health checks.

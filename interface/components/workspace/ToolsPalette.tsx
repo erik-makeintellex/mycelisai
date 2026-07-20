@@ -46,8 +46,9 @@ export default function ToolsPalette() {
             });
             const text = await res.text();
             setToolResult(text);
-        } catch (err: any) {
-            setToolResult(`Error: ${err.message}`);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Tool call failed";
+            setToolResult(`Error: ${message}`);
         } finally {
             setExecutingTool(null);
         }

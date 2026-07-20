@@ -9,11 +9,23 @@ import { approvalSentEvent, executionStartedEvent } from '@/store/cortexStorePro
 import { extractTeamWorkRefs, teamWorkMessage, type TeamWorkConfirmationRef } from '@/store/cortexStoreProposalTeamWorkRefs';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { ProposalData } from '@/store/cortexStoreTypesChat';
+import type { ExecutionSummaryData } from '@/store/cortexStoreTypesExecutionSummary';
 
-function recoveryTextFromExecutionSummary(summary: any) {
-    const degradation = summary?.audit_recovery?.degradation;
+type ConfirmFailureBody = {
+    error?: string;
+    data?: {
+        run_id?: string;
+        execution_summary?: ExecutionSummaryData;
+    };
+};
+
+function recoveryTextFromExecutionSummary(summary: ExecutionSummaryData | undefined) {
+    const auditRecovery = summary?.audit_recovery && typeof summary.audit_recovery === 'object'
+        ? summary.audit_recovery
+        : undefined;
+    const degradation = auditRecovery?.degradation;
     const whatFailed = trimToNonEmpty(degradation?.what_failed)
-        ?? trimToNonEmpty(summary?.audit_recovery?.blocker);
+        ?? trimToNonEmpty(auditRecovery?.blocker);
     const safeContinuation = trimToNonEmpty(degradation?.safe_continuation);
     const diagnostics = [
         trimToNonEmpty(degradation?.code),
@@ -161,9 +173,9 @@ export function createCortexProposalExecutionSlice(
 
                 const text = await res.text();
                 let errMsg = 'Confirm action failed';
-                let parsedBody: any = null;
+                let parsedBody: ConfirmFailureBody | null = null;
                 try {
-                    parsedBody = JSON.parse(text);
+                    parsedBody = JSON.parse(text) as ConfirmFailureBody;
                     errMsg = parsedBody.error || errMsg;
                 } catch {
                     errMsg = text || errMsg;

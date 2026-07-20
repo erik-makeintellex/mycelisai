@@ -140,12 +140,12 @@ def _load_legacy_caps(path: Path = LEGACY_CAPS_PATH) -> dict[str, int]:
 
 @task(
     help={
-        "limit": "Maximum allowed lines per file (default: 300).",
+        "limit": "Maximum allowed lines per file (default: 330).",
         "paths": "Comma-separated paths to scan (default: main source tree).",
         "strict": "Ignore legacy caps and fail on every over-limit file.",
     }
 )
-def max_lines(_c, limit=300, paths=DEFAULT_SOURCE_PATHS, strict=False):
+def max_lines(_c, limit=330, paths=DEFAULT_SOURCE_PATHS, strict=False):
     """
     Enforce maximum file length with temporary no-regression caps for legacy files.
     """

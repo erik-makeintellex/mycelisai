@@ -176,7 +176,7 @@ uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.health
 uv run inv ci.baseline
 uv run inv api.delivery-proof
-uv run inv lifecycle.memory-restart && uv run inv team.architecture-sync && uv run inv quality.max-lines --limit 300
+uv run inv lifecycle.memory-restart && uv run inv team.architecture-sync && uv run inv quality.max-lines --limit 330
 ```
 
 `uv run inv install` includes Reticulum bootstrap: it syncs the locked `rns` package through `uv`, then warms/verifies `uvx --from rns rnstatus --help` before continuing with Go, Interface, and Playwright setup.

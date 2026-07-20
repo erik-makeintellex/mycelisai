@@ -102,7 +102,7 @@ function normalizeClass(value: string | undefined) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
-function metadataString(metadata: Record<string, any>, key: string) {
+function metadataString(metadata: Record<string, unknown>, key: string) {
   const value = metadata[key];
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }

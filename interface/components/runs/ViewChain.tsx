@@ -10,7 +10,7 @@ function buildTree(runs: MissionRun[]): ChainNode[] {
     const childMap = new Map<string, ChainNode[]>();
 
     for (const run of runs) {
-        const node: ChainNode = { run, children: [] };
+        const node: ChainNode = { run, childRuns: [] };
         nodeMap.set(run.id, node);
         childMap.set(run.id, []);
     }
@@ -39,7 +39,7 @@ function buildTree(runs: MissionRun[]): ChainNode[] {
 
     const attachChildren = (node: ChainNode): ChainNode => ({
         run: node.run,
-        children: sortNodes(childMap.get(node.run.id) ?? []).map(attachChildren),
+        childRuns: sortNodes(childMap.get(node.run.id) ?? []).map(attachChildren),
     });
 
     const orderedRoots = sortNodes(roots);
@@ -148,7 +148,7 @@ export default function ViewChain({ runId }: Props) {
 
                     <div className="space-y-2">
                         {tree.map((node) => (
-                            <RunChainNode key={node.run.id} run={node.run} children={node.children} />
+                            <RunChainNode key={node.run.id} run={node.run} childRuns={node.childRuns} />
                         ))}
                     </div>
                 </div>
