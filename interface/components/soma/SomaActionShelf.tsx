@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Bolt, Plus, X } from "lucide-react";
 import {
   instantiateBackendAction,
@@ -9,6 +9,7 @@ import {
   persistLocalActions,
   saveBackendAction,
 } from "./somaActionPersistence";
+import { useClientReady } from "@/lib/browserLocation";
 
 export type SomaPinnedAction = {
   id?: string;
@@ -35,6 +36,24 @@ export const DEFAULT_PINNED_ACTIONS: SomaPinnedAction[] = [
 ];
 const SAVED_ACTIONS_KEY = "mycelis-soma-saved-actions";
 
+function subscribeSavedActions(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+function readSavedActionsSnapshot() {
+  return window.localStorage.getItem(SAVED_ACTIONS_KEY) ?? "[]";
+}
+
+function parseSavedActions(raw: string): SomaPinnedAction[] {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(isSavedAction).slice(0, 2) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function SomaActionShelf({
   actions = DEFAULT_PINNED_ACTIONS,
   onRunAction,
@@ -42,27 +61,20 @@ export function SomaActionShelf({
   actions?: readonly SomaPinnedAction[];
   onRunAction: (prompt: string) => void;
 }) {
-  const [savedActions, setSavedActions] = useState<SomaPinnedAction[]>([]);
-  const [isClientReady, setIsClientReady] = useState(false);
+  const localSnapshot = useSyncExternalStore(subscribeSavedActions, readSavedActionsSnapshot, () => "[]");
+  const localActions = useMemo(() => parseSavedActions(localSnapshot), [localSnapshot]);
+  const [loadedActions, setLoadedActions] = useState<SomaPinnedAction[] | null>(null);
+  const savedActions = loadedActions ?? localActions;
+  const isClientReady = useClientReady();
   const [studioOpen, setStudioOpen] = useState(false);
   const visibleActions = useMemo(() => [...savedActions, ...actions].slice(0, 3), [actions, savedActions]);
 
   useEffect(() => {
     let cancelled = false;
-    try {
-      const raw = window.localStorage.getItem(SAVED_ACTIONS_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(parsed)) {
-        setSavedActions(parsed.filter(isSavedAction).slice(0, 2));
-      }
-    } catch {
-      setSavedActions([]);
-    }
-    setIsClientReady(true);
     loadBackendActions()
       .then((actions) => {
         if (!cancelled && actions.length > 0) {
-          setSavedActions(actions);
+          setLoadedActions(actions);
           persistLocalActions(actions);
         }
       })
@@ -76,14 +88,14 @@ export function SomaActionShelf({
 
   const saveAction = async (action: SomaPinnedAction) => {
     const next = [action, ...savedActions.filter((item) => item.label !== action.label)].slice(0, 2);
-    setSavedActions(next);
+    setLoadedActions(next);
     setStudioOpen(false);
     persistLocalActions(next);
     try {
       const saved = await saveBackendAction(action);
       if (saved) {
         const backendNext = [saved, ...savedActions.filter((item) => item.label !== saved.label)].slice(0, 2);
-        setSavedActions(backendNext);
+        setLoadedActions(backendNext);
         persistLocalActions(backendNext);
       }
     } catch {

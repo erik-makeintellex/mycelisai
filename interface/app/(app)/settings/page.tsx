@@ -13,6 +13,10 @@ import {
     type SettingsTabId as TabId,
 } from "@/components/settings/SettingsGuidedWorkflow";
 import { useCortexStore } from "@/store/useCortexStore";
+import { useBrowserSearch } from "@/lib/browserLocation";
+
+const validTabs: TabId[] = ["profile", "profiles", "users", "engines", "auth", "tools"];
+const advancedTabs: TabId[] = ["engines", "auth", "tools"];
 
 export default function SettingsPage() {
     return <SettingsContent />;
@@ -22,30 +26,17 @@ function SettingsContent() {
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
     const fetchUserSettings = useCortexStore((s) => s.fetchUserSettings);
-    const validTabs: TabId[] = ["profile", "profiles", "users", "engines", "auth", "tools"];
-    const [requestedTab, setRequestedTab] = useState<TabId | null>(null);
-    const requestedAdvancedTab = requestedTab && ["engines", "auth", "tools"].includes(requestedTab) ? requestedTab : null;
-    const [activeTab, setActiveTab] = useState<TabId>("profile");
+    const search = useBrowserSearch();
+    const queryTab = new URLSearchParams(search).get("tab") as TabId | null;
+    const requestedTab = queryTab && validTabs.includes(queryTab) ? queryTab : null;
+    const requestedAdvancedTab = requestedTab && advancedTabs.includes(requestedTab) ? requestedTab : null;
+    const [selectedTab, setSelectedTab] = useState<TabId | null>(null);
     const [webRole, setWebRole] = useState<"admin" | "standard">("admin");
     const isAdmin = webRole === "admin";
 
     useEffect(() => {
         void fetchUserSettings();
     }, [fetchUserSettings]);
-
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const tab = params.get("tab") as TabId | null;
-        setRequestedTab(tab && validTabs.includes(tab) ? tab : null);
-    }, []);
-
-    useEffect(() => {
-        if (!requestedTab) return;
-        const requiresAdvanced = ["engines", "auth", "tools"].includes(requestedTab);
-        if (!requiresAdvanced || advancedMode) {
-            setActiveTab(requestedTab);
-        }
-    }, [advancedMode, requestedTab]);
 
     useEffect(() => {
         let cancelled = false;
@@ -62,15 +53,20 @@ function SettingsContent() {
             cancelled = true;
         };
     }, []);
-    useEffect(() => {
-        if (!isAdmin && activeTab !== "profile" && activeTab !== "profiles") setActiveTab("profile");
-    }, [activeTab, isAdmin]);
+    const requestedAvailable = requestedTab && (!advancedTabs.includes(requestedTab) || advancedMode)
+        ? requestedTab
+        : null;
+    const candidateTab = selectedTab ?? requestedAvailable ?? "profile";
+    const activeTab = isAdmin || candidateTab === "profile" || candidateTab === "profiles"
+        ? candidateTab
+        : "profile";
+
     const openRequestedAdvancedTab = () => {
         if (!requestedAdvancedTab) return;
         if (!advancedMode) {
             toggleAdvancedMode();
         }
-        setActiveTab(requestedAdvancedTab);
+        setSelectedTab(requestedAdvancedTab);
     };
 
     return (
@@ -90,18 +86,18 @@ function SettingsContent() {
                 {requestedAdvancedTab && !advancedMode ? (
                     <AdvancedDeepLinkNotice requestedTab={requestedAdvancedTab} onOpen={openRequestedAdvancedTab} />
                 ) : null}
-                <SettingsGuidedWorkflow advancedMode={advancedMode} activeTab={activeTab} onSelect={setActiveTab} />
+                <SettingsGuidedWorkflow advancedMode={advancedMode} activeTab={activeTab} onSelect={setSelectedTab} />
 
                 {/* Tabs */}
                 <div role="tablist" aria-label="Settings sections" className="flex items-center gap-1 border-b border-cortex-border">
-                    <Tab label="Profile" icon={User} active={activeTab === "profile"} onClick={() => setActiveTab("profile")} />
-                    <Tab label="Mission Profiles" icon={Layers} active={activeTab === "profiles"} onClick={() => setActiveTab("profiles")} />
-                    {isAdmin && <Tab label="People & Access" icon={Shield} active={activeTab === "users"} onClick={() => setActiveTab("users")} />}
+                    <Tab label="Profile" icon={User} active={activeTab === "profile"} onClick={() => setSelectedTab("profile")} />
+                    <Tab label="Mission Profiles" icon={Layers} active={activeTab === "profiles"} onClick={() => setSelectedTab("profiles")} />
+                    {isAdmin && <Tab label="People & Access" icon={Shield} active={activeTab === "users"} onClick={() => setSelectedTab("users")} />}
                     {advancedMode && isAdmin && (
                         <>
-                            <Tab label="AI Engines" icon={Brain} active={activeTab === "engines"} onClick={() => setActiveTab("engines")} />
-                            <Tab label="Auth Providers" icon={KeyRound} active={activeTab === "auth"} onClick={() => setActiveTab("auth")} />
-                            <Tab label="Capabilities" icon={Wrench} active={activeTab === "tools"} onClick={() => setActiveTab("tools")} />
+                            <Tab label="AI Engines" icon={Brain} active={activeTab === "engines"} onClick={() => setSelectedTab("engines")} />
+                            <Tab label="Auth Providers" icon={KeyRound} active={activeTab === "auth"} onClick={() => setSelectedTab("auth")} />
+                            <Tab label="Capabilities" icon={Wrench} active={activeTab === "tools"} onClick={() => setSelectedTab("tools")} />
                         </>
                     )}
                 </div>

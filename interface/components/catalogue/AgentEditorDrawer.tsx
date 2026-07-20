@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { X, Save } from "lucide-react";
 import type { CatalogueAgent } from "@/store/useCortexStore";
 import { TagInput } from "@/components/common/TagInput";
@@ -20,44 +20,32 @@ export default function AgentEditorDrawer({
   onClose,
   onSave,
 }: AgentEditorDrawerProps) {
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<string>("cognitive");
-  const [systemPrompt, setSystemPrompt] = useState("");
-  const [model, setModel] = useState("");
-  const [tools, setTools] = useState<string[]>([]);
-  const [inputs, setInputs] = useState<string[]>([]);
-  const [outputs, setOutputs] = useState<string[]>([]);
-  const [verificationStrategy, setVerificationStrategy] =
-    useState<string>("none");
-  const [verificationRubric, setVerificationRubric] = useState("");
-  const [validationCommand, setValidationCommand] = useState("");
+  return (
+    <AgentEditorForm
+      key={agent?.id ?? "new-agent"}
+      agent={agent}
+      onClose={onClose}
+      onSave={onSave}
+    />
+  );
+}
 
-  // Pre-populate in edit mode
-  useEffect(() => {
-    if (agent) {
-      setName(agent.name);
-      setRole(agent.role);
-      setSystemPrompt(agent.system_prompt ?? "");
-      setModel(agent.model ?? "");
-      setTools([...agent.tools]);
-      setInputs([...agent.inputs]);
-      setOutputs([...agent.outputs]);
-      setVerificationStrategy(agent.verification_strategy ?? "none");
-      setVerificationRubric(agent.verification_rubric.join(", "));
-      setValidationCommand(agent.validation_command ?? "");
-    } else {
-      setName("");
-      setRole("cognitive");
-      setSystemPrompt("");
-      setModel("");
-      setTools([]);
-      setInputs([]);
-      setOutputs([]);
-      setVerificationStrategy("none");
-      setVerificationRubric("");
-      setValidationCommand("");
-    }
-  }, [agent]);
+function AgentEditorForm({ agent, onClose, onSave }: AgentEditorDrawerProps) {
+  const [name, setName] = useState(agent?.name ?? "");
+  const [role, setRole] = useState<string>(agent?.role ?? "cognitive");
+  const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt ?? "");
+  const [model, setModel] = useState(agent?.model ?? "");
+  const [tools, setTools] = useState<string[]>(() => [...(agent?.tools ?? [])]);
+  const [inputs, setInputs] = useState<string[]>(() => [...(agent?.inputs ?? [])]);
+  const [outputs, setOutputs] = useState<string[]>(() => [...(agent?.outputs ?? [])]);
+  const [verificationStrategy, setVerificationStrategy] =
+    useState<string>(agent?.verification_strategy ?? "none");
+  const [verificationRubric, setVerificationRubric] = useState(
+    () => agent?.verification_rubric.join(", ") ?? "",
+  );
+  const [validationCommand, setValidationCommand] = useState(
+    agent?.validation_command ?? "",
+  );
 
   const handleSave = useCallback(() => {
     const rubricArray = verificationRubric

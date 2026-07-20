@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { X, Save, Trash2 } from "lucide-react";
 import type { AgentManifest } from "@/store/useCortexStore";
 import type { MissionStatus } from "@/store/useCortexStore";
@@ -32,24 +32,36 @@ export default function WiringAgentEditor({
   onSave,
   onDelete,
 }: WiringAgentEditorProps) {
-  const [agentId, setAgentId] = useState("");
-  const [role, setRole] = useState<string>("cognitive");
-  const [systemPrompt, setSystemPrompt] = useState("");
-  const [model, setModel] = useState("");
-  const [tools, setTools] = useState<string[]>([]);
-  const [inputs, setInputs] = useState<string[]>([]);
-  const [outputs, setOutputs] = useState<string[]>([]);
+  return (
+    <WiringAgentEditorForm
+      key={`${teamIdx}:${agentIdx}:${agent.id}`}
+      teamIdx={teamIdx}
+      agentIdx={agentIdx}
+      agent={agent}
+      missionStatus={missionStatus}
+      onClose={onClose}
+      onSave={onSave}
+      onDelete={onDelete}
+    />
+  );
+}
 
-  // Pre-populate from agent
-  useEffect(() => {
-    setAgentId(agent.id);
-    setRole(agent.role);
-    setSystemPrompt(agent.system_prompt ?? "");
-    setModel(agent.model ?? "");
-    setTools([...(agent.tools ?? [])]);
-    setInputs([...(agent.inputs ?? [])]);
-    setOutputs([...(agent.outputs ?? [])]);
-  }, [agent]);
+function WiringAgentEditorForm({
+  teamIdx,
+  agentIdx,
+  agent,
+  missionStatus,
+  onClose,
+  onSave,
+  onDelete,
+}: WiringAgentEditorProps) {
+  const [agentId, setAgentId] = useState(agent.id);
+  const [role, setRole] = useState<string>(agent.role);
+  const [systemPrompt, setSystemPrompt] = useState(agent.system_prompt ?? "");
+  const [model, setModel] = useState(agent.model ?? "");
+  const [tools, setTools] = useState<string[]>(() => [...(agent.tools ?? [])]);
+  const [inputs, setInputs] = useState<string[]>(() => [...(agent.inputs ?? [])]);
+  const [outputs, setOutputs] = useState<string[]>(() => [...(agent.outputs ?? [])]);
 
   const handleSave = useCallback(() => {
     onSave(teamIdx, agentIdx, {

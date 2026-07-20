@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { ScrollText, Cable, ShieldCheck, Clock, CalendarClock } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import AutomationHub from "@/components/automations/AutomationHub";
+import { useBrowserSearch, useClientReady } from "@/lib/browserLocation";
 
 const ApprovalsContent = dynamic(() => import("@/components/automations/ApprovalsTab"), {
     ssr: false,
@@ -35,20 +36,13 @@ export default function AutomationsPage() {
 
 function AutomationsContent() {
     const advancedMode = useCortexStore((s) => s.advancedMode);
-    const [isHydrated, setIsHydrated] = useState(false);
-    const [requestedTab, setRequestedTab] = useState<TabId | null>(null);
-    useEffect(() => {
-        setIsHydrated(true);
-        const params = new URLSearchParams(window.location.search);
-        const tab = params.get("tab") as TabId | null;
-        setRequestedTab(tab && VALID_TABS.includes(tab) ? tab : null);
-    }, []);
+    const isHydrated = useClientReady();
+    const search = useBrowserSearch();
+    const queryTab = new URLSearchParams(search).get("tab") as TabId | null;
+    const requestedTab = queryTab && VALID_TABS.includes(queryTab) ? queryTab : null;
     const effectiveAdvancedMode = isHydrated ? advancedMode : false;
-    const [activeTab, setActiveTab] = useState<TabId>("active");
-
-    useEffect(() => {
-        if (requestedTab) setActiveTab(requestedTab);
-    }, [requestedTab]);
+    const [selectedTab, setSelectedTab] = useState<TabId | null>(null);
+    const activeTab = selectedTab ?? requestedTab ?? "active";
 
     const effectiveTab =
         !effectiveAdvancedMode && activeTab === "wiring"
@@ -70,12 +64,12 @@ function AutomationsContent() {
                 </div>
 
                 <div className="flex gap-1 border-b border-cortex-border overflow-x-auto">
-                    <TabButton active={effectiveTab === "active"} onClick={() => setActiveTab("active")} icon={<Clock size={14} />} label="Active Automations" />
-                    <TabButton active={effectiveTab === "triggers"} onClick={() => setActiveTab("triggers")} icon={<ScrollText size={14} />} label="Trigger Rules" />
-                    <TabButton active={effectiveTab === "schedules"} onClick={() => setActiveTab("schedules")} icon={<CalendarClock size={14} />} label="Schedule Rules" />
-                    <TabButton active={effectiveTab === "approvals"} onClick={() => setActiveTab("approvals")} icon={<ShieldCheck size={14} />} label="Approvals" />
+                    <TabButton active={effectiveTab === "active"} onClick={() => setSelectedTab("active")} icon={<Clock size={14} />} label="Active Automations" />
+                    <TabButton active={effectiveTab === "triggers"} onClick={() => setSelectedTab("triggers")} icon={<ScrollText size={14} />} label="Trigger Rules" />
+                    <TabButton active={effectiveTab === "schedules"} onClick={() => setSelectedTab("schedules")} icon={<CalendarClock size={14} />} label="Schedule Rules" />
+                    <TabButton active={effectiveTab === "approvals"} onClick={() => setSelectedTab("approvals")} icon={<ShieldCheck size={14} />} label="Approvals" />
                     {effectiveAdvancedMode && (
-                        <TabButton active={effectiveTab === "wiring"} onClick={() => setActiveTab("wiring")} icon={<Cable size={14} />} label="Workflow Builder" />
+                        <TabButton active={effectiveTab === "wiring"} onClick={() => setSelectedTab("wiring")} icon={<Cable size={14} />} label="Workflow Builder" />
                     )}
                 </div>
             </header>
@@ -84,7 +78,7 @@ function AutomationsContent() {
                 {effectiveTab === "active" && (
                     <AutomationHub
                         advancedMode={effectiveAdvancedMode}
-                        openTab={(tab) => setActiveTab(tab)}
+                        openTab={setSelectedTab}
                     />
                 )}
                 {effectiveTab === "triggers" && <TriggersContent />}

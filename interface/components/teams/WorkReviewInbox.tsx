@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Archive, Eye, Pause, Play, RefreshCw, Send } from "lucide-react";
 import type { TeamInteraction, TeamOutputRef, TeamWorkItem } from "@/store/useCortexStore";
@@ -38,12 +38,6 @@ export function WorkReviewInbox({
 }) {
   const [selectedId, setSelectedId] = useState(items[0]?.id ?? null);
   const selectedItem = useMemo(() => items.find((item) => item.id === selectedId) ?? items[0] ?? null, [items, selectedId]);
-
-  useEffect(() => {
-    if (!items.some((item) => item.id === selectedId)) {
-      setSelectedId(items[0]?.id ?? null);
-    }
-  }, [items, selectedId]);
 
   if (items.length === 0) {
     return (

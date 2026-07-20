@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ArrowLeft, Eye } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
+import { useBrowserSearch } from "@/lib/browserLocation";
 
 export default function AdvancedModeGate({
     title,
@@ -19,13 +19,10 @@ export default function AdvancedModeGate({
 }) {
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
     const pathname = usePathname() ?? "/dashboard";
-    const [advancedHref, setAdvancedHref] = useState(`${pathname}?advanced=1`);
-
-    useEffect(() => {
-        const advancedParams = new URLSearchParams(window.location.search);
-        advancedParams.set("advanced", "1");
-        setAdvancedHref(`${pathname}?${advancedParams.toString()}`);
-    }, [pathname]);
+    const search = useBrowserSearch();
+    const advancedParams = new URLSearchParams(search);
+    advancedParams.set("advanced", "1");
+    const advancedHref = `${pathname}?${advancedParams.toString()}`;
 
     return (
         <div className="flex h-full items-center justify-center bg-cortex-bg px-6 py-10">
