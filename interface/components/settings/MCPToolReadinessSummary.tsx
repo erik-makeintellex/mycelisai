@@ -1,6 +1,7 @@
 "use client";
 
 import type { CapabilityManifest } from "@/store/useCortexStore";
+import { CAPABILITY_ORIGINS, capabilityOrigin } from "./MCPToolCapabilityOrigin";
 
 export function CapabilityReadinessSummary({
     capabilities,
@@ -19,8 +20,12 @@ export function CapabilityReadinessSummary({
 }) {
     const ready = capabilities.filter(isCapabilityReady);
     const repair = capabilities.filter((capability) => !isCapabilityReady(capability));
-    const readyNames = ready.slice(0, 3).map((capability) => capability.name);
-    const repairNames = repair.slice(0, 3).map((capability) => capability.name);
+    const originCounts = new Map(
+        CAPABILITY_ORIGINS.map((origin) => [
+            origin.id,
+            capabilities.filter((capability) => capabilityOrigin(capability) === origin.id).length,
+        ]),
+    );
 
     return (
         <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
@@ -61,42 +66,33 @@ export function CapabilityReadinessSummary({
                 />
                 <SummaryChip label="Available to add" count={1} onClick={onOpenAccess} />
             </div>
-            <div className="mt-3 divide-y divide-cortex-border overflow-hidden rounded-lg border border-cortex-border bg-cortex-bg/50">
-                <ReadinessRow
-                    action="View catalog"
-                    count={ready.length}
-                    empty={isLoading ? "Checking capabilities..." : "No ready capabilities visible yet."}
-                    items={readyNames}
-                    onAction={onOpenCatalog}
-                    title="Ready"
-                    summary="Soma can use these when the current scope allows it."
-                />
-                <ReadinessRow
-                    action={repair.length ? "Review attention" : "View catalog"}
-                    count={repair.length}
-                    empty="No visible blockers."
-                    items={repairNames}
-                    onAction={onOpenCatalog}
-                    title="Needs attention"
-                    summary={repair.length
-                        ? "Review these before relying on the related work."
-                        : "No capability attention work is visible right now."}
-                    tone={repair.length ? "warning" : "success"}
-                />
-                <ReadinessRow
-                    action="Open access"
-                    count={1}
-                    empty="Search sources, service data connections, data mounts, and scoped permissions."
-                    items={[]}
-                    onAction={onOpenAccess}
-                    title="Available to add"
-                    summary="Connect more sources or permissions when Soma needs new reach."
-                />
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Capability origin summary">
+                {CAPABILITY_ORIGINS.map((origin) => (
+                    <button
+                        key={origin.id}
+                        type="button"
+                        aria-label={`${origin.label}: ${isLoading ? "checking" : originCounts.get(origin.id) ?? 0}`}
+                        onClick={onOpenCatalog}
+                        className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full border border-cortex-border bg-cortex-bg/50 px-3 py-1.5 text-left transition hover:border-cortex-primary/40"
+                    >
+                        <span className="text-xs font-semibold text-cortex-text-main">{origin.label}</span>
+                        <span className="rounded-full border border-cortex-border bg-cortex-surface px-2 py-1 font-mono text-[10px] text-cortex-text-main">
+                            {isLoading ? "…" : originCounts.get(origin.id) ?? 0}
+                        </span>
+                    </button>
+                ))}
             </div>
+            <dl className="mt-2 grid gap-x-4 gap-y-1 border-t border-cortex-border pt-2 sm:grid-cols-2">
+                {CAPABILITY_ORIGINS.map((origin) => (
+                    <div key={origin.id} className="flex min-w-0 gap-1 text-[11px] leading-4">
+                        <dt className="shrink-0 font-semibold text-cortex-text-main">{origin.label}:</dt>
+                        <dd className="text-cortex-text-muted">{origin.summary}</dd>
+                    </div>
+                ))}
+            </dl>
         </div>
     );
 }
-
 export function isCapabilityReady(capability: CapabilityManifest): boolean {
     const status = capability.availability_status?.toLowerCase();
     return !status || status === "available" || status === "connected" || status === "ready" || status === "online";
@@ -129,54 +125,5 @@ function SummaryChip({
                 {count}
             </span>
         </button>
-    );
-}
-
-function ReadinessRow({
-    action,
-    count,
-    empty,
-    items,
-    onAction,
-    summary,
-    title,
-    tone = "neutral",
-}: {
-    action: string;
-    count: number;
-    empty: string;
-    items: string[];
-    onAction: () => void;
-    summary: string;
-    title: string;
-    tone?: "neutral" | "success" | "warning";
-}) {
-    const countClass = tone === "warning"
-        ? "border-cortex-warning/30 bg-cortex-warning/10 text-cortex-warning"
-        : tone === "success"
-        ? "border-cortex-success/30 bg-cortex-success/10 text-cortex-success"
-        : "border-cortex-border bg-cortex-bg text-cortex-text-muted";
-    return (
-        <section className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-            <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-xs font-semibold text-cortex-text-main">{title}</p>
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-mono ${countClass}`}>
-                        {count}
-                    </span>
-                </div>
-                <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{summary}</p>
-                <p className="mt-1 truncate text-xs text-cortex-text-main">
-                    {items.length ? items.join(", ") : empty}
-                </p>
-            </div>
-            <button
-                type="button"
-                onClick={onAction}
-                className="justify-self-start rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-xs font-semibold text-cortex-text-muted transition hover:text-cortex-text-main md:justify-self-end"
-            >
-                {action}
-            </button>
-        </section>
     );
 }

@@ -172,10 +172,17 @@ export function WebAccessSetupCard({
                 <CapabilityPill active={hasLocalSearch} label="Approved local or mounted sources" />
                 <CapabilityPill active={hasPublicWeb} label="Public web search" />
             </div>
-            <SearchSourceList sources={status?.sources ?? []} compact />
-            <p className="mt-3 text-xs leading-5 text-cortex-text-main">
-                {nextStep}
-            </p>
+            {hasPublicWeb || hasLocalSearch ? (
+                <details className="mt-3 rounded-lg border border-cortex-border bg-cortex-bg/50 px-3 py-2">
+                    <summary className="cursor-pointer text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                        Web access details
+                    </summary>
+                    <SearchSourceList sources={status?.sources ?? []} compact />
+                    <p className="mt-3 text-xs leading-5 text-cortex-text-main">{nextStep}</p>
+                </details>
+            ) : (
+                <p className="mt-3 text-xs leading-5 text-cortex-text-main">{nextStep}</p>
+            )}
         </section>
     );
 }

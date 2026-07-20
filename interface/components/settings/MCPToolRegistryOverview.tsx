@@ -100,12 +100,6 @@ export function MCPToolRegistryOverview({
 
             {activeFocus === "readiness" && (
                 <div className="grid gap-4">
-                    <WebAccessSetupCard
-                        status={searchCapability}
-                        isLoading={isFetchingSearchCapability}
-                        error={searchCapabilityError}
-                        onAddWebCapability={onAddWebCapability}
-                    />
                     <CapabilityReadinessSummary
                         capabilities={capabilities}
                         isLoading={isFetchingCapabilities}
@@ -113,6 +107,12 @@ export function MCPToolRegistryOverview({
                         usingFallback={usingCapabilityFallback}
                         onOpenCatalog={() => setActiveFocus("catalog")}
                         onOpenAccess={() => setActiveFocus("access")}
+                    />
+                    <WebAccessSetupCard
+                        status={searchCapability}
+                        isLoading={isFetchingSearchCapability}
+                        error={searchCapabilityError}
+                        onAddWebCapability={onAddWebCapability}
                     />
                 </div>
             )}
