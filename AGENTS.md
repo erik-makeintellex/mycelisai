@@ -25,14 +25,15 @@ This repository is Go-first for product/runtime work and Python-first for manage
 
 ## Feature Branch And Merge Quality Contract
 
-- Product/runtime feature work must start from an intentionally named feature branch unless the user explicitly asks for a different branch shape.
+- `main` is the production-promotion branch. `dev` is the shared integration branch. Product/runtime feature work must start from a clean, updated `dev` on an intentionally named `feature/*` branch unless the user explicitly asks for a different branch shape.
 - Keep each branch scoped to one reviewable slice. If work expands, split follow-on work into a new branch instead of letting one branch become a mixed backlog.
 - Before engaging teams or implementing a substantial next slice, review current branch state, the active scoreboard, canonical PRD alignment, and likely proof gates. Write down the execution shape before spawning or redirecting agents.
 - Before spawning new sub-agents for any work, review existing open agentry for reuse or closure. Reuse relevant active agents when their context matches the slice; close completed, stale, duplicate, or no-longer-relevant agents before adding more background work.
-- Do not treat local green tests as enough for merge readiness. A slice reaches merge quality only after code, docs/state, focused tests, typecheck/build gates, and any required live GUI proof pass together.
-- Before merging to `main`, review `git status --short --branch`, `git diff --check`, branch divergence, untracked files, temporary proof artifacts, and affected docs. Resolve or record every item.
-- Merge only when the branch is clean enough that `main` can be released or handed to another agent without hidden local assumptions, stale temp files, or unexplained generated output.
-- After merge, delete local feature branches that are fully merged and explicitly review remote branches before deletion. Keep unmerged/archive branches only with a named purpose.
+- A feature branch reaches integration quality only after code, docs/state, focused tests, typecheck/build gates, and any required live GUI proof pass together. Commit that proven state before merging it into `dev`.
+- After every feature merge, test the resulting `dev` state again. Run the affected integration suites, service health, and live GUI journeys needed to detect cross-slice regressions; feature-branch proof is not a substitute for post-merge integration proof.
+- Promote `dev` to `main` only from a clean, committed integration checkpoint after the required broader release preflight, deployment/runtime proof, and user-facing browser certification pass. Rerun the release smoke and health checks after the promotion.
+- Before every merge or promotion, review `git status --short --branch`, `git diff --check`, branch divergence, untracked files, temporary proof artifacts, and affected docs. Resolve or record every item.
+- After a feature is merged and its `dev` proof passes, delete the merged local feature branch. Explicitly review remote branches before deletion. Keep unmerged/archive branches only with a named purpose.
 - If urgent work must happen directly on `main`, the close-out must still follow the same branch-quality checklist before commit, push, or handoff.
 
 ## Team Orchestration And Messaging Contract

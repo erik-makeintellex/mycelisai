@@ -173,6 +173,8 @@ uv run inv quality.max-lines --limit 300
 
 ## III. Development Workflow
 
+Use `feature/* -> dev -> main` as the delivery ladder. Feature branches are reviewable implementation slices and must pass focused code, docs, build, and visible-workflow proof before merging. The merged `dev` checkpoint must then pass affected integration and live-service proof. Promote `dev` to `main` only from a clean commit after release preflight and required deployment proof; confirm health again after promotion and remove merged feature branches.
+
 Choose the runtime lane first:
 - Compose for supported home-runtime proof
 - Rancher Desktop K3s or k3d/Helm for local cluster proof
