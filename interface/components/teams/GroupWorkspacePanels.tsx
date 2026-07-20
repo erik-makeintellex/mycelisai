@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CreateGroupPane } from "./CreateGroupPane";
 import { GroupCommunicationPanel } from "./GroupCommunicationPanel";
 import { GroupConfigPane } from "./GroupConfigPane";
@@ -64,10 +64,6 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
   const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>(
     initialPanel ?? "overview",
   );
-
-  useEffect(() => {
-    if (initialPanel) setActivePanel(initialPanel);
-  }, [initialPanel]);
 
   const selectPanel = (panel: GroupWorkspacePanel, groupId = selectedGroupId) => {
     setActivePanel(panel);

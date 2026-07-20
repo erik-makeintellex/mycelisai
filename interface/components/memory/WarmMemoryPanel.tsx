@@ -137,14 +137,17 @@ export default function WarmMemoryPanel({
   }, []);
 
   useEffect(() => {
-    if (activeTab === "warm") {
-      loadSitreps();
-      fetchArtifacts({ limit: 50 });
-    } else if (activeTab === "sitreps") {
-      loadSitreps();
-    } else if (activeTab === "artifacts") {
-      fetchArtifacts({ limit: 50 });
-    }
+    const timer = window.setTimeout(() => {
+      if (activeTab === "warm") {
+        void loadSitreps();
+        void fetchArtifacts({ limit: 50 });
+      } else if (activeTab === "sitreps") {
+        void loadSitreps();
+      } else if (activeTab === "artifacts") {
+        void fetchArtifacts({ limit: 50 });
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [activeTab, loadSitreps, fetchArtifacts]);
 
   const isLoading = activeTab === "warm"

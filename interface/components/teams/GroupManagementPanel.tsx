@@ -279,7 +279,7 @@ export default function GroupManagementPanel({
   };
 
   return (
-    <GroupWorkspacePanels
+    <GroupWorkspacePanels key={initialPanel ?? "overview"}
       buckets={buckets}
       monitor={monitor}
       lifecycleReport={lifecycleReport}

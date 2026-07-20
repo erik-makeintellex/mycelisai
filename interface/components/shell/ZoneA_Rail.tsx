@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users, Radio, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { readLastOrganization, subscribeLastOrganizationChange } from '@/lib/lastOrganization';
+import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users, Radio, LogOut, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react';
+import { useLastOrganization } from '@/lib/lastOrganization';
 import { useCortexStore } from '@/store/useCortexStore';
 
 export function ZoneA() {
@@ -15,21 +15,10 @@ export function ZoneA() {
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
     const toggleRailCollapsed = useCortexStore((s) => s.toggleRailCollapsed);
     const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
-    const [isHydrated, setIsHydrated] = useState(false);
-    const [lastOrganization, setLastOrganization] = useState<{ id: string; name: string } | null>(null);
+    const isHydrated = useSyncExternalStore(subscribeHydration, readHydrated, readServerHydrated);
+    const lastOrganization = useLastOrganization();
     const [webRole, setWebRole] = useState<'admin' | 'standard'>('admin');
 
-    useEffect(() => {
-        const syncLastOrganization = () => {
-            setLastOrganization(readLastOrganization());
-        };
-
-        setIsHydrated(true);
-        syncLastOrganization();
-        return subscribeLastOrganizationChange((organization) => {
-            setLastOrganization(organization);
-        });
-    }, [pathname]);
     useEffect(() => {
         let cancelled = false;
         const request = fetch('/auth/session', { cache: 'no-store' });
@@ -179,7 +168,7 @@ export function ZoneA() {
     );
 }
 
-function NavItem({ icon: Icon, label, href, title, description, onClick, testId, collapsed = false }: { icon: any; label: string; href: string; title?: string; description?: string; onClick?: () => void; testId?: string; collapsed?: boolean }) {
+function NavItem({ icon: Icon, label, href, title, description, onClick, testId, collapsed = false }: { icon: LucideIcon; label: string; href: string; title?: string; description?: string; onClick?: () => void; testId?: string; collapsed?: boolean }) {
     const pathname = usePathname();
     const isActive = pathname === href || pathname?.startsWith(href + '/') === true;
     const classes = `
@@ -215,4 +204,16 @@ function NavItem({ icon: Icon, label, href, title, description, onClick, testId,
             {content}
         </Link>
     );
+}
+
+function subscribeHydration() {
+    return () => undefined;
+}
+
+function readHydrated() {
+    return true;
+}
+
+function readServerHydrated() {
+    return false;
 }

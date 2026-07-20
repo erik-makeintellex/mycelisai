@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
-import { readLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
+import { use, useEffect, useMemo } from "react";
+import { useLastOrganization } from "@/lib/lastOrganization";
 import { SomaOperatingSurface } from "@/components/soma/SomaOperatingSurface";
 import { useCortexStore } from "@/store/useCortexStore";
 
@@ -25,7 +25,7 @@ export default function CentralSomaHome({
 }: {
     requestedTeamIdPromise?: Promise<{ team_id?: string | string[] }>;
 }) {
-    const [lastOrganization, setLastOrganization] = useState<LastOrganization | null>(null);
+    const lastOrganization: LastOrganization | null = useLastOrganization();
     const fetchTeamsDetail = useCortexStore((s) => s.fetchTeamsDetail);
     const selectTeam = useCortexStore((s) => s.selectTeam);
     const selectedTeamId = useCortexStore((s) => s.selectedTeamId);
@@ -35,13 +35,6 @@ export default function CentralSomaHome({
     const requestedTeamId = Array.isArray(requestedTeamIdValue)
         ? requestedTeamIdValue[0]?.trim() ?? ""
         : requestedTeamIdValue?.trim() ?? "";
-
-    useEffect(() => {
-        setLastOrganization(readLastOrganization());
-        return subscribeLastOrganizationChange((organization) => {
-            setLastOrganization(organization);
-        });
-    }, []);
 
     useEffect(() => {
         void fetchTeamsDetail().finally(() => {

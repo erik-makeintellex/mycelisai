@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo, useSyncExternalStore } from "react";
+
 export interface LastOrganizationRef {
     id: string;
     name: string;
@@ -62,4 +64,29 @@ export function subscribeLastOrganizationChange(listener: (organization: LastOrg
     return () => {
         window.removeEventListener(LAST_ORGANIZATION_CHANGED_EVENT, handleChange as EventListener);
     };
+}
+
+function subscribeLastOrganizationSnapshot(listener: () => void) {
+    return subscribeLastOrganizationChange(() => listener());
+}
+
+function readLastOrganizationSnapshot() {
+    const organization = readLastOrganization();
+    return organization ? JSON.stringify(organization) : "";
+}
+
+function readServerLastOrganizationSnapshot() {
+    return "";
+}
+
+export function useLastOrganization() {
+    const snapshot = useSyncExternalStore(
+        subscribeLastOrganizationSnapshot,
+        readLastOrganizationSnapshot,
+        readServerLastOrganizationSnapshot,
+    );
+    return useMemo<LastOrganizationRef | null>(
+        () => (snapshot ? JSON.parse(snapshot) as LastOrganizationRef : null),
+        [snapshot],
+    );
 }
