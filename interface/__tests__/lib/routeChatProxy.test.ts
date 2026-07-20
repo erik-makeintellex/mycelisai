@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST as postWorkspaceChat } from '@/app/api/v1/chat/route';
 import { POST as postCouncilChat } from '@/app/api/v1/council/[member]/chat/route';
 import { POST as postLegacyChat } from '@/app/(app)/api/chat/route';
+import { GET as getSearchSources, POST as postSearchSource } from '@/app/api/v1/search/sources/route';
+import { DELETE as deleteSearchSource, PATCH as patchSearchSource } from '@/app/api/v1/search/sources/[id]/route';
 
 describe('chat proxy routes', () => {
     const originalApiKey = process.env.MYCELIS_API_KEY;
@@ -109,5 +111,42 @@ describe('chat proxy routes', () => {
         const headers = init.headers as Headers;
         expect(headers.get('X-Mycelis-Web-Identity')).toBe('signed-payload');
         expect(headers.get('X-Mycelis-Web-Identity-Signature')).toBe('signed-proof');
+    });
+
+    it('proxies search-source reads and preserves query parameters', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true, data: [] }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+        })));
+
+        const response = await getSearchSources(new Request('http://localhost/api/v1/search/sources?scope_kind=group'));
+
+        expect(response.status).toBe(200);
+        expect(fetch).toHaveBeenCalledWith(
+            'http://127.0.0.1:8081/api/v1/search/sources?scope_kind=group',
+            expect.objectContaining({ method: 'GET', headers: expect.any(Headers) }),
+        );
+    });
+
+    it('proxies search-source mutations through the shared authenticated transport', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+        })));
+        const body = JSON.stringify({ name: 'Approved docs' });
+
+        await postSearchSource(new Request('http://localhost/api/v1/search/sources', { method: 'POST', body }));
+        await patchSearchSource(
+            new Request('http://localhost/api/v1/search/sources/approved%20docs', { method: 'PATCH', body }),
+            { params: Promise.resolve({ id: 'approved docs' }) },
+        );
+        await deleteSearchSource(
+            new Request('http://localhost/api/v1/search/sources/approved%20docs', { method: 'DELETE' }),
+            { params: Promise.resolve({ id: 'approved docs' }) },
+        );
+
+        expect(fetch).toHaveBeenNthCalledWith(1, 'http://127.0.0.1:8081/api/v1/search/sources', expect.objectContaining({ method: 'POST', body }));
+        expect(fetch).toHaveBeenNthCalledWith(2, 'http://127.0.0.1:8081/api/v1/search/sources/approved%20docs', expect.objectContaining({ method: 'PATCH', body }));
+        expect(fetch).toHaveBeenNthCalledWith(3, 'http://127.0.0.1:8081/api/v1/search/sources/approved%20docs', expect.objectContaining({ method: 'DELETE', body: undefined }));
     });
 });
