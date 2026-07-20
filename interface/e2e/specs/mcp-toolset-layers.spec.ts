@@ -69,6 +69,12 @@ async function mockSettingsApis(page: Page) {
             },
         });
     });
+    await page.route("**/api/v1/search/sources", async (route) => {
+        await fulfillJSON(route, { ok: true, data: { sources: [] } });
+    });
+    await page.route("**/api/v1/input-sources", async (route) => {
+        await fulfillJSON(route, { ok: true, data: [] });
+    });
     await page.route("**/api/v1/capabilities", async (route) => {
         await fulfillJSON(route, {
             ok: true,
@@ -107,7 +113,9 @@ test.describe("Capability permission settings", () => {
         await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
         await page.goto("/resources?tab=tools", { waitUntil: "domcontentloaded" });
 
+        await clickVisibleControl(page, page.getByRole("button", { name: /^Access/i }));
         await expect(page.getByText("Capability permissions", { exact: true })).toBeVisible({ timeout: 20_000 });
+        await clickVisibleControl(page, page.getByRole("button", { name: /^Service connections/i }));
         await expect(page.getByText("Choose where Soma can use connected tools")).toBeVisible();
         await expect(page.getByText("Shared workspace file tools.")).toBeVisible();
         await expect(page.getByText("Group: market-research")).toBeVisible();

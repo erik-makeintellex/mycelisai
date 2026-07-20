@@ -45,6 +45,7 @@ describe('MissionControlChat execution summary', () => {
                 ok: true,
                 data: {
                     ...CTS_CHAT_RESPONSE.data,
+                    mode: 'execution_result',
                     payload: {
                         text: 'Directed execution completed.',
                         execution_summary: {

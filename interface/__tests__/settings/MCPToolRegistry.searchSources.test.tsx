@@ -46,52 +46,30 @@ describe('MCPToolRegistry search sources', () => {
     });
 
     it('shows the optional registry and adds safe source metadata', async () => {
-        mockFetch
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ ok: true, data: { sources: [{
-                    id: 'approved-docs',
-                    name: 'Approved docs',
-                    source_type: 'knowledge_collection',
-                    scope_kind: 'all',
-                    boundary: 'Approved company knowledge index',
-                    auth_scheme: 'none',
-                    mode: 'live',
-                    sensitivity_class: 'governed',
-                    trust_class: 'trusted_internal',
-                    status: 'available',
-                }, {
-                    id: 'public-web',
-                    name: 'Public web research',
-                    source_type: 'public_web',
-                    endpoint: 'https://web-search.example.test',
-                    scope_kind: 'all',
-                    boundary: 'Approved public web search',
-                    auth_scheme: 'none',
-                    mode: 'live',
-                    sensitivity_class: 'public',
-                    trust_class: 'bounded_external',
-                    status: 'available',
-                }] } }),
-            })
-            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: { id: 'team-api' } }) })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ ok: true, data: { sources: [{
-                    id: 'team-api',
-                    name: 'Team research API',
-                    source_type: 'local_api',
-                    scope_kind: 'group',
-                    scope_ref: 'research',
-                    boundary: 'Approved research API',
-                    auth_scheme: 'api_token',
-                    secret_ref: 'SEARCH_API_KEY',
-                    mode: 'live',
-                    sensitivity_class: 'governed',
-                    trust_class: 'bounded_internal',
-                    status: 'available',
-                }] } }),
-            });
+        mockSearchSourceRegistry([{
+            id: 'approved-docs',
+            name: 'Approved docs',
+            source_type: 'knowledge_collection',
+            scope_kind: 'all',
+            boundary: 'Approved company knowledge index',
+            auth_scheme: 'none',
+            mode: 'live',
+            sensitivity_class: 'governed',
+            trust_class: 'trusted_internal',
+            status: 'available',
+        }, {
+            id: 'public-web',
+            name: 'Public web research',
+            source_type: 'public_web',
+            endpoint: 'https://web-search.example.test',
+            scope_kind: 'all',
+            boundary: 'Approved public web search',
+            auth_scheme: 'none',
+            mode: 'live',
+            sensitivity_class: 'public',
+            trust_class: 'bounded_external',
+            status: 'available',
+        }]);
 
         render(<MCPToolRegistry />);
         openAccessFocus();
@@ -144,46 +122,21 @@ describe('MCPToolRegistry search sources', () => {
     });
 
     it('updates and removes operator-managed search sources', async () => {
-        mockFetch
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ ok: true, data: [{
-                    id: 'team-api',
-                    name: 'Team research API',
-                    managed: true,
-                    source_type: 'local_api',
-                    endpoint: 'https://search.example.test/api',
-                    scope_kind: 'group',
-                    scope_ref: 'research',
-                    boundary: 'Approved research API',
-                    auth_scheme: 'none',
-                    mode: 'live',
-                    sensitivity_class: 'governed',
-                    trust_class: 'bounded_internal',
-                    status: 'available',
-                }] }),
-            })
-            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: { id: 'team-api' } }) })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ ok: true, data: [{
-                    id: 'team-api',
-                    name: 'Team research API v2',
-                    managed: true,
-                    source_type: 'local_api',
-                    endpoint: 'https://search.example.test/v2',
-                    scope_kind: 'group',
-                    scope_ref: 'research',
-                    boundary: 'Approved research API v2',
-                    auth_scheme: 'none',
-                    mode: 'live',
-                    sensitivity_class: 'governed',
-                    trust_class: 'bounded_internal',
-                    status: 'available',
-                }] }),
-            })
-            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: { deleted: true } }) })
-            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: [] }) });
+        mockSearchSourceRegistry([{
+            id: 'team-api',
+            name: 'Team research API',
+            managed: true,
+            source_type: 'local_api',
+            endpoint: 'https://search.example.test/api',
+            scope_kind: 'group',
+            scope_ref: 'research',
+            boundary: 'Approved research API',
+            auth_scheme: 'none',
+            mode: 'live',
+            sensitivity_class: 'governed',
+            trust_class: 'bounded_internal',
+            status: 'available',
+        }]);
 
         render(<MCPToolRegistry />);
         openAccessFocus();
@@ -204,27 +157,7 @@ describe('MCPToolRegistry search sources', () => {
     });
 
     it('adds mounted folder sources with local paths instead of HTTP endpoints', async () => {
-        mockFetch
-            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: [] }) })
-            .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: { id: 'client-docs' } }) })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ ok: true, data: [{
-                    id: 'client-docs',
-                    name: 'Client docs mount',
-                    managed: true,
-                    source_type: 'mounted_folder',
-                    endpoint: 'workspace/client-docs',
-                    scope_kind: 'host',
-                    scope_ref: 'workstation-1',
-                    boundary: 'Operator-approved client docs folder',
-                    auth_scheme: 'none',
-                    mode: 'live',
-                    sensitivity_class: 'restricted',
-                    trust_class: 'trusted_internal',
-                    status: 'available',
-                }] }),
-            });
+        mockSearchSourceRegistry([]);
 
         render(<MCPToolRegistry />);
         openAccessFocus();
@@ -260,4 +193,43 @@ describe('MCPToolRegistry search sources', () => {
 
 function openAccessFocus() {
     fireEvent.click(screen.getAllByRole('button', { name: /Access/i })[0]);
+}
+
+function mockSearchSourceRegistry(initialSources: Array<Record<string, unknown>>) {
+    let sources = [...initialSources];
+    mockFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? 'GET';
+        if (url === '/api/v1/input-sources') return jsonResponse({ ok: true, data: [] });
+        if (!url.startsWith('/api/v1/search/sources')) return jsonResponse({ ok: true, data: [] });
+
+        if (method === 'POST') {
+            const draft = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+            const id = draft.name === 'Client docs mount' ? 'client-docs' : 'team-api';
+            const created = { ...draft, id, managed: true, status: 'available' };
+            sources = [...sources, created];
+            return jsonResponse({ ok: true, data: created });
+        }
+        if (method === 'PATCH') {
+            const id = decodeURIComponent(url.split('/').at(-1) ?? '');
+            const draft = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+            sources = sources.map((source) => source.id === id ? { ...source, ...draft } : source);
+            return jsonResponse({ ok: true, data: sources.find((source) => source.id === id) });
+        }
+        if (method === 'DELETE') {
+            const id = decodeURIComponent(url.split('/').at(-1) ?? '');
+            sources = sources.filter((source) => source.id !== id);
+            return jsonResponse({ ok: true, data: { deleted: true } });
+        }
+        return jsonResponse({ ok: true, data: { sources } });
+    });
+}
+
+function jsonResponse(payload: unknown): Response {
+    return {
+        ok: true,
+        status: 200,
+        json: async () => payload,
+        text: async () => JSON.stringify(payload),
+    } as Response;
 }

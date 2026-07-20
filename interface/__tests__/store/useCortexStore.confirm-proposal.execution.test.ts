@@ -71,7 +71,8 @@ describe('useCortexStore confirm proposal execution', () => {
         expect(useCortexStore.getState().durableWorkRefreshVersion).toBe(1);
         expect(mockFetch).toHaveBeenCalledWith('/api/v1/teams/detail');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Run run-123 started.');
-        expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Review active work and latest output below');
+        expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Soma handed this to the work bus');
+        expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('saved the run receipt');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).not.toContain('Active Work');
         expect(useCortexStore.getState().missionChat.at(-1)?.thread_events?.[0]).toMatchObject({
             kind: 'execution_started',

@@ -166,6 +166,7 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
   consult_council: "Routes question to a council specialist",
   delegate_task: "Assigns work to an active team (governance-gated)",
   search_memory: "Semantic search over situation reports",
+  web_search: "Searches approved public, local, mounted, or private sources within the current scope",
   load_deployment_context: "Stores governed customer context or approved company knowledge in the separate vector-backed context store",
   promote_deployment_context: "Promotes a customer-context entry into approved company knowledge with lineage preserved",
   generate_blueprint: "Creates mission blueprint via MetaArchitect (governance-gated)",

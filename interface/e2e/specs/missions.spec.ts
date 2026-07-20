@@ -67,7 +67,7 @@ test.describe('Soma Dashboard (/dashboard)', () => {
 
         await expect(page.getByRole('dialog', { name: /Save quick action/i })).toHaveCount(0);
         await expect(page.getByRole('button', { name: 'Client risk brief' })).toBeVisible();
-        await expect(page.getByText(/Run Expense Audit/i)).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Plan next step' })).toBeVisible();
     });
 
     test('dashboard keeps secondary setup chrome out of the Soma workspace', async ({ page }) => {
