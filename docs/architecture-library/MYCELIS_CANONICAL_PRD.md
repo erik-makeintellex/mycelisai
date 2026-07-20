@@ -301,7 +301,7 @@ Non-goals for MVP:
 | P0.9 | Full journey proof | IN_REVIEW | Ask through Revisit | Headed and headless proof cover ask, understand, approve, execute, deliver, trust, recover, and revisit; latest GUI sweep covers primary/admin routes and critical workflows with no console/page errors or horizontal overflow. |
 | P0.10 | Worker execution library | IN_REVIEW | Execute, Deliver | Confirmed Soma proposals now enter a normalized worker lifecycle through the central backend while preserving existing execution contracts, run receipts, proof artifacts, team-work refs, retained outputs, audit, and recovery; Hermes-compatible execution remains adapter/config-selected. |
 | P0.11 | Docs cleanup and release discipline | ACTIVE | Trust, Revisit | This PRD remains the single architecture authority, old doctrine is deleted instead of archived into active docs, user help matches current UI, and implementation slices update docs/state in the same change. |
-| P0.12 | Release hygiene and promotion proof | ACTIVE | Trust | Keep main/dev branches clean, commit coherent tested slices, remove runtime and test-fixture lint debt without weakening product rules, run the full browser/release proof from committed state, and verify PostgreSQL/NATS-backed runtime paths rather than stale local/test-only state. |
+| P0.12 | Release hygiene and promotion proof | ACTIVE | Trust | Use the staged `feature/* -> dev -> main` delivery path; commit coherent feature slices only after focused proof, retest each merged `dev` state with affected integration and live GUI journeys, and promote only a clean committed release candidate after full browser/release proof. Remove runtime and test-fixture lint debt without weakening product rules, and verify PostgreSQL/NATS-backed runtime paths rather than stale local/test-only state. |
 
 ## Testing And Release Gates
 Visible UI changes require both functional tests and live user-experience review. The reviewer must inspect layout density, scroll behavior, text-field reachability, panel overlap, card size, plain-language copy, and whether the screen matches the target Soma workspace concept.
@@ -311,7 +311,8 @@ Required proof lanes:
 - docs tests for live links and canonical PRD coverage
 - Playwright headless proof for repeatability
 - headed browser proof for actual user experience
-- release preflight from a clean committed state before production deployment
+- affected integration and live-journey proof again after each feature merges into `dev`
+- release preflight from a clean committed `dev` state before promotion to `main`, followed by post-promotion smoke and health proof
 
 ## Documentation Contract
 This PRD is the canonical architecture/product document. Keep support docs, but do not recreate split doctrine.

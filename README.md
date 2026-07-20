@@ -70,6 +70,7 @@ The active UI expression target is the threaded Soma workspace defined in the ca
 
 Delivery rule:
 - advance V8.3 slices only with a named boundary, proof lane, promotion rule, and documentation review
+- use the staged delivery path `feature/* -> dev -> main`: prove the feature first, prove the integrated `dev` state after merge, and promote only a clean committed release candidate to `main`
 - prefer operational embodiment over new doctrine: the canonical MVP workflow is natural Soma conversation -> shaped outcome -> approval when needed -> owned work -> deliverables -> proof/recovery -> revisit
 - do not create new split doctrine documents for current release-candidate scope
 

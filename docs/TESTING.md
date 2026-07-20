@@ -19,6 +19,7 @@
 - [Adding New Tests](#adding-new-tests)
 ## Current Validation Contract
 - Feature work is not done until relevant tests run against the final branch state, touched docs are reviewed and updated where meaning changed, and close-out names evidence plus docs changed/reviewed.
+- Promotion follows `feature/* -> dev -> main`. A feature branch must pass focused proof before merge; the merged `dev` state must pass affected integration, health, and live user-journey proof; `main` promotion requires clean committed `dev` release proof and a post-promotion smoke check.
 - Use `uv run inv ...` for real task execution. Install-contract proof includes Reticulum checks: `uv run python -c "import RNS; print(RNS.__version__)"` and `uvx --from rns rnstatus --help`.
 - Cleanup-task proof should account for active runtimes: `clean.generated`, `clean.wsl-handoff`, and `clean.windows-dev-residue` skip the current Python environment when invoked from it, then report the skip instead of failing while deleting `.venv`.
 - `uv run inv ci.baseline` is the default branch-readiness gate.
@@ -30,6 +31,11 @@
 - Playwright starts/stops the managed Next.js app, seeds a local admin web session for ordinary specs, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant; managed Playwright/build/test invocations are serial for a workspace and port.
 ## Thorough Release Testing Contract
 Use this source-first sequence when a slice changes the delivered operator workflow, runtime topology, governance behavior, retained outputs, AI provider posture, or release proof lane:
+
+Promotion test order:
+1. On `feature/*`, run focused backend/UI/docs tests, typecheck/build, and headed GUI proof whenever visible behavior changes. Commit only the proven slice.
+2. Merge the feature into `dev`, then rerun the affected integration suites, lifecycle health, and the complete user journey touched by the slice against the integrated state.
+3. Promote `dev` to `main` only after broader release preflight and required WSL/Compose/deployment proof pass from a clean commit. Rerun release smoke and health checks on `main` before calling the promotion complete.
 
 1. Source and contract proof from the Windows repo first: `uv run inv core.test`, Interface gates, docs tests, `api.delivery-proof` when Core is live, and `uv run inv quality.max-lines --limit 300`; capped files in `ops/quality_legacy_caps.txt` must match current counts.
 2. Keep native PostgreSQL and NATS available when the local source stack needs real persistence or bus proof; run `uv run inv native-infra.up`, `uv run inv native-infra.status`, and `uv run inv db.migrate`, then containerize only after source proof is acceptable.
