@@ -4,6 +4,7 @@ import { useCortexStore } from "@/store/useCortexStore";
 vi.mock("@/lib/lastOrganization", () => ({
     readLastOrganization: () => ({ id: "org-1", name: "Northstar Labs" }),
     subscribeLastOrganizationChange: () => () => undefined,
+    useLastOrganization: () => ({ id: "org-1", name: "Northstar Labs" }),
 }));
 
 vi.mock("@/components/soma/SomaOperatingSurface", () => ({
@@ -24,7 +25,7 @@ vi.mock("@/components/soma/SomaOperatingSurface", () => ({
         >
             <h2>Talk to Soma</h2>
             <p>Ready for your first request</p>
-            <p>Evidence of Soma's work</p>
+            <p>Evidence of Soma&apos;s work</p>
             <p>{organizationName ?? "No organization"}</p>
         </div>
     ),

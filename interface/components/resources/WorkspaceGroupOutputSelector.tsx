@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import {
@@ -42,7 +42,13 @@ export default function WorkspaceGroupOutputSelector({
     onToggleTeamSourceFiles: (checked: boolean) => void;
     onOpenArtifact: (artifact: Artifact) => void;
 }) {
-    const [selectedLevel, setSelectedLevel] = useState<ContributorLevel>("all");
+    const [levelSelection, setLevelSelection] = useState<{
+        groupID: string;
+        level: ContributorLevel;
+    }>({ groupID: selectedGroupID, level: "all" });
+    const selectedLevel = levelSelection.groupID === selectedGroupID
+        ? levelSelection.level
+        : "all";
     const selectedGroup = groups.find((group) => group.group_id === selectedGroupID) ?? null;
     const selectedGroupHref = selectedGroup
         ? `/groups?group_id=${encodeURIComponent(selectedGroup.group_id)}`
@@ -60,10 +66,6 @@ export default function WorkspaceGroupOutputSelector({
             ),
         [selectedGroup?.outputs, selectedLevel],
     );
-
-    useEffect(() => {
-        setSelectedLevel("all");
-    }, [selectedGroupID]);
 
     return (
         <section
@@ -163,7 +165,10 @@ export default function WorkspaceGroupOutputSelector({
                                     role="tab"
                                     aria-label={`${level.label} ${count}`}
                                     aria-selected={selected}
-                                    onClick={() => setSelectedLevel(level.id)}
+                                    onClick={() => setLevelSelection({
+                                        groupID: selectedGroupID,
+                                        level: level.id,
+                                    })}
                                     className={`min-w-0 rounded border px-3 py-1.5 text-left text-xs transition-colors ${
                                         selected
                                             ? "border-cortex-primary/50 bg-cortex-primary/10 text-cortex-text-main"

@@ -53,10 +53,10 @@ export default function MissionControlChat({
     const [pendingContinuationContext, setPendingContinuationContext] = useState<MissionChatContinuationContext | null>(null);
     const [broadcastMode, setBroadcastMode] = useState(false);
     const [fetchedMembers, setFetchedMembers] = useState(false);
-    const [directTarget, setDirectTarget] = useState<string | null>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const showAdvancedRouting = !simpleMode;
+    const directTarget = councilTarget === "admin" ? null : councilTarget;
     const currentTeamId = focusedTeamId || selectedTeamId;
     const currentTeam = currentTeamId
         ? teamsDetail.find((team) => team.id === currentTeamId) ?? null
@@ -92,14 +92,7 @@ export default function MissionControlChat({
     }, [chatScope, setMissionChatScope]);
 
     useEffect(() => {
-        setDirectTarget(councilTarget === "admin" ? null : councilTarget);
-    }, [councilTarget]);
-
-    useEffect(() => {
-        if (!showAdvancedRouting) {
-            setFetchedMembers(false);
-            return;
-        }
+        if (!showAdvancedRouting) return;
         fetchCouncilMembers().then(() => setFetchedMembers(true));
     }, [fetchCouncilMembers, showAdvancedRouting]);
 
@@ -172,7 +165,7 @@ export default function MissionControlChat({
                 messageCount={missionChat.length}
                 setBroadcastMode={setBroadcastMode}
                 setCouncilTarget={setCouncilTarget}
-                setDirectTarget={setDirectTarget}
+                setDirectTarget={(target) => setCouncilTarget(target ?? "admin")}
                 showAdvancedRouting={showAdvancedRouting}
                 simpleMode={simpleMode}
             />
@@ -185,12 +178,10 @@ export default function MissionControlChat({
                         failure={missionChatFailure}
                         onRetry={retryLastMessage}
                         onSwitchToSoma={() => {
-                            setDirectTarget(null);
                             setCouncilTarget("admin");
                             retryLastMessage();
                         }}
                         onContinueWithSoma={() => {
-                            setDirectTarget(null);
                             setCouncilTarget("admin");
                         }}
                     />

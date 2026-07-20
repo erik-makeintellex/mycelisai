@@ -148,6 +148,7 @@ export default function MCPToolRegistry() {
             <div className="flex-1 overflow-y-auto">
                 {activeTab === "overview" && (
                     <MCPToolRegistryOverview
+                        key={searchSourceCreateRequest?.nonce ?? "overview"}
                         capabilities={visibleCapabilities}
                         isFetchingCapabilities={isFetchingCapabilities}
                         capabilitiesError={capabilitiesError}

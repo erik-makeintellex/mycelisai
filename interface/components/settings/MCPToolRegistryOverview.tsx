@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Database, Search, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import type { CapabilityManifest, SearchCapabilityStatus } from "@/store/useCortexStore";
 import { CapabilityRegistryPanel } from "./MCPToolCapabilityRegistry";
@@ -46,14 +46,12 @@ export function MCPToolRegistryOverview({
     isStreamConnected: boolean;
     onAddWebCapability: () => void;
 }) {
-    const [activeFocus, setActiveFocus] = useState<OverviewFocus>("readiness");
+    const [activeFocus, setActiveFocus] = useState<OverviewFocus>(
+        searchSourceCreateRequest ? "access" : "readiness",
+    );
     const [activeAccessFocus, setActiveAccessFocus] = useState<AccessFocus>("search");
     const availableCount = capabilities.filter(isCapabilityReady).length;
     const repairCount = capabilities.length - availableCount;
-
-    useEffect(() => {
-        if (searchSourceCreateRequest) setActiveFocus("access");
-    }, [searchSourceCreateRequest]);
 
     return (
         <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">

@@ -247,13 +247,13 @@ function MetaLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function stringMetadata(metadata: Record<string, any> | undefined, key: string) {
+function stringMetadata(metadata: Record<string, unknown> | undefined, key: string) {
   const value = metadata?.[key];
   return typeof value === "string" ? value.trim() : "";
 }
 
 function stringArrayMetadata(
-  metadata: Record<string, any> | undefined,
+  metadata: Record<string, unknown> | undefined,
   key: string,
 ) {
   const value = metadata?.[key];

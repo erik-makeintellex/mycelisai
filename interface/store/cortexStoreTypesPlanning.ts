@@ -118,7 +118,7 @@ export interface Artifact {
     content?: string;
     file_path?: string;
     file_size_bytes?: number;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     trust_score?: number;
     status: ArtifactStatus;
     created_at: string;
