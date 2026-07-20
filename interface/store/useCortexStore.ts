@@ -31,7 +31,7 @@ function createCortexComposition(set: CortexSet, get: CortexGet) {
 
         // Mission chat + governance contract
         ...createCortexMissionChatSlice(set, get),
-        ...createCortexGovernanceSystemSlice(set, get),
+        ...createCortexGovernanceSystemSlice(set),
 
         // Draft execution + proposal lifecycle
         ...createCortexMissionDraftSlice(set, get),

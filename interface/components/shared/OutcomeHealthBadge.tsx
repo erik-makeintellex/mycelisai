@@ -15,23 +15,23 @@ export function OutcomeHealthBadge({
   className?: string;
 }) {
   const label = outcomeHealthLabel(health);
-  const Icon = outcomeHealthIcon(health);
   return (
     <span
       aria-label={`Outcome health: ${label}`}
       className={`inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border px-2 text-[10px] font-semibold ${outcomeHealthClassName(health)} ${className}`}
     >
-      <Icon className="h-3 w-3" aria-hidden="true" />
+      <OutcomeHealthIcon health={health} />
       {label}
     </span>
   );
 }
 
-function outcomeHealthIcon(health: OutcomeHealthState) {
-  if (health === "blocked") return AlertTriangle;
-  if (health === "degraded" || health === "waiting") return AlertCircle;
-  if (health === "running") return Radio;
-  if (health === "completed") return CheckCircle2;
-  if (health === "archived") return Archive;
-  return ShieldCheck;
+function OutcomeHealthIcon({ health }: { health: OutcomeHealthState }) {
+  const props = { className: "h-3 w-3", "aria-hidden": true } as const;
+  if (health === "blocked") return <AlertTriangle {...props} />;
+  if (health === "degraded" || health === "waiting") return <AlertCircle {...props} />;
+  if (health === "running") return <Radio {...props} />;
+  if (health === "completed") return <CheckCircle2 {...props} />;
+  if (health === "archived") return <Archive {...props} />;
+  return <ShieldCheck {...props} />;
 }

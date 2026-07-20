@@ -94,7 +94,7 @@ export function DocsSidebar({
 
         {filtered.length === 0 ? (
           <p className="px-3 py-4 text-[11px] font-mono text-cortex-text-muted/60 text-center">
-            No docs match "{query}"
+            No docs match &quot;{query}&quot;
           </p>
         ) : null}
       </div>

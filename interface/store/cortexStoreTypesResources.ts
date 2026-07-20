@@ -18,7 +18,7 @@ export interface MCPTool {
     server_id: string;
     name: string;
     description?: string;
-    input_schema: Record<string, any>;
+    input_schema: Record<string, unknown>;
     capability_id?: string;
 }
 

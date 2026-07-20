@@ -25,17 +25,17 @@ function timeLabel(iso: string): string {
 
 export type ChainNode = {
     run: MissionRun;
-    children: ChainNode[];
+    childRuns: ChainNode[];
 };
 
 interface Props {
     run: MissionRun;
-    children?: ChainNode[];
+    childRuns?: ChainNode[];
 }
 
-export default function RunChainNode({ run, children = [] }: Props) {
+export default function RunChainNode({ run, childRuns = [] }: Props) {
     const [expanded, setExpanded] = useState(true);
-    const hasChildren = children.length > 0;
+    const hasChildren = childRuns.length > 0;
 
     const metadataEntries = useMemo(() => {
         const entries = run.metadata ? Object.entries(run.metadata) : [];
@@ -105,7 +105,7 @@ export default function RunChainNode({ run, children = [] }: Props) {
                         aria-label={expanded ? "Collapse child runs" : "Expand child runs"}
                     >
                         {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                        {children.length}
+                        {childRuns.length}
                     </button>
                 )}
             </div>
@@ -113,8 +113,8 @@ export default function RunChainNode({ run, children = [] }: Props) {
             {hasChildren && expanded && (
                 <div className="border-t border-cortex-border/70 bg-cortex-bg/40 px-3 py-3 pl-6">
                     <div className="space-y-2">
-                        {children.map((child) => (
-                            <RunChainNode key={child.run.id} run={child.run} children={child.children} />
+                        {childRuns.map((child) => (
+                            <RunChainNode key={child.run.id} run={child.run} childRuns={child.childRuns} />
                         ))}
                     </div>
                 </div>

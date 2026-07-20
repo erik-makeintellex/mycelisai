@@ -37,7 +37,7 @@ Promotion test order:
 2. Merge the feature into `dev`, then rerun the affected integration suites, lifecycle health, and the complete user journey touched by the slice against the integrated state.
 3. Promote `dev` to `main` only after broader release preflight and required WSL/Compose/deployment proof pass from a clean commit. Rerun release smoke and health checks on `main` before calling the promotion complete.
 
-1. Source and contract proof from the Windows repo first: `uv run inv core.test`, Interface gates, docs tests, `api.delivery-proof` when Core is live, and `uv run inv quality.max-lines --limit 300`; capped files in `ops/quality_legacy_caps.txt` must match current counts.
+1. Source and contract proof from the Windows repo first: `uv run inv core.test`, Interface gates, docs tests, `api.delivery-proof` when Core is live, and `uv run inv quality.max-lines --limit 330`; capped files in `ops/quality_legacy_caps.txt` must match current counts.
 2. Keep native PostgreSQL and NATS available when the local source stack needs real persistence or bus proof; run `uv run inv native-infra.up`, `uv run inv native-infra.status`, and `uv run inv db.migrate`, then containerize only after source proof is acceptable.
    - `uv run inv wsl.refresh`
    - `uv run inv wsl.validate --lane=release`

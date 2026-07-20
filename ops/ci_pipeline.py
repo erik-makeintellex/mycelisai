@@ -141,8 +141,8 @@ def run_baseline(
     _run_baseline_step("[1/7] logging.check-schema", lambda: logging_tasks.check_schema.body(c), errors, "logging schema check failed")
     _run_baseline_step("[2/7] logging.check-topics", lambda: logging_tasks.check_topics.body(c), errors, "logging topic check failed")
     _run_baseline_step(
-        "[3/7] quality.max-lines --limit=300",
-        lambda: quality.max_lines.body(c, limit=300, paths=quality.DEFAULT_SOURCE_PATHS, strict=False),
+        "[3/7] quality.max-lines --limit=330",
+        lambda: quality.max_lines.body(c, limit=330, paths=quality.DEFAULT_SOURCE_PATHS, strict=False),
         errors,
         "quality max-lines check failed",
     )

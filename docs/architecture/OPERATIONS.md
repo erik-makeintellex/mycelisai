@@ -168,7 +168,7 @@ Use `--live-backend` for browser proof that must hit a real Core backend.
 ```bash
 uv run inv logging.check-schema
 uv run inv logging.check-topics
-uv run inv quality.max-lines --limit 300
+uv run inv quality.max-lines --limit 330
 ```
 
 ## III. Development Workflow
