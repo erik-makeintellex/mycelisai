@@ -1,6 +1,17 @@
-import type React from "react";
+"use client";
+
+import { useMemo, useState, type ReactNode } from "react";
 import { Database, Route, ShieldCheck } from "lucide-react";
 import type { CapabilityManifest } from "@/store/useCortexStore";
+import {
+    CAPABILITY_ORIGINS,
+    capabilityOrigin,
+    capabilityOriginLabel,
+    type CapabilityOrigin,
+} from "./MCPToolCapabilityOrigin";
+
+type OriginFilter = "all" | CapabilityOrigin;
+const PAGE_SIZE = 12;
 
 export function CapabilityRegistryPanel({
     capabilities,
@@ -13,11 +24,27 @@ export function CapabilityRegistryPanel({
     error: string | null;
     usingFallback: boolean;
 }) {
-    const availableCount = capabilities.filter((capability) => isCapabilityAvailable(capability)).length;
+    const [originFilter, setOriginFilter] = useState<OriginFilter>("all");
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+    const filteredCapabilities = useMemo(
+        () => originFilter === "all"
+            ? capabilities
+            : capabilities.filter((capability) => capabilityOrigin(capability) === originFilter),
+        [capabilities, originFilter],
+    );
+    const availableCount = capabilities.filter(isCapabilityAvailable).length;
+    const repairCount = capabilities.length - availableCount;
     const mutatingCount = capabilities.filter((capability) => capability.writes && capability.writes.length > 0).length;
-    const availableCapabilities = capabilities.filter(isCapabilityAvailable);
-    const repairCapabilities = capabilities.filter((capability) => !isCapabilityAvailable(capability));
-    const visibleAvailable = availableCapabilities.slice(0, 6);
+    const availableCapabilities = filteredCapabilities.filter(isCapabilityAvailable);
+    const repairCapabilities = filteredCapabilities.filter((capability) => !isCapabilityAvailable(capability));
+    const orderedCapabilities = [...repairCapabilities, ...availableCapabilities];
+    const visibleCapabilities = orderedCapabilities.slice(0, visibleCount);
+    const remainingCount = orderedCapabilities.length - visibleCapabilities.length;
+
+    function selectOrigin(next: OriginFilter) {
+        setOriginFilter(next);
+        setVisibleCount(PAGE_SIZE);
+    }
 
     return (
         <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
@@ -28,7 +55,7 @@ export function CapabilityRegistryPanel({
                     </div>
                     <div>
                         <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                            Capability overview
+                            Capability catalog
                         </p>
                         <p className="mt-1 text-sm font-semibold text-cortex-text-main">
                             What Soma can use right now
@@ -42,7 +69,7 @@ export function CapabilityRegistryPanel({
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <SummaryChip label={`${availableCount} can use now`} />
-                    <SummaryChip label={`${repairCapabilities.length} need repair`} />
+                    <SummaryChip label={`${repairCount} need repair`} />
                     <SummaryChip label={`${mutatingCount} can write`} />
                 </div>
             </div>
@@ -53,6 +80,24 @@ export function CapabilityRegistryPanel({
                 </div>
             )}
 
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Capability origin filters">
+                <OriginButton
+                    active={originFilter === "all"}
+                    count={capabilities.length}
+                    label="All"
+                    onClick={() => selectOrigin("all")}
+                />
+                {CAPABILITY_ORIGINS.map((origin) => (
+                    <OriginButton
+                        key={origin.id}
+                        active={originFilter === origin.id}
+                        count={capabilities.filter((capability) => capabilityOrigin(capability) === origin.id).length}
+                        label={origin.label}
+                        onClick={() => selectOrigin(origin.id)}
+                    />
+                ))}
+            </div>
+
             {isLoading && capabilities.length === 0 ? (
                 <p className="mt-4 text-xs text-cortex-text-muted">Loading capability registry...</p>
             ) : capabilities.length === 0 ? (
@@ -60,29 +105,30 @@ export function CapabilityRegistryPanel({
                     No capabilities are visible yet.
                 </p>
             ) : (
-                <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                    <CapabilitySection title="Can use now" count={availableCapabilities.length}>
-                        {visibleAvailable.map((capability) => (
-                            <CapabilityCard key={capability.id} capability={capability} />
-                        ))}
-                        {availableCapabilities.length > visibleAvailable.length && (
-                            <p className="text-xs text-cortex-text-muted">
-                                {availableCapabilities.length - visibleAvailable.length} more ready capabilities are available through Inspect details.
-                            </p>
-                        )}
-                    </CapabilitySection>
-                    <CapabilitySection title="Needs repair" count={repairCapabilities.length}>
-                        {repairCapabilities.map((capability) => (
-                            <CapabilityCard key={capability.id} capability={capability} />
-                        ))}
-                    </CapabilitySection>
-                    <div className="rounded-lg border border-cortex-border bg-cortex-bg/60 px-3 py-3">
-                        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                            Can request/add
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-                            Use Add connector to request another approved tool or service connector, then return here to confirm availability and repair guidance.
-                        </p>
+                <div className="mt-4">
+                    <p className="mb-2 text-[11px] leading-5 text-cortex-text-muted">
+                        {originFilter === "all"
+                            ? "Filter by origin to see whether a capability is part of Mycelis, exposed by its host, or supplied through MCP."
+                            : CAPABILITY_ORIGINS.find((origin) => origin.id === originFilter)?.summary}
+                    </p>
+                    <div className="max-h-[min(58vh,38rem)] overflow-y-auto rounded-lg border border-cortex-border bg-cortex-bg/40 p-2" data-testid="capability-catalog-list">
+                        <div className="grid gap-2">
+                            {visibleCapabilities.map((capability) => (
+                                <CapabilityCard key={capability.id} capability={capability} />
+                            ))}
+                            {visibleCapabilities.length === 0 ? (
+                                <p className="px-2 py-4 text-xs text-cortex-text-muted">No capabilities have this origin.</p>
+                            ) : null}
+                        </div>
+                        {remainingCount > 0 ? (
+                            <button
+                                type="button"
+                                onClick={() => setVisibleCount((current) => current + PAGE_SIZE)}
+                                className="mt-2 w-full rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs font-semibold text-cortex-text-muted transition hover:text-cortex-text-main"
+                            >
+                                Show {Math.min(PAGE_SIZE, remainingCount)} more
+                            </button>
+                        ) : null}
                     </div>
                 </div>
             )}
@@ -90,17 +136,28 @@ export function CapabilityRegistryPanel({
     );
 }
 
-function CapabilitySection({ children, count, title }: { children: React.ReactNode; count: number; title: string }) {
+function OriginButton({
+    active,
+    count,
+    label,
+    onClick,
+}: {
+    active: boolean;
+    count: number;
+    label: string;
+    onClick: () => void;
+}) {
     return (
-        <section className="rounded-lg border border-cortex-border bg-cortex-surface/60 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">{title}</p>
-                <SummaryChip label={`${count} item${count === 1 ? "" : "s"}`} />
-            </div>
-            {count > 0 ? <div className="grid gap-2">{children}</div> : (
-                <p className="text-xs text-cortex-text-muted">No capabilities in this state.</p>
-            )}
-        </section>
+        <button
+            type="button"
+            onClick={onClick}
+            className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${active
+                ? "border-cortex-primary/40 bg-cortex-primary/10 text-cortex-text-main"
+                : "border-cortex-border bg-cortex-bg text-cortex-text-muted hover:text-cortex-text-main"}`}
+        >
+            {label}
+            <span className="font-mono text-[10px]">{count}</span>
+        </button>
     );
 }
 
@@ -120,6 +177,7 @@ function CapabilityCard({ capability }: { capability: CapabilityManifest }) {
                     <div className="flex flex-wrap items-center gap-2">
                         <span className={`h-2 w-2 rounded-full ${available ? "bg-cortex-success" : "bg-cortex-warning"}`} />
                         <p className="text-sm font-semibold text-cortex-text-main">{capability.name}</p>
+                        <CapabilityBadge label={capabilityOriginLabel(capability)} />
                     </div>
                     {capability.description && (
                         <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{capability.description}</p>
@@ -179,7 +237,7 @@ function CapabilityBadge({ label, tone = "neutral" }: { label: string; tone?: "n
     );
 }
 
-function CapabilityDetail({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }) {
+function CapabilityDetail({ icon, label, value }: { icon?: ReactNode; label: string; value: string }) {
     return (
         <div className="rounded-lg border border-cortex-border bg-cortex-surface px-2.5 py-2">
             <p className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider text-cortex-text-muted">

@@ -26,7 +26,7 @@ The Resources page keeps these resource types in a persistent menu and renders t
 
 ## Connected Tools
 
-Connected tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, where that permission applies, what needs attention, and what can be requested. The default readiness view should be a compact status strip and row summary, not three large inventory tiles. Raw MCP/server structure stays behind Inspect.
+Connected tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, where that permission applies, what needs attention, and what can be requested. The default readiness view uses compact counts and origin summaries instead of capability inventory cards. Raw server structure stays behind Catalog details or Inspect.
 
 For web access specifically, use `Resources -> Capabilities -> Soma research access`. That lane should show whether Soma currently has approved local data, mounted-source search, public-web search, and direct Soma Search available. When public web is already available, the lane should say Soma can search now and offer **Add URL reader MCP** only for explicit supplied-URL retrieval through tools such as `fetch`. When public web is missing, it should offer **Add web search provider** or **Set up web search** and guide the operator toward a safe search provider such as built-in web, SearXNG/local API, or Brave. Built-in Mycelis Soma Search does not depend on `fetch`; add or repair `fetch` when users need Soma or a team to retrieve a specific supplied URL. The default UI should say **Soma Search** or **Research**; raw tool IDs such as `web_search` belong in Inspect/API details only.
 
@@ -78,7 +78,15 @@ Current baseline posture:
 - `artifact-renderer` remains planned
 
 Key outcome:
-Operators should be able to determine "what Soma can currently use" directly from this tab. The default view should put web-access status and the compact capability overview ahead of examples or workflow education. The readiness summary should use small **Ready**, **Needs attention**, and **Available to add** controls plus short rows with one clear next action. The capability list should stay compact: capability name, purpose, availability, risk, and approval posture first; output destinations, bindings, fallback behavior, and audit details belong behind **Details and binding** unless the capability needs attention. Command examples and workflow education may remain available as expandable guidance, but they should not crowd the main status readout.
+Operators should be able to determine "what Soma can currently use" directly from this tab. The default view should put web-access status and the compact capability overview ahead of examples or workflow education. The readiness summary uses small **Ready**, **Needs attention**, and **Available to add** controls plus compact origin summaries; it does not preview an arbitrary subset of capability names. The Catalog keeps capability name, purpose, availability, origin, risk, and approval posture first; output destinations, bindings, fallback behavior, and audit details belong behind **Inspect capability details** unless the capability needs attention. Command examples and workflow education may remain available as expandable guidance, but they should not crowd the main status readout.
+
+Capability origin is separate from readiness. Overview summarizes four origins without listing every capability:
+- **Built-in runtime**: implemented inside Mycelis; no MCP server is involved.
+- **Host / CLI**: an allowlisted command or script exposed by the machine or container running Core. It is governed by Mycelis, but availability depends on that deployed host.
+- **MCP**: supplied by an installed MCP server. Catalog labels include the server name when the runtime provides it.
+- **Connector**: an external API, plugin, or provider connection that does not use MCP.
+
+Open **Catalog** for the full inventory. Filter it by origin to answer whether an action uses Mycelis runtime code, host/container tooling, or an MCP server. The inventory stays inside a bounded scrolling region and loads more entries deliberately so a large registry does not make the Resources page grow indefinitely.
 
 Capability manifest expectation:
 - every built-in MCP, external tool, local script, custom connector, or plugin must register as a governed capability before Soma or a team can use it
@@ -93,7 +101,7 @@ Capability permission groups support three configuration forms:
 
 Under the hood these still save as MCP tool-set scopes (`all`, `group`, and `host`). When the same tool-set name exists at multiple layers, scoped runtime resolution should prefer the group or host layer first, then fall back to the shared `all` layer. This lets operators keep a default capability posture while adding narrower MCP access for a project lane or a particular host.
 
-The Capabilities page opens as a focused readiness surface, not as one long MCP configuration document. Use the focus buttons to choose the current job: **Readiness** for web/search setup, **Catalog** for what Soma can use now or what needs attention, **Access** for sources/scopes/data, and **Inspect** for raw refs, provider bindings, workflow examples, and deeper technical evidence. Raw capability refs, output/write channels, provider bindings, and longer examples stay behind **Inspect capability details** or the **Inspect** focus.
+The Capabilities page opens as a focused readiness surface, not as one long MCP configuration document. Use the focus buttons to choose the current job: **Readiness** for web/search and compact origin posture, **Catalog** for the bounded, origin-filtered capability inventory, **Access** for sources/scopes/data, and **Inspect** for raw refs, provider bindings, workflow examples, and deeper technical evidence. Raw capability refs, output/write channels, provider bindings, and longer examples stay behind **Inspect capability details** or the **Inspect** focus.
 
 Inside **Access**, choose the job you are doing instead of scrolling one mixed setup page:
 
