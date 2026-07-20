@@ -297,13 +297,7 @@ function PolicyTab() {
     fetchPolicy();
   }, [fetchPolicy]);
 
-  useEffect(() => {
-    if (policyConfig && !draft) {
-      setDraft(structuredClone(policyConfig));
-    }
-  }, [policyConfig, draft]);
-
-  const config = draft ?? {
+  const config = draft ?? policyConfig ?? {
     groups: [],
     defaults: { default_action: "DENY" },
   };
@@ -378,7 +372,7 @@ function PolicyTab() {
     setDraft({ ...config, defaults: { default_action: action } });
   };
 
-  if (isFetchingPolicy && !draft) {
+  if (isFetchingPolicy && !draft && !policyConfig) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 size={24} className="text-cortex-primary animate-spin" />

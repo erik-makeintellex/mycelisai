@@ -19,16 +19,16 @@ function uniqueRoutes(routes: string[]): string[] {
     return Array.from(new Set(routes.map((r) => r.trim()).filter(Boolean)));
 }
 
-export default function RouteTemplatePicker({ profile, onRoutesChange, onBusModeChange }: RouteTemplatePickerProps) {
+export default function RouteTemplatePicker(props: RouteTemplatePickerProps) {
+    const resetKey = `${props.profile.id}:${props.profile.suggestedRoutes.join("|")}`;
+    return <RouteTemplatePickerForm key={resetKey} {...props} />;
+}
+
+function RouteTemplatePickerForm({ profile, onRoutesChange, onBusModeChange }: RouteTemplatePickerProps) {
     const [mode, setMode] = useState<BusExposureMode>("basic");
     const [selectedTemplateId, setSelectedTemplateId] = useState<string>(ROUTE_TEMPLATE_OPTIONS[0].id);
     const [routes, setRoutes] = useState<string[]>(profile.suggestedRoutes);
     const [expertInput, setExpertInput] = useState<string>(profile.suggestedRoutes.join("\n"));
-
-    useEffect(() => {
-        setRoutes(profile.suggestedRoutes);
-        setExpertInput(profile.suggestedRoutes.join("\n"));
-    }, [profile.id, profile.suggestedRoutes]);
 
     useEffect(() => {
         onRoutesChange?.(routes);

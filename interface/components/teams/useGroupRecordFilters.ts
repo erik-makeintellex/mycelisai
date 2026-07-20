@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import {
   defaultGroupRecordFilters,
   isCompleteGroup,
@@ -8,32 +8,45 @@ import {
 } from "./groupWorkspaceTypes";
 
 const storageKey = "mycelis.groups.recordFilters";
+const filtersChangedEvent = "mycelis:group-record-filters";
+
+function subscribeRecordFilters(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(filtersChangedEvent, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(filtersChangedEvent, onChange);
+  };
+}
+
+function readRecordFiltersSnapshot() {
+  return window.localStorage.getItem(storageKey) ?? "";
+}
+
+function parseSnapshot(raw: string): GroupRecordFilters {
+  if (!raw) return defaultGroupRecordFilters;
+  try {
+    return parseRecordFilters(JSON.parse(raw));
+  } catch {
+    return defaultGroupRecordFilters;
+  }
+}
 
 export function useGroupRecordFilters() {
-  const [recordFilters, setRecordFilters] = useState<GroupRecordFilters>(
-    defaultGroupRecordFilters,
+  const snapshot = useSyncExternalStore(
+    subscribeRecordFilters,
+    readRecordFiltersSnapshot,
+    () => "",
   );
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      if (!raw) return;
-      setRecordFilters(parseRecordFilters(JSON.parse(raw)));
-    } catch {
-      setRecordFilters(defaultGroupRecordFilters);
-    }
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(storageKey, JSON.stringify(recordFilters));
-  }, [recordFilters]);
+  const recordFilters = useMemo(() => parseSnapshot(snapshot), [snapshot]);
 
   return {
     recordFilters,
-    updateRecordFilters: (patch: Partial<GroupRecordFilters>) =>
-      setRecordFilters((current) =>
-        parseRecordFilters({ ...current, ...patch }),
-      ),
+    updateRecordFilters: (patch: Partial<GroupRecordFilters>) => {
+      const next = parseRecordFilters({ ...recordFilters, ...patch });
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+      window.dispatchEvent(new Event(filtersChangedEvent));
+    },
   };
 }
 
