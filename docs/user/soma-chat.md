@@ -46,6 +46,8 @@ Soma should choose the lightest useful answer depth for the ask. A request for a
 
 Lightweight answers stay inside the normal conversation. A quick table, summary, or decision brief should not add approval buttons, tool-chip stacks, or run receipts unless Soma is actually proposing or reporting work. Ask `turn this into work` when you want Soma to move from answer to execution.
 
+When work will run once, on a schedule, as a continuing service, as a project, or as an extension to Soma, open `Details` to check how it can be stopped, retried, or recovered. These controls remain attached to the approved work after handoff and reload. They stay out of the default approval pause so the conversation remains readable.
+
 Before creating teams, enabling MCP servers, assigning tools, changing capability bindings, using private services, or storing recurring behavior, Soma should:
 
 1. Review the latest request and relevant prior context.

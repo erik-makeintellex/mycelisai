@@ -17,6 +17,13 @@ export interface WorkOutputContractData {
     validation?: string[];
 }
 
+export interface WorkLifecycleContractData {
+    stop_action?: string;
+    retry_action?: string;
+    recovery_action?: string;
+    control_summary?: string;
+}
+
 export interface WorkIntentData {
     kind?: string;
     objective?: string;
@@ -29,4 +36,5 @@ export interface WorkIntentData {
     service_refs?: string[];
     project_ref?: string;
     output_contract?: WorkOutputContractData;
+    lifecycle?: WorkLifecycleContractData;
 }

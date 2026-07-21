@@ -17,6 +17,15 @@ describe("teamWorkProjection", () => {
           objective: "Build the launch package",
           owner: "Alpha lead",
           execution_shape: "deliverable",
+		  execution_mode: "team_async",
+		  work_intent: {
+			kind: "service",
+			lifecycle: {
+			  stop_action: "stop_service",
+			  retry_action: "restart_service",
+			  recovery_action: "inspect_and_restart",
+			},
+		  },
           state: "output_ready",
           expected_outputs: ["reviewable package"],
           expected_proof: ["smoke proof"],
@@ -81,6 +90,8 @@ describe("teamWorkProjection", () => {
     expect(item?.interactions.find((action) => action.action === "inspect")?.label).toBe("Open run");
     expect(item?.interactions.find((action) => action.action === "archive")?.label).toBe("Clear from review");
     expect(item?.advanced?.expectedOutputs).toEqual(["reviewable package"]);
+	expect(item?.advanced?.executionMode).toEqual(["team_async"]);
+	expect(item?.advanced?.lifecycleControls).toEqual(["stop_service", "restart_service", "inspect_and_restart"]);
     expect(item?.outputRefs?.[0]?.proof).toMatchObject({
       proof_id: "proof-envelope-1",
       path_boundary_status: "verified",

@@ -12,16 +12,17 @@ import (
 func scanTeamWorkItem(scanner interface{ Scan(dest ...any) error }) (protocol.TeamWorkItem, error) {
 	var item protocol.TeamWorkItem
 	var executionShape, governancePosture, state string
-	var scope, outputs, proof, caps, lastEvent, recovery, outputRefs, proofRefs, auditRefs []byte
+	var scope, workIntent, outputs, proof, caps, lastEvent, recovery, outputRefs, proofRefs, auditRefs []byte
 	if err := scanner.Scan(
 		&item.WorkItemID, &item.TeamID, &item.RunID, &item.IntentProofID, &item.ContractID, &item.ProofID,
-		&item.Objective, &scope, &item.Owner, &executionShape, &outputs, &proof, &caps,
+		&item.Objective, &scope, &item.Owner, &executionShape, &item.ExecutionMode, &workIntent, &outputs, &proof, &caps,
 		&governancePosture, &state, &lastEvent, &item.NeedsOperator, &item.DegradationState,
 		&recovery, &outputRefs, &proofRefs, &auditRefs, &item.CreatedAt, &item.UpdatedAt, &item.Version,
 	); err != nil {
 		return item, err
 	}
 	item.ExecutionShape = protocol.TeamExecutionShape(executionShape)
+	_ = json.Unmarshal(workIntent, &item.WorkIntent)
 	item.GovernancePosture = protocol.ApprovalPosture(governancePosture)
 	item.State = protocol.TeamWorkState(state)
 	item.Scope = decodeStringList(scope)
@@ -63,17 +64,18 @@ func scanTeamInteraction(scanner interface{ Scan(dest ...any) error }) (protocol
 func scanTeamStatusEvent(scanner interface{ Scan(dest ...any) error }) (protocol.TeamStatusEvent, error) {
 	var item protocol.TeamStatusEvent
 	var state string
-	var blockedBy, auditRefs []byte
+	var blockedBy, workIntent, auditRefs []byte
 	if err := scanner.Scan(
 		&item.EventID, &item.TeamID, &item.WorkItemID, &item.RunID, &item.IntentProofID,
 		&item.ContractID, &item.ProofID, &state, &item.Headline, &item.Details,
-		&item.ConfidencePosture, &blockedBy, &item.NextAction, &item.SourceKind,
+		&item.ConfidencePosture, &blockedBy, &item.NextAction, &item.ExecutionMode, &workIntent, &item.SourceKind,
 		&item.SourceChannel, &item.PayloadKind, &auditRefs, &item.Timestamp, &item.Version,
 	); err != nil {
 		return item, err
 	}
 	item.State = protocol.TeamWorkState(state)
 	item.BlockedBy = decodeStringList(blockedBy)
+	_ = json.Unmarshal(workIntent, &item.WorkIntent)
 	item.AuditRefs = decodeStringList(auditRefs)
 	item.TargetRef = protocol.TargetRefForTeamStatusEvent(item)
 	return protocol.NormalizeTeamStatusEvent(item), nil
@@ -146,6 +148,16 @@ func jsonObjectOrNil(value map[string]any) any {
 	}
 	raw, _ := json.Marshal(value)
 	return raw
+}
+
+func workIntentMap(intent *protocol.WorkIntent) map[string]any {
+	if intent == nil {
+		return nil
+	}
+	raw, _ := json.Marshal(protocol.NormalizeWorkIntent(intent))
+	value := map[string]any{}
+	_ = json.Unmarshal(raw, &value)
+	return value
 }
 
 func decodeStringList(raw []byte) []string {

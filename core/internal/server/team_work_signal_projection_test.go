@@ -163,7 +163,7 @@ func mockLinkedTeamWorkItem(mock sqlmock.Sqlmock, teamID, workID, runID, intentP
 		WithArgs(teamID, workID).
 		WillReturnRows(teamWorkItemRows().AddRow(
 			workID, teamID, runID, intentProofID, contractID, "", "Build playable game", []byte(`[]`), "Soma",
-			string(protocol.TeamExecutionShapeDeliverable), []byte(`["playable app package"]`), []byte(`["launch smoke proof"]`), []byte(`[]`),
+			string(protocol.TeamExecutionShapeDeliverable), "", []byte(`null`), []byte(`["playable app package"]`), []byte(`["launch smoke proof"]`), []byte(`[]`),
 			"approved", string(protocol.TeamWorkStateRunning), []byte(`null`), false, "",
 			[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`[]`), now, now, "v1",
 		))
@@ -242,7 +242,7 @@ func expectProjectedStatusEventInsertWithSource(mock sqlmock.Sqlmock, teamID, wo
 			sqlmock.AnyArg(), teamID, workID, sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			string(state), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sourceKind,
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sourceKind,
 			sourceChannel, string(kind), sqlmock.AnyArg(), "v1",
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))

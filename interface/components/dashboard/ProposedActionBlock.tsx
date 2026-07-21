@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Clock3, Loader2, XCircle } from "lucide-react";
 import { useCortexStore, type ChatMessage } from "@/store/useCortexStore";
 import ProposedActionDetails from "./ProposedActionDetails";
@@ -48,8 +48,17 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const cancelProposal = useCortexStore((s) => s.cancelProposal);
     const assistantName = useCortexStore((s) => s.assistantName);
     const [detailsOpen, setDetailsOpen] = useState(false);
+	const detailsRef = useRef<HTMLDivElement | null>(null);
     const [confirming, setConfirming] = useState(false);
     const [confirmError, setConfirmError] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (!detailsOpen) return;
+		const frame = window.requestAnimationFrame(() => {
+			detailsRef.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
+		});
+		return () => window.cancelAnimationFrame(frame);
+	}, [detailsOpen]);
 
     const proposal = message.proposal;
     if (!proposal) return null;
@@ -171,7 +180,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                 </button>
 
                 {detailsOpen ? (
-                    <div className="space-y-2">
+                    <div ref={detailsRef} className="space-y-2">
                         <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-3 text-xs">
                             <div className="grid gap-2 md:grid-cols-2">
                                 <div>

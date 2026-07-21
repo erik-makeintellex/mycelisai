@@ -157,6 +157,8 @@ After a temporary collaboration is archived, use `/groups` to review the workflo
 
 For permanent or standing groups, keep deliverables inside the group folder instead of the general output folders. Soma-owned team media defaults to `groups/<team-id>/media`, and Soma-owned team project packages default to `groups/<team-id>/generated/...`. Explicit operator paths are still respected when you intentionally name a different workspace-confined target. Long-running teams should also name approved input mounts or Deployment Context sources they may reuse so they do not treat every old working file as current truth.
 
+Active Work retains the approved execution mode and its lifecycle guidance. Open `Advanced inspect` when you need to verify whether the work is one-shot, scheduled, a continuing service, a project, or a Soma extension and which stop, retry, and recovery operations apply. Those labels describe the governed control path; they do not let a team bypass approval or policy.
+
 ## Team Creation
 
 Use the guided team-creation workflow when you want Soma to shape the team for you.

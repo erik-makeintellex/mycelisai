@@ -186,6 +186,7 @@ describe('ProposedActionBlock', () => {
             proposal: {
                 ...buildMessage().proposal!,
                 work_intent: {
+					kind: 'service',
                     cadence: 'continuous',
                     schedule_summary: 'Watch the incident channel every 5 minutes.',
                     bus_scope: 'current_team',
@@ -195,6 +196,12 @@ describe('ProposedActionBlock', () => {
                         primary_deliverable: 'Playable browser package with proof.',
                         launch_hint: 'Return an openable entrypoint and folder access.',
                     },
+					lifecycle: {
+						stop_action: 'stop_service',
+						retry_action: 'restart_service',
+						recovery_action: 'inspect_and_restart',
+						control_summary: 'You can stop the service or inspect its last trusted state.',
+					},
                 },
             },
         })} />);
@@ -206,6 +213,9 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/when it runs/i)).toBeDefined();
         expect(screen.getByText(/keep running/i)).toBeDefined();
         expect(screen.getByText(/watch the incident channel every 5 minutes/i)).toBeDefined();
+		expect(screen.getByText(/control:/i)).toBeDefined();
+		expect(screen.getByText(/stop service/i)).toBeDefined();
+		expect(screen.getByText(/inspect its last trusted state/i)).toBeDefined();
         expect(screen.getByText(/team connection/i)).toBeDefined();
         expect(screen.getByText(/current team/i)).toBeDefined();
         expect(screen.getByText('swarm.team.ops.signal.status')).toBeDefined();

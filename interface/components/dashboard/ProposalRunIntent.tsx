@@ -72,6 +72,16 @@ function outputShapeLabel(shape?: string) {
     }
 }
 
+function controlLabel(action?: string) {
+    switch (action) {
+        case "disable_schedule": return "Disable schedule";
+        case "stop_service": return "Stop service";
+        case "pause_project": return "Pause project";
+        case "rollback_extension": return "Roll back extension";
+        default: return "Cancel active run";
+    }
+}
+
 export default function ProposalRunIntent({ proposal }: { proposal: ProposalData }) {
     const subjects = proposal.nats_subjects ?? proposal.work_intent?.nats_subjects ?? [];
     const output = proposal.work_intent?.output_contract;
@@ -91,6 +101,12 @@ export default function ProposalRunIntent({ proposal }: { proposal: ProposalData
                 </div>
                 <p className="mt-1.5 text-sm font-medium text-cortex-text-main">{cadenceLabel(proposal)}</p>
                 <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{cadenceSummary(proposal)}</p>
+                {proposal.work_intent?.lifecycle ? (
+                    <p className="mt-1.5 border-t border-cortex-border/70 pt-1.5 text-[11px] leading-5 text-cortex-text-muted">
+                        <span className="font-medium text-cortex-text-main">Control:</span>{" "}
+                        {controlLabel(proposal.work_intent.lifecycle.stop_action)}. {proposal.work_intent.lifecycle.control_summary}
+                    </p>
+                ) : null}
             </div>
             <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
                 <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">

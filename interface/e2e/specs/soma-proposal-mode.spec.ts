@@ -10,16 +10,25 @@ test.skip(({ browserName }) => browserName !== "chromium", "Deep UI testing cove
 
 function workIntentProposalEnvelope() {
     const response = proposalEnvelope();
-    const proposal = ((response.body as Record<string, any>).data.payload.proposal as Record<string, any>);
+    const body = response.body as {
+        data: { payload: { proposal: Record<string, unknown> } };
+    };
+    const proposal = body.data.payload.proposal;
     proposal.execution_mode = "schedule_handoff";
     proposal.work_intent = {
-        kind: "team_service",
+        kind: "service",
         objective: "Keep a media review lane running for the selected team.",
         cadence: "continuous",
         schedule_summary: "Watch the media inbox every 15 minutes.",
         runtime_posture: "Leave the review lane active until the operator pauses it.",
         bus_scope: "current_team",
         nats_subjects: ["swarm.team.media.signal.status"],
+		lifecycle: {
+			stop_action: "stop_service",
+			retry_action: "restart_service",
+			recovery_action: "inspect_and_restart",
+			control_summary: "You can stop the service or inspect its last trusted state before recovery.",
+		},
     };
     return response;
 }
@@ -47,6 +56,7 @@ test.describe("Soma proposal mode", () => {
     });
 
     test("keeps structured work intent understandable behind Details", async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 720 });
         await mockOrganizationWorkspace(page, () => workIntentProposalEnvelope());
 
         await openOrganization(page);
@@ -56,6 +66,7 @@ test.describe("Soma proposal mode", () => {
         await expect(page.getByText("Start this?")).toBeVisible();
         await expect(page.getByText("swarm.team.media.signal.status")).toHaveCount(0);
         await expect(page.getByText("Team connection")).toHaveCount(0);
+		await expect(page.getByText("Control:")).toHaveCount(0);
 
         await page.getByRole("button", { name: /^Details$/i }).click();
 
@@ -65,6 +76,17 @@ test.describe("Soma proposal mode", () => {
         await expect(page.getByText("Team connection")).toBeVisible();
         await expect(page.getByText("Current team", { exact: true })).toBeVisible();
         await expect(page.getByText("swarm.team.media.signal.status")).toBeVisible();
+		await expect(page.getByText("Control:")).toBeVisible();
+		await expect(page.getByText(/Stop service\. You can stop the service/i)).toBeVisible();
+		const composer = page.getByPlaceholder(/Tell Soma what you want/i);
+		await expect(composer).toBeVisible();
+		await expect.poll(async () => {
+			const controlBox = await page.getByText(/Stop service\. You can stop the service/i).boundingBox();
+			const composerBox = await composer.boundingBox();
+			if (!controlBox || !composerBox) return false;
+			return controlBox.x + controlBox.width <= 1280
+				&& controlBox.y + controlBox.height <= composerBox.y;
+		}).toBe(true);
     });
 
     test("keeps failed approved execution reviewable with run proof and recovery copy", async ({ page }) => {
