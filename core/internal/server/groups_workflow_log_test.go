@@ -44,7 +44,7 @@ func TestHandleGroupWorkflowLog_ReturnsNormalizedTimeline(t *testing.T) {
 		WithArgs("game-team", 20).
 		WillReturnRows(teamWorkItemRows().AddRow(
 			workID, "game-team", runID, "", "contract-1", "proof-artifact-1", "Build a playable browser game", []byte(`["browser app"]`), "Soma",
-			string(protocol.TeamExecutionShapeDeliverable), []byte(`["index.html"]`), []byte(`["manual play proof"]`), []byte(`["workspace.write"]`),
+			string(protocol.TeamExecutionShapeDeliverable), "", []byte(`null`), []byte(`["index.html"]`), []byte(`["manual play proof"]`), []byte(`["workspace.write"]`),
 			"confirmed-chat-proposal", string(protocol.TeamWorkStateOutputReady),
 			[]byte(`{"headline":"Playable game package is ready","confidence_posture":"verified","source_kind":"internal_tool","source_channel":"soma.team_work","payload_kind":"team_status"}`),
 			false, "", []byte(`[]`), []byte(outputRefs), []byte(`["proof-artifact-1"]`), []byte(`["audit-work"]`), now.Add(-2*time.Minute), now.Add(-time.Minute), "v1",

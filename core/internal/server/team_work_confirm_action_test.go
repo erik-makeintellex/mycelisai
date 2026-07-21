@@ -210,7 +210,7 @@ func expectTeamWorkItemInsertWithPosture(mock sqlmock.Sqlmock, teamID string, sh
 		WithArgs(
 			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "Soma",
-			string(shape), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			string(shape), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			string(protocol.ApprovalPostureRequired), string(state), needsOperator,
 			degradation, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
 		).
@@ -223,7 +223,7 @@ func expectTeamStatusEventInsert(mock sqlmock.Sqlmock, teamID string, state prot
 			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			string(state), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindWebAPI),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindWebAPI),
 			"api.intent.confirm-action", string(protocol.PayloadKindStatus), sqlmock.AnyArg(), "v1",
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))

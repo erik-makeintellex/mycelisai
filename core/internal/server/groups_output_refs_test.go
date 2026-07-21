@@ -61,7 +61,7 @@ func TestHandleGroupOutputs_ProjectsTeamOutputRefs(t *testing.T) {
 		WithArgs(teamID, 8).
 		WillReturnRows(teamWorkItemRows().AddRow(
 			workID, teamID, "", "", "", "", "Create playable package", []byte(`[]`), "Soma",
-			string(protocol.TeamExecutionShapeDeliverable), []byte(`["project package"]`), []byte(`["proof"]`), []byte(`[]`),
+			string(protocol.TeamExecutionShapeDeliverable), "", []byte(`null`), []byte(`["project package"]`), []byte(`["proof"]`), []byte(`[]`),
 			"confirmed", string(protocol.TeamWorkStateOutputReady), []byte(`null`), false, "",
 			[]byte(`[]`), jsonArray(outputRefs), []byte(`["proof-playable-package"]`), []byte(`[]`), now.Add(-2*time.Minute), now, "v1",
 		))

@@ -10,6 +10,10 @@ import (
 )
 
 func baseConfirmedActionWorkItem(link confirmedActionTeamWorkLink, teamID, objective string) protocol.TeamWorkItem {
+	var workIntent *protocol.WorkIntent
+	if link.Scope != nil {
+		workIntent = protocol.NormalizeWorkIntent(link.Scope.WorkIntent)
+	}
 	return protocol.NormalizeTeamWorkItem(protocol.TeamWorkItem{
 		WorkItemID:        uuid.NewString(),
 		TeamID:            teamID,
@@ -19,6 +23,8 @@ func baseConfirmedActionWorkItem(link confirmedActionTeamWorkLink, teamID, objec
 		ProofID:           link.ProofArtifactID,
 		Objective:         firstNonEmptyString(objective, "Confirmed team work"),
 		Owner:             "Soma",
+		ExecutionMode:     scopeExecutionMode(link.Scope),
+		WorkIntent:        workIntent,
 		GovernancePosture: approvalPostureFromScope(link.Scope),
 		ProofRefs:         compactProofRefs(link.ProofID, link.ProofArtifactID),
 		AuditRefs:         compactProofRefs(link.AuditID),
@@ -39,6 +45,11 @@ func confirmedActionStatusEvent(link confirmedActionTeamWorkLink, item protocol.
 		Details:           details,
 		ConfidencePosture: confidence,
 		NextAction:        next,
+		ExpectedOutputs:   item.ExpectedOutputs,
+		ExpectedProof:     item.ExpectedProof,
+		ExecutionMode:     item.ExecutionMode,
+		WorkIntent:        item.WorkIntent,
+		OutputRefs:        item.OutputRefs,
 		SourceKind:        string(protocol.SourceKindWebAPI),
 		SourceChannel:     "api.intent.confirm-action",
 		PayloadKind:       string(protocol.PayloadKindStatus),

@@ -27,7 +27,7 @@ func buildProposalWorkIntent(planned []protocol.PlannedToolCall, latestRequest s
 		kind = "project"
 	}
 	output := inferProposalOutputContract(latestRequest, paths, display)
-	if output.Shape == "app_package" || output.Shape == "mixed_output" {
+	if kind == "one_shot" && (output.Shape == "app_package" || output.Shape == "mixed_output") {
 		kind = "project"
 	}
 	return &protocol.WorkIntent{
@@ -38,6 +38,7 @@ func buildProposalWorkIntent(planned []protocol.PlannedToolCall, latestRequest s
 		BusScope:        display.BusScope,
 		NATSSubjects:    display.NATSSubjects,
 		OutputContract:  output,
+		Lifecycle:       protocol.WorkLifecycleForKind(kind),
 		ScheduleSummary: scheduleSummaryForWorkIntent(cadence),
 	}
 }

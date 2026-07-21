@@ -32,6 +32,8 @@ type TeamWorkAPIRecord = {
   scope?: unknown;
   owner?: unknown;
   execution_shape?: unknown;
+	execution_mode?: unknown;
+	work_intent?: unknown;
   expected_outputs?: unknown;
   expected_proof?: unknown;
   capability_requirements?: unknown;
@@ -166,6 +168,13 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
   const auditRefs = firstNonEmptyStringArray(raw.audit_refs, lastEvent?.audit_refs);
   const nextAction = stringValue(lastEvent?.next_action);
   const targetRef = normalizeTargetRef(raw.target_ref ?? lastEvent?.target_ref);
+	const workIntent = objectValue<Record<string, unknown>>(raw.work_intent);
+	const lifecycle = objectValue<Record<string, unknown>>(workIntent?.lifecycle);
+	const lifecycleControls = unique([
+		stringValue(lifecycle?.stop_action),
+		stringValue(lifecycle?.retry_action),
+		stringValue(lifecycle?.recovery_action),
+	].filter((value): value is string => Boolean(value)));
   const description = [
     stringValue(lastEvent?.headline),
     stringValue(lastEvent?.details),
@@ -208,6 +217,8 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
       capabilityIds: stringArray(raw.capability_requirements),
       policyRef: stringValue(raw.governance_posture) ?? undefined,
       executionShape: stringValue(raw.execution_shape) ? [stringValue(raw.execution_shape) as string] : [],
+		executionMode: stringValue(raw.execution_mode) ? [stringValue(raw.execution_mode) as string] : [],
+		lifecycleControls,
     },
   };
 }

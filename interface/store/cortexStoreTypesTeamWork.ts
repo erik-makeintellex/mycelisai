@@ -95,5 +95,7 @@ export interface TeamWorkItem {
         expectedOutputs?: string[];
         expectedProof?: string[];
         executionShape?: string[];
+		executionMode?: string[];
+		lifecycleControls?: string[];
     };
 }

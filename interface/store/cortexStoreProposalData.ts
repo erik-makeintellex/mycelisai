@@ -72,6 +72,18 @@ function normalizeOutputContract(raw: unknown): WorkIntentData['output_contract'
     return hasValue ? output : undefined;
 }
 
+function normalizeLifecycleContract(raw: unknown): WorkIntentData['lifecycle'] {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const rec = raw as Record<string, unknown>;
+    const lifecycle = {
+        stop_action: pickString(rec, 'stop_action', 'stopAction'),
+        retry_action: pickString(rec, 'retry_action', 'retryAction'),
+        recovery_action: pickString(rec, 'recovery_action', 'recoveryAction'),
+        control_summary: pickString(rec, 'control_summary', 'controlSummary'),
+    };
+    return Object.values(lifecycle).some(Boolean) ? lifecycle : undefined;
+}
+
 function pickString(rec: Record<string, unknown>, snake: string, camel: string): string | undefined {
     const raw = rec[snake] ?? rec[camel];
     const value = typeof raw === 'string' ? raw : typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : '';
@@ -94,6 +106,7 @@ function normalizeWorkIntent(raw: unknown): WorkIntentData | undefined {
         service_refs: normalizeStringArray(rec.service_refs ?? rec.serviceRefs),
         project_ref: pickString(rec, 'project_ref', 'projectRef'),
         output_contract: normalizeOutputContract(rec.output_contract ?? rec.outputContract),
+        lifecycle: normalizeLifecycleContract(rec.lifecycle),
     };
     const hasValue = Object.values(workIntent).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value));
     return hasValue ? workIntent : undefined;

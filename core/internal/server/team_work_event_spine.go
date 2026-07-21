@@ -66,6 +66,8 @@ func teamWorkMissionEventPayload(event *protocol.TeamStatusEvent, emittedAt time
 		"next_action":             event.NextAction,
 		"expected_outputs":        event.ExpectedOutputs,
 		"expected_proof":          event.ExpectedProof,
+		"execution_mode":          event.ExecutionMode,
+		"work_intent":             event.WorkIntent,
 		"output_refs":             event.OutputRefs,
 		"source_kind":             event.SourceKind,
 		"source_channel":          event.SourceChannel,

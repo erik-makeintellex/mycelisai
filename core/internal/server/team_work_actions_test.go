@@ -160,7 +160,7 @@ func mockTeamWorkItem(mock sqlmock.Sqlmock, teamID, workID string, state protoco
 		WithArgs(teamID, workID).
 		WillReturnRows(teamWorkItemRows().AddRow(
 			workID, teamID, "", "", "", "", "Draft release proof", []byte(`[]`), "Soma",
-			string(protocol.TeamExecutionShapeDeliverable), []byte(`["release proof"]`), []byte(`["run proof"]`), []byte(`[]`),
+			string(protocol.TeamExecutionShapeDeliverable), "", []byte(`null`), []byte(`["release proof"]`), []byte(`["run proof"]`), []byte(`[]`),
 			"auto_approved", string(state), []byte(`null`), needsOperator, degradation,
 			[]byte(`["retry"]`), []byte(`[]`), []byte(`["proof-1"]`), []byte(`["audit-1"]`), now, now, "v1",
 		))
@@ -178,7 +178,7 @@ func expectTeamWorkActionPersistence(mock sqlmock.Sqlmock, now time.Time) {
 func teamWorkItemRows() *sqlmock.Rows {
 	return sqlmock.NewRows([]string{
 		"id", "team_id", "run_id", "intent_proof_id", "contract_id", "proof_id",
-		"objective", "scope", "owner", "execution_shape", "expected_outputs", "expected_proof",
+		"objective", "scope", "owner", "execution_shape", "execution_mode", "work_intent", "expected_outputs", "expected_proof",
 		"capability_requirements", "governance_posture", "state", "last_event", "needs_operator",
 		"degradation_state", "recovery_options", "output_refs", "proof_refs", "audit_refs",
 		"created_at", "updated_at", "version",

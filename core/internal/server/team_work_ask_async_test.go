@@ -44,7 +44,9 @@ func TestHandleTeamWorkAsk_AsyncPublishesCommandAndReturnsQueued(t *testing.T) {
 	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
 		"message":"Create the next validation note.",
 		"async":true,
-		"expected_outputs":["validation note"]
+		"expected_outputs":["validation note"],
+		"execution_mode":"team_async",
+		"work_intent":{"kind":"service","cadence":"continuous"}
 	}`)
 
 	assertStatus(t, rr, http.StatusAccepted)
@@ -60,6 +62,17 @@ func TestHandleTeamWorkAsk_AsyncPublishesCommandAndReturnsQueued(t *testing.T) {
 	work := data["work_item"].(map[string]any)
 	if work["state"] != string(protocol.TeamWorkStateRunning) {
 		t.Fatalf("state = %v", work["state"])
+	}
+	if work["execution_mode"] != "team_async" {
+		t.Fatalf("execution_mode = %v", work["execution_mode"])
+	}
+	workIntent, ok := work["work_intent"].(map[string]any)
+	if !ok || workIntent["kind"] != "service" {
+		t.Fatalf("work_intent = %#v", work["work_intent"])
+	}
+	lifecycle, ok := workIntent["lifecycle"].(map[string]any)
+	if !ok || lifecycle["stop_action"] != protocol.WorkStopService {
+		t.Fatalf("work_intent.lifecycle = %#v", workIntent["lifecycle"])
 	}
 	recoveryOptions, ok := work["recovery_options"].([]any)
 	if !ok || len(recoveryOptions) < 2 {
@@ -202,5 +215,12 @@ func assertAsyncTeamAskEnvelope(t *testing.T, raw []byte) {
 	}
 	if context["team_id"] != "qa-team" {
 		t.Fatalf("payload context team_id = %v", context["team_id"])
+	}
+	if context["execution_mode"] != "team_async" {
+		t.Fatalf("payload context execution_mode = %v", context["execution_mode"])
+	}
+	workIntent, ok := context["work_intent"].(map[string]any)
+	if !ok || workIntent["kind"] != "service" {
+		t.Fatalf("payload context work_intent = %#v", context["work_intent"])
 	}
 }

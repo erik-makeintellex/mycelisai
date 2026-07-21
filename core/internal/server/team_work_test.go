@@ -64,7 +64,7 @@ func TestHandleListTeamWork_ExcludesArchivedWhenRequested(t *testing.T) {
 		WithArgs("research-team", 10).
 		WillReturnRows(teamWorkItemRows().AddRow(
 			workID, "research-team", "", "", "", "", "Review failed proof", []byte(`[]`), "Soma",
-			string(protocol.TeamExecutionShapeDelegatedWork), []byte(`["review"]`), []byte(`["proof"]`), []byte(`[]`),
+			string(protocol.TeamExecutionShapeDelegatedWork), "", []byte(`null`), []byte(`["review"]`), []byte(`["proof"]`), []byte(`[]`),
 			"auto_approved", string(protocol.TeamWorkStateDegraded), []byte(`null`), true, "missing_execution_plan",
 			[]byte(`["archive stale item"]`), []byte(`[]`), []byte(`["proof-1"]`), []byte(`["audit-1"]`), now, now, "v1",
 		))
@@ -132,6 +132,7 @@ func TestHandleListTeamStatusEvents_ReturnsTimeline(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "team_id", "work_item_id", "run_id", "intent_proof_id", "contract_id", "proof_id",
 			"state", "headline", "details", "confidence_posture", "blocked_by", "next_action",
+			"execution_mode", "work_intent",
 			"source_kind", "source_channel", "payload_kind", "audit_refs", "timestamp", "version",
 		}).AddRow(
 			"22222222-2222-2222-2222-222222222222",
@@ -147,6 +148,8 @@ func TestHandleListTeamStatusEvents_ReturnsTimeline(t *testing.T) {
 			"verified",
 			[]byte(`["waiting_on_review"]`),
 			"Watch for output",
+			"",
+			[]byte(`null`),
 			"workspace_ui",
 			"soma.team_work",
 			"team_status",

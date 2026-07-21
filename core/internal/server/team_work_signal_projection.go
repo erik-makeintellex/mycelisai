@@ -16,8 +16,7 @@ type teamWorkSignalProjection struct {
 	server *AdminServer
 }
 
-// StartTeamWorkSignalProjection subscribes to governed team status/result lanes
-// and projects explicitly correlated signals into Active Work state.
+// StartTeamWorkSignalProjection projects correlated team signals into Active Work.
 func StartTeamWorkSignalProjection(ctx context.Context, s *AdminServer) error {
 	if s == nil || s.getDB() == nil {
 		return fmt.Errorf("team work signal projection requires database")
@@ -191,6 +190,8 @@ func projectedSignalStatusEvent(item protocol.TeamWorkItem, env protocol.SignalE
 		NextAction:        projectedNextActionForItem(item, payload),
 		ExpectedOutputs:   item.ExpectedOutputs,
 		ExpectedProof:     item.ExpectedProof,
+		ExecutionMode:     item.ExecutionMode,
+		WorkIntent:        item.WorkIntent,
 		OutputRefs:        outputRefs,
 		SourceKind:        string(env.Meta.SourceKind),
 		SourceChannel:     firstNonEmptyString(env.Meta.SourceChannel, subject),

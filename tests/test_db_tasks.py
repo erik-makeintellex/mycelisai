@@ -243,6 +243,17 @@ def test_schema_bootstrapped_requires_search_source_registry_table():
     assert "search_sources" in checks["search_sources table"]
 
 
+def test_schema_bootstrapped_requires_team_work_lifecycle_columns():
+    checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
+
+    for table in ("team_work_items", "team_status_events"):
+        for column in ("work_intent", "execution_mode"):
+            label = f"{table} {column} column"
+            assert label in checks
+            assert table in checks[label]
+            assert column in checks[label]
+
+
 def test_schema_bootstrapped_accepts_current_runtime_schema(monkeypatch):
     monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
     monkeypatch.setattr(
