@@ -80,7 +80,7 @@ describe('RunsPage', () => {
 
         expect(fetchRecentRuns).toHaveBeenCalledTimes(1);
         expect(screen.getByText('run-alpha-123')).toBeDefined();
-        expect(screen.getByText('running')).toBeDefined();
+        expect(screen.getByLabelText('Outcome health: Running')).toBeDefined();
 
         const row = screen.getByText('run-alpha-123').closest('a');
         expect(row).toBeDefined();

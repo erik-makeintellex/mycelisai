@@ -6,7 +6,7 @@ import {
   type TeamWorkItem,
   type TeamWorkItemState,
 } from "@/store/useCortexStore";
-import { normalizeOutcomeHealth } from "@/lib/outcomeHealth";
+import { normalizeOutcomeHealth, outcomeHealthFromRunStatus } from "@/lib/outcomeHealth";
 import {
   isRecord,
   objectValue,
@@ -187,7 +187,9 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
     title: objective,
     description: description || expectedOutputs.map((item) => `Output: ${item}`).join(" "),
     state,
-    outcomeHealth: normalizeOutcomeHealth(raw.outcome_health),
+    outcomeHealth: typeof raw.outcome_health === "string" && raw.outcome_health.trim()
+      ? normalizeOutcomeHealth(raw.outcome_health)
+      : outcomeHealthFromRunStatus(state),
     ownerLabel: stringValue(raw.owner) || (team ? `${team.name} lead` : "Team lead"),
     scopeLabel: executionShapeLabel(stringValue(raw.execution_shape)),
     updatedAt: stringValue(raw.updated_at) ?? stringValue(raw.created_at),
