@@ -231,11 +231,11 @@ test.describe("Resources workspace files", () => {
             "/groups?group_id=group-with-output&panel=message",
         );
         await expect(page.getByRole("tab", { name: /Team lead 1/i })).toBeVisible();
-        await expect(page.getByRole("tab", { name: /Coders 1/i })).toBeVisible();
-        await clickVisibleControl(page, page.getByRole("tab", { name: /Coders 1/i }));
-        await expect(page.getByRole("button", { name: /Gameplay Loop/i })).toBeVisible();
-        await expect(page.getByRole("button", { name: /Final Game Brief/i })).toHaveCount(0);
-        await clickVisibleControl(page, page.getByRole("tab", { name: /All 3/i }));
+        await expect(page.getByRole("tab", { name: /Coders 0/i })).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("tab", { name: /Coders 0/i }));
+        await expect(page.getByText("No retained outputs at this contributor level.")).toBeVisible();
+        await expect(page.getByRole("button", { name: /Gameplay Loop/i })).toHaveCount(0);
+        await clickVisibleControl(page, page.getByRole("tab", { name: /All 2/i }));
         await expect(page.getByText("Empty Group")).toHaveCount(0);
         await clickVisibleControl(page, page.getByRole("button", { name: /Final Game Brief/i }));
         await expect(page.locator("textarea").first()).toHaveValue(/Retained user output/i);
