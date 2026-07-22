@@ -60,8 +60,8 @@ describe('ViewChain', () => {
         expect(screen.getByText('run-child')).toBeDefined();
         expect(screen.getByText('depth 0')).toBeDefined();
         expect(screen.getByText('depth 1')).toBeDefined();
-        expect(screen.getByText('completed')).toBeDefined();
-        expect(screen.getByText('running')).toBeDefined();
+        expect(screen.getByLabelText('Outcome health: Completed')).toBeDefined();
+        expect(screen.getByLabelText('Outcome health: Running')).toBeDefined();
     });
 
     it('shows an error state when the chain request fails', async () => {

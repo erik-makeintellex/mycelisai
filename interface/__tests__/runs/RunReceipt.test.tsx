@@ -67,7 +67,7 @@ describe("RunReceipt model", () => {
     );
 
     expect(screen.getByText("Run needs recovery")).toBeDefined();
-    expect(screen.getAllByText("failed").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Outcome health: Blocked")).toBeDefined();
     expect(screen.getByText("What happened")).toBeDefined();
     expect(screen.getByText("What to trust")).toBeDefined();
     expect(screen.getByText("Next step")).toBeDefined();

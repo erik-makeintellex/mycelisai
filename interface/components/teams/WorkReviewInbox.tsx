@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Archive, Eye, Pause, Play, RefreshCw, Send } from "lucide-react";
 import type { TeamInteraction, TeamOutputRef, TeamWorkItem } from "@/store/useCortexStore";
-import { teamWorkStateLabel } from "@/lib/deliveryRuntimeLanguage";
+import { outcomeHealthFromRunStatus } from "@/lib/outcomeHealth";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 import { ActiveWorkEvidence } from "./ActiveWorkEvidence";
 import {
   compactDescription,
@@ -123,9 +124,7 @@ function ReviewListRow({
     >
       <button type="button" onClick={onSelect} className="block w-full text-left">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-cortex-primary/25 bg-cortex-bg px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-primary">
-            {teamWorkStateLabel(item.state)}
-          </span>
+          <OutcomeHealthBadge health={item.outcomeHealth ?? outcomeHealthFromRunStatus(item.state)} />
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-text-muted">
             {item.scopeLabel}
           </span>

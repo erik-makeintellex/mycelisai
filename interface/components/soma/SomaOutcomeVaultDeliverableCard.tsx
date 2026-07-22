@@ -32,7 +32,7 @@ export function SomaOutcomeVaultDeliverableCard({ output }: { output: OutputWork
             ) : (
               <div className="font-semibold text-cortex-text-main">{output.text}</div>
             )}
-            <OutcomeHealthBadge health={output.health ?? (output.proofArtifactId ? "healthy" : "completed")} />
+            <OutcomeHealthBadge health={output.health ?? "completed"} />
           </div>
           {path ? (
             <details className="mt-1 text-xs text-cortex-text-muted">

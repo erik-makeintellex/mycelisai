@@ -5,9 +5,9 @@ import { Radio } from "lucide-react";
 import {
   type TeamInteraction,
   type TeamWorkItem,
-  type TeamWorkItemState,
 } from "@/store/useCortexStore";
-import { teamWorkStateLabel } from "@/lib/deliveryRuntimeLanguage";
+import { outcomeHealthFromRunStatus } from "@/lib/outcomeHealth";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 import { ActiveWorkAdvancedProjection } from "./ActiveWorkAdvancedProjection";
 import { ActiveWorkActionControl } from "./ActiveWorkActionControl";
 import { ActiveWorkEvidence } from "./ActiveWorkEvidence";
@@ -23,20 +23,6 @@ import { ReviewQueueSummary } from "./ReviewQueueSummary";
 import { TeamAskForm } from "./TeamAskForm";
 import { WorkReviewInbox } from "./WorkReviewInbox";
 import { WorkTruthSummary } from "./WorkTruthSummary";
-
-const stateStyles: Record<TeamWorkItemState, string> = {
-  new: "border-cortex-primary/25 bg-cortex-primary/10 text-cortex-primary",
-  briefed: "border-cortex-primary/25 bg-cortex-primary/10 text-cortex-primary",
-  queued: "border-cortex-border bg-cortex-bg text-cortex-text-muted",
-  running: "border-cortex-success/25 bg-cortex-success/10 text-cortex-success",
-  reviewing: "border-cortex-info/25 bg-cortex-info/10 text-cortex-info",
-  paused: "border-cortex-border bg-cortex-bg text-cortex-text-muted",
-  output_ready:
-    "border-cortex-primary/30 bg-cortex-primary/10 text-cortex-primary",
-  degraded: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-  needs_operator: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-  archived: "border-cortex-border bg-cortex-bg text-cortex-text-muted",
-};
 
 type LanePurpose = "active" | "review";
 
@@ -192,11 +178,7 @@ function WorkItemRow({
       <div className={compact ? "space-y-3" : "flex flex-wrap items-start justify-between gap-3"}>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] ${stateStyles[item.state]}`}
-            >
-              {teamWorkStateLabel(item.state)}
-            </span>
+            <OutcomeHealthBadge health={item.outcomeHealth ?? outcomeHealthFromRunStatus(item.state)} />
             {!compact && item.sourceLabel ? (
               <span className="rounded-full border border-cortex-border bg-cortex-surface px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-text-muted">
                 {item.sourceLabel}

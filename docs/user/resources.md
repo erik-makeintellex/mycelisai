@@ -22,6 +22,8 @@ Current resource menu:
 
 The Resources page keeps these resource types in a persistent menu and renders the selected type inside a bounded work window. Long tool lists, workspace folders, exchange records, and provider forms should scroll inside that selected panel rather than turning the whole page into one long operator path.
 
+Retained group outputs use the same Outcome Health labels as Soma, Teams, and Runs. A selectable group with retained user output is Completed; the badge describes operational state while proof and source material remain separate details.
+
 ---
 
 ## Connected Tools

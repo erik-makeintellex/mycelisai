@@ -1,3 +1,5 @@
+import type { OutcomeHealthState } from "@/lib/outcomeHealth";
+
 export interface CTSEnvelope {
     id: string;
     source: string;
@@ -62,6 +64,7 @@ export interface MissionRun {
     mission_id: string;
     tenant_id: string;
     status: 'pending' | 'running' | 'completed' | 'failed';
+    outcome_health?: OutcomeHealthState;
     run_depth: number;
     parent_run_id?: string;
     started_at: string;

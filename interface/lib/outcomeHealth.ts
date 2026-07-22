@@ -24,13 +24,27 @@ export function normalizeOutcomeHealth(value: unknown): OutcomeHealthState {
 }
 
 export function outcomeHealthLabel(health: OutcomeHealthState) {
-  if (health === "completed") return "Ready";
-  if (health === "blocked") return "Needs recovery";
-  if (health === "degraded") return "Needs review";
-  if (health === "running") return "Working";
-  if (health === "waiting") return "Waiting";
-  if (health === "archived") return "Archived";
-  return "Healthy";
+  return health.charAt(0).toUpperCase() + health.slice(1);
+}
+
+export function outcomeHealthFromRunStatus(value: unknown): OutcomeHealthState {
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (raw === "archived") return "archived";
+  if (["pending", "queued", "new", "briefed", "paused"].includes(raw)) return "waiting";
+  if (["running", "reviewing"].includes(raw)) return "running";
+  if (["completed", "succeeded", "success", "output_ready"].includes(raw)) return "completed";
+  if (["degraded", "needs_attention"].includes(raw)) return "degraded";
+  if (["failed", "blocked", "needs_operator", "cancelled", "canceled"].includes(raw)) return "blocked";
+  return "healthy";
+}
+
+export function aggregateOutcomeHealth(states: OutcomeHealthState[]): OutcomeHealthState {
+  if (states.length === 0) return "healthy";
+  if (states.every((state) => state === "archived")) return "archived";
+  for (const state of ["blocked", "degraded", "running", "completed", "waiting", "healthy"] as const) {
+    if (states.includes(state)) return state;
+  }
+  return "healthy";
 }
 
 export function outcomeHealthClassName(health: OutcomeHealthState) {

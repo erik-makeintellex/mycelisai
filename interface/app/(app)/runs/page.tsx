@@ -5,30 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Activity, Zap, Loader2 } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import AdvancedModeRoute from "@/components/shared/AdvancedModeRoute";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
+import { outcomeHealthFromRunStatus } from "@/lib/outcomeHealth";
 
 function timeAgo(iso: string): string {
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
     if (diff < 60)   return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     return `${Math.floor(diff / 3600)}h ago`;
-}
-
-function statusColor(status: string): string {
-    switch (status) {
-        case 'running':   return 'text-cortex-primary';
-        case 'completed': return 'text-cortex-success';
-        case 'failed':    return 'text-cortex-danger';
-        default:          return 'text-cortex-text-muted';
-    }
-}
-
-function statusDot(status: string): string {
-    switch (status) {
-        case 'running':   return 'bg-cortex-primary animate-pulse';
-        case 'completed': return 'bg-cortex-success';
-        case 'failed':    return 'bg-cortex-danger';
-        default:          return 'bg-cortex-text-muted/40';
-    }
 }
 
 export default function RunsPage() {
@@ -138,8 +122,6 @@ function RunsContent() {
                                     i < visibleRuns.length - 1 ? 'border-b border-cortex-border/50' : ''
                                 }`}
                             >
-                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusDot(run.status)}`} />
-
                                 <div className="flex-1 min-w-0">
                                     <div className="text-[11px] font-mono font-bold text-cortex-text-main group-hover:text-cortex-primary transition-colors truncate">
                                         {run.id}
@@ -149,9 +131,7 @@ function RunsContent() {
                                     </div>
                                 </div>
 
-                                <span className={`text-[9px] font-mono font-bold uppercase flex-shrink-0 ${statusColor(run.status)}`}>
-                                    {run.status}
-                                </span>
+                                <OutcomeHealthBadge health={run.outcome_health ?? outcomeHealthFromRunStatus(run.status)} />
 
                                 <span className="text-[9px] font-mono text-cortex-text-muted/60 flex-shrink-0">
                                     {timeAgo(run.started_at)}

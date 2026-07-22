@@ -1,4 +1,6 @@
-// V7 Event Spine — TypeScript types for mission runs and events.
+import type { OutcomeHealthState } from '@/lib/outcomeHealth';
+
+// Event Spine TypeScript types for mission runs and events.
 // Mirrors core/pkg/protocol/events.go and core/internal/runs/manager.go.
 // Used by RunTimeline.tsx, EventCard.tsx, ViewChain.tsx (Team E components).
 
@@ -47,6 +49,7 @@ export interface MissionRun {
   mission_id: string;
   tenant_id: string;
   status: RunStatus;
+  outcome_health?: OutcomeHealthState;
   run_depth: number;
   parent_run_id?: string;
   started_at: string; // ISO 8601

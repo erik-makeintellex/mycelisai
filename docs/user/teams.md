@@ -59,6 +59,8 @@ Use the root Soma chat when you want the simplest path:
 
 Use `Teams` when you want to inspect or manage existing teams:
 
+- read the compact Outcome Health badge first: Healthy, Waiting, Running, Degraded, Blocked, Completed, or Archived; open details only when you need the underlying team lifecycle state
+
 - review the Active Work Lane to see whether a team is new, queued, running, output-ready, degraded, paused, or waiting on the operator
 - use `/teams?view=work` when arriving from the Dashboard review panel; this focused Review Queue starts with counts for work needing a decision, ready output, work still running, and items that can be cleared
 - in Review Work, each row should answer `Reason`, `Trust`, and `Move` before the decision actions so the operator can decide whether to inspect, respond, recover, or clear it without reading the whole team setup page first
@@ -86,6 +88,8 @@ Use `Groups` when you want to review a collaboration lane without opening every 
 The **Create** tab is sectioned as **Basics**, **Policy**, **People**, and **Advanced** so the operator can define one part of the collaboration lane at a time instead of reading a compressed multi-column form. Start with the name and goal, then add work mode/approval posture, team or member ids, and only then any workspace/coordinator detail that matters.
 
 The **Outputs** tab is curated for user-facing deliverables. It hides planning, proof, source/support files, and team handoff records by default so a planned team does not look like it delivered real work. Use the include-internal checkbox when you intentionally need to inspect planning records such as `TEAM_EVOCATION.md`, proof files, research handoffs, or source material. A group labeled **Planned only** has retained working material but still needs a delivered output before it should be treated as complete. When you hand a file to a team, say whether it is a one-run draft/input, standing context for that team, or a final output target; Soma should keep those roles separate in the work item.
+
+Group Outputs use the same Outcome Health vocabulary as Soma and Runs: a group with retained user deliverables is Completed, an empty active output lane is Waiting, and a cleared group is Archived. Proof remains visible separately and does not rename a completed deliverable as Healthy.
 
 Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
 

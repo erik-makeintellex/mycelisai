@@ -42,6 +42,7 @@ func TestOutcomeHealthForTeamWork(t *testing.T) {
 		{state: TeamWorkStateDegraded, want: OutcomeHealthDegraded},
 		{state: TeamWorkStateNeedsOperator, want: OutcomeHealthBlocked},
 		{state: TeamWorkStateArchived, want: OutcomeHealthArchived},
+		{state: TeamWorkStateArchived, operator: true, recovery: []string{"stale"}, want: OutcomeHealthArchived},
 		{state: TeamWorkStateRunning, operator: true, want: OutcomeHealthBlocked},
 		{state: TeamWorkStateRunning, recovery: []string{"retry"}, want: OutcomeHealthBlocked},
 	}
@@ -64,6 +65,7 @@ func TestOutcomeHealthForTeamStatusEvent(t *testing.T) {
 		{name: "degraded event stays degraded", item: TeamStatusEvent{State: TeamWorkStateDegraded}, want: OutcomeHealthDegraded},
 		{name: "blocked dependency requires recovery", item: TeamStatusEvent{State: TeamWorkStateRunning, BlockedBy: []string{"provider"}}, want: OutcomeHealthBlocked},
 		{name: "output event is completed", item: TeamStatusEvent{State: TeamWorkStateOutputReady}, want: OutcomeHealthCompleted},
+		{name: "archived ignores stale blockers", item: TeamStatusEvent{State: TeamWorkStateArchived, BlockedBy: []string{"stale"}}, want: OutcomeHealthArchived},
 	}
 
 	for _, tt := range tests {
@@ -77,15 +79,30 @@ func TestOutcomeHealthForTeamStatusEvent(t *testing.T) {
 
 func TestOutcomeHealthForRunStatus(t *testing.T) {
 	tests := map[string]OutcomeHealthState{
-		"pending":   OutcomeHealthWaiting,
-		"running":   OutcomeHealthRunning,
-		"completed": OutcomeHealthCompleted,
-		"failed":    OutcomeHealthBlocked,
-		"unknown":   OutcomeHealthHealthy,
+		"pending":     OutcomeHealthWaiting,
+		"running":     OutcomeHealthRunning,
+		"completed":   OutcomeHealthCompleted,
+		"failed":      OutcomeHealthBlocked,
+		" CANCELLED ": OutcomeHealthBlocked,
+		"degraded":    OutcomeHealthDegraded,
+		"ARCHIVED":    OutcomeHealthArchived,
+		"unknown":     OutcomeHealthHealthy,
 	}
 	for status, want := range tests {
 		if got := OutcomeHealthForRunStatus(status); got != want {
 			t.Fatalf("OutcomeHealthForRunStatus(%q) = %q, want %q", status, got, want)
 		}
+	}
+}
+
+func TestAggregateOutcomeHealth(t *testing.T) {
+	if got := AggregateOutcomeHealth(OutcomeHealthCompleted, OutcomeHealthBlocked); got != OutcomeHealthBlocked {
+		t.Fatalf("AggregateOutcomeHealth() = %q, want %q", got, OutcomeHealthBlocked)
+	}
+	if got := AggregateOutcomeHealth(OutcomeHealthArchived, OutcomeHealthArchived); got != OutcomeHealthArchived {
+		t.Fatalf("AggregateOutcomeHealth() = %q, want %q", got, OutcomeHealthArchived)
+	}
+	if got := AggregateOutcomeHealth(OutcomeHealthArchived, OutcomeHealthCompleted); got != OutcomeHealthCompleted {
+		t.Fatalf("AggregateOutcomeHealth() = %q, want %q", got, OutcomeHealthCompleted)
 	}
 }

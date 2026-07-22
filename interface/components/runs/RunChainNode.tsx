@@ -3,19 +3,8 @@
 import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, GitBranch, Clock3, CircleDot } from "lucide-react";
 import type { MissionRun } from "@/types/events";
-
-function statusClass(status: MissionRun["status"]): string {
-    switch (status) {
-        case "completed":
-            return "bg-cortex-success/15 text-cortex-success border-cortex-success/30";
-        case "failed":
-            return "bg-cortex-danger/15 text-cortex-danger border-cortex-danger/30";
-        case "running":
-            return "bg-cortex-primary/15 text-cortex-primary border-cortex-primary/30";
-        default:
-            return "bg-cortex-border/40 text-cortex-text-muted border-cortex-border";
-    }
-}
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
+import { outcomeHealthFromRunStatus } from "@/lib/outcomeHealth";
 
 function timeLabel(iso: string): string {
     const started = new Date(iso);
@@ -51,9 +40,7 @@ export default function RunChainNode({ run, childRuns = [] }: Props) {
 
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase ${statusClass(run.status)}`}>
-                            {run.status}
-                        </span>
+                        <OutcomeHealthBadge health={run.outcome_health ?? outcomeHealthFromRunStatus(run.status)} />
                         <span className="text-[10px] font-mono font-bold text-cortex-text-main break-all">
                             {run.id}
                         </span>

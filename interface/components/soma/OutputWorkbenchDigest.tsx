@@ -50,7 +50,7 @@ export function outputWorkbenchDigest({
       ...(storagePath ? { storagePath } : {}),
       proofArtifactId: primaryOutput.proofArtifactId ?? null,
       replyReference: storagePath ?? primaryOutput.url ?? null,
-      health: primaryOutput.proofArtifactId ? "healthy" : "completed",
+      health: "completed",
       count: outputs.length + packages.length,
     };
   }
@@ -79,7 +79,7 @@ export function outputWorkbenchDigest({
     validation: primaryPackage.validation ?? null,
     proofArtifactId: primaryPackage.proof_artifact_id ?? null,
     replyReference: storagePath ?? itemUrl(primaryPackage) ?? null,
-    health: primaryPackage.validation || primaryPackage.proof_artifact_id ? "healthy" : "completed",
+    health: "completed",
     count: outputs.length + packages.length,
   };
 }
