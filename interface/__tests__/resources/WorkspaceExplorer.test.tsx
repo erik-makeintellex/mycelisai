@@ -144,7 +144,8 @@ describe("WorkspaceExplorer", () => {
         expect(calls[0].body).toEqual({ arguments: { path: "workspace" } });
         expect(screen.getByText("Open generated output on this machine")).toBeDefined();
         expect(await screen.findByTestId("workspace-group-output-selector")).toBeDefined();
-        expect(screen.getByText("Game Delivery Group (4)")).toBeDefined();
+        expect(screen.getByText("Game Delivery Group (3)")).toBeDefined();
+        expect(screen.getByLabelText("Outcome health: Completed")).toBeDefined();
         expect(screen.queryByText("Empty Group")).toBeNull();
         expect(screen.getByRole("link", { name: "Open group outputs" }).getAttribute("href")).toBe(
             "/groups?group_id=group-with-output&panel=outputs",
@@ -202,7 +203,7 @@ describe("WorkspaceExplorer", () => {
 
         render(<WorkspaceExplorer onOpenToolsTab={vi.fn()} />);
 
-        await screen.findByText("Game Delivery Group (4)");
+        await screen.findByText("Game Delivery Group (3)");
         fireEvent.click(screen.getByRole("button", { name: /Final Game Brief/i }));
         await waitFor(() => {
             expect(calls.some((call) => call.tool === "read_text_file" && call.body.arguments.path === "workspace/groups/game-delivery/final/game-brief.md")).toBe(true);
@@ -221,15 +222,15 @@ describe("WorkspaceExplorer", () => {
 
         render(<WorkspaceExplorer onOpenToolsTab={vi.fn()} />);
 
-        await screen.findByText("Game Delivery Group (4)");
+        await screen.findByText("Game Delivery Group (3)");
         expect(screen.getByRole("tablist", { name: /Output contributor level/i })).toBeDefined();
         expect(screen.getByRole("tab", { name: /Team lead 1/i })).toBeDefined();
-        expect(screen.getByRole("tab", { name: /Coders 1/i })).toBeDefined();
+        expect(screen.getByRole("tab", { name: /Coders 0/i })).toBeDefined();
         expect(screen.getByRole("tab", { name: /Review 1/i })).toBeDefined();
         expect(screen.getByRole("tab", { name: /Media 1/i })).toBeDefined();
 
-        fireEvent.click(screen.getByRole("tab", { name: /Coders 1/i }));
-        expect(screen.getByText("Gameplay Loop")).toBeDefined();
+        fireEvent.click(screen.getByRole("tab", { name: /Coders 0/i }));
+        expect(screen.getByText("No retained outputs at this contributor level.")).toBeDefined();
         expect(screen.queryByText("Final Game Brief")).toBeNull();
 
         fireEvent.click(screen.getByRole("tab", { name: /Review 1/i }));

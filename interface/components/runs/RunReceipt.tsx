@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, FileText, RotateCcw, ShieldCheck } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, RotateCcw, ShieldCheck } from "lucide-react";
 import type { MissionEvent } from "@/store/useCortexStore";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 
 type ReceiptStatus = "running" | "completed" | "failed";
 
@@ -104,18 +105,6 @@ export function buildRunReceipt(events: MissionEvent[], runId: string): Receipt 
   };
 }
 
-function statusClasses(status: ReceiptStatus) {
-  if (status === "completed") return "border-cortex-success/30 bg-cortex-success/10 text-cortex-success";
-  if (status === "failed") return "border-cortex-danger/30 bg-cortex-danger/10 text-cortex-danger";
-  return "border-cortex-primary/30 bg-cortex-primary/10 text-cortex-primary";
-}
-
-function StatusIcon({ status }: { status: ReceiptStatus }) {
-  if (status === "completed") return <CheckCircle2 className="h-4 w-4" />;
-  if (status === "failed") return <AlertTriangle className="h-4 w-4" />;
-  return <Activity className="h-4 w-4" />;
-}
-
 export default function RunReceipt({ events, runId }: { events: MissionEvent[]; runId: string }) {
   const [inspectOpen, setInspectOpen] = useState(false);
   const receipt = buildRunReceipt(events, runId);
@@ -130,10 +119,7 @@ export default function RunReceipt({ events, runId }: { events: MissionEvent[]; 
           </div>
           <h2 className="mt-2 text-lg font-semibold text-cortex-text-main">{receipt.headline}</h2>
         </div>
-        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-mono font-bold uppercase ${statusClasses(receipt.status)}`}>
-          <StatusIcon status={receipt.status} />
-          {receipt.status}
-        </span>
+        <OutcomeHealthBadge health={receipt.status === "failed" ? "blocked" : receipt.status} />
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-3">

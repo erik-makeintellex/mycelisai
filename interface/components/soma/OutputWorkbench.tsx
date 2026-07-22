@@ -176,7 +176,7 @@ export function OutputWorkbench({
               <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-primary">Latest output</div>
               <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
                 <span className="truncate text-sm font-semibold text-cortex-text-main">{primaryOutput.text}</span>
-                <OutcomeHealthBadge health={primaryOutput.proof || primaryOutput.proofArtifactId ? "healthy" : "completed"} />
+                <OutcomeHealthBadge health="completed" />
               </div>
               <p className="mt-1 text-xs leading-5 text-cortex-text-muted">Use Open file to view it, or Open folder to show it in the workspace.</p>
               <OutputPathHint storagePath={primaryOutput.storagePath} url={primaryOutput.url} />

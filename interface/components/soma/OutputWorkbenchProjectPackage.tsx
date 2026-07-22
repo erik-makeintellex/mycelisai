@@ -39,7 +39,7 @@ export function OutputWorkbenchProjectPackage({
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="truncate text-sm font-semibold text-cortex-text-main">{title}</span>
-            <OutcomeHealthBadge health={project.validation || project.proof_artifact_id ? "healthy" : "completed"} />
+            <OutcomeHealthBadge health="completed" />
           </div>
           {project.summary ? <div className="text-xs leading-5 text-cortex-text-muted">{project.summary}</div> : null}
         </div>
