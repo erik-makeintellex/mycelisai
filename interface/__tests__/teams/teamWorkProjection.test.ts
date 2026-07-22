@@ -75,6 +75,7 @@ describe("teamWorkProjection", () => {
       id: "work-1",
       title: "Build the launch package",
       state: "output_ready",
+      outcomeHealth: "completed",
       source: "durable",
       sourceLabel: "Durable team work",
       outputCount: 1,
