@@ -54,6 +54,75 @@ describe("RunReceipt model", () => {
     expect(receipt.proofRefs).toContain("audit-1");
   });
 
+  it("reconstructs approved execution, output, and lifecycle contracts", () => {
+    const receipt = buildRunReceipt(
+      [
+        event("team_work.status", {
+          execution_mode: "team_async",
+          work_intent: {
+            kind: "project",
+            objective: "Deliver a reviewable application.",
+            output_contract: {
+              shape: "app_package",
+              primary_deliverable: "generated/app/index.html",
+              retention: "user_deliverable",
+              launch_hint: "Open index.html in a browser.",
+              validation: ["launches", "supports keyboard input"],
+            },
+            lifecycle: {
+              stop_action: "pause_project",
+              retry_action: "resume_project",
+              recovery_action: "restore_checkpoint",
+              control_summary: "Pause, resume, or restore retained work.",
+            },
+          },
+          output_refs: [{ storage_ref: "workspace/generated/app", entrypoint: "index.html" }],
+        }),
+        event("mission.completed", { operator_summary: "Application package retained.", execution_mode: "team_async" }),
+      ],
+      "run-abc",
+    );
+
+    expect(receipt.status).toBe("completed");
+    expect(receipt.outputRefs).toContain("workspace/generated/app");
+    expect(receipt.approvedWork).toMatchObject({
+      executionMode: "team_async",
+      kind: "project",
+      outputShape: "app_package",
+      primaryDeliverable: "generated/app/index.html",
+      retention: "user_deliverable",
+      stopAction: "pause_project",
+      retryAction: "resume_project",
+      recoveryAction: "restore_checkpoint",
+    });
+  });
+
+  it("degrades completed work when its approved deliverable was not retained", () => {
+    const receipt = buildRunReceipt(
+      [
+        event("mission.started", {
+          execution_mode: "confirm_then_execute",
+          work_intent: {
+            kind: "one_shot",
+            output_contract: {
+              shape: "document",
+              primary_deliverable: "review.md",
+              retention: "user_deliverable",
+            },
+          },
+        }),
+        event("mission.completed", { operator_summary: "Work finished." }),
+      ],
+      "run-abc",
+    );
+
+    expect(receipt.status).toBe("degraded");
+    expect(receipt.headline).toBe("Run needs output recovery");
+    expect(receipt.result).toMatch(/approved deliverable was not retained/i);
+    expect(receipt.trust).toMatch(/not ready to rely on/i);
+    expect(receipt.next).toMatch(/retain the approved output/i);
+  });
+
   it("renders failed runs as recoverable work with trust and inspect evidence", () => {
     render(
       <RunReceipt
@@ -82,5 +151,32 @@ describe("RunReceipt model", () => {
 
     expect(screen.getByText("run-abc")).toBeDefined();
     expect(screen.getByText("audit-1")).toBeDefined();
+  });
+
+  it("renders reconstructed approved work only after the operator opens Inspect", () => {
+    render(
+      <RunReceipt
+        runId="run-abc"
+        events={[
+          event("team_work.status", {
+            execution_mode: "team_async",
+            work_intent: {
+              kind: "project",
+              output_contract: { primary_deliverable: "generated/app/index.html", retention: "user_deliverable" },
+              lifecycle: { control_summary: "Pause, resume, or restore retained work." },
+            },
+            output_refs: [{ storage_ref: "workspace/generated/app" }],
+          }),
+          event("mission.completed"),
+        ]}
+      />,
+    );
+
+    expect(screen.queryByText("Approved work")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Inspect receipt evidence/i }));
+    expect(screen.getByText("Approved work")).toBeDefined();
+    expect(screen.getByText("project · team_async")).toBeDefined();
+    expect(screen.getByText("generated/app/index.html")).toBeDefined();
+    expect(screen.getByText("Pause, resume, or restore retained work.")).toBeDefined();
   });
 });

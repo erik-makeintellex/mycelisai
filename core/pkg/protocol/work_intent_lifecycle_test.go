@@ -40,11 +40,28 @@ func TestNormalizeWorkIntentAddsLifecycleWithoutOverwritingExplicitContract(t *t
 
 	explicit := NormalizeWorkIntent(&WorkIntent{
 		Kind: "service",
+		OutputContract: &WorkOutputContract{
+			Shape: " App_Package ", PrimaryDeliverable: " dist/app.zip ",
+			Retention: " User_Deliverable ", LaunchHint: " Open index.html ",
+			Validation: []string{" playable ", "", "playable", " audio "},
+		},
 		Lifecycle: &WorkLifecycleContract{
 			StopAction: " custom_stop ", ControlSummary: " Keep the operator override. ",
 		},
 	})
 	if explicit.Lifecycle.StopAction != "custom_stop" || explicit.Lifecycle.ControlSummary != "Keep the operator override." {
 		t.Fatalf("expected explicit lifecycle to be retained, got %#v", explicit.Lifecycle)
+	}
+	if explicit.Lifecycle.RetryAction != WorkRetryRestartService || explicit.Lifecycle.RecoveryAction != WorkRecoverInspectAndRestart {
+		t.Fatalf("expected missing lifecycle controls to use service defaults, got %#v", explicit.Lifecycle)
+	}
+	if explicit.OutputContract.Shape != "app_package" || explicit.OutputContract.Retention != "user_deliverable" {
+		t.Fatalf("expected output contract enums to be normalized, got %#v", explicit.OutputContract)
+	}
+	if explicit.OutputContract.PrimaryDeliverable != "dist/app.zip" || explicit.OutputContract.LaunchHint != "Open index.html" {
+		t.Fatalf("expected output contract copy to be trimmed, got %#v", explicit.OutputContract)
+	}
+	if len(explicit.OutputContract.Validation) != 2 || explicit.OutputContract.Validation[1] != "audio" {
+		t.Fatalf("expected compact validation requirements, got %#v", explicit.OutputContract.Validation)
 	}
 }

@@ -41,10 +41,12 @@ The Events view now starts with a **Run receipt** before the raw event stream. R
 | **What happened** | The useful outcome or failure summary from the latest terminal event. |
 | **What to trust** | Whether completed output/proof is reliable, provisional, or invalid for this attempt. |
 | **Next step** | What the operator should do now: review output, wait, inspect events, or recover. |
-| **Output refs** | Retained output references detected in the run evidence. |
+| **Output refs** | Retained output references detected in direct artifact events or run-linked team results. |
 | **Proof refs** | Audit/proof identifiers detected in the run evidence. |
 
-Use **Inspect receipt evidence** when you need the exact run ID, output references, or proof references. Use the event stream below it only when you need low-level audit detail.
+Use **Inspect receipt evidence** when you need the exact run ID, the approved work mode and expected deliverable, lifecycle guidance, output references, or proof references. These details are reconstructed from the contract saved with the run; they do not create a second user-facing work object.
+
+If a run reports completion but its approved contract required a retained deliverable and no output reference exists, the receipt shows **Degraded** and **Run needs output recovery**. The completion event remains trusted, but the missing deliverable does not. Recover or rerun the owning work before accepting the result.
 
 ---
 

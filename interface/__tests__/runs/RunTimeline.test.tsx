@@ -233,6 +233,31 @@ describe('RunTimeline', () => {
         expect(screen.getByText('Run completed')).toBeDefined();
     });
 
+    it('shows one degraded state when completed work is missing its required output', async () => {
+        mockFetchOk([
+            {
+                ...mockEvents[0],
+                payload: {
+                    work_intent: {
+                        output_contract: { primary_deliverable: 'review.md', retention: 'user_deliverable' },
+                    },
+                },
+            },
+            terminalEvents[terminalEvents.length - 1],
+        ]);
+
+        await act(async () => {
+            render(<RunTimeline runId="run-abc" />);
+        });
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(0);
+        });
+
+        expect(screen.getByText('degraded')).toBeDefined();
+        expect(screen.getByText('Run needs output recovery')).toBeDefined();
+        expect(screen.queryByText('Run completed')).toBeNull();
+    });
+
     it('shows error state on fetch failure', async () => {
         mockFetchError(503);
 

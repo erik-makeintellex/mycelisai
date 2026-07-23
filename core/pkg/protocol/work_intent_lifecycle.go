@@ -59,14 +59,36 @@ func NormalizeWorkIntent(raw *WorkIntent) *WorkIntent {
 	intent.ServiceRefs = compactStrings(intent.ServiceRefs)
 	intent.NATSSubjects = compactStrings(intent.NATSSubjects)
 	intent.ProjectRef = strings.TrimSpace(intent.ProjectRef)
+	if intent.OutputContract != nil {
+		outputCopy := *intent.OutputContract
+		outputCopy.Shape = strings.TrimSpace(strings.ToLower(outputCopy.Shape))
+		outputCopy.PrimaryDeliverable = strings.TrimSpace(outputCopy.PrimaryDeliverable)
+		outputCopy.Retention = strings.TrimSpace(strings.ToLower(outputCopy.Retention))
+		outputCopy.LaunchHint = strings.TrimSpace(outputCopy.LaunchHint)
+		outputCopy.Validation = dedupeStrings(compactStrings(outputCopy.Validation))
+		intent.OutputContract = &outputCopy
+	}
+	defaults := WorkLifecycleForKind(intent.Kind)
 	if intent.Lifecycle == nil {
-		intent.Lifecycle = WorkLifecycleForKind(intent.Kind)
+		intent.Lifecycle = defaults
 	} else {
 		lifecycleCopy := *intent.Lifecycle
 		lifecycleCopy.StopAction = strings.TrimSpace(lifecycleCopy.StopAction)
 		lifecycleCopy.RetryAction = strings.TrimSpace(lifecycleCopy.RetryAction)
 		lifecycleCopy.RecoveryAction = strings.TrimSpace(lifecycleCopy.RecoveryAction)
 		lifecycleCopy.ControlSummary = strings.TrimSpace(lifecycleCopy.ControlSummary)
+		if lifecycleCopy.StopAction == "" {
+			lifecycleCopy.StopAction = defaults.StopAction
+		}
+		if lifecycleCopy.RetryAction == "" {
+			lifecycleCopy.RetryAction = defaults.RetryAction
+		}
+		if lifecycleCopy.RecoveryAction == "" {
+			lifecycleCopy.RecoveryAction = defaults.RecoveryAction
+		}
+		if lifecycleCopy.ControlSummary == "" {
+			lifecycleCopy.ControlSummary = defaults.ControlSummary
+		}
 		intent.Lifecycle = &lifecycleCopy
 	}
 	return &intent
