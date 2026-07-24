@@ -123,6 +123,8 @@ function MessageMeta({ msg, assistantName }: { msg: ChatMessage; assistantName: 
 function isAnswerOnlyDepth(msg: ChatMessage) {
     return Boolean(
         !msg.proposal
+        && !msg.artifacts?.length
+        && !msg.consultations?.length
         && msg.mode !== "execution_result"
         && (
             msg.response_depth === "quick_box"
@@ -156,6 +158,7 @@ export default function MissionControlMessageBubble({
     const assistantName = useCortexStore((s) => s.assistantName);
     const artifactSummary = artifactResultSummary(msg.artifacts);
     const consultationSummary = consultationResultSummary(msg.consultations);
+    const responseBadge = askClassBadge(msg.ask_class);
     const answerOnlyDepth = isAnswerOnlyDepth(msg);
     const showExecutionSummary = Boolean(
         msg.execution_summary
@@ -167,9 +170,15 @@ export default function MissionControlMessageBubble({
             || msg.ask_class === "execution_blocker"
         ),
     );
+    const hasStructuredEvidence = Boolean(
+        msg.artifacts?.length || msg.consultations?.length,
+    );
     const showAnswerExtras = !answerOnlyDepth;
     const showMeta = !isUser && !compactResult;
     const showTraceExtras = !isUser && showAnswerExtras && !compactResult;
+    const showStructuredEvidence = !isUser
+        && showAnswerExtras
+        && (!compactResult || hasStructuredEvidence);
     const showThreadState = !isUser && showAnswerExtras && (!compactResult || shouldShowSimpleThreadState(msg));
     const useReceipt = compactResult && showExecutionSummary && msg.execution_summary
         ? shouldUseExecutionSummaryReceipt({
@@ -256,23 +265,27 @@ export default function MissionControlMessageBubble({
                     )
                 )}
                 {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}
-                {showTraceExtras && artifactSummary && (
+                {showStructuredEvidence && artifactSummary && (
                     <div className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/5 px-3 py-2">
                         <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-primary">
-                            Returned output
+                            {compactResult
+                                ? responseBadge?.label ?? "Returned output"
+                                : "Returned output"}
                         </div>
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">{artifactSummary}</p>
                     </div>
                 )}
-                {showTraceExtras && msg.ask_class === "specialist_consultation" && consultationSummary && (
+                {showStructuredEvidence && consultationSummary && (
                     <div className="rounded-lg border border-cortex-warning/20 bg-cortex-warning/5 px-3 py-2">
                         <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-warning">
-                            Specialist context
+                            {compactResult
+                                ? "Specialist support"
+                                : "Specialist context"}
                         </div>
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">{consultationSummary}</p>
                     </div>
                 )}
-                {showTraceExtras && msg.artifacts?.length ? (
+                {showStructuredEvidence && msg.artifacts?.length ? (
                     <div className="space-y-1">
                         {msg.artifacts.map((artifact, i) => <InlineArtifact key={artifact.id || `art-${i}`} artifact={artifact} />)}
                     </div>

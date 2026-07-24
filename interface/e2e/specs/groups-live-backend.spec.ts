@@ -134,7 +134,7 @@ test.describe('Groups retained outputs live backend contract', () => {
         await page.getByTestId(`groups-list-item-${group.group_id}`).click();
         await expect(page.getByRole('heading', { name: group.name })).toBeVisible();
         await expect(page.getByText('Temporary group', { exact: true })).toBeVisible();
-        await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
+        await expect(page.getByTestId('groups-output-summary')).toContainText('2 delivered');
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
         await page.getByRole('tab', { name: /Outputs/i }).click();
         await expect(page.getByText(brief.title, { exact: true })).toBeVisible();
@@ -150,7 +150,7 @@ test.describe('Groups retained outputs live backend contract', () => {
         await expect(page.getByTestId('groups-archived-readonly-note')).toContainText('retained output review');
         await page.getByRole('tab', { name: /Outputs/i }).click();
         await expect(page.getByTestId('groups-retained-outputs-note')).toContainText('Downloads remain available');
-        await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
+        await expect(page.getByTestId('groups-output-summary')).toContainText('2 delivered');
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
         await expect(page.getByText(brief.title, { exact: true })).toBeVisible();
         await expect(page.getByText(checklist.title, { exact: true })).toBeVisible();

@@ -66,8 +66,30 @@ func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool
 		args["agents"] = agents
 	}
 	args["required_capabilities"] = requiredCapabilitiesForContentContract(contentContract)
+	args["tools"] = executionToolsForContentContract(contentContract)
 
 	return protocol.PlannedToolCall{Name: "create_team", Arguments: args}, true
+}
+
+func executionToolsForContentContract(contract map[string]any) []string {
+	tools := []string{}
+	needsPackageValidation := false
+	for _, capability := range requiredCapabilitiesForContentContract(contract) {
+		switch capability {
+		case "write_file", "store_artifact", "generate_image", "save_cached_image", "research_for_blueprint", "consult_council":
+			tools = append(tools, capability)
+		}
+	}
+	for _, kind := range confirmedActionStringSlice(contract["content_types"]) {
+		switch kind {
+		case "game", "application_package", "code_app":
+			needsPackageValidation = true
+		}
+	}
+	if needsPackageValidation {
+		tools = append(tools, "read_file", "local_command")
+	}
+	return uniqueOrderedTools(tools)
 }
 
 func requestAsksToCreateTeam(lower string) bool {

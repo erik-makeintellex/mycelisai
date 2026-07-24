@@ -208,7 +208,7 @@ test.describe('Guided Team Creation (/teams/create)', () => {
         await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Launch Delivery Team temporary workflow' })).toBeVisible();
         await expect(page.getByText('Temporary group', { exact: true })).toBeVisible();
-        await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
+        await expect(page.getByTestId('groups-output-summary')).toContainText('2 delivered');
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
         await expect(page.getByRole('link', { name: 'Open Soma' }).first()).toHaveAttribute('href', '/dashboard');
         await expect(page.getByTitle('Open launch-lead lead')).toHaveAttribute('href', '/dashboard?team_id=launch-lead');
@@ -224,7 +224,7 @@ test.describe('Guided Team Creation (/teams/create)', () => {
         await expect(page.getByTestId('groups-notice')).toContainText('Group cleared from active lanes.');
         await expect(page.getByText('Archived temporary group', { exact: true })).toBeVisible();
         await expect(page.getByText('Group cleared from active lanes. Retained outputs remain reviewable.')).toBeVisible();
-        await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
+        await expect(page.getByTestId('groups-output-summary')).toContainText('2 delivered');
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
         await page.getByRole('tab', { name: /Outputs/i }).click();
         await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();

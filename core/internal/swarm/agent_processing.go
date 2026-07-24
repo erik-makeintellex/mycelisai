@@ -1,6 +1,7 @@
 package swarm
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -26,6 +27,10 @@ func (a *Agent) processMessage(input string, priorHistory []cognitive.ChatMessag
 }
 
 func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.ChatMessage) ProcessResult {
+	return a.processMessageStructuredWithPosture(input, priorHistory, true)
+}
+
+func (a *Agent) processMessageStructuredWithPosture(input string, priorHistory []cognitive.ChatMessage, planningOnly bool) ProcessResult {
 	if a.brain == nil {
 		log.Printf("Agent [%s] has no brain. Skipping inference.", a.Manifest.ID)
 		return ProcessResult{Availability: &cognitive.ExecutionAvailability{
@@ -43,14 +48,34 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	if err != nil {
 		log.Printf("Agent [%s] brain freeze: %v", a.Manifest.ID, err)
 		availability := a.brain.ExecutionAvailability(profile, a.Manifest.Provider)
-		if availability.Summary == "" {
-			availability.Summary = "Soma does not have an available cognitive engine right now."
+		availability.Available = false
+		availability.Code = "provider_inference_failed"
+		availability.Summary = "The team could not complete inference with its configured cognitive engine."
+		availability.RecommendedAction = "Retry the work after checking the configured engine. If the issue persists, choose another available engine."
+		if availability.Profile == "" {
+			availability.Profile = profile
 		}
 		return ProcessResult{Availability: &availability}
 	}
+	if resp != nil && strings.TrimSpace(resp.Text) == "" {
+		req.Messages = append(req.Messages,
+			cognitive.ChatMessage{Role: "system", Content: "Recovery correction: the previous response was empty. Return a concise direct answer, emit exactly one available tool_call JSON needed to complete the ask, or state one concrete blocker. Do not return an empty response."},
+			cognitive.ChatMessage{Role: "user", Content: "Retry the latest request now under the recovery correction."},
+		)
+		recovered, recoverErr := a.brain.InferWithContract(a.ctx, req)
+		if recoverErr != nil {
+			log.Printf("Agent [%s] empty-response recovery failed: %v", a.Manifest.ID, recoverErr)
+		} else if recovered != nil {
+			resp = recovered
+		}
+	}
 
-	loop := a.runToolLoop(input, priorHistory, &req, resp, profile)
+	loop := a.runToolLoop(input, priorHistory, &req, resp, profile, planningOnly)
+	loop.artifacts = dedupeAgentArtifacts(loop.artifacts)
 	responseText := stripToolCallJSON(loop.responseText)
+	if strings.TrimSpace(responseText) == "" && len(loop.artifacts) > 0 {
+		responseText = retainedArtifactCompletionSummary(loop.artifacts)
+	}
 	if a.internalTools != nil && len(priorHistory) > 0 && len(priorHistory)%15 == 0 {
 		histCopy := make([]cognitive.ChatMessage, len(priorHistory))
 		copy(histCopy, priorHistory)
@@ -78,6 +103,40 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 
 	a.logTurn("assistant", responseText, providerID, modelUsed, "", nil, "", "")
 	return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, Artifacts: loop.artifacts, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
+}
+
+func dedupeAgentArtifacts(artifacts []protocol.ChatArtifactRef) []protocol.ChatArtifactRef {
+	if len(artifacts) < 2 {
+		return artifacts
+	}
+	seen := make(map[string]struct{}, len(artifacts))
+	unique := make([]protocol.ChatArtifactRef, 0, len(artifacts))
+	for _, artifact := range artifacts {
+		comparable := artifact
+		comparable.ID = ""
+		raw, err := json.Marshal(comparable)
+		key := string(raw)
+		if err != nil {
+			key = strings.Join([]string{artifact.Type, artifact.Title, artifact.ContentType, artifact.Content, artifact.URL, artifact.SavedPath, artifact.Entrypoint, artifact.Folder}, "\x00")
+		}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		unique = append(unique, artifact)
+	}
+	return unique
+}
+
+func retainedArtifactCompletionSummary(artifacts []protocol.ChatArtifactRef) string {
+	if len(artifacts) == 1 {
+		title := strings.TrimSpace(artifacts[0].Title)
+		if title != "" {
+			return fmt.Sprintf("Created retained output: %s.", title)
+		}
+		return "Created one retained output."
+	}
+	return fmt.Sprintf("Created %d retained outputs.", len(artifacts))
 }
 
 func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMessage) (cognitive.InferRequest, string) {

@@ -22,6 +22,7 @@ test.describe('Teams Workspace (/teams)', () => {
             .filter({ has: page.locator('option:has-text("All Teams")') })
             .first();
         await expect(filter).toBeVisible();
+        await expect(filter).toBeEnabled();
         await expect(filter.locator('option')).toHaveCount(3);
         await filter.selectOption('standing');
         await expect(filter).toHaveValue('standing');

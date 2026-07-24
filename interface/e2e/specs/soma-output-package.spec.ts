@@ -48,9 +48,9 @@ test.describe("Soma output package separation", () => {
         await expect(thread.getByText("Team-managed output package ready: Marketing Delivery Team produced the reviewable campaign package.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText("Artifact result")).toBeVisible();
         await expect(page.getByText("Soma prepared 1 artifact for review: Marketing Delivery Team output brief.")).toBeVisible();
-        await expect(page.getByText(/Soma consulted/i)).toBeVisible();
-        await expect(page.getByTestId("mission-chat").getByText("Creative", { exact: true }).last()).toBeVisible();
-        await expect(page.getByText("Marketing Delivery Team should return reviewable creative output and a concise usage note.")).toBeVisible();
+        await expect(page.getByText(
+            "Soma checked with Creative while shaping this answer: Marketing Delivery Team should return reviewable creative output and a concise usage note.",
+        )).toBeVisible();
         await expect(page.getByTestId("mission-chat").getByText("Marketing Delivery Team output brief").first()).toBeVisible();
     });
 });

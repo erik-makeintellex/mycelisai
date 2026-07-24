@@ -108,6 +108,53 @@ func TestAutofillToolArguments_ReadSignalsTopicPatternAlias(t *testing.T) {
 	}
 }
 
+func TestAutofillToolArguments_NormalizesFileAndArtifactAliases(t *testing.T) {
+	writeCall := &toolCallPayload{
+		Name:      "write_file",
+		Arguments: map[string]any{"file_path": "groups/team/generated/index.html", "body": "<html></html>"},
+	}
+	autofillToolArguments(writeCall, "build the output")
+	if writeCall.Arguments["path"] != "groups/team/generated/index.html" || writeCall.Arguments["content"] != "<html></html>" {
+		t.Fatalf("write aliases = %#v", writeCall.Arguments)
+	}
+
+	artifactCall := &toolCallPayload{
+		Name:      "store_artifact",
+		Arguments: map[string]any{"kind": "document", "name": "Proof", "data": "validated"},
+	}
+	autofillToolArguments(artifactCall, "retain the proof")
+	if artifactCall.Arguments["type"] != "document" || artifactCall.Arguments["title"] != "Proof" || artifactCall.Arguments["content"] != "validated" {
+		t.Fatalf("artifact aliases = %#v", artifactCall.Arguments)
+	}
+}
+
+func TestAutofillToolArguments_InfersDeclaredProjectPackageWrite(t *testing.T) {
+	call := &toolCallPayload{
+		Name: "write_file",
+		Arguments: map[string]any{
+			"file_path": "groups/team/generated/app/index.html",
+			"content":   "<html></html>",
+		},
+	}
+	autofillToolArguments(call, "Return a retained project_package. Use the package title Team App.")
+
+	if call.Arguments["package_kind"] != "project_package" {
+		t.Fatalf("package_kind = %#v", call.Arguments["package_kind"])
+	}
+	if call.Arguments["package_entrypoint"] != "groups/team/generated/app/index.html" {
+		t.Fatalf("package_entrypoint = %#v", call.Arguments["package_entrypoint"])
+	}
+	if call.Arguments["package_folder"] != "groups/team/generated/app" {
+		t.Fatalf("package_folder = %#v", call.Arguments["package_folder"])
+	}
+	if call.Arguments["package_title"] != "Team App" {
+		t.Fatalf("package_title = %#v", call.Arguments["package_title"])
+	}
+	if files := stringSlice(call.Arguments["package_files"]); len(files) != 4 {
+		t.Fatalf("package_files = %#v", files)
+	}
+}
+
 func TestNormalizeCouncilMember(t *testing.T) {
 	tests := map[string]string{
 		"Architect":         "council-architect",

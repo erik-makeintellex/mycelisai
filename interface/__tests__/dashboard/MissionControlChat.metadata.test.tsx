@@ -109,7 +109,44 @@ describe('MissionControlChat metadata contracts', () => {
         expect(screen.queryByText('C:0.5')).toBeNull();
         expect(screen.queryByText('Search Memory')).toBeNull();
         expect(screen.queryByText('View Teams')).toBeNull();
-        expect(screen.queryByText(/Soma checked with Architect/i)).toBeNull();
+        expect(screen.getByText('Specialist support')).toBeDefined();
+        expect(screen.getByText(/Soma checked with Architect/i)).toBeDefined();
+    });
+
+    it('keeps artifact and specialist evidence together in simplified mode', async () => {
+        useCortexStore.setState({
+            missionChat: [
+                {
+                    role: 'council',
+                    content: 'The launch package is ready for review.',
+                    source_node: 'admin',
+                    ask_class: 'governed_artifact',
+                    tools_used: ['store_artifact'],
+                    consultations: [
+                        { member: 'council-creative', summary: 'Keep the usage note concise.' },
+                    ],
+                    artifacts: [
+                        {
+                            id: 'launch-brief',
+                            type: 'document',
+                            title: 'Launch brief',
+                            content_type: 'text/markdown',
+                            content: '# Launch brief',
+                        },
+                    ],
+                },
+            ],
+        });
+
+        render(<MissionControlChat simpleMode />);
+        await settleMissionControlChat();
+
+        expect(screen.getByText('Artifact result')).toBeDefined();
+        expect(screen.getByText('Specialist support')).toBeDefined();
+        expect(screen.getByText(
+            'Soma checked with Creative while shaping this answer: Keep the usage note concise.',
+        )).toBeDefined();
+        expect(screen.queryByText('Store Artifact')).toBeNull();
     });
 
     it('does not render tools pills when tools_used is empty', async () => {

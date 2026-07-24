@@ -128,6 +128,7 @@ func artifactFromTeamOutputRef(item protocol.TeamWorkItem, ref protocol.TeamOutp
 		"run_id":         firstNonEmptyString(ref.RunID, item.RunID),
 		"output_class":   string(outputClassForTeamRef(ref)),
 		"entrypoint":     ref.Entrypoint,
+		"folder":         projectPackageFolder(ref),
 		"validation_ref": ref.ValidationRef,
 		"proof_ref":      ref.ProofRef,
 		"contract_id":    firstNonEmptyString(ref.ContractID, item.ContractID),
@@ -145,6 +146,13 @@ func artifactFromTeamOutputRef(item protocol.TeamWorkItem, ref protocol.TeamOutp
 		Status:       "approved",
 		CreatedAt:    createdAt,
 	}
+}
+
+func projectPackageFolder(ref protocol.TeamOutputRef) string {
+	if artifactTypeForTeamOutputRef(ref) != artifacts.TypeProjectPackage {
+		return ""
+	}
+	return strings.TrimSpace(ref.StorageRef)
 }
 
 func stableGroupOutputRefID(item protocol.TeamWorkItem, ref protocol.TeamOutputRef) uuid.UUID {

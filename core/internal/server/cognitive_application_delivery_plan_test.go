@@ -21,6 +21,12 @@ func TestBuildPlannedToolCalls_ComplexAppAskDelegatesWithPackageContract(t *test
 	if calls[1].Arguments["path"] != "groups/"+teamID+"/planning/TEAM_EVOCATION.md" {
 		t.Fatalf("evocation path = %#v", calls[1].Arguments["path"])
 	}
+	tools := confirmedActionStringSlice(calls[0].Arguments["tools"])
+	for _, want := range []string{"write_file", "store_artifact", "research_for_blueprint", "consult_council", "read_file", "local_command"} {
+		if !containsToolName(tools, want) {
+			t.Fatalf("team tools = %#v, missing %q", tools, want)
+		}
+	}
 	if calls[2].Arguments["path"] != "groups/"+teamID+"/planning/RESEARCH_COUNCIL_HANDOFF.md" {
 		t.Fatalf("handoff path = %#v", calls[2].Arguments["path"])
 	}

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { expect, type Page, type Route } from "@playwright/test";
+import { expect, type APIResponse, type Page, type Route } from "@playwright/test";
 import type { RouteResponse } from "./soma-ui-testing";
 import { liveAPIHeaders, liveAPIURL } from "./live-api-auth";
 
@@ -69,7 +69,10 @@ export async function parseJSONIfPossible<T>(response: { text(): Promise<string>
 }
 
 function backendWorkspaceRoots() {
-  const configuredRoot = process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT;
+  const configuredRoot =
+    process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT
+    ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT
+    ?? process.env.MYCELIS_WORKSPACE;
   if (configuredRoot?.trim()) {
     return [path.isAbsolute(configuredRoot) ? configuredRoot : path.join(repoRoot, configuredRoot)];
   }
@@ -139,10 +142,20 @@ export function removeTarget(relativePath: string) {
 }
 
 export async function createOrganization(page: Page, name: string) {
-  const response = await page.request.post(liveAPIURL("/api/v1/organizations"), {
-    headers: liveAPIHeaders(),
-    data: { name, purpose: "Exact UI finalization browser package proof", start_mode: "empty" },
-  });
+  let response: APIResponse | undefined;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      response = await page.request.post(liveAPIURL("/api/v1/organizations"), {
+        headers: liveAPIHeaders(),
+        data: { name, purpose: "Exact UI finalization browser package proof", start_mode: "empty" },
+      });
+      break;
+    } catch (error) {
+      if (!String(error).includes("EADDRINUSE") || attempt === 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 250));
+    }
+  }
+  if (!response) throw new Error("Organization bootstrap did not return a response");
   const parsed = await parseJSONIfPossible<OrganizationEnvelope>(response);
   expect(response.ok(), parsed.body ? JSON.stringify(parsed.body) : parsed.raw).toBeTruthy();
   expect(parsed.body?.data?.id).toBeTruthy();

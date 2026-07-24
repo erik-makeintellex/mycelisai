@@ -42,7 +42,7 @@ func (a *Agent) prepareToolCall(input string, toolCall *toolCallPayload, failedT
 	return false
 }
 
-func (a *Agent) executeToolIteration(i int, req *cognitive.InferRequest, toolCall *toolCallPayload, failedToolCalls map[string]int, reinfer func(string, string) bool, result *agentToolLoopResult) bool {
+func (a *Agent) executeToolIteration(i int, req *cognitive.InferRequest, toolCall *toolCallPayload, failedToolCalls map[string]int, reinfer func(string, string) bool, result *agentToolLoopResult, planningOnly bool) bool {
 	fingerprint := toolCallFingerprint(toolCall)
 	log.Printf("Agent [%s] tool_call [%d/%d]: %s", a.Manifest.ID, i+1, a.Manifest.EffectiveMaxIterations(), toolCall.Name)
 	result.toolsUsed = append(result.toolsUsed, toolCall.Name)
@@ -54,7 +54,7 @@ func (a *Agent) executeToolIteration(i int, req *cognitive.InferRequest, toolCal
 
 	toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
 		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, SourceKind: protocol.SourceKindSystem,
-		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand, PlanningOnly: true,
+		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand, PlanningOnly: planningOnly,
 	})
 	serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, toolCall.Name)
 	if err != nil {

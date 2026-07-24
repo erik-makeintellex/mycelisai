@@ -166,6 +166,36 @@ func TestOutputRefFromMapDerivesFilePathFromViewerHrefForMedia(t *testing.T) {
 	}
 }
 
+func TestProjectedSignalOutputRefsAcceptsAgentArtifacts(t *testing.T) {
+	item := protocol.TeamWorkItem{
+		TeamID:     "game-team",
+		WorkItemID: "work-1",
+		RunID:      "run-1",
+	}
+	env := protocol.SignalEnvelope{Meta: protocol.SignalMeta{TeamID: "game-team", RunID: "run-1"}}
+	payload := map[string]any{
+		"artifacts": []any{map[string]any{
+			"id":         "playable-package",
+			"type":       "project_package",
+			"title":      "Playable package",
+			"folder":     "groups/game-team/generated/first-game",
+			"entrypoint": "groups/game-team/generated/first-game/index.html",
+			"validation": "Browser play test passed.",
+		}},
+	}
+
+	refs := projectedSignalOutputRefs(item, env, payload)
+	if len(refs) != 1 {
+		t.Fatalf("output refs = %+v, want one structured artifact", refs)
+	}
+	if refs[0].Kind != "project_package" || refs[0].StorageRef != "groups/game-team/generated/first-game" {
+		t.Fatalf("output ref = %+v", refs[0])
+	}
+	if refs[0].Entrypoint != "index.html" {
+		t.Fatalf("entrypoint = %q, want relative package entrypoint", refs[0].Entrypoint)
+	}
+}
+
 func expectProjectedTeamWorkUpdateWithOutputs(mock sqlmock.Sqlmock, workID string, state protocol.TeamWorkState, needsOperator bool, degradation string, outputs sqlmock.Argument) {
 	mock.ExpectExec("UPDATE team_work_items").
 		WithArgs(

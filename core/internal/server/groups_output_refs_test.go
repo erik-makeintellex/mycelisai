@@ -82,6 +82,10 @@ func TestHandleGroupOutputs_ProjectsTeamOutputRefs(t *testing.T) {
 	if first["file_path"] != "groups/qa-delivery-team/generated/first-game" {
 		t.Fatalf("file_path = %v", first["file_path"])
 	}
+	metadata := first["metadata"].(map[string]any)
+	if metadata["folder"] != "groups/qa-delivery-team/generated/first-game" || metadata["entrypoint"] != "index.html" {
+		t.Fatalf("package metadata = %#v", metadata)
+	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
 	}

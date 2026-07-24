@@ -183,7 +183,7 @@ test.describe("Workflow output multi-lane package", () => {
         await page.getByRole("button", { name: "Release Readiness Workflow temporary workflow" }).click();
 
         await expect(page.getByRole("heading", { name: "Release Readiness Workflow temporary workflow" })).toBeVisible();
-        await expect(page.getByTestId("groups-output-summary")).toContainText("3 outputs");
+        await expect(page.getByTestId("groups-output-summary")).toContainText("3 delivered");
         await page.getByRole("tab", { name: /Outputs/i }).click();
         await expect(page.getByText("Planning lane package", { exact: true })).toBeVisible();
         await expect(page.getByText("Validation lane checklist", { exact: true })).toBeVisible();

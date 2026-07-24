@@ -55,6 +55,17 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationContinuation(t *
 	if ask["ask_kind"] != "implementation" || ask["lane_role"] != "implementer" {
 		t.Fatalf("delegate ask routing = %#v", ask)
 	}
+	capabilities := confirmedActionStringSlice(ask["required_capabilities"])
+	if containsToolName(capabilities, "research_for_blueprint") || containsToolName(capabilities, "consult_council") {
+		t.Fatalf("delivery capabilities repeat completed preparation work: %#v", capabilities)
+	}
+	if !containsToolName(capabilities, "write_file") || !containsToolName(capabilities, "store_artifact") {
+		t.Fatalf("delivery capabilities = %#v, want retained output tools", capabilities)
+	}
+	constraints := confirmedActionStringSlice(ask["constraints"])
+	if !containsToolName(constraints, "Read every retained user-facing entrypoint back after writing it and validate the requested behavior before reporting completion.") {
+		t.Fatalf("constraints = %#v, want retained output readback", constraints)
+	}
 	context, ok := ask["context"].(map[string]any)
 	if !ok {
 		t.Fatalf("delegate context = %#v, want map", ask["context"])
@@ -64,6 +75,10 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationContinuation(t *
 	}
 	if context["research_council_handoff"] != "groups/mixed-output-team-b8066/planning/RESEARCH_COUNCIL_HANDOFF.md" {
 		t.Fatalf("research handoff context = %#v", context["research_council_handoff"])
+	}
+	resultContract := mapArgument(context["result_contract"])
+	if resultContract["validation_mode"] != "readback_against_exit_criteria" {
+		t.Fatalf("result contract = %#v, want readback validation mode", resultContract)
 	}
 	exitCriteria := confirmedActionStringSlice(ask["exit_criteria"])
 	for _, want := range []string{"playable controls respond in browser", "direct launch or view path is provided for the user or another agent"} {

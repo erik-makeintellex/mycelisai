@@ -145,7 +145,9 @@ uv run inv interface.e2e --headed --live-backend --server-mode=start --project=c
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=e2e/specs/team-output-content-live.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/ui-finalization-browser-package-live.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-browser-game-p0-live.spec.ts
+uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/trusted-outcome-journey-live.spec.ts
 ```
+When Go source changed, run `uv run inv core.compile` before `uv run inv lifecycle.restart`; source-mode lifecycle restart launches the existing `core/bin/server` binary and does not rebuild it. The trusted-outcome journey must therefore run against a freshly compiled Core binary. It proves governed ask and approval, correlated NATS team work, retained project-package generation, browser interaction, proof/run readback, and Dashboard/Resources/Groups/Activity revisit. A package that reports a blocker, omits retained output, or cannot prove its requested interaction must remain degraded rather than appearing output-ready.
 Finalization proof order after integration:
 1. Run the mocked browser harness serially with `--project=chromium --workers=1`: `first-demo-success.spec.ts`, `ui-finalization-browser-package-retry.spec.ts`, `desktop-mobile-compression.spec.ts`, `system-deployments.spec.ts`, and `active-work-api.spec.ts`.
 2. Run source gates: `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.build`, docs tests, and focused backend tests for changed APIs.

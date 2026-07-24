@@ -74,7 +74,7 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 
 	inputs := stringSlice(merged["inputs"])
 	if len(inputs) == 0 {
-		inputs = []string{protocol.TopicGlobalBroadcast}
+		inputs = []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID)}
 	}
 	deliveries := stringSlice(merged["deliveries"])
 	if len(deliveries) == 0 {

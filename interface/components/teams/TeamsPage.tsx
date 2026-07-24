@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useCallback, useMemo, useState } from "react";
+import React, { useEffect, useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { RefreshCw, Users } from "lucide-react";
 import {
   useCortexStore,
@@ -26,6 +26,7 @@ import { prioritizeRequestedWorkItem } from "./teamsPageWorkReview";
 const FILTERS: { value: TeamsFilter; label: string }[] = [
   { value: "all", label: "All Teams" }, { value: "standing", label: "Standing" }, { value: "mission", label: "Mission" },
 ];
+const subscribeToHydration = () => () => {};
 
 export default function TeamsPage() {
   const teamsDetail = useCortexStore((s) => s.teamsDetail);
@@ -43,6 +44,11 @@ export default function TeamsPage() {
   const setTeamsFilter = useCortexStore((s) => s.setTeamsFilter);
   const durableWorkRefreshVersion = useCortexStore(
     (s) => s.durableWorkRefreshVersion,
+  );
+  const isInteractive = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
   );
   const [isTemplateDrawerOpen, setIsTemplateDrawerOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<CatalogueAgent | null>(null);
@@ -195,6 +201,8 @@ export default function TeamsPage() {
           <select
             value={teamsFilter}
             onChange={handleFilterChange}
+            disabled={!isInteractive}
+            aria-label="Filter teams"
             className="bg-cortex-bg border border-cortex-border rounded px-2.5 py-1.5 text-xs font-mono text-cortex-text-main focus:outline-none focus:border-cortex-primary transition-colors appearance-none"
           >
             {FILTERS.map((f) => (

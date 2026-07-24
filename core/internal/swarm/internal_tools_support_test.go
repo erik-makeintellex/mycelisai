@@ -1,6 +1,11 @@
 package swarm
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+
+	"github.com/mycelis/core/pkg/protocol"
+)
 
 func TestBuildRuntimeTeamManifest_DefaultsAskRoutingHints(t *testing.T) {
 	manifest := buildRuntimeTeamManifest(map[string]any{
@@ -21,6 +26,10 @@ func TestBuildRuntimeTeamManifest_DefaultsAskRoutingHints(t *testing.T) {
 	}
 	if manifest.AskRouting["implementation"] != "implementer" {
 		t.Fatalf("implementation ask routing = %q", manifest.AskRouting["implementation"])
+	}
+	wantInput := fmt.Sprintf(protocol.TopicTeamInternalCommand, "research-team")
+	if len(manifest.Inputs) != 1 || manifest.Inputs[0] != wantInput {
+		t.Fatalf("runtime team inputs = %#v, want %q", manifest.Inputs, wantInput)
 	}
 }
 

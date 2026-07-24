@@ -16,7 +16,7 @@ func TestHandleWriteFileCreatesProjectPackageSupportFiles(t *testing.T) {
 	registry := NewInternalToolRegistry(InternalToolDeps{})
 	output, err := registry.handleWriteFile(context.Background(), map[string]any{
 		"path":               "workspace/generated/game/index.html",
-		"content":            "<!doctype html><title>Game</title>",
+		"content":            "<!doctype html><html><body>Game</body></html>",
 		"package_kind":       "project_package",
 		"package_title":      "Playable Game",
 		"package_folder":     "workspace/generated/game",
@@ -31,6 +31,13 @@ func TestHandleWriteFileCreatesProjectPackageSupportFiles(t *testing.T) {
 	if !strings.Contains(output, "Project package support files written: 3") {
 		t.Fatalf("output = %q, want support file count", output)
 	}
+	message, artifacts, ok := extractToolOutputArtifacts(output)
+	if !ok || !strings.Contains(message, "Project package support files written: 3") {
+		t.Fatalf("structured write output = %q", output)
+	}
+	if len(artifacts) != 1 || artifacts[0].Type != "project_package" || artifacts[0].Entrypoint != "workspace/generated/game/index.html" {
+		t.Fatalf("write artifacts = %#v", artifacts)
+	}
 
 	for _, rel := range []string{
 		"generated/game/index.html",
@@ -41,6 +48,14 @@ func TestHandleWriteFileCreatesProjectPackageSupportFiles(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(workspaceRoot, filepath.FromSlash(rel))); err != nil {
 			t.Fatalf("expected package file %s: %v", rel, err)
 		}
+	}
+
+	entrypointBytes, err := os.ReadFile(filepath.Join(workspaceRoot, "generated", "game", "index.html"))
+	if err != nil {
+		t.Fatalf("read entrypoint: %v", err)
+	}
+	if !strings.Contains(string(entrypointBytes), "<title>Playable Game</title>") {
+		t.Fatalf("entrypoint title was not normalized: %q", entrypointBytes)
 	}
 
 	readme, err := os.ReadFile(filepath.Join(workspaceRoot, "generated", "game", "README.md"))

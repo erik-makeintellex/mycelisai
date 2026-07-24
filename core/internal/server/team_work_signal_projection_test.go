@@ -41,6 +41,16 @@ func TestTeamWorkSignalProjection_ResultWithoutRetainedOutputsDegradesDeliverabl
 	}
 }
 
+func TestDeliverableResultMissingOutputs_AppliesToDelegatedWork(t *testing.T) {
+	item := protocol.TeamWorkItem{
+		ExecutionShape:  protocol.TeamExecutionShapeDelegatedWork,
+		ExpectedOutputs: []string{"retained project package"},
+	}
+	if !deliverableResultMissingOutputs(item, protocol.PayloadKindResult, nil) {
+		t.Fatal("delegated work with expected outputs must degrade when a result has no retained output refs")
+	}
+}
+
 func TestTeamWorkSignalProjection_StatusUsesExplicitState(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)

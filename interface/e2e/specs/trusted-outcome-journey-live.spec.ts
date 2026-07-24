@@ -4,7 +4,6 @@ import {
   type GroupRecord,
   confirmProposal,
   createOrganization,
-  expectProjectPackageMetadata,
   expectProjectPackageVisible,
   liveAPIGet,
   liveTimeoutMs,
@@ -14,6 +13,7 @@ import {
   submitLiveWorkspaceChat,
   targetExists,
 } from "../support/finalization-browser-package";
+import { liveAPIHeaders, liveAPIURL } from "../support/live-api-auth";
 
 type ConfirmData = {
   run_id?: string;
@@ -41,6 +41,23 @@ type ContractRecord = {
 
 type RunEvent = { event_type?: string; payload?: Record<string, unknown> };
 type ArtifactRecord = { title?: string; file_path?: string; artifact_type?: string };
+type TeamOutputRef = {
+  kind?: string;
+  label?: string;
+  storage_ref?: string;
+  entrypoint?: string;
+  proof_ref?: string;
+};
+type TeamWorkItem = {
+  work_item_id?: string;
+  team_id?: string;
+  run_id?: string;
+  execution_shape?: string;
+  state?: string;
+  degradation_state?: string;
+  recovery_options?: string[];
+  output_refs?: TeamOutputRef[];
+};
 
 test.describe("Trusted Outcome Journey live smoke", () => {
   test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires a live Core backend");
@@ -62,9 +79,12 @@ test.describe("Trusted Outcome Journey live smoke", () => {
         page,
         [
           `Create a team with team_id ${teamID} named ${teamName}.`,
-          "Ask Soma for the exact first demo deliverable: a playable browser game project package.",
+          "Have that team build the exact first demo deliverable: a playable browser game project package.",
           `Retain it at ${folder} with entrypoint ${entrypoint}.`,
+          `Use the package title ${packageTitle}.`,
           "The package metadata must include files index.html, README.md, PROOF.md, and validation notes from opening the browser game.",
+          "The self-contained HTML must start its render loop and visibly move the player while ArrowRight is held.",
+          "Read the saved entrypoint back and repair it before reporting completion if any required interaction or file is missing.",
           "After approval, return a retained project_package output with entrypoint, folder, files, validation, and proof.",
         ].join(" "),
       );
@@ -84,19 +104,32 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       expect(data?.execution_state).toBe("verified");
       expect(data?.run_id).toBeTruthy();
 
-      const outputs = data?.execution_summary?.outputs ?? [];
-      const projectPackage = outputs.find((output) => output.kind === "project_package");
-      expect(projectPackage, JSON.stringify(outputs)).toBeTruthy();
-      expectProjectPackageMetadata(projectPackage!, { title: packageTitle, entrypoint, folder });
-      await expect.poll(() => targetExists(entrypoint), { timeout: 30_000 }).toBeTruthy();
+      const workItem = await waitForTeamDelivery(page, teamID, data!.run_id!);
+      expect(workItem.state, JSON.stringify(workItem)).toBe("output_ready");
+      const projectPackageRef = workItem.output_refs?.find((output) => output.kind === "project_package");
+      expect(projectPackageRef, JSON.stringify(workItem.output_refs ?? [])).toBeTruthy();
+      expect(projectPackageRef?.storage_ref).toBe(folder);
+      expect(projectPackageRef?.entrypoint).toMatch(/index\.html$/);
+      expect(projectPackageRef?.proof_ref).toBeTruthy();
+      await expect.poll(() => targetExists(entrypoint), { timeout: 60_000 }).toBeTruthy();
+
+      await page.goto(`/dashboard?team_id=${encodeURIComponent(teamID)}`, { waitUntil: "domcontentloaded" });
       await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
 
       const outputPagePromise = page.context().waitForEvent("page");
-      await page.getByRole("button", { name: new RegExp(`Open file .*${packageTitle}`, "i") }).last().click();
+      await page.getByRole("button", { name: new RegExp(`Open app .*${packageTitle}`, "i") }).last().click();
       const outputPage = await outputPagePromise;
       await outputPage.waitForLoadState("domcontentloaded");
       await expect(outputPage).toHaveTitle(packageTitle);
-      await expect(outputPage.locator("body")).toContainText(/score|start|play|restart|game/i);
+      const canvas = outputPage.locator("canvas").first();
+      await expect(canvas).toBeVisible();
+      const beforeMove = await canvas.screenshot();
+      await outputPage.keyboard.down("ArrowRight");
+      await outputPage.waitForTimeout(350);
+      await outputPage.keyboard.up("ArrowRight");
+      await outputPage.waitForTimeout(100);
+      const afterMove = await canvas.screenshot();
+      expect(afterMove.equals(beforeMove), "the generated browser package should respond to player input").toBeFalsy();
       await outputPage.close();
 
       await expectProofAndRunReadback(page, data!);
@@ -105,6 +138,7 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       await expectGroupsRevisit(page, group, packageTitle, entrypoint);
       await expectRunReceiptRevisit(page, data!.run_id!);
     } finally {
+      await cleanupLiveJourney(page, teamID);
       removeTarget(entrypoint);
       removeTarget(`${folder}/README.md`);
       removeTarget(`${folder}/PROOF.md`);
@@ -112,6 +146,57 @@ test.describe("Trusted Outcome Journey live smoke", () => {
     }
   });
 });
+
+async function waitForTeamDelivery(page: import("@playwright/test").Page, teamID: string, runID: string) {
+  let latest: TeamWorkItem | undefined;
+  await expect.poll(async () => {
+    const response = await liveAPIGet(page, `/api/v1/teams/${encodeURIComponent(teamID)}/work?limit=25`);
+    if (!response.ok()) return `http_${response.status()}`;
+    const items = ((await response.json()) as APIEnvelope<TeamWorkItem[]>).data ?? [];
+    latest = items.find((item) => (
+      item.run_id === runID
+      && item.team_id === teamID
+      && item.execution_shape === "delegated_work"
+    ));
+    return latest?.state ?? "missing";
+  }, {
+    timeout: 150_000,
+    intervals: [500, 1_000, 2_000, 5_000],
+    message: `team ${teamID} should finish or expose a recoverable terminal state`,
+  }).toMatch(/^(output_ready|degraded|needs_operator)$/);
+
+  expect(latest, `No correlated TeamWorkItem found for run ${runID}`).toBeTruthy();
+  if (latest?.state !== "output_ready") {
+    throw new Error(
+      `Team delivery ended ${latest?.state}: ${latest?.degradation_state ?? "unknown"}; `
+      + `recovery=${(latest?.recovery_options ?? []).join(" | ")}`,
+    );
+  }
+  return latest;
+}
+
+async function cleanupLiveJourney(page: import("@playwright/test").Page, teamID: string) {
+  const groupsResponse = await liveAPIGet(page, "/api/v1/groups");
+  if (groupsResponse.ok()) {
+    const groups = ((await groupsResponse.json()) as APIEnvelope<GroupRecord[]>).data ?? [];
+    const group = groups.find((candidate) => candidate.team_ids?.includes(teamID));
+    if (group) {
+      await page.request.post(
+        liveAPIURL(`/api/v1/groups/${encodeURIComponent(group.group_id)}/clear`),
+        {
+          headers: {
+            ...(liveAPIHeaders() ?? {}),
+            "Content-Type": "application/json",
+          },
+          data: { include_outputs: true },
+        },
+      );
+    }
+  }
+  await page.request.delete(liveAPIURL(`/api/v1/teams/${encodeURIComponent(teamID)}`), {
+    headers: liveAPIHeaders(),
+  });
+}
 
 async function expectProofAndRunReadback(page: import("@playwright/test").Page, data: ConfirmData) {
   const proofResponse = await liveAPIGet(page, `/api/v1/trust/proof-artifacts?run_id=${encodeURIComponent(data.run_id!)}&limit=10`);

@@ -171,7 +171,7 @@ test.describe("Workflow output compact team package", () => {
         await page.getByRole("button", { name: "Release Readiness Team temporary workflow" }).click();
 
         await expect(page.getByRole("heading", { name: "Release Readiness Team temporary workflow" })).toBeVisible();
-        await expect(page.getByTestId("groups-output-summary")).toContainText("2 outputs");
+        await expect(page.getByTestId("groups-output-summary")).toContainText("2 delivered");
         await page.getByRole("tab", { name: /Outputs/i }).click();
         await expect(page.getByText("Validation checklist", { exact: true })).toBeVisible();
         await expect(page.getByText("Risk review", { exact: true })).toBeVisible();

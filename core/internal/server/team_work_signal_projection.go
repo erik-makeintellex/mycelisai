@@ -166,13 +166,6 @@ func projectedSignalState(item protocol.TeamWorkItem, payloadKind protocol.Signa
 	return item.State
 }
 
-func deliverableResultMissingOutputs(item protocol.TeamWorkItem, payloadKind protocol.SignalPayloadKind, outputRefs []protocol.TeamOutputRef) bool {
-	return payloadKind == protocol.PayloadKindResult &&
-		item.ExecutionShape == protocol.TeamExecutionShapeDeliverable &&
-		len(item.ExpectedOutputs) > 0 &&
-		len(outputRefs) == 0
-}
-
 func projectedSignalStatusEvent(item protocol.TeamWorkItem, env protocol.SignalEnvelope, subject string, payloadKind protocol.SignalPayloadKind, payload map[string]any, outputRefs []protocol.TeamOutputRef) protocol.TeamStatusEvent {
 	return protocol.TeamStatusEvent{
 		EventID:           uuid.NewString(),

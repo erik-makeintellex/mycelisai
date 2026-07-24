@@ -83,19 +83,83 @@ func (a *Agent) handleTrigger(msg *nats.Msg) {
 	default:
 	}
 	input := normalizeTeamTriggerInput(msg.Data)
+	planningOnly := teamTriggerPlanningOnly(msg.Data)
 	log.Printf("Agent [%s] thinking about: %s", a.Manifest.ID, input)
-	responseText := a.processMessage(input, nil)
-	if responseText == "" {
+	result := a.processMessageStructuredWithPosture(input, nil, planningOnly)
+	if result.Text == "" && len(result.Artifacts) == 0 && result.Availability == nil {
 		if msg.Reply != "" {
 			msg.Respond([]byte(fmt.Sprintf("[%s] No response — LLM may be unavailable.", a.Manifest.ID)))
 		}
 		return
 	}
 	if msg.Reply != "" {
-		msg.Respond([]byte(responseText))
+		reply := result.Text
+		if reply == "" && result.Availability != nil {
+			reply = result.Availability.Summary
+		}
+		msg.Respond([]byte(reply))
 	}
-	a.nc.Publish(fmt.Sprintf(protocol.TopicTeamInternalRespond, a.TeamID), []byte(responseText))
+	a.nc.Publish(fmt.Sprintf(protocol.TopicTeamInternalRespond, a.TeamID), teamAgentResponsePayload(result))
 	log.Printf("Agent [%s] replied.", a.Manifest.ID)
+}
+
+func teamTriggerPlanningOnly(data []byte) bool {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 {
+		return true
+	}
+
+	var ask protocol.TeamAsk
+	if err := json.Unmarshal(trimmed, &ask); err != nil || ask.IsZero() {
+		return true
+	}
+	for _, key := range []string{"run_id", "contract_id", "intent_proof_id"} {
+		value, ok := ask.Context[key].(string)
+		if !ok || strings.TrimSpace(value) == "" {
+			return true
+		}
+	}
+	return false
+}
+
+func teamAgentResponsePayload(result ProcessResult) []byte {
+	if result.Availability != nil && !result.Availability.Available {
+		degradationState := strings.TrimSpace(result.Availability.Code)
+		if degradationState == "" {
+			degradationState = "cognitive_engine_unavailable"
+		}
+		summary := strings.TrimSpace(result.Availability.Summary)
+		if summary == "" {
+			summary = "The team could not use its configured cognitive engine."
+		}
+		recoveryOptions := []string{}
+		if action := strings.TrimSpace(result.Availability.RecommendedAction); action != "" {
+			recoveryOptions = append(recoveryOptions, action)
+		}
+		responsePayload, err := json.Marshal(map[string]any{
+			"text":              result.Text,
+			"tools_used":        result.ToolsUsed,
+			"artifacts":         result.Artifacts,
+			"availability":      result.Availability,
+			"provider_id":       result.ProviderID,
+			"model_used":        result.ModelUsed,
+			"consultations":     result.Consultations,
+			"state":             "degraded",
+			"headline":          "Team work needs attention",
+			"summary":           summary,
+			"details":           summary,
+			"degradation_state": degradationState,
+			"recovery_options":  recoveryOptions,
+		})
+		if err == nil {
+			return responsePayload
+		}
+	}
+	responsePayload, err := json.Marshal(result)
+	if err != nil {
+		return []byte(result.Text)
+	}
+	return responsePayload
 }
 
 func normalizeTeamTriggerInput(data []byte) string {
@@ -150,13 +214,79 @@ func renderTeamAskPrompt(ask protocol.TeamAsk) string {
 			sb.WriteString(fmt.Sprintf("- %s\n", item))
 		}
 	}
+	renderTeamAskResultContract(&sb, ask.Context)
 	if ask.Context != nil {
-		if raw, err := json.Marshal(ask.Context); err == nil {
+		if raw, err := json.Marshal(compactTeamAskContext(ask.Context)); err == nil {
 			sb.WriteString(fmt.Sprintf("Context: %s\n", string(raw)))
 		}
 	}
 	sb.WriteString("Complete the ask within scope, match the mission, and report the outcome clearly.")
 	return sb.String()
+}
+
+func renderTeamAskResultContract(sb *strings.Builder, context map[string]any) {
+	if len(context) == 0 {
+		return
+	}
+	contract, ok := context["result_contract"].(map[string]any)
+	if !ok || len(contract) == 0 {
+		return
+	}
+	kind := strings.TrimSpace(stringValue(contract["kind"]))
+	files := stringSlice(contract["files_required"])
+	entrypointRequired := boolValue(contract["entrypoint_required"])
+	folderRequired := boolValue(contract["folder_required"])
+	validationRequired := boolValue(contract["validation_required"])
+	proofRequired := boolValue(contract["proof_ref_required"])
+	repairChannel := strings.TrimSpace(stringValue(contract["repair_channel"]))
+	if kind == "" && len(files) == 0 && !entrypointRequired && !folderRequired && !validationRequired && !proofRequired && repairChannel == "" {
+		return
+	}
+
+	sb.WriteString("Output contract:\n")
+	if kind != "" {
+		sb.WriteString(fmt.Sprintf("- Kind: %s\n", kind))
+	}
+	if len(files) > 0 {
+		sb.WriteString(fmt.Sprintf("- Required files: %s\n", strings.Join(files, ", ")))
+	}
+	if entrypointRequired {
+		sb.WriteString("- Return a direct entrypoint.\n")
+	}
+	if folderRequired {
+		sb.WriteString("- Return the retained output folder.\n")
+	}
+	if validationRequired {
+		sb.WriteString("- Read the retained output back and validate it against every exit criterion before reporting completion.\n")
+	}
+	if proofRequired {
+		sb.WriteString("- Return a proof reference backed by the validation performed.\n")
+	}
+	if repairChannel != "" {
+		sb.WriteString(fmt.Sprintf("- If validation fails, report the blocker through %s instead of claiming completion.\n", repairChannel))
+	}
+}
+
+func compactTeamAskContext(context map[string]any) map[string]any {
+	if len(context) == 0 {
+		return nil
+	}
+	compact := make(map[string]any)
+	for _, key := range []string{
+		"run_id",
+		"contract_id",
+		"intent_proof_id",
+		"work_item_id",
+		"team_id",
+		"team_evocation_brief",
+		"research_council_handoff",
+		"delivery_team_responsibility",
+	} {
+		if value, ok := context[key]; ok {
+			compact[key] = value
+		}
+	}
+	return compact
 }
 
 func (a *Agent) handleDirectRequest(msg *nats.Msg) {

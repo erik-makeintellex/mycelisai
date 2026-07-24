@@ -209,7 +209,12 @@ func correlatedTeamResponsePayload(raw []byte, correlation *teamCommandCorrelati
 		payload["details"] = string(raw)
 	}
 	if signalString(payload["state"]) == "" {
-		payload["state"] = "output_ready"
+		if teamResponseHasBlocker(payload) {
+			payload["state"] = string(protocol.TeamWorkStateDegraded)
+			payload["needs_operator"] = true
+		} else {
+			payload["state"] = string(protocol.TeamWorkStateOutputReady)
+		}
 	}
 	payload["work_item_id"] = correlation.WorkItemID
 	payload["team_id"] = firstNonEmptySignalString(correlation.TeamID, "")
@@ -221,6 +226,36 @@ func correlatedTeamResponsePayload(raw []byte, correlation *teamCommandCorrelati
 		return raw
 	}
 	return out
+}
+
+func teamResponseHasBlocker(payload map[string]any) bool {
+	for _, key := range []string{"blocker", "blocked_by", "error"} {
+		if signalString(payload[key]) != "" {
+			return true
+		}
+	}
+	for _, key := range []string{"blockers", "errors"} {
+		if values, ok := payload[key].([]any); ok && len(values) > 0 {
+			return true
+		}
+	}
+	switch strings.ToLower(firstNonEmptySignalString(
+		signalString(payload["status"]),
+		signalString(payload["result"]),
+	)) {
+	case "blocked", "degraded", "failed", "failure", "incomplete", "needs_operator":
+		return true
+	}
+	text := strings.ToLower(strings.TrimSpace(firstNonEmptySignalString(
+		signalString(payload["text"]),
+		signalString(payload["details"]),
+	)))
+	for _, prefix := range []string{"blocked:", "failed:", "incomplete:", "could not "} {
+		if strings.HasPrefix(text, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func correlationRunID(correlation *teamCommandCorrelation) string {

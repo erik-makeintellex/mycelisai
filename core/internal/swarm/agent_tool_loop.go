@@ -16,7 +16,7 @@ type agentToolLoopResult struct {
 	consultations []protocol.ConsultationEntry
 }
 
-func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string) agentToolLoopResult {
+func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string, planningOnly bool) agentToolLoopResult {
 	result := agentToolLoopResult{resp: resp, responseText: resp.Text}
 	if a.toolExecutor == nil || len(a.Manifest.Tools) == 0 {
 		return result
@@ -39,6 +39,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 
 	preflightDone := map[string]bool{}
 	failedToolCalls := map[string]int{}
+	completedToolCalls := map[string]bool{}
 	if parseToolCall(result.responseText) == nil && responseSuggestsUnexecutedAction(result.responseText) {
 		req.Messages = append(req.Messages,
 			cognitive.ChatMessage{Role: "system", Content: "Policy correction: do not provide step-by-step plans when tools are available. Emit exactly one tool_call JSON now for the user's actionable request, or return a concrete blocker."},
@@ -69,7 +70,14 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			break
 		}
 		autofillToolArguments(toolCall, input)
-		if blocksProposalPlanningTool(toolCall.Name) {
+		fingerprint := toolCallFingerprint(toolCall)
+		if completedToolCalls[fingerprint] {
+			if !reinferWithToolFeedback(toolCall.Name, "That exact tool call already completed successfully in this turn. Do not repeat it. Return the concise final result or choose a different tool required to finish the ask.") {
+				break
+			}
+			continue
+		}
+		if planningOnly && blocksProposalPlanningTool(toolCall.Name) {
 			log.Printf("Agent [%s] proposal-planning tool captured without execution: %s", a.Manifest.ID, toolCall.Name)
 			result.toolsUsed = append(result.toolsUsed, toolCall.Name)
 			a.logTurn("tool_call", result.responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
@@ -84,9 +92,10 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		if !a.prepareToolCall(input, toolCall, failedToolCalls, preflightDone, reinferWithToolFeedback, &result) {
 			continue
 		}
-		if !a.executeToolIteration(i, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result) {
+		if !a.executeToolIteration(i, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result, planningOnly) {
 			continue
 		}
+		completedToolCalls[fingerprint] = true
 	}
 
 	return result

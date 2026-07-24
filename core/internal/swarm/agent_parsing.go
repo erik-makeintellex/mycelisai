@@ -182,6 +182,18 @@ func autofillToolArguments(call *toolCallPayload, latestUserInput string) {
 	}
 
 	switch call.Name {
+	case "write_file":
+		copyStringToolArgumentAlias(call.Arguments, "path", "file_path", "filename", "target_path")
+		copyStringToolArgumentAlias(call.Arguments, "content", "text", "data", "body")
+		inferProjectPackageWriteArguments(call.Arguments, latestUserInput)
+	case "read_file", "read_text_file":
+		copyStringToolArgumentAlias(call.Arguments, "path", "file_path", "filename", "target_path")
+	case "store_artifact":
+		copyStringToolArgumentAlias(call.Arguments, "type", "artifact_type", "kind")
+		copyStringToolArgumentAlias(call.Arguments, "title", "name", "filename")
+		copyStringToolArgumentAlias(call.Arguments, "content", "text", "data", "body")
+	case "research_for_blueprint":
+		copyStringToolArgumentAlias(call.Arguments, "intent", "query", "goal", "topic")
 	case "consult_council":
 		member, _ := call.Arguments["member"].(string)
 		if strings.TrimSpace(member) == "" {

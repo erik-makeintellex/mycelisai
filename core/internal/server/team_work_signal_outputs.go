@@ -12,6 +12,7 @@ import (
 func projectedSignalOutputRefs(item protocol.TeamWorkItem, env protocol.SignalEnvelope, payload map[string]any) []protocol.TeamOutputRef {
 	refs := outputRefsFromRaw(item, env, payload["output_refs"])
 	refs = append(refs, outputRefsFromRaw(item, env, payload["outputs"])...)
+	refs = append(refs, outputRefsFromRaw(item, env, payload["artifacts"])...)
 	if hasInlineOutputRefPayload(payload) {
 		ref, ok := outputRefFromMap(item, env, payload)
 		if !ok {
@@ -98,7 +99,7 @@ func outputRefsFromRaw(item protocol.TeamWorkItem, env protocol.SignalEnvelope, 
 func outputRefFromMap(item protocol.TeamWorkItem, env protocol.SignalEnvelope, data map[string]any) (protocol.TeamOutputRef, bool) {
 	outputID := firstNonEmptyString(stringField(data, "output_id"), stringField(data, "id"), stringField(data, "artifact_id"))
 	label := firstNonEmptyString(stringField(data, "label"), stringField(data, "title"), stringField(data, "summary"))
-	kind := firstNonEmptyString(stringField(data, "kind"), stringField(data, "output_kind"), "output")
+	kind := firstNonEmptyString(stringField(data, "kind"), stringField(data, "output_kind"), stringField(data, "type"), "output")
 	storageRef := teamOutputStorageRefFromMap(kind, data)
 	entrypoint := relativeTeamOutputEntrypoint(storageRef, stringField(data, "entrypoint"))
 	if outputID == "" && storageRef == "" && entrypoint == "" && label == "" {

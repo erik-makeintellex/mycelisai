@@ -166,6 +166,27 @@ func TestTeam_ResponseDeliveryUsesExplicitCorrelationWithoutConsumingPending(t *
 	}
 }
 
+func TestCorrelatedTeamResponsePayload_ProjectsBlockerAsDegraded(t *testing.T) {
+	raw := []byte(`{"text":"Package draft written.","blocker":"Browser validation is incomplete.","artifacts":[{"type":"project_package"}]}`)
+	correlation := &teamCommandCorrelation{
+		WorkItemID: "11111111-1111-1111-1111-111111111111",
+		TeamID:     "test-core",
+		RunID:      "run-9",
+	}
+
+	projectedRaw := correlatedTeamResponsePayload(raw, correlation)
+	var projected map[string]any
+	if err := json.Unmarshal(projectedRaw, &projected); err != nil {
+		t.Fatalf("decode projected response: %v", err)
+	}
+	if projected["state"] != string(protocol.TeamWorkStateDegraded) {
+		t.Fatalf("state = %v, want degraded", projected["state"])
+	}
+	if projected["needs_operator"] != true {
+		t.Fatalf("needs_operator = %v, want true", projected["needs_operator"])
+	}
+}
+
 func publishCorrelatedCommand(t *testing.T, nc *nats.Conn, workID, runID string) {
 	t.Helper()
 	payload, err := protocol.WrapSignalPayloadWithMeta(

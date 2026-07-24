@@ -107,6 +107,7 @@ func (r *InternalToolRegistry) handleWriteFile(_ context.Context, args map[strin
 	if path == "" || content == "" {
 		return "", fmt.Errorf("write_file requires 'path' and 'content'")
 	}
+	content = ensureDeclaredHTMLPackageTitle(path, content, args)
 	if len(content) > maxWriteSize {
 		return "", fmt.Errorf("content size %d exceeds maximum write size of %d bytes", len(content), maxWriteSize)
 	}
@@ -125,151 +126,39 @@ func (r *InternalToolRegistry) handleWriteFile(_ context.Context, args map[strin
 		return "", err
 	}
 	if supportCount > 0 {
-		return fmt.Sprintf("File written: %s (%d bytes). Project package support files written: %d.", safePath, len(content), supportCount), nil
+		message := fmt.Sprintf("File written: %s (%d bytes). Project package support files written: %d.", safePath, len(content), supportCount)
+		title := strings.TrimSpace(stringValue(args["package_title"]))
+		if title == "" {
+			title = "Generated project package"
+		}
+		folder := strings.TrimSpace(stringValue(args["package_folder"]))
+		if folder == "" {
+			folder = filepath.Dir(normalizeWorkspaceRelativePath(path))
+		}
+		entrypoint := strings.TrimSpace(stringValue(args["package_entrypoint"]))
+		if entrypoint == "" {
+			entrypoint = path
+		}
+		validation := strings.TrimSpace(firstProjectPackageString(args, "validation", "validation_summary"))
+		if validation == "" {
+			validation = "Open the entrypoint in a browser and review the retained output."
+		}
+		return mustJSON(map[string]any{
+			"message": message,
+			"artifact": protocol.ChatArtifactRef{
+				Type:        "project_package",
+				Title:       title,
+				ContentType: "application/vnd.mycelis.project+json",
+				Content:     projectPackageSupportFileContent("project-package.json", args, path),
+				SavedPath:   folder,
+				Entrypoint:  entrypoint,
+				Folder:      folder,
+				Files:       projectPackageSupportFileNames(args),
+				Validation:  validation,
+			},
+		}), nil
 	}
 	return fmt.Sprintf("File written: %s (%d bytes).", safePath, len(content)), nil
-}
-
-func writeProjectPackageSupportFiles(mainPath string, args map[string]any) (int, error) {
-	if !strings.EqualFold(strings.TrimSpace(stringValue(args["package_kind"])), "project_package") {
-		return 0, nil
-	}
-	folder := strings.TrimSpace(stringValue(args["package_folder"]))
-	if folder == "" {
-		folder = filepath.Dir(normalizeWorkspaceRelativePath(mainPath))
-	}
-	if folder == "." || folder == "" {
-		return 0, nil
-	}
-	safeFolder, err := validateToolPath(folder)
-	if err != nil {
-		return 0, err
-	}
-	if err := os.MkdirAll(safeFolder, 0o755); err != nil {
-		return 0, fmt.Errorf("failed to create package folder %s: %w", safeFolder, err)
-	}
-
-	count := 0
-	for _, file := range projectPackageSupportFileNames(args) {
-		rel := strings.Trim(strings.TrimSpace(file), `/\`)
-		if rel == "" {
-			continue
-		}
-		base := strings.ToLower(filepath.Base(rel))
-		if base != "readme.md" && base != "proof.md" && base != "validation-notes.md" && base != "project-package.json" {
-			continue
-		}
-		cleanRel := filepath.Clean(filepath.FromSlash(rel))
-		if filepath.IsAbs(cleanRel) || cleanRel == "." || strings.HasPrefix(cleanRel, "..") {
-			return count, fmt.Errorf("package support file %q escapes package folder", file)
-		}
-		target := filepath.Join(safeFolder, cleanRel)
-		relToFolder, err := filepath.Rel(safeFolder, target)
-		if err != nil || strings.HasPrefix(relToFolder, "..") {
-			return count, fmt.Errorf("package support file %q escapes package folder", file)
-		}
-		content := projectPackageSupportFileContent(base, args, mainPath)
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return count, fmt.Errorf("failed to create package support folder %s: %w", filepath.Dir(target), err)
-		}
-		if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
-			return count, fmt.Errorf("failed to write package support file %s: %w", target, err)
-		}
-		count++
-	}
-	return count, nil
-}
-
-func projectPackageSupportFileNames(args map[string]any) []string {
-	files := append([]string{}, stringSlice(args["package_files"])...)
-	foundManifest := false
-	for _, file := range files {
-		if strings.EqualFold(filepath.Base(strings.TrimSpace(file)), "project-package.json") {
-			foundManifest = true
-			break
-		}
-	}
-	if !foundManifest {
-		files = append(files, "project-package.json")
-	}
-	return files
-}
-
-func projectPackageSupportFileContent(file string, args map[string]any, mainPath string) string {
-	title := strings.TrimSpace(stringValue(args["package_title"]))
-	if title == "" {
-		title = "Generated project package"
-	}
-	folder := strings.TrimSpace(stringValue(args["package_folder"]))
-	if folder == "" {
-		folder = filepath.Dir(normalizeWorkspaceRelativePath(mainPath))
-	}
-	entrypoint := strings.TrimSpace(stringValue(args["package_entrypoint"]))
-	if entrypoint == "" {
-		entrypoint = mainPath
-	}
-	files := projectPackageSupportFileNames(args)
-	validation := strings.TrimSpace(stringValue(args["validation"]))
-	if validation == "" {
-		validation = strings.TrimSpace(stringValue(args["validation_summary"]))
-	}
-	if validation == "" {
-		validation = "Open the entrypoint in a browser and review the retained output."
-	}
-	usage := strings.TrimSpace(firstProjectPackageString(args, "package_usage", "usage", "controls", "package_controls"))
-	if usage == "" && strings.HasSuffix(strings.ToLower(entrypoint), ".html") {
-		usage = "Open the HTML entrypoint in a browser. If it is interactive, use the visible controls in the page."
-	}
-	recovery := strings.TrimSpace(firstProjectPackageString(args, "recovery", "recovery_hint", "open_hint", "package_recovery"))
-	if recovery == "" {
-		recovery = "If opening fails, use Resources -> Output Files to browse the package folder, confirm the entrypoint exists, then ask Soma to repair or regenerate the package."
-	}
-	if file == "project-package.json" {
-		payload := map[string]any{
-			"title":      title,
-			"kind":       "project_package",
-			"entrypoint": entrypoint,
-			"folder":     folder,
-			"files":      files,
-			"validation": validation,
-			"open": map[string]any{
-				"entrypoint":    entrypoint,
-				"resources_url": "/resources?tab=workspace&path=" + entrypointEscape(folder),
-				"hint":          "Open the entrypoint directly, or browse the folder from Resources -> Output Files.",
-			},
-			"recovery": map[string]any{
-				"hint": recovery,
-			},
-		}
-		if usage != "" {
-			payload["usage"] = usage
-		}
-		data, _ := json.MarshalIndent(payload, "", "  ")
-		return string(data) + "\n"
-	}
-	includedFiles := "- " + strings.Join(files, "\n- ")
-	if file == "proof.md" || file == "validation-notes.md" {
-		return fmt.Sprintf("# %s Proof\n\n## Open\n\nOpen `%s`.\n\n## Included files\n\n%s\n\n## Validation\n\n%s\n\n## Recovery\n\n%s\n", title, entrypoint, includedFiles, validation, recovery)
-	}
-	usageSection := ""
-	if usage != "" {
-		usageSection = fmt.Sprintf("\n## Usage / controls\n\n%s\n", usage)
-	}
-	return fmt.Sprintf("# %s\n\n## Open\n\nOpen `%s`.\n\n## Included files\n\n%s\n%s\n## Validation\n\n%s\n\n## Recovery\n\n%s\n", title, entrypoint, includedFiles, usageSection, validation, recovery)
-}
-
-func firstProjectPackageString(args map[string]any, keys ...string) string {
-	for _, key := range keys {
-		if value := strings.TrimSpace(stringValue(args[key])); value != "" {
-			return value
-		}
-	}
-	return ""
-}
-
-func entrypointEscape(value string) string {
-	replacer := strings.NewReplacer("%", "%25", " ", "%20", "#", "%23", "?", "%3F", "&", "%26")
-	return replacer.Replace(strings.ReplaceAll(value, "\\", "/"))
 }
 
 func (r *InternalToolRegistry) handleLocalCommand(ctx context.Context, args map[string]any) (string, error) {

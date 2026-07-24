@@ -12,8 +12,13 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamIn
 	var sb strings.Builder
 	sb.WriteString("\n\n## Runtime Context (Live System State)\n")
 	sb.WriteString(fmt.Sprintf("Timestamp: %s\n\n", time.Now().Format(time.RFC3339)))
-	r.writeTeamRoster(&sb)
 	r.writeAgentTopology(&sb, agentID, teamID, teamInputs, teamDeliveries)
+	if !r.isLeadAgent(agentID, teamID, role) {
+		r.writeDeploymentContext(&sb, agentID, teamID, currentInput)
+		writeScopedWorkerProtocol(&sb)
+		return sb.String()
+	}
+	r.writeTeamRoster(&sb)
 	r.writeCognitiveStatus(&sb)
 	r.writeMCPServers(&sb)
 	r.writeRecalledMemory(&sb, agentID, currentInput)
@@ -50,6 +55,15 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamIn
 	sb.WriteString("6. For in-flight planning or continuity, checkpoint state via `temp_memory_write` and reload with `temp_memory_read`\n")
 	sb.WriteString("7. Generated images are ephemeral cache by default (60m). Persist only on user request via `save_cached_image`\n")
 	return sb.String()
+}
+
+func writeScopedWorkerProtocol(sb *strings.Builder) {
+	sb.WriteString("### Scoped Execution Protocol\n")
+	sb.WriteString("- Work only within the assigned team contract and owned scope.\n")
+	sb.WriteString("- Use the available tools to create, read back, and validate the requested deliverable.\n")
+	sb.WriteString("- Keep internal scratch separate from retained user-facing outputs.\n")
+	sb.WriteString("- Return retained artifact references and concise validation evidence through the team result bus.\n")
+	sb.WriteString("- If execution cannot complete, report the blocker and safest recovery action instead of claiming success.\n")
 }
 
 func (r *InternalToolRegistry) isLeadAgent(agentID, teamID, role string) bool {

@@ -148,7 +148,7 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
       {projectPackage ? (
         <ProjectPackage
           artifact={artifact}
-          entrypoint={entrypoint}
+          entrypoint={packagePath ?? entrypoint}
           folder={folder}
           files={files}
           validation={validation}
