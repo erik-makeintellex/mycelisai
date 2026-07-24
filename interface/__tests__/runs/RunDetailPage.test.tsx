@@ -18,17 +18,17 @@ vi.mock('next/navigation', () => ({
 
 // Mock react `use` to resolve the params promise synchronously
 vi.mock('react', async () => {
-    const actual = await vi.importActual('react');
+    const actual = await vi.importActual<typeof import('react')>('react');
     return {
         ...actual,
-        use: (p: any) => ({ id: 'test-run-123-abcd-5678' }),
+        use: () => ({ id: 'test-run-123-abcd-5678' }),
     };
 });
 
 // Mock next/dynamic — returns a simple stub for dynamically imported components
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: any) => {
+    default: () => {
         const Component = () => {
             return <div data-testid="dynamic-component" />;
         };
@@ -44,10 +44,10 @@ describe('RunDetailPage (/runs/[id])', () => {
         vi.clearAllMocks();
         runSearchParams.forEach((_value, key) => runSearchParams.delete(key));
         // Mock fetch for the run status useEffect — return empty events (running status)
-        (global.fetch as any) = vi.fn().mockResolvedValue({
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             json: async () => ({ data: [] }),
-        });
+        }));
     });
 
     it('renders page with run ID in header', async () => {
@@ -113,10 +113,10 @@ describe('RunDetailPage (/runs/[id])', () => {
 
     it('shows status badge when runStatus is set', async () => {
         // Mock fetch to return completed event so runStatus becomes "completed"
-        (global.fetch as any) = vi.fn().mockResolvedValue({
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             json: async () => ({ data: [{ event_type: 'mission.completed' }] }),
-        });
+        }));
 
         await act(async () => {
             render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
@@ -132,10 +132,10 @@ describe('RunDetailPage (/runs/[id])', () => {
 
     it('shows running status with animated pulse dot', async () => {
         // Mock fetch to return no terminal events -> running
-        (global.fetch as any) = vi.fn().mockResolvedValue({
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             json: async () => ({ data: [{ event_type: 'mission.started' }] }),
-        });
+        }));
 
         await act(async () => {
             render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
@@ -154,10 +154,10 @@ describe('RunDetailPage (/runs/[id])', () => {
     });
 
     it('shows completed status badge', async () => {
-        (global.fetch as any) = vi.fn().mockResolvedValue({
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             json: async () => ({ data: [{ event_type: 'mission.completed' }] }),
-        });
+        }));
 
         await act(async () => {
             render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
@@ -174,10 +174,10 @@ describe('RunDetailPage (/runs/[id])', () => {
     });
 
     it('shows failed status badge when the run emits mission.failed', async () => {
-        (global.fetch as any) = vi.fn().mockResolvedValue({
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             json: async () => ({ data: [{ event_type: 'mission.failed' }] }),
-        });
+        }));
 
         await act(async () => {
             render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
@@ -191,10 +191,10 @@ describe('RunDetailPage (/runs/[id])', () => {
     });
 
     it('shows cancelled status badge when the run emits mission.cancelled', async () => {
-        (global.fetch as any) = vi.fn().mockResolvedValue({
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
             ok: true,
             json: async () => ({ data: [{ event_type: 'mission.cancelled' }] }),
-        });
+        }));
 
         await act(async () => {
             render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
@@ -208,7 +208,7 @@ describe('RunDetailPage (/runs/[id])', () => {
     });
 
     it('falls back to running status when the run status fetch fails', async () => {
-        (global.fetch as any) = vi.fn().mockRejectedValue(new Error('status-down'));
+        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('status-down')));
 
         await act(async () => {
             render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);

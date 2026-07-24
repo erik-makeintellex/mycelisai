@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { Node } from 'reactflow';
 
 vi.mock('reactflow', () => {
     const Position = {
@@ -10,12 +11,12 @@ vi.mock('reactflow', () => {
     return {
         __esModule: true,
         Position,
-        applyNodeChanges: (_changes: any[], nodes: any[]) => nodes,
-        applyEdgeChanges: (_changes: any[], edges: any[]) => edges,
+        applyNodeChanges: (_changes: unknown[], nodes: unknown[]) => nodes,
+        applyEdgeChanges: (_changes: unknown[], edges: unknown[]) => edges,
     };
 });
 
-import type { MissionBlueprint } from '@/store/useCortexStore';
+import type { ChatMessage, MissionBlueprint } from '@/store/useCortexStore';
 import {
     buildChatSessionStorageKey,
     CHAT_STORAGE_KEY,
@@ -67,10 +68,11 @@ describe('cortexStoreUtils', () => {
     });
 
     it('solidifies draft nodes by clearing draft class and marking agent online', () => {
-        const nodes: any[] = [
+        const nodes: Node[] = [
             {
                 id: 'team-0',
                 type: 'group',
+                position: { x: 0, y: 0 },
                 className: 'ghost-draft',
                 style: { border: '1px dashed red' },
                 data: {},
@@ -78,6 +80,7 @@ describe('cortexStoreUtils', () => {
             {
                 id: 'agent-0-0',
                 type: 'agentNode',
+                position: { x: 0, y: 0 },
                 className: 'ghost-draft',
                 data: { status: 'offline' },
             },
@@ -91,9 +94,9 @@ describe('cortexStoreUtils', () => {
     });
 
     it('dispatches thought and error signals to matching nodes', () => {
-        const nodes: any[] = [
-            { id: 'agent-a', data: { label: 'agent-a', status: 'online' } },
-            { id: 'agent-b', data: { label: 'agent-b', status: 'online' } },
+        const nodes: Node[] = [
+            { id: 'agent-a', position: { x: 0, y: 0 }, data: { label: 'agent-a', status: 'online' } },
+            { id: 'agent-b', position: { x: 0, y: 0 }, data: { label: 'agent-b', status: 'online' } },
         ];
 
         const thought = dispatchSignalToNodes(
@@ -186,10 +189,11 @@ describe('cortexStoreUtils', () => {
     });
 
     it('persists and reloads chat history from storage', () => {
-        persistChat([
+        const messages: ChatMessage[] = [
             { role: 'user', content: 'hello' },
             { role: 'council', content: 'world' },
-        ] as any);
+        ];
+        persistChat(messages);
 
         const loaded = loadPersistedChat();
         expect(loaded).toHaveLength(2);
@@ -240,8 +244,10 @@ describe('cortexStoreUtils', () => {
     });
 
     it('scopes persisted chat by organization key', () => {
-        persistChat([{ role: 'user', content: 'org-a' }] as any, 'org-a');
-        persistChat([{ role: 'user', content: 'org-b' }] as any, 'org-b');
+        const orgAMessages: ChatMessage[] = [{ role: 'user', content: 'org-a' }];
+        const orgBMessages: ChatMessage[] = [{ role: 'user', content: 'org-b' }];
+        persistChat(orgAMessages, 'org-a');
+        persistChat(orgBMessages, 'org-b');
 
         expect(loadPersistedChat('org-a')).toMatchObject([{ role: 'user', content: 'org-a' }]);
         expect(loadPersistedChat('org-b')).toMatchObject([{ role: 'user', content: 'org-b' }]);
@@ -272,8 +278,10 @@ describe('cortexStoreUtils', () => {
     });
 
     it('clears only the requested scoped chat history', () => {
-        persistChat([{ role: 'user', content: 'scoped' }] as any, 'org-1');
-        persistChat([{ role: 'user', content: 'global' }] as any);
+        const scopedMessages: ChatMessage[] = [{ role: 'user', content: 'scoped' }];
+        const globalMessages: ChatMessage[] = [{ role: 'user', content: 'global' }];
+        persistChat(scopedMessages, 'org-1');
+        persistChat(globalMessages);
         const scopedSession = loadOrCreateChatSessionId('org-1');
         const globalSession = loadOrCreateChatSessionId();
 

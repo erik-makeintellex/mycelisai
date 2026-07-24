@@ -1,10 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import type { ReactNode, SVGProps } from 'react';
+
+type ChildrenProps = {
+    children?: ReactNode;
+};
+
+type FlowPoint = {
+    x: number;
+    y: number;
+};
 
 // Mock reactflow with factory (must return default export properly)
-vi.mock('reactflow', () => {
-    const React = require('react');
-    const ReactFlow = React.forwardRef(({ children }: any, ref: any) =>
+vi.mock('reactflow', async () => {
+    const React = await import('react');
+    const ReactFlow = React.forwardRef<HTMLDivElement, ChildrenProps>(({ children }, ref) =>
         React.createElement('div', { 'data-testid': 'react-flow', ref }, children)
     );
     ReactFlow.displayName = 'ReactFlow';
@@ -12,22 +22,22 @@ vi.mock('reactflow', () => {
         __esModule: true,
         default: ReactFlow,
         ReactFlow,
-        ReactFlowProvider: ({ children }: any) =>
+        ReactFlowProvider: ({ children }: ChildrenProps) =>
             React.createElement('div', { 'data-testid': 'react-flow-provider' }, children),
         Background: () => React.createElement('div', { 'data-testid': 'react-flow-background' }),
         BackgroundVariant: { Dots: 'dots', Lines: 'lines', Cross: 'cross' },
         Controls: () => React.createElement('div', { 'data-testid': 'react-flow-controls' }),
         MiniMap: () => React.createElement('div', { 'data-testid': 'react-flow-minimap' }),
         Handle: () => React.createElement('div', { 'data-testid': 'react-flow-handle' }),
-        Panel: ({ children }: any) => React.createElement('div', { 'data-testid': 'react-flow-panel' }, children),
+        Panel: ({ children }: ChildrenProps) => React.createElement('div', { 'data-testid': 'react-flow-panel' }, children),
         Position: { Left: 'left', Right: 'right', Top: 'top', Bottom: 'bottom' },
         MarkerType: { Arrow: 'arrow', ArrowClosed: 'arrowclosed' },
-        useNodesState: (init: any[] = []) => {
-            const [nodes, setNodes] = React.useState(init);
+        useNodesState: (initialNodes: unknown[] = []) => {
+            const [nodes, setNodes] = React.useState<unknown[]>(initialNodes);
             return [nodes, setNodes, vi.fn()];
         },
-        useEdgesState: (init: any[] = []) => {
-            const [edges, setEdges] = React.useState(init);
+        useEdgesState: (initialEdges: unknown[] = []) => {
+            const [edges, setEdges] = React.useState<unknown[]>(initialEdges);
             return [edges, setEdges, vi.fn()];
         },
         useReactFlow: () => ({
@@ -38,11 +48,11 @@ vi.mock('reactflow', () => {
             fitView: vi.fn(),
             zoomIn: vi.fn(),
             zoomOut: vi.fn(),
-            project: vi.fn((pos: any) => pos),
+            project: vi.fn((position: FlowPoint) => position),
         }),
-        addEdge: vi.fn((e: any, es: any[]) => [...es, e]),
-        applyNodeChanges: vi.fn((_: any, n: any[]) => n),
-        applyEdgeChanges: vi.fn((_: any, e: any[]) => e),
+        addEdge: vi.fn((edge: unknown, edges: unknown[]) => [...edges, edge]),
+        applyNodeChanges: vi.fn((_changes: unknown[], nodes: unknown[]) => nodes),
+        applyEdgeChanges: vi.fn((_changes: unknown[], edges: unknown[]) => edges),
     };
 });
 vi.mock('reactflow/dist/style.css', () => ({}));
@@ -56,10 +66,10 @@ vi.mock('@/components/wiring/WiringAgentEditor', () => ({
     default: () => <div data-testid="wiring-agent-editor" />,
 }));
 vi.mock('lucide-react', () => ({
-    Zap: (props: any) => <svg data-testid="zap-icon" {...props} />,
-    Loader2: (props: any) => <svg data-testid="loader-icon" {...props} />,
-    Rocket: (props: any) => <svg data-testid="rocket-icon" {...props} />,
-    XCircle: (props: any) => <svg data-testid="xcircle-icon" {...props} />,
+    Zap: (props: SVGProps<SVGSVGElement>) => <svg data-testid="zap-icon" {...props} />,
+    Loader2: (props: SVGProps<SVGSVGElement>) => <svg data-testid="loader-icon" {...props} />,
+    Rocket: (props: SVGProps<SVGSVGElement>) => <svg data-testid="rocket-icon" {...props} />,
+    XCircle: (props: SVGProps<SVGSVGElement>) => <svg data-testid="xcircle-icon" {...props} />,
 }));
 
 import CircuitBoard from '@/components/workspace/CircuitBoard';
