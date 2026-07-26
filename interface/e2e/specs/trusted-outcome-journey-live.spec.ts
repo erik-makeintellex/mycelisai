@@ -128,11 +128,18 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       await expect(canvas).toBeVisible();
       const beforeMove = await canvas.screenshot();
       await outputPage.keyboard.down("ArrowRight");
-      await outputPage.waitForTimeout(350);
-      await outputPage.keyboard.up("ArrowRight");
-      await outputPage.waitForTimeout(100);
-      const afterMove = await canvas.screenshot();
-      expect(afterMove.equals(beforeMove), "the generated browser package should respond to player input").toBeFalsy();
+      try {
+        await expect.poll(async () => {
+          const whileMoving = await canvas.screenshot();
+          return whileMoving.equals(beforeMove);
+        }, {
+          timeout: 2_000,
+          intervals: [100, 150, 250],
+          message: "the generated browser package should visibly respond while ArrowRight is held",
+        }).toBeFalsy();
+      } finally {
+        await outputPage.keyboard.up("ArrowRight");
+      }
       await outputPage.close();
 
       await expectProofAndRunReadback(page, data!);

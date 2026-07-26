@@ -54,6 +54,7 @@ Latest new-user Core/UI acceptance proof (2026-07-26):
 - `uv run inv interface.typecheck`
 - headed `trusted-outcome-journey-live.spec.ts`: 1 passed with governed approval, NATS team delivery, retained playable browser package, run/contract/proof readback, and cross-surface revisit.
 - full live Chromium sweep: 110 passed, 32 gated skips, 0 failures.
+- Follow-up headed integration caught a held-input sampling gap and a squeezed output digest. The journey now samples canvas change while ArrowRight is held, and the Dashboard keeps output title/health above a separate wrapping action row. Focused SomaWorkspaceFrame tests, Interface typecheck, and the corrected headed live journey pass.
 
 Latest P0.5a Outcome Health convergence proof:
 

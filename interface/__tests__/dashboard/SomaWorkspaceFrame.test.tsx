@@ -83,6 +83,7 @@ describe("SomaWorkspaceFrame", () => {
     );
 
     const digest = within(screen.getByTestId("soma-workbench-output-digest"));
+    expect(screen.getByTestId("soma-output-digest-layout").className).toContain("flex-col");
     expect(digest.getByText("Latest:")).toBeDefined();
     expect(digest.getByText("Owner note")).toBeDefined();
     expect(digest.queryByText("generated/owner-note.md")).toBeNull();
