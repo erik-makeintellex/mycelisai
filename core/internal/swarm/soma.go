@@ -33,6 +33,7 @@ type Soma struct {
 	eventEmitter       protocol.EventEmitter
 	conversationLogger protocol.ConversationLogger
 	providerPolicy     ProviderPolicy
+	durableTeamLoader  DurableTeamLoader
 }
 
 // NewSoma creates a new Soma instance with composite tool support.

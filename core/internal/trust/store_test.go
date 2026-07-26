@@ -98,6 +98,34 @@ func TestRecordProofArtifactLinksContractAndUpdatesContract(t *testing.T) {
 	}
 }
 
+func TestRecordProofArtifactIntermediateDoesNotCompleteContract(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	mock.ExpectQuery("INSERT INTO proof_artifacts").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("44444444-4444-4444-4444-444444444444"))
+
+	id, err := NewStore(db).RecordProofArtifact(context.Background(), ProofArtifactInput{
+		ContractID:    "11111111-1111-1111-1111-111111111111",
+		IntentProofID: "22222222-2222-2222-2222-222222222222",
+		RunID:         "55555555-5555-5555-5555-555555555555",
+		Status:        protocol.ProofArtifactStatusSuccess,
+		Intermediate:  true,
+	})
+	if err != nil {
+		t.Fatalf("record intermediate proof: %v", err)
+	}
+	if id == "" {
+		t.Fatal("expected retained intermediate proof id")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("intermediate proof unexpectedly finalized its contract: %v", err)
+	}
+}
+
 func TestRecordProofArtifactHonorsTeamSignalArtifactKind(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

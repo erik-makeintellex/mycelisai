@@ -98,7 +98,11 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 		return fmt.Errorf("begin projected team work transaction: %w", err)
 	}
 	defer tx.Rollback()
-	proofArtifactID, err := p.recordAsyncCompletionProof(ctx, tx, item, payloadKind, incomingOutputRefs)
+	finalResult, err := p.isFinalLinkedTeamResult(ctx, tx, item, payloadKind)
+	if err != nil {
+		return err
+	}
+	proofArtifactID, err := p.recordAsyncCompletionProof(ctx, tx, item, payloadKind, incomingOutputRefs, finalResult)
 	if err != nil {
 		return err
 	}
@@ -116,6 +120,11 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	interaction := projectedSignalInteraction(item, env, subject, payloadKind, payload)
 	if err := p.server.insertTeamInteractionExec(ctx, tx, &interaction); err != nil {
 		return fmt.Errorf("insert projected team interaction: %w", err)
+	}
+	if finalResult {
+		if err := p.server.markRunCompletedTx(tx, item.RunID, item.IntentProofID); err != nil {
+			return fmt.Errorf("complete linked execution run: %w", err)
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit projected team work transaction: %w", err)
@@ -138,16 +147,6 @@ func parseTeamWorkSignalEnvelope(data []byte) (protocol.SignalEnvelope, map[stri
 		payload["text"] = env.Text
 	}
 	return env, payload, true
-}
-
-func signalWorkItemID(payload map[string]any) string {
-	if id := stringField(payload, "work_item_id"); id != "" {
-		return id
-	}
-	if contextValue, ok := payload["context"].(map[string]any); ok {
-		return stringField(contextValue, "work_item_id")
-	}
-	return ""
 }
 
 func projectedSignalState(item protocol.TeamWorkItem, payloadKind protocol.SignalPayloadKind, payload map[string]any, outputRefs []protocol.TeamOutputRef) protocol.TeamWorkState {

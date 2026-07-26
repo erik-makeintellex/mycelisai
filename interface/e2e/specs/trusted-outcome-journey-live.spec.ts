@@ -17,6 +17,7 @@ import { liveAPIHeaders, liveAPIURL } from "../support/live-api-auth";
 
 type ConfirmData = {
   run_id?: string;
+  run_status?: string;
   verified?: boolean;
   execution_state?: string;
   proof_artifact_id?: string;
@@ -100,8 +101,10 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       const confirmed = await confirmProposal(page);
       expect(confirmed.response.ok(), confirmed.body ? JSON.stringify(confirmed.body) : confirmed.raw).toBeTruthy();
       const data = confirmed.body?.data as ConfirmData | undefined;
-      expect(data?.verified).toBeTruthy();
-      expect(data?.execution_state).toBe("verified");
+      expect(data?.verified).toBeFalsy();
+      expect(data?.execution_state).toBe("running");
+      expect(data?.run_status).toBe("running");
+      expect(data?.proof_artifact_id).toBeFalsy();
       expect(data?.run_id).toBeTruthy();
 
       const workItem = await waitForTeamDelivery(page, teamID, data!.run_id!);
@@ -199,6 +202,11 @@ async function cleanupLiveJourney(page: import("@playwright/test").Page, teamID:
 }
 
 async function expectProofAndRunReadback(page: import("@playwright/test").Page, data: ConfirmData) {
+  const runResponse = await liveAPIGet(page, `/api/v1/runs/${encodeURIComponent(data.run_id!)}`);
+  expect(runResponse.ok(), await runResponse.text()).toBeTruthy();
+  const run = ((await runResponse.json()) as APIEnvelope<{ status?: string }>).data;
+  expect(run?.status).toBe("completed");
+
   const proofResponse = await liveAPIGet(page, `/api/v1/trust/proof-artifacts?run_id=${encodeURIComponent(data.run_id!)}&limit=10`);
   expect(proofResponse.ok(), await proofResponse.text()).toBeTruthy();
   const proofRecords = ((await proofResponse.json()) as APIEnvelope<ProofRecord[]>).data ?? [];
@@ -213,6 +221,7 @@ async function expectProofAndRunReadback(page: import("@playwright/test").Page, 
   const contracts = ((await contractResponse.json()) as APIEnvelope<ContractRecord[]>).data ?? [];
   expect(contracts.length, JSON.stringify(contracts)).toBeGreaterThan(0);
   if (data.contract_id) expect(contracts.some((contract) => contract.id === data.contract_id)).toBeTruthy();
+  expect(contracts.some((contract) => contract.status === "completed")).toBeTruthy();
 
   const eventResponse = await liveAPIGet(page, `/api/v1/runs/${encodeURIComponent(data.run_id!)}/events`);
   expect(eventResponse.ok(), await eventResponse.text()).toBeTruthy();

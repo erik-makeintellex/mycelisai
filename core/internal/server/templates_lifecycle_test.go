@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/pkg/protocol"
@@ -225,6 +226,39 @@ func TestHandleGetIntentProof_NilDB(t *testing.T) {
 	mux := setupMux(t, "GET /api/v1/intent/proof/{id}", s.handleGetIntentProof)
 	rr := doRequest(t, mux, "GET", "/api/v1/intent/proof/11111111-1111-1111-1111-111111111111", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
+}
+
+func TestHandleGetIntentProof_NullConfirmationToken(t *testing.T) {
+	dbOpt, mock := withDB(t)
+	s := newTestServer(dbOpt)
+	proofID := "11111111-1111-1111-1111-111111111111"
+	now := time.Now()
+
+	mock.ExpectQuery("SELECT .+ FROM intent_proofs").
+		WithArgs(proofID).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "template_id", "resolved_intent", "user_confirmation_token",
+			"permission_check", "policy_decision", "scope_validation",
+			"audit_event_id", "mission_id", "status", "created_at", "confirmed_at",
+		}).AddRow(
+			proofID, string(protocol.TemplateChatToProposal), "chat-action", nil,
+			"pass", "require_approval", []byte(`{"risk_level":"low"}`),
+			nil, nil, "confirmed", now, now,
+		))
+
+	mux := setupMux(t, "GET /api/v1/intent/proof/{id}", s.handleGetIntentProof)
+	rr := doRequest(t, mux, "GET", "/api/v1/intent/proof/"+proofID, "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var response map[string]any
+	assertJSON(t, rr, &response)
+	data, ok := response["data"].(map[string]any)
+	if !ok || data["id"] != proofID {
+		t.Fatalf("intent proof response = %#v", response)
+	}
+	if _, ok := data["user_confirmation_token"]; ok {
+		t.Fatalf("null confirmation token should be omitted: %#v", data)
+	}
 }
 
 func TestHandleGetIntentProof_NotFound(t *testing.T) {

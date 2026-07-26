@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -52,12 +53,14 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, auditUser, actorIdentity, err)
 		return
 	}
-	s.completeConfirmedActionWorkerRun(r.Context(), runID, results)
-
-	if err := s.markRunCompletedTx(tx, runID, proofID); err != nil {
-		log.Printf("CE-1: confirm-action run completion failed: %v", err)
-		respondAPIError(w, "failed to finalize execution record", http.StatusInternalServerError)
-		return
+	pendingTeamWork := confirmedActionHasPendingTeamWork(results)
+	if !pendingTeamWork {
+		s.completeConfirmedActionWorkerRun(r.Context(), runID, results)
+		if err := s.markRunCompletedTx(tx, runID, proofID); err != nil {
+			log.Printf("CE-1: confirm-action run completion failed: %v", err)
+			respondAPIError(w, "failed to finalize execution record", http.StatusInternalServerError)
+			return
+		}
 	}
 	if err := s.confirmChatProofTx(tx, proofID); err != nil {
 		log.Printf("CE-1: confirm-action proof update failed: %v", err)
@@ -70,8 +73,11 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	auditID := s.auditConfirmedAction(proofID, runID, scope, auditUser, actorIdentity)
-	proofArtifactID := s.persistConfirmActionSuccessProof(r.Context(), proofID, contractID, runID, auditID, scope, results)
+	auditID := s.auditConfirmedAction(proofID, runID, scope, auditUser, actorIdentity, pendingTeamWork)
+	proofArtifactID := ""
+	if !pendingTeamWork {
+		proofArtifactID = s.persistConfirmActionSuccessProof(r.Context(), proofID, contractID, runID, auditID, scope, results)
+	}
 	link := confirmedActionTeamWorkLink{
 		ProofID:         proofID,
 		ContractID:      contractID,
@@ -86,7 +92,11 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		log.Printf("CE-1: confirm-action visibility persistence failed: %v", err)
 	}
 	s.broadcastConfirmActionThreadEvent(runID, proofID, contractID, teamWorkRefs)
-	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID, scope, results, teamWorkRefs, outcomeProject)))
+	runStatus := runs.StatusCompleted
+	if pendingTeamWork {
+		runStatus = runs.StatusRunning
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseDataForStatus(proofID, contractID, proofArtifactID, runID, auditID, runStatus, scope, results, teamWorkRefs, outcomeProject)))
 }
 
 func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, string, *protocol.ScopeValidation, string, bool) {
@@ -186,14 +196,22 @@ func (s *AdminServer) loadIntentProofScopeForFailure(ctx context.Context, proofI
 	return scope, nil
 }
 
-func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protocol.ScopeValidation, auditUser string, actorIdentity map[string]any) string {
+func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protocol.ScopeValidation, auditUser string, actorIdentity map[string]any, pendingTeamWork bool) string {
+	executionState := "verified"
+	runResult := "completed"
+	runMessage := "Execution run completed for confirmed chat proposal"
+	if pendingTeamWork {
+		executionState = "running"
+		runResult = "started"
+		runMessage = "Execution run started for confirmed chat proposal"
+	}
 	auditID, _ := s.createAuditEvent(
 		protocol.TemplateChatToProposal, "confirm-action",
-		"Chat proposal confirmed and verified execution record created",
+		"Chat proposal confirmed and execution record created",
 		withActorIdentity(map[string]any{
 			"proof_id":        proofID,
 			"run_id":          runID,
-			"execution_state": "verified",
+			"execution_state": executionState,
 			"actor":           "Soma",
 			"user":            auditUser,
 			"action":          "proposal_confirmed",
@@ -205,18 +223,27 @@ func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protoco
 	)
 	_, _ = s.createAuditEvent(
 		protocol.TemplateChatToProposal, "confirm-action",
-		"Execution run completed for confirmed chat proposal",
+		runMessage,
 		withActorIdentity(map[string]any{
 			"actor":           "Soma",
 			"user":            auditUser,
 			"action":          "execution_run",
-			"result_status":   "completed",
+			"result_status":   runResult,
 			"run_id":          runID,
 			"intent_proof_id": proofID,
 			"capability_used": strings.Join(scope.CapabilityIDs, ","),
 		}, actorIdentity),
 	)
 	return auditID
+}
+
+func confirmedActionHasPendingTeamWork(results []plannedToolExecutionResult) bool {
+	for _, result := range results {
+		if isDelegateTool(result.Name) {
+			return true
+		}
+	}
+	return false
 }
 
 func withActorIdentity(ctx map[string]any, actorIdentity map[string]any) map[string]any {

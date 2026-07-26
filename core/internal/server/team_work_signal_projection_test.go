@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -94,6 +95,9 @@ func TestTeamWorkSignalProjection_ResultWithRetainedOutputRecordsCompletionProof
 	mock.MatchExpectationsInOrder(true)
 	mockLinkedTeamWorkItem(mock, "game-team", workID, runID, intentProofID, contractID, now)
 	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT COUNT\\(\\*\\).*FROM team_work_items").
+		WithArgs(runID, workID).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 	mock.ExpectQuery("INSERT INTO proof_artifacts").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("55555555-5555-5555-5555-555555555555"))
 	mock.ExpectExec("UPDATE execution_contracts").
@@ -103,6 +107,12 @@ func TestTeamWorkSignalProjection_ResultWithRetainedOutputRecordsCompletionProof
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	expectProjectedTeamWorkUpdate(mock, workID, protocol.TeamWorkStateOutputReady, false, "")
 	expectProjectedInteractionInsertOnly(mock, "game-team", workID, "output_ready", protocol.PayloadKindResult, now)
+	mock.ExpectExec("UPDATE mission_runs SET status = \\$1, completed_at = GREATEST").
+		WithArgs(runs.StatusCompleted, runID).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("INSERT INTO mission_events").
+		WithArgs(sqlmock.AnyArg(), runID, "default", string(protocol.EventMissionCompleted), string(protocol.SeverityInfo), "admin", "governance", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
 	raw := mustSignalEnvelope(t, protocol.SignalEnvelope{

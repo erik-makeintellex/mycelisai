@@ -123,12 +123,15 @@ func (s *AdminServer) markRunCompletedTx(tx *sql.Tx, runID, proofID string) erro
 	}
 	now := time.Now()
 
-	_, err := tx.Exec(
-		`UPDATE mission_runs SET status = $1, completed_at = NOW() WHERE id = $2`,
+	result, err := tx.Exec(
+		`UPDATE mission_runs SET status = $1, completed_at = GREATEST(NOW(), started_at) WHERE id = $2 AND status <> $1`,
 		runs.StatusCompleted, runID,
 	)
 	if err != nil {
 		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return nil
 	}
 
 	payload, _ := json.Marshal(map[string]any{
@@ -159,7 +162,7 @@ func (s *AdminServer) markRunFailedTx(tx *sql.Tx, runID, proofID, reason string)
 	}
 
 	_, err := tx.Exec(
-		`UPDATE mission_runs SET status = $1, completed_at = NOW() WHERE id = $2`,
+		`UPDATE mission_runs SET status = $1, completed_at = GREATEST(NOW(), started_at) WHERE id = $2`,
 		runs.StatusFailed, runID,
 	)
 	if err != nil {

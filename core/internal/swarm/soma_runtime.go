@@ -21,6 +21,7 @@ func (s *Soma) Start() error {
 	if err != nil {
 		log.Printf("WARN: Failed to load team manifests: %v", err)
 	}
+	manifests = s.mergeDurableTeamManifests(manifests)
 	for _, m := range manifests {
 		team := NewTeam(s.applyProviderPolicy(m), s.nc, s.brain, s.toolExecutor)
 		s.configureTeam(team, toolDescs)
@@ -37,6 +38,43 @@ func (s *Soma) Start() error {
 		return fmt.Errorf("failed to start Axon: %w", err)
 	}
 	return nil
+}
+
+func (s *Soma) mergeDurableTeamManifests(standing []*TeamManifest) []*TeamManifest {
+	merged := make([]*TeamManifest, 0, len(standing))
+	seen := make(map[string]struct{}, len(standing))
+	for _, manifest := range standing {
+		if manifest == nil || strings.TrimSpace(manifest.ID) == "" {
+			continue
+		}
+		if _, exists := seen[manifest.ID]; exists {
+			continue
+		}
+		seen[manifest.ID] = struct{}{}
+		merged = append(merged, manifest)
+	}
+	if s.durableTeamLoader == nil {
+		return merged
+	}
+
+	restored, err := s.durableTeamLoader.LoadRuntimeTeams(s.ctx)
+	if err != nil {
+		log.Printf("WARN: Failed to restore durable runtime teams: %v", err)
+		return merged
+	}
+	for _, manifest := range restored {
+		if manifest == nil || strings.TrimSpace(manifest.ID) == "" {
+			continue
+		}
+		if _, exists := seen[manifest.ID]; exists {
+			log.Printf("Soma kept standing manifest for durable team ID %s", manifest.ID)
+			continue
+		}
+		seen[manifest.ID] = struct{}{}
+		merged = append(merged, manifest)
+		log.Printf("Soma restoring durable runtime team: %s", manifest.ID)
+	}
+	return merged
 }
 
 func (s *Soma) configureTeam(team *Team, toolDescs map[string]string) {

@@ -57,3 +57,38 @@ func TestConfirmActionResponseDataIncludesTeamWorkRefs(t *testing.T) {
 		t.Fatalf("primary deliverable = %q", summary.WorkIntent.OutputContract.PrimaryDeliverable)
 	}
 }
+
+func TestConfirmActionResponseDataKeepsDelegatedExecutionRunning(t *testing.T) {
+	data := confirmActionResponseDataForStatus(
+		"proof-1", "contract-1", "", "run-1", "audit-1", runs.StatusRunning,
+		&protocol.ScopeValidation{},
+		[]plannedToolExecutionResult{{Name: "delegate_task"}},
+		[]confirmActionTeamWorkRef{{WorkItemID: "work-1", TeamID: "qa-team", State: protocol.TeamWorkStateQueued}},
+		nil,
+	)
+	if data["verified"] != false || data["execution_state"] != "running" || data["run_status"] != runs.StatusRunning {
+		t.Fatalf("running response = %#v", data)
+	}
+	summary, ok := data["execution_summary"].(*protocol.ExecutionSummary)
+	if !ok {
+		t.Fatalf("execution_summary = %T", data["execution_summary"])
+	}
+	if summary.Execution.Status != protocol.ExecutionStatusRunning {
+		t.Fatalf("execution status = %q", summary.Execution.Status)
+	}
+	if summary.Proof.Verified == nil || *summary.Proof.Verified {
+		t.Fatalf("pending proof must remain unverified: %#v", summary.Proof)
+	}
+	if summary.Proof.ProofID != "" {
+		t.Fatalf("pending execution must not claim a completion proof: %#v", summary.Proof)
+	}
+}
+
+func TestConfirmedActionHasPendingTeamWork(t *testing.T) {
+	if confirmedActionHasPendingTeamWork([]plannedToolExecutionResult{{Name: "write_file"}}) {
+		t.Fatal("synchronous file output should not remain pending")
+	}
+	if !confirmedActionHasPendingTeamWork([]plannedToolExecutionResult{{Name: "delegate_task"}}) {
+		t.Fatal("delegated work must remain pending")
+	}
+}

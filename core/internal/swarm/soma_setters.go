@@ -24,3 +24,8 @@ func (s *Soma) SetMCPToolDescs(descs map[string]string) {
 func (s *Soma) SetProviderPolicy(policy ProviderPolicy) {
 	s.providerPolicy = policy.Clone()
 }
+
+// SetDurableTeamLoader enables restoration of nonterminal runtime-created teams.
+func (s *Soma) SetDurableTeamLoader(loader DurableTeamLoader) {
+	s.durableTeamLoader = loader
+}

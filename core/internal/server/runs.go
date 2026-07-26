@@ -2,9 +2,35 @@ package server
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/mycelis/core/pkg/protocol"
 )
+
+// handleGetRun returns one durable run receipt.
+// GET /api/v1/runs/{id}
+func (s *AdminServer) handleGetRun(w http.ResponseWriter, r *http.Request) {
+	runID := r.PathValue("id")
+	if runID == "" {
+		respondAPIError(w, "run_id is required", http.StatusBadRequest)
+		return
+	}
+	if s.Runs == nil {
+		respondAPIError(w, "run store not initialized", http.StatusServiceUnavailable)
+		return
+	}
+
+	run, err := s.Runs.GetRun(r.Context(), runID)
+	if err != nil {
+		if strings.Contains(err.Error(), "runs: not found:") {
+			respondAPIError(w, "run not found", http.StatusNotFound)
+			return
+		}
+		respondAPIError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(run))
+}
 
 // handleGetRunEvents returns the chronological event timeline for a run.
 // GET /api/v1/runs/{id}/events

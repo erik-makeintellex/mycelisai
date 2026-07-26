@@ -206,6 +206,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/mission-profiles/{id}/activate", s.HandleActivateMissionProfile)
 
 	mux.HandleFunc("GET /api/v1/runs", s.handleListRuns)
+	mux.HandleFunc("GET /api/v1/runs/{id}", s.handleGetRun)
 	mux.HandleFunc("GET /api/v1/runs/{id}/events", s.handleGetRunEvents)
 	mux.HandleFunc("GET /api/v1/runs/{id}/chain", s.handleGetRunChain)
 	mux.HandleFunc("GET /api/v1/triggers", s.HandleListTriggers)

@@ -57,7 +57,7 @@ func TestHandleConfirmAction_PersistsFailureProofArtifact(t *testing.T) {
 	mock.ExpectExec("UPDATE intent_proofs SET status = 'failed' WHERE id = \\$1").
 		WithArgs(sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectExec("UPDATE mission_runs SET status = \\$1, completed_at = NOW\\(\\) WHERE id = \\$2").
+	mock.ExpectExec("UPDATE mission_runs SET status = \\$1, completed_at = GREATEST\\(NOW\\(\\), started_at\\) WHERE id = \\$2").
 		WithArgs(runs.StatusFailed, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("INSERT INTO mission_events").

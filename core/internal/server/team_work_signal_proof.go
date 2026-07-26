@@ -16,6 +16,7 @@ func (p *teamWorkSignalProjection) recordAsyncCompletionProof(
 	item protocol.TeamWorkItem,
 	payloadKind protocol.SignalPayloadKind,
 	outputRefs []protocol.TeamOutputRef,
+	finalResult bool,
 ) (string, error) {
 	if payloadKind != protocol.PayloadKindResult || item.State != protocol.TeamWorkStateOutputReady || len(outputRefs) == 0 {
 		return "", nil
@@ -64,6 +65,7 @@ func (p *teamWorkSignalProjection) recordAsyncCompletionProof(
 			"expected_proof":   item.ExpectedProof,
 			"output_refs":      outputRefs,
 		},
+		Intermediate: !finalResult,
 	})
 	if err != nil {
 		return "", fmt.Errorf("record async team completion proof: %w", err)
