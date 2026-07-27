@@ -197,7 +197,7 @@ function RailAlertLink({ alert }: { alert: DashboardRailAlert }) {
       data-target-type={alert.target?.type}
       data-target-id={alert.target?.id}
       aria-label={`${actionLabel}: ${alert.title}`}
-      className={`block rounded-lg border px-3 py-2 text-left text-xs transition focus:outline-none focus:ring-2 ${alertClassName(alert.severity)}`}
+      className={`block min-w-0 break-words rounded-lg border px-3 py-2 text-left text-xs transition focus:outline-none focus:ring-2 ${alertClassName(alert.severity)}`}
     >
       <span className="block font-semibold">{alert.title}</span>
       {alert.detail ? (

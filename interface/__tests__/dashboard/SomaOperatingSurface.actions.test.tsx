@@ -183,14 +183,36 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
     expect(screen.queryByText("Outcome Vault")).toBeNull();
     expect(screen.getByTestId("mission-chat")).toBeDefined();
+    const opener = screen.getByRole("button", { name: /Open Outcome Vault/i });
+    expect(opener.getAttribute("aria-expanded")).toBe("false");
 
-    fireEvent.click(screen.getAllByRole("button", { name: /Open Outcome Vault/i })[0]);
+    opener.focus();
+    fireEvent.click(opener);
 
     expect(screen.getByTestId("soma-outcome-vault-overlay")).toBeDefined();
     expect(screen.getByTestId("soma-outcome-vault").getAttribute("data-state")).toBe("expanded");
     expect(screen.getByText("Outcome Vault")).toBeDefined();
+    expect(screen.getByRole("dialog", { name: "Outcome Vault" })).toBeDefined();
+    expect(opener.getAttribute("aria-expanded")).toBe("true");
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /^Close Outcome Vault$/i }));
 
-    fireEvent.click(screen.getByRole("button", { name: /Close Outcome Vault/i }));
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Browse all" }));
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /^Close Outcome Vault$/i }));
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
+    expect(document.activeElement).toBe(opener);
+
+    fireEvent.click(opener);
+    fireEvent.click(screen.getByRole("button", { name: /Close Outcome Vault backdrop/i }));
+
+    expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
+
+    fireEvent.click(opener);
+    fireEvent.click(screen.getByRole("button", { name: /Close Outcome Vault$/i }));
 
     expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
     expect(screen.getByTestId("mission-chat")).toBeDefined();
