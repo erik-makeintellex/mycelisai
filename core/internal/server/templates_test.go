@@ -230,6 +230,9 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 		t.Fatalf("file content = %q, want hello world", got)
 	}
 
+	if !s.Soma.StopTeam("qa-runtime-team") {
+		t.Fatal("expected confirmed runtime team to stop before database verification")
+	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet db expectations: %v", err)
 	}
