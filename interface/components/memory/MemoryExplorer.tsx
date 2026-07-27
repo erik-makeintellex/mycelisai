@@ -22,24 +22,28 @@ type MemoryView = "work" | "search" | "details";
 const MEMORY_VIEWS: Array<{
   id: MemoryView;
   label: string;
+  compactLabel: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
   {
     id: "work",
     label: "Recent Work",
+    compactLabel: "Recent",
     description: "Warm records",
     icon: FileText,
   },
   {
     id: "search",
     label: "Search Memory",
+    compactLabel: "Search",
     description: "Cold recall",
     icon: Search,
   },
   {
     id: "details",
     label: "Details",
+    compactLabel: "Details",
     description: "Inspect record",
     icon: Brain,
   },
@@ -52,25 +56,36 @@ export default function MemoryExplorer() {
   const [coldSearchQuery, setColdSearchQuery] = useState<string | undefined>(
     undefined,
   );
-  const [activeView, setActiveView] = useState<MemoryView>("work");
+  const [activeView, setActiveView] = useState<MemoryView>(readMemoryView);
   const [selection, setSelection] = useState<MemorySelection | null>(null);
   const [signalExpanded, setSignalExpanded] = useState(false);
   const getArtifactDetail = useCortexStore((s) => s.getArtifactDetail);
   const selectedArtifactDetail = useCortexStore((s) => s.selectedArtifactDetail);
 
+  const selectView = useCallback((view: MemoryView, mode: RouteMode = "push") => {
+    setActiveView(view);
+    updateMemoryRoute(view, mode);
+  }, []);
+
   const handleSearchRelated = useCallback((query: string) => {
     setColdSearchQuery(query);
-    setActiveView("search");
-  }, []);
+    selectView("search");
+  }, [selectView]);
 
   const handleSelectArtifact = useCallback(
     (artifact: Artifact) => {
       setSelection({ kind: "artifact", artifact });
-      setActiveView("details");
+      selectView("details");
       void getArtifactDetail(artifact.id);
     },
-    [getArtifactDetail],
+    [getArtifactDetail, selectView],
   );
+
+  React.useEffect(() => {
+    const restoreView = () => setActiveView(readMemoryView());
+    window.addEventListener("popstate", restoreView);
+    return () => window.removeEventListener("popstate", restoreView);
+  }, []);
 
   React.useEffect(() => {
     if (!selectedArtifactDetail || selection?.kind !== "artifact") return;
@@ -99,8 +114,9 @@ export default function MemoryExplorer() {
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <nav
           aria-label="Memory views"
-          className="flex flex-wrap gap-2 border-b border-cortex-border bg-cortex-surface/30 px-3 py-2"
+          className="flex flex-nowrap gap-1 overflow-x-auto border-b border-cortex-border bg-cortex-surface/30 px-2 py-2 [scrollbar-width:none] sm:px-3 [&::-webkit-scrollbar]:hidden"
           role="tablist"
+          onKeyDown={(event) => handleMemoryTabKeyDown(event, activeView, selectView)}
         >
           {MEMORY_VIEWS.map((view) => {
             const Icon = view.icon;
@@ -112,8 +128,11 @@ export default function MemoryExplorer() {
                 role="tab"
                 aria-label={view.label}
                 aria-selected={isActive}
-                onClick={() => setActiveView(view.id)}
-                className={`flex min-w-[160px] items-center gap-2 rounded-xl border px-3 py-2 text-left transition-colors ${
+                aria-controls={`memory-${view.id}-panel`}
+                id={`memory-${view.id}-tab`}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => selectView(view.id)}
+                className={`flex h-11 min-w-max flex-none items-center gap-2 rounded-lg border px-3 text-left transition-colors sm:min-w-[150px] sm:flex-1 lg:max-w-[220px] ${
                   isActive
                     ? "border-cortex-primary/40 bg-cortex-primary/15 text-cortex-text-main"
                     : "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted hover:border-cortex-primary/30 hover:text-cortex-text-main"
@@ -121,8 +140,19 @@ export default function MemoryExplorer() {
               >
                 <Icon className="h-4 w-4 text-cortex-primary" />
                 <span>
-                  <span className="block text-sm font-bold">{view.label}</span>
-                  <span className="block text-[10px] text-cortex-text-muted">
+                  {view.compactLabel === view.label ? (
+                    <span className="block text-sm font-bold">{view.label}</span>
+                  ) : (
+                    <>
+                      <span className="block text-sm font-bold sm:hidden">
+                        {view.compactLabel}
+                      </span>
+                      <span className="hidden text-sm font-bold sm:block">
+                        {view.label}
+                      </span>
+                    </>
+                  )}
+                  <span className="hidden text-[10px] text-cortex-text-muted sm:block">
                     {view.description}
                   </span>
                 </span>
@@ -131,7 +161,12 @@ export default function MemoryExplorer() {
           })}
         </nav>
 
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div
+          className="min-h-0 flex-1 overflow-hidden"
+          role="tabpanel"
+          id={`memory-${activeView}-panel`}
+          aria-labelledby={`memory-${activeView}-tab`}
+        >
           {activeView === "work" ? (
             <WarmMemoryPanel
               onSearchRelated={handleSearchRelated}
@@ -142,7 +177,7 @@ export default function MemoryExplorer() {
               searchQuery={coldSearchQuery}
               onSelectResult={(result) => {
                 setSelection({ kind: "search", result });
-                setActiveView("details");
+                selectView("details");
               }}
             />
           ) : (
@@ -180,4 +215,57 @@ export default function MemoryExplorer() {
       )}
     </div>
   );
+}
+
+type RouteMode = "push" | "replace";
+
+const MEMORY_VIEW_ORDER: MemoryView[] = ["work", "search", "details"];
+
+function readMemoryView(): MemoryView {
+  if (typeof window === "undefined") return "work";
+  const view = new URL(window.location.href).searchParams.get("view");
+  return view === "search" || view === "details" ? view : "work";
+}
+
+function updateMemoryRoute(view: MemoryView, mode: RouteMode) {
+  if (typeof window === "undefined") return;
+  const nextUrl = new URL(window.location.href);
+  if (view === "work") nextUrl.searchParams.delete("view");
+  else nextUrl.searchParams.set("view", view);
+  const updateHistory =
+    mode === "push" ? window.history.pushState : window.history.replaceState;
+  updateHistory.call(
+    window.history,
+    window.history.state,
+    "",
+    `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`,
+  );
+}
+
+function handleMemoryTabKeyDown(
+  event: React.KeyboardEvent<HTMLElement>,
+  activeView: MemoryView,
+  selectView: (view: MemoryView, mode?: RouteMode) => void,
+) {
+  const offsets: Record<string, number | undefined> = {
+    ArrowRight: 1,
+    ArrowDown: 1,
+    ArrowLeft: -1,
+    ArrowUp: -1,
+  };
+  let nextIndex = MEMORY_VIEW_ORDER.indexOf(activeView);
+  if (event.key === "Home") nextIndex = 0;
+  else if (event.key === "End") nextIndex = MEMORY_VIEW_ORDER.length - 1;
+  else if (offsets[event.key]) {
+    nextIndex =
+      (nextIndex + offsets[event.key]! + MEMORY_VIEW_ORDER.length) %
+      MEMORY_VIEW_ORDER.length;
+  } else return;
+
+  event.preventDefault();
+  const nextView = MEMORY_VIEW_ORDER[nextIndex];
+  selectView(nextView);
+  requestAnimationFrame(() => {
+    document.getElementById(`memory-${nextView}-tab`)?.focus();
+  });
 }
