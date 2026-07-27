@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -216,7 +217,7 @@ profiles:
 }
 
 func TestNewRouter_NoEmergencyLoopbackFallbackWithoutConfiguredProviders(t *testing.T) {
-	t.Setenv("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED", "")
+	clearProviderRoutingEnv(t)
 
 	router, err := NewRouter(filepath.Join(t.TempDir(), "missing-cognitive.yaml"), nil)
 	if err != nil {
@@ -228,6 +229,33 @@ func TestNewRouter_NoEmergencyLoopbackFallbackWithoutConfiguredProviders(t *test
 	}
 	if len(router.Config.Providers) != 0 {
 		t.Fatalf("expected no providers without explicit config, got %d", len(router.Config.Providers))
+	}
+}
+
+func TestClearProviderRoutingEnvRemovesDynamicOverrides(t *testing.T) {
+	t.Setenv("MYCELIS_PROVIDER_TEST_DYNAMIC_ENABLED", "true")
+	t.Setenv("MYCELIS_PROFILE_TEST_DYNAMIC_PROVIDER", "test-dynamic")
+
+	clearProviderRoutingEnv(t)
+
+	if value := os.Getenv("MYCELIS_PROVIDER_TEST_DYNAMIC_ENABLED"); value != "" {
+		t.Fatalf("provider override remained %q", value)
+	}
+	if value := os.Getenv("MYCELIS_PROFILE_TEST_DYNAMIC_PROVIDER"); value != "" {
+		t.Fatalf("profile override remained %q", value)
+	}
+}
+
+func clearProviderRoutingEnv(t *testing.T) {
+	t.Helper()
+	for _, entry := range os.Environ() {
+		key, _, ok := strings.Cut(entry, "=")
+		if !ok {
+			continue
+		}
+		if strings.HasPrefix(key, "MYCELIS_PROVIDER_") || strings.HasPrefix(key, "MYCELIS_PROFILE_") {
+			t.Setenv(key, "")
+		}
 	}
 }
 
