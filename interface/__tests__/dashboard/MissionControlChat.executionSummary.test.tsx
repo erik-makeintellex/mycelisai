@@ -161,6 +161,59 @@ describe('MissionControlChat execution summary', () => {
         });
     });
 
+    it('keeps a compact trust receipt on quick tool-assisted answers', async () => {
+        useCortexStore.setState({
+            councilMembers: COUNCIL_MEMBERS,
+            councilTarget: 'admin',
+        });
+        mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+            const url = requestUrl(input);
+            if (url.includes('/api/v1/council/members')) {
+                return okJson({ ok: true, data: COUNCIL_MEMBERS });
+            }
+            if (!url.includes('/api/v1/chat')) return errorText(404, 'not found');
+            return okJson({
+                ok: true,
+                data: {
+                    ...CTS_CHAT_RESPONSE.data,
+                    mode: 'answer',
+                    payload: {
+                        text: 'Soma found current public-web sources.',
+                        ask_class: 'direct_answer',
+                        response_depth: 'quick_box',
+                        execution_summary: {
+                            execution: {
+                                shape: 'tool_assisted_work',
+                                status: 'completed',
+                            },
+                            capability_use: [{
+                                id: 'web_search',
+                                reason: 'Search source: External or public web provider; verify before relying',
+                            }],
+                            proof: {
+                                run_class: 'no_run',
+                                proof_class: 'audit_only',
+                                audit_event_id: 'audit-search-123',
+                                verified: true,
+                            },
+                        },
+                    },
+                },
+            });
+        });
+        render(<MissionControlChat />);
+        await settleMissionControlChat();
+        const input = screen.getByPlaceholderText(/Ask Soma/i);
+        fireEvent.change(input, { target: { value: 'Find current sources' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+        await waitFor(() => {
+            expect(screen.getByText('Soma found current public-web sources.')).toBeDefined();
+            expect(screen.getByTestId('execution-summary-receipt')).toBeDefined();
+            expect(screen.getByText('Result verified')).toBeDefined();
+            expect(screen.queryByTestId('execution-summary-card')).toBeNull();
+        });
+    });
+
     it('renders confirmed generated file outputs as openable links on system run messages', async () => {
         const openWindow = vi.spyOn(window, 'open').mockReturnValue(null);
         mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
