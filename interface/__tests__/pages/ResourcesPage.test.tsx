@@ -92,19 +92,19 @@ describe('Resources Page (operator support)', () => {
 
     it('renders all tabs', async () => {
         await act(async () => { render(<ResourcesPage />); });
-        expect(screen.getByRole('navigation', { name: 'Resource type menu' })).toBeDefined();
-        expect(screen.getByRole('button', { name: /Capabilities/i })).toBeDefined();
-        expect(screen.getByRole('button', { name: /Exchange/i })).toBeDefined();
-        expect(screen.getByRole('button', { name: /Deployment Context/i })).toBeDefined();
-        expect(screen.getByRole('button', { name: /Output Files/i })).toBeDefined();
-        expect(screen.getByRole('button', { name: /AI Engines/i })).toBeDefined();
-        expect(screen.getByRole('button', { name: /Role Library/i })).toBeDefined();
+        expect(screen.getByRole('tablist', { name: 'Resource type menu' })).toBeDefined();
+        expect(screen.getByRole('tab', { name: /Capabilities/i })).toBeDefined();
+        expect(screen.getByRole('tab', { name: /Exchange/i })).toBeDefined();
+        expect(screen.getByRole('tab', { name: /Deployment Context/i })).toBeDefined();
+        expect(screen.getByRole('tab', { name: /Output Files/i })).toBeDefined();
+        expect(screen.getByRole('tab', { name: /AI Engines/i })).toBeDefined();
+        expect(screen.getByRole('tab', { name: /Role Library/i })).toBeDefined();
     });
 
     it('defaults to output files tab', async () => {
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /Output Files/i }).getAttribute('aria-current')).toBe('page');
+            expect(screen.getByRole('tab', { name: /Output Files/i }).getAttribute('aria-selected')).toBe('true');
         });
         expect(screen.getByText(/Open delivered files, packages, media, and team outputs/i)).toBeDefined();
     });
@@ -113,7 +113,7 @@ describe('Resources Page (operator support)', () => {
         mockSearchParams.set('tab', 'tools');
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /Capabilities/i }).getAttribute('aria-current')).toBe('page');
+            expect(screen.getByRole('tab', { name: /Capabilities/i }).getAttribute('aria-selected')).toBe('true');
         });
         expect(screen.getByText(/What Soma can use, what needs repair, and what can be requested/i)).toBeDefined();
     });
@@ -122,7 +122,7 @@ describe('Resources Page (operator support)', () => {
         mockSearchParams.set('tab', 'roles');
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /Role Library/i }).getAttribute('aria-current')).toBe('page');
+            expect(screen.getByRole('tab', { name: /Role Library/i }).getAttribute('aria-selected')).toBe('true');
         });
     });
 
@@ -130,7 +130,7 @@ describe('Resources Page (operator support)', () => {
         mockSearchParams.set('tab', 'exchange');
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /Exchange/i }).getAttribute('aria-current')).toBe('page');
+            expect(screen.getByRole('tab', { name: /Exchange/i }).getAttribute('aria-selected')).toBe('true');
         });
     });
 
@@ -147,13 +147,19 @@ describe('Resources Page (operator support)', () => {
         mockSearchParams.set('tab', 'deployment-context');
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /Deployment Context/i }).getAttribute('aria-current')).toBe('page');
+            expect(screen.getByRole('tab', { name: /Deployment Context/i }).getAttribute('aria-selected')).toBe('true');
         });
     });
 
     it('stays available without admin tools gating', async () => {
         await act(async () => { render(<ResourcesPage />); });
-        expect(screen.getByRole('navigation', { name: 'Resource type menu' })).toBeDefined();
+        expect(screen.getByRole('tablist', { name: 'Resource type menu' })).toBeDefined();
         expect(screen.queryByText(/Admin tools/i)).toBeNull();
+    });
+
+    it('uses refresh-safe resource links', async () => {
+        await act(async () => { render(<ResourcesPage />); });
+        expect(screen.getByRole('tab', { name: /Capabilities/i }).getAttribute('href')).toBe('/resources?tab=tools');
+        expect(screen.getByRole('tab', { name: /Output Files/i }).getAttribute('href')).toBe('/resources');
     });
 });

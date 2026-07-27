@@ -2,6 +2,7 @@
 > Navigation: [Project README](../README.md) | [Docs Home](README.md)
 ## TOC
 - [Current Validation Contract](#current-validation-contract)
+- [Cross-Device Certification Matrix](#cross-device-certification-matrix)
 - [Thorough Release Testing Contract](#thorough-release-testing-contract)
 - [User Interaction Delivery Gate](#user-interaction-delivery-gate)
 - [Finalization Concretization Gate](#finalization-concretization-gate)
@@ -29,9 +30,18 @@
 - Repo tasks manage Mycelis tools, services, and proof checkouts, not WSL/Rancher/Docker host lifecycle or VM resets.
 - `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required; `interface.check` retries transient Windows socket-reuse failures after heavy browser proof before treating a route as failed.
 - Playwright starts/stops the managed Next.js app, seeds a local admin web session for ordinary specs, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant; managed Playwright/build/test invocations are serial for a workspace and port.
+
+## Cross-Device Certification Matrix
+Responsive acceptance proves the product journey, not only that a route renders at a smaller viewport:
+| Mode | Reference Viewport | Required Jobs |
+| --- | --- | --- |
+| Compact phone | `390x844` | Navigate, ask Soma, approve, monitor Outcome Health, open a deliverable, recover a blocker, use peer workspace tabs, and return through browser Back. |
+| Medium/tablet | `820x1180` | Complete compact jobs plus list-detail review, overlay/detail close and focus return, and lightweight resource configuration. |
+| Laptop/workspace | `1366x768` | Complete the full Outcome journey with collapsible navigation, bounded work panes, reachable composer, and no unnecessary document scrolling. |
+| Wide desktop | `1440x900` | Inspect proof, compare records, configure capabilities, and use optional simultaneous context without stretched content or oversized controls. |
+Every visible responsive slice checks one primary route scroll owner; bounded nested panes only; no document overflow, clipped labels, overlaps, unreachable fields, or fixed-UI occlusion; `44px` primary touch targets; keyboard/focus return and no hover-only action; URL/refresh/Back and selected-state continuity; loading/empty/degraded/offline/retry/long-content states; bounded composer growth; and visible-browser console, hydration, normalized request failure, and page-error review. Use `desktop-mobile-compression.spec.ts` for shared shell, Dashboard, Resources, and bounded-layout regressions, adding route-owned proof for richer interaction. PWA/native-shell proof begins only after that surface becomes an approved target.
 ## Thorough Release Testing Contract
 Use this source-first sequence when a slice changes the delivered operator workflow, runtime topology, governance behavior, retained outputs, AI provider posture, or release proof lane:
-
 Promotion test order:
 1. On `feature/*`, run focused backend/UI/docs tests, typecheck/build, and headed GUI proof whenever visible behavior changes. Commit only the proven slice.
 2. Merge the feature into `dev`, then rerun the affected integration suites, lifecycle health, and the complete user journey touched by the slice against the integrated state.
@@ -50,12 +60,9 @@ Promotion test order:
 
 ## User Interaction Delivery Gate
 Do not claim thorough release readiness from unit, type, or headless-only proof when the slice changes what the operator sees or approves.
-
 Supported user proof lanes are Windows Compose, Rancher Desktop K3s, WSL-hosted Compose, remote Linux/server hosts, and self-hosted Kubernetes/Helm reached through the same address the operator will use.
-
 Every accepted user-interaction proof must verify the browser address matches the delivered environment; direct Soma answers and governed proposals both work; guided team or temporary workflow lanes stay reviewable; retained outputs survive refresh; AI-host failure produces a visible blocker and recovery path; primary controls remain reachable after dynamic state appears; and page-by-page GUI review covers each route's user job, visual hierarchy, and default-vs-inspectable detail boundary.
 Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof and [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md) for first-run/browser gates and the full browser matrix.
-
 ## Finalization Concretization Gate
 Every finalization slice must prove the concrete runtime contract it touches, not only that screens render or APIs return `200`.
 
