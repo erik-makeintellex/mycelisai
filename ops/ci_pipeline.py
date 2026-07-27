@@ -1,3 +1,4 @@
+import sys
 import time
 
 
@@ -6,10 +7,15 @@ def _core_go_command(core_dir, arguments: str) -> str:
     return f'go -C "{core_dir}" {arguments}'
 
 
+def _console_safe(value: str, encoding: str | None = None) -> str:
+    target_encoding = encoding or getattr(sys.stdout, "encoding", None) or "utf-8"
+    return value.encode(target_encoding, errors="backslashreplace").decode(target_encoding)
+
+
 def _print_failed_result(result) -> None:
     for output in (getattr(result, "stdout", ""), getattr(result, "stderr", "")):
         if output:
-            print(output.rstrip())
+            print(_console_safe(output.rstrip()))
 
 
 def run_lint(c, *, core_dir, task_env, interface_tasks):

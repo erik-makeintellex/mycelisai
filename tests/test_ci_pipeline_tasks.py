@@ -1,10 +1,14 @@
 import pytest
 
-from ops import ci
+from ops import ci, ci_pipeline
 from tests.ci_task_support import FakeContext, FakeResult
 
 CORE_TEST_COMMAND = f'go -C "{ci.CORE_DIR}" test ./... -count=1'
 CORE_VET_COMMAND = f'go -C "{ci.CORE_DIR}" vet ./...'
+
+
+def test_console_safe_escapes_characters_missing_from_host_encoding():
+    assert ci_pipeline._console_safe("failure: \ufffd", "cp1252") == "failure: \\ufffd"
 
 
 def test_baseline_runs_expected_commands_without_e2e(monkeypatch):
