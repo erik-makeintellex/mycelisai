@@ -133,6 +133,15 @@ function isAnswerOnlyDepth(msg: ChatMessage) {
         ),
     );
 }
+function hasAuditableAnswerEvidence(msg: ChatMessage) {
+    const summary = msg.execution_summary;
+    const status = summary?.execution?.status?.trim().toLowerCase();
+    return Boolean(
+        summary?.execution?.shape === "tool_assisted_work"
+        && (status === "complete" || status === "completed")
+        && summary.proof,
+    );
+}
 
 function shouldShowSimpleThreadState(msg: ChatMessage) {
     const state = msg.ui_response_state ?? msg.execution_summary?.ui_response_state;
@@ -160,14 +169,19 @@ export default function MissionControlMessageBubble({
     const consultationSummary = consultationResultSummary(msg.consultations);
     const responseBadge = askClassBadge(msg.ask_class);
     const answerOnlyDepth = isAnswerOnlyDepth(msg);
+    const auditableAnswerEvidence = answerOnlyDepth && hasAuditableAnswerEvidence(msg);
     const showExecutionSummary = Boolean(
         msg.execution_summary
-        && !answerOnlyDepth
         && (
-            msg.mode === "execution_result"
-            || msg.run_id
-            || msg.artifacts?.length
-            || msg.ask_class === "execution_blocker"
+            auditableAnswerEvidence || (
+                !answerOnlyDepth
+                && (
+                    msg.mode === "execution_result"
+                    || msg.run_id
+                    || msg.artifacts?.length
+                    || msg.ask_class === "execution_blocker"
+                )
+            )
         ),
     );
     const hasStructuredEvidence = Boolean(
@@ -180,7 +194,7 @@ export default function MissionControlMessageBubble({
         && showAnswerExtras
         && (!compactResult || hasStructuredEvidence);
     const showThreadState = !isUser && showAnswerExtras && (!compactResult || shouldShowSimpleThreadState(msg));
-    const useReceipt = compactResult && showExecutionSummary && msg.execution_summary
+    const useReceipt = (compactResult || auditableAnswerEvidence) && showExecutionSummary && msg.execution_summary
         ? shouldUseExecutionSummaryReceipt({
             summary: msg.execution_summary,
             runId: msg.run_id,
