@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import { ActiveWorkLane } from "@/components/teams/ActiveWorkLane";
 import { mergeTeamWorkItems, useTeamWorkActionHandler } from "@/components/teams/useTeamWorkActionHandler";
@@ -165,6 +165,8 @@ export function SomaOperatingSurface({
   const trustNode = trustSlot ?? (hasTrustReviewContent ? <SomaCausalSummary messages={missionChat} /> : undefined);
   const contextNode = contextSlot ?? (hasContextReviewContent ? <SomaEvidencePanel items={evidence} compact /> : undefined);
   const [vaultOpen, setVaultOpen] = useState(false);
+  const openVault = useCallback(() => setVaultOpen(true), []);
+  const closeVault = useCallback(() => setVaultOpen(false), []);
 
   const clearFocusedContext = () => {
     selectTeam(null);
@@ -240,12 +242,11 @@ export function SomaOperatingSurface({
                 <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">
                   {governancePosture ?? "Governed"}
                 </span>
-                {!vaultOpen ? (
-                  <SomaOutcomeVaultHeaderButton
-                    attentionCount={attentionWorkCount + (hasOutputReviewContent ? 1 : 0)}
-                    onOpen={() => setVaultOpen(true)}
-                  />
-                ) : null}
+                <SomaOutcomeVaultHeaderButton
+                  attentionCount={attentionWorkCount + (hasOutputReviewContent ? 1 : 0)}
+                  expanded={vaultOpen}
+                  onOpen={openVault}
+                />
               </div>
             </div>
             <div className="min-h-0 flex-1 p-2 lg:p-3">
@@ -276,7 +277,7 @@ export function SomaOperatingSurface({
             projectSummary={outcomeProjectSummary}
             recoveryCount={unresolvedWorkReviewCount}
             alerts={outcomeVaultAlerts}
-            onClose={() => setVaultOpen(false)}
+            onClose={closeVault}
           />
         </div>
       </div>

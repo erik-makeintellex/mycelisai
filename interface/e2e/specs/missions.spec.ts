@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { expectNoHorizontalOverflow } from '../support/finalization-proof';
 
 test.describe('Soma Dashboard (/dashboard)', () => {
 
@@ -45,9 +46,64 @@ test.describe('Soma Dashboard (/dashboard)', () => {
         const widthDuring = await chatBox.boundingBox().then((box) => box?.width ?? 0);
         expect(widthDuring).toBeGreaterThanOrEqual(widthBefore - 8);
 
-        await page.getByRole('button', { name: /Close Outcome Vault/i }).click();
+        await page.getByRole('button', { name: 'Close Outcome Vault', exact: true }).click();
 
         await expect(page.getByTestId('soma-outcome-vault')).toHaveCount(0);
+    });
+
+    test('Outcome Vault and Soma composer stay usable across layout modes', async ({ page }, testInfo) => {
+        const layouts = [
+            { name: 'compact', width: 390, height: 844 },
+            { name: 'medium', width: 820, height: 1180 },
+            { name: 'workspace', width: 1366, height: 768 },
+            { name: 'wide', width: 1440, height: 900 },
+        ];
+
+        for (const layout of layouts) {
+            await page.setViewportSize({ width: layout.width, height: layout.height });
+            await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+            await expect(page.getByTestId('soma-action-shelf')).toHaveAttribute('data-hydrated', 'true');
+
+            const chat = page.getByTestId('central-soma-chat-frame');
+            const composer = chat.locator('textarea').first();
+            const opener = page.getByRole('button', { name: /Open Outcome Vault/i });
+            await expect(chat).toBeVisible();
+            await expect(composer).toBeVisible();
+            await expect(opener).toBeVisible();
+            await expect(opener).toHaveAttribute('aria-expanded', 'false');
+            const widthBefore = await chat.boundingBox().then((box) => box?.width ?? 0);
+
+            await opener.click();
+
+            const dialog = page.getByRole('dialog', { name: 'Outcome Vault' });
+            await expect(dialog).toBeVisible();
+            await expect(opener).toHaveAttribute('aria-expanded', 'true');
+            await expect(page.getByRole('button', { name: 'Close Outcome Vault', exact: true })).toBeFocused();
+            const widthDuring = await chat.boundingBox().then((box) => box?.width ?? 0);
+            expect(widthDuring).toBeGreaterThanOrEqual(widthBefore - 8);
+            const dialogBounds = await dialog.boundingBox();
+            expect(dialogBounds?.width ?? 0).toBeLessThanOrEqual(layout.width);
+            expect(dialogBounds?.height ?? 0).toBeLessThanOrEqual(layout.height);
+            await page.screenshot({
+                path: testInfo.outputPath(`dashboard-${layout.name}-outcomes.png`),
+                fullPage: false,
+            });
+
+            await page.keyboard.press('Escape');
+
+            await expect(dialog).toHaveCount(0);
+            await expect(opener).toBeFocused();
+            await expect(composer).toBeVisible();
+            await composer.fill(`Continue from the ${layout.name} layout.`);
+            await expect(composer).toHaveValue(`Continue from the ${layout.name} layout.`);
+            await composer.fill('');
+            await expectNoHorizontalOverflow(page);
+            await expect(page.locator('nextjs-portal')).not.toBeVisible();
+        }
+
+        await page.getByRole('button', { name: /Open Outcome Vault/i }).click();
+        await page.getByRole('button', { name: /Close Outcome Vault backdrop/i }).click({ position: { x: 4, y: 4 } });
+        await expect(page.getByRole('dialog', { name: 'Outcome Vault' })).toHaveCount(0);
     });
 
     test('quick action studio saves a reusable Soma ask', async ({ page }) => {
