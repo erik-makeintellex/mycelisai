@@ -44,16 +44,18 @@ export default function MCPToolRegistry() {
     const isEmptyInstalledState = !isFetching && !mcpServersError && mcpServers.length === 0;
     const searchSourceRegistry = useSearchSourceRegistry(searchCapability?.sources, fetchSearchCapability);
     const inputSourceRegistry = useInputSourceRegistry();
+    const fetchOptionalSearchSources = searchSourceRegistry.fetchOptionalSearchSources;
+    const fetchInputSources = inputSourceRegistry.fetchInputSources;
 
     useEffect(() => {
         fetchMCPServers();
         fetchMCPActivity();
         fetchSearchCapability();
-        searchSourceRegistry.fetchOptionalSearchSources();
-        inputSourceRegistry.fetchInputSources();
+        fetchOptionalSearchSources();
+        fetchInputSources();
         fetchCapabilities();
         fetchMCPToolSets();
-    }, [fetchCapabilities, fetchMCPActivity, fetchMCPServers, fetchMCPToolSets, fetchSearchCapability, inputSourceRegistry.fetchInputSources, searchSourceRegistry.fetchOptionalSearchSources]);
+    }, [fetchCapabilities, fetchInputSources, fetchMCPActivity, fetchMCPServers, fetchMCPToolSets, fetchOptionalSearchSources, fetchSearchCapability]);
 
     useEffect(() => {
         initializeStream();

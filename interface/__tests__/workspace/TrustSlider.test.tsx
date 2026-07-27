@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import type { SVGProps } from 'react';
 
 vi.mock('lucide-react', () => ({
-    Shield: (props: any) => <svg data-testid="shield-icon" {...props} />,
+    Shield: (props: SVGProps<SVGSVGElement>) => <svg data-testid="shield-icon" {...props} />,
 }));
 
 import TrustSlider from '@/components/workspace/TrustSlider';

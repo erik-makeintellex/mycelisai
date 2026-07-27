@@ -25,7 +25,7 @@ describe('RunChainPage (/runs/[id]/chain)', () => {
     });
 
     it('renders the causal chain route with navigation back to the run', async () => {
-        (global.fetch as any) = vi.fn().mockResolvedValue({
+        global.fetch = vi.fn().mockResolvedValue({
             ok: true,
             json: async () => ({
                 run_id: 'test-run-123-abcd-5678',

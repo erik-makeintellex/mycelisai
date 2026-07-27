@@ -163,6 +163,7 @@ def run_release_preflight(
     runtime_posture,
     runtime_posture_check,
     toolchain_check,
+    lint,
     baseline,
     service_check,
 ):
@@ -178,6 +179,7 @@ def run_release_preflight(
     ]
     if resolved["runtime_posture"]:
         stages.append(("runtime-posture", lambda: runtime_posture_check(c)))
+    stages.append(("lint", lambda: lint.body(c)))
     stages.append(("baseline", lambda: baseline.body(c, e2e=e2e)))
     if resolved["service_health"]:
         stages.append(("service-check", lambda: service_check.body(c, live_backend=resolved["live_backend"])))

@@ -5,34 +5,27 @@ test.describe('Agent Catalogue Page (/catalogue)', () => {
 
     test.beforeEach(async ({ page }) => {
         await page.goto('/catalogue', { waitUntil: 'domcontentloaded' });
+        await expect(page).toHaveURL(/\/resources\?tab=roles$/);
     });
 
     test('page loads without errors', async ({ page }) => {
+        await expect(page.getByRole('heading', { name: 'Resources' })).toBeVisible();
+        await expect(page.getByText('Agent Catalogue', { exact: true })).toBeVisible();
         const errorOverlay = page.locator('nextjs-portal');
         await expect(errorOverlay).not.toBeVisible();
     });
 
-    test('agent cards display when data exists', async ({ page }) => {
-        // Cards or empty state
-        const cards = page.locator('[class*="rounded"]').filter({
-            has: page.locator('text=/cognitive|sensory|actuation|ledger/i'),
-        });
-        const count = await cards.count();
-        if (count === 0) {
-            // Empty state or no agents — still valid
-            return;
-        }
-        await expect(cards.first()).toBeVisible();
+    test('role library exposes its current controls', async ({ page }) => {
+        await expect(page.getByRole('combobox')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'New Agent' })).toBeVisible();
     });
 
     test('create agent button is visible', async ({ page }) => {
-        const createBtn = page.locator('button:has-text("Create"), button:has-text("Add"), button:has-text("New")');
-        const visible = await createBtn.first().isVisible().catch(() => false);
-        if (!visible) {
-            test.skip();
-            return;
-        }
-        await expect(createBtn.first()).toBeVisible();
+        const createButton = page.getByRole('button', { name: 'New Agent' });
+        await expect(createButton).toBeVisible();
+        await createButton.click();
+        await expect(page.getByText('New Agent', { exact: true }).last()).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Create' })).toBeVisible();
     });
 
     test('no bg-white leak on catalogue page', async ({ page }) => {

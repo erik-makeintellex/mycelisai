@@ -1,16 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import type { SVGProps } from 'react';
 
 // vi.mock calls BEFORE component imports
 vi.mock('@/components/workspace/TrustSlider', () => ({
     default: () => <div data-testid="trust-slider">TrustSlider</div>,
 }));
 vi.mock('lucide-react', () => ({
-    Send: (props: any) => <svg data-testid="send-icon" {...props} />,
-    Loader2: (props: any) => <svg data-testid="loader-icon" {...props} />,
-    Bot: (props: any) => <svg data-testid="bot-icon" {...props} />,
-    User: (props: any) => <svg data-testid="user-icon" {...props} />,
-    FileJson: (props: any) => <svg data-testid="file-json-icon" {...props} />,
+    Send: (props: SVGProps<SVGSVGElement>) => <svg data-testid="send-icon" {...props} />,
+    Loader2: (props: SVGProps<SVGSVGElement>) => <svg data-testid="loader-icon" {...props} />,
+    Bot: (props: SVGProps<SVGSVGElement>) => <svg data-testid="bot-icon" {...props} />,
+    User: (props: SVGProps<SVGSVGElement>) => <svg data-testid="user-icon" {...props} />,
+    FileJson: (props: SVGProps<SVGSVGElement>) => <svg data-testid="file-json-icon" {...props} />,
 }));
 
 import ArchitectChat from '@/components/workspace/ArchitectChat';

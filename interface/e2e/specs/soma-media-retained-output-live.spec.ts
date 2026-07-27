@@ -10,7 +10,6 @@ import {
   mockOrganizationWorkspace,
   openOrganization,
   sendWorkspaceMessage,
-  type ChatRequestBody,
   type RouteResponse,
 } from "../support/soma-ui-testing";
 
@@ -197,7 +196,7 @@ test.describe("Soma media retained output proof", () => {
   test("mocked browser proof shows, opens, and locates a retained local/private media output", async ({ page }) => {
     const revealCalls = await mockRetainedMediaExecution(page);
     await mockOutputFilesMCP(page);
-    await mockOrganizationWorkspace(page, (_requestBody: ChatRequestBody) => mediaTeamProposal());
+    await mockOrganizationWorkspace(page, () => mediaTeamProposal());
 
     await openOrganization(page);
     await sendWorkspaceMessage(page, "Create a local/private media team output and retain the image for review.");

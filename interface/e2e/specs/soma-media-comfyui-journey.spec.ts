@@ -12,7 +12,6 @@ import {
   mockOrganizationWorkspace,
   openOrganization,
   sendWorkspaceMessage,
-  type ChatRequestBody,
   type RouteResponse,
 } from "../support/soma-ui-testing";
 
@@ -156,7 +155,7 @@ async function mockUnavailableComfyUIExecution(pageRoute: Route) {
 
 test.describe("Soma ComfyUI media journey", () => {
   test("mocked unavailable local media provider shows trusted degradation guidance", async ({ page }) => {
-    await mockOrganizationWorkspace(page, (_requestBody: ChatRequestBody) => mediaTeamProposal());
+    await mockOrganizationWorkspace(page, () => mediaTeamProposal());
     await page.route("**/api/v1/intent/confirm-action", mockUnavailableComfyUIExecution);
 
     await openOrganization(page);

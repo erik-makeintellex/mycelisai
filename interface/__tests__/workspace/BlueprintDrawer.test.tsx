@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import type { SVGProps } from 'react';
 
 vi.mock('lucide-react', () => ({
-    X: (props: any) => <svg data-testid="x-icon" {...props} />,
-    FileJson: (props: any) => <svg data-testid="file-json-icon" {...props} />,
-    Upload: (props: any) => <svg data-testid="upload-icon" {...props} />,
-    Download: (props: any) => <svg data-testid="download-icon" {...props} />,
+    X: (props: SVGProps<SVGSVGElement>) => <svg data-testid="x-icon" {...props} />,
+    FileJson: (props: SVGProps<SVGSVGElement>) => <svg data-testid="file-json-icon" {...props} />,
+    Upload: (props: SVGProps<SVGSVGElement>) => <svg data-testid="upload-icon" {...props} />,
+    Download: (props: SVGProps<SVGSVGElement>) => <svg data-testid="download-icon" {...props} />,
 }));
 
 import BlueprintDrawer from '@/components/workspace/BlueprintDrawer';

@@ -62,7 +62,7 @@ describe('MissionControlChat flow contracts', () => {
 
         await waitFor(() => {
             const calls = mockFetch.mock.calls;
-            const chatCall = calls.find((call: any[]) => requestUrl(call[0]).includes('/api/v1/chat'));
+            const chatCall = calls.find((call) => requestUrl(call[0]).includes('/api/v1/chat'));
             expect(chatCall).toBeDefined();
         });
     });
@@ -140,7 +140,7 @@ describe('MissionControlChat flow contracts', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         await waitFor(() => {
-            const chatCall = mockFetch.mock.calls.find((call: any[]) => requestUrl(call[0]).includes('/api/v1/chat'));
+            const chatCall = mockFetch.mock.calls.find((call) => requestUrl(call[0]).includes('/api/v1/chat'));
             expect(chatCall).toBeDefined();
             const body = JSON.parse(String(chatCall?.[1]?.body ?? '{}'));
             expect(body.continuation_context).toEqual({
@@ -169,7 +169,7 @@ describe('MissionControlChat flow contracts', () => {
         fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
 
         await waitFor(() => {
-            const chatCall = mockFetch.mock.calls.find((call: any[]) => requestUrl(call[0]).includes('/api/v1/chat'));
+            const chatCall = mockFetch.mock.calls.find((call) => requestUrl(call[0]).includes('/api/v1/chat'));
             const body = JSON.parse(String(chatCall?.[1]?.body ?? '{}'));
             expect(body).not.toHaveProperty('continuation_context');
         });
@@ -209,7 +209,7 @@ describe('MissionControlChat flow contracts', () => {
 
         await waitFor(() => {
             const calls = mockFetch.mock.calls;
-            const chatCall = calls.find((call: any[]) => requestUrl(call[0]).includes('/api/v1/council/council-architect/chat'));
+            const chatCall = calls.find((call) => requestUrl(call[0]).includes('/api/v1/council/council-architect/chat'));
             expect(chatCall).toBeDefined();
         });
     });

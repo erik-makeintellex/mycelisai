@@ -1,5 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import type { ReadinessSnapshot } from "@/lib/workflowContracts";
 
 vi.mock("reactflow", async () => {
     const mock = await import("../mocks/reactflow");
@@ -12,22 +13,27 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/components/automations/CapabilityReadinessGateCard", async () => {
     const React = await import("react");
+    function MockCapabilityReadinessGateCard({
+        onSnapshotChange,
+    }: {
+        onSnapshotChange?: (snapshot: ReadinessSnapshot) => void;
+    }) {
+        React.useEffect(() => {
+            onSnapshotChange?.({
+                providerReady: true,
+                mcpReady: true,
+                governanceReady: true,
+                natsReady: true,
+                sseReady: true,
+                dbReady: true,
+                blockers: [],
+            });
+        }, [onSnapshotChange]);
+        return <div data-testid="readiness-card">Readiness</div>;
+    }
     return {
         __esModule: true,
-        default: ({ onSnapshotChange }: { onSnapshotChange?: (s: any) => void }) => {
-            React.useEffect(() => {
-                onSnapshotChange?.({
-                    providerReady: true,
-                    mcpReady: true,
-                    governanceReady: true,
-                    natsReady: true,
-                    sseReady: true,
-                    dbReady: true,
-                    blockers: [],
-                });
-            }, [onSnapshotChange]);
-            return <div data-testid="readiness-card">Readiness</div>;
-        },
+        default: MockCapabilityReadinessGateCard,
     };
 });
 

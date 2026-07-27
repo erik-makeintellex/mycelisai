@@ -8,8 +8,17 @@ const mockToggleTriggerRule = vi.fn();
 const mockResolveScheduleHandoff = vi.fn();
 let triggerRules: TriggerRule[] = [];
 
+type ScheduleRulesStore = {
+    triggerRules: TriggerRule[];
+    isFetchingTriggers: boolean;
+    fetchTriggerRules: typeof mockFetchTriggerRules;
+    createTriggerRule: typeof mockCreateTriggerRule;
+    toggleTriggerRule: typeof mockToggleTriggerRule;
+    resolveScheduleHandoff: typeof mockResolveScheduleHandoff;
+};
+
 vi.mock("@/store/useCortexStore", () => ({
-    useCortexStore: (selector: any) =>
+    useCortexStore: (selector: (state: ScheduleRulesStore) => unknown) =>
         selector({
             triggerRules,
             isFetchingTriggers: false,

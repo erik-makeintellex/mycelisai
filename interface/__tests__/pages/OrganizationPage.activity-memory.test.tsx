@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { mockFetch } from "../setup";
 import OrganizationPage from "@/app/(app)/organizations/[id]/page";
 import {

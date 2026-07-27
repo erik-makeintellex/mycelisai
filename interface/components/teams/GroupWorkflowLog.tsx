@@ -236,7 +236,7 @@ function useGroupWorkflowLog(selectedGroup: Group | null): WorkflowLogLoadState 
     return () => {
       cancelled = true;
     };
-  }, [selectedGroup?.group_id]);
+  }, [selectedGroup]);
 
   return state;
 }
@@ -299,7 +299,7 @@ function useGroupTeamWork(
     return () => {
       cancelled = true;
     };
-  }, [enabled, selectedGroup?.group_id, teamKey]);
+  }, [enabled, selectedGroup, teamKey]);
 
   return state;
 }

@@ -1,36 +1,28 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
-async function openWiringTab(page: any) {
+async function openWiringTab(page: Page) {
     await page.goto('/automations');
     await page.waitForLoadState('domcontentloaded');
     const advancedOff = page.getByRole('button', { name: 'Admin tools: Off' });
-    if (await advancedOff.isVisible().catch(() => false)) {
+    if (await advancedOff.isVisible()) {
         await advancedOff.click();
     }
     const wiringTab = page.getByRole('button', { name: 'Workflow Builder' });
-    if (!(await wiringTab.isVisible().catch(() => false))) return false;
+    await expect(wiringTab, 'Workflow Builder must be available when admin tools are enabled').toBeVisible();
     await wiringTab.click();
-    await page.waitForTimeout(500);
-    return true;
+    await expect(page).toHaveURL(/\/automations/);
 }
 
 test.describe('Wiring Editor Surface', () => {
     test('wiring tab is reachable in advanced mode', async ({ page }) => {
-        const opened = await openWiringTab(page);
-        if (!opened) {
-            test.skip();
-            return;
-        }
+        await openWiringTab(page);
         await expect(page.getByRole('button', { name: 'Workflow Builder' })).toBeVisible();
         await expect(page.locator('nextjs-portal')).not.toBeVisible();
     });
 
     test('wiring surface does not crash when mounted', async ({ page }) => {
-        const opened = await openWiringTab(page);
-        if (!opened) {
-            test.skip();
-            return;
-        }
+        await openWiringTab(page);
         await expect(page.locator('body')).toBeVisible();
         await expect(page.locator('nextjs-portal')).not.toBeVisible();
     });

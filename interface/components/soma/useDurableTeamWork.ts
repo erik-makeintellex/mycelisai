@@ -50,7 +50,8 @@ export function useDurableTeamWork({
     let cancelled = false;
 
     const load = async () => {
-      if (selectedTeams.length === 0) {
+      const selectedTeamIds = selectedTeamKey ? selectedTeamKey.split("|") : [];
+      if (selectedTeamIds.length === 0) {
         setDurableItems([]);
         setFailedTeamIds([]);
         setIsLoading(false);
@@ -61,22 +62,22 @@ export function useDurableTeamWork({
       const fetchedItems: TeamWorkItem[] = [];
       const failures: string[] = [];
 
-      await Promise.all(selectedTeams.map(async (team) => {
+      await Promise.all(selectedTeamIds.map(async (teamId) => {
         try {
-          const response = await fetch(`/api/v1/teams/${encodeURIComponent(team.id)}/work?limit=8&include_archived=false`, {
+          const response = await fetch(`/api/v1/teams/${encodeURIComponent(teamId)}/work?limit=8&include_archived=false`, {
             cache: "no-store",
           });
           if (!response.ok) {
-            failures.push(team.id);
+            failures.push(teamId);
             return;
           }
           const payload = await response.json();
           const items = parseTeamWorkAPIItems(payload)
-            .map((item) => mapDurableTeamWorkItem(item, team))
+            .map((item) => mapDurableTeamWorkItem({ ...item, team_id: item.team_id ?? teamId }))
             .filter((item): item is TeamWorkItem => Boolean(item));
           fetchedItems.push(...items);
         } catch {
-          failures.push(team.id);
+          failures.push(teamId);
         }
       }));
 

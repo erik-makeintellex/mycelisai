@@ -1,11 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { mockFetch } from '../setup';
+import type { CatalogueAgent } from '@/store/useCortexStore';
+
+type AgentCardProps = {
+    agent: CatalogueAgent;
+    onSelect: (agent: CatalogueAgent) => void;
+    onDelete: (agentId: string) => void;
+};
 
 // Mock child components to isolate CataloguePage logic
 vi.mock('@/components/catalogue/AgentCard', () => ({
     __esModule: true,
-    default: ({ agent, onSelect, onDelete }: any) => (
+    default: ({ agent, onSelect, onDelete }: AgentCardProps) => (
         <div data-testid={`agent-card-${agent.id}`}>
             <span>{agent.name}</span>
             <span>{agent.role}</span>
@@ -21,7 +27,7 @@ vi.mock('@/components/catalogue/AgentCard', () => ({
 
 vi.mock('@/components/catalogue/AgentEditorDrawer', () => ({
     __esModule: true,
-    default: ({ agent, onClose, onSave }: any) => (
+    default: ({ agent, onClose }: { agent: CatalogueAgent | null; onClose: () => void }) => (
         <div data-testid="editor-drawer">
             <span>{agent ? `Editing: ${agent.name}` : 'Creating new agent'}</span>
             <button onClick={onClose}>Close</button>
@@ -31,7 +37,6 @@ vi.mock('@/components/catalogue/AgentEditorDrawer', () => ({
 
 import CataloguePage from '@/components/catalogue/CataloguePage';
 import { useCortexStore } from '@/store/useCortexStore';
-import type { CatalogueAgent } from '@/store/useCortexStore';
 
 const mockAgents: CatalogueAgent[] = [
     {

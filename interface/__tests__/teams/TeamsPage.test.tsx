@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { mockFetch } from "../setup";
+import type { CatalogueAgent, TeamDetail } from "@/store/cortexStoreTypesPlanning";
 
 vi.mock("@/components/teams/TeamDetailDrawer", () => ({
   __esModule: true,
-  default: ({ team, onClose }: any) => (
+  default: ({ team, onClose }: { team: TeamDetail; onClose: () => void }) => (
     <div data-testid="team-detail-drawer">
       <span>Drawer: {team.name}</span>
       <button onClick={onClose}>Close</button>
@@ -14,7 +15,7 @@ vi.mock("@/components/teams/TeamDetailDrawer", () => ({
 
 vi.mock("@/components/catalogue/AgentEditorDrawer", () => ({
   __esModule: true,
-  default: ({ agent, onClose }: any) => (
+  default: ({ agent, onClose }: { agent: CatalogueAgent | null; onClose: () => void }) => (
     <div data-testid="agent-editor-drawer">
       <span>{agent ? `Editing: ${agent.name}` : "Creating new template"}</span>
       <button onClick={onClose}>Close template drawer</button>
@@ -32,8 +33,8 @@ describe("TeamsPage", () => {
 
   beforeEach(() => {
     window.history.pushState({}, "", "/teams");
-    global.setInterval = vi.fn(() => 1) as any;
-    global.clearInterval = vi.fn() as any;
+    global.setInterval = vi.fn(() => 1) as unknown as typeof global.setInterval;
+    global.clearInterval = vi.fn() as unknown as typeof global.clearInterval;
     useCortexStore.setState({
       teamsDetail: [],
       isFetchingTeamsDetail: false,

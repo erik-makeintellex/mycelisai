@@ -4,6 +4,17 @@ import path from 'node:path';
 
 const repoRoot = path.resolve(__dirname, '../../..');
 
+type ProposalApiEnvelope = {
+    data?: {
+        mode?: string;
+        payload?: { proposal?: Record<string, unknown> };
+        confirmed?: boolean;
+        run_id?: string;
+        verified?: boolean;
+        execution_state?: string;
+    };
+};
+
 function resolveBackendWorkspaceRoots() {
     const configuredRoot =
         process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT;
@@ -49,9 +60,9 @@ async function issueLiveConfirmToken(page: import('@playwright/test').Page, targ
     });
 
     const text = await response.text();
-    let body: any = null;
+    let body: ProposalApiEnvelope | null = null;
     try {
-        body = JSON.parse(text);
+        body = JSON.parse(text) as ProposalApiEnvelope;
     } catch {
         body = null;
     }
@@ -62,8 +73,11 @@ async function issueLiveConfirmToken(page: import('@playwright/test').Page, targ
     const confirmToken = proposal?.confirm_token;
     const intentProofId = proposal?.intent_proof_id;
     expect(typeof confirmToken).toBe('string');
-    expect(confirmToken.length).toBeGreaterThan(0);
     expect(typeof intentProofId).toBe('string');
+    if (typeof confirmToken !== 'string' || typeof intentProofId !== 'string') {
+        throw new Error('Proposal response omitted confirmation proof identifiers.');
+    }
+    expect(confirmToken.length).toBeGreaterThan(0);
     return { confirmToken, intentProofId };
 }
 
@@ -227,9 +241,9 @@ test.describe('Mission Proposal Entry Points', () => {
 
             const confirmResponse = await confirmResponsePromise;
             const confirmText = await confirmResponse.text();
-            let confirmBody: any = null;
+            let confirmBody: ProposalApiEnvelope | null = null;
             try {
-                confirmBody = JSON.parse(confirmText);
+                confirmBody = JSON.parse(confirmText) as ProposalApiEnvelope;
             } catch {
                 confirmBody = null;
             }

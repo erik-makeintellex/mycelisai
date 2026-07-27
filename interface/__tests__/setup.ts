@@ -3,7 +3,7 @@ import { vi, beforeEach, afterEach } from 'vitest';
 // ── localStorage polyfill (jsdom sometimes lacks proper methods) ──
 if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localStorage.getItem !== 'function') {
     const store: Record<string, string> = {};
-    (globalThis as any).localStorage = {
+    const localStorageMock: Storage = {
         getItem: (key: string) => store[key] ?? null,
         setItem: (key: string, value: string) => { store[key] = String(value); },
         removeItem: (key: string) => { delete store[key]; },
@@ -11,6 +11,10 @@ if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localSto
         get length() { return Object.keys(store).length; },
         key: (i: number) => Object.keys(store)[i] ?? null,
     };
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: localStorageMock,
+    });
 }
 
 // ── Global fetch mock ────────────────────────────────────────
@@ -31,9 +35,9 @@ afterEach(() => {
 export class MockEventSource {
     static instances: MockEventSource[] = [];
     url: string;
-    onopen: ((ev: any) => void) | null = null;
-    onmessage: ((ev: any) => void) | null = null;
-    onerror: ((ev: any) => void) | null = null;
+    onopen: ((ev: Event) => void) | null = null;
+    onmessage: ((ev: MessageEvent<string>) => void) | null = null;
+    onerror: ((ev: Event) => void) | null = null;
     readyState = 0;
 
     constructor(url: string) {
@@ -42,7 +46,7 @@ export class MockEventSource {
         // Auto-connect on next tick
         setTimeout(() => {
             this.readyState = 1;
-            this.onopen?.({});
+            this.onopen?.(new Event('open'));
         }, 0);
     }
 
@@ -51,13 +55,13 @@ export class MockEventSource {
     }
 
     // Test helper: simulate a message
-    simulateMessage(data: any) {
-        this.onmessage?.({ data: JSON.stringify(data) });
+    simulateMessage(data: unknown) {
+        this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(data) }));
     }
 
     // Test helper: simulate error
     simulateError() {
-        this.onerror?.({});
+        this.onerror?.(new Event('error'));
     }
 
     static reset() {
@@ -70,7 +74,10 @@ export class MockEventSource {
 }
 
 // Install EventSource mock globally
-(global as any).EventSource = MockEventSource;
+Object.defineProperty(globalThis, 'EventSource', {
+    configurable: true,
+    value: MockEventSource,
+});
 
 // ── Next.js navigation mock ──────────────────────────────────
 vi.mock('next/navigation', () => ({

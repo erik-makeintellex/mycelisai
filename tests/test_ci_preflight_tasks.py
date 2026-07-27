@@ -28,6 +28,8 @@ def test_release_preflight_rejects_unknown_lane_before_running_checks():
 
 
 def test_release_preflight_runs_toolchain_and_baseline_when_clean(monkeypatch):
+    lint_calls: list[str] = []
+    monkeypatch.setattr(ci.lint, "body", lambda _ctx: lint_calls.append("lint"))
     monkeypatch.setattr(ci.logging_tasks.check_schema, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
@@ -50,6 +52,29 @@ def test_release_preflight_runs_toolchain_and_baseline_when_clean(monkeypatch):
     assert "git status --porcelain" in ctx.commands
     assert "go version" in ctx.commands
     assert "go test ./... -count=1" in ctx.commands
+    assert lint_calls == ["lint"]
+
+
+def test_release_preflight_stops_before_baseline_when_lint_fails(monkeypatch):
+    stage_order: list[str] = []
+
+    monkeypatch.setattr(ci.toolchain_check, "body", lambda _ctx, **_kwargs: stage_order.append("toolchain"))
+    monkeypatch.setattr(ci, "_runtime_posture_check", lambda _ctx: stage_order.append("runtime"))
+
+    def fail_lint(_ctx):
+        stage_order.append("lint")
+        raise SystemExit("lint failed")
+
+    monkeypatch.setattr(ci.lint, "body", fail_lint)
+    monkeypatch.setattr(ci.baseline, "body", lambda _ctx, **_kwargs: stage_order.append("baseline"))
+    monkeypatch.setattr(ci.service_check, "body", lambda _ctx, **_kwargs: stage_order.append("service"))
+
+    ctx = FakeContext({"git status --porcelain": FakeResult(stdout="")})
+
+    with pytest.raises(SystemExit, match="lint failed"):
+        ci.release_preflight.body(ctx, lane="release")
+
+    assert stage_order == ["toolchain", "runtime", "lint"]
 
 
 def test_release_preflight_release_lane_runs_runtime_and_service_stages(monkeypatch):
@@ -63,6 +88,7 @@ def test_release_preflight_release_lane_runs_runtime_and_service_stages(monkeypa
         lambda _ctx, **kwargs: stage_order.append(f"toolchain:{kwargs['strict']}"),
     )
     monkeypatch.setattr(ci, "_runtime_posture_check", lambda _ctx: stage_order.append("runtime"))
+    monkeypatch.setattr(ci.lint, "body", lambda _ctx: stage_order.append("lint"))
     monkeypatch.setattr(
         ci.baseline,
         "body",
@@ -83,7 +109,7 @@ def test_release_preflight_release_lane_runs_runtime_and_service_stages(monkeypa
     ci.release_preflight.body(ctx, lane="release", e2e=False, strict_toolchain=True)
 
     assert ctx.commands == ["git status --porcelain"]
-    assert stage_order == ["toolchain:True", "runtime", "baseline", "service"]
+    assert stage_order == ["toolchain:True", "runtime", "lint", "baseline", "service"]
     assert baseline_calls == [{"e2e": False}]
     assert service_calls == [{"live_backend": True}]
 
@@ -95,6 +121,7 @@ def test_release_preflight_release_lane_keeps_baseline_e2e_enabled_by_default(mo
 
     monkeypatch.setattr(ci.toolchain_check, "body", lambda _ctx, **_kwargs: stage_order.append("toolchain"))
     monkeypatch.setattr(ci, "_runtime_posture_check", lambda _ctx: stage_order.append("runtime"))
+    monkeypatch.setattr(ci.lint, "body", lambda _ctx: stage_order.append("lint"))
     monkeypatch.setattr(
         ci.baseline,
         "body",
@@ -115,12 +142,13 @@ def test_release_preflight_release_lane_keeps_baseline_e2e_enabled_by_default(mo
     ci.release_preflight.body(ctx, lane="release")
 
     assert ctx.commands == ["git status --porcelain"]
-    assert stage_order == ["toolchain", "runtime", "baseline", "service"]
+    assert stage_order == ["toolchain", "runtime", "lint", "baseline", "service"]
     assert baseline_calls == [{"e2e": True}]
     assert service_calls == [{"live_backend": True}]
 
 
 def test_release_preflight_runs_service_check_when_requested(monkeypatch):
+    monkeypatch.setattr(ci.lint, "body", lambda _ctx: None)
     monkeypatch.setattr(ci.logging_tasks.check_schema, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
@@ -153,6 +181,7 @@ def test_release_preflight_runs_service_check_when_requested(monkeypatch):
 
 def test_release_preflight_live_backend_flag_implies_service_check(monkeypatch):
     monkeypatch.setattr(ci.toolchain_check, "body", lambda _ctx, **_kwargs: None)
+    monkeypatch.setattr(ci.lint, "body", lambda _ctx: None)
     monkeypatch.setattr(ci.baseline, "body", lambda _ctx, **_kwargs: None)
     runtime_calls: list[str] = []
     service_calls: list[dict[str, object]] = []
@@ -177,6 +206,7 @@ def test_release_preflight_live_backend_flag_implies_service_check(monkeypatch):
 
 def test_release_preflight_runs_runtime_posture_when_requested(monkeypatch):
     monkeypatch.setattr(ci.toolchain_check, "body", lambda _ctx, **_kwargs: None)
+    monkeypatch.setattr(ci.lint, "body", lambda _ctx: None)
     baseline_calls: list[dict[str, object]] = []
     runtime_calls: list[str] = []
     monkeypatch.setattr(ci.baseline, "body", lambda _ctx, **kwargs: baseline_calls.append(kwargs))
