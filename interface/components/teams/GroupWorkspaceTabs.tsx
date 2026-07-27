@@ -30,7 +30,7 @@ export function GroupWorkspaceTabs({
 }: GroupWorkspaceTabsProps) {
   return (
     <div
-      className="flex flex-wrap gap-1 border-b border-cortex-border bg-cortex-bg/40 p-2"
+      className="flex flex-nowrap gap-1 overflow-x-auto border-b border-cortex-border bg-cortex-bg/40 p-2 lg:flex-wrap lg:overflow-x-hidden"
       role="tablist"
       aria-label="Group workspace sections"
       onKeyDown={(event) => handleTabKeyDown(event, activePanel, onSelect)}
@@ -64,8 +64,9 @@ function GroupWorkspaceTab({
       aria-selected={selected}
       aria-controls={`groups-${panel.id}-panel`}
       id={`groups-${panel.id}-tab`}
+      tabIndex={selected ? 0 : -1}
       onClick={() => onSelect(panel.id)}
-      className={`min-w-[8.75rem] flex-1 rounded-xl border px-3 py-2 text-left transition-colors sm:flex-none ${
+      className={`h-11 min-w-max flex-none rounded-xl border px-3 py-2 text-left transition-colors lg:h-auto lg:min-w-[8.75rem] lg:flex-1 ${
         selected
           ? "border-cortex-primary/45 bg-cortex-primary/10 text-cortex-text-main"
           : "border-cortex-border bg-cortex-surface text-cortex-text-muted hover:text-cortex-text-main"
@@ -75,7 +76,7 @@ function GroupWorkspaceTab({
         <Icon className="h-3.5 w-3.5" />
         {panel.label}
       </span>
-      <span className="mt-1 hidden truncate text-[11px] leading-4 sm:block">
+      <span className="mt-1 hidden truncate text-[11px] leading-4 lg:block">
         {panel.summary}
       </span>
     </button>

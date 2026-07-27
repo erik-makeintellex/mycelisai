@@ -54,7 +54,7 @@ export function GroupRail({
   );
   const selectedCount = selectedBulkGroupIds.size;
   return (
-    <aside className="flex min-h-0 flex-col rounded-2xl border border-cortex-border bg-cortex-surface p-3">
+    <aside className="flex h-full min-h-0 w-full flex-col rounded-2xl border border-cortex-border bg-cortex-surface p-3">
       <div className="flex items-center justify-between border-b border-cortex-border px-1 pb-3">
         <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-cortex-text-main">
           Group records

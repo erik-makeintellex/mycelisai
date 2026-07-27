@@ -2,6 +2,72 @@ import { expect, test } from "@playwright/test";
 import { mockGroupsWorkspace, openGroups } from "../support/groups-workspace";
 
 test.describe("Groups workspace (/groups)", () => {
+  test("uses a compact list-detail journey with browser Back", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockGroupsWorkspace(page);
+    await openGroups(page);
+
+    await expect(page.getByRole("heading", { name: "Group records" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Overview/i })).toBeHidden();
+
+    await page.getByTestId("groups-list-item-group-temp-launch").click();
+    await expect(page.getByRole("button", { name: "All groups" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Overview/i })).toBeVisible();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("group_id"))
+      .toBe("group-temp-launch");
+    await page.screenshot({
+      path: testInfo.outputPath("groups-compact-detail.png"),
+      fullPage: true,
+    });
+
+    await page.getByRole("tab", { name: /Outputs/i }).click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("panel"))
+      .toBe("outputs");
+    await page.goBack();
+    await expect(page.getByRole("tab", { name: /Overview/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    await page.goBack();
+    await expect(page.getByRole("heading", { name: "Group records" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Overview/i })).toBeHidden();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("group_id"))
+      .toBeNull();
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(4);
+
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Group records" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Overview/i })).toBeHidden();
+    await page.getByTestId("groups-list-item-group-temp-launch").click();
+    await expect(page.getByRole("button", { name: "All groups" })).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath("groups-tablet-detail.png"),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Group records" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Overview/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: "All groups" })).toBeHidden();
+    await expect(
+      page.getByRole("heading", { name: "Temporary Launch Sprint" }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath("groups-workspace-detail.png"),
+      fullPage: true,
+    });
+  });
+
   test("shows active and archived groups with tabbed output review", async ({ page }) => {
     await mockGroupsWorkspace(page);
     await openGroups(page);

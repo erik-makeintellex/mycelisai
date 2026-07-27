@@ -102,6 +102,7 @@ import MemoryExplorer from "@/components/memory/MemoryExplorer";
 describe("MemoryExplorer", () => {
   beforeEach(() => {
     mockAdvancedMode.mockReturnValue(false);
+    window.history.replaceState(null, "", "/memory");
   });
 
   it("renders the Memory header and focused view tabs", () => {
@@ -175,5 +176,27 @@ describe("MemoryExplorer", () => {
     expect(screen.getByRole("heading", { name: "Launch Plan" })).toBeDefined();
     expect(screen.getByText("# Launch Plan")).toBeDefined();
     expect(screen.getByText(/Download artifact/i)).toBeDefined();
+  });
+
+  it("keeps focused views in browser history and supports arrow keys", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<MemoryExplorer />);
+
+    const tablist = screen.getByRole("tablist", { name: "Memory views" });
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(
+      screen
+        .getByRole("tab", { name: "Search Memory" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(new URL(window.location.href).searchParams.get("view")).toBe("search");
+
+    window.history.replaceState(null, "", "/memory");
+    fireEvent.popState(window);
+    expect(
+      screen
+        .getByRole("tab", { name: "Recent Work" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
   });
 });

@@ -11,8 +11,8 @@ export default async function GroupsPage({
     const initialPanel = parseInitialPanel(resolvedSearchParams.panel);
 
     return (
-        <div className="h-full overflow-auto bg-cortex-bg px-6 py-8">
-            <div className="mx-auto max-w-7xl">
+        <div className="h-full overflow-hidden bg-cortex-bg px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6">
+            <div className="mx-auto h-full max-w-7xl">
                 <GroupManagementPanel
                     initialSelectedGroupId={initialSelectedGroupId}
                     initialPanel={initialPanel}

@@ -23,6 +23,8 @@ The Memory page presents this as focused tabs so records do not compete for hori
 - **Search Memory** opens cold semantic recall. Use it when you want to search prior meaning rather than browse recent work.
 - **Details** opens the selected search result or artifact for inspection, download, and provenance review.
 
+The three views form one horizontal tab strip on compact screens and keep the active view in the URL. Browser Back returns to the previous Memory view, and a refresh preserves whether you were browsing recent work, searching, or inspecting details. Use Left/Right or Up/Down arrow keys while a view tab is focused; Home and End move to the first and last view.
+
 You can also intentionally load governed private records, customer/deployment knowledge, approved company guidance, admin-shaped Soma operating context, and reflection/synthesis observations through **Resources → Deployment Context** so Soma has durable goal-relevant context to reuse later without mixing it into ordinary remembered facts.
 
 ---

@@ -38,7 +38,7 @@ export function GroupsHeader({
           <h1 className="mt-2 text-base font-semibold text-cortex-text-main sm:text-lg">
             Manage focused collaboration lanes.
           </h1>
-          <p className="mt-1 max-w-3xl text-sm leading-5 text-cortex-text-muted sm:line-clamp-2">
+          <p className="mt-1 hidden max-w-3xl text-sm leading-5 text-cortex-text-muted sm:line-clamp-2">
             Select a group, inspect retained outputs, or return to Soma without
             leaving this operating surface.
           </p>
@@ -49,8 +49,8 @@ export function GroupsHeader({
               <span className="font-semibold text-cortex-text-main">
                 {reviewCount} need review
               </span>
-              <span>{expiredCount} expired</span>
-              <span>{workCount} work items</span>
+              <span className="hidden sm:inline">{expiredCount} expired</span>
+              <span className="hidden sm:inline">{workCount} work items</span>
             </div>
           ) : null}
           {expiredCount > 0 ? (
