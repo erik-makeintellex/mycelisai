@@ -20,7 +20,7 @@ Current resource menu:
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
 
-The Resources page keeps these resource types in a persistent menu and renders the selected type inside a bounded work window. Long tool lists, workspace folders, exchange records, and provider forms should scroll inside that selected panel rather than turning the whole page into one long operator path.
+The Resources page keeps these resource types in a persistent selector and renders the selected type inside a bounded work window. On phones and tablets, Resource types appear as one compact horizontally scrollable tab row so the selected work surface remains near the top of the screen. On desktop, the same choices use a vertical list-detail menu with short descriptions. Selection is recorded in the page URL, survives refresh, and works with browser Back. Long tool lists, workspace folders, exchange records, and provider forms scroll inside the selected panel rather than turning the whole page into one long operator path.
 
 Retained group outputs use the same Outcome Health labels as Soma, Teams, and Runs. A selectable group with retained user output is Completed; the badge describes operational state while proof and source material remain separate details.
 

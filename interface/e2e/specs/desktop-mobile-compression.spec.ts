@@ -129,4 +129,26 @@ test.describe("Desktop/mobile compression proof", () => {
     await expect(page.getByText("Automation Timing", { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
+
+  test("Resources keeps its selector compact and preserves the selected workspace on mobile", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/resources", { waitUntil: "domcontentloaded" });
+
+    const selector = page.getByTestId("resource-type-tabs");
+    await expect(selector).toBeVisible({ timeout: 20_000 });
+    const selectorBox = await selector.boundingBox();
+    expect(selectorBox?.height ?? 0).toBeLessThanOrEqual(80);
+
+    const capabilities = page.getByRole("tab", { name: /^Capabilities/ });
+    await capabilities.click();
+    await expect(capabilities).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(/\/resources\?tab=tools$/);
+    await expect(page.getByRole("tabpanel")).toContainText("What Soma can use");
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("tab", { name: /^Capabilities/ })).toHaveAttribute("aria-selected", "true");
+    await page.goBack({ waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("tab", { name: /^Output Files/ })).toHaveAttribute("aria-selected", "true");
+    await expectNoHorizontalOverflow(page);
+  });
 });

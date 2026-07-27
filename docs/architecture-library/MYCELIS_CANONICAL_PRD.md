@@ -1,6 +1,6 @@
 # Mycelis Canonical PRD
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md)
-> Status: Canonical | Last Updated: 2026-07-21 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
+> Status: Canonical | Last Updated: 2026-07-27 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
 The default product language is:
@@ -19,7 +19,6 @@ Architecture stability rule: the architecture is stable, not frozen. Future work
 ## Workspace Outcome Hierarchy
 The operator lives inside a Workspace. A Workspace contains Outcomes. Each Outcome contains deliverables, active lanes, proof, recovery, history, and continuity. Runs, teams, capabilities, WorkIntent, ExecutionContracts, transport, storage, and infrastructure are runtime implementation unless the operator intentionally opens Details or Inspect.
 The canonical abstraction stack is:
-
 ```text
 Operator
 -> Soma
@@ -31,7 +30,6 @@ Operator
 -> Infrastructure
 ```
 `WorkIntent` is transitional. It transforms conversation into governed execution:
-
 ```text
 Conversation
 -> WorkIntent
@@ -54,7 +52,6 @@ Every Outcome exposes one clear health state:
 Every screen should derive its visual language from these states. The operator owns the Outcome. The operator never owns execution. Soma owns execution. The runtime should preserve trust while making execution disappear.
 ## Trusted Outcome Journey
 All P0 work is judged through this journey:
-
 ```text
 Ask
 -> Understand
@@ -70,9 +67,7 @@ Subsystems matter only when they strengthen the journey. Output Packages strengt
 
 The release question is not "Did we finish the subsystem?" The release question is "Can the user complete the journey and trust the result later?" Every screen should strengthen one journey step; every subsystem should exist only because it improves this journey.
 ## Primary User Experience
-
 The first authenticated surface is the Soma workspace. It should feel like a focused threaded workspace, not a dense admin console.
-
 Required first-viewport composition:
 - compact Start with shelf as a bounded row/wrap of generic conversation shapes and saved repeatable Soma asks without a visible horizontal scrollbar
 - large Talk to Soma thread as the primary canvas
@@ -89,6 +84,10 @@ The empty Soma thread should not be a stack of starter action cards. It should b
 The dashboard should keep the composer reachable at common desktop, laptop, tablet, and mobile viewports. The left navigation rail must be collapsible on desktop so Soma has more horizontal workspace when the operator is reading outputs, tables, or generated plans. Long content belongs inside bounded panes, overlays, tabs, or detail drawers rather than growing the whole page. Default work/output summaries should not expose file paths, proof internals, or stacked cards before the operator asks for detail; the primary surface should show the title, safe action, and review entry point.
 
 The Start with shelf is a conversational accelerator, not an autonomous trigger strip. Defaults should teach generic intent shapes such as plan, create, and review; saved asks may specialize the row after the user creates them. Button Studio should persist reusable Soma asks through the conversation-template path, keep a local fallback only for resilience, and run saved actions by sending the rendered prompt back into the Soma thread so understanding, approval, proof, and recovery stay intact.
+
+## Cross-Device Delivery Contract
+Mycelis is browser-first and cross-device, not desktop-shrunk. Next.js, React, TypeScript, and Tailwind remain the UI foundation; accessible patterns may extend owned primitives, but Flutter, Tamagui, Ionic, Quasar, Material UI, or another full framework must not create a second product model. One codebase means shared product/API/event contracts, state, tokens, semantics, accessibility, and components, while platform shells may compose them differently. Layout modes are Compact below `640px` (one column, compact rail/drawer, horizontal tabs, full-screen detail sheets, reachable composer), Medium `640-1023px` (primary workspace plus overlays/list-detail transitions), Workspace `1024-1439px` (collapsible navigation plus one main surface), and Wide `1440px+` (simultaneous context only when useful, never stretched prose or oversized controls). Phones prioritize Ask, Approve, Outcome Health, Deliverables, blockers/recovery, and revisit; tablets add focused list-detail and lightweight configuration; desktop exposes full administration, capability setup, proof inspection, and comparison. PWA readiness precedes native packaging, and a Capacitor-style shell is justified only by concrete native value such as notifications, device files/camera, offline shell behavior, or app-store distribution.
+Each route has one primary scroll owner; only bounded lists, threads, previews, editors, and inspectors may nest scroll. Outcomes, proof, recovery, and detail use overlays, drawers, sheets, tabs, or list-detail rather than squeezing Soma. Narrow peer workspaces use horizontally scrollable keyboard tabs whose selection is URL-addressable, refresh-safe, and Back-compatible. Primary touch targets are at least `44px`; no action is hover-only or unlabeled. The composer survives visual-keyboard changes, grows to a cap, then scrolls internally. Safe areas, font scaling, reduced motion, focus return, contrast, long content, loading, empty, degraded, offline, retry, and readable table-to-detail transformations are requirements. Owned responsibilities are `AppShell`, `ResponsiveRail`, `WorkspaceHeader`, `ContentTabs`, `OverlayPanel`, `ListDetailWorkspace`, `SomaComposer`, `OutcomeHealth`, `CompactReceipt`, `ResponsiveDataView`, `EmptyState`, and `OperationalAlert`; add primitives only when they remove repeated cross-route complexity. Acceptance uses real compact-phone, tablet, laptop, and wide-browser interaction covering keyboard/pointer equivalents, deep link/refresh/Back, overflow/overlap, bounded panes, composer reachability, and console/hydration/page errors. Native proof begins only when a native-only capability becomes an approved target.
 
 ## Conversation And Governance
 
@@ -303,6 +302,7 @@ Non-goals for MVP:
 | P0.10 | Worker execution library | IN_REVIEW | Execute, Deliver | Confirmed Soma proposals now enter a normalized worker lifecycle through the central backend while preserving existing execution contracts, run receipts, proof artifacts, team-work refs, retained outputs, audit, and recovery; Hermes-compatible execution remains adapter/config-selected. |
 | P0.11 | Docs cleanup and release discipline | ACTIVE | Trust, Revisit | This PRD remains the single architecture authority, old doctrine is deleted instead of archived into active docs, user help matches current UI, and implementation slices update docs/state in the same change. |
 | P0.12 | Release hygiene and promotion proof | ACTIVE | Trust | Use the staged `feature/* -> dev -> main` delivery path; commit coherent feature slices only after focused proof, retest each merged `dev` state with affected integration and live GUI journeys, and promote only a clean committed release candidate after full browser/release proof. Release preflight must run lint before later stages, browser gates must retain exact JSON/JUnit evidence, permissive UI self-skips are release failures, and prerequisite-gated skips must name the dependency and be exercised separately when it is available. Runtime and test-fixture lint must stay at zero errors without weakening product rules, and PostgreSQL/NATS-backed runtime paths must replace stale local/test-only proof. |
+| P0.13 | Cross-device operating surface | ACTIVE | Ask, Approve, Deliver, Recover, Revisit | Shared UI contracts support compact, medium, workspace, and wide layouts without a framework rewrite. Primary mobile journeys keep navigation, peer workspace tabs, Soma composer, Outcome Health, deliverables, approval, and recovery reachable; selection survives refresh and Back; live device-matrix proof finds no blocking overflow, overlap, hydration, console, or page errors. Resources is the first convergence slice, followed by Groups/Memory list-detail and Dashboard overlay certification. |
 
 ## Testing And Release Gates
 Visible UI changes require both functional tests and live user-experience review. The reviewer must inspect layout density, scroll behavior, text-field reachability, panel overlap, card size, plain-language copy, and whether the screen matches the target Soma workspace concept.
