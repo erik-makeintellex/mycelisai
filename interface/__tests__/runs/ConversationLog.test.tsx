@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
+import type { ConversationTurn } from '@/types/conversations';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -46,11 +47,18 @@ const mockTurns = [
 
 let storeState: Record<string, unknown> = {};
 
+type ConversationStore = {
+    conversationTurns: ConversationTurn[] | null;
+    isFetchingConversation: boolean;
+    fetchRunConversation: typeof mockFetchRunConversation;
+    interjectInRun: typeof mockInterjectInRun;
+};
+
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) => {
+    useCortexStore: (selector: (state: ConversationStore) => unknown) => {
         const state = {
-            conversationTurns: storeState.conversationTurns ?? null,
-            isFetchingConversation: storeState.isFetchingConversation ?? false,
+            conversationTurns: (storeState.conversationTurns as ConversationTurn[] | undefined) ?? null,
+            isFetchingConversation: (storeState.isFetchingConversation as boolean | undefined) ?? false,
             fetchRunConversation: mockFetchRunConversation,
             interjectInRun: mockInterjectInRun,
         };

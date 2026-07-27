@@ -42,7 +42,7 @@ describe('ViewChain', () => {
     });
 
     it('renders the causal chain tree from the run chain API', async () => {
-        (global.fetch as any) = vi.fn().mockResolvedValue({
+        global.fetch = vi.fn().mockResolvedValue({
             ok: true,
             json: async () => chainResponse,
         });
@@ -65,7 +65,7 @@ describe('ViewChain', () => {
     });
 
     it('shows an error state when the chain request fails', async () => {
-        (global.fetch as any) = vi.fn().mockResolvedValue({
+        global.fetch = vi.fn().mockResolvedValue({
             ok: false,
             status: 503,
             json: async () => ({}),

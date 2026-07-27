@@ -28,7 +28,12 @@ const fetchServicesStatus = vi.fn();
 const fetchUserSettings = vi.fn();
 const initializeStream = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) => selector({ setStatusDrawerOpen, fetchServicesStatus, fetchUserSettings, initializeStream }),
+    useCortexStore: (selector: (state: {
+        setStatusDrawerOpen: typeof setStatusDrawerOpen;
+        fetchServicesStatus: typeof fetchServicesStatus;
+        fetchUserSettings: typeof fetchUserSettings;
+        initializeStream: typeof initializeStream;
+    }) => unknown) => selector({ setStatusDrawerOpen, fetchServicesStatus, fetchUserSettings, initializeStream }),
 }));
 
 import { ShellLayout } from '@/components/shell/ShellLayout';

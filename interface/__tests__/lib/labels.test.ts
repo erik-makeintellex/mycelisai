@@ -180,9 +180,10 @@ describe('labels', () => {
 
     describe('deriveIntentClass', () => {
         it('returns "Direct Answer" for empty/null tools', () => {
+            const deriveFromUnknown = deriveIntentClass as (tools: unknown) => string;
             expect(deriveIntentClass([])).toBe('Direct Answer');
-            expect(deriveIntentClass(null as any)).toBe('Direct Answer');
-            expect(deriveIntentClass(undefined as any)).toBe('Direct Answer');
+            expect(deriveFromUnknown(null)).toBe('Direct Answer');
+            expect(deriveFromUnknown(undefined)).toBe('Direct Answer');
         });
 
         it('classifies blueprint tools as "Mission Design"', () => {

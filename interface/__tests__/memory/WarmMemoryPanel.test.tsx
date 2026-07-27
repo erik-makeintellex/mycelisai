@@ -1,11 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { mockFetch } from "../setup";
+import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 
 const mockFetchArtifacts = vi.fn();
 
 vi.mock("@/store/useCortexStore", () => ({
-  useCortexStore: (selector: any) =>
+  useCortexStore: (selector: (state: {
+    artifacts: Artifact[];
+    isFetchingArtifacts: boolean;
+    fetchArtifacts: typeof mockFetchArtifacts;
+  }) => unknown) =>
     selector({
       artifacts: [
         {

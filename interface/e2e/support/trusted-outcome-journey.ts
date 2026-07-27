@@ -1,6 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 import { fulfillJSON, type ArtifactRecord, type GroupRecord } from "./finalization-browser-package";
-import { answerEnvelope, lastUserMessage, mockOrganizationWorkspace, type RouteResponse } from "./soma-ui-testing";
+import { answerEnvelope, mockOrganizationWorkspace, type RouteResponse } from "./soma-ui-testing";
 
 type BrowserFetchOptions = { method?: string; headers?: Record<string, string>; body?: string };
 
@@ -174,7 +174,6 @@ export async function installTrustedOutcomeJourneyMocks(page: Page) {
   const chatRequests: unknown[] = [];
   await mockOrganizationWorkspace(page, (requestBody) => {
     chatRequests.push(requestBody);
-    const message = lastUserMessage(requestBody);
     if ((requestBody as { continuation_context?: unknown }).continuation_context) return answerEnvelope("Inspect the launch page first, then review PROOF.md and recovery notes before asking Soma for changes.", { askClass: "output_continuation" });
     return proposalEnvelope();
   });

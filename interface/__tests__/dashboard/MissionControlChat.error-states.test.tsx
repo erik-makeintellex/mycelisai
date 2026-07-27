@@ -135,7 +135,7 @@ describe('MissionControlChat error states', () => {
         mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
             const url = requestUrl(input);
             if (url.includes('/api/v1/council/members')) {
-                return { ok: false, status: 503, text: async () => 'unavailable' } as any;
+                return { ok: false, status: 503, text: async () => 'unavailable' } as Response;
             }
             if (url.includes('/api/v1/chat')) {
                 return errorText(500, '{"error":"Soma chat blocked (500)"}');
@@ -156,7 +156,7 @@ describe('MissionControlChat error states', () => {
         expect(screen.getByText('Operational alert')).toBeDefined();
         expect(screen.getAllByText(/workspace chat server error/i).length).toBeGreaterThan(0);
         expect(screen.queryByText('Switch to Soma')).toBeNull();
-        expect(mockFetch.mock.calls.some((call: any[]) => requestUrl(call[0]).includes('/api/v1/chat'))).toBe(true);
+        expect(mockFetch.mock.calls.some((call) => requestUrl(call[0]).includes('/api/v1/chat'))).toBe(true);
     });
 
     it('records council blocker mode and shows Soma fallback actions when direct council chat fails', async () => {
@@ -187,7 +187,7 @@ describe('MissionControlChat error states', () => {
         expect(screen.getByText('Operational alert')).toBeDefined();
         expect(screen.getByText('Switch to Soma')).toBeDefined();
         expect(screen.getByText('Continue with Soma Only')).toBeDefined();
-        expect(mockFetch.mock.calls.some((call: any[]) => requestUrl(call[0]).includes('/api/v1/council/council-sentry/chat'))).toBe(true);
+        expect(mockFetch.mock.calls.some((call) => requestUrl(call[0]).includes('/api/v1/council/council-sentry/chat'))).toBe(true);
     });
 
     it('hides raw council transport strings behind the blocker contract', async () => {

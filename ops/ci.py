@@ -255,6 +255,7 @@ def release_preflight(c, lane="baseline", e2e=True, strict_toolchain=False, serv
         runtime_posture=runtime_posture,
         runtime_posture_check=_runtime_posture_check,
         toolchain_check=toolchain_check,
+        lint=lint,
         baseline=baseline,
         service_check=service_check,
     )

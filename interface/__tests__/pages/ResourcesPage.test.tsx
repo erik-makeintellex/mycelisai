@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act, waitFor } from '@testing-library/react';
+import React, { type ComponentType } from 'react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -18,10 +19,9 @@ vi.mock('next/navigation', () => ({
 // Mock next/dynamic to render the component directly
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: any) => {
-        const Component = require('react').lazy(loader);
-        return (props: any) => {
-            const React = require('react');
+    default: (loader: () => Promise<{ default: ComponentType<Record<string, unknown>> }>) => {
+        const Component = React.lazy(loader);
+        return (props: Record<string, unknown>) => {
             return React.createElement(
                 React.Suspense,
                 { fallback: null },
@@ -62,7 +62,12 @@ vi.mock('@/components/catalogue/CataloguePage', () => ({
 const mockFetchMCPServers = vi.fn();
 const mockDeleteMCPServer = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) =>
+    useCortexStore: (selector: (state: {
+        mcpServers: never[];
+        isFetchingMCPServers: boolean;
+        fetchMCPServers: typeof mockFetchMCPServers;
+        deleteMCPServer: typeof mockDeleteMCPServer;
+    }) => unknown) =>
         selector({
             mcpServers: [],
             isFetchingMCPServers: false,

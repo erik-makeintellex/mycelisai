@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { mockFetch } from '../setup';
+import React, { type ComponentType } from 'react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -11,10 +12,9 @@ vi.mock('reactflow', async () => {
 // Mock next/dynamic to render the component directly
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: any) => {
-        const Component = require('react').lazy(loader);
-        return (props: any) => {
-            const React = require('react');
+    default: (loader: () => Promise<{ default: ComponentType<Record<string, unknown>> }>) => {
+        const Component = React.lazy(loader);
+        return (props: Record<string, unknown>) => {
             return React.createElement(
                 React.Suspense,
                 { fallback: null },
@@ -43,7 +43,15 @@ vi.mock('@/store/useCortexStore', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@/store/useCortexStore')>();
     return {
         ...actual,
-        useCortexStore: (selector: any) => selector({
+        useCortexStore: (selector: (state: {
+            advancedMode: boolean;
+            toggleAdvancedMode: typeof mockToggleAdvancedMode;
+            fetchUserSettings: typeof mockFetchUserSettings;
+            assistantName: string;
+            theme: string;
+            updateAssistantName: typeof mockUpdateAssistantName;
+            updateTheme: typeof mockUpdateTheme;
+        }) => unknown) => selector({
             advancedMode: mockAdvancedMode(),
             toggleAdvancedMode: mockToggleAdvancedMode,
             fetchUserSettings: mockFetchUserSettings,

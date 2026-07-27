@@ -211,7 +211,9 @@ def _run_interface_commandline(
 
 
 def _build_playwright_command(*, project: str = "", spec: str = "", workers: str = "", headed: bool = False) -> str:
-    cmd = "npx playwright test --reporter=dot"
+    # Reporter ownership belongs to playwright.config.ts so console output and
+    # durable JSON/JUnit evidence stay aligned for every Invoke-driven run.
+    cmd = "npx playwright test"
     effective_workers = workers or "1"
     if project:
         cmd += f" --project={project}"

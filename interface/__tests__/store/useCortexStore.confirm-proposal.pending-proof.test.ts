@@ -122,8 +122,8 @@ describe('useCortexStore confirm proposal pending proof', () => {
             }],
             activeMode: 'proposal',
         });
-        let resolveFetch!: (value: any) => void;
-        mockFetch.mockImplementation(() => new Promise((resolve) => {
+        let resolveFetch!: (value: Response) => void;
+        mockFetch.mockImplementation(() => new Promise<Response>((resolve) => {
             resolveFetch = resolve;
         }));
 
@@ -143,7 +143,7 @@ describe('useCortexStore confirm proposal pending proof', () => {
         resolveFetch({
             ok: true,
             json: async () => ({ data: { confirmed: true, run_id: 'run-1' } }),
-        });
+        } as Response);
         await pending;
     });
 });

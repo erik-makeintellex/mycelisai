@@ -17,8 +17,21 @@ const connectedFilesystemServer = {
 
 let mockMCPServers: Array<Record<string, unknown>> = [connectedFilesystemServer];
 
+type WorkspaceExplorerStore = {
+    mcpServers: Array<Record<string, unknown>>;
+    isFetchingMCPServers: boolean;
+    fetchMCPServers: typeof mockFetchMCPServers;
+};
+
+type ToolCallBody = {
+    arguments: {
+        path?: string;
+        [key: string]: unknown;
+    };
+};
+
 vi.mock("@/store/useCortexStore", () => ({
-    useCortexStore: (selector: any) =>
+    useCortexStore: (selector: (state: WorkspaceExplorerStore) => unknown) =>
         selector({
             mcpServers: mockMCPServers,
             isFetchingMCPServers: false,
@@ -27,7 +40,7 @@ vi.mock("@/store/useCortexStore", () => ({
 }));
 
 function mockToolFetch() {
-    const calls: Array<{ tool: string; body: any }> = [];
+    const calls: Array<{ tool: string; body: ToolCallBody }> = [];
     const revealCalls: string[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
@@ -106,7 +119,9 @@ function mockToolFetch() {
         }
         const match = url.match(/\/tools\/([^/]+)\/call$/);
         const tool = match?.[1] ?? "";
-        const body = init?.body ? JSON.parse(String(init.body)) : {};
+        const body = init?.body
+            ? JSON.parse(String(init.body)) as ToolCallBody
+            : { arguments: {} };
         calls.push({ tool, body });
 
         if (tool === "list_directory") {

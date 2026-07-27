@@ -29,11 +29,20 @@ const mockToggleTriggerRule = vi.fn();
 
 let storeState: Record<string, unknown> = {};
 
+type TriggerRulesStore = {
+    triggerRules: TriggerRule[];
+    isFetchingTriggers: boolean;
+    fetchTriggerRules: typeof mockFetchTriggerRules;
+    createTriggerRule: typeof mockCreateTriggerRule;
+    deleteTriggerRule: typeof mockDeleteTriggerRule;
+    toggleTriggerRule: typeof mockToggleTriggerRule;
+};
+
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) => {
+    useCortexStore: (selector: (state: TriggerRulesStore) => unknown) => {
         const state = {
-            triggerRules: storeState.triggerRules ?? [],
-            isFetchingTriggers: storeState.isFetchingTriggers ?? false,
+            triggerRules: (storeState.triggerRules as TriggerRule[] | undefined) ?? [],
+            isFetchingTriggers: (storeState.isFetchingTriggers as boolean | undefined) ?? false,
             fetchTriggerRules: mockFetchTriggerRules,
             createTriggerRule: mockCreateTriggerRule,
             deleteTriggerRule: mockDeleteTriggerRule,

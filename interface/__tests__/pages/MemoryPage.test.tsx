@@ -4,8 +4,8 @@ import { render, screen, act } from '@testing-library/react';
 // Mock next/dynamic — resolve the loader and flush microtask queue
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (_loader: () => Promise<any>, _opts?: any) => {
-        const DynamicComponent = (_props: Record<string, unknown>) => {
+    default: () => {
+        const DynamicComponent = () => {
             return (
                 <div data-testid="memory-route-content">
                     <span>Memory</span>
@@ -21,7 +21,7 @@ vi.mock('next/dynamic', () => ({
 
 const mockAdvancedMode = vi.fn(() => true);
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) => selector({ advancedMode: mockAdvancedMode() }),
+    useCortexStore: (selector: (state: { advancedMode: boolean }) => unknown) => selector({ advancedMode: mockAdvancedMode() }),
 }));
 
 const mockSearchParams = new URLSearchParams();

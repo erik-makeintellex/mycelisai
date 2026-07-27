@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
+import React, { type ComponentType, type ReactNode } from 'react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -19,18 +20,20 @@ vi.mock('next/navigation', () => ({
 // then the resolved component. Since vi.mock is hoisted, child mocks are ready.
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: () => Promise<any>, opts?: any) => {
+    default: (
+        loader: () => Promise<{ default: ComponentType<Record<string, unknown>> } | ComponentType<Record<string, unknown>>>,
+        opts?: { loading?: () => ReactNode },
+    ) => {
         const Dynamic = (props: Record<string, unknown>) => {
-            const React = require('react') as typeof import('react');
-            const [Comp, setComp] = React.useState<import('react').ComponentType<any> | null>(null);
+            const [Comp, setComp] = React.useState<ComponentType<Record<string, unknown>> | null>(null);
             React.useEffect(() => {
                 let mounted = true;
                 loader()
-                    .then((mod: any) => {
+                    .then((mod) => {
                         if (!mounted) {
                             return;
                         }
-                        setComp(() => (mod.default || mod) as import('react').ComponentType<any>);
+                        setComp(() => ('default' in mod ? mod.default : mod));
                     })
                     .catch(() => {});
                 return () => {
@@ -65,13 +68,13 @@ vi.mock('@/components/automations/ScheduleRulesTab', () => ({
 }));
 vi.mock('@/components/shared/DegradedState', () => ({
     __esModule: true,
-    default: ({ title }: any) => <div data-testid="degraded-state">{title}</div>,
+    default: ({ title }: { title: string }) => <div data-testid="degraded-state">{title}</div>,
 }));
 
 // Mock Zustand store
 const mockAdvancedMode = vi.fn(() => false);
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) => {
+    useCortexStore: (selector: (state: { advancedMode: boolean }) => unknown) => {
         const state = { advancedMode: mockAdvancedMode() };
         return selector(state);
     },

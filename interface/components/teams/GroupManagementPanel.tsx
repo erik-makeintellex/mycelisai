@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { GroupWorkspacePanels } from "./GroupWorkspacePanels";
 import type { GroupWorkspacePanel } from "./GroupWorkspaceTabs";
@@ -65,7 +65,7 @@ export default function GroupManagementPanel({
     lifecycleReport?.items.forEach((item) => byID.set(item.group_id, item));
     return byID;
   }, [lifecycleReport]);
-  const loadGroups = async () => {
+  const loadGroups = useCallback(async () => {
     setRefreshing(true);
     setError(null);
     try {
@@ -88,11 +88,11 @@ export default function GroupManagementPanel({
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [initialSelectedGroupId]);
 
   useEffect(() => {
     void loadGroups();
-  }, []);
+  }, [loadGroups]);
 
   useEffect(() => {
     if (!initialSelectedGroupId) return;

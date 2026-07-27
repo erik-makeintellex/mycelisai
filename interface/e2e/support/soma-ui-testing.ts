@@ -1,4 +1,4 @@
-import { expect, type Page, type Route } from "@playwright/test";
+import { type Page, type Route } from "@playwright/test";
 
 export const organizationId = "org-ui-testing-agent";
 export const chatPlaceholder = /Tell .* what you want to plan, review, create, or (execute|run)/i;

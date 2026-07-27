@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { mockFetch } from "../setup";
+import type { Artifact } from "@/store/cortexStoreTypesPlanning";
+import type { SearchResult } from "@/components/memory/memorySelection";
+
+type MemoryExplorerStore = {
+  advancedMode: boolean;
+  getArtifactDetail: ReturnType<typeof vi.fn>;
+  selectedArtifactDetail: Artifact | null;
+};
 
 // Mock Zustand store
 const mockAdvancedMode = vi.fn(() => false);
 vi.mock("@/store/useCortexStore", () => ({
-  useCortexStore: (selector: any) => {
+  useCortexStore: (selector: (state: MemoryExplorerStore) => unknown) => {
     const state = {
       advancedMode: mockAdvancedMode(),
       getArtifactDetail: vi.fn().mockResolvedValue(undefined),
@@ -23,7 +30,13 @@ vi.mock("@/components/memory/HotMemoryPanel", () => ({
 
 vi.mock("@/components/memory/WarmMemoryPanel", () => ({
   __esModule: true,
-  default: ({ onSearchRelated, onSelectArtifact }: any) => (
+  default: ({
+    onSearchRelated,
+    onSelectArtifact,
+  }: {
+    onSearchRelated: (query: string) => void;
+    onSelectArtifact: (artifact: Artifact) => void;
+  }) => (
     <div data-testid="warm-panel">
       Warm Panel
       <button
@@ -56,7 +69,13 @@ vi.mock("@/components/memory/WarmMemoryPanel", () => ({
 
 vi.mock("@/components/memory/ColdMemoryPanel", () => ({
   __esModule: true,
-  default: ({ searchQuery, onSelectResult }: any) => (
+  default: ({
+    searchQuery,
+    onSelectResult,
+  }: {
+    searchQuery?: string;
+    onSelectResult: (result: SearchResult) => void;
+  }) => (
     <div data-testid="cold-panel">
       Cold Panel
       {searchQuery && <span data-testid="cold-query">{searchQuery}</span>}

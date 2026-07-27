@@ -49,7 +49,11 @@ export default defineConfig({
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 1 : 4,
-    reporter: process.env.CI ? 'github' : 'list',
+    reporter: [
+        [process.env.CI ? 'github' : 'list'],
+        ['json', { outputFile: 'test-results/playwright-results.json' }],
+        ['junit', { outputFile: 'test-results/playwright-results.xml' }],
+    ],
     globalSetup: './e2e/global-setup.ts',
 
     use: {

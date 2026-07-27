@@ -10,7 +10,6 @@ import {
   mockOrganizationWorkspace,
   openOrganization,
   sendWorkspaceMessage,
-  type ChatRequestBody,
 } from "../support/soma-ui-testing";
 
 test.describe("UI finalization first-demo degraded retry proof", () => {
@@ -47,7 +46,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
       created_at: "2026-05-16T20:20:00Z",
     }];
 
-    await mockOrganizationWorkspace(page, (_requestBody: ChatRequestBody) => firstDemoPackageProposal());
+    await mockOrganizationWorkspace(page, () => firstDemoPackageProposal());
     await page.route("**/api/v1/intent/confirm-action", async (route) => {
       confirmCalls += 1;
       if (confirmCalls === 1) {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act } from '@testing-library/react';
+import React, { type ComponentType } from 'react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -18,17 +19,16 @@ vi.mock('next/navigation', () => ({
 // Mock next/dynamic — eagerly resolve the loader for testing
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: () => Promise<any>, _opts?: any) => {
+    default: (loader: () => Promise<{ default: ComponentType<Record<string, unknown>> } | ComponentType<Record<string, unknown>>>) => {
         return (props: Record<string, unknown>) => {
-            const React = require('react') as typeof import('react');
-            const [Resolved, setResolved] = React.useState<import('react').ComponentType<any> | null>(null);
+            const [Resolved, setResolved] = React.useState<ComponentType<Record<string, unknown>> | null>(null);
             React.useEffect(() => {
                 let mounted = true;
-                loader().then((mod: any) => {
+                loader().then((mod) => {
                     if (!mounted) {
                         return;
                     }
-                    setResolved(() => (mod.default || mod) as import('react').ComponentType<any>);
+                    setResolved(() => ('default' in mod ? mod.default : mod));
                 });
                 return () => {
                     mounted = false;
@@ -75,7 +75,7 @@ vi.mock('@/components/matrix/MatrixGrid', () => ({
 
 // Mock Zustand store
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) => {
+    useCortexStore: (selector: (state: { advancedMode: boolean; toggleAdvancedMode: ReturnType<typeof vi.fn> }) => unknown) => {
         const state = { advancedMode: false, toggleAdvancedMode: vi.fn() };
         return selector(state);
     },

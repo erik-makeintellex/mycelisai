@@ -20,7 +20,13 @@ const mockToggleAdvancedMode = vi.fn();
 const mockToggleRailCollapsed = vi.fn();
 const mockSetStatusDrawerOpen = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) => {
+    useCortexStore: (selector: (state: {
+        advancedMode: boolean;
+        railCollapsed: boolean;
+        toggleAdvancedMode: typeof mockToggleAdvancedMode;
+        toggleRailCollapsed: typeof mockToggleRailCollapsed;
+        setStatusDrawerOpen: typeof mockSetStatusDrawerOpen;
+    }) => unknown) => {
         const state = {
             advancedMode: mockAdvancedMode(),
             railCollapsed: mockRailCollapsed(),
