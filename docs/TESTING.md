@@ -291,7 +291,7 @@ uv run inv wsl.validate --lane=release
 The managed install path uses `npm ci` for Interface dependencies, so WSL and CI-style proof
 checkouts must not dirty `interface/package-lock.json` during bootstrap.
 
-Release-preflight lane presets are `baseline`, `runtime`, `service`, and `release`; use `uv run inv ci.release-preflight --lane=release` for the full release gate. Every preset begins with `ci.lint`, and a lint failure prevents baseline, service, or deployment-facing stages from running.
+Release-preflight lane presets are `baseline`, `runtime`, `service`, and `release`; use `uv run inv ci.release-preflight --lane=release` for the full release gate. Every preset begins with `ci.lint`, and a lint failure prevents baseline, service, or deployment-facing stages from running. CI Go lint/test commands use `go -C <core>` so the Core module is explicit even when Invoke or the host shell does not preserve a directory context; failed hidden commands must print their captured output.
 
 Invoke-driven Playwright runs use the reporter set in `interface/playwright.config.ts`; do not override it in task wrappers. The human-readable reporter stays on stdout, while exact pass, skip, annotation, and failure evidence is retained in `interface/test-results/playwright-results.json` and `interface/test-results/playwright-results.xml`. A prerequisite-gated skip is acceptable only when its annotation names the missing dependency and the corresponding live-backend journey is run separately when that dependency is available.
 

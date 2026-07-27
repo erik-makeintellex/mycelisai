@@ -3,6 +3,8 @@ import pytest
 from ops import ci
 from tests.ci_task_support import FakeContext, FakeResult
 
+CORE_TEST_COMMAND = f'go -C "{ci.CORE_DIR}" test ./... -count=1'
+
 
 def test_release_preflight_fails_on_dirty_tree_before_baseline():
     ctx = FakeContext(
@@ -43,7 +45,7 @@ def test_release_preflight_runs_toolchain_and_baseline_when_clean(monkeypatch):
             "go version": FakeResult(stdout="go version go1.26.0 windows/amd64\n"),
             "node -v": FakeResult(stdout="v25.2.1\n"),
             "npm -v": FakeResult(stdout="11.6.2\n"),
-            "go test ./... -count=1": FakeResult(),
+            CORE_TEST_COMMAND: FakeResult(),
         }
     )
 
@@ -51,7 +53,7 @@ def test_release_preflight_runs_toolchain_and_baseline_when_clean(monkeypatch):
 
     assert "git status --porcelain" in ctx.commands
     assert "go version" in ctx.commands
-    assert "go test ./... -count=1" in ctx.commands
+    assert CORE_TEST_COMMAND in ctx.commands
     assert lint_calls == ["lint"]
 
 
@@ -169,7 +171,7 @@ def test_release_preflight_runs_service_check_when_requested(monkeypatch):
             "go version": FakeResult(stdout="go version go1.26.0 windows/amd64\n"),
             "node -v": FakeResult(stdout="v25.2.1\n"),
             "npm -v": FakeResult(stdout="11.6.2\n"),
-            "go test ./... -count=1": FakeResult(),
+            CORE_TEST_COMMAND: FakeResult(),
         }
     )
 
