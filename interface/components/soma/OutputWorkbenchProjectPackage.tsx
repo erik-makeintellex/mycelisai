@@ -35,7 +35,7 @@ export function OutputWorkbenchProjectPackage({
 
   return (
     <article key={`${title}-${index}`} className="rounded-lg border border-cortex-border/70 bg-cortex-bg px-3 py-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="space-y-2">
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="truncate text-sm font-semibold text-cortex-text-main">{title}</span>
@@ -43,7 +43,7 @@ export function OutputWorkbenchProjectPackage({
           </div>
           {project.summary ? <div className="text-xs leading-5 text-cortex-text-muted">{project.summary}</div> : null}
         </div>
-        <span className="inline-flex shrink-0 flex-wrap items-center gap-1">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-1" data-testid="project-package-actions">
           {resourcesHref ? (
             <a
               href={resourcesHref}
@@ -70,7 +70,7 @@ export function OutputWorkbenchProjectPackage({
             <MessageSquareReply className="h-3 w-3" />
             Reply
           </button>
-        </span>
+        </div>
       </div>
       {(project.entrypoint || folder) ? (
         <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-cortex-text-muted">
@@ -100,9 +100,9 @@ export function OutputWorkbenchProjectPackage({
 
 function PackagePath({ label, value }: { label: string; value: string }) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-1 rounded border border-cortex-border/60 bg-cortex-bg/70 px-1.5 py-0.5">
-      <span>{label}</span>
-      <code className="max-w-64 truncate font-mono text-cortex-text-main">{value}</code>
+    <span className="inline-flex max-w-full min-w-0 items-center gap-1 rounded border border-cortex-border/60 bg-cortex-bg/70 px-1.5 py-0.5">
+      <span className="shrink-0">{label}</span>
+      <code className="min-w-0 flex-1 truncate font-mono text-cortex-text-main">{value}</code>
     </span>
   );
 }

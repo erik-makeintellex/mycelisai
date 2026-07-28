@@ -27,7 +27,7 @@ function SlotPanel({
   showHeader?: boolean;
 }) {
   return (
-    <section className={`min-w-0 rounded-xl border border-cortex-border bg-cortex-bg p-2.5 ${className}`}>
+    <section className={`min-w-0 overflow-hidden rounded-xl border border-cortex-border bg-cortex-bg p-2.5 ${className}`}>
       {showHeader ? (
         <div className="mb-2 flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-[0.16em] text-cortex-text-muted">
           <span className="text-cortex-primary">{icon}</span>
@@ -175,7 +175,7 @@ export function SomaWorkspaceFrame({
           <div
             id={sideRailId}
             aria-hidden={!isPanelOpen}
-            className={`fixed bottom-3 right-3 top-3 z-40 flex w-[min(92vw,440px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface/95 p-3 shadow-2xl shadow-black/20 backdrop-blur transition duration-200 ${
+            className={`fixed bottom-3 left-[68px] right-3 top-3 z-40 flex min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3 shadow-2xl shadow-black/20 transition duration-200 sm:left-auto sm:w-[min(calc(100vw-1.5rem),520px)] sm:bg-cortex-surface/95 sm:backdrop-blur ${
               isPanelOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
             }`}
             data-testid="soma-workbench-side-rail"
@@ -225,8 +225,8 @@ export function SomaWorkspaceFrame({
                               : "border-cortex-border text-cortex-text-muted hover:border-cortex-primary/30 hover:text-cortex-text-main"
                           }`}
                         >
-                          <span className="hidden sm:inline">{panel.label}</span>
-                          <span className="sm:hidden">{panel.icon}</span>
+                          {panel.icon}
+                          <span>{panel.label}</span>
                         </button>
                       ))}
                     </div>
@@ -234,7 +234,7 @@ export function SomaWorkspaceFrame({
                 </div>
                 {selectedPanel ? (
                   <div
-                    className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
+                    className="mt-3 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pr-1"
                     data-testid="soma-workbench-panel-scroll"
                   >
                     <SlotPanel

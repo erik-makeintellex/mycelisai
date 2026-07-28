@@ -28,6 +28,8 @@ describe("SomaWorkspaceFrame", () => {
 
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(sideRail.getAttribute("aria-hidden")).toBe("true");
+    expect(sideRail.className).toContain("520px");
+    expect(sideRail.className).toContain("left-[68px]");
     expect(within(frame).queryByText("Expression")).toBeNull();
     expect(toggle.textContent).toContain("Review output");
     expect(toggle.textContent).toContain("1");
@@ -39,6 +41,7 @@ describe("SomaWorkspaceFrame", () => {
 
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
     expect(sideRail.getAttribute("aria-hidden")).toBe("false");
+    expect(screen.getByTestId("soma-workbench-panel-scroll").className).toContain("overflow-x-hidden");
     expect(within(sideRail).getByRole("tab", { name: /Work/i })).toBeDefined();
     expect(within(sideRail).getByRole("tab", { name: /Output/i })).toBeDefined();
     expect(within(sideRail).getByRole("tab", { name: /Trust/i })).toBeDefined();
