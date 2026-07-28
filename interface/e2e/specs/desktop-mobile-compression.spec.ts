@@ -37,8 +37,8 @@ test.describe("Desktop/mobile compression proof", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("Dashboard focused team keeps output access compact without stacked pre-chat tiles", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
+  test("Dashboard focused team keeps output access compact without stacked pre-chat tiles", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1576, height: 900 });
     await page.goto("/dashboard?team_id=active-demo-team", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByTestId("soma-operating-surface")).toBeVisible({ timeout: 20_000 });
@@ -54,6 +54,43 @@ test.describe("Desktop/mobile compression proof", () => {
     await expect(digest.getByText("Coin Runner package")).toBeVisible();
     await expect(digest.getByRole("button", { name: /Open local folder/i })).toBeVisible();
     await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveAttribute("aria-expanded", "false");
+    await page.getByTestId("soma-workbench-panel-toggle").click();
+    const panel = page.getByTestId("soma-workbench-side-rail");
+    await expect(panel).toHaveAttribute("aria-hidden", "false");
+    await expect(panel).toHaveCSS("opacity", "1");
+    await expect(panel.getByTestId("project-package-actions")).toBeVisible();
+    const panelWidths = await panel.evaluate((node) => ({
+      clientWidth: node.clientWidth,
+      scrollWidth: node.scrollWidth,
+    }));
+    expect(panelWidths.scrollWidth).toBeLessThanOrEqual(panelWidths.clientWidth + 1);
+    await page.screenshot({
+      path: testInfo.outputPath("dashboard-output-review-desktop.png"),
+      fullPage: true,
+    });
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("Dashboard output review remains readable on a compact viewport", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/dashboard?team_id=active-demo-team", { waitUntil: "domcontentloaded" });
+
+    const toggle = page.getByTestId("soma-workbench-panel-toggle");
+    await expect(toggle).toBeVisible({ timeout: 20_000 });
+    await toggle.click();
+    const panel = page.getByTestId("soma-workbench-side-rail");
+    await expect(panel).toHaveAttribute("aria-hidden", "false");
+    await expect(panel).toHaveCSS("opacity", "1");
+    await expect(panel.getByTestId("project-package-actions")).toBeVisible();
+    const panelWidths = await panel.evaluate((node) => ({
+      clientWidth: node.clientWidth,
+      scrollWidth: node.scrollWidth,
+    }));
+    expect(panelWidths.scrollWidth).toBeLessThanOrEqual(panelWidths.clientWidth + 1);
+    await page.screenshot({
+      path: testInfo.outputPath("dashboard-output-review-compact.png"),
+      fullPage: true,
+    });
     await expectNoHorizontalOverflow(page);
   });
 

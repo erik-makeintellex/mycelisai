@@ -271,6 +271,7 @@ describe("OutputWorkbench", () => {
     );
 
     expect(screen.getByTestId("output-workbench")).toBeDefined();
+    expect(screen.getByTestId("project-package-actions").className).toContain("w-full");
     expect(screen.getByText("Launch microsite")).toBeDefined();
     expect(screen.getByText("Reviewable output package")).toBeDefined();
     expect(screen.getByText("Workspace folder")).toBeDefined();
