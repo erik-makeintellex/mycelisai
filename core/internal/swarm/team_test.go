@@ -57,6 +57,59 @@ func TestTeam_TriggerLogic(t *testing.T) {
 	}
 }
 
+func TestTeam_StartIsReadyForImmediateCommand(t *testing.T) {
+	s, nc := startTestNATS(t)
+	defer s.Shutdown()
+	defer nc.Close()
+
+	resultCh := make(chan *nats.Msg, 1)
+	if _, err := nc.Subscribe("swarm.team.immediate-team.signal.result", func(msg *nats.Msg) {
+		resultCh <- msg
+	}); err != nil {
+		t.Fatalf("subscribe result: %v", err)
+	}
+
+	router := &cognitive.Router{
+		Config: &cognitive.BrainConfig{Providers: map[string]cognitive.ProviderConfig{
+			"stub": {Enabled: true, ModelID: "stub", Location: "local"},
+		}},
+		Adapters: map[string]cognitive.LLMProvider{"stub": teamProviderStub{}},
+	}
+	manifest := &TeamManifest{
+		ID:         "immediate-team",
+		Name:       "Immediate Team",
+		Type:       TeamTypeAction,
+		Provider:   "stub",
+		Inputs:     []string{"swarm.team.immediate-team.internal.command"},
+		Deliveries: []string{"swarm.team.immediate-team.signal.result"},
+		Members: []protocol.AgentManifest{{
+			ID: "immediate-worker", Role: "worker", Provider: "stub",
+		}},
+	}
+
+	team := NewTeam(manifest, nc, router, nil)
+	if err := team.Start(); err != nil {
+		t.Fatalf("team start: %v", err)
+	}
+	defer team.Stop()
+
+	if err := nc.Publish("swarm.team.immediate-team.internal.command", []byte("deliver now")); err != nil {
+		t.Fatalf("publish immediate command: %v", err)
+	}
+	if err := nc.Flush(); err != nil {
+		t.Fatalf("flush immediate command: %v", err)
+	}
+
+	select {
+	case msg := <-resultCh:
+		if !strings.Contains(string(msg.Data), "ok") {
+			t.Fatalf("result = %s, want provider response", string(msg.Data))
+		}
+	case <-time.After(time.Second):
+		t.Fatal("team dropped the command published immediately after Start")
+	}
+}
+
 func TestTeam_ResponseDeliveryWrapsStatusAndResultSignals(t *testing.T) {
 	s, nc := startTestNATS(t)
 	defer s.Shutdown()

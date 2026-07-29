@@ -18,10 +18,9 @@ func (t *Team) Start() error {
 
 	for _, subject := range t.Manifest.Inputs {
 		if _, err := t.nc.Subscribe(subject, t.handleTrigger); err != nil {
-			log.Printf("Team [%s] Failed to subscribe to input [%s]: %v", t.Manifest.Name, subject, err)
-		} else {
-			log.Printf("Team [%s] Listening on [%s]", t.Manifest.Name, subject)
+			return fmt.Errorf("team %s subscribe to input %s: %w", t.Manifest.ID, subject, err)
 		}
+		log.Printf("Team [%s] Listening on [%s]", t.Manifest.Name, subject)
 	}
 
 	for _, manifest := range t.Manifest.Members {
@@ -46,11 +45,16 @@ func (t *Team) Start() error {
 		t.injectAgentToolDescriptions(agent, member.Tools)
 		t.injectAgentRuntimeBindings(agent)
 		agent.SetTeamTopology(t.Manifest.Inputs, t.Manifest.Deliveries)
-		go agent.Start()
+		agent.Start()
 	}
 
 	internalResponse := fmt.Sprintf(protocol.TopicTeamInternalRespond, t.Manifest.ID)
-	t.nc.Subscribe(internalResponse, t.handleResponse)
+	if _, err := t.nc.Subscribe(internalResponse, t.handleResponse); err != nil {
+		return fmt.Errorf("team %s subscribe to internal responses: %w", t.Manifest.ID, err)
+	}
+	if err := t.nc.Flush(); err != nil {
+		return fmt.Errorf("team %s establish runtime subscriptions: %w", t.Manifest.ID, err)
+	}
 	t.startScheduler()
 	return nil
 }

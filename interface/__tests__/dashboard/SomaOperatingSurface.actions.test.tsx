@@ -142,9 +142,9 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(mocks.useTeamWorkActionHandler).toHaveBeenCalledWith(mocks.selectTeam);
     expect(mocks.useDurableTeamWork).toHaveBeenCalledWith(expect.objectContaining({ focusedTeamId: "team-alpha", refreshVersion: 12 }));
     expect(mocks.missionControlChat).toHaveBeenCalledWith(expect.objectContaining({ focusedTeamId: "team-alpha" }));
-    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Working in");
+    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Work context");
     expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Alpha");
-    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Team chat, work, outputs, and proof");
+    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Team work and outputs");
     expect(screen.queryByRole("tab", { name: /Alpha/i })).toBeNull();
     expect(screen.getByRole("button", { name: /Alpha/i }).getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("work");
@@ -255,7 +255,7 @@ describe("SomaOperatingSurface active work actions", () => {
   it("lets operators switch the Soma surface into a team work context", () => {
     render(<SomaOperatingSurface />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Soma root/i }));
+    fireEvent.click(screen.getByRole("button", { name: /current All work/i }));
     fireEvent.click(screen.getByRole("option", { name: /Alpha/i }));
 
     expect(mocks.selectTeam).toHaveBeenCalledWith("team-alpha");

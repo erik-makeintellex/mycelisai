@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -119,15 +121,42 @@ func (r *InternalToolRegistry) handleCreateTeam(_ context.Context, args map[stri
 	}
 	for _, m := range r.somaRef.ListTeams() {
 		if m != nil && m.ID == manifest.ID {
-			out, _ := json.Marshal(map[string]any{"status": "already_exists", "team_id": manifest.ID})
+			workspaceFolder, err := ensureRuntimeTeamWorkspace(manifest.ID)
+			if err != nil {
+				return "", fmt.Errorf("repair team workspace: %w", err)
+			}
+			out, _ := json.Marshal(map[string]any{"status": "already_exists", "team_id": manifest.ID, "workspace_folder": workspaceFolder})
 			return string(out), nil
 		}
 	}
 	if err := r.somaRef.SpawnTeam(manifest); err != nil {
 		return "", fmt.Errorf("create_team failed: %w", err)
 	}
-	out, _ := json.Marshal(map[string]any{"status": "created", "team_id": manifest.ID, "name": manifest.Name})
+	workspaceFolder, err := ensureRuntimeTeamWorkspace(manifest.ID)
+	if err != nil {
+		r.somaRef.StopTeam(manifest.ID)
+		return "", fmt.Errorf("create team workspace: %w", err)
+	}
+	out, _ := json.Marshal(map[string]any{"status": "created", "team_id": manifest.ID, "name": manifest.Name, "workspace_folder": workspaceFolder})
 	return string(out), nil
+}
+
+func ensureRuntimeTeamWorkspace(teamID string) (string, error) {
+	trimmed := strings.TrimSpace(teamID)
+	if trimmed == "" || trimmed == "." || trimmed == ".." || strings.ContainsAny(trimmed, `/\\`) {
+		return "", fmt.Errorf("invalid team_id for workspace isolation")
+	}
+	relativeRoot := "groups/" + trimmed
+	root, err := validateToolPath(relativeRoot)
+	if err != nil {
+		return "", err
+	}
+	for _, folder := range []string{"planning", "source", "generated"} {
+		if err := os.MkdirAll(filepath.Join(root, folder), 0o755); err != nil {
+			return "", fmt.Errorf("create %s folder: %w", folder, err)
+		}
+	}
+	return relativeRoot, nil
 }
 
 func normalizeDelegateTaskArgs(args map[string]any) (teamID string, ask protocol.TeamAsk, err error) {

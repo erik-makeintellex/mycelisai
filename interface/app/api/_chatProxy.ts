@@ -23,7 +23,10 @@ function upstreamHeaders(req: Request): Headers {
         headers.set('X-Mycelis-Web-Identity', forwardedIdentity);
         headers.set('X-Mycelis-Web-Identity-Signature', forwardedIdentitySignature);
     }
-    headers.set('Content-Type', req.headers.get('content-type') || 'application/json');
+    for (const name of ['accept', 'cache-control', 'content-type', 'cookie']) {
+        const value = req.headers.get(name);
+        if (value) headers.set(name, value);
+    }
     return headers;
 }
 
@@ -66,12 +69,16 @@ async function proxyBackendRequest(req: Request, target: ProxyTarget, method: 'G
             method,
             headers: upstreamHeaders(req),
             body,
+            cache: 'no-store',
         });
 
         const headers = new Headers();
-        const contentType = response.headers.get('content-type');
-        if (contentType) {
-            headers.set('content-type', contentType);
+        for (const name of ['cache-control', 'content-type']) {
+            const value = response.headers.get(name);
+            if (value) headers.set(name, value);
+        }
+        if (response.headers.get('content-type')?.includes('text/event-stream')) {
+            headers.set('X-Accel-Buffering', 'no');
         }
 
         return new Response(response.body, {

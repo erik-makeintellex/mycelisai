@@ -33,6 +33,9 @@ afterEach(() => {
 
 // ── EventSource mock ─────────────────────────────────────────
 export class MockEventSource {
+    static readonly CONNECTING = 0;
+    static readonly OPEN = 1;
+    static readonly CLOSED = 2;
     static instances: MockEventSource[] = [];
     url: string;
     onopen: ((ev: Event) => void) | null = null;

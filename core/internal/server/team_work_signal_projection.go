@@ -83,8 +83,8 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	item.NeedsOperator = projectedState == protocol.TeamWorkStateNeedsOperator || projectedState == protocol.TeamWorkStateDegraded
 	if projectedState == protocol.TeamWorkStateDegraded {
 		item.DegradationState = firstNonEmptyString(stringField(payload, "degradation_state"), stringField(payload, "degradation"), item.DegradationState)
-		if item.DegradationState == "" && deliverableResultMissingOutputs(item, payloadKind, incomingOutputRefs) {
-			item.DegradationState = "missing_retained_output"
+		if item.DegradationState == "" {
+			item.DegradationState = deliverableResultOutputIssue(item, payloadKind, incomingOutputRefs)
 		}
 	} else {
 		item.DegradationState = ""
@@ -128,6 +128,9 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit projected team work transaction: %w", err)
+	}
+	if payloadKind == protocol.PayloadKindResult {
+		p.server.broadcastTeamWorkResultThreadEvent(item, event)
 	}
 	return nil
 }
@@ -260,29 +263,8 @@ func projectedHeadline(kind protocol.SignalPayloadKind, payload map[string]any) 
 	return "Team status update"
 }
 
-func projectedHeadlineForItem(item protocol.TeamWorkItem, kind protocol.SignalPayloadKind, payload map[string]any) string {
-	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "missing_retained_output" {
-		return "Team result missing retained output"
-	}
-	return projectedHeadline(kind, payload)
-}
-
 func projectedDetails(payload map[string]any) string {
 	return firstNonEmptyString(stringField(payload, "details"), stringField(payload, "message"), stringField(payload, "text"), stringField(payload, "summary"))
-}
-
-func projectedDetailsForItem(item protocol.TeamWorkItem, payload map[string]any) string {
-	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "missing_retained_output" {
-		return "The team reported completion, but did not include retained output references for the expected deliverable."
-	}
-	return projectedDetails(payload)
-}
-
-func projectedNextActionForItem(item protocol.TeamWorkItem, payload map[string]any) string {
-	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "missing_retained_output" {
-		return "Ask Soma to have the team attach or regenerate the retained deliverable."
-	}
-	return stringField(payload, "next_action")
 }
 
 func projectedSummary(kind protocol.SignalPayloadKind, payload map[string]any) string {

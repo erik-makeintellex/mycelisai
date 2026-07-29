@@ -11,6 +11,8 @@ import (
 	"github.com/mycelis/core/internal/memory"
 )
 
+var streamHeartbeatInterval = 15 * time.Second
+
 // StreamHandler manages SSE connections and broadcasts events
 type StreamHandler struct {
 	clients map[chan string]bool
@@ -73,15 +75,24 @@ func (s *StreamHandler) HandleStream(w http.ResponseWriter, r *http.Request) {
 
 	// Stream loop — respects client disconnect via request context
 	ctx := r.Context()
+	heartbeat := time.NewTicker(streamHeartbeatInterval)
+	defer heartbeat.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-heartbeat.C:
+			if _, err := fmt.Fprint(w, ": keepalive\n\n"); err != nil {
+				return
+			}
+			flusher.Flush()
 		case msg, open := <-clientChan:
 			if !open {
 				return
 			}
-			fmt.Fprintf(w, "data: %s\n\n", msg)
+			if _, err := fmt.Fprintf(w, "data: %s\n\n", msg); err != nil {
+				return
+			}
 			flusher.Flush()
 		}
 	}

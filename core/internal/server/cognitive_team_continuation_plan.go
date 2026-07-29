@@ -178,6 +178,9 @@ func deliveryCapabilitiesForContentContract(contract map[string]any) []string {
 }
 
 func requestAsksTeamToDeliver(lower string) bool {
+	if requestRequiresDeliveryTeam(lower) {
+		return true
+	}
 	if !requestContainsAny(lower, []string{"team", "teams"}) {
 		return false
 	}
@@ -185,7 +188,8 @@ func requestAsksTeamToDeliver(lower string) bool {
 }
 
 func requestAsksToContinueTeamEvocation(lower string) bool {
-	if !requestContainsAny(lower, []string{"brief", "evocation", "handoff", "retained", "research", "council"}) {
+	if !requestContainsAny(lower, []string{"brief", "evocation", "handoff"}) &&
+		!(hasExactWord(lower, "research") && hasExactWord(lower, "council")) {
 		return false
 	}
 	return requestContainsAny(lower, []string{

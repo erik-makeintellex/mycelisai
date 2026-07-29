@@ -116,6 +116,11 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       expect(projectPackageRef?.proof_ref).toBeTruthy();
       await expect.poll(() => targetExists(entrypoint), { timeout: 60_000 }).toBeTruthy();
 
+      await expect(page.getByText("Work complete", { exact: true }).last()).toBeVisible({ timeout: 30_000 });
+      const directOpen = page.getByRole("link", { name: "Open app" }).last();
+      await expect(directOpen).toBeVisible();
+      await expect(directOpen).toHaveAttribute("href", new RegExp(encodeURIComponent(teamID), "i"));
+
       await page.goto(`/dashboard?team_id=${encodeURIComponent(teamID)}`, { waitUntil: "domcontentloaded" });
       await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
 

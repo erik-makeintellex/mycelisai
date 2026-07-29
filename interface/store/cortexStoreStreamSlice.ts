@@ -82,9 +82,11 @@ export function createCortexStreamSlice(
             };
 
             source.onerror = () => {
-                set({ isStreamConnected: false, streamConnectionState: 'offline' });
-                eventSourceRef = null;
-                source.close();
+                const closed = source.readyState === EventSource.CLOSED;
+                set({
+                    isStreamConnected: false,
+                    streamConnectionState: closed ? 'offline' : 'connecting',
+                });
             };
 
             eventSourceRef = source;

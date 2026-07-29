@@ -91,7 +91,7 @@ export default function ExecutionSummaryCompactCard({
   const nextStep = nextStepText(summary.next_step);
   const trust = trustVerdict(summary, summaryRunId ?? runId, artifacts);
   const outputDigest = outputWorkbenchDigest({ outputs: allOutputs, projectPackages });
-  const hasDetails = executionShape || proofs.length || audit || degradation.length || nextStep;
+  const hasDetails = executionShape || proofs.length || audit || degradation.length || nextStep || summaryRunId;
   const heading = executionSummaryHeading(summary, allOutputs.length + projectPackages.length);
 
   return (
@@ -109,12 +109,6 @@ export default function ExecutionSummaryCompactCard({
           <span className={`rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${trustToneClass(trust.tone)}`}>
             {trust.label}
           </span>
-          {summaryRunId ? (
-            <a href={`/runs/${summaryRunId}`} className="inline-flex items-center gap-1 rounded border border-cortex-info/20 bg-cortex-info/10 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-cortex-info hover:underline">
-              Run {summaryRunId.slice(0, 8)}
-              <ExternalLink className="h-2.5 w-2.5" />
-            </a>
-          ) : null}
           {executionStatus ? (
             <span className={`rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${statusToneClass(executionStatus, trust.tone)}`}>
               {executionStatus}
@@ -149,6 +143,14 @@ export default function ExecutionSummaryCompactCard({
                       ) : <span key={`${proof.text}-${index}`}>{proof.text}</span>
                     ))}
                   </div>
+                </SummaryRow>
+              ) : null}
+              {summaryRunId ? (
+                <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Receipt">
+                  <a href={`/runs/${summaryRunId}`} className="inline-flex items-center gap-1 text-cortex-primary hover:underline">
+                    Inspect run receipt {summaryRunId.slice(0, 8)}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
                 </SummaryRow>
               ) : null}
               {audit ? <SummaryRow icon={<RotateCcw className="h-3.5 w-3.5" />} label="Recovery">{audit}</SummaryRow> : null}

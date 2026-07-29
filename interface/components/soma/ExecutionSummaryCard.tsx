@@ -113,7 +113,8 @@ export default function ExecutionSummaryCard({
         || proofs.length
         || audit
         || degradation.length
-        || nextStep;
+        || nextStep
+        || summaryRunId;
 
     const hasContent = intent.length
         || understanding.length
@@ -147,12 +148,6 @@ export default function ExecutionSummaryCard({
                     <span className={`rounded border px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${trustToneClass(trust.tone)}`}>
                         {trust.label}
                     </span>
-                    {summaryRunId && (
-                        <a href={`/runs/${summaryRunId}`} className="inline-flex items-center gap-1 rounded border border-cortex-info/20 bg-cortex-info/10 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase text-cortex-info hover:underline">
-                            Run {summaryRunId.slice(0, 8)}
-                            <ExternalLink className="h-2.5 w-2.5" />
-                        </a>
-                    )}
                     {executionStatus && (
                         <span className="rounded border border-cortex-success/20 bg-cortex-success/10 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase text-cortex-success">
                             {executionStatus}
@@ -241,6 +236,14 @@ export default function ExecutionSummaryCard({
                                     </div>
                                 </SummaryRow>
                             )}
+                            {summaryRunId ? (
+                                <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Receipt">
+                                    <a href={`/runs/${summaryRunId}`} className="inline-flex items-center gap-1 text-cortex-primary hover:underline">
+                                        Inspect run receipt {summaryRunId.slice(0, 8)}
+                                        <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                </SummaryRow>
+                            ) : null}
                             {audit && (
                                 <SummaryRow icon={<RotateCcw className="h-3.5 w-3.5" />} label="Recovery">
                                     {audit}
