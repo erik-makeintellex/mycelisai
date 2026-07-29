@@ -150,7 +150,7 @@ describe('MissionControlChat execution summary', () => {
         await waitFor(() => {
             expect(screen.getByTestId('execution-summary-card')).toBeDefined();
             expect(screen.getByText('Result verified')).toBeDefined();
-            expect(screen.getByRole('link', { name: /Run search-r/i }).getAttribute('href')).toBe('/runs/search-run-123');
+            expect(screen.getByRole('link', { name: /Inspect run receipt search-r/i }).getAttribute('href')).toBe('/runs/search-run-123');
             expect(screen.getByText('Tool-assisted work')).toBeDefined();
             expect(screen.getAllByText('Soma Search').length).toBeGreaterThan(0);
             expect(screen.queryByText('web_search')).toBeNull();

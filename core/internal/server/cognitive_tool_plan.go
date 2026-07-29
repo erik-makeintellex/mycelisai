@@ -14,6 +14,10 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 		planned = append(planned, crossTeamCalls...)
 		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
 	}
+	if continuationCalls, ok := inferTeamEvocationContinuationPlanFromRequest(latestRequest); ok {
+		planned = append(planned, continuationCalls...)
+		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
+	}
 	if inferredTeamCall, ok := inferCreateTeamPlanFromRequest(latestRequest); ok {
 		if hasParsedCall && strings.TrimSpace(parsedCall.Name) == "create_team" {
 			planned = append(planned, normalizePlannedToolCall(mergeMissingPlannedToolArguments(parsedCall, inferredTeamCall)))
@@ -38,10 +42,6 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 				planned = append(planned, normalizePlannedToolCall(saveCall))
 			}
 		}
-		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
-	}
-	if continuationCalls, ok := inferTeamEvocationContinuationPlanFromRequest(latestRequest); ok {
-		planned = append(planned, continuationCalls...)
 		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
 	}
 	if hasParsedCall {

@@ -137,6 +137,37 @@ describe('MissionControlChat thread state cards', () => {
         expect(screen.queryByText('Execution started - Soma accepted the approved work.')).toBeNull();
     });
 
+    it('returns completed team work as a concise directly openable result', () => {
+        useCortexStore.setState({
+            missionChat: [{
+                role: 'system',
+                content: 'Work complete - The team built and validated the app.',
+                mode: 'execution_result',
+                thread_event: {
+                    kind: 'result_ready',
+                    label: 'Work complete',
+                    detail: 'The team built and validated the app. One deliverable is ready to open.',
+                    tone: 'success',
+                    status: 'completed',
+                    href: '/api/v1/workspace/files/view?path=groups%2Fapp-team%2Fgenerated%2Fapp%2Findex.html',
+                    href_label: 'Open app',
+                    source_kind: 'system',
+                    source_channel: 'team-work.result-projection',
+                    payload_kind: 'thread_event',
+                },
+            }],
+            councilMembers: COUNCIL_MEMBERS,
+            councilTarget: 'admin',
+        });
+
+        render(<MissionControlChat simpleMode />);
+
+        expect(screen.getByText('Work complete')).toBeDefined();
+        expect(screen.getByText(/One deliverable is ready to open/i)).toBeDefined();
+        expect(screen.getByRole('link', { name: /Open app/i }).getAttribute('href')).toContain('groups%2Fapp-team');
+        expect(screen.queryByText('team-work.result-projection')).toBeNull();
+    });
+
     it('renders adaptive answer depth without turning answers into proposal controls', async () => {
         useCortexStore.setState({ councilMembers: COUNCIL_MEMBERS, councilTarget: 'admin' });
 

@@ -1,10 +1,50 @@
 package server
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mycelis/core/pkg/protocol"
 )
+
+func TestTeamWorkResultThreadEvent_ReturnsDirectPackageLink(t *testing.T) {
+	item := protocol.TeamWorkItem{
+		TeamID:     "game-team",
+		WorkItemID: "work-1",
+		RunID:      "run-1",
+		State:      protocol.TeamWorkStateOutputReady,
+		OutputRefs: []protocol.TeamOutputRef{{
+			Kind:       "project_package",
+			Label:      "Playable game",
+			StorageRef: "groups/game-team/generated/first-game",
+			Entrypoint: "index.html",
+		}},
+	}
+	event := teamWorkResultThreadEvent(item, protocol.TeamStatusEvent{Details: "The team built and validated the playable game."})
+	if event.Payload.Kind != protocol.ThreadEventResultReady || event.Payload.Label != "Work complete" {
+		t.Fatalf("payload = %#v", event.Payload)
+	}
+	if event.Payload.HrefLabel != "Open app" || !strings.Contains(event.Payload.Href, "groups%2Fgame-team%2Fgenerated%2Ffirst-game%2Findex.html") {
+		t.Fatalf("open action = %q %q", event.Payload.HrefLabel, event.Payload.Href)
+	}
+	if !strings.Contains(event.Payload.Detail, "One deliverable is ready to open") {
+		t.Fatalf("detail = %q", event.Payload.Detail)
+	}
+}
+
+func TestTeamWorkResultThreadEvent_ExplainsInvalidResultWithoutRunTimeline(t *testing.T) {
+	item := protocol.TeamWorkItem{
+		TeamID:           "game-team",
+		WorkItemID:       "work-1",
+		RunID:            "run-1",
+		State:            protocol.TeamWorkStateDegraded,
+		DegradationState: "invalid_deliverable_shape",
+	}
+	event := teamWorkResultThreadEvent(item, protocol.TeamStatusEvent{Details: "The expected package entrypoint was not retained."})
+	if event.Payload.Kind != protocol.ThreadEventAttentionNeeded || event.Payload.Href != "" {
+		t.Fatalf("payload = %#v, want attention without raw run link", event.Payload)
+	}
+}
 
 func TestFirstThreadEventTeamWorkRefAggregatesOutputRefs(t *testing.T) {
 	teamID, workItemID, outputs := firstThreadEventTeamWorkRef([]confirmActionTeamWorkRef{

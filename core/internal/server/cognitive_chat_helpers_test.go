@@ -243,13 +243,16 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationProposal(t *test
 	}
 
 	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
-	requirePlannedCallNames(t, calls, "create_team", "write_file")
+	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
 	if calls[0].Arguments["name"] != "First Demo Game Team" {
 		t.Fatalf("team name = %#v, want First Demo Game Team", calls[0].Arguments["name"])
 	}
 	path, _ := calls[1].Arguments["path"].(string)
 	if path != "groups/first-demo-game-team/planning/TEAM_EVOCATION.md" {
 		t.Fatalf("path = %q, want team evocation brief", path)
+	}
+	if calls[2].Arguments["path"] != "groups/first-demo-game-team/planning/RESEARCH_COUNCIL_HANDOFF.md" {
+		t.Fatalf("handoff path = %#v, want team-owned preparation", calls[2].Arguments["path"])
 	}
 	content, _ := calls[1].Arguments["content"].(string)
 	if !strings.Contains(content, "Team Evocation Brief") || !strings.Contains(content, "research, council review") {

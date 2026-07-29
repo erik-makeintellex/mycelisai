@@ -10,10 +10,11 @@ import (
 func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool) {
 	trimmed := strings.TrimSpace(text)
 	lower := strings.ToLower(trimmed)
-	if trimmed == "" || !strings.Contains(lower, "team") {
+	if trimmed == "" {
 		return protocol.PlannedToolCall{}, false
 	}
-	if !requestAsksToCreateTeam(lower) {
+	explicitTeamRequest := strings.Contains(lower, "team") && requestAsksToCreateTeam(lower)
+	if !explicitTeamRequest && !requestRequiresDeliveryTeam(lower) {
 		return protocol.PlannedToolCall{}, false
 	}
 
@@ -69,6 +70,40 @@ func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool
 	args["tools"] = executionToolsForContentContract(contentContract)
 
 	return protocol.PlannedToolCall{Name: "create_team", Arguments: args}, true
+}
+
+// requestRequiresDeliveryTeam identifies retained, multi-file product work that
+// should be executed by an isolated team even when the operator speaks only in
+// outcome language. Explicit single-file asks continue through write_file.
+func requestRequiresDeliveryTeam(lower string) bool {
+	if !requestHasDeliveryVerb(lower) {
+		return false
+	}
+	if fileCall, ok := inferWriteFilePlanFromRequest(lower); ok && shouldUseRequestedWriteFilePlan(lower, fileCall) {
+		return false
+	}
+	if requestContainsAny(lower, []string{
+		"browser app", "web app", "mobile app", "project package", "project-package",
+		"software project", "complete application", "playable",
+	}) {
+		return true
+	}
+	for _, word := range []string{"game", "application", "executable", "codebase", "website"} {
+		if hasExactWord(lower, word) {
+			return true
+		}
+	}
+	return requestContainsAny(lower, []string{"complex", "production", "production-ready", "full project"}) &&
+		requestContainsAny(lower, []string{"package", "project", "media kit", "campaign", "dataset"})
+}
+
+func requestHasDeliveryVerb(lower string) bool {
+	for _, verb := range []string{"build", "create", "develop", "deliver", "generate", "implement", "make", "produce", "ship"} {
+		if hasExactWord(lower, verb) {
+			return true
+		}
+	}
+	return false
 }
 
 func executionToolsForContentContract(contract map[string]any) []string {

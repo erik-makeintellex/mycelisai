@@ -148,6 +148,9 @@ func inferMutationToolsFromText(text string) []string {
 
 	tools = append(tools, teamEvocationContinuationMutationTools(text, lower)...)
 	tools = append(tools, contentMarketingCrossTeamMutationTools(text, lower)...)
+	if requestRequiresDeliveryTeam(lower) {
+		tools = append(tools, "write_file", "generate_blueprint", "delegate")
+	}
 
 	teamMention := requestContainsAny(lower, []string{"team", "teams", "specialist", "members", "lane", "lanes"})
 	fileActions := []string{"create", "write", "update", "edit", "modify", "replace", "append", "save", "persist", "store", "generate", "draft"}
