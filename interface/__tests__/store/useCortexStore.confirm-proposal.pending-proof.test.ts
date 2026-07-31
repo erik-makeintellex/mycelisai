@@ -82,7 +82,7 @@ describe('useCortexStore confirm proposal pending proof', () => {
             },
             thread_events: [{
                 kind: 'execution_started',
-                label: 'Work approved',
+                label: 'Work started',
                 detail: 'Soma handed this to the work bus. You can keep talking here while updates arrive.',
                 tone: 'info',
                 status: 'running',

@@ -57,12 +57,15 @@ test.describe("Natural Soma delivery routing", () => {
     expect(teamID).toMatch(/^application-delivery-team-/);
 
     try {
+      const confirmationStartedAt = Date.now();
       const confirmed = await confirmProposal(page);
+      expect(Date.now() - confirmationStartedAt).toBeLessThan(10_000);
       expect(confirmed.response.ok(), confirmed.body ? JSON.stringify(confirmed.body) : confirmed.raw).toBeTruthy();
       const confirmedData = confirmed.body?.data as ConfirmData | undefined;
       expect(confirmedData?.execution_state).toBe("running");
       expect(confirmedData?.run_status).toBe("running");
-      await expect(page.getByText("Execution started", { exact: true }).last()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText("Work started", { exact: true }).last()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByPlaceholder(/Tell Soma what you want/i)).toBeEnabled();
 
       const completed = await waitForNaturalDelivery(page, teamID!, confirmedData!.run_id!);
       expect(completed.output_refs?.some((output) => output.kind === "project_package"), JSON.stringify(completed)).toBeTruthy();

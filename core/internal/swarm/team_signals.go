@@ -18,7 +18,10 @@ func (t *Team) handleTrigger(msg *nats.Msg) {
 	internalSubject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID)
 	payload := normalizeCommandPayload(msg.Data)
 	if correlation := extractTeamCommandCorrelation(t.Manifest.ID, msg.Data, payload); correlation != nil {
-		t.rememberCommandCorrelation(*correlation)
+		if !t.rememberCommandCorrelation(*correlation) {
+			log.Printf("Team [%s] ignored duplicate command [%s]", t.Manifest.Name, correlation.commandKey())
+			return
+		}
 	}
 	t.nc.Publish(internalSubject, payload)
 }
@@ -94,16 +97,25 @@ func (t *Team) handleResponse(msg *nats.Msg) {
 	}
 }
 
-func (t *Team) rememberCommandCorrelation(correlation teamCommandCorrelation) {
+func (t *Team) rememberCommandCorrelation(correlation teamCommandCorrelation) bool {
 	if strings.TrimSpace(correlation.WorkItemID) == "" {
-		return
+		return true
 	}
 	correlation.TeamID = firstNonEmptySignalString(correlation.TeamID, t.Manifest.ID)
 	correlation.ExpiresAt = time.Now().UTC().Add(5 * time.Minute)
 	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.pruneExpiredCorrelationsLocked(time.Now().UTC())
+	key := correlation.commandKey()
+	if expiry, exists := t.seenCommandKeys[key]; exists && time.Now().UTC().Before(expiry) {
+		return false
+	}
+	if t.seenCommandKeys == nil {
+		t.seenCommandKeys = map[string]time.Time{}
+	}
+	t.seenCommandKeys[key] = time.Now().UTC().Add(time.Hour)
 	t.pendingCorrelations = append(t.pendingCorrelations, correlation)
-	t.mu.Unlock()
+	return true
 }
 
 func (t *Team) responseCommandCorrelation(raw []byte) *teamCommandCorrelation {
@@ -128,6 +140,11 @@ func (t *Team) consumeCommandCorrelation() *teamCommandCorrelation {
 }
 
 func (t *Team) pruneExpiredCorrelationsLocked(now time.Time) {
+	for key, expiry := range t.seenCommandKeys {
+		if now.After(expiry) {
+			delete(t.seenCommandKeys, key)
+		}
+	}
 	if len(t.pendingCorrelations) == 0 {
 		return
 	}
@@ -187,10 +204,15 @@ func correlationFromMap(values map[string]any) *teamCommandCorrelation {
 		return nil
 	}
 	return &teamCommandCorrelation{
-		WorkItemID: workItemID,
-		TeamID:     signalString(values["team_id"]),
-		RunID:      signalString(values["run_id"]),
+		WorkItemID:     workItemID,
+		TeamID:         signalString(values["team_id"]),
+		RunID:          signalString(values["run_id"]),
+		IdempotencyKey: signalString(values["idempotency_key"]),
 	}
+}
+
+func (c teamCommandCorrelation) commandKey() string {
+	return firstNonEmptySignalString(c.IdempotencyKey, c.WorkItemID)
 }
 
 func correlatedTeamResponsePayload(raw []byte, correlation *teamCommandCorrelation) []byte {
@@ -217,6 +239,7 @@ func correlatedTeamResponsePayload(raw []byte, correlation *teamCommandCorrelati
 		}
 	}
 	payload["work_item_id"] = correlation.WorkItemID
+	payload["idempotency_key"] = correlation.commandKey()
 	payload["team_id"] = firstNonEmptySignalString(correlation.TeamID, "")
 	if correlation.RunID != "" {
 		payload["run_id"] = correlation.RunID

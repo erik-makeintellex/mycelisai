@@ -40,6 +40,9 @@ func TestEnsureOutcomeOwnershipForConfirmedActionCreatesProjectAndRegistry(t *te
 		},
 	}
 
+	mock.ExpectQuery("SELECT id::text, outcome_id").
+		WithArgs(link.RunID).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
 	expectOutcomeProjectInsert(mock, protocol.OutcomeProjectStatusOutputReady, "Playable browser game outcome", now)
 	expectTeamRegistryEntryInsert(mock, "qa-team", "lead", now)
 
@@ -64,6 +67,46 @@ func TestEnsureOutcomeOwnershipForConfirmedActionCreatesProjectAndRegistry(t *te
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestEnsureOutcomeOwnershipForConfirmedActionReusesExistingOutcome(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	link := testConfirmedActionTeamWorkLink(&protocol.ScopeValidation{})
+	projectID := "66666666-6666-4666-8666-666666666666"
+
+	mock.ExpectQuery("SELECT id::text, outcome_id").
+		WithArgs(link.RunID).
+		WillReturnRows(sqlmock.NewRows(outcomeProjectScanColumns()).AddRow(
+			projectID, link.RunID, "Existing outcome", "Retained work", "project", "groups/qa-team",
+			"active", link.RunID, link.ProofID, link.ContractID, "", []byte(`["work-1"]`),
+			[]byte(`[]`), []byte(`[]`), []byte(`[]`), "retained", now, now, "v1",
+		))
+	mock.ExpectQuery("SELECT id::text, project_id::text").
+		WithArgs(projectID, 50).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+
+	project, err := s.ensureOutcomeOwnershipForConfirmedAction(t.Context(), link, []confirmActionTeamWorkRef{{
+		WorkItemID: "work-1", TeamID: "qa-team", State: protocol.TeamWorkStateQueued,
+	}})
+	if err != nil {
+		t.Fatalf("ensureOutcomeOwnershipForConfirmedAction: %v", err)
+	}
+	if project == nil || project.ProjectID != projectID {
+		t.Fatalf("project = %#v, want existing %s", project, projectID)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func outcomeProjectScanColumns() []string {
+	return []string{
+		"id", "outcome_id", "title", "purpose", "execution_mode", "workspace_folder",
+		"status", "run_id", "intent_proof_id", "contract_id", "proof_id", "work_item_refs",
+		"output_refs", "proof_refs", "recovery_refs", "retention_policy", "created_at", "updated_at", "version",
 	}
 }
 

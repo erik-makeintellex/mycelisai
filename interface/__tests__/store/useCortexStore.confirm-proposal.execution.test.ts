@@ -72,11 +72,12 @@ describe('useCortexStore confirm proposal execution', () => {
         expect(mockFetch).toHaveBeenCalledWith('/api/v1/teams/detail');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Run run-123 started.');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Soma handed this to the work bus');
-        expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('saved the run receipt');
+        expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('not a completed result or proof');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).not.toContain('Active Work');
         expect(useCortexStore.getState().missionChat.at(-1)?.thread_events?.[0]).toMatchObject({
             kind: 'execution_started',
-            label: 'Execution started',
+            label: 'Work started',
+            status: 'running',
             target_reference: 'run:run-123',
             source_kind: 'web_api',
             source_channel: 'api.intent.confirm-action',

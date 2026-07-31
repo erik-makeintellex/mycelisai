@@ -48,6 +48,10 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 
 	auditUser := auditUserLabelFromRequest(r)
 	actorIdentity := actorIdentitySnapshotFromRequest(r)
+	if confirmedActionNeedsAsyncDispatch(scope) {
+		s.handleAsyncConfirmedAction(w, r, tx, proofID, contractID, runID, scope, auditUser, actorIdentity)
+		return
+	}
 	results, err := s.executePlannedToolCalls(r.Context(), scope, auditUser, runID, proofID, contractID)
 	if err != nil {
 		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, auditUser, actorIdentity, err)

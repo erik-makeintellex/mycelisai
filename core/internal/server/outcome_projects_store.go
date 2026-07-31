@@ -112,6 +112,29 @@ func (s *AdminServer) getOutcomeProjectDB(ctx context.Context, projectID string)
 	return item, nil
 }
 
+func (s *AdminServer) getOutcomeProjectByOutcomeIDDB(ctx context.Context, outcomeID string) (protocol.OutcomeProject, error) {
+	db := s.getDB()
+	if db == nil {
+		return protocol.OutcomeProject{}, errors.New("database not available")
+	}
+	item, err := scanOutcomeProject(db.QueryRowContext(ctx, `
+		SELECT id::text, outcome_id, title, purpose, execution_mode, workspace_folder,
+		       status, COALESCE(run_id,''), COALESCE(intent_proof_id,''),
+		       COALESCE(contract_id,''), COALESCE(proof_id,''), work_item_refs,
+		       output_refs, proof_refs, recovery_refs, retention_policy,
+		       created_at, updated_at, version
+		FROM outcome_projects
+		WHERE tenant_id='default' AND outcome_id=$1`, outcomeID))
+	if err != nil {
+		return item, err
+	}
+	entries, _ := s.listTeamRegistryEntriesDB(ctx, item.ProjectID, 50)
+	for _, entry := range entries {
+		item.TeamRegistryRefs = append(item.TeamRegistryRefs, entry.RegistryID)
+	}
+	return item, nil
+}
+
 func (s *AdminServer) insertTeamRegistryEntryDB(ctx context.Context, item *protocol.TeamRegistryEntry) error {
 	db := s.getDB()
 	if db == nil {

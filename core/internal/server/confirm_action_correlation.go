@@ -15,8 +15,9 @@ func annotateConfirmedDelegationCall(planned protocol.PlannedToolCall, runID, pr
 	teamID := firstNonEmptyString(confirmedActionTeamID(args), confirmedActionCreatedTeamIDFromScope(scope))
 	workID := firstNonEmptyString(correlationContextValue(args, "work_item_id"), args["work_item_id"], uuid.NewString())
 	context := map[string]any{
-		"work_item_id": workID,
-		"team_id":      teamID,
+		"work_item_id":    workID,
+		"team_id":         teamID,
+		"idempotency_key": "confirm-action:" + proofID,
 	}
 	addIfNotEmpty(context, "run_id", runID)
 	addIfNotEmpty(context, "intent_proof_id", proofID)
