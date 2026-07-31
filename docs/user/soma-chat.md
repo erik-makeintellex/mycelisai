@@ -79,7 +79,7 @@ The review panel overlays the conversation instead of resizing it. On compact sc
 
 When output is ready and recovery is also present, Soma should say that plainly, keep the output openable, and point you to the Work tab for recovery.
 
-Soma replies may also show small action-state cards inside the thread. These compact cards translate structured work state into user language such as `Approval sent`, `Execution started`, `Output ready`, or `Needs recovery` without repeating the same event text in multiple places or exposing raw routing subjects and system payloads. When a handoff has a run receipt, the card should offer a plain `Open run receipt` link for proof and recovery review.
+Soma replies may also show small action-state cards inside the thread. These compact cards translate structured work state into user language such as `Approval sent`, `Work started`, `Output ready`, or `Needs recovery` without repeating the same event text in multiple places or exposing raw routing subjects and system payloads. `Work started` means the approved plan is durably queued or running on the work bus; it is not completion proof, and the composer remains available for another conversation or request. When a handoff has a run receipt, the card should offer a plain `Open run receipt` link for proof and recovery review.
 
 ## Outputs
 

@@ -69,6 +69,7 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("trigger_rules schedule columns", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'trigger_rules' AND column_name = 'trigger_kind';"),
     ("search_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'search_sources';"),
     ("input_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'input_sources';"),
+    ("execution_dispatch_outbox table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'execution_dispatch_outbox';"),
 )
 
 def _load_env():

@@ -71,7 +71,7 @@ function proposalStartedState(): NonNullable<ChatMessage['ui_response_state']> {
 function confirmedRunMessage(runId: string | null, summary?: string | null, teamWorkRefs: TeamWorkConfirmationRef[] = []) {
     const state = runId ? `Run ${runId.slice(0, 8)} started.` : 'Proposal approved.';
     const next = runId
-        ? 'Soma handed this to the work bus and saved the run receipt.'
+        ? 'Soma handed this to the work bus. This is running, not a completed result or proof.'
         : proposalStartedDetail;
     return [state, next, teamWorkMessage(teamWorkRefs), summary].filter(Boolean).join(' ');
 }

@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/mycelis/core/pkg/protocol"
@@ -10,6 +12,12 @@ import (
 func (s *AdminServer) ensureOutcomeOwnershipForConfirmedAction(ctx context.Context, link confirmedActionTeamWorkLink, refs []confirmActionTeamWorkRef) (*protocol.OutcomeProject, error) {
 	if s.getDB() == nil || len(refs) == 0 {
 		return nil, nil
+	}
+	outcomeID := firstNonEmptyString(link.RunID, link.ProofID)
+	if existing, err := s.getOutcomeProjectByOutcomeIDDB(ctx, outcomeID); err == nil {
+		return &existing, nil
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
 	}
 	workRefs := make([]string, 0, len(refs))
 	outputRefs := []protocol.TeamOutputRef{}
@@ -34,7 +42,7 @@ func (s *AdminServer) ensureOutcomeOwnershipForConfirmedAction(ctx context.Conte
 		return nil, nil
 	}
 	project := protocol.NormalizeOutcomeProject(protocol.OutcomeProject{
-		OutcomeID:       firstNonEmptyString(link.RunID, link.ProofID),
+		OutcomeID:       outcomeID,
 		Title:           outcomeProjectTitle(link, refs, outputRefs),
 		Purpose:         outcomeProjectPurpose(link),
 		ExecutionMode:   "project",

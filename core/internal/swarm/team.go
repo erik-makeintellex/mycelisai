@@ -52,26 +52,29 @@ type Team struct {
 	mcpServerNames      map[uuid.UUID]string
 	mcpToolDescs        map[string]string
 	pendingCorrelations []teamCommandCorrelation
+	seenCommandKeys     map[string]time.Time
 	subscriptions       []*nats.Subscription
 	agents              []*Agent
 }
 
 type teamCommandCorrelation struct {
-	WorkItemID string
-	TeamID     string
-	RunID      string
-	ExpiresAt  time.Time
+	WorkItemID     string
+	TeamID         string
+	RunID          string
+	IdempotencyKey string
+	ExpiresAt      time.Time
 }
 
 // NewTeam creates a new Team instance.
 func NewTeam(manifest *TeamManifest, nc *nats.Conn, brain *cognitive.Router, toolExec MCPToolExecutor) *Team {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Team{
-		Manifest:     manifest,
-		nc:           nc,
-		brain:        brain,
-		toolExecutor: toolExec,
-		ctx:          ctx,
-		cancel:       cancel,
+		Manifest:        manifest,
+		nc:              nc,
+		brain:           brain,
+		toolExecutor:    toolExec,
+		ctx:             ctx,
+		cancel:          cancel,
+		seenCommandKeys: map[string]time.Time{},
 	}
 }

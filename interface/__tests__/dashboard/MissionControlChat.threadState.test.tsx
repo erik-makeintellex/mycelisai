@@ -16,10 +16,13 @@ import {
     settleMissionControlChat,
 } from './support/missionControlChatTestUtils';
 
+const realSendMissionChat = useCortexStore.getState().sendMissionChat;
+
 describe('MissionControlChat thread state cards', () => {
     beforeEach(() => {
         localStorage.clear();
         resetMissionControlChatStore();
+        useCortexStore.setState({ sendMissionChat: realSendMissionChat });
         mockFetch.mockResolvedValue(okJson({ ok: true, data: COUNCIL_MEMBERS }));
     });
 
@@ -74,17 +77,18 @@ describe('MissionControlChat thread state cards', () => {
         expect(screen.queryByText('swarm.team.ops.internal.command')).toBeNull();
     });
 
-    it('renders compact typed thread events without exposing transport subjects', () => {
+    it('renders accepted work as running rather than completed proof and keeps Soma available', () => {
+        const sendMissionChat = vi.fn();
         useCortexStore.setState({
             missionChat: [{
                 role: 'system',
-                content: 'Execution started - Soma accepted the approved work.',
+                content: 'Work started - Soma accepted the approved work.',
                 mode: 'execution_result',
                 run_id: 'run-thread-123',
                 thread_events: [{
                     kind: 'execution_started',
-                    label: 'Execution started',
-                    detail: 'Soma handed this to the work bus. You can keep talking here while work continues.',
+                    label: 'Work started',
+                    detail: 'Soma handed this to the work bus. It is running, not complete, and you can keep talking here.',
                     tone: 'info',
                     status: 'running',
                     target_reference: 'run:run-thread-123',
@@ -95,17 +99,30 @@ describe('MissionControlChat thread state cards', () => {
             }],
             councilMembers: COUNCIL_MEMBERS,
             councilTarget: 'admin',
+            isMissionChatting: false,
+            isBroadcasting: false,
+            sendMissionChat,
         });
 
         render(<MissionControlChat simpleMode />);
 
         expect(screen.getByTestId('soma-thread-state-card')).toBeDefined();
-        expect(screen.getByText('Execution started')).toBeDefined();
+        expect(screen.getByText('Work started')).toBeDefined();
         expect(screen.getByText('running')).toBeDefined();
-        expect(screen.getByText('Soma handed this to the work bus. You can keep talking here while work continues.')).toBeDefined();
+        expect(screen.getByText('Soma handed this to the work bus. It is running, not complete, and you can keep talking here.')).toBeDefined();
         expect(screen.getByRole('button', { name: /Continue with Soma/i })).toBeDefined();
         expect(screen.queryByRole('link', { name: /Open run receipt/i })).toBeNull();
+        expect(screen.queryByText(/Work complete/i)).toBeNull();
+        expect(screen.queryByText(/Result verified/i)).toBeNull();
         expect(screen.queryByText('api.intent.confirm-action')).toBeNull();
+
+        const input = screen.getByPlaceholderText(/Tell Soma/i);
+        expect((input as HTMLTextAreaElement).disabled).toBe(false);
+        fireEvent.change(input, { target: { value: 'Also prepare a concise launch note.' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        expect(sendMissionChat).toHaveBeenCalledWith('Also prepare a concise launch note.', undefined);
+        expect((input as HTMLTextAreaElement).value).toBe('');
     });
 
     it('does not duplicate plain system text when a structured thread event is present', () => {

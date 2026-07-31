@@ -187,6 +187,21 @@ func TestCorrelatedTeamResponsePayload_ProjectsBlockerAsDegraded(t *testing.T) {
 	}
 }
 
+func TestTeamCommandCorrelationRejectsDuplicateIdempotencyKey(t *testing.T) {
+	team := &Team{Manifest: &TeamManifest{ID: "test-core"}, seenCommandKeys: map[string]time.Time{}}
+	correlation := teamCommandCorrelation{
+		WorkItemID:     "11111111-1111-1111-1111-111111111111",
+		TeamID:         "test-core",
+		IdempotencyKey: "confirm-action:proof-1",
+	}
+	if !team.rememberCommandCorrelation(correlation) {
+		t.Fatal("first command should be accepted")
+	}
+	if team.rememberCommandCorrelation(correlation) {
+		t.Fatal("duplicate idempotency key should be rejected")
+	}
+}
+
 func publishCorrelatedCommand(t *testing.T, nc *nats.Conn, workID, runID string) {
 	t.Helper()
 	payload, err := protocol.WrapSignalPayloadWithMeta(

@@ -79,6 +79,10 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	}
 	incomingOutputRefs := projectedSignalOutputRefs(item, env, payload)
 	projectedState := projectedSignalState(item, payloadKind, payload, incomingOutputRefs)
+	if projectedSignalWouldRegress(item.State, projectedState) {
+		log.Printf("team work signal projection: ignored stale %s signal for terminal work item %s/%s", projectedState, teamID, workItemID)
+		return nil
+	}
 	item.State = projectedState
 	item.NeedsOperator = projectedState == protocol.TeamWorkStateNeedsOperator || projectedState == protocol.TeamWorkStateDegraded
 	if projectedState == protocol.TeamWorkStateDegraded {
@@ -133,6 +137,16 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 		p.server.broadcastTeamWorkResultThreadEvent(item, event)
 	}
 	return nil
+}
+
+func projectedSignalWouldRegress(current, incoming protocol.TeamWorkState) bool {
+	if current == protocol.TeamWorkStateOutputReady {
+		return true
+	}
+	if current != protocol.TeamWorkStateDegraded && current != protocol.TeamWorkStateNeedsOperator {
+		return false
+	}
+	return incoming != protocol.TeamWorkStateOutputReady && incoming != protocol.TeamWorkStateDegraded && incoming != protocol.TeamWorkStateNeedsOperator
 }
 
 func parseTeamWorkSignalEnvelope(data []byte) (protocol.SignalEnvelope, map[string]any, bool) {

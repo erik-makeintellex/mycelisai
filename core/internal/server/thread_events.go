@@ -33,8 +33,8 @@ func (s *AdminServer) broadcastConfirmActionThreadEvent(runID, proofID, contract
 		},
 		Payload: protocol.ThreadEventPayload{
 			Kind:            protocol.ThreadEventExecutionStarted,
-			Label:           "Execution started",
-			Detail:          "Soma accepted the approved work. You can keep talking here while work continues.",
+			Label:           "Work started",
+			Detail:          "Soma handed this to the work bus. It is running, not complete, and you can keep talking here.",
 			Tone:            "info",
 			Status:          "running",
 			TargetReference: "run:" + runID,

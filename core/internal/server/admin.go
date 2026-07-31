@@ -12,6 +12,7 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
+	"github.com/mycelis/core/internal/dispatchoutbox"
 	"github.com/mycelis/core/internal/events"
 	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/governance"
@@ -79,6 +80,7 @@ type AdminServer struct {
 	Capabilities        *capabilities.Service
 	MCPToolExecutor     swarm.MCPToolExecutor
 	WorkerBackend       workers.WorkerBackend
+	DispatchOutbox      *dispatchoutbox.Store
 }
 
 func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, ex *exchange.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
@@ -127,6 +129,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		TemplateBundlesPath: "config/templates",
 		MCPToolExecutor:     mcpToolExecutor,
 		WorkerBackend:       workers.NewCentralBackend(),
+		DispatchOutbox:      dispatchoutbox.NewStore(db),
 	}
 }
 

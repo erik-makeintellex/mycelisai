@@ -5,16 +5,16 @@ const proposalStartedDetail = 'Soma handed this to the work bus. You can keep ta
 
 export function executionStartedEvent(
     runId: string | null,
-    teamWorkRefs: TeamWorkConfirmationRef[],
+    _teamWorkRefs: TeamWorkConfirmationRef[],
 ): NonNullable<ChatMessage['thread_events']>[number] {
     return {
         kind: 'execution_started',
-        label: runId ? 'Execution started' : 'Work approved',
+        label: 'Work started',
         detail: runId
-            ? 'Soma handed this to the work bus. You can keep talking here while work continues.'
+            ? 'Soma handed this to the work bus. It is running, not complete, and you can keep talking here.'
             : proposalStartedDetail,
         tone: 'info',
-        status: teamWorkRefs.length ? 'team handoff' : 'running',
+        status: 'running',
         run_id: runId ?? undefined,
         source_kind: 'web_api',
         source_channel: 'api.intent.confirm-action',
