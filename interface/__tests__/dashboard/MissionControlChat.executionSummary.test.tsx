@@ -257,7 +257,7 @@ describe('MissionControlChat execution summary', () => {
 
         expect(await screen.findByText(filePath)).toBeDefined();
         expect(screen.getByText('Result saved')).toBeDefined();
-        expect(screen.getByRole('link', { name: /Mission activated/i }).getAttribute('href')).toBe('/runs/run-game-123456');
+        expect(screen.getByRole('link', { name: /Inspect run receipt/i }).getAttribute('href')).toBe('/runs/run-game-123456');
 
         fireEvent.click(screen.getByRole('button', { name: new RegExp(`Open file ${filePath} in a new browser window`) }));
         expect(openWindow).toHaveBeenCalledWith(href, '_blank', 'noopener,noreferrer');

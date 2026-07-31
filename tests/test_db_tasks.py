@@ -243,6 +243,13 @@ def test_schema_bootstrapped_requires_search_source_registry_table():
     assert "search_sources" in checks["search_sources table"]
 
 
+def test_schema_bootstrapped_requires_operator_sse_event_ledger():
+    checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
+
+    assert "operator_sse_events table" in checks
+    assert "operator_sse_events" in checks["operator_sse_events table"]
+
+
 def test_schema_bootstrapped_requires_team_work_lifecycle_columns():
     checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
 

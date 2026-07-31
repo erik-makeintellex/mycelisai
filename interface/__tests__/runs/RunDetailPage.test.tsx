@@ -226,12 +226,8 @@ describe('RunDetailPage (/runs/[id])', () => {
             render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
         });
 
-        // The back link reads "Workspace" and links to /dashboard
-        const backLink = screen.getByText('Workspace');
-        expect(backLink).toBeDefined();
-        const anchor = backLink.closest('a');
-        expect(anchor).toBeDefined();
-        expect(anchor?.getAttribute('href')).toBe('/dashboard');
+        const backLink = screen.getByRole('link', { name: 'Back to Soma' });
+        expect(backLink.getAttribute('href')).toBe('/dashboard');
     });
 
     it('renders a chain link to /runs/[id]/chain', async () => {
