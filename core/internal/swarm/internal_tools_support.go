@@ -109,7 +109,7 @@ func runtimeTeamDescription(members []protocol.AgentManifest) string {
 }
 
 func runtimeTeamMembersFromArgs(merged map[string]any, teamID, fallbackAgentID, fallbackRole, fallbackSystemPrompt string) []protocol.AgentManifest {
-	tools := stringSlice(merged["tools"])
+	tools := runtimeTeamToolsFromArgs(merged)
 	if agents := runtimeAgentsFromRaw(merged["agents"], teamID, tools); len(agents) > 0 {
 		return agents
 	}
@@ -181,6 +181,53 @@ func runtimeAgentFromMap(source map[string]any, teamID string, idx int, fallback
 		Tools:         tools,
 		MaxIterations: maxIterations,
 	}
+}
+
+func runtimeTeamToolsFromArgs(merged map[string]any) []string {
+	tools := stringSlice(merged["tools"])
+	if len(tools) > 0 {
+		return uniqueStrings(tools)
+	}
+
+	for _, key := range []string{"required_capabilities", "allowed_capabilities"} {
+		for _, capability := range stringSlice(merged[key]) {
+			if isDirectRuntimeToolCapability(capability) {
+				tools = append(tools, capability)
+			}
+		}
+	}
+	if len(tools) == 0 {
+		tools = append(tools, "store_artifact")
+	}
+	return uniqueStrings(tools)
+}
+
+func isDirectRuntimeToolCapability(capability string) bool {
+	switch strings.TrimSpace(capability) {
+	case "write_file", "read_file", "store_artifact", "local_command",
+		"generate_image", "save_cached_image", "research_for_blueprint",
+		"consult_council", "web_search":
+		return true
+	default:
+		return false
+	}
+}
+
+func uniqueStrings(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
 }
 
 func parseTeamAskRouting(raw any) map[string]string {

@@ -30,13 +30,13 @@ export type OutputWorkbenchItem = {
 
 export function projectPackageOutputs(outputs: ExecutionSummaryData["outputs"]) {
   return asItems(outputs).filter((item): item is ExecutionSummaryItem => (
-    typeof item !== "string" && item.kind === "project_package"
+    typeof item !== "string" && item.kind === "project_package" && isUserDeliverableSummaryItem(item)
   ));
 }
 
 export function outputWorkbenchItems(summary?: ExecutionSummaryData, artifacts?: ChatArtifactRef[]) {
   const directOutputs = asItems(summary?.outputs)
-    .filter((item) => typeof item === "string" || item.kind !== "project_package")
+    .filter((item) => typeof item === "string" || (item.kind !== "project_package" && isUserDeliverableSummaryItem(item)))
     .map((item) => {
       const storagePath = typeof item !== "string" ? itemWorkspacePath(item) : null;
       return {
@@ -54,6 +54,19 @@ export function outputWorkbenchItems(summary?: ExecutionSummaryData, artifacts?:
     ...directOutputs,
     ...artifactOutputs.filter((artifact) => !directOutputs.some((output) => output.text === artifact.text)),
   ];
+}
+
+function isUserDeliverableSummaryItem(item: ExecutionSummaryItem) {
+  const outputClass = item.output_class?.trim().toLowerCase();
+  if (outputClass) return ["user_deliverable", "deliverable", "output", "final"].includes(outputClass);
+  const reference = [item.path, item.folder, item.entrypoint, item.url, item.href]
+    .filter(Boolean)
+    .join("/")
+    .replace(/\\/g, "/")
+    .toLowerCase();
+  return !reference.includes("/planning/")
+    && !reference.endsWith("/team_evocation.md")
+    && !reference.endsWith("/research_council_handoff.md");
 }
 
 export function teamOutputWorkbenchItems(outputRefs: TeamOutputRef[]): OutputWorkbenchItem[] {

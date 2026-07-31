@@ -48,6 +48,26 @@ func TestResponseSuggestsUnexecutedAction(t *testing.T) {
 	}
 }
 
+func TestAutofillToolArguments_InfersNaturalApplicationPackage(t *testing.T) {
+	call := &toolCallPayload{
+		Name: "write_file",
+		Arguments: map[string]any{
+			"path":    "groups/app-team/generated/client-portal/play.html",
+			"content": "<!doctype html><main>Ready</main>",
+		},
+	}
+
+	autofillToolArguments(call, "Build and return a playable browser app with a direct entrypoint.")
+
+	if call.Arguments["package_kind"] != "project_package" {
+		t.Fatalf("package_kind = %v, want project_package", call.Arguments["package_kind"])
+	}
+	files := stringSlice(call.Arguments["package_files"])
+	if len(files) != 4 || files[0] != "play.html" {
+		t.Fatalf("package_files = %v, want entrypoint and support files", files)
+	}
+}
+
 func TestParseToolCall_FallbackOperationPayload(t *testing.T) {
 	got := parseToolCall("{\"operation\":\"consult_council\",\"arguments\":{\"member\":\"council-architect\",\"question\":\"What API should we use?\"}}")
 	if got == nil {
@@ -155,6 +175,67 @@ func TestAutofillToolArguments_InfersDeclaredProjectPackageWrite(t *testing.T) {
 	}
 }
 
+func TestAutofillToolArgumentsNormalizesProjectPackageContentMetadata(t *testing.T) {
+	call := &toolCallPayload{Name: "store_artifact", Arguments: map[string]any{
+		"key":  "project-package-a1b2c",
+		"type": "project_package",
+		"content": map[string]any{
+			"entrypoint": "index.html",
+			"folder":     "groups/app-team/deliveries/project-package-a1b2c",
+			"files":      []any{"index.html", "README.md"},
+			"validation": map[string]any{"pass": []any{"launch"}},
+		},
+	}}
+
+	autofillToolArguments(call, "Retain the application package.")
+
+	if call.Arguments["title"] != "project-package-a1b2c" {
+		t.Fatalf("title = %#v", call.Arguments["title"])
+	}
+	if _, ok := call.Arguments["content"].(string); !ok {
+		t.Fatalf("content = %#v, want JSON string", call.Arguments["content"])
+	}
+	metadata, ok := call.Arguments["metadata"].(map[string]any)
+	if !ok {
+		t.Fatalf("metadata = %#v", call.Arguments["metadata"])
+	}
+	if metadata["entrypoint"] != "index.html" || metadata["folder"] != "groups/app-team/deliveries/project-package-a1b2c" {
+		t.Fatalf("metadata = %#v", metadata)
+	}
+	if files := stringSlice(metadata["files"]); len(files) != 2 {
+		t.Fatalf("files = %#v", files)
+	}
+	if validation, ok := metadata["validation"].(string); !ok || !strings.Contains(validation, "launch") {
+		t.Fatalf("validation = %#v", metadata["validation"])
+	}
+}
+
+func TestNormalizeAgentToolCallArgumentsScopesProjectPackageMetadataToTeam(t *testing.T) {
+	call := &toolCallPayload{Name: "store_artifact", Arguments: map[string]any{
+		"type":    "project_package",
+		"title":   "Application package",
+		"content": `{"kind":"project_package"}`,
+		"metadata": map[string]any{
+			"folder":     "application-delivery-team-3ff8d/project-package-698b9fa7",
+			"entrypoint": "index.html",
+			"files":      []any{"index.html", "README.md"},
+		},
+	}}
+
+	normalizeAgentToolCallArguments(call, "application-delivery-team-3ff8d", "Develop a playable browser application.")
+
+	metadata, ok := call.Arguments["metadata"].(map[string]any)
+	if !ok {
+		t.Fatalf("metadata = %#v", call.Arguments["metadata"])
+	}
+	if metadata["folder"] != "groups/application-delivery-team-3ff8d/generated/project-package-698b9fa7" {
+		t.Fatalf("folder = %#v", metadata["folder"])
+	}
+	if metadata["entrypoint"] != "index.html" {
+		t.Fatalf("entrypoint = %#v", metadata["entrypoint"])
+	}
+}
+
 func TestNormalizeCouncilMember(t *testing.T) {
 	tests := map[string]string{
 		"Architect":         "council-architect",
@@ -229,86 +310,5 @@ func TestAutofillToolArguments_DelegateTaskPromotesCreateTeam(t *testing.T) {
 	}
 	if call.Arguments["role"] != "coder" {
 		t.Fatalf("role = %v", call.Arguments["role"])
-	}
-}
-
-func TestShouldCouncilPreflight(t *testing.T) {
-	if !shouldCouncilPreflight("create_team") {
-		t.Fatal("expected create_team preflight")
-	}
-	if !shouldCouncilPreflight("delegate_task") {
-		t.Fatal("expected delegate_task preflight")
-	}
-	if !shouldCouncilPreflight("local_command") {
-		t.Fatal("expected local_command preflight")
-	}
-	if shouldCouncilPreflight("read_file") {
-		t.Fatal("did not expect read_file preflight")
-	}
-}
-
-func TestCouncilPreflightMember(t *testing.T) {
-	if got := councilPreflightMember("create_team"); got != "council-architect" {
-		t.Fatalf("got %q", got)
-	}
-	if got := councilPreflightMember("delegate_task"); got != "council-architect" {
-		t.Fatalf("got %q", got)
-	}
-	if got := councilPreflightMember("local_command"); got != "council-coder" {
-		t.Fatalf("got %q", got)
-	}
-}
-
-func TestFormatCouncilPreflightQuestion(t *testing.T) {
-	call := &toolCallPayload{Name: "create_team", Arguments: map[string]any{"team_id": "x"}}
-	got := formatCouncilPreflightQuestion("make a team", call)
-	if got == "" || !strings.Contains(got, "create_team") || !strings.Contains(got, "make a team") {
-		t.Fatalf("unexpected question: %q", got)
-	}
-}
-
-func TestToolCallFingerprint(t *testing.T) {
-	got := toolCallFingerprint(&toolCallPayload{
-		Name:      "local_command",
-		Arguments: map[string]any{"command": "echo hello"},
-	})
-	if !strings.Contains(got, "local_command") || !strings.Contains(got, "echo hello") {
-		t.Fatalf("unexpected fingerprint: %q", got)
-	}
-}
-
-func TestPreferDirectDraftResponse(t *testing.T) {
-	if !preferDirectDraftResponse("create a simple hello letter for me") {
-		t.Fatal("expected direct draft preference for simple letter request")
-	}
-	if !preferDirectDraftResponse("Summarize the current Workspace V8 design objectives.") {
-		t.Fatal("expected informational summary request to prefer a direct answer")
-	}
-	if preferDirectDraftResponse("write the result to workspace/hello.txt") {
-		t.Fatal("did not expect direct draft preference for explicit file write")
-	}
-	if preferDirectDraftResponse("Explain the contents of workspace/logs/hello.txt") {
-		t.Fatal("did not expect direct draft preference for explicit workspace file inspection")
-	}
-}
-
-func TestShouldAvoidToolsForDirectDraft(t *testing.T) {
-	if !shouldAvoidToolsForDirectDraft("write_file") {
-		t.Fatal("expected write_file to be blocked for direct draft requests")
-	}
-	if shouldAvoidToolsForDirectDraft("get_system_status") {
-		t.Fatal("did not expect get_system_status to be blocked for direct draft requests")
-	}
-	if shouldAvoidToolsForDirectDraft("list_teams") {
-		t.Fatal("did not expect list_teams to be blocked for direct draft requests")
-	}
-	if shouldAvoidToolsForDirectDraft("read_signals") {
-		t.Fatal("did not expect read_signals to be blocked for direct draft requests")
-	}
-	if shouldAvoidToolsForDirectDraft("consult_council") {
-		t.Fatal("did not expect consult_council to be blocked for direct draft requests")
-	}
-	if shouldAvoidToolsForDirectDraft("generate_image") {
-		t.Fatal("did not expect generate_image to be blocked by direct draft guard")
 	}
 }

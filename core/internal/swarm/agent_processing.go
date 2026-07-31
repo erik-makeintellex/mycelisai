@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -112,6 +113,22 @@ func dedupeAgentArtifacts(artifacts []protocol.ChatArtifactRef) []protocol.ChatA
 	seen := make(map[string]struct{}, len(artifacts))
 	unique := make([]protocol.ChatArtifactRef, 0, len(artifacts))
 	for _, artifact := range artifacts {
+		if strings.EqualFold(strings.TrimSpace(artifact.Type), "project_package") {
+			merged := false
+			for index := range unique {
+				if !sameLogicalProjectPackage(unique[index], artifact) {
+					continue
+				}
+				if projectPackageCompleteness(artifact) > projectPackageCompleteness(unique[index]) {
+					unique[index] = artifact
+				}
+				merged = true
+				break
+			}
+			if merged {
+				continue
+			}
+		}
 		comparable := artifact
 		comparable.ID = ""
 		raw, err := json.Marshal(comparable)
@@ -126,6 +143,46 @@ func dedupeAgentArtifacts(artifacts []protocol.ChatArtifactRef) []protocol.ChatA
 		unique = append(unique, artifact)
 	}
 	return unique
+}
+
+func sameLogicalProjectPackage(left, right protocol.ChatArtifactRef) bool {
+	if !strings.EqualFold(strings.TrimSpace(left.Type), "project_package") ||
+		!strings.EqualFold(strings.TrimSpace(right.Type), "project_package") {
+		return false
+	}
+	leftLocation := projectPackageLocation(left)
+	rightLocation := projectPackageLocation(right)
+	if leftLocation != "" && rightLocation != "" {
+		return strings.EqualFold(leftLocation, rightLocation)
+	}
+	return strings.EqualFold(strings.TrimSpace(left.Title), strings.TrimSpace(right.Title)) && strings.TrimSpace(left.Title) != ""
+}
+
+func projectPackageLocation(artifact protocol.ChatArtifactRef) string {
+	location := strings.TrimSpace(artifact.Folder)
+	if location == "" {
+		location = strings.TrimSpace(artifact.SavedPath)
+	}
+	if location == "" && strings.TrimSpace(artifact.Entrypoint) != "" {
+		location = filepath.Dir(strings.ReplaceAll(strings.TrimSpace(artifact.Entrypoint), "\\", "/"))
+	}
+	return strings.Trim(strings.ReplaceAll(location, "\\", "/"), "/")
+}
+
+func projectPackageCompleteness(artifact protocol.ChatArtifactRef) int {
+	score := 0
+	for _, value := range []string{artifact.Folder, artifact.SavedPath, artifact.Entrypoint, artifact.Validation} {
+		if strings.TrimSpace(value) != "" {
+			score += 2
+		}
+	}
+	if len(artifact.Files) > 0 {
+		score += 2 + len(artifact.Files)
+	}
+	if strings.Contains(strings.TrimSpace(artifact.Content), "{") {
+		score++
+	}
+	return score
 }
 
 func retainedArtifactCompletionSummary(artifacts []protocol.ChatArtifactRef) string {

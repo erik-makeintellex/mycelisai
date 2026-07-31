@@ -84,11 +84,10 @@ describe('MissionControlChat thread state cards', () => {
                 thread_events: [{
                     kind: 'execution_started',
                     label: 'Execution started',
-                    detail: 'Soma handed this to the work bus and saved the run receipt.',
+                    detail: 'Soma handed this to the work bus. You can keep talking here while work continues.',
                     tone: 'info',
                     status: 'running',
-                    href: '/runs/run-thread-123',
-                    href_label: 'Open run receipt',
+                    target_reference: 'run:run-thread-123',
                     source_kind: 'web_api',
                     source_channel: 'api.intent.confirm-action',
                     payload_kind: 'soma_thread_event',
@@ -103,8 +102,9 @@ describe('MissionControlChat thread state cards', () => {
         expect(screen.getByTestId('soma-thread-state-card')).toBeDefined();
         expect(screen.getByText('Execution started')).toBeDefined();
         expect(screen.getByText('running')).toBeDefined();
-        expect(screen.getByText('Soma handed this to the work bus and saved the run receipt.')).toBeDefined();
-        expect(screen.getByRole('link', { name: /Open run receipt/i }).getAttribute('href')).toBe('/runs/run-thread-123');
+        expect(screen.getByText('Soma handed this to the work bus. You can keep talking here while work continues.')).toBeDefined();
+        expect(screen.getByRole('button', { name: /Continue with Soma/i })).toBeDefined();
+        expect(screen.queryByRole('link', { name: /Open run receipt/i })).toBeNull();
         expect(screen.queryByText('api.intent.confirm-action')).toBeNull();
     });
 

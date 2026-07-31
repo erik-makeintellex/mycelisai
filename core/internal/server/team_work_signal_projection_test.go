@@ -2,6 +2,8 @@ package server
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -85,6 +87,17 @@ func TestTeamWorkSignalProjection_StatusUsesExplicitState(t *testing.T) {
 }
 
 func TestTeamWorkSignalProjection_ResultWithRetainedOutputRecordsCompletionProof(t *testing.T) {
+	workspace := t.TempDir()
+	t.Setenv("MYCELIS_WORKSPACE", workspace)
+	packageDir := filepath.Join(workspace, "groups", "game-team", "generated", "game")
+	if err := os.MkdirAll(packageDir, 0o755); err != nil {
+		t.Fatalf("create package dir: %v", err)
+	}
+	packageHTML := `<!doctype html><title>Playable game</title><p>Click Play to begin.</p><button onclick="document.body.dataset.played='true'">Play</button>`
+	if err := os.WriteFile(filepath.Join(packageDir, "index.html"), []byte(packageHTML), 0o644); err != nil {
+		t.Fatalf("write package entrypoint: %v", err)
+	}
+
 	opt, mock := withDB(t)
 	s := newTestServer(opt)
 	now := time.Now().UTC()

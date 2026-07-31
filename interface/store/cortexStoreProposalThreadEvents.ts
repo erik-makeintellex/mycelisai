@@ -11,7 +11,7 @@ export function executionStartedEvent(
         kind: 'execution_started',
         label: runId ? 'Execution started' : 'Work approved',
         detail: runId
-            ? 'Soma handed this to the work bus and saved the run receipt.'
+            ? 'Soma handed this to the work bus. You can keep talking here while work continues.'
             : proposalStartedDetail,
         tone: 'info',
         status: teamWorkRefs.length ? 'team handoff' : 'running',
@@ -19,8 +19,6 @@ export function executionStartedEvent(
         source_kind: 'web_api',
         source_channel: 'api.intent.confirm-action',
         payload_kind: 'soma_thread_event',
-        href: runId ? `/runs/${runId}` : undefined,
-        href_label: runId ? 'Open run receipt' : undefined,
         target_reference: runId ? `run:${runId}` : undefined,
         timestamp: new Date().toISOString(),
     };

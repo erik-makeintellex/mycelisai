@@ -143,7 +143,8 @@ export function removeTarget(relativePath: string) {
 
 export async function createOrganization(page: Page, name: string) {
   let response: APIResponse | undefined;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  const maxAttempts = 5;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       response = await page.request.post(liveAPIURL("/api/v1/organizations"), {
         headers: liveAPIHeaders(),
@@ -151,8 +152,8 @@ export async function createOrganization(page: Page, name: string) {
       });
       break;
     } catch (error) {
-      if (!String(error).includes("EADDRINUSE") || attempt === 3) throw error;
-      await new Promise((resolve) => setTimeout(resolve, attempt * 250));
+      if (!String(error).includes("EADDRINUSE") || attempt === maxAttempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 500));
     }
   }
   if (!response) throw new Error("Organization bootstrap did not return a response");

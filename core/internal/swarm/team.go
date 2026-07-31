@@ -52,6 +52,8 @@ type Team struct {
 	mcpServerNames      map[uuid.UUID]string
 	mcpToolDescs        map[string]string
 	pendingCorrelations []teamCommandCorrelation
+	subscriptions       []*nats.Subscription
+	agents              []*Agent
 }
 
 type teamCommandCorrelation struct {

@@ -77,4 +77,67 @@ describe("ExecutionSummaryReceipt", () => {
     });
     window.removeEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
   });
+
+  it("keeps technical run inspection secondary when no deliverable exists yet", () => {
+    const continuation = vi.fn();
+    window.addEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
+    const summary: ExecutionSummaryData = {
+      execution: {
+        shape: "team_execution",
+        status: "verified",
+        summary: "Team work started.",
+      },
+      proof: [{ run_id: "run-work-1" }],
+    };
+
+    render(<ExecutionSummaryReceipt summary={summary} runId="run-work-1" />);
+
+    expect(screen.queryByRole("link", { name: /^Run$/i })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Continue with Soma/i }));
+    expect(continuation).toHaveBeenCalled();
+    expect(continuation.mock.calls[0][0].detail).toMatchObject({
+      reference: "run:run-work-1",
+      proof: "run-work-1",
+    });
+
+    fireEvent.click(screen.getByText("Proof and execution details"));
+    expect(screen.getByRole("link", { name: /Inspect run receipt/i }).getAttribute("href"))
+      .toBe("/runs/run-work-1");
+    window.removeEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
+  });
+
+  it("does not present team planning files as completed user output", () => {
+    const summary: ExecutionSummaryData = {
+      execution: {
+        shape: "team_execution",
+        status: "verified",
+        summary: "Created the team and queued delivery work.",
+      },
+      outputs: [{
+        kind: "file",
+        output_class: "planning",
+        title: "Team evocation brief",
+        path: "groups/game-team/planning/TEAM_EVOCATION.md",
+        url: "/api/v1/workspace/files/view?path=groups%2Fgame-team%2Fplanning%2FTEAM_EVOCATION.md",
+        retained: true,
+      }],
+      proof: [{ run_id: "run-planning-1" }],
+    };
+
+    render(<ExecutionSummaryReceipt
+      summary={summary}
+      runId="run-planning-1"
+      artifacts={[{
+        id: "planning-artifact",
+        type: "file",
+        title: "Team evocation brief",
+        output_class: "planning",
+        saved_path: "groups/game-team/planning/TEAM_EVOCATION.md",
+      }]}
+    />);
+
+    expect(screen.getByText("Work started")).toBeDefined();
+    expect(screen.getByText(/deliverable will appear here only after/i)).toBeDefined();
+    expect(screen.queryByText("Team evocation brief")).toBeNull();
+  });
 });

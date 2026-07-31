@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ExternalLink, ShieldAlert } from "lucide-react";
+import { CheckCircle2, ExternalLink, MessageSquareReply, ShieldAlert } from "lucide-react";
 import type { ChatArtifactRef, ExecutionSummaryData } from "@/store/useCortexStore";
 import {
   actionableOutputWorkbenchItems,
@@ -10,6 +10,7 @@ import {
 import { outputWorkbenchDigest, OutputWorkbenchCompactDigest } from "./OutputWorkbenchDigest";
 import { proofLinks, linkRunId, trustVerdict } from "./ExecutionSummaryCardModel";
 import ExecutionSummaryMediaPreview from "./ExecutionSummaryMediaPreview";
+import { requestSomaOutputContinuation } from "./outputContinuation";
 
 export function shouldUseExecutionSummaryReceipt({
   summary,
@@ -63,14 +64,20 @@ export default function ExecutionSummaryReceipt({
                 : trust.detail}
           </p>
         </div>
-        {summaryRunId ? (
-          <a
-            href={`/runs/${summaryRunId}`}
+        {summaryRunId && !digest ? (
+          <button
+            type="button"
+            onClick={() => requestSomaOutputContinuation({
+              title: "this requested work",
+              reference: `run:${summaryRunId}`,
+              proof: summaryRunId,
+              sourceLabel: "run",
+            })}
             className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-cortex-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-main hover:border-cortex-primary/40"
           >
-            Run
-            <ExternalLink className="h-3 w-3" />
-          </a>
+            Continue with Soma
+            <MessageSquareReply className="h-3 w-3" />
+          </button>
         ) : null}
       </div>
       {digest ? (
@@ -79,6 +86,20 @@ export default function ExecutionSummaryReceipt({
         </div>
       ) : null}
       {outputs.length > 0 ? <ExecutionSummaryMediaPreview outputs={outputs} compact /> : null}
+      {summaryRunId ? (
+        <details className="mt-2 border-t border-cortex-border/60 pt-2 text-[10px] text-cortex-text-muted">
+          <summary className="cursor-pointer font-semibold uppercase tracking-[0.08em] hover:text-cortex-text-main">
+            Proof and execution details
+          </summary>
+          <a
+            href={`/runs/${summaryRunId}`}
+            className="mt-2 inline-flex items-center gap-1 text-cortex-primary hover:underline"
+          >
+            Inspect run receipt
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </details>
+      ) : null}
     </div>
   );
 }

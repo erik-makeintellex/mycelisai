@@ -9,6 +9,7 @@ import (
 
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/pkg/protocol"
+	"github.com/nats-io/nats.go"
 )
 
 // Start activates the Team's subscriptions and member runtime.
@@ -17,9 +18,11 @@ func (t *Team) Start() error {
 	t.normalizeRuntimeProviderRouting()
 
 	for _, subject := range t.Manifest.Inputs {
-		if _, err := t.nc.Subscribe(subject, t.handleTrigger); err != nil {
+		subscription, err := t.nc.Subscribe(subject, t.handleTrigger)
+		if err != nil {
 			return fmt.Errorf("team %s subscribe to input %s: %w", t.Manifest.ID, subject, err)
 		}
+		t.subscriptions = append(t.subscriptions, subscription)
 		log.Printf("Team [%s] Listening on [%s]", t.Manifest.Name, subject)
 	}
 
@@ -45,13 +48,16 @@ func (t *Team) Start() error {
 		t.injectAgentToolDescriptions(agent, member.Tools)
 		t.injectAgentRuntimeBindings(agent)
 		agent.SetTeamTopology(t.Manifest.Inputs, t.Manifest.Deliveries)
+		t.agents = append(t.agents, agent)
 		agent.Start()
 	}
 
 	internalResponse := fmt.Sprintf(protocol.TopicTeamInternalRespond, t.Manifest.ID)
-	if _, err := t.nc.Subscribe(internalResponse, t.handleResponse); err != nil {
+	responseSubscription, err := t.nc.Subscribe(internalResponse, t.handleResponse)
+	if err != nil {
 		return fmt.Errorf("team %s subscribe to internal responses: %w", t.Manifest.ID, err)
 	}
+	t.subscriptions = append(t.subscriptions, responseSubscription)
 	if err := t.nc.Flush(); err != nil {
 		return fmt.Errorf("team %s establish runtime subscriptions: %w", t.Manifest.ID, err)
 	}
@@ -164,6 +170,22 @@ func (t *Team) normalizeRuntimeProviderRouting() {
 
 // Stop shuts down the team and its scheduler (if any).
 func (t *Team) Stop() {
+	t.mu.Lock()
+	subscriptions := append([]*nats.Subscription(nil), t.subscriptions...)
+	agents := append([]*Agent(nil), t.agents...)
+	t.subscriptions = nil
+	t.agents = nil
+	t.mu.Unlock()
+	for _, subscription := range subscriptions {
+		if subscription != nil {
+			_ = subscription.Unsubscribe()
+		}
+	}
+	for _, agent := range agents {
+		if agent != nil {
+			agent.Stop()
+		}
+	}
 	if t.scheduler != nil {
 		t.scheduler.Stop()
 	}

@@ -77,8 +77,6 @@ describe('useCortexStore confirm proposal execution', () => {
         expect(useCortexStore.getState().missionChat.at(-1)?.thread_events?.[0]).toMatchObject({
             kind: 'execution_started',
             label: 'Execution started',
-            href: '/runs/run-123',
-            href_label: 'Open run receipt',
             target_reference: 'run:run-123',
             source_kind: 'web_api',
             source_channel: 'api.intent.confirm-action',
