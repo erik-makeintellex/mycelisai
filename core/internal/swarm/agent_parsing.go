@@ -192,6 +192,7 @@ func autofillToolArguments(call *toolCallPayload, latestUserInput string) {
 		copyStringToolArgumentAlias(call.Arguments, "type", "artifact_type", "kind")
 		copyStringToolArgumentAlias(call.Arguments, "title", "name", "filename")
 		copyStringToolArgumentAlias(call.Arguments, "content", "text", "data", "body")
+		normalizeProjectPackageArtifactArguments(call.Arguments)
 	case "research_for_blueprint":
 		copyStringToolArgumentAlias(call.Arguments, "intent", "query", "goal", "topic")
 	case "consult_council":

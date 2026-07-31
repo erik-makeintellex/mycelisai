@@ -8,15 +8,31 @@ test.describe('Authenticated front door', () => {
         });
         const page = await context.newPage();
         await page.goto('/');
-        await expect(page).toHaveURL(/\/login\?next=%2F$/);
+        await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/);
         await expect(page.getByRole('heading', { name: /Sign in to operate Mycelis/i })).toBeVisible();
         await expect(page.getByText(/Sign in, then start with Soma/i)).toBeVisible();
         await expect(page.getByText(/Personal Gmail accounts are rejected/i)).toBeVisible();
         const googleLink = page.getByRole('link', { name: /Sign in with Google Workspace/i });
         if (await googleLink.count()) {
-            await expect(googleLink).toHaveAttribute('href', /\/auth\/google\/start\?next=%2F/);
+            await expect(googleLink).toHaveAttribute('href', /\/auth\/google\/start\?next=%2Fdashboard/);
             await expect(page.getByText(/Accepted Google account domain/i)).toBeVisible();
         }
+        await context.close();
+    });
+
+    test('signing in from a stale groups URL starts at Soma', async ({ browser }, testInfo) => {
+        const context = await browser.newContext({
+            baseURL: String(testInfo.project.use.baseURL),
+            storageState: { cookies: [], origins: [] },
+        });
+        const page = await context.newPage();
+        await page.goto('/groups');
+        await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/);
+        await page.getByLabel(/Local admin username/i).fill(process.env.MYCELIS_LOCAL_ADMIN_USERNAME || 'admin');
+        await page.getByLabel(/Password or local API key/i).fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || 'playwright-admin');
+        await page.getByRole('button', { name: /Sign in as local admin/i }).click();
+        await expect(page).toHaveURL(/\/dashboard$/);
+        await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
         await context.close();
     });
 

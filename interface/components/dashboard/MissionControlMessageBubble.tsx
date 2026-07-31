@@ -1,6 +1,5 @@
 "use client";
-
-import { AlertTriangle, Bot, Brain, ExternalLink, Eye, Globe, Megaphone, User, Zap } from "lucide-react";
+import { AlertTriangle, Bot, Brain, Eye, Globe, Megaphone, MessageSquareReply, User, Zap } from "lucide-react";
 import {
     sourceNodeLabel,
     trustBadge,
@@ -16,6 +15,7 @@ import ExecutionSummaryReceipt, { shouldUseExecutionSummaryReceipt } from "@/com
 import MissionControlThreadStateCard from "./MissionControlThreadStateCard";
 import MissionControlResponseDepth from "./MissionControlResponseDepth";
 import MissionControlToolsUsed from "./MissionControlToolsUsed";
+import { requestSomaOutputContinuation } from "@/components/soma/outputContinuation";
 import {
     artifactResultSummary,
     askClassBadge,
@@ -23,7 +23,6 @@ import {
     COUNCIL_META,
     trustColor,
 } from "./missionControlChatHelpers";
-
 function DelegationTrace({ consultations, assistantName }: { consultations: ChatConsultation[]; assistantName: string }) {
     if (!consultations?.length) return null;
     return (
@@ -54,7 +53,6 @@ function MessageMeta({ msg, assistantName }: { msg: ChatMessage; assistantName: 
     const setInspected = useCortexStore((s) => s.setInspectedMessage);
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const askBadge = askClassBadge(msg.ask_class);
-
     if (!msg.source_node && !msg.brain) return null;
     return (
         <div className="flex items-center gap-1.5 px-1 flex-wrap">
@@ -142,7 +140,6 @@ function hasAuditableAnswerEvidence(msg: ChatMessage) {
         && summary.proof,
     );
 }
-
 function shouldShowSimpleThreadState(msg: ChatMessage) {
     const state = msg.ui_response_state ?? msg.execution_summary?.ui_response_state;
     const hasThreadEvents = Boolean(msg.thread_event || msg.thread_events?.length);
@@ -207,11 +204,20 @@ export default function MissionControlMessageBubble({
             <div className="my-1.5 flex justify-center">
                 <div className="flex w-full max-w-[720px] flex-col items-center gap-1.5 px-2">
                     {msg.run_id ? (
-                        <a href={`/runs/${msg.run_id}`} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-cortex-success/30 bg-cortex-success/5 text-cortex-success text-[9px] font-mono hover:bg-cortex-success/10 transition-colors">
+                        <button
+                            type="button"
+                            onClick={() => requestSomaOutputContinuation({
+                                title: "this requested work",
+                                reference: `run:${msg.run_id}`,
+                                proof: msg.run_id,
+                                sourceLabel: "run",
+                            })}
+                            className="flex items-center gap-1.5 rounded-full border border-cortex-success/30 bg-cortex-success/5 px-2.5 py-1 font-mono text-[9px] text-cortex-success transition-colors hover:bg-cortex-success/10"
+                        >
                             <Zap className="w-3 h-3" />
-                            Mission activated &mdash; {msg.run_id.slice(0, 8)}...
-                            <ExternalLink className="w-2.5 h-2.5 opacity-60" />
-                        </a>
+                            Continue with Soma
+                            <MessageSquareReply className="h-2.5 w-2.5 opacity-60" />
+                        </button>
                     ) : msg.thread_event || msg.thread_events?.length ? null : (
                         <span className="text-[9px] font-mono text-cortex-text-muted px-2.5 py-1 rounded-full border border-cortex-border">
                             {msg.content}

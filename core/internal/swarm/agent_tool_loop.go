@@ -69,7 +69,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		if toolCall == nil {
 			break
 		}
-		autofillToolArguments(toolCall, input)
+		normalizeAgentToolCallArguments(toolCall, a.TeamID, input)
 		fingerprint := toolCallFingerprint(toolCall)
 		if completedToolCalls[fingerprint] {
 			if !reinferWithToolFeedback(toolCall.Name, "That exact tool call already completed successfully in this turn. Do not repeat it. Return the concise final result or choose a different tool required to finish the ask.") {
@@ -92,7 +92,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		if !a.prepareToolCall(input, toolCall, failedToolCalls, preflightDone, reinferWithToolFeedback, &result) {
 			continue
 		}
-		if !a.executeToolIteration(i, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result, planningOnly) {
+		if !a.executeToolIteration(i, input, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result, planningOnly) {
 			continue
 		}
 		completedToolCalls[fingerprint] = true

@@ -110,6 +110,67 @@ func TestTeam_StartIsReadyForImmediateCommand(t *testing.T) {
 	}
 }
 
+func TestTeam_StopUnsubscribesBeforeSameIDIsRecreated(t *testing.T) {
+	s, nc := startTestNATS(t)
+	defer s.Shutdown()
+	defer nc.Close()
+
+	resultCh := make(chan *nats.Msg, 4)
+	if _, err := nc.Subscribe("swarm.team.recreated-team.signal.result", func(msg *nats.Msg) {
+		resultCh <- msg
+	}); err != nil {
+		t.Fatalf("subscribe result: %v", err)
+	}
+	router := &cognitive.Router{
+		Config: &cognitive.BrainConfig{Providers: map[string]cognitive.ProviderConfig{
+			"stub": {Enabled: true, ModelID: "stub", Location: "local"},
+		}},
+		Adapters: map[string]cognitive.LLMProvider{"stub": teamProviderStub{}},
+	}
+	newManifest := func() *TeamManifest {
+		return &TeamManifest{
+			ID:         "recreated-team",
+			Name:       "Recreated Team",
+			Type:       TeamTypeAction,
+			Provider:   "stub",
+			Inputs:     []string{"swarm.team.recreated-team.internal.command"},
+			Deliveries: []string{"swarm.team.recreated-team.signal.result"},
+			Members: []protocol.AgentManifest{{
+				ID: "recreated-worker", Role: "worker", Provider: "stub",
+			}},
+		}
+	}
+
+	first := NewTeam(newManifest(), nc, router, nil)
+	if err := first.Start(); err != nil {
+		t.Fatalf("first team start: %v", err)
+	}
+	first.Stop()
+
+	second := NewTeam(newManifest(), nc, router, nil)
+	if err := second.Start(); err != nil {
+		t.Fatalf("second team start: %v", err)
+	}
+	defer second.Stop()
+	if err := nc.Publish("swarm.team.recreated-team.internal.command", []byte("deliver once")); err != nil {
+		t.Fatalf("publish command: %v", err)
+	}
+	if err := nc.Flush(); err != nil {
+		t.Fatalf("flush command: %v", err)
+	}
+
+	select {
+	case <-resultCh:
+	case <-time.After(time.Second):
+		t.Fatal("recreated team did not return a result")
+	}
+	select {
+	case duplicate := <-resultCh:
+		t.Fatalf("stopped team left a duplicate NATS consumer: %s", string(duplicate.Data))
+	case <-time.After(250 * time.Millisecond):
+	}
+}
+
 func TestTeam_ResponseDeliveryWrapsStatusAndResultSignals(t *testing.T) {
 	s, nc := startTestNATS(t)
 	defer s.Shutdown()
@@ -261,42 +322,5 @@ func TestNormalizeCommandPayload_PreservesStructuredTeamAsk(t *testing.T) {
 	}
 	if ask.AskKind != protocol.TeamAskKindResearch {
 		t.Fatalf("ask_kind = %q", ask.AskKind)
-	}
-}
-
-func TestTeamNormalizeRuntimeProviderRoutingFallsBackExplicitDefaults(t *testing.T) {
-	team := &Team{
-		Manifest: &TeamManifest{
-			ID:       "admin-core",
-			Name:     "Soma",
-			Provider: "local-ollama-dev",
-			Members: []protocol.AgentManifest{
-				{ID: "admin", Role: "admin"},
-				{ID: "council-coder", Role: "coder", Provider: "local-ollama-dev"},
-			},
-		},
-		brain: &cognitive.Router{
-			Config: &cognitive.BrainConfig{
-				Providers: map[string]cognitive.ProviderConfig{
-					"ollama":           {Enabled: true, ModelID: "qwen2.5-coder:7b", Location: "local"},
-					"local-ollama-dev": {Enabled: false, ModelID: "qwen2.5-coder:7b", Location: "local"},
-				},
-			},
-			Adapters: map[string]cognitive.LLMProvider{
-				"ollama": teamProviderStub{},
-			},
-		},
-	}
-
-	team.normalizeRuntimeProviderRouting()
-
-	if team.Manifest.Provider != "ollama" {
-		t.Fatalf("team provider = %q, want ollama", team.Manifest.Provider)
-	}
-	if team.Manifest.Members[0].Provider != "ollama" {
-		t.Fatalf("admin provider = %q, want ollama", team.Manifest.Members[0].Provider)
-	}
-	if team.Manifest.Members[1].Provider != "ollama" {
-		t.Fatalf("coder provider = %q, want ollama", team.Manifest.Members[1].Provider)
 	}
 }

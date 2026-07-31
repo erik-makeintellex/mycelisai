@@ -104,6 +104,7 @@ func requestNeedsTeamPreparation(lower string, types []string) bool {
 
 func gameAcceptanceCriteria() []string {
 	return []string{
+		"visible in-app instructions name the primary control and objective",
 		"playable controls respond in browser",
 		"visible game loop renders without a blank canvas",
 		"collision or boundary rules affect play",
@@ -134,6 +135,7 @@ func gameValidationSummary() string {
 func applicationPackageAcceptanceCriteria() []string {
 	return []string{
 		"direct open or launch path is provided in chat and retained output metadata",
+		"the primary control or workflow is visible, understandable, and changes application state when used",
 		"primary user workflows are named and validated, including create/read/update or equivalent interactions when requested",
 		"data/table views render with readable columns, empty states, and source or assumption boundaries when relevant",
 		"package includes operator-readable usage notes and any setup limits",

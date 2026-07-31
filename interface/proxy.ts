@@ -49,7 +49,7 @@ export async function proxy(request: NextRequest) {
 
 function redirectToLogin(request: NextRequest): NextResponse {
     const login = new URL('/login', request.url);
-    login.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search);
+    login.searchParams.set('next', '/dashboard');
     return NextResponse.redirect(login);
 }
 

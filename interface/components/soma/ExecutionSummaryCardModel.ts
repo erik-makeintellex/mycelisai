@@ -214,7 +214,7 @@ export function nextStepText(value: ExecutionSummaryData["next_step"]) {
 }
 
 export function artifactOutputItems(artifacts?: ChatArtifactRef[]) {
-    return artifacts?.map((artifact) => ({
+    return artifacts?.filter(isUserDeliverableArtifact).map((artifact) => ({
         text: artifact.title || artifact.type || artifact.id || "Artifact",
         url: artifact.url ?? null,
         ...((artifact.saved_path ?? artifact.folder ?? artifact.entrypoint) ? { storagePath: artifact.saved_path ?? artifact.folder ?? artifact.entrypoint } : {}),
@@ -240,8 +240,11 @@ export function trustVerdict(summary: ExecutionSummaryData, runId?: string, arti
     const proofClass = proofs.map((proof) => compactText(proof.proof_class)).find(Boolean);
     const verified = proofs.some((proof) => proof.verified === true);
     const hasRun = Boolean(compactText(runId) ?? proofs.map((proof) => compactText(proof.run_id)).find(Boolean));
-    const retainedOutput = asItems(summary.outputs).some((item) => typeof item !== "string" && (item.retained === true || item.kind === "code" || item.kind === "file"))
-        || Boolean(artifacts?.some((artifact) => artifact.id || artifact.cached || artifact.saved_path || artifact.url));
+    const retainedOutput = asItems(summary.outputs).some((item) => typeof item !== "string"
+        && isUserDeliverableSummaryItem(item)
+        && (item.retained === true || item.kind === "code" || item.kind === "file" || item.kind === "project_package"))
+        || Boolean(artifacts?.some((artifact) => isUserDeliverableArtifact(artifact)
+            && (artifact.id || artifact.cached || artifact.saved_path || artifact.url)));
 
     if (degradation?.requires_attention || ["failed", "blocked", "cancelled"].includes(status) || compactText(audit?.blocker)) {
         const mediaRecovery = mediaDependencyRecovery(degradation);
@@ -265,6 +268,13 @@ export function trustVerdict(summary: ExecutionSummaryData, runId?: string, arti
             label: "Result saved",
             detail: "The produced output is available for review.",
             tone: "trusted",
+        };
+    }
+    if (hasRun && !retainedOutput && summary.execution?.shape === "team_execution") {
+        return {
+            label: "Work started",
+            detail: "Soma handed the request to the team. A deliverable will appear here only after the team returns usable output.",
+            tone: "review",
         };
     }
     if (hasRun || verified) {
@@ -293,4 +303,23 @@ export function trustVerdict(summary: ExecutionSummaryData, runId?: string, arti
         detail: "Review the available output before relying on this result.",
         tone: "review",
     };
+}
+
+function isUserDeliverableSummaryItem(item: ExecutionSummaryItem): boolean {
+    const outputClass = compactText(item.output_class)?.toLowerCase();
+    if (!outputClass) return true;
+    return ["user_deliverable", "deliverable", "output", "final"].includes(outputClass);
+}
+
+function isUserDeliverableArtifact(artifact: ChatArtifactRef): boolean {
+    const outputClass = compactText(artifact.output_class)?.toLowerCase();
+    if (outputClass) return ["user_deliverable", "deliverable", "output", "final"].includes(outputClass);
+    const reference = [artifact.saved_path, artifact.folder, artifact.entrypoint, artifact.url]
+        .filter(Boolean)
+        .join("/")
+        .replace(/\\/g, "/")
+        .toLowerCase();
+    return !reference.includes("/planning/")
+        && !reference.endsWith("/team_evocation.md")
+        && !reference.endsWith("/research_council_handoff.md");
 }

@@ -133,6 +133,15 @@ func isDeliverableTool(toolName string) bool {
 	}
 }
 
+func hasUserDeliverableExecutionOutput(outputs []protocol.ExecutionOutput) bool {
+	for _, output := range outputs {
+		if outputClassForExecutionOutput(output) == protocol.OutputClassUserDeliverable {
+			return true
+		}
+	}
+	return false
+}
+
 func executionShapeForTeamWorkTool(toolName string) protocol.TeamExecutionShape {
 	if strings.TrimSpace(toolName) == "create_team" {
 		return protocol.TeamExecutionShapeCreateTeam

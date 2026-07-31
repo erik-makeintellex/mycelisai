@@ -42,7 +42,7 @@ func (a *Agent) prepareToolCall(input string, toolCall *toolCallPayload, failedT
 	return false
 }
 
-func (a *Agent) executeToolIteration(i int, req *cognitive.InferRequest, toolCall *toolCallPayload, failedToolCalls map[string]int, reinfer func(string, string) bool, result *agentToolLoopResult, planningOnly bool) bool {
+func (a *Agent) executeToolIteration(i int, input string, req *cognitive.InferRequest, toolCall *toolCallPayload, failedToolCalls map[string]int, reinfer func(string, string) bool, result *agentToolLoopResult, planningOnly bool) bool {
 	fingerprint := toolCallFingerprint(toolCall)
 	log.Printf("Agent [%s] tool_call [%d/%d]: %s", a.Manifest.ID, i+1, a.Manifest.EffectiveMaxIterations(), toolCall.Name)
 	result.toolsUsed = append(result.toolsUsed, toolCall.Name)
@@ -101,11 +101,18 @@ func (a *Agent) executeToolIteration(i int, req *cognitive.InferRequest, toolCal
 		}
 	}
 	a.logTurn("tool_result", toolResult, "", "", toolCall.Name, nil, "", consultMember)
+	extractedArtifacts := false
 	if toolMessage, toolArtifacts, ok := extractToolOutputArtifacts(toolResult); ok {
 		result.artifacts = append(result.artifacts, toolArtifacts...)
+		extractedArtifacts = len(toolArtifacts) > 0
 		toolResult = toolMessage
 		if toolResult == "" {
 			toolResult = fmt.Sprintf("Tool %s completed successfully.", toolCall.Name)
+		}
+	}
+	if !extractedArtifacts && toolCall.Name == "write_file" {
+		if artifact, ok := projectPackageArtifactFromSuccessfulWrite(toolCall.Arguments, input); ok {
+			result.artifacts = append(result.artifacts, artifact)
 		}
 	}
 	if isMCPTool {

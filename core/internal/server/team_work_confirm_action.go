@@ -167,6 +167,9 @@ func (s *AdminServer) persistConfirmedDeliverableWorkItems(ctx context.Context, 
 			continue
 		}
 		outputs := executionOutputsForResult(result)
+		if !hasUserDeliverableExecutionOutput(outputs) {
+			continue
+		}
 		item := baseConfirmedActionWorkItem(link, teamID, objectiveForDeliverableResult(result))
 		item.ExecutionShape = protocol.TeamExecutionShapeDeliverable
 		item.State = protocol.TeamWorkStateOutputReady

@@ -34,11 +34,9 @@ func (s *AdminServer) broadcastConfirmActionThreadEvent(runID, proofID, contract
 		Payload: protocol.ThreadEventPayload{
 			Kind:            protocol.ThreadEventExecutionStarted,
 			Label:           "Execution started",
-			Detail:          "Soma accepted the approved work and saved the run receipt for proof.",
+			Detail:          "Soma accepted the approved work. You can keep talking here while work continues.",
 			Tone:            "info",
 			Status:          "running",
-			Href:            "/runs/" + runID,
-			HrefLabel:       "Open run receipt",
 			TargetReference: "run:" + runID,
 			WorkItemID:      workItemID,
 			IntentProofID:   proofID,
