@@ -146,7 +146,7 @@ func startProductServices(ctx context.Context, core *coreRuntime) productService
 	memService := core.MemService
 	services := productServices{
 		Provisioning: provisioning.NewEngine(cogRouter),
-		Stream:       mycelisSignal.NewStreamHandler(),
+		Stream:       mycelisSignal.NewStreamHandler(sharedDB),
 		Comms:        comms.NewGatewayFromEnv(),
 		Search:       searchcap.NewService(searchcap.ConfigFromEnv(), cogRouter, memService),
 		Inputs:       inputs.NewService(),
