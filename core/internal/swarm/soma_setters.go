@@ -29,3 +29,7 @@ func (s *Soma) SetProviderPolicy(policy ProviderPolicy) {
 func (s *Soma) SetDurableTeamLoader(loader DurableTeamLoader) {
 	s.durableTeamLoader = loader
 }
+
+func (s *Soma) SetCommandReceiptStore(store CommandReceiptStore) {
+	s.commandReceipts = store
+}

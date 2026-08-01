@@ -2,6 +2,7 @@ package swarm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -18,12 +19,30 @@ func (t *Team) handleTrigger(msg *nats.Msg) {
 	internalSubject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID)
 	payload := normalizeCommandPayload(msg.Data)
 	if correlation := extractTeamCommandCorrelation(t.Manifest.ID, msg.Data, payload); correlation != nil {
-		if !t.rememberCommandCorrelation(*correlation) {
-			log.Printf("Team [%s] ignored duplicate command [%s]", t.Manifest.Name, correlation.commandKey())
+		accepted, err := t.acceptCommandCorrelation(context.Background(), *correlation, msg.Subject)
+		if err != nil {
+			log.Printf("Team [%s] could not durably accept command [%s]: %v", t.Manifest.Name, correlation.commandKey(), err)
 			return
+		}
+		if !accepted {
+			log.Printf("Team [%s] ignored replayed command [%s]", t.Manifest.Name, correlation.commandKey())
+			return
+		}
+		if t.commandReceipts != nil {
+			t.publishCommandAccepted(*correlation, msg.Subject)
 		}
 	}
 	t.nc.Publish(internalSubject, payload)
+}
+
+func (t *Team) acceptCommandCorrelation(ctx context.Context, correlation teamCommandCorrelation, sourceChannel string) (bool, error) {
+	if t.commandReceipts != nil {
+		accepted, err := t.commandReceipts.AcceptCommand(ctx, correlation, sourceChannel)
+		if err != nil || !accepted {
+			return accepted, err
+		}
+	}
+	return t.rememberCommandCorrelation(correlation), nil
 }
 
 func normalizeCommandPayload(data []byte) []byte {

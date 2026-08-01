@@ -102,6 +102,13 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 		return fmt.Errorf("begin projected team work transaction: %w", err)
 	}
 	defer tx.Rollback()
+	receiptID, accepted, err := claimProjectedTeamSignal(ctx, tx, item, subject, payloadKind, payload, data)
+	if err != nil {
+		return fmt.Errorf("accept projected team signal: %w", err)
+	}
+	if !accepted {
+		return nil
+	}
 	finalResult, err := p.isFinalLinkedTeamResult(ctx, tx, item, payloadKind)
 	if err != nil {
 		return err
@@ -115,6 +122,7 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	item.ProofRefs = mergeTeamSignalStrings(item.ProofRefs, proofRefsFromTeamOutputRefs(incomingOutputRefs))
 	item.AuditRefs = mergeTeamSignalStrings(item.AuditRefs, auditRefsFromTeamOutputRefs(incomingOutputRefs))
 	event := projectedSignalStatusEvent(item, env, subject, payloadKind, payload, incomingOutputRefs)
+	event.EventID = receiptID
 	if err := p.server.insertTeamStatusEventExec(ctx, tx, &event); err != nil {
 		return fmt.Errorf("insert projected team status event: %w", err)
 	}
@@ -184,7 +192,6 @@ func projectedSignalState(item protocol.TeamWorkItem, payloadKind protocol.Signa
 
 func projectedSignalStatusEvent(item protocol.TeamWorkItem, env protocol.SignalEnvelope, subject string, payloadKind protocol.SignalPayloadKind, payload map[string]any, outputRefs []protocol.TeamOutputRef) protocol.TeamStatusEvent {
 	return protocol.TeamStatusEvent{
-		EventID:           uuid.NewString(),
 		TeamID:            item.TeamID,
 		WorkItemID:        item.WorkItemID,
 		RunID:             firstNonEmptyString(env.Meta.RunID, item.RunID),

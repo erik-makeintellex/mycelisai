@@ -89,20 +89,28 @@ test.describe("Active work Ask Team live GUI proof", () => {
     const resultTitle = `Operator asked ${teamId} to continue work on "${sourceObjective}".`;
     const resultRow = lane.locator("article").filter({ hasText: resultTitle });
     await expect(resultRow).toBeVisible({ timeout: 20_000 });
-    if (askData.work_item.state === "queued") {
-      await expect(resultRow.getByText(/Queued/i).first()).toBeVisible();
-      await expect(lane.getByText(/Team ask queued. You can keep working/i)).toBeVisible();
-      return;
-    }
-    if (askData.work_item.state === "running") {
-      await expect(resultRow.getByText(/In progress/i).first()).toBeVisible();
+    const acceptedEventsResponse = await page.request.get(
+      liveAPIURL(`/api/v1/teams/${encodeURIComponent(teamId)}/work/${encodeURIComponent(askData.work_item.work_item_id)}/status-events`),
+      { headers: liveAPIHeaders(), timeout: 10_000 },
+    );
+    const acceptedEventsBody = await acceptedEventsResponse.text();
+    expect(acceptedEventsResponse.status(), acceptedEventsBody).toBe(200);
+    const acceptedEvents = JSON.parse(acceptedEventsBody).data as Array<{ headline?: string }>;
+    expect(acceptedEvents.filter((event) => event.headline === "Team accepted work")).toHaveLength(1);
+
+    if (await resultRow.getByText(/Running/i).first().isVisible()) {
+      await expect(resultRow).toContainText("Team accepted work");
       await expect(resultRow.getByText(/Running, output may still change/i).first()).toBeVisible();
-      await expect(resultRow.getByText(/Wait for a team status\/result signal/i).first()).toBeVisible();
+      await expect(resultRow.getByText(/Keep working with Soma/i).first()).toBeVisible();
       return;
     }
-    if (askData.work_item.state === "degraded") {
+    if (await resultRow.getByText(/Degraded|Blocked/i).first().isVisible()) {
       await expect(resultRow.getByText(/Degraded/i).first()).toBeVisible();
       await expect(resultRow.getByText(/Needs recovery|No retained output yet/i).first()).toBeVisible();
+      return;
+    }
+    if (await resultRow.getByText(/Waiting/i).first().isVisible()) {
+      await expect(lane.getByText(/Team ask queued. You can keep working/i)).toBeVisible();
       return;
     }
     await expect(resultRow.getByText(/Output ready/i).first()).toBeVisible();

@@ -34,7 +34,7 @@ func OutcomeHealthForTeamWork(item TeamWorkItem) OutcomeHealthState {
 	if item.State == TeamWorkStateArchived {
 		return OutcomeHealthArchived
 	}
-	if item.NeedsOperator || len(item.RecoveryOptions) > 0 {
+	if item.NeedsOperator {
 		return OutcomeHealthBlocked
 	}
 	switch item.State {

@@ -78,6 +78,7 @@ func (s *Soma) mergeDurableTeamManifests(standing []*TeamManifest) []*TeamManife
 }
 
 func (s *Soma) configureTeam(team *Team, toolDescs map[string]string) {
+	team.commandReceipts = s.commandReceipts
 	if len(toolDescs) > 0 {
 		team.SetToolDescriptions(toolDescs)
 	}
