@@ -132,7 +132,7 @@ describe('MissionControlChat execution summary', () => {
                                 kind: 'tool',
                                 reason: 'Search source: Local Mycelis context',
                             }],
-                            proof: [{ label: 'Search proof', url: '/runs/search-proof', run_id: 'search-run-123' }],
+                            proof: [{ label: 'Search proof', url: '/runs/search-proof', run_id: 'search-run-123', verified: true }],
                             next_step: 'Share the direct search result with the operator.',
                         },
                     },

@@ -90,8 +90,10 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 		if item.DegradationState == "" {
 			item.DegradationState = deliverableResultOutputIssue(item, payloadKind, incomingOutputRefs)
 		}
+		item.RecoveryOptions = projectedRecoveryOptionsForItem(item, payload)
 	} else {
 		item.DegradationState = ""
+		item.RecoveryOptions = nil
 	}
 	db := p.server.getDB()
 	if db == nil {

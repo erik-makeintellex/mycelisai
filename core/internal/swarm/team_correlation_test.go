@@ -166,6 +166,37 @@ func TestTeam_ResponseDeliveryUsesExplicitCorrelationWithoutConsumingPending(t *
 	}
 }
 
+func TestTeam_ResponseDeliveryConsumesMatchingExplicitCorrelation(t *testing.T) {
+	team := NewTeam(&TeamManifest{ID: "test-core", Name: "Test Core"}, nil, nil, nil)
+	const workID = "11111111-1111-1111-1111-111111111111"
+	team.rememberCommandCorrelation(teamCommandCorrelation{WorkItemID: workID, TeamID: "test-core"})
+
+	explicit := team.responseCommandCorrelation([]byte(`{"work_item_id":"` + workID + `","team_id":"test-core","state":"output_ready"}`))
+	if explicit == nil || explicit.WorkItemID != workID {
+		t.Fatalf("explicit correlation = %+v, want %s", explicit, workID)
+	}
+	if pending := team.consumeCommandCorrelation(); pending != nil {
+		t.Fatalf("matching pending correlation was not consumed: %+v", pending)
+	}
+}
+
+func TestTeamAgentResponsePayloadForTriggerCarriesDurableCorrelation(t *testing.T) {
+	const workID = "11111111-1111-1111-1111-111111111111"
+	trigger := []byte(`{"goal":"build the package","context":{"work_item_id":"` + workID + `","team_id":"delivery-team","run_id":"run-9"}}`)
+
+	raw := teamAgentResponsePayloadForTrigger(ProcessResult{Text: "Package ready."}, trigger, "delivery-team")
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatalf("decode response payload: %v", err)
+	}
+	if payload["work_item_id"] != workID || payload["team_id"] != "delivery-team" || payload["run_id"] != "run-9" {
+		t.Fatalf("correlated response = %#v", payload)
+	}
+	if payload["state"] != string(protocol.TeamWorkStateOutputReady) {
+		t.Fatalf("state = %v, want output_ready", payload["state"])
+	}
+}
+
 func TestCorrelatedTeamResponsePayload_ProjectsBlockerAsDegraded(t *testing.T) {
 	raw := []byte(`{"text":"Package draft written.","blocker":"Browser validation is incomplete.","artifacts":[{"type":"project_package"}]}`)
 	correlation := &teamCommandCorrelation{

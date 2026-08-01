@@ -27,7 +27,9 @@ type ConfirmData = {
 
 type ProofRecord = {
   id?: string;
+  contract_id?: string;
   run_id?: string;
+  artifact_kind?: string;
   status?: string;
   proof_class?: string;
   proof_quality?: string;
@@ -106,6 +108,8 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       expect(data?.run_status).toBe("running");
       expect(data?.proof_artifact_id).toBeFalsy();
       expect(data?.run_id).toBeTruthy();
+      await expect(page.getByText("Action completed", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("Result verified", { exact: true })).toHaveCount(0);
 
       const workItem = await waitForTeamDelivery(page, teamID, data!.run_id!);
       expect(workItem.state, JSON.stringify(workItem)).toBe("output_ready");
@@ -115,11 +119,14 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       expect(projectPackageRef?.entrypoint).toMatch(/index\.html$/);
       expect(projectPackageRef?.proof_ref).toBeTruthy();
       await expect.poll(() => targetExists(entrypoint), { timeout: 60_000 }).toBeTruthy();
+      for (const requiredFile of ["README.md", "PROOF.md", "project-package.json"]) {
+        expect(targetExists(`${folder}/${requiredFile}`), `${requiredFile} must exist physically`).toBeTruthy();
+      }
 
       await expect(page.getByText("Work complete", { exact: true }).last()).toBeVisible({ timeout: 30_000 });
       const directOpen = page.getByRole("link", { name: "Open app" }).last();
       await expect(directOpen).toBeVisible();
-      await expect(directOpen).toHaveAttribute("href", new RegExp(encodeURIComponent(teamID), "i"));
+      await expect(directOpen).toHaveAttribute("href", new RegExp(encodeURIComponent(entrypoint), "i"));
 
       await page.goto(`/dashboard?team_id=${encodeURIComponent(teamID)}`, { waitUntil: "domcontentloaded" });
       await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
@@ -147,7 +154,7 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       }
       await outputPage.close();
 
-      await expectProofAndRunReadback(page, data!);
+      await expectProofAndRunReadback(page, data!, projectPackageRef!.proof_ref!);
       const group = await expectGroupOutputReadback(page, teamID, packageTitle, entrypoint);
       await expectResourcesRevisit(page, folder, "index.html");
       await expectGroupsRevisit(page, group, packageTitle, entrypoint);
@@ -175,7 +182,7 @@ async function waitForTeamDelivery(page: import("@playwright/test").Page, teamID
     ));
     return latest?.state ?? "missing";
   }, {
-    timeout: 150_000,
+    timeout: 360_000,
     intervals: [500, 1_000, 2_000, 5_000],
     message: `team ${teamID} should finish or expose a recoverable terminal state`,
   }).toMatch(/^(output_ready|degraded|needs_operator)$/);
@@ -213,7 +220,7 @@ async function cleanupLiveJourney(page: import("@playwright/test").Page, teamID:
   });
 }
 
-async function expectProofAndRunReadback(page: import("@playwright/test").Page, data: ConfirmData) {
+async function expectProofAndRunReadback(page: import("@playwright/test").Page, data: ConfirmData, outputProofRef: string) {
   const runResponse = await liveAPIGet(page, `/api/v1/runs/${encodeURIComponent(data.run_id!)}`);
   expect(runResponse.ok(), await runResponse.text()).toBeTruthy();
   const run = ((await runResponse.json()) as APIEnvelope<{ status?: string }>).data;
@@ -223,10 +230,13 @@ async function expectProofAndRunReadback(page: import("@playwright/test").Page, 
   expect(proofResponse.ok(), await proofResponse.text()).toBeTruthy();
   const proofRecords = ((await proofResponse.json()) as APIEnvelope<ProofRecord[]>).data ?? [];
   expect(proofRecords.length, JSON.stringify(proofRecords)).toBeGreaterThan(0);
-  if (data.proof_artifact_id) {
-    expect(proofRecords.some((record) => record.id === data.proof_artifact_id)).toBeTruthy();
-  }
-  expect(proofRecords.some((record) => record.status === "success" || record.proof_quality === "verified")).toBeTruthy();
+  const resultProof = proofRecords.find((record) => record.id === outputProofRef);
+  expect(resultProof, JSON.stringify(proofRecords)).toBeTruthy();
+  expect(resultProof?.artifact_kind).toBe("team_signal_result");
+  expect(resultProof?.run_id).toBe(data.run_id);
+  expect(resultProof?.contract_id).toBe(data.contract_id);
+  expect(resultProof?.status).toBe("success");
+  expect(resultProof?.proof_quality).toBe("verified");
 
   const contractResponse = await liveAPIGet(page, `/api/v1/trust/execution-contracts?run_id=${encodeURIComponent(data.run_id!)}&limit=10`);
   expect(contractResponse.ok(), await contractResponse.text()).toBeTruthy();

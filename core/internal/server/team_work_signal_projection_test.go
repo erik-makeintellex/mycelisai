@@ -20,7 +20,8 @@ func TestTeamWorkSignalProjection_ResultWithoutRetainedOutputsDegradesDeliverabl
 	mock.MatchExpectationsInOrder(true)
 	mockTeamWorkItem(mock, "research-team", workID, protocol.TeamWorkStateRunning, false, "", now)
 	expectProjectedStatusEvent(mock, "research-team", workID, protocol.TeamWorkStateDegraded, protocol.PayloadKindResult, now)
-	expectProjectedTeamWorkUpdate(mock, workID, protocol.TeamWorkStateDegraded, true, "missing_retained_output")
+	recovery := []string{"Ask Soma to have the team attach or regenerate the retained deliverable."}
+	expectProjectedTeamWorkUpdateWithRecovery(mock, workID, protocol.TeamWorkStateDegraded, true, "missing_retained_output", recovery)
 	expectProjectedInteraction(mock, "research-team", workID, "degraded", protocol.PayloadKindResult, now)
 
 	raw := mustSignalEnvelope(t, protocol.SignalEnvelope{

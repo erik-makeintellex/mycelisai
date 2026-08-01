@@ -32,6 +32,22 @@ func TestTeamWorkResultThreadEvent_ReturnsDirectPackageLink(t *testing.T) {
 	}
 }
 
+func TestTeamWorkResultThreadEvent_PrefersAuthoritativeCompletionProof(t *testing.T) {
+	item := protocol.TeamWorkItem{
+		ProofID:   "dispatch-proof",
+		ProofRefs: []string{"dispatch-proof", "completion-proof"},
+		State:     protocol.TeamWorkStateOutputReady,
+		OutputRefs: []protocol.TeamOutputRef{{
+			Kind: "project_package", ProofID: "completion-proof", ProofRef: "completion-proof",
+		}},
+	}
+
+	event := teamWorkResultThreadEvent(item, protocol.TeamStatusEvent{})
+	if event.Payload.ProofID != "completion-proof" {
+		t.Fatalf("proof id = %q, want authoritative completion proof", event.Payload.ProofID)
+	}
+}
+
 func TestTeamWorkResultThreadEvent_ExplainsInvalidResultWithoutRunTimeline(t *testing.T) {
 	item := protocol.TeamWorkItem{
 		TeamID:           "game-team",
@@ -39,9 +55,15 @@ func TestTeamWorkResultThreadEvent_ExplainsInvalidResultWithoutRunTimeline(t *te
 		RunID:            "run-1",
 		State:            protocol.TeamWorkStateDegraded,
 		DegradationState: "invalid_deliverable_shape",
+		OutputRefs: []protocol.TeamOutputRef{{
+			Kind:       "project_package",
+			Label:      "Unvalidated game",
+			StorageRef: "groups/game-team/generated/first-game",
+			Entrypoint: "index.html",
+		}},
 	}
 	event := teamWorkResultThreadEvent(item, protocol.TeamStatusEvent{Details: "The expected package entrypoint was not retained."})
-	if event.Payload.Kind != protocol.ThreadEventAttentionNeeded || event.Payload.Href != "" {
+	if event.Payload.Kind != protocol.ThreadEventAttentionNeeded || event.Payload.Href != "" || event.Payload.HrefLabel != "" {
 		t.Fatalf("payload = %#v, want attention without raw run link", event.Payload)
 	}
 }

@@ -1,6 +1,10 @@
 package server
 
-import "github.com/mycelis/core/pkg/protocol"
+import (
+	"strings"
+
+	"github.com/mycelis/core/pkg/protocol"
+)
 
 func projectedHeadlineForItem(item protocol.TeamWorkItem, kind protocol.SignalPayloadKind, payload map[string]any) string {
 	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "missing_retained_output" {
@@ -48,4 +52,41 @@ func projectedNextActionForItem(item protocol.TeamWorkItem, payload map[string]a
 		return "Ask Soma to have the same team expose a clear primary control, verify that it changes the application, and return the repaired package."
 	}
 	return stringField(payload, "next_action")
+}
+
+func projectedRecoveryOptionsForItem(item protocol.TeamWorkItem, payload map[string]any) []string {
+	if item.State != protocol.TeamWorkStateDegraded {
+		return nil
+	}
+	switch item.DegradationState {
+	case "missing_retained_output", "invalid_deliverable_shape", "incomplete_deliverable_files", "unverified_primary_interaction":
+		nextAction := strings.TrimSpace(projectedNextActionForItem(item, payload))
+		if nextAction != "" {
+			return []string{nextAction}
+		}
+	}
+	if options := projectedRecoveryOptionsFromPayload(payload); len(options) > 0 {
+		return options
+	}
+	return normalizeStringSlice(item.RecoveryOptions)
+}
+
+func projectedRecoveryOptionsFromPayload(payload map[string]any) []string {
+	if payload == nil {
+		return nil
+	}
+	options := []string{}
+	switch raw := payload["recovery_options"].(type) {
+	case []any:
+		for _, value := range raw {
+			if text, ok := value.(string); ok {
+				options = append(options, text)
+			}
+		}
+	case []string:
+		options = append(options, raw...)
+	case string:
+		options = append(options, raw)
+	}
+	return normalizeStringSlice(options)
 }

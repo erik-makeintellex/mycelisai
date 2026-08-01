@@ -46,6 +46,7 @@ func TestExecuteToolIteration_PersistsMCPFailureToExchange(t *testing.T) {
 
 	ok := agent.executeToolIteration(
 		0,
+		6,
 		"Run the MCP tool.",
 		&cognitive.InferRequest{Profile: "chat"},
 		&toolCallPayload{Name: "browser_search", Arguments: map[string]any{"query": "governed MCP visibility"}},
@@ -89,6 +90,7 @@ func TestExecuteToolIteration_PersistsMCPCompletionToExchange(t *testing.T) {
 	result := &agentToolLoopResult{responseText: `{"tool_call":{"name":"browser_search"}}`}
 	ok := agent.executeToolIteration(
 		0,
+		6,
 		"Run the MCP tool.",
 		req,
 		&toolCallPayload{Name: "browser_search", Arguments: map[string]any{"query": "workspace brief"}},

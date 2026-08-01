@@ -156,13 +156,30 @@ describe('ProposedActionBlock', () => {
         expect(screen.queryByText(/action completed/i)).toBeNull();
     });
 
-    it('renders a verified execution label when run proof exists', () => {
+    it('keeps delegated work pending when approval only produced a run id', () => {
         render(<ProposedActionBlock message={buildMessage({ proposal_status: 'executed', run_id: 'run-123' })} />);
 
-        expect(screen.getByText(/action completed/i)).toBeDefined();
+        expect(screen.getByText(/waiting for result/i)).toBeDefined();
+        expect(screen.getByText(/approved, still running/i)).toBeDefined();
+        expect(screen.queryByText(/action completed/i)).toBeNull();
+        expect(screen.queryByText(/result verified/i)).toBeNull();
+        expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
+    });
+
+    it('labels delegated work verified only with an explicit verified terminal result', () => {
+        render(<ProposedActionBlock message={buildMessage({
+            proposal_status: 'executed',
+            run_id: 'run-123',
+            execution_summary: {
+                execution: { shape: 'team_execution', status: 'verified' },
+                proof: [{ run_id: 'run-123', verified: true }],
+            },
+        })} />);
+
+        expect(screen.getByText(/result verified/i)).toBeDefined();
         expect(screen.getByText(/result saved/i)).toBeDefined();
         expect(screen.getByRole('link', { name: /open run details/i }).getAttribute('href')).toBe('/runs/run-123');
-        expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
+        expect(screen.queryByText(/action completed/i)).toBeNull();
     });
 
     it('renders a failed lifecycle without offering approval actions', () => {

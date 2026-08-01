@@ -32,6 +32,10 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 }
 
 func (a *Agent) processMessageStructuredWithPosture(input string, priorHistory []cognitive.ChatMessage, planningOnly bool) ProcessResult {
+	return a.processMessageStructuredWithRequirement(input, priorHistory, planningOnly, nil)
+}
+
+func (a *Agent) processMessageStructuredWithRequirement(input string, priorHistory []cognitive.ChatMessage, planningOnly bool, requirement *teamResultRequirement) ProcessResult {
 	if a.brain == nil {
 		log.Printf("Agent [%s] has no brain. Skipping inference.", a.Manifest.ID)
 		return ProcessResult{Availability: &cognitive.ExecutionAvailability{
@@ -45,6 +49,9 @@ func (a *Agent) processMessageStructuredWithPosture(input string, priorHistory [
 	}
 
 	req, profile := a.buildInferRequest(input, priorHistory)
+	if requirement.active() {
+		req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "system", Content: resultContractExecutionPrompt(requirement)})
+	}
 	resp, err := a.brain.InferWithContract(a.ctx, req)
 	if err != nil {
 		log.Printf("Agent [%s] brain freeze: %v", a.Manifest.ID, err)
@@ -71,7 +78,8 @@ func (a *Agent) processMessageStructuredWithPosture(input string, priorHistory [
 		}
 	}
 
-	loop := a.runToolLoop(input, priorHistory, &req, resp, profile, planningOnly)
+	loop := a.runToolLoop(input, priorHistory, &req, resp, profile, planningOnly, requirement)
+	loop.artifacts = reconcileToolBackedArtifacts(loop.artifacts, loop.toolEvidence, input)
 	loop.artifacts = dedupeAgentArtifacts(loop.artifacts)
 	responseText := stripToolCallJSON(loop.responseText)
 	if strings.TrimSpace(responseText) == "" && len(loop.artifacts) > 0 {
@@ -87,6 +95,16 @@ func (a *Agent) processMessageStructuredWithPosture(input string, priorHistory [
 	if loop.resp != nil {
 		providerID = loop.resp.Provider
 		modelUsed = loop.resp.ModelUsed
+	}
+	if issues := resultContractIssues(requirement, loop.artifacts, loop.toolEvidence); len(issues) > 0 {
+		summary := "The team exhausted its bounded correction attempts without satisfying the approved result contract: " + strings.Join(issues, "; ") + "."
+		availability := cognitive.ExecutionAvailability{
+			Available: false, Code: "result_contract_unsatisfied", Summary: summary,
+			RecommendedAction: resultContractRecoveryAction(requirement, issues),
+			Profile:           profile, ProviderID: providerID, ModelID: modelUsed,
+		}
+		a.logTurn("assistant", availability.Summary, providerID, modelUsed, "", nil, "", "")
+		return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, Artifacts: loop.artifacts, Availability: &availability, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
 	}
 	if strings.TrimSpace(responseText) == "" {
 		summary := "Soma could not produce a readable reply for that request."

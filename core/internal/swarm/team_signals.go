@@ -140,9 +140,26 @@ func (t *Team) rememberCommandCorrelation(correlation teamCommandCorrelation) bo
 func (t *Team) responseCommandCorrelation(raw []byte) *teamCommandCorrelation {
 	if explicit := correlationFromPayload(raw); explicit != nil {
 		explicit.TeamID = firstNonEmptySignalString(explicit.TeamID, t.Manifest.ID)
+		t.forgetMatchingCommandCorrelation(*explicit)
 		return explicit
 	}
 	return t.consumeCommandCorrelation()
+}
+
+func (t *Team) forgetMatchingCommandCorrelation(explicit teamCommandCorrelation) {
+	key := explicit.commandKey()
+	if strings.TrimSpace(key) == "" {
+		return
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for i, pending := range t.pendingCorrelations {
+		if pending.commandKey() != key {
+			continue
+		}
+		t.pendingCorrelations = append(t.pendingCorrelations[:i], t.pendingCorrelations[i+1:]...)
+		return
+	}
 }
 
 func (t *Team) consumeCommandCorrelation() *teamCommandCorrelation {
@@ -298,28 +315,4 @@ func teamResponseHasBlocker(payload map[string]any) bool {
 		}
 	}
 	return false
-}
-
-func correlationRunID(correlation *teamCommandCorrelation) string {
-	if correlation == nil {
-		return ""
-	}
-	return correlation.RunID
-}
-
-func signalString(value any) string {
-	text, ok := value.(string)
-	if !ok {
-		return ""
-	}
-	return strings.TrimSpace(text)
-}
-
-func firstNonEmptySignalString(values ...string) string {
-	for _, value := range values {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
 }

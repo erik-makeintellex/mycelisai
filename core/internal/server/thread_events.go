@@ -107,10 +107,19 @@ func teamWorkResultThreadEvent(item protocol.TeamWorkItem, status protocol.TeamS
 			WorkItemID:      item.WorkItemID,
 			IntentProofID:   item.IntentProofID,
 			ContractID:      item.ContractID,
-			ProofID:         firstNonEmptyString(item.ProofID, firstTeamSignalString(item.ProofRefs)),
+			ProofID:         completionProofRef(item),
 			OutputRefs:      item.OutputRefs,
 		},
 	}
+}
+
+func completionProofRef(item protocol.TeamWorkItem) string {
+	for _, ref := range item.OutputRefs {
+		if proofID := firstNonEmptyString(ref.ProofID, ref.ProofRef); proofID != "" {
+			return proofID
+		}
+	}
+	return firstNonEmptyString(firstTeamSignalString(item.ProofRefs), item.ProofID)
 }
 
 func completedTeamWorkDetail(status protocol.TeamStatusEvent, outputs []protocol.TeamOutputRef) string {

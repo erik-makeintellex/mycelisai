@@ -146,9 +146,6 @@ func inferProjectPackageWriteArguments(arguments map[string]any, latestUserInput
 			arguments["package_folder"] = normalizedPath[:index]
 		}
 	}
-	if len(stringSlice(arguments["package_files"])) == 0 {
-		arguments["package_files"] = []string{pathBase(normalizedPath), "README.md", "PROOF.md", "project-package.json"}
-	}
 	if strings.TrimSpace(stringValue(arguments["package_title"])) == "" {
 		if title := extractRequestedPackageTitle(latestUserInput); title != "" {
 			arguments["package_title"] = title
@@ -201,16 +198,13 @@ func projectPackageArtifactFromSuccessfulWrite(arguments map[string]any, latestU
 	}
 	files := stringSlice(arguments["package_files"])
 	if len(files) == 0 {
-		files = []string{pathBase(entrypoint), "README.md", "PROOF.md", "project-package.json"}
+		files = []string{pathBase(entrypoint)}
 	}
 	title := strings.TrimSpace(stringValue(arguments["package_title"]))
 	if title == "" {
 		title = "Generated application package"
 	}
-	validation := strings.TrimSpace(firstProjectPackageString(arguments, "validation", "validation_summary"))
-	if validation == "" {
-		validation = "Package entrypoint retained; open it to complete operator interaction validation."
-	}
+	validation := ""
 	payload, _ := json.Marshal(map[string]any{
 		"title": title, "kind": "project_package", "entrypoint": entrypoint,
 		"folder": folder, "files": files, "validation": validation,

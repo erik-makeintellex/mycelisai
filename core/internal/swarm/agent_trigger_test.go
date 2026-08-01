@@ -63,7 +63,10 @@ func TestNormalizeTeamTriggerInput_CompactsDuplicatedExecutionContext(t *testing
 			t.Fatalf("rendered prompt missing compact context value %q:\n%s", want, got)
 		}
 	}
-	for _, omitted := range []string{"A very long operator request", "result_contract", "already rendered separately"} {
+	if !strings.Contains(got, "Acceptance criteria:\n- already rendered separately") {
+		t.Fatalf("rendered prompt omitted contract acceptance criteria:\n%s", got)
+	}
+	for _, omitted := range []string{"A very long operator request", "result_contract"} {
 		if strings.Contains(got, omitted) {
 			t.Fatalf("rendered prompt retained duplicated context %q:\n%s", omitted, got)
 		}
@@ -82,6 +85,9 @@ func TestNormalizeTeamTriggerInput_RendersActionableResultContract(t *testing.T)
 				"folder_required":true,
 				"validation_required":true,
 				"proof_ref_required":true,
+				"expected_outputs":["Openable retained package"],
+				"acceptance_criteria":["Entrypoint opens"],
+				"proof_required":["Readback evidence"],
 				"repair_channel":"soma"
 			}
 		}
@@ -91,10 +97,15 @@ func TestNormalizeTeamTriggerInput_RendersActionableResultContract(t *testing.T)
 		"Output contract:",
 		"Kind: project_package",
 		"Required files: README.md, PROOF.md, project-package.json",
+		"Expected outputs:\n- Openable retained package",
+		"Acceptance criteria:\n- Entrypoint opens",
+		"Proof requirements:\n- Readback evidence",
 		"Return a direct entrypoint.",
-		"Read the retained output back and validate it against every exit criterion before reporting completion.",
-		"Return a proof reference backed by the validation performed.",
+		"Read the retained output back to establish structural evidence. Readback alone does not prove semantic acceptance.",
+		"server/live validation layer to attach the authoritative proof reference.",
 		"If validation fails, report the blocker through soma instead of claiming completion.",
+		"Semantic acceptance and final proof remain authoritative in server/live validation.",
+		"Prose and declared metadata are not evidence.",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("rendered prompt missing %q:\n%s", want, got)

@@ -6,6 +6,7 @@
 ## API TOC
 
 - [Endpoints](#endpoints)
+- [Team result-contract completion](#team-result-contract-completion)
 - [Directed Execution Payloads](#directed-execution-payloads)
 - [Provider Auth Notes](#provider-auth-notes)
 
@@ -223,6 +224,12 @@ Conversation-template instantiation is non-executing by default. Quick Actions i
 | `/api/v1/organizations/{id}/output-model-routing` | PATCH | Update the organization default model or detected output-type model bindings for team and specialist output delivery |
 
 `POST /api/v1/teams/{id}/work/ask` also accepts optional `execution_mode` and `work_intent`. Async command envelopes, durable `TeamWorkItem` records, status events, and run-linked mission events preserve those fields so a reloaded client can inspect the approved lifecycle without reconstructing it from prose.
+
+### Team result-contract completion
+
+For approved team work carrying `context.result_contract`, worker completion is evidence-gated before result projection. Required retained files must map to successful output writes, and validation/proof requirements require successful readback of written output. The worker receives bounded correction opportunities; exhaustion returns `result_contract_unsatisfied` with operator-safe recovery instead of allowing model prose or declared metadata to imply completion. Server projection remains authoritative for package path, physical dependency, interaction, proof-artifact, and run/contract validation. A run id records that work started, not that a result was verified.
+
+The resulting `team_signal_result` proof uses validation source `retained_output_validation` and evidence strength `retained_output`. Its verification scope is limited to retained files, package containment, referenced local assets, and the statically inspectable interaction contract. Runtime/browser interaction is a separate release or review proof and is never implied by this completion artifact. Thread completion events prefer this authoritative output proof over the earlier dispatch or intent proof.
 
 ## Directed Execution Payloads
 

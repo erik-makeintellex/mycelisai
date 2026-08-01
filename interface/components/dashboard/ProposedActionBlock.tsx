@@ -43,6 +43,23 @@ function approvalPlanBullets(proposal: ChatMessage["proposal"], operatorSummary:
     return [...new Set(bullets)].slice(0, 3);
 }
 
+function isDelegatedOrAsync(proposal: NonNullable<ChatMessage["proposal"]>): boolean {
+    return proposal.tools.some((tool) => /^(create_team|delegate|delegate_task)$/i.test(tool))
+        || proposal.execution_mode === "team_async"
+        || proposal.execution_mode === "schedule_handoff"
+        || ["scheduled", "continuous", "event_driven"].includes(proposal.work_intent?.cadence ?? proposal.task_cadence ?? "");
+}
+
+function hasVerifiedTerminalResult(message: ChatMessage): boolean {
+    const status = (message.execution_summary?.execution?.status ?? message.execution_summary?.execution_status ?? "").trim().toLowerCase();
+    if (status === "verified") return true;
+    if (!["complete", "completed", "success", "succeeded"].includes(status)) return false;
+
+    const proof = message.execution_summary?.proof;
+    const proofs = Array.isArray(proof) ? proof : proof ? [proof] : [];
+    return proofs.some((item) => typeof item === "object" && item.verified === true);
+}
+
 export default function ProposedActionBlock({ message }: { message: ChatMessage }) {
     const confirmProposal = useCortexStore((s) => s.confirmProposal);
     const cancelProposal = useCortexStore((s) => s.cancelProposal);
@@ -64,7 +81,11 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     if (!proposal) return null;
     const lifecycle = message.proposal_status ?? "active";
     const hasRunProof = Boolean(message.run_id?.trim());
-    const renderedLifecycle = lifecycle === "executed" && !hasRunProof ? "confirmed_pending_execution" : lifecycle;
+    const delegatedOrAsync = isDelegatedOrAsync(proposal);
+    const verifiedTerminalResult = hasVerifiedTerminalResult(message);
+    const renderedLifecycle = lifecycle === "executed" && (!hasRunProof || (delegatedOrAsync && !verifiedTerminalResult))
+        ? "confirmed_pending_execution"
+        : lifecycle;
     const isActionable = renderedLifecycle === "active";
     const hasConfirmToken = Boolean(proposal.confirm_token?.trim());
     const hasIntentProof = Boolean(proposal.intent_proof_id?.trim());
@@ -99,7 +120,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
         : renderedLifecycle === "confirmed_pending_execution"
             ? "Confirmed, waiting for result"
             : renderedLifecycle === "executed"
-                ? "Action completed"
+                ? delegatedOrAsync ? "Result verified" : "Action completed"
                 : renderedLifecycle === "failed"
                     ? "Could not run"
                     : "Awaiting approval";

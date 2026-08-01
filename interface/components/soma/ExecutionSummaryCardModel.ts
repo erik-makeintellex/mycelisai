@@ -234,12 +234,17 @@ function auditObject(value: ExecutionSummaryData["audit_recovery"]) {
 
 export function trustVerdict(summary: ExecutionSummaryData, runId?: string, artifacts?: ChatArtifactRef[]): TrustVerdict {
     const status = (compactText(summary.execution?.status) ?? compactText(summary.execution_status) ?? "").toLowerCase();
+    const executionShape = (compactText(summary.execution?.shape) ?? compactText(summary.execution_shape) ?? "").toLowerCase();
     const audit = auditObject(summary.audit_recovery);
     const degradation = audit?.degradation;
     const proofs = proofObjects(summary.proof);
     const proofClass = proofs.map((proof) => compactText(proof.proof_class)).find(Boolean);
     const verified = proofs.some((proof) => proof.verified === true);
     const hasRun = Boolean(compactText(runId) ?? proofs.map((proof) => compactText(proof.run_id)).find(Boolean));
+    const verifiedTerminal = status === "verified" || (["complete", "completed", "success", "succeeded"].includes(status) && verified);
+    const delegatedOrAsync = ["team_execution", "native_team"].includes(executionShape)
+        || summary.execution_mode === "team_async"
+        || summary.execution_mode === "schedule_handoff";
     const retainedOutput = asItems(summary.outputs).some((item) => typeof item !== "string"
         && isUserDeliverableSummaryItem(item)
         && (item.retained === true || item.kind === "code" || item.kind === "file" || item.kind === "project_package"))
@@ -263,21 +268,21 @@ export function trustVerdict(summary: ExecutionSummaryData, runId?: string, arti
             tone: "review",
         };
     }
-    if (hasRun && retainedOutput) {
+    if (hasRun && retainedOutput && (!delegatedOrAsync || verifiedTerminal)) {
         return {
             label: "Result saved",
             detail: "The produced output is available for review.",
             tone: "trusted",
         };
     }
-    if (hasRun && !retainedOutput && summary.execution?.shape === "team_execution") {
+    if (hasRun && delegatedOrAsync) {
         return {
             label: "Work started",
-            detail: "Soma handed the request to the team. A deliverable will appear here only after the team returns usable output.",
+            detail: "Soma handed the request to the team. A deliverable will appear here only after the team returns a verified result.",
             tone: "review",
         };
     }
-    if (hasRun || verified) {
+    if (verifiedTerminal) {
         return {
             label: "Result verified",
             detail: "Run details are linked for this result.",

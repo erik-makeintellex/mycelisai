@@ -66,12 +66,11 @@ func stampTeamOutputRefsWithProof(refs []protocol.TeamOutputRef, proofArtifactID
 	}
 	out := make([]protocol.TeamOutputRef, 0, len(refs))
 	for _, ref := range refs {
-		if strings.TrimSpace(ref.ProofRef) == "" {
-			ref.ProofRef = proofArtifactID
-		}
-		if strings.TrimSpace(ref.ProofID) == "" {
-			ref.ProofID = proofArtifactID
-		}
+		// Core's persisted completion proof is authoritative for the durable
+		// output reference. Any worker-declared proof remains captured in the
+		// proof payload as lineage, but must not control the operator trust link.
+		ref.ProofRef = proofArtifactID
+		ref.ProofID = proofArtifactID
 		out = append(out, ref)
 	}
 	return out
