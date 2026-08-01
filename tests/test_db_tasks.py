@@ -250,6 +250,13 @@ def test_schema_bootstrapped_requires_operator_sse_event_ledger():
     assert "operator_sse_events" in checks["operator_sse_events table"]
 
 
+def test_schema_bootstrapped_requires_team_signal_receipt_ledger():
+    checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
+
+    assert "team_signal_receipts table" in checks
+    assert "team_signal_receipts" in checks["team_signal_receipts table"]
+
+
 def test_schema_bootstrapped_requires_team_work_lifecycle_columns():
     checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
 

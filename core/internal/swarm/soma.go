@@ -34,6 +34,7 @@ type Soma struct {
 	conversationLogger protocol.ConversationLogger
 	providerPolicy     ProviderPolicy
 	durableTeamLoader  DurableTeamLoader
+	commandReceipts    CommandReceiptStore
 }
 
 // NewSoma creates a new Soma instance with composite tool support.

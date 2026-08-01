@@ -71,6 +71,7 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("input_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'input_sources';"),
     ("execution_dispatch_outbox table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'execution_dispatch_outbox';"),
     ("operator_sse_events table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'operator_sse_events';"),
+    ("team_signal_receipts table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_signal_receipts';"),
 )
 
 def _load_env():

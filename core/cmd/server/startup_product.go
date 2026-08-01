@@ -105,15 +105,15 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 	)
 	wireAdminServices(ctx, mux, core, adminSrv, services)
 	if core.SharedDB != nil && core.NC != nil && core.NC.IsConnected() {
-		if err := server.StartConfirmedActionDispatch(ctx, adminSrv); err != nil {
-			log.Printf("WARN: Confirmed action dispatch disabled: %v", err)
-		} else {
-			log.Println("Confirmed action dispatch active.")
-		}
 		if err := server.StartTeamWorkSignalProjection(ctx, adminSrv); err != nil {
 			log.Printf("WARN: Team work signal projection disabled: %v", err)
 		} else {
 			log.Println("Team work signal projection active.")
+		}
+		if err := server.StartConfirmedActionDispatch(ctx, adminSrv); err != nil {
+			log.Printf("WARN: Confirmed action dispatch disabled: %v", err)
+		} else {
+			log.Println("Confirmed action dispatch active.")
 		}
 		if err := server.StartRegisteredInputProjection(ctx, adminSrv); err != nil {
 			log.Printf("WARN: Registered input projection disabled: %v", err)

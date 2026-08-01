@@ -44,7 +44,7 @@ func TestOutcomeHealthForTeamWork(t *testing.T) {
 		{state: TeamWorkStateArchived, want: OutcomeHealthArchived},
 		{state: TeamWorkStateArchived, operator: true, recovery: []string{"stale"}, want: OutcomeHealthArchived},
 		{state: TeamWorkStateRunning, operator: true, want: OutcomeHealthBlocked},
-		{state: TeamWorkStateRunning, recovery: []string{"retry"}, want: OutcomeHealthBlocked},
+		{state: TeamWorkStateRunning, recovery: []string{"retry if the deadline expires"}, want: OutcomeHealthRunning},
 	}
 
 	for _, tt := range tests {

@@ -108,6 +108,7 @@ func TestTeamWorkSignalProjection_ResultWithRetainedOutputRecordsCompletionProof
 	mock.MatchExpectationsInOrder(true)
 	mockLinkedTeamWorkItem(mock, "game-team", workID, runID, intentProofID, contractID, now)
 	mock.ExpectBegin()
+	expectProjectedSignalReceipt(mock, "game-team", workID, "swarm.team.game-team.signal.result")
 	mock.ExpectQuery("SELECT COUNT\\(\\*\\).*FROM team_work_items").
 		WithArgs(runID, workID).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
@@ -262,6 +263,7 @@ func expectProjectedStatusEvent(mock sqlmock.Sqlmock, teamID, workID string, sta
 
 func expectProjectedStatusEventWithSource(mock sqlmock.Sqlmock, teamID, workID string, state protocol.TeamWorkState, kind protocol.SignalPayloadKind, sourceKind, sourceChannel string, now time.Time) {
 	mock.ExpectBegin()
+	expectProjectedSignalReceipt(mock, teamID, workID, "swarm.team."+teamID+".signal."+string(kind))
 	expectProjectedStatusEventInsertWithSource(mock, teamID, workID, state, kind, sourceKind, sourceChannel, now)
 }
 

@@ -53,6 +53,7 @@ type Team struct {
 	mcpToolDescs        map[string]string
 	pendingCorrelations []teamCommandCorrelation
 	seenCommandKeys     map[string]time.Time
+	commandReceipts     CommandReceiptStore
 	subscriptions       []*nats.Subscription
 	agents              []*Agent
 }
