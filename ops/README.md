@@ -259,7 +259,7 @@ Delivery-focused validation, runner checks, and release preflight.
 
 ### `misc.py` (Team Coordination)
 Central architect sync path and utility task surfaces.
-- **Architecture Sync**: `uv run inv team.architecture-sync`
+- **Architecture Sync**: `uv run inv team.architecture-sync` sends the standing architecture, development, and AGUI teams the current Workspace/Outcome execution-to-deliverable gate and collects concise proof priorities; it does not authorize implementation by itself.
 - **Worktree Triage**: `uv run inv team.worktree-triage`
 
 ## Directives

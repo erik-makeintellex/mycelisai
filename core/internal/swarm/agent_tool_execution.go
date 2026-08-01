@@ -42,14 +42,13 @@ func (a *Agent) prepareToolCall(input string, toolCall *toolCallPayload, failedT
 	return false
 }
 
-func (a *Agent) executeToolIteration(i int, input string, req *cognitive.InferRequest, toolCall *toolCallPayload, failedToolCalls map[string]int, reinfer func(string, string) bool, result *agentToolLoopResult, planningOnly bool) bool {
+func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, req *cognitive.InferRequest, toolCall *toolCallPayload, failedToolCalls map[string]int, reinfer func(string, string) bool, result *agentToolLoopResult, planningOnly bool) bool {
 	fingerprint := toolCallFingerprint(toolCall)
-	log.Printf("Agent [%s] tool_call [%d/%d]: %s", a.Manifest.ID, i+1, a.Manifest.EffectiveMaxIterations(), toolCall.Name)
+	log.Printf("Agent [%s] tool_call [%d/%d]: %s", a.Manifest.ID, i+1, iterationLimit, toolCall.Name)
 	result.toolsUsed = append(result.toolsUsed, toolCall.Name)
 	if a.eventEmitter != nil && a.runID != "" {
 		go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolInvoked, protocol.SeverityInfo, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": toolCall.Name, "iteration": i + 1}) //nolint:errcheck
 	}
-
 	a.logTurn("tool_call", result.responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
 
 	toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
@@ -85,6 +84,7 @@ func (a *Agent) executeToolIteration(i int, input string, req *cognitive.InferRe
 		}
 		return false
 	}
+	recordSuccessfulToolEvidence(result, toolCall, toolResult)
 	if a.eventEmitter != nil && a.runID != "" {
 		go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolCompleted, protocol.SeverityInfo, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": toolCall.Name, "iteration": i + 1}) //nolint:errcheck
 	}
@@ -115,17 +115,16 @@ func (a *Agent) executeToolIteration(i int, input string, req *cognitive.InferRe
 			result.artifacts = append(result.artifacts, artifact)
 		}
 	}
+	result.artifacts = reconcileToolBackedArtifacts(result.artifacts, result.toolEvidence, input)
 	if isMCPTool {
 		preview := truncateLog(toolResult, 500)
 		a.persistMCPExchangeResult(serverID, toolCall.Name, "completed", preview, map[string]any{"arguments": toolCall.Arguments, "result_preview": preview})
 		a.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{"state": "completed", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "result_preview": truncateLog(toolResult, 500), "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
 	}
-	req.Messages = append(req.Messages,
-		cognitive.ChatMessage{Role: "assistant", Content: result.responseText},
-		cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolCall.Name, toolResult)},
-	)
+	appendAssistantHistory(&req.Messages, result.responseText)
+	req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolCall.Name, toolResult)})
 	updated, err := a.brain.InferWithContract(a.ctx, *req)
-	if err != nil {
+	if err != nil || updated == nil {
 		log.Printf("Agent [%s] re-inference failed: %v", a.Manifest.ID, err)
 		return false
 	}

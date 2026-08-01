@@ -161,6 +161,8 @@ uv run inv api.delivery-proof
 uv run inv team.architecture-sync
 ```
 
+`team.architecture-sync` is a bounded coordination check, not an autonomous implementation run. Its standing-team prompts follow the current Workspace/Outcome hierarchy and Ask-to-Recover journey, with validated execution-to-deliverable handoff as the active release gate.
+
 Use `--live-backend` for browser proof that must hit a real Core backend.
 
 ### Logging & Quality Gates (`ops/logging.py`, `ops/quality.py`)

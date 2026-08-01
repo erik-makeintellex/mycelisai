@@ -62,9 +62,8 @@ func TestAutofillToolArguments_InfersNaturalApplicationPackage(t *testing.T) {
 	if call.Arguments["package_kind"] != "project_package" {
 		t.Fatalf("package_kind = %v, want project_package", call.Arguments["package_kind"])
 	}
-	files := stringSlice(call.Arguments["package_files"])
-	if len(files) != 4 || files[0] != "play.html" {
-		t.Fatalf("package_files = %v, want entrypoint and support files", files)
+	if files := stringSlice(call.Arguments["package_files"]); len(files) != 0 {
+		t.Fatalf("package_files = %v, want no files before successful writes", files)
 	}
 }
 
@@ -170,8 +169,8 @@ func TestAutofillToolArguments_InfersDeclaredProjectPackageWrite(t *testing.T) {
 	if call.Arguments["package_title"] != "Team App" {
 		t.Fatalf("package_title = %#v", call.Arguments["package_title"])
 	}
-	if files := stringSlice(call.Arguments["package_files"]); len(files) != 4 {
-		t.Fatalf("package_files = %#v", files)
+	if files := stringSlice(call.Arguments["package_files"]); len(files) != 0 {
+		t.Fatalf("package_files = %#v, want no synthesized support files", files)
 	}
 }
 

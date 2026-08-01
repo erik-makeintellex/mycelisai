@@ -5,6 +5,24 @@ import { OUTPUT_CONTINUATION_EVENT } from "@/components/soma/outputContinuation"
 import type { ExecutionSummaryData } from "@/store/useCortexStore";
 
 describe("ExecutionSummaryReceipt", () => {
+  it("keeps an approval run pending until the team result is explicitly verified", () => {
+    const summary: ExecutionSummaryData = {
+      execution_mode: "team_async",
+      execution: {
+        status: "completed",
+        summary: "The approved work was handed to the team.",
+      },
+      proof: [{ run_id: "run-pending-1" }],
+    };
+
+    render(<ExecutionSummaryReceipt summary={summary} runId="run-pending-1" />);
+
+    expect(screen.getByText("Work started")).toBeDefined();
+    expect(screen.getByText(/after the team returns a verified result/i)).toBeDefined();
+    expect(screen.queryByText("Result verified")).toBeNull();
+    expect(screen.queryByText("Result saved")).toBeNull();
+  });
+
   it("reveals generated app packages with launch, resources, and reply paths", () => {
     const continuation = vi.fn();
     window.addEventListener(OUTPUT_CONTINUATION_EVENT, continuation);

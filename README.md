@@ -179,6 +179,8 @@ uv run inv api.delivery-proof
 uv run inv lifecycle.memory-restart && uv run inv team.architecture-sync && uv run inv quality.max-lines --limit 330
 ```
 
+`team.architecture-sync` sends the standing architecture, development, and AGUI teams one bounded Workspace-to-Outcome release brief: close the current execution-to-deliverable gate, require validated retained output, keep Soma lifecycle language truthful, and return concise proof priorities without starting another doctrine lane.
+
 `uv run inv install` includes Reticulum bootstrap: it syncs the locked `rns` package through `uv`, then warms/verifies `uvx --from rns rnstatus --help` before continuing with Go, Interface, and Playwright setup.
 
 Cleanup note: `uv run inv clean.generated` removes repo-local generated artifacts but skips the active Python runtime directory when the task is running from that environment. If you intentionally need to remove `.venv`, do it from an external shell after leaving the environment.

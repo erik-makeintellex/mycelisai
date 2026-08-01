@@ -73,19 +73,19 @@ WORKTREE_AREA_RULES = (
 
 def architecture_sync_directives():
     messages = {
-        "prime-architect": "Central architecture directive: keep the next-target workflow aligned to strict gate order. "
-        "P0 remains the active phase. Require concrete test evidence before any phase advancement, "
-        "coordinate development and AGUI work to the target goals, and reply with a concise execution brief. "
+        "prime-architect": "Architecture directive: preserve the stable Workspace -> Outcome hierarchy while closing the current release gate. "
+        "Require concrete Ask -> Approve -> Execute -> Deliver -> Trust -> Recover proof before advancement, "
+        "coordinate development and AGUI work around one bounded Outcome, and reply with a concise execution brief. "
         "Do not use tools for this sync. Respond in plain text with at most 6 short lines.",
-        "prime-development": "Development directive: focus on P0 closure, memory-restart reliability, logging standardization, "
-        "error-handling normalization, and no-regression verification. Go remains the primary implementation "
-        "language for backend/runtime work. Python is limited to tasks, management scripting, and tests. "
-        "Reply with the top implementation/testing priorities. Do not use tools for this sync. "
+        "prime-development": "Development directive: close the approved execution-to-deliverable handoff without adding a parallel runtime. "
+        "Use the existing NATS execution spine, enforce the requested result contract, retain validated output, "
+        "and degrade with a concrete recovery action when delivery is incomplete. Reply with the top implementation and proof priorities. "
+        "Go remains the runtime language; do not use tools for this sync. "
         "Respond in plain text with at most 5 short lines.",
-        "agui-design-architect": "AGUI directive: align base UI updates to architecture truth. Prioritize workflow-composer onboarding, "
-        "gate-state visibility, system status, team roster visibility, and operator-safe error presentation. "
-        "Do not invent client-side workflow semantics that diverge from backend gates. "
-        "Reply with the top UI architecture priorities. Do not use tools for this sync. "
+        "agui-design-architect": "AGUI directive: keep the Soma thread conversational while making asynchronous work truthful. "
+        "Show one concise start state, never claim completion before validated output, and return a short delivery summary, "
+        "direct open action, or clear recovery instruction. Keep runtime internals behind Inspect. "
+        "Reply with the top UI proof priorities. Do not use tools for this sync. "
         "Respond in plain text with at most 5 short lines.",
     }
     return {

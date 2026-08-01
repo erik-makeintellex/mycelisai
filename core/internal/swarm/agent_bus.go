@@ -84,8 +84,9 @@ func (a *Agent) handleTrigger(msg *nats.Msg) {
 	}
 	input := normalizeTeamTriggerInput(msg.Data)
 	planningOnly := teamTriggerPlanningOnly(msg.Data)
+	requirement := teamResultRequirementFromTrigger(msg.Data, planningOnly)
 	log.Printf("Agent [%s] thinking about: %s", a.Manifest.ID, input)
-	result := a.processMessageStructuredWithPosture(input, nil, planningOnly)
+	result := a.processMessageStructuredWithRequirement(input, nil, planningOnly, requirement)
 	if result.Text == "" && len(result.Artifacts) == 0 && result.Availability == nil {
 		if msg.Reply != "" {
 			msg.Respond([]byte(fmt.Sprintf("[%s] No response — LLM may be unavailable.", a.Manifest.ID)))
@@ -93,14 +94,20 @@ func (a *Agent) handleTrigger(msg *nats.Msg) {
 		return
 	}
 	if msg.Reply != "" {
-		reply := result.Text
-		if reply == "" && result.Availability != nil {
-			reply = result.Availability.Summary
-		}
-		msg.Respond([]byte(reply))
+		msg.Respond([]byte(teamAgentRequestReply(result)))
 	}
-	a.nc.Publish(fmt.Sprintf(protocol.TopicTeamInternalRespond, a.TeamID), teamAgentResponsePayload(result))
+	a.nc.Publish(fmt.Sprintf(protocol.TopicTeamInternalRespond, a.TeamID), teamAgentResponsePayloadForTrigger(result, msg.Data, a.TeamID))
 	log.Printf("Agent [%s] replied.", a.Manifest.ID)
+}
+
+func teamAgentResponsePayloadForTrigger(result ProcessResult, trigger []byte, teamID string) []byte {
+	payload := teamAgentResponsePayload(result)
+	correlation := correlationFromPayload(trigger)
+	if correlation == nil {
+		return payload
+	}
+	correlation.TeamID = firstNonEmptySignalString(correlation.TeamID, teamID)
+	return correlatedTeamResponsePayload(payload, correlation)
 }
 
 func teamTriggerPlanningOnly(data []byte) bool {
@@ -234,12 +241,16 @@ func renderTeamAskResultContract(sb *strings.Builder, context map[string]any) {
 	}
 	kind := strings.TrimSpace(stringValue(contract["kind"]))
 	files := stringSlice(contract["files_required"])
+	expectedOutputs := stringSlice(contract["expected_outputs"])
+	acceptanceCriteria := stringSlice(contract["acceptance_criteria"])
+	proofRequirements := stringSlice(contract["proof_required"])
 	entrypointRequired := boolValue(contract["entrypoint_required"])
 	folderRequired := boolValue(contract["folder_required"])
 	validationRequired := boolValue(contract["validation_required"])
 	proofRequired := boolValue(contract["proof_ref_required"])
 	repairChannel := strings.TrimSpace(stringValue(contract["repair_channel"]))
-	if kind == "" && len(files) == 0 && !entrypointRequired && !folderRequired && !validationRequired && !proofRequired && repairChannel == "" {
+	if kind == "" && len(files) == 0 && len(expectedOutputs) == 0 && len(acceptanceCriteria) == 0 && len(proofRequirements) == 0 &&
+		!entrypointRequired && !folderRequired && !validationRequired && !proofRequired && repairChannel == "" {
 		return
 	}
 
@@ -250,6 +261,9 @@ func renderTeamAskResultContract(sb *strings.Builder, context map[string]any) {
 	if len(files) > 0 {
 		sb.WriteString(fmt.Sprintf("- Required files: %s\n", strings.Join(files, ", ")))
 	}
+	renderTeamAskContractList(sb, "Expected outputs", expectedOutputs)
+	renderTeamAskContractList(sb, "Acceptance criteria", acceptanceCriteria)
+	renderTeamAskContractList(sb, "Proof requirements", proofRequirements)
 	if entrypointRequired {
 		sb.WriteString("- Return a direct entrypoint.\n")
 	}
@@ -257,14 +271,15 @@ func renderTeamAskResultContract(sb *strings.Builder, context map[string]any) {
 		sb.WriteString("- Return the retained output folder.\n")
 	}
 	if validationRequired {
-		sb.WriteString("- Read the retained output back and validate it against every exit criterion before reporting completion.\n")
+		sb.WriteString("- Read the retained output back to establish structural evidence. Readback alone does not prove semantic acceptance.\n")
 	}
 	if proofRequired {
-		sb.WriteString("- Return a proof reference backed by the validation performed.\n")
+		sb.WriteString("- Provide tool-backed evidence for the server/live validation layer to attach the authoritative proof reference.\n")
 	}
 	if repairChannel != "" {
 		sb.WriteString(fmt.Sprintf("- If validation fails, report the blocker through %s instead of claiming completion.\n", repairChannel))
 	}
+	sb.WriteString("- Worker completion requires successful retained-output tool writes and successful structural readback when requested. Semantic acceptance and final proof remain authoritative in server/live validation. Prose and declared metadata are not evidence.\n")
 }
 
 func compactTeamAskContext(context map[string]any) map[string]any {

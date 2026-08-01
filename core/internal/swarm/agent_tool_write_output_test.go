@@ -12,8 +12,11 @@ func TestProjectPackageArtifactFromSuccessfulWriteNormalizesMCPWrite(t *testing.
 	if artifact.Type != "project_package" || artifact.Entrypoint != "groups/app-team/generated/portal/play.html" {
 		t.Fatalf("artifact = %+v", artifact)
 	}
-	if artifact.Folder != "groups/app-team/generated/portal" || len(artifact.Files) != 4 || artifact.Files[0] != "play.html" {
+	if artifact.Folder != "groups/app-team/generated/portal" || len(artifact.Files) != 1 || artifact.Files[0] != "play.html" {
 		t.Fatalf("package shape = %+v", artifact)
+	}
+	if artifact.Validation != "" {
+		t.Fatalf("validation = %q, want no claim before readback", artifact.Validation)
 	}
 }
 

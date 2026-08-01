@@ -133,6 +133,16 @@ def test_architecture_sync_requests_all_teams_and_reports_replies(monkeypatch, c
     assert fake_sock.closed is True
 
 
+def test_architecture_sync_directives_follow_current_outcome_delivery_gate():
+    directives = misc._architecture_sync_directives()
+    combined = " ".join(item["message"] for item in directives.values())
+
+    assert "Workspace -> Outcome" in combined
+    assert "execution-to-deliverable" in combined
+    assert "never claim completion before validated output" in combined
+    assert "memory-restart" not in combined
+
+
 def test_format_sync_reply_prefers_process_result_text():
     message = '{"text":"brief body","tools_used":["publish_signal"]}'
 
