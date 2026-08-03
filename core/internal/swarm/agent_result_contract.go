@@ -125,7 +125,8 @@ func resultContractEntrypointNeedsRepair(requirement *teamResultRequirement, art
 		(!resultContractInteractiveHandlerPattern.MatchString(content) || !resultContractExposesPrimaryControl(content)) {
 		return true
 	}
-	return len(outputValidationTargetIssues(requirement.OutputValidation, content)) > 0
+	return len(outputValidationTargetIssues(requirement.OutputValidation, content)) > 0 ||
+		len(outputValidationAnimationLoopIssues(requirement.OutputValidation, content)) > 0
 }
 
 func resultContractNeedsRequiredWrites(requirement *teamResultRequirement, artifacts []protocol.ChatArtifactRef, evidence []successfulToolEvidence) bool {
@@ -269,6 +270,7 @@ func resultContractIssues(requirement *teamResultRequirement, artifacts []protoc
 			issues = append(issues, "entrypoint readback does not expose an inspectable primary interaction and visible control instructions")
 		}
 		issues = append(issues, outputValidationTargetIssues(requirement.OutputValidation, content)...)
+		issues = append(issues, outputValidationAnimationLoopIssues(requirement.OutputValidation, content)...)
 	}
 	return uniqueResultContractStrings(issues)
 }
