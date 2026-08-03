@@ -90,6 +90,23 @@ func TestInteractivePackageReadbackRequiresApprovedValidationTargets(t *testing.
 	}
 }
 
+func TestOutputValidationExecutionInstructionRequiresRenderedStateTransition(t *testing.T) {
+	plan := &protocol.OutputValidationPlan{
+		Kind: protocol.OutputValidationInteractiveBrowser, Required: true,
+		Probe: &protocol.OutputValidationProbe{
+			Action:  protocol.OutputValidationAction{Kind: protocol.OutputValidationActionKeyHold, Key: "ArrowRight"},
+			Observe: protocol.OutputValidationObservation{Kind: protocol.OutputValidationObserveVisualChange, Target: "[data-mycelis-validation-surface]"},
+		},
+	}
+
+	instruction := outputValidationExecutionInstruction(plan)
+	for _, required := range []string{"ArrowRight", "render loop actually consumes", "before/after state must differ", "unused intermediate"} {
+		if !strings.Contains(instruction, required) {
+			t.Fatalf("instruction = %q, want %q", instruction, required)
+		}
+	}
+}
+
 func TestInteractivePackageUsesLaterSuccessfulRepairWriteAfterReadback(t *testing.T) {
 	requirement := &teamResultRequirement{
 		Kind: "project_package", ExpectedOutputs: []string{"playable browser game package"}, ReadbackRequired: true,

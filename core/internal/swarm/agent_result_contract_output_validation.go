@@ -89,7 +89,7 @@ func outputValidationExecutionInstruction(plan *protocol.OutputValidationPlan) s
 		action = fmt.Sprintf("%s action for key %s", plan.Probe.Action.Kind, plan.Probe.Action.Key)
 	}
 	return fmt.Sprintf(
-		" The entrypoint must implement the approved %s and include observation target %s exactly; that action must visibly change the observed surface.",
+		" The entrypoint must implement the approved %s and include observation target %s exactly; that action must visibly change the observed surface. The action must mutate state that the DOM or render loop actually consumes, and the rendered before/after state must differ; do not only assign an otherwise-unused intermediate value.",
 		action,
 		plan.Probe.Observe.Target,
 	)
