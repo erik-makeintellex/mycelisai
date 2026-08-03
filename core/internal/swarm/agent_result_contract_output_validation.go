@@ -11,6 +11,8 @@ import (
 
 var (
 	outputValidationAttributeSelector       = regexp.MustCompile(`^\[([a-zA-Z_:][a-zA-Z0-9_:.-]*)\]$`)
+	outputValidationNamedFunction           = regexp.MustCompile(`(?m)\bfunction\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\([^)]*\)\s*\{`)
+	outputValidationScriptContent           = regexp.MustCompile(`(?is)<script\b[^>]*>(.*?)</script>`)
 	resultContractInteractiveHandlerPattern = regexp.MustCompile(`(?i)(?:addEventListener\s*\(\s*["'](?:click|pointerdown|touchstart|keydown|keyup)|on(?:click|pointerdown|touchstart|keydown)\s*=)`)
 	resultContractVisibleControlPattern     = regexp.MustCompile(`(?i)\b(?:click|tap|press|use|move|drag|select|arrow|space|wasd|control)\b`)
 	resultContractScriptOrStylePattern      = regexp.MustCompile(`(?is)<(?:script|style)\b[^>]*>.*?</(?:script|style)>`)
@@ -72,6 +74,164 @@ func outputValidationTargetIssues(plan *protocol.OutputValidationPlan, content s
 	return uniqueResultContractStrings(issues)
 }
 
+func outputValidationAnimationLoopIssues(plan *protocol.OutputValidationPlan, content string) []string {
+	if plan == nil || !plan.Required || plan.Kind != protocol.OutputValidationInteractiveBrowser {
+		return nil
+	}
+	scanContent := javascriptCodeOnly(outputValidationJavaScript(content))
+	issues := make([]string, 0, 1)
+	for _, match := range outputValidationNamedFunction.FindAllStringSubmatchIndex(scanContent, -1) {
+		name := scanContent[match[2]:match[3]]
+		bodyEnd, ok := javascriptBlockEnd(scanContent, match[1]-1)
+		if !ok {
+			continue
+		}
+		body := scanContent[match[1]:bodyEnd]
+		selfSchedule := regexp.MustCompile(`\brequestAnimationFrame\s*\(\s*` + regexp.QuoteMeta(name) + `\s*\)`)
+		if !selfSchedule.MatchString(body) {
+			continue
+		}
+		outside := scanContent[:match[0]] + strings.Repeat(" ", bodyEnd-match[0]+1) + scanContent[bodyEnd+1:]
+		bootstrap := regexp.MustCompile(
+			`(?:\b` + regexp.QuoteMeta(name) + `\s*\(|\b(?:requestAnimationFrame|setTimeout|setInterval)\s*\(\s*` + regexp.QuoteMeta(name) + `\b|\baddEventListener\s*\([^;]*,\s*` + regexp.QuoteMeta(name) + `\s*\))`,
+		)
+		if !bootstrap.MatchString(outside) {
+			issues = append(issues, fmt.Sprintf("animation loop %s is defined but never started", name))
+		}
+	}
+	return uniqueResultContractStrings(issues)
+}
+
+func outputValidationJavaScript(content string) string {
+	matches := outputValidationScriptContent.FindAllStringSubmatch(content, -1)
+	if len(matches) == 0 {
+		return content
+	}
+	var source strings.Builder
+	for _, match := range matches {
+		source.WriteString(match[1])
+		source.WriteByte('\n')
+	}
+	return source.String()
+}
+
+func javascriptBlockEnd(content string, open int) (int, bool) {
+	depth, quote, escaped := 0, byte(0), false
+	lineComment, blockComment := false, false
+	for index := open; index < len(content); index++ {
+		current := content[index]
+		next := byte(0)
+		if index+1 < len(content) {
+			next = content[index+1]
+		}
+		if lineComment {
+			if current == '\n' {
+				lineComment = false
+			}
+			continue
+		}
+		if blockComment {
+			if current == '*' && next == '/' {
+				blockComment = false
+				index++
+			}
+			continue
+		}
+		if quote != 0 {
+			if escaped {
+				escaped = false
+			} else if current == '\\' {
+				escaped = true
+			} else if current == quote {
+				quote = 0
+			}
+			continue
+		}
+		if current == '/' && next == '/' {
+			lineComment = true
+			index++
+			continue
+		}
+		if current == '/' && next == '*' {
+			blockComment = true
+			index++
+			continue
+		}
+		if current == '\'' || current == '"' || current == '`' {
+			quote = current
+			continue
+		}
+		switch current {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return index, true
+			}
+		}
+	}
+	return 0, false
+}
+
+func javascriptCodeOnly(content string) string {
+	result := []byte(content)
+	quote, escaped := byte(0), false
+	lineComment, blockComment := false, false
+	for index := 0; index < len(result); index++ {
+		current := result[index]
+		next := byte(0)
+		if index+1 < len(result) {
+			next = result[index+1]
+		}
+		if lineComment {
+			result[index] = ' '
+			if current == '\n' {
+				lineComment = false
+				result[index] = '\n'
+			}
+			continue
+		}
+		if blockComment {
+			result[index] = ' '
+			if current == '*' && next == '/' {
+				blockComment = false
+				result[index+1] = ' '
+				index++
+			}
+			continue
+		}
+		if quote != 0 {
+			result[index] = ' '
+			if escaped {
+				escaped = false
+			} else if current == '\\' {
+				escaped = true
+			} else if current == quote {
+				quote = 0
+			}
+			continue
+		}
+		if current == '/' && next == '/' {
+			lineComment = true
+			result[index], result[index+1] = ' ', ' '
+			index++
+			continue
+		}
+		if current == '/' && next == '*' {
+			blockComment = true
+			result[index], result[index+1] = ' ', ' '
+			index++
+			continue
+		}
+		if current == '\'' || current == '"' || current == '`' {
+			quote = current
+			result[index] = ' '
+		}
+	}
+	return string(result)
+}
+
 func outputValidationTargetPresent(content, selector string) bool {
 	match := outputValidationAttributeSelector.FindStringSubmatch(strings.TrimSpace(selector))
 	if len(match) != 2 {
@@ -96,7 +256,11 @@ func outputValidationExecutionInstruction(plan *protocol.OutputValidationPlan) s
 }
 
 func outputValidationCorrectionInstruction(plan *protocol.OutputValidationPlan, issues []string) string {
-	if plan == nil || plan.Probe == nil || !strings.Contains(strings.Join(issues, " "), "approved validation target") {
+	joined := strings.Join(issues, " ")
+	if strings.Contains(joined, "defined but never started") {
+		return " Start the retained animation or render loop explicitly after defining it (for example by invoking the loop once), then read the entrypoint back."
+	}
+	if plan == nil || plan.Probe == nil || !strings.Contains(joined, "approved validation target") {
 		return ""
 	}
 	return fmt.Sprintf(
