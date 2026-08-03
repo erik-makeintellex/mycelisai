@@ -138,13 +138,16 @@ func TestResultContractLoopLimitReservesBoundedMultiFileRepairBudget(t *testing.
 
 func TestResultContractEvidenceToolAllowedRestrictsIncompleteProjectPackage(t *testing.T) {
 	requirement := &teamResultRequirement{Kind: "project_package", FilesRequired: []string{"index.html"}}
-	for _, toolName := range []string{"write_file", "read_file", "read_text_file"} {
-		if !resultContractEvidenceToolAllowed(requirement, toolName) {
-			t.Fatalf("%s should advance package evidence", toolName)
+	if !resultContractEvidenceToolAllowed(requirement, "write_file", nil, nil) {
+		t.Fatal("write_file should advance package evidence")
+	}
+	for _, toolName := range []string{"read_file", "read_text_file"} {
+		if resultContractEvidenceToolAllowed(requirement, toolName, nil, nil) {
+			t.Fatalf("%s should wait until required package writes finish", toolName)
 		}
 	}
 	for _, toolName := range []string{"local_command", "store_artifact", "consult_council"} {
-		if resultContractEvidenceToolAllowed(requirement, toolName) {
+		if resultContractEvidenceToolAllowed(requirement, toolName, nil, nil) {
 			t.Fatalf("%s should be deferred while package evidence is incomplete", toolName)
 		}
 	}

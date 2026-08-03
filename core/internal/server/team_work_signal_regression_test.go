@@ -16,6 +16,8 @@ func TestProjectedSignalWouldRegressTerminalWork(t *testing.T) {
 		{name: "duplicate result", current: protocol.TeamWorkStateOutputReady, incoming: protocol.TeamWorkStateOutputReady, want: true},
 		{name: "late running", current: protocol.TeamWorkStateOutputReady, incoming: protocol.TeamWorkStateRunning, want: true},
 		{name: "blocked does not silently resume", current: protocol.TeamWorkStateNeedsOperator, incoming: protocol.TeamWorkStateRunning, want: true},
+		{name: "validation does not silently resume", current: protocol.TeamWorkStateReviewing, incoming: protocol.TeamWorkStateRunning, want: true},
+		{name: "validation may degrade", current: protocol.TeamWorkStateReviewing, incoming: protocol.TeamWorkStateDegraded, want: false},
 		{name: "degraded may accept corrected result", current: protocol.TeamWorkStateDegraded, incoming: protocol.TeamWorkStateOutputReady, want: false},
 		{name: "normal progress", current: protocol.TeamWorkStateQueued, incoming: protocol.TeamWorkStateRunning, want: false},
 	}

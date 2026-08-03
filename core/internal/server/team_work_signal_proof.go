@@ -18,6 +18,35 @@ func (p *teamWorkSignalProjection) recordAsyncCompletionProof(
 	outputRefs []protocol.TeamOutputRef,
 	finalResult bool,
 ) (string, error) {
+	return p.recordCompletionProof(ctx, exec, item, payloadKind, outputRefs, finalResult, nil)
+}
+
+type completionValidationEvidence struct {
+	ValidationRef string
+	ContentDigest string
+	EvidenceRefs  []string
+}
+
+func (p *teamWorkSignalProjection) recordRuntimeCompletionProof(
+	ctx context.Context,
+	exec trust.SQLExecutor,
+	item protocol.TeamWorkItem,
+	outputRefs []protocol.TeamOutputRef,
+	finalResult bool,
+	validation completionValidationEvidence,
+) (string, error) {
+	return p.recordCompletionProof(ctx, exec, item, protocol.PayloadKindResult, outputRefs, finalResult, &validation)
+}
+
+func (p *teamWorkSignalProjection) recordCompletionProof(
+	ctx context.Context,
+	exec trust.SQLExecutor,
+	item protocol.TeamWorkItem,
+	payloadKind protocol.SignalPayloadKind,
+	outputRefs []protocol.TeamOutputRef,
+	finalResult bool,
+	validation *completionValidationEvidence,
+) (string, error) {
 	if payloadKind != protocol.PayloadKindResult || item.State != protocol.TeamWorkStateOutputReady || len(outputRefs) == 0 {
 		return "", nil
 	}
@@ -36,6 +65,28 @@ func (p *teamWorkSignalProjection) recordAsyncCompletionProof(
 		}
 		outputs[i].Proof.ProofID = proofID
 	}
+	validationSource := protocol.TrustValidationSourceRetainedOutput
+	validationScope := "retained files, package containment, referenced local assets, and static interaction contract"
+	runtimeValidation := "not_required"
+	reviewEvent := "team_signal_result"
+	if validation != nil {
+		validationSource = protocol.TrustValidationSourceRuntimeOutput
+		validationScope = "digest-bound browser load, page errors, local assets, and approved primary interaction"
+		runtimeValidation = "passed"
+		reviewEvent = "runtime_output_validation"
+	}
+	payload := map[string]any{
+		"team_id": item.TeamID, "work_item_id": item.WorkItemID, "run_id": item.RunID,
+		"contract_id": item.ContractID, "intent_proof_id": item.IntentProofID,
+		"expected_outputs": item.ExpectedOutputs, "expected_proof": item.ExpectedProof,
+		"output_refs": outputRefs, "validation_scope": validationScope,
+		"runtime_validation": runtimeValidation,
+	}
+	if validation != nil {
+		payload["validation_ref"] = validation.ValidationRef
+		payload["content_digest"] = validation.ContentDigest
+		payload["evidence_refs"] = validation.EvidenceRefs
+	}
 	recordedID, err := trust.RecordProofArtifact(ctx, exec, trust.ProofArtifactInput{
 		ID:               proofID,
 		ArtifactKind:     "team_signal_result",
@@ -44,29 +95,18 @@ func (p *teamWorkSignalProjection) recordAsyncCompletionProof(
 		RunID:            item.RunID,
 		Status:           protocol.ProofArtifactStatusSuccess,
 		ProofClass:       protocol.ExecutionProofClassRunAudit,
-		ValidationSource: protocol.TrustValidationSourceRetainedOutput,
+		ValidationSource: validationSource,
 		EvidenceStrength: protocol.TrustEvidenceStrengthRetainedOutput,
 		ProofQuality:     protocol.TrustProofQualityVerified,
 		OutputRefs:       outputs,
 		AuditRefs:        auditRefsForAsyncCompletion(item, outputRefs),
 		ReviewLineage: []map[string]string{{
-			"event":        "team_signal_result",
-			"source":       string(protocol.TrustValidationSourceRetainedOutput),
+			"event":        reviewEvent,
+			"source":       string(validationSource),
 			"team_id":      item.TeamID,
 			"work_item_id": item.WorkItemID,
 		}},
-		Payload: map[string]any{
-			"team_id":            item.TeamID,
-			"work_item_id":       item.WorkItemID,
-			"run_id":             item.RunID,
-			"contract_id":        item.ContractID,
-			"intent_proof_id":    item.IntentProofID,
-			"expected_outputs":   item.ExpectedOutputs,
-			"expected_proof":     item.ExpectedProof,
-			"output_refs":        outputRefs,
-			"validation_scope":   "retained files, package containment, referenced local assets, and static interaction contract",
-			"runtime_validation": "not_performed_by_completion_projection",
-		},
+		Payload:      payload,
 		Intermediate: !finalResult,
 	})
 	if err != nil {

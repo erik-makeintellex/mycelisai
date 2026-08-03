@@ -4,25 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"html"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-var (
-	resultContractInteractiveHandlerPattern = regexp.MustCompile(`(?i)(?:addEventListener\s*\(\s*["'](?:click|pointerdown|touchstart|keydown|keyup)|on(?:click|pointerdown|touchstart|keydown)\s*=)`)
-	resultContractVisibleControlPattern     = regexp.MustCompile(`(?i)\b(?:click|tap|press|use|move|drag|select|arrow|space|wasd|control)\b`)
-	resultContractScriptOrStylePattern      = regexp.MustCompile(`(?is)<(?:script|style)\b[^>]*>.*?</(?:script|style)>`)
-	resultContractHTMLTagPattern            = regexp.MustCompile(`(?s)<[^>]+>`)
-)
-
 const (
-	maxResultContractCorrections    = 2
-	maxResultContractToolIterations = 14
+	maxResultContractCorrections    = 4
+	maxResultContractToolIterations = 20
 )
 
 type teamResultRequirement struct {
@@ -36,6 +27,7 @@ type teamResultRequirement struct {
 	ReadbackRequired   bool
 	DownstreamProofRef bool
 	RepairChannel      string
+	OutputValidation   *protocol.OutputValidationPlan
 }
 
 type successfulToolEvidence struct {
@@ -77,6 +69,7 @@ func teamResultRequirementFromTrigger(data []byte, planningOnly bool) *teamResul
 		ReadbackRequired:   boolValue(contract["validation_required"]),
 		DownstreamProofRef: boolValue(contract["proof_ref_required"]),
 		RepairChannel:      strings.TrimSpace(stringValue(contract["repair_channel"])),
+		OutputValidation:   outputValidationRequirement(contract["output_validation"]),
 	}
 	if len(requirement.AcceptanceCriteria) == 0 {
 		requirement.AcceptanceCriteria = append([]string(nil), ask.ExitCriteria...)
@@ -94,7 +87,7 @@ func (requirement *teamResultRequirement) active() bool {
 	return requirement != nil && (requirement.Kind != "" || len(requirement.FilesRequired) > 0 ||
 		len(requirement.ExpectedOutputs) > 0 || len(requirement.AcceptanceCriteria) > 0 ||
 		len(requirement.ProofRequirements) > 0 || requirement.EntrypointRequired ||
-		requirement.FolderRequired || requirement.ReadbackRequired || requirement.DownstreamProofRef)
+		requirement.FolderRequired || requirement.ReadbackRequired || requirement.DownstreamProofRef || requirement.OutputValidation != nil)
 }
 
 func resultContractLoopLimit(current int, requirement *teamResultRequirement) int {
@@ -107,16 +100,53 @@ func resultContractLoopLimit(current int, requirement *teamResultRequirement) in
 	return maxResultContractToolIterations
 }
 
-func resultContractEvidenceToolAllowed(requirement *teamResultRequirement, toolName string) bool {
+func resultContractEvidenceToolAllowed(requirement *teamResultRequirement, toolName string, artifacts []protocol.ChatArtifactRef, evidence []successfulToolEvidence) bool {
 	if !requirement.active() || !strings.EqualFold(requirement.Kind, "project_package") {
 		return true
 	}
 	switch strings.TrimSpace(toolName) {
-	case "write_file", "read_file", "read_text_file":
+	case "write_file":
 		return true
+	case "read_file", "read_text_file":
+		return !resultContractNeedsRequiredWrites(requirement, artifacts, evidence) &&
+			!resultContractEntrypointNeedsRepair(requirement, artifacts, evidence)
 	default:
 		return false
 	}
+}
+
+func resultContractEntrypointNeedsRepair(requirement *teamResultRequirement, artifacts []protocol.ChatArtifactRef, evidence []successfulToolEvidence) bool {
+	packageArtifact := firstProjectPackageArtifact(artifacts)
+	if packageArtifact == nil || strings.TrimSpace(packageArtifact.Entrypoint) == "" {
+		return false
+	}
+	content := latestEntrypointEvidenceContent(evidence, packageArtifact.Entrypoint)
+	if resultContractRequiresPrimaryInteraction(requirement) &&
+		(!resultContractInteractiveHandlerPattern.MatchString(content) || !resultContractExposesPrimaryControl(content)) {
+		return true
+	}
+	return len(outputValidationTargetIssues(requirement.OutputValidation, content)) > 0
+}
+
+func resultContractNeedsRequiredWrites(requirement *teamResultRequirement, artifacts []protocol.ChatArtifactRef, evidence []successfulToolEvidence) bool {
+	if requirement == nil {
+		return false
+	}
+	writes := evidencePaths(evidence, "write_file")
+	packageArtifact := firstProjectPackageArtifact(artifacts)
+	if requirement.EntrypointRequired && (packageArtifact == nil || packageArtifact.Entrypoint == "" || !evidenceContainsPath(writes, packageArtifact.Entrypoint)) {
+		return true
+	}
+	for _, required := range requirement.FilesRequired {
+		requiredPath := cleanEvidencePath(required)
+		if packageArtifact != nil && strings.TrimSpace(packageArtifact.Folder) != "" && !pathWithinFolder(requiredPath, packageArtifact.Folder) {
+			requiredPath = strings.TrimRight(cleanEvidencePath(packageArtifact.Folder), "/") + "/" + strings.TrimLeft(requiredPath, "/")
+		}
+		if !evidenceContainsPath(writes, requiredPath) {
+			return true
+		}
+	}
+	return false
 }
 
 func recordSuccessfulToolEvidence(result *agentToolLoopResult, call *toolCallPayload, toolResult string) {
@@ -232,46 +262,15 @@ func resultContractIssues(requirement *teamResultRequirement, artifacts []protoc
 			issues = append(issues, "missing successful structural readback of a written output")
 		}
 	}
-	if resultContractRequiresPrimaryInteraction(requirement) && packageArtifact != nil && packageArtifact.Entrypoint != "" {
+	if packageArtifact != nil && packageArtifact.Entrypoint != "" {
 		content := latestEntrypointEvidenceContent(evidence, packageArtifact.Entrypoint)
-		if !resultContractInteractiveHandlerPattern.MatchString(content) || !resultContractExposesPrimaryControl(content) {
+		if resultContractRequiresPrimaryInteraction(requirement) &&
+			(!resultContractInteractiveHandlerPattern.MatchString(content) || !resultContractExposesPrimaryControl(content)) {
 			issues = append(issues, "entrypoint readback does not expose an inspectable primary interaction and visible control instructions")
 		}
+		issues = append(issues, outputValidationTargetIssues(requirement.OutputValidation, content)...)
 	}
 	return uniqueResultContractStrings(issues)
-}
-
-func resultContractRequiresPrimaryInteraction(requirement *teamResultRequirement) bool {
-	if requirement == nil {
-		return false
-	}
-	values := append(append([]string{}, requirement.ExpectedOutputs...), requirement.AcceptanceCriteria...)
-	for _, value := range values {
-		lower := strings.ToLower(value)
-		if strings.Contains(lower, "playable") || strings.Contains(lower, "browser game") ||
-			strings.Contains(lower, "controls respond") || strings.Contains(lower, "primary user workflow") ||
-			strings.Contains(lower, "primary control") {
-			return true
-		}
-	}
-	return false
-}
-
-func latestEntrypointEvidenceContent(evidence []successfulToolEvidence, entrypoint string) string {
-	content := ""
-	for _, item := range evidence {
-		if (item.ToolName == "write_file" || item.ToolName == "read_file" || item.ToolName == "read_text_file") &&
-			evidenceContainsPath([]string{item.Path}, entrypoint) && strings.TrimSpace(item.Content) != "" {
-			content = item.Content
-		}
-	}
-	return content
-}
-
-func resultContractExposesPrimaryControl(content string) bool {
-	visibleText := resultContractScriptOrStylePattern.ReplaceAllString(content, " ")
-	visibleText = html.UnescapeString(resultContractHTMLTagPattern.ReplaceAllString(visibleText, " "))
-	return resultContractVisibleControlPattern.MatchString(visibleText)
 }
 
 func resultContractExecutionPrompt(requirement *teamResultRequirement) string {
@@ -288,6 +287,7 @@ func resultContractExecutionPrompt(requirement *teamResultRequirement) string {
 	if strings.EqualFold(requirement.Kind, "project_package") {
 		prompt += " When the requested application is interactive, its entrypoint must visibly explain the primary control and implement that control with a standard click, pointer, touch, keydown, or keyup handler that retained validation can inspect."
 	}
+	prompt += outputValidationExecutionInstruction(requirement.OutputValidation)
 	return prompt + " Continue until the evidence is complete or a concrete tool blocker prevents progress."
 }
 
@@ -300,6 +300,7 @@ func resultContractCorrectionPrompt(requirement *teamResultRequirement, issues [
 			break
 		}
 	}
+	prompt += outputValidationCorrectionInstruction(requirement.OutputValidation, issues)
 	return prompt
 }
 

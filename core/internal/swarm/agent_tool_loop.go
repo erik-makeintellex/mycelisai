@@ -105,7 +105,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			}
 			continue
 		}
-		if issues := resultContractIssues(requirement, result.artifacts, result.toolEvidence); len(issues) > 0 && !resultContractEvidenceToolAllowed(requirement, toolCall.Name) {
+		if issues := resultContractIssues(requirement, result.artifacts, result.toolEvidence); len(issues) > 0 && !resultContractEvidenceToolAllowed(requirement, toolCall.Name, result.artifacts, result.toolEvidence) {
 			feedback := resultContractCorrectionPrompt(requirement, issues) + " Do not call " + toolCall.Name + " while required package evidence is incomplete."
 			if !reinferWithToolFeedback(toolCall.Name, feedback) {
 				break
@@ -134,7 +134,11 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		if !a.prepareToolCall(input, toolCall, failedToolCalls, preflightDone, reinferWithToolFeedback, &result) {
 			continue
 		}
+		evidenceCount := len(result.toolEvidence)
 		if !a.executeToolIteration(i, loopLimit, input, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result, planningOnly) {
+			if len(result.toolEvidence) > evidenceCount {
+				completedToolCalls[fingerprint] = true
+			}
 			continue
 		}
 		completedToolCalls[fingerprint] = true

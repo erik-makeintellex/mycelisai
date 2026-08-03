@@ -7,6 +7,9 @@ import (
 )
 
 func projectedHeadlineForItem(item protocol.TeamWorkItem, kind protocol.SignalPayloadKind, payload map[string]any) string {
+	if item.State == protocol.TeamWorkStateReviewing {
+		return "Checking deliverable"
+	}
 	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "missing_retained_output" {
 		return "Team result missing retained output"
 	}
@@ -19,10 +22,19 @@ func projectedHeadlineForItem(item protocol.TeamWorkItem, kind protocol.SignalPa
 	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "unverified_primary_interaction" {
 		return "Team deliverable needs interaction proof"
 	}
+	if item.State == protocol.TeamWorkStateDegraded && strings.HasPrefix(item.DegradationState, "runtime_validation_") {
+		return "Team deliverable needs runtime repair"
+	}
+	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "validation_plan_incomplete" {
+		return "Team deliverable cannot be checked safely"
+	}
 	return projectedHeadline(kind, payload)
 }
 
 func projectedDetailsForItem(item protocol.TeamWorkItem, payload map[string]any) string {
+	if item.State == protocol.TeamWorkStateReviewing {
+		return "The team returned retained files. Soma is checking the approved primary workflow before calling the work complete."
+	}
 	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "missing_retained_output" {
 		return "The team reported completion, but did not include retained output references for the expected deliverable."
 	}
@@ -35,10 +47,19 @@ func projectedDetailsForItem(item protocol.TeamWorkItem, payload map[string]any)
 	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "unverified_primary_interaction" {
 		return "The package does not expose enough retained evidence that its documented primary control can be used."
 	}
+	if item.State == protocol.TeamWorkStateDegraded && strings.HasPrefix(item.DegradationState, "runtime_validation_") {
+		return "The retained package did not pass its approved runtime workflow check."
+	}
+	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "validation_plan_incomplete" {
+		return "The approved validation contract or retained launch target is incomplete."
+	}
 	return projectedDetails(payload)
 }
 
 func projectedNextActionForItem(item protocol.TeamWorkItem, payload map[string]any) string {
+	if item.State == protocol.TeamWorkStateReviewing {
+		return "Keep working with Soma while the deliverable check runs in the background."
+	}
 	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "missing_retained_output" {
 		return "Ask Soma to have the team attach or regenerate the retained deliverable."
 	}
@@ -51,6 +72,9 @@ func projectedNextActionForItem(item protocol.TeamWorkItem, payload map[string]a
 	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "unverified_primary_interaction" {
 		return "Ask Soma to have the same team expose a clear primary control, verify that it changes the application, and return the repaired package."
 	}
+	if item.State == protocol.TeamWorkStateDegraded && (strings.HasPrefix(item.DegradationState, "runtime_validation_") || item.DegradationState == "validation_plan_incomplete") {
+		return "Ask Soma to have the same team repair the primary workflow and return a new retained candidate."
+	}
 	return stringField(payload, "next_action")
 }
 
@@ -59,7 +83,7 @@ func projectedRecoveryOptionsForItem(item protocol.TeamWorkItem, payload map[str
 		return nil
 	}
 	switch item.DegradationState {
-	case "missing_retained_output", "invalid_deliverable_shape", "incomplete_deliverable_files", "unverified_primary_interaction":
+	case "missing_retained_output", "invalid_deliverable_shape", "incomplete_deliverable_files", "unverified_primary_interaction", "validation_plan_incomplete", "runtime_validation_failed", "runtime_validation_unavailable", "runtime_validation_stale":
 		nextAction := strings.TrimSpace(projectedNextActionForItem(item, payload))
 		if nextAction != "" {
 			return []string{nextAction}

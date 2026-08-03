@@ -124,8 +124,8 @@ func (s *AdminServer) markRunCompletedTx(tx *sql.Tx, runID, proofID string) erro
 	now := time.Now()
 
 	result, err := tx.Exec(
-		`UPDATE mission_runs SET status = $1, completed_at = GREATEST(NOW(), started_at) WHERE id = $2 AND status <> $1`,
-		runs.StatusCompleted, runID,
+		`UPDATE mission_runs SET status = $1, completed_at = GREATEST(NOW(), started_at) WHERE id = $2 AND status NOT IN ($1, $3)`,
+		runs.StatusCompleted, runID, runs.StatusFailed,
 	)
 	if err != nil {
 		return err

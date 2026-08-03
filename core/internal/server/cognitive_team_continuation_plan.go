@@ -270,7 +270,7 @@ func teamEvocationDelegationConstraints() []string {
 }
 
 func projectPackageResultContract(teamID string, contract map[string]any) map[string]any {
-	return map[string]any{
+	result := map[string]any{
 		"kind":                 "project_package",
 		"entrypoint_required":  true,
 		"folder_required":      true,
@@ -285,4 +285,8 @@ func projectPackageResultContract(teamID string, contract map[string]any) map[st
 		"proof_required":       confirmedActionStringSlice(contract["proof_required"]),
 		"source_material_mode": "internal_sources_hidden_until_requested",
 	}
+	if plan, err := protocol.DecodeOutputValidationPlan(contract["output_validation"]); err == nil {
+		result["output_validation"] = plan
+	}
+	return result
 }

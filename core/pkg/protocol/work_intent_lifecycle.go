@@ -66,6 +66,7 @@ func NormalizeWorkIntent(raw *WorkIntent) *WorkIntent {
 		outputCopy.Retention = strings.TrimSpace(strings.ToLower(outputCopy.Retention))
 		outputCopy.LaunchHint = strings.TrimSpace(outputCopy.LaunchHint)
 		outputCopy.Validation = dedupeStrings(compactStrings(outputCopy.Validation))
+		outputCopy.OutputValidation = NormalizeOutputValidationPlan(outputCopy.OutputValidation)
 		intent.OutputContract = &outputCopy
 	}
 	defaults := WorkLifecycleForKind(intent.Kind)

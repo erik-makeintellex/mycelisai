@@ -62,6 +62,7 @@ const (
 	TrustValidationSourceConfirmAction  TrustValidationSource = "confirm_action"
 	TrustValidationSourceTeamSignal     TrustValidationSource = "team_signal"
 	TrustValidationSourceRetainedOutput TrustValidationSource = "retained_output_validation"
+	TrustValidationSourceRuntimeOutput  TrustValidationSource = "runtime_output_validation"
 )
 
 type TrustEvidenceStrength string

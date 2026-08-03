@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   type APIEnvelope,
   type GroupRecord,
+  attachRetainedPackageEvidence,
   confirmProposal,
   createOrganization,
   expectProjectPackageVisible,
@@ -66,7 +67,7 @@ test.describe("Trusted Outcome Journey live smoke", () => {
   test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires a live Core backend");
   test.setTimeout(liveTimeoutMs);
 
-  test("proves the source-stack Ask to Revisit path with durable proof readback", async ({ page }) => {
+  test("proves the source-stack Ask to Revisit path with durable proof readback", async ({ page }, testInfo) => {
     test.slow();
     const stamp = Date.now();
     const teamID = `trusted-outcome-live-${stamp}`;
@@ -160,6 +161,12 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       await expectGroupsRevisit(page, group, packageTitle, entrypoint);
       await expectRunReceiptRevisit(page, data!.run_id!);
     } finally {
+      await attachRetainedPackageEvidence(page, testInfo, [
+        entrypoint,
+        `${folder}/project-package.json`,
+        `${folder}/README.md`,
+        `${folder}/PROOF.md`,
+      ]);
       await cleanupLiveJourney(page, teamID);
       removeTarget(entrypoint);
       removeTarget(`${folder}/README.md`);
@@ -171,7 +178,7 @@ test.describe("Trusted Outcome Journey live smoke", () => {
 
 async function waitForTeamDelivery(page: import("@playwright/test").Page, teamID: string, runID: string) {
   let latest: TeamWorkItem | undefined;
-  await expect.poll(async () => {
+  const refreshState = async () => {
     const response = await liveAPIGet(page, `/api/v1/teams/${encodeURIComponent(teamID)}/work?limit=25`);
     if (!response.ok()) return `http_${response.status()}`;
     const items = ((await response.json()) as APIEnvelope<TeamWorkItem[]>).data ?? [];
@@ -181,11 +188,23 @@ async function waitForTeamDelivery(page: import("@playwright/test").Page, teamID
       && item.execution_shape === "delegated_work"
     ));
     return latest?.state ?? "missing";
+  };
+
+  await expect.poll(async () => {
+    return refreshState();
   }, {
-    timeout: 360_000,
+    timeout: 600_000,
     intervals: [500, 1_000, 2_000, 5_000],
-    message: `team ${teamID} should finish or expose a recoverable terminal state`,
-  }).toMatch(/^(output_ready|degraded|needs_operator)$/);
+    message: `team ${teamID} should produce a candidate or expose a recoverable terminal state`,
+  }).toMatch(/^(reviewing|output_ready|degraded|needs_operator)$/);
+
+  if (latest?.state === "reviewing") {
+    await expect.poll(refreshState, {
+      timeout: 120_000,
+      intervals: [500, 1_000, 2_000, 5_000],
+      message: `team ${teamID} candidate should finish runtime validation`,
+    }).toMatch(/^(output_ready|degraded|needs_operator)$/);
+  }
 
   expect(latest, `No correlated TeamWorkItem found for run ${runID}`).toBeTruthy();
   if (latest?.state !== "output_ready") {

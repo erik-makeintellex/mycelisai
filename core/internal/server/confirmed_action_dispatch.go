@@ -124,6 +124,19 @@ func (s *AdminServer) dispatchOneConfirmedAction(ctx context.Context) error {
 	if err != nil || item == nil {
 		return err
 	}
+	switch item.DispatchKind {
+	case confirmedActionDispatchKind:
+		return s.dispatchClaimedConfirmedAction(ctx, item)
+	case teamWorkValidationDispatchKind:
+		return s.dispatchClaimedTeamWorkValidation(ctx, item)
+	default:
+		err := fmt.Errorf("unsupported dispatch kind %q", item.DispatchKind)
+		_ = s.DispatchOutbox.MarkFailed(ctx, item.ID, err)
+		return err
+	}
+}
+
+func (s *AdminServer) dispatchClaimedConfirmedAction(ctx context.Context, item *dispatchoutbox.Item) error {
 	var payload confirmedActionDispatchPayload
 	if err := json.Unmarshal(item.Payload, &payload); err != nil {
 		_ = s.DispatchOutbox.MarkFailed(ctx, item.ID, err)

@@ -123,7 +123,7 @@ func TestTeamWorkSignalProjection_ResultWithRetainedOutputRecordsCompletionProof
 	expectProjectedTeamWorkUpdate(mock, workID, protocol.TeamWorkStateOutputReady, false, "")
 	expectProjectedInteractionInsertOnly(mock, "game-team", workID, "output_ready", protocol.PayloadKindResult, now)
 	mock.ExpectExec("UPDATE mission_runs SET status = \\$1, completed_at = GREATEST").
-		WithArgs(runs.StatusCompleted, runID).
+		WithArgs(runs.StatusCompleted, runID, runs.StatusFailed).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("INSERT INTO mission_events").
 		WithArgs(sqlmock.AnyArg(), runID, "default", string(protocol.EventMissionCompleted), string(protocol.SeverityInfo), "admin", "governance", sqlmock.AnyArg(), sqlmock.AnyArg()).
