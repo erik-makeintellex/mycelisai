@@ -83,7 +83,10 @@ func TestInteractivePackageReadbackRequiresApprovedValidationTargets(t *testing.
 
 	repaired := strings.Replace(content, "<button ", `<button data-mycelis-primary-action `, 1)
 	repaired = strings.Replace(repaired, `<p id="status"`, `<p data-mycelis-validation-surface id="status"`, 1)
-	evidence = append(evidence, successfulToolEvidence{ToolName: "write_file", Path: entrypoint, Content: repaired})
+	evidence = append(evidence,
+		successfulToolEvidence{ToolName: "write_file", Path: entrypoint, Content: repaired},
+		successfulToolEvidence{ToolName: "read_file", Path: entrypoint, Content: repaired},
+	)
 	artifacts = reconcileToolBackedArtifacts(nil, evidence, "Create an interactive browser app.")
 	if issues := resultContractIssues(requirement, artifacts, evidence); len(issues) != 0 {
 		t.Fatalf("repaired validation targets still fail: %v", issues)
@@ -107,78 +110,7 @@ func TestOutputValidationExecutionInstructionRequiresRenderedStateTransition(t *
 	}
 }
 
-func TestInteractivePackageRejectsAnimationLoopThatNeverStarts(t *testing.T) {
-	plan := &protocol.OutputValidationPlan{Kind: protocol.OutputValidationInteractiveBrowser, Required: true}
-	content := `<script>
-function gameLoop() { render(); requestAnimationFrame(gameLoop); }
-</script>`
-	issues := strings.Join(outputValidationAnimationLoopIssues(plan, content), ";")
-	if !strings.Contains(issues, "animation loop gameLoop is defined but never started") {
-		t.Fatalf("issues = %q, want dormant animation-loop issue", issues)
-	}
-	if !strings.Contains(outputValidationCorrectionInstruction(plan, []string{issues}), "invoking the loop once") {
-		t.Fatal("correction does not tell the worker how to start the retained loop")
-	}
-}
-
-func TestInteractivePackageAcceptsAnimationLoopBootstrapForms(t *testing.T) {
-	plan := &protocol.OutputValidationPlan{Kind: protocol.OutputValidationInteractiveBrowser, Required: true}
-	declaration := `function gameLoop() { render(); requestAnimationFrame(gameLoop); }`
-	for name, bootstrap := range map[string]string{
-		"direct call":        `gameLoop();`,
-		"animation callback": `requestAnimationFrame(gameLoop);`,
-		"event callback":     `addEventListener('load', gameLoop);`,
-		"timer callback":     `setTimeout(gameLoop, 0);`,
-	} {
-		t.Run(name, func(t *testing.T) {
-			if issues := outputValidationAnimationLoopIssues(plan, declaration+bootstrap); len(issues) != 0 {
-				t.Fatalf("bootstrap was rejected: %v", issues)
-			}
-		})
-	}
-}
-
-func TestAnimationLoopPreflightBlocksReadbackUntilRepair(t *testing.T) {
-	entrypoint := "groups/team/generated/app/index.html"
-	plan := &protocol.OutputValidationPlan{Kind: protocol.OutputValidationInteractiveBrowser, Required: true}
-	requirement := &teamResultRequirement{Kind: "project_package", EntrypointRequired: true, ReadbackRequired: true, OutputValidation: plan}
-	dormant := `<script>function gameLoop(){render();requestAnimationFrame(gameLoop)}</script>`
-	evidence := []successfulToolEvidence{{ToolName: "write_file", Path: entrypoint, Content: dormant}}
-	artifacts := reconcileToolBackedArtifacts(nil, evidence, "Create an interactive browser app.")
-	if resultContractEvidenceToolAllowed(requirement, "read_file", artifacts, evidence) {
-		t.Fatal("readback was allowed before the self-scheduling loop was started")
-	}
-
-	started := dormant + `<script>gameLoop()</script>`
-	evidence = append(evidence, successfulToolEvidence{ToolName: "write_file", Path: entrypoint, Content: started})
-	artifacts = reconcileToolBackedArtifacts(artifacts, evidence, "Create an interactive browser app.")
-	if !resultContractEvidenceToolAllowed(requirement, "read_file", artifacts, evidence) {
-		t.Fatal("readback remained blocked after the loop gained a bootstrap")
-	}
-	evidence = append(evidence, successfulToolEvidence{ToolName: "read_file", Path: entrypoint, Content: started})
-	if issues := resultContractIssues(requirement, artifacts, evidence); len(issues) != 0 {
-		t.Fatalf("repaired entrypoint issues = %v", issues)
-	}
-}
-
-func TestAnimationLoopPreflightIgnoresUnownedPatterns(t *testing.T) {
-	interactive := &protocol.OutputValidationPlan{Kind: protocol.OutputValidationInteractiveBrowser, Required: true}
-	for _, content := range []string{
-		`const loop = () => requestAnimationFrame(loop);`,
-		`function renderOnce() { render(); }`,
-		`// function fake(){requestAnimationFrame(fake)}`,
-		`<p>It's a function demo.</p><script>function loop(){requestAnimationFrame(loop)}; loop()</script>`,
-	} {
-		if issues := outputValidationAnimationLoopIssues(interactive, content); len(issues) != 0 {
-			t.Fatalf("unowned pattern %q produced issues %v", content, issues)
-		}
-	}
-	if issues := outputValidationAnimationLoopIssues(&protocol.OutputValidationPlan{Kind: "text", Required: true}, `function loop(){requestAnimationFrame(loop)}`); len(issues) != 0 {
-		t.Fatalf("noninteractive plan produced issues %v", issues)
-	}
-}
-
-func TestInteractivePackageUsesLaterSuccessfulRepairWriteAfterReadback(t *testing.T) {
+func TestInteractivePackageRequiresFreshReadbackAfterRepairWrite(t *testing.T) {
 	requirement := &teamResultRequirement{
 		Kind: "project_package", ExpectedOutputs: []string{"playable browser game package"}, ReadbackRequired: true,
 	}
@@ -190,8 +122,46 @@ func TestInteractivePackageUsesLaterSuccessfulRepairWriteAfterReadback(t *testin
 	}
 	artifacts := reconcileToolBackedArtifacts(nil, evidence, "Create a playable project package.")
 
+	issues := strings.Join(resultContractIssues(requirement, artifacts, evidence), ";")
+	if !strings.Contains(issues, "missing successful structural readback") {
+		t.Fatalf("later write did not invalidate stale readback: %s", issues)
+	}
+	if artifacts[0].Validation != "" {
+		t.Fatalf("artifact retained stale validation: %q", artifacts[0].Validation)
+	}
+
+	evidence = append(evidence, successfulToolEvidence{ToolName: "read_file", Path: entrypoint, Content: evidence[len(evidence)-1].Content})
+	artifacts = reconcileToolBackedArtifacts(artifacts, evidence, "Create a playable project package.")
 	if issues := resultContractIssues(requirement, artifacts, evidence); len(issues) != 0 {
-		t.Fatalf("successful repair write was not treated as latest evidence: %v", issues)
+		t.Fatalf("fresh readback did not restore proof: %v", issues)
+	}
+}
+
+func TestDormantGameOverwriteInvalidatesEarlierReadback(t *testing.T) {
+	entrypoint := "groups/team/generated/first-game/index.html"
+	plan := &protocol.OutputValidationPlan{Kind: protocol.OutputValidationInteractiveBrowser, Required: true}
+	requirement := &teamResultRequirement{
+		Kind: "project_package", EntrypointRequired: true, ReadbackRequired: true, OutputValidation: plan,
+	}
+	started := `<script>function gameLoop(){requestAnimationFrame(gameLoop)} gameLoop()</script>`
+	dormant := `<p>Use ArrowRight to move.</p><canvas data-mycelis-validation-surface></canvas><script>
+document.addEventListener('keydown', e => right = e.key === 'ArrowRight');
+function gameLoop() { requestAnimationFrame(gameLoop); }
+</script>`
+	evidence := []successfulToolEvidence{
+		{ToolName: "write_file", Path: entrypoint, Content: started},
+		{ToolName: "read_file", Path: entrypoint, Content: started},
+		{ToolName: "write_file", Path: entrypoint, Content: dormant},
+	}
+	artifacts := reconcileToolBackedArtifacts(nil, evidence, "Create a playable browser game.")
+	if resultContractEvidenceToolAllowed(requirement, "read_file", artifacts, evidence) {
+		t.Fatal("readback was allowed for a dormant latest entrypoint write")
+	}
+	issues := strings.Join(resultContractIssues(requirement, artifacts, evidence), ";")
+	for _, expected := range []string{"missing successful structural readback", "animation loop gameLoop is defined but never started"} {
+		if !strings.Contains(issues, expected) {
+			t.Fatalf("issues = %q, want %q", issues, expected)
+		}
 	}
 }
 

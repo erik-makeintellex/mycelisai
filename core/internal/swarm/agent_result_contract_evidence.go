@@ -48,9 +48,27 @@ func matchingEvidencePath(paths []string, candidate string) string {
 	return ""
 }
 
-func hasReadbackEvidence(writes, reads []string) bool {
-	for _, read := range reads {
-		if evidenceContainsPath(writes, read) {
+func hasCurrentReadbackEvidence(evidence []successfulToolEvidence, candidate string) bool {
+	current := map[string]bool{}
+	candidate = comparableEvidencePath(candidate)
+	for _, item := range evidence {
+		path := comparableEvidencePath(item.Path)
+		if path == "" || (candidate != "" && !evidenceContainsPath([]string{path}, candidate)) {
+			continue
+		}
+		switch item.ToolName {
+		case "write_file":
+			current[path] = false
+		case "read_file", "read_text_file":
+			for writtenPath := range current {
+				if evidenceContainsPath([]string{writtenPath}, path) {
+					current[writtenPath] = true
+				}
+			}
+		}
+	}
+	for _, readAfterWrite := range current {
+		if readAfterWrite {
 			return true
 		}
 	}
