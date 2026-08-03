@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func TestInferCreateTeamPlanFromRequest_GeneratedTeamIDUsesReadableUUIDSuffix(t *testing.T) {
@@ -124,7 +126,7 @@ func TestInferCreateTeamPlanFromRequest_ContentContractCoversTableAndAppOutputs(
 		}
 	}
 	criteria := strings.Join(confirmedActionStringSlice(contract["acceptance_criteria"]), "\n")
-	for _, want := range []string{"columns and rows", "direct open or launch path", "primary user workflows", "browser or runtime validation"} {
+	for _, want := range []string{"columns and rows", "direct open or launch path", "data-mycelis-primary-action", "primary user workflows", "browser or runtime validation"} {
 		if !strings.Contains(criteria, want) {
 			t.Fatalf("criteria = %q, missing %q", criteria, want)
 		}
@@ -162,6 +164,49 @@ func TestContentContract_PackageMetadataDoesNotImplyTableData(t *testing.T) {
 	for _, want := range []string{"game", "text"} {
 		if !containsString(contentTypes, want) {
 			t.Fatalf("content_types = %#v, missing %q", contentTypes, want)
+		}
+	}
+}
+
+func TestContentContract_InteractiveBrowserOutputCarriesRunnableProbe(t *testing.T) {
+	contract := contentContractForTeamRequest("Build a browser application for managing customer records.")
+	plan, ok := contract["output_validation"].(*protocol.OutputValidationPlan)
+	if !ok {
+		t.Fatalf("output_validation = %#v, want typed plan", contract["output_validation"])
+	}
+	if err := plan.Validate(); err != nil {
+		t.Fatalf("output validation plan is not runnable: %v", err)
+	}
+	if plan.Probe.Action.Kind != protocol.OutputValidationActionClick ||
+		plan.Probe.Observe.Kind != protocol.OutputValidationObserveVisualChange {
+		t.Fatalf("probe = %#v, want generic click and visual-change probe", plan.Probe)
+	}
+}
+
+func TestContentContract_ExplicitHeldKeyBecomesPrimaryRuntimeProbe(t *testing.T) {
+	contract := contentContractForTeamRequest("Build a browser application that visibly moves while ArrowRight is held.")
+	plan, ok := contract["output_validation"].(*protocol.OutputValidationPlan)
+	if !ok || plan.Probe == nil {
+		t.Fatalf("output_validation = %#v, want typed probe", contract["output_validation"])
+	}
+	if plan.Probe.Action.Kind != protocol.OutputValidationActionKeyHold ||
+		plan.Probe.Action.Key != "ArrowRight" || plan.Probe.Action.DurationMS != 600 {
+		t.Fatalf("action = %#v, want held ArrowRight probe", plan.Probe.Action)
+	}
+	if plan.Probe.Observe.Kind != protocol.OutputValidationObserveVisualChange ||
+		plan.Probe.Observe.Target != "[data-mycelis-validation-surface]" {
+		t.Fatalf("observation = %#v, want visual surface change", plan.Probe.Observe)
+	}
+}
+
+func TestContentContract_NonInteractiveOutputOmitsBrowserProbe(t *testing.T) {
+	for _, request := range []string{
+		"Write a markdown research brief.",
+		"Build a native executable package for offline use.",
+	} {
+		contract := contentContractForTeamRequest(request)
+		if plan := contract["output_validation"]; plan != nil {
+			t.Fatalf("request %q output_validation = %#v, want no browser probe", request, plan)
 		}
 	}
 }

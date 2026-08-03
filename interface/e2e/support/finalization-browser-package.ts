@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { expect, type APIResponse, type Page, type Route } from "@playwright/test";
+import { expect, type APIResponse, type Page, type Route, type TestInfo } from "@playwright/test";
 import type { RouteResponse } from "./soma-ui-testing";
 import { liveAPIHeaders, liveAPIURL } from "./live-api-auth";
 
 const repoRoot = path.resolve(__dirname, "../../..");
-export const liveTimeoutMs = 180_000;
+export const liveTimeoutMs = 300_000;
 export const chatTimeoutMs = 120_000;
 
 export type APIEnvelope<T> = { ok?: boolean; data?: T; error?: string };
@@ -139,6 +139,42 @@ export function removeTarget(relativePath: string) {
   } catch {
     // Cleanup is best-effort; the browser assertion should remain the useful failure.
   }
+}
+
+export async function attachRetainedPackageEvidence(
+  page: Page,
+  testInfo: TestInfo,
+  relativePaths: string[],
+) {
+  const retrievals: Array<{ path: string; status: number; attached: boolean; error?: string }> = [];
+
+  for (const relativePath of relativePaths) {
+    try {
+      const response = await page.request.get(
+        liveAPIURL(`/api/v1/workspace/files/view?path=${encodeURIComponent(relativePath)}`),
+        { headers: liveAPIHeaders() },
+      );
+      const record = { path: relativePath, status: response.status(), attached: response.ok() };
+      if (!response.ok()) {
+        retrievals.push({ ...record, error: await response.text() });
+        continue;
+      }
+
+      const fileName = path.posix.basename(relativePath.replace(/\\/g, "/"));
+      await testInfo.attach(`retained-package-${fileName}`, {
+        body: await response.body(),
+        contentType: response.headers()["content-type"] ?? "application/octet-stream",
+      });
+      retrievals.push(record);
+    } catch (error) {
+      retrievals.push({ path: relativePath, status: 0, attached: false, error: String(error) });
+    }
+  }
+
+  await testInfo.attach("retained-package-retrieval.json", {
+    body: Buffer.from(JSON.stringify(retrievals, null, 2)),
+    contentType: "application/json",
+  });
 }
 
 export async function createOrganization(page: Page, name: string) {

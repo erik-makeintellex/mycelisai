@@ -110,8 +110,8 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	mock.ExpectExec("INSERT INTO log_entries \\(id, trace_id, timestamp, level, source, intent, message, context\\)").
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "audit", "confirm-action", string(protocol.TemplateChatToProposal), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectExec("UPDATE mission_runs SET status = \\$1, completed_at = GREATEST\\(NOW\\(\\), started_at\\) WHERE id = \\$2 AND status <> \\$1").
-		WithArgs(runs.StatusCompleted, sqlmock.AnyArg()).
+	mock.ExpectExec("UPDATE mission_runs SET status = \\$1, completed_at = GREATEST\\(NOW\\(\\), started_at\\) WHERE id = \\$2 AND status NOT IN \\(\\$1, \\$3\\)").
+		WithArgs(runs.StatusCompleted, sqlmock.AnyArg(), runs.StatusFailed).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("INSERT INTO mission_events").
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), "default", string(protocol.EventMissionCompleted), string(protocol.SeverityInfo), "admin", "governance", sqlmock.AnyArg(), sqlmock.AnyArg()).

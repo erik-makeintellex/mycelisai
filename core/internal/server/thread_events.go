@@ -72,7 +72,13 @@ func teamWorkResultThreadEvent(item protocol.TeamWorkItem, status protocol.TeamS
 	state := "degraded"
 	detail := firstNonEmptyString(status.Details, status.Headline, "The team could not return a usable deliverable.")
 	href, hrefLabel, target := "", "", ""
-	if isReady {
+	if item.State == protocol.TeamWorkStateReviewing {
+		kind = protocol.ThreadEventExecutionUpdate
+		label = "Checking deliverable"
+		tone = "info"
+		state = "reviewing"
+		detail = firstNonEmptyString(status.Details, status.Headline, "The team returned files. Soma is checking the approved primary workflow before calling the work complete.")
+	} else if isReady {
 		kind = protocol.ThreadEventResultReady
 		label = "Work complete"
 		tone = "success"

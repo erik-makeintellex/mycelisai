@@ -78,20 +78,33 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 		payloadKind = payloadKindFromSignalSubject(subject)
 	}
 	incomingOutputRefs := projectedSignalOutputRefs(item, env, payload)
+	candidateOutputRefs := mergeTeamOutputRefs(item.OutputRefs, incomingOutputRefs)
 	projectedState := projectedSignalState(item, payloadKind, payload, incomingOutputRefs)
 	if projectedSignalWouldRegress(item.State, projectedState) {
 		log.Printf("team work signal projection: ignored stale %s signal for terminal work item %s/%s", projectedState, teamID, workItemID)
 		return nil
 	}
 	item.State = projectedState
-	item.NeedsOperator = projectedState == protocol.TeamWorkStateNeedsOperator || projectedState == protocol.TeamWorkStateDegraded
-	if projectedState == protocol.TeamWorkStateDegraded {
-		item.DegradationState = firstNonEmptyString(stringField(payload, "degradation_state"), stringField(payload, "degradation"), item.DegradationState)
+	var validationDispatch *teamWorkValidationDispatchPayload
+	validationIssue := ""
+	if payloadKind == protocol.PayloadKindResult && item.State == protocol.TeamWorkStateOutputReady {
+		prepared, prepareErr := prepareTeamWorkValidation(item, candidateOutputRefs)
+		if prepareErr != nil {
+			item.State = protocol.TeamWorkStateDegraded
+			validationIssue = "validation_plan_incomplete"
+		} else if prepared != nil {
+			item.State = protocol.TeamWorkStateReviewing
+			validationDispatch = prepared
+		}
+	}
+	item.NeedsOperator = item.State == protocol.TeamWorkStateNeedsOperator || item.State == protocol.TeamWorkStateDegraded
+	if item.State == protocol.TeamWorkStateDegraded {
+		item.DegradationState = firstNonEmptyString(validationIssue, stringField(payload, "degradation_state"), stringField(payload, "degradation"), item.DegradationState)
 		if item.DegradationState == "" {
 			item.DegradationState = deliverableResultOutputIssue(item, payloadKind, incomingOutputRefs)
 		}
 		item.RecoveryOptions = projectedRecoveryOptionsForItem(item, payload)
-	} else {
+	} else if item.State != protocol.TeamWorkStateDegraded {
 		item.DegradationState = ""
 		item.RecoveryOptions = nil
 	}
@@ -135,6 +148,13 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	if err := p.server.insertTeamInteractionExec(ctx, tx, &interaction); err != nil {
 		return fmt.Errorf("insert projected team interaction: %w", err)
 	}
+	validationKey := ""
+	if validationDispatch != nil {
+		validationKey, err = p.server.stageTeamWorkValidationTx(ctx, tx, item, *validationDispatch)
+		if err != nil {
+			return fmt.Errorf("stage team output validation: %w", err)
+		}
+	}
 	if finalResult {
 		if err := p.server.markRunCompletedTx(tx, item.RunID, item.IntentProofID); err != nil {
 			return fmt.Errorf("complete linked execution run: %w", err)
@@ -142,6 +162,11 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit projected team work transaction: %w", err)
+	}
+	if validationKey != "" {
+		if err := p.server.DispatchOutbox.Activate(ctx, validationKey); err != nil {
+			log.Printf("team work signal projection: validation dispatch %s remains staged for recovery: %v", validationKey, err)
+		}
 	}
 	if payloadKind == protocol.PayloadKindResult {
 		p.server.broadcastTeamWorkResultThreadEvent(item, event)
@@ -152,6 +177,9 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 func projectedSignalWouldRegress(current, incoming protocol.TeamWorkState) bool {
 	if current == protocol.TeamWorkStateOutputReady {
 		return true
+	}
+	if current == protocol.TeamWorkStateReviewing {
+		return incoming != protocol.TeamWorkStateOutputReady && incoming != protocol.TeamWorkStateDegraded
 	}
 	if current != protocol.TeamWorkStateDegraded && current != protocol.TeamWorkStateNeedsOperator {
 		return false
@@ -222,6 +250,8 @@ func projectedSignalInteraction(item protocol.TeamWorkItem, env protocol.SignalE
 	verb := "status"
 	if item.State == protocol.TeamWorkStateDegraded {
 		verb = "degraded"
+	} else if item.State == protocol.TeamWorkStateReviewing {
+		verb = "reviewing"
 	} else if payloadKind == protocol.PayloadKindResult {
 		verb = "output_ready"
 	}
@@ -257,71 +287,4 @@ func projectedInteractionPayload(item protocol.TeamWorkItem, payload map[string]
 		copied["expected_proof"] = item.ExpectedProof
 	}
 	return copied
-}
-
-func teamIDFromSignalSubject(subject string) string {
-	parts := strings.Split(subject, ".")
-	if len(parts) == 5 && parts[0] == "swarm" && parts[1] == "team" && parts[3] == "signal" {
-		return strings.TrimSpace(parts[2])
-	}
-	return ""
-}
-
-func payloadKindFromSignalSubject(subject string) protocol.SignalPayloadKind {
-	switch {
-	case strings.HasSuffix(subject, ".signal.result"):
-		return protocol.PayloadKindResult
-	default:
-		return protocol.PayloadKindStatus
-	}
-}
-
-func projectedHeadline(kind protocol.SignalPayloadKind, payload map[string]any) string {
-	if headline := firstNonEmptyString(stringField(payload, "headline"), stringField(payload, "title")); headline != "" {
-		return headline
-	}
-	if kind == protocol.PayloadKindResult {
-		return "Team result ready"
-	}
-	return "Team status update"
-}
-
-func projectedDetails(payload map[string]any) string {
-	return firstNonEmptyString(stringField(payload, "details"), stringField(payload, "message"), stringField(payload, "text"), stringField(payload, "summary"))
-}
-
-func projectedSummary(kind protocol.SignalPayloadKind, payload map[string]any) string {
-	if summary := firstNonEmptyString(stringField(payload, "summary"), stringField(payload, "message"), stringField(payload, "text"), stringField(payload, "details")); summary != "" {
-		return summary
-	}
-	if kind == protocol.PayloadKindResult {
-		return "Team emitted a correlated result signal."
-	}
-	return "Team emitted a correlated status signal."
-}
-
-func stringField(values map[string]any, key string) string {
-	if values == nil {
-		return ""
-	}
-	switch value := values[key].(type) {
-	case string:
-		return strings.TrimSpace(value)
-	default:
-		return ""
-	}
-}
-
-func stringSliceField(values map[string]any, key string) []string {
-	raw, ok := values[key].([]any)
-	if !ok {
-		return nil
-	}
-	out := make([]string, 0, len(raw))
-	for _, value := range raw {
-		if text, ok := value.(string); ok && strings.TrimSpace(text) != "" {
-			out = append(out, strings.TrimSpace(text))
-		}
-	}
-	return out
 }

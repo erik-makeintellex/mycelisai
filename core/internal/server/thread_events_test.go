@@ -68,6 +68,24 @@ func TestTeamWorkResultThreadEvent_ExplainsInvalidResultWithoutRunTimeline(t *te
 	}
 }
 
+func TestTeamWorkResultThreadEvent_ReviewingDoesNotClaimCompletion(t *testing.T) {
+	item := protocol.TeamWorkItem{
+		TeamID: "app-team", WorkItemID: "work-1", RunID: "run-1",
+		State: protocol.TeamWorkStateReviewing,
+		OutputRefs: []protocol.TeamOutputRef{{
+			Kind: "project_package", StorageRef: "groups/app-team/generated/app", Entrypoint: "index.html",
+		}},
+	}
+
+	event := teamWorkResultThreadEvent(item, protocol.TeamStatusEvent{})
+	if event.Payload.Kind != protocol.ThreadEventExecutionUpdate || event.Payload.Label != "Checking deliverable" {
+		t.Fatalf("payload = %#v, want non-terminal validation update", event.Payload)
+	}
+	if event.Payload.Status != "reviewing" || event.Payload.Href != "" || event.Payload.ProofID != "" {
+		t.Fatalf("payload = %#v, want reviewing without launch or completion proof", event.Payload)
+	}
+}
+
 func TestFirstThreadEventTeamWorkRefAggregatesOutputRefs(t *testing.T) {
 	teamID, workItemID, outputs := firstThreadEventTeamWorkRef([]confirmActionTeamWorkRef{
 		{

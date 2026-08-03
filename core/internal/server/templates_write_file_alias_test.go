@@ -78,8 +78,8 @@ func TestHandleConfirmAction_NormalizesWriteFileAliasesInStoredPlan(t *testing.T
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("44444444-4444-4444-4444-444444444444"))
 	mock.ExpectExec("UPDATE execution_contracts").
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectExec("UPDATE mission_runs SET status = \\$1, completed_at = GREATEST\\(NOW\\(\\), started_at\\) WHERE id = \\$2 AND status <> \\$1").
-		WithArgs(runs.StatusCompleted, sqlmock.AnyArg()).
+	mock.ExpectExec("UPDATE mission_runs SET status = \\$1, completed_at = GREATEST\\(NOW\\(\\), started_at\\) WHERE id = \\$2 AND status NOT IN \\(\\$1, \\$3\\)").
+		WithArgs(runs.StatusCompleted, sqlmock.AnyArg(), runs.StatusFailed).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("INSERT INTO mission_events").
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), "default", string(protocol.EventMissionCompleted), string(protocol.SeverityInfo), "admin", "governance", sqlmock.AnyArg(), sqlmock.AnyArg()).

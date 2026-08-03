@@ -44,6 +44,16 @@ func TestNormalizeWorkIntentAddsLifecycleWithoutOverwritingExplicitContract(t *t
 			Shape: " App_Package ", PrimaryDeliverable: " dist/app.zip ",
 			Retention: " User_Deliverable ", LaunchHint: " Open index.html ",
 			Validation: []string{" playable ", "", "playable", " audio "},
+			OutputValidation: &OutputValidationPlan{
+				Kind: " INTERACTIVE_BROWSER ", Required: true,
+				Checks: []OutputValidationCheck{" LOAD ", "", "load", " NO_PAGE_ERRORS "},
+				Probe: &OutputValidationProbe{
+					Action: OutputValidationAction{
+						Kind: " CLICK ", Target: " [data-primary] ", Value: " unused ",
+					},
+					Observe: OutputValidationObservation{Kind: " TEXT_CHANGE ", Target: " #status "},
+				},
+			},
 		},
 		Lifecycle: &WorkLifecycleContract{
 			StopAction: " custom_stop ", ControlSummary: " Keep the operator override. ",
@@ -63,5 +73,15 @@ func TestNormalizeWorkIntentAddsLifecycleWithoutOverwritingExplicitContract(t *t
 	}
 	if len(explicit.OutputContract.Validation) != 2 || explicit.OutputContract.Validation[1] != "audio" {
 		t.Fatalf("expected compact validation requirements, got %#v", explicit.OutputContract.Validation)
+	}
+	plan := explicit.OutputContract.OutputValidation
+	if plan == nil || plan.Kind != OutputValidationInteractiveBrowser || len(plan.Checks) != 2 {
+		t.Fatalf("expected normalized output validation plan, got %#v", plan)
+	}
+	if plan.Probe.Action.Target != "[data-primary]" || plan.Probe.Observe.Target != "#status" {
+		t.Fatalf("expected normalized probe selectors, got %#v", plan.Probe)
+	}
+	if err := plan.Validate(); err != nil {
+		t.Fatalf("expected normalized plan to remain runnable: %v", err)
 	}
 }

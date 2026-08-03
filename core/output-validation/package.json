@@ -1,0 +1,9 @@
+{
+  "name": "@mycelis/output-validation-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pinned browser runtime for digest-bound Mycelis output validation.",
+  "dependencies": {
+    "@playwright/test": "1.58.2"
+  }
+}

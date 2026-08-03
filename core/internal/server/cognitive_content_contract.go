@@ -1,6 +1,11 @@
 package server
 
-import "strings"
+import (
+	"slices"
+	"strings"
+
+	"github.com/mycelis/core/pkg/protocol"
+)
 
 func contentContractForTeamRequest(request string) map[string]any {
 	lower := strings.ToLower(strings.TrimSpace(request))
@@ -77,12 +82,77 @@ func contentContractForTeamRequest(request string) map[string]any {
 		)
 		proof = append(proof, "research/council preparation summary when complex delivery is requested")
 	}
-	return map[string]any{
+	result := map[string]any{
 		"content_types":       types,
 		"expected_outputs":    uniqueOrderedTools(outputs),
 		"acceptance_criteria": uniqueOrderedTools(criteria),
 		"proof_required":      uniqueOrderedTools(proof),
 		"team_preparation":    uniqueOrderedTools(preparation),
+	}
+	if plan := interactiveBrowserValidationPlan(lower, types); plan != nil {
+		result["output_validation"] = plan
+	}
+	return result
+}
+
+func interactiveBrowserValidationPlan(lower string, types []string) *protocol.OutputValidationPlan {
+	interactive := slices.Contains(types, "game") || requestContainsAny(lower, []string{
+		"browser", "web app", "web application", "index.html", ".html",
+	})
+	if !interactive {
+		return nil
+	}
+	return interactiveBrowserValidationPlanForRequest(lower)
+}
+
+func interactiveBrowserValidationPlanForRequest(lower string) *protocol.OutputValidationPlan {
+	plan := defaultInteractiveBrowserValidationPlan()
+	for _, candidate := range []struct {
+		phrases []string
+		key     string
+	}{
+		{[]string{"arrowright", "arrow right"}, "ArrowRight"},
+		{[]string{"arrowleft", "arrow left"}, "ArrowLeft"},
+		{[]string{"arrowup", "arrow up"}, "ArrowUp"},
+		{[]string{"arrowdown", "arrow down"}, "ArrowDown"},
+		{[]string{"spacebar", "space bar", "space key"}, "Space"},
+		{[]string{"enter key", "press enter"}, "Enter"},
+		{[]string{"escape key", "press escape"}, "Escape"},
+	} {
+		if !requestContainsAny(lower, candidate.phrases) {
+			continue
+		}
+		kind := protocol.OutputValidationActionKeyPress
+		duration := 0
+		if requestContainsAny(lower, []string{" hold ", " held", "holding "}) {
+			kind = protocol.OutputValidationActionKeyHold
+			duration = 600
+		}
+		plan.Probe.Action = protocol.OutputValidationAction{Kind: kind, Key: candidate.key, DurationMS: duration}
+		return plan
+	}
+	return plan
+}
+
+func defaultInteractiveBrowserValidationPlan() *protocol.OutputValidationPlan {
+	return &protocol.OutputValidationPlan{
+		Kind:     protocol.OutputValidationInteractiveBrowser,
+		Required: true,
+		Checks: []protocol.OutputValidationCheck{
+			protocol.OutputValidationCheckLoad,
+			protocol.OutputValidationCheckNoPageErrors,
+			protocol.OutputValidationCheckNoFailedAssets,
+		},
+		Probe: &protocol.OutputValidationProbe{
+			Action: protocol.OutputValidationAction{
+				Kind:   protocol.OutputValidationActionClick,
+				Target: "[data-mycelis-primary-action]",
+			},
+			Observe: protocol.OutputValidationObservation{
+				Kind:   protocol.OutputValidationObserveVisualChange,
+				Target: "[data-mycelis-validation-surface]",
+			},
+		},
 	}
 }
 
@@ -136,6 +206,7 @@ func applicationPackageAcceptanceCriteria() []string {
 	return []string{
 		"direct open or launch path is provided in chat and retained output metadata",
 		"the primary control or workflow is visible, understandable, and changes application state when used",
+		"the primary interactive control carries data-mycelis-primary-action and its changed surface carries data-mycelis-validation-surface so governed runtime validation can exercise the delivered workflow",
 		"primary user workflows are named and validated, including create/read/update or equivalent interactions when requested",
 		"data/table views render with readable columns, empty states, and source or assumption boundaries when relevant",
 		"package includes operator-readable usage notes and any setup limits",

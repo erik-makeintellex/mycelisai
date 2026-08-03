@@ -54,6 +54,42 @@ func TestInteractivePackageReadbackRequiresHandlerAndVisibleInstructions(t *test
 	}
 }
 
+func TestInteractivePackageReadbackRequiresApprovedValidationTargets(t *testing.T) {
+	entrypoint := "groups/team/generated/app/index.html"
+	plan := &protocol.OutputValidationPlan{
+		Kind: protocol.OutputValidationInteractiveBrowser, Required: true,
+		Checks: []protocol.OutputValidationCheck{protocol.OutputValidationCheckLoad},
+		Probe: &protocol.OutputValidationProbe{
+			Action:  protocol.OutputValidationAction{Kind: protocol.OutputValidationActionClick, Target: "[data-mycelis-primary-action]"},
+			Observe: protocol.OutputValidationObservation{Kind: protocol.OutputValidationObserveTextChange, Target: "[data-mycelis-validation-surface]"},
+		},
+	}
+	requirement := &teamResultRequirement{
+		Kind: "project_package", ExpectedOutputs: []string{"interactive browser app"},
+		ReadbackRequired: true, OutputValidation: plan,
+	}
+	content := `<p>Use the primary control.</p><button onclick="status.textContent='changed'">Run</button><p id="status">Ready</p>`
+	evidence := []successfulToolEvidence{
+		{ToolName: "write_file", Path: entrypoint, Content: content},
+		{ToolName: "read_file", Path: entrypoint, Content: content},
+	}
+	artifacts := reconcileToolBackedArtifacts(nil, evidence, "Create an interactive browser app.")
+	issues := strings.Join(resultContractIssues(requirement, artifacts, evidence), ";")
+	for _, selector := range []string{"[data-mycelis-primary-action]", "[data-mycelis-validation-surface]"} {
+		if !strings.Contains(issues, selector) {
+			t.Fatalf("issues = %q, want missing selector %s", issues, selector)
+		}
+	}
+
+	repaired := strings.Replace(content, "<button ", `<button data-mycelis-primary-action `, 1)
+	repaired = strings.Replace(repaired, `<p id="status"`, `<p data-mycelis-validation-surface id="status"`, 1)
+	evidence = append(evidence, successfulToolEvidence{ToolName: "write_file", Path: entrypoint, Content: repaired})
+	artifacts = reconcileToolBackedArtifacts(nil, evidence, "Create an interactive browser app.")
+	if issues := resultContractIssues(requirement, artifacts, evidence); len(issues) != 0 {
+		t.Fatalf("repaired validation targets still fail: %v", issues)
+	}
+}
+
 func TestInteractivePackageUsesLaterSuccessfulRepairWriteAfterReadback(t *testing.T) {
 	requirement := &teamResultRequirement{
 		Kind: "project_package", ExpectedOutputs: []string{"playable browser game package"}, ReadbackRequired: true,
@@ -82,6 +118,57 @@ func TestProjectPackageRequiredFilesMustShareRetainedPackageFolder(t *testing.T)
 	issues := strings.Join(resultContractIssues(requirement, artifacts, evidence), ";")
 	if !strings.Contains(issues, "missing successful write for README.md") {
 		t.Fatalf("wrong-folder file satisfied package contract: %s", issues)
+	}
+}
+
+func TestProjectPackageReadbackWaitsForEveryRequiredWrite(t *testing.T) {
+	requirement := &teamResultRequirement{
+		Kind: "project_package", FilesRequired: []string{"index.html", "README.md", "project-package.json"},
+		EntrypointRequired: true, ReadbackRequired: true,
+	}
+	evidence := []successfulToolEvidence{{ToolName: "write_file", Path: "groups/team/generated/app/index.html"}}
+	artifacts := reconcileToolBackedArtifacts(nil, evidence, "Create a project package.")
+
+	if resultContractEvidenceToolAllowed(requirement, "read_file", artifacts, evidence) {
+		t.Fatal("readback was allowed before every required package file was written")
+	}
+	evidence = append(evidence,
+		successfulToolEvidence{ToolName: "write_file", Path: "groups/team/generated/app/README.md"},
+		successfulToolEvidence{ToolName: "write_file", Path: "groups/team/generated/app/project-package.json"},
+	)
+	artifacts = reconcileToolBackedArtifacts(artifacts, evidence, "Create a project package.")
+	if !resultContractEvidenceToolAllowed(requirement, "read_file", artifacts, evidence) {
+		t.Fatal("readback remained blocked after every required package file was written")
+	}
+}
+
+func TestProjectPackageReadbackWaitsForInspectableInteractiveWrite(t *testing.T) {
+	entrypoint := "groups/team/generated/app/index.html"
+	plan := &protocol.OutputValidationPlan{
+		Kind: protocol.OutputValidationInteractiveBrowser, Required: true,
+		Probe: &protocol.OutputValidationProbe{
+			Action:  protocol.OutputValidationAction{Kind: protocol.OutputValidationActionClick, Target: "[data-mycelis-primary-action]"},
+			Observe: protocol.OutputValidationObservation{Kind: protocol.OutputValidationObserveTextChange, Target: "[data-mycelis-validation-surface]"},
+		},
+	}
+	requirement := &teamResultRequirement{
+		Kind: "project_package", ExpectedOutputs: []string{"interactive browser app"},
+		EntrypointRequired: true, ReadbackRequired: true, OutputValidation: plan,
+	}
+	evidence := []successfulToolEvidence{{
+		ToolName: "write_file", Path: entrypoint,
+		Content: `<button onclick="status.textContent='changed'">Run</button><p id="status">Ready</p>`,
+	}}
+	artifacts := reconcileToolBackedArtifacts(nil, evidence, "Create an interactive browser app.")
+	if resultContractEvidenceToolAllowed(requirement, "read_file", artifacts, evidence) {
+		t.Fatal("readback was allowed before the interactive write exposed approved validation targets")
+	}
+
+	repaired := `<p>Use Run to start.</p><button data-mycelis-primary-action onclick="status.textContent='changed'">Run</button><p data-mycelis-validation-surface id="status">Ready</p>`
+	evidence = append(evidence, successfulToolEvidence{ToolName: "write_file", Path: entrypoint, Content: repaired})
+	artifacts = reconcileToolBackedArtifacts(artifacts, evidence, "Create an interactive browser app.")
+	if !resultContractEvidenceToolAllowed(requirement, "read_file", artifacts, evidence) {
+		t.Fatal("readback remained blocked after the interactive write satisfied static contract checks")
 	}
 }
 
