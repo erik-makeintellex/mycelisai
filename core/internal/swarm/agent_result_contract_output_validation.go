@@ -36,14 +36,23 @@ func resultContractRequiresPrimaryInteraction(requirement *teamResultRequirement
 }
 
 func latestEntrypointEvidenceContent(evidence []successfulToolEvidence, entrypoint string) string {
-	content := ""
+	writeContent := ""
+	readContent := ""
 	for _, item := range evidence {
-		if (item.ToolName == "write_file" || item.ToolName == "read_file" || item.ToolName == "read_text_file") &&
-			evidenceContainsPath([]string{item.Path}, entrypoint) && strings.TrimSpace(item.Content) != "" {
-			content = item.Content
+		if !evidenceContainsPath([]string{item.Path}, entrypoint) || strings.TrimSpace(item.Content) == "" {
+			continue
+		}
+		switch item.ToolName {
+		case "write_file":
+			writeContent = item.Content
+		case "read_file", "read_text_file":
+			readContent = item.Content
 		}
 	}
-	return content
+	if writeContent != "" {
+		return writeContent
+	}
+	return readContent
 }
 
 func resultContractExposesPrimaryControl(content string) bool {

@@ -169,7 +169,6 @@ func recordSuccessfulToolEvidence(result *agentToolLoopResult, call *toolCallPay
 
 func reconcileToolBackedArtifacts(artifacts []protocol.ChatArtifactRef, evidence []successfulToolEvidence, input string) []protocol.ChatArtifactRef {
 	writes := evidencePaths(evidence, "write_file")
-	reads := append(evidencePaths(evidence, "read_file"), evidencePaths(evidence, "read_text_file")...)
 	if !hasProjectPackageArtifact(artifacts) {
 		for _, path := range writes {
 			if artifact, ok := projectPackageArtifactFromSuccessfulWrite(map[string]any{"path": path}, input); ok {
@@ -182,12 +181,12 @@ func reconcileToolBackedArtifacts(artifacts []protocol.ChatArtifactRef, evidence
 		if !strings.EqualFold(strings.TrimSpace(artifacts[index].Type), "project_package") {
 			continue
 		}
-		artifacts[index] = reconcileProjectPackageArtifact(artifacts[index], writes, reads)
+		artifacts[index] = reconcileProjectPackageArtifact(artifacts[index], writes, evidence)
 	}
 	return artifacts
 }
 
-func reconcileProjectPackageArtifact(artifact protocol.ChatArtifactRef, writes, reads []string) protocol.ChatArtifactRef {
+func reconcileProjectPackageArtifact(artifact protocol.ChatArtifactRef, writes []string, evidence []successfulToolEvidence) protocol.ChatArtifactRef {
 	entrypoint := firstHTMLWrite(writes)
 	if candidate := cleanEvidencePath(artifact.Entrypoint); candidate != "" && evidenceContainsPath(writes, candidate) {
 		entrypoint = matchingEvidencePath(writes, candidate)
@@ -205,7 +204,7 @@ func reconcileProjectPackageArtifact(artifact protocol.ChatArtifactRef, writes, 
 	}
 	sort.Strings(files)
 	validation := ""
-	if entrypoint != "" && evidenceContainsPath(reads, entrypoint) {
+	if entrypoint != "" && hasCurrentReadbackEvidence(evidence, entrypoint) {
 		validation = fmt.Sprintf("Structural readback completed for %s; semantic acceptance is evaluated by server/live validation.", entrypoint)
 	}
 	artifact.Entrypoint = entrypoint
@@ -227,7 +226,6 @@ func resultContractIssues(requirement *teamResultRequirement, artifacts []protoc
 		return nil
 	}
 	writes := evidencePaths(evidence, "write_file")
-	reads := append(evidencePaths(evidence, "read_file"), evidencePaths(evidence, "read_text_file")...)
 	stored := evidenceHasTool(evidence, "store_artifact")
 	issues := make([]string, 0, 5)
 	if len(writes) == 0 && !(stored && len(artifacts) > 0) {
@@ -255,9 +253,9 @@ func resultContractIssues(requirement *teamResultRequirement, artifacts []protoc
 	// Acceptance criteria guide the worker and downstream validator. This gate
 	// only asserts inspectable tool evidence; it does not grade semantic quality.
 	if requirement.ReadbackRequired || requirement.DownstreamProofRef || len(requirement.ProofRequirements) > 0 {
-		readbackPresent := hasReadbackEvidence(writes, reads)
+		readbackPresent := hasCurrentReadbackEvidence(evidence, "")
 		if packageArtifact != nil && strings.TrimSpace(packageArtifact.Entrypoint) != "" {
-			readbackPresent = evidenceContainsPath(reads, packageArtifact.Entrypoint)
+			readbackPresent = hasCurrentReadbackEvidence(evidence, packageArtifact.Entrypoint)
 		}
 		if !readbackPresent {
 			issues = append(issues, "missing successful structural readback of a written output")
