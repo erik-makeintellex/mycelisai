@@ -92,22 +92,6 @@ export default function TeamsPage() {
   const onlineAgents = teamsDetail.reduce((sum, t) => sum + t.agents.filter((a) => a.status >= 1).length, 0);
   const sortedTemplates = useMemo(() => [...catalogueAgents].sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)), [catalogueAgents]);
   const highlightedTemplates = sortedTemplates.slice(0, 4);
-  const templateCoverage = useMemo(() => {
-    const coverage = new Map<string, CatalogueAgent[]>();
-    sortedTemplates.forEach((agent) => {
-      const keys = agent.outputs.length > 0 ? agent.outputs : [agent.role];
-      keys.forEach((key) => {
-        const trimmed = key.trim();
-        if (!trimmed) {
-          return;
-        }
-        const current = coverage.get(trimmed) ?? [];
-        current.push(agent);
-        coverage.set(trimmed, current);
-      });
-    });
-    return Array.from(coverage.entries()).slice(0, 6);
-  }, [sortedTemplates]);
   const activeTeamWork = useDurableTeamWork({
     teams: filteredTeams,
     refreshVersion: durableWorkRefreshVersion + activeWorkActions.activeWorkRefreshVersion,
@@ -171,6 +155,22 @@ export default function TeamsPage() {
     ],
   );
 
+  const handleTemplateDuplicate = useCallback(
+    (agent: CatalogueAgent) => {
+      const suffix = globalThis.crypto?.randomUUID?.().replaceAll("-", "").slice(0, 5) ?? Date.now().toString(16).slice(-5);
+      void createCatalogueAgent({
+        ...agent,
+        id: undefined,
+        profile_key: undefined,
+        name: `${agent.name} custom-${suffix}`,
+        source: "user",
+        locked: false,
+      });
+      closeTemplateDrawer();
+    },
+    [closeTemplateDrawer, createCatalogueAgent],
+  );
+
   return (
     <div className="h-full flex flex-col bg-cortex-bg relative">
       <div className="px-6 py-4 border-b border-cortex-border bg-cortex-surface/50 flex items-center justify-between flex-shrink-0">
@@ -192,7 +192,7 @@ export default function TeamsPage() {
             <p className="mt-1 text-xs text-cortex-text-muted">
               {isWorkReviewView
                 ? "Review active team work first. Open the team workspace or outputs only when the item needs more context."
-                : "Review live teams here, open focused lead workspaces, and define which reusable team-member templates Soma should apply when specializing a new lane."}
+                : "Review live teams here, open focused lead workspaces, and define which worker profiles Soma may apply when specializing a new lane."}
             </p>
           </div>
         </div>
@@ -235,7 +235,6 @@ export default function TeamsPage() {
           <>
             <TeamsSetupPanels
                 highlightedTemplates={highlightedTemplates}
-                templateCoverage={templateCoverage}
                 isFetchingCatalogue={isFetchingCatalogue}
                 onNewTemplate={() => openTemplateDrawer(null)}
                 onEditTemplate={openTemplateDrawer}
@@ -296,6 +295,7 @@ export default function TeamsPage() {
           agent={editingTemplate}
           onClose={closeTemplateDrawer}
           onSave={handleTemplateSave}
+          onDuplicate={handleTemplateDuplicate}
         />
       )}
     </div>

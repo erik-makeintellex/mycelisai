@@ -219,6 +219,7 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 	if sys == "" {
 		sys = fmt.Sprintf("You are a %s in the %s team.", a.Manifest.Role, a.TeamID)
 	}
+	sys += agentProfileContextDirective(a.Manifest)
 	sys += runtimeResponseDirective()
 	if a.internalTools != nil {
 		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
@@ -238,6 +239,28 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 		profile = a.Manifest.Model
 	}
 	return cognitive.InferRequest{Profile: profile, Provider: a.Manifest.Provider, Messages: messages}, profile
+}
+
+func agentProfileContextDirective(manifest protocol.AgentManifest) string {
+	if strings.TrimSpace(manifest.ProfileRef) == "" && len(manifest.Context) == 0 {
+		return ""
+	}
+	var bindings []string
+	for _, binding := range manifest.Context {
+		label := strings.TrimSpace(binding.Kind)
+		if binding.Ref != "" {
+			label += ":" + strings.TrimSpace(binding.Ref)
+		}
+		if binding.Access != "" {
+			label += " (" + strings.TrimSpace(binding.Access) + ")"
+		}
+		if label != "" {
+			bindings = append(bindings, label)
+		}
+	}
+	return fmt.Sprintf("\n\n## Worker Profile\nProfile: %s\nSelection: %s; scope: %s.\nApproved context bindings: %s. These bindings describe intended context only and never bypass tool, mount, MCP, capability, approval, or workspace policy.\n",
+		firstNonEmptyString(manifest.ProfileRef, "custom"), firstNonEmptyString(manifest.Usage.Selection, "explicit"),
+		firstNonEmptyString(manifest.Usage.Scope, "team"), firstNonEmptyString(strings.Join(bindings, ", "), "none"))
 }
 
 func runtimeResponseDirective() string {

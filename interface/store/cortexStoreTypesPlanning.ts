@@ -32,12 +32,15 @@ export interface ContextSnapshot {
 
 export interface AgentManifest {
     id: string;
+    profile_ref?: string;
     role: string;
     system_prompt?: string;
     model?: string;
     inputs?: string[];
     outputs?: string[];
     tools?: string[];
+    context?: AgentContextBinding[];
+    usage?: AgentUsagePolicy;
 }
 
 export interface BlueprintTeam {
@@ -88,11 +91,18 @@ export interface TeamProposal {
 
 export interface CatalogueAgent {
     id: string;
+    profile_key?: string;
     name: string;
+    description?: string;
     role: string;
+    source?: 'built_in' | 'user';
+    locked?: boolean;
     system_prompt?: string;
     model?: string;
     tools: string[];
+    capability_refs?: string[];
+    context_bindings?: AgentContextBinding[];
+    usage_policy?: AgentUsagePolicy;
     inputs: string[];
     outputs: string[];
     verification_strategy?: string;
@@ -100,6 +110,17 @@ export interface CatalogueAgent {
     validation_command?: string;
     created_at: string;
     updated_at: string;
+}
+
+export interface AgentContextBinding {
+    kind: string;
+    ref?: string;
+    access?: 'read' | 'write' | 'read_write' | string;
+}
+
+export interface AgentUsagePolicy {
+    selection?: 'soma_or_manual' | 'soma' | 'manual' | 'automatic' | string;
+    scope?: 'workspace' | 'outcome' | 'team' | string;
 }
 
 export type ArtifactType = 'code' | 'document' | 'image' | 'audio' | 'data' | 'file' | 'chart' | 'project_package';

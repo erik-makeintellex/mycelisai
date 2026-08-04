@@ -108,7 +108,7 @@ commands:
   - id: planning.catalogue
     handler: list_catalogue
     title: List role catalogue
-    summary: Show reusable agent templates available for team shaping.
+    summary: Show reusable Worker Profiles available for team shaping.
     user_quote: "What kinds of specialists can Soma use?"
     category: Planning
     capability_id: role_library

@@ -178,7 +178,7 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
   list_missions: "Lists active missions",
   get_system_status: "Retrieves system telemetry",
   list_available_tools: "Lists all available tools",
-  list_catalogue: "Lists agent templates from catalogue",
+  list_catalogue: "Lists reusable worker profiles",
   remember: "Stores fact to scoped durable memory",
   store_artifact: "Persists agent output to artifacts table",
   broadcast: "Sends message to all active teams",

@@ -18,7 +18,7 @@ Current resource menu:
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
 | Deployment Context | Save files or notes Soma should reuse as long-lived, scoped source context |
 | AI Engines | Global AI engine configuration and health |
-| Role Library | Reusable specialist-role definitions |
+| Worker Profiles | Ready-made and user-owned reusable teammates |
 
 The Resources page keeps these resource types in a persistent selector and renders the selected type inside a bounded work window. On phones and tablets, Resource types appear as one compact horizontally scrollable tab row so the selected work surface remains near the top of the screen. On desktop, the same choices use a vertical list-detail menu with short descriptions. Selection is recorded in the page URL, survives refresh, and works with browser Back. Long tool lists, workspace folders, exchange records, and provider forms scroll inside the selected panel rather than turning the whole page into one long operator path.
 
@@ -304,16 +304,18 @@ Operational behavior:
 
 ---
 
-## Role Library
+## Worker Profiles
+Worker Profiles define reusable teammates Soma may assign to governed work. Ready-made profiles are locked so the shipped safety and access posture stays inspectable; use **Copy profile** to create an editable user-owned version. **New profile** starts a blank profile.
 
-Role Library is the catalogue surface for reusable specialist definitions and templates.
+Each profile may define:
+- a plain purpose and role
+- optional model preference, otherwise the workspace AI engine applies
+- capability references such as approved research, file, media, or review access
+- context sources and read/search/write posture
+- whether Soma, the operator, or policy automation may select it and whether its default scope is Workspace, Outcome, or Team
+- expected outputs and verification criteria
 
-Typical template fields:
-- role
-- model/provider expectations
-- allowed tools
-- input/output contracts
-- validation strategy
+Profiles do not grant access by themselves. Runtime capability health, source scope, approval, secret, Outcome, and Execution Contract rules still apply. Ask Soma naturally to use a named profile, such as `Use the Research Specialist and Quality Reviewer`, or omit names and let Soma choose the smallest useful team. Teams receive a resolved profile snapshot at creation so later profile edits do not silently redefine running authority.
 
 ---
 
@@ -325,4 +327,4 @@ Use `Resources` to answer these operator questions quickly:
 3. How is external or research context classified and reviewed?
 4. What deployment knowledge has been intentionally loaded into long-term context?
 5. Are workspace file operations available?
-6. Which role definitions are available for advanced workflow work?
+6. Which ready-made or custom worker profiles can Soma assign?

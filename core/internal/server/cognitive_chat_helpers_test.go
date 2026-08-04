@@ -292,6 +292,9 @@ func TestInferCreateTeamPlanFromRequest_DefaultResearchTeam(t *testing.T) {
 	if call.Arguments["role"] != "researcher" {
 		t.Fatalf("role = %#v", call.Arguments["role"])
 	}
+	if call.Arguments["profile_ref"] != "default.researcher" {
+		t.Fatalf("profile_ref = %#v, want default.researcher", call.Arguments["profile_ref"])
+	}
 	if call.Arguments["initial_member_count"] != 1 || call.Arguments["recommended_member_limit"] != 3 {
 		t.Fatalf("minimal staffing args = %#v, want lead-only start with bounded expansion", call.Arguments)
 	}

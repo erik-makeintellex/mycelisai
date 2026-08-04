@@ -5,13 +5,11 @@ import { TeamMemberTemplatesPanel } from "./TeamMemberTemplatesPanel";
 
 export function TeamsSetupPanels({
   highlightedTemplates,
-  templateCoverage,
   isFetchingCatalogue,
   onNewTemplate,
   onEditTemplate,
 }: {
   highlightedTemplates: CatalogueAgent[];
-  templateCoverage: Array<[string, CatalogueAgent[]]>;
   isFetchingCatalogue: boolean;
   onNewTemplate: () => void;
   onEditTemplate: (agent: CatalogueAgent) => void;
@@ -21,7 +19,6 @@ export function TeamsSetupPanels({
       <TeamsIntroPanel />
       <TeamMemberTemplatesPanel
         highlightedTemplates={highlightedTemplates}
-        templateCoverage={templateCoverage}
         isFetchingCatalogue={isFetchingCatalogue}
         onNewTemplate={onNewTemplate}
         onEditTemplate={onEditTemplate}

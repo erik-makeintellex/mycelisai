@@ -62,6 +62,7 @@ func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool
 		"temporary_addition_guidance": "Add specialists only after the lead names the missing capability, owned task, proof expected, and removal point.",
 		"content_contract":            contentContract,
 		"team_evocation":              teamEvocation,
+		"profile_ref":                 defaultProfileRefForTeamRole(role),
 	}
 	if len(agents) > 0 {
 		args["agents"] = agents
@@ -70,6 +71,13 @@ func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool
 	args["tools"] = executionToolsForContentContract(contentContract)
 
 	return protocol.PlannedToolCall{Name: "create_team", Arguments: args}, true
+}
+
+func defaultProfileRefForTeamRole(role string) string {
+	if strings.EqualFold(strings.TrimSpace(role), "researcher") {
+		return "default.researcher"
+	}
+	return "default.builder"
 }
 
 // requestRequiresDeliveryTeam identifies retained, multi-file product work that
@@ -188,9 +196,24 @@ func specialistAgentsForTeamRequest(teamID, lower string) []map[string]any {
 func specialistAgent(teamID, suffix, role, prompt string) map[string]any {
 	return map[string]any{
 		"id":            teamID + "-" + suffix,
+		"profile_ref":   defaultProfileRefForSpecialistRole(role),
 		"role":          role,
 		"system_prompt": prompt,
 		"tools":         []string{"generate_image", "save_cached_image", "store_artifact"},
+	}
+}
+
+func defaultProfileRefForSpecialistRole(role string) string {
+	normalized := strings.ToLower(strings.TrimSpace(role))
+	switch {
+	case strings.Contains(normalized, "proof"), strings.Contains(normalized, "review"):
+		return "default.reviewer"
+	case strings.Contains(normalized, "character"), strings.Contains(normalized, "artist"), strings.Contains(normalized, "layout"), strings.Contains(normalized, "media"):
+		return "default.media-creator"
+	case strings.Contains(normalized, "story"), strings.Contains(normalized, "analyst"):
+		return "default.context-analyst"
+	default:
+		return "default.builder"
 	}
 }
 

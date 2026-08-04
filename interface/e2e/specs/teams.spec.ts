@@ -10,6 +10,8 @@ test.describe('Teams Workspace (/teams)', () => {
     });
 
     test('header and filter controls render', async ({ page }) => {
+        await expect(page.getByRole('heading', { name: 'Worker profiles' })).toBeVisible();
+        await expect(page.getByText('Context Analyst', { exact: true })).toBeVisible();
         await expect(page.locator('text=/\\d+ team/')).toBeVisible();
         await expect(
             page

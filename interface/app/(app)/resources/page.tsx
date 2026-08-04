@@ -80,9 +80,9 @@ const RESOURCE_TABS: ResourceTab[] = [
     },
     {
         id: "roles",
-        label: "Role Library",
-        summary: "Reusable specialist roles and templates for advanced workflow work.",
-        detail: "Reusable templates",
+        label: "Worker Profiles",
+        summary: "Choose ready-made teammates or create reusable profiles with scoped access and context.",
+        detail: "Reusable teammates",
         icon: BookOpen,
     },
 ];

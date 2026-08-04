@@ -100,6 +100,9 @@ func TestInferCreateTeamPlanFromRequest_ContentContractCoversMixedGameMediaText(
 	if evocation["mode"] != "research_council_then_staff" || evocation["research_required"] != true || evocation["council_review_required"] != true {
 		t.Fatalf("team_evocation = %#v, want research/council staffing mode", evocation)
 	}
+	if call.Arguments["profile_ref"] != "default.builder" {
+		t.Fatalf("profile_ref = %#v, want default.builder", call.Arguments["profile_ref"])
+	}
 }
 
 func TestInferCreateTeamPlanFromRequest_ContentContractCoversTableAndAppOutputs(t *testing.T) {

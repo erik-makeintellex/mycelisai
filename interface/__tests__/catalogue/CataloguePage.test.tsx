@@ -43,6 +43,8 @@ const mockAgents: CatalogueAgent[] = [
         id: 'agent-001',
         name: 'Coder Bot',
         role: 'cognitive',
+        source: 'built_in',
+        locked: true,
         system_prompt: 'You are a coder.',
         model: 'qwen2.5-coder:7b-instruct',
         tools: ['read_file', 'write_file'],
@@ -56,6 +58,8 @@ const mockAgents: CatalogueAgent[] = [
         id: 'agent-002',
         name: 'Sensor Node',
         role: 'sensory',
+        source: 'user',
+        locked: false,
         tools: [],
         inputs: [],
         outputs: ['sensor.data'],
@@ -86,16 +90,14 @@ describe('CataloguePage', () => {
 
         render(<CataloguePage />);
 
-        // Both agent cards should render
+        // The default view shows only ready-made profiles.
         expect(screen.getByTestId('agent-card-agent-001')).toBeDefined();
-        expect(screen.getByTestId('agent-card-agent-002')).toBeDefined();
-
-        // Agent names should be visible
         expect(screen.getByText('Coder Bot')).toBeDefined();
-        expect(screen.getByText('Sensor Node')).toBeDefined();
+        expect(screen.queryByTestId('agent-card-agent-002')).toBeNull();
+        expect(screen.getByText('Worker profiles')).toBeDefined();
 
-        // Header should show "Agent Catalogue"
-        expect(screen.getByText('Agent Catalogue')).toBeDefined();
+        fireEvent.click(screen.getByRole('tab', { name: /My profiles/ }));
+        expect(screen.getByText('Sensor Node')).toBeDefined();
     });
 
     it('New Agent button is present and opens the editor drawer', () => {
@@ -105,8 +107,7 @@ describe('CataloguePage', () => {
 
         render(<CataloguePage />);
 
-        // "New Agent" button should be present
-        const newBtn = screen.getByText('New Agent');
+        const newBtn = screen.getByText('New profile');
         expect(newBtn).toBeDefined();
 
         // No drawer initially
@@ -129,11 +130,13 @@ describe('CataloguePage', () => {
 
         render(<CataloguePage />);
 
+        fireEvent.click(screen.getByRole('tab', { name: /My profiles/ }));
+
         // Click the delete button on agent-001
-        fireEvent.click(screen.getByTestId('delete-agent-001'));
+        fireEvent.click(screen.getByTestId('delete-agent-002'));
 
         // The store's deleteCatalogueAgent should have been called
         expect(deleteFn).toHaveBeenCalledTimes(1);
-        expect(deleteFn).toHaveBeenCalledWith('agent-001');
+        expect(deleteFn).toHaveBeenCalledWith('agent-002');
     });
 });

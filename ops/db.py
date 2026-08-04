@@ -72,8 +72,10 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("execution_dispatch_outbox table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'execution_dispatch_outbox';"),
     ("operator_sse_events table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'operator_sse_events';"),
     ("team_signal_receipts table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_signal_receipts';"),
+    ("agent_catalogue profile_key column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'agent_catalogue' AND column_name = 'profile_key';"),
 )
 
+TARGETED_SCHEMA_MIGRATIONS = {"agent_catalogue profile_key column": "056_agent_profile_library.up.sql"}
 def _load_env():
     try:
         from dotenv import load_dotenv
@@ -207,6 +209,24 @@ def schema_bootstrapped() -> bool:
     return True
 
 
+def _apply_missing_targeted_migrations() -> bool:
+    migrations = {path.name: path for path in _migration_files()}
+    applied = False
+    for label, sql in SCHEMA_COMPATIBILITY_CHECKS:
+        migration_name = TARGETED_SCHEMA_MIGRATIONS.get(label)
+        if migration_name is None: continue
+        result = _run_psql(sql=sql)
+        if result.returncode == 0 and "1" in result.stdout.split():
+            continue
+        migration = migrations.get(migration_name)
+        if migration is None: raise SystemExit(f"Missing targeted migration: {migration_name}")
+        print(f"Applying missing runtime migration {migration_name}...")
+        if _psql(file=migration) != 0:
+            raise SystemExit(f"Migration failed: {migration_name}")
+        applied = True
+    return applied
+
+
 def _apply_migrations(strict=False):
     _load_env()
     db = os.getenv("DB_NAME", "cortex")
@@ -222,6 +242,8 @@ def _apply_migrations(strict=False):
     if strict and not extensions_ready:
         raise SystemExit("Failed preparing native PostgreSQL extensions.")
 
+    if not strict:
+        _apply_missing_targeted_migrations()
     if not strict and schema_bootstrapped():
         print(
             f"Schema for '{db}' already appears compatible with the current runtime; "

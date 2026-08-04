@@ -71,7 +71,7 @@ describe("TeamsPage", () => {
     expect(
       screen.getByText(/Specialize new teams through Soma/i),
     ).toBeDefined();
-    expect(screen.getByText(/Soma team-member templates/i)).toBeDefined();
+    expect(screen.getByRole("heading", { name: /Worker profiles/i })).toBeDefined();
     expect(
       screen
         .getByRole("link", { name: /Open guided team creation/i })
@@ -81,15 +81,12 @@ describe("TeamsPage", () => {
     expect(screen.getAllByText("Audience Researcher").length).toBeGreaterThan(
       0,
     );
-    expect(screen.getAllByText(/campaign copy/i).length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(/Agent type, model, and MCP access/i),
-    ).toBeDefined();
+    expect(screen.getByText(/Name one when you ask Soma/i)).toBeDefined();
     expect(
       screen
-        .getByRole("link", { name: /Manage MCP tools/i })
+        .getByRole("link", { name: /Manage all profiles/i })
         .getAttribute("href"),
-    ).toBe("/resources?tab=tools");
+    ).toBe("/resources?tab=roles");
     expect(screen.getByText(/Outputs and active collaboration/i)).toBeDefined();
     expect(screen.getByTestId("active-work-lane")).toBeDefined();
     expect(screen.getByText("Active work lane")).toBeDefined();
@@ -120,7 +117,7 @@ describe("TeamsPage", () => {
     ).toBe("/dashboard");
     expect(
       screen
-        .getByRole("link", { name: /Open full role library/i })
+        .getByRole("link", { name: /Manage all profiles/i })
         .getAttribute("href"),
     ).toBe("/resources?tab=roles");
     expect(screen.getByText(/2 teams/)).toBeDefined();
@@ -259,7 +256,7 @@ describe("TeamsPage", () => {
     expect(screen.queryByText("nats.output.alpha")).toBeNull();
   });
 
-  it("opens the team-member template drawer from the teams page", () => {
+  it("opens the worker profile editor from the teams page", () => {
     useCortexStore.setState({
       teamsDetail: mockTeams,
       catalogueAgents: mockTemplates,
@@ -267,7 +264,7 @@ describe("TeamsPage", () => {
 
     render(<TeamsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: /new template/i }));
+    fireEvent.click(screen.getByRole("button", { name: /new profile/i }));
     expect(screen.getByTestId("agent-editor-drawer")).toBeDefined();
     expect(screen.getByText("Creating new template")).toBeDefined();
 
