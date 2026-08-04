@@ -9,7 +9,7 @@ import (
 	"github.com/mycelis/core/internal/catalogue"
 )
 
-// handleListCatalogue returns all agent templates.
+// handleListCatalogue returns all reusable worker profiles.
 // GET /api/v1/catalogue/agents
 func (s *AdminServer) handleListCatalogue(w http.ResponseWriter, r *http.Request) {
 	if s.Catalogue == nil {
@@ -29,7 +29,7 @@ func (s *AdminServer) handleListCatalogue(w http.ResponseWriter, r *http.Request
 	respondJSON(w, agents)
 }
 
-// handleCreateCatalogue creates a new agent template.
+// handleCreateCatalogue creates a new worker profile.
 // POST /api/v1/catalogue/agents
 func (s *AdminServer) handleCreateCatalogue(w http.ResponseWriter, r *http.Request) {
 	if s.Catalogue == nil {
@@ -51,6 +51,9 @@ func (s *AdminServer) handleCreateCatalogue(w http.ResponseWriter, r *http.Reque
 		http.Error(w, `{"error":"role is required"}`, http.StatusBadRequest)
 		return
 	}
+	input.ProfileKey = ""
+	input.Source = "user"
+	input.Locked = false
 
 	created, err := s.Catalogue.Create(r.Context(), input)
 	if err != nil {
@@ -62,7 +65,7 @@ func (s *AdminServer) handleCreateCatalogue(w http.ResponseWriter, r *http.Reque
 	respondJSON(w, created)
 }
 
-// handleUpdateCatalogue updates an existing agent template.
+// handleUpdateCatalogue updates an existing worker profile.
 // PUT /api/v1/catalogue/agents/{id}
 func (s *AdminServer) handleUpdateCatalogue(w http.ResponseWriter, r *http.Request) {
 	if s.Catalogue == nil {
@@ -91,6 +94,9 @@ func (s *AdminServer) handleUpdateCatalogue(w http.ResponseWriter, r *http.Reque
 		http.Error(w, `{"error":"role is required"}`, http.StatusBadRequest)
 		return
 	}
+	input.ProfileKey = ""
+	input.Source = "user"
+	input.Locked = false
 
 	updated, err := s.Catalogue.Update(r.Context(), id, input)
 	if err != nil {
@@ -101,7 +107,7 @@ func (s *AdminServer) handleUpdateCatalogue(w http.ResponseWriter, r *http.Reque
 	respondJSON(w, updated)
 }
 
-// handleDeleteCatalogue removes an agent template.
+// handleDeleteCatalogue removes a worker profile.
 // DELETE /api/v1/catalogue/agents/{id}
 func (s *AdminServer) handleDeleteCatalogue(w http.ResponseWriter, r *http.Request) {
 	if s.Catalogue == nil {

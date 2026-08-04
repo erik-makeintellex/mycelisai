@@ -19,7 +19,7 @@ test.describe("Desktop/mobile compression proof", () => {
 
     await expect(page.getByRole("heading", { name: "Team Lead Workspaces" })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText("Specialize new teams through Soma")).toBeVisible();
-    await expect(page.getByText("Soma team-member templates")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Worker profiles" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Open guided team creation" })).toHaveAttribute("href", "/teams/create");
     await expect(page.getByRole("link", { name: "Open Soma workspace" }).first()).toHaveAttribute("href", "/dashboard");
     await expect(page.getByRole("link", { name: "Review outputs" }).first()).toHaveAttribute("href", "/groups");
@@ -47,7 +47,7 @@ test.describe("Desktop/mobile compression proof", () => {
     await expect(page.getByTestId("focused-team-output-dock")).toHaveCount(0);
     const switcher = page.getByTestId("soma-team-context-switcher");
     await expect(switcher).toBeVisible();
-    await expect(switcher).toContainText("Working in");
+    await expect(switcher).toContainText("Work context");
     await expect(switcher).toContainText("First Demo Game Team");
     const digest = page.getByTestId("soma-workbench-output-digest");
     await expect(digest).toBeVisible();

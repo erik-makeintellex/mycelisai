@@ -120,7 +120,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the Mycelis Interface
 | `/automations` | Automation hub with approvals, trigger rules, teams, and advanced wiring |
 | `/docs` | In-app docs browser |
 | `/settings` | Preferences, mission profiles, people access, and advanced setup |
-| `/resources` | Advanced support hub for connected tools, workspace files, AI engines, and role library |
+| `/resources` | Support hub for delivered files, capabilities, connected sources, AI engines, and worker profiles |
 | `/memory` | Advanced memory explorer |
 | `/system` | Advanced diagnostics and recovery checks |
 

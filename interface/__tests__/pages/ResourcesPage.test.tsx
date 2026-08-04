@@ -98,7 +98,7 @@ describe('Resources Page (operator support)', () => {
         expect(screen.getByRole('tab', { name: /Deployment Context/i })).toBeDefined();
         expect(screen.getByRole('tab', { name: /Output Files/i })).toBeDefined();
         expect(screen.getByRole('tab', { name: /AI Engines/i })).toBeDefined();
-        expect(screen.getByRole('tab', { name: /Role Library/i })).toBeDefined();
+        expect(screen.getByRole('tab', { name: /Worker Profiles/i })).toBeDefined();
     });
 
     it('defaults to output files tab', async () => {
@@ -118,11 +118,11 @@ describe('Resources Page (operator support)', () => {
         expect(screen.getByText(/What Soma can use, what needs repair, and what can be requested/i)).toBeDefined();
     });
 
-    it('deep-links to role library tab via search param', async () => {
+    it('deep-links to worker profiles via the compatible roles search param', async () => {
         mockSearchParams.set('tab', 'roles');
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
-            expect(screen.getByRole('tab', { name: /Role Library/i }).getAttribute('aria-selected')).toBe('true');
+            expect(screen.getByRole('tab', { name: /Worker Profiles/i }).getAttribute('aria-selected')).toBe('true');
         });
     });
 

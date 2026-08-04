@@ -107,8 +107,8 @@ Interface proxy routes sign the current web session into `X-Mycelis-Web-Identity
 | `/admin/approvals` | GET | List pending governance approvals |
 | `/admin/approvals/{id}` | POST | Approve/reject governance action |
 | **Agent Catalogue** | | |
-| `/api/v1/catalogue/agents` | GET/POST | List/create agent blueprints |
-| `/api/v1/catalogue/agents/{id}` | PUT/DELETE | Update/delete agent blueprint |
+| `/api/v1/catalogue/agents` | GET/POST | List ready-made and user-owned Worker Profiles or create a user-owned profile. Profile payloads include `profile_key`, `description`, `source`, `locked`, `capability_refs`, `context_bindings`, `usage_policy`, output contracts, and verification fields. POST always creates an unlocked `source=user` profile; built-in keys are reserved. |
+| `/api/v1/catalogue/agents/{id}` | PUT/DELETE | Update or delete a user-owned Worker Profile. Locked built-ins fail closed; copy one through POST before editing. Team agent manifests may use `profile_ref` with a stable profile key or UUID; Core resolves it before team creation, hydrates missing defaults, preserves explicit governed fields, and blocks unknown refs. |
 | **Template Marketplace (Planned)** | | |
 | `/api/v1/template-market/sources` | GET/POST | List/register marketplace sources (clawhub/private hubs) |
 | `/api/v1/template-market/sources/{source_id}` | PATCH | Update source credentials/status |

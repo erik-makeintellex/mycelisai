@@ -111,9 +111,12 @@ func (r *InternalToolRegistry) resolveDelegationTeam(ask protocol.TeamAsk) (stri
 	}
 }
 
-func (r *InternalToolRegistry) handleCreateTeam(_ context.Context, args map[string]any) (string, error) {
+func (r *InternalToolRegistry) handleCreateTeam(ctx context.Context, args map[string]any) (string, error) {
 	if r.somaRef == nil {
 		return "", fmt.Errorf("Soma not available — cannot create team")
+	}
+	if err := r.hydrateCreateTeamProfiles(ctx, args); err != nil {
+		return "", err
 	}
 	manifest := buildRuntimeTeamManifest(args)
 	if manifest == nil {

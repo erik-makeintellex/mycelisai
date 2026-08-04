@@ -257,8 +257,8 @@ def _compose_check_results(checks: tuple[tuple[str, str], ...], env_values: dict
 
 def _compose_schema_bootstrapped(env_values: dict[str, str] | None = None) -> bool:
     env_values = env_values or _compose_effective_env()
-    return all(ok for _label, ok in _compose_check_results(db_tasks.SCHEMA_COMPATIBILITY_CHECKS, env_values))
-
+    base_checks = tuple(check for check in db_tasks.SCHEMA_COMPATIBILITY_CHECKS if check[0] not in db_tasks.TARGETED_SCHEMA_MIGRATIONS)
+    return all(ok for _label, ok in _compose_check_results(base_checks, env_values))
 
 COMPOSE_LONG_TERM_STORAGE_CHECKS = compose_storage.COMPOSE_LONG_TERM_STORAGE_CHECKS
 COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = compose_storage.COMPOSE_STORAGE_MIGRATIONS_BY_CHECK

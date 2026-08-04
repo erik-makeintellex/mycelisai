@@ -13,7 +13,18 @@ var catColumns = []string{
 	"id", "name", "role", "system_prompt", "model",
 	"tools", "inputs", "outputs",
 	"verification_strategy", "verification_rubric", "validation_command",
+	"profile_key", "description", "source", "locked",
+	"capability_refs", "context_bindings", "usage_policy",
 	"created_at", "updated_at",
+}
+
+func addAgentRow(rows *sqlmock.Rows, id uuid.UUID, name, role string, now time.Time) *sqlmock.Rows {
+	return rows.AddRow(id, name, role, "Review code", "qwen2.5",
+		[]byte(`["read_file"]`), []byte(`[]`), []byte(`[]`),
+		"semantic", []byte(`["Check correctness"]`), nil,
+		nil, "Reusable worker", "user", false,
+		[]byte(`["read_file"]`), []byte(`[]`), []byte(`{"selection":"manual","scope":"workspace"}`),
+		now, now)
 }
 
 func TestCatalogueService_List(t *testing.T) {
@@ -29,15 +40,9 @@ func TestCatalogueService_List(t *testing.T) {
 	id2 := uuid.New()
 	now := time.Now()
 
-	rows := sqlmock.NewRows(catColumns).
-		AddRow(id1, "Code Reviewer", "cognitive", "Review code", "qwen2.5",
-			[]byte(`["read_file"]`), []byte(`["swarm.data.>"]`), []byte(`["swarm.output.>"]`),
-			"semantic", []byte(`["Check correctness"]`), nil,
-			now, now).
-		AddRow(id2, "Weather Sensor", "sensory", nil, nil,
-			[]byte(`[]`), []byte(`[]`), []byte(`[]`),
-			nil, []byte(`[]`), nil,
-			now, now)
+	rows := sqlmock.NewRows(catColumns)
+	addAgentRow(rows, id1, "Code Reviewer", "cognitive", now)
+	addAgentRow(rows, id2, "Weather Sensor", "sensory", now)
 
 	mock.ExpectQuery("SELECT .+ FROM agent_catalogue").WillReturnRows(rows)
 
@@ -106,6 +111,8 @@ func TestCatalogueService_Create(t *testing.T) {
 			sqlmock.AnyArg(), sqlmock.AnyArg(), // system_prompt, model (NullString)
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), // tools, inputs, outputs JSON
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), // ver_strat, rubric, val_cmd
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
 			AddRow(newID, now, now))
@@ -151,6 +158,8 @@ func TestCatalogueService_CreateNilSlices(t *testing.T) {
 	mock.ExpectQuery("INSERT INTO agent_catalogue").
 		WithArgs("Minimal Agent", "sensory",
 			sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
@@ -250,6 +259,8 @@ func TestCatalogueService_Update(t *testing.T) {
 			sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			agentID,
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -257,11 +268,7 @@ func TestCatalogueService_Update(t *testing.T) {
 	// Expect the follow-up GET (Update calls Get internally)
 	mock.ExpectQuery("SELECT .+ FROM agent_catalogue WHERE id").
 		WithArgs(agentID).
-		WillReturnRows(sqlmock.NewRows(catColumns).
-			AddRow(agentID, "Updated Agent", "actuation", "Updated prompt", "qwen2.5",
-				[]byte(`["tool_a"]`), []byte(`[]`), []byte(`[]`),
-				nil, []byte(`[]`), nil,
-				now, now))
+		WillReturnRows(addAgentRow(sqlmock.NewRows(catColumns), agentID, "Updated Agent", "actuation", now))
 
 	input := AgentTemplate{
 		Name:         "Updated Agent",

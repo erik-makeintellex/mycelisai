@@ -74,7 +74,7 @@ uv run inv db.reset
 uv run inv db.status
 ```
 
-`db.migrate` is forward-bootstrap aware: compatible schemas are not replayed as a cleanup mechanism, and compatibility now includes capability manifests, execution/proof artifacts, team-work tables and lifecycle columns, collaboration-group workspace folders, OutcomeProject/TeamRegistry ownership, the search-source registry, the execution-dispatch outbox, the operator SSE event ledger, and durable team command/result receipts. Use `db.reset` when you intentionally need a fresh rebuild. Use `db.clear-runtime-context` before fresh Soma/team GUI proof when stale conversations, team work, run/proof handshakes, or temp memory would influence the operator experience; it dry-runs by default and requires `--yes` to delete rows.
+`db.migrate` is forward-bootstrap aware: compatible schemas are not replayed as a cleanup mechanism, and compatibility includes capability manifests, execution/proof artifacts, team-work lifecycle, collaboration-group workspaces, OutcomeProject/TeamRegistry ownership, search sources, Worker Profiles, dispatch outbox, operator SSE ledger, and durable team command/result receipts. Known late slices are checked individually and their targeted migrations run when only that contract is missing. Use `db.reset` for an intentional fresh rebuild. Use `db.clear-runtime-context` before fresh Soma/team GUI proof when stale conversations, team work, run/proof handshakes, or temp memory would influence the experience; it dry-runs by default and requires `--yes` to delete rows.
 
 ### Auth Tasks (`ops/auth.py`)
 

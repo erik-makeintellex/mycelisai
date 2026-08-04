@@ -115,9 +115,16 @@ func runtimeTeamMembersFromArgs(merged map[string]any, teamID, fallbackAgentID, 
 	}
 	return []protocol.AgentManifest{{
 		ID:            fallbackAgentID,
+		ProfileRef:    stringValue(merged["profile_ref"]),
 		Role:          fallbackRole,
 		SystemPrompt:  fallbackSystemPrompt,
+		Model:         stringValue(merged["model"]),
+		Provider:      stringValue(merged["provider"]),
+		Inputs:        stringSlice(merged["inputs"]),
+		Outputs:       stringSlice(merged["outputs"]),
 		Tools:         tools,
+		Context:       runtimeContextBindings(merged["context_bindings"]),
+		Usage:         runtimeUsagePolicy(merged["usage_policy"]),
 		MaxIterations: 6,
 	}}
 }
@@ -172,6 +179,7 @@ func runtimeAgentFromMap(source map[string]any, teamID string, idx int, fallback
 	}
 	return protocol.AgentManifest{
 		ID:            id,
+		ProfileRef:    stringValue(source["profile_ref"]),
 		Role:          role,
 		SystemPrompt:  firstNonEmptyString(stringValue(source["system_prompt"]), fmt.Sprintf("You are the %s for team %s. Own your bounded specialist contribution and report concise output/proof to Soma.", role, teamID)),
 		Model:         stringValue(source["model"]),
@@ -179,8 +187,36 @@ func runtimeAgentFromMap(source map[string]any, teamID string, idx int, fallback
 		Inputs:        stringSlice(source["inputs"]),
 		Outputs:       stringSlice(source["outputs"]),
 		Tools:         tools,
+		Context:       runtimeContextBindings(source["context_bindings"]),
+		Usage:         runtimeUsagePolicy(source["usage_policy"]),
 		MaxIterations: maxIterations,
 	}
+}
+
+func runtimeContextBindings(raw any) []protocol.AgentContextBinding {
+	if bindings, ok := raw.([]protocol.AgentContextBinding); ok {
+		return append([]protocol.AgentContextBinding(nil), bindings...)
+	}
+	items, _ := raw.([]any)
+	bindings := make([]protocol.AgentContextBinding, 0, len(items))
+	for _, item := range items {
+		source, ok := item.(map[string]any)
+		if !ok || strings.TrimSpace(stringValue(source["kind"])) == "" {
+			continue
+		}
+		bindings = append(bindings, protocol.AgentContextBinding{
+			Kind: stringValue(source["kind"]), Ref: stringValue(source["ref"]), Access: stringValue(source["access"]),
+		})
+	}
+	return bindings
+}
+
+func runtimeUsagePolicy(raw any) protocol.AgentUsagePolicy {
+	if policy, ok := raw.(protocol.AgentUsagePolicy); ok {
+		return policy
+	}
+	source, _ := raw.(map[string]any)
+	return protocol.AgentUsagePolicy{Selection: stringValue(source["selection"]), Scope: stringValue(source["scope"])}
 }
 
 func runtimeTeamToolsFromArgs(merged map[string]any) []string {

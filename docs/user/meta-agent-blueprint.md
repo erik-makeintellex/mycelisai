@@ -159,7 +159,7 @@ The Architect draws from the **Agent Catalogue** when generating blueprints — 
 - The Architect matches catalogue templates to roles in the blueprint goal
 - If no good match exists, a new agent definition is generated inline
 
-To improve blueprint quality for recurring task types, add good reusable role definitions in the Role Library (`/resources?tab=roles`). The Architect will use them automatically.
+To improve recurring team work, add user-owned Worker Profiles in `Resources -> Worker Profiles` (`/resources?tab=roles`). Soma may select them automatically or the operator may name one in conversation.
 
 ---
 
