@@ -171,6 +171,22 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-current')).toBe('page');
     });
 
+    it('uses a shrink-safe mobile section selector without changing tab semantics', async () => {
+        await act(async () => {
+            render(<SettingsPage />);
+        });
+
+        const page = screen.getByTestId('settings-page');
+        const tablist = screen.getByRole('tablist', { name: 'Settings sections' });
+
+        expect(page.className).toContain('min-w-0');
+        expect(page.className).toContain('overflow-x-hidden');
+        expect(tablist.className).toContain('grid-cols-2');
+        expect(tablist.className).toContain('sm:flex');
+        expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-selected')).toBe('true');
+        expect(screen.getByRole('tab', { name: 'Mission Profiles' }).className).toContain('w-full');
+    });
+
     it('hides advanced tabs when advanced mode is off', async () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => {

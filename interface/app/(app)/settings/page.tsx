@@ -70,9 +70,9 @@ function SettingsContent() {
     };
 
     return (
-        <div className="h-full flex flex-col">
+        <div data-testid="settings-page" className="h-full min-w-0 overflow-x-hidden flex flex-col">
             {/* Header */}
-            <div className="max-w-5xl mx-auto w-full px-6 pt-6 pb-0">
+            <div className="max-w-5xl mx-auto w-full min-w-0 px-4 pt-5 pb-0 sm:px-6 sm:pt-6">
                 <h1 className="text-2xl font-bold tracking-tight text-cortex-text-main flex items-center gap-2">
                     <Settings className="w-6 h-6 text-cortex-text-muted" />
                     Settings
@@ -82,14 +82,19 @@ function SettingsContent() {
                 </p>
             </div>
 
-            <div className="max-w-5xl mx-auto w-full px-6 mt-6 space-y-5">
+            <div className="max-w-5xl mx-auto w-full min-w-0 px-4 mt-5 space-y-5 sm:px-6 sm:mt-6">
                 {requestedAdvancedTab && !advancedMode ? (
                     <AdvancedDeepLinkNotice requestedTab={requestedAdvancedTab} onOpen={openRequestedAdvancedTab} />
                 ) : null}
                 <SettingsGuidedWorkflow advancedMode={advancedMode} activeTab={activeTab} onSelect={setSelectedTab} />
 
                 {/* Tabs */}
-                <div role="tablist" aria-label="Settings sections" className="flex items-center gap-1 border-b border-cortex-border">
+                <div
+                    role="tablist"
+                    aria-label="Settings sections"
+                    data-testid="settings-section-tabs"
+                    className="grid min-w-0 grid-cols-2 gap-1 border-b border-cortex-border sm:flex sm:flex-wrap sm:items-center"
+                >
                     <Tab label="Profile" icon={User} active={activeTab === "profile"} onClick={() => setSelectedTab("profile")} />
                     <Tab label="Mission Profiles" icon={Layers} active={activeTab === "profiles"} onClick={() => setSelectedTab("profiles")} />
                     {isAdmin && <Tab label="People & Access" icon={Shield} active={activeTab === "users"} onClick={() => setSelectedTab("users")} />}
@@ -103,7 +108,7 @@ function SettingsContent() {
                 </div>
             </div>
 
-            <div className="max-w-5xl mx-auto w-full px-6 py-6 min-h-[400px]">
+            <div className="max-w-5xl mx-auto w-full min-w-0 px-4 py-5 min-h-[400px] sm:px-6 sm:py-6">
                 {activeTab === "profile" && <ProfileSettings />}
                 {activeTab === "engines" && advancedMode && <BrainsPage />}
                 {activeTab === "auth" && advancedMode && <AuthProvidersPage />}
@@ -189,14 +194,14 @@ function Tab({
             aria-current={active ? "page" : undefined}
             onClick={onClick}
             className={`
-                flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors
+                flex w-full min-w-0 items-center justify-start gap-2 px-2 py-2 text-left text-sm font-medium leading-5 border-b-2 transition-colors sm:w-auto sm:px-4
                 ${active
                     ? "border-cortex-primary text-cortex-primary"
                     : "border-transparent text-cortex-text-muted hover:text-cortex-text-main hover:border-cortex-border"}
             `}
         >
-            <Icon className="w-4 h-4" />
-            {label}
+            <Icon className="w-4 h-4 shrink-0" />
+            <span className="min-w-0">{label}</span>
         </button>
     );
 }
