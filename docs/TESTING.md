@@ -115,7 +115,7 @@ No backend/API review is complete without a mapped UI target and evidence result
 - Inspect service ports/processes before runtime proof when prior runs may have left residue.
 - Use `uv run inv lifecycle.status` for the fast process/endpoint snapshot; it checks Core through `/healthz` and Ollama through `/api/tags` across loopback fallbacks so transient TCP-only snapshots do not mark reachable services down.
 - Treat repo-local Interface workers as cleanup targets on Windows.
-- Before fresh Soma/team UX proof, use `uv run inv db.clear-runtime-context` to review volatile runtime-context counts, then `uv run inv db.clear-runtime-context --yes` when stale conversations, team work, run/proof handshakes, or temp memory would bias the test. Long-memory `context_vectors` stay intact unless `--include-memory-vectors` is explicitly supplied.
+- Before fresh Soma/team UX proof, use `uv run inv db.clear-runtime-context` to review volatile runtime-context counts, then `uv run inv db.clear-runtime-context --yes` when stale conversations, team work, run/proof handshakes, or temp memory would bias the test. Long-memory `context_vectors` stay intact unless `--include-memory-vectors` is explicitly supplied. This task is not a complete owner-scoped retained-data purge: it leaves Groups, Outcome projects, artifacts, and shared NATS storage alone. `/dashboard?fresh=1` is likewise a chat-presentation reset, not a database cleanup boundary.
 - Run one managed Playwright/build/test invocation at a time for a workspace and port; do not run `interface.build`, `interface.test`, or managed `interface.e2e` concurrently.
 - Start only the services required for the check.
 - Shut services down after the check unless a follow-on validation needs them alive.

@@ -7,6 +7,8 @@
 
 Open `Soma` (`/dashboard`) and type naturally. Soma receives the request first, uses the current organization/workspace context, and should return either a direct answer, a governed proposal, a retained output, or a clear blocker/recovery state.
 
+Opening `/dashboard?fresh=1` starts a fresh conversation presentation; it does not erase or conceal retained Outcomes. The default Outcomes attention count is bounded to operator decisions, recovery, and ready deliverables. Ordinary queued/running work remains available through its Outcome or team progress view without appearing as review debt.
+
 The dashboard is organized as a threaded workspace:
 
 - `Start with`: a compact pinned row for common conversation shapes: plan next step, create output, or review work. Saved asks can still appear here, but the defaults stay generic so a new user sees how to talk to Soma instead of seeing a domain-specific workflow menu. Use `Create ask` to save a repeated Soma request; Mycelis stores it through the conversation-template path when Core is available and keeps a local fallback when it is not. Saved asks still enter the Soma conversation so you can adjust risky or unclear work before execution.

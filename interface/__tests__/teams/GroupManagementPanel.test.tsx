@@ -79,10 +79,10 @@ describe("GroupManagementPanel", () => {
     render(<GroupManagementPanel />);
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: /Temp Campaign/i }),
+        screen.getByRole("heading", { name: "Standing Ops" }),
       ).toBeDefined(),
     );
-    fireEvent.click(screen.getByRole("button", { name: /Temp Campaign/i }));
+    fireEvent.click(screen.getByTestId("groups-list-item-group-temp"));
 
     await waitFor(() =>
       expect(screen.getByTestId("groups-output-summary").textContent).toContain(
@@ -149,7 +149,7 @@ describe("GroupManagementPanel", () => {
   it("keeps a route-selected group visible when saved filters hide it", async () => {
     window.localStorage.setItem(
       "mycelis.groups.recordFilters",
-      JSON.stringify({ query: "", kind: "standing", state: "all", retentionDays: 30 }),
+      JSON.stringify({ query: "", kind: "standing", state: "current", retentionDays: 30 }),
     );
     installGroupsFetch({ groups: [standingGroup(), tempGroup()] });
 
@@ -164,9 +164,9 @@ describe("GroupManagementPanel", () => {
     expect(screen.getByTestId("groups-list").textContent).toContain(
       "Standing Ops",
     );
-    expect(screen.getByTestId("groups-list").textContent).not.toContain(
-      "Temp Campaign",
-    );
+    expect(
+      screen.getByTestId("groups-list-item-group-temp").getAttribute("aria-current"),
+    ).toBe("true");
   });
 
   it("prioritizes setup and review surfaces before coordination logging", async () => {
@@ -296,18 +296,18 @@ describe("GroupManagementPanel", () => {
   it("filters group records by type, state, and completed record retention", async () => {
     installGroupsFetch({
       groups: [
+        tempGroup({
+          group_id: "group-archived", name: "Archived Campaign", status: "archived",
+          expiry: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+        }),
         standingGroup(),
         tempGroup(),
         tempGroup({
-          group_id: "group-complete",
-          name: "Recent Complete",
-          status: "archived",
+          group_id: "group-complete", name: "Recent Complete", status: "active",
           expiry: new Date(Date.now() - 2 * 86_400_000).toISOString(),
         }),
         tempGroup({
-          group_id: "group-old-complete",
-          name: "Old Complete",
-          status: "archived",
+          group_id: "group-old-complete", name: "Old Complete", status: "active",
           expiry: new Date(Date.now() - 45 * 86_400_000).toISOString(),
         }),
       ],
@@ -316,40 +316,24 @@ describe("GroupManagementPanel", () => {
     render(<GroupManagementPanel />);
 
     await waitFor(() =>
-      expect(screen.getByTestId("groups-list").textContent).toContain(
-        "Standing Ops",
-      ),
+      expect(screen.getByRole("heading", { name: "Standing Ops" })).toBeDefined(),
     );
+    expect(screen.queryByText("Selected outside filters")).toBeNull();
     expect(screen.getByTestId("groups-list").textContent).toContain(
       "Temp Campaign",
     );
-    expect(screen.getByTestId("groups-list").textContent).toContain(
+    expect(screen.getByTestId("groups-list").textContent).not.toContain(
       "Recent Complete",
     );
     expect(screen.getByTestId("groups-list").textContent).not.toContain(
       "Old Complete",
     );
+    expect(screen.getByTestId("groups-list").textContent).not.toContain(
+      "Archived Campaign",
+    );
 
     fireEvent.click(screen.getByText("Filters"));
-    fireEvent.click(screen.getByRole("button", { name: "Temp" }));
-    expect(screen.getByTestId("groups-list").textContent).not.toContain(
-      "Standing Ops",
-    );
-
-    fireEvent.change(screen.getByLabelText("Search group records"), {
-      target: { value: "recent" },
-    });
-    expect(screen.getByTestId("groups-list").textContent).toContain(
-      "Recent Complete",
-    );
-    expect(screen.getByTestId("groups-list").textContent).not.toContain(
-      "Temp Campaign",
-    );
-    fireEvent.change(screen.getByLabelText("Search group records"), {
-      target: { value: "" },
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Complete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Completed" }));
     expect(screen.getByTestId("groups-list").textContent).toContain(
       "Recent Complete",
     );
@@ -364,6 +348,14 @@ describe("GroupManagementPanel", () => {
       expect(screen.getByTestId("groups-list").textContent).toContain(
         "Old Complete",
       ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Archived" }));
+    expect(screen.getByTestId("groups-list").textContent).toContain(
+      "Archived Campaign",
+    );
+    expect(screen.getByTestId("groups-list").textContent).not.toContain(
+      "Recent Complete",
     );
   });
 });

@@ -68,7 +68,7 @@ test.describe("Groups workspace (/groups)", () => {
     });
   });
 
-  test("shows active and archived groups with tabbed output review", async ({ page }) => {
+  test("separates current, completed, and archived records for retained output review", async ({ page }) => {
     await mockGroupsWorkspace(page);
     await openGroups(page);
 
@@ -78,6 +78,8 @@ test.describe("Groups workspace (/groups)", () => {
     await expect(page.getByRole("heading", { name: "Standing groups" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Temporary groups" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Completed records" })).toBeVisible();
+    await expect(page.getByTestId("groups-list-item-group-temp-launch")).toBeVisible();
+    await expect(page.getByTestId("groups-list-item-group-temp-archived")).toHaveCount(0);
     await expect(page.getByRole("tab", { name: /Overview/i })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Workflow Log/i })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Outputs/i })).toBeVisible();
@@ -120,6 +122,15 @@ test.describe("Groups workspace (/groups)", () => {
       "/api/v1/artifacts/artifact-brief/download",
     );
 
+    await page.getByText("Filters", { exact: true }).click();
+    await page.getByRole("button", { name: "Completed", exact: true }).click();
+    await expect(page.getByLabel("Completed record retention days")).toBeVisible();
+    await expect(page.getByText("Selected outside filters", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("groups-list-item-group-temp-archived")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Archived", exact: true }).click();
+    await expect(page.getByLabel("Completed record retention days")).toHaveCount(0);
+    await expect(page.getByTestId("groups-list-item-group-temp-archived")).toBeVisible();
     await page.getByTestId("groups-list-item-group-temp-archived").click();
     await expect
       .poll(() => new URL(page.url()).searchParams.get("group_id"))

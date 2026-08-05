@@ -111,7 +111,12 @@ async function expectRoute(page: Page, route: RouteCheck, testInfo: TestInfo) {
   await page.goto(route.path, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: route.heading }).first()).toBeVisible({ timeout: 20_000 });
   for (const affordance of route.affordances) {
-    await expect(page.getByText(affordance).first()).toBeVisible({ timeout: 15_000 });
+    await expect
+      .poll(async () => {
+        const matches = await page.getByText(affordance).all();
+        return (await Promise.all(matches.map((match) => match.isVisible()))).some(Boolean);
+      }, { timeout: 15_000 })
+      .toBe(true);
   }
   const metrics = await collectLayoutMetrics(page);
   expect(metrics.widthOverflow, `${route.name} should not create horizontal document overflow`).toBeLessThanOrEqual(4);

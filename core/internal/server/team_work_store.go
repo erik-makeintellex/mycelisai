@@ -10,14 +10,29 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+type teamWorkListView string
+
+const (
+	teamWorkListViewAll       teamWorkListView = ""
+	teamWorkListViewAttention teamWorkListView = "attention"
+)
+
 func (s *AdminServer) listTeamWorkItemsDB(ctx context.Context, teamID string, limit int, includeArchived bool) ([]protocol.TeamWorkItem, error) {
+	return s.listTeamWorkItemsByViewDB(ctx, teamID, limit, includeArchived, teamWorkListViewAll)
+}
+
+func (s *AdminServer) listTeamWorkItemsByViewDB(ctx context.Context, teamID string, limit int, includeArchived bool, view teamWorkListView) ([]protocol.TeamWorkItem, error) {
 	db := s.getDB()
 	if db == nil {
 		return nil, errors.New("database not available")
 	}
 	archivedFilter := ""
-	if !includeArchived {
+	if !includeArchived || view == teamWorkListViewAttention {
 		archivedFilter = "AND state <> 'archived'"
+	}
+	viewFilter := ""
+	if view == teamWorkListViewAttention {
+		viewFilter = "AND (needs_operator = TRUE OR state IN ('needs_operator','reviewing','output_ready','degraded'))"
 	}
 	rows, err := db.QueryContext(ctx, `
 		SELECT id::text, team_id, COALESCE(run_id::text,''), COALESCE(intent_proof_id::text,''),
@@ -29,6 +44,7 @@ func (s *AdminServer) listTeamWorkItemsDB(ctx context.Context, teamID string, li
 		FROM team_work_items
 		WHERE tenant_id='default' AND team_id=$1
 		`+archivedFilter+`
+		`+viewFilter+`
 		ORDER BY updated_at DESC
 		LIMIT $2`, strings.TrimSpace(teamID), limit)
 	if err != nil {

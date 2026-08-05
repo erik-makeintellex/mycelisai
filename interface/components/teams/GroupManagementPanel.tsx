@@ -78,7 +78,7 @@ export default function GroupManagementPanel({
       const nextGroups = await getData<Group[]>(groupsRes);
       setGroups(nextGroups);
       setSelectedGroupId((current) =>
-        pickSelectedGroupId(nextGroups, current, initialSelectedGroupId),
+        pickSelectedGroupId(nextGroups, current, initialSelectedGroupId, false),
       );
       if (monitorRes.ok) setMonitor(await getData<Monitor>(monitorRes));
       if (lifecycleRes.ok)

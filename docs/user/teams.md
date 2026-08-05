@@ -64,7 +64,7 @@ Use `Teams` when you want to inspect or manage existing teams:
 - review the Active Work Lane to see whether a team is new, queued, running, output-ready, degraded, paused, or waiting on the operator
 - use `/teams?view=work` when arriving from the Dashboard review panel; this focused Review Queue starts with counts for work needing a decision, ready output, work still running, and items that can be cleared
 - in Review Work, each row should answer `Reason`, `Trust`, and `Move` before the decision actions so the operator can decide whether to inspect, respond, recover, or clear it without reading the whole team setup page first
-- treat the Dashboard Active Work lane as an attention-first slice; use `Teams` for the full durable backlog
+- treat the Dashboard Active Work lane as an attention-first slice; its API projection includes operator decisions, recovery, and ready deliverables without counting ordinary queued/running progress as review; use `Teams` for the full durable backlog
 - use the Dashboard current-work lane for the quickest read of focused workflow, active task posture, latest output, and next review action
 - use the Dashboard `Working in` picker when you want to switch Soma between `Soma root` and a specific team's focused chat/output/proof lane without leaving the main workbench
 - when a focused team has retained outputs and no active work needs attention, use the current-work lane or Work panel for immediate open/open-folder access; when work is queued, running, degraded, or waiting on the operator, the lane keeps Work as the primary next action while preserving latest-output access
@@ -84,6 +84,8 @@ Ask Team is non-blocking. When you queue a follow-on ask, the row should close t
 `Clear from review` archives a durable work item so it leaves active review queues while retained outputs, proof refs, audit refs, and history remain inspectable. Use it for stale failed proposals or old test data after confirming nothing useful is waiting to be recovered.
 
 Use `Groups` when you want to review a collaboration lane without opening every team surface. The selected group includes a **Workflow Log** tab that combines the group brief, lifecycle recommendation, attached team-work rows, retained output cues, latest broadcast result, and bus/recovery signal into one operator-readable stream. It is workflow context, not a final deliverable folder and not raw NATS/bus logs. Group workspace tabs keep the selected group and panel in the URL, so an operator can return directly to `overview`, `workflow`, `outputs`, `message`, `settings`, or `create` during review handoff.
+
+Groups opens on **Current** so completed and archived history does not crowd active work. Open **Filters** to switch between **Current**, **Completed**, and **Archived**. Completed means an expired temporary collaboration that has not yet been archived; Archived means a cleared retained record. Completed history can be bounded by age. Route-selected records remain inspectable even when they sit outside the current filter.
 
 On phones and tablets, Groups shows one job at a time. Start in the group-record list, choose a group to open its workspace, and use **All groups** or browser Back to return to the list. The workspace sections remain a horizontal tab strip instead of compressing the record list and detail pane beside each other. Desktop keeps the list and selected workspace visible together.
 
