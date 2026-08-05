@@ -104,6 +104,13 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 		services.RunsManager,
 	)
 	wireAdminServices(ctx, mux, core, adminSrv, services)
+	if core.SharedDB != nil {
+		if err := server.StartTeamWorkRecoveryReconciler(ctx, adminSrv); err != nil {
+			log.Printf("WARN: Team work recovery reconciler disabled: %v", err)
+		} else {
+			log.Println("Team work recovery reconciler active.")
+		}
+	}
 	if core.SharedDB != nil && core.NC != nil && core.NC.IsConnected() {
 		if err := server.StartTeamWorkSignalProjection(ctx, adminSrv); err != nil {
 			log.Printf("WARN: Team work signal projection disabled: %v", err)

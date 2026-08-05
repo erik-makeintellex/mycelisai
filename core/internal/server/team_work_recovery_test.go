@@ -1,0 +1,172 @@
+package server
+
+import (
+	"database/sql"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/mycelis/core/internal/runs"
+	"github.com/mycelis/core/pkg/protocol"
+)
+
+type testTeamWorkPublisher struct {
+	connected  bool
+	publishErr error
+	flushErr   error
+}
+
+func (p testTeamWorkPublisher) IsConnected() bool            { return p.connected }
+func (p testTeamWorkPublisher) Publish(string, []byte) error { return p.publishErr }
+func (p testTeamWorkPublisher) Flush() error                 { return p.flushErr }
+
+func TestPublishTeamWorkAskSurfacesDispatchFailures(t *testing.T) {
+	tests := []struct {
+		name      string
+		publisher teamWorkPublisher
+		wantState string
+	}{
+		{name: "offline", publisher: testTeamWorkPublisher{}, wantState: "nats_offline"},
+		{name: "publish", publisher: testTeamWorkPublisher{connected: true, publishErr: errors.New("publish failed")}, wantState: "team_ask_publish_failed"},
+		{name: "flush", publisher: testTeamWorkPublisher{connected: true, flushErr: errors.New("flush failed")}, wantState: "team_ask_publish_unflushed"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			state, err := publishTeamWorkAsk(test.publisher, "swarm.team.test.internal.command", []byte("work"))
+			if err == nil {
+				t.Fatal("publishTeamWorkAsk error = nil, want failure")
+			}
+			if state != test.wantState {
+				t.Fatalf("state = %q, want %q", state, test.wantState)
+			}
+		})
+	}
+}
+
+func TestReconcileOneOverdueTeamWorkProjectsRecoverableState(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	workID := "11111111-1111-1111-1111-111111111111"
+	teamID := "delivery-team"
+	mock.MatchExpectationsInOrder(true)
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id::text, team_id.*recovery_deadline_at <= NOW").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "team_id"}).AddRow(workID, teamID))
+	mock.ExpectQuery("SELECT id::text, team_id.*FOR UPDATE").
+		WithArgs(teamID, workID).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			workID, teamID, "", "", "", "", "Build a retained package", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDeliverable), "", []byte(`null`), []byte(`["project package"]`), []byte(`["runtime proof"]`), []byte(`[]`),
+			"approved", string(protocol.TeamWorkStateRunning), []byte(`null`), false, "",
+			[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`[]`), now, now, "v1",
+		))
+	expectRecoveryStatusEvent(mock, teamID, workID, now)
+	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateDegraded, true, "team_work_recovery_deadline_exceeded")
+	expectRecoveryInteraction(mock, teamID, workID, now)
+	mock.ExpectCommit()
+
+	reconciled, err := s.reconcileOneOverdueTeamWork(t.Context())
+	if err != nil {
+		t.Fatalf("reconcile overdue work: %v", err)
+	}
+	if !reconciled {
+		t.Fatal("reconciled = false, want true")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestReconcileOneOverdueTeamWorkReturnsCleanlyWhenQueueEmpty(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id::text, team_id.*recovery_deadline_at <= NOW").
+		WillReturnError(sql.ErrNoRows)
+	mock.ExpectCommit()
+
+	reconciled, err := s.reconcileOneOverdueTeamWork(t.Context())
+	if err != nil {
+		t.Fatalf("reconcile empty queue: %v", err)
+	}
+	if reconciled {
+		t.Fatal("reconciled = true, want false")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestMarkRunDegradedWhenSettledWaitsForActiveSibling(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	runID := "22222222-2222-2222-2222-222222222222"
+	mock.ExpectBegin()
+	tx, err := s.getDB().BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mock.ExpectQuery(`COUNT\(\*\) FILTER.*FROM team_work_items`).
+		WithArgs(runID).
+		WillReturnRows(sqlmock.NewRows([]string{"unresolved", "degraded"}).AddRow(1, 1))
+	if err := s.markRunDegradedWhenSettledTx(t.Context(), tx, protocol.TeamWorkItem{RunID: runID}); err != nil {
+		t.Fatal(err)
+	}
+	mock.ExpectRollback()
+	_ = tx.Rollback()
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestMarkRunDegradedWhenSettledTerminatesMultiItemRun(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	runID := "22222222-2222-2222-2222-222222222222"
+	item := protocol.TeamWorkItem{RunID: runID, IntentProofID: "33333333-3333-3333-3333-333333333333", TeamID: "delivery-team"}
+	mock.ExpectBegin()
+	tx, err := s.getDB().BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mock.ExpectQuery(`COUNT\(\*\) FILTER.*FROM team_work_items`).
+		WithArgs(runID).
+		WillReturnRows(sqlmock.NewRows([]string{"unresolved", "degraded"}).AddRow(0, 1))
+	mock.ExpectExec(`UPDATE mission_runs.*status=\$1`).
+		WithArgs(runs.StatusDegraded, runID, runs.StatusCompleted, runs.StatusFailed).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("INSERT INTO mission_events").
+		WithArgs(sqlmock.AnyArg(), runID, string(protocol.EventMissionDegraded), string(protocol.SeverityWarn), item.TeamID, sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	if err := s.markRunDegradedWhenSettledTx(t.Context(), tx, item); err != nil {
+		t.Fatal(err)
+	}
+	mock.ExpectRollback()
+	_ = tx.Rollback()
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func expectRecoveryStatusEvent(mock sqlmock.Sqlmock, teamID, workID string, now time.Time) {
+	mock.ExpectQuery("INSERT INTO team_status_events").
+		WithArgs(
+			sqlmock.AnyArg(), teamID, workID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			string(protocol.TeamWorkStateDegraded), "Team work needs recovery", sqlmock.AnyArg(), "operator_attention",
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindSystem),
+			"team-work.recovery-reconciler", string(protocol.PayloadKindError), sqlmock.AnyArg(), "v1",
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
+}
+
+func expectRecoveryInteraction(mock sqlmock.Sqlmock, teamID, workID string, now time.Time) {
+	mock.ExpectQuery("INSERT INTO team_interactions").
+		WithArgs(
+			sqlmock.AnyArg(), teamID, workID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			string(protocol.SourceKindSystem), "team-work.recovery-reconciler", "Soma", "degraded", sqlmock.AnyArg(),
+			string(protocol.PayloadKindError), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
+}
