@@ -4,7 +4,6 @@ from pathlib import Path
 WORKTREE_REVIEW_TARGETS = (
     "README.md",
     ".state/V8_DEV_STATE.md",
-    "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
     "docs/architecture-library/MYCELIS_CANONICAL_PRD.md",
     "docs/LOCAL_DEV_WORKFLOW.md",
     "docs/architecture/OPERATIONS.md",

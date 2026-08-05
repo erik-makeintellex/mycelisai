@@ -430,12 +430,10 @@ def test_release_proof_sequence_keeps_wsl_validate_before_browser_certification(
             (
                 V8_DEV_STATE,
                 [
-                    "guarded `uv run inv wsl.validate --lane=release` path from the refreshed `mycelis-root` deployment checkout",
-                    "maps `--lane=service` and `--lane=release` to `ci.release-preflight --lane=runtime --no-e2e`",
-                    "keep the focused `/runs` and guided retry/recovery browser proofs green, refresh the WSL proof checkout from the committed slice, run `wsl.validate`, and then rerun broader headed certification from committed state",
-                    "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting the new browser-gap evidence as authoritative",
-                    "live MCP workflow correlation is now green from the refreshed WSL proof checkout",
-                    "run `wsl.validate` from the refreshed proof checkout, keep the new `/runs` and guided Soma retry/recovery browser workflow proofs green, then rerun the broader headed Chromium certification pass from committed state",
+                    "guarded `uv run inv wsl.validate --lane=release` path from the refreshed WSL proof checkout",
+                    "Run broader headed browser certification from committed state",
+                    "clean release preflight\n-> refreshed WSL validation\n-> Compose and Kubernetes deployment proof",
+                    "post-promotion health and browser smoke",
                 ],
             ),
     ]

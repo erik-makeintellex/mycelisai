@@ -55,11 +55,11 @@ These are the active contributor support surfaces for changing or reviewing the 
 
 ## Architecture Contracts
 
-The active architecture library is intentionally singular. It is not a holding area for old version notes, doctrine fragments, or temporary execution plans.
+Product architecture has one active document and no archive inside the docs tree:
 
-- **Architecture Docs Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **Mycelis Canonical PRD**: `./architecture-library/MYCELIS_CANONICAL_PRD.md`
-- **Worker Library Source Map**: `./architecture-library/WORKER_LIBRARY_SOURCE_MAP.md`
+
+Backend, Frontend, Operations, API, Testing, and user guides are scoped implementation or operating contracts. They support the PRD without becoming additional product doctrine.
 
 ## Testing And Release
 

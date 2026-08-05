@@ -44,7 +44,6 @@ var Manifest = []Section{
 			{Slug: "readme", Label: "Repository Overview", Path: "README.md", Description: "Primary development and command contract"},
 			{Slug: "testing", Label: "Testing", Path: "docs/TESTING.md", Description: "Unit, integration, browser, and release validation guidance"},
 			{Slug: "api-reference", Label: "API Reference", Path: "docs/API_REFERENCE.md", Description: "Endpoint table with request and response shapes"},
-			{Slug: "architecture-index", Label: "Architecture Docs Index", Path: "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md", Description: "Curated active architecture set"},
 			{Slug: "mycelis-canonical-prd", Label: "Mycelis Canonical PRD", Path: "docs/architecture-library/MYCELIS_CANONICAL_PRD.md", Description: "Single source for product thesis, UX, runtime architecture, governance, outcomes, capabilities, recovery, MVP scope, P0 delivery, and release gates"},
 		},
 	},

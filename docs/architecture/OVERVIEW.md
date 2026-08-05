@@ -65,7 +65,6 @@ Governance is runtime infrastructure:
 
 Use these documents for detailed authority:
 
-- [Architecture Library Index](../architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
 - [Mycelis Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md)
 - [Backend](BACKEND.md)
 - [Frontend](FRONTEND.md)

@@ -216,7 +216,6 @@ def test_worktree_triage_expected_targets_cover_task_contract_docs(capsys):
     misc.worktree_triage.body(ctx)
 
     output = capsys.readouterr().out
-    assert "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md" in output
     assert "docs/architecture-library/MYCELIS_CANONICAL_PRD.md" in output
     assert "docs/LOCAL_DEV_WORKFLOW.md" in output
     assert "docs/architecture/OPERATIONS.md" in output
