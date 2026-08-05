@@ -60,7 +60,7 @@ Before changing runtime, API, operator workflow, governance, testing, or task be
 ## What Mycelis Is
 In operator language, Mycelis lets someone ask Soma for an outcome, see what happened, open the durable result, recover when trust is broken, and return later knowing what is active, delivered, incomplete, or needs attention.
 
-In architecture language, Mycelis is built around instantiated organizations as runtime truth, a Soma operational identity layer, governed execution, memory/continuity contracts, durable outputs, recoverable runs, and auditable automation.
+In architecture language, Mycelis is built around user-owned Workspaces and Outcomes, a Soma operational identity layer, governed execution, memory/continuity contracts, durable deliverables, recoverable runs, and auditable automation.
 
 ## Active Delivery Target (V8.3 Embodiment)
 
@@ -92,19 +92,19 @@ Default surfaces should read as product workflows, not raw system internals:
 - Dashboard and organization workspaces share the same Soma operating surface.
 - Intent suggestions live inside Soma, not as competing panels or separate front doors; they should frame outcome, output shape, proof, and next action rather than raw prompts.
 - Meaningful actions must show a causal summary: understood intent, coordination, outputs, state changes, and next step.
-- AI Organizations are governed work contexts.
+- Workspaces are governed user contexts; Outcomes hold deliverables, active work, proof, recovery, history, and continuity.
 - Teams and groups are visible when they help the operator review or steer work.
 - Advanced controls expose runtime depth, MCP/resources, deep memory, groups, runs, settings, auth, and docs without polluting first-run or default use; long topology surfaces should use focused menu/detail or list/detail panes rather than primary-page sprawl.
 
 Use the [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md) for screen/API expectations and browser-proof standards.
 
 Default Operator Surface:
-- the default UX must stay simple and intent-first while making the outcome owner path obvious
-- Soma, AI Organizations, teams/groups, activity, memory, resources, and settings are the operator-visible product surfaces
+- the default UX must stay simple and intent-first while making Workspace and Outcome ownership obvious
+- Soma, Outcomes, deliverables, active work, proof, recovery, and focused Resources/Groups access are the normal operator surfaces
 
 Advanced Architecture / Runtime Surface:
 - the advanced architecture/runtime surface is now defined as a contract, but it is not fully implemented yet
-- the advanced architecture/runtime surface must stay separate, make inheritance legible, and make config origin legible
+- Admin tools expose Activity/Runs, deep Memory, System, Settings, and explicit Inspect detail; they must stay separate, make inheritance legible, and make config origin legible
 
 source-of-truth layers remain separate:
 - guided UI settings
