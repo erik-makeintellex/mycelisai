@@ -45,6 +45,12 @@ type teamWorkAskResult struct {
 	DispatchState string                   `json:"dispatch_state,omitempty"`
 }
 
+type teamWorkPublisher interface {
+	IsConnected() bool
+	Publish(string, []byte) error
+	Flush() error
+}
+
 // HandleTeamWorkAsk submits one bounded request to a team and records either
 // output or degradation as durable Active Work state.
 func (s *AdminServer) HandleTeamWorkAsk(w http.ResponseWriter, r *http.Request) {
@@ -170,17 +176,24 @@ func teamWorkAskPayload(req teamWorkAskRequest) ([]byte, error) {
 }
 
 func (s *AdminServer) dispatchTeamWorkAsk(item protocol.TeamWorkItem, req teamWorkAskRequest, subject string) (string, error) {
-	if s.NC == nil || !s.NC.IsConnected() {
+	if s.NC == nil {
 		return "nats_offline", fmt.Errorf("NATS connection offline; the team ask was recorded but not sent.")
 	}
 	payload, err := teamWorkAskCommandEnvelope(item, req)
 	if err != nil {
 		return "team_ask_payload_invalid", fmt.Errorf("team ask command payload could not be prepared: %w", err)
 	}
-	if err := s.NC.Publish(subject, payload); err != nil {
+	return publishTeamWorkAsk(s.NC, subject, payload)
+}
+
+func publishTeamWorkAsk(publisher teamWorkPublisher, subject string, payload []byte) (string, error) {
+	if publisher == nil || !publisher.IsConnected() {
+		return "nats_offline", fmt.Errorf("NATS connection offline; the team ask was recorded but not sent.")
+	}
+	if err := publisher.Publish(subject, payload); err != nil {
 		return "team_ask_publish_failed", fmt.Errorf("team ask command could not be published: %w", err)
 	}
-	if err := s.NC.Flush(); err != nil {
+	if err := publisher.Flush(); err != nil {
 		return "team_ask_publish_unflushed", fmt.Errorf("team ask command could not be flushed to NATS: %w", err)
 	}
 	return "published", nil

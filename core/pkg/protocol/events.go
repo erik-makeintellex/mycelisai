@@ -6,13 +6,14 @@ import (
 )
 
 // EventType classifies a mission event in the persistent audit trail.
-// All 17 event types are defined here as constants to prevent typos.
+// Event types are defined here as constants to prevent typos.
 type EventType string
 
 const (
 	// Mission lifecycle
 	EventMissionStarted   EventType = "mission.started"
 	EventMissionCompleted EventType = "mission.completed"
+	EventMissionDegraded  EventType = "mission.degraded"
 	EventMissionFailed    EventType = "mission.failed"
 	EventMissionCancelled EventType = "mission.cancelled"
 

@@ -21,6 +21,7 @@ const (
 	StatusPending   RunStatus = "pending"
 	StatusRunning   RunStatus = "running"
 	StatusCompleted RunStatus = "completed"
+	StatusDegraded  RunStatus = "degraded"
 	StatusFailed    RunStatus = "failed"
 )
 
@@ -103,7 +104,7 @@ func (m *Manager) UpdateRunStatus(ctx context.Context, runID string, status stri
 
 	var err error
 	switch status {
-	case StatusCompleted, StatusFailed:
+	case StatusCompleted, StatusDegraded, StatusFailed:
 		_, err = m.db.ExecContext(ctx, `
 			UPDATE mission_runs SET status = $1, completed_at = NOW() WHERE id = $2
 		`, status, runID)

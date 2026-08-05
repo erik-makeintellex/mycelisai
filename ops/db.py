@@ -6,7 +6,6 @@ from invoke import task, Collection
 from .config import CORE_DIR, ROOT_DIR
 
 MIGRATIONS_DIR = CORE_DIR / "migrations"
-
 SCHEMA_COMPATIBILITY_CHECKS = (
     (
         "nodes.type column",
@@ -58,6 +57,7 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("team_work_items table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_work_items';"),
     ("team_work_items work_intent column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'team_work_items' AND column_name = 'work_intent' AND data_type = 'jsonb';"),
     ("team_work_items execution_mode column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'team_work_items' AND column_name = 'execution_mode' AND data_type = 'text';"),
+    ("team_work_items recovery_deadline_at column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'team_work_items' AND column_name = 'recovery_deadline_at' AND data_type = 'timestamp with time zone';"),
     ("team_interactions table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_interactions';"),
     ("team_status_events table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_status_events';"),
     ("team_status_events work_intent column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'team_status_events' AND column_name = 'work_intent' AND data_type = 'jsonb';"),
@@ -75,7 +75,7 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("agent_catalogue profile_key column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'agent_catalogue' AND column_name = 'profile_key';"),
 )
 
-TARGETED_SCHEMA_MIGRATIONS = {"agent_catalogue profile_key column": "056_agent_profile_library.up.sql"}
+TARGETED_SCHEMA_MIGRATIONS = {"agent_catalogue profile_key column": "056_agent_profile_library.up.sql", "team_work_items recovery_deadline_at column": "057_team_work_recovery_deadline.up.sql"}
 def _load_env():
     try:
         from dotenv import load_dotenv

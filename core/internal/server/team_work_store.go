@@ -96,12 +96,14 @@ func (s *AdminServer) insertTeamWorkItemExec(ctx context.Context, exec teamWorkS
 			id, tenant_id, team_id, run_id, intent_proof_id, contract_id, proof_id,
 			objective, scope, owner, execution_shape, execution_mode, work_intent, expected_outputs, expected_proof,
 			capability_requirements, governance_posture, state, needs_operator,
-			degradation_state, recovery_options, output_refs, proof_refs, audit_refs, version
+			degradation_state, recovery_options, output_refs, proof_refs, audit_refs, version,
+			recovery_deadline_at
 		) VALUES (
 			$1, 'default', $2, $3, $4, NULLIF($5,''), NULLIF($6,''),
 			$7, $8, $9, $10, $11, $12, $13, $14,
 			$15, $16, $17, $18,
-			$19, $20, $21, $22, $23, $24
+			$19, $20, $21, $22, $23, $24,
+			CASE WHEN $17 IN ('queued','running') THEN NOW() + INTERVAL '15 minutes' ELSE NULL END
 		)
 		RETURNING created_at, updated_at`,
 		item.WorkItemID, item.TeamID, nullableUUID(item.RunID), nullableUUID(item.IntentProofID),
@@ -200,6 +202,10 @@ func (s *AdminServer) updateTeamWorkItemLastEventExec(ctx context.Context, exec 
 		    output_refs=$7,
 		    proof_refs=$8,
 		    audit_refs=$9,
+		    recovery_deadline_at=CASE
+		        WHEN $2 IN ('output_ready','degraded','needs_operator','archived') THEN NULL
+		        ELSE recovery_deadline_at
+		    END,
 		    updated_at=NOW()
 		WHERE id=$1 AND tenant_id='default'`,
 		item.WorkItemID, string(item.State), eventJSON, item.NeedsOperator,

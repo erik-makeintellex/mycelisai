@@ -273,6 +273,11 @@ def test_targeted_worker_profile_migration_applies_when_column_is_missing(monkey
     monkeypatch.setattr(db_tasks, "_migration_files", lambda: [migration])
     monkeypatch.setattr(
         db_tasks,
+        "TARGETED_SCHEMA_MIGRATIONS",
+        {"agent_catalogue profile_key column": migration.name},
+    )
+    monkeypatch.setattr(
+        db_tasks,
         "_run_psql",
         lambda sql=None, file=None, dbname=None: SimpleNamespace(returncode=0, stdout="", stderr=""),
     )
