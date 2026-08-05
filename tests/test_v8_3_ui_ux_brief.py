@@ -5,7 +5,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CANONICAL_PRD = ROOT / "docs" / "architecture-library" / "MYCELIS_CANONICAL_PRD.md"
-ARCH_INDEX = ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md"
 DOCS_HOME = ROOT / "docs" / "README.md"
 DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
 README = ROOT / "README.md"
@@ -17,7 +16,7 @@ def test_canonical_prd_layers_threaded_workspace_mandate():
 
     required = [
         "The first authenticated surface is the Soma workspace.",
-        "compact Quick Actions shelf",
+        "compact Start with shelf",
         "large Talk to Soma thread as the primary canvas",
         "header Outcomes button that opens Outcome Vault on demand",
         "No raw backend stack traces should reach the default UI.",
@@ -32,7 +31,6 @@ def test_canonical_prd_layers_threaded_workspace_mandate():
 
 def test_canonical_prd_is_registered_in_active_docs():
     references = {
-        ARCH_INDEX: "MYCELIS_CANONICAL_PRD.md",
         DOCS_HOME: "MYCELIS_CANONICAL_PRD.md",
         DOCS_MANIFEST: "mycelis-canonical-prd",
         README: "MYCELIS_CANONICAL_PRD.md",

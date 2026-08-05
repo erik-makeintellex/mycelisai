@@ -38,4 +38,4 @@ tests/test_k8s_tasks.py=358
 tests/test_interface_e2e_tasks.py=539
 tests/test_interface_tasks.py=485
 tests/test_lifecycle_tasks.py=568
-tests/test_runtime_deploy_contract_text.py=507
+tests/test_runtime_deploy_contract_text.py=505

@@ -131,7 +131,6 @@ def test_search_fallback_and_provenance_docs_match_runtime_shape():
 
 
 def test_mycelis_search_contract_lives_in_user_api_and_capability_docs():
-    index = _read("docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md")
     docs_home = _read("docs/README.md")
     manifest = _read("interface/lib/docsManifest.ts")
     resources_doc = _read("docs/user/resources.md")
@@ -139,7 +138,6 @@ def test_mycelis_search_contract_lives_in_user_api_and_capability_docs():
     api_doc = _read("docs/API_REFERENCE.md")
     capability_doc = _read("docs/architecture-library/MYCELIS_CANONICAL_PRD.md")
 
-    assert "V8 Mycelis Search Capability Delivery Plan" not in index
     assert "V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md" not in docs_home
     assert "V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md" not in manifest
 

@@ -30,16 +30,15 @@ Canonical ownership:
 ## Fresh Agent Start Here
 Review these before planning or editing:
 1. [AGENTS.md](AGENTS.md)
-2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
+2. [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md)
 3. [V8 Development State](.state/V8_DEV_STATE.md)
-4. [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md)
-5. [Operations](docs/architecture/OPERATIONS.md)
-6. [Testing](docs/TESTING.md)
-7. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
-8. [Docs Manifest](interface/lib/docsManifest.ts)
+4. [Operations](docs/architecture/OPERATIONS.md)
+5. [Testing](docs/TESTING.md)
+6. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
+7. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
-- The canonical PRD owns current release-candidate embodiment. Historical V7/V8.2 split docs were removed from active documentation; use Git history only when archaeology is necessary.
+- The canonical PRD owns current release-candidate embodiment. Do not create a product-architecture archive or parallel doctrine inside the active documentation tree.
 - `.state/V8_DEV_STATE.md` is the implementation truth for what is actually complete; use its active snapshot first and treat dated boards as evidence unless reactivated.
 - Keep user-facing docs and engineering docs cross-linked but distinct.
 
@@ -50,7 +49,7 @@ For product use rather than implementation, start with [Docs Navigation](docs/RE
 For implementation, review in this order:
 
 1. [AGENTS.md](AGENTS.md)
-2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
+2. [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md)
 3. [V8 Development State](.state/V8_DEV_STATE.md)
 4. [Testing](docs/TESTING.md)
 5. [Operations](docs/architecture/OPERATIONS.md)

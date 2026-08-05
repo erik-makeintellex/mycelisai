@@ -3,8 +3,8 @@
  *
  * Curated registry of documentation files served by the in-app doc browser.
  * This surface is intentionally small: user guides, repo operating docs, and
- * the active architecture contracts only. Stale planning notes and superseded
- * version docs do not belong in the operator-facing documentation surface.
+ * the single product-architecture authority plus scoped implementation contracts.
+ * Planning notes and superseded doctrine do not belong in this surface.
  */
 
 export interface DocEntry {
@@ -67,11 +67,9 @@ export const DOC_MANIFEST: DocSection[] = [
         ],
     },
     {
-        section: "Architecture Review",
+        section: "Architecture",
         docs: [
-            { slug: "architecture-index", label: "Architecture Docs Index", path: "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md", description: "Curated active architecture set; stale planning notes are excluded" },
             { slug: "mycelis-canonical-prd", label: "Mycelis Canonical PRD", path: "docs/architecture-library/MYCELIS_CANONICAL_PRD.md", description: "Single source for product thesis, UX, runtime architecture, governance, outcomes, capabilities, recovery, MVP scope, P0 delivery, and release gates" },
-            { slug: "worker-library-source-map", label: "Worker Library Source Map", path: "docs/architecture-library/WORKER_LIBRARY_SOURCE_MAP.md", description: "Central and Hermes-compatible execution backend contract, source map, security model, and phase plan" },
             { slug: "arch-overview", label: "Architecture Overview", path: "docs/architecture/OVERVIEW.md", description: "Current implementation overview aligned to the canonical PRD" },
             { slug: "arch-backend", label: "Backend", path: "docs/architecture/BACKEND.md", description: "Go packages, APIs, DB schema, NATS, and execution pipelines" },
             { slug: "arch-frontend", label: "Frontend", path: "docs/architecture/FRONTEND.md", description: "Routes, components, Zustand, and design system" },
