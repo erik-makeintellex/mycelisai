@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Boxes, FileText, Radio, ShieldCheck, Sparkles, X } from "lucide-react";
 import {
@@ -65,6 +65,8 @@ export function SomaWorkspaceFrame({
 }) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<PanelKey>("work");
+  const sideRailRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const sideRailId = "soma-workbench-panel";
   const panels = [
     {
@@ -130,6 +132,52 @@ export function SomaWorkspaceFrame({
     ? `${recoveryReviewCount} recovery ${recoveryReviewCount === 1 ? "item" : "items"} also ${recoveryReviewCount === 1 ? "needs" : "need"} review.`
     : null;
 
+  useEffect(() => {
+    if (!isPanelOpen) return;
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const closeButton = sideRailRef.current?.querySelector<HTMLButtonElement>(
+      'button[aria-label="Close work panel"]',
+    );
+    closeButton?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsPanelOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(sideRailRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? []);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        sideRailRef.current?.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !sideRailRef.current?.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !sideRailRef.current?.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [isPanelOpen]);
+
   const togglePanel = () => {
     setIsPanelOpen((open) => {
       if (!open && primaryReviewPanel) {
@@ -173,10 +221,14 @@ export function SomaWorkspaceFrame({
       {hasPanels ? (
         <>
           <div
+            ref={sideRailRef}
             id={sideRailId}
+            role={isPanelOpen ? "dialog" : undefined}
+            aria-modal={isPanelOpen ? "true" : undefined}
+            aria-label={isFocusedWorkReview ? "Review work" : "Review output"}
             aria-hidden={!isPanelOpen}
             className={`fixed bottom-3 left-[68px] right-3 top-3 z-40 flex min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3 shadow-2xl shadow-black/20 transition duration-200 sm:left-auto sm:w-[min(calc(100vw-1.5rem),520px)] sm:bg-cortex-surface/95 sm:backdrop-blur ${
-              isPanelOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
+              isPanelOpen ? "visible translate-x-0 opacity-100" : "invisible pointer-events-none translate-x-full opacity-0"
             }`}
             data-testid="soma-workbench-side-rail"
             tabIndex={isPanelOpen ? 0 : -1}

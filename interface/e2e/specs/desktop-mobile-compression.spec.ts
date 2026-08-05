@@ -54,10 +54,14 @@ test.describe("Desktop/mobile compression proof", () => {
     await expect(digest.getByText("Coin Runner package")).toBeVisible();
     await expect(digest.getByRole("button", { name: /Open local folder/i })).toBeVisible();
     await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveAttribute("aria-expanded", "false");
-    await page.getByTestId("soma-workbench-panel-toggle").click();
+    const reviewToggle = page.getByTestId("soma-workbench-panel-toggle");
+    await reviewToggle.click();
     const panel = page.getByTestId("soma-workbench-side-rail");
     await expect(panel).toHaveAttribute("aria-hidden", "false");
+    await expect(panel).toHaveAttribute("role", "dialog");
+    await expect(panel).toHaveAttribute("aria-modal", "true");
     await expect(panel).toHaveCSS("opacity", "1");
+    await expect(panel.getByRole("button", { name: "Close work panel" })).toBeFocused();
     await expect(panel.getByTestId("project-package-actions")).toBeVisible();
     const panelWidths = await panel.evaluate((node) => ({
       clientWidth: node.clientWidth,
@@ -69,6 +73,15 @@ test.describe("Desktop/mobile compression proof", () => {
       fullPage: true,
     });
     await expectNoHorizontalOverflow(page);
+
+    await page.keyboard.press("Escape");
+    await expect(panel).toHaveAttribute("aria-hidden", "true");
+    await expect(panel).toHaveCSS("visibility", "hidden");
+    await expect(reviewToggle).toBeFocused();
+
+    const vaultToggle = page.getByRole("button", { name: /Open Outcome Vault/i });
+    await vaultToggle.click();
+    await expect(page.getByRole("dialog", { name: "Outcome Vault" })).toBeVisible();
   });
 
   test("Dashboard output review remains readable on a compact viewport", async ({ page }, testInfo) => {

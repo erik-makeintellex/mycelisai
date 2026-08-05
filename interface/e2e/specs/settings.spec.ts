@@ -172,4 +172,35 @@ test.describe('Settings Page (/settings)', () => {
         const body = await page.content();
         expect(body).not.toContain('bg-white');
     });
+
+    test('mobile settings is a readable single column without nested horizontal scrolling', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.reload({ waitUntil: 'domcontentloaded' });
+
+        const settingsPage = page.getByTestId('settings-page');
+        const tablist = page.getByRole('tablist', { name: 'Settings sections' });
+        await expect(settingsPage).toBeVisible();
+        await expect(tablist).toBeVisible();
+        await expect(page.getByRole('tab', { name: 'Profile', exact: true })).toBeVisible();
+        await expect(page.getByRole('tab', { name: 'Mission Profiles' })).toBeVisible();
+        await expect(page.getByRole('tab', { name: 'People & Access' })).toBeVisible();
+
+        const overflow = await settingsPage.evaluate((root) => {
+            const candidates = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+            return candidates
+                .map((element) => {
+                    const style = window.getComputedStyle(element);
+                    return {
+                        name: element.getAttribute('data-testid') || element.getAttribute('aria-label') || element.tagName,
+                        excess: element.scrollWidth - element.clientWidth,
+                        overflowX: style.overflowX,
+                    };
+                })
+                .filter((item) => item.excess > 4 && (item.overflowX === 'auto' || item.overflowX === 'scroll'));
+        });
+
+        expect(overflow).toEqual([]);
+        expect(await settingsPage.evaluate((root) => root.scrollWidth - root.clientWidth)).toBeLessThanOrEqual(1);
+        expect(await tablist.evaluate((root) => root.scrollWidth - root.clientWidth)).toBeLessThanOrEqual(1);
+    });
 });

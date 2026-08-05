@@ -244,48 +244,17 @@ Use focused component and browser proof for the touched surface when the global 
 
 ## 10. Development Strategy (Frontend-Facing)
 
-This strategy aligns GUI work with active architecture slices and avoids speculative rewrites.
+The active order and status live in `.state/V8_DEV_STATE.md`; this document defines stable frontend boundaries rather than a second scoreboard. Current work should extend the Workspace/Outcome operating model, keep machine detail behind deliberate inspection, and avoid speculative surface replacement.
 
-### 10.1 Stream A - Slice 2 UX stabilization (`ACTIVE`)
+Frontend slices should:
+- preserve Soma as the default conversational workspace and Outcomes as durable user-owned work
+- use progressive disclosure for proof, recovery, capabilities, and runtime detail
+- retain one primary scroll owner with bounded local scrolling only for content such as tables, code, logs, or record lists
+- preserve keyboard, URL, refresh, Back, and cross-device continuity
+- keep API usage aligned with backend ownership and normalized terminal states
+- extract oversized logic only in bounded, behavior-preserving slices
 
-Scope:
-- simplify default Workspace density while preserving diagnostics via progressive disclosure
-- lock Soma direct-first chat behavior for routine prompts
-- align reroute/recovery copy and interactions across `MissionControlChat`, `CouncilCallErrorCard`, and `DegradedModeBanner`
-
-Proof targets:
-- focused Vitest for Team Lead action, blocker, and degraded-state components
-- Playwright MVP route/tab coverage (`navigation`, `layout`, `missions`, `automations`, `settings`, `teams`, `proposals`, `accessibility`)
-
-### 10.2 Stream B - Contract-safe store/API cleanup (`ACTIVE`)
-
-Scope:
-- split hot-path store logic into bounded modules without changing API contracts
-- keep MCP tool registry surfaces aligned to the curated-library install contract and disabled raw-admin boundary
-- keep API endpoint usage aligned with backend route ownership
-
-Proof targets: focused Vitest for touched store/API slices; `uv run inv interface.test` and `cd interface && npx vitest run --reporter=dot` when the global harness is healthy; `uv run inv interface.build`.
-
-### 10.3 Stream C - Slice 4 complexity reduction (`REQUIRED`)
-
-Scope:
-- extract high-risk logic from oversized files while preserving existing behavior and telemetry semantics
-- prioritize no-regression extraction over feature addition
-
-Proof targets:
-- `uv run inv quality.max-lines --limit 330`
-- `uv run inv ci.baseline`
-
-### 10.4 Stream D - Slice 7 team workspace contract (`BLOCKED -> NEXT once prerequisites land`)
-
-Scope once unblocked:
-- deliver created-team workspace tabs and communication filters
-- add explicit operator controls for interject/reroute/pause-resume where valid
-- map team command + `signal.status`/`signal.result` outputs to inspectable UI state
-
-Proof targets:
-- route-level Vitest coverage for communications inspector
-- integration and product-flow tests for team command/result lifecycle
+Proof targets are focused Vitest for changed states, TypeScript and production build gates, `uv run inv quality.max-lines --limit 330`, and headed Playwright for every changed operator journey. Promotion still follows the feature, integrated `dev`, and release-candidate gates in `docs/TESTING.md`.
 
 ---
 

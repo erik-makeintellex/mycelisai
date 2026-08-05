@@ -30,7 +30,8 @@ export function MarkdownDocRenderer({
   onSelectDoc: (entry: DocEntry) => void;
 }) {
   return (
-    <ReactMarkdown
+    <div className="min-w-0 max-w-full overflow-x-hidden [overflow-wrap:anywhere]">
+      <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
         h1: ({ children }) => (
@@ -79,12 +80,12 @@ export function MarkdownDocRenderer({
               {children}
             </code>
           ) : (
-            <code className="text-[11px] font-mono text-cortex-primary bg-cortex-primary/10 px-1 py-0.5 rounded">
+            <code className="break-words rounded bg-cortex-primary/10 px-1 py-0.5 text-[11px] font-mono text-cortex-primary">
               {children}
             </code>
           ),
         pre: ({ children }) => (
-          <pre className="bg-cortex-bg border border-cortex-border rounded p-3 overflow-x-auto mb-3 text-[11px] font-mono text-cortex-text-main leading-relaxed">
+          <pre className="mb-3 max-w-full overflow-x-auto rounded border border-cortex-border bg-cortex-bg p-3 text-[11px] font-mono leading-relaxed text-cortex-text-main">
             {children}
           </pre>
         ),
@@ -122,8 +123,8 @@ export function MarkdownDocRenderer({
           );
         },
         table: ({ children }) => (
-          <div className="overflow-x-auto mb-4">
-            <table className="w-full text-[11px] font-mono border-collapse border border-cortex-border">
+          <div data-testid="docs-table-scroll" className="mb-4 max-w-full overflow-x-auto">
+            <table className="w-full min-w-max border-collapse border border-cortex-border text-[11px] font-mono">
               {children}
             </table>
           </div>
@@ -150,6 +151,7 @@ export function MarkdownDocRenderer({
       }}
     >
       {content}
-    </ReactMarkdown>
+      </ReactMarkdown>
+    </div>
   );
 }
