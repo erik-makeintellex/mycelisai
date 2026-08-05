@@ -88,6 +88,85 @@ func TestHandleListTeamWork_ExcludesArchivedWhenRequested(t *testing.T) {
 	}
 }
 
+func TestHandleListTeamWork_DefaultViewPreservesArchivedRows(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	mock.ExpectQuery("WHERE tenant_id='default' AND team_id=\\$1[[:space:]]+ORDER BY updated_at DESC").
+		WithArgs("research-team", 20).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			"11111111-1111-1111-1111-111111111111", "research-team", "", "", "", "", "Archived work", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDelegatedWork), "", []byte(`null`), []byte(`[]`), []byte(`[]`), []byte(`[]`),
+			"auto_approved", string(protocol.TeamWorkStateArchived), []byte(`null`), false, "",
+			[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`[]`), now, now, "v1",
+		))
+
+	mux := setupMux(t, "GET /api/v1/teams/{id}/work", s.HandleListTeamWork)
+	rr := doRequest(t, mux, http.MethodGet, "/api/v1/teams/research-team/work", "")
+
+	assertStatus(t, rr, http.StatusOK)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	items := resp["data"].([]any)
+	if len(items) != 1 || items[0].(map[string]any)["state"] != string(protocol.TeamWorkStateArchived) {
+		t.Fatalf("default view did not preserve archived work: %v", items)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestHandleListTeamWork_AttentionViewFiltersOperatorWork(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	mock.ExpectQuery("state <> 'archived'.*needs_operator = TRUE OR state IN").
+		WithArgs("research-team", 10).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			"11111111-1111-1111-1111-111111111111", "research-team", "", "", "", "", "Review the retained output", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDelegatedWork), "", []byte(`null`), []byte(`["review"]`), []byte(`["proof"]`), []byte(`[]`),
+			"auto_approved", string(protocol.TeamWorkStateOutputReady), []byte(`null`), false, "",
+			[]byte(`[]`), []byte(`[]`), []byte(`["proof-1"]`), []byte(`["audit-1"]`), now, now, "v1",
+		).AddRow(
+			"22222222-2222-2222-2222-222222222222", "research-team", "", "", "", "", "Operator intervention required", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDelegatedWork), "", []byte(`null`), []byte(`["decision"]`), []byte(`["proof"]`), []byte(`[]`),
+			"auto_approved", string(protocol.TeamWorkStateRunning), []byte(`null`), true, "waiting_for_operator",
+			[]byte(`["retry"]`), []byte(`[]`), []byte(`[]`), []byte(`["audit-2"]`), now, now, "v1",
+		))
+
+	mux := setupMux(t, "GET /api/v1/teams/{id}/work", s.HandleListTeamWork)
+	rr := doRequest(t, mux, http.MethodGet, "/api/v1/teams/research-team/work?view=attention&limit=10", "")
+
+	assertStatus(t, rr, http.StatusOK)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	items := resp["data"].([]any)
+	if len(items) != 2 {
+		t.Fatalf("expected 2 attention items, got %d", len(items))
+	}
+	if items[0].(map[string]any)["state"] != string(protocol.TeamWorkStateOutputReady) {
+		t.Fatalf("first state = %v", items[0].(map[string]any)["state"])
+	}
+	if items[1].(map[string]any)["needs_operator"] != true {
+		t.Fatalf("second needs_operator = %v", items[1].(map[string]any)["needs_operator"])
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestHandleListTeamWork_RejectsUnknownView(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	mux := setupMux(t, "GET /api/v1/teams/{id}/work", s.HandleListTeamWork)
+	rr := doRequest(t, mux, http.MethodGet, "/api/v1/teams/research-team/work?view=history", "")
+
+	assertStatus(t, rr, http.StatusBadRequest)
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unexpected database query: %v", err)
+	}
+}
+
 func TestHandleCreateTeamInteraction_PersistsDurableSourceContract(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)

@@ -141,26 +141,26 @@ export function GroupRail({
           </button>
         </div>
       ) : null}
-      {hiddenSelectedGroup ? (
-        <div className="mt-3 rounded-xl border border-cortex-primary/25 bg-cortex-primary/10 p-2">
-          <p className="px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cortex-primary">
-            Selected outside filters
-          </p>
-          <GroupRecordButton
-            group={hiddenSelectedGroup}
-            lifecycleItem={lifecycleByGroupId.get(hiddenSelectedGroup.group_id)}
-            selected
-            bulkMode={bulkMode}
-            bulkSelected={selectedBulkGroupIds.has(hiddenSelectedGroup.group_id)}
-            onSelect={onSelectGroup}
-            onToggleBulk={onToggleBulkGroup}
-          />
-        </div>
-      ) : null}
       <div
         className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1"
         data-testid="groups-list"
       >
+        {hiddenSelectedGroup ? (
+          <div className="rounded-xl border border-cortex-primary/25 bg-cortex-primary/10 p-2">
+            <p className="px-1 font-mono text-[10px] uppercase tracking-[0.16em] text-cortex-primary">
+              Selected outside filters
+            </p>
+            <GroupRecordButton
+              group={hiddenSelectedGroup}
+              lifecycleItem={lifecycleByGroupId.get(hiddenSelectedGroup.group_id)}
+              selected
+              bulkMode={bulkMode}
+              bulkSelected={selectedBulkGroupIds.has(hiddenSelectedGroup.group_id)}
+              onSelect={onSelectGroup}
+              onToggleBulk={onToggleBulkGroup}
+            />
+          </div>
+        ) : null}
         {buckets.map((bucket) => (
           <div key={bucket.id}>
             <div className="mb-2 flex items-center justify-between gap-2 px-1">

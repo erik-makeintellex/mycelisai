@@ -100,6 +100,19 @@ describe("useDurableTeamWork", () => {
     expect(result.current.degradedMessage).toContain("durable TeamWorkItem API was unavailable");
   });
 
+  it("requests the bounded attention projection when asked", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ data: [] }) });
+
+    renderHook(() => useDurableTeamWork({ teams: [team], view: "attention" }));
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/teams/team-alpha/work?limit=8&include_archived=false&view=attention",
+        expect.objectContaining({ cache: "no-store" }),
+      );
+    });
+  });
+
   it("refetches durable rows when the refresh version changes", async () => {
     mockFetch
       .mockResolvedValueOnce({

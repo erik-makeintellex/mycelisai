@@ -91,6 +91,7 @@ export function SomaOperatingSurface({
   const teamWork = useDurableTeamWork({
     teams: teamsDetail,
     focusedTeamId: effectiveFocusedTeamId,
+    view: "attention",
     refreshVersion: durableWorkRefreshVersion + activeWorkActions.activeWorkRefreshVersion,
   });
   const teamOutputItems = teamOutputWorkbenchItems(teamWork.outputRefs);

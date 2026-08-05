@@ -45,13 +45,13 @@ export function GroupRecordFilterControls({
           label="State"
           value={filters.state}
           options={[
-            ["all", "All"],
-            ["running", "Running"],
-            ["complete", "Complete"],
+            ["current", "Current"],
+            ["completed", "Completed"],
+            ["archived", "Archived"],
           ]}
           onChange={(state) => onFiltersChange({ state })}
         />
-        <label className="block text-xs">
+        {filters.state === "completed" ? <label className="block text-xs">
           <span className="font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
             Show completed records from last
           </span>
@@ -70,7 +70,7 @@ export function GroupRecordFilterControls({
             />
             <span className="text-xs text-cortex-text-muted">days</span>
           </div>
-        </label>
+        </label> : null}
       </div>
     </details>
   );

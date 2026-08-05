@@ -23,12 +23,14 @@ type DurableTeamWorkState = {
 export function useDurableTeamWork({
   teams,
   focusedTeamId,
+  view = "all",
   refreshVersion = 0,
   maxTeams = 8,
   pollIntervalMs = 5000,
 }: {
   teams: TeamDetailEntry[];
   focusedTeamId?: string | null;
+  view?: "all" | "attention";
   refreshVersion?: number;
   maxTeams?: number;
   pollIntervalMs?: number;
@@ -64,7 +66,8 @@ export function useDurableTeamWork({
 
       await Promise.all(selectedTeamIds.map(async (teamId) => {
         try {
-          const response = await fetch(`/api/v1/teams/${encodeURIComponent(teamId)}/work?limit=8&include_archived=false`, {
+          const viewQuery = view === "attention" ? "&view=attention" : "";
+          const response = await fetch(`/api/v1/teams/${encodeURIComponent(teamId)}/work?limit=8&include_archived=false${viewQuery}`, {
             cache: "no-store",
           });
           if (!response.ok) {
@@ -91,7 +94,7 @@ export function useDurableTeamWork({
     return () => {
       cancelled = true;
     };
-  }, [pollVersion, refreshVersion, selectedTeamKey]);
+  }, [pollVersion, refreshVersion, selectedTeamKey, view]);
 
   const hasPollingWork = useMemo(
     () => durableItems.some((item) => shouldPollTeamWork(item)),

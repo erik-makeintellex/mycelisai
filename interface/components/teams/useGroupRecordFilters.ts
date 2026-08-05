@@ -58,10 +58,14 @@ export function filterGroups(groups: Group[], filters: GroupRecordFilters) {
     if (query && !searchable.includes(query)) return false;
     if (filters.kind === "standing" && group.expiry) return false;
     if (filters.kind === "temporary" && !group.expiry) return false;
-    const complete = isCompleteGroup(group);
-    if (filters.state === "running" && complete) return false;
-    if (filters.state === "complete" && !complete) return false;
-    return isGroupWithinRetention(group, filters.retentionDays);
+    const archived = group.status === "archived";
+    const completed = !archived && isCompleteGroup(group);
+    if (filters.state === "current" && (archived || completed)) return false;
+    if (filters.state === "completed" && !completed) return false;
+    if (filters.state === "archived" && !archived) return false;
+    return filters.state === "current"
+      ? true
+      : isGroupWithinRetention(group, filters.retentionDays);
   });
 }
 
@@ -73,9 +77,9 @@ function parseRecordFilters(
       ? value.kind
       : "all";
   const state =
-    value.state === "running" || value.state === "complete"
+    value.state === "completed" || value.state === "archived"
       ? value.state
-      : "all";
+      : "current";
   const retentionDays = Number(value.retentionDays);
   return {
     query: typeof value.query === "string" ? value.query.slice(0, 120) : "",
