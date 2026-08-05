@@ -9,6 +9,7 @@ type DocsSidebarProps = {
   query: string;
   onSelect: (entry: DocEntry) => void;
   onQueryChange: (query: string) => void;
+  mobileHidden?: boolean;
 };
 
 export function DocsSidebar({
@@ -17,6 +18,7 @@ export function DocsSidebar({
   query,
   onSelect,
   onQueryChange,
+  mobileHidden = false,
 }: DocsSidebarProps) {
   const normalizedQuery = query.toLowerCase();
   const filtered = query.trim()
@@ -33,7 +35,11 @@ export function DocsSidebar({
     : sections;
 
   return (
-    <div className="w-56 flex-shrink-0 border-r border-cortex-border flex flex-col overflow-hidden">
+    <nav
+      aria-label="Documentation"
+      data-testid="docs-navigation-pane"
+      className={`${mobileHidden ? "hidden" : "flex"} min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden md:flex md:w-56 md:flex-none md:border-r md:border-cortex-border`}
+    >
       <div className="px-3 py-2.5 border-b border-cortex-border">
         <div className="flex items-center gap-2 bg-cortex-bg border border-cortex-border rounded px-2 py-1.5">
           <Search className="w-3 h-3 text-cortex-text-muted flex-shrink-0" />
@@ -43,7 +49,7 @@ export function DocsSidebar({
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Filter docs..."
-            className="flex-1 bg-transparent text-[11px] font-mono text-cortex-text-main placeholder:text-cortex-text-muted/50 outline-none"
+            className="min-w-0 flex-1 bg-transparent text-[11px] font-mono text-cortex-text-main placeholder:text-cortex-text-muted/50 outline-none"
           />
           {query ? (
             <button
@@ -98,6 +104,6 @@ export function DocsSidebar({
           </p>
         ) : null}
       </div>
-    </div>
+    </nav>
   );
 }

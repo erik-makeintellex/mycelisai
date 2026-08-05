@@ -107,6 +107,55 @@ describe("SomaWorkspaceFrame", () => {
     expect(within(sideRail).queryByText("Active lane fallback")).toBeNull();
   });
 
+  it("contains review focus, dismisses on Escape, and restores the opener", () => {
+    render(
+      <SomaWorkspaceFrame
+        expression={<button type="button">Open Outcome Vault</button>}
+        activeWork={<button type="button">Recover work</button>}
+        output={(
+          <OutputWorkbench
+            outputs={[{
+              text: "Retained output",
+              url: "/api/v1/workspace/files/view?path=generated%2Fretained-output.md",
+            }]}
+          />
+        )}
+        trust={<div>Trust details</div>}
+        context={<div>Context details</div>}
+      />,
+    );
+
+    const toggle = screen.getByTestId("soma-workbench-panel-toggle");
+    const sideRail = screen.getByTestId("soma-workbench-side-rail");
+    toggle.focus();
+    fireEvent.click(toggle);
+
+    const closeButton = within(sideRail).getByRole("button", { name: "Close work panel" });
+    expect(sideRail.getAttribute("role")).toBe("dialog");
+    expect(sideRail.getAttribute("aria-modal")).toBe("true");
+    expect(document.activeElement).toBe(closeButton);
+
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(sideRail.contains(document.activeElement)).toBe(true);
+    const lastFocusedElement = document.activeElement;
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(closeButton);
+    expect(lastFocusedElement).not.toBe(closeButton);
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(sideRail.getAttribute("aria-hidden")).toBe("true");
+    expect(sideRail.getAttribute("role")).toBeNull();
+    expect(sideRail.getAttribute("aria-modal")).toBeNull();
+    expect(sideRail.className).toContain("invisible");
+    expect(sideRail.className).toContain("pointer-events-none");
+    expect(document.activeElement).toBe(toggle);
+
+    const vaultButton = screen.getByRole("button", { name: "Open Outcome Vault" });
+    vaultButton.focus();
+    fireEvent.click(vaultButton);
+    expect(document.activeElement).toBe(vaultButton);
+  });
+
   it("opens work first while keeping latest output accessible when active work needs attention", () => {
     render(
       <SomaWorkspaceFrame
