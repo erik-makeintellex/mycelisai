@@ -8,7 +8,7 @@
 | --- | --- |
 | Updated | 2026-08-06 |
 | Integration branch | `dev` |
-| Active slice | P0.12 promotion browser certification on `feature/promotion-browser-certification`; the managed release baseline is aligned to Chromium and stale UI proof contracts are repaired. |
+| Active slice | P0.12 live governance certification on `feature/promotion-live-governance-certification`; all four governed live scenarios pass against the conversational `Start` and `Adjust` controls and compact proof disclosure. |
 | Production branch | `main` remains behind the accepted `dev` integration train pending release certification. |
 | Runtime posture | Native PostgreSQL, NATS, Core, Interface, and Ollama are the supported source-development stack. Current lifecycle health is green. |
 | Delivery target | Finish P0.13 operator acceptance and deterministic QA-data ownership, then execute P0.12 release certification and intentional `dev -> main` promotion. |
@@ -23,7 +23,7 @@
 | P0.11 documentation convergence | `COMPLETE` | The canonical PRD contains the worker execution contract and all product architecture. The redundant architecture index/source-map documents are removed, the state transcript contains current truth only, and post-merge docs/Core/Interface/headed desktop/mobile Help proof passes on `dev`. | Keep one product-architecture authority and update owned support docs with behavior changes. |
 | P0.13 retained-state projection | `COMPLETE` | TeamWork has an explicit attention view; Dashboard requests operator attention only; Groups defaults to Current with separate Completed and Archived history. | Preserve in fresh-user proof. |
 | P0.13 cross-device operator acceptance | `IN_REVIEW` | Dashboard, Groups, Resources, Memory, Docs, and Settings have focused desktop/mobile proof with no blocking overlap, hidden composer, page errors, console errors, or horizontal document overflow. | Add deterministic fixture ownership and rerun the integrated new-user matrix. |
-| P0.12 release hygiene and certification | `ACTIVE` | Feature-to-dev merge discipline, retained browser reports, release-preflight ordering, and PostgreSQL/NATS runtime boundaries are implemented. The managed Chromium baseline and seven previously stale browser journeys pass focused production-build proof. | Commit and integrate the proof repair, then rerun clean release preflight, WSL validation, Compose/Kubernetes proof, and headed browser certification. |
+| P0.12 release hygiene and certification | `ACTIVE` | The clean release baseline passes lint, Core, build, typecheck, Vitest, and 121 Chromium journeys. Managed Chromium scope and stale browser contracts are repaired; all four live governance scenarios pass with durable mutation, audit, proof, and reload checks. | Integrate the live proof repair, then rerun clean release preflight, WSL validation, Compose/Kubernetes proof, and headed browser certification. |
 | Production promotion | `REQUIRED` | `main` is intentionally not promoted from the current `dev` train. | Merge certified `dev` into `main`, rerun health/browser smoke, update state, and synchronize remotes. |
 
 ## Immediate Work Order

@@ -87,7 +87,9 @@ test.describe('Soma governed mutation live contract', () => {
             await expect(page.getByText('I can start that.')).toBeVisible({ timeout: 30_000 });
             expect(anyTargetExists(targetPaths)).toBeFalsy();
 
-            await page.getByRole('button', { name: /^Cancel$/i }).click();
+            const adjustProposal = page.getByRole('button', { name: /^Adjust$/i });
+            await expect(adjustProposal).toBeVisible({ timeout: 30_000 });
+            await adjustProposal.click();
             await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 30_000 });
             expect(anyTargetExists(targetPaths)).toBeFalsy();
 
@@ -144,13 +146,15 @@ test.describe('Soma governed mutation live contract', () => {
                 })
                 .toBeTruthy();
 
-            await expect(page.getByText(/Execution verified/i)).toBeVisible({ timeout: 30_000 });
-            await expect(page.getByRole('link', { name: /Mission activated/i })).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByText(/Latest output is ready/i)).toBeVisible({ timeout: 30_000 });
+            await page.getByText('Proof and execution details', { exact: true }).last().click();
+            await expect(page.getByRole('link', { name: /Inspect run receipt/i })).toBeVisible({ timeout: 30_000 });
 
             await page.reload({ waitUntil: 'domcontentloaded' });
             await waitForOrganizationWorkspaceReady(page);
-            await expect(page.getByText(/Execution verified/i)).toBeVisible({ timeout: 30_000 });
-            await expect(page.getByRole('link', { name: /Mission activated/i })).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByText(/Latest output is ready/i)).toBeVisible({ timeout: 30_000 });
+            await page.getByText('Proof and execution details', { exact: true }).last().click();
+            await expect(page.getByRole('link', { name: /Inspect run receipt/i })).toBeVisible({ timeout: 30_000 });
         } finally {
             removeExistingTargets(targetPaths);
         }
