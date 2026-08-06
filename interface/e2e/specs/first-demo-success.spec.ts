@@ -126,6 +126,7 @@ test.describe("Canonical first-demo success path", () => {
     await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
 
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
+    await page.getByText("Proof and execution details", { exact: true }).last().click();
     await expect(page.locator(`a[href="/runs/${runId}"]`).first()).toBeVisible();
     await page.reload({ waitUntil: "domcontentloaded" });
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });

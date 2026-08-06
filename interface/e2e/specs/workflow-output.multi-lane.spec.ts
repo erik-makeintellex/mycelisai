@@ -53,6 +53,7 @@ test.describe("Workflow output multi-lane package", () => {
                 return;
             }
 
+            const body = route.request().postDataJSON() as { expiry?: string };
             const created: GroupRecord = {
                 group_id: "group-multilane-release",
                 name: "Release Readiness Workflow temporary workflow",
@@ -63,7 +64,7 @@ test.describe("Workflow output multi-lane package", () => {
                 coordinator_profile: "Release workflow coordinator",
                 approval_policy_ref: "browser-proof",
                 status: "active",
-                expiry: "2026-04-18T18:00:00Z",
+                expiry: body.expiry ?? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
                 created_by: "owner",
                 created_at: "2026-04-15T20:01:00Z",
             };

@@ -53,6 +53,7 @@ test.describe("Workflow output compact team package", () => {
                 return;
             }
 
+            const body = route.request().postDataJSON() as { expiry?: string };
             const created: GroupRecord = {
                 group_id: "group-compact-release",
                 name: "Release Readiness Team temporary workflow",
@@ -63,7 +64,7 @@ test.describe("Workflow output compact team package", () => {
                 coordinator_profile: "Release Readiness lead",
                 approval_policy_ref: "browser-proof",
                 status: "active",
-                expiry: "2026-04-18T18:00:00Z",
+                expiry: body.expiry ?? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
                 created_by: "owner",
                 created_at: "2026-04-15T20:01:00Z",
             };
