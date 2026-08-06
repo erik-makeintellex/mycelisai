@@ -206,9 +206,9 @@ async function expectFocusedDashboardLane(page: Page) {
   await expect(page.getByTestId("focused-team-output-dock")).toHaveCount(0);
   const switcher = page.getByTestId("soma-team-context-switcher");
   await expect(switcher).toBeVisible();
-  await expect(switcher).toContainText("Working in");
+  await expect(switcher).toContainText("Work context");
   await expect(switcher).toContainText(focusedTeamName);
-  await expect(switcher).toContainText("Team chat, work, outputs, and proof");
+  await expect(switcher).toContainText("Team work and outputs");
 
   await page.getByRole("button", { name: /Open Outcome Vault/i }).click();
   const vault = page.getByTestId("soma-outcome-vault");
@@ -223,7 +223,7 @@ async function expectFocusedDashboardLane(page: Page) {
 
   await switcher.getByRole("button", { name: /Focused Browser Proof Team/i }).click();
   await expect(page.getByRole("listbox", { name: "Choose current workflow" })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Soma root/i })).toBeVisible();
+  await expect(page.getByRole("option", { name: /All work/i })).toBeVisible();
   await expect(page.getByRole("option", { name: /Focused Browser Proof Team/i })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("link", { name: /Manage teams/i })).toHaveAttribute("href", "/teams");

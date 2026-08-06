@@ -193,7 +193,7 @@ def run_baseline(
     else:
         try:
             interface_tasks.build.body(c)
-            interface_tasks.e2e.body(c, workers="1", server_mode="start")
+            interface_tasks.e2e.body(c, project="chromium", workers="1", server_mode="start")
         except SystemExit:
             errors.append("interface playwright failed")
         else:

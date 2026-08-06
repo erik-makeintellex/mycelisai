@@ -62,7 +62,7 @@ def test_baseline_runs_playwright_when_e2e_enabled(monkeypatch):
 
     ci.baseline.body(ctx, e2e=True)
 
-    assert e2e_calls == [{"workers": "1", "server_mode": "start"}]
+    assert e2e_calls == [{"project": "chromium", "workers": "1", "server_mode": "start"}]
     assert build_calls == ["build", "build"]
     assert test_calls == ["test"]
     assert typecheck_calls == ["typecheck"]
@@ -121,7 +121,7 @@ def test_baseline_runs_playwright_by_default(monkeypatch):
 
     ci.baseline.body(ctx)
 
-    assert e2e_calls == [{"workers": "1", "server_mode": "start"}]
+    assert e2e_calls == [{"project": "chromium", "workers": "1", "server_mode": "start"}]
     assert build_calls == ["build", "build"]
     assert test_calls == ["test"]
     assert typecheck_calls == ["typecheck"]
