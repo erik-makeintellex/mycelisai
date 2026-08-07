@@ -258,6 +258,8 @@ Bootstrap reminder: normal startup fails closed unless a valid bootstrap bundle 
 
 Windows is the source-edit and git surface. WSL is the guarded Compose proof checkout for install, build, tests, Compose, and live GUI validation. Rancher Desktop K3s is the Windows local Kubernetes proof lane for Helm/commercial-release parity.
 
+Compose projects the same `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` references into Core and Interface. When either value is omitted, both containers use the repo-local `MYCELIS_API_KEY` fallback; deployment-specific secret values belong in `.env` and must remain identical across both services.
+
 Use the guarded WSL handoff lane when release-style proof matters:
 
 ```bash
