@@ -205,10 +205,10 @@ For output block, media readiness, and team-managed review, use:
 - `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
 - `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 
+For side-by-side native and Compose proof, set the four `MYCELIS_COMPOSE_*_PORT` host bindings in `.env.compose`. `compose.up` uses those same PostgreSQL, NATS, Core, and Interface ports for readiness, so a native listener on a default port cannot create a false pass or block an isolated proof stack.
 If the media engine is offline, record a blocker instead of treating missing media as passed. Gateway unit proof uses `uv run pytest tests/test_media_gateway.py -q` and does not require Pinokio to be running.
 ## Tier 1: Backend Unit Tests
 Run:
-
 ```bash
 uv run inv core.test
 ```
@@ -306,7 +306,7 @@ Core tests that assert an unconfigured provider posture must clear all `MYCELIS_
 Invoke-driven Playwright runs use the reporter set in `interface/playwright.config.ts`; do not override it in task wrappers. The human-readable reporter stays on stdout, while exact pass, skip, annotation, and failure evidence is retained in `interface/test-results/playwright-results.json` and `interface/test-results/playwright-results.xml`. A prerequisite-gated skip is acceptable only when its annotation names the missing dependency and the corresponding live-backend journey is run separately when that dependency is available.
 
 Deployment proof contracts:
-- Windows Docker-compatible Compose through Rancher Desktop or Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof.
+- Windows Docker-compatible Compose through Rancher Desktop or Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof. An authenticated request must pass from Interface to Core using the same web-session and forwarded-identity secret references; `invalid forwarded web identity` is a deployment failure, not a browser-test skip.
 - Windows Rancher Desktop K3s with `MYCELIS_K8S_BACKEND=rancher` for local commercial-release parity proof.
 - Kubernetes / Helm clustered deployment reached through the real ingress, remote host, IP, or hostname; the browser opens the UI through the same operator-facing address the delivered environment will actually use.
 - when the validation target is clustered deployment, run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`; Compose remains rapid local development/proof only.

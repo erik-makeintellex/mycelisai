@@ -121,6 +121,7 @@ uv run inv compose.down
 ```
 
 Compose is the supported single-host runtime lane. `.env.compose` owns container topology; `.env` remains the secret source.
+Full bring-up resolves PostgreSQL, NATS, Core, and Interface readiness from the configured `MYCELIS_COMPOSE_*_PORT` host bindings. Use isolated host ports when the proof stack must coexist with native source-mode dependencies; container-internal ports remain unchanged.
 The WSL release proof health-gates each live browser spec with `compose.health` because the runner executes specs through separate WSL shell invocations.
 
 ### Kubernetes Tasks (`ops/k8s.py`)
@@ -176,6 +177,8 @@ uv run inv quality.max-lines --limit 330
 ## III. Development Workflow
 
 Use `feature/* -> dev -> main` as the delivery ladder. Feature branches are reviewable implementation slices and must pass focused code, docs, build, and visible-workflow proof before merging. The merged `dev` checkpoint must then pass affected integration and live-service proof. Promote `dev` to `main` only from a clean commit after release preflight and required deployment proof; confirm health again after promotion and remove merged feature branches.
+
+Compose auth boundary: Core and Interface must receive the same `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` references. Repo-local Compose falls back to `MYCELIS_API_KEY` for either omitted value; production deployments should provide distinct matching secrets through `.env`, never committed Compose values.
 
 Choose the runtime lane first:
 - Compose for supported home-runtime proof

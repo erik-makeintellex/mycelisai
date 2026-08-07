@@ -178,6 +178,8 @@ uv run inv api.delivery-proof
 uv run inv lifecycle.memory-restart && uv run inv team.architecture-sync && uv run inv quality.max-lines --limit 330
 ```
 
+Compose launch and readiness use the same configurable host ports from `.env.compose`: `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`. This allows an isolated proof stack to coexist with native development dependencies without readiness checks probing unrelated default-port services.
+
 `team.architecture-sync` sends the standing architecture, development, and AGUI teams one bounded Workspace-to-Outcome release brief: close the current execution-to-deliverable gate, require validated retained output, keep Soma lifecycle language truthful, and return concise proof priorities without starting another doctrine lane.
 
 `uv run inv install` includes Reticulum bootstrap: it syncs the locked `rns` package through `uv`, then warms/verifies `uvx --from rns rnstatus --help` before continuing with Go, Interface, and Playwright setup.
@@ -255,6 +257,8 @@ Bootstrap reminder: normal startup fails closed unless a valid bootstrap bundle 
 ## Cross-Platform Setup
 
 Windows is the source-edit and git surface. WSL is the guarded Compose proof checkout for install, build, tests, Compose, and live GUI validation. Rancher Desktop K3s is the Windows local Kubernetes proof lane for Helm/commercial-release parity.
+
+Compose projects the same `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` references into Core and Interface. When either value is omitted, both containers use the repo-local `MYCELIS_API_KEY` fallback; deployment-specific secret values belong in `.env` and must remain identical across both services.
 
 Use the guarded WSL handoff lane when release-style proof matters:
 

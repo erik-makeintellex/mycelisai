@@ -147,6 +147,15 @@ def compose_host_port(env_values: dict[str, str], key: str, default: str) -> int
         raise SystemExit(f"Invalid .env.compose {key}: {env_values.get(key)!r} must be an integer port.") from exc
 
 
+def compose_host_ports(env_values: dict[str, str], api_default: int, interface_default: int) -> tuple[int, int, int, int]:
+    return (
+        compose_host_port(env_values, "MYCELIS_COMPOSE_POSTGRES_PORT", "5432"),
+        compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_PORT", "4222"),
+        compose_host_port(env_values, "MYCELIS_COMPOSE_CORE_PORT", str(api_default)),
+        compose_host_port(env_values, "MYCELIS_COMPOSE_INTERFACE_PORT", str(interface_default)),
+    )
+
+
 def print_data_plane_connection_guidance(
     env_values: dict[str, str],
     *,
