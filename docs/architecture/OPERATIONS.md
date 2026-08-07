@@ -4,7 +4,7 @@ This manual owns task and runtime operations. It links to [Local Development Wor
 
 Implementation slices that change runtime, tasking, validation, API meaning, or operator behavior must review and update the owning docs in the same change rather than leaving docs drift for later cleanup.
 
-Current proof posture: workflows are manual-only, source-mode local run/build/test plus native PostgreSQL/NATS is first, and Core/Interface Compose/K8s app services are brought up only after local evidence is acceptable for container/deployment proof.
+Current proof posture: workflows are manual-only, source-mode Core/Interface run against Dockerized PostgreSQL/NATS first, and containerized Core/Interface or Kubernetes app services are brought up only for explicit deployment proof.
 
 ## TOC
 
@@ -31,7 +31,7 @@ Task modules live under `ops/*.py` and are registered through `tasks.py`. App-ti
 
 Task ownership boundary: Invoke tasks manage repo tools, Mycelis app services, data-plane dependencies, and proof lanes; WSL/Rancher/Docker host lifecycle and VM repair stay outside repo tasking.
 
-Native infrastructure is the default source-mode data plane: `native-infra.install-nats`, `native-infra.up`, `native-infra.status`, `native-infra.bootstrap-postgres`, and `native-infra.start-nats` manage only Windows/source-mode PostgreSQL app bootstrap and local NATS. Use `MYCELIS_DEV_INFRA_MODE=k8s` only for explicit clustered proof.
+Compose infrastructure is the default source-mode data plane: `compose.infra-up` and `compose.infra-health` manage only Dockerized PostgreSQL and NATS, while `lifecycle.up --frontend` runs Core and Interface locally from source. Neither task builds application images. Use `MYCELIS_DEV_INFRA_MODE=native` only for the host-service fallback and `MYCELIS_DEV_INFRA_MODE=k8s` only for explicit clustered bridge proof.
 
 ### Master Registry
 
@@ -104,7 +104,7 @@ uv run inv lifecycle.memory-restart --frontend
 ```
 
 `lifecycle.status` is the fast local snapshot. It reports process/port state and confirms Core through `/healthz` plus Ollama through `/api/tags` over loopback fallbacks. Use `lifecycle.health` for the deeper endpoint proof gate before claiming service readiness; its cognitive-status probe uses a longer client timeout than the endpoint's bounded provider probes so failures return as evidence instead of socket timeouts.
-`lifecycle.up` defaults to the native infrastructure lane and only starts Core/Interface after PostgreSQL and NATS are reachable. It does not repair Docker/Rancher/WSL.
+`lifecycle.up` defaults to the Compose dependency lane and starts local Core/Interface only after Dockerized PostgreSQL and NATS are reachable. It does not run full `compose.up`, build application images, enable Kubernetes, or repair Docker/Rancher/WSL. `lifecycle.down` leaves the dependency containers running for reuse.
 
 ### Compose Tasks (`ops/compose.py`)
 

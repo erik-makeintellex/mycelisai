@@ -2,7 +2,7 @@
 Lifecycle management for the Mycelis development stack.
 
 Provides unified start/stop/status/health commands that handle the full
-dependency graph: native infra or explicit port-forwards -> core server -> frontend.
+dependency graph: Dockerized data services -> local core server -> local frontend.
 
 All probes are Python-native (socket/urllib) — no shell wrappers.
 """
@@ -29,6 +29,7 @@ from .config import (
     powershell,
 )
 from . import db as db_tasks
+from . import lifecycle_infra
 from . import lifecycle_status
 from .lifecycle_processes import COMPILED_GO_PROCESS_HINTS, WINDOWS_COMPILED_GO_PROCESS_NAMES
 
@@ -140,10 +141,7 @@ def _wait_for_http_ok(
 
 
 def _dev_infra_mode() -> str:
-    mode = os.environ.get("MYCELIS_DEV_INFRA_MODE", "native").strip().lower()
-    if mode not in {"", "native", "k8s"}:
-        raise SystemExit("Invalid MYCELIS_DEV_INFRA_MODE. Use native or k8s.")
-    return mode
+    return lifecycle_infra.dev_infra_mode(ROOT_DIR)
 
 
 def _core_council_ready(timeout: int = 10, interval: float = 1.0) -> bool:
@@ -237,8 +235,7 @@ def _run_best_effort(cmd: list[str], timeout: int = 5):
 
 def _remaining_managed_services() -> list[str]:
     """Return managed service labels that still have listening ports."""
-    infra_mode = _dev_infra_mode()
-    keys = ("core", "frontend") if infra_mode in {"", "native"} else ("postgres", "nats", "core", "frontend")
+    keys = lifecycle_infra.managed_process_keys(_dev_infra_mode())
     return [
         svc["label"]
         for key, svc in SERVICES.items()
@@ -373,8 +370,7 @@ def _kill_compiled_go_services() -> list[dict[str, str | int]]:
 
 
 def _service_keys_by_label(labels: list[str]) -> list[str]:
-    infra_mode = _dev_infra_mode()
-    allowed = ("core", "frontend") if infra_mode in {"", "native"} else ("postgres", "nats", "core", "frontend")
+    allowed = lifecycle_infra.managed_process_keys(_dev_infra_mode())
     keys: list[str] = []
     for key, svc in SERVICES.items():
         if key in allowed and svc["label"] in labels:
@@ -417,7 +413,10 @@ def _start_port_forward(svc: str, forward: str):
 def _ensure_bridge():
     """Ensure PostgreSQL and NATS are reachable for source-mode Core."""
     infra_mode = _dev_infra_mode()
-    if infra_mode in {"", "native"}:
+    if lifecycle_infra.ensure_compose_data_plane(infra_mode):
+        return
+
+    if infra_mode == "native":
         from . import native_infra
 
         native_infra.ensure_for_lifecycle(timeout=30)
@@ -507,8 +506,7 @@ def status(c):
     """Show health of every service in the dev stack."""
     print("=== Mycelis Stack Status ===\n")
 
-    print(f"  Dev infra mode  : {_dev_infra_mode() or 'native'}")
-    print("  Docker/K8s      : proof lane; inspect with compose.* or k8s.*")
+    lifecycle_infra.print_development_status(_dev_infra_mode())
 
     # Service ports
     for key, svc in SERVICES.items():
@@ -566,7 +564,7 @@ def status(c):
 def up(c, frontend=False, build=False):
     """
     Bring up the full dev stack (idempotent).
-    Order: native infra or explicit port-forwards -> core server -> (optional) frontend.
+    Order: configured data plane -> local core server -> (optional) local frontend.
     """
     print("=== Mycelis Stack Up ===\n")
 
@@ -742,7 +740,8 @@ def down(c):
     remaining_compiled = _kill_compiled_go_services()
 
     # 4. Infra bridge cleanup
-    if _dev_infra_mode() == "k8s":
+    infra_mode = _dev_infra_mode()
+    if infra_mode == "k8s":
         print("[4/4] Stopping Kubernetes port-forwards...")
         _kill_bridges()
 
@@ -755,8 +754,7 @@ def down(c):
         else:
             _run_best_effort(["pkill", "-f", "kubectl port-forward"])
     else:
-        print("[4/4] Native infrastructure: left running")
-        print("  PostgreSQL and NATS are development dependencies; inspect them with native-infra.status.")
+        lifecycle_infra.print_retained_data_plane(infra_mode)
 
     remaining = []
     deadline = time.time() + 8

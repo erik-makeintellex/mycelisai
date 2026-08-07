@@ -300,17 +300,6 @@ def test_status_reports_unknown_when_compiled_go_inspection_fails(monkeypatch, c
     assert "Compiled Go svc : UNKNOWN" in output
 
 
-def test_status_reports_native_mode_with_docker_as_proof_lane(monkeypatch, capsys):
-    monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
-    monkeypatch.setattr(lifecycle, "_http_get", lambda *args, **kwargs: (0, "offline"))
-    monkeypatch.setattr(lifecycle, "_list_compiled_go_service_processes", lambda: [])
-    lifecycle.status.body(Context())
-
-    output = capsys.readouterr().out
-    assert "Dev infra mode  : native" in output
-    assert "Docker/K8s      : proof lane; inspect with compose.* or k8s.*" in output
-
-
 def test_status_uses_core_healthz_when_tcp_snapshot_misses(monkeypatch, capsys):
     class Result:
         ok = True

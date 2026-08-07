@@ -21,7 +21,7 @@
 - App-tied management logic stays in Python task modules; PowerShell is wrapper-only when the host needs it.
 - Task, runtime, or validation changes are not complete until the matching docs are reviewed and updated in the same slice.
 - GitHub Actions workflows are manual-only through `workflow_dispatch` for the current release-readiness push; `Full Release Candidate` is the umbrella hosted release lane, while CI/source/API/build/package workflows remain narrower manual proofs.
-- Treat source-mode local run/build/test with native PostgreSQL/NATS as the first acceptance lane. Bring up full Compose, Rancher K3s, WSL/Compose, or target-cluster app proof only after local evidence is acceptable.
+- Treat source-mode local run/build/test with Dockerized PostgreSQL/NATS and locally run Core/Interface as the first acceptance lane. Bring up full application Compose, Rancher K3s, WSL/Compose, or target-cluster app proof only after local evidence is acceptable.
 - Scope tasks around needed tools and Mycelis services. Do not add repo tasks that manage whole host environments such as terminating WSL distros, resetting Rancher Desktop VMs, or repairing Docker Desktop itself.
 
 ## Components
@@ -30,7 +30,7 @@ This directory contains the logic for the **Service Release Standard 1.0**.
 Recommended host posture:
 - Windows repo: canonical editing, review, and git-push surface for active development
 - WSL `mycelis-root` deployment checkout: guarded WSL Compose proof checkout for install, build, API/UI test, Compose runtime, and deployment-mimic validation
-- Windows native: run Core/Interface from source against Windows PostgreSQL and a local NATS server first; use Compose or Kubernetes only after local evidence is acceptable
+- Windows source mode: run Core/Interface locally against PostgreSQL and NATS hosted by Rancher Desktop's Docker engine; use full application Compose or Kubernetes only after local evidence is acceptable
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
 - cleanup tasks that include `.venv` skip the active Python runtime when invoked through `uv run inv`, then report the skipped path; remove the active environment from an external shell only when that is intentionally needed
@@ -46,8 +46,8 @@ WSL Compose proof-checkout contract:
 - WSL tasking is deliberately proof-checkout scoped. If the distro, Rancher Desktop, or Docker host is unhealthy, fix the host tool outside the repo task runner and then rerun the narrow validation task.
 
 Deployment selection rule:
-- local source-mode run/build/test with native PostgreSQL/NATS is the default development and review lane
-- Docker Compose is the rapid local development and same-machine proof runtime
+- local source-mode run/build/test with Dockerized PostgreSQL/NATS and local Core/Interface is the default development and review lane
+- full application Docker Compose is a same-machine promotion-proof runtime, not the default edit/test loop
 - Rancher Desktop K3s is the preferred Windows local Kubernetes validation lane for Helm behavior
 - `k3d` is the preferred WSL/Linux local Kubernetes validation lane for Helm behavior
 - Kubernetes / Helm is the target clustered deployment contract for self-hosted and enterprise environments
@@ -127,7 +127,7 @@ Owns the narrow Windows/source-mode dependency path for development and testing 
 - **Status**: `uv run inv native-infra.status` checks PostgreSQL port/query readiness, NATS port readiness, and the NATS monitor endpoint.
 - **Bootstrap PostgreSQL**: `uv run inv native-infra.bootstrap-postgres` uses `POSTGRES_USER` / `POSTGRES_PASSWORD` from `.env` to create or update `DB_USER`, `DB_PASSWORD`, and `DB_NAME`.
 - **Start NATS**: `uv run inv native-infra.start-nats` starts only NATS when PostgreSQL is already ready.
-- `lifecycle.up` defaults to `MYCELIS_DEV_INFRA_MODE=native`, so it no longer tries Kubernetes port-forwards during ordinary source-mode development. Set `MYCELIS_DEV_INFRA_MODE=k8s` only for explicit clustered bridge proof.
+- `lifecycle.up` defaults to `MYCELIS_DEV_INFRA_MODE=compose`: PostgreSQL and NATS run in Docker while Core and Interface run locally from source. It invokes only `compose.infra-up`, never full `compose.up` or an app-image build. Set `MYCELIS_DEV_INFRA_MODE=native` for the host-service fallback or `k8s` only for explicit clustered bridge proof.
 
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.
