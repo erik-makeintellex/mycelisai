@@ -33,7 +33,8 @@ Install the toolchain needed for the runtime lane you will use:
 | Go 1.26 | Core build/test |
 | Node.js 20+ | Interface build/test; hosted GitHub lanes and Interface container proof currently use Node.js 24 |
 | uv | Python environment and Invoke task runner |
-| psql 16+ and nats-server | native database and event-bus proof |
+| psql 16+ | local database administration and migration client |
+| nats-server | optional host-native event-bus fallback |
 | Ollama or compatible endpoint | local/self-hosted text inference |
 
 Task runner contract: use `uv run inv ...` for real execution; use `uvx --from invoke inv -l` only as a compatibility probe; do not use bare `uvx inv ...`. Tasks are scoped to Mycelis tools, app services, data-plane dependencies, and proof lanes; host runtime lifecycle for WSL, Rancher Desktop, Docker Desktop, and OS VM repair stays outside the repo task runner.
@@ -47,7 +48,7 @@ Task runner contract: use `uv run inv ...` for real execution; use `uvx --from i
 | Local Kubernetes proof on WSL/Linux | `k3d` | preferred chart validation lane |
 | Enterprise/self-hosted cluster | Helm | use real ingress, secrets, storage, and policy controls |
 | Small control node | packaged binary | keep AI on a reachable remote service |
-| Source development | `native-infra.*` + lifecycle tasks | best for implementation, not the operator deployment story |
+| Source development | `compose.infra-up` + lifecycle tasks | Docker runs PostgreSQL/NATS; Core and Interface run locally from source |
 
 Promoted chart presets are `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, and `charts/mycelis-core/values-enterprise-windows-ai.yaml`; set `MYCELIS_K8S_VALUES_FILE` before `uv run inv k8s.deploy` or `uv run inv k8s.up`.
 ## Deployment Guidance By Host Architecture
@@ -74,7 +75,7 @@ Common runtime variables:
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: local Core database connection
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`: native PostgreSQL bootstrap user for creating/updating the app role/database
 - `NATS_URL`: Core NATS connection
-- `MYCELIS_DEV_INFRA_MODE`: `native` for Windows/source-mode PostgreSQL/NATS; `k8s` only for explicit port-forward bridge proof
+- `MYCELIS_DEV_INFRA_MODE`: `compose` for the default Docker PostgreSQL/NATS data plane; `native` for an explicit host-service fallback; `k8s` only for clustered bridge proof
 - `MYCELIS_WORKSPACE`, `MYCELIS_ARTIFACT_ROOT`: governed output root and artifact/cache root; `DATA_DIR` is still honored as a legacy artifact alias, but new runtime config should set `MYCELIS_ARTIFACT_ROOT`
 - `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
@@ -103,11 +104,11 @@ The deployed Core image resolves those files from `/core/config`; the Helm chart
 
 Use separate generated dependency/runtime roots per host: Windows editing checkout for source/review/git, WSL proof checkout for release-style validation, Compose data/output under `workspace/docker-compose/...`, and repo-local tool/cache roots visible through `uv run inv cache.status`. Do not share `.venv`, `interface/node_modules`, `.next`, or generated runtime state across Windows and WSL.
 
-For native source development, set `MYCELIS_WORKSPACE=./workspace` and `MYCELIS_ARTIFACT_ROOT=./workspace/artifacts` in `.env` so operators know where generated packages, workspace files, browser outputs, and artifact downloads land. Keep legacy `DATA_DIR` aligned with `MYCELIS_ARTIFACT_ROOT`; `System -> Deployments` reports both runtime roots for proof.
+For source development, set `MYCELIS_WORKSPACE=./workspace` and `MYCELIS_ARTIFACT_ROOT=./workspace/artifacts` in `.env` so operators know where generated packages, workspace files, browser outputs, and artifact downloads land. Keep legacy `DATA_DIR` aligned with `MYCELIS_ARTIFACT_ROOT`; `System -> Deployments` reports both runtime roots for proof.
 
-## Native Source-Mode Infrastructure
+## Local Source Development
 
-Default development runs Core and Interface from source against host-local PostgreSQL and NATS: `uv run inv native-infra.install-nats`, `uv run inv native-infra.up`, `uv run inv native-infra.status`, `uv run inv db.migrate`, then `uv run inv lifecycle.up --frontend`. `native-infra.up` creates/updates the PostgreSQL app role/database from `.env` and starts local NATS; Docker/Rancher/WSL remain separate proof lanes.
+Default development runs PostgreSQL and NATS in Docker while Core and Interface run locally from source. `uv run inv lifecycle.up --frontend` idempotently invokes `compose.infra-up` for only those two dependencies; it does not build or start containerized Core or Interface services. `lifecycle.down` stops the local app processes and leaves the reusable data plane running. Use `uv run inv compose.down` only when intentionally stopping the dependency containers. Set `MYCELIS_DEV_INFRA_MODE=native` only for the supported host-service fallback.
 
 ## WSL/Linux Proof Checkout Handoff
 
@@ -135,9 +136,6 @@ Source-mode development:
 ```bash
 uv run inv install
 uv run inv auth.dev-key
-uv run inv native-infra.install-nats
-uv run inv native-infra.up
-uv run inv native-infra.status
 uv run inv db.migrate
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
@@ -191,10 +189,10 @@ Startup now instantiates the runtime organization only through a selected bundle
 
 ## Daily Startup Sequence
 
-Source-mode:
+Source-mode with Docker dependencies:
 
 ```bash
-uv run inv native-infra.status
+uv run inv compose.infra-health
 uv run inv db.migrate
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.status
@@ -212,7 +210,9 @@ uv run inv compose.health
 Shutdown:
 
 ```bash
+# Stop local Core and Interface; keep PostgreSQL/NATS warm.
 uv run inv lifecycle.down
+# Stop the Docker data plane only when intentionally ending it.
 uv run inv compose.down
 ```
 

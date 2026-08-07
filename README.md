@@ -165,8 +165,6 @@ Common commands:
 
 ```bash
 uv run inv install
-uv run inv native-infra.install-nats
-uv run inv native-infra.up
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.status
 uv run inv lifecycle.health
@@ -186,7 +184,7 @@ Compose launch and readiness use the same configurable host ports from `.env.com
 
 Cleanup note: `uv run inv clean.generated` removes repo-local generated artifacts but skips the active Python runtime directory when the task is running from that environment. If you intentionally need to remove `.venv`, do it from an external shell after leaving the environment.
 
-Task boundary: repo Invoke tasks manage Mycelis tools, app services, data-plane dependencies, and proof lanes. `native-infra.*` owns the Windows/source-mode PostgreSQL + NATS dependency path. Host runtimes such as WSL distros, Rancher Desktop itself, Docker Desktop itself, and OS-level VM resets are operator/platform responsibilities outside the task registry; use repo tasks to probe, validate, and run Mycelis on those tools, not to manage the whole host environment.
+Task boundary: repo Invoke tasks manage Mycelis tools, app services, data-plane dependencies, and proof lanes. Default development uses `compose.infra-up` for Dockerized PostgreSQL/NATS and runs Core/Interface locally; `native-infra.*` is the explicit host-service fallback. Host runtimes such as WSL distros, Rancher Desktop itself, Docker Desktop itself, and OS-level VM resets are operator/platform responsibilities outside the task registry; use repo tasks to probe, validate, and run Mycelis on those tools, not to manage the whole host environment.
 
 `lifecycle.status` is the quick local snapshot and now confirms Core through `/healthz` plus Ollama through `/api/tags` across loopback fallbacks; use `lifecycle.health` for deeper endpoint proof, `uv run inv api.delivery-proof` for API self-use, and `uv run inv ci.entrypoint-check` for runner matrix proof. The deeper health gate gives `/api/v1/cognitive/status` enough time to return bounded provider evidence instead of timing out at the client edge.
 
@@ -211,7 +209,7 @@ Env override contract: `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PRO
 
 Deployment guidance by host architecture: Windows x86_64, Linux x86_64, Linux arm64, and Mixed-architecture deployments are supported through the lane-specific guidance in local dev and operations docs. The deployed Core image resolves runtime config from `/core/config`.
 
-Supported user access lanes: source-mode local development with native PostgreSQL/NATS first, then Windows/Rancher Desktop Compose, Windows Docker Desktop Compose, Windows + WSL Docker Compose, Rancher Desktop K3s, WSL Compose, and Kubernetes / Helm clustered deployment when container proof is intentionally requested. Run/build/test Core and Interface locally before containerizing app services; open `http://localhost:3000` from the Windows browser for same-machine proof, and for clustered proof, prove the real ingress/hostname/IP from the operator machine. Rancher Desktop K3s is the preferred Windows local commercial-release parity lane once local source proof is acceptable.
+Supported user access lanes: source-mode local development with Dockerized PostgreSQL/NATS first, then full Windows Compose, Windows + WSL Docker Compose, Rancher Desktop K3s, WSL Compose, and Kubernetes / Helm clustered deployment when container proof is intentionally requested. Run/build/test Core and Interface locally before containerizing app services; open `http://localhost:3000` from the Windows browser for same-machine proof, and for clustered proof, prove the real ingress/hostname/IP from the operator machine. Rancher Desktop K3s is the preferred Windows local commercial-release parity lane once local source proof is acceptable.
 
 Deployment target contract: Kubernetes / Helm targets self-hosted and enterprise deployment using standard Kubernetes resources; Docker Compose remains rapid local development, demo, and same-machine proof runtime, not the clustered deployment contract. Run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` and cover Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. Local Windows K3s proof uses `MYCELIS_K8S_BACKEND=rancher` against Rancher Desktop.
 
@@ -221,7 +219,7 @@ Kubernetes values contract: prefer Rancher Desktop K3s on Windows and `k3d` on W
 
 Runtime packaging contract: the supported Core container image includes Node/npm/npx for curated stdio MCP servers, and manual `filesystem` library install must be able to launch and bind to the configured `/data/workspace` output block. `MYCELIS_WORKSPACE` is the governed workspace for generated files, project packages, browser games, filesystem MCP writes, and group-owned output folders under `groups/...`; generated project packages should retain support files such as `README.md`, `PROOF.md`, and `project-package.json`. `MYCELIS_ARTIFACT_ROOT` is the file-backed artifact/cache root; `DATA_DIR` is a legacy alias that should stay aligned until removed. Compose maps these to `/data/workspace` and `/data/artifacts`, and System -> Deployments reports both roots for operator proof.
 
-Release proof contract: start with local source gates (`core.test`, `interface.test`, `interface.typecheck`, `interface.build`, focused Playwright) against native PostgreSQL/NATS when live data or bus proof is required. Only after those pass, containerize Core/Interface for Compose/K8s proof. `uv run inv ci.release-preflight --lane=release` is the full local release gate and always runs repository lint before baseline, service, or deployment-facing proof; its managed baseline uses the repo-provisioned Chromium project with one worker and retained JSON/JUnit evidence. A lint failure stops the lane before later work can create false confidence. CI-owned Go commands select the Core module explicitly with `go -C` instead of trusting mutable shell-directory state, so Windows and Linux prove the same package tree, and failed hidden commands emit console-safe diagnostics on Windows as well as Linux. Use guarded WSL tasks when WSL Compose deployment-mimic proof matters, and Rancher Desktop K3s with `MYCELIS_K8S_BACKEND=rancher` when the release slice needs local Kubernetes parity proof. Hosted release jobs remain manual; `Full Release Candidate` chains source gates, authenticated browser proof, optional hosted source API proof, Helm packaging, optional images, and binary packaging. Hosted GitHub lanes use Node 24-capable action majors, Node.js 24 for Interface proof and container builds, and checksum-verified pinned Helm 3 setup instead of Node-20 Helm actions.
+Release proof contract: start with local source gates (`core.test`, `interface.test`, `interface.typecheck`, `interface.build`, focused Playwright) against Dockerized PostgreSQL/NATS when live data or bus proof is required. Only after those pass, containerize Core/Interface for full Compose/K8s proof. `uv run inv ci.release-preflight --lane=release` is the full local release gate and always runs repository lint before baseline, service, or deployment-facing proof; its managed baseline uses the repo-provisioned Chromium project with one worker and retained JSON/JUnit evidence. A lint failure stops the lane before later work can create false confidence. CI-owned Go commands select the Core module explicitly with `go -C` instead of trusting mutable shell-directory state, so Windows and Linux prove the same package tree, and failed hidden commands emit console-safe diagnostics on Windows as well as Linux. Use guarded WSL tasks when WSL Compose deployment-mimic proof matters, and Rancher Desktop K3s with `MYCELIS_K8S_BACKEND=rancher` when the release slice needs local Kubernetes parity proof. Hosted release jobs remain manual; `Full Release Candidate` chains source gates, authenticated browser proof, optional hosted source API proof, Helm packaging, optional images, and binary packaging. Hosted GitHub lanes use Node 24-capable action majors, Node.js 24 for Interface proof and container builds, and checksum-verified pinned Helm 3 setup instead of Node-20 Helm actions.
 
 ## Playwright Contract
 
@@ -238,8 +236,6 @@ End-of-slice reporting should name evidence commands run, docs changed, touched 
 ```bash
 uv run inv install
 uv run inv auth.dev-key
-uv run inv native-infra.install-nats
-uv run inv native-infra.up
 uv run inv db.migrate
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health

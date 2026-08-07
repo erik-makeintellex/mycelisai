@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-mycelis}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
       POSTGRES_DB: ${POSTGRES_DB:-cortex}
     ports:
       - "${MYCELIS_COMPOSE_POSTGRES_PORT:-5432}:5432"
