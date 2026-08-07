@@ -268,8 +268,7 @@ def _compose_storage_check_results(env_values: dict[str, str]) -> list[tuple[str
     return _compose_check_results(COMPOSE_LONG_TERM_STORAGE_CHECKS, env_values)
 
 
-def _compose_host_port(env_values: dict[str, str], key: str, default: str) -> int:
-    return compose_storage.compose_host_port(env_values, key, default)
+_compose_host_port = compose_storage.compose_host_port
 
 
 def _print_data_plane_connection_guidance(env_values: dict[str, str]):
@@ -428,6 +427,7 @@ def up(c, build=False, wait_timeout=180):
     env_values = _compose_effective_env()
     _validate_compose_env(env_values)
     env_values = _prepare_wsl_ollama_host(env_values)
+    postgres_port, nats_port, api_port, interface_port = compose_storage.compose_host_ports(env_values, API_PORT, INTERFACE_PORT)
     wait_timeout = int(wait_timeout)
     if wait_timeout < 30:
         raise SystemExit("Compose up wait timeout must be at least 30 seconds.")
@@ -450,7 +450,7 @@ def up(c, build=False, wait_timeout=180):
 
     _expect_stage(
         _wait_for_port,
-        5432,
+        postgres_port,
         "PostgreSQL",
         timeout_seconds=wait_timeout,
         failure=f"Compose up failed: PostgreSQL did not become reachable within {wait_timeout}s.",
@@ -472,7 +472,7 @@ def up(c, build=False, wait_timeout=180):
     )
     _expect_stage(
         _wait_for_port,
-        4222,
+        nats_port,
         "NATS",
         timeout_seconds=wait_timeout,
         failure=f"Compose up failed: NATS did not become reachable within {wait_timeout}s.",
@@ -509,7 +509,7 @@ def up(c, build=False, wait_timeout=180):
 
     _expect_stage(
         _wait_for_port,
-        API_PORT,
+        api_port,
         "Core API",
         timeout_seconds=wait_timeout,
         failure=f"Compose up failed: Core API port did not open within {wait_timeout}s.",
@@ -520,7 +520,7 @@ def up(c, build=False, wait_timeout=180):
     )
     _expect_stage(
         _wait_for_http_ok,
-        f"http://{API_HOST}:{API_PORT}/healthz",
+        f"http://{API_HOST}:{api_port}/healthz",
         "Core health",
         timeout_seconds=wait_timeout,
         failure=f"Compose up failed: Core /healthz did not become ready within {wait_timeout}s.",
@@ -531,7 +531,7 @@ def up(c, build=False, wait_timeout=180):
     )
     _expect_stage(
         _wait_for_port,
-        INTERFACE_PORT,
+        interface_port,
         "Frontend",
         timeout_seconds=wait_timeout,
         failure=f"Compose up failed: Frontend port did not open within {wait_timeout}s.",
@@ -542,7 +542,7 @@ def up(c, build=False, wait_timeout=180):
     )
     _expect_stage(
         _wait_for_http_ok,
-        f"http://{INTERFACE_HOST}:{INTERFACE_PORT}/",
+        f"http://{INTERFACE_HOST}:{interface_port}/",
         "Frontend",
         timeout_seconds=wait_timeout,
         failure=f"Compose up failed: Frontend root did not become ready within {wait_timeout}s.",

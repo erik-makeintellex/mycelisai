@@ -205,10 +205,10 @@ For output block, media readiness, and team-managed review, use:
 - `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
 - `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 
+For side-by-side native and Compose proof, set the four `MYCELIS_COMPOSE_*_PORT` host bindings in `.env.compose`. `compose.up` uses those same PostgreSQL, NATS, Core, and Interface ports for readiness, so a native listener on a default port cannot create a false pass or block an isolated proof stack.
 If the media engine is offline, record a blocker instead of treating missing media as passed. Gateway unit proof uses `uv run pytest tests/test_media_gateway.py -q` and does not require Pinokio to be running.
 ## Tier 1: Backend Unit Tests
 Run:
-
 ```bash
 uv run inv core.test
 ```

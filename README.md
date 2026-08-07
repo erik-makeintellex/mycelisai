@@ -178,6 +178,8 @@ uv run inv api.delivery-proof
 uv run inv lifecycle.memory-restart && uv run inv team.architecture-sync && uv run inv quality.max-lines --limit 330
 ```
 
+Compose launch and readiness use the same configurable host ports from `.env.compose`: `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`. This allows an isolated proof stack to coexist with native development dependencies without readiness checks probing unrelated default-port services.
+
 `team.architecture-sync` sends the standing architecture, development, and AGUI teams one bounded Workspace-to-Outcome release brief: close the current execution-to-deliverable gate, require validated retained output, keep Soma lifecycle language truthful, and return concise proof priorities without starting another doctrine lane.
 
 `uv run inv install` includes Reticulum bootstrap: it syncs the locked `rns` package through `uv`, then warms/verifies `uvx --from rns rnstatus --help` before continuing with Go, Interface, and Playwright setup.

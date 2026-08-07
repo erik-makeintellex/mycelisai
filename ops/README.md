@@ -95,13 +95,14 @@ Handles the rapid Docker Compose single-host runtime for development, same-machi
 - **Infra Health**: `uv run inv compose.infra-health` (PostgreSQL port/query readiness, NATS port, and NATS monitor only; no Core/UI health checks)
 - **Storage Health**: `uv run inv compose.storage-health` (post-migration PostgreSQL long-term storage gate for pgvector, semantic context vectors, durable memory, conversation continuity, artifacts, managed exchange, collaboration groups, and templates)
 - **Warm Cognitive**: `uv run inv compose.warm-cognitive` (warms the configured Compose text model through the same Ollama endpoint Core uses before live browser proof)
-- **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface, with numbered stage output and optional `--wait-timeout=<seconds>`)
+- **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface, with numbered stage output, optional `--wait-timeout=<seconds>`, and readiness on the configured PostgreSQL/NATS/Core/Interface host ports)
 - Compose `up` and `migrate` behave like the main `db.migrate` contract: they bootstrap forward only when the compose `cortex` schema is compatible through the capability/proof/team-work tables, team-work lifecycle columns, collaboration-group workspace-folder schema, operator SSE ledger, and team signal-receipt ledger, and they point to `uv run inv compose.down --volumes` for a truly fresh replay.
 - **Down**: `uv run inv compose.down`
 - **Health**: `uv run inv compose.health`
 - **Status**: `uv run inv compose.status`
 - **Logs**: `uv run inv compose.logs`
 - Compose uses `.env.compose` so host/container assumptions stay separate from the local-Kubernetes `.env` path.
+- Compose launch and readiness share `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`, allowing isolated proof bindings without probing unrelated services on default host ports.
 - Compose uses `MYCELIS_COMPOSE_OLLAMA_HOST` instead of raw `OLLAMA_HOST` so host-machine Ollama bind settings cannot override the container runtime accidentally, and maps that value into provider-specific endpoint overrides inside Core.
 - Compose passes `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, and `MYCELIS_SEARCH_MAX_RESULTS` into Core for governed search; use `local_sources` for token-free governed local-source search, `searxng` for operator-owned metasearch, or `local_api` for an operator-owned HTTP search endpoint instead of treating Brave as mandatory.
 - Compose rejects loopback compose Ollama values because `localhost`, `127.0.0.1`, and `0.0.0.0` point back at the Core container instead of the operator host.

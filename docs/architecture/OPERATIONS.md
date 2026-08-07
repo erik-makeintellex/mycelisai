@@ -121,6 +121,7 @@ uv run inv compose.down
 ```
 
 Compose is the supported single-host runtime lane. `.env.compose` owns container topology; `.env` remains the secret source.
+Full bring-up resolves PostgreSQL, NATS, Core, and Interface readiness from the configured `MYCELIS_COMPOSE_*_PORT` host bindings. Use isolated host ports when the proof stack must coexist with native source-mode dependencies; container-internal ports remain unchanged.
 The WSL release proof health-gates each live browser spec with `compose.health` because the runner executes specs through separate WSL shell invocations.
 
 ### Kubernetes Tasks (`ops/k8s.py`)
