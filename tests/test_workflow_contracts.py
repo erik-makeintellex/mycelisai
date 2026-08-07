@@ -59,9 +59,9 @@ def test_user_workflow_specs_match_current_shared_trial_expectations():
         assert spec_path in manual_plan
 
     assert "Soma-first operator workflow" in remote_testing
-    assert "deployment-context loading into governed vector-backed stores" in remote_testing
-    assert "MCP visibility and recent persisted tool activity" in remote_testing
-    assert "safe current actuation proof is governed file output, governed context loading, MCP-backed tool usage, and reviewable audit/activity behavior" in remote_testing
+    assert "Deployment-context loading, capability/MCP visibility, and recent persisted tool activity" in remote_testing
+    assert "selected files or context can return to Soma" in remote_testing
+    assert "raw events stay behind Details or Inspect" in remote_testing
 
     assert "supported Docker Compose lane" in manual_plan
     assert "Kubernetes is framed as the modular scale-up proof lane" in manual_plan

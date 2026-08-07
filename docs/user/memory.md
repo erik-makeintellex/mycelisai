@@ -39,11 +39,11 @@ Mycelis now treats memory as several different classes with different purposes:
 - **`REFLECTION_MEMORY`**: distilled lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations. Reflection starts as a Managed Exchange `LearningCandidate` before promotion into `reflection_synthesis`.
 - **Durable semantic memory**: reusable facts, decisions, SitReps, recipes, and intentionally promoted summaries. This is the pgvector-backed recall substrate.
 - **User-private context store**: user-uploaded or pasted records, diary notes, finance/legal/health references, and other sensitive material intentionally made available for specific target goal sets. This is private/restricted by default and is not company knowledge.
-- **Customer context store**: operator- or customer-provided docs, notes, briefs, and research intentionally loaded into pgvector so Soma, Council, and teams can reason with deployment-specific requirements across future sessions.
+- **Customer context store**: operator- or customer-provided docs, notes, briefs, and research intentionally loaded into pgvector so Soma and governed teams can reason with deployment-specific requirements across future sessions.
 - **Company knowledge store**: approved company-authored guidance or playbooks that Soma or teams are explicitly allowed to treat as durable organizational reference.
 - **Reflection / synthesis memory**: distilled lessons, inferred patterns, contradictions, user-trajectory shifts, and meta-observations about what is changing over time. This is stored as `reflection_synthesis`, private/restricted by default, and should not be treated as raw transcript or customer content.
 - **Temporary continuity**: restart-safe planning checkpoints and in-flight working context. This stays in temporary memory channels and does **not** automatically become long-term semantic memory.
-- **Trace and audit**: conversation turns, mission events, and operational review logs used for causality, inspection, and governance. These are review surfaces, not default semantic memory.
+- **Trace and audit**: conversation turns, execution events, and operational review logs used for causality, inspection, and governance. These are review surfaces, not default semantic memory.
 
 Important distinction:
 - `SOMA_MEMORY` is Soma's personal durable continuity
@@ -73,7 +73,7 @@ Type a natural-language query — not exact keywords, but the *meaning* of what 
 ```
 "Python file parsing functions we wrote last week"
 "decisions made about the auth module"
-"errors encountered in the CSV processor mission"
+"errors encountered while producing the CSV processor outcome"
 ```
 
 Results are ranked by **cosine similarity** to your query, not by keyword match. Relevant memories from different time periods surface together.
@@ -96,7 +96,7 @@ Governed deployment knowledge is stored under dedicated vector types:
 - `user_private_context` for user-owned private records, diary entries, finance notes, and other sensitive references tied to explicit goal sets
 - `reflection_synthesis` for lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations that Soma should retain as synthesis rather than transcript
 
-That lets Soma, Council, and teams recall deployment knowledge independently from ordinary remembered facts when a stricter context boundary is needed.
+That lets Soma and governed teams recall deployment knowledge independently from ordinary remembered facts when a stricter context boundary is needed.
 
 ## Trusted Recall
 
@@ -144,10 +144,10 @@ Reflection is stricter than ordinary recall:
 
 ## SitReps (Situation Reports)
 
-The **SitReps** tab shows compressed summaries of past mission activity. The system's Archivist process compresses raw log events into SitReps every 5 minutes.
+The **SitReps** tab shows compressed summaries of past execution activity. The system's Archivist process compresses raw log events into SitReps every 5 minutes.
 
 Each SitRep covers:
-- Active missions and their state transitions
+- Active work and its state transitions
 - Key tool calls and artifacts produced
 - Notable errors or governance events
 

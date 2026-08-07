@@ -6,6 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
 SOMA_CHAT = ROOT / "docs" / "user" / "soma-chat.md"
+META_AGENT_BLUEPRINT = ROOT / "docs" / "user" / "meta-agent-blueprint.md"
+ARCHITECTURE_OVERVIEW = ROOT / "docs" / "architecture" / "OVERVIEW.md"
 
 
 def _manifest_section(text: str, section: str) -> str:
@@ -27,6 +29,11 @@ def test_user_help_start_here_stays_operator_first():
         assert slug in start_here
     assert "meta-agent-blueprint" not in start_here
     assert "meta-agent-blueprint" not in advanced
+
+
+def test_superseded_product_docs_stay_deleted():
+    assert not META_AGENT_BLUEPRINT.exists()
+    assert not ARCHITECTURE_OVERVIEW.exists()
 
 
 def test_soma_chat_doc_matches_current_outcome_workspace():

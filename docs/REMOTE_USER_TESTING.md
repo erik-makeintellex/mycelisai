@@ -1,242 +1,253 @@
-# Remote User Testing Runbook
-> Navigation: [Project README](../README.md) | [Docs Home](README.md) | [Testing](TESTING.md)
+# User Acceptance Runbook
+> Navigation: [Project README](../README.md) | [Docs Home](README.md) | [Testing](TESTING.md) | [Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
 
-Use this runbook when a human tester validates Mycelis from a different browser, host, or operator machine than the runtime/control checkout.
-
-## TOC
-
-- [Purpose](#purpose)
-- [Current Truth And Boundaries](#current-truth-and-boundaries)
-- [Preflight](#preflight)
-- [Environment Setup](#environment-setup)
-- [Windows Self-Hosted Operator Lane](#windows-self-hosted-operator-lane)
-- [Walkthrough](#walkthrough)
-- [Pass Criteria](#pass-criteria)
-- [Initial Release Review Packet](#initial-release-review-packet)
-- [Failure Notes To Capture](#failure-notes-to-capture)
-- [Recommended Evidence Capture](#recommended-evidence-capture)
+Use this runbook for human validation of the delivered Mycelis experience. It applies to same-machine development review, another browser or device, and release deployment certification.
 
 ## Purpose
 
-Remote user testing proves the delivered operator path, not only local code health. The tester should reach the UI through the same address a real user will use, interact through Soma, and verify governance, retained outputs, and recovery from the browser.
+Acceptance proves the Trusted Outcome Journey through the address a user actually opens:
 
-Use [Testing](TESTING.md) for engineering gates and [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md) for the full browser matrix.
+```text
+Ask
+-> Understand
+-> Approve
+-> Execute
+-> Deliver
+-> Trust
+-> Recover
+-> Revisit
+```
 
-## Current Truth And Boundaries
+The Soma-first operator workflow does not pass merely because endpoints respond or buttons can be clicked. A new user must understand what to do, see useful progress, open the result, and know what remains trusted later.
 
-Accepted runtime lanes:
-- Docker Compose on the same Windows machine as the tester
-- Docker-in-WSL Compose with Windows browser on the same machine
-- Compose or Kubernetes on another host reached by IP/hostname
-- self-hosted Kubernetes through real ingress
+## Record Before Testing
 
-Required topology truth:
-- AI endpoint is explicit and reachable from the runtime
-- the browser address is the delivered operator address
-- no proof depends on hidden localhost shortcuts unless the delivered lane is same-machine `http://localhost:3000`
+Record:
 
-Soma-first operator workflow is the target user path.
+- branch and commit SHA
+- local date/time
+- runtime lane
+- UI address used by the tester
+- Core/API address when separately exposed
+- AI endpoint host posture without tokens
+- browser, operating system, and viewport/device
+- whether test-owned retained fixtures were cleaned first
 
-Remote proof should include deployment-context loading into governed vector-backed stores when a workflow depends on retained host/deployment context. Include MCP visibility and recent persisted tool activity. The safe current actuation proof is governed file output, governed context loading, MCP-backed tool usage, and reviewable audit/activity behavior.
+## Runtime Lanes
 
-Use a clean WSL deployment-mimic checkout refreshed from git as the validation host, with the Windows root repo as the dev/staging worktree. For WSL proof, use a clean WSL deployment-mimic checkout refreshed from git as the validation host and run `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv ci.release-preflight --lane=release`.
+| Lane | Purpose |
+| --- | --- |
+| Source development | Dockerized PostgreSQL/NATS with local Core/Interface for rapid product review |
+| Full Compose | Packaged single-host release proof |
+| Kubernetes | Helm, ingress, storage, secret, and clustered-runtime proof |
+| Remote operator | Real hostname/IP/ingress from another browser or device |
 
-For Windows browser proof, verify `http://localhost:3000` from the Windows side with both a simple HTTP probe and a real browser launch. If the first browser request warms a cold Next.js/Compose path, classify it as `cold_start_first_request` instead of a clean first-pass success; do not silently relabel the run as a clean first-pass success. Record whether the issue is a `cold_start_first_request`, a steady-state regression, or an environment/setup gap.
+WSL is used only when it provides distinct release evidence. It is not the normal source-development application host.
 
 ## Preflight
 
-Record:
-- branch and commit SHA
-- local date/time
-- runtime lane: `compose`, `wsl-compose`, `kubernetes`, or `remote-host`
-- UI URL used by the tester
-- Core/API URL if separately exposed
-- AI endpoint host/IP, not secret tokens
-- browser and OS
+For normal development:
 
-Run one matching readiness set before inviting the tester:
-
-```bash
-uv run inv compose.status
-uv run inv compose.health
-```
-
-or:
-
-```bash
+```powershell
+git status --short --branch
+uv run inv compose.infra-health
 uv run inv lifecycle.status
 uv run inv lifecycle.health
 ```
 
-or the target-cluster equivalent plus:
+For full Compose:
 
-```bash
-uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml
+```powershell
+uv run inv compose.status
+uv run inv compose.health
 ```
 
-## Environment Setup
+For Kubernetes, run the selected Helm standards check plus cluster status/readiness and operator-address probes.
 
-For Compose:
-- configure `.env.compose`
-- set `MYCELIS_COMPOSE_OLLAMA_HOST` to a runtime-reachable endpoint
-- run `uv run inv compose.up --build --wait-timeout=240`
-- confirm `uv run inv compose.health` passes
+Before a fresh-user acceptance pass, use only owner-tagged QA cleanup. Do not infer test ownership from names or delete shared NATS/database state.
 
-For Kubernetes:
-- set `MYCELIS_K8S_TEXT_ENDPOINT`
-- optionally set `MYCELIS_K8S_MEDIA_ENDPOINT`
-- select a values preset with `MYCELIS_K8S_VALUES_FILE`
-- deploy through `uv run inv k8s.up` or the target-cluster Helm process
+## Interaction Review Standard
 
-For source-mode proof:
-- use the WSL proof checkout for release-style validation
-- use the Windows browser for same-machine WSL-hosted UI proof
+At every step inspect:
 
-## Windows Self-Hosted Operator Lane
+- first-glance purpose and next action
+- plain-language copy
+- layout density and visual hierarchy
+- primary scroll ownership
+- text-field reachability and growth
+- panel, drawer, and keyboard overlap
+- desktop, tablet, and compact-phone behavior
+- loading, empty, blocked, degraded, retry, and completed states
+- console, hydration, network, and page errors
 
-This lane proves the product as a Windows operator actually uses it:
-- browser runs on Windows
-- UI is reached from Windows at the delivered address
-- runtime is Windows/Rancher Desktop Docker-compatible Compose, Docker-in-WSL Compose, Rancher Desktop K3s, or self-hosted Kubernetes
-- AI engine is an explicit Windows host/IP or equivalent self-hosted service
+Do not accept a technically functional screen that is confusing, crowded, clipped, or dependent on runtime vocabulary.
 
-Same-machine proof starts at:
+## Trusted Outcome Walkthrough
 
-```text
-http://localhost:3000
+### 1. Sign In And Enter Soma
+
+Sign in through the configured local or SSO path.
+
+Expected:
+
+- successful authentication lands at `/dashboard`
+- Soma is the dominant operating surface
+- starter asks are compact and optional
+- Outcomes and review panels do not squeeze the thread by default
+- the composer is immediately reachable
+
+### 2. Ask For A Direct Answer
+
+Ask a simple non-mutating question and then request a compact list or table.
+
+Expected:
+
+- Soma answers without forcing a proposal
+- response depth matches the request
+- sources or trust context appear when needed
+- the answer does not expose raw provider or transport noise
+
+### 3. Shape Meaningful Work
+
+Ask Soma to create or review a durable result. Include the expected output type and how it should be usable.
+
+Expected:
+
+- Soma can discuss and refine the request before execution
+- the proposed team/capability shape is the smallest useful one
+- the proposal summarizes intended work and deliverables in conversational form
+- risk and approval posture are understandable
+
+### 4. Cancel And Adjust
+
+Cancel one governed proposal, then adjust or ask again.
+
+Expected:
+
+- cancellation applies no mutation
+- the conversation remains intact
+- adjustment does not require rebuilding the request from scratch
+
+### 5. Approve And Continue Talking
+
+Approve the revised work.
+
+Expected:
+
+- visible queued/running feedback appears immediately
+- Soma remains available while NATS-backed work continues
+- progress is correlated to the same Outcome
+- the UI does not navigate the user into a raw event chain as the primary experience
+
+### 6. Receive And Open The Deliverable
+
+Wait for terminal feedback without manually polling hidden runtime pages.
+
+Expected:
+
+- Soma reports completion or truthful degradation
+- the completion message briefly explains what was delivered
+- direct file/app/folder access is available
+- group-owned content is isolated under `groups/<team-id>/generated/...`
+- package entrypoint, local dependencies, and expected interaction were validated
+
+### 7. Review Trust
+
+Open proof or receipt details deliberately.
+
+Expected:
+
+- Outcome health uses the canonical vocabulary
+- proof explains why the result is trusted
+- runtime IDs and raw events stay behind Details or Inspect
+- missing output or validation creates recovery, not false completion
+
+### 8. Exercise Recovery
+
+Use a safe injected or existing degraded case.
+
+Expected:
+
+- the UI states what failed, what remains trusted, and what can continue
+- recovery retains the approved contract and context
+- uncertain external mutation is not silently retried
+- the user returns to Soma or the owning Outcome after recovery
+
+### 9. Revisit Across Surfaces
+
+Reload and revisit the Outcome from Soma, Groups, and Resources.
+
+Expected:
+
+- the deliverable and producing group remain attributable
+- completed history does not inflate active-review counts
+- replying to an output can create an update, alternative, or follow-on request
+- selected files or context can return to Soma without becoming unrestricted permanent memory
+
+### 10. Review Supporting Routes
+
+Check Groups, Resources, Docs, and guided Settings. Turn on Admin tools only for Activity, Runs, deep Memory, System, or raw capability inspection.
+
+Expected:
+
+- each route has one obvious purpose
+- tabs/list-detail/overlays replace long compressed columns
+- Help content matches visible labels and workflows
+- infrastructure depth remains optional
+
+## Cross-Device Matrix
+
+Repeat the primary journey at minimum on:
+
+- compact phone
+- tablet or narrow laptop
+- standard laptop/desktop
+- wide desktop
+
+Verify navigation, peer tabs, overlays, composer, approval, deliverables, recovery, Docs, and Settings with pointer and keyboard equivalents where applicable.
+
+## Release Certification
+
+Run the committed release candidate through:
+
+```powershell
+uv run inv ci.release-preflight --lane=release
 ```
 
-Second-machine proof uses the reachable hostname or IP. Do not record raw secrets in evidence.
+Use WSL only when it supplies distinct deployment-mimic evidence. Keep the Windows root repo as the dev/staging worktree and use a clean WSL deployment-mimic checkout refreshed from git as the validation host. The guarded tasks are:
 
-## Walkthrough
+```powershell
+uv run inv wsl.status
+uv run inv wsl.refresh --branch <name>
+uv run inv wsl.validate --lane=release
+```
 
-### 1. Workspace Entry And Continuity
+For a same-machine WSL or Compose proof, verify `http://localhost:3000` from the Windows side with both a simple HTTP probe and a real browser launch. If the first request warms a cold runtime, classify it as `cold_start_first_request` instead of a clean first-pass success. Do not silently relabel the run as a clean first-pass success. Record whether the issue is a `cold_start_first_request`, a steady-state regression, or an environment/setup gap.
 
-Open the UI. Confirm the tester can create or re-enter an AI Organization and land in a Soma-primary workspace.
-
-Expected: the product reads as an AI Organization workspace, not a raw chat box or dev console.
-
-### 2. Direct Soma Answer
-
-Ask a non-mutating question.
-
-Expected: Soma returns an `answer` without asking for mutation approval.
-
-### 3. Soma Creates Or Refines A Team
-
-Ask Soma for a focused team or temporary workflow lane.
-
-Expected: the team/lane shape is compact, reviewable, and routed through governed UI state.
-
-### 3a. Groups Workspace
-
-Open the groups/temporary workflow surface.
-
-Expected: retained outputs, status, and review affordances remain visible.
-
-### 4. Team Creation And Team Lead Focus
-
-Run the guided team-creation path.
-
-Expected: the Team Lead, purpose, and compact-default behavior are clear.
-
-### 4a. Output Model Routing
-
-Inspect AI Engine/response-style behavior only if the slice changes provider routing or response contracts.
-
-Expected: effective settings are visible without exposing secrets.
-
-### 4b. Output Block And Media Readiness
-
-Create or review an output artifact.
-
-Expected: generated files are linked/downloadable from the configured output block. If media is unavailable, the UI shows a clear blocker.
-
-### 5. Governed Mutation: Cancel Path
-
-Ask for a protected/mutating action and cancel it.
-
-Expected: proposal state is visible, cancellation is clean, and no mutation is applied.
-
-### 6. Governed Mutation: Execute Path
-
-Repeat a protected action and approve it.
-
-Expected: execution state and result are visible, auditable, and retained.
-
-### 7. Deployment Context Intake
-
-Provide deployment context only when needed for the tested slice.
-
-Expected: private context is treated as governed input, not leaked as raw backend noise.
-
-### 8. MCP Visibility And Tool Activity
-
-Open Resources/Capabilities when MCP behavior is in scope.
-
-Expected: registry/library/activity state is understandable and actions remain governed.
-
-### 9. Optional Web/External Research
-
-Run only when search/research is in scope.
-
-Expected: configured provider posture is visible, and unreachable endpoints block clearly.
-
-### 10. Audit / Activity Review
-
-Open activity or run timeline.
-
-Expected: direct answers, proposals, executions, and retained artifacts are reviewable.
-
-### 11. Failure Recovery Check
-
-Temporarily break or simulate AI endpoint failure only if safe for the environment.
-
-Expected: blocker appears, recovery restores the same workflow after endpoint health returns.
+Deployment-context loading, capability/MCP visibility, and recent persisted tool activity are tested only when relevant to the approved Outcome. They remain supporting evidence, not setup steps every new user must complete.
 
 ## Pass Criteria
 
 The run passes only when:
-- the tester used the real delivered UI address
-- Soma direct answer, governed proposal, approval/cancel, and retention paths worked
-- output artifacts were visible or a truthful blocker was recorded
-- the AI endpoint was explicit and reachable from runtime
-- failures surfaced in user-readable form
 
-## Initial Release Review Packet
+- the real delivered UI address was used
+- the full Trusted Outcome Journey was understandable
+- asynchronous execution did not block continued Soma conversation
+- deliverables opened and matched the approved output contract
+- proof and recovery were truthful
+- refresh/revisit preserved the Outcome
+- no blocking console, hydration, page, overlap, overflow, or unreachable-control errors occurred
 
-Provide:
-- UI URL
-- runtime lane
-- AI endpoint host posture
-- evidence commands run
-- screenshots or short recordings
+## Evidence Packet
+
+Retain:
+
+- runtime lane, commit, and UI address
+- viewport/device list
+- screenshots or short recordings of the major journey steps
+- console/page-error summary
+- commands and suites run
 - pass/fail notes
-- known blockers and recovery steps
+- blockers, trusted remainder, and recovery action
 
-Follow [Local Development Workflow](LOCAL_DEV_WORKFLOW.md) for host-specific bring-up.
-
-## Failure Notes To Capture
-
-Capture:
-- exact user action
-- visible UI state
-- browser console/network symptom when available
-- Core/log symptom when available
-- runtime lane and UI URL
-- whether refresh/retry recovered
-
-## Recommended Evidence Capture
-
-Minimum:
-- dashboard or organization entry screenshot
-- Soma direct answer screenshot
-- proposal/cancel screenshot
-- proposal/execute result screenshot
-- retained output or blocker screenshot
-- activity/run timeline screenshot
-
-References:
-- [Testing](TESTING.md)
-- [Local Development Workflow](LOCAL_DEV_WORKFLOW.md)
-- [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
+Do not retain credentials, unrelated user data, or unowned test fixtures.

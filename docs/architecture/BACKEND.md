@@ -1,7 +1,7 @@
-# Mycelis Cortex - Backend Specification
-> Navigation: [Project README](../../README.md) | [Overview](OVERVIEW.md) | [Frontend](FRONTEND.md) | [Operations](OPERATIONS.md)
+# Mycelis Backend Implementation Contract
+> Navigation: [Project README](../../README.md) | [Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md) | [Frontend](FRONTEND.md) | [Operations](OPERATIONS.md)
 
-This file is the compact backend architecture index. It preserves stable anchors for existing docs and points implementation work toward code, API docs, and V8 contracts instead of duplicating full runtime detail.
+This file is the scoped backend implementation contract. Product, UX, and release authority remains in the Canonical PRD.
 
 ## I. Package Structure
 
@@ -195,7 +195,7 @@ SQL owns schema and migration contracts. Runtime tables cover identity, organiza
 
 Use migration files as the source of exact DDL truth. When API behavior or payload meaning changes, review [API Reference](../API_REFERENCE.md) and the affected migration docs/tests.
 
-## VIII. API Surface (50+ Endpoints)
+## VIII. API Surface
 
 ### Identity & Users
 User, local-admin, break-glass, and future enterprise auth endpoints.

@@ -128,7 +128,7 @@ Use at least one durable surface:
 - **Run Timeline** for the execution trace and resume context
 - **Temporary workflow groups** when you want lane ownership and archived output review
 - **Conversation templates** when the ask shape should be reused later
-- **Governed memory or deployment context** only when the material should influence future work beyond this one mission
+- **Governed memory or deployment context** only when the material should influence future work beyond this one execution
 
 Simple rule:
 - working state belongs in temporary continuity
@@ -153,5 +153,5 @@ Helpful related docs:
 - [Teams](teams.md)
 - [Memory](memory.md)
 - [Run Timeline](run-timeline.md)
-- [Meta-Agent & Blueprints](meta-agent-blueprint.md)
+- [Teams](teams.md)
 - [Mycelis Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md)

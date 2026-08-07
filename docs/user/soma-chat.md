@@ -172,7 +172,7 @@ Use these boundaries:
 
 ## Direct Drafting
 
-If you ask for plain chat content such as a short letter, note, email, or message, Soma should answer directly in chat. It should not route that request through file tools, local commands, or council delegation unless you ask to save, inspect, execute, or hand off the work.
+If you ask for plain chat content such as a short letter, note, email, or message, Soma should answer directly in chat. It should not route that request through file tools, local commands, or team delegation unless you ask to save, inspect, execute, or hand off the work.
 
 If you ask `what is your current state` or `what teams currently exist`, Soma should answer from current runtime and team state rather than giving a generic provider apology.
 

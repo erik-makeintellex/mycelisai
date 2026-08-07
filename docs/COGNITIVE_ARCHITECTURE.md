@@ -1,7 +1,7 @@
-# Cognitive Architecture
-> Navigation: [Project README](../README.md) | [Docs Home](README.md)
+# AI Provider Runtime
+> Navigation: [Project README](../README.md) | [Docs Home](README.md) | [Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md) | [API Reference](API_REFERENCE.md)
 
-> Back to [README](../README.md) | See also: [Architecture Overview](architecture/OVERVIEW.md) | [API Reference](API_REFERENCE.md) | [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
+This is the scoped implementation contract for model providers, routing, embeddings, and local media gateways. Product and UX authority remains in the Canonical PRD.
 
 ## TOC
 
@@ -86,7 +86,7 @@ Navigate to `/settings` → **AI Engines** (Advanced mode):
 - Click a **provider** to configure endpoint, model ID, and API keys
 - Changes persist to `cognitive.yaml` via `PUT /api/v1/cognitive/profiles` and `PUT /api/v1/cognitive/providers/{id}`
 
-AI Organizations also expose an operator-facing output-model routing layer from the organization workspace. That layer does not replace provider configuration; it selects which configured local models are used for delivery types such as general text, research and reasoning, code generation, and vision analysis.
+Compatibility organization contexts also expose an output-model routing layer. That layer does not replace provider configuration; it selects which configured local models are used for delivery types such as general text, research and reasoning, code generation, and vision analysis.
 
 Current self-hosted starting points surfaced in product:
 - `Qwen3 8B`

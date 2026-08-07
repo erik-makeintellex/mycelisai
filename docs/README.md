@@ -46,7 +46,7 @@ These are the active contributor support surfaces for changing or reviewing the 
 - **Repository Entry Point**: `../README.md`
 - **Operations**: `./architecture/OPERATIONS.md`
 - **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
-- **Cognitive Architecture Reference**: `./COGNITIVE_ARCHITECTURE.md`
+- **AI Provider Runtime**: `./COGNITIVE_ARCHITECTURE.md`
 - **API Reference**: `./API_REFERENCE.md`
 - **Logging Standard**: `./logging.md`
 - **Ops README**: `../ops/README.md`
@@ -66,7 +66,7 @@ Backend, Frontend, Operations, API, Testing, and user guides are scoped implemen
 Use these when the goal is verification, release proof, or workflow-complete validation:
 
 - **Testing Guide**: `./TESTING.md`
-- **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
+- **User Acceptance Runbook**: `./REMOTE_USER_TESTING.md`
 - **Mycelis Canonical PRD**: `./architecture-library/MYCELIS_CANONICAL_PRD.md`
 - **Governance System**: `./governance.md`
 - **Licensing & Editions**: `./licensing.md`

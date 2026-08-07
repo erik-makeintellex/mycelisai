@@ -73,7 +73,7 @@ Common runtime variables:
 - `MYCELIS_API_KEY`, `MYCELIS_WEB_SESSION_SECRET`, `MYCELIS_WEB_IDENTITY_FORWARD_SECRET`, `MYCELIS_PUBLIC_ORIGIN`: local API credential, browser-session signing, optional Interface-to-Core identity HMAC separation, and auth redirect origin
 - `MYCELIS_BREAK_GLASS_API_KEY`: optional recovery credential
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: local Core database connection
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`: native PostgreSQL bootstrap user for creating/updating the app role/database
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`: host-service fallback bootstrap user for creating/updating the app role/database when `MYCELIS_DEV_INFRA_MODE=native`
 - `NATS_URL`: Core NATS connection
 - `MYCELIS_DEV_INFRA_MODE`: `compose` for the default Docker PostgreSQL/NATS data plane; `native` for an explicit host-service fallback; `k8s` only for clustered bridge proof
 - `MYCELIS_WORKSPACE`, `MYCELIS_ARTIFACT_ROOT`: governed output root and artifact/cache root; `DATA_DIR` is still honored as a legacy artifact alias, but new runtime config should set `MYCELIS_ARTIFACT_ROOT`
@@ -260,7 +260,7 @@ Guarded commands: `uv run inv wsl.status`, `uv run inv wsl.refresh --branch <nam
 
 ## Troubleshooting
 
-- NATS or council responses disappear: run `uv run inv lifecycle.status`, then restart with `uv run inv lifecycle.restart --frontend`.
+- NATS, Soma, or team responses disappear: run `uv run inv lifecycle.status`, then restart with `uv run inv lifecycle.restart --frontend`.
 - Compose readiness times out on a first build: rerun with `uv run inv compose.up --build --wait-timeout=240`.
 - Windows host has no native `docker`: the Compose task may use Docker inside WSL; set `MYCELIS_WSL_DISTRO` if the default distro is not the Docker host.
 - Windows-hosted Ollama from WSL/Docker: keep `MYCELIS_COMPOSE_OLLAMA_HOST` pointed at the intended Windows service address; the task layer may relay it through WSL.
@@ -283,7 +283,7 @@ uv run inv cognitive.up
 uv run inv cognitive.status
 ```
 
-For private Pinokio media generation, use the `.env.example` `MYCELIS_MEDIA_GATEWAY_*` block and `uv run inv cognitive.media-gateway`; the gateway accepts local/private upstreams by default, returns `b64_json`, and requires `MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1` for intentional non-private upstream routing. Forge/AUTOMATIC1111 can use the direct `txt2img` adapter. ComfyUI uses `MYCELIS_MEDIA_GATEWAY_BACKEND=comfyui` plus a reviewed API-format workflow file and node mappings so the gateway can submit `/prompt`, poll `/history/{prompt_id}`, and fetch outputs through `/view`. Details live in [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md).
+For private Pinokio media generation, use the `.env.example` `MYCELIS_MEDIA_GATEWAY_*` block and `uv run inv cognitive.media-gateway`; the gateway accepts local/private upstreams by default, returns `b64_json`, and requires `MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1` for intentional non-private upstream routing. Forge/AUTOMATIC1111 can use the direct `txt2img` adapter. ComfyUI uses `MYCELIS_MEDIA_GATEWAY_BACKEND=comfyui` plus a reviewed API-format workflow file and node mappings so the gateway can submit `/prompt`, poll `/history/{prompt_id}`, and fetch outputs through `/view`. Details live in [AI Provider Runtime](COGNITIVE_ARCHITECTURE.md).
 
 ## Binary Release Process
 

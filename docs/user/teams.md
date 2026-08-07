@@ -37,7 +37,7 @@ Default rule:
 
 For most work, Soma should launch one accountable lead first.
 
-The lead is the user-facing counterpart who keeps the mission, status, and outputs clear. If the work truly needs more coverage, the operator can add a member deliberately or the temporary team lead can request one temporary specialist with:
+The lead is the focused counterpart who keeps the Outcome goal, status, and outputs clear. If the work truly needs more coverage, the operator can add a member deliberately or the temporary team lead can request one temporary specialist with:
 
 - the missing capability
 - the owned task
@@ -124,7 +124,7 @@ If you need the higher-level boundary between direct Soma, one context-rich agen
 Most teams should have:
 - one clear lead
 - a small specialist set
-- a narrow mission
+- a narrow Outcome goal
 - readable outputs
 - a named output contract such as "brief", "test plan", "image prompt pack", "website draft", "data review", "implementation patch", or "release checklist"
 

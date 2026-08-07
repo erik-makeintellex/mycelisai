@@ -210,7 +210,7 @@ Operational behavior:
 - promotion from customer context into company knowledge should happen through a governed approval path with lineage preserved, not by rewriting the original entry in place
 - Soma operating context is stricter than ordinary deployment intake: it is normalized into admin guidance, stays globally scoped, and is intended for durable shared output/identity/stance shaping rather than personal chat preferences
 - reflection/synthesis context is separate from Soma memory and from user-private/customer/company lanes so Soma can reason about what is changing over time without mixing those meta-observations into raw source material
-- Soma, Council, and teams can recall allowed context during planning and answer generation without treating it as raw unrestricted web input
+- Soma and governed teams can recall allowed context during planning and answer generation without treating it as raw unrestricted web input
 - private user context is only intended to enter agent work when its visibility/scope and target goal sets match the user’s request; it is not company knowledge and should not be promoted silently
 - use `source_kind=web_research` or a stricter trust/sensitivity class when the content came from external sources
 
