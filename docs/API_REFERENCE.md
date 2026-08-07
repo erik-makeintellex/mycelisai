@@ -1,7 +1,5 @@
 # API Reference
-> Navigation: [Project README](../README.md) | [Docs Home](README.md)
-
-> Back to [README](../README.md) | See also: [Architecture Overview](architecture/OVERVIEW.md) | [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md)
+> Navigation: [Project README](../README.md) | [Docs Home](README.md) | [Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md) | [AI Provider Runtime](COGNITIVE_ARCHITECTURE.md)
 
 ## API TOC
 
@@ -271,4 +269,4 @@ Implementation notes:
 - provider secrets resolve through env/secret references; raw `api_key` update payloads are rejected by provider-management APIs
 - provider reads never return raw secret values; safe configuration responses may expose configured/readiness posture only
 - the canonical secret boundary is defined in [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
-- for local-model switching and profile routing, see [Local Dev Workflow](LOCAL_DEV_WORKFLOW.md) and [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md)
+- for local-model switching and profile routing, see [Local Dev Workflow](LOCAL_DEV_WORKFLOW.md) and [AI Provider Runtime](COGNITIVE_ARCHITECTURE.md)

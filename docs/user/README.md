@@ -31,9 +31,9 @@ Before accepting a new-user browser pass, verify these from the product:
 2. Dashboard orientation is clear: Soma input is primary, starter asks are generic conversation shapes, Active Work is compact by default, and any backlog opens through `Teams`.
 3. Provider/search readiness is visible: Settings, Resources, or System tells the operator whether Soma can use the intended local or hosted engine/search path.
 4. Capabilities are understandable: `Resources -> Capabilities` shows what Soma can use, what needs attention, and what can be connected next before exposing raw MCP/server detail.
-5. Output roots are known: `MYCELIS_WORKSPACE` is where generated files, project packages, browser games, and filesystem MCP writes land; `MYCELIS_ARTIFACT_ROOT` is where file-backed artifacts and cached media land.
-6. Canonical demo is repeatable: a retained demo output, such as a project package, opens from the browser, survives refresh/reload, and links to run/proof evidence.
-7. Team proof is honest: one bounded team ask reaches readable `output_ready` or a visible `degraded` timeout/offline/unreadable state with recovery guidance.
+5. Output roots are known: `MYCELIS_WORKSPACE` is where generated files, project packages, applications, and filesystem capability writes land; `MYCELIS_ARTIFACT_ROOT` is where file-backed artifacts and cached media land.
+6. Canonical demo is repeatable: a retained project package opens from the browser, survives refresh/reload, and links to proof or recovery evidence.
+7. Team proof is honest: one bounded team ask reaches readable output or a visible degraded timeout/offline/unreadable state with recovery guidance.
 
 Good first prompts:
 
@@ -61,7 +61,7 @@ Concrete requests Soma should understand when the matching capability is configu
 - [Using Soma Chat](soma-chat.md): central Soma chat, concrete search/team/host-data prompts, generated outputs, team handoffs, and failure recovery.
 - [Workflow Variants And Plan Memory](workflow-variants-and-plan-memory.md): when direct Soma is enough, when a team matters, and how to keep plans through a reboot.
 - [Teams](teams.md): compact team creation, lead-centered workflow, and broad-ask lane splitting.
-- [Core Concepts](core-concepts.md): operator-language explanation of Soma, Council, teams, memory, and governance.
+- [Core Concepts](core-concepts.md): operator-language explanation of Workspaces, Outcomes, Soma, deliverables, teams, continuity, and trust.
 - [Resources](resources.md): output files, governed context, capability readiness, tool repair, AI engines, and advanced tool activity when needed.
 - [Memory](memory.md): semantic search, retained knowledge, reflection context, and continuity boundaries.
 - [Settings And Access](settings-access.md): profile, People & Access, auth-provider posture, access-denied recovery, and connected-tool/search management boundaries.

@@ -63,7 +63,7 @@ Promotion test order:
 Do not claim thorough release readiness from unit, type, or headless-only proof when the slice changes what the operator sees or approves.
 Supported user proof lanes are Windows Compose, Rancher Desktop K3s, WSL-hosted Compose, remote Linux/server hosts, and self-hosted Kubernetes/Helm reached through the same address the operator will use.
 Every accepted user-interaction proof must verify the browser address matches the delivered environment; direct Soma answers and governed proposals both work; guided team or temporary workflow lanes stay reviewable; retained outputs survive refresh; AI-host failure produces a visible blocker and recovery path; primary controls remain reachable after dynamic state appears; and page-by-page GUI review covers each route's user job, visual hierarchy, and default-vs-inspectable detail boundary.
-Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof and [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md) for first-run/browser gates and the full browser matrix.
+Use [User Acceptance Testing](REMOTE_USER_TESTING.md) for human walkthrough proof and [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md) for first-run/browser gates and the full browser matrix.
 ## Finalization Concretization Gate
 Every finalization slice must prove the concrete runtime contract it touches, not only that screens render or APIs return `200`.
 
@@ -108,7 +108,7 @@ Backend/API -> UI Target Plan
 ```
 No backend/API review is complete without a mapped UI target and evidence result. For propose-only schedule handoff approval changes, prove backend success plus invalid/not-found/conflict/attached-run guards, UI state badges/actions/store behavior, focused Schedule Rules browser proof, and API/user/state/testing doc review.
 ## Clean Run Discipline
-- Stop prior Core/Interface services before runtime or integration tests: `uv run inv lifecycle.down`. Native PostgreSQL and NATS remain development dependencies and are inspected with `uv run inv native-infra.status`.
+- Stop prior Core/Interface services before runtime or integration tests: `uv run inv lifecycle.down`. Dockerized PostgreSQL and NATS remain reusable development dependencies and are inspected with `uv run inv compose.infra-health`.
 - Do not keep full Docker/K8s app stacks running during ordinary source work; use local Core/Interface with Dockerized PostgreSQL/NATS, then intentionally bring up containerized Core/Interface or Kubernetes for deployment proof.
 - For the normal development data plane, use `uv run inv compose.infra-up`, `compose.infra-health`, and `compose.storage-health`; these tasks do not build or run Core/Interface images.
 - If the host runtime itself is broken, repair it outside Invoke, then rerun the narrow Mycelis readiness task.
@@ -318,7 +318,7 @@ Guarded WSL tasks: `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run in
 
 These WSL tasks own proof-checkout synchronization and validation only; use platform tooling for host runtime recovery.
 
-Release-proof sequencing rule: validate WSL git auth repair/report behavior for `wsl.refresh`; run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence; that task intentionally runs `ci.release-preflight --lane=runtime --no-e2e` first, then Compose health/storage and `compose.warm-cognitive` before live browser proof; keep the newly closed focused browser proof gaps green: `/runs` workflow depth and guided Soma retry/recovery both have focused Chromium proof in production `start` mode; rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL.
+Release-proof sequencing rule: start from a clean committed `dev` release preflight. Use `wsl.refresh` and `wsl.validate` only when the refreshed WSL proof checkout supplies distinct deployment-mimic evidence; that task intentionally runs `ci.release-preflight --lane=runtime --no-e2e` before Compose health/storage and live browser proof. Full Compose, Kubernetes, and broader headed browser certification must use the committed candidate and the real operator-facing address before promotion.
 
 ## Adding New Tests
 Add tests where the risk lives:

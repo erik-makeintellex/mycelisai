@@ -1,6 +1,6 @@
 # Mycelis Canonical PRD
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
-> Status: Canonical | Last Updated: 2026-08-05 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
+> Status: Canonical | Last Updated: 2026-08-07 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
 The default product language is:
@@ -324,7 +324,7 @@ Allowed supporting docs:
 - `docs/user/*` for operator help
 - `docs/API_REFERENCE.md` for API behavior
 - `docs/TESTING.md` for validation
-- `docs/architecture/OPERATIONS.md`, `BACKEND.md`, `FRONTEND.md`, and `OVERVIEW.md` for implementation support
+- `docs/architecture/OPERATIONS.md`, `BACKEND.md`, and `FRONTEND.md` for implementation support
 - `ops/README.md`, `core/README.md`, and `interface/README.md` for owned subsystem operations
 
 Removed architecture details must be promoted here if still current. Otherwise they should be deleted and left to Git history.

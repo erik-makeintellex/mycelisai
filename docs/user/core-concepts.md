@@ -1,258 +1,171 @@
 # Core Concepts
-> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [User Docs Home](README.md)
 
-> Plain-language glossary for the terms you see in Workspace, Automations, Resources, and System.
+Mycelis is organized around the work you want and the result you own. Runtime machinery stays behind **Details** or **Inspect** until it is useful.
 
----
+## Workspace
+
+A Workspace is the user-owned operating context in which you talk with Soma and return to work later. It can hold one Outcome or many Outcomes without changing how you interact.
+
+The default authenticated route is the Soma workspace at `/dashboard`.
+
+## Outcome
+
+An Outcome is the durable product object created when meaningful work begins. It owns:
+
+- deliverables
+- active work
+- proof
+- recovery
+- history
+- continuity
+
+The operator owns the Outcome. Soma owns the execution needed to produce it.
 
 ## Soma
 
-Soma is your executive orchestrator. Every Workspace message goes to Soma first.
+Soma is the persistent operational counterpart for the Workspace. Ask Soma naturally for an answer, comparison, plan, retained output, team effort, scheduled lane, or recovery.
 
-Soma can:
-- reason through your request (ReAct loop, up to 10 iterations)
-- consult council specialists
-- call internal and MCP tools
-- return an answer or a governed proposal
-- generate images inline and persist them on request
-- execute root-admin configuration work across the full platform (providers, policies, MCP, profiles, groups, and runtime settings), not only team creation
+Soma should:
 
-You do not need to manually pick Soma. It is the default route in Workspace chat.
-On normal startup, Workspace opens with Soma already selected and starts the live stream automatically, so you should not need a recovery click just to begin.
-For AI Organizations, the organization-wide AI Engine, Response Style, and Memory & Continuity posture chosen during setup become Soma's starting posture until you intentionally change them.
-At the root organization workspace, admins should ask Soma to create, reshape, and coordinate teams rather than bypassing Soma to manually assemble the operating structure first.
-You can rename Soma from `Settings -> Profile -> Assistant Name`; the updated name appears across chat and operational UI labels.
-Root admins can also configure output-model routing for the organization so all team members either share one default model or inherit detected models by output type.
+- answer directly when no execution is needed
+- ask a useful follow-up when the goal or expected output is unclear
+- propose the smallest useful execution shape for meaningful work
+- request approval when policy or risk requires it
+- keep the conversation available while asynchronous work continues
+- report progress, completion, deliverables, proof, and recovery in user language
 
----
+You do not need to choose agents, tools, or transport before asking for value.
 
-## Team Leads
+## Adaptive Answer Depth
 
-Created teams are entered through a focused lead counterpart, not through a generic shared chat bucket.
+Soma separates answer depth from execution intent:
 
-Team Leads:
-- own the immediate lane context for that team
-- work from scoped team memory and delivery context first
-- can coordinate back through Soma when broader organization context, RAG retrieval, or cross-team direction is needed
-- inherit the organization's default output model unless the admin has enabled detected output-type routing for planning, research, code, or vision work
+| Depth | Typical request | Expected response |
+| --- | --- | --- |
+| Quick result | "Give me the top five" | Compact list, table, links, or source box |
+| Structured summary | "Compare these options" | Grouped findings and relevant differences |
+| Decision brief | "What should we do?" | Recommendation, confidence, risks, and guidance |
+| Execution proposal | "Create this and have a team review it" | Deliverables, execution shape, approval posture, and proof expectations |
 
-Use Soma at the root workspace when you want to:
-- create or manage teams
-- reshape organization structure
-- coordinate across multiple teams
+When the request is ambiguous, Soma should use the lightest useful response and offer expansion.
 
-Use a Team Lead workspace when you want to:
-- work inside one team lane
-- review that lane's inputs, deliveries, and agent roster
-- keep interaction focused before escalating back to Soma
+## Governance
 
-Use `Teams` when you want to:
-- review which teams currently exist
-- open a specific lead workspace
-- define or edit the reusable member templates Soma should use when specializing future teams
-- decide when a certain kind of work should prefer a specific specialist role, model, toolset, or output contract
-- enter the guided team-creation workflow at `/teams/create` instead of building a new team from a raw field list
-- launch a temporary workflow group directly from Soma's guided execution path when the design should move immediately into a bounded delivery lane
+Governance protects meaningful or risky actions without turning ordinary conversation into a form.
 
----
+A proposal should briefly state:
 
-## Council
+- what Soma understood
+- what will be delivered
+- which compact team or capability shape is needed
+- whether approval is required
 
-The council is a standing specialist set that Soma can consult:
+Approval creates durable governed work. Canceling or adjusting a proposal must not apply the mutation.
 
-| Member | Focus |
-|--------|-------|
-| Architect | system design and planning |
-| Coder | implementation and debugging |
-| Creative | writing and ideation |
-| Sentry | security and risk review |
+## WorkIntent And Execution
 
-Consultations appear as Delegation Trace cards below Soma replies.
-If you want direct specialist output, use the `Direct` selector in the chat header.
+WorkIntent is the transitional record that converts conversation into governed execution. It is inspectable, but it is not another permanent object the user must manage.
 
----
+The normal transition is:
 
-## Mission
+```text
+Conversation
+-> WorkIntent
+-> governed execution
+-> Outcome
+```
 
-A mission is a defined work objective and execution plan.
-It is the "what" to execute.
+Execution can be one-shot, scheduled, continuous/service-style, project-shaped, or an extension to the Mycelis environment. The approved work must retain its expected output, stop/retry behavior, and proof requirements.
 
----
+## Teams And Groups
 
-## Run
+Soma may use a direct capability, one specialist, or a compact team. Teams are execution mechanisms, not separate assistant identities.
 
-A run is one concrete execution instance of a mission, with a unique `run_id`.
-Runs are the audit anchor for:
-- timeline events
-- trigger chains
-- artifacts
+Use **Groups** when you need to:
 
-Mission : Run = definition : execution instance.
+- inspect active or retained team work
+- read the workflow log
+- review outputs associated with the producing group
+- message or steer an active lane
+- archive or clear finished group records through governed controls
 
----
+Temporary teams should expire or archive when their bounded work ends. Standing teams remain only when their continuing responsibility is useful.
 
-## Proposal
+## Deliverables
 
-When your request requires mutation (files, teams, schedules, external actions), Soma returns a proposal block.
+Deliverables are durable outputs such as documents, code, media, reports, project packages, or validated applications. A deliverable should be attributable to its Outcome and producing team.
 
-Proposals show:
-- intended action
-- tool path
-- risk context
-- explicit confirm/cancel controls
+Use **Open file**, **Open app**, **Open folder**, or **Open in Resources** when those actions are available. Planning notes and team-internal source material remain hidden unless you deliberately include them.
 
-No mutation executes until confirmation.
+A package is not complete merely because a file exists. Required entrypoints, dependencies, expected behavior, and validation must pass before Mycelis presents it as verified.
 
----
+## Outcome Health
 
-## AI Engine / Provider
+Every Outcome uses the same operational vocabulary:
 
-An AI engine is a curated model-provider posture used by the product.
-Role routing is managed through AI engines and mission profiles.
+| State | Meaning |
+| --- | --- |
+| Healthy | Usable and does not need attention |
+| Waiting | Needs approval, input, schedule, dependency, or another next action |
+| Running | Work is active and can continue safely |
+| Degraded | Some work failed or is uncertain, but trusted parts remain |
+| Blocked | Soma cannot safely continue until something changes |
+| Completed | A deliverable is retained with sufficient proof for revisit |
+| Archived | Inactive but retained for history, proof, or outputs |
 
-For AI Organizations, admins can also assign output models by delivery type:
-- `single_model`: one default model for all team members
-- `detected_output_types`: a shared default plus specialized models for general text, research and reasoning, code generation, and vision analysis
+Health describes the Outcome. Proof remains a separate trust attribute.
 
-Current self-hosted starting points in the product:
-- `Qwen3 8B` for strong general text delivery
-- `Llama 3.1 8B` for research and reasoning
-- `Qwen2.5 Coder 7B` for code generation
-- `LLaVA 7B` for vision analysis
+## Proof And Recovery
 
-The model inventory can include several models on the same Ollama, vLLM, or LM Studio host. When the admin has not pinned a model for a requested output, Soma should prefer installed self-hosted models that match the detected output type, use larger local candidates such as `Qwen3 14B`, `Qwen2.5 Coder 14B`, or `DeepSeek Coder V2 16B` when the host and latency budget fit, and ask the owner/admin before running a model-behavior review or changing the saved routing policy.
+Proof explains why a result can be trusted. Recovery explains how to proceed when it cannot.
 
-Ollama text and vision models do not automatically mean image or voice generation is configured. Soma can use them to plan prompts, write website/code artifacts, or critique images; actual pixel/audio output needs the configured media engine.
+The default UI should answer:
 
-Primary management surfaces:
-- `Resources -> AI Engines` (admin setup)
-- `Settings -> Profiles`
-- `AI Organization -> AI Engine Settings`
+- what happened
+- what remains trusted
+- what is incomplete or uncertain
+- which deliverable is available
+- what Soma recommends next
 
----
+Raw event payloads, runtime identifiers, and transport diagnostics belong behind **Details** or **Inspect**.
 
-## Event
+## Resources And Capabilities
 
-Every important step emits a structured event.
-Events are persisted and used to build run timelines and causal traces.
+**Resources** is where you revisit outputs and manage what Soma can use.
 
-Common examples:
-- `mission.started`
-- `tool.invoked`
-- `tool.completed`
-- `tool.failed`
-- `mission.completed`
-- `mission.failed`
+Key areas include:
 
----
+- **Output Files** for retained deliverables and workspace folders
+- **Capabilities** for readiness, catalog, access scope, servers, and repair
+- **Exchange** for governed cross-team handoffs
+- **Deployment Context** for approved long-lived source context
+- **AI Engines** for model-provider posture
+- **Role Library** for reusable worker profiles
 
-## Operational Status UX
+A capability may be built in, an MCP server/tool, a local command, or another registered service. The UI should identify its source kind and access scope rather than presenting every item as MCP.
 
-Current Mycelis surfaces global operator-recovery UX:
+## Memory And Continuity
 
-- **Degraded Mode Banner**: appears when critical subsystems degrade
-- **Status Drawer**: global health panel (open via ribbon or floating status action)
-- **Structured Council Error Card**: retry/reroute/copy diagnostics in chat
-- **Focus Mode (`F`)**: collapse ops panel while keeping critical status strip
-- **System Checks**: run targeted checks from `/system`
+Memory supports recall. Continuity helps Soma resume long-running operational context. Neither is autonomous authority.
 
-These are designed to keep workflows recoverable without page switching.
+Authority remains with approved Outcomes, deliverables, proof, policies, audit records, and operator decisions. Use **Deployment Context** when a file or note should become approved long-lived source material rather than a one-run attachment.
 
-Expected user-visible controls:
-- global **Degraded Mode** banner actions (`Retry`, `Open Status`, and `Switch to Soma` only when you are not already on the Soma route)
-- right-side **Status Drawer** with council reachability + service health
-- `/system` **System Checks** with run + copy diagnostics actions
+## Activity And Runs
 
----
+Most users should follow progress from Soma and the Outcome. **Activity** and **Runs** are Admin tools for deeper inspection, support, and audit.
 
-## Advanced Mode
+A run is one execution instance supporting an Outcome. Its receipt summarizes what happened, what to trust, output references, proof, and recovery. The event timeline exists to reconstruct execution, not to replace the deliverable or Outcome view.
 
-Advanced Mode reveals deeper operational surfaces (for power operators).
-Toggle from the rail footer (`Admin tools: On/Off`).
+## Admin Tools
 
-Typical unlocks:
-- System diagnostics depth
-- Workflow Builder tab in Automations
-- Workspace telemetry row (hidden in standard mode to keep chat-first layout)
+Turn on **Admin tools** from the left rail when you need Activity, deep Memory, System diagnostics, provider settings, or raw Inspect detail. Keep it off for the simplest Soma-first operating surface.
 
----
+See also:
 
-## Users and Groups
-
-`Settings -> People & Access` provides:
-- user management elements (role, remote-provider allowance, active/disabled state)
-- environment ownership, identity posture, and shared-Soma governance posture
-- deploy-owned edition/auth fields as read-only release posture unless the current edition enables management actions
-
-See [Settings And Access](settings-access.md) for the current operator contract around Profile, People & Access, Auth Providers, connected-tool boundaries, and access-denied recovery.
-
-Collaboration groups now have their own dedicated workflow surface:
-- `Groups` for standing and temporary group creation, plus archived temporary-group review after closure
-- compact group selection in a left rail, with the selected group's data, config posture, broadcast/review workflow, and retained outputs shown in the main panes
-- focused group review, broadcast while active, output/contributing-lead summaries, and retained output visibility after archive
-- quick entry into the attached team-lead lanes
-- lifecycle review that separates expired temporary lanes, groups with team work still needing attention, output-ready idle lanes, and stale no-expiry standing groups; `Archive expired` moves only expired temporary groups into retained history and does not delete their outputs or proof
-
-The root Soma home also includes a filtered live interaction stream:
-- review active team output from the admin surface
-- filter by multiple teams
-- filter by available activity aspects such as status, results, artifacts, tools, governance, and errors
-
----
-
-## Trust Score and Governance
-
-Agent outputs include trust context.
-Lower-trust mutation paths are routed to approvals instead of auto-executed.
-
-See:
-- `Automations -> Approvals`
-- `docs/user/governance-trust.md`
-
----
-
-## NATS
-
-NATS is the internal event spine and signaling bus.
-Agents, triggers, runtime health, and mission events all depend on it.
-
-If NATS degrades, UI enters degraded mode and offers recovery actions.
-
----
-
-## Capabilities And Connected Tools
-
-Connected tools extend agent capabilities (filesystem, fetch, memory, etc.).
-
-Primary surfaces:
-- `Resources -> Capabilities` for what Soma can use, repair, or request, with server/tool visibility behind Inspect
-- `Workspace` for actual tool usage via agent execution
-
-Current baseline profile:
-- curated library installs are the supported default path
-- `filesystem` and `fetch` are common curated entries, not assumed bootstrap defaults in supported runtime lanes
-- `memory` is curated install and remains distinct from Mycelis-governed memory/context layers
-- `artifact-renderer` remains planned
-
----
-
-## Standardized Resource API Contract
-
-Mycelis resource surfaces are converging on one API envelope pattern:
-- payloads may arrive as either `{ ok, data, error }` or raw data
-- UI store/actions normalize both into typed state before rendering
-- component-level parsing is minimized so new channels can reuse the same contract
-
-Why this matters:
-- adding new AI resource channels (tools, services, hardware, future RAG paths) does not require bespoke parsing logic per screen
-- degraded/error behavior stays consistent across Workspace, Resources, and System surfaces
-
----
-
-## Current UI Reliability Baseline
-
-The in-app docs and UI now assume these interaction guarantees:
-1. no dead-end empty states on Automations
-2. structured council error recovery in chat
-3. global degraded visibility from any page
-4. quick diagnostic checks directly from `/system`
+- [Using Soma Chat](soma-chat.md)
+- [Teams](teams.md)
+- [Resources](resources.md)
+- [Memory](memory.md)
+- [Governance & Trust](governance-trust.md)
+- [Run Timeline](run-timeline.md)

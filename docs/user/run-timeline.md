@@ -1,147 +1,95 @@
 # Run Timeline
-> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [User Docs Home](README.md)
 
-> Every mission execution produces a run. The timeline shows exactly what happened, in order.
+A run is one execution instance supporting an Outcome. Most users should follow work from Soma and the Outcome; the run receipt and event timeline are Admin tools for proof, recovery, and support.
 
----
+## When To Open A Run
 
-## What Is a Run?
+Open a run when you need to:
 
-When you confirm a proposal in Workspace chat, Mycelis creates a **run** — a single execution instance of the activated mission. Runs have:
+- verify what execution occurred
+- understand why work is still running or degraded
+- inspect retained output and proof references
+- recover a failed or incomplete attempt
+- provide diagnostics to an operator or developer
 
-- A unique `run_id` (e.g., `abc1234-...`)
-- A start timestamp
-- A status: `running`, `completed`, or `failed`
-- An ordered list of **events**
+Use the Outcome or deliverable view when you only need the result.
 
----
+## Opening A Run
 
-## Opening the Timeline
+Run links may appear in Soma details, Outcome proof, Activity, Groups workflow logs, or recovery information. A direct `/runs/{run_id}` URL is bookmarkable for authorized users.
 
-After confirming a proposal, a pill appears in the chat:
+The `/runs` list and `/activity` are available through **Admin tools**. Activity provides the cleaner operating summary; the dedicated run page provides the full receipt and timeline.
 
-```
-⚡ Mission activated — abc1234... →
-```
+## Read The Receipt First
 
-Click it to navigate to `/runs/{run_id}`. You can also navigate directly if you have the run ID.
+The run page begins with a receipt that translates runtime evidence into operator questions:
 
-Admins can start at `/activity` when they need a cleaner operating view before drilling into a specific run. The Activity page summarizes active workflows, recent run outcomes, live stream counts, and NATS/groups bus health without exposing the lower-level System diagnostics by default.
-
-Activity is a split admin view: select a run on the left, then inspect its recorded events on the right without expanding each event card. Use the full timeline link only when you need the dedicated `/runs/{run_id}` page.
-
----
-
-## Reading The Run Receipt
-
-The Events view now starts with a **Run receipt** before the raw event stream. Read this first.
-
-| Receipt Field | What It Answers |
+| Receipt field | What it answers |
 | --- | --- |
-| **What happened** | The useful outcome or failure summary from the latest terminal event. |
-| **What to trust** | Whether completed output/proof is reliable, provisional, or invalid for this attempt. |
-| **Next step** | What the operator should do now: review output, wait, inspect events, or recover. |
-| **Output refs** | Retained output references detected in direct artifact events or run-linked team results. |
-| **Proof refs** | Audit/proof identifiers detected in the run evidence. |
+| What happened | The useful execution outcome or failure summary |
+| What to trust | Whether output and proof are reliable, provisional, missing, or invalid |
+| Next step | Review, wait, retry, recover, or inspect further |
+| Output refs | Durable deliverables linked to this run |
+| Proof refs | Validation, audit, or proof records supporting the result |
 
-Use **Inspect receipt evidence** when you need the exact run ID, the approved work mode and expected deliverable, lifecycle guidance, output references, or proof references. These details are reconstructed from the contract saved with the run; they do not create a second user-facing work object.
-
-If a run reports completion but its approved contract required a retained deliverable and no output reference exists, the receipt shows **Degraded** and **Run needs output recovery**. The completion event remains trusted, but the missing deliverable does not. Recover or rerun the owning work before accepting the result.
-
----
-
-## Reading the Timeline
-
-The timeline is a vertical sequence of event cards, oldest at top, newest at bottom. Auto-refreshes every 5 seconds while the run is active.
-
-### Event Card Anatomy
-
-```
-● tool.invoked         [admin]         2s ago
-  write_file → /workspace/projects/parser.py
-  ▼ (expand for full payload)
-```
-
-| Element | Description |
-|---------|-------------|
-| **Dot color** | Event severity / type (see table below) |
-| **Event type** | What happened |
-| **Source agent** | Which agent emitted this event |
-| **Timestamp** | Relative time (hover for absolute) |
-| **Summary** | Most useful payload field (tool name, file path, error) |
-| **Expand chevron** | Click to see full JSON payload |
-
-### Event Type Colors
-
-| Event | Color | Meaning |
-|-------|-------|---------|
-| `mission.started` | Green | Run began |
-| `mission.completed` | Green | Run finished successfully |
-| `mission.failed` | Red | Run terminated with error |
-| `tool.invoked` | Cyan | Agent called a tool |
-| `tool.completed` | Blue | Tool finished |
-| `tool.failed` | Red | Tool errored |
-| `agent.started` | Muted | Agent began processing |
-| `memory.stored` | Amber | Fact or artifact stored |
-| `memory.recalled` | Amber | Memory was queried |
-| `artifact.created` | Amber | File/document produced |
-
----
+Use **Inspect receipt evidence** for the approved work mode, expected deliverable, lifecycle guidance, runtime identifiers, and exact references.
 
 ## Run Status
 
-The header shows current run status:
+| Status | Meaning |
+| --- | --- |
+| Pending | Accepted but not yet executing |
+| Running | Execution is active |
+| Completed | Execution reached a successful terminal state |
+| Degraded | Work settled with missing, failed, or uncertain requirements that need recovery |
+| Failed | Execution terminated without a usable result |
 
-| Status | Display | Meaning |
-|--------|---------|---------|
-| `running` | `● running` (pulsing) | Execution in progress |
-| `completed` | `✓ completed` | Finished successfully |
-| `failed` | `✗ failed` | Terminated with error |
+Run status supports Outcome health but does not replace it. For example, a run can complete while an Outcome remains degraded because a required deliverable or validation record is missing.
 
-While `running`, the timeline polls for new events every 5 seconds automatically.
+## Missing Output Is Not Completion
 
----
+When an approved contract requires a retained deliverable but no output reference exists, the receipt shows **Run needs output recovery**. The recorded execution remains available, but the missing deliverable must not be presented as trusted completion.
+
+Recover or rerun the owning work from Soma, the Outcome review surface, Groups, or the run recovery action.
+
+## Reading The Timeline
+
+The timeline is an ordered reconstruction of execution events. While a run is active, the view refreshes for new evidence.
+
+Each event can include:
+
+- event type and severity
+- source component or agent
+- timestamp
+- concise summary
+- expandable structured payload
+
+Common event families include execution started/completed/degraded, tool invocation, artifact creation, memory/context use, proof creation, and recovery actions. Exact payloads remain Inspect detail because they are implementation evidence, not the primary product result.
+
+## Trust And Recovery
+
+For a degraded or failed run, confirm these in order:
+
+1. What work actually completed?
+2. Which deliverables can still be opened?
+3. Which proof is missing or invalid?
+4. Is an external mutation uncertain?
+5. Can Soma retry safely with the retained contract and context?
+6. Does an operator need to change a dependency, permission, or request?
+
+Do not infer exactly-once external mutation merely because message delivery was deduplicated. When the external result is ambiguous, follow the explicit recovery guidance instead of silently rerunning.
 
 ## Navigation
 
-- **<- Workspace** link in the header returns to Workspace (`/dashboard`)
-- **Activity** in the main rail opens `/activity`, the admin overview for current workflows, inline run events, and readable message-bus activity
-- The run URL (`/runs/{run_id}`) is bookmarkable and shareable — anyone with access can view the same timeline
-- Each event card's expanded JSON is a complete audit record
+- **Soma** returns to `/dashboard` for conversation and steering.
+- **Activity** opens the Admin tools summary of active and recent execution.
+- **Groups** opens producing-team workflow logs and retained outputs.
+- **Resources** opens durable files and project packages.
+- **Details** or **Inspect** exposes runtime identifiers and raw evidence only when needed.
 
----
+See also:
 
-## Common Patterns
-
-### Tool Chain
-A typical file-writing task produces:
-```
-mission.started
-agent.started    [admin]
-tool.invoked     [admin]  write_file → parser.py
-tool.completed   [admin]  write_file ✓  (234 bytes)
-artifact.created [admin]  parser.py
-mission.completed
-```
-
-### Council Consultation
-When Soma consults the Coder:
-```
-mission.started
-agent.started    [admin]
-tool.invoked     [admin]  consult_council → council-coder
-agent.started    [council-coder]
-tool.invoked     [council-coder]  write_file → impl.py
-tool.completed   [council-coder]  write_file ✓
-artifact.created [council-coder]  impl.py
-tool.completed   [admin]   consult_council ✓
-mission.completed
-```
-
-### Memory Operations
-```
-tool.invoked   [admin]  search_memory → "CSV parsing patterns"
-memory.recalled [admin]  3 results found
-tool.invoked   [admin]  remember → key: "user_prefers_type_hints"
-memory.stored  [admin]  stored successfully
-```
+- [Using Soma Chat](soma-chat.md)
+- [Governance & Trust](governance-trust.md)
+- [System Status & Recovery](system-status-recovery.md)

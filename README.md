@@ -34,7 +34,7 @@ Review these before planning or editing:
 3. [V8 Development State](.state/V8_DEV_STATE.md)
 4. [Operations](docs/architecture/OPERATIONS.md)
 5. [Testing](docs/TESTING.md)
-6. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
+6. [User Acceptance Testing](docs/REMOTE_USER_TESTING.md)
 7. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
@@ -88,7 +88,7 @@ Status changes in planning/state docs must use the canonical markers: `REQUIRED`
 Default surfaces should read as product workflows, not raw system internals:
 - The root URL is no longer a public marketing page; every edition enters through `/login` and then the authenticated Soma workspace.
 - Soma is the primary counterpart.
-- Dashboard and organization workspaces share the same Soma operating surface.
+- The authenticated Dashboard is the primary Soma Workspace; compatibility organization routes must not introduce a competing product hierarchy.
 - Intent suggestions live inside Soma, not as competing panels or separate front doors; they should frame outcome, output shape, proof, and next action rather than raw prompts.
 - Meaningful actions must show a causal summary: understood intent, coordination, outputs, state changes, and next step.
 - Workspaces are governed user contexts; Outcomes hold deliverables, active work, proof, recovery, history, and continuity.
@@ -121,13 +121,13 @@ finalization GUI posture: live Soma governance, team execution, first-demo proje
 
 | Architecture term | Operator term |
 | --- | --- |
-| Inception | AI Organization |
+| Workspace and Outcome contracts | Workspace and Outcomes |
 | Soma Kernel | Soma |
-| Central Council | Advisors / governance support |
-| Provider Policy | AI Engine Settings |
-| Identity and Continuity State | Memory & Continuity |
-| Mission / run events | Activity / Run timeline |
-| Capability and tool policy | Resources / Connected Tools |
+| WorkIntent and execution contract | Proposed work and approval details |
+| Provider policy | AI Engines |
+| Identity and continuity state | Memory and continuity |
+| Mission and run events | Activity and run receipt |
+| Capability and tool policy | Resources and capabilities |
 
 ## Feature Status Standard
 
@@ -209,7 +209,7 @@ Env override contract: `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PRO
 
 Deployment guidance by host architecture: Windows x86_64, Linux x86_64, Linux arm64, and Mixed-architecture deployments are supported through the lane-specific guidance in local dev and operations docs. The deployed Core image resolves runtime config from `/core/config`.
 
-Supported user access lanes: source-mode local development with Dockerized PostgreSQL/NATS first, then full Windows Compose, Windows + WSL Docker Compose, Rancher Desktop K3s, WSL Compose, and Kubernetes / Helm clustered deployment when container proof is intentionally requested. Run/build/test Core and Interface locally before containerizing app services; open `http://localhost:3000` from the Windows browser for same-machine proof, and for clustered proof, prove the real ingress/hostname/IP from the operator machine. Rancher Desktop K3s is the preferred Windows local commercial-release parity lane once local source proof is acceptable.
+Supported user access lanes: source-mode local development with Dockerized PostgreSQL/NATS first, then Windows Rancher Desktop or Docker Desktop Compose, Windows + WSL Docker Compose, Rancher Desktop K3s, guarded WSL Compose, and Kubernetes / Helm clustered deployment when container proof is intentionally requested. Run/build/test Core and Interface locally before containerizing app services; open `http://localhost:3000` from the Windows browser for same-machine proof, and for clustered proof, prove the real ingress/hostname/IP from the operator machine. Rancher Desktop K3s is the preferred Windows local commercial-release parity lane once local source proof is acceptable.
 
 Deployment target contract: Kubernetes / Helm targets self-hosted and enterprise deployment using standard Kubernetes resources; Docker Compose remains rapid local development, demo, and same-machine proof runtime, not the clustered deployment contract. Run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` and cover Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. Local Windows K3s proof uses `MYCELIS_K8S_BACKEND=rancher` against Rancher Desktop.
 

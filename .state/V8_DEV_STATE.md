@@ -6,9 +6,9 @@
 
 | Field | Current state |
 | --- | --- |
-| Updated | 2026-08-06 |
+| Updated | 2026-08-07 |
 | Integration branch | `dev` |
-| Active slice | Development-topology convergence is in proof: Dockerized PostgreSQL/NATS with locally run Core/Interface is restored as the normal implementation lane. |
+| Active slice | Documentation authority and operator guidance are converged after the development-topology merge; deterministic owner-scoped QA fixture lifecycle is the next implementation slice. |
 | Production branch | `main` remains behind the accepted `dev` integration train pending release certification. |
 | Runtime posture | Dockerized PostgreSQL/NATS are healthy as the source-development data plane; local Core, Interface, and Ollama are healthy. Full Compose app containers, Kubernetes, and WSL remain explicit release-proof lanes. |
 | Delivery target | Finish P0.13 operator acceptance and deterministic QA-data ownership, then execute P0.12 release certification and intentional `dev -> main` promotion. |
@@ -20,17 +20,17 @@
 | Lane | Status | Current evidence | Next gate |
 | --- | --- | --- | --- |
 | P0.9 full Trusted Outcome Journey | `COMPLETE` | Governed ask, approval, asynchronous NATS team execution, retained interactive package, validation, proof, and cross-surface revisit pass on the local source stack. | Preserve during release certification. |
-| P0.11 documentation convergence | `COMPLETE` | The canonical PRD contains the worker execution contract and all product architecture. The redundant architecture index/source-map documents are removed, the state transcript contains current truth only, and post-merge docs/Core/Interface/headed desktop/mobile Help proof passes on `dev`. | Keep one product-architecture authority and update owned support docs with behavior changes. |
+| P0.11 documentation convergence | `COMPLETE` | The canonical PRD contains all product architecture. The duplicate architecture overview and obsolete user-facing blueprint guide are deleted; user concepts, run/recovery, acceptance, deployment, API/provider, implementation, README, state, and in-app Help guidance match current Workspace/Outcome delivery and the Docker data-plane development lane. Documentation contracts, Help component tests, typecheck, and a headed real-manifest PRD-to-acceptance journey pass. | Keep one product-architecture authority and update owned support docs with behavior changes. |
 | P0.13 retained-state projection | `COMPLETE` | TeamWork has an explicit attention view; Dashboard requests operator attention only; Groups defaults to Current with separate Completed and Archived history. | Preserve in fresh-user proof. |
 | P0.13 cross-device operator acceptance | `IN_REVIEW` | Dashboard, Groups, Resources, Memory, Docs, and Settings have focused desktop/mobile proof with no blocking overlap, hidden composer, page errors, console errors, or horizontal document overflow. | Add deterministic fixture ownership and rerun the integrated new-user matrix. |
-| P0.12 release hygiene and certification | `ACTIVE` | Clean Windows release preflight passes lint, Core, build, typecheck, Vitest, 121 Chromium journeys, source service health, and all four live governance scenarios. Configured Compose ports and the shared identity-secret boundary are merged into `dev`. Docker-only Rancher now runs PostgreSQL/NATS while local Core/Interface health and `12/12` browser navigation journeys pass without app image builds. | Merge and re-prove the development-topology slice, then certify full Compose/Kubernetes and Windows-browser release paths intentionally. |
+| P0.12 release hygiene and certification | `ACTIVE` | Clean Windows release preflight passes lint, Core, build, typecheck, Vitest, 121 Chromium journeys, source service health, and all four live governance scenarios. Configured Compose ports, shared identity-secret boundaries, and the Docker PostgreSQL/NATS plus local Core/Interface development topology are merged and re-proven on `dev` without app image builds. | Finish deterministic QA ownership and P0.13 acceptance, then certify full Compose/Kubernetes and Windows-browser release paths intentionally. |
 | Production promotion | `REQUIRED` | `main` is intentionally not promoted from the current `dev` train. | Merge certified `dev` into `main`, rerun health/browser smoke, update state, and synchronize remotes. |
 
 ## Immediate Work Order
 
-1. Finish and prove the Docker PostgreSQL/NATS plus local Core/Interface development lifecycle without rebuilding app infrastructure.
-2. Implement owner-scoped QA fixture lifecycle and purge across Groups, Outcomes, artifacts, team work, runs, and proof without deleting legitimate operator data.
-3. Rerun P0.13 fresh-user desktop/mobile acceptance against clean owned fixtures.
+1. Implement owner-scoped QA fixture lifecycle and purge across Groups, Outcomes, artifacts, team work, runs, and proof without deleting legitimate operator data.
+2. Rerun P0.13 fresh-user desktop/mobile acceptance against clean owned fixtures.
+3. Close ambiguous external-mutation recovery before accepting retries after uncertain timeouts.
 4. Run `uv run inv ci.release-preflight --lane=release` from a clean committed `dev` state.
 5. Certify the supported full Compose/Kubernetes runtime and Windows-browser path; use guarded WSL proof only when that environment supplies distinct evidence.
 6. Promote `dev` to `main` only after every required gate passes.
@@ -58,6 +58,7 @@
 - `docs/architecture-library/MYCELIS_CANONICAL_PRD.md` is the single product architecture and PRD authority.
 - Supporting Backend, Frontend, Operations, API, Testing, and user guides have bounded implementation or operator ownership.
 - Superseded product doctrine is deleted, not archived in the active docs tree.
+- The real in-app Help manifest opens the Canonical PRD and User Acceptance Runbook in headed Chromium and no longer exposes the deleted overview.
 - Every behavior slice reviews README, this scoreboard, the owning docs, and the in-app Help manifest when applicable.
 
 ## Open Release Risks
@@ -77,7 +78,7 @@ clean feature proof
 -> merge to dev
 -> affected post-merge integration proof
 -> clean release preflight
--> refreshed WSL validation
+-> optional refreshed WSL validation when it supplies distinct evidence
 -> Compose and Kubernetes deployment proof
 -> headed browser certification
 -> dev to main promotion
