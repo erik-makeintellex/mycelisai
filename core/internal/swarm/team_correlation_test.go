@@ -233,6 +233,34 @@ func TestTeamCommandCorrelationRejectsDuplicateIdempotencyKey(t *testing.T) {
 	}
 }
 
+func TestTeamCommandCorrelationSurvivesLongRunningWorker(t *testing.T) {
+	team := &Team{Manifest: &TeamManifest{ID: "test-core"}, seenCommandKeys: map[string]time.Time{}}
+	started := time.Now().UTC()
+	correlation := teamCommandCorrelation{
+		WorkItemID:     "11111111-1111-1111-1111-111111111111",
+		TeamID:         "test-core",
+		IdempotencyKey: "confirm-action:proof-long-running",
+	}
+	if !team.rememberCommandCorrelation(correlation) {
+		t.Fatal("long-running command should be accepted")
+	}
+	if len(team.pendingCorrelations) != 1 {
+		t.Fatalf("pending correlations = %d, want 1", len(team.pendingCorrelations))
+	}
+	if team.pendingCorrelations[0].ExpiresAt.Before(started.Add(15 * time.Minute)) {
+		t.Fatalf("correlation expires before durable recovery deadline: %s", team.pendingCorrelations[0].ExpiresAt)
+	}
+
+	team.pruneExpiredCorrelationsLocked(started.Add(6 * time.Minute))
+	if len(team.pendingCorrelations) != 1 {
+		t.Fatal("six-minute worker response lost its durable correlation")
+	}
+	team.pruneExpiredCorrelationsLocked(started.Add(teamCommandCorrelationTTL + time.Second))
+	if len(team.pendingCorrelations) != 0 {
+		t.Fatal("expired worker correlation was not pruned")
+	}
+}
+
 func publishCorrelatedCommand(t *testing.T, nc *nats.Conn, workID, runID string) {
 	t.Helper()
 	payload, err := protocol.WrapSignalPayloadWithMeta(

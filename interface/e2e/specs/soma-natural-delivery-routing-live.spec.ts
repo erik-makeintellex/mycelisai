@@ -33,7 +33,9 @@ type WorkItem = {
   output_refs?: Array<{ kind?: string; entrypoint?: string; storage_ref?: string }>;
 };
 
-const naturalDeliveryTimeoutMs = Math.max(liveTimeoutMs, 420_000);
+// Local-model multi-file delivery can cross five minutes. Keep the live proof
+// below Core's 15-minute recovery deadline while allowing bounded correction.
+const naturalDeliveryTimeoutMs = Math.max(liveTimeoutMs, 780_000);
 
 test.describe("Natural Soma delivery routing", () => {
   test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires a live Core backend");
@@ -136,17 +138,22 @@ test.describe("Natural Soma delivery routing", () => {
 
 async function waitForNaturalDelivery(page: import("@playwright/test").Page, teamID: string, runID: string) {
   let latest: WorkItem | undefined;
-  await expect.poll(async () => {
-    const response = await liveAPIGet(page, `/api/v1/teams/${encodeURIComponent(teamID)}/work?limit=25`);
-    if (!response.ok()) return `http_${response.status()}`;
-    const items = ((await response.json()) as APIEnvelope<WorkItem[]>).data ?? [];
-    latest = items.find((item) => item.run_id === runID && item.execution_shape === "delegated_work");
-    return latest?.state ?? "missing";
-  }, {
-    timeout: naturalDeliveryTimeoutMs - 60_000,
-    intervals: [500, 1_000, 2_000, 5_000],
-    message: `natural delivery team ${teamID} should return a usable output or an honest blocker`,
-  }).toMatch(/^(output_ready|degraded|needs_operator)$/);
+  try {
+    await expect.poll(async () => {
+      const response = await liveAPIGet(page, `/api/v1/teams/${encodeURIComponent(teamID)}/work?limit=25`);
+      if (!response.ok()) return `http_${response.status()}`;
+      const items = ((await response.json()) as APIEnvelope<WorkItem[]>).data ?? [];
+      latest = items.find((item) => item.run_id === runID && item.execution_shape === "delegated_work");
+      return latest?.state ?? "missing";
+    }, {
+      timeout: naturalDeliveryTimeoutMs - 60_000,
+      intervals: [500, 1_000, 2_000, 5_000],
+      message: `natural delivery team ${teamID} should return a usable output or an honest blocker`,
+    }).toMatch(/^(output_ready|degraded|needs_operator)$/);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`${detail}; last work state: ${JSON.stringify(latest ?? {})}`);
+  }
   if (latest?.state !== "output_ready") {
     throw new Error(
       `Natural delivery ended ${latest?.state}: ${latest?.degradation_state ?? "unknown"}; ${JSON.stringify(latest?.last_event ?? {})}`,

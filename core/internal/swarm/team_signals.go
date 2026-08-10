@@ -13,6 +13,8 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+const teamCommandCorrelationTTL = 30 * time.Minute
+
 // handleTrigger receives an external signal and broadens it to the internal team bus.
 func (t *Team) handleTrigger(msg *nats.Msg) {
 	log.Printf("Team [%s] Triggered by [%s]", t.Manifest.Name, msg.Subject)
@@ -121,7 +123,10 @@ func (t *Team) rememberCommandCorrelation(correlation teamCommandCorrelation) bo
 		return true
 	}
 	correlation.TeamID = firstNonEmptySignalString(correlation.TeamID, t.Manifest.ID)
-	correlation.ExpiresAt = time.Now().UTC().Add(5 * time.Minute)
+	// Keep response correlation beyond the durable work recovery deadline.
+	// Local-model package work can legitimately take more than five minutes;
+	// expiring first would publish an orphan result and leave work queued.
+	correlation.ExpiresAt = time.Now().UTC().Add(teamCommandCorrelationTTL)
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.pruneExpiredCorrelationsLocked(time.Now().UTC())
