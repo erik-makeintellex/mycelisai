@@ -157,9 +157,13 @@ func TestResultContractExecutionPromptCarriesAcceptanceIntoInteractivePackage(t 
 	requirement := &teamResultRequirement{
 		Kind: "project_package", FilesRequired: []string{"README.md"},
 		AcceptanceCriteria: []string{"primary control changes the application"},
+		OutputValidation: &protocol.OutputValidationPlan{Probe: &protocol.OutputValidationProbe{
+			Action:  protocol.OutputValidationAction{Kind: protocol.OutputValidationActionClick, Target: "[data-mycelis-primary-action]"},
+			Observe: protocol.OutputValidationObservation{Kind: protocol.OutputValidationObserveTextChange, Target: "[data-mycelis-validation-surface]"},
+		}},
 	}
 	prompt := resultContractExecutionPrompt(requirement)
-	for _, want := range []string{"README.md", "primary control changes the application", "visibly explain the primary control", "keydown"} {
+	for _, want := range []string{"README.md", "primary control changes the application", "visibly explain the primary control", "keydown", "never a positional selector", "addEventListener"} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("execution prompt = %q, missing %q", prompt, want)
 		}

@@ -292,15 +292,16 @@ func resultContractExecutionPrompt(requirement *teamResultRequirement) string {
 }
 
 func resultContractCorrectionPrompt(requirement *teamResultRequirement, issues []string) string {
-	prompt := "Result-contract correction: the approved delivery is not complete. Missing: " + strings.Join(issues, "; ") +
-		". Emit exactly one available tool_call that advances the missing evidence. Use write_file to create required retained outputs and read_file/read_text_file on the entrypoint to establish structural readback. Do not use store_artifact as a substitute for project-package files or read missing support files before writing them. Readback does not prove semantic acceptance; server/live validation remains authoritative. Do not claim files, proof, or completion from prose or metadata."
-	for _, issue := range issues {
+	focusedIssues := focusedResultContractCorrectionIssues(issues)
+	prompt := "Result-contract correction: complete only this next gap: " + strings.Join(focusedIssues, "; ") +
+		". Emit exactly one tool_call JSON object and no second tool call; the runtime executes only the first object in a response. Use write_file for a missing or invalid retained output, or read_file/read_text_file only when entrypoint readback is the named gap. Do not use store_artifact as a substitute for project-package files. Do not claim files, proof, or completion from prose or metadata."
+	for _, issue := range focusedIssues {
 		if strings.Contains(issue, "visible control instructions") {
 			prompt += " Overwrite the existing entrypoint with write_file so visible page text names the primary control (for example, 'Controls: Hold ArrowRight to move') while retaining its matching interaction handler, then read the entrypoint back."
 			break
 		}
 	}
-	prompt += outputValidationCorrectionInstruction(requirement.OutputValidation, issues)
+	prompt += outputValidationCorrectionInstruction(requirement.OutputValidation, focusedIssues)
 	return prompt
 }
 

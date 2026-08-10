@@ -60,6 +60,9 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/groups/{id}/workflow-log", s.HandleGroupWorkflowLog)
 	mux.HandleFunc("GET /api/v1/groups/{id}/outputs", s.HandleGroupOutputs)
 	mux.HandleFunc("POST /api/v1/groups/{id}/broadcast", s.HandleGroupBroadcast)
+	mux.HandleFunc("POST /api/v1/testing/fixture-scopes", s.HandleCreateQAFixtureScope)
+	mux.HandleFunc("POST /api/v1/testing/fixture-scopes/{id}/resources", s.HandleAddQAFixtureResources)
+	mux.HandleFunc("POST /api/v1/testing/fixture-scopes/{id}/purge", s.HandlePurgeQAFixtureScope)
 
 	mux.HandleFunc("GET /api/v1/missions", s.handleListMissions)
 	mux.HandleFunc("GET /api/v1/missions/{id}", s.handleGetMission)

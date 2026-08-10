@@ -32,6 +32,25 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		respondAPIError(w, "database not available", http.StatusServiceUnavailable)
 		return
 	}
+	fixtureScopeID, ok := s.qaFixtureScopeFromRequest(w, r)
+	if !ok {
+		return
+	}
+	var releaseFixtureFence func()
+	if fixtureScopeID != "" {
+		var lockErr error
+		releaseFixtureFence, lockErr = acquireQAFixturePurgeLock(r.Context(), db, fixtureScopeID)
+		if lockErr != nil {
+			respondAPIError(w, "failed to lock execution cleanup ownership", http.StatusConflict)
+			return
+		}
+		defer func() {
+			if releaseFixtureFence != nil {
+				releaseFixtureFence()
+			}
+		}()
+		r = r.WithContext(withQAFixtureFenceHeld(r.Context(), fixtureScopeID))
+	}
 
 	tx, err := db.BeginTx(r.Context(), nil)
 	if err != nil {
@@ -45,16 +64,22 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
+	if fixtureScopeID != "" {
+		if err := s.claimQAFixtureResourcesLocked(r.Context(), fixtureScopeID, []qaFixtureResource{{Kind: "run", Ref: runID}}); err != nil {
+			respondAPIError(w, "failed to bind execution cleanup ownership", http.StatusConflict)
+			return
+		}
+	}
 
 	auditUser := auditUserLabelFromRequest(r)
 	actorIdentity := actorIdentitySnapshotFromRequest(r)
 	if confirmedActionNeedsAsyncDispatch(scope) {
-		s.handleAsyncConfirmedAction(w, r, tx, proofID, contractID, runID, scope, auditUser, actorIdentity)
+		s.handleAsyncConfirmedAction(w, r, tx, proofID, contractID, runID, scope, fixtureScopeID, auditUser, actorIdentity)
 		return
 	}
-	results, err := s.executePlannedToolCalls(r.Context(), scope, auditUser, runID, proofID, contractID)
+	results, err := s.executePlannedToolCalls(r.Context(), scope, auditUser, runID, proofID, contractID, fixtureScopeID, fixtureScopeID != "")
 	if err != nil {
-		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, auditUser, actorIdentity, err)
+		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, fixtureScopeID, auditUser, actorIdentity, err)
 		return
 	}
 	pendingTeamWork := confirmedActionHasPendingTeamWork(results)
@@ -76,7 +101,6 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		respondAPIError(w, "transaction commit failed", http.StatusInternalServerError)
 		return
 	}
-
 	auditID := s.auditConfirmedAction(proofID, runID, scope, auditUser, actorIdentity, pendingTeamWork)
 	proofArtifactID := ""
 	if !pendingTeamWork {
@@ -90,6 +114,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		AuditID:         auditID,
 		AuditUser:       auditUser,
 		Scope:           scope,
+		FixtureScopeID:  fixtureScopeID,
 	}
 	teamWorkRefs, outcomeProject, err := s.persistConfirmedActionVisibility(r.Context(), link, results)
 	if err != nil {
@@ -134,7 +159,7 @@ func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Requ
 	return proofID, contractID, scope, runID, true
 }
 
-func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, r *http.Request, tx *sql.Tx, proofID, contractID, runID, auditUser string, actorIdentity map[string]any, err error) {
+func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, r *http.Request, tx *sql.Tx, proofID, contractID, runID, fixtureScopeID, auditUser string, actorIdentity map[string]any, err error) {
 	s.failConfirmedActionWorkerRun(r.Context(), runID, err)
 	if failErr := s.failChatProofTx(tx, proofID); failErr != nil {
 		log.Printf("CE-1: confirm-action proof failure update failed: %v", failErr)
@@ -167,6 +192,7 @@ func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, r *http
 		RunID:           runID,
 		AuditID:         auditID,
 		AuditUser:       auditUser,
+		FixtureScopeID:  fixtureScopeID,
 	}
 	if scope, scopeErr := s.loadIntentProofScopeForFailure(r.Context(), proofID); scopeErr == nil {
 		link.Scope = scope

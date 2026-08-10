@@ -58,8 +58,23 @@ func (s *AdminServer) handleCreateOrganization(w http.ResponseWriter, r *http.Re
 		template = resolved
 	}
 
+	fixtureScopeID, ok := s.qaFixtureScopeFromRequest(w, r)
+	if !ok {
+		return
+	}
 	home := s.buildOrganizationHome(req, template)
-	home = s.organizationStore().Save(home)
+	home.QAFixtureScopeID = fixtureScopeID
+	err := s.withQAFixtureScopeLock(r.Context(), fixtureScopeID, func() error {
+		if err := s.claimQAFixtureResourcesLocked(r.Context(), fixtureScopeID, []qaFixtureResource{{Kind: "organization", Ref: home.ID}}); err != nil {
+			return err
+		}
+		home = s.organizationStore().Save(home)
+		return nil
+	})
+	if err != nil {
+		respondAPIError(w, "Failed to bind organization cleanup ownership", http.StatusServiceUnavailable)
+		return
+	}
 	s.loopProfileStore().EnsureDefaults(home)
 	s.emitReviewLoopEvent(home.ID, ReviewLoopEventOrganizationCreated)
 	respondAPIJSON(w, http.StatusCreated, protocol.NewAPISuccess(home))

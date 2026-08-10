@@ -48,11 +48,24 @@ func TestEnsureGroupForCreatedTeamKeepsNewTeamLaneWhenNameRepeats(t *testing.T) 
 		"team_id": "first-demo-game-team-new",
 		"name":    "First Demo Game Team",
 		"role":    "worker",
-	})
+	}, "")
 	if err != nil {
 		t.Fatalf("ensure group for repeat team name: %v", err)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet db expectations: %v", err)
+	}
+}
+
+func TestConfirmedActionCreatedTeamResultsExcludeExistingTeams(t *testing.T) {
+	created := confirmedActionCreatedTeamResults([]plannedToolExecutionResult{
+		{Name: "create_team", Output: `{"status":"already_exists","team_id":"standing-team"}`},
+		{Name: "create_team", Output: `{"status":"created","team_id":"new-team"}`},
+	})
+	if created["standing-team"] {
+		t.Fatal("already-existing team was treated as fixture-created")
+	}
+	if !created["new-team"] {
+		t.Fatal("new team was not recognized from execution evidence")
 	}
 }

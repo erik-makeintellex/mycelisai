@@ -36,7 +36,7 @@ func TestEnsureGroupForCreatedTeamMirrorsConfirmedCreateTeam(t *testing.T) {
 		"name":    "Research Team",
 		"role":    "researcher",
 		"goal":    "Map optimal agentry architecture.",
-	})
+	}, "")
 	if err != nil {
 		t.Fatalf("ensure group for created team: %v", err)
 	}
@@ -193,6 +193,7 @@ func TestPersistConfirmedActionOutputArtifactsStoresSlugTeamWriteFile(t *testing
 	err := s.persistConfirmedActionOutputArtifacts(
 		t.Context(),
 		"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+		"",
 		[]plannedToolExecutionResult{
 			{
 				Name:      "create_team",

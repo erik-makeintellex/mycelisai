@@ -37,7 +37,7 @@ func TestExecutePlannedToolCalls_PropagatesRunAndWorkCorrelationToDelegateTask(t
 			},
 		}},
 	}
-	results, err := s.executePlannedToolCalls(t.Context(), scope, "test-user", runID, proofID, contractID)
+	results, err := s.executePlannedToolCalls(t.Context(), scope, "test-user", runID, proofID, contractID, "", false)
 	if err != nil {
 		t.Fatalf("executePlannedToolCalls: %v", err)
 	}

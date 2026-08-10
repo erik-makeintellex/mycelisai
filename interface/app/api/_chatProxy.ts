@@ -23,6 +23,10 @@ function upstreamHeaders(req: Request): Headers {
         headers.set('X-Mycelis-Web-Identity', forwardedIdentity);
         headers.set('X-Mycelis-Web-Identity-Signature', forwardedIdentitySignature);
     }
+	const qaFixtureScope = req.headers.get('x-mycelis-qa-fixture-scope');
+	if (qaFixtureScope) {
+		headers.set('X-Mycelis-QA-Fixture-Scope', qaFixtureScope);
+	}
     for (const name of ['accept', 'cache-control', 'content-type', 'cookie']) {
         const value = req.headers.get(name);
         if (value) headers.set(name, value);

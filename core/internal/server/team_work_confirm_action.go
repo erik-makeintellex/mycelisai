@@ -72,6 +72,7 @@ type confirmedActionTeamWorkLink struct {
 	AuditID         string
 	AuditUser       string
 	Scope           *protocol.ScopeValidation
+	FixtureScopeID  string
 }
 
 type confirmActionTeamWorkRef struct {

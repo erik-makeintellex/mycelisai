@@ -42,6 +42,7 @@ export type GroupRecord = {
   work_mode?: string;
   status?: string;
   team_ids?: string[];
+  workspace_folder?: string;
 };
 
 export type ArtifactRecord = {
@@ -177,13 +178,22 @@ export async function attachRetainedPackageEvidence(
   });
 }
 
-export async function createOrganization(page: Page, name: string) {
+export async function createOrganization(
+  page: Page,
+  name: string,
+  options: { fixtureScopeID?: string } = {},
+) {
   let response: APIResponse | undefined;
   const maxAttempts = 5;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       response = await page.request.post(liveAPIURL("/api/v1/organizations"), {
-        headers: liveAPIHeaders(),
+        headers: {
+          ...(liveAPIHeaders() ?? {}),
+          ...(options.fixtureScopeID
+            ? { "X-Mycelis-QA-Fixture-Scope": options.fixtureScopeID }
+            : {}),
+        },
         data: { name, purpose: "Exact UI finalization browser package proof", start_mode: "empty" },
       });
       break;

@@ -12,7 +12,9 @@ type OrganizationStore struct {
 }
 
 func NewOrganizationStore() *OrganizationStore {
-	return &OrganizationStore{items: make(map[string]OrganizationHomePayload)}
+	return &OrganizationStore{
+		items: make(map[string]OrganizationHomePayload),
+	}
 }
 
 func (s *OrganizationStore) List() []OrganizationSummary {
@@ -32,6 +34,9 @@ func (s *OrganizationStore) List() []OrganizationSummary {
 func (s *OrganizationStore) Save(home OrganizationHomePayload) OrganizationHomePayload {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if existing, exists := s.items[home.ID]; exists {
+		home.QAFixtureScopeID = existing.QAFixtureScopeID
+	}
 	s.items[home.ID] = home
 	return home
 }
@@ -55,6 +60,23 @@ func (s *OrganizationStore) Update(id string, update func(OrganizationHomePayloa
 	item = update(item)
 	s.items[id] = item
 	return item, true
+}
+
+func (s *OrganizationStore) Delete(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.items[id]; !ok {
+		return false
+	}
+	delete(s.items, id)
+	return true
+}
+
+func (s *OrganizationStore) QAFixtureScope(id string) (string, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	item, ok := s.items[id]
+	return item.QAFixtureScopeID, ok && item.QAFixtureScopeID != ""
 }
 
 func (s *AdminServer) templateBundlesPath() string {

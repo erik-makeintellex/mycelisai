@@ -52,8 +52,7 @@ func (s *AdminServer) loadIntentProofScopeTx(tx *sql.Tx, proofID string) (*proto
 	return scope, nil
 }
 
-// createExecutionRunTx persists a durable execution record before the approved
-// action is executed so later status updates have a stable identity to target.
+// createExecutionRunTx persists the durable identity used by later execution status updates.
 func (s *AdminServer) createExecutionRunTx(ctx context.Context, tx *sql.Tx, proofID string, scope *protocol.ScopeValidation, auditUser string) (string, error) {
 	if tx == nil {
 		return "", errDBUnavailable
@@ -185,7 +184,7 @@ func (s *AdminServer) markRunFailedTx(tx *sql.Tx, runID, proofID, reason string)
 	return err
 }
 
-func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protocol.ScopeValidation, auditUser, runID, proofID, contractID string) ([]plannedToolExecutionResult, error) {
+func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protocol.ScopeValidation, auditUser, runID, proofID, contractID, fixtureScopeID string, fixtureFenceHeld bool) ([]plannedToolExecutionResult, error) {
 	if scope == nil || len(scope.PlannedToolCalls) == 0 {
 		return nil, fmt.Errorf("no approved execution plan was stored for this proposal")
 	}
@@ -227,7 +226,36 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 		if err != nil {
 			return results, err
 		}
-		output, err := executor.CallTool(toolCtx, serverID, resolvedToolName, planned.Arguments)
+		if strings.EqualFold(resolvedToolName, "create_team") && strings.TrimSpace(fixtureScopeID) != "" && serverID != uuid.Nil {
+			return results, fmt.Errorf("scoped QA create_team must use the internal team runtime")
+		}
+		var output string
+		execute := func() error {
+			if strings.EqualFold(resolvedToolName, "create_team") {
+				if err := s.ensureQAFixtureTeamCreationAvailable(toolCtx, fixtureScopeID, runID, planned.Arguments); err != nil {
+					return err
+				}
+			}
+			var callErr error
+			output, callErr = executor.CallTool(toolCtx, serverID, resolvedToolName, planned.Arguments)
+			if callErr != nil {
+				return callErr
+			}
+			if strings.EqualFold(resolvedToolName, "create_team") {
+				return s.claimConfirmedCreatedTeam(toolCtx, fixtureScopeID, planned.Arguments, output)
+			}
+			return nil
+		}
+		if strings.EqualFold(resolvedToolName, "create_team") && strings.TrimSpace(fixtureScopeID) != "" && !fixtureFenceHeld {
+			err = s.withQAFixtureScopeLock(toolCtx, fixtureScopeID, func() error {
+				if err := s.claimQAFixtureResourcesLocked(toolCtx, fixtureScopeID, []qaFixtureResource{{Kind: "run", Ref: runID}}); err != nil {
+					return err
+				}
+				return execute()
+			})
+		} else {
+			err = execute()
+		}
 		if err != nil {
 			return results, err
 		}

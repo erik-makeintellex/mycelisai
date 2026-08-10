@@ -4,78 +4,10 @@ from pathlib import Path
 
 from invoke import task, Collection
 from .config import CORE_DIR, ROOT_DIR
+from .db_schema import SCHEMA_COMPATIBILITY_CHECKS, TARGETED_SCHEMA_MIGRATIONS
 
 MIGRATIONS_DIR = CORE_DIR / "migrations"
-SCHEMA_COMPATIBILITY_CHECKS = (
-    (
-        "nodes.type column",
-        "SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema = 'public' AND table_name = 'nodes' AND column_name = 'type';",
-    ),
-    (
-        "nodes.specs column",
-        "SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema = 'public' AND table_name = 'nodes' AND column_name = 'specs';",
-    ),
-    (
-        "intent_proofs table",
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'intent_proofs';",
-    ),
-    (
-        "confirm_tokens table",
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'confirm_tokens';",
-    ),
-    (
-        "conversation_turns table",
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'conversation_turns';",
-    ),
-    (
-        "collaboration_groups table",
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'collaboration_groups';",
-    ),
-    (
-        "collaboration_groups workspace_folder column",
-        "SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema = 'public' AND table_name = 'collaboration_groups' AND column_name = 'workspace_folder';",
-    ),
-    (
-        "capability_manifests table",
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'capability_manifests';",
-    ),
-    (
-        "capability_manifests health column",
-        "SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema = 'public' AND table_name = 'capability_manifests' AND column_name = 'health';",
-    ),
-    ("execution_contracts table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'execution_contracts';"),
-    ("proof_artifacts table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'proof_artifacts';"),
-    ("team_work_items table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_work_items';"),
-    ("team_work_items work_intent column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'team_work_items' AND column_name = 'work_intent' AND data_type = 'jsonb';"),
-    ("team_work_items execution_mode column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'team_work_items' AND column_name = 'execution_mode' AND data_type = 'text';"),
-    ("team_work_items recovery_deadline_at column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'team_work_items' AND column_name = 'recovery_deadline_at' AND data_type = 'timestamp with time zone';"),
-    ("team_interactions table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_interactions';"),
-    ("team_status_events table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_status_events';"),
-    ("team_status_events work_intent column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'team_status_events' AND column_name = 'work_intent' AND data_type = 'jsonb';"),
-    ("team_status_events execution_mode column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'team_status_events' AND column_name = 'execution_mode' AND data_type = 'text';"),
-    ("outcome_projects table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'outcome_projects';"),
-    ("outcome_projects run_id text column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'outcome_projects' AND column_name = 'run_id' AND data_type = 'text';"),
-    ("outcome_projects intent_proof_id text column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'outcome_projects' AND column_name = 'intent_proof_id' AND data_type = 'text';"),
-    ("team_registry_entries table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_registry_entries';"),
-    ("trigger_rules schedule columns", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'trigger_rules' AND column_name = 'trigger_kind';"),
-    ("search_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'search_sources';"),
-    ("input_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'input_sources';"),
-    ("execution_dispatch_outbox table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'execution_dispatch_outbox';"),
-    ("operator_sse_events table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'operator_sse_events';"),
-    ("team_signal_receipts table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_signal_receipts';"),
-    ("agent_catalogue profile_key column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'agent_catalogue' AND column_name = 'profile_key';"),
-)
 
-TARGETED_SCHEMA_MIGRATIONS = {"agent_catalogue profile_key column": "056_agent_profile_library.up.sql", "team_work_items recovery_deadline_at column": "057_team_work_recovery_deadline.up.sql"}
 def _load_env():
     try:
         from dotenv import load_dotenv
