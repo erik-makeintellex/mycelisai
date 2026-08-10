@@ -36,6 +36,14 @@ COMPOSE_LONG_TERM_STORAGE_CHECKS = (
         "worker profiles",
         "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'agent_catalogue' AND column_name = 'profile_key';",
     ),
+    (
+        "QA fixture ownership",
+        "SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'uq_qa_fixture_resource_claim';",
+    ),
+    (
+        "released QA fixture claims",
+        "SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM qa_fixture_resources r JOIN qa_fixture_scopes s ON s.id=r.scope_id WHERE s.status='purged');",
+    ),
 )
 
 
@@ -50,6 +58,11 @@ COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = {
     "managed exchange items": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
     "conversation templates": ("038_conversation_templates.up.sql",),
     "worker profiles": ("056_agent_profile_library.up.sql",),
+    "QA fixture ownership": (
+        "058_qa_fixture_ownership.up.sql",
+        "059_qa_fixture_ownership_hardening.up.sql",
+    ),
+    "released QA fixture claims": ("060_release_purged_qa_fixture_claims.up.sql",),
 }
 
 

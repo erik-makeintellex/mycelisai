@@ -3,8 +3,20 @@
 
 Use this page when you want to operate Mycelis through the product instead of reading backend or implementation details.
 
+## Open The Right Guide
+
+| What you need to do | Open |
+| --- | --- |
+| Ask Soma, approve work, or continue from a result | [Using Soma Chat](soma-chat.md) |
+| Open generated files or understand what Soma can access | [Outputs And Resources](resources.md) |
+| Configure identity, permissions, search, or connected access | [Settings And Access](settings-access.md) |
+| Understand a degraded state and recover safely | [System Status And Recovery](system-status-recovery.md) |
+| Read proof, execution history, and Outcome activity | [Run Timeline](run-timeline.md) |
+| Perform the full human release journey | [User Acceptance Runbook](../REMOTE_USER_TESTING.md) |
+
 ## TOC
 
+- [Open The Right Guide](#open-the-right-guide)
 - [Start Here](#start-here)
 - [Core Workflows](#core-workflows)
 - [Setup And Recovery](#setup-and-recovery)
@@ -19,7 +31,7 @@ For most user testing and daily operation, start with Soma:
 3. Ask for the outcome you want.
 4. Let Soma propose the smallest useful team or direct answer path.
 5. Review visible outputs in chat, team lead workspaces, or retained artifacts.
-7. Use Settings, Resources, System, or Memory only when the workflow calls for them.
+6. Use Settings, Resources, System, or Memory only when the workflow calls for them.
 
 The normal product path is not "configure every backend component first." It is "sign in, tell Soma the goal, review the proposed execution shape, and inspect outputs."
 

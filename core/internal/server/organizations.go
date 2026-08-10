@@ -173,6 +173,7 @@ type OrganizationHomePayload struct {
 	Description         string                           `json:"description,omitempty"`
 	Departments         []OrganizationDepartmentSummary  `json:"departments,omitempty"`
 	OutputModelBindings []OrganizationOutputModelBinding `json:"output_model_bindings,omitempty"`
+	QAFixtureScopeID    string                           `json:"-"`
 }
 
 type TeamLeadGuidedAction string

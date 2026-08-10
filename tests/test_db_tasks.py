@@ -8,6 +8,7 @@ import pytest
 
 from ops import db as db_tasks
 from ops import lifecycle
+from ops import native_postgres
 
 
 def _missing_dotenv_import(name, globals=None, locals=None, fromlist=(), level=0):
@@ -120,6 +121,7 @@ def test_reset_fails_fast_when_a_migration_errors(monkeypatch):
 
     monkeypatch.setattr(db_tasks, "_psql", fake_run_psql)
     monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
+    monkeypatch.setattr(native_postgres, "ensure_extensions", lambda db: True)
 
     with pytest.raises(SystemExit, match="Migration failed: 019_agent_memories.up.sql"):
         db_tasks.reset.body(None)

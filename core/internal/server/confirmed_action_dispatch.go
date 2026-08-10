@@ -20,10 +20,11 @@ const (
 )
 
 type confirmedActionDispatchPayload struct {
-	AuditUser     string                    `json:"audit_user"`
-	ActorIdentity map[string]any            `json:"actor_identity,omitempty"`
-	AuditID       string                    `json:"audit_id,omitempty"`
-	Scope         *protocol.ScopeValidation `json:"scope"`
+	AuditUser      string                    `json:"audit_user"`
+	ActorIdentity  map[string]any            `json:"actor_identity,omitempty"`
+	AuditID        string                    `json:"audit_id,omitempty"`
+	Scope          *protocol.ScopeValidation `json:"scope"`
+	FixtureScopeID string                    `json:"fixture_scope_id,omitempty"`
 }
 
 func confirmedActionNeedsAsyncDispatch(scope *protocol.ScopeValidation) bool {
@@ -52,12 +53,12 @@ func correlateConfirmedActionScope(scope *protocol.ScopeValidation, runID, proof
 	return &copyScope
 }
 
-func (s *AdminServer) stageConfirmedActionDispatchTx(ctx context.Context, tx *sql.Tx, proofID, contractID, runID string, scope *protocol.ScopeValidation, auditUser string, actorIdentity map[string]any) (confirmedActionDispatchPayload, string, error) {
+func (s *AdminServer) stageConfirmedActionDispatchTx(ctx context.Context, tx *sql.Tx, proofID, contractID, runID string, scope *protocol.ScopeValidation, fixtureScopeID, auditUser string, actorIdentity map[string]any) (confirmedActionDispatchPayload, string, error) {
 	if s.DispatchOutbox == nil {
 		return confirmedActionDispatchPayload{}, "", dispatchoutbox.ErrUnavailable
 	}
 	payload := confirmedActionDispatchPayload{
-		AuditUser: auditUser, ActorIdentity: actorIdentity, Scope: scope,
+		AuditUser: auditUser, ActorIdentity: actorIdentity, Scope: scope, FixtureScopeID: fixtureScopeID,
 	}
 	raw, err := json.Marshal(payload)
 	if err != nil {
@@ -147,14 +148,25 @@ func (s *AdminServer) dispatchClaimedConfirmedAction(ctx context.Context, item *
 		_ = s.DispatchOutbox.MarkFailed(ctx, item.ID, err)
 		return err
 	}
+	return s.withQAFixtureScopeLock(ctx, payload.FixtureScopeID, func() error {
+		lockedCtx := withQAFixtureFenceHeld(ctx, payload.FixtureScopeID)
+		return s.dispatchClaimedConfirmedActionLocked(lockedCtx, item, payload)
+	})
+}
+
+func (s *AdminServer) dispatchClaimedConfirmedActionLocked(ctx context.Context, item *dispatchoutbox.Item, payload confirmedActionDispatchPayload) error {
 	if payload.AuditID == "" {
 		payload.AuditID = s.auditConfirmedAction(item.IntentProofID, item.RunID, payload.Scope, payload.AuditUser, payload.ActorIdentity, true)
 	}
 	if _, _, err := s.ensureAsyncDispatchVisibility(ctx, item, payload); err != nil {
 		return s.retryOrFailConfirmedDispatch(ctx, item, payload, err)
 	}
-	results, err := s.executePlannedToolCalls(ctx, payload.Scope, payload.AuditUser, item.RunID, item.IntentProofID, item.ContractID)
+	results, err := s.executePlannedToolCalls(ctx, payload.Scope, payload.AuditUser, item.RunID, item.IntentProofID, item.ContractID, payload.FixtureScopeID, payload.FixtureScopeID != "")
 	if err != nil {
+		return s.retryOrFailConfirmedDispatch(ctx, item, payload, err)
+	}
+	link := confirmedActionTeamWorkLink{ProofID: item.IntentProofID, ContractID: item.ContractID, RunID: item.RunID, AuditID: payload.AuditID, AuditUser: payload.AuditUser, Scope: payload.Scope, FixtureScopeID: payload.FixtureScopeID}
+	if err := s.persistAsyncConfirmedActionResults(ctx, link, results); err != nil {
 		return s.retryOrFailConfirmedDispatch(ctx, item, payload, err)
 	}
 	if !confirmedActionHasPendingTeamWork(results) {
@@ -166,17 +178,28 @@ func (s *AdminServer) dispatchClaimedConfirmedAction(ctx context.Context, item *
 	return s.DispatchOutbox.MarkCompleted(ctx, item.ID)
 }
 
+func (s *AdminServer) persistAsyncConfirmedActionResults(ctx context.Context, link confirmedActionTeamWorkLink, results []plannedToolExecutionResult) error {
+	if err := s.ensureGroupsForCreatedTeams(ctx, link.AuditID, link.AuditUser, link.Scope, link.FixtureScopeID, results); err != nil {
+		return err
+	}
+	if err := s.persistConfirmedActionOutputArtifacts(ctx, link.RunID, link.FixtureScopeID, results); err != nil {
+		return err
+	}
+	_, err := s.persistConfirmedCreateTeamItems(ctx, link, results)
+	return err
+}
+
 func (s *AdminServer) ensureAsyncDispatchVisibility(ctx context.Context, item *dispatchoutbox.Item, payload confirmedActionDispatchPayload) ([]confirmActionTeamWorkRef, *protocol.OutcomeProject, error) {
 	teamID, workItemID := confirmedActionDispatchTargets(payload.Scope)
 	if teamID != "" && workItemID != "" {
 		if existing, err := s.getTeamWorkItemDB(ctx, teamID, workItemID); err == nil {
 			ref := confirmActionTeamWorkRefForItem(existing)
-			link := confirmedActionTeamWorkLink{ProofID: item.IntentProofID, ContractID: item.ContractID, RunID: item.RunID, AuditID: payload.AuditID, AuditUser: payload.AuditUser, Scope: payload.Scope}
+			link := confirmedActionTeamWorkLink{ProofID: item.IntentProofID, ContractID: item.ContractID, RunID: item.RunID, AuditID: payload.AuditID, AuditUser: payload.AuditUser, Scope: payload.Scope, FixtureScopeID: payload.FixtureScopeID}
 			project, projectErr := s.ensureOutcomeOwnershipForConfirmedAction(ctx, link, []confirmActionTeamWorkRef{ref})
 			return []confirmActionTeamWorkRef{ref}, project, projectErr
 		}
 	}
-	link := confirmedActionTeamWorkLink{ProofID: item.IntentProofID, ContractID: item.ContractID, RunID: item.RunID, AuditID: payload.AuditID, AuditUser: payload.AuditUser, Scope: payload.Scope}
+	link := confirmedActionTeamWorkLink{ProofID: item.IntentProofID, ContractID: item.ContractID, RunID: item.RunID, AuditID: payload.AuditID, AuditUser: payload.AuditUser, Scope: payload.Scope, FixtureScopeID: payload.FixtureScopeID}
 	return s.persistConfirmedActionVisibility(ctx, link, plannedDispatchVisibilityResults(payload.Scope))
 }
 
@@ -237,7 +260,7 @@ func (s *AdminServer) failAsyncDispatchRun(ctx context.Context, item *dispatchou
 		auditID, _ = s.createAuditEvent(protocol.TemplateChatToProposal, "confirm-action-dispatch", "Committed execution dispatch failed", map[string]any{"run_id": item.RunID, "intent_proof_id": item.IntentProofID, "reason": cause.Error()})
 	}
 	proofID := s.persistConfirmActionFailureProof(ctx, item.IntentProofID, item.ContractID, item.RunID, auditID, cause)
-	link := confirmedActionTeamWorkLink{ProofID: item.IntentProofID, ContractID: item.ContractID, ProofArtifactID: proofID, RunID: item.RunID, AuditID: auditID, AuditUser: payload.AuditUser, Scope: payload.Scope}
+	link := confirmedActionTeamWorkLink{ProofID: item.IntentProofID, ContractID: item.ContractID, ProofArtifactID: proofID, RunID: item.RunID, AuditID: auditID, AuditUser: payload.AuditUser, Scope: payload.Scope, FixtureScopeID: payload.FixtureScopeID}
 	return s.persistFailedConfirmedActionTeamWork(ctx, link, cause)
 }
 

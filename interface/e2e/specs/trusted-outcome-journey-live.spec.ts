@@ -10,11 +10,13 @@ import {
   liveTimeoutMs,
   openLiveWorkspace,
   parseJSONIfPossible,
-  removeTarget,
   submitLiveWorkspaceChat,
   targetExists,
 } from "../support/finalization-browser-package";
-import { liveAPIHeaders, liveAPIURL } from "../support/live-api-auth";
+import {
+  createQAFixtureScope,
+  purgeDeliveryFixture,
+} from "../support/qa-fixture-ownership";
 
 type ConfirmData = {
   run_id?: string;
@@ -75,10 +77,16 @@ test.describe("Trusted Outcome Journey live smoke", () => {
     const folder = `groups/${teamID}/generated/first-game`;
     const entrypoint = `${folder}/index.html`;
     const packageTitle = `${teamName} First Playable`;
-    const organizationID = await createOrganization(page, `Trusted Outcome Journey ${stamp}`);
-
-    await openLiveWorkspace(page, organizationID);
+    const fixture = await createQAFixtureScope(page, `trusted-outcome-${stamp}`);
+    let organizationID: string | undefined;
+    let runID: string | undefined;
     try {
+      organizationID = await createOrganization(
+        page,
+        `Trusted Outcome Journey ${stamp}`,
+        { fixtureScopeID: fixture.id },
+      );
+      await openLiveWorkspace(page, organizationID);
       const proposal = await submitLiveWorkspaceChat(
         page,
         [
@@ -109,6 +117,7 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       expect(data?.run_status).toBe("running");
       expect(data?.proof_artifact_id).toBeFalsy();
       expect(data?.run_id).toBeTruthy();
+      runID = data?.run_id;
       await expect(page.getByText("Action completed", { exact: true })).toHaveCount(0);
       await expect(page.getByText("Result verified", { exact: true })).toHaveCount(0);
 
@@ -161,17 +170,16 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       await expectGroupsRevisit(page, group, packageTitle, entrypoint);
       await expectRunReceiptRevisit(page, data!.run_id!);
     } finally {
-      await attachRetainedPackageEvidence(page, testInfo, [
-        entrypoint,
-        `${folder}/project-package.json`,
-        `${folder}/README.md`,
-        `${folder}/PROOF.md`,
-      ]);
-      await cleanupLiveJourney(page, teamID);
-      removeTarget(entrypoint);
-      removeTarget(`${folder}/README.md`);
-      removeTarget(`${folder}/PROOF.md`);
-      removeTarget(`${folder}/project-package.json`);
+		try {
+			await attachRetainedPackageEvidence(page, testInfo, [
+				entrypoint,
+				`${folder}/project-package.json`,
+				`${folder}/README.md`,
+				`${folder}/PROOF.md`,
+			]);
+		} finally {
+			await purgeDeliveryFixture(page, fixture, { teamID, organizationID, runID });
+		}
     }
   });
 });
@@ -214,29 +222,6 @@ async function waitForTeamDelivery(page: import("@playwright/test").Page, teamID
     );
   }
   return latest;
-}
-
-async function cleanupLiveJourney(page: import("@playwright/test").Page, teamID: string) {
-  const groupsResponse = await liveAPIGet(page, "/api/v1/groups");
-  if (groupsResponse.ok()) {
-    const groups = ((await groupsResponse.json()) as APIEnvelope<GroupRecord[]>).data ?? [];
-    const group = groups.find((candidate) => candidate.team_ids?.includes(teamID));
-    if (group) {
-      await page.request.post(
-        liveAPIURL(`/api/v1/groups/${encodeURIComponent(group.group_id)}/clear`),
-        {
-          headers: {
-            ...(liveAPIHeaders() ?? {}),
-            "Content-Type": "application/json",
-          },
-          data: { include_outputs: true },
-        },
-      );
-    }
-  }
-  await page.request.delete(liveAPIURL(`/api/v1/teams/${encodeURIComponent(teamID)}`), {
-    headers: liveAPIHeaders(),
-  });
 }
 
 async function expectProofAndRunReadback(page: import("@playwright/test").Page, data: ConfirmData, outputProofRef: string) {

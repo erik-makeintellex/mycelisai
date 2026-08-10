@@ -15,6 +15,11 @@ func (s *AdminServer) ensureOutcomeOwnershipForConfirmedAction(ctx context.Conte
 	}
 	outcomeID := firstNonEmptyString(link.RunID, link.ProofID)
 	if existing, err := s.getOutcomeProjectByOutcomeIDDB(ctx, outcomeID); err == nil {
+		if link.FixtureScopeID != "" && existing.RunID == link.RunID {
+			if claimErr := s.claimQAFixtureResources(ctx, link.FixtureScopeID, []qaFixtureResource{{Kind: "outcome", Ref: existing.OutcomeID}}); claimErr != nil {
+				return nil, claimErr
+			}
+		}
 		return &existing, nil
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
@@ -58,22 +63,31 @@ func (s *AdminServer) ensureOutcomeOwnershipForConfirmedAction(ctx context.Conte
 		RecoveryRefs:    outcomeRecoveryRefs(refs),
 		RetentionPolicy: "retained",
 	})
-	if err := s.insertOutcomeProjectDB(ctx, &project); err != nil {
-		return nil, err
-	}
-	for i, teamID := range teamIDs {
-		entry := protocol.NormalizeTeamRegistryEntry(protocol.TeamRegistryEntry{
-			ProjectID:        project.ProjectID,
-			Role:             teamRegistryRole(i),
-			TeamID:           teamID,
-			AssignmentReason: "Assigned by confirmed Soma execution to produce or review retained outcome work.",
-			Temporary:        true,
-			Status:           "active",
-		})
-		if err := s.insertTeamRegistryEntryDB(ctx, &entry); err != nil {
-			return nil, err
+	err := s.withQAFixtureScopeLock(ctx, link.FixtureScopeID, func() error {
+		if err := s.claimQAFixtureResourcesLocked(ctx, link.FixtureScopeID, []qaFixtureResource{{Kind: "outcome", Ref: project.OutcomeID}}); err != nil {
+			return err
 		}
-		project.TeamRegistryRefs = append(project.TeamRegistryRefs, entry.RegistryID)
+		if err := s.insertOutcomeProjectDB(ctx, &project); err != nil {
+			return err
+		}
+		for i, teamID := range teamIDs {
+			entry := protocol.NormalizeTeamRegistryEntry(protocol.TeamRegistryEntry{
+				ProjectID:        project.ProjectID,
+				Role:             teamRegistryRole(i),
+				TeamID:           teamID,
+				AssignmentReason: "Assigned by confirmed Soma execution to produce or review retained outcome work.",
+				Temporary:        true,
+				Status:           "active",
+			})
+			if err := s.insertTeamRegistryEntryDB(ctx, &entry); err != nil {
+				return err
+			}
+			project.TeamRegistryRefs = append(project.TeamRegistryRefs, entry.RegistryID)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return &project, nil
 }

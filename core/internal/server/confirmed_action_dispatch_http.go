@@ -10,14 +10,14 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func (s *AdminServer) handleAsyncConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, proofID, contractID, runID string, scope *protocol.ScopeValidation, auditUser string, actorIdentity map[string]any) {
+func (s *AdminServer) handleAsyncConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, proofID, contractID, runID string, scope *protocol.ScopeValidation, fixtureScopeID, auditUser string, actorIdentity map[string]any) {
 	scope = correlateConfirmedActionScope(scope, runID, proofID, contractID)
 	if err := persistCorrelatedScopeTx(r.Context(), tx, proofID, scope); err != nil {
 		log.Printf("CE-1: persist correlated dispatch scope failed: %v", err)
 		respondAPIError(w, "failed to preserve execution correlation", http.StatusInternalServerError)
 		return
 	}
-	payload, idempotencyKey, err := s.stageConfirmedActionDispatchTx(r.Context(), tx, proofID, contractID, runID, scope, auditUser, actorIdentity)
+	payload, idempotencyKey, err := s.stageConfirmedActionDispatchTx(r.Context(), tx, proofID, contractID, runID, scope, fixtureScopeID, auditUser, actorIdentity)
 	if err != nil {
 		log.Printf("CE-1: stage confirmed action dispatch failed: %v", err)
 		respondAPIError(w, "failed to stage approved work", http.StatusInternalServerError)
