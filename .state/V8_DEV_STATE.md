@@ -8,10 +8,10 @@
 | --- | --- |
 | Updated | 2026-08-10 |
 | Integration branch | `dev` |
-| Active slice | Long-running team result correlation is `IN_REVIEW` on `feature/team-correlation-lifetime`. Post-merge natural-delivery proof exposed a five-minute in-memory correlation lease expiring before the 15-minute durable recovery deadline; the lease now survives 30 minutes, has a six-minute regression, and passed the headed natural delivery journey in 5.8 minutes. |
+| Active slice | P0.13 fresh-user cross-device acceptance is `NEXT`. Deterministic QA ownership, generated-package correction, and long-running result correlation are merged and post-merge proven on `dev`; the integrated operator matrix is the next release gate. |
 | Production branch | `main` remains behind the accepted `dev` integration train pending release certification. |
 | Runtime posture | Dockerized PostgreSQL and NATS plus local Core and Interface are healthy; Ollama is running. Full Compose app containers, Kubernetes, and WSL remain explicit release-proof lanes. |
-| Delivery target | Merge and re-prove long-running result correlation, finish the P0.13 fresh-user device matrix, then execute P0.12 release certification and intentional `dev -> main` promotion. |
+| Delivery target | Finish the P0.13 fresh-user device matrix, then execute P0.12 release certification and intentional `dev -> main` promotion. |
 | Main release risk | The canonical natural and trusted delivery journeys now produce and validate usable browser packages, but production promotion still requires the integrated new-user device matrix, ambiguous external-mutation recovery, and deployment certification from a clean release candidate. |
 | Canonical PRD alignment | Workspace owns Outcomes; Soma owns execution; WorkIntent is transitional; deliverables, proof, recovery, and continuity remain Outcome-owned user concepts. |
 
@@ -36,18 +36,17 @@
 | P0.9 full Trusted Outcome Journey | `COMPLETE` | Governed ask, approval, asynchronous NATS team execution, retained interactive package, validation, proof, and cross-surface revisit pass on the local source stack. | Preserve during release certification. |
 | P0.11 documentation convergence | `COMPLETE` | The canonical PRD contains all product architecture. The duplicate architecture overview and obsolete user-facing blueprint guide are deleted; user concepts, run/recovery, acceptance, deployment, API/provider, implementation, README, state, and in-app Help guidance match current Workspace/Outcome delivery and the Docker data-plane development lane. Documentation contracts, Help component tests, typecheck, and a headed real-manifest PRD-to-acceptance journey pass. | Keep one product-architecture authority and update owned support docs with behavior changes. |
 | P0.13 retained-state projection | `COMPLETE` | TeamWork has an explicit attention view; Dashboard requests operator attention only; Groups defaults to Current with separate Completed and Archived history. | Preserve in fresh-user proof. |
-| P0.13 cross-device operator acceptance | `IN_REVIEW` | Dashboard, Groups, Resources, Memory, Docs, and Settings have focused desktop/mobile proof. Exact owner-scoped creation and purge pass visibly in Chromium; 31 fixture scopes are purged, no non-terminal scopes remain, and active claims are zero. Headed natural delivery creates a complete browser package, validates its declared interaction, opens it directly, and purges its resources. A post-merge run that crossed five minutes exposed and reproduced orphan result correlation; the corrected feature run passed in 5.8 minutes. The headed Trusted Outcome Journey also passes Ask through Revisit with retained proof and cleanup. | Merge the correlation fix and repeat its live proof on `dev`, then complete the integrated new-user desktop/mobile matrix. |
+| P0.13 cross-device operator acceptance | `IN_REVIEW` | Dashboard, Groups, Resources, Memory, Docs, and Settings have focused desktop/mobile proof. Exact owner-scoped creation and purge pass visibly in Chromium; 32 fixture scopes are purged, no non-terminal scopes remain, and active claims are zero. Headed natural delivery creates a complete browser package, validates its declared interaction, opens it directly, and purges its resources. A post-merge run that crossed five minutes exposed orphan result correlation; the corrected feature and merged `dev` runs passed in 5.8 and 5.5 minutes. The headed Trusted Outcome Journey also passes Ask through Revisit with retained proof and cleanup. | Complete the integrated new-user desktop/mobile matrix. |
 | P0.12 release hygiene and certification | `ACTIVE` | Clean Windows release preflight passes lint, Core, build, typecheck, Vitest, 121 Chromium journeys, source service health, and all four live governance scenarios. Configured Compose ports, shared identity-secret boundaries, and the Docker PostgreSQL/NATS plus local Core/Interface development topology are merged and re-proven on `dev` without app image builds. | Finish deterministic QA ownership and P0.13 acceptance, then certify full Compose/Kubernetes and Windows-browser release paths intentionally. |
 | Production promotion | `REQUIRED` | `main` is intentionally not promoted from the current `dev` train. | Merge certified `dev` into `main`, rerun health/browser smoke, update state, and synchronize remotes. |
 
 ## Immediate Work Order
 
-1. Commit and merge the long-running team result-correlation fix, then repeat focused Core and headed natural-delivery proof on `dev`.
-2. Complete the P0.13 fresh-user desktop/mobile matrix against owner-scoped clean fixtures.
-3. Close ambiguous external-mutation recovery before accepting retries after uncertain timeouts.
-4. Run `uv run inv ci.release-preflight --lane=release` from a clean committed `dev` state.
-5. Certify the supported full Compose/Kubernetes runtime and Windows-browser path; use guarded WSL proof only when that environment supplies distinct evidence.
-6. Promote `dev` to `main` only after every required gate passes.
+1. Complete the P0.13 fresh-user desktop/mobile matrix against owner-scoped clean fixtures.
+2. Close ambiguous external-mutation recovery before accepting retries after uncertain timeouts.
+3. Run `uv run inv ci.release-preflight --lane=release` from a clean committed `dev` state.
+4. Certify the supported full Compose/Kubernetes runtime and Windows-browser path; use guarded WSL proof only when that environment supplies distinct evidence.
+5. Promote `dev` to `main` only after every required gate passes.
 
 ## Accepted Proof
 
@@ -56,7 +55,7 @@
 - Approved work commits durable WorkIntent, ExecutionContract, Outcome/work ownership, and idempotent dispatch state before asynchronous handoff.
 - Soma remains conversational while NATS-backed work progresses; start, progress, result, proof, and recovery are projected from correlated durable state.
 - Final interactive deliverables require successful retained-file readback and contract-selected browser validation before verified completion.
-- Focused live ownership proof opens an exactly scoped organization and proves it is unavailable after purge. Thirty-one scopes are terminally purged with zero active claims and no non-terminal scope. Failed attempts and successful delivery both purge only their exact Group, team-work, run, organization, and workspace resources without touching NATS.
+- Focused live ownership proof opens an exactly scoped organization and proves it is unavailable after purge. Thirty-two scopes are terminally purged with zero active claims and no non-terminal scope. Failed attempts and successful delivery both purge only their exact Group, team-work, run, organization, and workspace resources without touching NATS.
 - Headed natural delivery and Trusted Outcome journeys prove asynchronous team execution, complete retained browser packages, structural and interaction validation, direct opening, proof/revisit, and deterministic cleanup.
 - Team command correlation outlives the durable recovery deadline; a 5.8-minute local-model package delivery remains attached to its work item instead of publishing an orphan result.
 - PostgreSQL recovery deadlines and restart reconciliation expose overdue accepted work as degraded operator attention instead of silent loss.
@@ -83,7 +82,7 @@
 | Risk | Status | Required resolution |
 | --- | --- | --- |
 | Deterministic QA ownership | `COMPLETE` | Migrations `058`-`060`, opt-in root-admin API, exact creation provenance, reentrant creation/purge fencing, current-run staged-ownership allowance, durable pre-existence rejection, independently committed created-team/workspace claims, resumable purge, atomic claim release, and NATS exclusion are covered by Core, Python, UI proxy, and post-merge headed Chromium proof. Thirty-one scopes are purged with zero active claims or non-terminal scopes. | Preserve in every retained-state live journey and release certification. |
-| Generated package delivery and correlation | `IN_REVIEW` | Worker correction requests one missing contract item at a time, entrypoint guidance forbids positional event selectors, and completion still requires retained-file readback plus structural and browser interaction validation. The command correlation lease now exceeds the durable work recovery deadline; its six-minute regression and a 5.8-minute headed natural journey are green on the feature branch. | Merge to `dev`, repeat the focused Core and natural delivery proof, then preserve it in the fresh-user device matrix and release certification. |
+| Generated package delivery and correlation | `COMPLETE` | Worker correction requests one missing contract item at a time, entrypoint guidance forbids positional event selectors, and completion still requires retained-file readback plus structural and browser interaction validation. The command correlation lease exceeds the durable work recovery deadline; its six-minute regression and headed natural journeys pass on the feature branch and merged `dev` in 5.8 and 5.5 minutes. | Preserve in the fresh-user device matrix and release certification. |
 | Ambiguous external mutation | `REQUIRED` | Capability-level idempotency or explicit uncertain-result recovery must prevent false completion after timeouts. |
 | Windows Core restart wrapper | `IN_REVIEW` | Distinguish a foreground wrapper timeout from service failure and retain useful diagnostics. |
 | Deployment certification | `REQUIRED` | WSL, Compose, Kubernetes, and operator-facing browser paths must pass from the committed release candidate. |
