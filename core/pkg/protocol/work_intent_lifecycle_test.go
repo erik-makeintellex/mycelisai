@@ -85,3 +85,43 @@ func TestNormalizeWorkIntentAddsLifecycleWithoutOverwritingExplicitContract(t *t
 		t.Fatalf("expected normalized plan to remain runnable: %v", err)
 	}
 }
+
+func TestNormalizeWorkIntentDefaultsExternalMutationToUncertainRetry(t *testing.T) {
+	intent := NormalizeWorkIntent(&WorkIntent{
+		Kind: " one_shot ",
+		SideEffect: &WorkSideEffectContract{
+			EffectKind: " EXTERNAL_MUTATION ",
+		},
+	})
+	if intent.SideEffect == nil {
+		t.Fatal("expected side-effect contract")
+	}
+	if intent.SideEffect.EffectKind != WorkEffectExternalMutation {
+		t.Fatalf("effect kind = %q", intent.SideEffect.EffectKind)
+	}
+	if intent.SideEffect.RetrySafety != WorkRetryUnknown {
+		t.Fatalf("retry safety = %q, want unknown", intent.SideEffect.RetrySafety)
+	}
+	if intent.SideEffect.SideEffectState != WorkSideEffectNotStarted {
+		t.Fatalf("side-effect state = %q, want not_started", intent.SideEffect.SideEffectState)
+	}
+	if WorkIntentAllowsIdempotentRetry(intent) {
+		t.Fatal("external mutation without key must not be retryable")
+	}
+}
+
+func TestWorkIntentAllowsIdempotentRetryRequiresSafeKey(t *testing.T) {
+	intent := NormalizeWorkIntent(&WorkIntent{SideEffect: &WorkSideEffectContract{
+		EffectKind: "external_mutation", IdempotencyKey: " mutation-42 ", RetrySafety: "safe",
+	}})
+	if !WorkIntentAllowsIdempotentRetry(intent) {
+		t.Fatal("safe external mutation with a stable key should permit idempotent retry")
+	}
+	if intent.SideEffect.IdempotencyKey != "mutation-42" {
+		t.Fatalf("idempotency key = %q", intent.SideEffect.IdempotencyKey)
+	}
+	intent.SideEffect.RetrySafety = WorkRetryUnsafe
+	if WorkIntentAllowsIdempotentRetry(intent) {
+		t.Fatal("unsafe external mutation must not permit retry")
+	}
+}

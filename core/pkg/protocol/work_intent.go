@@ -15,6 +15,30 @@ type WorkIntent struct {
 	ProjectRef      string                 `json:"project_ref,omitempty"`
 	OutputContract  *WorkOutputContract    `json:"output_contract,omitempty"`
 	Lifecycle       *WorkLifecycleContract `json:"lifecycle,omitempty"`
+	SideEffect      *WorkSideEffectContract `json:"side_effect,omitempty"`
+}
+
+const (
+	WorkEffectRead             = "read"
+	WorkEffectExternalMutation = "external_mutation"
+
+	WorkRetrySafe    = "safe"
+	WorkRetryUnsafe  = "unsafe"
+	WorkRetryUnknown = "unknown"
+
+	WorkSideEffectNotStarted = "not_started"
+	WorkSideEffectAccepted   = "accepted"
+	WorkSideEffectCommitted  = "committed"
+	WorkSideEffectUnknown    = "unknown"
+)
+
+// WorkSideEffectContract describes the retry boundary for work that can change
+// state outside Mycelis. It is trust metadata, not execution authority.
+type WorkSideEffectContract struct {
+	EffectKind      string `json:"effect_kind,omitempty"`
+	IdempotencyKey  string `json:"idempotency_key,omitempty"`
+	RetrySafety     string `json:"retry_safety,omitempty"`
+	SideEffectState string `json:"side_effect_state,omitempty"`
 }
 
 // WorkOutputContract names the expected deliverable shape for approved work.

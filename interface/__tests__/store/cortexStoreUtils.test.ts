@@ -171,6 +171,12 @@ describe('cortexStoreUtils', () => {
                 nats_subjects: ['swarm.team.client-brief.signal.status'],
                 service_refs: ['scheduler.weekly-client-brief'],
                 project_ref: 'client-briefs',
+                side_effect: {
+                    effect_kind: 'external_mutation',
+                    idempotency_key: 'client-brief-2026-08-11',
+                    retry_safety: 'safe',
+                    side_effect_state: 'accepted',
+                },
             },
         });
 
@@ -185,6 +191,12 @@ describe('cortexStoreUtils', () => {
             objective: 'Generate the client brief each Monday.',
             target_team_id: 'client-brief-team',
             project_ref: 'client-briefs',
+            side_effect: {
+                effect_kind: 'external_mutation',
+                idempotency_key: 'client-brief-2026-08-11',
+                retry_safety: 'safe',
+                side_effect_state: 'accepted',
+            },
         });
     });
 

@@ -24,6 +24,13 @@ export interface WorkLifecycleContractData {
     control_summary?: string;
 }
 
+export interface WorkSideEffectContractData {
+    effect_kind?: "read" | "external_mutation";
+    idempotency_key?: string;
+    retry_safety?: "safe" | "unsafe" | "unknown";
+    side_effect_state?: "not_started" | "accepted" | "committed" | "unknown";
+}
+
 export interface WorkIntentData {
     kind?: string;
     objective?: string;
@@ -37,4 +44,5 @@ export interface WorkIntentData {
     project_ref?: string;
     output_contract?: WorkOutputContractData;
     lifecycle?: WorkLifecycleContractData;
+    side_effect?: WorkSideEffectContractData;
 }
