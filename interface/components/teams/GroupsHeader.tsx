@@ -12,7 +12,6 @@ export function GroupsHeader({
   refreshing,
   archivingExpired,
   onArchiveExpired,
-  onCreate,
   onRefresh,
 }: {
   monitor: Monitor | null;
@@ -20,7 +19,6 @@ export function GroupsHeader({
   refreshing: boolean;
   archivingExpired: boolean;
   onArchiveExpired: () => void;
-  onCreate: () => void;
   onRefresh: () => void;
 }) {
   const summary = lifecycleReport?.summary;
@@ -67,10 +65,10 @@ export function GroupsHeader({
             <ArrowLeft className="mr-2 h-4 w-4" />
             Open Soma
           </Link>
-          <button type="button" onClick={onCreate} className={compactButtonClassName}>
+          <Link href="/groups?panel=create" className={compactButtonClassName}>
             <Plus className="mr-2 h-4 w-4" />
             Create group
-          </button>
+          </Link>
           <button type="button" onClick={onRefresh} className={compactButtonClassName}>
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             Refresh

@@ -111,7 +111,6 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
         refreshing={refreshing}
         archivingExpired={archivingExpired}
         onArchiveExpired={onArchiveExpired}
-        onCreate={() => selectPanel("create")}
         onRefresh={onRefresh}
       />
       <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3 lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]">

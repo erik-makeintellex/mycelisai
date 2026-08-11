@@ -62,6 +62,7 @@ test.describe('Soma Dashboard (/dashboard)', () => {
         for (const layout of layouts) {
             await page.setViewportSize({ width: layout.width, height: layout.height });
             await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('load');
             const chat = page.getByTestId('central-soma-chat-frame');
             const composer = chat.locator('textarea').first();
             const opener = page.getByRole('button', { name: /Open Outcome Vault/i });
