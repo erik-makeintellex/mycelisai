@@ -11,7 +11,6 @@ Opening `/dashboard?fresh=1` starts a fresh conversation presentation; it does n
 
 The dashboard is organized as a threaded workspace:
 
-- `Start with`: a compact pinned row for common conversation shapes: plan next step, create output, or review work. Saved asks can still appear here, but the defaults stay generic so a new user sees how to talk to Soma instead of seeing a domain-specific workflow menu. Use `Create ask` to save a repeated Soma request; Mycelis stores it through the conversation-template path when Core is available and keeps a local fallback when it is not. Saved asks still enter the Soma conversation so you can adjust risky or unclear work before execution.
 - `Talk to Soma`: the primary visible heading and conversation where you ask, approve, recover, and review.
 - `Outcome Vault`: a secondary overlay drawer for saved results, work in progress, and anything that needs attention. It stays closed by default so Soma keeps the main workspace, then opens over the thread when you need delivery, recovery, or revisit detail. On a phone it becomes a full-width sheet; on larger screens it stays a bounded right-side drawer without narrowing the conversation. Close it with its visible control, the shaded backdrop, or Escape. Keyboard focus stays inside while it is open and returns to `Outcomes` when it closes.
 
@@ -90,11 +89,11 @@ Soma responses can include:
 1. **Primary answer**: markdown text, code blocks, links, and tables. Table-like data should render as a real table, not as pasted aligned text. Compact labels such as `Quick answer`, `Summary`, or `Decision brief` may appear only to clarify answer depth.
 2. **Inline generated outputs**: images, audio, video, code, charts, briefs, data, documents, and media previews.
 3. **Output package**: a retained file/app/package with `Open file`, `Open folder`, proof, and Resources re-entry.
-4. **Proposal block**: a compact `Approve this?` or `Start this?` conversational pause for actions that execute or change something.
+4. **Proposal quote**: a compact summary and short work list for actions that execute or change something. Reply `approve`, `go ahead`, or `start` in the normal composer to begin; reply `cancel` to cancel; otherwise tell Soma what to change.
 5. **Recovery/blocker card**: a compact trust boundary in the thread, with what failed, what remains trusted, what is not trusted, and what can safely happen next behind `Details and proof`.
 6. **Action-state card**: the current status, route, capability use, or next step for structured Soma work.
 
-No mutation executes until you confirm. Opening `Details`, asking for more explanation, or requesting a deeper brief is not approval. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Details` unless they require immediate attention.
+No mutation executes until you confirm. Only a bounded approval reply resolves the pending proposal. A qualified reply such as `approve after changing the title` remains ordinary conversation so Soma can revise it safely. Opening `Details`, asking for more explanation, or requesting a deeper brief is not approval. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Details` unless they require immediate attention.
 
 Saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details. Use `Resources -> Output Files` for broader browsing later.
 
@@ -110,7 +109,7 @@ Resources can start the same one-shot continuation flow. Use **Ask Soma with thi
 
 ## Teams And Groups
 
-Root Soma is organization-wide. The compact `Work context` picker shows `All work` by default and lets you focus one active delivery team when needed. It changes which team work and outputs the conversation is reviewing; it does not create a team or start execution. The adjacent team-management icon opens deeper team administration.
+Root Soma is organization-wide. When a Groups or Outcome link opens a focused conversation, the header quietly names that context. Ask Soma to change, combine, or leave that context; team selection and routing are not required controls in the default conversation.
 
 Team defaults:
 

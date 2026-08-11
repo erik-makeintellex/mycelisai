@@ -19,6 +19,7 @@ import OrchestrationInspector from "./OrchestrationInspector";
 import { somaPlaceholder, teamSuggestions } from "./missionControlChatUi";
 import { buildMissionChatScope } from "@/store/cortexStoreMissionChatHelpers";
 import { clearAllPersistedChat } from "@/store/cortexStoreUtils";
+import { conversationalProposalReply } from "./conversationalProposalReply";
 
 export default function MissionControlChat({
     simpleMode = false,
@@ -37,6 +38,9 @@ export default function MissionControlChat({
     const isMissionChatting = useCortexStore((s) => s.isMissionChatting);
     const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
     const sendMissionChat = useCortexStore((s) => s.sendMissionChat);
+    const pendingProposal = useCortexStore((s) => s.pendingProposal);
+    const confirmProposal = useCortexStore((s) => s.confirmProposal);
+    const cancelProposal = useCortexStore((s) => s.cancelProposal);
     const clearMissionChat = useCortexStore((s) => s.clearMissionChat);
     const setMissionChatScope = useCortexStore((s) => s.setMissionChatScope);
     const broadcastToSwarm = useCortexStore((s) => s.broadcastToSwarm);
@@ -53,6 +57,7 @@ export default function MissionControlChat({
     const [pendingContinuationContext, setPendingContinuationContext] = useState<MissionChatContinuationContext | null>(null);
     const [broadcastMode, setBroadcastMode] = useState(false);
     const [fetchedMembers, setFetchedMembers] = useState(false);
+    const [isReplyingToProposal, setIsReplyingToProposal] = useState(false);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const showAdvancedRouting = !simpleMode;
@@ -66,7 +71,7 @@ export default function MissionControlChat({
         [organizationId, currentTeamId],
     );
     const activeSuggestions = currentTeam ? teamSuggestions(currentTeam.name) : suggestions;
-    const isLoading = isMissionChatting || isBroadcasting;
+    const isLoading = isMissionChatting || isBroadcasting || isReplyingToProposal;
     const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
     useSomaOutputContinuation({ disabled: isLoading, inputRef, setInput, setContinuationContext: setPendingContinuationContext });
 
@@ -118,14 +123,27 @@ export default function MissionControlChat({
             : trimmed;
 
         if (!content) return;
-        if (isBroadcast) {
+        const proposalReply = pendingProposal && !isBroadcast
+            ? conversationalProposalReply(content)
+            : null;
+        if (proposalReply === "confirm") {
+            setInput("");
+            setPendingContinuationContext(null);
+            setIsReplyingToProposal(true);
+            void confirmProposal(pendingProposal ?? undefined, content)
+                .finally(() => setIsReplyingToProposal(false));
+        } else if (proposalReply === "cancel") {
+            setInput("");
+            setPendingContinuationContext(null);
+            cancelProposal(content);
+        } else if (isBroadcast) {
             broadcastToSwarm(content);
             setPendingContinuationContext(null);
         } else {
             sendMissionChat(content, pendingContinuationContext ? { continuation_context: pendingContinuationContext } : undefined);
             setPendingContinuationContext(null);
         }
-        setInput("");
+        if (!proposalReply) setInput("");
     };
 
     const applyStarterPrompt = (prompt: string) => {

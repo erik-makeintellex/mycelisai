@@ -118,9 +118,9 @@ Expected:
 - the proposal summarizes intended work and deliverables in conversational form
 - risk and approval posture are understandable
 
-### 4. Cancel And Adjust
+### 4. Cancel And Adjust Conversationally
 
-Cancel one governed proposal, then adjust or ask again.
+Type `cancel` for one governed proposal, then describe the adjustment in the normal composer and ask again.
 
 Expected:
 
@@ -130,11 +130,12 @@ Expected:
 
 ### 5. Approve And Continue Talking
 
-Approve the revised work.
+Type `approve` or `go ahead` for the revised work.
 
 Expected:
 
 - visible queued/running feedback appears immediately
+- no approval, adjust, team-routing, or run-navigation button is required
 - Soma remains available while NATS-backed work continues
 - progress is correlated to the same Outcome
 - the UI does not navigate the user into a raw event chain as the primary experience

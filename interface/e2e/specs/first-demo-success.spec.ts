@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  confirmProposal,
   expectProjectPackageVisible,
   firstDemoPackageProposal,
   fulfillJSON,
@@ -123,7 +124,7 @@ test.describe("Canonical first-demo success path", () => {
     await openOrganization(page);
     await sendWorkspaceMessage(page, "Create the exact first-demo playable browser game package with README and validation notes.");
     await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+    await confirmProposal(page);
 
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
     await page.getByText("Proof and execution details", { exact: true }).last().click();

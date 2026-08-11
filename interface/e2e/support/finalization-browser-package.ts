@@ -236,7 +236,9 @@ export async function confirmProposal(page: Page) {
     (response) => response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
     { timeout: chatTimeoutMs },
   );
-  await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+  const composer = page.getByPlaceholder(/Tell Soma what you want/i);
+  await composer.fill("approve");
+  await composer.press("Enter");
   const response = await responsePromise;
   const parsed = await parseJSONIfPossible<ConfirmEnvelope>(response);
   return { response, raw: parsed.raw, body: parsed.body };

@@ -162,7 +162,7 @@ test.describe("Soma ComfyUI media journey", () => {
     await sendWorkspaceMessage(page, "Create a local/private ComfyUI media team output.");
 
     await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+    await confirmProposal(page);
 
     const failureCard = page.getByTestId("execution-summary-card").last();
     await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });

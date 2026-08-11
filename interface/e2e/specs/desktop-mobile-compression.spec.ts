@@ -45,10 +45,8 @@ test.describe("Desktop/mobile compression proof", () => {
     await expect(page.getByTestId("central-soma-chat-frame")).toBeVisible();
     await expect(page.getByTestId("soma-context-focus-bar")).toHaveCount(0);
     await expect(page.getByTestId("focused-team-output-dock")).toHaveCount(0);
-    const switcher = page.getByTestId("soma-team-context-switcher");
-    await expect(switcher).toBeVisible();
-    await expect(switcher).toContainText("Work context");
-    await expect(switcher).toContainText("First Demo Game Team");
+    await expect(page.getByTestId("soma-team-context-switcher")).toHaveCount(0);
+    await expect(page.getByText("Continuing First Demo Game Team")).toBeVisible();
     const digest = page.getByTestId("soma-workbench-output-digest");
     await expect(digest).toBeVisible();
     await expect(digest.getByText("Coin Runner package")).toBeVisible();

@@ -87,9 +87,9 @@ test.describe('Soma governed mutation live contract', () => {
             await expect(page.getByText('I can start that.')).toBeVisible({ timeout: 30_000 });
             expect(anyTargetExists(targetPaths)).toBeFalsy();
 
-            const adjustProposal = page.getByRole('button', { name: /^Adjust$/i });
-            await expect(adjustProposal).toBeVisible({ timeout: 30_000 });
-            await adjustProposal.click();
+            const composer = page.getByPlaceholder(/Tell Soma what you want/i);
+            await composer.fill('cancel');
+            await composer.press('Enter');
             await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 30_000 });
             expect(anyTargetExists(targetPaths)).toBeFalsy();
 
