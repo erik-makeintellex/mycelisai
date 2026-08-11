@@ -59,6 +59,22 @@ func NormalizeWorkIntent(raw *WorkIntent) *WorkIntent {
 	intent.ServiceRefs = compactStrings(intent.ServiceRefs)
 	intent.NATSSubjects = compactStrings(intent.NATSSubjects)
 	intent.ProjectRef = strings.TrimSpace(intent.ProjectRef)
+	if intent.SideEffect != nil {
+		sideEffectCopy := *intent.SideEffect
+		sideEffectCopy.EffectKind = normalizeWorkEffectKind(sideEffectCopy.EffectKind)
+		sideEffectCopy.IdempotencyKey = strings.TrimSpace(sideEffectCopy.IdempotencyKey)
+		sideEffectCopy.RetrySafety = normalizeWorkRetrySafety(sideEffectCopy.RetrySafety)
+		sideEffectCopy.SideEffectState = normalizeWorkSideEffectState(sideEffectCopy.SideEffectState)
+		if sideEffectCopy.EffectKind == WorkEffectExternalMutation {
+			if sideEffectCopy.RetrySafety == "" {
+				sideEffectCopy.RetrySafety = WorkRetryUnknown
+			}
+			if sideEffectCopy.SideEffectState == "" {
+				sideEffectCopy.SideEffectState = WorkSideEffectNotStarted
+			}
+		}
+		intent.SideEffect = &sideEffectCopy
+	}
 	if intent.OutputContract != nil {
 		outputCopy := *intent.OutputContract
 		outputCopy.Shape = strings.TrimSpace(strings.ToLower(outputCopy.Shape))
@@ -93,6 +109,59 @@ func NormalizeWorkIntent(raw *WorkIntent) *WorkIntent {
 		intent.Lifecycle = &lifecycleCopy
 	}
 	return &intent
+}
+
+func normalizeWorkEffectKind(value string) string {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case WorkEffectRead:
+		return WorkEffectRead
+	case WorkEffectExternalMutation:
+		return WorkEffectExternalMutation
+	default:
+		return ""
+	}
+}
+
+func normalizeWorkRetrySafety(value string) string {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case WorkRetrySafe:
+		return WorkRetrySafe
+	case WorkRetryUnsafe:
+		return WorkRetryUnsafe
+	case WorkRetryUnknown:
+		return WorkRetryUnknown
+	default:
+		return ""
+	}
+}
+
+func normalizeWorkSideEffectState(value string) string {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case WorkSideEffectNotStarted:
+		return WorkSideEffectNotStarted
+	case WorkSideEffectAccepted:
+		return WorkSideEffectAccepted
+	case WorkSideEffectCommitted:
+		return WorkSideEffectCommitted
+	case WorkSideEffectUnknown:
+		return WorkSideEffectUnknown
+	default:
+		return ""
+	}
+}
+
+// WorkIntentHasExternalMutation reports whether missing completion leaves an
+// external side effect ambiguous rather than safely retryable by default.
+func WorkIntentHasExternalMutation(intent *WorkIntent) bool {
+	return intent != nil && intent.SideEffect != nil && intent.SideEffect.EffectKind == WorkEffectExternalMutation
+}
+
+// WorkIntentAllowsIdempotentRetry requires both an explicit safe posture and
+// a stable key that the downstream capability can reuse.
+func WorkIntentAllowsIdempotentRetry(intent *WorkIntent) bool {
+	return WorkIntentHasExternalMutation(intent) &&
+		intent.SideEffect.RetrySafety == WorkRetrySafe &&
+		strings.TrimSpace(intent.SideEffect.IdempotencyKey) != ""
 }
 
 func lifecycle(stop, retry, recovery, summary string) *WorkLifecycleContract {

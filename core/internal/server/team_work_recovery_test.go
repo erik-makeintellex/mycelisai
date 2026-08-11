@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,6 +77,50 @@ func TestReconcileOneOverdueTeamWorkProjectsRecoverableState(t *testing.T) {
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestProjectOverdueExternalMutationRequiresVerification(t *testing.T) {
+	item := protocol.TeamWorkItem{WorkIntent: protocol.NormalizeWorkIntent(&protocol.WorkIntent{
+		SideEffect: &protocol.WorkSideEffectContract{
+			EffectKind:      protocol.WorkEffectExternalMutation,
+			RetrySafety:     protocol.WorkRetryUnsafe,
+			SideEffectState: protocol.WorkSideEffectAccepted,
+		},
+	})}
+	projectOverdueRecovery(&item)
+	if item.DegradationState != "external_mutation_outcome_unknown" {
+		t.Fatalf("degradation = %q", item.DegradationState)
+	}
+	if item.WorkIntent.SideEffect.SideEffectState != protocol.WorkSideEffectUnknown {
+		t.Fatalf("side-effect state = %q", item.WorkIntent.SideEffect.SideEffectState)
+	}
+	if len(item.RecoveryOptions) != 2 {
+		t.Fatalf("recovery options = %#v, want verify and archive only", item.RecoveryOptions)
+	}
+	for _, option := range item.RecoveryOptions {
+		if strings.Contains(strings.ToLower(option), "retry with") {
+			t.Fatalf("unsafe recovery offered retry: %q", option)
+		}
+	}
+	event := overdueTeamWorkStatusEvent(item)
+	if event.Headline != "External change needs verification" || event.BlockedBy[0] != "external_mutation_outcome_unknown" {
+		t.Fatalf("event = %#v", event)
+	}
+}
+
+func TestProjectOverdueExternalMutationOffersSameKeyRetryAfterVerification(t *testing.T) {
+	item := protocol.TeamWorkItem{WorkIntent: protocol.NormalizeWorkIntent(&protocol.WorkIntent{
+		SideEffect: &protocol.WorkSideEffectContract{
+			EffectKind:      protocol.WorkEffectExternalMutation,
+			IdempotencyKey:  "invoice-2026-08-11",
+			RetrySafety:     protocol.WorkRetrySafe,
+			SideEffectState: protocol.WorkSideEffectAccepted,
+		},
+	})}
+	projectOverdueRecovery(&item)
+	if len(item.RecoveryOptions) != 3 || !strings.Contains(item.RecoveryOptions[1], "invoice-2026-08-11") {
+		t.Fatalf("recovery options = %#v", item.RecoveryOptions)
 	}
 }
 

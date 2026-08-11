@@ -70,11 +70,11 @@ func (s *AdminServer) reconcileOneOverdueTeamWork(ctx context.Context) (bool, er
 	}
 	item.State = protocol.TeamWorkStateDegraded
 	item.NeedsOperator = true
-	item.DegradationState = "team_work_recovery_deadline_exceeded"
-	item.RecoveryOptions = []string{
-		"Ask Soma to retry this work with the same team after checking team and capability availability.",
-		"Steer the work with updated guidance before retrying.",
-		"Archive the work if it is no longer needed.",
+	projectOverdueRecovery(&item)
+	if protocol.WorkIntentHasExternalMutation(item.WorkIntent) {
+		if err := persistTeamWorkIntentTx(ctx, tx, item); err != nil {
+			return false, err
+		}
 	}
 	event := overdueTeamWorkStatusEvent(item)
 	if err := s.insertTeamStatusEventExec(ctx, tx, &event); err != nil {
@@ -97,13 +97,51 @@ func (s *AdminServer) reconcileOneOverdueTeamWork(ctx context.Context) (bool, er
 	return true, nil
 }
 
+func projectOverdueRecovery(item *protocol.TeamWorkItem) {
+	if protocol.WorkIntentHasExternalMutation(item.WorkIntent) {
+		item.DegradationState = "external_mutation_outcome_unknown"
+		item.WorkIntent.SideEffect.SideEffectState = protocol.WorkSideEffectUnknown
+		item.RecoveryOptions = []string{
+			"Ask Soma to verify the external system before deciding whether any retry is safe.",
+		}
+		if protocol.WorkIntentAllowsIdempotentRetry(item.WorkIntent) {
+			item.RecoveryOptions = append(item.RecoveryOptions,
+				"If verification confirms the mutation did not commit, retry with the same idempotency key: "+item.WorkIntent.SideEffect.IdempotencyKey+".")
+		}
+		item.RecoveryOptions = append(item.RecoveryOptions, "Archive the work if it is no longer needed.")
+		return
+	}
+	item.DegradationState = "team_work_recovery_deadline_exceeded"
+	item.RecoveryOptions = []string{
+		"Ask Soma to retry this work with the same team after checking team and capability availability.",
+		"Steer the work with updated guidance before retrying.",
+		"Archive the work if it is no longer needed.",
+	}
+}
+
+func persistTeamWorkIntentTx(ctx context.Context, tx *sql.Tx, item protocol.TeamWorkItem) error {
+	_, err := tx.ExecContext(ctx, `
+		UPDATE team_work_items
+		SET work_intent=$2, updated_at=NOW()
+		WHERE id=$1 AND tenant_id='default'`, item.WorkItemID, jsonObjectOrNil(workIntentMap(item.WorkIntent)))
+	return err
+}
+
 func overdueTeamWorkStatusEvent(item protocol.TeamWorkItem) protocol.TeamStatusEvent {
+	headline := "Team work needs recovery"
+	details := "No terminal team result arrived before the durable recovery deadline."
+	blockedBy := []string{"recovery_deadline_exceeded"}
+	if item.DegradationState == "external_mutation_outcome_unknown" {
+		headline = "External change needs verification"
+		details = "The external system accepted work, but no terminal result proves whether its change committed."
+		blockedBy = []string{"external_mutation_outcome_unknown"}
+	}
 	return protocol.NormalizeTeamStatusEvent(protocol.TeamStatusEvent{
 		EventID: uuid.NewString(), TeamID: item.TeamID, WorkItemID: item.WorkItemID,
 		RunID: item.RunID, IntentProofID: item.IntentProofID, ContractID: item.ContractID,
-		State: item.State, Headline: "Team work needs recovery",
-		Details:           "No terminal team result arrived before the durable recovery deadline.",
-		ConfidencePosture: "operator_attention", BlockedBy: []string{"recovery_deadline_exceeded"},
+		State: item.State, Headline: headline,
+		Details:           details,
+		ConfidencePosture: "operator_attention", BlockedBy: blockedBy,
 		NextAction: item.RecoveryOptions[0], ExpectedOutputs: item.ExpectedOutputs,
 		ExpectedProof: item.ExpectedProof, ExecutionMode: item.ExecutionMode, WorkIntent: item.WorkIntent,
 		SourceKind: string(protocol.SourceKindSystem), SourceChannel: "team-work.recovery-reconciler",

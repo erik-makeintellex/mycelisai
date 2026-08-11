@@ -225,7 +225,7 @@ Conversation-template instantiation is non-executing by default. Quick Actions i
 | `/api/v1/organizations/{id}/output-model-routing` | GET | Read admin-configurable output-model routing for the organization, including detected output-type bindings, locally installed models, and recommended self-hosted starting points |
 | `/api/v1/organizations/{id}/output-model-routing` | PATCH | Update the organization default model or detected output-type model bindings for team and specialist output delivery |
 
-`POST /api/v1/teams/{id}/work/ask` also accepts optional `execution_mode` and `work_intent`. Async command envelopes, durable `TeamWorkItem` records, status events, and run-linked mission events preserve those fields so a reloaded client can inspect the approved lifecycle without reconstructing it from prose.
+`POST /api/v1/teams/{id}/work/ask` also accepts optional `execution_mode` and `work_intent`. Async command envelopes, durable `TeamWorkItem` records, status events, and run-linked mission events preserve those fields so a reloaded client can inspect the approved lifecycle without reconstructing it from prose. External mutation work may declare `work_intent.side_effect` with `effect_kind: "external_mutation"`, `retry_safety` (`safe`, `unsafe`, or `unknown`), `idempotency_key` when the downstream capability supports stable replay, and `side_effect_state` (`not_started`, `accepted`, `committed`, or `unknown`). If its recovery deadline expires without a terminal result, Core projects `external_mutation_outcome_unknown` and a verification-first recovery option. It does not offer blind retry; same-key retry is described only for an explicitly safe contract with a non-empty key and only after external verification confirms no commit.
 
 ### Team result-contract completion
 
@@ -238,7 +238,7 @@ For output contracts without required runtime interaction, the resulting `team_s
 `execution_summary` is the additive directed-execution contract for Soma-facing runtime responses. It is optional for compatibility, but meaningful Soma actions should populate it as they move into the directed-execution model.
 
 The object can include:
-- `work_intent` and `execution_mode`: approved work posture, expected output shape, retention, launch hint, validation expectations, and bus/team scope when the action is proposed or confirmed. `work_intent.lifecycle` names mode-specific `stop_action`, `retry_action`, `recovery_action`, and a plain `control_summary`; this metadata does not itself authorize an action.
+- `work_intent` and `execution_mode`: approved work posture, expected output shape, retention, launch hint, validation expectations, and bus/team scope when the action is proposed or confirmed. `work_intent.lifecycle` names mode-specific `stop_action`, `retry_action`, `recovery_action`, and a plain `control_summary`. `work_intent.side_effect` names external-mutation uncertainty and idempotent-retry boundaries. This metadata does not itself authorize an action.
 - `intent`: original and resolved request classification
 - `understanding`: Soma's concise interpretation and assumptions
 - `execution`: shape, status, and summary such as `direct_soma`, `guided_proposal`, `tool_assisted_work`, or `team_execution`
