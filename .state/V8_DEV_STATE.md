@@ -6,13 +6,13 @@
 
 | Field | Current state |
 | --- | --- |
-| Updated | 2026-08-10 |
+| Updated | 2026-08-11 |
 | Integration branch | `dev` |
-| Active slice | P0.13 conversational Soma control is `IN_REVIEW`. The action shelf, team/routing picker, mode/status cluster, and proposal buttons are removed from the default workspace; typed approval/cancellation and substantive revision now stay in one conversation. |
+| Active slice | P0.13 fresh-user desktop/mobile acceptance is `IN_REVIEW`. The feature branch passes the integrated authenticated desktop/compact matrix and adjacent headed UI regression set; merge and post-merge `dev` proof remain. |
 | Production branch | `main` remains behind the accepted `dev` integration train pending release certification. |
 | Runtime posture | Dockerized PostgreSQL and NATS plus local Core and Interface are healthy; Ollama is running. Full Compose app containers, Kubernetes, and WSL remain explicit release-proof lanes. |
-| Delivery target | Integrate and post-merge prove conversational Soma control, finish the P0.13 fresh-user device matrix, then execute P0.12 release certification and intentional `dev -> main` promotion. |
-| Main release risk | The canonical natural and trusted delivery journeys now produce and validate usable browser packages, but production promotion still requires the integrated new-user device matrix, ambiguous external-mutation recovery, and deployment certification from a clean release candidate. |
+| Delivery target | Integrate the proven P0.13 fresh-user device matrix, close ambiguous external-mutation recovery, then execute P0.12 release certification and intentional `dev -> main` promotion. |
+| Main release risk | The canonical natural and trusted delivery journeys now produce and validate usable browser packages, but production promotion still requires ambiguous external-mutation recovery and deployment certification from a clean release candidate. |
 | Canonical PRD alignment | Workspace owns Outcomes; Soma owns execution; WorkIntent is transitional; deliverables, proof, recovery, and continuity remain Outcome-owned user concepts. |
 
 ## Documentation Shortcuts
@@ -36,18 +36,17 @@
 | P0.9 full Trusted Outcome Journey | `COMPLETE` | Governed ask, approval, asynchronous NATS team execution, retained interactive package, validation, proof, and cross-surface revisit pass on the local source stack. | Preserve during release certification. |
 | P0.11 documentation convergence | `COMPLETE` | The canonical PRD contains all product architecture. The duplicate architecture overview and obsolete user-facing blueprint guide are deleted; user concepts, run/recovery, acceptance, deployment, API/provider, implementation, README, state, and in-app Help guidance match current Workspace/Outcome delivery and the Docker data-plane development lane. Documentation contracts, Help component tests, typecheck, and a headed real-manifest PRD-to-acceptance journey pass. | Keep one product-architecture authority and update owned support docs with behavior changes. |
 | P0.13 retained-state projection | `COMPLETE` | TeamWork has an explicit attention view; Dashboard requests operator attention only; Groups defaults to Current with separate Completed and Archived history. | Preserve in fresh-user proof. |
-| P0.13 cross-device operator acceptance | `IN_REVIEW` | Dashboard, Groups, Resources, Memory, Docs, and Settings have focused desktop/mobile proof. Exact owner-scoped creation and purge pass visibly in Chromium; 32 fixture scopes are purged, no non-terminal scopes remain, and active claims are zero. Headed natural delivery creates a complete browser package, validates its declared interaction, opens it directly, and purges its resources. A post-merge run that crossed five minutes exposed orphan result correlation; the corrected feature and merged `dev` runs passed in 5.8 and 5.5 minutes. The headed Trusted Outcome Journey also passes Ask through Revisit with retained proof and cleanup. Conversational-control proof removes the action shelf and default runtime pickers, accepts bounded approval/cancellation through the composer, routes qualified replies back to Soma, and keeps intentional Details content visible above the composer. | Integrate this slice, then complete the integrated new-user desktop/mobile matrix. |
+| P0.13 cross-device operator acceptance | `IN_REVIEW` | Dashboard, Groups, Resources, Memory, Docs, and Settings have focused desktop/mobile proof. Exact owner-scoped creation and purge pass visibly in Chromium; 32 fixture scopes are purged, no non-terminal scopes remain, and active claims are zero. Headed natural delivery creates a complete browser package, validates its declared interaction, opens it directly, and purges its resources. A post-merge run that crossed five minutes exposed orphan result correlation; the corrected feature and merged `dev` runs passed in 5.8 and 5.5 minutes. The headed Trusted Outcome Journey also passes Ask through Revisit with retained proof and cleanup. Conversational control is merged and post-merge proven. The integrated fresh-user matrix now starts from a stale work URL, signs into Soma, traverses Groups creation, Resources, Memory, Docs, Settings, and returns to Soma with zero page, console, hydration, `5xx`, or horizontal-overflow failures at desktop and compact widths. The adjacent 40-journey headed set passes after focused Groups history and Vault hydration reruns. | Merge to `dev` and repeat the affected integration proof. |
 | P0.12 release hygiene and certification | `ACTIVE` | Clean Windows release preflight passes lint, Core, build, typecheck, Vitest, 121 Chromium journeys, source service health, and all four live governance scenarios. Configured Compose ports, shared identity-secret boundaries, and the Docker PostgreSQL/NATS plus local Core/Interface development topology are merged and re-proven on `dev` without app image builds. | Finish deterministic QA ownership and P0.13 acceptance, then certify full Compose/Kubernetes and Windows-browser release paths intentionally. |
 | Production promotion | `REQUIRED` | `main` is intentionally not promoted from the current `dev` train. | Merge certified `dev` into `main`, rerun health/browser smoke, update state, and synchronize remotes. |
 
 ## Immediate Work Order
 
-1. Merge conversational Soma control into `dev` and rerun its focused unit, type, build, and headed Chromium gates.
-2. Complete the P0.13 fresh-user desktop/mobile matrix against owner-scoped clean fixtures.
-3. Close ambiguous external-mutation recovery before accepting retries after uncertain timeouts.
-4. Run `uv run inv ci.release-preflight --lane=release` from a clean committed `dev` state.
-5. Certify the supported full Compose/Kubernetes runtime and Windows-browser path; use guarded WSL proof only when that environment supplies distinct evidence.
-6. Promote `dev` to `main` only after every required gate passes.
+1. Merge the P0.13 fresh-user acceptance slice to `dev` and repeat its focused unit, type, health, and headed browser proof.
+2. Close ambiguous external-mutation recovery before accepting retries after uncertain timeouts.
+3. Run `uv run inv ci.release-preflight --lane=release` from a clean committed `dev` state.
+4. Certify the supported full Compose/Kubernetes runtime and Windows-browser path; use guarded WSL proof only when that environment supplies distinct evidence.
+5. Promote `dev` to `main` only after every required gate passes.
 
 ## Accepted Proof
 
@@ -69,6 +68,7 @@
 - Opening proposal Details scrolls the disclosed content into the bounded conversation viewport so inspection does not hide behind the composer.
 - The composer remains reachable and expands with user input before bounded scrolling.
 - Groups, Resources, Memory, Docs, and Settings use focused list/detail, tabs, or overlays rather than full-page content stacks.
+- Authenticated desktop and compact-phone navigation reaches every primary operator surface through visible controls while retaining a reachable Soma composer and zero document-level horizontal overflow.
 - Output actions open retained files/packages directly; runtime IDs and transport details remain behind Details or Inspect.
 - Current, Completed, and Archived work are distinct; retained history does not inflate active review counts.
 

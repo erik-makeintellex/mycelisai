@@ -59,6 +59,9 @@ describe("GroupManagementPanel workspace tabs", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("tab", { name: /Create/i }));
     });
+    expect(
+      screen.getByRole("tab", { name: /Create/i }).getAttribute("aria-selected"),
+    ).toBe("true");
     expect(screen.getByRole("tablist", { name: "Create group sections" })).toBeDefined();
 
     for (const [tab, field] of [

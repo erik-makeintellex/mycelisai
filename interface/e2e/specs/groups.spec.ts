@@ -213,7 +213,7 @@ test.describe("Groups workspace (/groups)", () => {
     const harness = await mockGroupsWorkspace(page);
     await openGroups(page);
 
-    await page.getByRole("button", { name: "Create group" }).click();
+    await page.getByRole("link", { name: "Create group" }).click();
     await expect(page.getByRole("tablist", { name: "Create group sections" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Basics" })).toHaveAttribute(
       "aria-selected",
