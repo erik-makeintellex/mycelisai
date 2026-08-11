@@ -8,10 +8,10 @@
 | --- | --- |
 | Updated | 2026-08-11 |
 | Integration branch | `dev` |
-| Active slice | P0.4 external-mutation uncertainty is `IN_REVIEW`. P0.13 fresh-user desktop/mobile acceptance is merged and post-merge proven on `dev`; the focused side-effect contract, recovery projection, UI normalization, docs, and live browser proof pass on the feature branch. |
+| Active slice | P0.4 external-mutation uncertainty is `IN_REVIEW`. P0.13 fresh-user desktop/mobile acceptance and the P0.4 side-effect contract are merged and post-merge proven on `dev`; operator review remains before release certification. |
 | Production branch | `main` remains behind the accepted `dev` integration train pending release certification. |
 | Runtime posture | Dockerized PostgreSQL and NATS plus local Core and Interface are healthy; Ollama is running. Full Compose app containers, Kubernetes, and WSL remain explicit release-proof lanes. |
-| Delivery target | Close ambiguous external-mutation recovery, then execute P0.12 release certification and intentional `dev -> main` promotion. |
+| Delivery target | Accept the external-mutation recovery contract through operator review, then execute P0.12 release certification and intentional `dev -> main` promotion. |
 | Main release risk | The canonical natural and trusted delivery journeys now produce and validate usable browser packages, but production promotion still requires ambiguous external-mutation recovery and deployment certification from a clean release candidate. |
 | Canonical PRD alignment | Workspace owns Outcomes; Soma owns execution; WorkIntent is transitional; deliverables, proof, recovery, and continuity remain Outcome-owned user concepts. |
 
@@ -42,8 +42,8 @@
 
 ## Immediate Work Order
 
-1. Close ambiguous external-mutation recovery before accepting retries after uncertain timeouts.
-2. Run the focused Core, protocol, API normalization, and recovery proof for the side-effect contract; merge and repeat on `dev`.
+1. Review the merged external-mutation recovery contract and its verification-first operator language.
+2. Execute P0.12 release certification from the clean `dev` candidate, then intentionally promote `dev -> main` only if every release gate passes.
 3. Run `uv run inv ci.release-preflight --lane=release` from a clean committed `dev` state.
 4. Certify the supported full Compose/Kubernetes runtime and Windows-browser path; use guarded WSL proof only when that environment supplies distinct evidence.
 5. Promote `dev` to `main` only after every required gate passes.
@@ -86,7 +86,7 @@
 | --- | --- | --- |
 | Deterministic QA ownership | `COMPLETE` | Migrations `058`-`060`, opt-in root-admin API, exact creation provenance, reentrant creation/purge fencing, current-run staged-ownership allowance, durable pre-existence rejection, independently committed created-team/workspace claims, resumable purge, atomic claim release, and NATS exclusion are covered by Core, Python, UI proxy, and post-merge headed Chromium proof. Thirty-one scopes are purged with zero active claims or non-terminal scopes. | Preserve in every retained-state live journey and release certification. |
 | Generated package delivery and correlation | `COMPLETE` | Worker correction requests one missing contract item at a time, entrypoint guidance forbids positional event selectors, and completion still requires retained-file readback plus structural and browser interaction validation. The command correlation lease exceeds the durable work recovery deadline; its six-minute regression and headed natural journeys pass on the feature branch and merged `dev` in 5.8 and 5.5 minutes. | Preserve in the fresh-user device matrix and release certification. |
-| Ambiguous external mutation | `IN_REVIEW` | WorkIntent carries side-effect kind, retry safety, stable idempotency key, and observed side-effect state. Overdue accepted external mutation projects unknown outcome and verification-first recovery; focused Go, frontend normalization, type, docs, optimized build, service health, and headed cross-device proof pass. Merged-`dev` integration proof and operator review remain before acceptance. |
+| Ambiguous external mutation | `IN_REVIEW` | WorkIntent carries side-effect kind, retry safety, stable idempotency key, and observed side-effect state. Overdue accepted external mutation projects unknown outcome and verification-first recovery. Feature and merged-`dev` proof pass focused Go, frontend normalization, type, docs, max-lines, optimized build, service health, and the four-journey headed cross-device matrix. Operator review remains before acceptance. |
 | Windows Core restart wrapper | `IN_REVIEW` | Distinguish a foreground wrapper timeout from service failure and retain useful diagnostics. |
 | Deployment certification | `REQUIRED` | WSL, Compose, Kubernetes, and operator-facing browser paths must pass from the committed release candidate. |
 | Production promotion | `REQUIRED` | Promote only after clean-tree release proof; do not mix new feature work into the candidate. |
