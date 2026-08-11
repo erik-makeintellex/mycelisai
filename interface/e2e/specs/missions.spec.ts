@@ -13,7 +13,7 @@ test.describe('Soma Dashboard (/dashboard)', () => {
         await expect(errorOverlay).not.toBeVisible();
 
         await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
-        await expect(page.getByTestId('soma-action-shelf')).toBeVisible();
+        await expect(page.getByTestId('soma-action-shelf')).toHaveCount(0);
         await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
         await expect(page.getByTestId('soma-outcome-vault')).toHaveCount(0);
         await expect(page.getByRole('button', { name: /Open Outcome Vault/i }).first()).toBeVisible();
@@ -62,8 +62,6 @@ test.describe('Soma Dashboard (/dashboard)', () => {
         for (const layout of layouts) {
             await page.setViewportSize({ width: layout.width, height: layout.height });
             await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-            await expect(page.getByTestId('soma-action-shelf')).toHaveAttribute('data-hydrated', 'true');
-
             const chat = page.getByTestId('central-soma-chat-frame');
             const composer = chat.locator('textarea').first();
             const opener = page.getByRole('button', { name: /Open Outcome Vault/i });
@@ -104,26 +102,6 @@ test.describe('Soma Dashboard (/dashboard)', () => {
         await page.getByRole('button', { name: /Open Outcome Vault/i }).click();
         await page.getByRole('button', { name: /Close Outcome Vault backdrop/i }).click({ position: { x: 4, y: 4 } });
         await expect(page.getByRole('dialog', { name: 'Outcome Vault' })).toHaveCount(0);
-    });
-
-    test('quick action studio saves a reusable Soma ask', async ({ page }) => {
-        await page.evaluate(() => window.localStorage.removeItem('mycelis-soma-saved-actions'));
-        await page.reload({ waitUntil: 'domcontentloaded' });
-        const actionShelf = page.getByTestId('soma-action-shelf');
-        await expect(actionShelf).toBeVisible();
-        await expect(actionShelf).toHaveAttribute('data-hydrated', 'true');
-
-        await page.getByRole('button', { name: /Create new quick action/i }).click();
-        const studio = page.getByRole('dialog', { name: /Save quick action/i });
-        await expect(studio).toBeVisible();
-        await studio.getByLabel('Button label').fill('Client risk brief');
-        await studio.getByLabel('Outcome', { exact: true }).fill('Create a retained brief with risks and next steps');
-        await studio.getByLabel('Output format').fill('Markdown');
-        await studio.getByRole('button', { name: /Save action/i }).click();
-
-        await expect(page.getByRole('dialog', { name: /Save quick action/i })).toHaveCount(0);
-        await expect(page.getByRole('button', { name: 'Client risk brief' })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Plan next step' })).toBeVisible();
     });
 
     test('dashboard keeps secondary setup chrome out of the Soma workspace', async ({ page }) => {

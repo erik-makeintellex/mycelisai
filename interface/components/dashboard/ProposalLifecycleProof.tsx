@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Clock3, ExternalLink, ShieldOff, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, ShieldOff, XCircle } from "lucide-react";
 import type { ProposalLifecycleStatus } from "@/store/useCortexStore";
 
 type RenderedProposalLifecycle = ProposalLifecycleStatus | "confirmed_pending_execution";
@@ -24,12 +23,7 @@ export default function ProposalLifecycleProof({
                 <Icon className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-mono uppercase tracking-[0.14em]">{proof.label}</span>
                 <span className="text-current/85">{proof.detail}</span>
-                {runId && lifecycle === "executed" ? (
-                    <Link href={`/runs/${runId}`} className="inline-flex items-center gap-1 font-mono underline underline-offset-2">
-                        Open run details
-                        <ExternalLink className="h-3 w-3" />
-                    </Link>
-                ) : null}
+                {runId && lifecycle === "executed" ? <span>Proof is available in Trust.</span> : null}
             </div>
         </div>
     );

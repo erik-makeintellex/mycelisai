@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  confirmProposal,
   firstDemoPackageProposal,
   fulfillJSON,
   type ArtifactRecord,
@@ -133,7 +134,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await openOrganization(page);
     await sendWorkspaceMessage(page, firstDemoAsk);
     await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+    await confirmProposal(page);
     const failureCard = page.getByTestId("execution-summary-card").last();
     await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
     await expect(failureCard.getByText("Details and proof")).toBeVisible();
@@ -146,7 +147,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
 
     await sendWorkspaceMessage(page, firstDemoAsk);
     await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+    await confirmProposal(page);
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
     await page.getByText("Proof and execution details", { exact: true }).last().click();
     await expect(page.locator(`a[href="/runs/${retryRunId}"]`).first()).toBeVisible();

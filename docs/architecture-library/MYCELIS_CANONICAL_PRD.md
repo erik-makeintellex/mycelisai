@@ -69,10 +69,9 @@ The release question is not "Did we finish the subsystem?" The release question 
 ## Primary User Experience
 The first authenticated surface is the Soma workspace. It should feel like a focused threaded workspace, not a dense admin console.
 Required first-viewport composition:
-- compact Start with shelf as a bounded row/wrap of generic conversation shapes and saved repeatable Soma asks without a visible horizontal scrollbar
 - large Talk to Soma thread as the primary canvas
-- no separate dashboard headline band above the thread; status and governance live in the Soma header
-- focused work/team context inside the Soma header when needed, not as another full-width pre-chat panel
+- no separate dashboard headline band or persistent launcher strip above the thread
+- focused work/team context appears as quiet conversational context when needed, not as a picker or another full-width pre-chat panel
 - quiet current-work strip only when there is meaningful work state
 - header Outcomes button that opens Outcome Vault on demand
 - no default right rail squeezing Soma
@@ -83,7 +82,7 @@ The empty Soma thread should not be a stack of starter action cards. It should b
 
 The dashboard should keep the composer reachable at common desktop, laptop, tablet, and mobile viewports. The left navigation rail must be collapsible on desktop so Soma has more horizontal workspace when the operator is reading outputs, tables, or generated plans. Long content belongs inside bounded panes, overlays, tabs, or detail drawers rather than growing the whole page. Default work/output summaries should not expose file paths, proof internals, or stacked cards before the operator asks for detail; the primary surface should show the title, safe action, and review entry point.
 
-The Start with shelf is a conversational accelerator, not an autonomous trigger strip. Defaults should teach generic intent shapes such as plan, create, and review; saved asks may specialize the row after the user creates them. Button Studio should persist reusable Soma asks through the conversation-template path, keep a local fallback only for resilience, and run saved actions by sending the rendered prompt back into the Soma thread so understanding, approval, proof, and recovery stay intact.
+The dashboard must not require a launcher strip, Button Studio, routing picker, team picker, mode selector, or status-pill cluster before conversation. Repeated work may still be represented by durable templates behind Soma, but the operator invokes, revises, schedules, or reuses it by speaking naturally. Soma translates that conversation into the same governed template and execution spine without making the user operate the machinery.
 
 ## Cross-Device Delivery Contract
 Mycelis is browser-first and cross-device, not desktop-shrunk. Next.js, React, TypeScript, and Tailwind remain the UI foundation; accessible patterns may extend owned primitives, but Flutter, Tamagui, Ionic, Quasar, Material UI, or another full framework must not create a second product model. One codebase means shared product/API/event contracts, state, tokens, semantics, accessibility, and components, while platform shells may compose them differently. Layout modes are Compact below `640px` (one column, compact rail/drawer, horizontal tabs, full-screen detail sheets, reachable composer), Medium `640-1023px` (primary workspace plus overlays/list-detail transitions), Workspace `1024-1439px` (collapsible navigation plus one main surface), and Wide `1440px+` (simultaneous context only when useful, never stretched prose or oversized controls). Phones prioritize Ask, Approve, Outcome Health, Deliverables, blockers/recovery, and revisit; tablets add focused list-detail and lightweight configuration; desktop exposes full administration, capability setup, proof inspection, and comparison. PWA readiness precedes native packaging, and a Capacitor-style shell is justified only by concrete native value such as notifications, device files/camera, offline shell behavior, or app-store distribution.
@@ -100,21 +99,20 @@ Conversational phases:
 | Shape | "Turn this into a plan." | Soma forms WorkIntent, output shape, constraints, execution mode, and approval posture. |
 | Execute | "Run/build/schedule/start this." | Soma creates or uses an ExecutionContract, starts governed work, and updates the thread. |
 
-Governance is mandatory for mutation, durable execution, risky tool use, team/project instantiation, schedules, service mode, and Soma self-extension regardless of requested response depth. A deeper explanation, expanded details, or decision brief never grants execution authority. The visible governance experience should be a small conversational pause, not a large compliance panel: Soma gives a 1-3 sentence summary, a short bullet list of the intended team/work/output, and one approval choice while NATS/team routing, run proof, and recovery details stay available behind Details.
+Governance is mandatory for mutation, durable execution, risky tool use, team/project instantiation, schedules, service mode, and Soma self-extension regardless of requested response depth. A deeper explanation, expanded details, or decision brief never grants execution authority. The visible governance experience should be a small conversational pause, not a large compliance panel: Soma gives a 1-3 sentence summary, a short bullet list of the intended team/work/output, and asks for a reply in the same composer while NATS/team routing, run proof, and recovery details stay available behind Details. Exact bounded replies such as `approve`, `go ahead`, `start`, or `cancel` may resolve the pending proposal. Any substantive qualification or requested change remains ordinary conversation and must not be inferred as approval.
 
 Default approval frame:
 
 ```text
 Soma
-I can start that.
-Approve this?
-I will hand this to the work bus after approval and keep this thread open.
+I can start that. I will hand this to the work bus after approval and keep this thread open.
 
 - Shape the project workspace.
 - Hand the work to the right team.
 - Save the deliverable to Outcomes.
 
-[Approve] [Adjust] [Details]
+Reply "approve" to begin, or tell me what to change.
+Details
 ```
 
 After approval, Soma should immediately acknowledge the handoff:
@@ -288,8 +286,8 @@ Non-goals for MVP:
 ## P0 Delivery Plan
 | Priority | Slice | Status | Journey Step | Acceptance |
 | --- | --- | --- | --- | --- |
-| P0.1 | Threaded Soma workspace | IN_REVIEW | Ask, Understand | Compact quick asks, primary chat, no default Vault rail, no setup stack, collapsible rail, reachable expanding composer, and headed route sweep without console/page errors. |
-| P0.2 | Natural governance cards | IN_REVIEW | Approve, Trust | Proposal/running/done/blocked cards stay small and conversational, show one obvious next action, and keep risk/proof/recovery detail behind Details or Inspect. |
+| P0.1 | Threaded Soma workspace | IN_REVIEW | Ask, Understand | Primary chat, no persistent launcher strip, routing/team picker, default Vault rail, setup stack, or status-pill cluster; collapsible navigation, reachable expanding composer, and headed route sweep without console/page errors. |
+| P0.2 | Natural governance cards | IN_REVIEW | Approve, Trust | Proposal/running/done/blocked turns stay small and conversational; approval and cancellation use bounded composer replies, requested changes remain conversation, and risk/proof/recovery detail stays behind Details or Inspect. |
 | P0.3 | WorkIntent and ExecutionMode | COMPLETE | Understand, Execute, Trust | One-shot, scheduled, service/watch, project, and Soma self-extension modes have typed contracts, stop/retry/recover semantics, output-shape expectations, validation/launch hints, and approval posture without expanding the default approval card. Confirmed runs, durable team-work records, status events, NATS handoffs, and reloaded Inspect state retain the same execution mode, lifecycle, and output contract so proof/recovery can compare delivered work to the approved expectation, including treating deliverable completion without retained output refs as recoverable rather than trusted output. |
 | P0.4 | Bus handoff and started/completed feedback | IN_REVIEW | Execute, Deliver, Recover, Trust | Approval or quick action immediately commits visible queued state, correlation, durable work linkage, expected-output/proof context, and an idempotent dispatch record before asynchronous NATS/worker handoff. Soma remains conversational while proof-linked results arrive through replay-safe projection. Operator SSE events are persisted in PostgreSQL with stable sequence ids; reconnecting clients use `Last-Event-ID` for bounded ordered replay, receive an explicit replay-gap state when history cannot be complete, and suppress duplicate ids in the browser. Team consumers claim a PostgreSQL command receipt before work and result projection claims a stable receipt with its work/status update. In-memory command/result correlation must outlive the durable work recovery deadline so a slow worker cannot publish an orphan result. Approved result contracts require successful file writes and readback. An interactive result is retained as a digest-bound `reviewing` candidate, then dispatched through the same durable outbox to the Core-owned browser validator; it cannot create verified completion proof or complete the run until the approved workflow passes. Pass creates runtime-bound proof for that exact digest; failure or bounded validator unavailability degrades into Soma-mediated recovery. Accepted asynchronous work carries a queryable PostgreSQL recovery deadline. A Core reconciler runs independently of NATS connectivity, converts overdue queued/running work into an operator-readable degraded event and recovery interaction after restart or disconnect, and marks the linked run terminal `degraded` only when all sibling work has settled. Immediate NATS offline, publish, and flush failures use the same visible degraded-work boundary. A run id communicates `Work started`; only explicit terminal verification may communicate `Result verified`. At-least-once transport and deduplication do not imply exactly-once mutation; capability-level mutation idempotency and ambiguous external-mutation recovery remain release gates. Stopped teams relinquish all NATS consumers before same-id reuse. |
 | P0.5 | OutcomeProject and TeamRegistry | IN_REVIEW | Deliver, Revisit | Confirmed work writes durable project/team ownership, Vault summaries, target refs, and producing-team identity without exposing agent internals by default. |

@@ -203,7 +203,7 @@ test.describe("Soma media retained output proof", () => {
 
     await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(mediaPath).last()).toBeVisible();
-    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+    await confirmProposal(page);
 
     await expect(page.getByText("Latest output").last()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(mediaTitle).last()).toBeVisible();

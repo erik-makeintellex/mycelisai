@@ -174,8 +174,8 @@ export interface CortexMissionChatContract {
     setCouncilTarget: (id: string) => void;
     fetchCouncilMembers: () => Promise<void>;
     broadcastToSwarm: (message: string) => Promise<void>;
-    confirmProposal: (proposal?: ProposalData) => Promise<ConfirmProposalResult>;
-    cancelProposal: () => void;
+    confirmProposal: (proposal?: ProposalData, operatorReply?: string) => Promise<ConfirmProposalResult>;
+    cancelProposal: (operatorReply?: string) => void;
 }
 
 export interface CortexGovernanceOpsContract {

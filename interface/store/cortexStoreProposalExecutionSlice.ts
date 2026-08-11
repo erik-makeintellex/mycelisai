@@ -92,7 +92,7 @@ export function createCortexProposalExecutionSlice(
     }
 
     return {
-        confirmProposal: async (proposalOverride?: ProposalData): Promise<ConfirmProposalResult> => {
+        confirmProposal: async (proposalOverride?: ProposalData, operatorReply?: string): Promise<ConfirmProposalResult> => {
             const { activeConfirmToken, pendingProposal } = get();
             const proposal = proposalOverride ?? pendingProposal ?? latestActiveProposal();
             const confirmToken = proposalOverride
@@ -115,16 +115,26 @@ export function createCortexProposalExecutionSlice(
                     error: 'This proposal is missing executable proof. Ask Soma to regenerate it before running.',
                 };
             }
-            set((s) => ({
-                activeMode: 'proposal',
-                missionChatError: null,
-                missionChatFailure: null,
-                missionChat: updateProposalLifecycle(s.missionChat, intentProofId, 'confirmed_pending_execution', {
-                    mode: 'proposal',
-                    ui_response_state: proposalStartedState(),
-                    thread_events: [approvalSentEvent()],
-                }),
-            }));
+            set((s) => {
+                const conversationalReply = trimToNonEmpty(operatorReply);
+                const missionChat = conversationalReply
+                    ? [...s.missionChat, {
+                        role: 'user' as const,
+                        content: conversationalReply,
+                        timestamp: new Date().toISOString(),
+                    }]
+                    : s.missionChat;
+                return {
+                    activeMode: 'proposal',
+                    missionChatError: null,
+                    missionChatFailure: null,
+                    missionChat: updateProposalLifecycle(missionChat, intentProofId, 'confirmed_pending_execution', {
+                        mode: 'proposal',
+                        ui_response_state: proposalStartedState(),
+                        thread_events: [approvalSentEvent()],
+                    }),
+                };
+            });
             try {
                 const res = await fetch('/api/v1/intent/confirm-action', {
                     method: 'POST',
@@ -258,7 +268,7 @@ export function createCortexProposalExecutionSlice(
             }
         },
 
-        cancelProposal: () => {
+        cancelProposal: (operatorReply?: string) => {
             const { pendingProposal } = get();
             if (pendingProposal?.intent_proof_id) {
                 void fetch('/api/v1/intent/cancel-action', {
@@ -267,26 +277,36 @@ export function createCortexProposalExecutionSlice(
                     body: JSON.stringify({ intent_proof_id: pendingProposal.intent_proof_id }),
                 });
             }
-            set((s) => ({
-                missionChat: pendingProposal
-                    ? [
-                        ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'cancelled', {
-                            mode: 'proposal',
-                        }),
-                        {
-                            role: 'system',
-                            content: 'Proposal cancelled. No action executed.',
-                            timestamp: new Date().toISOString(),
-                        },
-                    ]
-                    : s.missionChat,
-                pendingProposal: null,
-                activeConfirmToken: null,
-                activeRunId: null,
-                activeMode: 'answer',
-                missionChatError: null,
-                missionChatFailure: null,
-            }));
+            set((s) => {
+                const conversationalReply = trimToNonEmpty(operatorReply);
+                const missionChat = conversationalReply
+                    ? [...s.missionChat, {
+                        role: 'user' as const,
+                        content: conversationalReply,
+                        timestamp: new Date().toISOString(),
+                    }]
+                    : s.missionChat;
+                return {
+                    missionChat: pendingProposal
+                        ? [
+                            ...updateProposalLifecycle(missionChat, pendingProposal.intent_proof_id, 'cancelled', {
+                                mode: 'proposal',
+                            }),
+                            {
+                                role: 'system',
+                                content: 'Proposal cancelled. No action executed.',
+                                timestamp: new Date().toISOString(),
+                            },
+                        ]
+                        : missionChat,
+                    pendingProposal: null,
+                    activeConfirmToken: null,
+                    activeRunId: null,
+                    activeMode: 'answer',
+                    missionChatError: null,
+                    missionChatFailure: null,
+                };
+            });
         },
     };
 }
