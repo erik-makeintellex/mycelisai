@@ -151,10 +151,15 @@ async function signInFromStaleWorkUrl(browser: Browser, testInfo: TestInfo, view
 }
 
 async function expectNoDocumentOverflow(page: Page, label: string) {
-  const overflow = await page.evaluate(
-    () => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - window.innerWidth,
-  );
-  expect(overflow, `${label} should not create horizontal document overflow`).toBeLessThanOrEqual(4);
+  await expect.poll(
+    () => page.evaluate(() => {
+      const root = document.documentElement;
+      const body = document.body;
+      if (!root || !body) return Number.POSITIVE_INFINITY;
+      return Math.max(root.scrollWidth, body.scrollWidth) - window.innerWidth;
+    }),
+    { message: `${label} should not create horizontal document overflow` },
+  ).toBeLessThanOrEqual(4);
   await expect(page.locator("nextjs-portal")).not.toBeVisible();
 }
 
