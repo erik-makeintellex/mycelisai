@@ -241,7 +241,7 @@ test.describe("New user UI sweep", () => {
       await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
       await page.reload({ waitUntil: "domcontentloaded" });
       await openNav(page, "nav-memory", /\/memory$/, /Memory/i);
-      await openNav(page, "nav-docs", /\/docs$/, /Docs|Documentation|Help/i);
+      await openNav(page, "nav-docs", /\/docs(?:\?|$)/, /Docs|Documentation|Help/i);
       await openNav(page, "nav-settings", /\/settings$/, "Settings");
       await openNav(page, "nav-dashboard", /\/dashboard$/, /Talk to Soma/i);
       await expect(page.getByPlaceholder(/Tell Soma what you want/i)).toBeVisible();
