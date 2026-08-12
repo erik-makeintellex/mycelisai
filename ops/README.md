@@ -128,6 +128,7 @@ Owns the narrow Windows/source-mode dependency path for development and testing 
 - **Bootstrap PostgreSQL**: `uv run inv native-infra.bootstrap-postgres` uses `POSTGRES_USER` / `POSTGRES_PASSWORD` from `.env` to create or update `DB_USER`, `DB_PASSWORD`, and `DB_NAME`.
 - **Start NATS**: `uv run inv native-infra.start-nats` starts only NATS when PostgreSQL is already ready.
 - `lifecycle.up` defaults to `MYCELIS_DEV_INFRA_MODE=compose`: PostgreSQL and NATS run in Docker while Core and Interface run locally from source. It invokes only `compose.infra-up`, never full `compose.up` or an app-image build. Set `MYCELIS_DEV_INFRA_MODE=native` for the host-service fallback or `k8s` only for explicit clustered bridge proof.
+- Shared NATS host contract: set `NATS_URL` for the broker used by one Core process and `MYCELIS_NATS_SERVICE_ID` for a stable deployment-scoped client identity. `lifecycle.down` drains local Mycelis app clients while leaving reusable data services running. Other services may share the broker through concrete registered input subjects; use `compose.down` only when intentionally stopping the dependency containers.
 
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.

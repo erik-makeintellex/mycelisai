@@ -139,6 +139,54 @@ func TestStoreRecordEventUpdatesLatestForAppendLatest(t *testing.T) {
 	}
 }
 
+func TestStoreBufferWithoutChannelReturnsAllSourceChannels(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	store := NewStore(db)
+	now := time.Date(2026, 8, 12, 10, 0, 0, 0, time.UTC)
+	sourceColumns := []string{
+		"id", "name", "source_type", "adapter_kind", "scope_kind", "scope_ref",
+		"target_outcome_id", "target_group_id", "target_host_id", "auth_scheme", "secret_ref",
+		"allowed_ingress_subject", "payload_schema_ref", "buffer_mode", "buffer_policy",
+		"sensitivity_class", "trust_class", "status", "recovery", "tenant_id", "created_at", "updated_at",
+	}
+	mock.ExpectQuery("FROM input_sources").WithArgs("service-a").WillReturnRows(
+		sqlmock.NewRows(sourceColumns).AddRow(
+			"service-a", "Service A", "service_bus", AdapterAPI, ScopeAll, nil,
+			nil, nil, nil, AuthNone, nil, "swarm.global.input.service-a", nil,
+			BufferAppendLog, []byte(`{}`), "governed", "bounded_external", StatusAvailable,
+			nil, "default", now, now,
+		),
+	)
+	eventColumns := []string{
+		"event_id", "source_id", "channel_key", "payload", "payload_hash", "source_timestamp",
+		"received_at", "run_id", "team_id", "agent_id", "source_kind", "source_channel",
+		"payload_kind", "tenant_id",
+	}
+	mock.ExpectQuery("FROM input_source_events").WithArgs("service-a", "", 10).WillReturnRows(
+		sqlmock.NewRows(eventColumns).AddRow(
+			"11111111-1111-1111-1111-111111111111", "service-a", "primary", []byte(`{"value":42}`),
+			"hash", now, now, nil, nil, nil, string(protocol.SourceKindWebAPI),
+			"swarm.global.input.service-a", string(protocol.PayloadKindStatus), "default",
+		),
+	)
+
+	view, err := store.Buffer(context.Background(), "service-a", BufferAppendLog, "", 10)
+	if err != nil {
+		t.Fatalf("Buffer: %v", err)
+	}
+	if len(view.Events) != 1 || view.Events[0].ChannelKey != "primary" {
+		t.Fatalf("events = %+v", view.Events)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
 func TestStoreRecordEventUpsertsWindowForWindowedRollup(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

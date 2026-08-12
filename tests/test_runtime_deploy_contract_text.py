@@ -16,6 +16,8 @@ REMOTE_USER_TESTING = ROOT / "docs" / "REMOTE_USER_TESTING.md"
 API_REFERENCE = ROOT / "docs" / "API_REFERENCE.md"
 BACKEND_ARCH = ROOT / "docs" / "architecture" / "BACKEND.md"
 DOCKER_COMPOSE = ROOT / "docker-compose.yml"
+HELM_VALUES = ROOT / "charts" / "mycelis-core" / "values.yaml"
+HELM_DEPLOYMENT = ROOT / "charts" / "mycelis-core" / "templates" / "deployment.yaml"
 CORE_DOCKERFILE = ROOT / "core" / "Dockerfile"
 V8_DEV_STATE = ROOT / ".state/V8_DEV_STATE.md"
 
@@ -73,6 +75,19 @@ def test_compose_runtime_maps_ai_host_into_provider_overrides():
     missing = [snippet for snippet in required_snippets if snippet not in text]
     assert not missing, "docker-compose.yml is missing provider endpoint overrides:\n" + "\n".join(missing)
     assert "      OLLAMA_HOST:" not in text, "docker-compose.yml should not inject legacy OLLAMA_HOST into Core"
+
+
+def test_shared_nats_service_identity_reaches_compose_and_helm():
+    compose_text = DOCKER_COMPOSE.read_text(encoding="utf-8")
+    values_text = HELM_VALUES.read_text(encoding="utf-8")
+    deployment_text = HELM_DEPLOYMENT.read_text(encoding="utf-8")
+
+    assert "MYCELIS_NATS_SERVICE_ID: ${MYCELIS_NATS_SERVICE_ID:-mycelis-core}" in compose_text
+    assert "serviceID: mycelis-core" in values_text
+    assert "url: \"\"" in values_text
+    assert "name: MYCELIS_NATS_SERVICE_ID" in deployment_text
+    assert ".Values.nats.serviceID" in deployment_text
+    assert ".Values.nats.url" in deployment_text
 
 
 def test_compose_core_image_supports_curated_stdio_mcp_launch():

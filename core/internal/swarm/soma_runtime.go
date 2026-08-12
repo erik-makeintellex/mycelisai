@@ -9,7 +9,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-// Start brings Soma online, loads standing teams, and subscribes to global input.
+// Start brings Soma online, loads standing teams, and subscribes to operator intent.
 func (s *Soma) Start() error {
 	log.Printf("🧠 Soma [%s] Online. Listening for User Intent...", s.id)
 	toolDescs := map[string]string(nil)
@@ -31,8 +31,8 @@ func (s *Soma) Start() error {
 		}
 	}
 
-	if _, err = s.nc.Subscribe(protocol.TopicGlobalInputWild, s.handleGlobalInput); err != nil {
-		return fmt.Errorf("failed to subscribe to global input: %w", err)
+	if _, err = s.nc.Subscribe(protocol.TopicGlobalInputUser, s.handleGlobalInput); err != nil {
+		return fmt.Errorf("failed to subscribe to operator input: %w", err)
 	}
 	if err := s.axon.Start(); err != nil {
 		return fmt.Errorf("failed to start Axon: %w", err)
@@ -93,7 +93,8 @@ func (s *Soma) configureTeam(team *Team, toolDescs map[string]string) {
 	}
 }
 
-// handleGlobalInput processes raw external signals after guard validation.
+// handleGlobalInput processes operator intent after guard validation. Registered
+// service/device traffic is normalized and buffered by the input projection.
 func (s *Soma) handleGlobalInput(msg *nats.Msg) {
 	if err := s.guard.ValidateIngress(msg.Subject, msg.Data); err != nil {
 		log.Printf("🛡️ Soma Shield Blocked Input: %v", err)

@@ -65,7 +65,9 @@ spec:
             - name: PORT
               value: "{{ .Values.service.port }}"
             - name: NATS_URL
-              value: "nats://{{ .Release.Name }}-nats:4222"
+              value: {{ default (printf "nats://%s-nats:4222" .Release.Name) .Values.nats.url | quote }}
+            - name: MYCELIS_NATS_SERVICE_ID
+              value: {{ .Values.nats.serviceID | quote }}
             - name: DB_HOST
               value: "{{ .Release.Name }}-postgresql"
             - name: DB_USER

@@ -74,7 +74,8 @@ Common runtime variables:
 - `MYCELIS_BREAK_GLASS_API_KEY`: optional recovery credential
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: local Core database connection
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`: host-service fallback bootstrap user for creating/updating the app role/database when `MYCELIS_DEV_INFRA_MODE=native`
-- `NATS_URL`: Core NATS connection
+- `NATS_URL`: the explicit NATS host used by this Core process; the broker may be shared with other applications
+- `MYCELIS_NATS_SERVICE_ID`: stable lowercase deployment identity used to distinguish Mycelis runtime and observer clients on a shared broker; default `mycelis-core`
 - `MYCELIS_DEV_INFRA_MODE`: `compose` for the default Docker PostgreSQL/NATS data plane; `native` for an explicit host-service fallback; `k8s` only for clustered bridge proof
 - `MYCELIS_WORKSPACE`, `MYCELIS_ARTIFACT_ROOT`: governed output root and artifact/cache root; `DATA_DIR` is still honored as a legacy artifact alias, but new runtime config should set `MYCELIS_ARTIFACT_ROOT`
 - `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
@@ -109,6 +110,8 @@ For source development, set `MYCELIS_WORKSPACE=./workspace` and `MYCELIS_ARTIFAC
 ## Local Source Development
 
 Default development runs PostgreSQL and NATS in Docker while Core and Interface run locally from source. `uv run inv lifecycle.up --frontend` idempotently invokes `compose.infra-up` for only those two dependencies; it does not build or start containerized Core or Interface services. `lifecycle.down` stops the local app processes and leaves the reusable data plane running. Use `uv run inv compose.down` only when intentionally stopping the dependency containers. Set `MYCELIS_DEV_INFRA_MODE=native` only for the supported host-service fallback.
+
+When another locally developed service shares the NATS host, keep that broker running and assign explicit service identities and subjects. Mycelis external ingress uses concrete registered `swarm.global.input.{source}` subjects; one registered source owns each subject, unknown subjects are ignored, and wildcard registrations are rejected. A Core process connects to one configured NATS host. Connecting another host requires a separately configured Core/bridge deployment rather than an implicit cross-host subscription.
 
 ## WSL/Linux Proof Checkout Handoff
 
