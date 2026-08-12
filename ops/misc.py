@@ -3,6 +3,7 @@ from pathlib import Path
 from invoke import Collection, task
 
 from .cleanup_support import filter_active_runtime_targets, print_active_runtime_skip
+from .ci_pipeline import _console_safe
 from .config import ROOT_DIR, is_windows
 from .misc_support import (
     WORKTREE_BASELINE_INSTALLS,
@@ -214,6 +215,10 @@ def _format_sync_reply(message: str) -> str:
     return text
 
 
+def _format_sync_output(subject: str, message: str, encoding: str | None = None) -> str:
+    return _console_safe(f"[reply] {subject}: {_format_sync_reply(message)}", encoding)
+
+
 @task(name="architecture-sync")
 def architecture_sync(c, timeout=12):
     """Synchronize architect, development, and AGUI teams over the NATS bus."""
@@ -270,7 +275,7 @@ def architecture_sync(c, timeout=12):
             time.sleep(0.2)
 
         for subject, message in acknowledgements:
-            print(f"[reply] {subject}: {_format_sync_reply(message)}")
+            print(_format_sync_output(subject, message))
 
         missing = [
             team_id
