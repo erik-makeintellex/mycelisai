@@ -105,7 +105,7 @@ function submittedTeamAskItem(sourceItem: TeamWorkItem, result: TeamWorkAskResul
     fallbackReason: state === "degraded" ? teamAskDegradedMessage(result) : undefined,
     nextAction: submittedTeamAskNextAction(state, outputRefs.length, result),
     recoveryOptions: state === "degraded"
-      ? ["Review degraded delivery and retry from retained context."]
+      ? [submittedTeamAskRecoveryOption(result)]
       : undefined,
   };
 }
@@ -162,9 +162,18 @@ function submittedTeamAskNextAction(
     return "Wait for team output or degradation proof.";
   }
   if (state === "degraded") {
-    return "Review recovery before retrying.";
+    return result.degradationState === "external_mutation_outcome_unknown"
+      ? "Ask Soma to verify the external outcome before considering a retry."
+      : "Review recovery before retrying.";
   }
   return undefined;
+}
+
+function submittedTeamAskRecoveryOption(result: TeamWorkAskResult) {
+  if (result.degradationState === "external_mutation_outcome_unknown") {
+    return "Verify the external system outcome through Soma; do not retry while the result is unknown.";
+  }
+  return "Review degraded delivery and retry from retained context.";
 }
 
 function actionSummary(item: TeamWorkItem, action: TeamInteraction) {

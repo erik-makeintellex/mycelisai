@@ -28,6 +28,9 @@ func ApplyTeamWorkAction(item TeamWorkItem, action TeamWorkAction) (TeamWorkStat
 	if item.State == TeamWorkStateArchived {
 		return item.State, fmt.Errorf("archived work cannot be changed")
 	}
+	if externalMutationNeedsVerification(item) && action != TeamWorkActionSteer && action != TeamWorkActionArchive {
+		return item.State, fmt.Errorf("external mutation outcome must be verified through Soma before %s", action)
+	}
 
 	switch action {
 	case TeamWorkActionStartWork:
@@ -45,6 +48,12 @@ func ApplyTeamWorkAction(item TeamWorkItem, action TeamWorkAction) (TeamWorkStat
 	default:
 		return item.State, fmt.Errorf("invalid team work action")
 	}
+}
+
+func externalMutationNeedsVerification(item TeamWorkItem) bool {
+	return item.DegradationState == "external_mutation_outcome_unknown" ||
+		(WorkIntentHasExternalMutation(item.WorkIntent) &&
+			item.WorkIntent.SideEffect.SideEffectState == WorkSideEffectUnknown)
 }
 
 func startTeamWork(item TeamWorkItem) (TeamWorkState, error) {
