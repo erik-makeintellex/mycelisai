@@ -108,9 +108,9 @@ describe('MissionControlChat thread state cards', () => {
 
         expect(screen.getByTestId('soma-thread-state-card')).toBeDefined();
         expect(screen.getByText('Work started')).toBeDefined();
-        expect(screen.getByText('running')).toBeDefined();
+        expect(screen.queryByText('running')).toBeNull();
         expect(screen.getByText('Soma handed this to the work bus. It is running, not complete, and you can keep talking here.')).toBeDefined();
-        expect(screen.getByRole('button', { name: /Continue with Soma/i })).toBeDefined();
+        expect(screen.queryByRole('button', { name: /Continue with Soma/i })).toBeNull();
         expect(screen.queryByRole('link', { name: /Open run receipt/i })).toBeNull();
         expect(screen.queryByText(/Work complete/i)).toBeNull();
         expect(screen.queryByText(/Result verified/i)).toBeNull();
@@ -123,6 +123,57 @@ describe('MissionControlChat thread state cards', () => {
 
         expect(sendMissionChat).toHaveBeenCalledWith('Also prepare a concise launch note.', undefined);
         expect((input as HTMLTextAreaElement).value).toBe('');
+    });
+
+    it('shows one clear latest state when the same work emits repeated machine updates', () => {
+        const threadEvent = (kind: 'execution_started' | 'attention_required', label: string, detail: string) => ({
+            kind,
+            label,
+            detail,
+            tone: kind === 'attention_required' ? 'warning' as const : 'info' as const,
+            status: kind === 'attention_required' ? 'degraded' : 'running',
+            run_id: 'run-repeated-1',
+            source_kind: 'system',
+            source_channel: 'team-work.result-projection',
+            payload_kind: 'thread_event',
+        });
+        useCortexStore.setState({
+            missionChat: [
+                {
+                    role: 'system',
+                    content: 'Work started',
+                    mode: 'execution_result',
+                    run_id: 'run-repeated-1',
+                    thread_event: threadEvent('execution_started', 'Work started', 'Work is underway.'),
+                },
+                {
+                    role: 'system',
+                    content: 'Work needs attention',
+                    mode: 'blocker',
+                    run_id: 'run-repeated-1',
+                    thread_event: threadEvent('attention_required', 'Work needs attention', 'The configured provider did not return a readable reply.'),
+                },
+                {
+                    role: 'system',
+                    content: 'Work needs attention again',
+                    mode: 'blocker',
+                    run_id: 'run-repeated-1',
+                    thread_event: threadEvent('attention_required', 'Work needs attention', 'The configured provider timed out.'),
+                },
+            ],
+            councilMembers: COUNCIL_MEMBERS,
+            councilTarget: 'admin',
+        });
+
+        render(<MissionControlChat simpleMode />);
+
+        expect(screen.getAllByTestId('soma-thread-state-card')).toHaveLength(1);
+        expect(screen.getByText('Soma needs your direction')).toBeDefined();
+        expect(screen.getByText(/Tell Soma to try again, use another available service, or change the request/i)).toBeDefined();
+        expect(screen.queryByText('degraded')).toBeNull();
+        expect(screen.queryByText('Work started')).toBeNull();
+        expect(screen.queryByRole('button', { name: /Continue with Soma/i })).toBeNull();
+        expect(screen.getByPlaceholderText(/Tell Soma/i)).toBeDefined();
     });
 
     it('does not duplicate plain system text when a structured thread event is present', () => {

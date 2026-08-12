@@ -97,8 +97,6 @@ describe("ExecutionSummaryReceipt", () => {
   });
 
   it("keeps technical run inspection secondary when no deliverable exists yet", () => {
-    const continuation = vi.fn();
-    window.addEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
     const summary: ExecutionSummaryData = {
       execution: {
         shape: "team_execution",
@@ -111,17 +109,11 @@ describe("ExecutionSummaryReceipt", () => {
     render(<ExecutionSummaryReceipt summary={summary} runId="run-work-1" />);
 
     expect(screen.queryByRole("link", { name: /^Run$/i })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /Continue with Soma/i }));
-    expect(continuation).toHaveBeenCalled();
-    expect(continuation.mock.calls[0][0].detail).toMatchObject({
-      reference: "run:run-work-1",
-      proof: "run-work-1",
-    });
+    expect(screen.queryByRole("button", { name: /Continue with Soma/i })).toBeNull();
 
     fireEvent.click(screen.getByText("Proof and execution details"));
     expect(screen.getByRole("link", { name: /Inspect run receipt/i }).getAttribute("href"))
       .toBe("/runs/run-work-1");
-    window.removeEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
   });
 
   it("does not present team planning files as completed user output", () => {

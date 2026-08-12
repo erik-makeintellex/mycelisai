@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ExternalLink, MessageSquareReply, ShieldAlert } from "lucide-react";
+import { CheckCircle2, ExternalLink, ShieldAlert } from "lucide-react";
 import type { ChatArtifactRef, ExecutionSummaryData } from "@/store/useCortexStore";
 import {
   actionableOutputWorkbenchItems,
@@ -10,7 +10,6 @@ import {
 import { outputWorkbenchDigest, OutputWorkbenchCompactDigest } from "./OutputWorkbenchDigest";
 import { proofLinks, linkRunId, trustVerdict } from "./ExecutionSummaryCardModel";
 import ExecutionSummaryMediaPreview from "./ExecutionSummaryMediaPreview";
-import { requestSomaOutputContinuation } from "./outputContinuation";
 
 export function shouldUseExecutionSummaryReceipt({
   summary,
@@ -64,21 +63,6 @@ export default function ExecutionSummaryReceipt({
                 : trust.detail}
           </p>
         </div>
-        {summaryRunId && !digest ? (
-          <button
-            type="button"
-            onClick={() => requestSomaOutputContinuation({
-              title: "this requested work",
-              reference: `run:${summaryRunId}`,
-              proof: summaryRunId,
-              sourceLabel: "run",
-            })}
-            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-cortex-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-main hover:border-cortex-primary/40"
-          >
-            Continue with Soma
-            <MessageSquareReply className="h-3 w-3" />
-          </button>
-        ) : null}
       </div>
       {digest ? (
         <div className="mt-2 rounded-lg border border-cortex-border/70 bg-cortex-bg/80 px-2.5 py-2">

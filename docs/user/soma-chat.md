@@ -76,7 +76,7 @@ When a document, application, report, dataset, media item, or package becomes th
 
 When output is ready and recovery is also present, Soma should say that plainly, keep the output openable, and point you to the Work tab for recovery.
 
-Soma replies may also show small action-state cards inside the thread. These compact cards translate structured work state into user language such as `Approval sent`, `Work started`, `Output ready`, or `Needs recovery` without repeating the same event text in multiple places or exposing raw routing subjects and system payloads. `Work started` means the approved plan is durably queued or running on the work bus; it is not completion proof, and the composer remains available for another conversation or request. When a handoff has a run receipt, the card should offer a plain `Open run receipt` link for proof and recovery review.
+Soma replies may also show one small action-state card inside the thread. Consecutive machine updates for the same work collapse into the latest state, while the full event history remains available through proof and inspection. The card uses user language such as `Work started`, `Output ready`, or `Soma needs your direction`; technical provider, tool, status, and routing detail stays under `What happened`. The composer is the continuation path, so status events do not add repeated continuation buttons. `Work started` means the approved plan is durably queued or running; it is not completion proof. When work stops, Soma explains that no usable result was produced and suggests plain conversational choices such as trying again, using another available service, or changing the request.
 
 ## Outputs
 
