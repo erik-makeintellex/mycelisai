@@ -33,6 +33,8 @@ Task ownership boundary: Invoke tasks manage repo tools, Mycelis app services, d
 
 Compose infrastructure is the default source-mode data plane: `compose.infra-up` and `compose.infra-health` manage only Dockerized PostgreSQL and NATS, while `lifecycle.up --frontend` runs Core and Interface locally from source. Neither task builds application images. Use `MYCELIS_DEV_INFRA_MODE=native` only for the host-service fallback and `MYCELIS_DEV_INFRA_MODE=k8s` only for explicit clustered bridge proof.
 
+NATS may be shared by Mycelis and separately developed services. `NATS_URL` selects the single broker host used by a Core process, while `MYCELIS_NATS_SERVICE_ID` gives that deployment stable, distinguishable runtime and observer client names. Routine Core and `lifecycle.down` shutdown drains Mycelis client connections only; it does not stop, purge, or claim shared broker storage. External producers enter Mycelis only through concrete subjects registered in `/api/v1/input-sources`; wildcard and duplicate source-channel claims are rejected. Use a separately configured bridge/Core deployment for another NATS host instead of silently spanning hosts.
+
 ### Master Registry
 
 List tasks:

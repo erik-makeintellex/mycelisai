@@ -147,9 +147,6 @@ func (s *Store) Buffer(ctx context.Context, sourceID, mode, channelKey string, l
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	if channelKey == "" {
-		channelKey = "default"
-	}
 	switch mode {
 	case BufferLatestState, BufferAppendLatest:
 		view.Latest, err = s.ListLatest(ctx, sourceID, channelKey)

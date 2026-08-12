@@ -2,6 +2,7 @@ package inputs
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -32,10 +33,14 @@ func (s *Service) UseStore(ctx context.Context, store *Store) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.sources = map[string]Source{}
+	loaded := map[string]Source{}
 	for _, source := range sources {
-		s.sources[source.ID] = source
+		if owner := subjectOwner(loaded, source.AllowedIngressSubject, source.ID); owner != "" {
+			return fmt.Errorf("%w: %s is already owned by %s", ErrSubjectInUse, source.AllowedIngressSubject, owner)
+		}
+		loaded[source.ID] = source
 	}
+	s.sources = loaded
 	return nil
 }
 
@@ -74,14 +79,17 @@ func (s *Service) Add(ctx context.Context, input SourceInput) (Source, error) {
 	if err != nil {
 		return Source{}, err
 	}
-	if s != nil && s.store != nil {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if owner := subjectOwner(s.sources, source.AllowedIngressSubject, source.ID); owner != "" {
+		return Source{}, fmt.Errorf("%w: %s is already owned by %s", ErrSubjectInUse, source.AllowedIngressSubject, owner)
+	}
+	if s.store != nil {
 		source, err = s.store.Create(ctx, source)
 		if err != nil {
 			return Source{}, err
 		}
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.sources[source.ID] = source
 	return source, nil
 }
@@ -92,23 +100,33 @@ func (s *Service) Update(ctx context.Context, id string, input SourceInput) (Sou
 	if err != nil {
 		return Source{}, err
 	}
-	if s != nil && s.store != nil {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if owner := subjectOwner(s.sources, source.AllowedIngressSubject, source.ID); owner != "" {
+		return Source{}, fmt.Errorf("%w: %s is already owned by %s", ErrSubjectInUse, source.AllowedIngressSubject, owner)
+	}
+	if s.store != nil {
 		source, err = s.store.Update(ctx, source)
 		if err != nil {
 			return Source{}, err
 		}
 	} else {
-		s.mu.RLock()
 		_, exists := s.sources[source.ID]
-		s.mu.RUnlock()
 		if !exists {
 			return Source{}, ErrNotFound
 		}
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.sources[source.ID] = source
 	return source, nil
+}
+
+func subjectOwner(sources map[string]Source, subject, excludingID string) string {
+	for id, source := range sources {
+		if id != excludingID && source.AllowedIngressSubject == subject {
+			return id
+		}
+	}
+	return ""
 }
 
 func (s *Service) Delete(ctx context.Context, id string) error {

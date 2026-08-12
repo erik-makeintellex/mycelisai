@@ -32,6 +32,53 @@ func TestResolveDatabaseConfigDefaults(t *testing.T) {
 	}
 }
 
+func TestResolveNATSRuntimeConfigDefaultsToSharedHostIdentity(t *testing.T) {
+	t.Setenv("NATS_URL", "")
+	t.Setenv("MYCELIS_NATS_SERVICE_ID", "")
+
+	cfg, err := resolveNATSRuntimeConfig()
+	if err != nil {
+		t.Fatalf("resolveNATSRuntimeConfig: %v", err)
+	}
+	if cfg.URL != "nats://127.0.0.1:4222" {
+		t.Fatalf("URL = %q, want default", cfg.URL)
+	}
+	if got := cfg.connectionName("runtime"); got != "mycelis-core.runtime" {
+		t.Fatalf("connection name = %q", got)
+	}
+}
+
+func TestResolveNATSRuntimeConfigUsesDeploymentIdentity(t *testing.T) {
+	t.Setenv("NATS_URL", "nats://shared-bus.internal:4222")
+	t.Setenv("MYCELIS_NATS_SERVICE_ID", "workspace-west")
+
+	cfg, err := resolveNATSRuntimeConfig()
+	if err != nil {
+		t.Fatalf("resolveNATSRuntimeConfig: %v", err)
+	}
+	if cfg.URL != "nats://shared-bus.internal:4222" {
+		t.Fatalf("URL = %q", cfg.URL)
+	}
+	if got := cfg.connectionName("observer"); got != "workspace-west.observer" {
+		t.Fatalf("connection name = %q", got)
+	}
+}
+
+func TestResolveNATSRuntimeConfigRejectsAmbiguousIdentity(t *testing.T) {
+	t.Setenv("MYCELIS_NATS_SERVICE_ID", "Workspace West")
+
+	if _, err := resolveNATSRuntimeConfig(); err == nil {
+		t.Fatal("expected invalid service identity rejection")
+	}
+}
+
+func TestNATSEndpointLabelRedactsCredentials(t *testing.T) {
+	got := natsEndpointLabel("nats://user:secret@shared.internal:4222?token=hidden")
+	if got != "nats://shared.internal:4222" {
+		t.Fatalf("endpoint label = %q", got)
+	}
+}
+
 func TestResolveDatabaseConfigUsesEnvironment(t *testing.T) {
 	t.Setenv("DB_HOST", "postgres")
 	t.Setenv("DB_PORT", "5544")

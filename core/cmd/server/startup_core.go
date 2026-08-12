@@ -29,7 +29,7 @@ type coreRuntime struct {
 	natsRuntime      *natsRuntime
 }
 
-func startCoreRuntime(ctx context.Context, natsURL string) *coreRuntime {
+func startCoreRuntime(ctx context.Context, natsConfig natsRuntimeConfig) *coreRuntime {
 	dbConfig := resolveDatabaseConfig()
 	dbURL := dbConfig.connectionString()
 
@@ -37,7 +37,7 @@ func startCoreRuntime(ctx context.Context, natsURL string) *coreRuntime {
 	cogRouter := loadCognitiveRouter(sharedDB)
 	guard := loadGovernanceGuard()
 	memService := startMemoryService(ctx, dbURL)
-	natsRuntime := connectNATSLanes(natsURL)
+	natsRuntime := connectNATSLanes(natsConfig)
 
 	rt := &coreRuntime{
 		SharedDB:         sharedDB,
@@ -164,9 +164,9 @@ type natsRuntime struct {
 	observerWrapper  *mycelis_nats.Client
 }
 
-func connectNATSLanes(natsURL string) *natsRuntime {
+func connectNATSLanes(config natsRuntimeConfig) *natsRuntime {
 	rt := &natsRuntime{}
-	ncWrapper, connErr := connectNATSWithRetry(natsURL, "Mycelis Core")
+	ncWrapper, connErr := connectNATSWithRetry(config.URL, config.connectionName("runtime"))
 	if connErr != nil {
 		log.Printf("WARN: NATS unreachable after 90s: %v. Running in DEGRADED mode (no messaging).", connErr)
 		return rt
@@ -174,9 +174,9 @@ func connectNATSLanes(natsURL string) *natsRuntime {
 
 	rt.coreWrapper = ncWrapper
 	rt.NC = ncWrapper.Conn
-	log.Printf("[nats] connected to %s", rt.NC.ConnectedUrl())
+	log.Printf("[nats] connected to %s", natsEndpointLabel(rt.NC.ConnectedUrl()))
 
-	observerWrapper, observerErr := connectNATSWithRetry(natsURL, "Mycelis Observer")
+	observerWrapper, observerErr := connectNATSWithRetry(config.URL, config.connectionName("observer"))
 	if observerErr != nil {
 		log.Printf("WARN: observer NATS lane unavailable: %v. Falling back to the primary NATS connection for router and memory fanout.", observerErr)
 		rt.ObserverNC = rt.NC
@@ -187,7 +187,7 @@ func connectNATSLanes(natsURL string) *natsRuntime {
 	rt.observerWrapper = observerWrapper
 	rt.ObserverNC = observerWrapper.Conn
 	rt.ObserverNCSource = "observer"
-	log.Printf("[nats] observer lane connected to %s", rt.ObserverNC.ConnectedUrl())
+	log.Printf("[nats] observer lane connected to %s", natsEndpointLabel(rt.ObserverNC.ConnectedUrl()))
 	return rt
 }
 
@@ -214,7 +214,7 @@ func connectNATSWithRetry(url, connectionName string) (*mycelis_nats.Client, err
 			return client, nil
 		}
 		if i == 1 || i%10 == 0 {
-			log.Printf("[nats] waiting for %s at %s (attempt %d/45): %v", connectionName, url, i, err)
+			log.Printf("[nats] waiting for %s at %s (attempt %d/45): %v", connectionName, natsEndpointLabel(url), i, err)
 		}
 		time.Sleep(2 * time.Second)
 	}
