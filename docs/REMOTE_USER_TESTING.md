@@ -82,6 +82,17 @@ At every step inspect:
 
 Do not accept a technically functional screen that is confusing, crowded, clipped, or dependent on runtime vocabulary.
 
+Human-first acceptance is performed before Playwright scrolls, focuses, fills, or clicks for the user:
+
+- the Soma composer is visible in the untouched first viewport
+- one Workspace/Outcome context and no more than one background-work entry point compete with the thread
+- no drawer opens automatically or reduces the conversation width
+- ordinary user surfaces do not expose agent rosters, NATS, MCP, run ids, execution contracts, event chains, or message-bus language
+- delayed work leaves the composer enabled; a steering message is acknowledged and remains correlated to the same Outcome
+- completion contains one concise summary and one primary `Open output` action
+- substantial output opens into a dedicated readable/operable surface, and Back restores the originating Soma conversation and Outcome
+- a novice can locate Ask, active work, and a completed deliverable without instruction
+
 ## Trusted Outcome Walkthrough
 
 ### 1. Sign In And Enter Soma
@@ -148,7 +159,8 @@ Expected:
 
 - Soma reports completion or truthful degradation
 - the completion message briefly explains what was delivered
-- direct file/app/folder access is available
+- one primary `Open output` action opens the file, app, document, media item, dataset, report, or package in a dedicated surface
+- folder access, Resources, proof, versions, download, and technical references remain secondary
 - group-owned content is isolated under `groups/<team-id>/generated/...`
 - package entrypoint, local dependencies, and expected interaction were validated
 

@@ -65,7 +65,7 @@ In architecture language, Mycelis is built around user-owned Workspaces and Outc
 
 The active delivery target is [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md): make the architecture operationally trustworthy through natural Soma conversation, compact governance, async execution, durable outputs, proof, recovery, capability settings, and fresh-user GUI validation.
 
-The active UI expression target is the threaded Soma workspace defined in the canonical PRD: users can talk with Soma before launching work, then see typed action cards, compact approval pauses, operational alerts, saved actions, outcome vaults, capability-permission settings, and raw infrastructure behind Inspect.
+The active UI expression target is the human-first threaded Soma workspace defined in the canonical PRD: users talk with Soma before launching work, approve through a compact conversational pause, keep steering while asynchronous work runs, receive a concise completion summary with one primary output action, and open substantial deliverables in a dedicated surface. Work lists, capability setup, proof, recovery, and raw infrastructure remain contextual or behind Inspect.
 
 Delivery rule:
 - advance V8.3 slices only with a named boundary, proof lane, promotion rule, and documentation review
@@ -99,7 +99,7 @@ Use the [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.
 
 Default Operator Surface:
 - the default UX must stay simple and intent-first while making Workspace and Outcome ownership obvious
-- Soma, Outcomes, deliverables, active work, proof, recovery, and focused Resources/Groups access are the normal operator surfaces
+- Soma, Outcomes, Work, deliverables, recovery, and focused Resources access are the normal operator concepts; Groups, teams, runs, capabilities, and transport stay contextual or behind Inspect
 
 Advanced Architecture / Runtime Surface:
 - the advanced architecture/runtime surface is now defined as a contract, but it is not fully implemented yet

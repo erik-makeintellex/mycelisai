@@ -43,9 +43,9 @@ export function ZoneA() {
         !!currentOrganizationHref &&
         (pathname === currentOrganizationHref || pathname?.startsWith(currentOrganizationHref + '/') === true);
     const primaryNav = [
-        { href: '/dashboard', icon: Home, label: 'Soma', description: 'Ask first', testId: 'nav-dashboard' },
-        { href: '/groups', icon: Users, label: 'Groups', description: 'Outputs', testId: 'nav-groups' },
-        { href: '/resources', icon: FolderCog, label: 'Resources', description: 'Files & tools', testId: 'nav-resources' },
+        { href: '/dashboard', icon: Home, label: 'Soma', description: 'Ask and guide work', testId: 'nav-dashboard' },
+        { href: '/groups', icon: Users, label: 'Work', description: 'Active and delivered outcomes', testId: 'nav-groups' },
+        { href: '/resources', icon: FolderCog, label: 'Resources', description: 'Sources and tools', testId: 'nav-resources' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
             icon: Building2,
@@ -54,7 +54,7 @@ export function ZoneA() {
             description: lastOrganization.name,
             testId: 'current-organization-nav',
         }] : []),
-        { href: '/docs', icon: BookOpen, label: 'Docs', testId: 'nav-docs' },
+        { href: '/docs', icon: BookOpen, label: 'Help', description: 'Guides and answers', testId: 'nav-docs' },
     ];
     const advancedNav = [
         { href: '/activity', icon: Radio, label: 'Activity', description: 'Runs & bus', testId: 'nav-activity' },

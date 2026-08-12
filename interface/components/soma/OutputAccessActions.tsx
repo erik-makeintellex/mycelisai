@@ -25,16 +25,22 @@ export default function OutputAccessActions({
     storagePath,
     openLabel = "Open",
     folderLabel = "Open folder",
+    primary = false,
+    showOpen = true,
+    showFolder = true,
 }: {
     label: string;
     url: string | null;
     storagePath?: string | null;
     openLabel?: string;
     folderLabel?: string;
+    primary?: boolean;
+    showOpen?: boolean;
+    showFolder?: boolean;
 }) {
     const [folderState, setFolderState] = useState<OutputFolderState>("idle");
     const workspacePath = useMemo(() => storagePath?.trim() || workspacePathFromOutputUrl(url), [storagePath, url]);
-    if (!url && !workspacePath) return null;
+    if ((!url || !showOpen) && (!workspacePath || !showFolder)) return null;
 
     const openOutput = () => {
         if (!url) return;
@@ -60,20 +66,22 @@ export default function OutputAccessActions({
         : `Open the local folder containing ${label}${workspacePath ? ` (${workspacePath})` : ""}`;
 
     return (
-        <span className="inline-flex shrink-0 items-center gap-1">
-            {url && (
+        <span className={`inline-flex min-w-0 items-center gap-1 ${primary ? "w-full sm:w-auto" : "shrink-0"}`}>
+            {url && showOpen && (
                 <button
                     type="button"
                     onClick={openOutput}
-                    className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"
+                    className={primary
+                        ? "inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-cortex-primary bg-cortex-primary px-4 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90 sm:w-auto"
+                        : "inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"}
                     title={`${openLabel} ${label} in a new browser window`}
                     aria-label={`${openLabel} ${label} in a new browser window`}
                 >
-                    <ExternalLink className="h-3 w-3" />
+                    <ExternalLink className={primary ? "h-4 w-4" : "h-3 w-3"} />
                     {openLabel}
                 </button>
             )}
-            {workspacePath && (
+            {workspacePath && showFolder && (
                 <button
                     type="button"
                     onClick={() => void openFolder()}

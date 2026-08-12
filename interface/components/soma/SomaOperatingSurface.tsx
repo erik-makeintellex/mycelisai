@@ -122,7 +122,9 @@ export function SomaOperatingSurface({
   const hasOutputReviewContent = mergedOutputItems.length > 0 || mergedProjectPackages.length > 0;
   const hasTrustReviewContent = missionChat.length > 0;
   const hasContextReviewContent = Boolean(effectiveFocusedTeamId) || hasWorkContextChoices;
-  const scopeCopy = organizationName ? `Ready to coordinate work for ${organizationName}` : "Ready to help create or resume an AI Organization";
+  const scopeCopy = organizationName
+    ? `Workspace: ${organizationName}`
+    : "Ask, continue, or revisit an Outcome in this Workspace";
   const activeWorkNode = activeWorkSlot ?? (
     hasWorkReviewContent ? (
       <ActiveWorkLane

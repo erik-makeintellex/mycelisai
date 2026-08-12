@@ -42,9 +42,9 @@ import { ZoneA } from '@/components/shell/ZoneA_Rail';
 
 const DEFAULT_NAV_ENTRIES = [
     { href: '/dashboard', label: 'Soma' },
-    { href: '/groups', label: 'Groups' },
+    { href: '/groups', label: 'Work' },
     { href: '/resources', label: 'Resources' },
-    { href: '/docs', label: 'Docs' },
+    { href: '/docs', label: 'Help' },
 ];
 
 describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
@@ -133,7 +133,7 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     it('shows admin-only routes when admin tools are on', () => {
         mockAdvancedMode.mockReturnValue(true);
         render(<ZoneA />);
-        expect(screen.getByText('Groups')).toBeDefined();
+        expect(screen.getByText('Work')).toBeDefined();
         expect(screen.getByText('Activity')).toBeDefined();
         expect(screen.getByText('Resources')).toBeDefined();
         expect(screen.getByText('Memory')).toBeDefined();

@@ -61,13 +61,7 @@ Confirming with `yes`, `confirm`, `proceed`, `do it`, or `one time` should bind 
 
 ## Reading The Soma Workspace
 
-The dashboard keeps Soma chat primary. A quiet current-work strip above chat summarizes:
-
-- current workflow state
-- latest retained output title and direct open/folder actions
-- review count
-- unresolved recovery work when output is ready but some proof/work still needs attention
-- the next action: `Review output` or `Review work`
+The dashboard keeps Soma chat primary. When meaningful work exists, one compact background-work indicator shows the Outcome health and whether anything needs you. Opening it reveals a bounded work list over the conversation; it never narrows Soma or turns the page into a dashboard.
 
 File paths and detailed proof stay out of the default strip unless needed. Open the review panel when you need more detail. Its tabs keep dense information out of the main chat:
 
@@ -76,7 +70,9 @@ File paths and detailed proof stay out of the default strip unless needed. Open 
 - `Trust`: what happened, evidence, run/proof links, and next step
 - `Context`: tools, saved context, and setup cues
 
-The review panel overlays the conversation instead of resizing it. On compact screens it stays beside the collapsed navigation rail and uses an opaque surface so background text cannot compete with review content. Output and package cards keep the title, health, and explanation on the first row; file, folder, Resources, Reply, and quote actions wrap on a separate row. Long workspace references truncate visually but remain available through their controls. The panel must scroll vertically only, never force a horizontal scrollbar, and exact package-reference duplicates should not appear as a second output. Distinct supporting files remain available under `More outputs and verification`.
+The review panel overlays the conversation instead of resizing it. It is for locating and triaging work, not for operating a substantial deliverable. On compact screens it uses an opaque full-width sheet so background text cannot compete with review content. Exact package-reference duplicates must not appear as a second output, and supporting files remain available under Details or Inspect.
+
+When a document, application, report, dataset, media item, or package becomes the object of attention, **Open output** promotes it into a dedicated surface with enough room to read, operate, compare, or validate it. Completion shows one short summary and one primary **Open output** action. Folder access, Resources, proof, versions, download, and technical references are secondary. Back returns to the originating Soma conversation and Outcome context.
 
 When output is ready and recovery is also present, Soma should say that plainly, keep the output openable, and point you to the Work tab for recovery.
 
@@ -101,7 +97,7 @@ When Soma is planning or reporting work, the visible plan should name the expect
 
 Proposal details may show an `Expected output` cue. This is not a separate action to approve; it is Soma's contract for what the team or capability must bring back, such as an app/package with an openable entrypoint, a table, a document, media, code, or a dataset. The same expected output follows the approval into the run receipt and team handoff, so the work can be reviewed later against what Soma said it would deliver. Outcome-language requests for a retained app, package, executable, or playable multi-file product should produce a bounded delivery-team proposal without requiring you to name the team yourself; a request for one exact file remains direct. When an asynchronous team returns an interactive package, Soma first reports that the retained candidate is being checked and stays available for conversation while Core validates it. `Work complete` with **Open app** or **Open output** appears only after the exact retained package passes its approved browser workflow. A missing attachment, entrypoint, dependency, non-responsive control, page error, failed local asset, or unavailable validator becomes recovery and asks the same team to repair or regenerate the deliverable. Packages live under the producing team's `groups/<team-id>/generated/...` folder. The main approval card stays short, while output shape, launch hint, validation, bus/team wiring, and proof expectations stay behind `Details`.
 
-Trusted compact receipts in the Soma thread should expose app/package outputs without requiring a full panel. The output title, health, and validation remain readable on the first row; **Open app**, **Open folder**, **Open in Resources**, and **Reply** wrap onto a separate compact action row instead of squeezing the title into a narrow column.
+Trusted compact receipts in the Soma thread expose the output title, Outcome health, a short completion summary, and one primary **Open output** action. Use Details for folder access, Resources, proof, versions, download, and technical references. Use the normal conversation to ask for changes; Soma keeps the delivered output and Outcome identity attached to that follow-up.
 
 Use **Reply** on a delivered output or project package when you want Soma to keep that exact output as context for the next request. Reply does not execute work by itself. It keeps the output visible, shows a compact `Continuing from` indicator, leaves the composer ready for your natural follow-up, and sends typed continuation context with the output title, workspace reference, and proof id when available. You can ask to update it, make an alternate version, generate downstream material from it, inspect it, or route it to another team; Soma classifies that follow-up separately from whether approval is required. If a file should become reusable long-term source material rather than just a one-request handoff, ask Soma to save it as governed context or use `Resources -> Deployment Context`.
 

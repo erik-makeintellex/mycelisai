@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { OutputWorkbench } from "@/components/soma/OutputWorkbench";
 
@@ -28,7 +28,9 @@ describe("OutputWorkbench reference deduplication", () => {
     );
 
     expect(screen.queryByText("Duplicate package folder")).toBeNull();
-    expect(screen.getByText("Latest output").closest("article")?.textContent).toContain("Launch review notes");
-    expect(screen.getByTestId("latest-output-actions").className).toContain("w-full");
+    expect(screen.getByText("Latest output").closest("article")?.textContent).not.toContain("Launch review notes");
+    fireEvent.click(screen.getByText("More outputs and verification"));
+    expect(screen.getByText("Launch review notes")).toBeDefined();
+    expect(screen.getByTestId("project-package-actions").className).toContain("w-full");
   });
 });
