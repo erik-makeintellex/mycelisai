@@ -2,9 +2,9 @@ import { test, expect, type Page } from '@playwright/test';
 
 const DEFAULT_NAV_ENTRIES = [
     { href: '/dashboard', label: 'Soma', testId: 'nav-dashboard' },
-    { href: '/groups', label: 'Groups', testId: 'nav-groups' },
+    { href: '/groups', label: 'Work', testId: 'nav-groups' },
     { href: '/resources', label: 'Resources', testId: 'nav-resources' },
-    { href: '/docs', label: 'Docs', testId: 'nav-docs' },
+    { href: '/docs', label: 'Help', testId: 'nav-docs' },
     { href: '/settings', label: 'Settings', testId: 'nav-settings' },
 ];
 

@@ -27,13 +27,11 @@ export type OutputWorkbenchItem = {
   proof?: OutputProofEnvelope;
   proofArtifactId?: string;
 };
-
 export function projectPackageOutputs(outputs: ExecutionSummaryData["outputs"]) {
   return asItems(outputs).filter((item): item is ExecutionSummaryItem => (
     typeof item !== "string" && item.kind === "project_package" && isUserDeliverableSummaryItem(item)
   ));
 }
-
 export function outputWorkbenchItems(summary?: ExecutionSummaryData, artifacts?: ChatArtifactRef[]) {
   const directOutputs = asItems(summary?.outputs)
     .filter((item) => typeof item === "string" || (item.kind !== "project_package" && isUserDeliverableSummaryItem(item)))
@@ -55,7 +53,6 @@ export function outputWorkbenchItems(summary?: ExecutionSummaryData, artifacts?:
     ...artifactOutputs.filter((artifact) => !directOutputs.some((output) => output.text === artifact.text)),
   ];
 }
-
 function isUserDeliverableSummaryItem(item: ExecutionSummaryItem) {
   const outputClass = item.output_class?.trim().toLowerCase();
   if (outputClass) return ["user_deliverable", "deliverable", "output", "final"].includes(outputClass);
@@ -68,7 +65,6 @@ function isUserDeliverableSummaryItem(item: ExecutionSummaryItem) {
     && !reference.endsWith("/team_evocation.md")
     && !reference.endsWith("/research_council_handoff.md");
 }
-
 export function teamOutputWorkbenchItems(outputRefs: TeamOutputRef[]): OutputWorkbenchItem[] {
   return sortTeamOutputRefsNewestFirst(outputRefs)
     .filter((output) => output.kind !== "project_package" && !output.entrypoint)
@@ -81,7 +77,6 @@ export function teamOutputWorkbenchItems(outputRefs: TeamOutputRef[]): OutputWor
     }))
     .filter((item): item is OutputWorkbenchItem => Boolean(item.text));
 }
-
 export function teamOutputProjectPackages(outputRefs: TeamOutputRef[]): ExecutionSummaryItem[] {
   return sortTeamOutputRefsNewestFirst(outputRefs)
     .filter((output) => output.kind === "project_package" || Boolean(output.entrypoint))
@@ -96,7 +91,6 @@ export function teamOutputProjectPackages(outputRefs: TeamOutputRef[]): Executio
       proof_artifact_id: output.proof_id,
     }));
 }
-
 export function mergeOutputWorkbenchItems(...groups: OutputWorkbenchItem[][]): OutputWorkbenchItem[] {
   const seen = new Set<string>();
   return groups.flat().filter((item) => {
@@ -106,11 +100,9 @@ export function mergeOutputWorkbenchItems(...groups: OutputWorkbenchItem[][]): O
     return true;
   });
 }
-
 export function actionableOutputWorkbenchItems(outputs: OutputWorkbenchItem[]): OutputWorkbenchItem[] {
   return outputs.filter((output) => Boolean(output.url || output.proof || output.proofArtifactId));
 }
-
 function preferredOutputIndex(outputs: OutputWorkbenchItem[]) {
   const fileIndex = outputs.findIndex((output) => Boolean(output.url) && isFileLikeOutput(output));
   if (fileIndex >= 0) return fileIndex;
@@ -148,6 +140,8 @@ export function OutputWorkbench({
 }) {
   const [copiedOutputKey, setCopiedOutputKey] = useState<string | null>(null);
   const packages = projectPackages ?? [];
+  const primaryPackage = packages[0] ?? null;
+  const secondaryPackages = packages.slice(1);
   const packageReferences = new Set(packages.flatMap(packageReferencesFor));
   const visibleOutputs = outputs.filter((output) => {
     const reference = normalizeOutputReference(outputWorkspacePath(output));
@@ -158,6 +152,9 @@ export function OutputWorkbench({
   const normalizedPrimaryIndex = primaryOutputIndex >= 0 ? primaryOutputIndex : visibleOutputs.length > 0 ? 0 : -1;
   const primaryOutput = normalizedPrimaryIndex >= 0 ? visibleOutputs[normalizedPrimaryIndex] : null;
   const secondaryOutputs = visibleOutputs.filter((_, index) => index !== normalizedPrimaryIndex);
+  const highlightedOutput = primaryPackage ? null : primaryOutput;
+  const supplementalOutputs = primaryPackage ? visibleOutputs : secondaryOutputs;
+  const hasAdditionalOutputs = secondaryPackages.length > 0 || supplementalOutputs.length > 0;
 
   const copyOutputQuote = async (output: OutputWorkbenchItem, key: string) => {
     await navigator.clipboard.writeText(quotedOutputText(output));
@@ -175,67 +172,95 @@ export function OutputWorkbench({
 
   return (
     <div className="space-y-3" data-testid="output-workbench">
-      {packages.length > 0 ? (
-        <div className="space-y-2">
-          {packages.map((project, index) => (
-            <OutputWorkbenchProjectPackage
-              key={`${itemText(project) ?? "Project package"}-${index}`}
-              project={project}
-              index={index}
-              projectOpenLabel={projectOpenLabel}
-            />
-          ))}
-        </div>
+      {primaryPackage ? (
+        <OutputWorkbenchProjectPackage
+          project={primaryPackage}
+          index={0}
+          projectOpenLabel={projectOpenLabel}
+          isPrimary
+        />
       ) : null}
-      {primaryOutput ? (
+      {highlightedOutput ? (
         <article className="rounded-lg border border-cortex-primary/50 bg-cortex-primary/15 px-3 py-2 shadow-[0_0_0_1px_rgba(115,92,255,0.12)]" aria-label="Latest output">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="min-w-0">
               <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-primary">Latest output</div>
               <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
-                <span className="truncate text-sm font-semibold text-cortex-text-main">{primaryOutput.text}</span>
+                <span className="truncate text-sm font-semibold text-cortex-text-main">{highlightedOutput.text}</span>
                 <OutcomeHealthBadge health="completed" />
               </div>
-              <p className="mt-1 text-xs leading-5 text-cortex-text-muted">Use Open file to view it, or Open folder to show it in the workspace.</p>
-              <OutputPathHint storagePath={primaryOutput.storagePath} url={primaryOutput.url} />
+              <p className="mt-1 text-xs leading-5 text-cortex-text-muted">Open the completed output to review the result.</p>
             </div>
-            <div className="flex w-full min-w-0 flex-wrap items-center gap-1" data-testid="latest-output-actions">
-              <OutputAccessActions label={primaryOutput.text} url={primaryOutput.url} storagePath={primaryOutput.storagePath} openLabel="Open file" folderLabel="Open folder" />
-              <button
-                type="button"
-                onClick={() => requestSomaOutputContinuation({
-                  title: primaryOutput.text,
-                  reference: outputContinuationReference(primaryOutput),
-                  proof: primaryOutput.proofArtifactId,
-                })}
-                className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"
-                title={`Reply to ${primaryOutput.text} in Soma`}
-                aria-label={`Reply to ${primaryOutput.text} in Soma`}
-              >
-                <MessageSquareReply className="h-3 w-3" />
-                Reply
-              </button>
-              <button
-                type="button"
-                onClick={() => void copyOutputQuote(primaryOutput, `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}`)}
-                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
-                title={copiedOutputKey === `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}` ? "Copied output quote" : "Copy output quote"}
-                aria-label={copiedOutputKey === `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}` ? "Copied output quote" : `Copy output quote for ${primaryOutput.text}`}
-              >
-                {copiedOutputKey === `primary-${primaryOutput.text}-${primaryOutput.url ?? "text"}` ? <Check className="h-3.5 w-3.5" /> : <Quote className="h-3.5 w-3.5" />}
-              </button>
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2" data-testid="latest-output-actions">
+              <OutputAccessActions
+                label={highlightedOutput.text}
+                url={highlightedOutput.url}
+                storagePath={highlightedOutput.storagePath}
+                openLabel="Open output"
+                folderLabel="Open folder"
+                primary
+                showFolder={false}
+              />
             </div>
           </div>
-          <OutputProofDetails proof={primaryOutput.proof} proofArtifactId={primaryOutput.proofArtifactId} />
+          <details className="mt-3 border-t border-cortex-border/70 pt-2">
+            <summary className="cursor-pointer text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
+              Details and proof
+            </summary>
+            <div className="mt-3 min-w-0 space-y-3">
+              <OutputPathHint storagePath={highlightedOutput.storagePath} url={highlightedOutput.url} />
+              <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
+                <OutputAccessActions
+                  label={highlightedOutput.text}
+                  url={highlightedOutput.url}
+                  storagePath={highlightedOutput.storagePath}
+                  folderLabel="Open folder"
+                  showOpen={false}
+                />
+                <button
+                  type="button"
+                  onClick={() => requestSomaOutputContinuation({
+                    title: highlightedOutput.text,
+                    reference: outputContinuationReference(highlightedOutput),
+                    proof: highlightedOutput.proofArtifactId,
+                  })}
+                  className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"
+                  title={`Reply to ${highlightedOutput.text} in Soma`}
+                  aria-label={`Reply to ${highlightedOutput.text} in Soma`}
+                >
+                  <MessageSquareReply className="h-3 w-3" />
+                  Reply
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void copyOutputQuote(highlightedOutput, `primary-${highlightedOutput.text}-${highlightedOutput.url ?? "text"}`)}
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
+                  title={copiedOutputKey === `primary-${highlightedOutput.text}-${highlightedOutput.url ?? "text"}` ? "Copied output quote" : "Copy output quote"}
+                  aria-label={copiedOutputKey === `primary-${highlightedOutput.text}-${highlightedOutput.url ?? "text"}` ? "Copied output quote" : `Copy output quote for ${highlightedOutput.text}`}
+                >
+                  {copiedOutputKey === `primary-${highlightedOutput.text}-${highlightedOutput.url ?? "text"}` ? <Check className="h-3.5 w-3.5" /> : <Quote className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+              <OutputProofDetails proof={highlightedOutput.proof} proofArtifactId={highlightedOutput.proofArtifactId} />
+            </div>
+          </details>
         </article>
       ) : null}
-      {secondaryOutputs.length > 0 ? (
-        <details className="rounded-lg border border-cortex-border/70 bg-cortex-bg/50 px-3 py-2">
+      {hasAdditionalOutputs ? (
+        <details className="border-t border-cortex-border/70 px-1 pt-2">
           <summary className="cursor-pointer text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
             More outputs and verification
           </summary>
           <div className="mt-2 grid min-w-0 gap-2">
-            {secondaryOutputs.map((output, index) => {
+            {secondaryPackages.map((project, index) => (
+              <OutputWorkbenchProjectPackage
+                key={`${itemText(project) ?? "Project package"}-${index + 1}`}
+                project={project}
+                index={index + 1}
+                projectOpenLabel={projectOpenLabel}
+              />
+            ))}
+            {supplementalOutputs.map((output, index) => {
               const key = `${output.text}-${output.url ?? "text"}-${index}`;
               const copied = copiedOutputKey === key;
               return (

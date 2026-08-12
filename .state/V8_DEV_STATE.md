@@ -8,11 +8,11 @@
 | --- | --- |
 | Updated | 2026-08-12 |
 | Integration branch | `dev` |
-| Active slice | P0.4 external-mutation verification enforcement is `ACTIVE`: Core and UI are closing the generic-retry bypass for unknown external outcomes before operator acceptance. Shared NATS service boundaries remain `COMPLETE` and merged into `dev`. |
+| Active slice | P0.9 human-first Soma convergence is `IN_REVIEW`: user-work navigation, first-viewport clarity, compact work triage, and a dedicated substantial-output blade are implemented and browser-proven. Continued conversation during delayed work, output-canvas Back restoration, and manual novice acceptance remain open. |
 | Production branch | `main` remains behind the accepted `dev` integration train pending release certification. |
 | Runtime posture | Dockerized PostgreSQL and NATS plus local Core and Interface are healthy; Ollama is running. Full Compose app containers, Kubernetes, and WSL remain explicit release-proof lanes. |
-| Delivery target | Accept the external-mutation recovery contract through operator review, then execute P0.12 release certification and intentional `dev -> main` promotion. |
-| Main release risk | The canonical natural and trusted delivery journeys now produce and validate usable browser packages, but production promotion still requires ambiguous external-mutation recovery and deployment certification from a clean release candidate. |
+| Delivery target | Pass human-first Soma acceptance, accept the external-mutation recovery contract, then execute P0.12 release certification and intentional `dev -> main` promotion. |
+| Main release risk | The trusted runtime journey and human-first composition now pass automated browser proof; asynchronous steering, true output-canvas return behavior, and unprompted novice comprehension still require explicit acceptance before release. |
 | Canonical PRD alignment | Workspace owns Outcomes; Soma owns execution; WorkIntent is transitional; deliverables, proof, recovery, and continuity remain Outcome-owned user concepts. |
 
 ## Documentation Shortcuts
@@ -33,7 +33,7 @@
 
 | Lane | Status | Current evidence | Next gate |
 | --- | --- | --- | --- |
-| P0.9 full Trusted Outcome Journey | `COMPLETE` | Governed ask, approval, asynchronous NATS team execution, retained interactive package, validation, proof, and cross-surface revisit pass on the local source stack. | Preserve during release certification. |
+| P0.9 full Trusted Outcome Journey | `IN_REVIEW` | Governed ask through revisit remains proven. The human-first slice adds `Soma`, `Work`, `Resources`, and `Help` navigation, removes default `AI Organization` language, keeps the untouched composer visible, prevents automatic drawers/runtime vocabulary/horizontal overflow, preserves a compact Work drawer, and promotes Output into a navigation-aware desktop blade or contained compact sheet with one primary open action. Focused component tests pass 36/36; headed human-first desktop/compact proof passes 2/2; navigation passes 12/12; the broader new-user matrix passes 4/4. | Prove conversational steering during delayed work, substantial-output Back restoration, and manual novice comprehension before release certification. |
 | P0.11 documentation convergence | `COMPLETE` | The canonical PRD contains all product architecture. The duplicate architecture overview and obsolete user-facing blueprint guide are deleted; user concepts, run/recovery, acceptance, deployment, API/provider, implementation, README, state, and in-app Help guidance match current Workspace/Outcome delivery and the Docker data-plane development lane. Documentation contracts, Help component tests, typecheck, and a headed real-manifest PRD-to-acceptance journey pass. | Keep one product-architecture authority and update owned support docs with behavior changes. |
 | P0.13 cross-device operator acceptance | `COMPLETE` | Dashboard, Groups, Resources, Memory, Docs, and Settings have focused desktop/mobile proof. Exact owner-scoped creation and purge pass visibly in Chromium; 32 fixture scopes are purged, no non-terminal scopes remain, and active claims are zero. Headed natural delivery creates a complete browser package, validates its declared interaction, opens it directly, and purges its resources. A post-merge run that crossed five minutes exposed orphan result correlation; the corrected feature and merged `dev` runs passed in 5.8 and 5.5 minutes. The headed Trusted Outcome Journey also passes Ask through Revisit with retained proof and cleanup. Conversational control is merged and post-merge proven. The integrated fresh-user matrix starts from a stale work URL, signs into Soma, traverses Groups creation, Resources, Memory, Docs, Settings, and returns to Soma with zero page, console, hydration, `5xx`, or horizontal-overflow failures at desktop and compact widths. The adjacent 40-journey headed set passes after focused Groups history and Vault hydration reruns. The merged `dev` state repeats the four-journey headed fresh-user matrix and service health successfully. | Preserve through release certification. |
 | P0.12 release hygiene and certification | `ACTIVE` | Clean Windows release preflight passes lint, Core, build, typecheck, Vitest, 121 Chromium journeys, source service health, and all four live governance scenarios. Configured Compose ports, shared identity-secret boundaries, and the Docker PostgreSQL/NATS plus local Core/Interface development topology are merged and re-proven on `dev` without app image builds. | Complete external-mutation operator acceptance, full Compose/Kubernetes certification, exact-candidate release preflight, and intentional promotion. |
@@ -42,11 +42,11 @@
 
 ## Immediate Work Order
 
-1. Review the merged external-mutation recovery contract and its verification-first operator language.
-2. Execute P0.12 release certification from the clean `dev` candidate, then intentionally promote `dev -> main` only if every release gate passes.
-3. Run `uv run inv ci.release-preflight --lane=release` from a clean committed `dev` state.
-4. Certify the supported full Compose/Kubernetes runtime and Windows-browser path; use guarded WSL proof only when that environment supplies distinct evidence.
-5. Promote `dev` to `main` only after every required gate passes.
+1. Complete P0.9 delayed-work steering: Soma must accept and acknowledge new conversation while NATS-backed work remains in progress.
+2. Promote substantial deliverables into a true output canvas and prove Back restores the originating Soma conversation and Outcome context.
+3. Run manual novice acceptance for Ask, active work, and completed deliverable discovery without instruction.
+4. Review the merged external-mutation recovery contract and its verification-first operator language.
+5. Execute P0.12 release certification from the clean `dev` candidate, then intentionally promote `dev -> main` only if every release gate passes.
 
 ## Accepted Proof
 
@@ -71,6 +71,8 @@
 - Authenticated desktop and compact-phone navigation reaches every primary operator surface through visible controls while retaining a reachable Soma composer and zero document-level horizontal overflow.
 - Output actions open retained files/packages directly; runtime IDs and transport details remain behind Details or Inspect.
 - Current, Completed, and Archived work are distinct; retained history does not inflate active review counts.
+- Default navigation speaks in user work (`Soma`, `Work`, `Resources`, `Help`), the first viewport contains one reachable composer and no automatic review dialog, and runtime vocabulary remains behind deliberate depth.
+- Output review overlays Soma instead of narrowing it, uses the desktop application canvas or contained compact sheet, and presents one primary open action while paths, folders, replies, and proof remain under Details.
 
 ### Documentation And Quality
 
@@ -82,14 +84,15 @@
 
 ## Open Release Risks
 
-| Risk | Status | Required resolution |
-| --- | --- | --- |
+| Risk | Status | Current evidence | Required resolution |
+| --- | --- | --- | --- |
+| Human-first default surface | `IN_REVIEW` | Untouched first-viewport, user-work navigation, one primary output action, desktop/compact dedicated output viewing, overlay stability, runtime-vocabulary exclusion, zero horizontal overflow, and broad route navigation now pass in headed and headless Chromium. | Prove delayed-work conversational steering, true output-canvas Back restoration, and manual novice comprehension. |
 | Deterministic QA ownership | `COMPLETE` | Migrations `058`-`060`, opt-in root-admin API, exact creation provenance, reentrant creation/purge fencing, current-run staged-ownership allowance, durable pre-existence rejection, independently committed created-team/workspace claims, resumable purge, atomic claim release, and NATS exclusion are covered by Core, Python, UI proxy, and post-merge headed Chromium proof. Thirty-one scopes are purged with zero active claims or non-terminal scopes. | Preserve in every retained-state live journey and release certification. |
 | Generated package delivery and correlation | `COMPLETE` | Worker correction requests one missing contract item at a time, entrypoint guidance forbids positional event selectors, and completion still requires retained-file readback plus structural and browser interaction validation. The command correlation lease exceeds the durable work recovery deadline; its six-minute regression and headed natural journeys pass on the feature branch and merged `dev` in 5.8 and 5.5 minutes. | Preserve in the fresh-user device matrix and release certification. |
 | Ambiguous external mutation | `IN_REVIEW` | WorkIntent carries side-effect kind, retry safety, stable idempotency key, and observed side-effect state. Independent acceptance review found that the generic team-work action endpoint and UI could still offer recovery after an external outcome became unknown. Core now fails closed on start/pause/resume/recover while preserving steering/archive, and the UI directs verification through Soma without enabled retry. Focused Core, UI, typecheck, quality, service-health, and headed Chromium proof pass on the feature branch and merged `dev`. | Obtain operator acceptance of the verification-first language and controls, then preserve the boundary through release certification. |
-| Windows Core restart wrapper | `IN_REVIEW` | Distinguish a foreground wrapper timeout from service failure and retain useful diagnostics. |
-| Deployment certification | `REQUIRED` | WSL, Compose, Kubernetes, and operator-facing browser paths must pass from the committed release candidate. |
-| Production promotion | `REQUIRED` | Promote only after clean-tree release proof; do not mix new feature work into the candidate. |
+| Windows Core restart wrapper | `IN_REVIEW` | Foreground wrapper timeout can still be confused with service failure. | Distinguish those states and retain useful diagnostics. |
+| Deployment certification | `REQUIRED` | Source-mode and focused deployment proof pass. | WSL, Compose, Kubernetes, and operator-facing browser paths must pass from the committed release candidate. |
+| Production promotion | `REQUIRED` | `dev` remains intentionally ahead of `main`. | Promote only after clean-tree release proof; do not mix new feature work into the candidate. |
 
 ## Release Proof Order
 

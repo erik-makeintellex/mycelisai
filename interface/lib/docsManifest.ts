@@ -25,10 +25,8 @@ export const DOC_MANIFEST: DocSection[] = [
     {
         section: "Start Here",
         docs: [
-            { slug: "user-docs-home", label: "Use Mycelis", path: "docs/user/README.md", description: "Operator-first entry point for Soma, teams, resources, outputs, and recovery workflows" },
+            { slug: "user-docs-home", label: "Use Mycelis", path: "docs/user/README.md", description: "Operator-first entry point for Soma, Outcomes, active work, deliverables, and recovery" },
             { slug: "soma-chat", label: "Using Soma Chat", path: "docs/user/soma-chat.md", description: "Human-first Soma prompts, compact answers, governed proposals, outputs, and recovery" },
-            { slug: "workflow-variants-plan-memory", label: "Workflow Variants + Plan Memory", path: "docs/user/workflow-variants-and-plan-memory.md", description: "Direct Soma, compact teams, multi-lane workflows, and durable plan memory" },
-            { slug: "teams-guide", label: "Teams", path: "docs/user/teams.md", description: "Active team work, compact defaults, broad-ask splitting, and lead-centered workflows" },
             { slug: "resources-guide", label: "Outputs And Resources", path: "docs/user/resources.md", description: "Output files, group artifacts, capability readiness, tool repair, AI engines, and governed context" },
         ],
     },
@@ -48,6 +46,8 @@ export const DOC_MANIFEST: DocSection[] = [
     {
         section: "Advanced User Surfaces",
         docs: [
+            { slug: "workflow-variants-plan-memory", label: "Workflow Variants + Plan Memory", path: "docs/user/workflow-variants-and-plan-memory.md", description: "Direct Soma, compact teams, multi-lane workflows, and durable plan memory" },
+            { slug: "teams-guide", label: "Teams", path: "docs/user/teams.md", description: "Active team work, compact defaults, broad-ask splitting, and lead-centered workflows" },
             { slug: "automations-guide", label: "Automations", path: "docs/user/automations.md", description: "Event trigger rules, schedules, mission profiles, and approvals around automated work" },
         ],
     },
