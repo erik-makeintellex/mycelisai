@@ -128,6 +128,33 @@ describe("teamWorkProjection", () => {
     });
   });
 
+  it("requires Soma verification before an uncertain external mutation can retry", () => {
+    const item = mapDurableTeamWorkItem({
+      work_item_id: "work-external-1",
+      team_id: "team-alpha",
+      objective: "Update the customer system",
+      execution_shape: "delegated_work",
+      state: "degraded",
+      needs_operator: true,
+      degradation_state: "external_mutation_outcome_unknown",
+      recovery_options: [
+        "Ask Soma to verify the external system before deciding whether any retry is safe.",
+      ],
+    });
+
+    const recover = item?.interactions.find((action) => action.action === "recover");
+    const steer = item?.interactions.find((action) => action.action === "steer");
+    expect(recover).toMatchObject({
+      label: "Retry unavailable",
+      disabled: true,
+      disabledReason: "Ask Soma to verify the external outcome before considering a retry.",
+    });
+    expect(steer).toMatchObject({
+      label: "Tell Soma what you found",
+      disabled: false,
+    });
+  });
+
   it("uses last event evidence when durable work refs have not caught up yet", () => {
     const item = mapDurableTeamWorkItem({
       work_item_id: "work-3",

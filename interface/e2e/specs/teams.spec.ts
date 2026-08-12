@@ -109,6 +109,64 @@ test.describe('Teams Workspace (/teams)', () => {
         expect(bodyText.indexOf('Recovery and Review')).toBeLessThan(bodyText.indexOf('Team context'));
     });
 
+    test('unknown external mutation requires Soma verification before retry', async ({ page }) => {
+        await page.route('**/api/v1/teams/detail', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify([
+                    {
+                        id: 'team-external-review',
+                        name: 'External Review Team',
+                        role: 'action',
+                        type: 'mission',
+                        mission_id: 'mission-external-review',
+                        mission_intent: 'Verify external account update',
+                        inputs: [],
+                        deliveries: [],
+                        agents: [],
+                    },
+                ]),
+            });
+        });
+        await page.route('**/api/v1/catalogue/agents**', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ data: [] }),
+            });
+        });
+        await page.route('**/api/v1/teams/team-external-review/work?*', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    data: [
+                        {
+                            work_item_id: 'work-external-review-1',
+                            team_id: 'team-external-review',
+                            objective: 'Verify external account update',
+                            execution_shape: 'deliverable',
+                            state: 'degraded',
+                            needs_operator: true,
+                            degradation_state: 'external_mutation_outcome_unknown',
+                            recovery_options: ['verify the external result through Soma'],
+                            updated_at: '2026-08-12T10:00:00Z',
+                        },
+                    ],
+                }),
+            });
+        });
+
+        await page.goto('/teams?view=work', { waitUntil: 'domcontentloaded' });
+
+        await expect(page.getByLabel('Review details for Verify external account update')).toBeVisible();
+        await expect(page.getByRole('button', { name: /Retry recovery/i })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Tell Soma what you found' })).toBeEnabled();
+        await expect(page.getByText(/could not confirm whether the change completed/i)).toBeVisible();
+        await expect(page.getByText(/Do not retry until the result is verified/i)).toBeVisible();
+    });
+
     test('team quick action links are wired', async ({ page }) => {
         const cards = page.getByRole('button')
             .filter({ hasText: 'Open lead workspace' })

@@ -120,6 +120,31 @@ func TestHandleTeamWorkAction_RecoverQueuesDegradedWork(t *testing.T) {
 	}
 }
 
+func TestHandleTeamWorkAction_RejectsUnknownExternalMutationRecovery(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	workID := "11111111-1111-1111-1111-111111111111"
+	mock.ExpectQuery("SELECT id::text, team_id").
+		WithArgs("research-team", workID).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			workID, "research-team", "", "", "", "", "Update the customer system", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDeliverable), "", []byte(`{"side_effect":{"effect_kind":"external_mutation","retry_safety":"safe","idempotency_key":"customer-update-1","side_effect_state":"unknown"}}`), []byte(`["customer update"]`), []byte(`["external verification"]`), []byte(`[]`),
+			"required", string(protocol.TeamWorkStateDegraded), []byte(`null`), true, "external_mutation_outcome_unknown",
+			[]byte(`["Ask Soma to verify the external system before deciding whether any retry is safe."]`), []byte(`[]`), []byte(`["proof-1"]`), []byte(`["audit-1"]`), now, now, "v1",
+		))
+
+	rr := doTeamWorkAction(t, s, workID, `{
+		"action":"recover",
+		"summary":"Retry without verification."
+	}`)
+
+	assertStatus(t, rr, http.StatusBadRequest)
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestHandleTeamWorkAction_ArchiveClearsReviewQueue(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)
