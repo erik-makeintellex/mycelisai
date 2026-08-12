@@ -155,6 +155,16 @@ def test_format_sync_reply_prefers_wrapped_signal_text():
     assert misc._format_sync_reply(message) == "wrapped brief"
 
 
+def test_format_sync_output_escapes_characters_missing_from_host_encoding():
+    output = misc._format_sync_output(
+        "swarm.team.test.signal.status",
+        '{"text":"plan → delivery"}',
+        "cp1252",
+    )
+
+    assert output == "[reply] swarm.team.test.signal.status: plan \\u2192 delivery"
+
+
 def test_build_worktree_triage_maps_changed_paths_to_installs_and_commands():
     triage = misc._build_worktree_triage(
         "\n".join(
