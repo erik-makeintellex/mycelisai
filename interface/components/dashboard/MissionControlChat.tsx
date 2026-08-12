@@ -20,6 +20,7 @@ import { somaPlaceholder, teamSuggestions } from "./missionControlChatUi";
 import { buildMissionChatScope } from "@/store/cortexStoreMissionChatHelpers";
 import { clearAllPersistedChat } from "@/store/cortexStoreUtils";
 import { conversationalProposalReply } from "./conversationalProposalReply";
+import { presentMissionChat } from "./missionControlChatPresentation";
 
 export default function MissionControlChat({
     simpleMode = false,
@@ -46,6 +47,7 @@ export default function MissionControlChat({
     const broadcastToSwarm = useCortexStore((s) => s.broadcastToSwarm);
     const isBroadcasting = useCortexStore((s) => s.isBroadcasting);
     const assistantName = useCortexStore((s) => s.assistantName);
+    const presentedMissionChat = useMemo(() => presentMissionChat(missionChat), [missionChat]);
     const councilTarget = useCortexStore((s) => s.councilTarget);
     const councilMembers = useCortexStore((s) => s.councilMembers);
     const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
@@ -220,7 +222,7 @@ export default function MissionControlChat({
                         />
                     )
                 ) : (
-                    missionChat.map((msg, i) => (
+                    presentedMissionChat.map((msg, i) => (
                         <MissionControlMessageBubble key={i} msg={msg} compactResult={simpleMode} />
                     ))
                 )}

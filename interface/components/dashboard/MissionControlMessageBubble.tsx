@@ -1,5 +1,5 @@
 "use client";
-import { AlertTriangle, Bot, Brain, Eye, Globe, Megaphone, MessageSquareReply, User, Zap } from "lucide-react";
+import { AlertTriangle, Bot, Brain, Eye, Globe, Megaphone, User } from "lucide-react";
 import {
     sourceNodeLabel,
     trustBadge,
@@ -15,7 +15,6 @@ import ExecutionSummaryReceipt, { shouldUseExecutionSummaryReceipt } from "@/com
 import MissionControlThreadStateCard from "./MissionControlThreadStateCard";
 import MissionControlResponseDepth from "./MissionControlResponseDepth";
 import MissionControlToolsUsed from "./MissionControlToolsUsed";
-import { requestSomaOutputContinuation } from "@/components/soma/outputContinuation";
 import {
     artifactResultSummary,
     askClassBadge,
@@ -203,22 +202,7 @@ export default function MissionControlMessageBubble({
         return (
             <div className="my-1.5 flex justify-center">
                 <div className="flex w-full max-w-[720px] flex-col items-center gap-1.5 px-2">
-                    {msg.run_id ? (
-                        <button
-                            type="button"
-                            onClick={() => requestSomaOutputContinuation({
-                                title: "this requested work",
-                                reference: `run:${msg.run_id}`,
-                                proof: msg.run_id,
-                                sourceLabel: "run",
-                            })}
-                            className="flex items-center gap-1.5 rounded-full border border-cortex-success/30 bg-cortex-success/5 px-2.5 py-1 font-mono text-[9px] text-cortex-success transition-colors hover:bg-cortex-success/10"
-                        >
-                            <Zap className="w-3 h-3" />
-                            Continue with Soma
-                            <MessageSquareReply className="h-2.5 w-2.5 opacity-60" />
-                        </button>
-                    ) : msg.thread_event || msg.thread_events?.length ? null : (
+                    {msg.thread_event || msg.thread_events?.length ? null : (
                         <span className="text-[9px] font-mono text-cortex-text-muted px-2.5 py-1 rounded-full border border-cortex-border">
                             {msg.content}
                         </span>
