@@ -1,5 +1,4 @@
 "use client";
-
 import { Check, ExternalLink, MessageSquareReply, Quote } from "lucide-react";
 import { useState } from "react";
 import { sortTeamOutputRefsNewestFirst } from "@/components/teams/teamWorkProjection";
@@ -200,6 +199,8 @@ export function OutputWorkbench({
                 folderLabel="Open folder"
                 primary
                 showFolder={false}
+                openInCanvas
+                proofArtifactId={highlightedOutput.proofArtifactId}
               />
             </div>
           </div>
@@ -277,7 +278,7 @@ export function OutputWorkbench({
                     <OutputPathHint storagePath={output.storagePath} url={output.url} />
                   </div>
                   <div className="mt-2 flex w-full min-w-0 flex-wrap items-center gap-1">
-                    <OutputAccessActions label={output.text} url={output.url} storagePath={output.storagePath} openLabel="Open file" folderLabel="Open folder" />
+                    <OutputAccessActions label={output.text} url={output.url} storagePath={output.storagePath} openLabel="Open file" folderLabel="Open folder" openInCanvas proofArtifactId={output.proofArtifactId} />
                     <button
                       type="button"
                       onClick={() => requestSomaOutputContinuation({

@@ -2,7 +2,13 @@
 
 import { AlertTriangle, ExternalLink, Zap } from "lucide-react";
 import { responseStateToneClass } from "@/components/soma/SomaCausalSummaryState";
+import { outputCanvasHref } from "@/lib/outputPackageModel";
 import type { ChatMessage } from "@/store/useCortexStore";
+
+function currentSomaHref() {
+    if (typeof window === "undefined") return "/dashboard";
+    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
 
 export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessage }) {
     if (msg.proposal && !(msg.thread_event || msg.thread_events?.length)) return null;
@@ -46,6 +52,14 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
                         const eventDetail = needsDirection
                             ? "This work stopped before a usable result was produced. Nothing new should be trusted yet."
                             : event.detail;
+                        const canvasHref = event.kind === "result_ready" && event.href
+                            ? outputCanvasHref({
+                                label: event.href_label ?? eventLabel ?? "Retained output",
+                                url: event.href,
+                                storagePath: event.target_reference,
+                                returnTo: "/dashboard",
+                            })
+                            : null;
                         return (
                         <div key={event.id ?? `${event.kind}-${index}`}>
                             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -60,7 +74,20 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
                                 </p>
                             ) : null}
                             {event.href && event.kind === "result_ready" ? (
-                                <a href={event.href} className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-cortex-primary hover:underline">
+                                <a
+                                    href={canvasHref ?? event.href}
+                                    onClick={canvasHref ? (clickEvent) => {
+                                        clickEvent.preventDefault();
+                                        const destination = outputCanvasHref({
+                                            label: event.href_label ?? eventLabel ?? "Retained output",
+                                            url: event.href,
+                                            storagePath: event.target_reference,
+                                            returnTo: currentSomaHref(),
+                                        });
+                                        if (destination) window.location.assign(destination);
+                                    } : undefined}
+                                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-cortex-primary hover:underline"
+                                >
                                     {event.href_label ?? "Open proof"}
                                     <ExternalLink className="h-2.5 w-2.5" />
                                 </a>

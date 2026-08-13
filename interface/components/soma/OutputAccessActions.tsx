@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ExternalLink, FolderOpen, Loader2 } from "lucide-react";
+import { Check, ExternalLink, FolderOpen, Loader2, PanelTopOpen } from "lucide-react";
 import { outputFolderButtonLabel, type OutputFolderState } from "@/lib/deliveryRuntimeLanguage";
+import { outputCanvasHref } from "@/lib/outputPackageModel";
 
 export function workspacePathFromOutputUrl(url: string | null) {
     if (!url) return null;
@@ -28,6 +29,8 @@ export default function OutputAccessActions({
     primary = false,
     showOpen = true,
     showFolder = true,
+    openInCanvas = false,
+    proofArtifactId,
 }: {
     label: string;
     url: string | null;
@@ -37,15 +40,34 @@ export default function OutputAccessActions({
     primary?: boolean;
     showOpen?: boolean;
     showFolder?: boolean;
+    openInCanvas?: boolean;
+    proofArtifactId?: string | null;
 }) {
     const [folderState, setFolderState] = useState<OutputFolderState>("idle");
     const workspacePath = useMemo(() => storagePath?.trim() || workspacePathFromOutputUrl(url), [storagePath, url]);
+    const retainedFilePath = workspacePathFromOutputUrl(url) ?? storagePath;
+    const canvasEligible = openInCanvas && Boolean(outputCanvasHref({ label, url, storagePath: retainedFilePath }));
     if ((!url || !showOpen) && (!workspacePath || !showFolder)) return null;
 
     const openOutput = () => {
         if (!url) return;
+        const canvasHref = canvasEligible ? outputCanvasHref({
+            label,
+            url,
+            storagePath: retainedFilePath,
+            returnTo: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+            proofArtifactId,
+        }) : null;
+        if (canvasHref) {
+            window.location.assign(canvasHref);
+            return;
+        }
         window.open(url, "_blank", "noopener,noreferrer");
     };
+
+    const openTitle = canvasEligible
+        ? `${openLabel} ${label} in Mycelis`
+        : `${openLabel} ${label} in a new browser window`;
 
     const openFolder = async () => {
         if (!workspacePath || folderState === "opening") return;
@@ -74,10 +96,12 @@ export default function OutputAccessActions({
                     className={primary
                         ? "inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-cortex-primary bg-cortex-primary px-4 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90 sm:w-auto"
                         : "inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"}
-                    title={`${openLabel} ${label} in a new browser window`}
-                    aria-label={`${openLabel} ${label} in a new browser window`}
+                    title={openTitle}
+                    aria-label={openTitle}
                 >
-                    <ExternalLink className={primary ? "h-4 w-4" : "h-3 w-3"} />
+                    {canvasEligible
+                        ? <PanelTopOpen className={primary ? "h-4 w-4" : "h-3 w-3"} />
+                        : <ExternalLink className={primary ? "h-4 w-4" : "h-3 w-3"} />}
                     {openLabel}
                 </button>
             )}
