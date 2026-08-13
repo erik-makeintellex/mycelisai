@@ -286,7 +286,7 @@ uv run inv cognitive.up
 uv run inv cognitive.status
 ```
 
-For private Pinokio media generation, use the `.env.example` `MYCELIS_MEDIA_GATEWAY_*` block and `uv run inv cognitive.media-gateway`; the gateway accepts local/private upstreams by default, returns `b64_json`, and requires `MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1` for intentional non-private upstream routing. Forge/AUTOMATIC1111 can use the direct `txt2img` adapter. ComfyUI uses `MYCELIS_MEDIA_GATEWAY_BACKEND=comfyui` plus a reviewed API-format workflow file and node mappings so the gateway can submit `/prompt`, poll `/history/{prompt_id}`, and fetch outputs through `/view`. Details live in [AI Provider Runtime](COGNITIVE_ARCHITECTURE.md).
+For private Pinokio Forge generation, set `MYCELIS_MEDIA_TYPE=forge`, point `MYCELIS_MEDIA_ENDPOINT` at the Forge base URL (normally `http://127.0.0.1:7860`), and launch Forge with `--api` enabled. Core calls Forge directly; no additional gateway is required. Use `uv run inv cognitive.media-gateway` for ComfyUI or an OpenAI-compatible compatibility path. ComfyUI uses `MYCELIS_MEDIA_GATEWAY_BACKEND=comfyui` plus a reviewed API-format workflow file and node mappings so the gateway can submit `/prompt`, poll `/history/{prompt_id}`, and fetch outputs through `/view`. Details live in [AI Provider Runtime](COGNITIVE_ARCHITECTURE.md).
 
 ## Binary Release Process
 

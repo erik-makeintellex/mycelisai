@@ -171,4 +171,35 @@ describe("CouncilCallErrorCard", () => {
         fireEvent.click(screen.getByText("Open Settings"));
         expect(assign).toHaveBeenCalledWith("/settings");
     });
+
+    it("offers Resources navigation for image-generator setup", () => {
+        const assign = vi.fn();
+        Object.defineProperty(window, "location", {
+            value: { assign },
+            configurable: true,
+        });
+
+        render(
+            <CouncilCallErrorCard
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "admin",
+                    message: "Forge is open, but image generation is not enabled.",
+                    availability: {
+                        code: "media_provider_not_ready",
+                        summary: "Forge is open, but image generation is not enabled.",
+                        recommended_action: "Enable API mode in Forge, restart Forge, then ask Soma to try again.",
+                        setup_required: true,
+                        setup_path: "/resources?section=capabilities",
+                    },
+                })}
+                onRetry={vi.fn()}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        fireEvent.click(screen.getByText("Open Resources"));
+        expect(assign).toHaveBeenCalledWith("/resources?section=capabilities");
+    });
 });

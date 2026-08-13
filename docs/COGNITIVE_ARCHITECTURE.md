@@ -17,7 +17,7 @@ This is the scoped implementation contract for model providers, routing, embeddi
 
 Mycelis supports **multiple self-hosted and commercial inference engines** — configure any combination of vLLM, Ollama, LM Studio, OpenAI, Anthropic, and Google via `cognitive.yaml` or the AI Engines settings surface.
 
-Media generation stays local-first. Core always calls the configured media provider through an OpenAI-compatible `/v1/images/generations` contract, but that contract is only the wire shape; it does not require OpenAI or `OPENAI_API_KEY`. For Pinokio-hosted apps, run `uv run inv cognitive.media-gateway` and point `MYCELIS_MEDIA_ENDPOINT` at `http://127.0.0.1:8001/v1`; the gateway adapts local Forge/AUTOMATIC1111 `txt2img` responses or ComfyUI workflow output retrieval without sending prompts or images to hosted providers. The gateway returns `b64_json` only and blocks public upstream hosts by default.
+Media generation stays local-first. Core supports direct Forge/AUTOMATIC1111 generation with `MYCELIS_MEDIA_TYPE=forge` and the native `/sdapi/v1/txt2img` contract, so a Pinokio-hosted Forge instance does not require a second gateway process. Forge must start with API mode enabled. OpenAI-compatible and hosted providers continue to use `/v1/images/generations`; ComfyUI continues through the optional local gateway because its workflow submission and output retrieval require an adapter. Before Soma offers approval for image work, Core checks configured Forge readiness. A running UI with API mode off produces one setup instruction and no doomed proposal/run.
 
 ## Provider Registry
 
@@ -163,17 +163,16 @@ Pinokio local media profile:
 
 ```env
 MYCELIS_MEDIA_PROVIDER_ID=pinokio-local
-MYCELIS_MEDIA_TYPE=openai_compatible
-MYCELIS_MEDIA_ENDPOINT=http://127.0.0.1:8001/v1
-MYCELIS_MEDIA_MODEL_ID=local-media
+MYCELIS_MEDIA_TYPE=forge
+MYCELIS_MEDIA_ENDPOINT=http://127.0.0.1:7860
+MYCELIS_MEDIA_MODEL_ID=forge-local
 MYCELIS_MEDIA_LOCATION=local
 MYCELIS_MEDIA_DATA_BOUNDARY=local_only
 MYCELIS_MEDIA_USAGE_POLICY=local_first
 MYCELIS_MEDIA_ENABLED=true
-MYCELIS_MEDIA_GATEWAY_BACKEND=forge
-MYCELIS_MEDIA_GATEWAY_UPSTREAM=http://127.0.0.1:7860
-MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=0
 ```
+
+Start Forge through Pinokio with API mode enabled and verify `http://127.0.0.1:7860/sdapi/v1/options` returns success. The ordinary Forge UI at `/` is not sufficient proof; when the UI is open but this route returns `404`, Soma explains the missing API mode before asking for approval.
 
 ComfyUI local media profile:
 

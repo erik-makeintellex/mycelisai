@@ -8,11 +8,11 @@
 | --- | --- |
 | Updated | 2026-08-12 |
 | Integration branch | `dev` |
-| Active slice | P0.9 human-first Soma convergence is `IN_REVIEW`: user-work navigation, first-viewport clarity, compact work triage, dedicated substantial-output viewing, and consolidated conversational work-attention state are implemented. Continued conversation during delayed work, output-canvas Back restoration, and manual novice acceptance remain open. |
+| Active slice | P0.9 human-first Soma convergence remains `IN_REVIEW`. Direct Pinokio Forge readiness and media Outcome delivery are `ACTIVE`: Core calls Forge without a hidden gateway, checks API readiness before approval, names the retained group image rather than `TEAM_EVOCATION.md`, and visibly blocks before proposal/team/run creation when Forge API mode is off. |
 | Production branch | `main` remains behind the accepted `dev` integration train pending release certification. |
 | Runtime posture | Dockerized PostgreSQL and NATS plus local Core and Interface are healthy; Ollama is running. Full Compose app containers, Kubernetes, and WSL remain explicit release-proof lanes. |
 | Delivery target | Pass human-first Soma acceptance, accept the external-mutation recovery contract, then execute P0.12 release certification and intentional `dev -> main` promotion. |
-| Main release risk | The trusted runtime journey and human-first composition now pass automated browser proof; asynchronous steering, true output-canvas return behavior, and unprompted novice comprehension still require explicit acceptance before release. |
+| Main release risk | The trusted runtime journey and human-first composition pass automated browser proof, but live media execution is blocked until the running Forge instance enables its API mode. Asynchronous steering, true output-canvas return behavior, and unprompted novice comprehension also require explicit acceptance before release. |
 | Canonical PRD alignment | Workspace owns Outcomes; Soma owns execution; WorkIntent is transitional; deliverables, proof, recovery, and continuity remain Outcome-owned user concepts. |
 
 ## Documentation Shortcuts
@@ -34,6 +34,7 @@
 | Lane | Status | Current evidence | Next gate |
 | --- | --- | --- | --- |
 | P0.9 full Trusted Outcome Journey | `IN_REVIEW` | Governed ask through revisit remains proven. The human-first slice adds `Soma`, `Work`, `Resources`, and `Help` navigation, removes default `AI Organization` language, keeps the untouched composer visible, prevents automatic drawers/runtime vocabulary/horizontal overflow, preserves a compact Work drawer, promotes Output into a navigation-aware desktop blade or contained compact sheet with one primary open action, and collapses repeated same-work machine updates into one conversational direction state without repeated continuation buttons. Focused component and desktop/compact browser proof cover this projection. | Prove conversational steering during delayed work, substantial-output Back restoration, and manual novice comprehension before release certification. |
+| Media Outcome execution | `ACTIVE` | Direct Forge `/sdapi/v1/txt2img`, group-scoped media targeting, provider-specific recovery, broad Core tests, UI unit tests, typecheck/build, and headed Chromium preflight pass. With the running Forge UI returning `404` for `/sdapi/v1/options`, Soma now shows one image-generator setup alert and creates no proposal, approval, team, failed run, or internal planning deliverable. | Restart Forge with API mode (`--api`) enabled, then complete the headed natural Soma ask through generated image preview, saved group path, proof, and revisit. |
 | P0.11 documentation convergence | `COMPLETE` | The canonical PRD contains all product architecture. The duplicate architecture overview and obsolete user-facing blueprint guide are deleted; user concepts, run/recovery, acceptance, deployment, API/provider, implementation, README, state, and in-app Help guidance match current Workspace/Outcome delivery and the Docker data-plane development lane. Documentation contracts, Help component tests, typecheck, and a headed real-manifest PRD-to-acceptance journey pass. | Keep one product-architecture authority and update owned support docs with behavior changes. |
 | P0.13 cross-device operator acceptance | `COMPLETE` | Dashboard, Groups, Resources, Memory, Docs, and Settings have focused desktop/mobile proof. Exact owner-scoped creation and purge pass visibly in Chromium; 32 fixture scopes are purged, no non-terminal scopes remain, and active claims are zero. Headed natural delivery creates a complete browser package, validates its declared interaction, opens it directly, and purges its resources. A post-merge run that crossed five minutes exposed orphan result correlation; the corrected feature and merged `dev` runs passed in 5.8 and 5.5 minutes. The headed Trusted Outcome Journey also passes Ask through Revisit with retained proof and cleanup. Conversational control is merged and post-merge proven. The integrated fresh-user matrix starts from a stale work URL, signs into Soma, traverses Groups creation, Resources, Memory, Docs, Settings, and returns to Soma with zero page, console, hydration, `5xx`, or horizontal-overflow failures at desktop and compact widths. The adjacent 40-journey headed set passes after focused Groups history and Vault hydration reruns. The merged `dev` state repeats the four-journey headed fresh-user matrix and service health successfully. | Preserve through release certification. |
 | P0.12 release hygiene and certification | `ACTIVE` | Clean Windows release preflight passes lint, Core, build, typecheck, Vitest, 121 Chromium journeys, source service health, and all four live governance scenarios. Configured Compose ports, shared identity-secret boundaries, and the Docker PostgreSQL/NATS plus local Core/Interface development topology are merged and re-proven on `dev` without app image builds. | Complete external-mutation operator acceptance, full Compose/Kubernetes certification, exact-candidate release preflight, and intentional promotion. |
@@ -42,11 +43,11 @@
 
 ## Immediate Work Order
 
-1. Complete P0.9 delayed-work steering: Soma must accept and acknowledge new conversation while NATS-backed work remains in progress.
-2. Promote substantial deliverables into a true output canvas and prove Back restores the originating Soma conversation and Outcome context.
-3. Run manual novice acceptance for Ask, active work, and completed deliverable discovery without instruction.
-4. Review the merged external-mutation recovery contract and its verification-first operator language.
-5. Execute P0.12 release certification from the clean `dev` candidate, then intentionally promote `dev -> main` only if every release gate passes.
+1. Restart Forge with API mode (`--api`) enabled, then complete live direct-Forge proof: natural Soma ask -> concise proposal -> approval -> retained group image -> preview/proof/revisit.
+2. Complete P0.9 delayed-work steering: Soma must accept and acknowledge new conversation while NATS-backed work remains in progress.
+3. Promote substantial deliverables into a true output canvas and prove Back restores the originating Soma conversation and Outcome context.
+4. Run manual novice acceptance for Ask, active work, and completed deliverable discovery without instruction.
+5. Review external-mutation recovery, then execute P0.12 certification and intentional `dev -> main` promotion only if every release gate passes.
 
 ## Accepted Proof
 

@@ -136,14 +136,26 @@ func plannedCallsAreDeterministicProposalSafe(planned []protocol.PlannedToolCall
 }
 
 func firstPlannedOutputTarget(planned []protocol.PlannedToolCall) string {
+	// The user owns the requested deliverable. Internal planning files may be
+	// retained for Inspect, but must never headline a media proposal.
 	for _, call := range planned {
-		switch strings.TrimSpace(call.Name) {
-		case "write_file":
+		if strings.TrimSpace(call.Name) == "save_cached_image" {
+			if target := workspaceMediaTarget(call.Arguments); target != "" {
+				return target
+			}
+		}
+	}
+	for _, call := range planned {
+		if strings.TrimSpace(call.Name) == "write_file" {
 			if target := firstNonEmptyString(call.Arguments["path"], call.Arguments["package_entrypoint"], call.Arguments["package_folder"]); target != "" {
 				return target
 			}
-		case "save_cached_image":
-			if target := workspaceMediaTarget(call.Arguments); target != "" {
+		}
+	}
+	for _, call := range planned {
+		switch strings.TrimSpace(call.Name) {
+		case "write_file":
+			if target := firstNonEmptyString(call.Arguments["path"], call.Arguments["package_entrypoint"], call.Arguments["package_folder"]); target != "" && !strings.Contains(strings.ToLower(target), "/planning/") {
 				return target
 			}
 		}

@@ -153,6 +153,14 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isMutation, mutTools, plannedToolCalls := executableMutationPlan(isMutation, agentResult, latestUserText, mutTools)
+	if isMutation {
+		if availability := s.mediaGenerationPreflight(r.Context(), plannedToolCalls); availability != nil {
+			agentResult.Availability = availability
+			agentResult.Text = availability.Summary
+			respondStructuredChatBlocker(w, agentResult)
+			return
+		}
+	}
 	if !isMutation && strings.TrimSpace(agentResult.Text) == "" && len(agentResult.Artifacts) == 0 {
 		respondStructuredChatBlocker(w, agentResult)
 		return

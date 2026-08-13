@@ -61,4 +61,25 @@ describe("buildMissionChatFailure", () => {
         expect(failure.bannerLabel).toBe("AI engine setup required");
         expect(failure.setupPath).toBe("/settings");
     });
+
+    it("names image-generator setup without presenting it as an AI engine failure", () => {
+        const failure = buildMissionChatFailure({
+            assistantName: "Soma",
+            targetId: "admin",
+            message: "Forge is open, but image generation is not enabled.",
+            statusCode: 503,
+            availability: {
+                code: "media_provider_not_ready",
+                summary: "Forge is open, but image generation is not enabled.",
+                recommended_action: "Enable API mode in Forge, restart Forge, then ask Soma to try again.",
+                setup_required: true,
+                setup_path: "/resources?section=capabilities",
+            },
+        });
+
+        expect(failure.type).toBe("setup_required");
+        expect(failure.title).toBe("Image Generator Setup Required");
+        expect(failure.bannerLabel).toBe("Image generator setup required");
+        expect(failure.setupPath).toBe("/resources?section=capabilities");
+    });
 });

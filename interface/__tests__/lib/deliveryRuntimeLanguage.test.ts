@@ -77,17 +77,28 @@ describe("deliveryRuntimeLanguage", () => {
     });
 
     expect(recovery).toEqual({
-      failed: "Local media generation is not reachable, so Soma could not create the image output.",
+      failed: "The configured image generator is not ready, so Soma could not create the image output.",
       trusted: "The approval, request, failed run record, and audit trail remain available for review.",
       invalid: "No completed image output or execution proof should be trusted for this attempt.",
-      recovery: "Start or reconnect the configured ComfyUI upstream, then retry. If you only need text/files, ask Soma to rerun without image generation.",
+      recovery: "Start or reconnect the configured image generator, then tell Soma to try the image again.",
     });
     expect(recovery ? recoveryTrustLines(recovery) : []).toEqual([
-      "Local media generation is not reachable, so Soma could not create the image output.",
+      "The configured image generator is not ready, so Soma could not create the image output.",
       "Still available: The approval, request, failed run record, and audit trail remain available for review.",
       "Not reliable: No completed image output or execution proof should be trusted for this attempt.",
-      "Safe next: Start or reconnect the configured ComfyUI upstream, then retry. If you only need text/files, ask Soma to rerun without image generation.",
+      "Safe next: Start or reconnect the configured image generator, then tell Soma to try the image again.",
     ]);
+  });
+
+  it("explains when Forge is open without API mode", () => {
+    const recovery = localMediaDependencyRecovery({
+      what_failed: "Forge is open, but image API access is off; enable API mode in Forge/Pinokio.",
+      trusted_state: "The request remains available.",
+    });
+    expect(recovery).toMatchObject({
+      failed: "Forge is open, but Soma cannot use image generation until its API mode is enabled.",
+      recovery: "Enable API mode in Forge's Pinokio launch settings, restart Forge, then tell Soma to try the image again.",
+    });
   });
 
   it("exposes compact review copy for failed and degraded team work", () => {

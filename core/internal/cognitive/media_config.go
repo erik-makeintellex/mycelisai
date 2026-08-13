@@ -8,6 +8,7 @@ import (
 const (
 	DefaultMediaProviderID       = "media"
 	DefaultMediaProviderType     = "openai_compatible"
+	MediaProviderTypeForge       = "forge"
 	DefaultMediaLocalLocation    = "local"
 	DefaultMediaRemoteLocation   = "remote"
 	DefaultMediaLocalBoundary    = "local_only"
