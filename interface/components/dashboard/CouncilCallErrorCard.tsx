@@ -17,6 +17,7 @@ export default function CouncilCallErrorCard({
 }) {
     const isSoma = failure.routeKind === "workspace";
     const showSetupAction = failure.type === "setup_required" && Boolean(failure.setupPath);
+    const setupActionLabel = failure.setupPath?.startsWith("/resources") ? "Open Resources" : "Open Settings";
     const [detailsOpen, setDetailsOpen] = useState(false);
 
     return (
@@ -51,7 +52,7 @@ export default function CouncilCallErrorCard({
                         onClick={() => window.location.assign(failure.setupPath!)}
                         className="inline-flex h-8 items-center rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/15"
                     >
-                        Open Settings
+                        {setupActionLabel}
                     </button>
                 )}
                 {!isSoma && (

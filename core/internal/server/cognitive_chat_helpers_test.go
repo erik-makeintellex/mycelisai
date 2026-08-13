@@ -129,6 +129,17 @@ func TestBuildPlannedToolCalls_StartsComplexTeamEvocationBrief(t *testing.T) {
 	}
 }
 
+func TestFirstPlannedOutputTarget_PrefersSavedMediaOverPlanningBrief(t *testing.T) {
+	calls := []protocol.PlannedToolCall{
+		{Name: "write_file", Arguments: map[string]any{"path": "groups/media-team/planning/TEAM_EVOCATION.md"}},
+		{Name: "generate_image", Arguments: map[string]any{"prompt": "Soma portrait"}},
+		{Name: "save_cached_image", Arguments: map[string]any{"folder": "groups/media-team/media", "filename": "soma-portrait.png"}},
+	}
+	if target := firstPlannedOutputTarget(calls); target != "groups/media-team/media/soma-portrait.png" {
+		t.Fatalf("target = %q, want retained image path", target)
+	}
+}
+
 func TestBuildPlannedToolCalls_PackageAskCreatesEvocationBrief(t *testing.T) {
 	request := strings.Join([]string{
 		"Create a team named First Demo Game Team and get them to build a playable browser game.",
