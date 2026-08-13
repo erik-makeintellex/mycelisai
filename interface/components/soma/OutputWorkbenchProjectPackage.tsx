@@ -69,6 +69,8 @@ export function OutputWorkbenchProjectPackage({
             folderLabel={OUTPUT_PACKAGE_FOLDER_LABEL}
             primary={isPrimary}
             showFolder={false}
+            openInCanvas
+            proofArtifactId={project.proof_artifact_id}
           />
         </div>
       </div>

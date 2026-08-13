@@ -256,11 +256,9 @@ The workspace explorer is organized around three operator steps:
 
 Output Files should read top-to-bottom: choose retained group output/source scope, optionally open the current folder, then browse, preview, or create from the full-width workspace panel below.
 
-The upper access card includes **Open folder** for the current workspace path.
-Use it when an operator wants to grab generated files, media proof, project
-packages, or browser-game output from the local machine without decoding the
-storage configuration. Retained output cards in Soma, Teams, and Groups should
-also expose **Open folder** when they carry a workspace path.
+The upper access card includes **Open folder** for the current workspace path. Use it when an operator wants to grab generated files, media proof, project packages, or browser-game output from the local machine without decoding the storage configuration.
+
+Retained output cards in Soma, Teams, and Groups open their primary file in the dedicated Mycelis output canvas and also expose **Open folder** when they carry a workspace path. Use **Back to Soma** to return to the exact conversation and Outcome context. Resources browsing, local folder access, proof, and technical references remain secondary ways to inspect the same retained object.
 
 Output locations:
 - generated files, project packages, browser games, and filesystem MCP writes land under `MYCELIS_WORKSPACE`

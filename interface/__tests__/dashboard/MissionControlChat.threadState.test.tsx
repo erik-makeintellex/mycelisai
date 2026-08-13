@@ -232,7 +232,10 @@ describe('MissionControlChat thread state cards', () => {
 
         expect(screen.getByText('Work complete')).toBeDefined();
         expect(screen.getByText(/One deliverable is ready to open/i)).toBeDefined();
-        expect(screen.getByRole('link', { name: /Open app/i }).getAttribute('href')).toContain('groups%2Fapp-team');
+        const outputLink = screen.getByRole('link', { name: /Open app/i });
+        expect(outputLink.getAttribute('href')).toContain('/outputs/view?');
+        expect(outputLink.getAttribute('href')).toContain('groups%252Fapp-team');
+        expect(outputLink.getAttribute('href')).toContain('return_to=%2Fdashboard');
         expect(screen.queryByText('team-work.result-projection')).toBeNull();
     });
 

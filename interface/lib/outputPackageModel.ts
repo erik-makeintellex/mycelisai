@@ -9,6 +9,15 @@ export interface OutputPackagePathInput {
 export const OUTPUT_PACKAGE_OPEN_LABEL = OUTPUT_PACKAGE_ACTION_LABELS.openFile;
 export const OUTPUT_PACKAGE_FOLDER_LABEL = OUTPUT_PACKAGE_ACTION_LABELS.openFolder;
 export const OUTPUT_PACKAGE_RESOURCES_LABEL = OUTPUT_PACKAGE_ACTION_LABELS.openInResources;
+export const OUTPUT_CANVAS_PATH = "/outputs/view";
+
+export interface OutputCanvasHrefInput {
+  label: string;
+  url?: string | null;
+  storagePath?: string | null;
+  returnTo?: string | null;
+  proofArtifactId?: string | null;
+}
 
 export function normalizeWorkspacePath(path?: string | null) {
   const normalized = path?.trim().replace(/\\/g, "/").replace(/^\/+/, "");
@@ -65,4 +74,38 @@ export function resourcesWorkspaceHref(path?: string | null) {
 
 export function projectPackageResourcesHref(input: OutputPackagePathInput) {
   return resourcesWorkspaceHref(projectPackageRevealPath(input));
+}
+
+export function outputCanvasSourceHref(url?: string | null, storagePath?: string | null) {
+  const source = url?.trim() || workspaceFileHref(storagePath);
+  if (!source) return null;
+  try {
+    const parsed = new URL(source, "http://mycelis.local");
+    if (parsed.origin !== "http://mycelis.local" || parsed.pathname !== "/api/v1/workspace/files/view") return null;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return null;
+  }
+}
+
+export function somaReturnHref(returnTo?: string | null) {
+  if (!returnTo) return "/dashboard";
+  try {
+    const parsed = new URL(returnTo, "http://mycelis.local");
+    if (parsed.origin !== "http://mycelis.local" || parsed.pathname !== "/dashboard") return "/dashboard";
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return "/dashboard";
+  }
+}
+
+export function outputCanvasHref({ label, url, storagePath, returnTo, proofArtifactId }: OutputCanvasHrefInput) {
+  const source = outputCanvasSourceHref(url, storagePath);
+  if (!source) return null;
+  const params = new URLSearchParams({ source, label: label.trim() || "Retained output" });
+  const normalizedPath = normalizeWorkspacePath(storagePath);
+  if (normalizedPath) params.set("path", normalizedPath);
+  if (proofArtifactId?.trim()) params.set("proof", proofArtifactId.trim());
+  params.set("return_to", somaReturnHref(returnTo));
+  return `${OUTPUT_CANVAS_PATH}?${params.toString()}`;
 }

@@ -72,7 +72,7 @@ File paths and detailed proof stay out of the default strip unless needed. Open 
 
 The review panel overlays the conversation instead of resizing it. It is for locating and triaging work, not for operating a substantial deliverable. On compact screens it uses an opaque full-width sheet so background text cannot compete with review content. Exact package-reference duplicates must not appear as a second output, and supporting files remain available under Details or Inspect.
 
-When a document, application, report, dataset, media item, or package becomes the object of attention, **Open output** promotes it into a dedicated surface with enough room to read, operate, compare, or validate it. Completion shows one short summary and one primary **Open output** action. Folder access, Resources, proof, versions, download, and technical references are secondary. Back returns to the originating Soma conversation and Outcome context.
+When a document, application, report, dataset, media item, or package becomes the object of attention, **Open output** promotes it into a dedicated Mycelis surface with enough room to read, operate, compare, or validate it instead of exposing a raw workspace-file endpoint. Completion shows one short summary and one primary **Open output** action. Folder access, Resources, proof, versions, download, and technical references are secondary. **Back to Soma** returns to the originating conversation, query, and Outcome context.
 
 When output is ready and recovery is also present, Soma should say that plainly, keep the output openable, and point you to the Work tab for recovery.
 

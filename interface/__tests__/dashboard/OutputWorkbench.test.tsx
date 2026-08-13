@@ -229,7 +229,7 @@ describe("OutputWorkbench", () => {
 
     expect(screen.getByText("Latest output").closest("article")?.textContent).toContain("Playable output");
     expect(screen.getByText("Open the completed output to review the result.")).toBeDefined();
-    expect(screen.getByRole("button", { name: /Open output Playable output/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Open output Playable output in Mycelis" })).toBeDefined();
     fireEvent.click(screen.getByText("Details and proof"));
     expect(screen.getByRole("button", { name: /Open local folder for Playable output/i })).toBeDefined();
     expect(screen.getByText("More outputs and verification")).toBeDefined();
