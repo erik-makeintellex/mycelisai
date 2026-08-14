@@ -129,6 +129,7 @@ export interface SomaThreadEvent {
     status?: string;
     run_id?: string;
     team_id?: string;
+    work_item_id?: string;
     agent_id?: string;
     source_kind?: string;
     source_channel?: string;
@@ -170,6 +171,16 @@ export interface MissionChatContinuationContext {
     proof?: string;
 }
 
+export interface MissionChatActiveWorkContext {
+    type: 'team_work';
+    id: string;
+    run_id: string;
+    team_id: string;
+    work_item_id: string;
+    project_id?: string;
+    steering_id?: string;
+}
+
 export interface ChatContinuationIntent {
     kind: 'follow_up' | 'update' | 'fork' | 'route' | 'inspect';
     context_kind?: string;
@@ -182,6 +193,7 @@ export interface ChatContinuationIntent {
 
 export interface MissionChatSendOptions {
     continuation_context?: MissionChatContinuationContext;
+    active_work_context?: MissionChatActiveWorkContext;
 }
 
 export interface CouncilMember {

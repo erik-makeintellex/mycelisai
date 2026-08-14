@@ -5,8 +5,10 @@ const proposalStartedDetail = 'Soma handed this to the work bus. You can keep ta
 
 export function executionStartedEvent(
     runId: string | null,
-    _teamWorkRefs: TeamWorkConfirmationRef[],
+    teamWorkRefs: TeamWorkConfirmationRef[],
 ): NonNullable<ChatMessage['thread_events']>[number] {
+    const activeWork = teamWorkRefs.find((ref) => ref.team_id && (ref.work_item_id || ref.work_id || ref.id));
+    const workItemId = activeWork?.work_item_id ?? activeWork?.work_id ?? activeWork?.id;
     return {
         kind: 'execution_started',
         label: 'Work started',
@@ -16,10 +18,12 @@ export function executionStartedEvent(
         tone: 'info',
         status: 'running',
         run_id: runId ?? undefined,
+        team_id: activeWork?.team_id,
+        work_item_id: workItemId,
         source_kind: 'web_api',
         source_channel: 'api.intent.confirm-action',
         payload_kind: 'soma_thread_event',
-        target_reference: runId ? `run:${runId}` : undefined,
+        target_reference: workItemId ? `work:${workItemId}` : runId ? `run:${runId}` : undefined,
         timestamp: new Date().toISOString(),
     };
 }

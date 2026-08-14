@@ -172,6 +172,37 @@ func TestInferContinuationIntent(t *testing.T) {
 	}
 }
 
+func TestNormalizeChatActiveWorkContextRequiresCorrelatedIdentity(t *testing.T) {
+	ctx, err := normalizeChatActiveWorkContext(&chatActiveWorkContext{
+		RunID:      "11111111-1111-4111-8111-111111111111",
+		TeamID:     "launch-team",
+		WorkItemID: "22222222-2222-4222-8222-222222222222",
+		SteeringID: "33333333-3333-4333-8333-333333333333",
+	})
+	if err != nil {
+		t.Fatalf("normalize active work context: %v", err)
+	}
+	if ctx.Type != "team_work" || ctx.ID != ctx.WorkItemID {
+		t.Fatalf("normalized active work context = %#v", ctx)
+	}
+	if _, err := normalizeChatActiveWorkContext(&chatActiveWorkContext{TeamID: "launch-team"}); err == nil {
+		t.Fatal("expected incomplete active work context to be rejected")
+	}
+}
+
+func TestShouldSteerActiveWorkKeepsOrdinaryConversationSeparate(t *testing.T) {
+	ctx := &chatActiveWorkContext{TeamID: "launch-team", WorkItemID: "work-1", RunID: "run-1"}
+	if !shouldSteerActiveWork(ctx, "Also include a concise launch summary.") {
+		t.Fatal("explicit addition should steer active work")
+	}
+	if shouldSteerActiveWork(ctx, "What is the weather like today?") {
+		t.Fatal("ordinary conversation must not steer active work")
+	}
+	if shouldSteerActiveWork(nil, "Also include a concise launch summary.") {
+		t.Fatal("conversation without active work cannot steer")
+	}
+}
+
 func decodeChatPayloadForTest(t *testing.T, body []byte) protocol.ChatResponsePayload {
 	t.Helper()
 	var response struct {

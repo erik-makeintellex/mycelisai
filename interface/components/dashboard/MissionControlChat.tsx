@@ -21,6 +21,7 @@ import { buildMissionChatScope } from "@/store/cortexStoreMissionChatHelpers";
 import { clearAllPersistedChat } from "@/store/cortexStoreUtils";
 import { conversationalProposalReply } from "./conversationalProposalReply";
 import { presentMissionChat } from "./missionControlChatPresentation";
+import { activeWorkContextFromMessages } from "@/store/cortexStoreThreadEvents";
 
 export default function MissionControlChat({
     simpleMode = false,
@@ -48,6 +49,7 @@ export default function MissionControlChat({
     const isBroadcasting = useCortexStore((s) => s.isBroadcasting);
     const assistantName = useCortexStore((s) => s.assistantName);
     const presentedMissionChat = useMemo(() => presentMissionChat(missionChat), [missionChat]);
+    const activeWorkContext = useMemo(() => activeWorkContextFromMessages(missionChat), [missionChat]);
     const councilTarget = useCortexStore((s) => s.councilTarget);
     const councilMembers = useCortexStore((s) => s.councilMembers);
     const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
@@ -142,7 +144,13 @@ export default function MissionControlChat({
             broadcastToSwarm(content);
             setPendingContinuationContext(null);
         } else {
-            sendMissionChat(content, pendingContinuationContext ? { continuation_context: pendingContinuationContext } : undefined);
+            const options = pendingContinuationContext || activeWorkContext
+                ? {
+                    continuation_context: pendingContinuationContext ?? undefined,
+                    active_work_context: activeWorkContext ?? undefined,
+                }
+                : undefined;
+            sendMissionChat(content, options);
             setPendingContinuationContext(null);
         }
         if (!proposalReply) setInput("");

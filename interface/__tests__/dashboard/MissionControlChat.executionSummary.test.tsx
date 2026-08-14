@@ -86,7 +86,7 @@ describe('MissionControlChat execution summary', () => {
             expect(screen.getByText('Operations Team')).toBeDefined();
             expect(screen.getByRole('link', { name: /Audit proof/i }).getAttribute('href')).toBe('/proof/proof-123');
             expect(screen.getByText('Onboarding run package')).toBeDefined();
-            expect(screen.getByRole('button', { name: /Open file Onboarding run package/i })).toBeDefined();
+            expect(screen.getByRole('button', { name: /Open output Onboarding run package in a new browser window/i })).toBeDefined();
             expect(screen.getByText('Review the generated package before notifying operators.')).toBeDefined();
         });
 

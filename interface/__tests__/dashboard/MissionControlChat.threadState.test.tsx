@@ -91,6 +91,9 @@ describe('MissionControlChat thread state cards', () => {
                     detail: 'Soma handed this to the work bus. It is running, not complete, and you can keep talking here.',
                     tone: 'info',
                     status: 'running',
+                    run_id: 'run-thread-123',
+                    team_id: 'launch-team',
+                    work_item_id: 'work-thread-123',
                     target_reference: 'run:run-thread-123',
                     source_kind: 'web_api',
                     source_channel: 'api.intent.confirm-action',
@@ -121,7 +124,16 @@ describe('MissionControlChat thread state cards', () => {
         fireEvent.change(input, { target: { value: 'Also prepare a concise launch note.' } });
         fireEvent.keyDown(input, { key: 'Enter' });
 
-        expect(sendMissionChat).toHaveBeenCalledWith('Also prepare a concise launch note.', undefined);
+        expect(sendMissionChat).toHaveBeenCalledWith('Also prepare a concise launch note.', {
+            active_work_context: {
+                type: 'team_work',
+                id: 'work-thread-123',
+                run_id: 'run-thread-123',
+                team_id: 'launch-team',
+                work_item_id: 'work-thread-123',
+            },
+            continuation_context: undefined,
+        });
         expect((input as HTMLTextAreaElement).value).toBe('');
     });
 

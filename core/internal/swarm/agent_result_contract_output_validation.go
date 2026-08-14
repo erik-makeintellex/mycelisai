@@ -14,7 +14,7 @@ var (
 	outputValidationNamedFunction           = regexp.MustCompile(`(?m)\bfunction\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\([^)]*\)\s*\{`)
 	outputValidationScriptContent           = regexp.MustCompile(`(?is)<script\b[^>]*>(.*?)</script>`)
 	resultContractInteractiveHandlerPattern = regexp.MustCompile(`(?i)(?:addEventListener\s*\(\s*["'](?:click|pointerdown|touchstart|keydown|keyup)|on(?:click|pointerdown|touchstart|keydown)\s*=)`)
-	resultContractVisibleControlPattern     = regexp.MustCompile(`(?i)\b(?:click|tap|press|use|move|drag|select|arrow|space|wasd|control)\b`)
+	resultContractVisibleControlPattern     = regexp.MustCompile(`(?i)\b(?:click|tap|press|use|move|drag|select|arrow|space|wasd|control|start|restart|run|submit|save|reset|open|add|next)\b`)
 	resultContractScriptOrStylePattern      = regexp.MustCompile(`(?is)<(?:script|style)\b[^>]*>.*?</(?:script|style)>`)
 	resultContractHTMLTagPattern            = regexp.MustCompile(`(?s)<[^>]+>`)
 )

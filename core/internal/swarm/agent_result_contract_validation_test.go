@@ -54,6 +54,23 @@ func TestInteractivePackageReadbackRequiresHandlerAndVisibleInstructions(t *test
 	}
 }
 
+func TestInteractivePackageAcceptsFamiliarVisibleControlLabel(t *testing.T) {
+	requirement := &teamResultRequirement{
+		Kind: "project_package", ExpectedOutputs: []string{"interactive browser app"},
+		AcceptanceCriteria: []string{"primary control changes the application"}, ReadbackRequired: true,
+	}
+	entrypoint := "groups/team/generated/app/index.html"
+	content := `<button data-mycelis-primary-action onclick="status.textContent='restarted'">Restart</button><p data-mycelis-validation-surface id="status">Ready</p>`
+	evidence := []successfulToolEvidence{
+		{ToolName: "write_file", Path: entrypoint, Content: content},
+		{ToolName: "read_file", Path: entrypoint, Content: content},
+	}
+	artifacts := reconcileToolBackedArtifacts(nil, evidence, "Create an interactive browser app.")
+	if issues := resultContractIssues(requirement, artifacts, evidence); len(issues) != 0 {
+		t.Fatalf("familiar visible control label was rejected: %v", issues)
+	}
+}
+
 func TestInteractivePackageReadbackRequiresApprovedValidationTargets(t *testing.T) {
 	entrypoint := "groups/team/generated/app/index.html"
 	plan := &protocol.OutputValidationPlan{

@@ -16,6 +16,7 @@ import {
 type NaturalProposalData = {
   mode?: string;
   payload?: {
+    text?: string;
     tools_used?: string[];
   };
 };
@@ -84,6 +85,34 @@ test.describe("Natural Soma delivery routing", () => {
       runID = confirmedData?.run_id;
       expect(runID).toBeTruthy();
       await expect(page.getByText("Work started", { exact: true }).last()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByPlaceholder(/Tell Soma what you want/i)).toBeEnabled();
+
+      const steeringStartedAt = Date.now();
+      const steering = await submitLiveWorkspaceChat(
+        page,
+        "Also keep the visible Restart control in the finished app.",
+      );
+      expect(steering.response.ok(), steering.body ? JSON.stringify(steering.body) : steering.raw).toBeTruthy();
+      const steeringRequest = steering.response.request().postDataJSON() as {
+        active_work_context?: {
+          type?: string;
+          run_id?: string;
+          team_id?: string;
+          work_item_id?: string;
+          steering_id?: string;
+        };
+      };
+      expect(steeringRequest.active_work_context).toEqual(expect.objectContaining({
+        type: "team_work",
+        run_id: runID,
+        team_id: teamID,
+        work_item_id: expect.any(String),
+        steering_id: expect.any(String),
+      }));
+      expect(Date.now() - steeringStartedAt).toBeLessThan(10_000);
+      const steeringData = steering.body?.data as NaturalProposalData | undefined;
+      expect(steeringData?.payload?.text).toContain("I passed that guidance to the team");
+      await expect(page.getByText(/I passed that guidance to the team/i).last()).toBeVisible();
       await expect(page.getByPlaceholder(/Tell Soma what you want/i)).toBeEnabled();
 
       const completed = await waitForNaturalDelivery(page, teamID!, confirmedData!.run_id!);

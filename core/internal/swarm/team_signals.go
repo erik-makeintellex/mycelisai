@@ -18,10 +18,10 @@ const teamCommandCorrelationTTL = 30 * time.Minute
 // handleTrigger receives an external signal and broadens it to the internal team bus.
 func (t *Team) handleTrigger(msg *nats.Msg) {
 	log.Printf("Team [%s] Triggered by [%s]", t.Manifest.Name, msg.Subject)
-	internalSubject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID)
 	payload := normalizeCommandPayload(msg.Data)
+	guidance, steering := extractTeamSteering(payload)
 	if correlation := extractTeamCommandCorrelation(t.Manifest.ID, msg.Data, payload); correlation != nil {
-		accepted, err := t.acceptCommandCorrelation(context.Background(), *correlation, msg.Subject)
+		accepted, err := t.acceptCommand(context.Background(), *correlation, msg.Subject, steering)
 		if err != nil {
 			log.Printf("Team [%s] could not durably accept command [%s]: %v", t.Manifest.Name, correlation.commandKey(), err)
 			return
@@ -34,6 +34,11 @@ func (t *Team) handleTrigger(msg *nats.Msg) {
 			t.publishCommandAccepted(*correlation, msg.Subject)
 		}
 	}
+	if steering {
+		t.publishAgentInterjections(guidance)
+		return
+	}
+	internalSubject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID)
 	t.nc.Publish(internalSubject, payload)
 }
 
