@@ -56,4 +56,30 @@ describe('useCortexStore mission chat continuation context', () => {
         const body = JSON.parse(String(request.body));
         expect(body).not.toHaveProperty('continuation_context');
     });
+
+    it('adds an idempotent active-work reference without changing the visible message', async () => {
+        mockFetch.mockResolvedValue(okChat('I passed that guidance to the team.'));
+
+        await useCortexStore.getState().sendMissionChat('Also add a launch note.', {
+            active_work_context: {
+                type: 'team_work',
+                id: '22222222-2222-4222-8222-222222222222',
+                run_id: '11111111-1111-4111-8111-111111111111',
+                team_id: 'launch-team',
+                work_item_id: '22222222-2222-4222-8222-222222222222',
+            },
+        });
+
+        const request = mockFetch.mock.calls[0]?.[1] as RequestInit;
+        const body = JSON.parse(String(request.body));
+        expect(body.active_work_context).toMatchObject({
+            type: 'team_work',
+            id: '22222222-2222-4222-8222-222222222222',
+            run_id: '11111111-1111-4111-8111-111111111111',
+            team_id: 'launch-team',
+            work_item_id: '22222222-2222-4222-8222-222222222222',
+        });
+        expect(body.active_work_context.steering_id).toMatch(/^[0-9a-f-]{36}$/i);
+        expect(body.messages.at(-1)).toEqual({ role: 'user', content: 'Also add a launch note.' });
+    });
 });

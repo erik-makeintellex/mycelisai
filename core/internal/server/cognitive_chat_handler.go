@@ -28,6 +28,11 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		respondAPIError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	activeWorkContext, err := normalizeChatActiveWorkContext(req.ActiveWorkContext)
+	if err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	if len(req.Messages) == 0 {
 		http.Error(w, "Empty conversation", http.StatusBadRequest)
@@ -55,6 +60,12 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	latestUserText := latestUserMessageContent(req.Messages)
 	continuationContext = applyContinuationIntent(continuationContext, latestUserText)
 	continuationIntent := chatContinuationIntent(continuationContext)
+	if shouldSteerActiveWork(activeWorkContext, latestUserText) {
+		s.respondActiveWorkSteering(
+			w, r, activeWorkContext, latestUserText, sessionID, focusedTeamID, sessionTurnIndex,
+		)
+		return
+	}
 	if isRuntimeStateQuestion(latestUserText) {
 		s.respondRuntimeStateSummary(w, r, req.OrganizationID, req.TeamID, req.TeamName)
 		return

@@ -17,6 +17,16 @@ type chatContinuationContext struct {
 	Intent    string `json:"intent,omitempty"`
 }
 
+type chatActiveWorkContext struct {
+	Type       string `json:"type,omitempty"`
+	ID         string `json:"id,omitempty"`
+	RunID      string `json:"run_id,omitempty"`
+	TeamID     string `json:"team_id,omitempty"`
+	WorkItemID string `json:"work_item_id,omitempty"`
+	ProjectID  string `json:"project_id,omitempty"`
+	SteeringID string `json:"steering_id,omitempty"`
+}
+
 type chatRequest struct {
 	Messages            []chatRequestMessage     `json:"messages"`
 	SessionID           string                   `json:"session_id,omitempty"`
@@ -24,6 +34,39 @@ type chatRequest struct {
 	TeamID              string                   `json:"team_id,omitempty"`
 	TeamName            string                   `json:"team_name,omitempty"`
 	ContinuationContext *chatContinuationContext `json:"continuation_context,omitempty"`
+	ActiveWorkContext   *chatActiveWorkContext   `json:"active_work_context,omitempty"`
+}
+
+func normalizeChatActiveWorkContext(input *chatActiveWorkContext) (*chatActiveWorkContext, error) {
+	if input == nil {
+		return nil, nil
+	}
+	out := &chatActiveWorkContext{
+		Type:       cleanContinuationField(input.Type, 40),
+		ID:         cleanContinuationField(input.ID, 80),
+		RunID:      cleanContinuationField(input.RunID, 80),
+		TeamID:     cleanContinuationField(input.TeamID, 120),
+		WorkItemID: cleanContinuationField(input.WorkItemID, 80),
+		ProjectID:  cleanContinuationField(input.ProjectID, 80),
+		SteeringID: cleanContinuationField(input.SteeringID, 80),
+	}
+	if out.Type == "" {
+		out.Type = "team_work"
+	}
+	if out.Type != "team_work" || out.TeamID == "" || out.WorkItemID == "" || out.RunID == "" {
+		return nil, fmt.Errorf("active_work_context requires type team_work, team_id, work_item_id, and run_id")
+	}
+	for label, value := range map[string]string{
+		"run_id": out.RunID, "work_item_id": out.WorkItemID, "steering_id": out.SteeringID,
+	} {
+		if value != "" {
+			if err := validateOptionalUUID(label, value); err != nil {
+				return nil, err
+			}
+		}
+	}
+	out.ID = firstNonEmptyString(out.ID, out.WorkItemID)
+	return out, nil
 }
 
 func normalizeChatContinuationContext(input *chatContinuationContext) (*chatContinuationContext, error) {

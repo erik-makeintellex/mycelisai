@@ -1,4 +1,9 @@
-import type { ChatMessage, SomaThreadEvent, StreamSignal } from '@/store/cortexStoreTypes';
+import type {
+    ChatMessage,
+    MissionChatActiveWorkContext,
+    SomaThreadEvent,
+    StreamSignal,
+} from '@/store/cortexStoreTypes';
 
 type RawThreadEvent = Partial<SomaThreadEvent> & {
     hrefLabel?: string;
@@ -7,6 +12,27 @@ type RawThreadEvent = Partial<SomaThreadEvent> & {
 
 const THREAD_EVENT_KINDS = new Set(['execution_started', 'execution_update', 'result_ready', 'attention_required']);
 const THREAD_EVENT_TONES = new Set(['info', 'success', 'warning', 'danger']);
+
+export function activeWorkContextFromMessages(messages: ChatMessage[]): MissionChatActiveWorkContext | null {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const message = messages[index];
+        const events = message.thread_events?.length ? message.thread_events : message.thread_event ? [message.thread_event] : [];
+        for (let eventIndex = events.length - 1; eventIndex >= 0; eventIndex -= 1) {
+            const event = events[eventIndex];
+            const runId = event.run_id ?? message.run_id;
+            if (!runId || !event.team_id || !event.work_item_id) continue;
+            if (event.kind === 'result_ready') return null;
+            return {
+                type: 'team_work',
+                id: event.work_item_id,
+                run_id: runId,
+                team_id: event.team_id,
+                work_item_id: event.work_item_id,
+            };
+        }
+    }
+    return null;
+}
 
 export function chatMessageFromThreadSignal(signal: StreamSignal): ChatMessage | null {
     if (signal.payload_kind !== 'thread_event' && signal.type !== 'thread_event') return null;
@@ -41,6 +67,7 @@ export function chatMessageFromThreadSignal(signal: StreamSignal): ChatMessage |
             status: textValue(raw.status),
             run_id: signal.run_id,
             team_id: signal.team_id,
+            work_item_id: textValue(raw.work_item_id),
             agent_id: signal.agent_id,
             source_kind: signal.source_kind,
             source_channel: signal.source_channel,
@@ -59,6 +86,7 @@ export function chatMessageFromThreadSignal(signal: StreamSignal): ChatMessage |
             status: textValue(raw.status),
             run_id: signal.run_id,
             team_id: signal.team_id,
+            work_item_id: textValue(raw.work_item_id),
             agent_id: signal.agent_id,
             source_kind: signal.source_kind,
             source_channel: signal.source_channel,

@@ -38,11 +38,15 @@ function fallbackUUID(): string {
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-function createChatSessionId(): string {
+export function createClientCorrelationId(): string {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         return crypto.randomUUID();
     }
     return fallbackUUID();
+}
+
+function createChatSessionId(): string {
+    return createClientCorrelationId();
 }
 
 function isValidChatSessionId(value: string): boolean {
@@ -140,6 +144,7 @@ function sanitizeThreadEvent(value: unknown): SomaThreadEvent | undefined {
         status: optionalString(value.status),
         run_id: optionalString(value.run_id),
         team_id: optionalString(value.team_id),
+        work_item_id: optionalString(value.work_item_id),
         agent_id: optionalString(value.agent_id),
         source_kind: optionalString(value.source_kind),
         source_channel: optionalString(value.source_channel),

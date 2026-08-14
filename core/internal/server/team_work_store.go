@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -82,6 +83,22 @@ func (s *AdminServer) getTeamWorkItemDB(ctx context.Context, teamID, workItemID 
 		WHERE tenant_id='default' AND team_id=$1 AND id=$2`,
 		strings.TrimSpace(teamID), workItemID,
 	))
+}
+
+func (s *AdminServer) getTeamWorkItemForUpdateTx(ctx context.Context, tx *sql.Tx, teamID, workItemID string) (protocol.TeamWorkItem, error) {
+	if tx == nil {
+		return protocol.TeamWorkItem{}, errors.New("database transaction not available")
+	}
+	return scanTeamWorkItem(tx.QueryRowContext(ctx, `
+		SELECT id::text, team_id, COALESCE(run_id::text,''), COALESCE(intent_proof_id::text,''),
+		       COALESCE(contract_id,''), COALESCE(proof_id,''), objective, scope, owner,
+		       execution_shape, execution_mode, work_intent, expected_outputs, expected_proof, capability_requirements,
+		       governance_posture, state, COALESCE(last_event, 'null'::jsonb), needs_operator,
+		       degradation_state, recovery_options, output_refs, proof_refs, audit_refs,
+		       created_at, updated_at, version
+		FROM team_work_items
+		WHERE tenant_id='default' AND team_id=$1 AND id=$2
+		FOR UPDATE`, strings.TrimSpace(teamID), workItemID))
 }
 
 func (s *AdminServer) insertTeamWorkItemDB(ctx context.Context, item *protocol.TeamWorkItem) error {

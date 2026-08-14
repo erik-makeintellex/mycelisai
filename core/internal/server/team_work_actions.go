@@ -1,9 +1,12 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -11,15 +14,19 @@ import (
 )
 
 type teamWorkActionRequest struct {
-	Action        protocol.TeamWorkAction `json:"action"`
-	Summary       string                  `json:"summary,omitempty"`
-	ActorRef      string                  `json:"actor_ref,omitempty"`
-	SourceKind    string                  `json:"source_kind,omitempty"`
-	SourceChannel string                  `json:"source_channel,omitempty"`
-	PayloadKind   string                  `json:"payload_kind,omitempty"`
-	Payload       map[string]any          `json:"payload,omitempty"`
-	AuditRefs     []string                `json:"audit_refs,omitempty"`
+	Action         protocol.TeamWorkAction `json:"action"`
+	Summary        string                  `json:"summary,omitempty"`
+	ActorRef       string                  `json:"actor_ref,omitempty"`
+	SourceKind     string                  `json:"source_kind,omitempty"`
+	SourceChannel  string                  `json:"source_channel,omitempty"`
+	PayloadKind    string                  `json:"payload_kind,omitempty"`
+	Payload        map[string]any          `json:"payload,omitempty"`
+	AuditRefs      []string                `json:"audit_refs,omitempty"`
+	IdempotencyKey string                  `json:"idempotency_key,omitempty"`
+	ExpectedRunID  string                  `json:"-"`
 }
+
+var errTeamWorkActionRejected = errors.New("team work action rejected")
 
 // HandleTeamWorkAction applies a durable operator control to an existing work item.
 // POST /api/v1/teams/{id}/work/{workItemId}/actions
@@ -48,45 +55,87 @@ func (s *AdminServer) HandleTeamWorkAction(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	item, err := s.getTeamWorkItemDB(r.Context(), teamID, workItemID)
+	item, steeringKey, err := s.applyTeamWorkAction(r.Context(), teamID, workItemID, req, action)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondAPIError(w, "team work item not found", http.StatusNotFound)
 			return
 		}
-		respondAPIError(w, "Failed to load team work: "+err.Error(), http.StatusServiceUnavailable)
+		if errors.Is(err, errTeamWorkActionRejected) {
+			message := strings.TrimPrefix(err.Error(), errTeamWorkActionRejected.Error()+": ")
+			respondAPIError(w, message, http.StatusBadRequest)
+			return
+		}
+		respondAPIError(w, "Failed to update team work: "+err.Error(), http.StatusServiceUnavailable)
 		return
+	}
+	if steeringKey != "" {
+		if err := s.DispatchOutbox.Activate(r.Context(), steeringKey); err != nil {
+			log.Printf("team steering %s remains staged for dispatch recovery: %v", steeringKey, err)
+		}
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(item))
+}
+
+func (s *AdminServer) applyTeamWorkAction(
+	ctx context.Context,
+	teamID string,
+	workItemID string,
+	req teamWorkActionRequest,
+	action protocol.TeamWorkAction,
+) (protocol.TeamWorkItem, string, error) {
+	db := s.getDB()
+	if db == nil {
+		return protocol.TeamWorkItem{}, "", errors.New("database not available")
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return protocol.TeamWorkItem{}, "", err
+	}
+	defer tx.Rollback()
+
+	item, err := s.getTeamWorkItemForUpdateTx(ctx, tx, teamID, workItemID)
+	if err != nil {
+		return protocol.TeamWorkItem{}, "", err
+	}
+	if expected := strings.TrimSpace(req.ExpectedRunID); expected != "" && item.RunID != expected {
+		return protocol.TeamWorkItem{}, "", fmt.Errorf("%w: active work no longer matches this run", errTeamWorkActionRejected)
 	}
 	targetState, err := protocol.ApplyTeamWorkAction(item, action)
 	if err != nil {
-		respondAPIError(w, err.Error(), http.StatusBadRequest)
-		return
+		return protocol.TeamWorkItem{}, "", fmt.Errorf("%w: %v", errTeamWorkActionRejected, err)
 	}
-
 	item.State = targetState
 	applyTeamWorkActionPosture(&item)
 	if err := protocol.ValidateTeamWorkItem(item); err != nil {
-		respondAPIError(w, err.Error(), http.StatusBadRequest)
-		return
+		return protocol.TeamWorkItem{}, "", fmt.Errorf("%w: %v", errTeamWorkActionRejected, err)
 	}
 	event := teamWorkActionStatusEvent(item, req, action)
-	if err := s.insertTeamStatusEventDB(r.Context(), &event); err != nil {
-		respondAPIError(w, "Failed to record team work status: "+err.Error(), http.StatusInternalServerError)
-		return
+	if err := s.insertTeamStatusEventExec(ctx, tx, &event); err != nil {
+		return protocol.TeamWorkItem{}, "", err
 	}
-	if err := s.updateTeamWorkItemLastEventDB(r.Context(), &item, event); err != nil {
-		respondAPIError(w, "Failed to update team work: "+err.Error(), http.StatusInternalServerError)
-		return
+	if err := s.updateTeamWorkItemLastEventExec(ctx, tx, &item, event); err != nil {
+		return protocol.TeamWorkItem{}, "", err
 	}
+	item.LastEvent = &event
 	interaction := teamWorkActionInteraction(item, req, action)
-	if err := s.insertTeamInteractionDB(r.Context(), &interaction); err != nil {
-		respondAPIError(w, "Failed to record team work interaction: "+err.Error(), http.StatusInternalServerError)
-		return
+	if err := s.insertTeamInteractionExec(ctx, tx, &interaction); err != nil {
+		return protocol.TeamWorkItem{}, "", err
+	}
+	steeringKey := ""
+	if action == protocol.TeamWorkActionSteer && item.RunID != "" && item.IntentProofID != "" {
+		steeringKey, err = s.stageTeamWorkSteeringTx(ctx, tx, item, req)
+		if err != nil {
+			return protocol.TeamWorkItem{}, "", err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return protocol.TeamWorkItem{}, "", err
 	}
 	if !event.Timestamp.IsZero() {
 		item.UpdatedAt = event.Timestamp
 	}
-	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(item))
+	return item, steeringKey, nil
 }
 
 func applyTeamWorkActionPosture(item *protocol.TeamWorkItem) {

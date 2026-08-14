@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeIncomingSignal } from "@/lib/signalNormalize";
-import { chatMessageFromThreadSignal } from "@/store/cortexStoreThreadEvents";
+import { activeWorkContextFromMessages, chatMessageFromThreadSignal } from "@/store/cortexStoreThreadEvents";
+import { executionStartedEvent } from "@/store/cortexStoreProposalThreadEvents";
 
 describe("cortexStoreThreadEvents", () => {
     it("maps typed stream events into compact Soma thread messages", () => {
@@ -58,5 +59,49 @@ describe("cortexStoreThreadEvents", () => {
         });
 
         expect(chatMessageFromThreadSignal(signal)).toBeNull();
+    });
+
+    it("retains active team work identity without exposing it as a new interface object", () => {
+        const event = executionStartedEvent("11111111-1111-4111-8111-111111111111", [{
+            team_id: "launch-team",
+            work_item_id: "22222222-2222-4222-8222-222222222222",
+            state: "running",
+        }]);
+
+        expect(event).toMatchObject({
+            run_id: "11111111-1111-4111-8111-111111111111",
+            team_id: "launch-team",
+            work_item_id: "22222222-2222-4222-8222-222222222222",
+        });
+        expect(activeWorkContextFromMessages([{
+            role: "system",
+            content: "Work started",
+            mode: "execution_result",
+            run_id: event.run_id,
+            thread_events: [event],
+        }])).toEqual({
+            type: "team_work",
+            id: "22222222-2222-4222-8222-222222222222",
+            run_id: "11111111-1111-4111-8111-111111111111",
+            team_id: "launch-team",
+            work_item_id: "22222222-2222-4222-8222-222222222222",
+        });
+    });
+
+    it("stops attaching conversation after the correlated result is ready", () => {
+        expect(activeWorkContextFromMessages([{
+            role: "system",
+            content: "Work complete",
+            mode: "execution_result",
+            run_id: "11111111-1111-4111-8111-111111111111",
+            thread_event: {
+                kind: "result_ready",
+                label: "Work complete",
+                tone: "success",
+                run_id: "11111111-1111-4111-8111-111111111111",
+                team_id: "launch-team",
+                work_item_id: "22222222-2222-4222-8222-222222222222",
+            },
+        }])).toBeNull();
     });
 });
