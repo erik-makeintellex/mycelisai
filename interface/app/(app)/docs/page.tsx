@@ -73,6 +73,7 @@ function DocsContent() {
   );
 
   useEffect(() => {
+    let active = true;
     const requestedSlug = searchParams?.get("doc") ?? null;
     fetch("/docs-api")
       .then((response) => {
@@ -80,6 +81,7 @@ function DocsContent() {
         return response.json();
       })
       .then((data: ManifestResponse) => {
+        if (!active) return;
         if (!Array.isArray(data.sections)) {
           throw new Error("manifest response did not include sections");
         }
@@ -90,8 +92,16 @@ function DocsContent() {
           : allDocs[0];
         if (target) loadDoc(target, Boolean(requestedSlug));
       })
-      .catch((err) => setError(`Failed to load doc manifest: ${err instanceof Error ? err.message : String(err)}`))
-      .finally(() => setLoadingManifest(false));
+      .catch((err) => {
+        if (active) setError(`Failed to load doc manifest: ${err instanceof Error ? err.message : String(err)}`);
+      })
+      .finally(() => {
+        if (active) setLoadingManifest(false);
+      });
+    return () => {
+      active = false;
+      docRequestRef.current += 1;
+    };
     // Load the initial manifest once; document clicks call loadDoc directly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

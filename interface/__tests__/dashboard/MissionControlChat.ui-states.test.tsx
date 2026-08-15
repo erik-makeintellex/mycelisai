@@ -43,10 +43,9 @@ describe('MissionControlChat UI states', () => {
 
         expect(screen.getByText(/Your Mycelis runtime isn't running yet/i)).toBeDefined();
         expect(screen.getByText('Source-mode recovery')).toBeDefined();
-        expect(screen.getByText('uv run inv native-infra.status')).toBeDefined();
-        expect(screen.getByText('uv run inv native-infra.up')).toBeDefined();
-        expect(screen.getByText('uv run inv db.migrate')).toBeDefined();
+        expect(screen.getByText('uv run inv lifecycle.status')).toBeDefined();
         expect(screen.getByText('uv run inv lifecycle.up --frontend')).toBeDefined();
+        expect(screen.queryByText(/native-infra/)).toBeNull();
         expect(screen.queryByText(/neural organism/i)).toBeNull();
         expect(screen.queryByText('uv run inv lifecycle.up')).toBeNull();
         expect(screen.queryByText('inv lifecycle.up')).toBeNull();

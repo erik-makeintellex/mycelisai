@@ -136,6 +136,34 @@ def test_cache_guard_fails_when_free_space_is_below_threshold(monkeypatch, tmp_p
         raise AssertionError("cache.guard should fail under low disk headroom")
 
 
+def test_cache_guard_checks_user_volume_with_default_targets(monkeypatch, tmp_path):
+    repo_path = tmp_path / "repo"
+    user_path = tmp_path / "user"
+    repo_path.mkdir()
+    user_path.mkdir()
+    gib = 1024 ** 3
+
+    monkeypatch.setattr(
+        cache,
+        "_disk_targets",
+        lambda paths=None: [("repo", repo_path), ("user", user_path)],
+    )
+    monkeypatch.setattr(
+        cache.shutil,
+        "disk_usage",
+        lambda path: shutil._ntuple_diskusage(100 * gib, 95 * gib, 5 * gib)
+        if path == user_path
+        else shutil._ntuple_diskusage(100 * gib, 50 * gib, 50 * gib),
+    )
+
+    try:
+        cache.guard.body(Context(), min_free_gb=8)
+    except SystemExit as exc:
+        assert "user has only 5.0 GiB free" in str(exc)
+    else:
+        raise AssertionError("cache.guard should fail when the user volume is low")
+
+
 def test_cache_status_reports_disk_headroom(monkeypatch, tmp_path, capsys):
     project_root = tmp_path / "workspace" / "tool-cache"
     project_root.mkdir(parents=True)
@@ -148,4 +176,4 @@ def test_cache_status_reports_disk_headroom(monkeypatch, tmp_path, capsys):
 
     output = capsys.readouterr().out
     assert "Disk headroom:" in output
-    assert "Docker daemon / WSL image-layer storage is tracked separately" in output
+    assert "Docker image layers and unrelated user data" in output

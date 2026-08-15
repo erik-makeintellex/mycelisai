@@ -1,4 +1,5 @@
 from invoke import Context
+import pytest
 
 from ops import compose, lifecycle
 
@@ -7,6 +8,13 @@ def test_dev_infra_mode_defaults_to_compose(monkeypatch, tmp_path):
     monkeypatch.delenv("MYCELIS_DEV_INFRA_MODE", raising=False)
 
     assert lifecycle.lifecycle_infra.dev_infra_mode(tmp_path) == "compose"
+
+
+def test_dev_infra_mode_rejects_native_host_services(monkeypatch, tmp_path):
+    monkeypatch.setenv("MYCELIS_DEV_INFRA_MODE", "native")
+
+    with pytest.raises(SystemExit, match="native host services are unsupported"):
+        lifecycle.lifecycle_infra.dev_infra_mode(tmp_path)
 
 
 def test_ensure_bridge_uses_compose_data_plane_without_building_apps(monkeypatch):
@@ -39,6 +47,7 @@ def test_status_reports_compose_data_plane_with_local_apps(monkeypatch, capsys):
     monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
     monkeypatch.setattr(lifecycle, "_http_get", lambda *args, **kwargs: (0, "offline"))
     monkeypatch.setattr(lifecycle, "_list_compiled_go_service_processes", lambda: [])
+    monkeypatch.setattr(lifecycle.lifecycle_infra, "database_endpoint", lambda _root: ("127.0.0.1", 15432))
 
     lifecycle.status.body(Context())
 
@@ -46,3 +55,4 @@ def test_status_reports_compose_data_plane_with_local_apps(monkeypatch, capsys):
     assert "Dev infra mode  : compose" in output
     assert "Development     : Docker PostgreSQL/NATS + local Core/Interface" in output
     assert "Full containers : explicit proof via compose.up; Kubernetes via k8s.*" in output
+    assert "PostgreSQL      : DOWN  [127.0.0.1:15432]" in output

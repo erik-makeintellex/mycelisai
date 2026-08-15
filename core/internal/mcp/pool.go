@@ -57,7 +57,7 @@ func (p *ClientPool) Connect(ctx context.Context, cfg ServerConfig) error {
 	case "sse":
 		t, err = transport.NewStreamableHTTP(cfg.URL)
 		if err != nil {
-			statusErr := p.service.UpdateStatus(ctx, cfg.ID, "error", fmt.Sprintf("transport init: %v", err))
+			statusErr := p.updateStatus(ctx, cfg.ID, "error", fmt.Sprintf("transport init: %v", err))
 			if statusErr != nil {
 				log.Printf("mcp pool: failed to update status for %s: %v", cfg.ID, statusErr)
 			}
@@ -66,7 +66,7 @@ func (p *ClientPool) Connect(ctx context.Context, cfg ServerConfig) error {
 
 	default:
 		errMsg := fmt.Sprintf("unsupported transport type: %s", cfg.Transport)
-		statusErr := p.service.UpdateStatus(ctx, cfg.ID, "error", errMsg)
+		statusErr := p.updateStatus(ctx, cfg.ID, "error", errMsg)
 		if statusErr != nil {
 			log.Printf("mcp pool: failed to update status for %s: %v", cfg.ID, statusErr)
 		}
@@ -78,7 +78,7 @@ func (p *ClientPool) Connect(ctx context.Context, cfg ServerConfig) error {
 
 	// Start the transport connection.
 	if err := c.Start(ctx); err != nil {
-		statusErr := p.service.UpdateStatus(ctx, cfg.ID, "error", fmt.Sprintf("start: %v", err))
+		statusErr := p.updateStatus(ctx, cfg.ID, "error", fmt.Sprintf("start: %v", err))
 		if statusErr != nil {
 			log.Printf("mcp pool: failed to update status for %s: %v", cfg.ID, statusErr)
 		}
@@ -97,7 +97,7 @@ func (p *ClientPool) Connect(ctx context.Context, cfg ServerConfig) error {
 	_, err = c.Initialize(ctx, initReq)
 	if err != nil {
 		_ = c.Close()
-		statusErr := p.service.UpdateStatus(ctx, cfg.ID, "error", fmt.Sprintf("initialize: %v", err))
+		statusErr := p.updateStatus(ctx, cfg.ID, "error", fmt.Sprintf("initialize: %v", err))
 		if statusErr != nil {
 			log.Printf("mcp pool: failed to update status for %s: %v", cfg.ID, statusErr)
 		}
@@ -108,7 +108,7 @@ func (p *ClientPool) Connect(ctx context.Context, cfg ServerConfig) error {
 	toolsResult, err := c.ListTools(ctx, mcp.ListToolsRequest{})
 	if err != nil {
 		_ = c.Close()
-		statusErr := p.service.UpdateStatus(ctx, cfg.ID, "error", fmt.Sprintf("list tools: %v", err))
+		statusErr := p.updateStatus(ctx, cfg.ID, "error", fmt.Sprintf("list tools: %v", err))
 		if statusErr != nil {
 			log.Printf("mcp pool: failed to update status for %s: %v", cfg.ID, statusErr)
 		}
@@ -121,7 +121,7 @@ func (p *ClientPool) Connect(ctx context.Context, cfg ServerConfig) error {
 	toolDefs, err := convertTools(cfg.ID, tools)
 	if err != nil {
 		_ = c.Close()
-		statusErr := p.service.UpdateStatus(ctx, cfg.ID, "error", fmt.Sprintf("convert tools: %v", err))
+		statusErr := p.updateStatus(ctx, cfg.ID, "error", fmt.Sprintf("convert tools: %v", err))
 		if statusErr != nil {
 			log.Printf("mcp pool: failed to update status for %s: %v", cfg.ID, statusErr)
 		}
@@ -130,7 +130,7 @@ func (p *ClientPool) Connect(ctx context.Context, cfg ServerConfig) error {
 
 	if err := p.service.CacheTools(ctx, cfg.ID, toolDefs); err != nil {
 		_ = c.Close()
-		statusErr := p.service.UpdateStatus(ctx, cfg.ID, "error", fmt.Sprintf("cache tools: %v", err))
+		statusErr := p.updateStatus(ctx, cfg.ID, "error", fmt.Sprintf("cache tools: %v", err))
 		if statusErr != nil {
 			log.Printf("mcp pool: failed to update status for %s: %v", cfg.ID, statusErr)
 		}
@@ -138,7 +138,7 @@ func (p *ClientPool) Connect(ctx context.Context, cfg ServerConfig) error {
 	}
 
 	// Update the server status to connected.
-	if err := p.service.UpdateStatus(ctx, cfg.ID, "connected", ""); err != nil {
+	if err := p.updateStatus(ctx, cfg.ID, "connected", ""); err != nil {
 		_ = c.Close()
 		return fmt.Errorf("update status for %s: %w", cfg.Name, err)
 	}
@@ -176,7 +176,7 @@ func (p *ClientPool) Disconnect(serverID uuid.UUID) error {
 	// Update status to stopped (best-effort; use background context since
 	// the caller may not care about DB persistence failures here).
 	ctx := context.Background()
-	if err := p.service.UpdateStatus(ctx, serverID, "stopped", ""); err != nil {
+	if err := p.updateStatus(ctx, serverID, "stopped", ""); err != nil {
 		log.Printf("mcp pool: failed to update status to stopped for %s: %v", serverID, err)
 	}
 

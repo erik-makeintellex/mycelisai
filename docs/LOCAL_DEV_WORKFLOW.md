@@ -33,7 +33,7 @@ Install the toolchain needed for the runtime lane you will use:
 | Go 1.26 | Core build/test |
 | Node.js 20+ | Interface build/test; hosted GitHub lanes and Interface container proof currently use Node.js 24 |
 | uv | Python environment and Invoke task runner |
-| psql 16+ | local database administration and migration client |
+| psql 16+ | optional client for the Dockerized development database; it does not provide a supported host server |
 | nats-server | optional host-native event-bus fallback |
 | Ollama or compatible endpoint | local/self-hosted text inference |
 
@@ -73,10 +73,10 @@ Common runtime variables:
 - `MYCELIS_API_KEY`, `MYCELIS_WEB_SESSION_SECRET`, `MYCELIS_WEB_IDENTITY_FORWARD_SECRET`, `MYCELIS_PUBLIC_ORIGIN`: local API credential, browser-session signing, optional Interface-to-Core identity HMAC separation, and auth redirect origin
 - `MYCELIS_BREAK_GLASS_API_KEY`: optional recovery credential
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: local Core database connection
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`: host-service fallback bootstrap user for creating/updating the app role/database when `MYCELIS_DEV_INFRA_MODE=native`
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`: deployment database credentials; development uses them only with the Dockerized pgvector/pg16 server, never a native host server
 - `NATS_URL`: the explicit NATS host used by this Core process; the broker may be shared with other applications
 - `MYCELIS_NATS_SERVICE_ID`: stable lowercase deployment identity used to distinguish Mycelis runtime and observer clients on a shared broker; default `mycelis-core`
-- `MYCELIS_DEV_INFRA_MODE`: `compose` for the default Docker PostgreSQL/NATS data plane; `native` for an explicit host-service fallback; `k8s` only for clustered bridge proof
+- `MYCELIS_DEV_INFRA_MODE`: `compose` for the supported Docker PostgreSQL/NATS development data plane; `k8s` only for clustered bridge proof; native host PostgreSQL is unsupported
 - `MYCELIS_WORKSPACE`, `MYCELIS_ARTIFACT_ROOT`: governed output root and artifact/cache root; `DATA_DIR` is still honored as a legacy artifact alias, but new runtime config should set `MYCELIS_ARTIFACT_ROOT`
 - `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
@@ -109,7 +109,9 @@ For source development, set `MYCELIS_WORKSPACE=./workspace` and `MYCELIS_ARTIFAC
 
 ## Local Source Development
 
-Default development runs PostgreSQL and NATS in Docker while Core and Interface run locally from source. `uv run inv lifecycle.up --frontend` idempotently invokes `compose.infra-up` for only those two dependencies; it does not build or start containerized Core or Interface services. `lifecycle.down` stops the local app processes and leaves the reusable data plane running. Use `uv run inv compose.down` only when intentionally stopping the dependency containers. Set `MYCELIS_DEV_INFRA_MODE=native` only for the supported host-service fallback.
+Default development runs PostgreSQL and NATS in Docker while Core and Interface run locally from source. `uv run inv lifecycle.up --frontend` idempotently invokes `compose.infra-up` for only those two dependencies; it does not build or start containerized Core or Interface services. `lifecycle.down` stops the local app processes and leaves the reusable data plane running. Use `uv run inv compose.down` only when intentionally stopping the dependency containers.
+
+The Docker `pgvector/pgvector:pg16` service is the sole development PostgreSQL server. Relational rows and pgvector embeddings share its `postgres-data` volume. Local Core connects through the configured published port (`127.0.0.1:15432` by default); Compose Core connects inside the network at `postgres:5432`. A host-installed `psql` is client-only, and a native host PostgreSQL server is unsupported.
 
 When another locally developed service shares the NATS host, keep that broker running and assign explicit service identities and subjects. Mycelis external ingress uses concrete registered `swarm.global.input.{source}` subjects; one registered source owns each subject, unknown subjects are ignored, and wildcard registrations are rejected. A Core process connects to one configured NATS host. Connecting another host requires a separately configured Core/bridge deployment rather than an implicit cross-host subscription.
 
@@ -225,7 +227,7 @@ uv run inv compose.down
 | --- | --- |
 | Interface | `http://localhost:3000` |
 | Core API | `http://localhost:8081` source, `8080` in cluster |
-| PostgreSQL | `localhost:5432` |
+| PostgreSQL | `localhost:15432` for local Core/host clients; `postgres:5432` for Compose Core |
 | NATS | `localhost:4222` |
 | Ollama | `http://127.0.0.1:11434` host-local |
 

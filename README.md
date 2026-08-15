@@ -176,7 +176,9 @@ uv run inv api.delivery-proof
 uv run inv lifecycle.memory-restart && uv run inv team.architecture-sync && uv run inv quality.max-lines --limit 330
 ```
 
-Compose launch and readiness use the same configurable host ports from `.env.compose`: `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`. This allows an isolated proof stack to coexist with native development dependencies without readiness checks probing unrelated default-port services.
+Compose launch and readiness use the same configurable host ports from `.env.compose`: `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`. The repository default publishes PostgreSQL on `15432`; local Core uses `DB_HOST=127.0.0.1` and `DB_PORT=15432`, while Compose Core uses the container address `postgres:5432`.
+
+Development persistence has one contract: Docker Compose runs `pgvector/pgvector:pg16` as the sole PostgreSQL server, and relational data plus vector data share its `postgres-data` volume. A host `psql` binary is a client for that containerized server only. Running a native host PostgreSQL server for Mycelis development is unsupported.
 
 NATS is a reusable transport host, not a Mycelis-owned workflow object. Set `NATS_URL` to the broker this Core process should use and give each Mycelis deployment a stable `MYCELIS_NATS_SERVICE_ID`; Core names only its own runtime and observer clients and drains only those clients on shutdown. Other services may share the broker by publishing to concrete channels registered through `/api/v1/input-sources`; duplicate channel claims and wildcard ingress are rejected, and high-rate traffic is buffered before teams consume it.
 
@@ -186,7 +188,7 @@ NATS is a reusable transport host, not a Mycelis-owned workflow object. Set `NAT
 
 Cleanup note: `uv run inv clean.generated` removes repo-local generated artifacts but skips the active Python runtime directory when the task is running from that environment. If you intentionally need to remove `.venv`, do it from an external shell after leaving the environment.
 
-Task boundary: repo Invoke tasks manage Mycelis tools, app services, data-plane dependencies, and proof lanes. Default development uses `compose.infra-up` for Dockerized PostgreSQL/NATS and runs Core/Interface locally; `native-infra.*` is the explicit host-service fallback. Host runtimes such as WSL distros, Rancher Desktop itself, Docker Desktop itself, and OS-level VM resets are operator/platform responsibilities outside the task registry; use repo tasks to probe, validate, and run Mycelis on those tools, not to manage the whole host environment.
+Task boundary: repo Invoke tasks manage Mycelis tools, app services, data-plane dependencies, and proof lanes. Default development uses `compose.infra-up` for Dockerized PostgreSQL/NATS and runs Core/Interface locally; there is no supported native-host PostgreSQL fallback. Host runtimes such as WSL distros, Rancher Desktop itself, Docker Desktop itself, and OS-level VM resets are operator/platform responsibilities outside the task registry; use repo tasks to probe, validate, and run Mycelis on those tools, not to manage the whole host environment.
 
 `lifecycle.status` is the quick local snapshot and now confirms Core through `/healthz` plus Ollama through `/api/tags` across loopback fallbacks; use `lifecycle.health` for deeper endpoint proof, `uv run inv api.delivery-proof` for API self-use, and `uv run inv ci.entrypoint-check` for runner matrix proof. The deeper health gate gives `/api/v1/cognitive/status` enough time to return bounded provider evidence instead of timing out at the client edge.
 

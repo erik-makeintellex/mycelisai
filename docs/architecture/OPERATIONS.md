@@ -31,7 +31,7 @@ Task modules live under `ops/*.py` and are registered through `tasks.py`. App-ti
 
 Task ownership boundary: Invoke tasks manage repo tools, Mycelis app services, data-plane dependencies, and proof lanes; WSL/Rancher/Docker host lifecycle and VM repair stay outside repo tasking.
 
-Compose infrastructure is the default source-mode data plane: `compose.infra-up` and `compose.infra-health` manage only Dockerized PostgreSQL and NATS, while `lifecycle.up --frontend` runs Core and Interface locally from source. Neither task builds application images. Use `MYCELIS_DEV_INFRA_MODE=native` only for the host-service fallback and `MYCELIS_DEV_INFRA_MODE=k8s` only for explicit clustered bridge proof.
+Compose infrastructure is the default source-mode data plane: `compose.infra-up` and `compose.infra-health` manage only Dockerized PostgreSQL and NATS, while `lifecycle.up --frontend` runs Core and Interface locally from source. Neither task builds application images. Use `MYCELIS_DEV_INFRA_MODE=compose` for development and `MYCELIS_DEV_INFRA_MODE=k8s` only for explicit clustered bridge proof; native host PostgreSQL is unsupported.
 
 NATS may be shared by Mycelis and separately developed services. `NATS_URL` selects the single broker host used by a Core process, while `MYCELIS_NATS_SERVICE_ID` gives that deployment stable, distinguishable runtime and observer client names. Routine Core and `lifecycle.down` shutdown drains Mycelis client connections only; it does not stop, purge, or claim shared broker storage. External producers enter Mycelis only through concrete subjects registered in `/api/v1/input-sources`; wildcard and duplicate source-channel claims are rejected. Use a separately configured bridge/Core deployment for another NATS host instead of silently spanning hosts.
 
@@ -94,6 +94,8 @@ uv run inv cache.guard
 uv run inv cache.clean
 ```
 
+`cache.guard` checks both the repository volume and the user-profile/system volume by default, because package caches and local tool state can exhaust the system drive even when the workspace drive has room. `cache.clean` remains limited to repo-owned caches; it reports Docker or unrelated user data separately and does not delete Docker volumes or user files.
+
 ### Lifecycle Tasks (`ops/lifecycle.py`)
 
 ```bash
@@ -123,7 +125,7 @@ uv run inv compose.down
 ```
 
 Compose is the supported single-host runtime lane. `.env.compose` owns container topology; `.env` remains the secret source.
-Full bring-up resolves PostgreSQL, NATS, Core, and Interface readiness from the configured `MYCELIS_COMPOSE_*_PORT` host bindings. Use isolated host ports when the proof stack must coexist with native source-mode dependencies; container-internal ports remain unchanged.
+Full bring-up resolves PostgreSQL, NATS, Core, and Interface readiness from the configured `MYCELIS_COMPOSE_*_PORT` host bindings. PostgreSQL is published on `15432` by default for local Core and host clients; Compose Core always uses `postgres:5432`. A host `psql` binary is client-only and must not be treated as a second development server.
 The WSL release proof health-gates each live browser spec with `compose.health` because the runner executes specs through separate WSL shell invocations.
 
 ### Kubernetes Tasks (`ops/k8s.py`)
@@ -267,9 +269,11 @@ use a reachable Windows IP or hostname such as `http://192.168.x.x:11434/v1`, no
 
 the compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root.
 
+Local stdio MCP startup allows a bounded 60-second connection window so an intentionally cleaned npm cache can repopulate. Connection failures persist their error state through a separate short database deadline, preventing an expired launch context from leaving a stale `connected` status.
+
 ### Persistent Storage Contract
 
-PostgreSQL plus pgvector owns durable memory/context. Generated files, browser game packages, filesystem MCP writes, and retained project outputs land under `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`; `DATA_DIR` remains a legacy fallback and should stay aligned with `MYCELIS_ARTIFACT_ROOT` until it is removed. Compose maps those paths into `/data/workspace` and `/data/artifacts`; Kubernetes uses the chart output block/PVC mounted at `/data`. Native Core live-browser proof infers the host-visible workspace from the loaded `.env`/process `MYCELIS_WORKSPACE`, using absolute roots directly and mapping repo-local `./workspace` to `core/workspace`; K8s live-browser proof that checks backend-written files should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` so the assertion targets the Core pod workspace/PVC rather than host-only paths.
+Docker Compose `pgvector/pgvector:pg16` is the sole development PostgreSQL server. Its `postgres-data` volume holds both relational data and pgvector-backed memory/context; these are not separate databases or host stores. Generated files, browser game packages, filesystem MCP writes, and retained project outputs land under `MYCELIS_WORKSPACE`. File-backed artifacts and cached media land under `MYCELIS_ARTIFACT_ROOT`; `DATA_DIR` remains a legacy fallback and should stay aligned with `MYCELIS_ARTIFACT_ROOT` until it is removed. Compose maps those paths into `/data/workspace` and `/data/artifacts`; Kubernetes uses the chart output block/PVC mounted at `/data`. Local source Core live-browser proof infers the host-visible workspace from the loaded `.env`/process `MYCELIS_WORKSPACE`, using absolute roots directly and mapping repo-local `./workspace` to `core/workspace`; K8s live-browser proof that checks backend-written files should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` so the assertion targets the Core pod workspace/PVC rather than host-only paths.
 
 ### Startup Sequence
 
