@@ -48,7 +48,6 @@ def test_root_collection_registers_expected_namespaces():
         "k8s",
         "lifecycle",
         "logging",
-        "native-infra",
         "proto",
         "quality",
         "relay",
@@ -86,6 +85,7 @@ def test_root_collection_exports_expected_task_surface():
         "cognitive.install",
         "cognitive.llm",
         "cognitive.media",
+        "cognitive.media-gateway",
         "cognitive.status",
         "cognitive.stop",
         "cognitive.up",
@@ -108,6 +108,7 @@ def test_root_collection_exports_expected_task_surface():
         "core.smoke",
         "core.stop",
         "core.test",
+        "db.clear-runtime-context",
         "db.create",
         "db.migrate",
         "db.reset",
@@ -143,11 +144,6 @@ def test_root_collection_exports_expected_task_surface():
         "lifecycle.up",
         "logging.check-schema",
         "logging.check-topics",
-        "native-infra.bootstrap-postgres",
-        "native-infra.install-nats",
-        "native-infra.start-nats",
-        "native-infra.status",
-        "native-infra.up",
         "proto.generate",
         "quality.max-lines",
         "relay.demo",
@@ -171,6 +167,8 @@ def test_install_skips_optional_engines_by_default(capsys):
 
     assert ctx.commands == [
         "uv sync --all-packages --dev",
+        'uv run python -c "import RNS; print(RNS.__version__)"',
+        "uvx --from rns rnstatus --help",
         "go mod download",
         "npm ci --prefix interface",
         "npx --prefix interface playwright install chromium",
@@ -187,6 +185,8 @@ def test_install_can_include_optional_engines():
 
     assert ctx.commands == [
         "uv sync --all-packages --dev",
+        'uv run python -c "import RNS; print(RNS.__version__)"',
+        "uvx --from rns rnstatus --help",
         "go mod download",
         "npm ci --prefix interface",
         "npx --prefix interface playwright install chromium",

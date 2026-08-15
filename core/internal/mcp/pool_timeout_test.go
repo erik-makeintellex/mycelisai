@@ -36,3 +36,23 @@ func TestWithMCPConnectTimeoutAddsDeadline(t *testing.T) {
 		t.Fatal("expected callback to run")
 	}
 }
+
+func TestMCPStatusContextSurvivesExpiredConnectContext(t *testing.T) {
+	connectCtx, cancelConnect := context.WithCancel(context.Background())
+	cancelConnect()
+
+	statusCtx, cancelStatus := mcpStatusContext(connectCtx)
+	defer cancelStatus()
+
+	if err := statusCtx.Err(); err != nil {
+		t.Fatalf("status context inherited canceled connect context: %v", err)
+	}
+	deadline, ok := statusCtx.Deadline()
+	if !ok {
+		t.Fatal("expected status context deadline")
+	}
+	remaining := time.Until(deadline)
+	if remaining <= 0 || remaining > mcpStatusTimeout {
+		t.Fatalf("remaining status timeout = %v, want within (0, %v]", remaining, mcpStatusTimeout)
+	}
+}

@@ -66,7 +66,7 @@ If these roots do not match the intended mounted or host folder, fix configurati
 
 ## Default Development Recovery
 
-Normal development uses PostgreSQL and NATS in Rancher Desktop's Docker engine while Core and Interface run locally.
+Normal development uses the Docker `pgvector/pgvector:pg16` PostgreSQL server and Dockerized NATS while Core and Interface run locally. Relational and vector data share the PostgreSQL service's `postgres-data` volume. Local Core connects to the configured published port (`127.0.0.1:15432` by default); Compose Core connects to `postgres:5432`.
 
 Check the reusable data plane and app first:
 
@@ -86,7 +86,7 @@ uv run inv lifecycle.health
 
 `lifecycle.down` leaves Dockerized PostgreSQL and NATS running. Use `uv run inv compose.down` only when intentionally stopping the development data plane.
 
-The host-service fallback is explicit: set `MYCELIS_DEV_INFRA_MODE=native` and use `native-infra.*` only when Dockerized dependencies are intentionally unavailable.
+A host `psql` binary may be used as a client against the published Docker port. A native host PostgreSQL server and `MYCELIS_DEV_INFRA_MODE=native` are unsupported recovery paths.
 
 ## Full Compose Recovery
 

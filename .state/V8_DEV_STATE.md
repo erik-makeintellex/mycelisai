@@ -6,11 +6,11 @@
 
 | Field | Current state |
 | --- | --- |
-| Updated | 2026-08-13 |
+| Updated | 2026-08-15 |
 | Integration branch | `dev` |
-| Active slice | P0.9 delayed-work steering is `IN_REVIEW`. Soma now carries active run/team/work identity through the ordinary composer, distinguishes explicit guidance from ordinary questions, commits guidance and its dispatch record atomically, and hands it to the active worker through durable NATS command ingress without blocking conversation. |
+| Active slice | Development data-plane and disk hygiene is `IN_REVIEW`: Dockerized PostgreSQL/pgvector and NATS are the reusable development services, local Core/Interface use their configured host ports, obsolete native PostgreSQL task paths are removed, system-drive headroom is guarded, and cold MCP startup records honest status. |
 | Production branch | `main` remains behind the accepted `dev` integration train pending release certification. |
-| Runtime posture | Local Core and Interface are intentionally stopped after a clean shutdown. Dockerized PostgreSQL and NATS remain running as the reusable development data plane, and Ollama remains available. Full Compose app containers, Kubernetes, and WSL remain explicit release-proof lanes. |
+| Runtime posture | Dockerized PostgreSQL/pgvector and NATS are running as the reusable development data plane; Core and Interface run locally from source, and Ollama is available. Full Compose app containers, Kubernetes, and WSL remain explicit release-proof lanes. |
 | Delivery target | Pass human-first Soma acceptance, accept the external-mutation recovery contract, then execute P0.12 release certification and intentional `dev -> main` promotion. |
 | Main release risk | The headed delayed-work journey proves guidance reaches the active worker while Soma stays conversational, but the local `qwen3:8b` package worker still exhausts its bounded loop before required entrypoint readback and degrades honestly. Manual novice comprehension, external-mutation recovery acceptance, and exact-candidate deployment certification remain release gates; optional provider-specific media proof is not the critical path. |
 | Canonical PRD alignment | Workspace owns Outcomes; Soma owns execution; WorkIntent is transitional; deliverables, proof, recovery, and continuity remain Outcome-owned user concepts. |
@@ -33,6 +33,7 @@
 
 | Lane | Status | Current evidence | Next gate |
 | --- | --- | --- | --- |
+| Development environment and persistence hygiene | `IN_REVIEW` | Docker pgvector is the sole development PostgreSQL server and stores relational plus vector state in one retained volume. Source Core resolves the configured published port, native host-server tasks are removed, cache guard checks both repository and system volumes, and cold stdio MCP startup has an honest bounded status path. Focused lifecycle, cache, DB, docs, Go MCP, UI, typecheck, storage-health, and headed fresh-user/live-backend proof pass on the feature branch. | Merge into `dev`, rerun affected integration proof, and preserve this topology without routine app-image rebuilds. |
 | P0.9 full Trusted Outcome Journey | `ACTIVE` | Governed ask through revisit remains proven. The human-first slice keeps the composer visible, prevents automatic drawers/runtime vocabulary/horizontal overflow, preserves a compact Work drawer, and collapses repeated machine updates. Retained outputs open in a dedicated canvas with exact Back-to-Soma context. Active run/team/work identity survives in the thread; explicit composer guidance is validated, retained atomically with mission evidence, queued idempotently, accepted through the team command channel, and translated to the active agent interjection channel instead of starting competing work. Focused Go/UI/typecheck/NATS tests pass. In headed Chromium, the acknowledgement returned within ten seconds and the active worker consumed the guidance during its existing tool loop. The broader app journey then degraded because the local model did not perform required structural readback; no false completion was shown. | Repair deterministic package readback completion, rerun the full headed journey, then run manual novice comprehension before release certification. |
 | Media Outcome execution | `ACTIVE` | Direct Forge `/sdapi/v1/txt2img`, group-scoped media targeting, provider-specific recovery, broad Core tests, UI unit tests, typecheck/build, and headed Chromium preflight pass. With the running Forge UI returning `404` for `/sdapi/v1/options`, Soma now shows one image-generator setup alert and creates no proposal, approval, team, failed run, or internal planning deliverable. | Restart Forge with API mode (`--api`) enabled, then complete the headed natural Soma ask through generated image preview, saved group path, proof, and revisit. |
 | P0.11 documentation convergence | `COMPLETE` | The canonical PRD contains all product architecture. The duplicate architecture overview and obsolete user-facing blueprint guide are deleted; user concepts, run/recovery, acceptance, deployment, API/provider, implementation, README, state, and in-app Help guidance match current Workspace/Outcome delivery and the Docker data-plane development lane. Documentation contracts, Help component tests, typecheck, and a headed real-manifest PRD-to-acceptance journey pass. | Keep one product-architecture authority and update owned support docs with behavior changes. |
@@ -60,6 +61,8 @@
 - Team command correlation outlives the durable recovery deadline; a 5.8-minute local-model package delivery remains attached to its work item instead of publishing an orphan result.
 - PostgreSQL recovery deadlines and restart reconciliation expose overdue accepted work as degraded operator attention instead of silent loss.
 - Direct run readback includes non-empty run-event evidence for completed governed execution.
+- Docker PostgreSQL/pgvector and NATS remain reusable development dependencies while Core and Interface run locally; lifecycle status resolves the configured PostgreSQL host port instead of assuming a native server.
+- Repository cache cleanup cannot hide low space on the user/system volume, and it does not delete retained Docker volumes or unrelated user data.
 
 ### Operator Experience
 

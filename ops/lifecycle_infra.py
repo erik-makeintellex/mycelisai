@@ -3,6 +3,8 @@
 import os
 from pathlib import Path
 
+from dotenv import dotenv_values
+
 
 def dev_infra_mode(root_dir: Path) -> str:
     """Resolve the explicit mode, with Docker dependencies as the default."""
@@ -15,9 +17,17 @@ def dev_infra_mode(root_dir: Path) -> str:
         except ModuleNotFoundError:
             configured_mode = None
     mode = str(configured_mode or "compose").strip().lower()
-    if mode not in {"", "compose", "native", "k8s"}:
-        raise SystemExit("Invalid MYCELIS_DEV_INFRA_MODE. Use compose, native, or k8s.")
+    if mode not in {"", "compose", "k8s"}:
+        raise SystemExit("Invalid MYCELIS_DEV_INFRA_MODE. Use compose or k8s; native host services are unsupported.")
     return mode or "compose"
+
+
+def database_endpoint(root_dir: Path) -> tuple[str, int]:
+    """Return the host endpoint used by source-mode Core."""
+    values = dotenv_values(root_dir / ".env")
+    host = os.environ.get("DB_HOST") or values.get("DB_HOST") or "127.0.0.1"
+    port = os.environ.get("DB_PORT") or values.get("DB_PORT") or "5432"
+    return str(host), int(port)
 
 
 def managed_process_keys(infra_mode: str) -> tuple[str, ...]:
@@ -42,9 +52,6 @@ def print_development_status(infra_mode: str) -> None:
     if infra_mode == "compose":
         print("  Development     : Docker PostgreSQL/NATS + local Core/Interface")
         print("  Full containers : explicit proof via compose.up; Kubernetes via k8s.*")
-    elif infra_mode == "native":
-        print("  Development     : host PostgreSQL/NATS + local Core/Interface")
-        print("  Docker/K8s      : explicit proof lanes via compose.* or k8s.*")
     else:
         print("  Development     : Kubernetes bridges + local Core/Interface")
 
@@ -54,5 +61,5 @@ def print_retained_data_plane(infra_mode: str) -> None:
         print("[4/4] Docker data plane: left running")
         print("  PostgreSQL and NATS remain reusable; inspect them with compose.infra-health.")
         return
-    print("[4/4] Native infrastructure: left running")
-    print("  PostgreSQL and NATS are development dependencies; inspect them with native-infra.status.")
+    print("[4/4] Kubernetes data plane: left running")
+    print("  PostgreSQL and NATS bridges remain reusable; inspect them with k8s.status.")

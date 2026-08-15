@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { mockFetch } from '../setup';
 
 const routerReplace = vi.fn();
@@ -194,6 +194,31 @@ describe('DocsPage', () => {
         render(<DocsPage />);
 
         expect(await screen.findByText(/Failed to load doc manifest/)).toBeDefined();
+    });
+
+    it('does not replace navigation after the user leaves while the manifest is loading', async () => {
+        let resolveManifest: ((response: Response) => void) | undefined;
+        mockFetch.mockImplementation(() => new Promise<Response>((resolve) => {
+            resolveManifest = resolve;
+        }));
+
+        const { unmount } = render(<DocsPage />);
+        unmount();
+
+        await act(async () => {
+            resolveManifest?.({
+                ok: true,
+                json: async () => ({
+                    sections: [{
+                        section: 'Start here',
+                        docs: [{ slug: 'getting-started', label: 'Getting Started', path: 'docs/user/getting-started.md' }],
+                    }],
+                }),
+            } as Response);
+            await Promise.resolve();
+        });
+
+        expect(routerReplace).not.toHaveBeenCalled();
     });
 
     it('shows a readable doc-load error when a selected doc fetch fails', async () => {

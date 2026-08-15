@@ -25,7 +25,7 @@
 - Cleanup-task proof should account for active runtimes: `clean.generated`, `clean.wsl-handoff`, and `clean.windows-dev-residue` skip the current Python environment when invoked from it, then report the skip instead of failing while deleting `.venv`.
 - `uv run inv ci.baseline` is the default branch-readiness gate.
 - Use `uv run inv ci.baseline --no-e2e` only for intentionally narrower debugging.
-- GitHub Actions are manual-only through `workflow_dispatch`; source-mode local gates are first, Dockerized PostgreSQL/NATS support live proof, and full containerized Core/Interface or Kubernetes proof starts only after local run/build/test evidence is acceptable.
+- GitHub Actions are manual-only through `workflow_dispatch`; source-mode local gates are first, Dockerized PostgreSQL/NATS support live proof, and full containerized Core/Interface or Kubernetes proof starts only after local run/build/test evidence is acceptable. Development database proof uses only Docker `pgvector/pgvector:pg16`: relational and vector data share `postgres-data`, local Core and host `psql` clients use the configured published port (`15432` by default), and Compose Core uses `postgres:5432`. A native host PostgreSQL server is not a supported test lane.
 - Windows is the edit/review/push surface; WSL is the guarded Compose release-style proof checkout, while Rancher Desktop K3s is the Windows local Kubernetes/commercial-parity proof lane.
 - Repo tasks manage Mycelis tools, services, and proof checkouts, not WSL/Rancher/Docker host lifecycle or VM resets.
 - `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required; `interface.check` retries transient Windows socket-reuse failures after heavy browser proof before treating a route as failed.
@@ -206,7 +206,7 @@ For output block, media readiness, and team-managed review, use:
 - `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
 - `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 
-For side-by-side native and Compose proof, set the four `MYCELIS_COMPOSE_*_PORT` host bindings in `.env.compose`. `compose.up` uses those same PostgreSQL, NATS, Core, and Interface ports for readiness, so a native listener on a default port cannot create a false pass or block an isolated proof stack.
+For source-Core or full-Compose proof, keep the four `MYCELIS_COMPOSE_*_PORT` host bindings explicit in `.env.compose`. `compose.up` uses those same PostgreSQL, NATS, Core, and Interface bindings for readiness. The canonical database paths are `127.0.0.1:15432` for local Core/host clients and `postgres:5432` for Compose Core; a listener from a native host PostgreSQL server is unsupported and must not satisfy readiness.
 If the media engine is offline, record a blocker instead of treating missing media as passed. Gateway unit proof uses `uv run pytest tests/test_media_gateway.py -q` and does not require Pinokio to be running.
 ## Tier 1: Backend Unit Tests
 Run:

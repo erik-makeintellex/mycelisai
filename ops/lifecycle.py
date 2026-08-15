@@ -100,14 +100,14 @@ def _status_service_alive(key: str, port: int) -> bool:
     return lifecycle_status.status_service_alive(key, port, _http_get, _port_open, API_HOST)
 
 
-def _wait_for_port(port: int, label: str, timeout: int = 30, interval: float = 1.0) -> bool:
+def _wait_for_port(port: int, label: str, timeout: int = 30, interval: float = 1.0, host: str = "127.0.0.1") -> bool:
     """Block until a port is open or timeout expires. Returns True on success."""
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if _port_open(port):
+        if _port_open(port, host=host):
             return True
         time.sleep(interval)
-    print(f"  TIMEOUT waiting for {label} on port {port} ({timeout}s)")
+    print(f"  TIMEOUT waiting for {label} at {host}:{port} ({timeout}s)")
     return False
 
 
@@ -416,12 +416,6 @@ def _ensure_bridge():
     if lifecycle_infra.ensure_compose_data_plane(infra_mode):
         return
 
-    if infra_mode == "native":
-        from . import native_infra
-
-        native_infra.ensure_for_lifecycle(timeout=30)
-        return
-
     # Kubernetes bridge mode remains available for explicit clustered proof.
     for key in ("postgres", "nats"):
         svc = SERVICES[key]
@@ -508,18 +502,20 @@ def status(c):
 
     lifecycle_infra.print_development_status(_dev_infra_mode())
 
+    db_host, db_port = lifecycle_infra.database_endpoint(ROOT_DIR)
     # Service ports
     for key, svc in SERVICES.items():
-        port = svc["port"]
+        port = db_port if key == "postgres" else svc["port"]
         label = svc["label"]
-        alive = _status_service_alive(key, port)
+        alive = _port_open(port, host=db_host) if key == "postgres" else _status_service_alive(key, port)
         tag = "UP" if alive else "DOWN"
         pid_info = ""
         if alive:
             pid = _find_pid_on_port(port)
             if pid:
                 pid_info = f" (PID {pid})"
-        print(f"  {label:<16}: {tag}{pid_info}  [:{port}]")
+        endpoint = f"{db_host}:{port}" if key == "postgres" else f":{port}"
+        print(f"  {label:<16}: {tag}{pid_info}  [{endpoint}]")
 
     # Deep probe: Core API health
     print()
@@ -571,7 +567,8 @@ def up(c, frontend=False, build=False):
     # Capture dependency state before we touch bridges. If Core is already up while one
     # of these is down, Core is likely running in degraded mode and should be restarted
     # after dependencies are healthy.
-    deps_were_down_before_up = (not _port_open(5432)) or (not _port_open(4222))
+    db_host, db_port = lifecycle_infra.database_endpoint(ROOT_DIR)
+    deps_were_down_before_up = (not _port_open(db_port, host=db_host)) or (not _port_open(4222))
 
     # 0. Optionally build
     if build:
@@ -589,12 +586,12 @@ def up(c, frontend=False, build=False):
     print()
 
     print("[2/4] Waiting for dependencies...")
-    pg_ok = _wait_for_port(5432, "PostgreSQL", timeout=30)
+    pg_ok = _wait_for_port(db_port, "PostgreSQL", timeout=30, host=db_host)
     nats_ok = _wait_for_port(4222, "NATS", timeout=30)
 
     if not pg_ok:
         print("  WARN: PostgreSQL not yet reachable — Core will retry for 90s after start.")
-        print("        If this persists, check: uv run inv k8s.status")
+        print("        If this persists, check: uv run inv compose.infra-health")
     else:
         print("  PostgreSQL ready")
 
@@ -887,10 +884,11 @@ def memory_restart(c, build=False, frontend=False):
 
     print("[2/6] Restoring database bridge...")
     _ensure_bridge()
-    if not _wait_for_port(5432, "PostgreSQL", timeout=30):
+    db_host, db_port = lifecycle_infra.database_endpoint(ROOT_DIR)
+    if not _wait_for_port(db_port, "PostgreSQL", timeout=30, host=db_host):
         raise SystemExit(
-            "MEMORY RESTART FAILED: PostgreSQL bridge not reachable on 127.0.0.1:5432. "
-            "Run 'uv run inv k8s.up' or 'uv run inv k8s.bridge' and retry."
+            f"MEMORY RESTART FAILED: PostgreSQL is not reachable at {db_host}:{db_port}. "
+            "Run 'uv run inv compose.infra-up' and retry."
         )
     print()
 

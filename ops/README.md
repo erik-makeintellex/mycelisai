@@ -102,7 +102,8 @@ Handles the rapid Docker Compose single-host runtime for development, same-machi
 - **Status**: `uv run inv compose.status`
 - **Logs**: `uv run inv compose.logs`
 - Compose uses `.env.compose` so host/container assumptions stay separate from the local-Kubernetes `.env` path.
-- Compose launch and readiness share `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`, allowing isolated proof bindings without probing unrelated services on default host ports.
+- Compose launch and readiness share `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`. PostgreSQL publishes `15432` by default for local Core and host clients; Compose Core uses `postgres:5432`.
+- Docker `pgvector/pgvector:pg16` is the sole development PostgreSQL server. Relational rows and vectors share its `postgres-data` volume. A host `psql` binary is client-only; native host PostgreSQL is unsupported.
 - Compose uses `MYCELIS_COMPOSE_OLLAMA_HOST` instead of raw `OLLAMA_HOST` so host-machine Ollama bind settings cannot override the container runtime accidentally, and maps that value into provider-specific endpoint overrides inside Core.
 - Compose passes `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, and `MYCELIS_SEARCH_MAX_RESULTS` into Core for governed search; use `local_sources` for token-free governed local-source search, `searxng` for operator-owned metasearch, or `local_api` for an operator-owned HTTP search endpoint instead of treating Brave as mandatory.
 - Compose rejects loopback compose Ollama values because `localhost`, `127.0.0.1`, and `0.0.0.0` point back at the Core container instead of the operator host.
@@ -120,15 +121,8 @@ Handles the rapid Docker Compose single-host runtime for development, same-machi
 - The compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; default npm-backed MCP auto-bootstrap still stays disabled by default to keep startup logs honest.
 - Manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root, which is `/data/workspace` in the supported Compose output block.
 
-### `native_infra.py` (Source-Mode Data Plane)
-Owns the narrow Windows/source-mode dependency path for development and testing without Docker.
-- **Install NATS**: `uv run inv native-infra.install-nats` installs `nats-server` with Go into the local Go bin directory. The pinned default is `v2.14.0`.
-- **Up**: `uv run inv native-infra.up` bootstraps the configured PostgreSQL app role/database and starts local NATS with JetStream plus the HTTP monitor.
-- **Status**: `uv run inv native-infra.status` checks PostgreSQL port/query readiness, NATS port readiness, and the NATS monitor endpoint.
-- **Bootstrap PostgreSQL**: `uv run inv native-infra.bootstrap-postgres` uses `POSTGRES_USER` / `POSTGRES_PASSWORD` from `.env` to create or update `DB_USER`, `DB_PASSWORD`, and `DB_NAME`.
-- **Start NATS**: `uv run inv native-infra.start-nats` starts only NATS when PostgreSQL is already ready.
-- `lifecycle.up` defaults to `MYCELIS_DEV_INFRA_MODE=compose`: PostgreSQL and NATS run in Docker while Core and Interface run locally from source. It invokes only `compose.infra-up`, never full `compose.up` or an app-image build. Set `MYCELIS_DEV_INFRA_MODE=native` for the host-service fallback or `k8s` only for explicit clustered bridge proof.
-- Shared NATS host contract: set `NATS_URL` for the broker used by one Core process and `MYCELIS_NATS_SERVICE_ID` for a stable deployment-scoped client identity. `lifecycle.down` drains local Mycelis app clients while leaving reusable data services running. Other services may share the broker through concrete registered input subjects; use `compose.down` only when intentionally stopping the dependency containers.
+### Development Data Plane
+`lifecycle.up` uses `MYCELIS_DEV_INFRA_MODE=compose`: PostgreSQL and NATS run in Docker while Core and Interface run locally from source. It invokes only `compose.infra-up`, never full `compose.up` or an app-image build. Native host PostgreSQL/NATS bootstrap tasks are not exposed. A host `psql` binary remains a client for the Dockerized database. Shared NATS hosts still use `NATS_URL` and `MYCELIS_NATS_SERVICE_ID`; `lifecycle.down` drains local Mycelis app clients while leaving reusable data services running.
 
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.
