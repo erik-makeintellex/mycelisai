@@ -3,19 +3,21 @@
 import os
 from pathlib import Path
 
-from dotenv import dotenv_values
+
+def _dotenv_values(path: Path) -> dict[str, str | None]:
+    """Read dotenv values when runtime dependencies are installed."""
+    try:
+        from dotenv import dotenv_values
+    except ModuleNotFoundError:
+        return {}
+    return dict(dotenv_values(path))
 
 
 def dev_infra_mode(root_dir: Path) -> str:
     """Resolve the explicit mode, with Docker dependencies as the default."""
     configured_mode = os.environ.get("MYCELIS_DEV_INFRA_MODE")
     if configured_mode is None:
-        try:
-            from dotenv import dotenv_values
-
-            configured_mode = dotenv_values(root_dir / ".env").get("MYCELIS_DEV_INFRA_MODE")
-        except ModuleNotFoundError:
-            configured_mode = None
+        configured_mode = _dotenv_values(root_dir / ".env").get("MYCELIS_DEV_INFRA_MODE")
     mode = str(configured_mode or "compose").strip().lower()
     if mode not in {"", "compose", "k8s"}:
         raise SystemExit("Invalid MYCELIS_DEV_INFRA_MODE. Use compose or k8s; native host services are unsupported.")
@@ -24,7 +26,7 @@ def dev_infra_mode(root_dir: Path) -> str:
 
 def database_endpoint(root_dir: Path) -> tuple[str, int]:
     """Return the host endpoint used by source-mode Core."""
-    values = dotenv_values(root_dir / ".env")
+    values = _dotenv_values(root_dir / ".env")
     host = os.environ.get("DB_HOST") or values.get("DB_HOST") or "127.0.0.1"
     port = os.environ.get("DB_PORT") or values.get("DB_PORT") or "5432"
     return str(host), int(port)
@@ -63,3 +65,21 @@ def print_retained_data_plane(infra_mode: str) -> None:
         return
     print("[4/4] Kubernetes data plane: left running")
     print("  PostgreSQL and NATS bridges remain reusable; inspect them with k8s.status.")
+
+
+def stop_compose_data_plane(context) -> None:
+    """Stop Compose dependencies without deleting retained volumes."""
+    from . import compose
+
+    print("[4/4] Stopping Docker data plane...")
+    compose.down.body(context, volumes=False)
+
+
+def print_shutdown_summary(infra_mode: str, included_data_plane: bool) -> None:
+    """Report the exact shutdown boundary instead of implying host-wide control."""
+    if infra_mode == "compose" and included_data_plane:
+        print("\nLocal app services and Compose data plane stopped. Retained volumes were preserved.")
+    elif infra_mode == "compose":
+        print("\nLocal app services stopped. Compose PostgreSQL and NATS remain running for reuse.")
+    else:
+        print("\nLocal app services and Kubernetes port-forwards stopped. Cluster services remain running.")
