@@ -202,6 +202,8 @@ def test_docs_review_contract_remains_visible():
     required_snippets = {
         ROOT / "AGENTS.md": [
             "Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, or canonical terminology must include a documentation review in the same slice.",
+            "perform an obsolescence review in the same slice across commands, code, configuration, tests, docs, routes, fixtures, and generated scaffolding",
+            "record the canonical replacement in the owning docs or state file",
             "docs/architecture-library/MYCELIS_CANONICAL_PRD.md",
         ],
         README: [
