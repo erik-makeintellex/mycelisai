@@ -1,21 +1,7 @@
 from invoke import task, Collection
 from .config import CORE_DIR, is_windows
-from . import core, interface
+from . import interface
 
-@task
-def all(c):
-    """
-    Run ALL Unit Tests (Core + Interface).
-    """
-    print("Executing Full Test Suite...")
-
-    try:
-        core.test.body(c)
-        interface.test.body(c)
-        print("All Tests Passed.")
-    except SystemExit:
-        print("Test Failure: see task output above.")
-        raise SystemExit(1)
 
 @task
 def coverage(c):
@@ -34,36 +20,6 @@ def coverage(c):
     print()
     print("Coverage reports generated.")
 
-@task(
-    help={
-        "headed": "Open a visible browser window.",
-        "project": "Optional Playwright project (chromium, firefox, webkit, mobile-chromium).",
-        "spec": "Optional Playwright spec path or glob.",
-        "live_backend": "Enable specs that require a real Core backend and authenticated UI proxying.",
-        "workers": "Optional Playwright worker count override.",
-        "server_mode": "Server mode for the UI server (dev, start, or external).",
-    }
-)
-def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="dev"):
-    """
-    Run Playwright E2E tests (alias for interface.e2e).
-    The alias mirrors the managed Interface browser contract, including worker
-    and server-mode controls used for stable mocked proof or stricter built
-    bundle proof, or external mode for a running Compose-delivered UI. Start
-    Core separately only when the spec needs a live backend instead of route
-    stubs.
-    """
-    interface.e2e.body(
-        c,
-        headed=headed,
-        project=project,
-        spec=spec,
-        live_backend=live_backend,
-        workers=workers,
-        server_mode=server_mode,
-    )
 
 ns = Collection("test")
-ns.add_task(all)
 ns.add_task(coverage)
-ns.add_task(e2e)

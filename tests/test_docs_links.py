@@ -36,6 +36,23 @@ def test_readme_docs_home_and_architecture_links_resolve():
         _assert_links_resolve(path)
 
 
+def test_all_active_documentation_links_resolve():
+    documentation = {
+        README,
+        ROOT / "AGENTS.md",
+        ROOT / "ops" / "README.md",
+        ROOT / "core" / "README.md",
+        ROOT / "interface" / "README.md",
+        ROOT / "cli" / "README.md",
+        ROOT / "core" / "internal" / "registry" / "README.md",
+        *sorted((ROOT / "docs").rglob("*.md")),
+        *sorted((ROOT / "architecture").rglob("*.md")),
+    }
+
+    for path in sorted(documentation):
+        _assert_links_resolve(path)
+
+
 def test_docs_manifest_paths_resolve_and_exposes_canonical_prd():
     text = DOCS_MANIFEST.read_text(encoding="utf-8")
     paths = re.findall(r'path:\s*"([^"]+)"', text)
@@ -44,6 +61,18 @@ def test_docs_manifest_paths_resolve_and_exposes_canonical_prd():
     assert not missing, f"docsManifest contains broken paths: {missing}"
     assert 'slug: "mycelis-canonical-prd"' in text
     assert 'path: "docs/architecture-library/MYCELIS_CANONICAL_PRD.md"' in text
+
+
+def test_all_user_docs_are_exposed_in_help_manifest():
+    text = DOCS_MANIFEST.read_text(encoding="utf-8")
+    manifest_paths = set(re.findall(r'path:\s*"([^"]+)"', text))
+    user_docs = {
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "docs" / "user").glob("*.md")
+    }
+
+    missing = sorted(user_docs - manifest_paths)
+    assert not missing, f"User docs missing from the in-app Help manifest: {missing}"
 
 
 def test_readme_style_pages_expose_project_navigation_and_tocs():

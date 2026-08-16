@@ -84,7 +84,7 @@ uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
 ```
 
-`lifecycle.down` leaves Dockerized PostgreSQL and NATS running. Use `uv run inv compose.down` only when intentionally stopping the development data plane.
+`lifecycle.down` leaves Dockerized PostgreSQL and NATS running. Use `uv run inv lifecycle.down --include-data-plane` to stop the local app and data plane together without deleting volumes, or `uv run inv compose.down` when only the dependency containers need to stop. Ollama and host runtimes remain independently managed.
 
 A host `psql` binary may be used as a client against the published Docker port. A native host PostgreSQL server and `MYCELIS_DEV_INFRA_MODE=native` are unsupported recovery paths.
 

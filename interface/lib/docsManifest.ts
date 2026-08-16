@@ -27,6 +27,7 @@ export const DOC_MANIFEST: DocSection[] = [
         docs: [
             { slug: "user-docs-home", label: "Use Mycelis", path: "docs/user/README.md", description: "Operator-first entry point for Soma, Outcomes, active work, deliverables, and recovery" },
             { slug: "soma-chat", label: "Using Soma Chat", path: "docs/user/soma-chat.md", description: "Human-first Soma prompts, compact answers, governed proposals, outputs, and recovery" },
+            { slug: "teams-guide", label: "Teams", path: "docs/user/teams.md", description: "Active team work, compact defaults, broad-ask splitting, and lead-centered workflows" },
             { slug: "resources-guide", label: "Outputs And Resources", path: "docs/user/resources.md", description: "Output files, group artifacts, capability readiness, tool repair, AI engines, and governed context" },
         ],
     },
@@ -34,7 +35,7 @@ export const DOC_MANIFEST: DocSection[] = [
         section: "Trust And Setup",
         docs: [
             { slug: "core-concepts", label: "Core Concepts", path: "docs/user/core-concepts.md", description: "Soma, teams, memory, governance, runs, and trust in operator language" },
-            { slug: "memory-guide", label: "Memory", path: "docs/user/memory.md", description: "Trusted recall, memory lanes, governed context, and continuity rules" },
+            { slug: "memory-guide", label: "Memory", path: "docs/user/memory.md", description: "Workspace continuity, source-aware recall, governed context, and trust boundaries" },
             { slug: "governance-trust", label: "Governance & Trust", path: "docs/user/governance-trust.md", description: "Approval posture, risk classes, audit visibility, and trusted-memory precedence" },
             { slug: "settings-access", label: "Settings And Access", path: "docs/user/settings-access.md", description: "Profile, access posture, auth providers, and connected-tool/search boundaries" },
             { slug: "auth-modes", label: "Authentication Modes", path: "docs/user/auth-modes.md", description: "Local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM posture" },
@@ -47,7 +48,6 @@ export const DOC_MANIFEST: DocSection[] = [
         section: "Advanced User Surfaces",
         docs: [
             { slug: "workflow-variants-plan-memory", label: "Workflow Variants + Plan Memory", path: "docs/user/workflow-variants-and-plan-memory.md", description: "Direct Soma, compact teams, multi-lane workflows, and durable plan memory" },
-            { slug: "teams-guide", label: "Teams", path: "docs/user/teams.md", description: "Active team work, compact defaults, broad-ask splitting, and lead-centered workflows" },
             { slug: "automations-guide", label: "Automations", path: "docs/user/automations.md", description: "Event trigger rules, schedules, mission profiles, and approvals around automated work" },
         ],
     },

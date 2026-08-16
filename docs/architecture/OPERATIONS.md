@@ -29,6 +29,8 @@ Use `uv run inv ...` for real tasks. Use `uvx --from invoke inv -l` only as a co
 
 Task modules live under `ops/*.py` and are registered through `tasks.py`. App-tied management logic belongs in Python; `uv run inv api.delivery-proof` exercises the live Mycelis API as a source-mode delivery lane, while `uv run inv ci.entrypoint-check` proves runner registration.
 
+The public task surface is capped at 95 registered commands. Each command must own distinct operator or proof behavior; aliases such as a second browser-test entrypoint or a second combined unit-test entrypoint are intentionally excluded. Use the task's owning namespace directly, and consolidate an existing task before increasing the budget.
+
 Task ownership boundary: Invoke tasks manage repo tools, Mycelis app services, data-plane dependencies, and proof lanes; WSL/Rancher/Docker host lifecycle and VM repair stay outside repo tasking.
 
 Compose infrastructure is the default source-mode data plane: `compose.infra-up` and `compose.infra-health` manage only Dockerized PostgreSQL and NATS, while `lifecycle.up --frontend` runs Core and Interface locally from source. Neither task builds application images. Use `MYCELIS_DEV_INFRA_MODE=compose` for development and `MYCELIS_DEV_INFRA_MODE=k8s` only for explicit clustered bridge proof; native host PostgreSQL is unsupported.
@@ -157,8 +159,8 @@ These are optional local GPU/helper tasks, not the default path for every host; 
 ### Test Tasks (`ops/test.py`) And CI Tasks (`ops/ci.py`)
 
 ```bash
-uv run inv test.all
-uv run inv test.e2e
+uv run inv test.coverage
+uv run inv interface.e2e
 uv run inv ci.test
 uv run inv ci.baseline
 uv run inv ci.service-check

@@ -16,7 +16,7 @@ def test_canonical_prd_layers_threaded_workspace_mandate():
 
     required = [
         "The first authenticated surface is the Soma workspace.",
-        "compact Start with shelf",
+        "no separate dashboard headline band or persistent launcher strip above the thread",
         "large Talk to Soma thread as the primary canvas",
         "header Outcomes button that opens Outcome Vault on demand",
         "No raw backend stack traces should reach the default UI.",
