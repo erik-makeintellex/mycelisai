@@ -63,7 +63,7 @@ In architecture language, Mycelis is built around user-owned Workspaces and Outc
 
 ## Active Delivery Target (V8.3 Embodiment)
 
-The active delivery target is [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md): make the architecture operationally trustworthy through natural Soma conversation, compact governance, async execution, durable outputs, proof, recovery, capability settings, and fresh-user GUI validation.
+The active delivery target is [Mycelis Canonical PRD](docs/architecture-library/MYCELIS_CANONICAL_PRD.md): make the architecture operationally trustworthy through natural Soma conversation, bounded clarification, compact governance, async execution, durable outputs, proof, recovery, capability settings, and fresh-user GUI validation.
 
 The active UI expression target is the human-first threaded Soma workspace defined in the canonical PRD: users talk with Soma before launching work, approve through a compact conversational pause, keep steering while asynchronous work runs, receive a concise completion summary with one primary output action, and open substantial deliverables in a dedicated surface. Work lists, capability setup, proof, recovery, and raw infrastructure remain contextual or behind Inspect.
 
@@ -71,6 +71,8 @@ Delivery rule:
 - advance V8.3 slices only with a named boundary, proof lane, promotion rule, and documentation review
 - use the staged delivery path `feature/* -> dev -> main`: prove the feature first, prove the integrated `dev` state after merge, and promote only a clean committed release candidate to `main`
 - prefer operational embodiment over new doctrine: the canonical MVP workflow is natural Soma conversation -> shaped outcome -> approval when needed -> owned work -> deliverables -> proof/recovery -> revisit
+- keep complex requests conversational: Soma gathers only the minimum sufficient brief, asks at most the few material questions needed for safe delivery, and records safe defaults when the operator asks it to proceed
+- extend the existing spine through reusable Outcome Templates and declarative configuration; templates may shape WorkIntent but must not become another permanent user-facing object or parallel execution model
 - do not create new split doctrine documents for current release-candidate scope
 
 ## Compatibility Baseline
@@ -80,6 +82,11 @@ The compatibility baseline is now inside the canonical PRD. Older versioned arch
 ## Current Implementation State
 
 Use `.state/V8_DEV_STATE.md` for the active scoreboard. Its active snapshot and immediate next actions are the current execution truth; older dated boards remain historical evidence only through Git history unless explicitly copied into the active snapshot.
+
+Current configuration delivery boundary:
+- `NEXT` P0.3a introduces the shared `ConfigDocument` validation, preview, activation, version, and rollback path plus the first Outcome Template compiler. Soma-authored configuration and direct YAML/JSON must pass through the same governed pipeline.
+- `REQUIRED` P0.7b extends that proven path to Worker Profiles, team templates, reusable asks/actions, capability and MCP connections, search/data sources, registered inputs, governed NATS actions, and scheduled/service definitions.
+- These are delivery targets, not claims of completed behavior. The current implementation and accepted proof remain authoritative in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).
 
 Status changes in planning/state docs must use the canonical markers: `REQUIRED`, `NEXT`, `ACTIVE`, `IN_REVIEW`, `COMPLETE`, `BLOCKED`.
 
@@ -91,6 +98,7 @@ Default surfaces should read as product workflows, not raw system internals:
 - The authenticated Dashboard is the primary Soma Workspace; compatibility organization routes must not introduce a competing product hierarchy.
 - Intent suggestions live inside Soma, not as competing panels or separate front doors; they should frame outcome, output shape, proof, and next action rather than raw prompts.
 - Meaningful actions must show a causal summary: understood intent, coordination, outputs, state changes, and next step.
+- Simple requests stay simple. Soma independently infers answer depth and execution intent, while complex work uses a bounded minimum-sufficient brief covering the Outcome, audience, essential behavior, quality bar, delivery form, constraints, and acceptance evidence.
 - Workspaces are governed user contexts; Outcomes hold deliverables, active work, proof, recovery, history, and continuity.
 - Teams and groups are visible when they help the operator review or steer work.
 - Advanced controls expose runtime depth, MCP/resources, deep memory, groups, runs, settings, auth, and docs without polluting first-run or default use; long topology surfaces should use focused menu/detail or list/detail panes rather than primary-page sprawl.
@@ -107,10 +115,12 @@ Advanced Architecture / Runtime Surface:
 
 source-of-truth layers remain separate:
 - guided UI settings
-- bundle/file configuration
+- file-authoritative declarative configuration authored through Soma or direct YAML/JSON
 - deployment/env overrides
 - runtime state
 - state and architecture docs
+
+Planned configuration authoring follows one path: `parse -> validate -> resolve scope and references -> dry-run -> preview effects -> approve when required -> atomic write -> compile/register -> activate -> proof/rollback`. User, organization, and Workspace scope must remain explicit; committed configuration stores secret references rather than raw secrets. Configuration adapters must compile into the existing WorkIntent, team, capability, source, NATS, scheduling, and service contracts instead of bypassing their governance.
 
 managed exchange foundation: channels, threads, schemas, and normalized outputs remain the governed substrate. managed exchange is permissioned; normalization into managed exchange does not imply unrestricted trust. The free-node release now includes foundational security boundaries.
 capability manifest foundation: MCP tools, custom connectors, local scripts, external APIs, generated artifacts, and future plugins/modules must register as governed capabilities before Soma, teams, groups, or automations use them. Meaningful executions attach to runs; meaningful outputs normalize into exchange, artifacts, audit, or learning candidates instead of remaining raw tool side effects.
