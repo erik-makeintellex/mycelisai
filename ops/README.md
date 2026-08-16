@@ -192,11 +192,9 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - Compose passes matching web-session and forwarded-identity secret references to Core and Interface. Keep any explicit `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` values in `.env`; omitted local values fall back consistently to `MYCELIS_API_KEY`.
 - Runtime file/tool requests may also use `workspace/...` as a friendly alias for the configured workspace root; the backend normalizes that prefix away so Compose-backed `/data/workspace` and repo-local `./workspace` do not produce doubled `workspace/workspace/...` paths.
 
-### `test.py` (Root Test Aliases)
-- **All**: `uv run inv test.all`
+### `test.py` (Cross-Stack Coverage)
 - **Coverage**: `uv run inv test.coverage`
-- **E2E Alias**: `uv run inv test.e2e`
-- `uv run inv test.e2e` mirrors the same managed browser options as `uv run inv interface.e2e`, including `--workers` and `--server-mode=dev|start|external`.
+- Use `uv run inv ci.test` for the combined Core and Interface unit gate and `uv run inv interface.e2e` for browser proof; duplicate aliases are intentionally not registered.
 
 ### `cognitive.py` (Optional Local Engine Helpers)
 - **Install**: `uv run inv cognitive.install`

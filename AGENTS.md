@@ -15,6 +15,8 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - Use `uv run inv ...` for real task execution.
 - Use `uvx --from invoke inv -l` only as a compatibility probe.
 - Do not use bare `uvx inv ...`.
+- Keep the public Invoke surface at or below 95 registered tasks. New tasks must provide distinct operator value and should replace or consolidate an existing entry when possible.
+- Do not register convenience aliases for an existing task. Documentation and automation must call the canonical owning namespace directly.
 - When invoke task behavior or task names change, update `README.md`, `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, `ops/README.md`, and any affected in-app docs surface in `interface/lib/docsManifest.ts` in the same slice.
 
 ## README Navigation Contract

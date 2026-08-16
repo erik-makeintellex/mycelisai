@@ -1,6 +1,6 @@
 # Mycelis Canonical PRD
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
-> Status: Canonical | Last Updated: 2026-08-12 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
+> Status: Canonical | Last Updated: 2026-08-16 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
 The default product language is:

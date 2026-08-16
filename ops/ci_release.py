@@ -189,15 +189,3 @@ def run_release_preflight(
         print(f"[{index}/{len(stages)}] {stage_name}")
         runner()
     print("RELEASE PREFLIGHT PASSED")
-
-
-def run_deploy(c, *, lint_task, test_task):
-    from . import k8s
-
-    print("=== DEPLOY ===")
-    print()
-    lint_task(c)
-    test_task(c)
-    k8s.deploy(c)
-    print()
-    print("DEPLOY COMPLETE")

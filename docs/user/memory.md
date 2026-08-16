@@ -1,7 +1,7 @@
 # Memory
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Persistent semantic memory — what the system knows, what it has done, and what it can recall.
+> Workspace continuity — what the system may recall, where it came from, and whether it can be trusted.
 
 ---
 

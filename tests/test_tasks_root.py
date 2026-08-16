@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import re
 from contextlib import contextmanager
 from dataclasses import dataclass
+from pathlib import Path
 
 from invoke import Context
 
 import tasks
-from ops import test as test_tasks
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @dataclass
@@ -70,7 +74,6 @@ def test_root_collection_exports_expected_task_surface():
         "ci.baseline",
         "ci.build",
         "ci.check",
-        "ci.deploy",
         "ci.entrypoint-check",
         "ci.lint",
         "ci.release-preflight",
@@ -150,14 +153,35 @@ def test_root_collection_exports_expected_task_surface():
         "relay.test",
         "team.architecture-sync",
         "team.worktree-triage",
-        "test.all",
         "test.coverage",
-        "test.e2e",
         "wsl.cycle",
         "wsl.refresh",
         "wsl.status",
         "wsl.validate",
     ]
+
+
+def test_root_task_surface_stays_within_operator_budget():
+    assert len(tasks.ns.task_names) <= 95
+
+
+def test_documented_invoke_commands_are_registered():
+    documentation = {
+        ROOT / "README.md",
+        ROOT / "AGENTS.md",
+        ROOT / "ops" / "README.md",
+        *sorted((ROOT / "docs").rglob("*.md")),
+        *sorted((ROOT / "architecture").rglob("*.md")),
+    }
+    command_pattern = re.compile(r"uv run inv ([a-z][a-z0-9]*(?:[.-][a-z0-9]+)*)(?![a-z0-9.*-])")
+    documented_tasks = {
+        match
+        for path in documentation
+        for match in command_pattern.findall(path.read_text(encoding="utf-8"))
+    }
+    missing = sorted(documented_tasks - set(tasks.ns.task_names))
+
+    assert not missing, f"Documentation references unregistered Invoke tasks: {missing}"
 
 
 def test_install_skips_optional_engines_by_default(capsys):
@@ -193,52 +217,3 @@ def test_install_can_include_optional_engines():
         "uv sync",
     ]
     assert ctx.cd_paths == ["core", "cognitive"]
-
-
-def test_test_all_normalizes_failures_to_system_exit(monkeypatch, capsys):
-    monkeypatch.setattr(test_tasks.core.test, "body", lambda c: None)
-    monkeypatch.setattr(test_tasks.interface.test, "body", lambda c: (_ for _ in ()).throw(SystemExit(3)))
-
-    with __import__("pytest").raises(SystemExit) as excinfo:
-        test_tasks.all.body(FakeContext())
-
-    assert excinfo.value.code == 1
-    assert "Test Failure: see task output above." in capsys.readouterr().out
-
-
-def test_test_e2e_alias_forwards_workers_and_server_mode(monkeypatch):
-    captured: dict[str, object] = {}
-
-    monkeypatch.setattr(
-        test_tasks.interface.e2e,
-        "body",
-        lambda c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="dev": captured.update(
-            {
-                "headed": headed,
-                "project": project,
-                "spec": spec,
-                "live_backend": live_backend,
-                "workers": workers,
-                "server_mode": server_mode,
-            }
-        ),
-    )
-
-    test_tasks.e2e.body(
-        FakeContext(),
-        headed=True,
-        project="chromium",
-        spec="e2e/specs/navigation.spec.ts",
-        live_backend=True,
-        workers="1",
-        server_mode="start",
-    )
-
-    assert captured == {
-        "headed": True,
-        "project": "chromium",
-        "spec": "e2e/specs/navigation.spec.ts",
-        "live_backend": True,
-        "workers": "1",
-        "server_mode": "start",
-    }
