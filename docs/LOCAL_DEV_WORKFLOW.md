@@ -109,7 +109,7 @@ For source development, set `MYCELIS_WORKSPACE=./workspace` and `MYCELIS_ARTIFAC
 
 ## Local Source Development
 
-Default development runs PostgreSQL and NATS in Docker while Core and Interface run locally from source. `uv run inv lifecycle.up --frontend` idempotently invokes `compose.infra-up` for only those two dependencies; it does not build or start containerized Core or Interface services. `lifecycle.down` stops the local app processes and leaves the reusable data plane running. Use `uv run inv compose.down` only when intentionally stopping the dependency containers.
+Default development runs PostgreSQL and NATS in Docker while Core and Interface run locally from source. `uv run inv lifecycle.up --frontend` idempotently invokes `compose.infra-up` for only those two dependencies; it does not build or start containerized Core or Interface services. `lifecycle.down` stops the local app processes and leaves the reusable data plane running. Use `lifecycle.down --include-data-plane` to stop both layers without deleting volumes, or `compose.down` when only the dependency containers need to stop.
 
 The Docker `pgvector/pgvector:pg16` service is the sole development PostgreSQL server. Relational rows and pgvector embeddings share its `postgres-data` volume. Local Core connects through the configured published port (`127.0.0.1:15432` by default); Compose Core connects inside the network at `postgres:5432`. A host-installed `psql` is client-only, and a native host PostgreSQL server is unsupported.
 
@@ -217,7 +217,9 @@ Shutdown:
 ```bash
 # Stop local Core and Interface; keep PostgreSQL/NATS warm.
 uv run inv lifecycle.down
-# Stop the Docker data plane only when intentionally ending it.
+# Stop local services and the Docker data plane; preserve retained volumes.
+uv run inv lifecycle.down --include-data-plane
+# Stop only the Docker data plane when local app services are already down.
 uv run inv compose.down
 ```
 

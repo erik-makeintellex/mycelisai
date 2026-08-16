@@ -108,7 +108,7 @@ Backend/API -> UI Target Plan
 ```
 No backend/API review is complete without a mapped UI target and evidence result. For propose-only schedule handoff approval changes, prove backend success plus invalid/not-found/conflict/attached-run guards, UI state badges/actions/store behavior, focused Schedule Rules browser proof, and API/user/state/testing doc review.
 ## Clean Run Discipline
-- Stop prior Core/Interface services before runtime or integration tests: `uv run inv lifecycle.down`. Dockerized PostgreSQL and NATS remain reusable development dependencies and are inspected with `uv run inv compose.infra-health`.
+- Stop prior Core/Interface services before runtime or integration tests with `uv run inv lifecycle.down`; Dockerized PostgreSQL and NATS remain reusable and are inspected with `uv run inv compose.infra-health`. Use `lifecycle.down --include-data-plane` only when the proof requires the dependency containers stopped too; it preserves named volumes.
 - Do not keep full Docker/K8s app stacks running during ordinary source work; use local Core/Interface with Dockerized PostgreSQL/NATS, then intentionally bring up containerized Core/Interface or Kubernetes for deployment proof.
 - For the normal development data plane, use `uv run inv compose.infra-up`, `compose.infra-health`, and `compose.storage-health`; these tasks do not build or run Core/Interface images.
 - If the host runtime itself is broken, repair it outside Invoke, then rerun the narrow Mycelis readiness task.

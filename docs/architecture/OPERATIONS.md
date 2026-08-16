@@ -104,11 +104,12 @@ uv run inv lifecycle.status
 uv run inv lifecycle.health
 uv run inv lifecycle.restart --frontend
 uv run inv lifecycle.down
+uv run inv lifecycle.down --include-data-plane
 uv run inv lifecycle.memory-restart --frontend
 ```
 
 `lifecycle.status` is the fast local snapshot. It reports process/port state and confirms Core through `/healthz` plus Ollama through `/api/tags` over loopback fallbacks. Use `lifecycle.health` for the deeper endpoint proof gate before claiming service readiness; its cognitive-status probe uses a longer client timeout than the endpoint's bounded provider probes so failures return as evidence instead of socket timeouts.
-`lifecycle.up` defaults to the Compose dependency lane and starts local Core/Interface only after Dockerized PostgreSQL and NATS are reachable. It does not run full `compose.up`, build application images, enable Kubernetes, or repair Docker/Rancher/WSL. `lifecycle.down` leaves the dependency containers running for reuse.
+`lifecycle.up` defaults to the Compose dependency lane and starts local Core/Interface only after Dockerized PostgreSQL and NATS are reachable. It does not run full `compose.up`, build application images, enable Kubernetes, or repair Docker/Rancher/WSL. `lifecycle.down` stops local app processes and leaves dependency containers running for reuse. `lifecycle.down --include-data-plane` also runs the non-destructive Compose shutdown for PostgreSQL/NATS; named volumes remain intact. It does not stop Ollama, shared external brokers, Docker/Rancher Desktop, WSL, or a Kubernetes cluster.
 
 ### Compose Tasks (`ops/compose.py`)
 

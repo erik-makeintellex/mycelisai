@@ -179,6 +179,7 @@ uv run inv lifecycle.up --frontend
 uv run inv lifecycle.status
 uv run inv lifecycle.health
 uv run inv lifecycle.down
+uv run inv lifecycle.down --include-data-plane
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.health
 uv run inv ci.baseline
@@ -199,6 +200,8 @@ NATS is a reusable transport host, not a Mycelis-owned workflow object. Set `NAT
 Cleanup note: `uv run inv clean.generated` removes repo-local generated artifacts but skips the active Python runtime directory when the task is running from that environment. If you intentionally need to remove `.venv`, do it from an external shell after leaving the environment.
 
 Task boundary: repo Invoke tasks manage Mycelis tools, app services, data-plane dependencies, and proof lanes. Default development uses `compose.infra-up` for Dockerized PostgreSQL/NATS and runs Core/Interface locally; there is no supported native-host PostgreSQL fallback. Host runtimes such as WSL distros, Rancher Desktop itself, Docker Desktop itself, and OS-level VM resets are operator/platform responsibilities outside the task registry; use repo tasks to probe, validate, and run Mycelis on those tools, not to manage the whole host environment.
+
+Service-control boundary: `lifecycle.down` stops local Core, Interface, repo-owned helpers, and Kubernetes port-forwards while retaining reusable data-plane services. In Compose development, use `lifecycle.down --include-data-plane` to stop Core/Interface plus PostgreSQL/NATS in one command without deleting volumes; `compose.down` remains the lower-level container-only equivalent. Ollama, Rancher Desktop, Docker Desktop, WSL distributions, and external/shared NATS hosts are not silently stopped.
 
 `lifecycle.status` is the quick local snapshot and now confirms Core through `/healthz` plus Ollama through `/api/tags` across loopback fallbacks; use `lifecycle.health` for deeper endpoint proof, `uv run inv api.delivery-proof` for API self-use, and `uv run inv ci.entrypoint-check` for runner matrix proof. The deeper health gate gives `/api/v1/cognitive/status` enough time to return bounded provider evidence instead of timing out at the client edge.
 

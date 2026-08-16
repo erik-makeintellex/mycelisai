@@ -673,14 +673,13 @@ def up(c, frontend=False, build=False):
     print("\nStack ready. Run 'uv run inv lifecycle.status' to verify.")
 
 
-@task
-def down(c):
+@task(help={"include_data_plane": "Also stop Compose PostgreSQL and NATS without deleting volumes."})
+def down(c, include_data_plane=False):
     """
-    Stop all dev stack services cleanly.
-    Order: core -> frontend -> compiled Go cleanup -> infra bridge cleanup when enabled.
+    Stop local app services, optionally including the Compose data plane.
+    Order: core -> frontend -> compiled Go cleanup -> optional data-plane shutdown.
     """
     print("=== Mycelis Stack Down ===\n")
-
     # 1. Core
     print("[1/4] Stopping Core...")
     if _kill_port(API_PORT, "Core"):
@@ -736,7 +735,6 @@ def down(c):
     print("[3/4] Cleaning compiled Go services...")
     remaining_compiled = _kill_compiled_go_services()
 
-    # 4. Infra bridge cleanup
     infra_mode = _dev_infra_mode()
     if infra_mode == "k8s":
         print("[4/4] Stopping Kubernetes port-forwards...")
@@ -750,6 +748,8 @@ def down(c):
             )
         else:
             _run_best_effort(["pkill", "-f", "kubectl port-forward"])
+    elif include_data_plane:
+        lifecycle_infra.stop_compose_data_plane(c)
     else:
         lifecycle_infra.print_retained_data_plane(infra_mode)
 
@@ -786,7 +786,7 @@ def down(c):
             + "). Re-run lifecycle.down or inspect the reported ports/PIDs with lifecycle.status."
         )
 
-    print("\nAll services stopped.")
+    lifecycle_infra.print_shutdown_summary(infra_mode, bool(include_data_plane))
 
 
 @task

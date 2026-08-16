@@ -165,11 +165,13 @@ Enforces max-lines policy across the main source tree with temporary no-regressi
 ### `lifecycle.py` (Local Stack Control)
 Owns deterministic local bring-up, teardown, and deep health checks.
 - **Up**: `uv run inv lifecycle.up --frontend`
-- **Down**: `uv run inv lifecycle.down`
+- **Down local app**: `uv run inv lifecycle.down` (retains Compose PostgreSQL/NATS)
+- **Down local app + data plane**: `uv run inv lifecycle.down --include-data-plane` (preserves named volumes)
 - **Health**: `uv run inv lifecycle.health`
 - **Memory Restart**: `uv run inv lifecycle.memory-restart --frontend`
 - `lifecycle.up` now ensures the `cortex` database exists before Core starts, so the bootstrap listener does not crash when a fresh bridge comes up after a reboot or cluster reset
 - `lifecycle.down` now treats repo-local Interface worker residue as part of the teardown contract, not just bound ports
+- shutdown summaries name the exact boundary: local app only, local app plus Compose data plane, or local app plus Kubernetes port-forwards; independently managed Ollama and host runtimes remain untouched
 - `lifecycle.status` reports a quick service snapshot and validates Core through `/healthz` plus Ollama through `/api/tags` across accepted loopback hosts so endpoint-reachable services are not reported down from a single TCP miss
 - `lifecycle.health` and `compose.health` allow the cognitive status endpoint a longer client window than its internal provider probes, so slow or degraded local AI endpoints produce operator-readable health evidence instead of edge timeouts
 - local tasking targets the bridged Core API port by default (`localhost:8081` unless `MYCELIS_API_PORT` overrides it)
