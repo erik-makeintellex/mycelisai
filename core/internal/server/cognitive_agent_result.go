@@ -42,6 +42,7 @@ func decodeChatAgentResult(data []byte) chatAgentResult {
 func (r chatAgentResult) hasStructuredState() bool {
 	return strings.TrimSpace(r.Text) != "" ||
 		len(r.ToolsUsed) > 0 ||
+		len(r.PlannedToolCalls) > 0 ||
 		len(r.Artifacts) > 0 ||
 		r.Availability != nil ||
 		strings.TrimSpace(r.ProviderID) != "" ||

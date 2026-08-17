@@ -155,6 +155,8 @@ uv run inv interface.e2e --headed --live-backend --server-mode=external --projec
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-browser-game-p0-live.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/trusted-outcome-journey-live.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-natural-delivery-routing-live.spec.ts
+uv run inv interface.e2e --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-outcome-template-journey.spec.ts
+uv run inv interface.e2e --live-backend --server-mode=dev --project=chromium --workers=1 --spec=e2e/specs/soma-outcome-template-preview-live.spec.ts
 ```
 When Go source changed, run `uv run inv core.compile` before `uv run inv lifecycle.restart`; source-mode lifecycle restart launches the existing `core/bin/server` binary and does not rebuild it. The trusted-outcome journey must therefore run against a freshly compiled Core binary. It proves governed ask and approval, immediately ready NATS team subscriptions, correlated team work, retained project-package generation, live `Work complete` notification, direct app launch, browser interaction, proof/run readback, and Dashboard/Resources/Groups/Activity revisit. Immediately after approval, delegated work must remain `running` and unverified with no completion proof. Only the final correlated result with the expected retained output may complete the run and execution contract; intermediate multi-team results may retain evidence without finalizing the Outcome. In-memory command correlation must outlive the 15-minute durable recovery deadline so slow local-model workers cannot publish orphan results. A package that reports a blocker, omits retained output, or cannot prove its requested interaction must remain degraded rather than appearing output-ready. Long-running proof must keep the authenticated SSE route connected through heartbeat comments and receive the completion event without reloading. SSE restart proof must disconnect after event N, persist later events, restart Core, reconnect with `Last-Event-ID: N`, and observe ordered replay without duplicate cards; bounded or unavailable history must surface `replay_gap` without leaking raw persistence errors. Slow-client proof must fill the live client buffer, verify Core closes that connection, and confirm reconnect resumes from the last delivered id. This certifies visibility only. Separate command certification must crash after command acceptance/effect but before outbox completion, restart, and prove one durable command receipt plus no repeated non-idempotent mutation. Restart coverage must also prove that runtime-created teams with nonterminal durable work are restored for result correlation without replaying the original command.
 RC-2 execution-to-deliverable proof adds four non-negotiable assertions to that journey: immediately after approval, delegated work has no `Action completed` or `Result verified` label; required retained files are backed by successful writes; required validation/proof is backed by successful readback; and the final output's `proof_ref` resolves to the exact `team_signal_result` artifact for the approved run and contract. Readback is ordered evidence: every later entrypoint write invalidates earlier readback and artifact-validation text until the current file is read again, and static package checks inspect the latest successful write rather than a stale or wrapped read result. Declared metadata, model prose, an unrelated successful proof, or a run id alone must not satisfy the gate. Exhausted correction must persist a concrete recovery option and must not expose a direct-open or verified-result action.
@@ -289,13 +291,11 @@ Primary local gates:
 - `uv run inv ci.baseline`
 - `uv run inv ci.service-check`
 - `uv run inv ci.release-preflight --lane=release`
-
 WSL release-style proof:
 ```bash
 uv run inv wsl.refresh
 uv run inv wsl.validate --lane=release
 ```
-
 The managed install path uses `npm ci` for Interface dependencies, so WSL and CI-style proof
 checkouts must not dirty `interface/package-lock.json` during bootstrap.
 

@@ -6,7 +6,7 @@ func chatToolRisk(tools []string) string {
 		if t == "publish_signal" || t == "broadcast" {
 			return "high"
 		}
-		if t == "generate_blueprint" || t == "delegate" || t == "create_team" || t == "delegate_task" || t == "write_file" {
+		if t == "generate_blueprint" || t == "delegate" || t == "create_team" || t == "delegate_task" || t == "write_file" || t == "store_config_document" || t == "activate_config_document" {
 			return "medium"
 		}
 		if t == "promote_deployment_context" {

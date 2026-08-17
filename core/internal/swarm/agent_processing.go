@@ -14,13 +14,14 @@ import (
 
 // ProcessResult holds the structured output of a processMessage call.
 type ProcessResult struct {
-	Text          string                           `json:"text"`
-	ToolsUsed     []string                         `json:"tools_used,omitempty"`
-	Artifacts     []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
-	Availability  *cognitive.ExecutionAvailability `json:"availability,omitempty"`
-	ProviderID    string                           `json:"provider_id,omitempty"`
-	ModelUsed     string                           `json:"model_used,omitempty"`
-	Consultations []protocol.ConsultationEntry     `json:"consultations,omitempty"`
+	Text             string                           `json:"text"`
+	ToolsUsed        []string                         `json:"tools_used,omitempty"`
+	PlannedToolCalls []protocol.PlannedToolCall       `json:"planned_tool_calls,omitempty"`
+	Artifacts        []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
+	Availability     *cognitive.ExecutionAvailability `json:"availability,omitempty"`
+	ProviderID       string                           `json:"provider_id,omitempty"`
+	ModelUsed        string                           `json:"model_used,omitempty"`
+	Consultations    []protocol.ConsultationEntry     `json:"consultations,omitempty"`
 }
 
 func (a *Agent) processMessage(input string, priorHistory []cognitive.ChatMessage) string {
@@ -82,6 +83,9 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 	loop.artifacts = reconcileToolBackedArtifacts(loop.artifacts, loop.toolEvidence, input)
 	loop.artifacts = dedupeAgentArtifacts(loop.artifacts)
 	responseText := stripToolCallJSON(loop.responseText)
+	if strings.TrimSpace(responseText) == "" && len(loop.plannedCalls) > 0 {
+		responseText = "Soma prepared the requested governed action for approval."
+	}
 	if strings.TrimSpace(responseText) == "" && len(loop.artifacts) > 0 {
 		responseText = retainedArtifactCompletionSummary(loop.artifacts)
 	}
@@ -104,7 +108,7 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 			Profile:           profile, ProviderID: providerID, ModelID: modelUsed,
 		}
 		a.logTurn("assistant", availability.Summary, providerID, modelUsed, "", nil, "", "")
-		return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, Artifacts: loop.artifacts, Availability: &availability, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
+		return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, PlannedToolCalls: loop.plannedCalls, Artifacts: loop.artifacts, Availability: &availability, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
 	}
 	if strings.TrimSpace(responseText) == "" {
 		summary := "Soma could not produce a readable reply for that request."
@@ -121,7 +125,7 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 	}
 
 	a.logTurn("assistant", responseText, providerID, modelUsed, "", nil, "", "")
-	return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, Artifacts: loop.artifacts, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
+	return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, PlannedToolCalls: loop.plannedCalls, Artifacts: loop.artifacts, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
 }
 
 func dedupeAgentArtifacts(artifacts []protocol.ChatArtifactRef) []protocol.ChatArtifactRef {
@@ -224,7 +228,7 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 	if a.internalTools != nil {
 		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
 	}
-	sys += a.buildToolsBlock()
+	sys += a.buildToolsBlock(input)
 
 	messages := []cognitive.ChatMessage{{Role: "system", Content: sys}}
 	if len(priorHistory) > 0 {

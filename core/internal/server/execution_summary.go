@@ -148,6 +148,20 @@ func buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, ru
 			Action: "chat",
 			Href:   "/api/v1/runs/" + runID,
 		}
+	} else if toolResultExists(results, "store_config_document") {
+		understandingSummary = "The Outcome Template revision was saved after approval."
+		executionStateSummary = "The reusable Outcome Template is saved and remains inactive until you ask Soma to use it."
+		nextStep = &protocol.ExecutionNextStep{
+			Label:  "Ask Soma to use this Outcome Template.",
+			Action: "chat",
+		}
+	} else if toolResultExists(results, "activate_config_document") {
+		understandingSummary = "The selected Outcome Template revision was activated after approval."
+		executionStateSummary = "The Outcome Template is active and ready to shape new work."
+		nextStep = &protocol.ExecutionNextStep{
+			Label:  "Tell Soma what outcome you want to create with this template.",
+			Action: "chat",
+		}
 	}
 
 	return &protocol.ExecutionSummary{

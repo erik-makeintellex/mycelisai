@@ -21,6 +21,8 @@ var mutationTools = map[string]bool{
 	"publish_signal":             true,
 	"broadcast":                  true,
 	"promote_deployment_context": true,
+	"store_config_document":      true,
+	"activate_config_document":   true,
 }
 
 const emptyProviderOutputCode = "empty_provider_output"
@@ -40,13 +42,14 @@ type chatRequestMessage struct {
 }
 
 type chatAgentResult struct {
-	Text          string                           `json:"text"`
-	ToolsUsed     []string                         `json:"tools_used,omitempty"`
-	Artifacts     []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
-	Availability  *cognitive.ExecutionAvailability `json:"availability,omitempty"`
-	ProviderID    string                           `json:"provider_id,omitempty"`
-	ModelUsed     string                           `json:"model_used,omitempty"`
-	Consultations []protocol.ConsultationEntry     `json:"consultations,omitempty"`
+	Text             string                           `json:"text"`
+	ToolsUsed        []string                         `json:"tools_used,omitempty"`
+	PlannedToolCalls []protocol.PlannedToolCall       `json:"planned_tool_calls,omitempty"`
+	Artifacts        []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
+	Availability     *cognitive.ExecutionAvailability `json:"availability,omitempty"`
+	ProviderID       string                           `json:"provider_id,omitempty"`
+	ModelUsed        string                           `json:"model_used,omitempty"`
+	Consultations    []protocol.ConsultationEntry     `json:"consultations,omitempty"`
 }
 
 // hasMutationTools checks if any tools in the list are mutation tools.
@@ -142,6 +145,9 @@ func inferMutationToolsFromText(text string) []string {
 	lower := strings.ToLower(strings.TrimSpace(text))
 	if lower == "" {
 		return nil
+	}
+	if tools, recognized := outcomeTemplateMutationTools(lower); recognized {
+		return tools
 	}
 
 	var tools []string
@@ -265,8 +271,12 @@ func normalizeChatRequestMessages(messages []chatRequestMessage, extraMutationTo
 	copy(normalized, messages)
 	if len(mutTools) == 0 {
 		depth := inferResponseDepthFromRequest(trimmed, false)
+		toolInstruction := "Do not call mutating tools, do not emit tool_call JSON, and do not route work unless the user explicitly asked to change something."
+		if readOnlyTools := inferReadOnlyConfigToolsFromText(trimmed); len(readOnlyTools) > 0 {
+			toolInstruction = "Use preview_config_document to validate and preview the model-authored Outcome Template when enough context is available. This preview is read-only; do not call store_config_document, activate_config_document, or another mutating tool."
+		}
 		normalized[idx].Content = directAnswerRoutePrefix + "\n" +
-			"Answer the latest request directly in readable text. Do not call mutating tools, do not emit tool_call JSON, and do not route work unless the user explicitly asked to change something.\n\n" +
+			"Answer the latest request directly in readable text. " + toolInstruction + "\n\n" +
 			"Match the user's requested answer depth (" + string(depth) + "). Use the lightest useful response, and offer expansion instead of turning the answer into a proposal.\n\n" +
 			"Original request:\n" + trimmed
 		return normalized, nil

@@ -20,6 +20,7 @@ type agentToolLoopResult struct {
 	resp          *cognitive.InferResponse
 	responseText  string
 	toolsUsed     []string
+	plannedCalls  []protocol.PlannedToolCall
 	artifacts     []protocol.ChatArtifactRef
 	consultations []protocol.ConsultationEntry
 	toolEvidence  []successfulToolEvidence
@@ -32,6 +33,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 	}
 
 	directAnswerPreferred := preferDirectDraftResponse(input)
+	directAnswerRoute := isDirectAnswerRoute(input)
 	reinferWithToolFeedback := func(toolName string, feedback string) bool {
 		appendAssistantHistory(&req.Messages, result.responseText)
 		req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolName, feedback)})
@@ -119,9 +121,19 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			}
 			continue
 		}
+		if directAnswerRoute && blocksProposalPlanningTool(toolCall.Name) {
+			if !reinferWithToolFeedback(toolCall.Name, "Authority correction: direct-answer mode cannot run mutation-capable tools. Use the requested read-only tool when one is available, or answer without a tool. Do not delegate, create, write, store, activate, publish, or execute commands.") {
+				break
+			}
+			continue
+		}
 		if planningOnly && blocksProposalPlanningTool(toolCall.Name) {
 			log.Printf("Agent [%s] proposal-planning tool captured without execution: %s", a.Manifest.ID, toolCall.Name)
 			result.toolsUsed = append(result.toolsUsed, toolCall.Name)
+			result.plannedCalls = append(result.plannedCalls, protocol.PlannedToolCall{
+				Name:      strings.TrimSpace(toolCall.Name),
+				Arguments: toolCall.Arguments,
+			})
 			a.logTurn("tool_call", result.responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
 			break
 		}

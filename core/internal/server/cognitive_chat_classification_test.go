@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/somacommands"
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
@@ -214,6 +216,65 @@ func TestInferMutationToolsTreatsToolPostureGuidanceAsReadOnly(t *testing.T) {
 				t.Fatalf("tools = %#v, want no mutation tools", tools)
 			}
 		})
+	}
+}
+
+func TestOutcomeTemplateManifestUserQuotesRouteConfigurationCommands(t *testing.T) {
+	registry, err := somacommands.LoadDefault()
+	if err != nil {
+		t.Fatalf("load Soma command manifests: %v", err)
+	}
+	quotes := map[string]string{}
+	for _, command := range registry.Commands {
+		quotes[command.Handler] = command.UserQuote
+	}
+
+	tests := []struct {
+		handler      string
+		wantMutation []string
+		wantReadOnly []string
+	}{
+		{handler: "preview_config_document", wantReadOnly: []string{"preview_config_document"}},
+		{handler: "store_config_document", wantMutation: []string{"store_config_document"}},
+		{handler: "activate_config_document", wantMutation: []string{"activate_config_document"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.handler, func(t *testing.T) {
+			quote := strings.TrimSpace(quotes[tc.handler])
+			if quote == "" {
+				t.Fatalf("manifest user_quote missing for %s", tc.handler)
+			}
+			if got := inferMutationToolsFromText(quote); !slices.Equal(got, tc.wantMutation) {
+				t.Fatalf("inferMutationToolsFromText(%q) = %v, want %v", quote, got, tc.wantMutation)
+			}
+			if got := inferReadOnlyConfigToolsFromText(quote); !slices.Equal(got, tc.wantReadOnly) {
+				t.Fatalf("inferReadOnlyConfigToolsFromText(%q) = %v, want %v", quote, got, tc.wantReadOnly)
+			}
+			messages, mutationTools := normalizeChatRequestMessages([]chatRequestMessage{{Role: "user", Content: quote}})
+			if !slices.Equal(mutationTools, tc.wantMutation) {
+				t.Fatalf("normalized mutation tools = %v, want %v", mutationTools, tc.wantMutation)
+			}
+			latest := latestUserMessageContent(messages)
+			if len(tc.wantMutation) > 0 && !strings.Contains(latest, governedMutationRoutePrefix) {
+				t.Fatalf("mutation quote did not use governed route: %q", latest)
+			}
+			if len(tc.wantReadOnly) > 0 && (!strings.Contains(latest, directAnswerRoutePrefix) || !strings.Contains(latest, "preview_config_document")) {
+				t.Fatalf("preview quote did not retain read-only preview guidance: %q", latest)
+			}
+		})
+	}
+}
+
+func TestOutcomeTemplateRequestsDoNotRouteToGenericFileOrRecurringTemplateTools(t *testing.T) {
+	tests := map[string][]string{
+		"Draft an Outcome Template as YAML for this request.": nil,
+		"Save this reusable Outcome Template.":                {"store_config_document"},
+		"Apply this recurring Outcome Template from now on.":  {"activate_config_document"},
+	}
+	for input, want := range tests {
+		if got := inferMutationToolsFromText(input); !slices.Equal(got, want) {
+			t.Fatalf("inferMutationToolsFromText(%q) = %v, want %v", input, got, want)
+		}
 	}
 }
 

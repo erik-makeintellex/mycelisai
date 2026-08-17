@@ -59,6 +59,12 @@ Before creating teams, enabling MCP servers, assigning tools, changing capabilit
 
 Confirming with `yes`, `confirm`, `proceed`, `do it`, or `one time` should bind to the prior inferred action instead of starting a new unrelated request.
 
+### Outcome Templates
+
+You can ask Soma to draft or check reusable Outcome Template configuration without leaving the conversation. Preview is read-only: when you provide YAML/JSON, Soma validates that exact document and says whether it is valid while making clear that nothing was saved or activated. A direct answer cannot delegate work or run another mutation in place of preview.
+
+Saving and activating are separate governed actions. Ask Soma to `save this Outcome Template` to create an immutable revision, then ask it to `use` or `activate` the saved revision when you are ready. Soma should show one compact proposal for each mutation, preserve the revision identity, and report whether the template is merely saved or actually active. Direct files under the configured Mycelis config root use the same parser, validation, digest, scope, approval, and activation rules.
+
 ## Reading The Soma Workspace
 
 The dashboard keeps Soma chat primary. When meaningful work exists, one compact background-work indicator shows the Outcome health and whether anything needs you. Opening it reveals a bounded work list over the conversation; it never narrows Soma or turns the page into a dashboard.

@@ -134,10 +134,11 @@ func (a *Agent) Stop() {
 	}
 }
 
-func (a *Agent) buildToolsBlock() string {
+func (a *Agent) buildToolsBlock(input string) string {
 	if len(a.Manifest.Tools) == 0 || len(a.toolDescs) == 0 {
 		return ""
 	}
+	readOnlyRoute := isDirectAnswerRoute(input)
 	var sb strings.Builder
 	sb.WriteString("\n\n## YOUR TOOLS (you MUST use these — never describe them to the user)\n")
 	sb.WriteString("To call a tool, output ONLY this JSON (no markdown fences around it):\n")
@@ -159,6 +160,9 @@ func (a *Agent) buildToolsBlock() string {
 			}
 		}
 		if strings.HasPrefix(toolName, "toolset:") || seen[displayName] {
+			continue
+		}
+		if readOnlyRoute && blocksProposalPlanningTool(displayName) {
 			continue
 		}
 		if desc, ok := a.toolDescs[displayName]; ok {

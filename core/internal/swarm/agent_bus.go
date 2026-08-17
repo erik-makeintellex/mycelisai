@@ -144,19 +144,20 @@ func teamAgentResponsePayload(result ProcessResult) []byte {
 			recoveryOptions = append(recoveryOptions, action)
 		}
 		responsePayload, err := json.Marshal(map[string]any{
-			"text":              result.Text,
-			"tools_used":        result.ToolsUsed,
-			"artifacts":         result.Artifacts,
-			"availability":      result.Availability,
-			"provider_id":       result.ProviderID,
-			"model_used":        result.ModelUsed,
-			"consultations":     result.Consultations,
-			"state":             "degraded",
-			"headline":          "Team work needs attention",
-			"summary":           summary,
-			"details":           summary,
-			"degradation_state": degradationState,
-			"recovery_options":  recoveryOptions,
+			"text":               result.Text,
+			"tools_used":         result.ToolsUsed,
+			"planned_tool_calls": result.PlannedToolCalls,
+			"artifacts":          result.Artifacts,
+			"availability":       result.Availability,
+			"provider_id":        result.ProviderID,
+			"model_used":         result.ModelUsed,
+			"consultations":      result.Consultations,
+			"state":              "degraded",
+			"headline":           "Team work needs attention",
+			"summary":            summary,
+			"details":            summary,
+			"degradation_state":  degradationState,
+			"recovery_options":   recoveryOptions,
 		})
 		if err == nil {
 			return responsePayload
