@@ -35,6 +35,9 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("qa_fixture_resources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'qa_fixture_resources';"),
     ("qa_fixture resource ownership index", "SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'uq_qa_fixture_resource_claim';"),
     ("purged QA fixture claims released", "SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM qa_fixture_resources r JOIN qa_fixture_scopes s ON s.id=r.scope_id WHERE s.status='purged');"),
+    ("config_documents table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'config_documents';"),
+    ("config_document_activations table", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activations' AND column_name = 'kind';"),
+    ("config_document_activation_history table", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activation_history' AND column_name = 'kind';"),
 )
 
 TARGETED_SCHEMA_MIGRATIONS = {
@@ -44,4 +47,7 @@ TARGETED_SCHEMA_MIGRATIONS = {
     "qa_fixture_resources table": "058_qa_fixture_ownership.up.sql",
     "qa_fixture resource ownership index": "059_qa_fixture_ownership_hardening.up.sql",
     "purged QA fixture claims released": "060_release_purged_qa_fixture_claims.up.sql",
+    "config_documents table": "061_config_documents.up.sql",
+    "config_document_activations table": "061_config_documents.up.sql",
+    "config_document_activation_history table": "061_config_documents.up.sql",
 }

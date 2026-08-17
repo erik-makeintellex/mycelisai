@@ -188,6 +188,7 @@ func (r *InternalToolRegistry) registerAll() {
 	r.registerDocsTools()
 	r.registerMemoryAndArtifactTools()
 	r.registerExecutionAndMediaTools()
+	r.registerConfigurationTools()
 }
 
 func (r *InternalToolRegistry) applyCommandManifests() {

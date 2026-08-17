@@ -6,11 +6,8 @@
 ---
 
 ## Overview
-
 Open `/resources` directly from the main rail when you need generated files, capability readiness, workspace roots, or connected-tool posture.
-
 Current resource menu:
-
 | Resource Type | Purpose |
 |-----|---------|
 | Output Files | Open generated content folders and browse filesystem MCP-backed files inside workspace boundary |
@@ -19,11 +16,8 @@ Current resource menu:
 | Deployment Context | Save files or notes Soma should reuse as long-lived, scoped source context |
 | AI Engines | Global AI engine configuration and health |
 | Worker Profiles | Ready-made and user-owned reusable teammates |
-
 The Resources page keeps these resource types in a persistent selector and renders the selected type inside a bounded work window. On phones and tablets, Resource types appear as one compact horizontally scrollable tab row so the selected work surface remains near the top of the screen. On desktop, the same choices use a vertical list-detail menu with short descriptions. Selection is recorded in the page URL, survives refresh, and works with browser Back. Long tool lists, workspace folders, exchange records, and provider forms scroll inside the selected panel rather than turning the whole page into one long operator path.
-
 Retained group outputs use the same Outcome Health labels as Soma, Teams, and Runs. A selectable group with retained user output is Completed; the badge describes operational state while proof and source material remain separate details.
-
 ---
 
 ## Connected Tools
@@ -39,6 +33,14 @@ Search scope must stay honest without making ordinary asks feel like configurati
 Search sources also support client-owned data: private docs, customer portals, repositories, issue trackers, file stores, intranet search, or SaaS knowledge bases. Current Capabilities show configured sources Soma may use, including source boundary, endpoint/base URL, scope, auth scheme, sensitivity/trust, status, and recovery. Use **Add search source** to name the source, choose type, provide the base URL/endpoint when the source is external or API-backed, choose auth scheme, select a secret reference, scope it to Everyone/Group/Host, and keep sensitivity/trust defaults visible. Operator-managed sources can be edited or removed from the same lane. The source list should say whether the source is ready for Soma now, ready once saved access is available, or only registered safely while another auth adapter is still needed. When Soma is asked to use a configured source, the runtime checks that the source is available, in scope for the current group or host, supported by a safe adapter, and able to resolve the referenced secret before searching it. Source records are PostgreSQL-backed and fail closed when durable persistence is unavailable. Raw tokens stay in `.env` or the configured secret backend.
 
 Local file access should use **named data mounts**, not arbitrary path guessing. Use Resources to list user-owned local folders or infrastructure shared folders that Soma may read, such as `workspace/client-docs`, a mounted network share, or a host-specific project data folder. Each mount needs a readable name, path/root, boundary description, mode such as read-only or read/write, scope (`Everyone`, `Group`, or `Host`), sensitivity/trust defaults, and recovery guidance. Once configured and in scope, mounted folders are live Soma search sources; Soma should name the mount when it uses files from it, and should not search or read unlisted paths just because they exist on the host.
+
+## Outcome Templates
+Outcome Templates help Soma ask only the few delivery questions that materially affect quality. They can define a minimum brief, defaults, expected output shape, validation expectations, capability/context references, and governance posture, then compile into the normal WorkIntent and Outcome journey. They are not saved chat prompts, automatic jobs, or a second execution system.
+There are two equivalent authoring paths:
+- Ask Soma to draft an Outcome Template, preview the resolved brief and effects, and save or activate it through governed configuration tools.
+- Write YAML or JSON under `MYCELIS_CONFIG_ROOT` (by default `MYCELIS_WORKSPACE/config`) and ask Soma or the configuration API to preview, store, and activate that file.
+Preview never persists or activates a document. Store creates an immutable revision. Activate changes the selected revision atomically and records who requested it; rollback explicitly reactivates a chosen prior revision. Running or approved work keeps the resolved template version and digest, so changing a template later does not rewrite historical authority. Configuration documents contain secret references only; put secret values in `.env` or the configured secret backend.
+Conversation Templates remain separate: they render reusable non-executing asks that return to Soma chat. Use an Outcome Template when repeated work needs a stable delivery brief and validation shape.
 
 ---
 
