@@ -1,0 +1,47 @@
+version: v1
+commands:
+  - id: configuration.preview_document
+    handler: preview_config_document
+    title: Preview configuration
+    summary: Validate an Outcome Template and show the brief or bounded questions without changing active configuration.
+    user_quote: "Preview this outcome template."
+    category: Outcome configuration
+    capability_id: config_documents
+    input_schema_ref: internal_tool.preview_config_document.input
+    output_schema_ref: config_document_preview.v1
+    scope: {default: workspace, roles: [soma, team_lead, admin]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: false}
+    delivery: {output_kinds: [preview, work_intent_draft], proof_required: false, recovery_posture: correct_document}
+    context_assertions: [non_mutating_preview, bounded_discovery]
+    ui_visibility: {default_surface: soma_thread, operator_label: Configuration preview}
+    availability: {mode: builtin, requires: [config_documents]}
+  - id: configuration.store_document
+    handler: store_config_document
+    title: Save configuration revision
+    summary: Save a validated immutable Outcome Template revision without activating it.
+    user_quote: "Save this outcome template."
+    category: Outcome configuration
+    capability_id: config_documents
+    input_schema_ref: internal_tool.store_config_document.input
+    output_schema_ref: config_document_revision.v1
+    scope: {default: workspace, roles: [soma, team_lead, admin]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [config_revision], proof_required: true, recovery_posture: correct_or_replace_revision}
+    context_assertions: [immutable_revision, no_activation]
+    ui_visibility: {default_surface: soma_thread, operator_label: Configuration saved}
+    availability: {mode: builtin, requires: [config_documents, postgres]}
+  - id: configuration.activate_document
+    handler: activate_config_document
+    title: Activate configuration revision
+    summary: Activate or roll back to an explicit validated revision after approval.
+    user_quote: "Use this outcome template."
+    category: Outcome configuration
+    capability_id: config_documents
+    input_schema_ref: internal_tool.activate_config_document.input
+    output_schema_ref: config_document_activation.v1
+    scope: {default: workspace, roles: [soma, team_lead, admin]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [activation_receipt], proof_required: true, recovery_posture: rollback_to_known_revision}
+    context_assertions: [explicit_revision, atomic_activation]
+    ui_visibility: {default_surface: soma_thread, operator_label: Configuration active}
+    availability: {mode: builtin, requires: [config_documents, postgres]}
