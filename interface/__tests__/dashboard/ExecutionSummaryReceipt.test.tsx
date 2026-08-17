@@ -116,6 +116,29 @@ describe("ExecutionSummaryReceipt", () => {
       .toBe("/runs/run-work-1");
   });
 
+  it("explains the saved-but-inactive Outcome Template state without opening proof", () => {
+    const summary: ExecutionSummaryData = {
+      execution: {
+        shape: "guided_proposal",
+        status: "completed",
+        summary: "The reusable Outcome Template is saved and remains inactive until you ask Soma to use it.",
+      },
+      outputs: [{
+        kind: "config_revision",
+        output_class: "user_deliverable",
+        title: "Outcome Template saved",
+        retained: true,
+        proof: { proof_id: "proof-template-1", execution_status: "verified" },
+      }],
+      proof: [{ run_id: "run-template-1" }],
+    };
+
+    render(<ExecutionSummaryReceipt summary={summary} runId="run-template-1" />);
+
+    expect(screen.getByText(/saved and remains inactive until you ask Soma to use it/i)).toBeDefined();
+    expect(screen.getByText("Outcome Template saved")).toBeDefined();
+  });
+
   it("does not present team planning files as completed user output", () => {
     const summary: ExecutionSummaryData = {
       execution: {

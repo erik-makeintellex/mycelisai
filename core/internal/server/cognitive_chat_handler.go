@@ -130,9 +130,13 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	subject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, "admin")
 	var agentResult chatAgentResult
+	deterministicPreview := false
+	agentResult, deterministicPreview = s.executeRequestedConfigPreview(r.Context(), latestUserText, chatAgentResult{})
 	deterministicProposal := false
-	agentResult, deterministicProposal = deterministicGovernedMutationResult(latestUserText, requestMutationTools)
-	if !deterministicProposal {
+	if !deterministicPreview {
+		agentResult, deterministicProposal = deterministicGovernedMutationResult(latestUserText, requestMutationTools)
+	}
+	if !deterministicPreview && !deterministicProposal {
 		var err error
 		agentResult, err = s.requestChatAgent(r.Context(), subject, req.Messages)
 		if err != nil {
@@ -142,7 +146,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if !deterministicProposal && shouldRetryDirectAnswer(agentResult, requestMutationTools) {
+	if !deterministicPreview && !deterministicProposal && shouldRetryDirectAnswer(agentResult, requestMutationTools) {
 		retryMessages := applyDirectAnswerRetryInstruction(req.Messages, latestUserText)
 		retryResult, retryErr := s.requestChatAgent(r.Context(), subject, retryMessages)
 		if retryErr == nil {
@@ -155,6 +159,12 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 				respondStructuredChatBlocker(w, directAnswerDriftBlocker(agentResult))
 			}
 			return
+		}
+	}
+	if !deterministicPreview && len(requestMutationTools) == 0 {
+		if previewResult, ok := s.executeRequestedConfigPreview(r.Context(), latestUserText, agentResult); ok {
+			agentResult = previewResult
+			deterministicPreview = true
 		}
 	}
 

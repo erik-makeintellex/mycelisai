@@ -84,7 +84,7 @@ The compatibility baseline is now inside the canonical PRD. Older versioned arch
 Use `.state/V8_DEV_STATE.md` for the active scoreboard. Its active snapshot and immediate next actions are the current execution truth; older dated boards remain historical evidence only through Git history unless explicitly copied into the active snapshot.
 
 Current configuration delivery boundary:
-- `IN_REVIEW` P0.3a now provides the shared `ConfigDocument` validation, preview, immutable revision, activation, rollback, and first Outcome Template compiler. Soma-authored configuration and direct YAML/JSON pass through the same governed pipeline; conversational browser acceptance remains before the lane is complete.
+- `IN_REVIEW` P0.3a now provides the shared `ConfigDocument` validation, preview, immutable revision, activation, rollback, and first Outcome Template compiler. Soma-authored configuration and direct YAML/JSON pass through the same governed pipeline. Authenticated live browser proof covers read-only preview without persistence; retained save, activation, and use still require one complete live conversational acceptance journey.
 - `REQUIRED` P0.7b extends that proven path to Worker Profiles, team templates, reusable asks/actions, capability and MCP connections, search/data sources, registered inputs, governed NATS actions, and scheduled/service definitions.
 - These are delivery states, not substitutes for acceptance evidence. The current implementation and accepted proof remain authoritative in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).
 

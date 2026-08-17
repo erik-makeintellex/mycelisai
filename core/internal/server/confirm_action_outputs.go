@@ -47,6 +47,16 @@ func executionOutputsFromToolResults(results []plannedToolExecutionResult) []pro
 			retained = true
 			href = workspaceFileOutputHref(path)
 		}
+		if toolName == "store_config_document" {
+			kind = "config_revision"
+			title = "Outcome Template saved"
+			retained = true
+		}
+		if toolName == "activate_config_document" {
+			kind = "config_activation"
+			title = "Outcome Template active"
+			retained = true
+		}
 		packageOutput := projectPackageOutputFromArgs(result.Arguments)
 		if packageOutput != nil {
 			id = packageOutput.ID

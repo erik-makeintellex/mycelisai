@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mycelis/core/internal/runs"
@@ -90,5 +91,42 @@ func TestConfirmedActionHasPendingTeamWork(t *testing.T) {
 	}
 	if !confirmedActionHasPendingTeamWork([]plannedToolExecutionResult{{Name: "delegate_task"}}) {
 		t.Fatal("delegated work must remain pending")
+	}
+}
+
+func TestConfirmActionSummaryExplainsOutcomeTemplateLifecycle(t *testing.T) {
+	tests := []struct {
+		name     string
+		tool     string
+		summary  string
+		nextStep string
+	}{
+		{
+			name:     "stored",
+			tool:     "store_config_document",
+			summary:  "saved and remains inactive",
+			nextStep: "Ask Soma to use this Outcome Template.",
+		},
+		{
+			name:     "active",
+			tool:     "activate_config_document",
+			summary:  "active and ready to shape new work",
+			nextStep: "Tell Soma what outcome you want to create with this template.",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			summary := buildConfirmActionExecutionSummary(
+				"intent-proof", "contract", "proof", "run", "audit",
+				&protocol.ScopeValidation{},
+				[]plannedToolExecutionResult{{Name: tc.tool}},
+			)
+			if !strings.Contains(summary.Execution.Summary, tc.summary) {
+				t.Fatalf("execution summary = %q, want %q", summary.Execution.Summary, tc.summary)
+			}
+			if summary.NextStep == nil || summary.NextStep.Label != tc.nextStep {
+				t.Fatalf("next step = %#v, want %q", summary.NextStep, tc.nextStep)
+			}
+		})
 	}
 }

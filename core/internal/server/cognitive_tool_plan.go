@@ -44,6 +44,12 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 		}
 		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
 	}
+	if len(agentResult.PlannedToolCalls) > 0 {
+		for _, call := range agentResult.PlannedToolCalls {
+			planned = append(planned, normalizePlannedToolCall(call))
+		}
+		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
+	}
 	if hasParsedCall {
 		planned = append(planned, normalizePlannedToolCall(parsedCall))
 	}
@@ -246,6 +252,18 @@ func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []stri
 		case "promote_deployment_context":
 			if artifactID, ok := call.Arguments["source_artifact_id"].(string); ok && strings.TrimSpace(artifactID) != "" {
 				resources = append(resources, fmt.Sprintf("company knowledge from %s", strings.TrimSpace(artifactID)))
+				continue
+			}
+		case "store_config_document":
+			if rawPath, ok := call.Arguments["path"].(string); ok && strings.TrimSpace(rawPath) != "" {
+				resources = append(resources, strings.TrimSpace(rawPath))
+				continue
+			}
+			resources = append(resources, "Outcome Template revision")
+			continue
+		case "activate_config_document":
+			if recordID := firstNonEmptyString(call.Arguments["record_id"]); recordID != "" {
+				resources = append(resources, "configuration revision:"+recordID)
 				continue
 			}
 		case "create_team":

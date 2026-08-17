@@ -8,7 +8,7 @@ import {
   projectPackageOutputs,
 } from "./OutputWorkbench";
 import { outputWorkbenchDigest, OutputWorkbenchCompactDigest } from "./OutputWorkbenchDigest";
-import { proofLinks, linkRunId, trustVerdict } from "./ExecutionSummaryCardModel";
+import { asItems, compactText, proofLinks, linkRunId, trustVerdict } from "./ExecutionSummaryCardModel";
 import ExecutionSummaryMediaPreview from "./ExecutionSummaryMediaPreview";
 
 export function shouldUseExecutionSummaryReceipt({
@@ -37,6 +37,9 @@ export default function ExecutionSummaryReceipt({
   const packages = projectPackageOutputs(summary.outputs);
   const digest = outputWorkbenchDigest({ outputs, projectPackages: packages });
   const summaryRunId = runId ?? proofLinks(summary.proof).map(linkRunId).find(Boolean) ?? null;
+  const configStateSummary = asItems(summary.outputs).some((output) => (
+    typeof output !== "string" && output.kind?.startsWith("config_")
+  )) ? compactText(summary.execution?.summary) : null;
 
   return (
     <div
@@ -56,7 +59,9 @@ export default function ExecutionSummaryReceipt({
             </p>
           </div>
           <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-            {digest?.isProjectPackage
+            {configStateSummary
+              ? configStateSummary
+              : digest?.isProjectPackage
               ? "App/package output is ready. Open it, browse it in Resources, or reply to Soma for changes."
               : digest
                 ? "Latest output is ready. Use Open file or open the review panel for proof."
