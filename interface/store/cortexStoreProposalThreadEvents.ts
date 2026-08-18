@@ -57,16 +57,22 @@ export function synchronousConfigAction(tools: string[] | undefined): Synchronou
     return null;
 }
 
-export function confirmationIsCompleted(body: any, responseStatus: number) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
+
+export function confirmationIsCompleted(body: unknown, responseStatus: number) {
     if (responseStatus === 202) return false;
-    const data = body?.data ?? body;
-    const summary = data?.execution_summary;
+    const root = isRecord(body) ? body : {};
+    const data = isRecord(root.data) ? root.data : root;
+    const summary = isRecord(data.execution_summary) ? data.execution_summary : {};
+    const execution = isRecord(summary.execution) ? summary.execution : {};
     const statuses = [
-        data?.run_status, data?.execution_status,
-        summary?.execution?.status, summary?.execution_status,
+        data.run_status, data.execution_status,
+        execution.status, summary.execution_status,
     ];
-    if (data?.verified === false || data?.execution_state === 'running' || statuses.includes('running')) return false;
-    return data?.verified === true || statuses.includes('completed');
+    if (data.verified === false || data.execution_state === 'running' || statuses.includes('running')) return false;
+    return data.verified === true || statuses.includes('completed');
 }
 
 export function configurationPendingEvent(
