@@ -146,4 +146,83 @@ describe('useCortexStore confirm proposal pending proof', () => {
         } as Response);
         await pending;
     });
+
+    it('presents synchronous template storage as a completed conversation instead of bus work', async () => {
+        const proposal = {
+            intent: 'Save the approved Outcome Template',
+            teams: 0,
+            agents: 0,
+            tools: ['store_config_document'],
+            risk_level: 'medium',
+            confirm_token: 'ct-config',
+            intent_proof_id: 'ip-config',
+        };
+        useCortexStore.setState({
+            pendingProposal: proposal,
+            activeConfirmToken: proposal.confirm_token,
+            missionChat: [{ role: 'council', content: 'Save this template?', mode: 'proposal', proposal, proposal_status: 'active' }],
+            activeMode: 'proposal',
+        });
+        mockFetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ data: {
+                confirmed: true,
+                run_id: 'run-config',
+                execution_summary: { execution: {
+                    status: 'completed',
+                    summary: 'Outcome Template "Delivery Brief" v2 saved with digest sha256:abc.',
+                } },
+            } }),
+        });
+
+        const result = await useCortexStore.getState().confirmProposal();
+
+        expect(result).toEqual({ ok: true, runId: 'run-config' });
+        const state = useCortexStore.getState();
+        expect(state.activeRunId).toBeNull();
+        expect(state.activeMode).toBe('execution_result');
+        expect(state.missionChat.at(-1)).toMatchObject({
+            content: 'Outcome Template "Delivery Brief" v2 saved with digest sha256:abc.',
+            mode: 'execution_result',
+            ui_response_state: {
+                kind: 'execution_result',
+                label: 'Template saved',
+                detail: 'It is saved but remains inactive until you activate it.',
+                tone: 'success',
+            },
+            thread_events: [{ kind: 'result_ready', label: 'Template saved', status: 'completed' }],
+        });
+        expect(JSON.stringify(state.missionChat)).not.toMatch(/work bus|Work started|Run run-config started/i);
+    });
+
+    it('keeps a config-only 202 response visible as active work', async () => {
+        const proposal = {
+            intent: 'Save the template', teams: 0, agents: 0,
+            tools: ['store_config_document'], risk_level: 'medium',
+            confirm_token: 'ct-running', intent_proof_id: 'ip-running',
+        };
+        useCortexStore.setState({
+            pendingProposal: proposal, activeConfirmToken: proposal.confirm_token,
+            missionChat: [{ role: 'council', content: 'Save?', mode: 'proposal', proposal, proposal_status: 'active' }],
+            activeMode: 'proposal',
+        });
+        mockFetch.mockResolvedValue({
+            ok: true, status: 202,
+            json: async () => ({ data: {
+                confirmed: true, verified: false, run_id: 'run-config-active', run_status: 'running',
+                execution_summary: { execution: { status: 'running' } },
+            } }),
+        });
+
+        await useCortexStore.getState().confirmProposal();
+
+        const state = useCortexStore.getState();
+        expect(state.activeRunId).toBe('run-config-active');
+        expect(state.missionChat.at(-1)).toMatchObject({
+            run_id: 'run-config-active',
+            thread_events: [{ kind: 'execution_started', status: 'running' }],
+        });
+        expect(JSON.stringify(state.missionChat)).not.toMatch(/Template saved|Template active/);
+    });
 });

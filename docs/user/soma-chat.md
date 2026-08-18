@@ -65,6 +65,8 @@ You can ask Soma to draft or check reusable Outcome Template configuration witho
 
 Saving and activating are separate governed actions. Ask Soma to `save this Outcome Template` to create an immutable revision, then ask it to `use` or `activate` the saved revision when you are ready. Soma should show one compact proposal for each mutation, preserve the revision identity, and report whether the template is merely saved or actually active. Direct files under the configured Mycelis config root use the same parser, validation, digest, scope, approval, and activation rules.
 
+After activation, ask Soma naturally to `use the active Outcome Template for this work`. Soma resolves the template in the current organization/workspace scope and snapshots the exact saved version and digest into the work it shapes. Reloading the conversation does not change that identity, and a later template revision cannot silently redefine already approved work. You do not need to manage ConfigDocument or WorkIntent records to use this path; those details remain available through proof or Inspect.
+
 ## Reading The Soma Workspace
 
 The dashboard keeps Soma chat primary. When meaningful work exists, one compact background-work indicator shows the Outcome health and whether anything needs you. Opening it reveals a bounded work list over the conversation; it never narrows Soma or turns the page into a dashboard.

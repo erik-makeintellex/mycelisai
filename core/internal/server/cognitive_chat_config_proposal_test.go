@@ -12,7 +12,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-func TestHandleChat_ConfigMutationsRemainGovernedProposals(t *testing.T) {
+func TestHandleChat_ConfigStoreRemainsGovernedProposal(t *testing.T) {
 	tests := []struct {
 		name      string
 		quote     string
@@ -21,9 +21,6 @@ func TestHandleChat_ConfigMutationsRemainGovernedProposals(t *testing.T) {
 	}{
 		{name: "store", quote: "Save this outcome template.", tool: "store_config_document", arguments: map[string]any{
 			"format": "yaml", "content": "model-authored-config",
-		}},
-		{name: "activate", quote: "Use this outcome template.", tool: "activate_config_document", arguments: map[string]any{
-			"record_id": "11111111-1111-1111-1111-111111111111", "action": "activate",
 		}},
 	}
 
@@ -93,5 +90,24 @@ func TestHandleChat_ConfigMutationsRemainGovernedProposals(t *testing.T) {
 				t.Fatalf("proposal risk = %q, want medium", payload.Proposal.RiskLevel)
 			}
 		})
+	}
+}
+
+func TestConfigDocumentRequestBoundarySurvivesApprovedScopeRoundTrip(t *testing.T) {
+	scope := protocol.ScopeValidation{ConfigRequestBoundary: configDocumentRequestBoundary(
+		" org-1 ", " team-1 ", " operator-1 ",
+	)}
+	raw, err := json.Marshal(scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var restored protocol.ScopeValidation
+	if err := json.Unmarshal(raw, &restored); err != nil {
+		t.Fatal(err)
+	}
+	boundary := restored.ConfigRequestBoundary
+	if boundary == nil || boundary.OrganizationID != "org-1" || boundary.WorkspaceID != "org-1" ||
+		boundary.TeamID != "team-1" || boundary.OperatorID != "operator-1" {
+		t.Fatalf("restored request boundary = %#v", boundary)
 	}
 }

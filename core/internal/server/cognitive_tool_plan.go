@@ -10,6 +10,9 @@ import (
 func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
 	var planned []protocol.PlannedToolCall
 	parsedCall, hasParsedCall := parsePlannedToolCall(agentResult.Text)
+	if configCalls, ok := explicitConfigMutationPlan(agentResult, latestRequest); ok {
+		return configCalls
+	}
 	if crossTeamCalls, ok := inferContentMarketingCrossTeamPlanFromRequest(latestRequest); ok {
 		planned = append(planned, crossTeamCalls...)
 		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
@@ -262,10 +265,8 @@ func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []stri
 			resources = append(resources, "Outcome Template revision")
 			continue
 		case "activate_config_document":
-			if recordID := firstNonEmptyString(call.Arguments["record_id"]); recordID != "" {
-				resources = append(resources, "configuration revision:"+recordID)
-				continue
-			}
+			resources = append(resources, "selected Outcome Template")
+			continue
 		case "create_team":
 			if teamID := firstNonEmptyString(call.Arguments["team_id"], call.Arguments["id"], call.Arguments["team_name"]); teamID != "" {
 				resources = append(resources, "team:"+teamID)

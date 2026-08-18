@@ -38,6 +38,12 @@ func (s *AdminServer) logConfirmedActionConversation(ctx context.Context, runID,
 		return nil
 	}
 	sessionID := runID
+	startContent := "Confirmed proposal execution started."
+	if result, ok := firstConfigDocumentResult(results, "store_config_document"); ok {
+		startContent = configDocumentResultSummary(result)
+	} else if result, ok := firstConfigDocumentResult(results, "activate_config_document"); ok {
+		startContent = configDocumentResultSummary(result)
+	}
 	_, err := s.Conversations.LogTurn(ctx, protocol.ConversationTurnData{
 		RunID:     runID,
 		SessionID: sessionID,
@@ -46,7 +52,7 @@ func (s *AdminServer) logConfirmedActionConversation(ctx context.Context, runID,
 		TeamID:    "admin-core",
 		TurnIndex: 0,
 		Role:      "assistant",
-		Content:   "Confirmed proposal execution started.",
+		Content:   startContent,
 	})
 	if err != nil {
 		return err

@@ -90,17 +90,27 @@ type IntentProof struct {
 
 // ScopeValidation tracks what resources a proposal will affect.
 type ScopeValidation struct {
-	Tools             []string                   `json:"tools"`
-	AffectedResources []string                   `json:"affected_resources"`           // e.g. ["missions", "teams", "service_manifests"]
-	RiskLevel         string                     `json:"risk_level"`                   // "low", "medium", "high"
-	PlannedToolCalls  []PlannedToolCall          `json:"planned_tool_calls,omitempty"` // governed mutation actions to execute only after confirmation
-	WorkIntent        *WorkIntent                `json:"work_intent,omitempty"`
-	ExecutionMode     string                     `json:"execution_mode,omitempty"`
-	Approval          *ApprovalPolicy            `json:"approval,omitempty"`
-	CapabilityIDs     []string                   `json:"capability_ids,omitempty"`
-	ExternalDataUse   bool                       `json:"external_data_use,omitempty"`
-	EstimatedCost     float64                    `json:"estimated_cost,omitempty"`
-	GovernanceProfile *GovernanceProfileSnapshot `json:"governance_profile,omitempty"`
+	Tools                 []string                       `json:"tools"`
+	AffectedResources     []string                       `json:"affected_resources"`           // e.g. ["missions", "teams", "service_manifests"]
+	RiskLevel             string                         `json:"risk_level"`                   // "low", "medium", "high"
+	PlannedToolCalls      []PlannedToolCall              `json:"planned_tool_calls,omitempty"` // governed mutation actions to execute only after confirmation
+	WorkIntent            *WorkIntent                    `json:"work_intent,omitempty"`
+	ExecutionMode         string                         `json:"execution_mode,omitempty"`
+	ConversationSessionID string                         `json:"conversation_session_id,omitempty"`
+	ConfigRequestBoundary *ConfigDocumentRequestBoundary `json:"config_request_boundary,omitempty"`
+	Approval              *ApprovalPolicy                `json:"approval,omitempty"`
+	CapabilityIDs         []string                       `json:"capability_ids,omitempty"`
+	ExternalDataUse       bool                           `json:"external_data_use,omitempty"`
+	EstimatedCost         float64                        `json:"estimated_cost,omitempty"`
+	GovernanceProfile     *GovernanceProfileSnapshot     `json:"governance_profile,omitempty"`
+}
+
+// ConfigDocumentRequestBoundary binds confirmed storage to its originating request.
+type ConfigDocumentRequestBoundary struct {
+	OrganizationID string `json:"organization_id,omitempty"`
+	WorkspaceID    string `json:"workspace_id,omitempty"`
+	TeamID         string `json:"team_id,omitempty"`
+	OperatorID     string `json:"operator_id,omitempty"`
 }
 
 // PlannedToolCall captures a governed tool action and its arguments so the

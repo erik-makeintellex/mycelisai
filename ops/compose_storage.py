@@ -35,6 +35,7 @@ COMPOSE_LONG_TERM_STORAGE_CHECKS = (
     ("config documents", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'config_documents';"),
     ("config document activations", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activations' AND column_name = 'kind';"),
     ("config document activation history", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activation_history' AND column_name = 'kind';"),
+    ("config document fixture ownership", "SELECT 1 FROM pg_constraint WHERE conname = 'chk_qa_fixture_resource_kind' AND pg_get_constraintdef(oid) LIKE '%config_document%';"),
     (
         "worker profiles",
         "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'agent_catalogue' AND column_name = 'profile_key';",
@@ -63,6 +64,7 @@ COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = {
     "config documents": ("061_config_documents.up.sql",),
     "config document activations": ("061_config_documents.up.sql",),
     "config document activation history": ("061_config_documents.up.sql",),
+    "config document fixture ownership": ("062_qa_fixture_config_documents.up.sql",),
     "worker profiles": ("056_agent_profile_library.up.sql",),
     "QA fixture ownership": (
         "058_qa_fixture_ownership.up.sql",

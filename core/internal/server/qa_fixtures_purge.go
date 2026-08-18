@@ -33,6 +33,15 @@ func deleteQAFixtureDatabaseResources(
 	resources []qaFixtureResource,
 	deleted map[string]int64,
 ) error {
+	configRefs := make([]string, 0)
+	for _, resource := range resources {
+		if resource.Kind == "config_document" {
+			configRefs = append(configRefs, resource.Ref)
+		}
+	}
+	if err := deleteQAFixtureConfigDocuments(ctx, tx, tenantID, configRefs, deleted); err != nil {
+		return fmt.Errorf("delete fixture config documents: %w", err)
+	}
 	for _, kind := range []string{"artifact", "group", "team", "outcome", "run"} {
 		for _, resource := range resources {
 			if resource.Kind != kind {
@@ -53,6 +62,9 @@ func deleteQAFixtureDatabaseResource(
 	resource qaFixtureResource,
 	deleted map[string]int64,
 ) error {
+	if resource.Kind == "config_document" {
+		return deleteQAFixtureConfigDocuments(ctx, tx, tenantID, []string{resource.Ref}, deleted)
+	}
 	queries := map[string][]struct {
 		label string
 		sql   string

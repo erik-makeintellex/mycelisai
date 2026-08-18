@@ -51,11 +51,13 @@ func executionOutputsFromToolResults(results []plannedToolExecutionResult) []pro
 			kind = "config_revision"
 			title = "Outcome Template saved"
 			retained = true
+			result.Output = configDocumentResultSummary(result)
 		}
 		if toolName == "activate_config_document" {
 			kind = "config_activation"
 			title = "Outcome Template active"
 			retained = true
+			result.Output = configDocumentResultSummary(result)
 		}
 		packageOutput := projectPackageOutputFromArgs(result.Arguments)
 		if packageOutput != nil {
