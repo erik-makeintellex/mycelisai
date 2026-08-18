@@ -3,9 +3,9 @@ commands:
   - id: configuration.preview_document
     handler: preview_config_document
     title: Preview configuration
-    summary: Validate an Outcome Template and show the brief or bounded questions without changing active configuration.
+    summary: Validate a supported configuration document and show its family-specific compiled preview without changing active configuration.
     user_quote: "Preview this outcome template."
-    category: Outcome configuration
+    category: Configuration
     capability_id: config_documents
     input_schema_ref: internal_tool.preview_config_document.input
     output_schema_ref: config_document_preview.v1
@@ -18,9 +18,9 @@ commands:
   - id: configuration.store_document
     handler: store_config_document
     title: Save configuration revision
-    summary: Save a validated immutable Outcome Template revision without activating it.
+    summary: Save a validated immutable configuration revision without activating it.
     user_quote: "Save this outcome template."
-    category: Outcome configuration
+    category: Configuration
     capability_id: config_documents
     input_schema_ref: internal_tool.store_config_document.input
     output_schema_ref: config_document_revision.v1
@@ -35,7 +35,7 @@ commands:
     title: Activate configuration revision
     summary: Activate or roll back to an explicit validated revision after approval.
     user_quote: "Use this outcome template."
-    category: Outcome configuration
+    category: Configuration
     capability_id: config_documents
     input_schema_ref: internal_tool.activate_config_document.input
     output_schema_ref: config_document_activation.v1

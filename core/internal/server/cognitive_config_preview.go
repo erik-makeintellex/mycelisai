@@ -31,16 +31,16 @@ func (s *AdminServer) executeRequestedConfigPreview(ctx context.Context, request
 	registry := swarm.NewInternalToolRegistry(swarm.InternalToolDeps{})
 	tool := registry.Get("preview_config_document")
 	if tool == nil {
-		return configPreviewFailure(fallback, "Outcome Template preview is unavailable in this runtime."), true
+		return configPreviewFailure(fallback, "Configuration preview is unavailable in this runtime."), true
 	}
 	raw, err := tool.Handler(ctx, map[string]any{"content": content, "format": format})
 	if err != nil {
-		return configPreviewFailure(fallback, "Soma could not validate this Outcome Template: "+err.Error()), true
+		return configPreviewFailure(fallback, "Soma could not validate this configuration: "+err.Error()), true
 	}
 
 	var preview configPreviewToolResult
 	if err := json.Unmarshal([]byte(raw), &preview); err != nil {
-		return configPreviewFailure(fallback, "Soma validated the Outcome Template but could not read the preview result."), true
+		return configPreviewFailure(fallback, "Soma validated the configuration but could not read the preview result."), true
 	}
 	result := fallback
 	result.ToolsUsed = []string{"preview_config_document"}
@@ -83,21 +83,33 @@ func parseInlineConfigDocument(text string) (string, string, protocol.ConfigDocu
 }
 
 func readableConfigPreview(document protocol.ConfigDocument, preview protocol.ConfigDocumentDryRunResult) string {
+	family := configDocumentFamilyLabel(document.Kind)
 	if preview.Valid {
 		scope := string(preview.Effect.Scope.Kind)
 		if preview.Effect.Scope.Ref != "" {
 			scope += " " + preview.Effect.Scope.Ref
 		}
 		return fmt.Sprintf(
-			"Outcome Template preview is valid. `%s` version `%s` would be available for %s after approval and activation. Nothing was saved or activated.",
-			document.Metadata.Name, document.Metadata.Version, scope,
+			"%s preview is valid. `%s` version `%s` would be available for %s after approval and activation. Nothing was saved or activated.",
+			family, document.Metadata.Name, document.Metadata.Version, scope,
 		)
 	}
 	if len(preview.Issues) == 0 {
-		return "Outcome Template preview is invalid. Nothing was saved or activated."
+		return family + " preview is invalid. Nothing was saved or activated."
 	}
 	issue := preview.Issues[0]
-	return fmt.Sprintf("Outcome Template preview needs correction: %s: %s. Nothing was saved or activated.", issue.Field, issue.Message)
+	return fmt.Sprintf("%s preview needs correction: %s: %s. Nothing was saved or activated.", family, issue.Field, issue.Message)
+}
+
+func configDocumentFamilyLabel(kind protocol.ConfigDocumentKind) string {
+	switch kind {
+	case protocol.ConfigDocumentKindWorkerProfile:
+		return "Worker Profile"
+	case protocol.ConfigDocumentKindOutcomeTemplate:
+		return "Outcome Template"
+	default:
+		return "Configuration"
+	}
 }
 
 func configPreviewFailure(fallback chatAgentResult, message string) chatAgentResult {

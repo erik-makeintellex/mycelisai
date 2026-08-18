@@ -7,7 +7,8 @@ import (
 )
 
 func outcomeTemplateMutationTools(lower string) ([]string, bool) {
-	if !requestContainsAny(lower, []string{"outcome template", "outcome-template"}) {
+	lower = strings.ToLower(strings.TrimSpace(lower))
+	if !mentionsConfigDocumentFamily(lower) {
 		return nil, false
 	}
 	if outcomeTemplateWorkApplication(lower) {
@@ -17,11 +18,13 @@ func outcomeTemplateMutationTools(lower string) ([]string, bool) {
 	var tools []string
 	if matchesConfiguredSomaCommandQuote(lower, "activate_config_document") ||
 		requestContainsAny(lower, []string{"roll back", "rollback"}) ||
+		requestContainsAny(lower, []string{"activate this worker profile", "activate the worker profile"}) ||
 		requestContainsAny(lower, []string{"make active", "set active", "from now on"}) ||
 		hasAnyExactWord(lower, "activate") {
 		tools = append(tools, "activate_config_document")
 	}
 	if matchesConfiguredSomaCommandQuote(lower, "store_config_document") ||
+		requestContainsAny(lower, []string{"save this worker profile", "save the worker profile", "store this worker profile", "store the worker profile"}) ||
 		hasAnyExactWord(lower, "save", "store", "persist") {
 		tools = append(tools, "store_config_document")
 	}
@@ -53,7 +56,7 @@ func outcomeTemplateWorkApplication(lower string) bool {
 
 func inferReadOnlyConfigToolsFromText(text string) []string {
 	lower := strings.ToLower(strings.TrimSpace(text))
-	if !requestContainsAny(lower, []string{"outcome template", "outcome-template"}) {
+	if !mentionsConfigDocumentFamily(lower) {
 		return nil
 	}
 	if matchesConfiguredSomaCommandQuote(lower, "preview_config_document") ||
@@ -62,6 +65,12 @@ func inferReadOnlyConfigToolsFromText(text string) []string {
 		return []string{"preview_config_document"}
 	}
 	return nil
+}
+
+func mentionsConfigDocumentFamily(lower string) bool {
+	return requestContainsAny(lower, []string{
+		"outcome template", "outcome-template", "worker profile", "worker-profile",
+	})
 }
 
 func matchesConfiguredSomaCommandQuote(text, handler string) bool {

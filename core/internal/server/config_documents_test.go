@@ -68,6 +68,63 @@ spec:
 	}
 }
 
+func TestHandleConfigDocumentDryRunCompilesWorkerProfileYAML(t *testing.T) {
+	s := newTestServer()
+	mux := setupMux(t, "POST /api/v1/config-documents/dry-run", s.HandleConfigDocumentDryRun)
+	body, err := json.Marshal(map[string]any{
+		"format": "yaml",
+		"content": `apiVersion: mycelis.ai/v1
+kind: WorkerProfile
+metadata:
+  id: evidence-reviewer
+  name: Evidence reviewer
+  version: "1"
+  owner_id: workspace-owner
+  scope:
+    kind: workspace
+    ref: primary
+  enabled: true
+  source:
+    kind: file
+    ref: config/profiles/evidence-reviewer.yaml
+  governance:
+    risk_level: low
+    approval_posture: optional
+spec:
+  role: reviewer
+  system_prompt: Review the assigned output against its acceptance evidence.
+  capability_refs:
+    - artifact.review
+  outputs:
+    - review_report
+  verification_strategy: semantic
+  verification_rubric:
+    - Every finding identifies evidence
+`,
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	rr := doAuthenticatedRequest(t, mux, http.MethodPost, "/api/v1/config-documents/dry-run", string(body))
+	assertStatus(t, rr, http.StatusOK)
+	var response protocol.APIResponse
+	assertJSON(t, rr, &response)
+	data := response.Data.(map[string]any)
+	compiled := data["compiled"].(map[string]any)
+	if compiled["ready"] != true {
+		t.Fatalf("compiled = %#v, want ready", compiled)
+	}
+	snapshot := compiled["profile_snapshot"].(map[string]any)
+	if snapshot["id"] != "evidence-reviewer" {
+		t.Fatalf("snapshot = %#v", snapshot)
+	}
+	profile := compiled["profile"].(map[string]any)
+	if profile["role"] != "reviewer" {
+		t.Fatalf("profile = %#v", profile)
+	}
+}
+
 func TestHandleConfigDocumentDryRunRejectsAmbiguousSource(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "POST /api/v1/config-documents/dry-run", s.HandleConfigDocumentDryRun)

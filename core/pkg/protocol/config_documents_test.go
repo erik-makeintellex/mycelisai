@@ -68,7 +68,7 @@ func TestValidateConfigDocumentFailsClosed(t *testing.T) {
 		code   string
 	}{
 		{name: "unsupported api version", mutate: func(document *ConfigDocument) { document.APIVersion = "mycelis.ai/v2" }, code: "config.unsupported_api_version"},
-		{name: "unsupported kind", mutate: func(document *ConfigDocument) { document.Kind = "WorkerProfile" }, code: "config.unsupported_kind"},
+		{name: "unsupported kind", mutate: func(document *ConfigDocument) { document.Kind = "TeamManifest" }, code: "config.unsupported_kind"},
 		{name: "missing id", mutate: func(document *ConfigDocument) { document.Metadata.ID = "" }, code: "metadata.missing_id"},
 		{name: "invalid id", mutate: func(document *ConfigDocument) { document.Metadata.ID = "Not Stable" }, code: "metadata.invalid_id"},
 		{name: "missing name", mutate: func(document *ConfigDocument) { document.Metadata.Name = " " }, code: "metadata.missing_name"},

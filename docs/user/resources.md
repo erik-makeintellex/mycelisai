@@ -306,7 +306,7 @@ Operational behavior:
 
 ## Worker Profiles
 Worker Profiles define reusable teammates Soma may assign to governed work. Ready-made profiles are locked so the shipped safety and access posture stays inspectable; use **Copy profile** to create an editable user-owned version. **New profile** starts a blank profile.
-
+Worker Profile YAML/JSON may now be previewed through the same ConfigDocument validator used by Soma. Preview proves the family fields and exact id/version/digest without saving or activating anything. Runtime activation and the focused Soma-first Resources editor are still being converged; until that gate passes, the existing user-profile editor remains compatibility behavior rather than a second file-authoritative configuration path.
 Each profile may define:
 - a plain purpose and role
 - optional model preference, otherwise the workspace AI engine applies

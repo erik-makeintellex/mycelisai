@@ -32,8 +32,8 @@ func (s *AdminServer) HandleConfigDocumentDryRun(w http.ResponseWriter, r *http.
 	}
 	dryRun := protocol.DryRunConfigDocument(document)
 	response := map[string]any{"dry_run": dryRun}
-	if dryRun.Valid && document.Kind == protocol.ConfigDocumentKindOutcomeTemplate {
-		compiled, err := configdocuments.CompileOutcomeTemplateDocument(document, input.OperatorValues, input.PolicyValues)
+	if dryRun.Valid {
+		compiled, err := configdocuments.CompileDocument(document, input.OperatorValues, input.PolicyValues)
 		if err != nil {
 			respondAPIError(w, err.Error(), http.StatusBadRequest)
 			return
@@ -126,7 +126,7 @@ func (s *AdminServer) HandleCompileConfigDocument(w http.ResponseWriter, r *http
 			return
 		}
 	}
-	compiled, err := configdocuments.CompileOutcomeTemplateDocument(record.Document, input.OperatorValues, input.PolicyValues)
+	compiled, err := configdocuments.CompileDocument(record.Document, input.OperatorValues, input.PolicyValues)
 	if err != nil {
 		respondConfigDocumentError(w, err)
 		return
