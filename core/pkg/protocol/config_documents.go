@@ -19,6 +19,7 @@ type ConfigDocumentEffectAction string
 
 const (
 	ConfigDocumentKindOutcomeTemplate ConfigDocumentKind = "OutcomeTemplate"
+	ConfigDocumentKindWorkerProfile   ConfigDocumentKind = "WorkerProfile"
 
 	ConfigDocumentScopeBuiltIn      ConfigDocumentScopeKind = "built_in"
 	ConfigDocumentScopeOrganization ConfigDocumentScopeKind = "organization"
@@ -116,7 +117,7 @@ func ValidateConfigDocument(document ConfigDocument) []ConfigDocumentValidationI
 	if document.APIVersion != ConfigDocumentAPIVersionV1 {
 		add("config.unsupported_api_version", "apiVersion", fmt.Sprintf("unsupported apiVersion %q", document.APIVersion))
 	}
-	if document.Kind != ConfigDocumentKindOutcomeTemplate {
+	if document.Kind != ConfigDocumentKindOutcomeTemplate && document.Kind != ConfigDocumentKindWorkerProfile {
 		add("config.unsupported_kind", "kind", fmt.Sprintf("unsupported config document kind %q", document.Kind))
 	}
 
@@ -154,6 +155,9 @@ func ValidateConfigDocument(document ConfigDocument) []ConfigDocumentValidationI
 		add("spec.empty", "spec", "config document spec must contain at least one field")
 	} else {
 		validateConfigDocumentSpecSecrets(spec, "spec", &issues)
+		if document.Kind == ConfigDocumentKindWorkerProfile {
+			issues = append(issues, ValidateWorkerProfileSpec(document.Spec)...)
+		}
 	}
 
 	return issues

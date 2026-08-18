@@ -17,8 +17,8 @@ func (r *InternalToolRegistry) handlePreviewConfigDocument(_ context.Context, ar
 	}
 	dryRun := protocol.DryRunConfigDocument(document)
 	result := map[string]any{"dry_run": dryRun}
-	if dryRun.Valid && document.Kind == protocol.ConfigDocumentKindOutcomeTemplate {
-		compiled, err := configdocuments.CompileOutcomeTemplateDocument(
+	if dryRun.Valid {
+		compiled, err := configdocuments.CompileDocument(
 			document,
 			minimumBriefFromArgs(args["operator_values"]),
 			minimumBriefFromArgs(args["policy_values"]),
