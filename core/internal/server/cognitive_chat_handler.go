@@ -17,7 +17,6 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	var req chatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Bad JSON", http.StatusBadRequest)
@@ -33,29 +32,18 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		respondAPIError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	if len(req.Messages) == 0 {
 		http.Error(w, "Empty conversation", http.StatusBadRequest)
 		return
 	}
 	focusedTeamID := resolveFocusedSomaTeamID(req.TeamID)
-
 	sessionID, sessionIDValid := validateOptionalChatSessionID(req.SessionID)
 	if !sessionIDValid {
 		respondAPIError(w, "Invalid session_id: expected UUID", http.StatusBadRequest)
 		return
 	}
-
-	sessionTurnIndex := 0
-	if sessionID != "" && s.Conversations != nil {
-		if priorTurns, err := s.Conversations.GetSessionTurns(r.Context(), sessionID); err != nil {
-			log.Printf("[chat] prior session conversation lookup failed: %v", err)
-		} else {
-			sessionTurnIndex = len(priorTurns)
-			req.Messages = mergePersistedSessionMessages(req.Messages, priorTurns)
-		}
-	}
-
+	var sessionTurnIndex int
+	req.Messages, sessionTurnIndex = s.restoreChatSessionMessages(r.Context(), sessionID, req.Messages)
 	req.Messages = normalizeRetryRequest(req.Messages)
 	latestUserText := latestUserMessageContent(req.Messages)
 	continuationContext = applyContinuationIntent(continuationContext, latestUserText)
@@ -82,7 +70,6 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		s.respondDirectSearchAnswer(w, r, searchRequest)
 		return
 	}
-
 	referentialReview := s.buildSomaReferentialReview(r.Context(), req.Messages)
 	if referentialReview.NeedsConfirmation {
 		logSomaConversationTurn(r.Context(), s.Conversations, sessionID, focusedTeamID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
@@ -175,6 +162,12 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 	isMutation, mutTools, plannedToolCalls := executableMutationPlan(isMutation, agentResult, latestUserText, mutTools)
 	if isMutation {
+		if !s.resolveThreadOutcomeTemplateActivationOrRespond(
+			w, r, sessionID, req.Messages, req.OrganizationID, req.TeamID,
+			auditActorIDFromRequest(r), &plannedToolCalls,
+		) {
+			return
+		}
 		if availability := s.mediaGenerationPreflight(r.Context(), plannedToolCalls); availability != nil {
 			agentResult.Availability = availability
 			agentResult.Text = availability.Summary
@@ -199,7 +192,6 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	applyBrainProvenance(s, &chatPayload, agentResult)
-
 	askContract := resolveChatAskContract("soma", isMutation, agentResult)
 	chatPayload.AskClass = askContract.AskClass
 	templateID := askContract.TemplateID
@@ -209,15 +201,23 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		effectiveTools := toolsForPlannedCalls(plannedToolCalls, mutTools)
 		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
 		display := buildProposalDisplayContractForTeam(plannedToolCalls, latestUserText, effectiveTools, focusedTeamID)
+		if !s.applyThreadOutcomeTemplateOrRespond(
+			w, r, sessionID, req.Messages, latestUserText, req.OrganizationID,
+			req.TeamID, auditActorIDFromRequest(r), &display,
+		) {
+			return
+		}
 		scope := &protocol.ScopeValidation{
-			Tools:             effectiveTools,
-			AffectedResources: affectedResourcesForPlannedCalls(plannedToolCalls),
-			RiskLevel:         chatToolRisk(effectiveTools),
-			PlannedToolCalls:  plannedToolCalls,
-			WorkIntent:        display.WorkIntent,
-			ExecutionMode:     proposalExecutionMode(display.WorkIntent),
-			Approval:          approval,
-			GovernanceProfile: profile.snapshot(),
+			Tools:                 effectiveTools,
+			AffectedResources:     affectedResourcesForPlannedCalls(plannedToolCalls),
+			RiskLevel:             chatToolRisk(effectiveTools),
+			PlannedToolCalls:      plannedToolCalls,
+			WorkIntent:            display.WorkIntent,
+			ExecutionMode:         proposalExecutionMode(display.WorkIntent),
+			ConversationSessionID: sessionID,
+			ConfigRequestBoundary: configDocumentRequestBoundary(req.OrganizationID, req.TeamID, auditActorIDFromRequest(r)),
+			Approval:              approval,
+			GovernanceProfile:     profile.snapshot(),
 		}
 		if approval != nil {
 			scope.CapabilityIDs = approval.CapabilityIDs

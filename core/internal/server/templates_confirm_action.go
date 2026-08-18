@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/pkg/protocol"
@@ -65,41 +64,90 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if fixtureScopeID != "" {
-		if err := s.claimQAFixtureResourcesLocked(r.Context(), fixtureScopeID, []qaFixtureResource{{Kind: "run", Ref: runID}}); err != nil {
+		if err := claimQAFixtureResourceTx(
+			r.Context(), tx, fixtureScopeID, qaFixtureResource{Kind: "run", Ref: runID},
+		); err != nil {
 			respondAPIError(w, "failed to bind execution cleanup ownership", http.StatusConflict)
 			return
 		}
 	}
 
-	auditUser := auditUserLabelFromRequest(r)
+	auditUser := auditActorIDFromRequest(r)
 	actorIdentity := actorIdentitySnapshotFromRequest(r)
+	configAction, configPlanErr := confirmedConfigMutationPlan(scope)
+	if configPlanErr != nil {
+		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, fixtureScopeID, auditUser, actorIdentity, configPlanErr)
+		return
+	}
 	if confirmedActionNeedsAsyncDispatch(scope) {
 		s.handleAsyncConfirmedAction(w, r, tx, proofID, contractID, runID, scope, fixtureScopeID, auditUser, actorIdentity)
 		return
 	}
-	results, err := s.executePlannedToolCalls(r.Context(), scope, auditUser, runID, proofID, contractID, fixtureScopeID, fixtureScopeID != "")
+	if configAction {
+		if _, err := tx.ExecContext(r.Context(), "SAVEPOINT confirmed_config_action"); err != nil {
+			respondAPIError(w, "failed to prepare atomic configuration action", http.StatusInternalServerError)
+			return
+		}
+	}
+	failAction := func(actionErr error) {
+		if configAction {
+			if _, rollbackErr := tx.ExecContext(r.Context(), "ROLLBACK TO SAVEPOINT confirmed_config_action"); rollbackErr != nil {
+				log.Printf("CE-1: config-action rollback failed: %v", rollbackErr)
+				respondAPIError(w, "configuration action rollback failed", http.StatusInternalServerError)
+				return
+			}
+		}
+		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, fixtureScopeID, auditUser, actorIdentity, actionErr)
+	}
+	var executionTx *sql.Tx
+	if configAction {
+		executionTx = tx
+	}
+	results, err := s.executePlannedToolCallsTx(r.Context(), executionTx, scope, auditUser, runID, proofID, contractID, fixtureScopeID, fixtureScopeID != "")
 	if err != nil {
-		s.respondConfirmActionFailure(w, r, tx, proofID, contractID, runID, fixtureScopeID, auditUser, actorIdentity, err)
+		failAction(err)
 		return
 	}
+	if err := s.claimConfirmedConfigDocuments(r.Context(), tx, fixtureScopeID, results); err != nil {
+		failAction(err)
+		return
+	}
+	if configAction {
+		if err := s.logConfigDocumentThreadReceiptsTx(r.Context(), tx, scope, results); err != nil {
+			failAction(fmt.Errorf("persist configuration receipt: %w", err))
+			return
+		}
+	}
 	pendingTeamWork := confirmedActionHasPendingTeamWork(results)
-	if !pendingTeamWork {
+	if !pendingTeamWork && !configAction {
 		s.completeConfirmedActionWorkerRun(r.Context(), runID, results)
+	}
+	if !pendingTeamWork {
 		if err := s.markRunCompletedTx(tx, runID, proofID); err != nil {
 			log.Printf("CE-1: confirm-action run completion failed: %v", err)
-			respondAPIError(w, "failed to finalize execution record", http.StatusInternalServerError)
+			failAction(fmt.Errorf("finalize execution record: %w", err))
 			return
 		}
 	}
 	if err := s.confirmChatProofTx(tx, proofID); err != nil {
 		log.Printf("CE-1: confirm-action proof update failed: %v", err)
-		respondAPIError(w, "failed to confirm intent proof", http.StatusInternalServerError)
+		failAction(fmt.Errorf("confirm intent proof: %w", err))
 		return
 	}
 	if err := tx.Commit(); err != nil {
 		log.Printf("CE-1: confirm-action tx commit failed: %v", err)
 		respondAPIError(w, "transaction commit failed", http.StatusInternalServerError)
 		return
+	}
+	if !pendingTeamWork && configAction {
+		s.completeConfirmedActionWorkerRun(r.Context(), runID, results)
+	}
+	if configAction {
+		for _, result := range results {
+			s.auditExecutedPlannedTool(protocol.PlannedToolCall{
+				Name: result.Name, ToolRef: result.ToolRef, Arguments: result.Arguments,
+			}, result.Name, auditUser)
+		}
 	}
 	auditID := s.auditConfirmedAction(proofID, runID, scope, auditUser, actorIdentity, pendingTeamWork)
 	proofArtifactID := ""
@@ -120,12 +168,33 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		log.Printf("CE-1: confirm-action visibility persistence failed: %v", err)
 	}
-	s.broadcastConfirmActionThreadEvent(runID, proofID, contractID, teamWorkRefs)
+	if !isSynchronousConfigAction(results) {
+		s.broadcastConfirmActionThreadEvent(runID, proofID, contractID, teamWorkRefs)
+	}
 	runStatus := runs.StatusCompleted
 	if pendingTeamWork {
 		runStatus = runs.StatusRunning
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseDataForStatus(proofID, contractID, proofArtifactID, runID, auditID, runStatus, scope, results, teamWorkRefs, outcomeProject)))
+}
+
+func confirmedConfigMutationPlan(scope *protocol.ScopeValidation) (bool, error) {
+	if scope == nil || len(scope.PlannedToolCalls) == 0 {
+		return false, nil
+	}
+	configCount := 0
+	for _, call := range scope.PlannedToolCalls {
+		if isConfigDocumentMutationTool(call.Name) {
+			configCount++
+		}
+	}
+	if configCount == 0 {
+		return false, nil
+	}
+	if configCount != len(scope.PlannedToolCalls) {
+		return false, fmt.Errorf("configuration changes must be approved separately from delegated or external work")
+	}
+	return true, nil
 }
 
 func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, string, *protocol.ScopeValidation, string, bool) {
@@ -142,7 +211,7 @@ func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Requ
 		return "", "", nil, "", false
 	}
 
-	runID, err := s.createExecutionRunTx(r.Context(), tx, proofID, scope, auditUserLabelFromRequest(r))
+	runID, err := s.createExecutionRunTx(r.Context(), tx, proofID, scope, auditActorIDFromRequest(r))
 	if err != nil {
 		log.Printf("CE-1: confirm-action run creation failed: %v", err)
 		respondAPIError(w, "failed to create execution record", http.StatusInternalServerError)
@@ -226,47 +295,6 @@ func (s *AdminServer) loadIntentProofScopeForFailure(ctx context.Context, proofI
 	return scope, nil
 }
 
-func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protocol.ScopeValidation, auditUser string, actorIdentity map[string]any, pendingTeamWork bool) string {
-	executionState := "verified"
-	runResult := "completed"
-	runMessage := "Execution run completed for confirmed chat proposal"
-	if pendingTeamWork {
-		executionState = "running"
-		runResult = "started"
-		runMessage = "Execution run started for confirmed chat proposal"
-	}
-	auditID, _ := s.createAuditEvent(
-		protocol.TemplateChatToProposal, "confirm-action",
-		"Chat proposal confirmed and execution record created",
-		withActorIdentity(map[string]any{
-			"proof_id":        proofID,
-			"run_id":          runID,
-			"execution_state": executionState,
-			"actor":           "Soma",
-			"user":            auditUser,
-			"action":          "proposal_confirmed",
-			"result_status":   "confirmed",
-			"approval_status": "confirmed",
-			"intent_proof_id": proofID,
-			"capability_used": strings.Join(scope.CapabilityIDs, ","),
-		}, actorIdentity),
-	)
-	_, _ = s.createAuditEvent(
-		protocol.TemplateChatToProposal, "confirm-action",
-		runMessage,
-		withActorIdentity(map[string]any{
-			"actor":           "Soma",
-			"user":            auditUser,
-			"action":          "execution_run",
-			"result_status":   runResult,
-			"run_id":          runID,
-			"intent_proof_id": proofID,
-			"capability_used": strings.Join(scope.CapabilityIDs, ","),
-		}, actorIdentity),
-	)
-	return auditID
-}
-
 func confirmedActionHasPendingTeamWork(results []plannedToolExecutionResult) bool {
 	for _, result := range results {
 		if isDelegateTool(result.Name) {
@@ -274,14 +302,4 @@ func confirmedActionHasPendingTeamWork(results []plannedToolExecutionResult) boo
 		}
 	}
 	return false
-}
-
-func withActorIdentity(ctx map[string]any, actorIdentity map[string]any) map[string]any {
-	if ctx == nil {
-		ctx = map[string]any{}
-	}
-	if len(actorIdentity) > 0 {
-		ctx["actor_identity"] = actorIdentity
-	}
-	return ctx
 }

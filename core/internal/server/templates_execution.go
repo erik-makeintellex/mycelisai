@@ -185,6 +185,10 @@ func (s *AdminServer) markRunFailedTx(tx *sql.Tx, runID, proofID, reason string)
 }
 
 func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protocol.ScopeValidation, auditUser, runID, proofID, contractID, fixtureScopeID string, fixtureFenceHeld bool) ([]plannedToolExecutionResult, error) {
+	return s.executePlannedToolCallsTx(ctx, nil, scope, auditUser, runID, proofID, contractID, fixtureScopeID, fixtureFenceHeld)
+}
+
+func (s *AdminServer) executePlannedToolCallsTx(ctx context.Context, tx *sql.Tx, scope *protocol.ScopeValidation, auditUser, runID, proofID, contractID, fixtureScopeID string, fixtureFenceHeld bool) ([]plannedToolExecutionResult, error) {
 	if scope == nil || len(scope.PlannedToolCalls) == 0 {
 		return nil, fmt.Errorf("no approved execution plan was stored for this proposal")
 	}
@@ -197,15 +201,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 	registry.SetSoma(s.Soma)
 	mcpExec := s.plannedMCPToolExecutor()
 	executor := swarm.NewCompositeToolExecutor(registry, mcpExec)
-	toolCtx := swarm.WithToolInvocationContext(ctx, swarm.ToolInvocationContext{
-		SourceKind:    protocol.SourceKindWebAPI,
-		SourceChannel: "api.intent.confirm-action",
-		PayloadKind:   protocol.PayloadKindCommand,
-		Timestamp:     time.Now(),
-		UserLabel:     auditUser,
-		RunID:         strings.TrimSpace(runID),
-		PlanningOnly:  false,
-	})
+	toolCtx := confirmedActionToolContext(ctx, auditUser, runID)
 
 	results := make([]plannedToolExecutionResult, 0, len(scope.PlannedToolCalls))
 	lastGeneratedImageArtifactID := ""
@@ -231,6 +227,11 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 		}
 		var output string
 		execute := func() error {
+			if tx != nil && isConfigDocumentMutationTool(resolvedToolName) {
+				var configErr error
+				output, configErr = s.executeConfigDocumentMutationTx(toolCtx, tx, resolvedToolName, planned.Arguments, scope, auditUser)
+				return configErr
+			}
 			if strings.EqualFold(resolvedToolName, "create_team") {
 				if err := s.ensureQAFixtureTeamCreationAvailable(toolCtx, fixtureScopeID, runID, planned.Arguments); err != nil {
 					return err
@@ -276,55 +277,10 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 			Output:    output,
 			Artifacts: artifacts,
 		})
-		s.auditExecutedPlannedTool(planned, resolvedToolName, auditUser)
+		if tx == nil || !isConfigDocumentMutationTool(resolvedToolName) {
+			s.auditExecutedPlannedTool(planned, resolvedToolName, auditUser)
+		}
 	}
 
 	return results, nil
-}
-
-func (s *AdminServer) auditExecutedPlannedTool(planned protocol.PlannedToolCall, resolvedToolName, auditUser string) {
-	resource := firstNonEmptyString(planned.Arguments["path"], planned.Arguments["subject"], planned.Arguments["channel"])
-	capabilityID := capabilityForPlannedTool(firstNonEmptyString(planned.ToolRef, resolvedToolName))
-	details := buildExecutionAuditDetailsForTool(planned, resolvedToolName)
-	_, _ = s.createAuditEvent(
-		protocol.TemplateChatToProposal, "confirm-action",
-		"Approved capability usage executed",
-		map[string]any{
-			"actor":           "Soma",
-			"user":            auditUser,
-			"action":          "capability_usage",
-			"result_status":   "completed",
-			"capability_used": capabilityID,
-			"resource":        resource,
-			"details":         details,
-		},
-	)
-	if resolvedToolName == "publish_signal" || resolvedToolName == "broadcast" {
-		_, _ = s.createAuditEvent(
-			protocol.TemplateChatToProposal, "confirm-action",
-			"Governed channel write executed",
-			map[string]any{
-				"actor":           "Soma",
-				"user":            auditUser,
-				"action":          "channel_written",
-				"result_status":   "completed",
-				"capability_used": capabilityID,
-				"resource":        resource,
-			},
-		)
-	}
-	if resolvedToolName == "write_file" || resolvedToolName == "promote_deployment_context" {
-		_, _ = s.createAuditEvent(
-			protocol.TemplateChatToProposal, "confirm-action",
-			"Governed artifact created",
-			map[string]any{
-				"actor":           "Soma",
-				"user":            auditUser,
-				"action":          "artifact_created",
-				"result_status":   "completed",
-				"capability_used": capabilityID,
-				"resource":        resource,
-			},
-		)
-	}
 }

@@ -104,13 +104,13 @@ func TestConfirmActionSummaryExplainsOutcomeTemplateLifecycle(t *testing.T) {
 		{
 			name:     "stored",
 			tool:     "store_config_document",
-			summary:  "saved and remains inactive",
+			summary:  "saved but not active",
 			nextStep: "Ask Soma to use this Outcome Template.",
 		},
 		{
 			name:     "active",
 			tool:     "activate_config_document",
-			summary:  "active and ready to shape new work",
+			summary:  "active for its configured scope",
 			nextStep: "Tell Soma what outcome you want to create with this template.",
 		},
 	}

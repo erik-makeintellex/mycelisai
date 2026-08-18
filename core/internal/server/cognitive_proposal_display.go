@@ -150,17 +150,12 @@ func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, lat
 			display.ExpectedResult = "A new approved company knowledge record will be created with lineage back to the original customer context entry."
 			return display
 		case "store_config_document":
-			display.OperatorSummary = "Save this Outcome Template as an immutable configuration revision."
+			display.OperatorSummary = "Save this Outcome Template for reuse."
 			display.ExpectedResult = "The validated revision will be stored after approval and will remain inactive."
 			return display
 		case "activate_config_document":
-			recordID := firstStringArgument(planned[0].Arguments, "record_id")
-			display.OperatorSummary = "Activate the selected Outcome Template revision."
-			if recordID != "" {
-				display.ExpectedResult = fmt.Sprintf("Configuration revision %q will become active after approval.", recordID)
-			} else {
-				display.ExpectedResult = "The selected configuration revision will become active after approval."
-			}
+			display.OperatorSummary = "Make the selected Outcome Template active."
+			display.ExpectedResult = "The selected Outcome Template will become active for its configured scope after approval."
 			return display
 		}
 	}
@@ -189,11 +184,11 @@ func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, lat
 			display.OperatorSummary = "Promote an existing customer context entry into approved company knowledge."
 			display.ExpectedResult = "A new approved company knowledge record will be created with lineage back to the original customer context entry."
 		case "store_config_document":
-			display.OperatorSummary = "Save this Outcome Template as an immutable configuration revision."
+			display.OperatorSummary = "Save this Outcome Template for reuse."
 			display.ExpectedResult = "The validated revision will be stored after approval and will remain inactive."
 		case "activate_config_document":
-			display.OperatorSummary = "Activate the selected Outcome Template revision."
-			display.ExpectedResult = "The selected configuration revision will become active after approval."
+			display.OperatorSummary = "Make the selected Outcome Template active."
+			display.ExpectedResult = "The selected Outcome Template will become active after approval."
 		}
 	}
 

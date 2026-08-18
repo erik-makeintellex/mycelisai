@@ -1,11 +1,18 @@
-import {
-    extractRunIdFromResponse,
-    trimToNonEmpty,
-    updateProposalLifecycle,
-} from '@/store/cortexStoreChatWorkflow';
+import { extractRunIdFromResponse, trimToNonEmpty, updateProposalLifecycle } from '@/store/cortexStoreChatWorkflow';
 import { buildMissionChatFailure } from '@/lib/missionChatFailure';
 import type { ChatMessage, ConfirmProposalResult } from '@/store/cortexStoreTypes';
-import { approvalSentEvent, executionStartedEvent } from '@/store/cortexStoreProposalThreadEvents';
+import {
+    approvalSentEvent,
+    confirmationIsCompleted,
+    configurationCompletedEvent,
+    configurationCompletedMessage,
+    configurationCompletedState,
+    configurationPendingEvent,
+    configurationPendingState,
+    executionStartedEvent,
+    proposalStartedState,
+    synchronousConfigAction,
+} from '@/store/cortexStoreProposalThreadEvents';
 import { extractTeamWorkRefs, teamWorkMessage, type TeamWorkConfirmationRef } from '@/store/cortexStoreProposalTeamWorkRefs';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { ProposalData } from '@/store/cortexStoreTypesChat';
@@ -64,22 +71,11 @@ function mediaDependencyRecoveryCopy(diagnostics: string) {
     };
 }
 
-const proposalStartedDetail = 'Soma handed this to the work bus. You can keep talking here while updates arrive.';
-
-function proposalStartedState(): NonNullable<ChatMessage['ui_response_state']> {
-    return {
-        kind: 'running',
-        label: 'Started',
-        detail: proposalStartedDetail,
-        tone: 'info',
-    };
-}
-
 function confirmedRunMessage(runId: string | null, summary?: string | null, teamWorkRefs: TeamWorkConfirmationRef[] = []) {
     const state = runId ? `Run ${runId.slice(0, 8)} started.` : 'Proposal approved.';
     const next = runId
         ? 'Soma handed this to the work bus. This is running, not a completed result or proof.'
-        : proposalStartedDetail;
+        : proposalStartedState().detail;
     return [state, next, teamWorkMessage(teamWorkRefs), summary].filter(Boolean).join(' ');
 }
 
@@ -122,6 +118,7 @@ export function createCortexProposalExecutionSlice(
                     error: 'This proposal is missing executable proof. Ask Soma to regenerate it before running.',
                 };
             }
+            const configAction = synchronousConfigAction(proposal.tools);
             set((s) => {
                 const conversationalReply = trimToNonEmpty(operatorReply);
                 const missionChat = conversationalReply
@@ -137,8 +134,8 @@ export function createCortexProposalExecutionSlice(
                     missionChatFailure: null,
                     missionChat: updateProposalLifecycle(missionChat, intentProofId, 'confirmed_pending_execution', {
                         mode: 'proposal',
-                        ui_response_state: proposalStartedState(),
-                        thread_events: [approvalSentEvent()],
+                        ui_response_state: configAction ? configurationPendingState(configAction) : proposalStartedState(),
+                        thread_events: [configAction ? configurationPendingEvent(configAction) : approvalSentEvent()],
                     }),
                 };
             });
@@ -155,28 +152,41 @@ export function createCortexProposalExecutionSlice(
                     const proofSummary = trimToNonEmpty(body?.data?.message)
                         ?? trimToNonEmpty(body?.message)
                         ?? trimToNonEmpty(body?.data?.summary)
-                        ?? trimToNonEmpty(body?.summary);
-                    const lifecycle = runId ? 'executed' : 'confirmed_pending_execution';
+                        ?? trimToNonEmpty(body?.summary)
+                        ?? trimToNonEmpty(body?.data?.execution_summary?.execution?.summary)
+                        ?? trimToNonEmpty(body?.data?.execution_summary?.execution_summary);
+                    const completedConfigAction = configAction && confirmationIsCompleted(body, res.status)
+                        ? configAction
+                        : null;
+                    const lifecycle = completedConfigAction || runId ? 'executed' : 'confirmed_pending_execution';
                     const systemMsg: ChatMessage = {
                         role: 'system',
-                        content: confirmedRunMessage(runId, proofSummary, teamWorkRefs),
-                        mode: runId ? 'execution_result' : 'proposal',
-                        ui_response_state: runId ? undefined : proposalStartedState(),
+                        content: completedConfigAction
+                            ? configurationCompletedMessage(completedConfigAction, proofSummary)
+                            : confirmedRunMessage(runId, proofSummary, teamWorkRefs),
+                        mode: completedConfigAction || runId ? 'execution_result' : 'proposal',
+                        ui_response_state: completedConfigAction
+                            ? configurationCompletedState(completedConfigAction)
+                            : runId ? undefined : proposalStartedState(),
                         run_id: runId ?? undefined,
-                        thread_events: [executionStartedEvent(runId, teamWorkRefs)],
+                        thread_events: [completedConfigAction
+                            ? configurationCompletedEvent(completedConfigAction)
+                            : executionStartedEvent(runId, teamWorkRefs)],
                         execution_summary: body?.data?.execution_summary,
                         timestamp: new Date().toISOString(),
                     };
                     set((s) => ({
-                        activeRunId: runId,
-                        activeMode: runId ? 'execution_result' : 'proposal',
+                        activeRunId: completedConfigAction ? null : runId,
+                        activeMode: completedConfigAction || runId ? 'execution_result' : 'proposal',
                         missionChatError: null,
                         missionChatFailure: null,
                         durableWorkRefreshVersion: s.durableWorkRefreshVersion + 1,
                         missionChat: [
                             ...updateProposalLifecycle(s.missionChat, intentProofId, lifecycle, {
-                                mode: runId ? 'execution_result' : 'proposal',
-                                ui_response_state: runId ? undefined : proposalStartedState(),
+                                mode: completedConfigAction || runId ? 'execution_result' : 'proposal',
+                                ui_response_state: completedConfigAction
+                                    ? configurationCompletedState(completedConfigAction)
+                                    : runId ? undefined : proposalStartedState(),
                                 run_id: runId ?? undefined,
                             }),
                             systemMsg,

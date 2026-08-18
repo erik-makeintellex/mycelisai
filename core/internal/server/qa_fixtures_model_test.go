@@ -43,6 +43,29 @@ func TestNormalizeQAFixtureResourceAcceptsGovernedWorkspace(t *testing.T) {
 	}
 }
 
+func TestNormalizeQAFixtureResourceAcceptsConfigDocumentRevision(t *testing.T) {
+	recordID := "11111111-1111-1111-1111-111111111111"
+	resource, err := normalizeQAFixtureResource(qaFixtureResource{
+		Kind: "config_document", Ref: recordID,
+	})
+	if err != nil {
+		t.Fatalf("normalize config document resource: %v", err)
+	}
+	if resource.Ref != recordID {
+		t.Fatalf("config document ref = %q", resource.Ref)
+	}
+}
+
+func TestNormalizeQAFixtureResourceAcceptsExactConfigActivation(t *testing.T) {
+	historyID := "22222222-2222-2222-2222-222222222222"
+	resource, err := normalizeQAFixtureResource(qaFixtureResource{
+		Kind: "config_document", Ref: configDocumentActivationFixtureRef(historyID),
+	})
+	if err != nil || resource.Ref != "activation:"+historyID {
+		t.Fatalf("activation fixture ref = %#v, %v", resource, err)
+	}
+}
+
 func TestQAFixtureExpiryIsBounded(t *testing.T) {
 	if _, err := qaFixtureExpiry(-1); err == nil {
 		t.Fatal("negative fixture TTL must be rejected")

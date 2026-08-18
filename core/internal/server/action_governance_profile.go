@@ -143,6 +143,18 @@ func auditUserLabelFromRequest(r *http.Request) string {
 	return "local-user"
 }
 
+func auditActorIDFromRequest(r *http.Request) string {
+	if identity := IdentityFromContext(r.Context()); identity != nil {
+		if userID := strings.TrimSpace(identity.UserID); userID != "" {
+			return userID
+		}
+		if username := strings.TrimSpace(identity.Username); username != "" {
+			return username
+		}
+	}
+	return "local-user"
+}
+
 func actorIdentitySnapshotFromRequest(r *http.Request) map[string]any {
 	identity := IdentityFromContext(r.Context())
 	if identity == nil {

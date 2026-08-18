@@ -10,11 +10,15 @@ func outcomeTemplateMutationTools(lower string) ([]string, bool) {
 	if !requestContainsAny(lower, []string{"outcome template", "outcome-template"}) {
 		return nil, false
 	}
+	if outcomeTemplateWorkApplication(lower) {
+		return nil, false
+	}
 
 	var tools []string
 	if matchesConfiguredSomaCommandQuote(lower, "activate_config_document") ||
 		requestContainsAny(lower, []string{"roll back", "rollback"}) ||
-		hasAnyExactWord(lower, "activate", "apply", "use") {
+		requestContainsAny(lower, []string{"make active", "set active", "from now on"}) ||
+		hasAnyExactWord(lower, "activate") {
 		tools = append(tools, "activate_config_document")
 	}
 	if matchesConfiguredSomaCommandQuote(lower, "store_config_document") ||
@@ -22,6 +26,29 @@ func outcomeTemplateMutationTools(lower string) ([]string, bool) {
 		tools = append(tools, "store_config_document")
 	}
 	return uniqueOrderedTools(tools), true
+}
+
+func outcomeTemplateWorkApplication(lower string) bool {
+	if !requestContainsAny(lower, []string{"outcome template", "outcome-template"}) {
+		return false
+	}
+	if requestContainsAny(lower, []string{
+		"save this outcome template", "save the outcome template",
+		"store this outcome template", "store the outcome template",
+		"preview this outcome template", "validate this outcome template",
+	}) {
+		return false
+	}
+	if !hasAnyExactWord(lower, "use", "using", "apply") {
+		return false
+	}
+	if requestContainsAny(lower, []string{"for this work", "for this task", "shape this work"}) {
+		return true
+	}
+	return hasAnyExactWord(
+		lower, "build", "create", "write", "generate", "produce",
+		"deliver", "implement", "update", "run", "execute",
+	)
 }
 
 func inferReadOnlyConfigToolsFromText(text string) []string {

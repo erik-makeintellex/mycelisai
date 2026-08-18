@@ -25,13 +25,14 @@ var (
 	errQAFixtureTeamIdentityMismatch = errors.New("created fixture team identity does not match the approved team")
 	qaFixtureIdentityPattern         = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,127}$`)
 	qaFixtureKinds                   = map[string]bool{
-		"organization":   true,
-		"group":          true,
-		"team":           true,
-		"run":            true,
-		"outcome":        true,
-		"artifact":       true,
-		"workspace_path": true,
+		"organization":    true,
+		"group":           true,
+		"team":            true,
+		"run":             true,
+		"outcome":         true,
+		"artifact":        true,
+		"config_document": true,
+		"workspace_path":  true,
 	}
 )
 
@@ -118,6 +119,11 @@ func normalizeQAFixtureResource(resource qaFixtureResource) (qaFixtureResource, 
 			return qaFixtureResource{}, errors.New("fixture workspace path must target one governed groups/... folder")
 		}
 		resource.Ref = normalized
+	}
+	if resource.Kind == "config_document" {
+		if _, _, ok := parseConfigDocumentFixtureRef(resource.Ref); !ok {
+			return qaFixtureResource{}, fmt.Errorf("fixture config_document ref must identify a revision or activation UUID")
+		}
 	}
 	if resource.Kind == "group" || resource.Kind == "run" || resource.Kind == "artifact" {
 		if _, err := uuid.Parse(resource.Ref); err != nil {
