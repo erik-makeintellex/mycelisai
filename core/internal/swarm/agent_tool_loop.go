@@ -147,13 +147,20 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			continue
 		}
 		evidenceCount := len(result.toolEvidence)
-		if !a.executeToolIteration(i, loopLimit, input, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result, planningOnly) {
+		if !a.executeToolIteration(i, loopLimit, input, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result, planningOnly, requirement) {
 			if len(result.toolEvidence) > evidenceCount {
 				completedToolCalls[fingerprint] = true
+				contractCorrections = 0
 			}
 			continue
 		}
 		completedToolCalls[fingerprint] = true
+		if len(result.toolEvidence) > evidenceCount {
+			contractCorrections = 0
+		}
+		if entrypoint := currentProjectPackageEntrypointReadback(requirement, result.artifacts, result.toolEvidence); entrypoint != "" {
+			completedToolCalls[toolCallFingerprint(&toolCallPayload{Name: "read_file", Arguments: map[string]any{"path": entrypoint}})] = true
+		}
 	}
 
 	return result

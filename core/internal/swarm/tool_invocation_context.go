@@ -24,6 +24,10 @@ type ToolInvocationContext struct {
 	// PlanningOnly marks an invocation that is part of proposal generation and
 	// must not produce any mutation side effects before confirmation.
 	PlanningOnly bool
+	// RuntimeOwned marks a mechanical proof step executed by Core rather than
+	// a model-selected tool call. Internal tools may use it to return complete
+	// evidence without expanding ordinary model-visible tool output.
+	RuntimeOwned bool
 }
 
 // WithToolInvocationContext stores invocation metadata in context.

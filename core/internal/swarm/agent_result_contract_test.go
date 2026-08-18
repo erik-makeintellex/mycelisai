@@ -82,18 +82,34 @@ func TestProjectPackageContractRedirectsArtifactStoreToPhysicalFileEvidence(t *t
 func (provider *resultContractProvider) Probe(context.Context) (bool, error) { return true, nil }
 
 type resultContractToolExecutor struct {
-	calls []string
-	fail  bool
+	calls        []string
+	fail         bool
+	failRead     bool
+	files        map[string]string
+	readOverride map[string]string
 }
 
 func (executor *resultContractToolExecutor) FindToolByName(_ context.Context, name string) (uuid.UUID, string, error) {
 	return InternalServerID, name, nil
 }
 
-func (executor *resultContractToolExecutor) CallTool(_ context.Context, _ uuid.UUID, name string, _ map[string]any) (string, error) {
+func (executor *resultContractToolExecutor) CallTool(_ context.Context, _ uuid.UUID, name string, args map[string]any) (string, error) {
 	executor.calls = append(executor.calls, name)
-	if executor.fail {
+	if executor.fail || (executor.failRead && name == "read_file") {
 		return "", errors.New("write unavailable")
+	}
+	path := cleanEvidencePath(stringValue(args["path"]))
+	switch name {
+	case "write_file":
+		if executor.files == nil {
+			executor.files = map[string]string{}
+		}
+		executor.files[path] = stringValue(args["content"])
+	case "read_file", "read_text_file":
+		if content, ok := executor.readOverride[path]; ok {
+			return content, nil
+		}
+		return executor.files[path], nil
 	}
 	return "completed:" + name, nil
 }

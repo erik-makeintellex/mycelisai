@@ -25,6 +25,23 @@ func evidenceHasTool(evidence []successfulToolEvidence, toolName string) bool {
 	return false
 }
 
+func recordSuccessfulToolEvidence(result *agentToolLoopResult, call *toolCallPayload, toolResult string) {
+	if result == nil || call == nil {
+		return
+	}
+	evidence := successfulToolEvidence{ToolName: strings.TrimSpace(call.Name)}
+	switch evidence.ToolName {
+	case "write_file", "read_file", "read_text_file":
+		evidence.Path = cleanEvidencePath(stringValue(call.Arguments["path"]))
+	}
+	if evidence.ToolName == "write_file" {
+		evidence.Content = stringValue(call.Arguments["content"])
+	} else if evidence.ToolName == "read_file" || evidence.ToolName == "read_text_file" {
+		evidence.Content = toolResult
+	}
+	result.toolEvidence = append(result.toolEvidence, evidence)
+}
+
 func cleanEvidencePath(value string) string {
 	return strings.Trim(strings.ReplaceAll(strings.TrimSpace(value), "\\", "/"), "/")
 }
@@ -49,7 +66,11 @@ func matchingEvidencePath(paths []string, candidate string) string {
 }
 
 func hasCurrentReadbackEvidence(evidence []successfulToolEvidence, candidate string) bool {
-	current := map[string]bool{}
+	type currentFileEvidence struct {
+		content       string
+		readbackExact bool
+	}
+	current := map[string]currentFileEvidence{}
 	candidate = comparableEvidencePath(candidate)
 	for _, item := range evidence {
 		path := comparableEvidencePath(item.Path)
@@ -58,17 +79,18 @@ func hasCurrentReadbackEvidence(evidence []successfulToolEvidence, candidate str
 		}
 		switch item.ToolName {
 		case "write_file":
-			current[path] = false
+			current[path] = currentFileEvidence{content: item.Content}
 		case "read_file", "read_text_file":
-			for writtenPath := range current {
+			for writtenPath, state := range current {
 				if evidenceContainsPath([]string{writtenPath}, path) {
-					current[writtenPath] = true
+					state.readbackExact = item.Content == state.content
+					current[writtenPath] = state
 				}
 			}
 		}
 	}
-	for _, readAfterWrite := range current {
-		if readAfterWrite {
+	for _, state := range current {
+		if state.readbackExact {
 			return true
 		}
 	}

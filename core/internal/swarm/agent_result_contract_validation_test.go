@@ -33,21 +33,22 @@ func TestInteractivePackageReadbackRequiresHandlerAndVisibleInstructions(t *test
 		AcceptanceCriteria: []string{"primary control changes the application"}, ReadbackRequired: true,
 	}
 	entrypoint := "groups/team/generated/app/index.html"
-	writes := []successfulToolEvidence{{ToolName: "write_file", Path: entrypoint}}
-	withoutInstructions := append(writes, successfulToolEvidence{
-		ToolName: "read_file", Path: entrypoint,
-		Content: `<canvas></canvas><script>document.addEventListener('keydown', move)</script>`,
-	})
+	withoutInstructionsContent := `<canvas></canvas><script>document.addEventListener('keydown', move)</script>`
+	withoutInstructions := []successfulToolEvidence{
+		{ToolName: "write_file", Path: entrypoint, Content: withoutInstructionsContent},
+		{ToolName: "read_file", Path: entrypoint, Content: withoutInstructionsContent},
+	}
 	artifacts := reconcileToolBackedArtifacts(nil, withoutInstructions, "Create a playable project package.")
 	issues := strings.Join(resultContractIssues(requirement, artifacts, withoutInstructions), ";")
 	if !strings.Contains(issues, "visible control instructions") {
 		t.Fatalf("issues = %q, want visible-control repair", issues)
 	}
 
-	withInstructions := append(writes, successfulToolEvidence{
-		ToolName: "read_file", Path: entrypoint,
-		Content: `<p>Use ArrowRight to move.</p><canvas></canvas><script>document.addEventListener('keydown', move)</script>`,
-	})
+	withInstructionsContent := `<p>Use ArrowRight to move.</p><canvas></canvas><script>document.addEventListener('keydown', move)</script>`
+	withInstructions := []successfulToolEvidence{
+		{ToolName: "write_file", Path: entrypoint, Content: withInstructionsContent},
+		{ToolName: "read_file", Path: entrypoint, Content: withInstructionsContent},
+	}
 	artifacts = reconcileToolBackedArtifacts(nil, withInstructions, "Create a playable project package.")
 	if issues := resultContractIssues(requirement, artifacts, withInstructions); len(issues) != 0 {
 		t.Fatalf("valid interactive evidence issues = %v", issues)
@@ -120,7 +121,7 @@ func TestOutputValidationExecutionInstructionRequiresRenderedStateTransition(t *
 	}
 
 	instruction := outputValidationExecutionInstruction(plan)
-	for _, required := range []string{"ArrowRight", "render loop actually consumes", "before/after state must differ", "unused intermediate"} {
+	for _, required := range []string{"ArrowRight", "one unambiguous state-changing effect", "must not also match that control", "render loop actually consumes", "before/after state must differ", "unused intermediate"} {
 		if !strings.Contains(instruction, required) {
 			t.Fatalf("instruction = %q, want %q", instruction, required)
 		}
