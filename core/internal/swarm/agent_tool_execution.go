@@ -42,7 +42,7 @@ func (a *Agent) prepareToolCall(input string, toolCall *toolCallPayload, failedT
 	return false
 }
 
-func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, req *cognitive.InferRequest, toolCall *toolCallPayload, failedToolCalls map[string]int, reinfer func(string, string) bool, result *agentToolLoopResult, planningOnly bool) bool {
+func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, req *cognitive.InferRequest, toolCall *toolCallPayload, failedToolCalls map[string]int, reinfer func(string, string) bool, result *agentToolLoopResult, planningOnly bool, requirement *teamResultRequirement) bool {
 	fingerprint := toolCallFingerprint(toolCall)
 	log.Printf("Agent [%s] tool_call [%d/%d]: %s", a.Manifest.ID, i+1, iterationLimit, toolCall.Name)
 	result.toolsUsed = append(result.toolsUsed, toolCall.Name)
@@ -116,6 +116,21 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 		}
 	}
 	result.artifacts = reconcileToolBackedArtifacts(result.artifacts, result.toolEvidence, input)
+	if toolCall.Name == "write_file" {
+		if entrypoint := pendingProjectPackageEntrypointReadback(requirement, result.artifacts, result.toolEvidence); entrypoint != "" {
+			_, readErr := a.executeRuntimeOwnedEntrypointReadback(i, entrypoint, failedToolCalls, result, planningOnly)
+			if readErr != nil {
+				toolResult += fmt.Sprintf("\n\nRuntime entrypoint readback failed: %v", readErr)
+			} else {
+				result.artifacts = reconcileToolBackedArtifacts(result.artifacts, result.toolEvidence, input)
+				if len(resultContractIssues(requirement, result.artifacts, result.toolEvidence)) == 0 {
+					result.responseText = ""
+					return false
+				}
+				toolResult += fmt.Sprintf("\n\nRuntime entrypoint readback completed for %s; remaining contract checks will be reported separately.", entrypoint)
+			}
+		}
+	}
 	if isMCPTool {
 		preview := truncateLog(toolResult, 500)
 		a.persistMCPExchangeResult(serverID, toolCall.Name, "completed", preview, map[string]any{"arguments": toolCall.Arguments, "result_preview": preview})
@@ -131,6 +146,44 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 	result.resp = updated
 	result.responseText = updated.Text
 	return true
+}
+
+func (a *Agent) executeRuntimeOwnedEntrypointReadback(i int, entrypoint string, failedToolCalls map[string]int, result *agentToolLoopResult, planningOnly bool) (string, error) {
+	call := &toolCallPayload{Name: "read_file", Arguments: map[string]any{"path": entrypoint}}
+	fingerprint := toolCallFingerprint(call)
+	result.toolsUsed = append(result.toolsUsed, call.Name)
+	if a.eventEmitter != nil && a.runID != "" {
+		go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolInvoked, protocol.SeverityInfo, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": call.Name, "iteration": i + 1, "runtime_owned": true}) //nolint:errcheck
+	}
+	a.logTurn("tool_call", "Runtime-owned project-package entrypoint readback.", "", "", call.Name, call.Arguments, "", "")
+
+	toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
+		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, SourceKind: protocol.SourceKindSystem,
+		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand,
+		PlanningOnly: planningOnly, RuntimeOwned: true,
+	})
+	serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, call.Name)
+	if err != nil {
+		failedToolCalls[fingerprint]++
+		if a.eventEmitter != nil && a.runID != "" {
+			go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolFailed, protocol.SeverityError, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": call.Name, "error": err.Error(), "phase": "lookup", "runtime_owned": true}) //nolint:errcheck
+		}
+		return "", fmt.Errorf("tool %s is not available: %w", call.Name, err)
+	}
+	readback, err := a.toolExecutor.CallTool(toolCtx, serverID, call.Name, call.Arguments)
+	if err != nil {
+		failedToolCalls[fingerprint]++
+		if a.eventEmitter != nil && a.runID != "" {
+			go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolFailed, protocol.SeverityError, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": call.Name, "error": err.Error(), "phase": "execute", "runtime_owned": true}) //nolint:errcheck
+		}
+		return "", fmt.Errorf("tool %s failed: %w", call.Name, err)
+	}
+	recordSuccessfulToolEvidence(result, call, readback)
+	if a.eventEmitter != nil && a.runID != "" {
+		go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolCompleted, protocol.SeverityInfo, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": call.Name, "iteration": i + 1, "runtime_owned": true}) //nolint:errcheck
+	}
+	a.logTurn("tool_result", fmt.Sprintf("Runtime entrypoint readback completed for %s.", entrypoint), "", "", call.Name, nil, "", "")
+	return readback, nil
 }
 
 func (a *Agent) persistMCPExchangeResult(serverID uuid.UUID, toolName, state, preview string, result map[string]any) {

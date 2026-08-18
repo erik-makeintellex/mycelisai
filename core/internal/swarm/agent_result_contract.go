@@ -120,13 +120,38 @@ func resultContractEntrypointNeedsRepair(requirement *teamResultRequirement, art
 	if packageArtifact == nil || strings.TrimSpace(packageArtifact.Entrypoint) == "" {
 		return false
 	}
-	content := latestEntrypointEvidenceContent(evidence, packageArtifact.Entrypoint)
+	content := resultContractPackageValidationContent(artifacts, evidence)
 	if resultContractRequiresPrimaryInteraction(requirement) &&
 		(!resultContractInteractiveHandlerPattern.MatchString(content) || !resultContractExposesPrimaryControl(content)) {
 		return true
 	}
 	return len(outputValidationTargetIssues(requirement.OutputValidation, content)) > 0 ||
 		len(outputValidationAnimationLoopIssues(requirement.OutputValidation, content)) > 0
+}
+
+func pendingProjectPackageEntrypointReadback(requirement *teamResultRequirement, artifacts []protocol.ChatArtifactRef, evidence []successfulToolEvidence) string {
+	if !requirement.active() || !strings.EqualFold(requirement.Kind, "project_package") ||
+		resultContractNeedsRequiredWrites(requirement, artifacts, evidence) ||
+		resultContractEntrypointNeedsRepair(requirement, artifacts, evidence) {
+		return ""
+	}
+	packageArtifact := firstProjectPackageArtifact(artifacts)
+	if packageArtifact == nil || strings.TrimSpace(packageArtifact.Entrypoint) == "" ||
+		hasCurrentReadbackEvidence(evidence, packageArtifact.Entrypoint) {
+		return ""
+	}
+	return cleanEvidencePath(packageArtifact.Entrypoint)
+}
+
+func currentProjectPackageEntrypointReadback(requirement *teamResultRequirement, artifacts []protocol.ChatArtifactRef, evidence []successfulToolEvidence) string {
+	if !requirement.active() || !strings.EqualFold(requirement.Kind, "project_package") {
+		return ""
+	}
+	packageArtifact := firstProjectPackageArtifact(artifacts)
+	if packageArtifact == nil || !hasCurrentReadbackEvidence(evidence, packageArtifact.Entrypoint) {
+		return ""
+	}
+	return cleanEvidencePath(packageArtifact.Entrypoint)
 }
 
 func resultContractNeedsRequiredWrites(requirement *teamResultRequirement, artifacts []protocol.ChatArtifactRef, evidence []successfulToolEvidence) bool {
@@ -147,24 +172,7 @@ func resultContractNeedsRequiredWrites(requirement *teamResultRequirement, artif
 			return true
 		}
 	}
-	return false
-}
-
-func recordSuccessfulToolEvidence(result *agentToolLoopResult, call *toolCallPayload, toolResult string) {
-	if result == nil || call == nil {
-		return
-	}
-	evidence := successfulToolEvidence{ToolName: strings.TrimSpace(call.Name)}
-	switch evidence.ToolName {
-	case "write_file", "read_file", "read_text_file":
-		evidence.Path = cleanEvidencePath(stringValue(call.Arguments["path"]))
-	}
-	if evidence.ToolName == "write_file" {
-		evidence.Content = stringValue(call.Arguments["content"])
-	} else if evidence.ToolName == "read_file" || evidence.ToolName == "read_text_file" {
-		evidence.Content = toolResult
-	}
-	result.toolEvidence = append(result.toolEvidence, evidence)
+	return len(resultContractLocalDependencyIssues(artifacts, evidence)) > 0
 }
 
 func reconcileToolBackedArtifacts(artifacts []protocol.ChatArtifactRef, evidence []successfulToolEvidence, input string) []protocol.ChatArtifactRef {
@@ -250,6 +258,7 @@ func resultContractIssues(requirement *teamResultRequirement, artifacts []protoc
 	if requirement.FolderRequired && (packageArtifact == nil || strings.TrimSpace(packageArtifact.Folder) == "") {
 		issues = append(issues, "missing retained output folder")
 	}
+	issues = append(issues, resultContractLocalDependencyIssues(artifacts, evidence)...)
 	// Acceptance criteria guide the worker and downstream validator. This gate
 	// only asserts inspectable tool evidence; it does not grade semantic quality.
 	if requirement.ReadbackRequired || requirement.DownstreamProofRef || len(requirement.ProofRequirements) > 0 {
@@ -262,7 +271,7 @@ func resultContractIssues(requirement *teamResultRequirement, artifacts []protoc
 		}
 	}
 	if packageArtifact != nil && packageArtifact.Entrypoint != "" {
-		content := latestEntrypointEvidenceContent(evidence, packageArtifact.Entrypoint)
+		content := resultContractPackageValidationContent(artifacts, evidence)
 		if resultContractRequiresPrimaryInteraction(requirement) &&
 			(!resultContractInteractiveHandlerPattern.MatchString(content) || !resultContractExposesPrimaryControl(content)) {
 			issues = append(issues, "entrypoint readback does not expose an inspectable primary interaction and visible control instructions")

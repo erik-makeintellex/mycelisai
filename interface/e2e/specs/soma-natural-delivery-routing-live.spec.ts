@@ -131,11 +131,15 @@ test.describe("Natural Soma delivery routing", () => {
       await directOpen.click();
       const appPage = (await appPagePromise) ?? page;
       await appPage.waitForLoadState("domcontentloaded");
-      await expect(appPage.getByRole("button", { name: /restart/i })).toBeVisible();
-      const appBody = appPage.locator("body");
+      const outputFrame = appPage.locator("iframe").first();
+      const appSurface = (await outputFrame.count()) > 0
+        ? appPage.frameLocator("iframe").first()
+        : appPage;
+      await expect(appSurface.getByRole("button", { name: /restart/i })).toBeVisible();
+      const appBody = appSurface.locator("body");
       await expect(appBody).toBeVisible({ timeout: 30_000 });
       const beforeInteraction = await appBody.screenshot();
-      const primaryControl = appPage.getByRole("button").filter({ hasNotText: /restart/i }).first();
+      const primaryControl = appSurface.getByRole("button").filter({ hasNotText: /restart/i }).first();
       if (await primaryControl.count()) {
         await primaryControl.click();
       } else {

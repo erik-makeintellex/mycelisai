@@ -37,7 +37,7 @@ func resultContractRequiresPrimaryInteraction(requirement *teamResultRequirement
 
 func latestEntrypointEvidenceContent(evidence []successfulToolEvidence, entrypoint string) string {
 	writeContent := ""
-	readContent := ""
+	currentReadContent := ""
 	for _, item := range evidence {
 		if !evidenceContainsPath([]string{item.Path}, entrypoint) || strings.TrimSpace(item.Content) == "" {
 			continue
@@ -45,14 +45,19 @@ func latestEntrypointEvidenceContent(evidence []successfulToolEvidence, entrypoi
 		switch item.ToolName {
 		case "write_file":
 			writeContent = item.Content
+			currentReadContent = ""
 		case "read_file", "read_text_file":
-			readContent = item.Content
+			if item.Content == writeContent {
+				currentReadContent = item.Content
+			} else {
+				currentReadContent = ""
+			}
 		}
 	}
-	if writeContent != "" {
-		return writeContent
+	if currentReadContent != "" {
+		return currentReadContent
 	}
-	return readContent
+	return writeContent
 }
 
 func resultContractExposesPrimaryControl(content string) bool {
@@ -246,7 +251,9 @@ func outputValidationTargetPresent(content, selector string) bool {
 	if len(match) != 2 {
 		return true // Runtime validation owns selectors that are not the standard marker form.
 	}
-	return strings.Contains(strings.ToLower(content), strings.ToLower(match[1]))
+	attribute := regexp.QuoteMeta(match[1])
+	pattern := regexp.MustCompile(`(?i)<[^>]*\s` + attribute + `(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?(?:\s|/?>)`)
+	return pattern.MatchString(content)
 }
 
 func outputValidationExecutionInstruction(plan *protocol.OutputValidationPlan) string {
@@ -258,7 +265,7 @@ func outputValidationExecutionInstruction(plan *protocol.OutputValidationPlan) s
 		action = fmt.Sprintf("%s action for key %s", plan.Probe.Action.Kind, plan.Probe.Action.Key)
 	}
 	return fmt.Sprintf(
-		" The entrypoint must implement the approved %s and include observation target %s exactly; that action must visibly change the observed surface. Bind handlers through the approved marker or a stable element ID, never a positional selector such as nth-child. Every selector used before addEventListener must resolve to an element in the same entrypoint. The action must mutate state that the DOM or render loop actually consumes, and the rendered before/after state must differ; do not only assign an otherwise-unused intermediate value.",
+		" The entrypoint must implement the approved %s and include observation target %s exactly; that action must visibly change the observed surface. Bind handlers through the approved marker or a stable element ID, never a positional selector such as nth-child. Every selector used before addEventListener must resolve to an element in the same entrypoint. Give the approved primary control one unambiguous state-changing effect; broader or secondary handlers must not also match that control or immediately undo its effect. The action must mutate state that the DOM or render loop actually consumes, and the rendered before/after state must differ; do not only assign an otherwise-unused intermediate value.",
 		action,
 		plan.Probe.Observe.Target,
 	)

@@ -81,7 +81,7 @@ func (r *InternalToolRegistry) handleSendExternalMessage(ctx context.Context, ar
 	return mustJSON(map[string]any{"message": fmt.Sprintf("external message sent via %s", res.Provider), "provider": res.Provider, "status": res.Status, "result": res}), nil
 }
 
-func (r *InternalToolRegistry) handleReadFile(_ context.Context, args map[string]any) (string, error) {
+func (r *InternalToolRegistry) handleReadFile(ctx context.Context, args map[string]any) (string, error) {
 	path := stringValue(args["path"])
 	if path == "" {
 		return "", fmt.Errorf("read_file requires 'path'")
@@ -95,7 +95,11 @@ func (r *InternalToolRegistry) handleReadFile(_ context.Context, args map[string
 		return "", fmt.Errorf("failed to read %s: %w", safePath, err)
 	}
 	content := string(data)
-	if len(content) > 32000 {
+	runtimeOwned := false
+	if invocation, ok := ToolInvocationContextFromContext(ctx); ok {
+		runtimeOwned = invocation.RuntimeOwned
+	}
+	if !runtimeOwned && len(content) > 32000 {
 		content = content[:32000] + "\n... [truncated at 32KB]"
 	}
 	return content, nil
@@ -108,6 +112,8 @@ func (r *InternalToolRegistry) handleWriteFile(_ context.Context, args map[strin
 		return "", fmt.Errorf("write_file requires 'path' and 'content'")
 	}
 	content = ensureDeclaredHTMLPackageTitle(path, content, args)
+	// Keep successful tool evidence aligned with the exact bytes written below.
+	args["content"] = content
 	if len(content) > maxWriteSize {
 		return "", fmt.Errorf("content size %d exceeds maximum write size of %d bytes", len(content), maxWriteSize)
 	}
