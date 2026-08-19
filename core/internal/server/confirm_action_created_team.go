@@ -130,7 +130,7 @@ func (s *AdminServer) ensureQAFixtureTeamCreationAvailable(ctx context.Context, 
 			}
 		}
 	}
-	var registryOwned, foreignWork, groupOwned bool
+	var registryOwned, foreignWork, groupOwned, runtimeManifest bool
 	if err := db.QueryRowContext(ctx, `
 		SELECT
 		EXISTS (
@@ -148,8 +148,11 @@ func (s *AdminServer) ensureQAFixtureTeamCreationAvailable(ctx context.Context, 
 		),
 		EXISTS (
 			SELECT 1 FROM collaboration_groups WHERE tenant_id=$1 AND team_ids ? $2
+		),
+		EXISTS (
+			SELECT 1 FROM runtime_team_manifests WHERE tenant_id=$1 AND team_id=$2
 		)
-	`, qaFixtureTenantID, teamID, strings.TrimSpace(runID)).Scan(&registryOwned, &foreignWork, &groupOwned); err != nil {
+	`, qaFixtureTenantID, teamID, strings.TrimSpace(runID)).Scan(&registryOwned, &foreignWork, &groupOwned, &runtimeManifest); err != nil {
 		return err
 	}
 	retainedKinds := []string{}
@@ -161,6 +164,9 @@ func (s *AdminServer) ensureQAFixtureTeamCreationAvailable(ctx context.Context, 
 	}
 	if groupOwned {
 		retainedKinds = append(retainedKinds, "group")
+	}
+	if runtimeManifest {
+		retainedKinds = append(retainedKinds, "runtime manifest")
 	}
 	if len(retainedKinds) > 0 {
 		return fmt.Errorf("%w: team %q has retained %s records", errQAFixtureTeamPreexisting, teamID, strings.Join(retainedKinds, ", "))

@@ -142,11 +142,31 @@ func TestEnsureQAFixtureTeamCreationAvailableRejectsDurableTeam(t *testing.T) {
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(scopeID, "existing-team").
 		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(qaFixtureTenantID, "existing-team", "22222222-2222-2222-2222-222222222222").
-		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group"}).AddRow(true, false, false))
+		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group", "runtime"}).AddRow(true, false, false, false))
 
 	err := s.ensureQAFixtureTeamCreationAvailable(t.Context(), scopeID, "22222222-2222-2222-2222-222222222222", map[string]any{"team_id": "existing-team"})
 	if !errors.Is(err, errQAFixtureTeamPreexisting) {
 		t.Fatalf("expected pre-existing team rejection, got %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestEnsureQAFixtureTeamCreationAvailableRejectsPersistedRuntimeManifest(t *testing.T) {
+	withDatabase, mock := withDB(t)
+	s := newTestServer(withDatabase)
+	t.Setenv("MYCELIS_WORKSPACE", t.TempDir())
+	scopeID := "11111111-1111-1111-1111-111111111111"
+	runID := "22222222-2222-2222-2222-222222222222"
+	mock.ExpectQuery("SELECT EXISTS").WithArgs(scopeID, "persisted-team").
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
+	mock.ExpectQuery("SELECT EXISTS").WithArgs(qaFixtureTenantID, "persisted-team", runID).
+		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group", "runtime"}).AddRow(false, false, false, true))
+
+	err := s.ensureQAFixtureTeamCreationAvailable(t.Context(), scopeID, runID, map[string]any{"team_id": "persisted-team"})
+	if !errors.Is(err, errQAFixtureTeamPreexisting) {
+		t.Fatalf("expected persisted runtime team rejection, got %v", err)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)
@@ -162,7 +182,7 @@ func TestEnsureQAFixtureTeamCreationAvailableRejectsExistingWorkspace(t *testing
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(scopeID, "existing-team").
 		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(qaFixtureTenantID, "existing-team", "22222222-2222-2222-2222-222222222222").
-		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group"}).AddRow(false, false, false))
+		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group", "runtime"}).AddRow(false, false, false, false))
 	if err := os.MkdirAll(filepath.Join(workspace, "groups", "existing-team"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +204,7 @@ func TestEnsureQAFixtureTeamCreationAvailableAllowsNewTeam(t *testing.T) {
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(scopeID, "new-team").
 		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(qaFixtureTenantID, "new-team", "22222222-2222-2222-2222-222222222222").
-		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group"}).AddRow(false, false, false))
+		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group", "runtime"}).AddRow(false, false, false, false))
 
 	if err := s.ensureQAFixtureTeamCreationAvailable(t.Context(), scopeID, "22222222-2222-2222-2222-222222222222", map[string]any{"team_id": "new-team"}); err != nil {
 		t.Fatal(err)

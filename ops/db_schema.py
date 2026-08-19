@@ -39,6 +39,7 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("config_document_activations table", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activations' AND column_name = 'kind';"),
     ("config_document_activation_history table", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activation_history' AND column_name = 'kind';"),
     ("config_document fixture ownership", "SELECT 1 FROM pg_constraint WHERE conname = 'chk_qa_fixture_resource_kind' AND pg_get_constraintdef(oid) LIKE '%config_document%';"),
+    ("runtime_team_manifests table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'runtime_team_manifests';"),
 )
 
 TARGETED_SCHEMA_MIGRATIONS = {
@@ -52,4 +53,5 @@ TARGETED_SCHEMA_MIGRATIONS = {
     "config_document_activations table": "061_config_documents.up.sql",
     "config_document_activation_history table": "061_config_documents.up.sql",
     "config_document fixture ownership": "062_qa_fixture_config_documents.up.sql",
+    "runtime_team_manifests table": "063_runtime_team_manifests.up.sql",
 }

@@ -20,16 +20,16 @@ const (
 
 // TeamManifest defines the configuration for a Swarm Team.
 type TeamManifest struct {
-	ID          string                   `yaml:"id"`
-	Name        string                   `yaml:"name"`
-	Type        TeamType                 `yaml:"type"`
-	Description string                   `yaml:"description"`
-	Provider    string                   `yaml:"provider,omitempty"`
-	AskRouting  map[string]string        `yaml:"ask_routing,omitempty"`
-	Members     []protocol.AgentManifest `yaml:"members"`
-	Inputs      []string                 `yaml:"inputs"`
-	Deliveries  []string                 `yaml:"deliveries"`
-	Schedule    *protocol.ScheduleConfig `yaml:"schedule,omitempty"`
+	ID          string                   `json:"id" yaml:"id"`
+	Name        string                   `json:"name" yaml:"name"`
+	Type        TeamType                 `json:"type" yaml:"type"`
+	Description string                   `json:"description" yaml:"description"`
+	Provider    string                   `json:"provider,omitempty" yaml:"provider,omitempty"`
+	AskRouting  map[string]string        `json:"ask_routing,omitempty" yaml:"ask_routing,omitempty"`
+	Members     []protocol.AgentManifest `json:"members" yaml:"members"`
+	Inputs      []string                 `json:"inputs" yaml:"inputs"`
+	Deliveries  []string                 `json:"deliveries" yaml:"deliveries"`
+	Schedule    *protocol.ScheduleConfig `json:"schedule,omitempty" yaml:"schedule,omitempty"`
 }
 
 // Team represents a running instance of a TeamManifest.

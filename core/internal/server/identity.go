@@ -95,7 +95,12 @@ func (s *AdminServer) HandleDeleteTeam(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "team id is required", http.StatusBadRequest)
 		return
 	}
-	if !s.Soma.StopTeam(teamID) {
+	found, err := s.Soma.StopTeamDurably(teamID)
+	if err != nil {
+		http.Error(w, "failed to remove durable team state", http.StatusInternalServerError)
+		return
+	}
+	if !found {
 		http.Error(w, "team not found", http.StatusNotFound)
 		return
 	}

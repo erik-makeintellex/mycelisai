@@ -15,9 +15,13 @@ func TestPostgresDurableTeamLoaderBuildsRuntimeManifest(t *testing.T) {
 		t.Fatalf("sqlmock: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
+	mock.ExpectQuery("SELECT team_id, schema_version, manifest_digest, manifest").
+		WithArgs(durableRuntimeTenant).
+		WillReturnRows(sqlmock.NewRows([]string{"team_id", "schema_version", "manifest_digest", "manifest"}))
 
 	mock.ExpectQuery("WITH restorable AS").
 		WithArgs(
+			durableRuntimeTenant,
 			string(protocol.TeamWorkStateNew),
 			string(protocol.TeamWorkStateBriefed),
 			string(protocol.TeamWorkStateQueued),
