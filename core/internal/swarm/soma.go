@@ -34,6 +34,7 @@ type Soma struct {
 	conversationLogger protocol.ConversationLogger
 	providerPolicy     ProviderPolicy
 	durableTeamLoader  DurableTeamLoader
+	durableTeamStore   DurableTeamStore
 	commandReceipts    CommandReceiptStore
 }
 

@@ -112,15 +112,22 @@ func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
 		return fmt.Errorf("team %s already exists", manifest.ID)
 	}
 
-	team := NewTeam(s.applyProviderPolicy(manifest), s.nc, s.brain, s.toolExecutor)
+	effectiveManifest := s.applyProviderPolicy(manifest)
+	team := NewTeam(effectiveManifest, s.nc, s.brain, s.toolExecutor)
 	if s.internalTools != nil {
 		s.configureTeam(team, s.internalTools.ListDescriptions())
 	}
 	if err := team.Start(); err != nil {
 		return err
 	}
-	s.teams[manifest.ID] = team
-	log.Printf("Soma Spawned New Team: %s", manifest.ID)
+	if s.durableTeamStore != nil {
+		if err := s.durableTeamStore.SaveRuntimeTeam(s.ctx, effectiveManifest); err != nil {
+			team.Stop()
+			return fmt.Errorf("persist team %s before acknowledgement: %w", effectiveManifest.ID, err)
+		}
+	}
+	s.teams[effectiveManifest.ID] = team
+	log.Printf("Soma Spawned New Team: %s", effectiveManifest.ID)
 	return nil
 }
 
@@ -137,28 +144,55 @@ func (s *Soma) ListTeams() []*TeamManifest {
 
 // StopTeam stops and removes one active runtime team.
 func (s *Soma) StopTeam(teamID string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	team, exists := s.teams[strings.TrimSpace(teamID)]
-	if !exists {
+	found, err := s.StopTeamDurably(teamID)
+	if err != nil {
+		log.Printf("ERR: Failed to durably stop Team %s: %v", strings.TrimSpace(teamID), err)
 		return false
 	}
+	return found
+}
+
+// StopTeamDurably removes the persisted manifest before stopping the runtime
+// instance so a storage failure cannot make a deleted team reappear on restart.
+func (s *Soma) StopTeamDurably(teamID string) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	teamID = strings.TrimSpace(teamID)
+	team, exists := s.teams[teamID]
+	if !exists {
+		return false, nil
+	}
+	if s.durableTeamStore != nil {
+		if err := s.durableTeamStore.DeleteRuntimeTeam(s.ctx, teamID); err != nil {
+			return true, err
+		}
+	}
 	team.Stop()
-	delete(s.teams, strings.TrimSpace(teamID))
-	log.Printf("Soma stopped Team: %s", strings.TrimSpace(teamID))
-	return true
+	delete(s.teams, teamID)
+	log.Printf("Soma stopped Team: %s", teamID)
+	return true, nil
 }
 
 // DeactivateMission stops and removes all teams belonging to a mission.
 func (s *Soma) DeactivateMission(missionID string) int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	prefix := missionID + "."
-	stopped := 0
-	for id, team := range s.teams {
+	s.mu.RLock()
+	teamIDs := make([]string, 0)
+	for id := range s.teams {
 		if strings.HasPrefix(id, prefix) {
-			team.Stop()
-			delete(s.teams, id)
+			teamIDs = append(teamIDs, id)
+		}
+	}
+	s.mu.RUnlock()
+
+	stopped := 0
+	for _, teamID := range teamIDs {
+		found, err := s.StopTeamDurably(teamID)
+		if err != nil {
+			log.Printf("ERR: Failed to durably deactivate Team %s for mission %s: %v", teamID, missionID, err)
+			continue
+		}
+		if found {
 			stopped++
 		}
 	}

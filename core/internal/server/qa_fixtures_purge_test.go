@@ -37,3 +37,31 @@ func TestDeleteQAFixtureGroupRequiresTenantMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestDeleteQAFixtureTeamRemovesExactRuntimeManifest(t *testing.T) {
+	withDatabase, mock := withDB(t)
+	s := newTestServer(withDatabase)
+	mock.ExpectBegin()
+	for _, table := range []string{"runtime_team_manifests", "team_registry_entries", "team_work_items"} {
+		mock.ExpectExec("DELETE FROM "+table).WithArgs("qa-team", qaFixtureTenantID).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+	}
+	mock.ExpectCommit()
+	tx, err := s.getDB().BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deleted := make(map[string]int64)
+	if err := deleteQAFixtureDatabaseResource(t.Context(), tx, qaFixtureTenantID, qaFixtureResource{Kind: "team", Ref: "qa-team"}, deleted); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if deleted["runtime_team_manifests"] != 1 {
+		t.Fatalf("deleted rows = %v", deleted)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}

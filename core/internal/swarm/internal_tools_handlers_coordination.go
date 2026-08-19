@@ -115,23 +115,24 @@ func (r *InternalToolRegistry) handleCreateTeam(ctx context.Context, args map[st
 	if r.somaRef == nil {
 		return "", fmt.Errorf("Soma not available — cannot create team")
 	}
+	candidate := buildRuntimeTeamManifest(args)
+	if candidate == nil {
+		return "", fmt.Errorf("create_team requires 'team_id'")
+	}
+	for _, m := range r.somaRef.ListTeams() {
+		if m != nil && m.ID == candidate.ID {
+			workspaceFolder, err := ensureRuntimeTeamWorkspace(candidate.ID)
+			if err != nil {
+				return "", fmt.Errorf("repair team workspace: %w", err)
+			}
+			out, _ := json.Marshal(map[string]any{"status": "already_exists", "team_id": candidate.ID, "workspace_folder": workspaceFolder})
+			return string(out), nil
+		}
+	}
 	if err := r.hydrateCreateTeamProfiles(ctx, args); err != nil {
 		return "", err
 	}
 	manifest := buildRuntimeTeamManifest(args)
-	if manifest == nil {
-		return "", fmt.Errorf("create_team requires 'team_id'")
-	}
-	for _, m := range r.somaRef.ListTeams() {
-		if m != nil && m.ID == manifest.ID {
-			workspaceFolder, err := ensureRuntimeTeamWorkspace(manifest.ID)
-			if err != nil {
-				return "", fmt.Errorf("repair team workspace: %w", err)
-			}
-			out, _ := json.Marshal(map[string]any{"status": "already_exists", "team_id": manifest.ID, "workspace_folder": workspaceFolder})
-			return string(out), nil
-		}
-	}
 	if err := r.somaRef.SpawnTeam(manifest); err != nil {
 		return "", fmt.Errorf("create_team failed: %w", err)
 	}

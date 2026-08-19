@@ -48,8 +48,8 @@ COMPOSE_LONG_TERM_STORAGE_CHECKS = (
         "released QA fixture claims",
         "SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM qa_fixture_resources r JOIN qa_fixture_scopes s ON s.id=r.scope_id WHERE s.status='purged');",
     ),
+    ("runtime team manifests", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'runtime_team_manifests';"),
 )
-
 
 COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = {
     "semantic context vectors": ("008_context_engine.up.sql",),
@@ -71,8 +71,8 @@ COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = {
         "059_qa_fixture_ownership_hardening.up.sql",
     ),
     "released QA fixture claims": ("060_release_purged_qa_fixture_claims.up.sql",),
+    "runtime team manifests": ("063_runtime_team_manifests.up.sql",),
 }
-
 
 def compose_db_user(env_values: dict[str, str], clean_env_value: Callable[[str], str]) -> str:
     return clean_env_value(env_values.get("DB_USER") or env_values.get("POSTGRES_USER") or "mycelis")

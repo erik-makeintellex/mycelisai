@@ -72,6 +72,7 @@ func deleteQAFixtureDatabaseResource(
 		"artifact": {{"artifacts", `DELETE FROM artifacts WHERE id=$1::uuid AND $2<>''`}},
 		"group":    {{"collaboration_groups", `DELETE FROM collaboration_groups WHERE id=$1::uuid AND tenant_id=$2`}},
 		"team": {
+			{"runtime_team_manifests", `DELETE FROM runtime_team_manifests WHERE team_id=$1 AND tenant_id=$2`},
 			{"team_registry_entries", `DELETE FROM team_registry_entries WHERE team_id=$1 AND tenant_id=$2`},
 			{"team_work_items", `DELETE FROM team_work_items WHERE team_id=$1 AND tenant_id=$2`},
 		},

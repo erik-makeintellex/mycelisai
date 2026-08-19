@@ -61,7 +61,7 @@ func startSomaRuntime(
 		soma.SetConversationLogger(services.ConversationLog)
 	}
 	if core.SharedDB != nil {
-		soma.SetDurableTeamLoader(swarm.NewPostgresDurableTeamLoader(core.SharedDB))
+		soma.SetDurableTeamStore(swarm.NewPostgresDurableTeamLoader(core.SharedDB))
 		soma.SetCommandReceiptStore(swarm.NewPostgresCommandReceiptStore(core.SharedDB))
 	}
 	wireSomaMCPDescriptions(ctx, soma, services.MCP)

@@ -2,6 +2,7 @@ package swarm
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -14,6 +15,14 @@ import (
 // nonterminal durable work. It restores subscriptions and workers, not work state.
 type DurableTeamLoader interface {
 	LoadRuntimeTeams(context.Context) ([]*TeamManifest, error)
+}
+
+// DurableTeamStore owns exact runtime-created team manifests. The persisted
+// manifest is authoritative; work/group metadata is only a legacy fallback.
+type DurableTeamStore interface {
+	DurableTeamLoader
+	SaveRuntimeTeam(context.Context, *TeamManifest) error
+	DeleteRuntimeTeam(context.Context, string) error
 }
 
 // PostgresDurableTeamLoader reads the existing team-work and group records.
@@ -29,7 +38,12 @@ func (l *PostgresDurableTeamLoader) LoadRuntimeTeams(ctx context.Context) ([]*Te
 	if l == nil || l.db == nil {
 		return nil, nil
 	}
+	manifests, seen, err := l.loadPersistedRuntimeTeams(ctx)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := l.db.QueryContext(ctx, durableRuntimeTeamsQuery,
+		durableRuntimeTenant,
 		string(protocol.TeamWorkStateNew),
 		string(protocol.TeamWorkStateBriefed),
 		string(protocol.TeamWorkStateQueued),
@@ -44,11 +58,13 @@ func (l *PostgresDurableTeamLoader) LoadRuntimeTeams(ctx context.Context) ([]*Te
 	}
 	defer rows.Close()
 
-	manifests := make([]*TeamManifest, 0)
 	for rows.Next() {
 		manifest, scanErr := scanDurableRuntimeTeam(rows)
 		if scanErr != nil {
 			return nil, scanErr
+		}
+		if _, exists := seen[manifest.ID]; exists {
+			continue
 		}
 		manifests = append(manifests, manifest)
 	}
@@ -58,13 +74,121 @@ func (l *PostgresDurableTeamLoader) LoadRuntimeTeams(ctx context.Context) ([]*Te
 	return manifests, nil
 }
 
+const durableRuntimeTenant = "default"
+
+const persistedRuntimeTeamsQuery = `
+SELECT team_id, schema_version, manifest_digest, manifest
+  FROM runtime_team_manifests
+ WHERE tenant_id=$1
+ ORDER BY team_id`
+
+func (l *PostgresDurableTeamLoader) loadPersistedRuntimeTeams(ctx context.Context) ([]*TeamManifest, map[string]struct{}, error) {
+	rows, err := l.db.QueryContext(ctx, persistedRuntimeTeamsQuery, durableRuntimeTenant)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load persisted runtime team manifests: %w", err)
+	}
+	defer rows.Close()
+
+	manifests := make([]*TeamManifest, 0)
+	seen := map[string]struct{}{}
+	for rows.Next() {
+		var teamID, schemaVersion, storedDigest string
+		var raw []byte
+		if err := rows.Scan(&teamID, &schemaVersion, &storedDigest, &raw); err != nil {
+			return nil, nil, fmt.Errorf("scan persisted runtime team manifest: %w", err)
+		}
+		if schemaVersion != "v1" {
+			return nil, nil, fmt.Errorf("persisted runtime team %s has unsupported schema %q", teamID, schemaVersion)
+		}
+		var manifest TeamManifest
+		if err := json.Unmarshal(raw, &manifest); err != nil {
+			return nil, nil, fmt.Errorf("decode persisted runtime team %s: %w", teamID, err)
+		}
+		canonical, err := json.Marshal(&manifest)
+		if err != nil {
+			return nil, nil, fmt.Errorf("canonicalize persisted runtime team %s: %w", teamID, err)
+		}
+		digest := fmt.Sprintf("sha256:%x", sha256.Sum256(canonical))
+		if storedDigest != digest {
+			return nil, nil, fmt.Errorf("persisted runtime team %s failed digest validation", teamID)
+		}
+		teamID = strings.TrimSpace(teamID)
+		if teamID == "" || strings.TrimSpace(manifest.ID) != teamID {
+			return nil, nil, fmt.Errorf("persisted runtime team identity mismatch: row=%q manifest=%q", teamID, manifest.ID)
+		}
+		seen[teamID] = struct{}{}
+		manifests = append(manifests, &manifest)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("iterate persisted runtime team manifests: %w", err)
+	}
+	return manifests, seen, nil
+}
+
+func (l *PostgresDurableTeamLoader) SaveRuntimeTeam(ctx context.Context, manifest *TeamManifest) error {
+	if l == nil || l.db == nil {
+		return nil
+	}
+	if manifest == nil || strings.TrimSpace(manifest.ID) == "" {
+		return fmt.Errorf("save runtime team manifest: team identity is required")
+	}
+	raw, err := json.Marshal(manifest)
+	if err != nil {
+		return fmt.Errorf("encode runtime team %s: %w", manifest.ID, err)
+	}
+	digest := fmt.Sprintf("sha256:%x", sha256.Sum256(raw))
+	result, err := l.db.ExecContext(ctx, `
+INSERT INTO runtime_team_manifests (tenant_id, team_id, manifest_digest, manifest)
+VALUES ($1, $2, $3, $4::jsonb)
+ON CONFLICT (tenant_id, team_id) DO NOTHING`, durableRuntimeTenant, strings.TrimSpace(manifest.ID), digest, raw)
+	if err != nil {
+		return fmt.Errorf("persist runtime team %s: %w", manifest.ID, err)
+	}
+	inserted, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("inspect persisted runtime team %s: %w", manifest.ID, err)
+	}
+	if inserted == 0 {
+		var storedDigest string
+		if err := l.db.QueryRowContext(ctx, `
+SELECT manifest_digest FROM runtime_team_manifests
+WHERE tenant_id=$1 AND team_id=$2`, durableRuntimeTenant, strings.TrimSpace(manifest.ID)).Scan(&storedDigest); err != nil {
+			return fmt.Errorf("read existing runtime team %s: %w", manifest.ID, err)
+		}
+		if storedDigest != digest {
+			return fmt.Errorf("runtime team %s already owns a different approved manifest", manifest.ID)
+		}
+	}
+	return nil
+}
+
+func (l *PostgresDurableTeamLoader) DeleteRuntimeTeam(ctx context.Context, teamID string) error {
+	if l == nil || l.db == nil {
+		return nil
+	}
+	teamID = strings.TrimSpace(teamID)
+	if teamID == "" {
+		return fmt.Errorf("delete runtime team manifest: team identity is required")
+	}
+	if _, err := l.db.ExecContext(ctx, `DELETE FROM runtime_team_manifests WHERE tenant_id=$1 AND team_id=$2`, durableRuntimeTenant, teamID); err != nil {
+		return fmt.Errorf("delete runtime team %s: %w", teamID, err)
+	}
+	return nil
+}
+
 const durableRuntimeTeamsQuery = `
 WITH restorable AS (
     SELECT DISTINCT ON (team_id)
            team_id, objective, capability_requirements
       FROM team_work_items
-     WHERE team_id <> ''
-       AND state IN ($1, $2, $3, $4, $5, $6, $7, $8)
+     WHERE tenant_id=$1
+       AND team_id <> ''
+       AND state IN ($2, $3, $4, $5, $6, $7, $8, $9)
+       AND NOT EXISTS (
+           SELECT 1 FROM runtime_team_manifests persisted
+            WHERE persisted.tenant_id=team_work_items.tenant_id
+              AND persisted.team_id=team_work_items.team_id
+       )
      ORDER BY team_id, updated_at DESC
 )
 SELECT restorable.team_id,
@@ -78,9 +202,10 @@ SELECT restorable.team_id,
       SELECT name, goal_statement, allowed_capabilities, coordinator_profile
         FROM collaboration_groups
        WHERE status = 'active'
+         AND tenant_id=$1
          AND (expiry IS NULL OR expiry > NOW())
          AND team_ids @> jsonb_build_array(restorable.team_id)
-       ORDER BY updated_at DESC
+       ORDER BY updated_at DESC, id DESC
        LIMIT 1
   ) AS group_record ON TRUE
  ORDER BY restorable.team_id`

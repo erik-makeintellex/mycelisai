@@ -31,6 +31,12 @@ func (s *Soma) HandleCreateTeam(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing ID or Name", http.StatusBadRequest)
 		return
 	}
+	for _, member := range manifest.Members {
+		if member.ProfileRef != "" || member.Profile != nil {
+			http.Error(w, "Worker Profile selection must be resolved through Soma", http.StatusBadRequest)
+			return
+		}
+	}
 	if manifest.Type == "" {
 		manifest.Type = TeamTypeAction
 	}

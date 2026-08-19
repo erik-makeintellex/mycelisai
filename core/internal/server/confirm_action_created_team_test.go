@@ -16,7 +16,7 @@ func TestEnsureQAFixtureTeamCreationAvailableAllowsCurrentRunStagedOwnership(t *
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(scopeID, "new-team").
 		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
 	mock.ExpectQuery("LEFT JOIN outcome_projects").WithArgs(qaFixtureTenantID, "new-team", runID).
-		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group"}).AddRow(false, false, false))
+		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group", "runtime"}).AddRow(false, false, false, false))
 
 	if err := s.ensureQAFixtureTeamCreationAvailable(t.Context(), scopeID, runID, map[string]any{"team_id": "new-team"}); err != nil {
 		t.Fatal(err)
@@ -35,7 +35,7 @@ func TestEnsureQAFixtureTeamCreationAvailableRejectsPriorRunVisibility(t *testin
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(scopeID, "existing-team").
 		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
 	mock.ExpectQuery("SELECT EXISTS").WithArgs(qaFixtureTenantID, "existing-team", runID).
-		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group"}).AddRow(false, true, false))
+		WillReturnRows(sqlmock.NewRows([]string{"registry", "work", "group", "runtime"}).AddRow(false, true, false, false))
 
 	err := s.ensureQAFixtureTeamCreationAvailable(t.Context(), scopeID, runID, map[string]any{"team_id": "existing-team"})
 	if !errors.Is(err, errQAFixtureTeamPreexisting) {
