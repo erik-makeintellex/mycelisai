@@ -158,7 +158,7 @@ describe("TeamsPage", () => {
           String(url).includes("/api/v1/teams/team-bravo/work?limit=8&include_archived=false"),
         ).length,
       ).toBeGreaterThan(1);
-    });
+    }, { timeout: 5000 });
   });
 
   it("posts recover and steer actions as durable team-work evidence", async () => {

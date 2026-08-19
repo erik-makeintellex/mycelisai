@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import type { CatalogueAgent } from "@/store/cortexStoreTypesPlanning";
 
 export const mockTeams = [
   {
@@ -51,7 +52,7 @@ export const mockTeams = [
   },
 ];
 
-export const mockTemplates = [
+export const mockTemplates: CatalogueAgent[] = [
   {
     id: "template-marketing-writer",
     name: "Marketing Writer",
