@@ -1,68 +1,34 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { BookOpen, Plus, Search } from "lucide-react";
+import { BookOpen, MessageSquareText, Search } from "lucide-react";
 import { useCortexStore, type CatalogueAgent } from "@/store/useCortexStore";
+import { customizeWorkerProfilePrompt, newWorkerProfilePrompt, requestSomaPromptHandoff } from "@/components/soma/somaPromptHandoff";
 import AgentCard from "./AgentCard";
 import AgentEditorDrawer from "./AgentEditorDrawer";
-
-type LibraryView = "built_in" | "user";
 
 export default function CataloguePage() {
   const catalogueAgents = useCortexStore((state) => state.catalogueAgents);
   const isFetchingCatalogue = useCortexStore((state) => state.isFetchingCatalogue);
   const selectedCatalogueAgent = useCortexStore((state) => state.selectedCatalogueAgent);
   const fetchCatalogue = useCortexStore((state) => state.fetchCatalogue);
-  const createCatalogueAgent = useCortexStore((state) => state.createCatalogueAgent);
-  const updateCatalogueAgent = useCortexStore((state) => state.updateCatalogueAgent);
-  const deleteCatalogueAgent = useCortexStore((state) => state.deleteCatalogueAgent);
   const selectCatalogueAgent = useCortexStore((state) => state.selectCatalogueAgent);
-  const [isCreating, setIsCreating] = useState(false);
-  const [libraryView, setLibraryView] = useState<LibraryView>("built_in");
   const [query, setQuery] = useState("");
 
   useEffect(() => { void fetchCatalogue(); }, [fetchCatalogue]);
 
   const isBuiltIn = (agent: CatalogueAgent) => agent.source === "built_in" || Boolean(agent.locked);
-  const builtInCount = catalogueAgents.filter(isBuiltIn).length;
-  const userCount = catalogueAgents.length - builtInCount;
-  const filteredAgents = catalogueAgents.filter((agent) => {
-    const source: LibraryView = isBuiltIn(agent) ? "built_in" : "user";
+  const builtInAgents = catalogueAgents.filter(isBuiltIn);
+  const filteredAgents = builtInAgents.filter((agent) => {
     const searchText = `${agent.name} ${agent.role} ${agent.description ?? ""}`.toLowerCase();
-    return source === libraryView && searchText.includes(query.trim().toLowerCase());
+    return searchText.includes(query.trim().toLowerCase());
   });
 
   const closeEditor = useCallback(() => {
-    setIsCreating(false);
     selectCatalogueAgent(null);
   }, [selectCatalogueAgent]);
 
-  const saveProfile = useCallback((data: Partial<CatalogueAgent>) => {
-    if (selectedCatalogueAgent && !isCreating) {
-      void updateCatalogueAgent(selectedCatalogueAgent.id, data);
-    } else {
-      void createCatalogueAgent(data);
-    }
-    closeEditor();
-  }, [selectedCatalogueAgent, isCreating, updateCatalogueAgent, createCatalogueAgent, closeEditor]);
-
-  const duplicateProfile = useCallback((agent: CatalogueAgent) => {
-    const suffix = globalThis.crypto?.randomUUID?.().replaceAll("-", "").slice(0, 5) ?? Date.now().toString(16).slice(-5);
-    void createCatalogueAgent({
-      ...agent,
-      id: undefined,
-      profile_key: undefined,
-      name: `${agent.name} custom-${suffix}`,
-      source: "user",
-      locked: false,
-    });
-    closeEditor();
-    setLibraryView("user");
-  }, [createCatalogueAgent, closeEditor]);
-
-  const emptyMessage = query
-    ? "No matching profiles."
-    : libraryView === "user" ? "No custom profiles yet." : "Default profiles are not loaded.";
+  const emptyMessage = query ? "No matching profiles." : "Default profiles are not loaded.";
 
   return (
     <div className="relative flex h-full flex-col bg-cortex-bg">
@@ -71,34 +37,21 @@ export default function CataloguePage() {
           <BookOpen className="h-5 w-5 text-cortex-success" />
           <div>
             <h2 className="text-base font-semibold text-cortex-text-main">Worker profiles</h2>
-            <p className="text-xs text-cortex-text-muted">Reusable teammates Soma can assign to governed work.</p>
+            <p className="text-xs text-cortex-text-muted">Inspect ready-made teammates, or ask Soma to create an activated custom profile.</p>
           </div>
           {isFetchingCatalogue && <span className="text-xs text-cortex-text-muted animate-pulse">Loading</span>}
         </div>
         <button
           type="button"
-          onClick={() => { selectCatalogueAgent(null); setIsCreating(true); setLibraryView("user"); }}
+          onClick={() => requestSomaPromptHandoff(newWorkerProfilePrompt())}
           className="flex items-center gap-1.5 rounded-md border border-cortex-success/40 bg-cortex-success/10 px-3 py-2 text-xs font-semibold text-cortex-success hover:bg-cortex-success/20"
         >
-          <Plus className="h-4 w-4" /> New profile
+          <MessageSquareText className="h-4 w-4" /> Create with Soma
         </button>
       </header>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cortex-border px-5 py-3">
-        <div className="inline-flex rounded-md border border-cortex-border bg-cortex-surface p-1" role="tablist" aria-label="Profile library">
-          {([['built_in', 'Ready-made', builtInCount], ['user', 'My profiles', userCount]] as const).map(([value, label, count]) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={libraryView === value}
-              onClick={() => setLibraryView(value)}
-              className={`rounded px-3 py-1.5 text-xs font-semibold ${libraryView === value ? "bg-cortex-primary/15 text-cortex-primary" : "text-cortex-text-muted hover:text-cortex-text-main"}`}
-            >
-              {label} <span className="ml-1 opacity-70">{count}</span>
-            </button>
-          ))}
-        </div>
+        <p className="text-xs font-semibold text-cortex-text-muted">{builtInAgents.length} ready-made profiles</p>
         <label className="flex min-w-56 items-center gap-2 rounded-md border border-cortex-border bg-cortex-surface px-3 py-2">
           <Search className="h-4 w-4 text-cortex-text-muted" />
           <span className="sr-only">Search profiles</span>
@@ -123,20 +76,19 @@ export default function CataloguePage() {
               <AgentCard
                 key={agent.id}
                 agent={agent}
-                onSelect={(selected) => { setIsCreating(false); selectCatalogueAgent(selected); }}
-                onDelete={(id) => void deleteCatalogueAgent(id)}
+                onSelect={selectCatalogueAgent}
               />
             ))}
           </div>
         )}
       </main>
 
-      {(isCreating || selectedCatalogueAgent) && (
+      {selectedCatalogueAgent && (
         <AgentEditorDrawer
-          agent={isCreating ? null : selectedCatalogueAgent}
+          agent={selectedCatalogueAgent}
           onClose={closeEditor}
-          onSave={saveProfile}
-          onDuplicate={duplicateProfile}
+          onSave={() => undefined}
+          onCustomize={(agent) => requestSomaPromptHandoff(customizeWorkerProfilePrompt(agent.name))}
         />
       )}
     </div>

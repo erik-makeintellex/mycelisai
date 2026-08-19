@@ -23,17 +23,17 @@ const builtIn: CatalogueAgent = {
 };
 
 describe('AgentEditorDrawer', () => {
-    it('keeps a ready-made profile read-only and exposes governed access before copying', () => {
-        const duplicate = vi.fn();
-        render(<AgentEditorDrawer agent={builtIn} onClose={vi.fn()} onSave={vi.fn()} onDuplicate={duplicate} />);
+    it('keeps a ready-made profile read-only and hands customization to Soma', () => {
+        const customize = vi.fn();
+        render(<AgentEditorDrawer agent={builtIn} onClose={vi.fn()} onSave={vi.fn()} onCustomize={customize} />);
 
         expect(screen.getByRole('dialog', { name: 'Research Specialist profile' })).toBeDefined();
         expect((screen.getByLabelText('Name') as HTMLInputElement).disabled).toBe(true);
         fireEvent.click(screen.getByRole('tab', { name: 'Access & context' }));
         expect(screen.getByText('web_search')).toBeDefined();
         expect((screen.getByLabelText('Context type 1') as HTMLSelectElement).disabled).toBe(true);
-        fireEvent.click(screen.getByRole('button', { name: 'Copy profile' }));
-        expect(duplicate).toHaveBeenCalledWith(builtIn);
+        fireEvent.click(screen.getByRole('button', { name: 'Customize with Soma' }));
+        expect(customize).toHaveBeenCalledWith(builtIn);
     });
 
     it('returns capabilities, context, scope, and quality for a new user profile', () => {

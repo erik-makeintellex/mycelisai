@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
-import { Copy, Plus, Save, Trash2, X } from "lucide-react";
+import { MessageSquareText, Plus, Save, Trash2, X } from "lucide-react";
 import type { AgentContextBinding, CatalogueAgent } from "@/store/useCortexStore";
 import { TagInput } from "@/components/common/TagInput";
 
@@ -9,7 +9,7 @@ interface AgentEditorDrawerProps {
   agent: CatalogueAgent | null;
   onClose: () => void;
   onSave: (data: Partial<CatalogueAgent>) => void;
-  onDuplicate?: (agent: CatalogueAgent) => void;
+  onCustomize?: (agent: CatalogueAgent) => void;
 }
 
 type EditorTab = "profile" | "access" | "quality";
@@ -20,7 +20,7 @@ export default function AgentEditorDrawer(props: AgentEditorDrawerProps) {
   return <AgentEditorForm key={props.agent?.id ?? "new-profile"} {...props} />;
 }
 
-function AgentEditorForm({ agent, onClose, onSave, onDuplicate }: AgentEditorDrawerProps) {
+function AgentEditorForm({ agent, onClose, onSave, onCustomize }: AgentEditorDrawerProps) {
   const readOnly = Boolean(agent?.locked || agent?.source === "built_in");
   const [tab, setTab] = useState<EditorTab>("profile");
   const [name, setName] = useState(agent?.name ?? "");
@@ -63,7 +63,7 @@ function AgentEditorForm({ agent, onClose, onSave, onDuplicate }: AgentEditorDra
         <header className="flex items-start justify-between gap-3 border-b border-cortex-border px-5 py-4">
           <div>
             <h2 className="text-base font-semibold text-cortex-text-main">{agent ? agent.name : "New worker profile"}</h2>
-            <p className="mt-1 text-xs text-cortex-text-muted">{readOnly ? "Ready-made profile. Copy it to make changes." : "Define what this teammate does and what it may use."}</p>
+            <p className="mt-1 text-xs text-cortex-text-muted">{readOnly ? "Ready-made profile. Ask Soma to create an activated custom version." : "Define what this teammate does and what it may use."}</p>
           </div>
           <button type="button" aria-label="Close profile" onClick={onClose} className="rounded p-1.5 text-cortex-text-muted hover:bg-cortex-border hover:text-cortex-text-main"><X className="h-4 w-4" /></button>
         </header>
@@ -117,7 +117,7 @@ function AgentEditorForm({ agent, onClose, onSave, onDuplicate }: AgentEditorDra
 
         <footer className="flex items-center justify-end gap-2 border-t border-cortex-border px-5 py-4">
           <button type="button" onClick={onClose} className="rounded-md border border-cortex-border px-4 py-2 text-xs font-semibold text-cortex-text-muted hover:text-cortex-text-main">Cancel</button>
-          {readOnly && agent && onDuplicate ? <button type="button" onClick={() => onDuplicate(agent)} className="inline-flex items-center gap-2 rounded-md border border-cortex-primary/40 bg-cortex-primary/10 px-4 py-2 text-xs font-semibold text-cortex-primary"><Copy className="h-4 w-4" /> Copy profile</button> : <button type="button" onClick={save} disabled={!name.trim()} className="inline-flex items-center gap-2 rounded-md border border-cortex-success/40 bg-cortex-success/10 px-4 py-2 text-xs font-semibold text-cortex-success disabled:opacity-40"><Save className="h-4 w-4" /> {agent ? "Save changes" : "Create profile"}</button>}
+          {readOnly && agent && onCustomize ? <button type="button" onClick={() => onCustomize(agent)} className="inline-flex items-center gap-2 rounded-md border border-cortex-primary/40 bg-cortex-primary/10 px-4 py-2 text-xs font-semibold text-cortex-primary"><MessageSquareText className="h-4 w-4" /> Customize with Soma</button> : <button type="button" onClick={save} disabled={!name.trim()} className="inline-flex items-center gap-2 rounded-md border border-cortex-success/40 bg-cortex-success/10 px-4 py-2 text-xs font-semibold text-cortex-success disabled:opacity-40"><Save className="h-4 w-4" /> {agent ? "Save changes" : "Create profile"}</button>}
         </footer>
       </section>
     </div>

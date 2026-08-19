@@ -194,14 +194,15 @@ func (s *AdminServer) executePlannedToolCallsTx(ctx context.Context, tx *sql.Tx,
 	}
 
 	registry := swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
-		NC:    s.NC,
-		Brain: s.Cognitive,
-		DB:    s.getDB(),
+		NC:        s.NC,
+		Brain:     s.Cognitive,
+		Catalogue: s.Catalogue,
+		DB:        s.getDB(),
 	})
 	registry.SetSoma(s.Soma)
 	mcpExec := s.plannedMCPToolExecutor()
 	executor := swarm.NewCompositeToolExecutor(registry, mcpExec)
-	toolCtx := confirmedActionToolContext(ctx, auditUser, runID)
+	toolCtx := confirmedActionToolContext(ctx, auditUser, runID, scope.ConfigRequestBoundary)
 
 	results := make([]plannedToolExecutionResult, 0, len(scope.PlannedToolCalls))
 	lastGeneratedImageArtifactID := ""

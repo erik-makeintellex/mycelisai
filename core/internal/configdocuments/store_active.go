@@ -66,6 +66,11 @@ func (s *Store) GetActiveRevision(
 		FROM config_document_activations activation
 		JOIN config_documents document
 		  ON document.record_id = activation.config_document_record_id
+		 AND document.tenant_id = activation.tenant_id
+		 AND document.kind = activation.kind
+		 AND document.document_id = activation.document_id
+		 AND document.scope_kind = activation.scope_kind
+		 AND document.scope_ref = activation.scope_ref
 		WHERE activation.tenant_id = $1
 		  AND activation.kind = $2
 		  AND activation.document_id = $3

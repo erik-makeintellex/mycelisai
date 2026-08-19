@@ -6,11 +6,13 @@ import (
 	"testing"
 
 	"github.com/mycelis/core/internal/swarm"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func TestConfirmedActionToolContextCarriesConfigDocumentActor(t *testing.T) {
 	ctx := confirmedActionToolContext(
 		t.Context(), " operator-1 ", "11111111-1111-1111-1111-111111111111",
+		&protocol.ConfigDocumentRequestBoundary{WorkspaceID: "workspace-1", OrganizationID: "org-1"},
 	)
 	invocation, ok := swarm.ToolInvocationContextFromContext(ctx)
 	if !ok {
@@ -18,6 +20,9 @@ func TestConfirmedActionToolContextCarriesConfigDocumentActor(t *testing.T) {
 	}
 	if invocation.AgentID != "operator-1" || invocation.UserLabel != "operator-1" {
 		t.Fatalf("actor metadata = %#v, want operator-1", invocation)
+	}
+	if invocation.OperatorID != "operator-1" || invocation.WorkspaceID != "workspace-1" || invocation.OrganizationID != "org-1" {
+		t.Fatalf("trusted profile boundary = %#v", invocation)
 	}
 }
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { Brain, Copy, LockKeyhole, Trash2 } from "lucide-react";
+import { Brain, LockKeyhole, MessageSquareText, Trash2 } from "lucide-react";
 import type { CatalogueAgent } from "@/store/useCortexStore";
 
 interface AgentCardProps {
   agent: CatalogueAgent;
   onSelect: (agent: CatalogueAgent) => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export default function AgentCard({ agent, onSelect, onDelete }: AgentCardProps) {
@@ -16,7 +16,7 @@ export default function AgentCard({ agent, onSelect, onDelete }: AgentCardProps)
 
   const handleDelete = (event: React.MouseEvent) => {
     event.stopPropagation();
-    if (window.confirm(`Delete profile "${agent.name}"?`)) onDelete(agent.id);
+    if (onDelete && window.confirm(`Delete profile "${agent.name}"?`)) onDelete(agent.id);
   };
 
   return (
@@ -36,7 +36,7 @@ export default function AgentCard({ agent, onSelect, onDelete }: AgentCardProps)
         </div>
         {isBuiltIn ? (
           <LockKeyhole className="h-4 w-4 text-cortex-text-muted" aria-label="Built-in profile" />
-        ) : (
+        ) : onDelete ? (
           <button
             type="button"
             aria-label={`Delete ${agent.name}`}
@@ -45,7 +45,7 @@ export default function AgentCard({ agent, onSelect, onDelete }: AgentCardProps)
           >
             <Trash2 className="h-4 w-4" />
           </button>
-        )}
+        ) : null}
       </div>
       <p className="mb-4 line-clamp-2 min-h-10 text-xs leading-5 text-cortex-text-muted">
         {agent.description || "Reusable teammate profile for governed team work."}
@@ -53,7 +53,7 @@ export default function AgentCard({ agent, onSelect, onDelete }: AgentCardProps)
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-cortex-text-muted">
         <span>{capabilities.length} capabilities</span><span aria-hidden="true">·</span>
         <span>{contextCount} context sources</span>
-        {isBuiltIn && <><span aria-hidden="true">·</span><span className="inline-flex items-center gap-1"><Copy className="h-3 w-3" /> Copy to customize</span></>}
+        {isBuiltIn && <><span aria-hidden="true">·</span><span className="inline-flex items-center gap-1"><MessageSquareText className="h-3 w-3" /> Customize with Soma</span></>}
       </div>
     </article>
   );

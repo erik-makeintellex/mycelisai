@@ -8,6 +8,17 @@ import (
 	"strings"
 )
 
+var ErrProfileNotFound = errors.New("worker profile not found")
+
+// ProfileResolutionScope is the approved user-work boundary used when selecting
+// an active WorkerProfile revision. More specific scopes win.
+type ProfileResolutionScope struct {
+	TenantID        string
+	OperatorRef     string
+	WorkspaceRef    string
+	OrganizationRef string
+}
+
 // Resolve finds a reusable profile by stable profile key or UUID text.
 func (s *Service) Resolve(ctx context.Context, ref string) (*AgentTemplate, error) {
 	ref = strings.TrimSpace(ref)
@@ -25,7 +36,7 @@ func (s *Service) Resolve(ctx context.Context, ref string) (*AgentTemplate, erro
 	profile, err := scanAgent(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("profile %s not found", ref)
+			return nil, fmt.Errorf("%w: %s", ErrProfileNotFound, ref)
 		}
 		return nil, fmt.Errorf("resolve profile %s: %w", ref, err)
 	}

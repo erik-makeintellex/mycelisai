@@ -105,7 +105,7 @@ When a group is meant to react to service, device, API, or sensor traffic, regis
 
 Use `Automations` when you want event rules to actuate work, route proposals, require approval before execution, or author propose-only Schedule Rules for reviewable cadence.
 
-Use `Resources -> Worker Profiles` to inspect ready-made teammates or create scoped profiles for recurring work. Name a profile in a Soma request when you want that teammate specifically, or let Soma choose the smallest useful set. Use `Resources -> Capabilities` to confirm the access those profiles may request; a profile never bypasses capability health, source scope, approval, or secret policy.
+Use `Resources -> Worker Profiles` to inspect ready-made teammates, then use **Create with Soma** or **Customize with Soma** to prepare a governed scoped profile conversationally. Name an activated profile in a Soma request when you want that teammate specifically, or let Soma choose the smallest useful set. Use `Resources -> Capabilities` to confirm the access those profiles may request; a profile never bypasses capability health, source scope, approval, or secret policy.
 
 If Soma recommends tools that are not installed yet, it should walk you through the enablement path before launch: name the missing MCP server, name required `.env` variables without exposing secret values, point to Capabilities and the MCP library, and then bind the resulting tool refs to the team or reusable member template after you confirm.
 

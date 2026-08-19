@@ -81,7 +81,7 @@ const RESOURCE_TABS: ResourceTab[] = [
     {
         id: "roles",
         label: "Worker Profiles",
-        summary: "Choose ready-made teammates or create reusable profiles with scoped access and context.",
+        summary: "Inspect ready-made teammates or continue with Soma to create an activated scoped profile.",
         detail: "Reusable teammates",
         icon: BookOpen,
     },
