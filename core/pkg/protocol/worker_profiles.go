@@ -27,9 +27,12 @@ type WorkerProfileSpec struct {
 }
 
 type WorkerProfileSnapshot struct {
-	ID      string `json:"id"`
-	Version string `json:"version"`
-	Digest  string `json:"digest"`
+	ID       string              `json:"id" yaml:"id"`
+	Version  string              `json:"version" yaml:"version"`
+	Digest   string              `json:"digest" yaml:"digest"`
+	RecordID string              `json:"record_id,omitempty" yaml:"record_id,omitempty"`
+	TenantID string              `json:"tenant_id,omitempty" yaml:"tenant_id,omitempty"`
+	Scope    ConfigDocumentScope `json:"scope,omitempty" yaml:"scope,omitempty"`
 }
 
 type WorkerProfileCompileResult struct {
@@ -139,7 +142,7 @@ func validateWorkerProfileUsage(usage AgentUsagePolicy, add func(string, string,
 	}
 	if scope != "" {
 		switch scope {
-		case "workspace", "outcome", "organization", "operator":
+		case "team", "workspace", "outcome", "organization", "operator":
 		default:
 			add("worker_profile.unsupported_usage_scope", "spec.usage_policy.scope", fmt.Sprintf("unsupported usage scope %q", scope))
 		}

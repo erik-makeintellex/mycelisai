@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Plus } from "lucide-react";
+import { BookOpen, MessageSquareText } from "lucide-react";
 import type { CatalogueAgent } from "@/store/useCortexStore";
 
 export function TeamMemberTemplatesPanel({
@@ -31,7 +31,7 @@ export function TeamMemberTemplatesPanel({
           </div>
         </div>
         <button type="button" onClick={onNewTemplate} className="inline-flex items-center gap-1.5 rounded-md border border-cortex-success/40 px-3 py-2 text-xs font-semibold text-cortex-success hover:bg-cortex-success/10">
-          <Plus className="h-4 w-4" /> New profile
+          <MessageSquareText className="h-4 w-4" /> Create with Soma
         </button>
       </div>
 

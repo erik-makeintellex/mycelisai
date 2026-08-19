@@ -24,6 +24,7 @@ vi.mock("@/components/catalogue/AgentEditorDrawer", () => ({
 }));
 
 import TeamsPage from "@/components/teams/TeamsPage";
+import { takePendingSomaPrompt } from "@/components/soma/somaPromptHandoff";
 import { useCortexStore } from "@/store/useCortexStore";
 import { mockTeamWorkFetch, mockTeams, mockTemplates } from "./TeamsPage.fixtures";
 
@@ -256,7 +257,7 @@ describe("TeamsPage", () => {
     expect(screen.queryByText("nats.output.alpha")).toBeNull();
   });
 
-  it("opens the worker profile editor from the teams page", () => {
+  it("hands worker profile creation to Soma without opening the legacy editor", () => {
     useCortexStore.setState({
       teamsDetail: mockTeams,
       catalogueAgents: mockTemplates,
@@ -264,11 +265,10 @@ describe("TeamsPage", () => {
 
     render(<TeamsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: /new profile/i }));
-    expect(screen.getByTestId("agent-editor-drawer")).toBeDefined();
-    expect(screen.getByText("Creating new template")).toBeDefined();
+    window.history.replaceState({}, "", "/dashboard");
+    fireEvent.click(screen.getByRole("button", { name: /create with soma/i }));
 
-    fireEvent.click(screen.getByRole("button", { name: /Marketing Writer/i }));
-    expect(screen.getByText("Editing: Marketing Writer")).toBeDefined();
+    expect(screen.queryByTestId("agent-editor-drawer")).toBeNull();
+    expect(takePendingSomaPrompt()).toContain("create a reusable Worker Profile");
   });
 });

@@ -9,6 +9,7 @@ import {
   type TeamDetailEntry,
 } from "@/store/useCortexStore";
 import AgentEditorDrawer from "@/components/catalogue/AgentEditorDrawer";
+import { customizeWorkerProfilePrompt, newWorkerProfilePrompt, requestSomaPromptHandoff } from "@/components/soma/somaPromptHandoff";
 import { recoveryReviewQueueItems } from "@/components/recovery/recoveryQueue";
 import { ActiveWorkLane } from "./ActiveWorkLane";
 import TeamCard from "./TeamCard";
@@ -38,8 +39,6 @@ export default function TeamsPage() {
   const teamsFilter = useCortexStore((s) => s.teamsFilter);
   const fetchTeamsDetail = useCortexStore((s) => s.fetchTeamsDetail);
   const fetchCatalogue = useCortexStore((s) => s.fetchCatalogue);
-  const createCatalogueAgent = useCortexStore((s) => s.createCatalogueAgent);
-  const updateCatalogueAgent = useCortexStore((s) => s.updateCatalogueAgent);
   const selectTeam = useCortexStore((s) => s.selectTeam);
   const setTeamsFilter = useCortexStore((s) => s.setTeamsFilter);
   const durableWorkRefreshVersion = useCortexStore(
@@ -90,7 +89,12 @@ export default function TeamsPage() {
 
   const totalAgents = teamsDetail.reduce((sum, t) => sum + t.agents.length, 0);
   const onlineAgents = teamsDetail.reduce((sum, t) => sum + t.agents.filter((a) => a.status >= 1).length, 0);
-  const sortedTemplates = useMemo(() => [...catalogueAgents].sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)), [catalogueAgents]);
+  const sortedTemplates = useMemo(
+    () => catalogueAgents
+      .filter((agent) => agent.source === "built_in" || agent.locked)
+      .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)),
+    [catalogueAgents],
+  );
   const highlightedTemplates = sortedTemplates.slice(0, 4);
   const activeTeamWork = useDurableTeamWork({
     teams: filteredTeams,
@@ -137,39 +141,6 @@ export default function TeamsPage() {
     setEditingTemplate(null);
     setIsTemplateDrawerOpen(false);
   }, []);
-
-  const handleTemplateSave = useCallback(
-    (data: Partial<CatalogueAgent>) => {
-      if (editingTemplate) {
-        void updateCatalogueAgent(editingTemplate.id, data);
-      } else {
-        void createCatalogueAgent(data);
-      }
-      closeTemplateDrawer();
-    },
-    [
-      closeTemplateDrawer,
-      createCatalogueAgent,
-      editingTemplate,
-      updateCatalogueAgent,
-    ],
-  );
-
-  const handleTemplateDuplicate = useCallback(
-    (agent: CatalogueAgent) => {
-      const suffix = globalThis.crypto?.randomUUID?.().replaceAll("-", "").slice(0, 5) ?? Date.now().toString(16).slice(-5);
-      void createCatalogueAgent({
-        ...agent,
-        id: undefined,
-        profile_key: undefined,
-        name: `${agent.name} custom-${suffix}`,
-        source: "user",
-        locked: false,
-      });
-      closeTemplateDrawer();
-    },
-    [closeTemplateDrawer, createCatalogueAgent],
-  );
 
   return (
     <div className="h-full flex flex-col bg-cortex-bg relative">
@@ -236,7 +207,7 @@ export default function TeamsPage() {
             <TeamsSetupPanels
                 highlightedTemplates={highlightedTemplates}
                 isFetchingCatalogue={isFetchingCatalogue}
-                onNewTemplate={() => openTemplateDrawer(null)}
+                onNewTemplate={() => requestSomaPromptHandoff(newWorkerProfilePrompt())}
                 onEditTemplate={openTemplateDrawer}
             />
             <TeamsOutputCollaboration />
@@ -294,8 +265,8 @@ export default function TeamsPage() {
         <AgentEditorDrawer
           agent={editingTemplate}
           onClose={closeTemplateDrawer}
-          onSave={handleTemplateSave}
-          onDuplicate={handleTemplateDuplicate}
+          onSave={() => undefined}
+          onCustomize={(agent) => requestSomaPromptHandoff(customizeWorkerProfilePrompt(agent.name))}
         />
       )}
     </div>

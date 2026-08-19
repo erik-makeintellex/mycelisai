@@ -64,3 +64,11 @@ func TestValidateWorkerProfileSpecFailsClosed(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateWorkerProfileSpecAllowsTeamUsageScope(t *testing.T) {
+	document := validWorkerProfileDocument()
+	document.Spec = json.RawMessage(`{"role":"builder","system_prompt":"Build the approved work.","usage_policy":{"selection":"soma_or_manual","scope":"team"}}`)
+	if issues := ValidateWorkerProfileSpec(document.Spec); len(issues) != 0 {
+		t.Fatalf("ValidateWorkerProfileSpec() issues = %#v", issues)
+	}
+}

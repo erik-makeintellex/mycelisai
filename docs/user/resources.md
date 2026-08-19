@@ -15,7 +15,7 @@ Current resource menu:
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
 | Deployment Context | Save files or notes Soma should reuse as long-lived, scoped source context |
 | AI Engines | Global AI engine configuration and health |
-| Worker Profiles | Ready-made and user-owned reusable teammates |
+| Worker Profiles | Ready-made teammates and Soma-guided custom profile creation |
 The Resources page keeps these resource types in a persistent selector and renders the selected type inside a bounded work window. On phones and tablets, Resource types appear as one compact horizontally scrollable tab row so the selected work surface remains near the top of the screen. On desktop, the same choices use a vertical list-detail menu with short descriptions. Selection is recorded in the page URL, survives refresh, and works with browser Back. Long tool lists, workspace folders, exchange records, and provider forms scroll inside the selected panel rather than turning the whole page into one long operator path.
 Retained group outputs use the same Outcome Health labels as Soma, Teams, and Runs. A selectable group with retained user output is Completed; the badge describes operational state while proof and source material remain separate details.
 ---
@@ -305,8 +305,8 @@ Operational behavior:
 ---
 
 ## Worker Profiles
-Worker Profiles define reusable teammates Soma may assign to governed work. Ready-made profiles are locked so the shipped safety and access posture stays inspectable; use **Copy profile** to create an editable user-owned version. **New profile** starts a blank profile.
-Worker Profile YAML/JSON may now be previewed through the same ConfigDocument validator used by Soma. Preview proves the family fields and exact id/version/digest without saving or activating anything. Runtime activation and the focused Soma-first Resources editor are still being converged; until that gate passes, the existing user-profile editor remains compatibility behavior rather than a second file-authoritative configuration path.
+Worker Profiles define reusable teammates Soma may assign to governed work. Ready-made profiles are locked so the shipped safety and access posture stays inspectable. Use **Create with Soma** for a new profile or **Customize with Soma** from a ready-made profile; Soma places a prepared request in the conversation, asks only for missing details, previews the result, and asks before saving or activating it.
+Worker Profile YAML/JSON may be previewed through the same ConfigDocument validator used by Soma. Preview proves the family fields and exact id/version/digest without saving or activating anything. After a stored revision is activated, newly created teams resolve the most specific allowed revision for the operator, workspace, organization, then built-in scope and retain its exact record/version/digest lineage. Existing teams do not change when a different revision is activated or rolled back. Legacy catalogue records remain API compatibility data and are not runtime activation authority; the primary UI does not present them as assignable profiles.
 Each profile may define:
 - a plain purpose and role
 - optional model preference, otherwise the workspace AI engine applies

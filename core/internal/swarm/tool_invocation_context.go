@@ -13,14 +13,17 @@ type toolInvocationContextKey struct{}
 // It is attached to context during agent execution and consumed by internal tools
 // when publishing governed product signals.
 type ToolInvocationContext struct {
-	RunID         string
-	TeamID        string
-	AgentID       string
-	UserLabel     string
-	SourceKind    protocol.SignalSourceKind
-	SourceChannel string
-	PayloadKind   protocol.SignalPayloadKind
-	Timestamp     time.Time
+	RunID          string
+	TeamID         string
+	AgentID        string
+	UserLabel      string
+	OperatorID     string
+	WorkspaceID    string
+	OrganizationID string
+	SourceKind     protocol.SignalSourceKind
+	SourceChannel  string
+	PayloadKind    protocol.SignalPayloadKind
+	Timestamp      time.Time
 	// PlanningOnly marks an invocation that is part of proposal generation and
 	// must not produce any mutation side effects before confirmation.
 	PlanningOnly bool

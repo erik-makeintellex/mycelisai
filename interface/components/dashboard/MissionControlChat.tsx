@@ -6,6 +6,7 @@ import { useCortexStore } from "@/store/useCortexStore";
 import { SomaConversationThread } from "@/components/soma/SomaConversationThread";
 import { SomaIntentInput } from "@/components/soma/SomaIntentInput";
 import { useSomaOutputContinuation } from "@/components/soma/outputContinuation";
+import { takePendingSomaPrompt } from "@/components/soma/somaPromptHandoff";
 import type { MissionChatContinuationContext } from "@/store/cortexStoreTypes";
 import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "@/components/soma/SomaSuggestionBar";
 import CouncilCallErrorCard from "./CouncilCallErrorCard";
@@ -78,6 +79,18 @@ export default function MissionControlChat({
     const isLoading = isMissionChatting || isBroadcasting || isReplyingToProposal;
     const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
     useSomaOutputContinuation({ disabled: isLoading, inputRef, setInput, setContinuationContext: setPendingContinuationContext });
+
+    useEffect(() => {
+        if (isLoading) return;
+        const pendingPrompt = takePendingSomaPrompt();
+        if (!pendingPrompt) return;
+        const timeout = window.setTimeout(() => {
+            setPendingContinuationContext(null);
+            setInput(pendingPrompt);
+            inputRef.current?.focus();
+        }, 0);
+        return () => window.clearTimeout(timeout);
+    }, [isLoading]);
 
     useEffect(() => {
         setCouncilTarget("admin");

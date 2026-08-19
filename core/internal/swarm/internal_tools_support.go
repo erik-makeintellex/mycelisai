@@ -116,6 +116,7 @@ func runtimeTeamMembersFromArgs(merged map[string]any, teamID, fallbackAgentID, 
 	return []protocol.AgentManifest{{
 		ID:            fallbackAgentID,
 		ProfileRef:    stringValue(merged["profile_ref"]),
+		Profile:       runtimeWorkerProfileSnapshot(merged["profile_snapshot"]),
 		Role:          fallbackRole,
 		SystemPrompt:  fallbackSystemPrompt,
 		Model:         stringValue(merged["model"]),
@@ -126,6 +127,7 @@ func runtimeTeamMembersFromArgs(merged map[string]any, teamID, fallbackAgentID, 
 		Context:       runtimeContextBindings(merged["context_bindings"]),
 		Usage:         runtimeUsagePolicy(merged["usage_policy"]),
 		MaxIterations: 6,
+		Verification:  runtimeVerification(merged["verification"]),
 	}}
 }
 
@@ -180,6 +182,7 @@ func runtimeAgentFromMap(source map[string]any, teamID string, idx int, fallback
 	return protocol.AgentManifest{
 		ID:            id,
 		ProfileRef:    stringValue(source["profile_ref"]),
+		Profile:       runtimeWorkerProfileSnapshot(source["profile_snapshot"]),
 		Role:          role,
 		SystemPrompt:  firstNonEmptyString(stringValue(source["system_prompt"]), fmt.Sprintf("You are the %s for team %s. Own your bounded specialist contribution and report concise output/proof to Soma.", role, teamID)),
 		Model:         stringValue(source["model"]),
@@ -190,6 +193,7 @@ func runtimeAgentFromMap(source map[string]any, teamID string, idx int, fallback
 		Context:       runtimeContextBindings(source["context_bindings"]),
 		Usage:         runtimeUsagePolicy(source["usage_policy"]),
 		MaxIterations: maxIterations,
+		Verification:  runtimeVerification(source["verification"]),
 	}
 }
 

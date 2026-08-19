@@ -12,26 +12,27 @@ import (
 
 // AgentTemplate is a reusable agent definition stored in the catalogue.
 type AgentTemplate struct {
-	ID                   uuid.UUID                      `json:"id"`
-	ProfileKey           string                         `json:"profile_key,omitempty"`
-	Name                 string                         `json:"name"`
-	Description          string                         `json:"description,omitempty"`
-	Role                 string                         `json:"role"` // cognitive, sensory, actuation, ledger
-	Source               string                         `json:"source"`
-	Locked               bool                           `json:"locked"`
-	SystemPrompt         string                         `json:"system_prompt,omitempty"`
-	Model                string                         `json:"model,omitempty"`
-	Tools                []string                       `json:"tools"`
-	CapabilityRefs       []string                       `json:"capability_refs"`
-	ContextBindings      []protocol.AgentContextBinding `json:"context_bindings"`
-	UsagePolicy          protocol.AgentUsagePolicy      `json:"usage_policy"`
-	Inputs               []string                       `json:"inputs"`
-	Outputs              []string                       `json:"outputs"`
-	VerificationStrategy string                         `json:"verification_strategy,omitempty"`
-	VerificationRubric   []string                       `json:"verification_rubric"`
-	ValidationCommand    string                         `json:"validation_command,omitempty"`
-	CreatedAt            time.Time                      `json:"created_at"`
-	UpdatedAt            time.Time                      `json:"updated_at"`
+	ID                   uuid.UUID                       `json:"id"`
+	ProfileKey           string                          `json:"profile_key,omitempty"`
+	Name                 string                          `json:"name"`
+	Description          string                          `json:"description,omitempty"`
+	Role                 string                          `json:"role"` // cognitive, sensory, actuation, ledger
+	Source               string                          `json:"source"`
+	Locked               bool                            `json:"locked"`
+	SystemPrompt         string                          `json:"system_prompt,omitempty"`
+	Model                string                          `json:"model,omitempty"`
+	Tools                []string                        `json:"tools"`
+	CapabilityRefs       []string                        `json:"capability_refs"`
+	ContextBindings      []protocol.AgentContextBinding  `json:"context_bindings"`
+	UsagePolicy          protocol.AgentUsagePolicy       `json:"usage_policy"`
+	Inputs               []string                        `json:"inputs"`
+	Outputs              []string                        `json:"outputs"`
+	VerificationStrategy string                          `json:"verification_strategy,omitempty"`
+	VerificationRubric   []string                        `json:"verification_rubric"`
+	ValidationCommand    string                          `json:"validation_command,omitempty"`
+	ProfileSnapshot      *protocol.WorkerProfileSnapshot `json:"profile_snapshot,omitempty"`
+	CreatedAt            time.Time                       `json:"created_at"`
+	UpdatedAt            time.Time                       `json:"updated_at"`
 }
 
 // Service manages CRUD operations on the agent catalogue.
