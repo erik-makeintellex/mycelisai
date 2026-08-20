@@ -20,6 +20,7 @@ type Soma struct {
 	axon               *Axon
 	teams              map[string]*Team
 	mu                 sync.RWMutex
+	spawnMu            sync.Mutex
 	ctx                context.Context
 	cancel             context.CancelFunc
 	registry           *Registry

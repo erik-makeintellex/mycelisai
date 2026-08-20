@@ -28,7 +28,18 @@ func outcomeTemplateMutationTools(lower string) ([]string, bool) {
 		hasAnyExactWord(lower, "save", "store", "persist") {
 		tools = append(tools, "store_config_document")
 	}
-	return uniqueOrderedTools(tools), true
+	tools = uniqueOrderedTools(tools)
+	if len(tools) > 0 {
+		return tools, true
+	}
+	// Drafting or reviewing a config document is read-only configuration work.
+	// Mark it recognized so generic file inference does not turn YAML wording
+	// into an unrelated write_file proposal.
+	return nil, configDocumentDefinitionIntent(lower)
+}
+
+func configDocumentDefinitionIntent(lower string) bool {
+	return hasAnyExactWord(lower, "draft", "preview", "validate", "review", "compose", "design")
 }
 
 func outcomeTemplateWorkApplication(lower string) bool {

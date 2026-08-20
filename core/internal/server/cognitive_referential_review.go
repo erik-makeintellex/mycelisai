@@ -129,6 +129,17 @@ func (s *AdminServer) buildSomaReferentialReview(ctx context.Context, messages [
 	return review
 }
 
+func (s *AdminServer) buildSomaReferentialReviewUnlessConfigDocument(
+	ctx context.Context,
+	messages []chatRequestMessage,
+) somaReferentialReview {
+	latest := latestUserMessageContent(messages)
+	if _, _, _, ok := parseInlineConfigDocument(latest); ok {
+		return somaReferentialReview{LatestRequest: latest, EffectiveRequest: latest}
+	}
+	return s.buildSomaReferentialReview(ctx, messages)
+}
+
 func inferSomaReferentialAction(text string) (string, []string) {
 	if match := matchSomaInteractionTemplate(text); match.Template.ActionSummary != "" {
 		return match.Template.ActionSummary, match.MutationTools

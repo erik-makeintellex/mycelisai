@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -14,7 +13,6 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/runs"
-	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -34,16 +32,12 @@ func (f *fakeProposalMCPExecutor) CallTool(_ context.Context, _ uuid.UUID, toolN
 	return "mcp " + toolName + " completed", nil
 }
 
-func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *testing.T) {
+func TestHandleConfirmAction_CompletesVerifiedExecutionWithInlineToolCall(t *testing.T) {
 	workspace := t.TempDir()
 	t.Setenv("MYCELIS_WORKSPACE", workspace)
 
 	dbOpt, mock := withDB(t)
-	wireNATS := withNATS(t)
-	s := newTestServer(dbOpt, wireNATS, func(s *AdminServer) {
-		s.Soma = swarm.NewSoma(s.NC, nil, nil, nil, nil, nil, nil)
-		t.Cleanup(s.Soma.Shutdown)
-	})
+	s := newTestServer(dbOpt)
 	mock.MatchExpectationsInOrder(false)
 
 	token := "11111111-1111-1111-1111-111111111111"
@@ -58,17 +52,8 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	}
 	expiresAt := time.Now().Add(time.Hour)
 	scope := protocol.ScopeValidation{
-		Tools: []string{"create_team", "write_file"},
+		Tools: []string{"write_file"},
 		PlannedToolCalls: []protocol.PlannedToolCall{
-			{
-				Name: "create_team",
-				Arguments: map[string]any{
-					"team_id":              "qa-runtime-team",
-					"name":                 "QA Runtime Team",
-					"role":                 "validator",
-					"allowed_capabilities": []any{"write_file", "team.coordinate"},
-				},
-			},
 			{
 				Name: "write_file",
 				Arguments: map[string]any{
@@ -77,7 +62,7 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 				},
 			},
 		},
-		CapabilityIDs: []string{"team_orchestration", "file_output"},
+		CapabilityIDs: []string{"file_output"},
 	}
 	scopeJSON, err := json.Marshal(scope)
 	if err != nil {
@@ -130,13 +115,6 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("44444444-4444-4444-4444-444444444444"))
 	mock.ExpectExec("UPDATE execution_contracts").
 		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectQuery("SELECT id::text, tenant_id, name, goal_statement, work_mode,").
-		WithArgs("QA Runtime Team").
-		WillReturnError(sql.ErrNoRows)
-	mock.ExpectQuery("INSERT INTO collaboration_groups").
-		WillReturnRows(sqlmock.NewRows([]string{"created_at", "updated_at"}).AddRow(time.Now(), time.Now()))
-	expectConfirmedCreateTeamLifecycle(mock, "qa-runtime-team", time.Now())
-	expectConfirmedDeliverableLifecycle(mock, "qa-runtime-team", "output/confirmed.txt", time.Now())
 
 	reqBody := `{"confirm_token":"` + token + `"}`
 	rr := doRequest(t, http.HandlerFunc(s.HandleConfirmAction), http.MethodPost, "/api/v1/intent/confirm-action", reqBody)
@@ -207,9 +185,6 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	if !ok {
 		t.Fatalf("expected outputs list, got %T", summary["outputs"])
 	}
-	if !executionSummaryHasOutput(outputs, "team", "qa-runtime-team", true) {
-		t.Fatalf("outputs missing retained team output: %#v", outputs)
-	}
 	if !executionSummaryHasOutput(outputs, "file", "output/confirmed.txt", true) {
 		t.Fatalf("outputs missing retained file output: %#v", outputs)
 	}
@@ -220,7 +195,6 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	if strings.TrimSpace(auditID) == "" {
 		t.Fatal("expected non-empty audit_event_id")
 	}
-	assertTeamWorkRefsForConfirmAction(t, data, "qa-runtime-team", runID)
 
 	written, err := os.ReadFile(filepath.Join(workspace, "output", "confirmed.txt"))
 	if err != nil {
@@ -230,9 +204,6 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 		t.Fatalf("file content = %q, want hello world", got)
 	}
 
-	if !s.Soma.StopTeam("qa-runtime-team") {
-		t.Fatal("expected confirmed runtime team to stop before database verification")
-	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet db expectations: %v", err)
 	}

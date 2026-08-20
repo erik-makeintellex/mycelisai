@@ -131,6 +131,6 @@ export function configurationCompletedMessage(action: SynchronousConfigAction, p
     const exactSummary = proofSummary?.trim();
     if (exactSummary) return exactSummary;
     return action === 'activate'
-        ? 'Outcome Template active. New matching work will use this saved version.'
-        : 'Outcome Template saved, but not active. Ask Soma to activate this template when you are ready.';
+        ? 'Configuration active. New matching work will use this saved version.'
+        : 'Configuration saved, but not active. Ask Soma to activate it when you are ready.';
 }

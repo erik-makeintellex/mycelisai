@@ -1,13 +1,17 @@
 package swarm
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
+
+const runtimeTeamPersistenceTimeout = 5 * time.Second
 
 // Start brings Soma online, loads standing teams, and subscribes to operator intent.
 func (s *Soma) Start() error {
@@ -106,11 +110,23 @@ func (s *Soma) handleGlobalInput(msg *nats.Msg) {
 
 // SpawnTeam dynamically creates and starts a new team.
 func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	return s.SpawnTeamContext(s.ctx, manifest)
+}
+
+// SpawnTeamContext creates a team within the caller's acknowledgement boundary.
+func (s *Soma) SpawnTeamContext(ctx context.Context, manifest *TeamManifest) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("spawn team before acknowledgement: %w", err)
+	}
+	s.spawnMu.Lock()
+	defer s.spawnMu.Unlock()
+
+	s.mu.RLock()
 	if _, exists := s.teams[manifest.ID]; exists {
+		s.mu.RUnlock()
 		return fmt.Errorf("team %s already exists", manifest.ID)
 	}
+	s.mu.RUnlock()
 
 	effectiveManifest := s.applyProviderPolicy(manifest)
 	team := NewTeam(effectiveManifest, s.nc, s.brain, s.toolExecutor)
@@ -121,12 +137,17 @@ func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
 		return err
 	}
 	if s.durableTeamStore != nil {
-		if err := s.durableTeamStore.SaveRuntimeTeam(s.ctx, effectiveManifest); err != nil {
+		persistCtx, cancel := context.WithTimeout(ctx, runtimeTeamPersistenceTimeout)
+		err := s.durableTeamStore.SaveRuntimeTeam(persistCtx, effectiveManifest)
+		cancel()
+		if err != nil {
 			team.Stop()
 			return fmt.Errorf("persist team %s before acknowledgement: %w", effectiveManifest.ID, err)
 		}
 	}
+	s.mu.Lock()
 	s.teams[effectiveManifest.ID] = team
+	s.mu.Unlock()
 	log.Printf("Soma Spawned New Team: %s", effectiveManifest.ID)
 	return nil
 }

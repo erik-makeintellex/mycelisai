@@ -70,7 +70,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		s.respondDirectSearchAnswer(w, r, searchRequest)
 		return
 	}
-	referentialReview := s.buildSomaReferentialReview(r.Context(), req.Messages)
+	referentialReview := s.buildSomaReferentialReviewUnlessConfigDocument(r.Context(), req.Messages)
 	if referentialReview.NeedsConfirmation {
 		logSomaConversationTurn(r.Context(), s.Conversations, sessionID, focusedTeamID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
 		s.respondReferentialConfirmation(w, r, referentialReview)
@@ -162,8 +162,8 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 	isMutation, mutTools, plannedToolCalls := executableMutationPlan(isMutation, agentResult, latestUserText, mutTools)
 	if isMutation {
-		if !s.resolveThreadOutcomeTemplateActivationOrRespond(
-			w, r, sessionID, req.Messages, req.OrganizationID, req.TeamID,
+		if !s.resolveThreadConfigurationMutationsOrRespond(
+			w, r, sessionID, req.Messages, latestUserText, req.OrganizationID, req.TeamID,
 			auditActorIDFromRequest(r), &plannedToolCalls,
 		) {
 			return

@@ -49,13 +49,13 @@ func executionOutputsFromToolResults(results []plannedToolExecutionResult) []pro
 		}
 		if toolName == "store_config_document" {
 			kind = "config_revision"
-			title = "Outcome Template saved"
+			title = configDocumentResultTitle(result, "saved")
 			retained = true
 			result.Output = configDocumentResultSummary(result)
 		}
 		if toolName == "activate_config_document" {
 			kind = "config_activation"
-			title = "Outcome Template active"
+			title = configDocumentResultTitle(result, "active")
 			retained = true
 			result.Output = configDocumentResultSummary(result)
 		}

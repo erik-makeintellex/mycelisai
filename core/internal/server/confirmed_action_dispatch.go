@@ -32,7 +32,7 @@ func confirmedActionNeedsAsyncDispatch(scope *protocol.ScopeValidation) bool {
 		return false
 	}
 	for _, planned := range scope.PlannedToolCalls {
-		if isDelegateTool(planned.Name) {
+		if strings.TrimSpace(planned.Name) == "create_team" || isDelegateTool(planned.Name) {
 			return true
 		}
 	}
