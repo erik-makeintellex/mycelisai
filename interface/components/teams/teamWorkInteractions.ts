@@ -34,15 +34,23 @@ export function durableInteractions({
     { action: "inspect", label: inspectLabel, href: inspectHref, audited: true },
     {
       action: "steer",
-      label: needsExternalVerification
-        ? "Tell Soma what you found"
-        : needsOperator
-          ? "Reply to team"
-          : "Ask for changes",
-      disabled: !canSteer,
-      disabledReason: canSteer ? undefined : "Archived work cannot be steered.",
+      label: needsOperator
+        ? "Reply to team"
+        : "Ask for changes",
+      disabled: !canSteer || needsExternalVerification,
+      disabledReason: needsExternalVerification
+        ? "Record the observed external result in verification."
+        : canSteer
+          ? undefined
+          : "Archived work cannot be steered.",
       audited: true,
     },
+    ...(needsExternalVerification ? [{
+      action: "verify_external_outcome" as const,
+      label: "Verify external result",
+      disabled: false,
+      audited: true,
+    }] : []),
     {
       action: "start_work",
       label: "Start task",

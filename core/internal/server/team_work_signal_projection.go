@@ -73,6 +73,10 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 		log.Printf("team work signal projection: ignored signal on %s for archived work item %s/%s", subject, teamID, workItemID)
 		return nil
 	}
+	if externalMutationOutcomeLocksProjection(item) {
+		log.Printf("team work signal projection: ignored signal on %s while external outcome verification controls work item %s/%s", subject, teamID, workItemID)
+		return nil
+	}
 	payloadKind := env.Meta.PayloadKind
 	if payloadKind == "" {
 		payloadKind = payloadKindFromSignalSubject(subject)
@@ -172,6 +176,17 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 		p.server.broadcastTeamWorkResultThreadEvent(item, event)
 	}
 	return nil
+}
+
+func externalMutationOutcomeLocksProjection(item protocol.TeamWorkItem) bool {
+	if item.State != protocol.TeamWorkStateDegraded && item.State != protocol.TeamWorkStateNeedsOperator {
+		return false
+	}
+	if !protocol.WorkIntentHasExternalMutation(item.WorkIntent) {
+		return false
+	}
+	state := item.WorkIntent.SideEffect.SideEffectState
+	return state == protocol.WorkSideEffectUnknown || state == protocol.WorkSideEffectVerifiedNotCommitted
 }
 
 func projectedSignalWouldRegress(current, incoming protocol.TeamWorkState) bool {

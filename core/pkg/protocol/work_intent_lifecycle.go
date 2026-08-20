@@ -65,6 +65,14 @@ func NormalizeWorkIntent(raw *WorkIntent) *WorkIntent {
 		sideEffectCopy.IdempotencyKey = strings.TrimSpace(sideEffectCopy.IdempotencyKey)
 		sideEffectCopy.RetrySafety = normalizeWorkRetrySafety(sideEffectCopy.RetrySafety)
 		sideEffectCopy.SideEffectState = normalizeWorkSideEffectState(sideEffectCopy.SideEffectState)
+		if sideEffectCopy.Verification != nil {
+			verificationCopy := *sideEffectCopy.Verification
+			verificationCopy.Result = NormalizeWorkExternalOutcomeResult(verificationCopy.Result)
+			verificationCopy.ActorRef = strings.TrimSpace(verificationCopy.ActorRef)
+			verificationCopy.Summary = strings.TrimSpace(verificationCopy.Summary)
+			verificationCopy.EvidenceRefs = dedupeStrings(compactStrings(verificationCopy.EvidenceRefs))
+			sideEffectCopy.Verification = &verificationCopy
+		}
 		if sideEffectCopy.EffectKind == WorkEffectExternalMutation {
 			if sideEffectCopy.RetrySafety == "" {
 				sideEffectCopy.RetrySafety = WorkRetryUnknown
@@ -145,6 +153,21 @@ func normalizeWorkSideEffectState(value string) string {
 		return WorkSideEffectCommitted
 	case WorkSideEffectUnknown:
 		return WorkSideEffectUnknown
+	case WorkSideEffectVerifiedNotCommitted:
+		return WorkSideEffectVerifiedNotCommitted
+	default:
+		return ""
+	}
+}
+
+func NormalizeWorkExternalOutcomeResult(value string) string {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case WorkExternalOutcomeCommitted:
+		return WorkExternalOutcomeCommitted
+	case WorkExternalOutcomeNotCommitted:
+		return WorkExternalOutcomeNotCommitted
+	case WorkExternalOutcomeStillUnknown:
+		return WorkExternalOutcomeStillUnknown
 	default:
 		return ""
 	}
@@ -161,6 +184,7 @@ func WorkIntentHasExternalMutation(intent *WorkIntent) bool {
 func WorkIntentAllowsIdempotentRetry(intent *WorkIntent) bool {
 	return WorkIntentHasExternalMutation(intent) &&
 		intent.SideEffect.RetrySafety == WorkRetrySafe &&
+		intent.SideEffect.SideEffectState == WorkSideEffectNotStarted &&
 		strings.TrimSpace(intent.SideEffect.IdempotencyKey) != ""
 }
 

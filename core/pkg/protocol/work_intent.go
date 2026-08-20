@@ -1,5 +1,7 @@
 package protocol
 
+import "time"
+
 // WorkIntent describes how Soma expects approved work to behave.
 // It is descriptive metadata for UI/proof/recovery, not execution authority.
 type WorkIntent struct {
@@ -28,19 +30,35 @@ const (
 	WorkRetryUnsafe  = "unsafe"
 	WorkRetryUnknown = "unknown"
 
-	WorkSideEffectNotStarted = "not_started"
-	WorkSideEffectAccepted   = "accepted"
-	WorkSideEffectCommitted  = "committed"
-	WorkSideEffectUnknown    = "unknown"
+	WorkSideEffectNotStarted           = "not_started"
+	WorkSideEffectAccepted             = "accepted"
+	WorkSideEffectCommitted            = "committed"
+	WorkSideEffectUnknown              = "unknown"
+	WorkSideEffectVerifiedNotCommitted = "verified_not_committed"
+
+	WorkExternalOutcomeCommitted    = "committed"
+	WorkExternalOutcomeNotCommitted = "not_committed"
+	WorkExternalOutcomeStillUnknown = "still_unknown"
 )
 
 // WorkSideEffectContract describes the retry boundary for work that can change
 // state outside Mycelis. It is trust metadata, not execution authority.
 type WorkSideEffectContract struct {
-	EffectKind      string `json:"effect_kind,omitempty"`
-	IdempotencyKey  string `json:"idempotency_key,omitempty"`
-	RetrySafety     string `json:"retry_safety,omitempty"`
-	SideEffectState string `json:"side_effect_state,omitempty"`
+	EffectKind      string                           `json:"effect_kind,omitempty"`
+	IdempotencyKey  string                           `json:"idempotency_key,omitempty"`
+	RetrySafety     string                           `json:"retry_safety,omitempty"`
+	SideEffectState string                           `json:"side_effect_state,omitempty"`
+	Verification    *WorkExternalOutcomeVerification `json:"verification,omitempty"`
+}
+
+// WorkExternalOutcomeVerification records an operator-attested observation of
+// an external mutation. Core supplies ActorRef and RecordedAt.
+type WorkExternalOutcomeVerification struct {
+	Result       string    `json:"result"`
+	ActorRef     string    `json:"actor_ref"`
+	Summary      string    `json:"summary"`
+	EvidenceRefs []string  `json:"evidence_refs"`
+	RecordedAt   time.Time `json:"recorded_at"`
 }
 
 // WorkOutputContract names the expected deliverable shape for approved work.

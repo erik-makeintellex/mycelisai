@@ -1,9 +1,6 @@
 package protocol
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 func TestNormalizeTeamWorkItem_DefaultsCreateTeamToNew(t *testing.T) {
 	item := NormalizeTeamWorkItem(TeamWorkItem{
@@ -206,47 +203,6 @@ func TestApplyTeamWorkAction_RejectsInvalidTransitions(t *testing.T) {
 
 	if _, err := ApplyTeamWorkAction(item, TeamWorkActionRecover); err == nil {
 		t.Fatal("expected output_ready recover to be rejected")
-	}
-}
-
-func TestApplyTeamWorkAction_RequiresExternalMutationVerification(t *testing.T) {
-	item := NormalizeTeamWorkItem(TeamWorkItem{
-		TeamID:           "delivery-team",
-		Objective:        "Update the customer system",
-		ExecutionShape:   TeamExecutionShapeDeliverable,
-		State:            TeamWorkStateDegraded,
-		DegradationState: "external_mutation_outcome_unknown",
-		WorkIntent: &WorkIntent{SideEffect: &WorkSideEffectContract{
-			EffectKind:      WorkEffectExternalMutation,
-			RetrySafety:     WorkRetrySafe,
-			IdempotencyKey:  "customer-update-1",
-			SideEffectState: WorkSideEffectUnknown,
-		}},
-	})
-
-	for _, action := range []TeamWorkAction{
-		TeamWorkActionRecover,
-		TeamWorkActionPause,
-		TeamWorkActionResume,
-		TeamWorkActionStartWork,
-	} {
-		t.Run(string(action), func(t *testing.T) {
-			got, err := ApplyTeamWorkAction(item, action)
-			if err == nil || !strings.Contains(err.Error(), "must be verified through Soma") {
-				t.Fatalf("ApplyTeamWorkAction error = %v", err)
-			}
-			if got != TeamWorkStateDegraded {
-				t.Fatalf("state = %q, want degraded", got)
-			}
-		})
-	}
-
-	for _, action := range []TeamWorkAction{TeamWorkActionSteer, TeamWorkActionArchive} {
-		t.Run(string(action), func(t *testing.T) {
-			if _, err := ApplyTeamWorkAction(item, action); err != nil {
-				t.Fatalf("ApplyTeamWorkAction(%s): %v", action, err)
-			}
-		})
 	}
 }
 

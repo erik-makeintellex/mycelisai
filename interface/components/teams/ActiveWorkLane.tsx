@@ -17,7 +17,10 @@ import {
   compactNextAction,
   compactTitle,
   isStaleFailedPlanItem,
+  needsExternalMutationVerification,
 } from "./activeWorkCompact";
+import { ExternalOutcomeVerificationForm } from "./ExternalOutcomeVerificationForm";
+import type { ExternalOutcomeVerification } from "./teamWorkActions";
 import { ReviewDecisionGuide } from "./ReviewDecisionGuide";
 import { ReviewQueueSummary } from "./ReviewQueueSummary";
 import { TeamAskForm } from "./TeamAskForm";
@@ -38,6 +41,7 @@ export function ActiveWorkLane({
   moreItemsHref = "/teams",
   purpose = "active",
   onAction,
+  onVerifyExternalOutcome,
   onTeamAsk,
 }: {
   title?: string;
@@ -51,6 +55,10 @@ export function ActiveWorkLane({
   moreItemsHref?: string;
   purpose?: LanePurpose;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
+  onVerifyExternalOutcome?: (
+    item: TeamWorkItem,
+    verification: ExternalOutcomeVerification,
+  ) => Promise<void> | void;
   onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
   const visibleItems =
@@ -75,6 +83,7 @@ export function ActiveWorkLane({
         statusLabel={statusLabel}
         degradedMessage={degradedMessage}
         onAction={onAction}
+        onVerifyExternalOutcome={onVerifyExternalOutcome}
         onTeamAsk={onTeamAsk}
       />
     );
@@ -133,6 +142,7 @@ export function ActiveWorkLane({
               compact={compact}
               reviewMode={isReviewPurpose}
               onAction={onAction}
+              onVerifyExternalOutcome={onVerifyExternalOutcome}
               onTeamAsk={onTeamAsk}
             />
           ))
@@ -158,14 +168,20 @@ function WorkItemRow({
   compact = false,
   reviewMode = false,
   onAction,
+  onVerifyExternalOutcome,
   onTeamAsk,
 }: {
   item: TeamWorkItem;
   compact?: boolean;
   reviewMode?: boolean;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
+  onVerifyExternalOutcome?: (
+    item: TeamWorkItem,
+    verification: ExternalOutcomeVerification,
+  ) => Promise<void> | void;
   onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
+  const needsExternalVerification = needsExternalMutationVerification(item);
   const visibleActions = compact || isStaleFailedPlanItem(item)
     ? compactActions(item)
     : item.interactions;
@@ -218,11 +234,18 @@ function WorkItemRow({
           <WorkTruthSummary item={item} compact={compact} />
           {compact || reviewMode ? null : <ReviewDecisionGuide item={item} />}
           <ActiveWorkEvidence item={item} />
+          {needsExternalVerification ? (
+            <ExternalOutcomeVerificationForm
+              item={item}
+              compact={compact}
+              onVerify={onVerifyExternalOutcome}
+            />
+          ) : null}
           {compact || isStaleFailedPlanItem(item) ? null : (
             <TeamAskForm item={item} onTeamAsk={onTeamAsk} />
           )}
         </div>
-        <div className={compact ? "flex flex-wrap gap-2" : "grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:justify-end"}>
+        {needsExternalVerification ? null : <div className={compact ? "flex flex-wrap gap-2" : "grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:justify-end"}>
           {reviewMode && !compact ? (
             <p className="col-span-3 w-full font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-text-muted sm:text-right">
               Decision actions
@@ -237,7 +260,7 @@ function WorkItemRow({
               compact={compact}
             />
           ))}
-        </div>
+        </div>}
       </div>
       {item.advanced ? <ActiveWorkAdvancedProjection item={item} /> : null}
     </article>

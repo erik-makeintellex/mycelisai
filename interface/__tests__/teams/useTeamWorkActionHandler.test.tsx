@@ -116,4 +116,34 @@ describe("useTeamWorkActionHandler", () => {
       ],
     });
   });
+
+  it("posts structured external outcome verification without requesting a retry", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: { status: "verified" } }),
+    });
+
+    const { result } = renderHook(() => useTeamWorkActionHandler(vi.fn()));
+    await act(async () => {
+      await result.current.handleExternalOutcomeVerification(sourceItem, {
+        result: "not_committed",
+        summary: "The account still shows the previous email address.",
+        evidenceRefs: ["receipt-42", "https://example.test/audit/42"],
+      });
+    });
+
+    const [, request] = mockFetch.mock.calls[0];
+    expect(JSON.parse(String(request?.body))).toMatchObject({
+      action: "verify_external_outcome",
+      summary: "The account still shows the previous email address.",
+      payload: {
+        result: "not_committed",
+        evidence_refs: ["receipt-42", "https://example.test/audit/42"],
+      },
+    });
+    expect(result.current.activeWorkActionNotice).toBe(
+      "Verification recorded: the external change was not observed. No retry was requested.",
+    );
+    expect(result.current.activeWorkRefreshVersion).toBe(1);
+  });
 });

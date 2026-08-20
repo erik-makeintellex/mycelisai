@@ -136,6 +136,7 @@ export function SomaOperatingSurface({
         statusLabel={activeWorkActions.activeWorkActionNotice ?? teamWork.statusLabel}
         degradedMessage={activeWorkActions.activeWorkActionError ?? teamWork.degradedMessage}
         onAction={handleActiveWorkAction}
+        onVerifyExternalOutcome={activeWorkActions.handleExternalOutcomeVerification}
         onTeamAsk={activeWorkActions.handleTeamAsk}
         frame={false}
         purpose="review"

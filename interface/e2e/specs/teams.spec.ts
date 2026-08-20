@@ -110,6 +110,8 @@ test.describe('Teams Workspace (/teams)', () => {
     });
 
     test('unknown external mutation requires Soma verification before retry', async ({ page }) => {
+        let submittedVerification: Record<string, unknown> | null = null;
+        let verificationRecorded = false;
         await page.route('**/api/v1/teams/detail', async (route) => {
             await route.fulfill({
                 status: 200,
@@ -147,14 +149,30 @@ test.describe('Teams Workspace (/teams)', () => {
                             team_id: 'team-external-review',
                             objective: 'Verify external account update',
                             execution_shape: 'deliverable',
-                            state: 'degraded',
-                            needs_operator: true,
-                            degradation_state: 'external_mutation_outcome_unknown',
-                            recovery_options: ['verify the external result through Soma'],
+                            state: verificationRecorded ? 'output_ready' : 'degraded',
+                            needs_operator: !verificationRecorded,
+                            degradation_state: verificationRecorded ? undefined : 'external_mutation_outcome_unknown',
+                            recovery_options: verificationRecorded ? [] : ['verify the external result through Soma'],
+                            work_intent: {
+                                side_effect: {
+                                    effect_kind: 'external_mutation',
+                                    retry_safety: 'unknown',
+                                    side_effect_state: verificationRecorded ? 'committed' : 'unknown',
+                                },
+                            },
                             updated_at: '2026-08-12T10:00:00Z',
                         },
                     ],
                 }),
+            });
+        });
+        await page.route('**/api/v1/teams/team-external-review/work/work-external-review-1/actions', async (route) => {
+            submittedVerification = route.request().postDataJSON() as Record<string, unknown>;
+            verificationRecorded = true;
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ data: { status: 'verified' } }),
             });
         });
 
@@ -162,9 +180,28 @@ test.describe('Teams Workspace (/teams)', () => {
 
         await expect(page.getByLabel('Review details for Verify external account update')).toBeVisible();
         await expect(page.getByRole('button', { name: /Retry recovery/i })).toHaveCount(0);
-        await expect(page.getByRole('button', { name: 'Tell Soma what you found' })).toBeEnabled();
+        await expect(page.getByLabel('Verify external result for Verify external account update')).toBeVisible();
         await expect(page.getByText(/could not confirm whether the change completed/i)).toBeVisible();
         await expect(page.getByText(/Do not retry until the result is verified/i)).toBeVisible();
+
+        await page.getByRole('radio', { name: 'Confirmed applied' }).click();
+        await page.getByRole('textbox', { name: /What did you observe/i }).fill('The updated email address is visible on the account.');
+        await page.getByRole('textbox', { name: /Evidence references/i }).fill('receipt-account-42');
+        await page.getByRole('button', { name: 'Submit verification' }).click();
+
+        await expect.poll(() => submittedVerification).toMatchObject({
+            action: 'verify_external_outcome',
+            summary: 'The updated email address is visible on the account.',
+            payload: {
+                result: 'committed',
+                evidence_refs: ['receipt-account-42'],
+            },
+        });
+        await expect(page.getByText(
+            'Verification recorded: the external change was observed. No retry was requested.',
+            { exact: true },
+        )).toBeVisible();
+        await expect(page.getByLabel('Verify external result for Verify external account update')).toHaveCount(0);
     });
 
     test('team quick action links are wired', async ({ page }) => {

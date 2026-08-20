@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Archive, Eye, Pause, Play, RefreshCw, Send } from "lucide-react";
+import { Archive, Eye, Pause, Play, RefreshCw, Send, ShieldCheck } from "lucide-react";
 import type { TeamInteraction, TeamOutputRef, TeamWorkItem } from "@/store/useCortexStore";
 import { outcomeHealthFromRunStatus } from "@/lib/outcomeHealth";
 import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
@@ -12,13 +12,16 @@ import {
   compactNextAction,
   compactTitle,
   isStaleFailedPlanItem,
+  needsExternalMutationVerification,
 } from "./activeWorkCompact";
+import { ExternalOutcomeVerificationForm } from "./ExternalOutcomeVerificationForm";
+import type { ExternalOutcomeVerification } from "./teamWorkActions";
 import { ReviewDecisionGuide } from "./ReviewDecisionGuide";
 import { ReviewQueueSummary } from "./ReviewQueueSummary";
 import { TeamAskForm } from "./TeamAskForm";
 import { WorkTruthSummary } from "./WorkTruthSummary";
 
-const actionIcons = { inspect: Eye, steer: Send, start_work: Play, pause: Pause, resume: Play, recover: RefreshCw, archive: Archive };
+const actionIcons = { inspect: Eye, steer: Send, verify_external_outcome: ShieldCheck, start_work: Play, pause: Pause, resume: Play, recover: RefreshCw, archive: Archive };
 
 export function WorkReviewInbox({
   title = "Work to review",
@@ -27,6 +30,7 @@ export function WorkReviewInbox({
   statusLabel,
   degradedMessage,
   onAction,
+  onVerifyExternalOutcome,
   onTeamAsk,
 }: {
   title?: string;
@@ -35,6 +39,10 @@ export function WorkReviewInbox({
   statusLabel?: string;
   degradedMessage?: string | null;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
+  onVerifyExternalOutcome?: (
+    item: TeamWorkItem,
+    verification: ExternalOutcomeVerification,
+  ) => Promise<void> | void;
   onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
   const [selectedId, setSelectedId] = useState(items[0]?.id ?? null);
@@ -94,6 +102,7 @@ export function WorkReviewInbox({
           <ReviewDetailPane
             item={selectedItem}
             onAction={onAction}
+            onVerifyExternalOutcome={onVerifyExternalOutcome}
             onTeamAsk={onTeamAsk}
           />
         ) : null}
@@ -148,13 +157,19 @@ function ReviewListRow({
 function ReviewDetailPane({
   item,
   onAction,
+  onVerifyExternalOutcome,
   onTeamAsk,
 }: {
   item: TeamWorkItem;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
+  onVerifyExternalOutcome?: (
+    item: TeamWorkItem,
+    verification: ExternalOutcomeVerification,
+  ) => Promise<void> | void;
   onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
-  const secondaryActions = item.interactions.filter((action) => (
+  const needsExternalVerification = needsExternalMutationVerification(item);
+  const secondaryActions = needsExternalVerification ? [] : item.interactions.filter((action) => (
     !action.disabled && action.action !== primaryReviewAction(item)?.action
   ));
   return (
@@ -171,7 +186,7 @@ function ReviewDetailPane({
             {compactDescription(item)}
           </p>
         </div>
-        <PrimaryDetailAction item={item} onAction={onAction} />
+        {needsExternalVerification ? null : <PrimaryDetailAction item={item} onAction={onAction} />}
       </div>
 
       {compactNextAction(item) ? (
@@ -183,6 +198,10 @@ function ReviewDetailPane({
       <WorkTruthSummary item={item} />
       <ReviewDecisionGuide item={item} concise />
       <ActiveWorkEvidence item={item} />
+
+      {needsExternalVerification ? (
+        <ExternalOutcomeVerificationForm item={item} onVerify={onVerifyExternalOutcome} />
+      ) : null}
 
       {item.state === "needs_operator" ? (
         <TeamAskForm item={item} onTeamAsk={onTeamAsk} />
@@ -249,6 +268,7 @@ function ActionControl({
 }
 
 function primaryReviewAction(item: TeamWorkItem): TeamInteraction | null {
+  if (needsExternalMutationVerification(item)) return null;
   const output = firstOutputAction(item.outputRefs);
   if (item.state === "output_ready" && output) return output;
   if (isStaleFailedPlanItem(item)) return enabledAction(item, "archive") ?? enabledAction(item, "inspect");
