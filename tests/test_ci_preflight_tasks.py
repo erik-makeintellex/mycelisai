@@ -36,6 +36,8 @@ def test_release_preflight_runs_toolchain_and_baseline_when_clean(monkeypatch):
     monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.interface_tasks.build, "body", lambda _ctx: None)
+    monkeypatch.setattr(ci.interface_tasks.stop, "body", lambda _ctx: None)
+    monkeypatch.setattr(ci.interface_tasks.clean, "body", lambda _ctx: None)
     monkeypatch.setattr(ci.interface_tasks.test, "body", lambda _ctx: None)
     monkeypatch.setattr(ci.interface_tasks.typecheck, "body", lambda _ctx: None)
 
@@ -155,6 +157,8 @@ def test_release_preflight_runs_service_check_when_requested(monkeypatch):
     monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.interface_tasks.build, "body", lambda _ctx: None)
+    monkeypatch.setattr(ci.interface_tasks.stop, "body", lambda _ctx: None)
+    monkeypatch.setattr(ci.interface_tasks.clean, "body", lambda _ctx: None)
     monkeypatch.setattr(ci.interface_tasks.test, "body", lambda _ctx: None)
     monkeypatch.setattr(ci.interface_tasks.typecheck, "body", lambda _ctx: None)
 

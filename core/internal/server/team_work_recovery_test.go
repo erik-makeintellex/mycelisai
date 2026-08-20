@@ -109,7 +109,7 @@ func TestProjectOverdueExternalMutationRequiresVerification(t *testing.T) {
 	}
 }
 
-func TestProjectOverdueExternalMutationOffersSameKeyRetryAfterVerification(t *testing.T) {
+func TestProjectOverdueExternalMutationRequiresVerificationBeforeRetry(t *testing.T) {
 	item := protocol.TeamWorkItem{WorkIntent: protocol.NormalizeWorkIntent(&protocol.WorkIntent{
 		SideEffect: &protocol.WorkSideEffectContract{
 			EffectKind:      protocol.WorkEffectExternalMutation,
@@ -119,8 +119,13 @@ func TestProjectOverdueExternalMutationOffersSameKeyRetryAfterVerification(t *te
 		},
 	})}
 	projectOverdueRecovery(&item)
-	if len(item.RecoveryOptions) != 3 || !strings.Contains(item.RecoveryOptions[1], "invoice-2026-08-11") {
+	if len(item.RecoveryOptions) != 2 || !strings.Contains(item.RecoveryOptions[0], "verify the external system") {
 		t.Fatalf("recovery options = %#v", item.RecoveryOptions)
+	}
+	for _, option := range item.RecoveryOptions {
+		if strings.Contains(option, "invoice-2026-08-11") {
+			t.Fatalf("unverified recovery exposed retry key: %#v", item.RecoveryOptions)
+		}
 	}
 }
 

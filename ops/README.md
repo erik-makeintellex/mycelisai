@@ -244,7 +244,7 @@ Stopping containers alone is not enough. The cleanup pass must also inspect and 
 Delivery-focused validation, runner checks, and release preflight.
 - **Test**: `uv run inv ci.test` (Go tests + blocking Vitest run)
 - **Entrypoint Check**: `uv run inv ci.entrypoint-check`
-- **Baseline**: `uv run inv ci.baseline` (includes the repo-provisioned Chromium project with one worker by default; use `--no-e2e` only for intentionally narrower local debugging, and provision other engines explicitly for a separate cross-engine matrix)
+- **Baseline**: `uv run inv ci.baseline` (uses the managed build lifecycle to stop repo-owned Interface servers and Playwright listeners and clear `.next`, then includes the repo-provisioned Chromium project with one worker by default; use `--no-e2e` only for intentionally narrower local debugging, and provision other engines explicitly for a separate cross-engine matrix)
 - **Service Check**: `uv run inv ci.service-check --live-backend`
 - **Release Preflight**: `uv run inv ci.release-preflight --lane=release`; every lane runs `ci.lint` first and stops before baseline/service work if lint fails. Core lint/test stages use `go -C <core>` so module selection is independent of Invoke/shell directory state, and captured Core failures print console-safe diagnostics instead of crashing on characters unsupported by the active Windows code page.
 - **Lane presets**: `baseline`, `runtime`, `service`, `release` (legacy flags still supported for custom proof)

@@ -438,14 +438,14 @@ def test_stop_runs_tree_kill_and_repo_cleanup_on_windows(monkeypatch):
     port = 4310
 
     monkeypatch.setattr(interface, "is_windows", lambda: True)
-    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("repo") or [])
+    monkeypatch.setattr(interface, "_cleanup_managed_interface_listeners", lambda: cleaned.append("managed") or [])
     monkeypatch.setattr(interface, "_windows_listening_pids_for_port", lambda _port: [1234])
     monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: killed.append(pid))
 
     interface.stop.body(ctx, port=port)
-
     assert killed == [1234]
-    assert cleaned == ["cleanup"]
+    assert cleaned == ["managed", "repo"]
 
 
 def test_install_provisions_npm_and_playwright(monkeypatch):

@@ -664,12 +664,12 @@ def stop(c, port=INTERFACE_PORT):
     else:
         # lsof works on macOS + Linux; fuser as fallback
         c.run(f"lsof -ti:{port} | xargs -r kill -9 2>/dev/null || fuser -k {port}/tcp 2>/dev/null || true", warn=True)
+    _cleanup_managed_interface_listeners()
     remaining = _cleanup_repo_local_interface_processes()
     if remaining:
         summary = ", ".join(f"{proc['name']}:{proc['pid']}" for proc in remaining[:6])
         print(f"WARN: repo-local Interface residuals still running ({summary})")
     print("Interface stopped.")
-
 @task
 def clean(c):
     """
