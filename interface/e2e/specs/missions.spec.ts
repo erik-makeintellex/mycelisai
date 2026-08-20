@@ -21,7 +21,7 @@ test.describe('Soma Dashboard (/dashboard)', () => {
 
     test('navigation rail is visible', async ({ page }) => {
         await expect(page.locator('a[href="/dashboard"]').first()).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Docs' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Help' })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
     });
 

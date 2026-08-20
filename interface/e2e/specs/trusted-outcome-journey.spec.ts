@@ -26,7 +26,7 @@ test.describe("Trusted Outcome Journey", () => {
     const confirmResponse = page.waitForResponse((response) =>
       response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
     );
-    await clickVisibleControl(page, page.getByRole("button", { name: /^(Approve|Start)$/i }));
+    await sendWorkspaceMessage(page, "start");
     const confirmBody = (await (await confirmResponse).json()) as Envelope<{ run_id?: string; verified?: boolean }>;
     expect(confirmBody.ok).toBeTruthy();
     expect(confirmBody.data?.run_id).toBe(j.runId);
