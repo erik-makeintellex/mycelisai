@@ -90,7 +90,7 @@ func TestExecutionOutputsFromToolResultsRetainsTeamAndCodeFile(t *testing.T) {
 	}
 }
 
-func TestExecutionOutputsFromToolResultsNamesOutcomeTemplateStateForOperators(t *testing.T) {
+func TestExecutionOutputsFromToolResultsNamesUntypedConfigurationStateForOperators(t *testing.T) {
 	outputs := executionOutputsFromToolResults([]plannedToolExecutionResult{
 		{Name: "store_config_document", Output: "revision stored"},
 		{Name: "activate_config_document", Output: "revision active"},
@@ -99,10 +99,10 @@ func TestExecutionOutputsFromToolResultsNamesOutcomeTemplateStateForOperators(t 
 	if len(outputs) != 2 {
 		t.Fatalf("outputs = %#v, want 2", outputs)
 	}
-	if outputs[0].Kind != "config_revision" || outputs[0].Title != "Outcome Template saved" {
+	if outputs[0].Kind != "config_revision" || outputs[0].Title != "Configuration saved" {
 		t.Fatalf("stored template output = %#v", outputs[0])
 	}
-	if outputs[1].Kind != "config_activation" || outputs[1].Title != "Outcome Template active" {
+	if outputs[1].Kind != "config_activation" || outputs[1].Title != "Configuration active" {
 		t.Fatalf("active template output = %#v", outputs[1])
 	}
 	for _, output := range outputs {

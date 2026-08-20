@@ -6,9 +6,12 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func TestConfirmedActionNeedsAsyncDispatchOnlyForDelegatedWork(t *testing.T) {
+func TestConfirmedActionNeedsAsyncDispatchForTeamWork(t *testing.T) {
 	if confirmedActionNeedsAsyncDispatch(&protocol.ScopeValidation{PlannedToolCalls: []protocol.PlannedToolCall{{Name: "write_file"}}}) {
 		t.Fatal("bounded inline tool should not require team dispatch")
+	}
+	if !confirmedActionNeedsAsyncDispatch(&protocol.ScopeValidation{PlannedToolCalls: []protocol.PlannedToolCall{{Name: "create_team"}}}) {
+		t.Fatal("create_team must dispatch after commit so profile hydration cannot block on the confirmation transaction")
 	}
 	if !confirmedActionNeedsAsyncDispatch(&protocol.ScopeValidation{PlannedToolCalls: []protocol.PlannedToolCall{{Name: "delegate_task"}}}) {
 		t.Fatal("delegated work must use async dispatch")

@@ -10,27 +10,6 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func (s *AdminServer) resolveThreadOutcomeTemplateActivationOrRespond(
-	w http.ResponseWriter,
-	r *http.Request,
-	sessionID string,
-	messages []chatRequestMessage,
-	organizationID string,
-	teamID string,
-	actorID string,
-	planned *[]protocol.PlannedToolCall,
-) bool {
-	resolved, err := s.resolveThreadOutcomeTemplateActivation(
-		r.Context(), sessionID, messages, organizationID, teamID, actorID, *planned,
-	)
-	if err != nil {
-		respondAPIError(w, err.Error(), http.StatusConflict)
-		return false
-	}
-	*planned = resolved
-	return true
-}
-
 func (s *AdminServer) applyThreadOutcomeTemplateOrRespond(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -50,95 +29,6 @@ func (s *AdminServer) applyThreadOutcomeTemplateOrRespond(
 		return false
 	}
 	return true
-}
-
-func (s *AdminServer) resolveThreadOutcomeTemplateActivation(
-	ctx context.Context,
-	sessionID string,
-	messages []chatRequestMessage,
-	organizationID string,
-	teamID string,
-	actorID string,
-	planned []protocol.PlannedToolCall,
-) ([]protocol.PlannedToolCall, error) {
-	hasActivation := false
-	for _, call := range planned {
-		if strings.EqualFold(strings.TrimSpace(call.Name), "activate_config_document") {
-			hasActivation = true
-			break
-		}
-	}
-	if !hasActivation {
-		return planned, nil
-	}
-	store, err := s.runtimeConfigDocumentStore()
-	if err != nil {
-		return nil, err
-	}
-	document, ok := s.latestThreadOutcomeTemplate(ctx, sessionID, messages)
-	if !ok {
-		return nil, fmt.Errorf("Soma could not identify which Outcome Template revision to activate")
-	}
-	if scopeErr := validateOutcomeTemplateRequestScope(document, organizationID, teamID, actorID); scopeErr != nil {
-		return nil, scopeErr
-	}
-	digest, err := protocol.CanonicalConfigDocumentDigest(document)
-	if err != nil {
-		return nil, err
-	}
-
-	resolvedRecordID := ""
-	for i, call := range planned {
-		if !strings.EqualFold(strings.TrimSpace(call.Name), "activate_config_document") {
-			continue
-		}
-		recordID := firstNonEmptyString(call.Arguments["record_id"])
-		if recordID != "" {
-			record, loadErr := store.GetRevision(ctx, "default", recordID)
-			if loadErr != nil {
-				return nil, fmt.Errorf("load selected configuration revision: %w", loadErr)
-			}
-			if scopeErr := validateOutcomeTemplateRequestScope(record.Document, organizationID, teamID, actorID); scopeErr != nil {
-				return nil, scopeErr
-			}
-			recordDigest, digestErr := protocol.CanonicalConfigDocumentDigest(record.Document)
-			if digestErr != nil || record.Document.Metadata.ID != document.Metadata.ID ||
-				record.Document.Metadata.Version != document.Metadata.Version || record.Digest != digest || recordDigest != digest {
-				return nil, fmt.Errorf("the selected Outcome Template revision does not match this thread")
-			}
-			continue
-		}
-		if resolvedRecordID == "" {
-			records, listErr := store.List(ctx, "default", configdocuments.ListFilter{
-				Kind:       document.Kind,
-				ScopeKind:  document.Metadata.Scope.Kind,
-				ScopeRef:   document.Metadata.Scope.Ref,
-				DocumentID: document.Metadata.ID,
-				Limit:      20,
-			})
-			if listErr != nil {
-				return nil, listErr
-			}
-			for _, record := range records {
-				if record.Digest == digest {
-					resolvedRecordID = record.RecordID
-					break
-				}
-			}
-			if resolvedRecordID == "" {
-				return nil, fmt.Errorf("the Outcome Template revision from this thread has not been saved")
-			}
-		}
-		if call.Arguments == nil {
-			call.Arguments = map[string]any{}
-		}
-		call.Arguments["record_id"] = resolvedRecordID
-		if firstNonEmptyString(call.Arguments["action"]) == "" {
-			call.Arguments["action"] = string(configdocuments.ActivationActionActivate)
-		}
-		planned[i] = call
-	}
-	return planned, nil
 }
 
 func (s *AdminServer) applyThreadOutcomeTemplate(
@@ -212,10 +102,10 @@ func validateOutcomeTemplateRequestScope(
 	case protocol.ConfigDocumentScopeOperator:
 		expected = strings.TrimSpace(actorID)
 	default:
-		return fmt.Errorf("the Outcome Template has an unsupported scope")
+		return fmt.Errorf("the configuration has an unsupported scope")
 	}
 	if expected == "" || actual != expected {
-		return fmt.Errorf("the Outcome Template is not available in the current workspace")
+		return fmt.Errorf("the configuration is not available in the current workspace")
 	}
 	return nil
 }
@@ -225,21 +115,9 @@ func (s *AdminServer) latestThreadOutcomeTemplate(
 	sessionID string,
 	messages []chatRequestMessage,
 ) (protocol.ConfigDocument, bool) {
-	for i := len(messages) - 1; i >= 0; i-- {
-		_, _, document, ok := parseInlineConfigDocument(messages[i].Content)
-		if ok && document.Kind == protocol.ConfigDocumentKindOutcomeTemplate {
-			return document, true
-		}
-	}
-	if receipt, ok := s.latestSessionConfigDocumentReceipt(ctx, sessionID); ok {
-		store, err := s.runtimeConfigDocumentStore()
-		if err != nil {
-			return protocol.ConfigDocument{}, false
-		}
-		record, err := store.GetRevision(ctx, "default", receipt.RecordID)
-		if err == nil && record.Digest == receipt.Digest {
-			return record.Document, true
-		}
+	document, ok := s.latestThreadConfigDocument(ctx, sessionID, messages)
+	if ok && document.Kind == protocol.ConfigDocumentKindOutcomeTemplate {
+		return document, true
 	}
 	return protocol.ConfigDocument{}, false
 }

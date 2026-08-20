@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/pkg/protocol"
 )
+
+const runtimeProfileResolutionTimeout = 5 * time.Second
 
 func (r *InternalToolRegistry) hydrateCreateTeamProfiles(ctx context.Context, args map[string]any) error {
 	scope, err := runtimeProfileScope(ctx, args["profile_scope"])
@@ -55,7 +58,9 @@ func (r *InternalToolRegistry) hydrateRuntimeProfile(ctx context.Context, target
 	if r.catalogue == nil {
 		return fmt.Errorf("create_team profile %s: profile catalogue is unavailable", ref)
 	}
-	profile, err := r.catalogue.ResolveActive(ctx, ref, scope)
+	resolveCtx, cancel := context.WithTimeout(ctx, runtimeProfileResolutionTimeout)
+	defer cancel()
+	profile, err := r.catalogue.ResolveActive(resolveCtx, ref, scope)
 	if err != nil {
 		return fmt.Errorf("create_team profile %s: %w", ref, err)
 	}

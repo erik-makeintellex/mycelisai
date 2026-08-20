@@ -303,10 +303,10 @@ Operational behavior:
 - workspace boundaries still apply (sandboxed filesystem rules)
 
 ---
-
 ## Worker Profiles
 Worker Profiles define reusable teammates Soma may assign to governed work. Ready-made profiles are locked so the shipped safety and access posture stays inspectable. Use **Create with Soma** for a new profile or **Customize with Soma** from a ready-made profile; Soma places a prepared request in the conversation, asks only for missing details, previews the result, and asks before saving or activating it.
 Worker Profile YAML/JSON may be previewed through the same ConfigDocument validator used by Soma. Preview proves the family fields and exact id/version/digest without saving or activating anything. After a stored revision is activated, newly created teams resolve the most specific allowed revision for the operator, workspace, organization, then built-in scope and retain its exact record/version/digest lineage. Existing teams do not change when a different revision is activated or rolled back. Legacy catalogue records remain API compatibility data and are not runtime activation authority; the primary UI does not present them as assignable profiles.
+The natural Soma sequence is: ask to save the Worker Profile YAML or JSON, approve the compact save proposal, ask Soma to activate that profile, then ask Soma to create work using `this Worker Profile` or its name. Team creation starts in the background and leaves the conversation available. To return future teams to an earlier revision, tell Soma the exact version, for example `Roll back this Worker Profile to version alpha.` Existing teams retain the snapshot they started with.
 Each profile may define:
 - a plain purpose and role
 - optional model preference, otherwise the workspace AI engine applies

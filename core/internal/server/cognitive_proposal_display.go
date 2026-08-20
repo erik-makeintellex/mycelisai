@@ -150,12 +150,14 @@ func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, lat
 			display.ExpectedResult = "A new approved company knowledge record will be created with lineage back to the original customer context entry."
 			return display
 		case "store_config_document":
-			display.OperatorSummary = "Save this Outcome Template for reuse."
+			label := configDocumentRequestLabel(latestRequest)
+			display.OperatorSummary = "Save this " + label + " for reuse."
 			display.ExpectedResult = "The validated revision will be stored after approval and will remain inactive."
 			return display
 		case "activate_config_document":
-			display.OperatorSummary = "Make the selected Outcome Template active."
-			display.ExpectedResult = "The selected Outcome Template will become active for its configured scope after approval."
+			label := configDocumentRequestLabel(latestRequest)
+			display.OperatorSummary = "Make the selected " + label + " active."
+			display.ExpectedResult = "The selected " + label + " will become active for its configured scope after approval."
 			return display
 		}
 	}
@@ -184,11 +186,13 @@ func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, lat
 			display.OperatorSummary = "Promote an existing customer context entry into approved company knowledge."
 			display.ExpectedResult = "A new approved company knowledge record will be created with lineage back to the original customer context entry."
 		case "store_config_document":
-			display.OperatorSummary = "Save this Outcome Template for reuse."
+			label := configDocumentRequestLabel(latestRequest)
+			display.OperatorSummary = "Save this " + label + " for reuse."
 			display.ExpectedResult = "The validated revision will be stored after approval and will remain inactive."
 		case "activate_config_document":
-			display.OperatorSummary = "Make the selected Outcome Template active."
-			display.ExpectedResult = "The selected Outcome Template will become active after approval."
+			label := configDocumentRequestLabel(latestRequest)
+			display.OperatorSummary = "Make the selected " + label + " active."
+			display.ExpectedResult = "The selected " + label + " will become active after approval."
 		}
 	}
 
@@ -197,6 +201,13 @@ func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, lat
 	}
 
 	return display
+}
+
+func configDocumentRequestLabel(request string) string {
+	if strings.Contains(strings.ToLower(request), "worker profile") {
+		return "Worker Profile"
+	}
+	return "Outcome Template"
 }
 
 func plannedWriteFilePaths(planned []protocol.PlannedToolCall) []string {

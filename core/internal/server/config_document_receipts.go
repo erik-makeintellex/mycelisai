@@ -11,6 +11,7 @@ import (
 
 type configDocumentReceipt struct {
 	RecordID string
+	Kind     protocol.ConfigDocumentKind
 	Name     string
 	Version  string
 	Digest   string
@@ -34,6 +35,7 @@ func configDocumentReceiptFromResult(result plannedToolExecutionResult) (configD
 	}
 	return configDocumentReceipt{
 		RecordID: revision.RecordID,
+		Kind:     revision.Document.Kind,
 		Name:     revision.Document.Metadata.Name,
 		Version:  revision.Document.Metadata.Version,
 		Digest:   revision.Digest,
@@ -42,11 +44,18 @@ func configDocumentReceiptFromResult(result plannedToolExecutionResult) (configD
 }
 
 func configDocumentVisibleLabel(receipt configDocumentReceipt) string {
-	name := firstNonEmptyString(receipt.Name, "Outcome Template")
+	name := firstNonEmptyString(receipt.Name, configDocumentKindLabel(receipt.Kind))
 	if version := strings.TrimSpace(receipt.Version); version != "" {
 		return fmt.Sprintf("%s v%s", name, version)
 	}
 	return name
+}
+
+func configDocumentKindLabel(kind protocol.ConfigDocumentKind) string {
+	if kind == protocol.ConfigDocumentKindWorkerProfile {
+		return "Worker Profile"
+	}
+	return "Outcome Template"
 }
 
 func configDocumentScopeLabel(scope protocol.ConfigDocumentScope) string {
@@ -66,15 +75,23 @@ func configDocumentResultSummary(result plannedToolExecutionResult) string {
 	receipt, ok := configDocumentReceiptFromResult(result)
 	if !ok {
 		if result.Name == "store_config_document" {
-			return "Outcome Template saved but not active."
+			return "Configuration saved but not active."
 		}
-		return "Outcome Template active for its configured scope."
+		return "Configuration active for its configured scope."
 	}
 	label := configDocumentVisibleLabel(receipt)
 	if result.Name == "store_config_document" {
 		return label + " saved but not active."
 	}
 	return fmt.Sprintf("%s is active for %s.", label, configDocumentScopeLabel(receipt.Scope))
+}
+
+func configDocumentResultTitle(result plannedToolExecutionResult, state string) string {
+	receipt, ok := configDocumentReceiptFromResult(result)
+	if !ok {
+		return "Configuration " + state
+	}
+	return configDocumentKindLabel(receipt.Kind) + " " + state
 }
 
 func firstConfigDocumentResult(results []plannedToolExecutionResult, name string) (plannedToolExecutionResult, bool) {
