@@ -85,4 +85,28 @@ describe("ActiveWorkLane compact review", () => {
     expect(screen.queryByText(/Playwright bounded team ask proof/i)).toBeNull();
     expect(screen.queryByRole("button", { name: /Ask team/i })).toBeNull();
   });
+
+  it("makes uncertain external outcome verification directly reachable", () => {
+    render(
+      <ActiveWorkLane
+        frame={false}
+        purpose="review"
+        items={[{
+          ...baseItem,
+          state: "degraded",
+          degradationState: "external_mutation_outcome_unknown",
+          interactions: [
+            { action: "verify_external_outcome", label: "Verify external result" },
+            { action: "recover", label: "Retry unavailable", disabled: true },
+          ],
+        }]}
+        onVerifyExternalOutcome={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Verify external result for Draft launch brief")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Submit verification" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /Retry/i })).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
 });

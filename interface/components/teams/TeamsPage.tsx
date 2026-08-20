@@ -126,6 +126,7 @@ export default function TeamsPage() {
         activeWorkActions.activeWorkActionError ?? activeTeamWork.degradedMessage
       }
       onAction={activeWorkActions.handleActiveWorkAction}
+      onVerifyExternalOutcome={activeWorkActions.handleExternalOutcomeVerification}
       onTeamAsk={activeWorkActions.handleTeamAsk}
       purpose={isWorkReviewView ? "review" : "active"}
       moreItemsHref="/teams?view=work"

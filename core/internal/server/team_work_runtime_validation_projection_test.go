@@ -113,7 +113,7 @@ func TestRuntimeValidationPassCreatesProofAndCompletesFinalRun(t *testing.T) {
 	mock.ExpectExec("INSERT INTO mission_events").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE team_work_items").WithArgs(
 		workID, string(protocol.TeamWorkStateOutputReady), sqlmock.AnyArg(), false, "",
-		sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+		sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 	).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("INSERT INTO team_interactions").WithArgs(
 		sqlmock.AnyArg(), "app-team", workID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
@@ -174,7 +174,7 @@ func TestRuntimeValidationFailureDegradesWithoutProofOrRunCompletion(t *testing.
 	mock.ExpectExec("INSERT INTO mission_events").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE team_work_items").WithArgs(
 		workID, string(protocol.TeamWorkStateDegraded), sqlmock.AnyArg(), true, "runtime_validation_failed",
-		sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+		sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 	).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("INSERT INTO team_interactions").WithArgs(
 		sqlmock.AnyArg(), "app-team", workID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),

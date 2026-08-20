@@ -235,6 +235,7 @@ func (s *AdminServer) updateTeamWorkItemLastEventExec(ctx context.Context, exec 
 		    output_refs=$7,
 		    proof_refs=$8,
 		    audit_refs=$9,
+		    work_intent=$10,
 		    recovery_deadline_at=CASE
 		        WHEN $2 IN ('output_ready','degraded','needs_operator','archived') THEN NULL
 		        ELSE recovery_deadline_at
@@ -243,7 +244,7 @@ func (s *AdminServer) updateTeamWorkItemLastEventExec(ctx context.Context, exec 
 		WHERE id=$1 AND tenant_id='default'`,
 		item.WorkItemID, string(item.State), eventJSON, item.NeedsOperator,
 		item.DegradationState, jsonArray(item.RecoveryOptions), jsonArray(item.OutputRefs),
-		jsonArray(item.ProofRefs), jsonArray(item.AuditRefs),
+		jsonArray(item.ProofRefs), jsonArray(item.AuditRefs), jsonObjectOrNil(workIntentMap(item.WorkIntent)),
 	)
 	return err
 }

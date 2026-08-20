@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -190,6 +189,64 @@ func TestHandleTeamWorkAction_RejectsUnknownExternalMutationRecovery(t *testing.
 	}
 }
 
+func TestHandleTeamWorkAction_VerifiesUnknownExternalOutcomeFromPayload(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	workID := "11111111-1111-1111-1111-111111111111"
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id::text, team_id").
+		WithArgs("research-team", workID).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			workID, "research-team", "", "", "", "", "Update the customer system", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDeliverable), "", []byte(`{"side_effect":{"effect_kind":"external_mutation","retry_safety":"safe","idempotency_key":"customer-update-1","side_effect_state":"unknown"}}`), []byte(`["customer update"]`), []byte(`["external verification"]`), []byte(`[]`),
+			"required", string(protocol.TeamWorkStateDegraded), []byte(`null`), true, protocol.TeamWorkDegradationExternalMutationUnknown,
+			[]byte(`["Verify the external result."]`), []byte(`[]`), []byte(`["proof-1"]`), []byte(`["audit-1"]`), now, now, "v1",
+		))
+	expectExternalOutcomeVerificationPersistence(mock, now)
+
+	rr := doTeamWorkAction(t, s, workID, `{
+		"action":"verify_external_outcome",
+		"summary":"The customer record contains the requested update.",
+		"source_kind":"system",
+		"source_channel":"spoofed.channel",
+		"payload_kind":"telemetry",
+		"audit_refs":["spoofed-audit"],
+		"payload":{"result":"committed","evidence_refs":[]}
+	}`)
+
+	assertStatus(t, rr, http.StatusOK)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	data := resp["data"].(map[string]any)
+	if data["state"] != string(protocol.TeamWorkStateOutputReady) || data["needs_operator"] != false {
+		t.Fatalf("state/operator = %v/%v", data["state"], data["needs_operator"])
+	}
+	workIntent := data["work_intent"].(map[string]any)
+	sideEffect := workIntent["side_effect"].(map[string]any)
+	if sideEffect["side_effect_state"] != protocol.WorkSideEffectCommitted {
+		t.Fatalf("side_effect_state = %v", sideEffect["side_effect_state"])
+	}
+	verification := sideEffect["verification"].(map[string]any)
+	if verification["result"] != protocol.WorkExternalOutcomeCommitted || verification["actor_ref"] != "local-user" {
+		t.Fatalf("verification = %#v", verification)
+	}
+	lastEvent := data["last_event"].(map[string]any)
+	if lastEvent["source_kind"] != string(protocol.SourceKindWorkspaceUI) ||
+		lastEvent["source_channel"] != "teams.external_outcome_verification" ||
+		lastEvent["payload_kind"] != "external_outcome_verification" {
+		t.Fatalf("last_event provenance = %#v", lastEvent)
+	}
+	for _, auditRef := range lastEvent["audit_refs"].([]any) {
+		if auditRef == "spoofed-audit" {
+			t.Fatalf("client-controlled audit ref persisted: %#v", lastEvent["audit_refs"])
+		}
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestHandleTeamWorkAction_ArchiveClearsReviewQueue(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)
@@ -218,45 +275,4 @@ func TestHandleTeamWorkAction_ArchiveClearsReviewQueue(t *testing.T) {
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
 	}
-}
-
-func doTeamWorkAction(t *testing.T, s *AdminServer, workID, body string) *httptest.ResponseRecorder {
-	t.Helper()
-	mux := setupMux(t, "POST /api/v1/teams/{id}/work/{workItemId}/actions", s.HandleTeamWorkAction)
-	return doRequest(t, mux, http.MethodPost, "/api/v1/teams/research-team/work/"+workID+"/actions", body)
-}
-
-func mockTeamWorkItem(mock sqlmock.Sqlmock, teamID, workID string, state protocol.TeamWorkState, needsOperator bool, degradation string, now time.Time) {
-	mock.ExpectQuery("SELECT id::text, team_id").
-		WithArgs(teamID, workID).
-		WillReturnRows(teamWorkItemRows().AddRow(
-			workID, teamID, "", "", "", "", "Draft release proof", []byte(`[]`), "Soma",
-			string(protocol.TeamExecutionShapeDeliverable), "", []byte(`null`), []byte(`["release proof"]`), []byte(`["run proof"]`), []byte(`[]`),
-			"auto_approved", string(state), []byte(`null`), needsOperator, degradation,
-			[]byte(`["retry"]`), []byte(`[]`), []byte(`["proof-1"]`), []byte(`["audit-1"]`), now, now, "v1",
-		))
-}
-
-func expectTeamWorkActionPersistence(mock sqlmock.Sqlmock, now time.Time) {
-	expectTeamWorkActionWrites(mock, now)
-	mock.ExpectCommit()
-}
-
-func expectTeamWorkActionWrites(mock sqlmock.Sqlmock, now time.Time) {
-	mock.ExpectQuery("INSERT INTO team_status_events").
-		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
-	mock.ExpectExec("UPDATE team_work_items").
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectQuery("INSERT INTO team_interactions").
-		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
-}
-
-func teamWorkItemRows() *sqlmock.Rows {
-	return sqlmock.NewRows([]string{
-		"id", "team_id", "run_id", "intent_proof_id", "contract_id", "proof_id",
-		"objective", "scope", "owner", "execution_shape", "execution_mode", "work_intent", "expected_outputs", "expected_proof",
-		"capability_requirements", "governance_posture", "state", "last_event", "needs_operator",
-		"degradation_state", "recovery_options", "output_refs", "proof_refs", "audit_refs",
-		"created_at", "updated_at", "version",
-	})
 }

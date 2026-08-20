@@ -125,6 +125,6 @@ function isRecoveryRequest(item: TeamWorkItem) {
   return /recovery requested/i.test(`${item.title} ${item.description ?? ""} ${item.nextAction ?? ""}`);
 }
 
-function needsExternalMutationVerification(item: TeamWorkItem) {
+export function needsExternalMutationVerification(item: TeamWorkItem) {
   return item.degradationState === "external_mutation_outcome_unknown";
 }

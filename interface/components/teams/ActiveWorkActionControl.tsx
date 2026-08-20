@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Archive, Eye, Pause, Play, RefreshCw, Search, Send } from "lucide-react";
+import { Archive, Eye, Pause, Play, RefreshCw, Search, Send, ShieldCheck } from "lucide-react";
 import type { TeamInteraction, TeamWorkItem } from "@/store/useCortexStore";
 
 const actionIcons = {
   inspect: Eye,
   steer: Send,
+  verify_external_outcome: ShieldCheck,
   start_work: Play,
   pause: Pause,
   resume: Play,

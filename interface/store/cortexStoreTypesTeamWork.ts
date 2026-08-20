@@ -16,6 +16,7 @@ export type TeamWorkItemState =
 export type TeamInteractionAction =
     | 'inspect'
     | 'steer'
+    | 'verify_external_outcome'
     | 'start_work'
     | 'pause'
     | 'resume'

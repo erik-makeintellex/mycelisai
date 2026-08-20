@@ -144,13 +144,18 @@ describe("teamWorkProjection", () => {
 
     const recover = item?.interactions.find((action) => action.action === "recover");
     const steer = item?.interactions.find((action) => action.action === "steer");
+    const verify = item?.interactions.find((action) => action.action === "verify_external_outcome");
     expect(recover).toMatchObject({
       label: "Retry unavailable",
       disabled: true,
       disabledReason: "Ask Soma to verify the external outcome before considering a retry.",
     });
     expect(steer).toMatchObject({
-      label: "Tell Soma what you found",
+      disabled: true,
+      disabledReason: "Record the observed external result in verification.",
+    });
+    expect(verify).toMatchObject({
+      label: "Verify external result",
       disabled: false,
     });
   });

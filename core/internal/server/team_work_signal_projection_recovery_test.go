@@ -212,7 +212,7 @@ func expectProjectedTeamWorkUpdateWithRecovery(mock sqlmock.Sqlmock, workID stri
 	mock.ExpectExec("UPDATE team_work_items").
 		WithArgs(
 			workID, string(state), sqlmock.AnyArg(), needsOperator, degradation,
-			jsonArray(recovery), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			jsonArray(recovery), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 }

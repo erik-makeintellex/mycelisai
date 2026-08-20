@@ -272,7 +272,7 @@ func expectTeamWorkItemUpdateWithPosture(mock sqlmock.Sqlmock, state protocol.Te
 	mock.ExpectExec("UPDATE team_work_items").
 		WithArgs(
 			sqlmock.AnyArg(), string(state), sqlmock.AnyArg(), needsOperator, degradation,
-			sqlmock.AnyArg(), outputRefs, sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), outputRefs, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 }

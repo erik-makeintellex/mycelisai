@@ -161,7 +161,7 @@ func TestStampTeamOutputRefsUsesAuthoritativeCompletionProof(t *testing.T) {
 func expectProjectedTeamWorkUpdateWithOutputs(mock sqlmock.Sqlmock, workID string, state protocol.TeamWorkState, needsOperator bool, degradation string, outputs sqlmock.Argument) {
 	mock.ExpectExec("UPDATE team_work_items").
 		WithArgs(workID, string(state), sqlmock.AnyArg(), needsOperator, degradation,
-			sqlmock.AnyArg(), outputs, sqlmock.AnyArg(), sqlmock.AnyArg()).
+			sqlmock.AnyArg(), outputs, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 }
 

@@ -15,6 +15,16 @@ When work degrades, Mycelis should explain:
 
 Start from the alert, Outcome review, or Soma thread. Use the offered **Retry**, **Recover**, **Review output**, or **Open details** action rather than recreating the request from memory.
 
+### When an external result is uncertain
+
+If Mycelis handed work to an external system but did not receive a final result, it must not retry the mutation blindly. Open the affected work item and record what you observed in the external system:
+
+- **Completed there**: the external change exists. Mycelis closes the work as operator-attested and does not replay it.
+- **Did not complete**: the change does not exist. Return to Soma to create and approve a new attempt.
+- **Still cannot tell**: keep the work degraded until better evidence is available.
+
+Add a short observation and, when available, an evidence reference such as a receipt, external record ID, or trusted URL. This verification is retained with the work history. Submitting it never starts another run automatically.
+
 ## Global Health Signals
 
 The application can expose:

@@ -2,7 +2,12 @@
 
 import { useCallback, useState } from "react";
 import type { TeamInteraction, TeamWorkItem, TeamWorkItemState } from "@/store/useCortexStore";
-import { postTeamWorkAction, postTeamWorkAsk, type TeamWorkAskResult } from "./teamWorkActions";
+import {
+  postTeamWorkAction,
+  postTeamWorkAsk,
+  type ExternalOutcomeVerification,
+  type TeamWorkAskResult,
+} from "./teamWorkActions";
 
 export function useTeamWorkActionHandler(
   selectTeam: (teamId: string | null) => void,
@@ -53,14 +58,52 @@ export function useTeamWorkActionHandler(
     }
   }, []);
 
+  const handleExternalOutcomeVerification = useCallback(async (
+    item: TeamWorkItem,
+    verification: ExternalOutcomeVerification,
+  ) => {
+    setActiveWorkActionError(null);
+    setActiveWorkActionNotice(null);
+    try {
+      await postTeamWorkAction(
+        item,
+        "verify_external_outcome",
+        verification.summary,
+        {
+          result: verification.result,
+          evidence_refs: verification.evidenceRefs,
+        },
+      );
+      setActiveWorkActionNotice(externalOutcomeVerificationNotice(verification.result));
+      setActiveWorkRefreshVersion((version) => version + 1);
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "External outcome verification failed.";
+      setActiveWorkActionError(message);
+      throw new Error(message);
+    }
+  }, []);
+
   return {
     activeWorkRefreshVersion,
     activeWorkActionError,
     activeWorkActionNotice,
     submittedTeamWorkItems,
     handleActiveWorkAction,
+    handleExternalOutcomeVerification,
     handleTeamAsk,
   };
+}
+
+function externalOutcomeVerificationNotice(result: ExternalOutcomeVerification["result"]) {
+  if (result === "committed") {
+    return "Verification recorded: the external change was observed. No retry was requested.";
+  }
+  if (result === "not_committed") {
+    return "Verification recorded: the external change was not observed. No retry was requested.";
+  }
+  return "Verification recorded: the external result remains unclear. Retry remains unavailable.";
 }
 
 export function mergeTeamWorkItems(
