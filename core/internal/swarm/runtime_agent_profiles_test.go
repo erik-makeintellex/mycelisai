@@ -18,6 +18,28 @@ var profileColumns = []string{
 	"created_at", "updated_at",
 }
 
+func TestHydrateCreateTeamProfilesDoesNotResolveUnselectedCatalogueEntries(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	registry := &InternalToolRegistry{catalogue: catalogue.NewService(db)}
+	args := map[string]any{
+		"team_id": "minimal-team",
+		"agents": []map[string]any{{
+			"id": "coordinator", "role": "coordinator",
+		}},
+	}
+	if err := registry.hydrateCreateTeamProfiles(context.Background(), args); err != nil {
+		t.Fatalf("hydrate profiles without selection: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unselected catalogue entry was resolved: %v", err)
+	}
+}
+
 func TestHydrateCreateTeamProfiles(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
