@@ -31,3 +31,30 @@ func explicitConfigMutationPlan(
 	}
 	return planned, true
 }
+
+func deterministicConfigMutationResult(planned []protocol.PlannedToolCall, mutTools []string) (chatAgentResult, bool) {
+	if len(planned) == 0 {
+		return chatAgentResult{}, false
+	}
+	for _, call := range planned {
+		switch strings.TrimSpace(call.Name) {
+		case "store_config_document":
+			if !configStoreCallHasSource(call) {
+				return chatAgentResult{}, false
+			}
+		case "activate_config_document":
+			continue
+		default:
+			return chatAgentResult{}, false
+		}
+	}
+	return chatAgentResult{
+		Text:             "Soma can update this saved configuration through a governed proposal.",
+		ToolsUsed:        toolsForPlannedCalls(planned, mutTools),
+		PlannedToolCalls: planned,
+	}, true
+}
+
+func configStoreCallHasSource(call protocol.PlannedToolCall) bool {
+	return firstNonEmptyString(call.Arguments["content"], call.Arguments["path"]) != ""
+}
