@@ -14,6 +14,7 @@ from .interface_process_support import (
 
 
 ProcessInfo = dict[str, str | int]
+WINDOWS_PROCESS_TREE_KILL_TIMEOUT_SECONDS = 90
 
 
 def matches_repo_local_interface_process(
@@ -141,7 +142,10 @@ def kill_pid_tree(
             run(
                 ["taskkill", "/F", "/T", "/PID", str(pid)],
                 capture_output=True,
-                timeout=12,
+                # Busy Windows hosts can spend close to a minute enumerating a
+                # Next.js tree. A shorter timeout kills only the parent in the
+                # fallback and leaves children holding .next build handles.
+                timeout=WINDOWS_PROCESS_TREE_KILL_TIMEOUT_SECONDS,
             )
             with suppress(subprocess.SubprocessError, OSError):
                 run(
