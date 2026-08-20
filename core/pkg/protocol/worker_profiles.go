@@ -8,9 +8,10 @@ import (
 	"strings"
 )
 
-// WorkerProfileSpec is the declarative, user-owned definition used to create
-// a bounded worker. Runtime identity and revision lineage come from the
-// ConfigDocument envelope rather than being duplicated inside Spec.
+// WorkerProfileSpec is an inert, user-owned catalogue template for a bounded
+// team member. Saving or activating it never starts an agent, provider
+// connection, session, or bus subscription. Runtime identity and revision
+// lineage are created only when approved team creation selects the profile.
 type WorkerProfileSpec struct {
 	Description          string                `json:"description,omitempty"`
 	Role                 string                `json:"role"`

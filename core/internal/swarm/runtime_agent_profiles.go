@@ -12,6 +12,10 @@ import (
 
 const runtimeProfileResolutionTimeout = 5 * time.Second
 
+// hydrateCreateTeamProfiles is the profile-to-runtime boundary. Catalogue
+// entries remain inert until create_team selects them; this function resolves
+// only those selected refs and pins their immutable lineage into the manifest
+// before Soma starts the team and its provider or NATS lifecycle.
 func (r *InternalToolRegistry) hydrateCreateTeamProfiles(ctx context.Context, args map[string]any) error {
 	scope, err := runtimeProfileScope(ctx, args["profile_scope"])
 	if err != nil {
