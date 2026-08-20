@@ -93,6 +93,43 @@ func TestResolveThreadConfigRollbackSelectsNamedWorkerProfileVersion(t *testing.
 	}
 }
 
+func TestConfigActivationBuildsDeterministicProposalWithoutProviderInference(t *testing.T) {
+	for _, request := range []string{"Activate this Worker Profile.", "Roll back this Worker Profile to version alpha."} {
+		tools := inferMutationToolsFromText(request)
+		result, ok := deterministicGovernedMutationResult(request, tools)
+		if !ok {
+			t.Fatalf("request %q did not produce deterministic proposal", request)
+		}
+		if !containsString(result.ToolsUsed, "activate_config_document") {
+			t.Fatalf("request %q tools = %v", request, result.ToolsUsed)
+		}
+		if len(result.PlannedToolCalls) != 1 || result.PlannedToolCalls[0].Name != "activate_config_document" {
+			t.Fatalf("request %q planned calls = %#v", request, result.PlannedToolCalls)
+		}
+	}
+
+	inlineSave := "Save this Worker Profile:\n" + retainedWorkerProfileYAML
+	result, ok := deterministicGovernedMutationResult(inlineSave, inferMutationToolsFromText(inlineSave))
+	if !ok || len(result.PlannedToolCalls) != 1 {
+		t.Fatalf("inline save result = (%#v, %v), want deterministic proposal", result, ok)
+	}
+	if content := firstNonEmptyString(result.PlannedToolCalls[0].Arguments["content"]); content == "" {
+		t.Fatal("inline save proposal omitted document content")
+	}
+}
+
+func TestConfigMutationFallsBackWhenSourceOrDecisionIsAmbiguous(t *testing.T) {
+	for _, request := range []string{
+		"Save this Worker Profile.",
+		"Should I activate this Worker Profile?",
+		"Help me decide whether to roll back this Worker Profile to version alpha.",
+	} {
+		if _, ok := deterministicGovernedMutationResult(request, inferMutationToolsFromText(request)); ok {
+			t.Fatalf("request %q unexpectedly produced a deterministic proposal", request)
+		}
+	}
+}
+
 func TestResolveThreadConfigRollbackRequiresTargetVersion(t *testing.T) {
 	withDatabase, _ := withDB(t)
 	s := newTestServer(withDatabase)

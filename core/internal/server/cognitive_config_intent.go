@@ -14,6 +14,9 @@ func outcomeTemplateMutationTools(lower string) ([]string, bool) {
 	if outcomeTemplateWorkApplication(lower) {
 		return nil, false
 	}
+	if configMutationDecisionQuestion(lower) {
+		return nil, true
+	}
 
 	var tools []string
 	if matchesConfiguredSomaCommandQuote(lower, "activate_config_document") ||
@@ -36,6 +39,13 @@ func outcomeTemplateMutationTools(lower string) ([]string, bool) {
 	// Mark it recognized so generic file inference does not turn YAML wording
 	// into an unrelated write_file proposal.
 	return nil, configDocumentDefinitionIntent(lower)
+}
+
+func configMutationDecisionQuestion(lower string) bool {
+	return requestContainsAny(lower, []string{
+		"should i ", "should we ", "help me decide", "whether to ",
+		"do you recommend", "what would happen if", "is it safe to ",
+	})
 }
 
 func configDocumentDefinitionIntent(lower string) bool {

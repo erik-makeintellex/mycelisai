@@ -80,7 +80,6 @@ func ensureWriteFileExecutionPlan(planned []protocol.PlannedToolCall, agentResul
 	if !containsToolName(mutTools, "write_file") {
 		return planned
 	}
-
 	fallback, hasFallback := inferWriteFileExecutionPlan(agentResult, latestRequest)
 	for i, call := range planned {
 		call = normalizePlannedToolCall(call)
@@ -94,7 +93,6 @@ func ensureWriteFileExecutionPlan(planned []protocol.PlannedToolCall, agentResul
 		planned[i] = normalizePlannedToolCall(call)
 		return planned
 	}
-
 	if hasFallback {
 		return append(planned, normalizePlannedToolCall(fallback))
 	}
@@ -103,6 +101,9 @@ func ensureWriteFileExecutionPlan(planned []protocol.PlannedToolCall, agentResul
 
 func deterministicGovernedMutationResult(latestRequest string, mutTools []string) (chatAgentResult, bool) {
 	planned := buildPlannedToolCalls(chatAgentResult{}, latestRequest, mutTools)
+	if result, ok := deterministicConfigMutationResult(planned, mutTools); ok {
+		return result, true
+	}
 	if len(planned) == 0 || !plannedCallsHaveWritableOutput(planned) || !plannedCallsAreDeterministicProposalSafe(planned) {
 		return chatAgentResult{}, false
 	}
@@ -116,7 +117,6 @@ func deterministicGovernedMutationResult(latestRequest string, mutTools []string
 		ToolsUsed: tools,
 	}, true
 }
-
 func plannedCallsHaveWritableOutput(planned []protocol.PlannedToolCall) bool {
 	for _, call := range planned {
 		if strings.EqualFold(strings.TrimSpace(call.Name), "write_file") {

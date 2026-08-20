@@ -18,6 +18,10 @@ func TestWorkerProfileIntentUsesSharedConfigurationTools(t *testing.T) {
 	if !recognized || !slices.Equal(tools, []string{"activate_config_document"}) {
 		t.Fatalf("activation tools = %v, recognized = %v", tools, recognized)
 	}
+	tools, recognized = outcomeTemplateMutationTools("Should I activate this worker profile?")
+	if !recognized || len(tools) != 0 {
+		t.Fatalf("decision question tools = %v, recognized = %v", tools, recognized)
+	}
 }
 
 func TestInlineWorkerProfileBypassesConversationTemplateReview(t *testing.T) {
