@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 import json
 import subprocess
 from collections.abc import Callable
@@ -15,6 +14,7 @@ from .interface_process_support import (
 
 ProcessInfo = dict[str, str | int]
 WINDOWS_PROCESS_TREE_KILL_TIMEOUT_SECONDS = 90
+WINDOWS_PROCESS_QUERY_TIMEOUT_SECONDS = 180
 
 
 def matches_repo_local_interface_process(
@@ -48,65 +48,35 @@ def list_repo_local_interface_processes(
     processes: list[ProcessInfo] = []
     try:
         if is_windows_func():
-            candidate_pids: list[int] = []
-            for image_name in ("node.exe", "cmd.exe"):
-                tasklist_result = run(
-                    ["tasklist", "/FO", "CSV", "/NH", "/FI", f"IMAGENAME eq {image_name}"],
-                    capture_output=True,
-                    text=True,
-                    timeout=20,
-                )
-                if tasklist_result.returncode != 0:
-                    raise RuntimeError(tasklist_result.stderr.strip() or "process query failed")
-                for row in csv.reader(tasklist_result.stdout.splitlines()):
-                    if len(row) < 2:
-                        continue
-                    listed_name = (row[0] or "").strip().lower()
-                    pid_text = (row[1] or "").strip()
-                    if listed_name != image_name or not pid_text.isdigit():
-                        continue
-                    candidate_pids.append(int(pid_text))
-            if not candidate_pids:
+            result = run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "Get-CimInstance Win32_Process "
+                    "-Filter \"Name = 'node.exe' OR Name = 'cmd.exe'\" | "
+                    "Select-Object ProcessId,Name,CommandLine | "
+                    "ConvertTo-Json -Compress",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=WINDOWS_PROCESS_QUERY_TIMEOUT_SECONDS,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(result.stderr.strip() or "process query failed")
+            raw = result.stdout.strip()
+            if not raw:
                 return []
-
-            import time
-
-            deadline = time.monotonic() + 30
-            for start in range(0, len(candidate_pids), 12):
-                remaining_seconds = deadline - time.monotonic()
-                if remaining_seconds <= 0:
-                    raise RuntimeError("process query timed out")
-                pid_batch = candidate_pids[start : start + 12]
-                filter_expr = " OR ".join(f"ProcessId = {pid}" for pid in pid_batch)
-                result = run(
-                    [
-                        "powershell",
-                        "-NoProfile",
-                        "-Command",
-                        f"Get-CimInstance Win32_Process -Filter \"{filter_expr}\" | "
-                        "Select-Object ProcessId,Name,CommandLine | "
-                        "ConvertTo-Json -Compress",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=max(1, min(8, int(remaining_seconds))),
-                )
-                if result.returncode != 0:
-                    raise RuntimeError(result.stderr.strip() or "process query failed")
-                raw = result.stdout.strip()
-                if not raw:
+            payload = json.loads(raw)
+            rows = payload if isinstance(payload, list) else [payload]
+            for row in rows:
+                pid_text = row.get("ProcessId")
+                name = row.get("Name") or ""
+                command_line = row.get("CommandLine") or ""
+                if not isinstance(pid_text, int):
                     continue
-                payload = json.loads(raw)
-                rows = payload if isinstance(payload, list) else [payload]
-                for row in rows:
-                    pid_text = row.get("ProcessId")
-                    name = row.get("Name") or ""
-                    command_line = row.get("CommandLine") or ""
-                    if not isinstance(pid_text, int):
-                        continue
-                    pid = pid_text
-                    if _matches(name, command_line):
-                        processes.append({"pid": pid, "name": name, "command": command_line})
+                if _matches(name, command_line):
+                    processes.append({"pid": pid_text, "name": name, "command": command_line})
             return processes
 
         result = run(
