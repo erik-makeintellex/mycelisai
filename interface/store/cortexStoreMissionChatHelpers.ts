@@ -1,4 +1,8 @@
-import { buildMissionChatFailure, type MissionChatAvailability } from "@/lib/missionChatFailure";
+import {
+    buildMissionChatFailure,
+    type MissionChatAvailability,
+    type MissionChatFailure,
+} from "@/lib/missionChatFailure";
 import type { ChatMessage } from "@/store/cortexStoreTypes";
 import type { CortexGet, CortexSet } from "@/store/cortexStoreSliceTypes";
 import type { CortexState } from "@/store/cortexStoreState";
@@ -118,9 +122,7 @@ export function setMissionChatBlocker({
         statusCode,
         availability,
     });
-    const safeContent = content && !content.toLowerCase().startsWith("error:")
-        ? content
-        : `${failure.bannerLabel}. Review the operational alert for the safe next step.`;
+    const safeContent = buildMissionChatBlockerContent(failure, content);
     set((s) => ({
         isMissionChatting: false,
         missionChatError: failure.summary,
@@ -134,6 +136,55 @@ export function setMissionChatBlocker({
         activeMode: "blocker",
         activeRole: targetId || routeLabel,
     }));
+}
+
+export function buildMissionChatBlockerContent(failure: MissionChatFailure, content?: string | null): string {
+    const providedContent = normalizeMissionChatBlockerContent(content);
+    if (providedContent && !providedContent.toLowerCase().startsWith("error:")) {
+        return providedContent;
+    }
+
+    const parts = [`${failure.bannerLabel}.`];
+    if (failure.summary && !isSameGuidanceText(failure.summary, failure.bannerLabel)) {
+        parts.push(failure.summary);
+    }
+    if (
+        failure.recommendedAction &&
+        !isSameGuidanceText(failure.recommendedAction, failure.summary) &&
+        !isSameGuidanceText(failure.recommendedAction, failure.bannerLabel)
+    ) {
+        parts.push(`Next: ${failure.recommendedAction}`);
+    }
+
+    return parts.join(" ").trim();
+}
+
+function normalizeMissionChatBlockerContent(content?: string | null): string | null {
+    if (!content) {
+        return null;
+    }
+    const normalized = content
+        .replace(/&#x20;/gi, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .replace(/\\+\s*$/g, "")
+        .trim();
+    return normalized || null;
+}
+
+function isSameGuidanceText(left?: string | null, right?: string | null): boolean {
+    if (!left || !right) {
+        return false;
+    }
+    return normalizeForGuidanceCompare(left) === normalizeForGuidanceCompare(right);
+}
+
+function normalizeForGuidanceCompare(value: string): string {
+    return value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
 }
 
 export function setMissionChatSuccess(set: CortexSet, get: CortexGet, chatMsg: ChatMessage, isSomaRoute: boolean) {
