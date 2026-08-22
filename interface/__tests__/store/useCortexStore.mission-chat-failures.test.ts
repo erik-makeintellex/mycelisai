@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildMissionChatBlockerContent } from '@/store/cortexStoreMissionChatHelpers';
 import { useCortexStore } from '@/store/useCortexStore';
 import { mockFetch } from '../setup';
 import { resetCortexStore } from './useCortexStoreTestSupport';
@@ -60,6 +61,57 @@ describe('useCortexStore mission chat failures', () => {
             bannerLabel: 'AI engine setup required',
             setupPath: '/settings',
         });
+        expect(useCortexStore.getState().missionChat.at(-1)?.content).toBe(
+            'AI engine setup required. Soma is routed to an AI Engine that is configured but disabled. Next: Open Settings and enable a reachable AI Engine for Soma.',
+        );
+    });
+
+    it('shows the image-generator setup reason and recovery step in the Soma thread', async () => {
+        mockFetch.mockResolvedValue({
+            ok: false,
+            status: 503,
+            text: async () => JSON.stringify({
+                ok: false,
+                error: 'Forge is open, but image generation is not enabled.',
+                data: {
+                    code: 'media_provider_not_ready',
+                    summary: 'Forge is open, but image generation is not enabled.',
+                    recommended_action: 'Enable API mode in Forge, restart Forge, then ask Soma to try again.',
+                    setup_required: true,
+                    setup_path: '/resources?section=capabilities',
+                },
+            }),
+        });
+
+        await useCortexStore.getState().sendMissionChat('create an image generation agent');
+
+        expect(useCortexStore.getState().activeMode).toBe('blocker');
+        expect(useCortexStore.getState().missionChatFailure).toMatchObject({
+            routeKind: 'workspace',
+            type: 'setup_required',
+            bannerLabel: 'Image generator setup required',
+            setupPath: '/resources?section=capabilities',
+        });
+        expect(useCortexStore.getState().missionChat.at(-1)?.content).toBe(
+            'Image generator setup required. Forge is open, but image generation is not enabled. Next: Enable API mode in Forge, restart Forge, then ask Soma to try again.',
+        );
+    });
+
+    it('cleans escaped whitespace from supplied blocker content', () => {
+        const content = buildMissionChatBlockerContent({
+            routeKind: 'workspace',
+            targetId: 'admin',
+            targetLabel: 'Soma',
+            type: 'setup_required',
+            title: 'Image Generator Setup Required',
+            bannerLabel: 'Image generator setup required',
+            summary: 'Forge is open, but image generation is not enabled.',
+            recommendedAction: 'Enable API mode in Forge, restart Forge, then ask Soma to try again.',
+            diagnostics: 'Forge is open, but image generation is not enabled.',
+            setupPath: '/resources?section=capabilities',
+        }, 'Image generator setup required. Review setup.\\\n&#x20;&#x20;');
+
+        expect(content).toBe('Image generator setup required. Review setup.');
     });
 
     it('routes Soma failures through the workspace contract when no council target is selected', async () => {
@@ -185,7 +237,9 @@ describe('useCortexStore mission chat failures', () => {
 
         expect(useCortexStore.getState().activeMode).toBe('blocker');
         expect(useCortexStore.getState().missionChatError).toBe('Soma hit a server-side failure while handling the request.');
-        expect(useCortexStore.getState().missionChat.at(-1)?.content).toBe('Workspace chat server error. Review the operational alert for the safe next step.');
+        expect(useCortexStore.getState().missionChat.at(-1)?.content).toBe(
+            'Workspace chat server error. Soma hit a server-side failure while handling the request. Next: Retry once. If the failure persists, inspect System Status and recent startup logs.',
+        );
         expect(useCortexStore.getState().missionChat.at(-1)?.content).not.toContain('Internal Server Error');
     });
 });
