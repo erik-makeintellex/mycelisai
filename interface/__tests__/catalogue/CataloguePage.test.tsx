@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { CatalogueAgent } from '@/store/useCortexStore';
 
 type AgentCardProps = {
@@ -70,6 +70,7 @@ describe('CataloguePage', () => {
     beforeEach(() => {
         window.history.replaceState({}, '', '/dashboard');
         window.sessionStorage.clear();
+        vi.restoreAllMocks();
         useCortexStore.setState({
             catalogueAgents: [],
             isFetchingCatalogue: false,
@@ -115,6 +116,44 @@ describe('CataloguePage', () => {
         fireEvent.click(newBtn);
         expect(screen.queryByTestId('editor-drawer')).toBeNull();
         expect(takePendingSomaPrompt()).toContain('create a reusable Worker Profile');
+    });
+
+    it('previews Worker Profile YAML before handing the draft to Soma', async () => {
+        const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                ok: true,
+                data: {
+                    dry_run: {
+                        valid: true,
+                        digest: 'sha256:1234567890abcdef',
+                        effect: {
+                            action: 'activate',
+                            document_id: 'research-specialist',
+                            document_version: '0.1.0',
+                            scope: { kind: 'workspace', ref: 'soma-root' },
+                            risk_level: 'medium',
+                            approval_posture: 'confirm',
+                        },
+                        issues: [],
+                    },
+                },
+            }),
+        } as Response);
+
+        render(<CataloguePage />);
+
+        fireEvent.click(screen.getByText('Preview only'));
+
+        await waitFor(() => {
+            expect(fetchMock).toHaveBeenCalledWith('/api/v1/config-documents/dry-run', expect.objectContaining({
+                method: 'POST',
+            }));
+        });
+        expect(await screen.findByText(/research-specialist 0.1.0 would activate for workspace\/soma-root/i)).toBeDefined();
+
+        fireEvent.click(screen.getByText('Ask Soma to save'));
+        expect(takePendingSomaPrompt()).toContain('Save this Worker Profile');
     });
 
     it('opens ready-made profile inspection', () => {

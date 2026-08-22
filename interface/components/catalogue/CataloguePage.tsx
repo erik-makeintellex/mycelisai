@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { BookOpen, MessageSquareText, Search } from "lucide-react";
 import { useCortexStore, type CatalogueAgent } from "@/store/useCortexStore";
 import { customizeWorkerProfilePrompt, newWorkerProfilePrompt, requestSomaPromptHandoff } from "@/components/soma/somaPromptHandoff";
+import WorkerProfileAuthoringPanel from "@/components/resources/WorkerProfileAuthoringPanel";
 import AgentCard from "./AgentCard";
 import AgentEditorDrawer from "./AgentEditorDrawer";
 
@@ -65,6 +66,7 @@ export default function CataloguePage() {
       </div>
 
       <main className="flex-1 overflow-y-auto">
+        <WorkerProfileAuthoringPanel />
         {filteredAgents.length === 0 && !isFetchingCatalogue ? (
           <div className="flex h-full flex-col items-center justify-center text-cortex-text-muted">
             <BookOpen className="mb-3 h-10 w-10 opacity-20" />

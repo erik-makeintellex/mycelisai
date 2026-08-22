@@ -18,6 +18,42 @@ test.describe('Worker Profiles Page (/catalogue)', () => {
     test('worker profile library exposes its current controls', async ({ page }) => {
         await expect(page.getByText(/ready-made profiles/)).toBeVisible();
         await expect(page.getByRole('button', { name: 'Create with Soma' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Preview only' })).toBeVisible();
+        await expect(page.getByText(/Profiles are inert until a governed team uses them/i)).toBeVisible();
+    });
+
+    test('worker profile draft previews before Soma save handoff', async ({ page }) => {
+        await page.route('**/api/v1/config-documents/dry-run', async (route) => {
+            await route.fulfill({
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    ok: true,
+                    data: {
+                        dry_run: {
+                            valid: true,
+                            digest: 'sha256:1234567890abcdef',
+                            effect: {
+                                action: 'activate',
+                                document_id: 'research-specialist',
+                                document_version: '0.1.0',
+                                scope: { kind: 'workspace', ref: 'soma-root' },
+                                risk_level: 'medium',
+                                approval_posture: 'confirm',
+                            },
+                            issues: [],
+                        },
+                    },
+                }),
+            });
+        });
+
+        await page.getByRole('button', { name: 'Preview only' }).click();
+        await expect(page.getByText(/research-specialist 0.1.0 would activate for workspace\/soma-root/i)).toBeVisible();
+        await expect(page.getByText(/Risk: medium/i)).toBeVisible();
+
+        await page.getByRole('button', { name: 'Ask Soma to save' }).click();
+        await expect(page).toHaveURL(/\/dashboard$/);
+        await expect(page.getByPlaceholder(/Tell Soma/)).toHaveValue(/Save this Worker Profile/);
     });
 
     test('custom profile creation continues naturally in Soma', async ({ page }) => {

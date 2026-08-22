@@ -25,3 +25,25 @@ export function newWorkerProfilePrompt() {
 export function customizeWorkerProfilePrompt(name: string) {
   return `Help me create a custom Worker Profile based on \"${name}\". Show the important changes, preview the profile, and ask before saving or activating it.`;
 }
+
+export function saveWorkerProfileDraftPrompt(content: string) {
+  return [
+    "Save this Worker Profile as a governed reusable teammate template.",
+    "Preview it first if needed, then ask me before saving the immutable revision.",
+    "",
+    "```yaml",
+    content.trim(),
+    "```",
+  ].join("\n");
+}
+
+export function activateWorkerProfileDraftPrompt(content: string) {
+  return [
+    "Preview, save, and activate this Worker Profile for future team creation.",
+    "Ask me before saving or activating. Do not start a team or agent from this request.",
+    "",
+    "```yaml",
+    content.trim(),
+    "```",
+  ].join("\n");
+}
