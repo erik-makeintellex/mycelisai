@@ -185,6 +185,8 @@ If you ask `what is your current state` or `what teams currently exist`, Soma sh
 
 If execution fails, Soma should recover inline without making you retype the request. Recovery cards should avoid raw `500`, raw `tool_call` JSON, and raw runtime envelopes in the main conversation.
 
+When the fix lives on another Mycelis page, Soma should include a direct link in the chat reply, such as `System Status`, `Settings`, or `Resources setup`, instead of only telling you to review an alert. When the fix is a configuration change Soma can safely prepare, the reply should also say that you can tell Soma what to change; Soma must still use the governed proposal/approval path before altering configuration, credentials, tools, providers, teams, or recurring behavior.
+
 Useful actions:
 
 - `Retry`

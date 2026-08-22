@@ -62,7 +62,7 @@ describe('useCortexStore mission chat failures', () => {
             setupPath: '/settings',
         });
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toBe(
-            'AI engine setup required. Soma is routed to an AI Engine that is configured but disabled. Next: Open Settings and enable a reachable AI Engine for Soma.',
+            'AI engine setup required. Soma is routed to an AI Engine that is configured but disabled. Next: Open Settings and enable a reachable AI Engine for Soma. Open [Settings](/settings). Or tell Soma what to change; it will ask before altering configuration.',
         );
     });
 
@@ -93,7 +93,7 @@ describe('useCortexStore mission chat failures', () => {
             setupPath: '/resources?section=capabilities',
         });
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toBe(
-            'Image generator setup required. Forge is open, but image generation is not enabled. Next: Enable API mode in Forge, restart Forge, then ask Soma to try again.',
+            'Image generator setup required. Forge is open, but image generation is not enabled. Next: Enable API mode in Forge, restart Forge, then ask Soma to try again. Open [Resources setup](/resources?section=capabilities). Or tell Soma what to change; it will ask before altering configuration.',
         );
     });
 
@@ -128,7 +128,7 @@ describe('useCortexStore mission chat failures', () => {
         }, 'Workspace chat unreachable. Review the operational alert for the safe next step.\\\n&#x20;&#x20;');
 
         expect(content).toBe(
-            'Workspace chat unreachable. Soma or the local API proxy is currently unreachable from this client. Next: Open System Status and verify Core, NATS, and the local proxy are online.',
+            'Workspace chat unreachable. Soma or the local API proxy is currently unreachable from this client. Next: Open System Status and verify Core, NATS, and the local proxy are online. Open [System Status](/system).',
         );
     });
 
@@ -256,7 +256,7 @@ describe('useCortexStore mission chat failures', () => {
         expect(useCortexStore.getState().activeMode).toBe('blocker');
         expect(useCortexStore.getState().missionChatError).toBe('Soma hit a server-side failure while handling the request.');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toBe(
-            'Workspace chat server error. Soma hit a server-side failure while handling the request. Next: Retry once. If the failure persists, inspect System Status and recent startup logs.',
+            'Workspace chat server error. Soma hit a server-side failure while handling the request. Next: Retry once. If the failure persists, inspect System Status and recent startup logs. Open [System Status](/system).',
         );
         expect(useCortexStore.getState().missionChat.at(-1)?.content).not.toContain('Internal Server Error');
     });
