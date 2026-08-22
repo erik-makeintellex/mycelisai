@@ -259,8 +259,9 @@ test.describe("Dashboard focused-team output proof", () => {
     expect(railText?.indexOf(olderSomaOutputLabel)).toBeGreaterThanOrEqual(0);
     expect(railText!.indexOf(focusedOutputLabel)).toBeLessThan(railText!.indexOf(olderSomaOutputLabel));
     await expect(
-      rail.getByRole("button", { name: `Open file ${focusedOutputLabel} in a new browser window` }),
+      rail.getByRole("button", { name: `Open output ${focusedOutputLabel} in Mycelis` }),
     ).toBeVisible();
+    await rail.getByText("Details and proof").first().click();
     await expect(
       rail.getByRole("button", { name: new RegExp(`Open local folder for ${focusedOutputLabel}`) }),
     ).toBeVisible();

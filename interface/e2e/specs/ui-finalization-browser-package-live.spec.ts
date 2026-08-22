@@ -86,7 +86,9 @@ test.describe("UI finalization exact browser package live proof", () => {
       const resourcesFolder = `workspace/${folder}`;
       await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
       await page.getByRole("button", { name: /Review output/i }).last().click();
-      await page.getByRole("link", { name: `Open ${packageTitle} in Resources` }).last().click();
+      const reviewRail = page.getByTestId("soma-workbench-side-rail");
+      await expect(reviewRail).toHaveAttribute("aria-hidden", "false");
+      await reviewRail.getByRole("link", { name: `Open ${packageTitle} in Resources` }).click();
       await expect(page).toHaveURL(new RegExp(`/resources\\?tab=workspace&path=${encodeURIComponent(resourcesFolder)}`));
       await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText(resourcesFolder).last()).toBeVisible();

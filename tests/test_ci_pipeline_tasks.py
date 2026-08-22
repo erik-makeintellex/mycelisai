@@ -3,7 +3,7 @@ import pytest
 from ops import ci, ci_pipeline
 from tests.ci_task_support import FakeContext, FakeResult
 
-CORE_TEST_COMMAND = f'go -C "{ci.CORE_DIR}" test ./... -count=1'
+CORE_TEST_COMMAND = f'go -C "{ci.CORE_DIR}" test ./... -count=1 -p 1'
 CORE_VET_COMMAND = f'go -C "{ci.CORE_DIR}" vet ./...'
 
 

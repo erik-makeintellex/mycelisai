@@ -164,8 +164,8 @@ def run_baseline(
         "quality max-lines check failed",
     )
 
-    print("[4/7] core go test ./... -count=1")
-    result = c.run(_core_go_command(core_dir, "test ./... -count=1"), warn=True, hide=True, env=task_env())
+    print("[4/7] core go test ./... -count=1 -p 1")
+    result = c.run(_core_go_command(core_dir, "test ./... -count=1 -p 1"), warn=True, hide=True, env=task_env())
     if result.exited != 0:
         _print_failed_result(result)
         errors.append("core go tests failed")

@@ -66,7 +66,7 @@ test.describe('Soma governed mutation live contract', () => {
         expect(mutation.body?.data?.mode).toBe('proposal');
         expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
         await expect(page.getByText('I can start that.')).toBeVisible({ timeout: 30_000 });
-        await expect(page.getByText(/Awaiting approval/i)).toBeVisible();
+        await expect(page.getByText(/Reply "start" to begin/i)).toBeVisible();
     });
 
     test('Scenario C+D: fresh mutation proposal stays side-effect free until confirm, and cancel remains safe + persistent', async ({ page }) => {

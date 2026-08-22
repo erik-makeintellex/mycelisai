@@ -42,7 +42,7 @@ from .interface_env import (
     interface_task_env,
     run_interface_command,
 )
-from . import interface_processes
+from . import interface_processes, service_ownership
 ns = Collection("interface")
 INTERFACE_DIR = ROOT_DIR / "interface"
 
@@ -82,12 +82,17 @@ def _windows_listening_pids_for_port_range(port_start: int, port_end: int) -> li
     return interface_processes.windows_listening_pids_for_port_range(port_start, port_end, run=subprocess.run)
 
 
+def _repo_local_interface_processes_for_pids(pids: list[int]) -> list[dict[str, str | int]]:
+    return service_ownership.repo_local_interface_processes_for_pids(pids, is_windows_func=is_windows, normalize_process_text=_normalize_process_text, run=subprocess.run)
+
+
 def _cleanup_managed_interface_listeners(port_start: int = 3100, port_end: int = 3199) -> list[int]:
     return interface_processes.cleanup_managed_interface_listeners(
         port_start,
         port_end,
         is_windows_func=is_windows,
         windows_listening_pids_for_port_range_func=_windows_listening_pids_for_port_range,
+        repo_local_processes_for_pids_func=_repo_local_interface_processes_for_pids,
         kill_pid_tree_func=_kill_pid_tree,
         sleep=time.sleep,
     )
@@ -450,10 +455,12 @@ def _wait_for_interface_ready(
     urls = _interface_ready_urls(host, port)
     deadline = time.time() + timeout_seconds
     last_error = "server did not respond"
-    process_exited_early = False
     while time.time() < deadline:
         if process is not None and process.poll() is not None:
-            process_exited_early = True
+            raise RuntimeError(
+                f"Managed Interface server exited before it became ready on port {port}. "
+                f"See {_playwright_server_log_path()} for server output."
+            )
         for url in urls:
             try:
                 with urllib.request.urlopen(url, timeout=5) as response:
@@ -467,12 +474,6 @@ def _wait_for_interface_ready(
             except Exception as exc:  # pragma: no cover - exercised via timeout path in task flow
                 last_error = f"{url}: {exc}"
         time.sleep(1)
-
-    if process_exited_early:
-        raise RuntimeError(
-            f"Managed Interface server exited before it became ready on port {port}. "
-            f"See {_playwright_server_log_path()} for server output."
-        )
 
     raise RuntimeError(
         f"Interface did not become ready at any of {', '.join(urls)} within {timeout_seconds}s. "
@@ -642,34 +643,30 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
         server_mode == "external" or _cleanup_managed_interface_listeners()
         if not keep_server_log:
             _cleanup_playwright_server_log()
-
-# ── Process Management ───────────────────────────────────────
-
 @task
 def stop(c, port=INTERFACE_PORT):
-    """
-    Stop the Interface server.
-    Kills the listener on --port (default 3000) and then sweeps any repo-local
-    Next.js/Vitest/Playwright worker residue that survived outside that port.
-    """
+    """Stop repo-local Interface processes without touching foreign listeners."""
     print(f"Stopping Interface (port {port})...")
     if is_windows():
         port_pids = _windows_listening_pids_for_port(int(port))
-        if port_pids:
-            for pid in port_pids:
-                _kill_pid_tree(pid)
-                print(f"Killed PID {pid}")
-        else:
-            print(f"No process on port {port}")
     else:
-        # lsof works on macOS + Linux; fuser as fallback
-        c.run(f"lsof -ti:{port} | xargs -r kill -9 2>/dev/null || fuser -k {port}/tcp 2>/dev/null || true", warn=True)
+        result = subprocess.run(["lsof", "-ti", f":{port}"], capture_output=True, text=True, timeout=5)
+        port_pids = [int(line) for line in result.stdout.splitlines() if line.strip().isdigit()]
+    owned_processes = _repo_local_interface_processes_for_pids(port_pids)
+    for process in owned_processes:
+        pid = int(process["pid"])
+        _kill_pid_tree(pid)
+        print(f"Killed PID {pid}")
+    if port_pids and not owned_processes:
+        print(f"Port {port} is held by non-repo process(es); left untouched.")
+    elif not port_pids:
+        print(f"No process on port {port}")
+    _cleanup_managed_interface_listeners()
     remaining = _cleanup_repo_local_interface_processes()
     if remaining:
         summary = ", ".join(f"{proc['name']}:{proc['pid']}" for proc in remaining[:6])
         print(f"WARN: repo-local Interface residuals still running ({summary})")
     print("Interface stopped.")
-
 @task
 def clean(c):
     """
