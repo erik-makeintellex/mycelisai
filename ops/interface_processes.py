@@ -10,6 +10,7 @@ from .interface_process_support import (
     _INTERFACE_PROCESS_COMMAND_HINTS,
     _INTERFACE_PROCESS_PATH_HINTS,
 )
+from . import process_inspection
 
 
 ProcessInfo = dict[str, str | int]
@@ -99,6 +100,26 @@ def list_repo_local_interface_processes(
     except (subprocess.SubprocessError, json.JSONDecodeError, OSError, ValueError, RuntimeError) as exc:
         raise RuntimeError(f"interface process inspection failed: {exc}") from exc
     return processes
+
+
+def repo_local_interface_processes_for_pids(
+    pids: list[int],
+    *,
+    is_windows_func: Callable[[], bool],
+    normalize_process_text: Callable[[str], str],
+    run: Callable[..., Any] = subprocess.run,
+) -> list[ProcessInfo]:
+    """Filter listener PIDs down to repo-owned Interface/Playwright workers."""
+    processes = process_inspection.list_processes_by_pids(pids, is_windows_func=is_windows_func, run=run)
+    return [
+        process
+        for process in processes
+        if matches_repo_local_interface_process(
+            str(process.get("name") or ""),
+            str(process.get("command") or ""),
+            normalize_process_text=normalize_process_text,
+        )
+    ]
 
 
 def kill_pid_tree(
@@ -255,12 +276,21 @@ def cleanup_managed_interface_listeners(
     *,
     is_windows_func: Callable[[], bool],
     windows_listening_pids_for_port_range_func: Callable[[int, int], list[int]],
+    repo_local_processes_for_pids_func: Callable[[list[int]], list[ProcessInfo]],
     kill_pid_tree_func: Callable[[int], None],
     sleep: Callable[[float], None],
 ) -> list[int]:
     if not is_windows_func():
         return []
-    pids = sorted(set(windows_listening_pids_for_port_range_func(port_start, port_end)))
+    candidate_pids = sorted(set(windows_listening_pids_for_port_range_func(port_start, port_end)))
+    if not candidate_pids:
+        return []
+    try:
+        processes = repo_local_processes_for_pids_func(candidate_pids)
+    except RuntimeError as exc:
+        print(f"  WARN: unable to inspect managed Interface listeners ({exc})")
+        return []
+    pids = sorted({int(process["pid"]) for process in processes})
     if not pids:
         return []
 

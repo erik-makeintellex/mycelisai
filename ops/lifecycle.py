@@ -30,6 +30,7 @@ from .config import (
 )
 from . import db as db_tasks
 from . import lifecycle_infra
+from . import service_ownership
 from . import lifecycle_status
 from .lifecycle_processes import COMPILED_GO_PROCESS_HINTS, WINDOWS_COMPILED_GO_PROCESS_NAMES
 
@@ -199,6 +200,14 @@ def _find_pid_on_port(port: int) -> int | None:
             pass
     return None
 
+
+def _owned_core_pid_on_port(port: int = API_PORT) -> int | None:
+    return service_ownership.owned_core_pid_on_port(port, find_pid_on_port_func=_find_pid_on_port, is_windows_func=is_windows, matches_compiled_go_service_func=_matches_compiled_go_service, run=subprocess.run)
+
+def _owned_frontend_pid_on_port(port: int = INTERFACE_PORT) -> int | None:
+    from .interface_env import _normalize_process_text
+
+    return service_ownership.owned_frontend_pid_on_port(port, is_windows_func=is_windows, normalize_process_text=_normalize_process_text, run=subprocess.run)
 
 def _kill_pid(pid: int):
     """Kill a process by PID without failing the workflow on slow OS cleanup."""
@@ -602,22 +611,22 @@ def up(c, frontend=False, build=False):
         print("  NATS ready")
     print()
 
-    # 2.5. Ensure the expected application database exists before Core starts.
-    # This keeps bootstrap listeners from crashing when a fresh cluster comes up
-    # without the cortex database already provisioned.
     print("[2.5/4] Ensuring cortex database exists...")
     db_tasks.create.body(c)
     print("  cortex database ready")
     print()
 
-    # 3. Core server — allow up to 120s since Core waits up to 90s for its own deps
     print("[3/4] Starting Core server...")
     if _port_open(API_PORT):
+        core_pid = _owned_core_pid_on_port(API_PORT)
+        if core_pid is None:
+            raise SystemExit(f"STACK UP FAILED: Core API port {API_PORT} is occupied by a non-repo process. Stop that service or configure a different MYCELIS_API_PORT before release proof.")
         print(f"  Core already running on :{API_PORT}")
         council_ready = _core_council_ready(timeout=3, interval=0.5)
         if deps_were_down_before_up or not council_ready:
             print("  Restarting Core to exit degraded startup mode after dependency recovery...")
-            _kill_port(API_PORT, "Core")
+            _kill_pid(core_pid)
+            _wait_for_port_closed(API_PORT, "Core")
             if _start_core_background():
                 if _wait_for_port(API_PORT, "Core API", timeout=120):
                     print(f"  Core restarted on :{API_PORT}")
@@ -654,6 +663,8 @@ def up(c, frontend=False, build=False):
     if frontend:
         print("[4/4] Starting Frontend...")
         if _port_open(INTERFACE_PORT):
+            if _owned_frontend_pid_on_port(INTERFACE_PORT) is None:
+                raise SystemExit(f"STACK UP FAILED: Interface port {INTERFACE_PORT} is occupied by a non-repo process. Stop that service or configure a different Interface port before release proof.")
             print(f"  Frontend already running on :{INTERFACE_PORT}")
         else:
             from . import interface as interface_tasks
@@ -680,47 +691,29 @@ def down(c, include_data_plane=False):
     Order: core -> frontend -> compiled Go cleanup -> optional data-plane shutdown.
     """
     print("=== Mycelis Stack Down ===\n")
-    # 1. Core
     print("[1/4] Stopping Core...")
-    if _kill_port(API_PORT, "Core"):
-        pass
-    else:
-        # Fallback: kill by process name
-        if is_windows():
-            _run_best_effort(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-Command",
-                    "Get-Process server -ErrorAction SilentlyContinue | Stop-Process -Force",
-                ]
-            )
-        else:
-            _run_best_effort(["pkill", "-f", "bin/server"])
+    core_pid = _owned_core_pid_on_port(API_PORT)
+    if core_pid is not None:
+        _kill_pid(core_pid)
         _wait_for_port_closed(API_PORT, "Core")
-        print("  Core stopped (by name)")
+        print(f"  Core stopped (PID {core_pid})")
+    elif _port_open(API_PORT):
+        print(f"  Core port {API_PORT} is held by a non-repo process; left untouched.")
+    else:
+        print("  Core not running")
 
-    # 2. Frontend
     print("[2/4] Stopping Frontend...")
-    if not _kill_port(INTERFACE_PORT, "Frontend"):
-        if is_windows():
-            _run_best_effort(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-Command",
-                    "Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | "
-                    f"Where-Object {{ $_.CommandLine -match 'next (dev|start).*--port {INTERFACE_PORT}' }} | "
-                    "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
-                ],
-            )
-        else:
-            _run_best_effort(["pkill", "-f", f"next (dev|start).*--port {INTERFACE_PORT}"])
-
+    frontend_pid = _owned_frontend_pid_on_port(INTERFACE_PORT)
+    if frontend_pid is not None:
+        _kill_pid(frontend_pid)
         if _wait_for_port_closed(INTERFACE_PORT, "Frontend"):
-            print("  Frontend stopped (by command line)")
+            print(f"  Frontend stopped (PID {frontend_pid})")
         else:
-            print("  Frontend not running")
+            print(f"  WARN: repo-local Frontend PID {frontend_pid} did not release port {INTERFACE_PORT}")
+    elif _port_open(INTERFACE_PORT):
+        print(f"  Frontend port {INTERFACE_PORT} is held by a non-repo process; left untouched.")
+    else:
+        print("  Frontend not running")
     from . import interface as interface_tasks
     remaining_interface = interface_tasks._cleanup_repo_local_interface_processes()
     if remaining_interface:
@@ -731,7 +724,6 @@ def down(c, include_data_plane=False):
             + "). Re-run lifecycle.down or inspect Interface node workers."
         )
 
-    # 3. Compiled Go helpers
     print("[3/4] Cleaning compiled Go services...")
     remaining_compiled = _kill_compiled_go_services()
 
@@ -740,7 +732,6 @@ def down(c, include_data_plane=False):
         print("[4/4] Stopping Kubernetes port-forwards...")
         _kill_bridges()
 
-        # Also kill any remaining kubectl port-forward processes
         if is_windows():
             _run_best_effort(
                 ["powershell", "-NoProfile", "-Command",
@@ -761,10 +752,18 @@ def down(c, include_data_plane=False):
             break
         time.sleep(0.5)
     if remaining:
-        # Windows can report the listener a moment after the first kill wave; retry by port.
         for key in _service_keys_by_label(remaining):
             svc = SERVICES[key]
-            _kill_port(svc["port"], svc["label"])
+            if key == "core":
+                pid = _owned_core_pid_on_port(svc["port"])
+                if pid is not None:
+                    _kill_pid(pid)
+            elif key == "frontend":
+                pid = _owned_frontend_pid_on_port(svc["port"])
+                if pid is not None:
+                    _kill_pid(pid)
+            else:
+                _kill_port(svc["port"], svc["label"])
 
         deadline = time.time() + 5
         while time.time() < deadline:
