@@ -3,7 +3,7 @@ import pytest
 from ops import ci
 from tests.ci_task_support import FakeContext, FakeResult
 
-CORE_TEST_COMMAND = f'go -C "{ci.CORE_DIR}" test ./... -count=1'
+CORE_TEST_COMMAND = f'go -C "{ci.CORE_DIR}" test ./... -count=1 -p 1'
 
 
 def test_release_preflight_fails_on_dirty_tree_before_baseline():
