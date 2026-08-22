@@ -140,7 +140,11 @@ export function setMissionChatBlocker({
 
 export function buildMissionChatBlockerContent(failure: MissionChatFailure, content?: string | null): string {
     const providedContent = normalizeMissionChatBlockerContent(content);
-    if (providedContent && !providedContent.toLowerCase().startsWith("error:")) {
+    if (
+        providedContent &&
+        !providedContent.toLowerCase().startsWith("error:") &&
+        !isObsoleteOperationalAlertRedirect(providedContent)
+    ) {
         return providedContent;
     }
 
@@ -157,6 +161,14 @@ export function buildMissionChatBlockerContent(failure: MissionChatFailure, cont
     }
 
     return parts.join(" ").trim();
+}
+
+function isObsoleteOperationalAlertRedirect(content: string): boolean {
+    const normalized = normalizeForGuidanceCompare(content);
+    return (
+        normalized.endsWith("review the operational alert for the safe next step") ||
+        normalized.includes("review the operational alert for the safe next step")
+    );
 }
 
 function normalizeMissionChatBlockerContent(content?: string | null): string | null {
