@@ -159,8 +159,32 @@ export function buildMissionChatBlockerContent(failure: MissionChatFailure, cont
     ) {
         parts.push(`Next: ${failure.recommendedAction}`);
     }
+    const action = blockerNavigationAction(failure);
+    if (action) {
+        parts.push(`Open [${action.label}](${action.href}).`);
+    }
+    if (failure.type === "setup_required") {
+        parts.push("Or tell Soma what to change; it will ask before altering configuration.");
+    }
 
     return parts.join(" ").trim();
+}
+
+function blockerNavigationAction(failure: MissionChatFailure): { label: string; href: string } | null {
+    if (failure.type === "setup_required") {
+        const href = failure.setupPath || "/settings";
+        return {
+            href,
+            label: href.startsWith("/resources") ? "Resources setup" : "Settings",
+        };
+    }
+    if (failure.type === "unreachable" || failure.type === "timeout" || failure.type === "server_error" || failure.type === "unknown") {
+        return { label: "System Status", href: "/system" };
+    }
+    if (failure.type === "permission_denied") {
+        return { label: "Settings", href: "/settings" };
+    }
+    return null;
 }
 
 function isObsoleteOperationalAlertRedirect(content: string): boolean {

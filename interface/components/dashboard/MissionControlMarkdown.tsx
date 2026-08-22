@@ -9,17 +9,20 @@ export default function MissionControlMarkdown({ content }: { content: string })
         <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-                a: ({ href, children }) => (
-                    <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cortex-primary hover:text-cortex-primary/80 underline underline-offset-2 decoration-cortex-primary/30 hover:decoration-cortex-primary/60 transition-colors inline-flex items-center gap-0.5"
-                    >
-                        {children}
-                        <ExternalLink className="w-2.5 h-2.5 inline-block flex-shrink-0" />
-                    </a>
-                ),
+                a: ({ href, children }) => {
+                    const isInternal = Boolean(href?.startsWith("/") || href?.startsWith("#"));
+                    return (
+                        <a
+                            href={href}
+                            target={isInternal ? undefined : "_blank"}
+                            rel={isInternal ? undefined : "noopener noreferrer"}
+                            className="text-cortex-primary hover:text-cortex-primary/80 underline underline-offset-2 decoration-cortex-primary/30 hover:decoration-cortex-primary/60 transition-colors inline-flex items-center gap-0.5"
+                        >
+                            {children}
+                            {!isInternal && <ExternalLink className="w-2.5 h-2.5 inline-block flex-shrink-0" />}
+                        </a>
+                    );
+                },
                 pre: ({ children }) => (
                     <div className="relative group my-2">
                         <pre className="bg-cortex-bg border border-cortex-border rounded-lg p-3 overflow-x-auto text-[11px] leading-relaxed max-h-64 overflow-y-auto">

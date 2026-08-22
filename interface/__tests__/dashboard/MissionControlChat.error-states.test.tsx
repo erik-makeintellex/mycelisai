@@ -89,7 +89,7 @@ describe('MissionControlChat error states', () => {
             expect(useCortexStore.getState().activeMode).toBe('blocker');
         });
         expect(screen.getByText('Operational alert')).toBeDefined();
-        expect(screen.getByText(/review the operational alert for the safe next step/i)).toBeDefined();
+        expect(screen.getByRole('link', { name: /system status/i }).getAttribute('href')).toBe('/system');
     });
 
     it('renders a readable fallback instead of raw council tool JSON in Soma chat', async () => {
@@ -245,7 +245,7 @@ describe('MissionControlChat error states', () => {
             expect(useCortexStore.getState().activeMode).toBe('blocker');
         });
         expect(screen.getByText('Operational alert')).toBeDefined();
-        expect(screen.getByText(/review the operational alert for the safe next step/i)).toBeDefined();
+        expect(screen.getByRole('link', { name: /system status/i }).getAttribute('href')).toBe('/system');
         expect(screen.queryByText(/Failed to fetch: TypeError/i)).toBeNull();
     });
 
