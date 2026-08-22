@@ -1,5 +1,4 @@
 import { extractApiData } from '@/lib/apiContracts';
-import type { CortexState } from '@/store/cortexStoreState';
 import type {
     AuditLogEntry,
     PolicyConfig,
@@ -7,11 +6,12 @@ import type {
     TeamAgent,
     TeamDetail,
 } from '@/store/cortexStoreTypes';
-import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
+import type { CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
+
+type TeamRosterResponse = Pick<TeamDetail, 'id' | 'name'> & { role?: string };
 
 export function createCortexGovernanceSystemSlice(
     set: CortexSet,
-    _get: CortexGet,
 ): CortexSlice<
     | 'fetchTeamDetails'
     | 'fetchPolicy'
@@ -35,7 +35,8 @@ export function createCortexGovernanceSystemSlice(
                 const agentsData = agentsRes.ok ? await agentsRes.json() : { agents: [] };
                 const agents: TeamAgent[] = Array.isArray(agentsData.agents) ? agentsData.agents : [];
 
-                const roster: TeamDetail[] = (Array.isArray(teams) ? teams : []).map((team: any) => ({
+                const teamRecords = (Array.isArray(teams) ? teams : []) as TeamRosterResponse[];
+                const roster: TeamDetail[] = teamRecords.map((team) => ({
                     id: team.id,
                     name: team.name,
                     role: team.role || 'observer',

@@ -8,7 +8,7 @@ import {
   projectPackageOutputs,
 } from "./OutputWorkbench";
 import { outputWorkbenchDigest, OutputWorkbenchCompactDigest } from "./OutputWorkbenchDigest";
-import { proofLinks, linkRunId, trustVerdict } from "./ExecutionSummaryCardModel";
+import { asItems, compactText, proofLinks, linkRunId, trustVerdict } from "./ExecutionSummaryCardModel";
 import ExecutionSummaryMediaPreview from "./ExecutionSummaryMediaPreview";
 
 export function shouldUseExecutionSummaryReceipt({
@@ -37,6 +37,9 @@ export default function ExecutionSummaryReceipt({
   const packages = projectPackageOutputs(summary.outputs);
   const digest = outputWorkbenchDigest({ outputs, projectPackages: packages });
   const summaryRunId = runId ?? proofLinks(summary.proof).map(linkRunId).find(Boolean) ?? null;
+  const configStateSummary = asItems(summary.outputs).some((output) => (
+    typeof output !== "string" && output.kind?.startsWith("config_")
+  )) ? compactText(summary.execution?.summary) : null;
 
   return (
     <div
@@ -56,22 +59,15 @@ export default function ExecutionSummaryReceipt({
             </p>
           </div>
           <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-            {digest?.isProjectPackage
+            {configStateSummary
+              ? configStateSummary
+              : digest?.isProjectPackage
               ? "App/package output is ready. Open it, browse it in Resources, or reply to Soma for changes."
               : digest
                 ? "Latest output is ready. Use Open file or open the review panel for proof."
                 : trust.detail}
           </p>
         </div>
-        {summaryRunId ? (
-          <a
-            href={`/runs/${summaryRunId}`}
-            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-cortex-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-main hover:border-cortex-primary/40"
-          >
-            Run
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        ) : null}
       </div>
       {digest ? (
         <div className="mt-2 rounded-lg border border-cortex-border/70 bg-cortex-bg/80 px-2.5 py-2">
@@ -79,6 +75,20 @@ export default function ExecutionSummaryReceipt({
         </div>
       ) : null}
       {outputs.length > 0 ? <ExecutionSummaryMediaPreview outputs={outputs} compact /> : null}
+      {summaryRunId ? (
+        <details className="mt-2 border-t border-cortex-border/60 pt-2 text-[10px] text-cortex-text-muted">
+          <summary className="cursor-pointer font-semibold uppercase tracking-[0.08em] hover:text-cortex-text-main">
+            Proof and execution details
+          </summary>
+          <a
+            href={`/runs/${summaryRunId}`}
+            className="mt-2 inline-flex items-center gap-1 text-cortex-primary hover:underline"
+          >
+            Inspect run receipt
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </details>
+      ) : null}
     </div>
   );
 }

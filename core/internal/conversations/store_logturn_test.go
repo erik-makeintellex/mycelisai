@@ -63,6 +63,41 @@ func TestLogTurn_HappyPath(t *testing.T) {
 	}
 }
 
+func TestLogTurnTxUsesCallerTransaction(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	mock.ExpectBegin()
+	mock.ExpectExec("INSERT INTO conversation_turns").
+		WithArgs(
+			sqlmock.AnyArg(), "", "11111111-1111-1111-1111-111111111111", "default",
+			"admin", "admin-core", 4, "tool_result", "retained receipt", "", "",
+			"store_config_document", sqlmock.AnyArg(), "", "", sqlmock.AnyArg(),
+		).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectRollback()
+	tx, err := db.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = NewStore(db).LogTurnTx(t.Context(), tx, protocol.ConversationTurnData{
+		SessionID: "11111111-1111-1111-1111-111111111111", TenantID: "default",
+		AgentID: "admin", TeamID: "admin-core", TurnIndex: 4, Role: "tool_result",
+		Content: "retained receipt", ToolName: "store_config_document",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLogTurn_UUIDColumnsUseCasts(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

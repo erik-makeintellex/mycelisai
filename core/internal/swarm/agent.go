@@ -37,6 +37,17 @@ type Agent struct {
 	interjectionMu     sync.Mutex
 	interjection       string
 	interjectionSub    *nats.Subscription
+	lifecycleMu        sync.Mutex
+	subscriptions      []*nats.Subscription
+}
+
+func (a *Agent) trackSubscription(subscription *nats.Subscription) {
+	if subscription == nil {
+		return
+	}
+	a.lifecycleMu.Lock()
+	a.subscriptions = append(a.subscriptions, subscription)
+	a.lifecycleMu.Unlock()
 }
 
 // NewAgent creates a new Agent instance with lifecycle context.

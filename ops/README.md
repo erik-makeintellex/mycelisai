@@ -21,7 +21,7 @@
 - App-tied management logic stays in Python task modules; PowerShell is wrapper-only when the host needs it.
 - Task, runtime, or validation changes are not complete until the matching docs are reviewed and updated in the same slice.
 - GitHub Actions workflows are manual-only through `workflow_dispatch` for the current release-readiness push; `Full Release Candidate` is the umbrella hosted release lane, while CI/source/API/build/package workflows remain narrower manual proofs.
-- Treat source-mode local run/build/test with native PostgreSQL/NATS as the first acceptance lane. Bring up full Compose, Rancher K3s, WSL/Compose, or target-cluster app proof only after local evidence is acceptable.
+- Treat source-mode local run/build/test with Dockerized PostgreSQL/NATS and locally run Core/Interface as the first acceptance lane. Bring up full application Compose, Rancher K3s, WSL/Compose, or target-cluster app proof only after local evidence is acceptable.
 - Scope tasks around needed tools and Mycelis services. Do not add repo tasks that manage whole host environments such as terminating WSL distros, resetting Rancher Desktop VMs, or repairing Docker Desktop itself.
 
 ## Components
@@ -30,7 +30,7 @@ This directory contains the logic for the **Service Release Standard 1.0**.
 Recommended host posture:
 - Windows repo: canonical editing, review, and git-push surface for active development
 - WSL `mycelis-root` deployment checkout: guarded WSL Compose proof checkout for install, build, API/UI test, Compose runtime, and deployment-mimic validation
-- Windows native: run Core/Interface from source against Windows PostgreSQL and a local NATS server first; use Compose or Kubernetes only after local evidence is acceptable
+- Windows source mode: run Core/Interface locally against PostgreSQL and NATS hosted by Rancher Desktop's Docker engine; use full application Compose or Kubernetes only after local evidence is acceptable
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
 - cleanup tasks that include `.venv` skip the active Python runtime when invoked through `uv run inv`, then report the skipped path; remove the active environment from an external shell only when that is intentionally needed
@@ -46,8 +46,8 @@ WSL Compose proof-checkout contract:
 - WSL tasking is deliberately proof-checkout scoped. If the distro, Rancher Desktop, or Docker host is unhealthy, fix the host tool outside the repo task runner and then rerun the narrow validation task.
 
 Deployment selection rule:
-- local source-mode run/build/test with native PostgreSQL/NATS is the default development and review lane
-- Docker Compose is the rapid local development and same-machine proof runtime
+- local source-mode run/build/test with Dockerized PostgreSQL/NATS and local Core/Interface is the default development and review lane
+- full application Docker Compose is a same-machine promotion-proof runtime, not the default edit/test loop
 - Rancher Desktop K3s is the preferred Windows local Kubernetes validation lane for Helm behavior
 - `k3d` is the preferred WSL/Linux local Kubernetes validation lane for Helm behavior
 - Kubernetes / Helm is the target clustered deployment contract for self-hosted and enterprise environments
@@ -93,23 +93,26 @@ Handles standards-first Kubernetes/Helm deployment automation, with Rancher Desk
 Handles the rapid Docker Compose single-host runtime for development, same-machine proof, home-lab experiments, and demo use. Compose is not the target clustered deployment contract.
 - **Infra Up**: `uv run inv compose.infra-up` (postgres + nats only, Core/Interface stay down, readiness checks + owner-facing connection settings; add `--migrate` only when schema bootstrap is intentionally needed)
 - **Infra Health**: `uv run inv compose.infra-health` (PostgreSQL port/query readiness, NATS port, and NATS monitor only; no Core/UI health checks)
-- **Storage Health**: `uv run inv compose.storage-health` (post-migration PostgreSQL long-term storage gate for pgvector, semantic context vectors, durable memory, conversation continuity, artifacts, managed exchange, collaboration groups, and templates)
+- **Storage Health**: `uv run inv compose.storage-health` (post-migration PostgreSQL long-term storage gate for pgvector, semantic context vectors, durable memory, conversation continuity, artifacts, managed exchange, collaboration groups, templates, configuration revisions/activation, exact runtime-team manifests, and exact QA ownership)
 - **Warm Cognitive**: `uv run inv compose.warm-cognitive` (warms the configured Compose text model through the same Ollama endpoint Core uses before live browser proof)
-- **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface, with numbered stage output and optional `--wait-timeout=<seconds>`)
-- Compose `up` and `migrate` now behave like the main `db.migrate` contract: they bootstrap forward only when the compose `cortex` schema is compatible through the V8.2 capability/proof/team-work tables and collaboration-group workspace-folder schema, and they point to `uv run inv compose.down --volumes` for a truly fresh replay.
+- **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface, with numbered stage output, optional `--wait-timeout=<seconds>`, and readiness on the configured PostgreSQL/NATS/Core/Interface host ports)
+- Compose `up` and `migrate` behave like the main `db.migrate` contract: they bootstrap forward only when the compose `cortex` schema is compatible through the capability/proof/team-work tables, team-work lifecycle columns, collaboration-group workspace-folder schema, operator SSE ledger, and team signal-receipt ledger, and they point to `uv run inv compose.down --volumes` for a truly fresh replay.
 - **Down**: `uv run inv compose.down`
 - **Health**: `uv run inv compose.health`
 - **Status**: `uv run inv compose.status`
 - **Logs**: `uv run inv compose.logs`
 - Compose uses `.env.compose` so host/container assumptions stay separate from the local-Kubernetes `.env` path.
+- Compose launch and readiness share `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`. PostgreSQL publishes `15432` by default for local Core and host clients; Compose Core uses `postgres:5432`.
+- Docker `pgvector/pgvector:pg16` is the sole development PostgreSQL server. Relational rows and vectors share its `postgres-data` volume. A host `psql` binary is client-only; native host PostgreSQL is unsupported.
 - Compose uses `MYCELIS_COMPOSE_OLLAMA_HOST` instead of raw `OLLAMA_HOST` so host-machine Ollama bind settings cannot override the container runtime accidentally, and maps that value into provider-specific endpoint overrides inside Core.
 - Compose passes `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, and `MYCELIS_SEARCH_MAX_RESULTS` into Core for governed search; use `local_sources` for token-free governed local-source search, `searxng` for operator-owned metasearch, or `local_api` for an operator-owned HTTP search endpoint instead of treating Brave as mandatory.
 - Compose rejects loopback compose Ollama values because `localhost`, `127.0.0.1`, and `0.0.0.0` point back at the Core container instead of the operator host.
 - Compose `infra-up` is the data-plane-only preflight for personal-owner deployments where PostgreSQL/NATS should be reachable before app services are launched.
 - Compose `storage-health` is the matching post-migration proof that the long-term Mycelis Postgres store is present before claiming RAG, retained outputs, or continuity are available.
-- Compose `migrate` skips unsafe full replay on compatible volumes but still applies known missing late storage migrations so `storage-health` can close the long-term store gate.
+- Compose `migrate` skips unsafe full replay on compatible volumes but still applies known missing late migrations, including Worker Profiles, ConfigDocument revision/activation/history storage, exact ConfigDocument QA fixture ownership, and exact runtime-team manifest persistence, so a broadly compatible database cannot hide a missing current contract and `storage-health` can close the long-term store gate. The fixture-ownership and runtime-manifest downgrades refuse to discard active records.
 - Compose validates output block mounting: use `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` plus `MYCELIS_OUTPUT_HOST_PATH=<host-directory>` when a local or Pinokio/media-hosted output directory should be mounted into Core as `/data`. The task resolves the host path with Python `pathlib` across Windows, Linux, and macOS before Docker starts.
 - Runtime output roots inside Core are explicit: `MYCELIS_WORKSPACE` is where generated files, project packages, browser games, and filesystem MCP writes land; `MYCELIS_ARTIFACT_ROOT` is where file-backed artifact/cache data lands. `DATA_DIR` is still honored as a legacy artifact-root alias and should match `MYCELIS_ARTIFACT_ROOT` in Compose proof.
+- Declarative configuration uses `MYCELIS_CONFIG_ROOT`, defaulting to `${MYCELIS_WORKSPACE}/config`; direct-file ConfigDocument reads must remain inside that root, and PostgreSQL stores normalized immutable revisions and activation history rather than raw secrets.
 - Compose defaults `MYCELIS_WORKSPACE_REVEAL_DRY_RUN=1` because Core runs inside a container. Browser `Storage` controls should still return a trusted mounted workspace path during proof, while native Core or a host-action bridge can opt into actual desktop folder opening.
 - On Windows, when native `docker` is absent but WSL Docker is available, `compose.*` uses the WSL Docker CLI automatically and translates compose/output-block paths for that runtime. Set `MYCELIS_WSL_DISTRO` when the Docker-owning distro is not the default.
 - On that WSL Docker path, `compose.up` and `compose.health` can auto-start a small restartable WSL-host relay for `MYCELIS_COMPOSE_OLLAMA_HOST`, including when you run the tasks directly inside the Docker-owning WSL distro, so the Core container can still reach a Windows-hosted Ollama service through `host.docker.internal` when bridge containers cannot dial the Windows LAN IP directly.
@@ -119,14 +122,8 @@ Handles the rapid Docker Compose single-host runtime for development, same-machi
 - The compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; default npm-backed MCP auto-bootstrap still stays disabled by default to keep startup logs honest.
 - Manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root, which is `/data/workspace` in the supported Compose output block.
 
-### `native_infra.py` (Source-Mode Data Plane)
-Owns the narrow Windows/source-mode dependency path for development and testing without Docker.
-- **Install NATS**: `uv run inv native-infra.install-nats` installs `nats-server` with Go into the local Go bin directory. The pinned default is `v2.14.0`.
-- **Up**: `uv run inv native-infra.up` bootstraps the configured PostgreSQL app role/database and starts local NATS with JetStream plus the HTTP monitor.
-- **Status**: `uv run inv native-infra.status` checks PostgreSQL port/query readiness, NATS port readiness, and the NATS monitor endpoint.
-- **Bootstrap PostgreSQL**: `uv run inv native-infra.bootstrap-postgres` uses `POSTGRES_USER` / `POSTGRES_PASSWORD` from `.env` to create or update `DB_USER`, `DB_PASSWORD`, and `DB_NAME`.
-- **Start NATS**: `uv run inv native-infra.start-nats` starts only NATS when PostgreSQL is already ready.
-- `lifecycle.up` defaults to `MYCELIS_DEV_INFRA_MODE=native`, so it no longer tries Kubernetes port-forwards during ordinary source-mode development. Set `MYCELIS_DEV_INFRA_MODE=k8s` only for explicit clustered bridge proof.
+### Development Data Plane
+`lifecycle.up` uses `MYCELIS_DEV_INFRA_MODE=compose`: PostgreSQL and NATS run in Docker while Core and Interface run locally from source. It invokes only `compose.infra-up`, never full `compose.up` or an app-image build. Native host PostgreSQL/NATS bootstrap tasks are not exposed. A host `psql` binary remains a client for the Dockerized database. Shared NATS hosts still use `NATS_URL` and `MYCELIS_NATS_SERVICE_ID`; `lifecycle.down` drains local Mycelis app clients while leaving reusable data services running.
 
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.
@@ -164,16 +161,18 @@ Enforces logging contract quality checks before delivery.
 
 ### `quality.py` (Code Hygiene Gates)
 Enforces max-lines policy across the main source tree with temporary no-regression caps for legacy oversized files. Stale cap entries for deleted files fail the gate so cleanup cannot leave old exceptions behind.
-- **Max Lines**: `uv run inv quality.max-lines --limit 300`
+- **Max Lines**: `uv run inv quality.max-lines --limit 330`
 
 ### `lifecycle.py` (Local Stack Control)
 Owns deterministic local bring-up, teardown, and deep health checks.
 - **Up**: `uv run inv lifecycle.up --frontend`
-- **Down**: `uv run inv lifecycle.down`
+- **Down local app**: `uv run inv lifecycle.down` (retains Compose PostgreSQL/NATS)
+- **Down local app + data plane**: `uv run inv lifecycle.down --include-data-plane` (preserves named volumes)
 - **Health**: `uv run inv lifecycle.health`
 - **Memory Restart**: `uv run inv lifecycle.memory-restart --frontend`
 - `lifecycle.up` now ensures the `cortex` database exists before Core starts, so the bootstrap listener does not crash when a fresh bridge comes up after a reboot or cluster reset
 - `lifecycle.down` now treats repo-local Interface worker residue as part of the teardown contract, not just bound ports
+- shutdown summaries name the exact boundary: local app only, local app plus Compose data plane, or local app plus Kubernetes port-forwards; independently managed Ollama and host runtimes remain untouched
 - `lifecycle.status` reports a quick service snapshot and validates Core through `/healthz` plus Ollama through `/api/tags` across accepted loopback hosts so endpoint-reachable services are not reported down from a single TCP miss
 - `lifecycle.health` and `compose.health` allow the cognitive status endpoint a longer client window than its internal provider probes, so slow or degraded local AI endpoints produce operator-readable health evidence instead of edge timeouts
 - local tasking targets the bridged Core API port by default (`localhost:8081` unless `MYCELIS_API_PORT` overrides it)
@@ -191,13 +190,12 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - `ops/interface.py` is the stable Invoke entrypoint; the task implementation lives in `ops/interface_runtime.py`, with shared command/env helpers in `ops/interface_env.py` and process matching hints in `ops/interface_process_support.py`
 - `uv run inv interface.e2e` now defaults to managed `dev` mode for stable mocked browser proof. Use `--server-mode=start` when you need the built `next start` path for stricter or live-backend proof; `uv run inv interface.build` still retries once after stale repo-local Next build locks, stale `.next/standalone` cleanup locks, incomplete built-server packaging, or transient missing `.next/types` output before failing, start-mode E2E inherits that same recovery behavior, Windows managed Playwright servers bind to `127.0.0.1` for stable loopback readiness/browser navigation, and managed `dev` runs clear an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains.
 - Live backend browser specs that assert filesystem side effects now infer `MYCELIS_BACKEND_WORKSPACE_ROOT` from the loaded `.env`/process `MYCELIS_WORKSPACE` for native Core: absolute roots are used directly, while repo-local `./workspace` maps to `core/workspace`. Set `MYCELIS_BACKEND_WORKSPACE_ROOT` or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT` only when the spec checkout and the running Core checkout differ, such as a supported Compose host workspace under `workspace/docker-compose/data/workspace`. For K8s/PVC proof, set `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` plus `PLAYWRIGHT_K8S_NAMESPACE`, `PLAYWRIGHT_K8S_CORE_SELECTOR`, and `PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT` so the live spec checks the Core pod workspace with `kubectl`.
+- Compose passes matching web-session and forwarded-identity secret references to Core and Interface. Keep any explicit `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` values in `.env`; omitted local values fall back consistently to `MYCELIS_API_KEY`.
 - Runtime file/tool requests may also use `workspace/...` as a friendly alias for the configured workspace root; the backend normalizes that prefix away so Compose-backed `/data/workspace` and repo-local `./workspace` do not produce doubled `workspace/workspace/...` paths.
 
-### `test.py` (Root Test Aliases)
-- **All**: `uv run inv test.all`
+### `test.py` (Cross-Stack Coverage)
 - **Coverage**: `uv run inv test.coverage`
-- **E2E Alias**: `uv run inv test.e2e`
-- `uv run inv test.e2e` mirrors the same managed browser options as `uv run inv interface.e2e`, including `--workers` and `--server-mode=dev|start|external`.
+- Use `uv run inv ci.test` for the combined Core and Interface unit gate and `uv run inv interface.e2e` for browser proof; duplicate aliases are intentionally not registered.
 
 ### `cognitive.py` (Optional Local Engine Helpers)
 - **Install**: `uv run inv cognitive.install`
@@ -216,10 +214,10 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - For the supported home-runtime stack, `uv run inv compose.down --volumes` is the clean reset path before runtime/browser proof.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect running compiled Go services before the test begins. Check repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
-- Detect repo-local Interface worker residue before and after browser/build/test runs. Windows `node.exe` children from `.next`, Vitest, or Playwright count as leaked dev state and should be swept by the task wrappers.
+- Detect repo-local Interface worker residue before and after browser/build/test runs. Windows `node.exe` children from `.next`, Vitest, or Playwright count as leaked dev state and should be swept by the task wrappers. Tree termination uses an extended bounded wait on Windows so slow descendant enumeration cannot silently degrade into a parent-only stop that leaves `.next` locked.
 - Treat browser proof as a stability-sensitive path by default. `uv run inv interface.e2e` now uses managed `dev` mode and `--workers=1` for stable mocked browser proof unless you explicitly switch to `--server-mode=start`, which refreshes the production bundle before the managed server runs and keeps the stricter or live-backend path aligned with the same cleanup/retry behavior. On Windows, managed browser proof binds the UI server to IPv4 loopback (`127.0.0.1`) even when normal dev servers may bind more broadly. `uv run inv ci.baseline` keeps the same low-parallelism posture, and `uv run inv ci.service-check --live-backend` stays at `--workers=1` while restoring the local bridge/core stack before the live proof when needed. The managed browser task must now own a clean UI server for the run; if the managed Next process exits or a stale listener blocks the port, the task fails instead of silently borrowing the wrong server. Keep managed `interface.build`, `interface.test`, and managed `interface.e2e` serial for a workspace and port because they share Next/Vitest workers and server ownership. The live service check now reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations on every run, so the managed gate prefers repeatable results over peak local parallelism without turning database state into false failure noise.
 - `uv run inv interface.check` retries transient Windows socket-reuse errors after heavy Playwright runs before failing a route check; persistent HTTP/SSR/runtime page failures still fail immediately.
-- `uv run inv db.migrate` is intentionally a forward-bootstrap helper now, not a replay-everything hammer. Once the schema is compatible through the capability/proof/team-work tables, collaboration-group workspace-folder schema, OutcomeProject/TeamRegistry ownership, and search-source registry, it skips replay and points operators to `uv run inv db.reset` for a clean rebuild path. For fresh Soma/team proof without rebuilding schema, first run `uv run inv db.clear-runtime-context` to inspect volatile context counts, then add `--yes` when stale conversations, team work, run/proof handshakes, or temp memory should be cleared; long-memory vectors are kept unless `--include-memory-vectors` is supplied.
+- `uv run inv db.migrate` is intentionally a forward-bootstrap helper now, not a replay-everything hammer. Once the schema is compatible through the capability/proof/team-work tables, lifecycle columns and recovery deadline, collaboration-group workspace-folder schema, OutcomeProject/TeamRegistry ownership, search-source registry, execution-dispatch outbox, operator SSE event ledger, team command/result receipt ledger, exact runtime-team manifest storage, and QA fixture ownership, it skips replay and points operators to `uv run inv db.reset` for a clean rebuild path. QA fixture migration checks fail closed on query errors rather than claiming a compatible schema. The Core recovery reconciler starts whenever PostgreSQL is available, even if NATS is offline, so expired queued/running work becomes visible degraded work after restart instead of remaining silently active. For fresh Soma/team proof without rebuilding schema, first run `uv run inv db.clear-runtime-context` to inspect volatile context counts, then add `--yes` when stale conversations, team work, run/proof handshakes, or temp memory should be cleared; long-memory vectors are kept unless `--include-memory-vectors` is supplied. Owner-scoped retained-fixture cleanup uses the opt-in test API, rejects pre-existing team/runtime/workspace state, records actual created-team and workspace ownership in a durable transaction independent of the outer run transaction, fences creation and purge with the same PostgreSQL advisory lock, safely resumes interrupted purges, releases resource leases only after successful purge, and never clears shared NATS storage.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -246,12 +244,12 @@ Stopping containers alone is not enough. The cleanup pass must also inspect and 
 Delivery-focused validation, runner checks, and release preflight.
 - **Test**: `uv run inv ci.test` (Go tests + blocking Vitest run)
 - **Entrypoint Check**: `uv run inv ci.entrypoint-check`
-- **Baseline**: `uv run inv ci.baseline` (includes Playwright by default; use `--no-e2e` only for intentionally narrower local debugging)
+- **Baseline**: `uv run inv ci.baseline` (uses the managed build lifecycle to stop repo-owned Interface servers and Playwright listeners and clear `.next`, then includes the repo-provisioned Chromium project with one worker by default; use `--no-e2e` only for intentionally narrower local debugging, and provision other engines explicitly for a separate cross-engine matrix)
 - **Service Check**: `uv run inv ci.service-check --live-backend`
-- **Release Preflight**: `uv run inv ci.release-preflight --lane=release`
+- **Release Preflight**: `uv run inv ci.release-preflight --lane=release`; every lane runs `ci.lint` first and stops before baseline/service work if lint fails. Core lint/test stages use `go -C <core>` so module selection is independent of Invoke/shell directory state, and the release baseline runs Core tests with `-p 1` so local runtime/browser probes do not race package-level resource contention. Captured Core failures print console-safe diagnostics instead of crashing on characters unsupported by the active Windows code page.
 - **Lane presets**: `baseline`, `runtime`, `service`, `release` (legacy flags still supported for custom proof)
 - **Runtime Posture Gate**: `--runtime-posture` adds a 12 GiB disk-headroom check, reads explicit AI endpoints from process env plus `.env.compose` / `.env`, fails closed when no supported non-loopback endpoint contract is configured before baseline proof runs, and mirrors `host.docker.internal` through WSL localhost when the probe itself is running inside WSL before Compose relay startup.
-- Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path
+- Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path. On Windows, cleanup uses one bounded repo-scoped Node/cmd inventory query before terminating only matching process trees, so another project's dev server is a port conflict to report rather than a process to borrow or stop. The task runner leaves Playwright reporter selection to `interface/playwright.config.ts`, preserving both operator-readable output and JSON/JUnit evidence under `interface/test-results`.
 - GitHub validation workflows should keep dependency/bootstrap steps workflow-native (`actions/setup-*`, `npm ci`, Playwright browser install), then hand real build/test execution back to the same `uv run inv ...` task surfaces so local and CI validation stay aligned
 - Hosted GitHub validation uses Node 24-capable action majors and Node.js 24 for Interface lanes. Helm setup is a checksum-verified pinned Helm 3 download instead of `azure/setup-helm@v4` because that action still runs on Node 20.
 - GitHub CI is manual-only and offers targeted repo hygiene, Core, Interface, authenticated browser smoke, and Helm standards lanes; live agentry/runtime proof remains in local/WSL release lanes unless the manual Source API Proof or Full Release Candidate workflow is explicitly dispatched.
@@ -259,7 +257,7 @@ Delivery-focused validation, runner checks, and release preflight.
 
 ### `misc.py` (Team Coordination)
 Central architect sync path and utility task surfaces.
-- **Architecture Sync**: `uv run inv team.architecture-sync`
+- **Architecture Sync**: `uv run inv team.architecture-sync` sends the standing architecture, development, and AGUI teams the current Workspace/Outcome execution-to-deliverable gate and collects concise proof priorities; it does not authorize implementation by itself.
 - **Worktree Triage**: `uv run inv team.worktree-triage`
 
 ## Directives

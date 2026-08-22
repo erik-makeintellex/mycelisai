@@ -25,10 +25,10 @@ Choose the runtime by deployment target, not by whichever tool is already open.
 | Local Helm and Kubernetes validation in WSL/Linux | `k3d` | Best WSL/Linux proof for chart behavior before a real cluster |
 | Customer-managed, enterprise-managed, or release target cluster | Enterprise self-hosted Kubernetes | Best fit for real cluster policy, ingress, registry, storage, and secret management |
 | Edge node, Raspberry Pi style control node, small Linux box | Packaged binary or node-attached service | Lightweight host footprint with remote AI service support |
-| Active code changes and UI/backend iteration | Windows source mode with `native-infra.*` plus local Core/Interface | Best fit for implementation work; containerize only after local source proof is acceptable |
+| Active code changes and UI/backend iteration | Rancher Desktop Docker data plane plus local Core/Interface | Best fit for implementation work without rebuilding application images |
 
 Quick rule:
-- if the question is "how do I change code and test the product locally?" use source mode with native PostgreSQL/NATS
+- if the question is "how do I change code and test the product locally?" use source mode with Dockerized PostgreSQL/NATS and local Core/Interface
 - if the question is "how do I prove packaged services on one host?" use Docker Compose
 - if the question is "how do I prove the Helm chart or cluster behavior locally?" use Rancher Desktop K3s on Windows or `k3d` in WSL/Linux
 - if the question is "how will this be deployed for release or a customer-owned environment?" use the Helm chart for enterprise self-hosted Kubernetes
@@ -210,16 +210,15 @@ Guidance:
 
 ## Developer Source Mode
 
-Use the source-run lifecycle path when you are changing code, debugging, or iterating on UI/backend behavior. This is the default development lane on the Windows host. It runs Core and Interface from source against host-local PostgreSQL and NATS, while Docker, WSL, Rancher, Compose, and Kubernetes remain proof/deployment lanes.
+Use the source-run lifecycle path when you are changing code, debugging, or iterating on UI/backend behavior. This is the default development lane on the Windows host. Rancher Desktop's Docker engine runs only PostgreSQL and NATS; Core and Interface run locally from source. Full application Compose, WSL, and Kubernetes remain proof/deployment lanes.
 
 Recommended path:
 
 ```bash
-cp .env.example .env
+Copy-Item .env.example .env
 uv run inv install
-uv run inv native-infra.install-nats
-uv run inv native-infra.up
-uv run inv native-infra.status
+uv run inv compose.infra-up --wait-timeout=180 --migrate
+uv run inv compose.infra-health
 uv run inv db.migrate
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
@@ -251,7 +250,7 @@ Rules:
 
 Before user testing or UI testing, prove the lane you picked:
 
-- source development: `uv run inv native-infra.status`, `uv run inv db.migrate`, `uv run inv lifecycle.status`, and `uv run inv lifecycle.health`
+- source development: `uv run inv compose.infra-health`, `uv run inv db.migrate`, `uv run inv lifecycle.status`, and `uv run inv lifecycle.health`
 - Docker Compose packaged-service proof: `uv run inv compose.status` and `uv run inv compose.health`
 - local Kubernetes: `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-k3d.yaml`, `uv run inv k8s.status`, and `uv run inv lifecycle.health`
 - enterprise self-hosted Kubernetes: run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`, render/package the Helm chart with the real values, then prove ingress, readiness, storage, and the explicit AI endpoint on the target cluster

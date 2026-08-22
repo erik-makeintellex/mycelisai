@@ -2,6 +2,7 @@ package swarm
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,6 +27,30 @@ func (p *proposalPlanningProvider) Probe(context.Context) (bool, error) {
 	return true, nil
 }
 
+type approvedExecutionProvider struct {
+	calls int
+}
+
+func (p *approvedExecutionProvider) Infer(context.Context, string, cognitive.InferOptions) (*cognitive.InferResponse, error) {
+	p.calls++
+	if p.calls == 1 {
+		return &cognitive.InferResponse{
+			Text:      `{"tool_call":{"name":"write_file","arguments":{"path":"workspace/generated/approved.txt","content":"approved output"}}}`,
+			Provider:  "mock",
+			ModelUsed: "test-model",
+		}, nil
+	}
+	return &cognitive.InferResponse{
+		Text:      "Created the approved output.",
+		Provider:  "mock",
+		ModelUsed: "test-model",
+	}, nil
+}
+
+func (p *approvedExecutionProvider) Probe(context.Context) (bool, error) {
+	return true, nil
+}
+
 type countingToolExecutor struct {
 	findCalls int
 	callCalls int
@@ -47,13 +72,17 @@ func (c *countingToolExecutor) CallTool(_ context.Context, _ uuid.UUID, toolName
 
 func TestBlocksProposalPlanningToolClassification(t *testing.T) {
 	tests := map[string]bool{
-		"write_file":             true,
-		"publish_signal":         true,
-		"send_external_message":  true,
-		"generate_blueprint":     true,
-		"research_for_blueprint": true,
-		"read_file":              false,
-		"consult_council":        false,
+		"write_file":               true,
+		"publish_signal":           true,
+		"send_external_message":    true,
+		"delegate":                 true,
+		"generate_blueprint":       true,
+		"research_for_blueprint":   true,
+		"store_config_document":    true,
+		"activate_config_document": true,
+		"preview_config_document":  false,
+		"read_file":                false,
+		"consult_council":          false,
 	}
 
 	for toolName, want := range tests {
@@ -111,6 +140,76 @@ func TestProcessMessageStructured_SkipsMutationExecutionDuringProposalPlanning(t
 	targetPath := filepath.Join(workspaceRoot, "workspace", "logs", "qa_browser_preconfirm_probe.py")
 	if _, err := os.Stat(targetPath); !os.IsNotExist(err) {
 		t.Fatalf("expected %s to remain absent before confirmation, got err=%v", targetPath, err)
+	}
+}
+
+func TestTeamTriggerPlanningOnlyRequiresCompleteGovernedCorrelation(t *testing.T) {
+	approved, err := json.Marshal(protocol.TeamAsk{
+		Goal: "Create the approved output.",
+		Context: map[string]any{
+			"run_id":          "11111111-1111-1111-1111-111111111111",
+			"contract_id":     "22222222-2222-2222-2222-222222222222",
+			"intent_proof_id": "33333333-3333-3333-3333-333333333333",
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal approved ask: %v", err)
+	}
+	if teamTriggerPlanningOnly(approved) {
+		t.Fatal("complete governed TeamAsk remained planning-only")
+	}
+
+	incomplete, err := json.Marshal(protocol.TeamAsk{
+		Goal: "Create output without proof.",
+		Context: map[string]any{
+			"run_id":      "11111111-1111-1111-1111-111111111111",
+			"contract_id": "22222222-2222-2222-2222-222222222222",
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal incomplete ask: %v", err)
+	}
+	if !teamTriggerPlanningOnly(incomplete) {
+		t.Fatal("incomplete TeamAsk unexpectedly received execution authority")
+	}
+	if !teamTriggerPlanningOnly([]byte("plain team message")) {
+		t.Fatal("plain team message unexpectedly received execution authority")
+	}
+}
+
+func TestProcessMessageStructured_ExecutesMutationForApprovedTeamAsk(t *testing.T) {
+	provider := &approvedExecutionProvider{}
+	router := &cognitive.Router{
+		Config: &cognitive.BrainConfig{
+			Profiles: map[string]string{"chat": "mock"},
+			Providers: map[string]cognitive.ProviderConfig{
+				"mock": {Type: "mock", Enabled: true, ModelID: "test-model"},
+			},
+		},
+		Adapters: map[string]cognitive.LLMProvider{"mock": provider},
+	}
+
+	exec := &countingToolExecutor{serverID: InternalServerID}
+	agent := NewAgent(context.Background(), protocol.AgentManifest{
+		ID:       "worker",
+		Role:     "implementer",
+		Provider: "mock",
+		Tools:    []string{"write_file"},
+	}, "approved-team", nil, router, exec)
+	agent.SetToolDescriptions(map[string]string{
+		"write_file": "Write content to a file within the workspace sandbox.",
+	})
+
+	result := agent.processMessageStructuredWithPosture("Create the approved output.", nil, false)
+
+	if exec.findCalls != 1 || exec.callCalls != 1 {
+		t.Fatalf("tool execution calls = find:%d call:%d, want 1 each", exec.findCalls, exec.callCalls)
+	}
+	if result.Text != "Created the approved output." {
+		t.Fatalf("result text = %q", result.Text)
+	}
+	if len(result.ToolsUsed) != 1 || result.ToolsUsed[0] != "write_file" {
+		t.Fatalf("tools_used = %#v, want [write_file]", result.ToolsUsed)
 	}
 }
 

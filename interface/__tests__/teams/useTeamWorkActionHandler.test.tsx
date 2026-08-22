@@ -84,4 +84,66 @@ describe("useTeamWorkActionHandler", () => {
       }),
     );
   });
+
+  it("does not recommend retry for an uncertain external mutation", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          accepted: true,
+          dispatch_state: "accepted",
+          work_item: {
+            work_item_id: "work-external-unknown",
+            team_id: "team-game",
+            objective: "Update the external system",
+            state: "degraded",
+            degradation_state: "external_mutation_outcome_unknown",
+          },
+        },
+      }),
+    });
+
+    const { result } = renderHook(() => useTeamWorkActionHandler(vi.fn()));
+    await act(async () => {
+      await result.current.handleTeamAsk(sourceItem, "Update the external system.");
+    });
+
+    expect(result.current.submittedTeamWorkItems[0]).toMatchObject({
+      state: "degraded",
+      nextAction: "Ask Soma to verify the external outcome before considering a retry.",
+      recoveryOptions: [
+        "Verify the external system outcome through Soma; do not retry while the result is unknown.",
+      ],
+    });
+  });
+
+  it("posts structured external outcome verification without requesting a retry", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: { status: "verified" } }),
+    });
+
+    const { result } = renderHook(() => useTeamWorkActionHandler(vi.fn()));
+    await act(async () => {
+      await result.current.handleExternalOutcomeVerification(sourceItem, {
+        result: "not_committed",
+        summary: "The account still shows the previous email address.",
+        evidenceRefs: ["receipt-42", "https://example.test/audit/42"],
+      });
+    });
+
+    const [, request] = mockFetch.mock.calls[0];
+    expect(JSON.parse(String(request?.body))).toMatchObject({
+      action: "verify_external_outcome",
+      summary: "The account still shows the previous email address.",
+      payload: {
+        result: "not_committed",
+        evidence_refs: ["receipt-42", "https://example.test/audit/42"],
+      },
+    });
+    expect(result.current.activeWorkActionNotice).toBe(
+      "Verification recorded: the external change was not observed. No retry was requested.",
+    );
+    expect(result.current.activeWorkRefreshVersion).toBe(1);
+  });
 });

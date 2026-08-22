@@ -59,6 +59,7 @@ func (a *Agent) subscribeInterjection() {
 		return
 	}
 	a.interjectionSub = sub
+	a.trackSubscription(sub)
 }
 
 func (a *Agent) SetTeamTopology(inputs, deliveries []string) {
@@ -69,11 +70,19 @@ func (a *Agent) SetTeamTopology(inputs, deliveries []string) {
 // Start brings the Agent online to listen to its team's internal chatter.
 func (a *Agent) Start() {
 	subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)
-	a.nc.Subscribe(subject, a.handleTrigger)
+	if subscription, err := a.nc.Subscribe(subject, a.handleTrigger); err != nil {
+		log.Printf("Agent [%s] team trigger subscribe failed: %v", a.Manifest.ID, err)
+	} else {
+		a.trackSubscription(subscription)
+	}
 	log.Printf("Agent [%s] (%s) joined Team [%s]", a.Manifest.ID, a.Manifest.Role, a.TeamID)
 
 	personalSubject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, a.Manifest.ID)
-	a.nc.Subscribe(personalSubject, a.handleDirectRequest)
+	if subscription, err := a.nc.Subscribe(personalSubject, a.handleDirectRequest); err != nil {
+		log.Printf("Agent [%s] direct request subscribe failed: %v", a.Manifest.ID, err)
+	} else {
+		a.trackSubscription(subscription)
+	}
 	log.Printf("Agent [%s] listening for direct requests on [%s]", a.Manifest.ID, personalSubject)
 
 	a.subscribeInterjection()
@@ -111,12 +120,25 @@ func (a *Agent) StartHeartbeat() {
 	}
 }
 
-func (a *Agent) Stop() { a.cancel() }
+func (a *Agent) Stop() {
+	a.cancel()
+	a.lifecycleMu.Lock()
+	subscriptions := append([]*nats.Subscription(nil), a.subscriptions...)
+	a.subscriptions = nil
+	a.interjectionSub = nil
+	a.lifecycleMu.Unlock()
+	for _, subscription := range subscriptions {
+		if subscription != nil {
+			_ = subscription.Unsubscribe()
+		}
+	}
+}
 
-func (a *Agent) buildToolsBlock() string {
+func (a *Agent) buildToolsBlock(input string) string {
 	if len(a.Manifest.Tools) == 0 || len(a.toolDescs) == 0 {
 		return ""
 	}
+	readOnlyRoute := isDirectAnswerRoute(input)
 	var sb strings.Builder
 	sb.WriteString("\n\n## YOUR TOOLS (you MUST use these — never describe them to the user)\n")
 	sb.WriteString("To call a tool, output ONLY this JSON (no markdown fences around it):\n")
@@ -138,6 +160,9 @@ func (a *Agent) buildToolsBlock() string {
 			}
 		}
 		if strings.HasPrefix(toolName, "toolset:") || seen[displayName] {
+			continue
+		}
+		if readOnlyRoute && blocksProposalPlanningTool(displayName) {
 			continue
 		}
 		if desc, ok := a.toolDescs[displayName]; ok {

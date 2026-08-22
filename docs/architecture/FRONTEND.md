@@ -1,10 +1,10 @@
-# Mycelis Cortex - Frontend Specification
+# Mycelis Frontend Implementation Contract
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Load this doc when: working on Next.js routes, React components, Zustand state, UI/API integration, or frontend delivery gates.
 >
 > Related:
-> [Overview](OVERVIEW.md) |
+> [Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md) |
 > [Backend](BACKEND.md) |
 > [Operations](OPERATIONS.md) |
 > [Mycelis Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md)
@@ -63,7 +63,7 @@ Current `page.tsx` route count: `28`.
 | `/login` | `app/login/page.tsx` | Authentication entry |
 | `/access-denied` | `app/(app)/access-denied/page.tsx` | Access recovery guidance |
 | `/dashboard` | `app/(app)/dashboard/page.tsx` | Soma threaded workspace |
-| `/organizations/[id]` | `app/(app)/organizations/[id]/page.tsx` | Soma-primary AI Organization workspace |
+| `/organizations/[id]` | `app/(app)/organizations/[id]/page.tsx` | Compatibility organization context using the Soma operating surface |
 | `/automations` | `app/(app)/automations/page.tsx` | Automation hub + tabs |
 | `/resources` | `app/(app)/resources/page.tsx` | Resources (output files, capabilities, exchange, context, AI engines, roles) |
 | `/groups` | `app/(app)/groups/page.tsx` | Collaboration lanes, workflow logs, retained outputs |
@@ -106,22 +106,18 @@ Docs and proxy support routes live outside the `page.tsx` count: `/docs-api`, `/
 
 ## 4. GUI Surface Inventory
 
-Component files under `interface/components`: `96` (`.tsx` and `.ts`) across `27` folders.
+Component ownership is organized by behavior rather than a static file-count snapshot:
 
-| Folder | Count | Primary responsibility |
-| --- | ---: | --- |
-| `dashboard/` | 10 | Workspace mission-control chat, proposal/inspector, and shared support surfaces |
-| `workspace/` | 10 | Wiring/editor and launch workflow surfaces |
-| `settings/` | 9 | Providers, MCP, profiles, users/groups |
-| `automations/` | 6 | Hub, approvals tab, trigger rules, instantiation wizard |
-| `shell/` | 5 | Layout and navigation shell |
-| `wiring/` | 3 | Graph/wiring editor node-edge surfaces |
-| `runs/` | 4 | Run timeline and conversation components |
-| `teams/` | 4 | Team and group management |
-| `memory/` | 4 | Hot/warm/cold memory panes |
-| `catalogue/` | 3 | Capability cards/editor |
-| `matrix/` | 3 | Cognitive matrix views |
-| Other folders | 35 | Shared, charts, missions, stream, system, command, organization, and utility surfaces |
+| Folder family | Primary responsibility |
+| --- | --- |
+| `soma/`, `dashboard/`, `workspace/` | Soma conversation, compact governance, Outcome summaries, deliverables, and workspace overlays |
+| `teams/`, `organizations/` | Team/group execution review and compatibility organization contexts |
+| `resources/`, `catalogue/`, `settings/` | Output access, capabilities, providers, identity, scopes, and configuration |
+| `memory/`, `activity/`, `runs/`, `system/` | Admin inspection, continuity, receipts, events, and deployment health |
+| `automations/`, `approvals/`, `wiring/` | Scheduled/event-driven work, approval queues, and advanced workflow structure |
+| `shell/`, `layout/`, `shared/`, `ui/` | Navigation, responsive composition, accessibility, and reusable primitives |
+
+Do not duplicate live component counts in docs. Use the repository tree for inventory and keep this contract focused on ownership boundaries.
 
 ---
 
@@ -212,21 +208,16 @@ All shared app state is composed through `interface/store/useCortexStore.ts`, wi
 
 Rules:
 1. execution-facing flows must classify terminal states as `answer`, `proposal`, `execution_result`, or `blocker`
-2. Workspace defaults to Soma (`/api/v1/chat`) and only routes to direct council endpoint when user targeting demands it
+2. Workspace defaults to Soma (`/api/v1/chat`); direct specialist endpoints are limited to explicit admin or compatibility contexts
 3. stream and service health must feed shared status/failure models used by banner, drawer, and chat blockers
 4. new UI flows must map API effects and failure affordances in `docs/architecture-library/MYCELIS_CANONICAL_PRD.md`
 5. shared store helpers that carry graph/proposal/persistence behavior live in focused modules such as `interface/store/cortexStoreUtils.ts` and require direct test coverage (`interface/__tests__/store/cortexStoreUtils.test.ts`)
 
 ---
 
-## 8. Current Gaps And Risks
+## 8. Delivery State Ownership
 
-| Area | Current state | Delivery status |
-| --- | --- | --- |
-| MVP browser gate scope | default Playwright coverage is now trimmed to Team Lead-first MVP routes/tabs; legacy V7 operational and raw telemetry specs remain out of the default RC gate | `COMPLETE` audit alignment |
-| Max-lines gate pressure | `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, and the largest remaining store slices (`cortexStoreMissionChatSlice.ts`, `cortexStoreMissionDraftSlice.ts`, `cortexStoreResourceCatalogSlice.ts`) still carry the main frontend cap pressure | `REQUIRED` Slice 4 |
-| Created-team communications inspector | architecture contract exists but dedicated team workspace/communications tabs are not fully delivered | `BLOCKED` Slice 7 |
-| Docs and runs route browser depth | route-level smoke coverage now exists, but failure/recovery depth (error branches + interjection/terminal transitions) still needs expansion | `NEXT` |
+Current priorities, open risks, and acceptance status live only in `.state/V8_DEV_STATE.md`. This contract defines stable frontend ownership and proof expectations; it must not grow a parallel delivery scoreboard or copy transient file counts.
 
 ---
 
@@ -244,48 +235,17 @@ Use focused component and browser proof for the touched surface when the global 
 
 ## 10. Development Strategy (Frontend-Facing)
 
-This strategy aligns GUI work with active architecture slices and avoids speculative rewrites.
+The active order and status live in `.state/V8_DEV_STATE.md`; this document defines stable frontend boundaries rather than a second scoreboard. Current work should extend the Workspace/Outcome operating model, keep machine detail behind deliberate inspection, and avoid speculative surface replacement.
 
-### 10.1 Stream A - Slice 2 UX stabilization (`ACTIVE`)
+Frontend slices should:
+- preserve Soma as the default conversational workspace and Outcomes as durable user-owned work
+- use progressive disclosure for proof, recovery, capabilities, and runtime detail
+- retain one primary scroll owner with bounded local scrolling only for content such as tables, code, logs, or record lists
+- preserve keyboard, URL, refresh, Back, and cross-device continuity
+- keep API usage aligned with backend ownership and normalized terminal states
+- extract oversized logic only in bounded, behavior-preserving slices
 
-Scope:
-- simplify default Workspace density while preserving diagnostics via progressive disclosure
-- lock Soma direct-first chat behavior for routine prompts
-- align reroute/recovery copy and interactions across `MissionControlChat`, `CouncilCallErrorCard`, and `DegradedModeBanner`
-
-Proof targets:
-- focused Vitest for Team Lead action, blocker, and degraded-state components
-- Playwright MVP route/tab coverage (`navigation`, `layout`, `missions`, `automations`, `settings`, `teams`, `proposals`, `accessibility`)
-
-### 10.2 Stream B - Contract-safe store/API cleanup (`ACTIVE`)
-
-Scope:
-- split hot-path store logic into bounded modules without changing API contracts
-- keep MCP tool registry surfaces aligned to the curated-library install contract and disabled raw-admin boundary
-- keep API endpoint usage aligned with backend route ownership
-
-Proof targets: focused Vitest for touched store/API slices; `uv run inv interface.test` and `cd interface && npx vitest run --reporter=dot` when the global harness is healthy; `uv run inv interface.build`.
-
-### 10.3 Stream C - Slice 4 complexity reduction (`REQUIRED`)
-
-Scope:
-- extract high-risk logic from oversized files while preserving existing behavior and telemetry semantics
-- prioritize no-regression extraction over feature addition
-
-Proof targets:
-- `uv run inv quality.max-lines --limit 300`
-- `uv run inv ci.baseline`
-
-### 10.4 Stream D - Slice 7 team workspace contract (`BLOCKED -> NEXT once prerequisites land`)
-
-Scope once unblocked:
-- deliver created-team workspace tabs and communication filters
-- add explicit operator controls for interject/reroute/pause-resume where valid
-- map team command + `signal.status`/`signal.result` outputs to inspectable UI state
-
-Proof targets:
-- route-level Vitest coverage for communications inspector
-- integration and product-flow tests for team command/result lifecycle
+Proof targets are focused Vitest for changed states, TypeScript and production build gates, `uv run inv quality.max-lines --limit 330`, and headed Playwright for every changed operator journey. Promotion still follows the feature, integrated `dev`, and release-candidate gates in `docs/TESTING.md`.
 
 ---
 

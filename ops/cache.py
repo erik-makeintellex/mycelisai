@@ -98,7 +98,9 @@ def _existing_usage_path(path: Path) -> Path:
 
 
 def _disk_targets(paths: tuple[Path, ...] | list[Path] | None = None) -> list[tuple[str, Path]]:
-    requested = paths or [PROJECT_CACHE_ROOT, ROOT_DIR]
+    # Heavy work can exhaust the user/system volume even when the repo and its
+    # managed caches live elsewhere, so default guards cover both locations.
+    requested = paths or [PROJECT_CACHE_ROOT, ROOT_DIR, Path.home()]
     deduped: dict[int, tuple[str, Path]] = {}
     for raw_path in requested:
         usage_path = _existing_usage_path(Path(raw_path))
@@ -129,9 +131,9 @@ def ensure_disk_headroom(
         if free_gb < float(min_free_gb):
             failures.append(f"{label} has only {free_gb:.1f} GiB free")
 
-    print("  Note: this guard covers the repo/cache volume, not Docker daemon image-layer storage.")
+    print("  Note: this guard covers repo/cache and user/system volumes; Docker storage remains separately managed.")
     if failures:
-        print("  Suggested recovery order: uv run inv lifecycle.down -> uv run inv cache.status -> uv run inv cache.clean")
+        print("  Suggested recovery: uv run inv cache.status -> uv run inv cache.clean -> docker system df")
         raise SystemExit(
             f"DISK HEADROOM CHECK FAILED: need at least {min_free_gb} GiB free.\n- "
             + "\n- ".join(failures)
@@ -223,7 +225,7 @@ def status(c):
             f"  - {label}: free {_format_size(usage.free)} / total {_format_size(usage.total)}"
             f" ({free_gb:.1f} GiB free)"
         )
-    print("  Note: Docker daemon / WSL image-layer storage is tracked separately from repo-managed cache usage.")
+    print("  Note: Docker image layers and unrelated user data are reported or cleaned through their owning tools.")
 
 
 @task(help={"min_free_gb": "Minimum free disk headroom in GiB required before heavy build/test work (default: 8)."})

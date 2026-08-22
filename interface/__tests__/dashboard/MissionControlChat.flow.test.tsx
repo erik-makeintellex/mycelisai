@@ -62,7 +62,7 @@ describe('MissionControlChat flow contracts', () => {
 
         await waitFor(() => {
             const calls = mockFetch.mock.calls;
-            const chatCall = calls.find((call: any[]) => requestUrl(call[0]).includes('/api/v1/chat'));
+            const chatCall = calls.find((call) => requestUrl(call[0]).includes('/api/v1/chat'));
             expect(chatCall).toBeDefined();
         });
     });
@@ -113,6 +113,76 @@ describe('MissionControlChat flow contracts', () => {
         });
     });
 
+    it('confirms pending work when the operator replies naturally', async () => {
+        const proposal = {
+            intent: 'create-output',
+            teams: 1,
+            agents: 1,
+            tools: ['delegate'],
+            risk_level: 'medium',
+            confirm_token: 'confirm-123',
+            intent_proof_id: 'proof-123',
+            approval_required: true,
+        };
+        const confirmProposal = vi.fn().mockResolvedValue({ ok: true, runId: 'run-123' });
+
+        render(<MissionControlChat simpleMode />);
+        await settleMissionControlChat();
+        act(() => {
+            useCortexStore.setState({
+                missionChat: [{ role: 'council', content: 'I can start that.', proposal, proposal_status: 'active' }],
+                pendingProposal: proposal,
+                activeConfirmToken: proposal.confirm_token,
+                confirmProposal,
+            });
+        });
+
+        const input = screen.getByRole('textbox');
+        fireEvent.change(input, { target: { value: 'approve' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => expect(confirmProposal).toHaveBeenCalledWith(proposal, 'approve'));
+        expect(mockFetch.mock.calls.some((call) => requestUrl(call[0]).includes('/api/v1/chat'))).toBe(false);
+    });
+
+    it('keeps requested proposal changes in the Soma conversation', async () => {
+        const proposal = {
+            intent: 'create-output',
+            teams: 1,
+            agents: 1,
+            tools: ['delegate'],
+            risk_level: 'medium',
+            confirm_token: 'confirm-123',
+            intent_proof_id: 'proof-123',
+            approval_required: true,
+        };
+        const confirmProposal = vi.fn().mockResolvedValue({ ok: true, runId: 'run-123' });
+        mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+            if (requestUrl(input).includes('/api/v1/chat')) return okJson(CTS_CHAT_RESPONSE);
+            return okJson({ ok: true, data: COUNCIL_MEMBERS });
+        });
+
+        render(<MissionControlChat simpleMode />);
+        await settleMissionControlChat();
+        act(() => {
+            useCortexStore.setState({
+                missionChat: [{ role: 'council', content: 'I can start that.', proposal, proposal_status: 'active' }],
+                pendingProposal: proposal,
+                activeConfirmToken: proposal.confirm_token,
+                confirmProposal,
+            });
+        });
+
+        const input = screen.getByRole('textbox');
+        fireEvent.change(input, { target: { value: 'Use a smaller team and keep the same output.' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => {
+            expect(mockFetch.mock.calls.some((call) => requestUrl(call[0]).includes('/api/v1/chat'))).toBe(true);
+        });
+        expect(confirmProposal).not.toHaveBeenCalled();
+    });
+
     it('submits typed continuation context when replying to delivered output', async () => {
         mockFetch.mockImplementation(async () => okJson({
             ok: true,
@@ -140,7 +210,7 @@ describe('MissionControlChat flow contracts', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         await waitFor(() => {
-            const chatCall = mockFetch.mock.calls.find((call: any[]) => requestUrl(call[0]).includes('/api/v1/chat'));
+            const chatCall = mockFetch.mock.calls.find((call) => requestUrl(call[0]).includes('/api/v1/chat'));
             expect(chatCall).toBeDefined();
             const body = JSON.parse(String(chatCall?.[1]?.body ?? '{}'));
             expect(body.continuation_context).toEqual({
@@ -169,7 +239,7 @@ describe('MissionControlChat flow contracts', () => {
         fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
 
         await waitFor(() => {
-            const chatCall = mockFetch.mock.calls.find((call: any[]) => requestUrl(call[0]).includes('/api/v1/chat'));
+            const chatCall = mockFetch.mock.calls.find((call) => requestUrl(call[0]).includes('/api/v1/chat'));
             const body = JSON.parse(String(chatCall?.[1]?.body ?? '{}'));
             expect(body).not.toHaveProperty('continuation_context');
         });
@@ -209,7 +279,7 @@ describe('MissionControlChat flow contracts', () => {
 
         await waitFor(() => {
             const calls = mockFetch.mock.calls;
-            const chatCall = calls.find((call: any[]) => requestUrl(call[0]).includes('/api/v1/council/council-architect/chat'));
+            const chatCall = calls.find((call) => requestUrl(call[0]).includes('/api/v1/council/council-architect/chat'));
             expect(chatCall).toBeDefined();
         });
     });

@@ -10,6 +10,7 @@ export function durableInteractions({
   runId,
   needsOperator = false,
   executionShape,
+  degradationState,
 }: {
   teamId: string;
   workItemId: string;
@@ -17,12 +18,14 @@ export function durableInteractions({
   runId?: string | null;
   needsOperator?: boolean;
   executionShape?: string | null;
+  degradationState?: string | null;
 }): TeamInteraction[] {
   const inspectHref = runId ? `/runs/${encodeURIComponent(runId)}` : "/teams?view=work";
   const inspectLabel = runId ? "Open run" : "Open details";
   const isActive = state === "running" || state === "reviewing";
   const canSteer = state !== "archived";
-  const canRecover = state === "degraded" || state === "needs_operator";
+  const needsExternalVerification = degradationState === "external_mutation_outcome_unknown";
+  const canRecover = !needsExternalVerification && (state === "degraded" || state === "needs_operator");
   const isTeamSetup = executionShape === "create_team";
   const canStart =
     !isTeamSetup && (state === "briefed" || state === "queued" || state === "new");
@@ -31,11 +34,23 @@ export function durableInteractions({
     { action: "inspect", label: inspectLabel, href: inspectHref, audited: true },
     {
       action: "steer",
-      label: needsOperator ? "Reply to team" : "Ask for changes",
-      disabled: !canSteer,
-      disabledReason: canSteer ? undefined : "Archived work cannot be steered.",
+      label: needsOperator
+        ? "Reply to team"
+        : "Ask for changes",
+      disabled: !canSteer || needsExternalVerification,
+      disabledReason: needsExternalVerification
+        ? "Record the observed external result in verification."
+        : canSteer
+          ? undefined
+          : "Archived work cannot be steered.",
       audited: true,
     },
+    ...(needsExternalVerification ? [{
+      action: "verify_external_outcome" as const,
+      label: "Verify external result",
+      disabled: false,
+      audited: true,
+    }] : []),
     {
       action: "start_work",
       label: "Start task",
@@ -59,11 +74,13 @@ export function durableInteractions({
     },
     {
       action: "recover",
-      label: "Retry recovery",
+      label: needsExternalVerification ? "Retry unavailable" : "Retry recovery",
       disabled: !canRecover,
-      disabledReason: canRecover
-        ? undefined
-        : "Recovery is available for degraded or operator-needed work.",
+      disabledReason: needsExternalVerification
+        ? "Ask Soma to verify the external outcome before considering a retry."
+        : canRecover
+          ? undefined
+          : "Recovery is available for degraded or operator-needed work.",
       audited: true,
     },
     {

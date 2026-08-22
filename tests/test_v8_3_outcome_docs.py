@@ -26,8 +26,9 @@ def test_canonical_prd_tracks_trusted_outcome_recovery_ownership_gates():
         "MVP is complete when one canonical workflow feels excellent",
     ]
     required_state = [
-        "deterministic P0.8 full journey plus Outcome Ownership/default recovery ownership proof",
-        "non-empty run-event readback green",
+        "Headed natural delivery and Trusted Outcome journeys prove asynchronous team execution, complete retained browser packages",
+        "Direct run readback includes non-empty run-event evidence",
+        "Deterministic QA ownership",
         "MYCELIS_CANONICAL_PRD.md",
     ]
 

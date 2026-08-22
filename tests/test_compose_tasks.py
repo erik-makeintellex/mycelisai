@@ -351,6 +351,7 @@ def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):
     waits: list[tuple[str, int | str]] = []
 
     monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {})
     monkeypatch.setattr(
         compose,
         "_run_compose",

@@ -129,7 +129,7 @@ export const buildGroupBuckets = (groups: Group[]): GroupBucket[] => [
 
 export type GroupKindFilter = "all" | "standing" | "temporary";
 
-export type GroupStateFilter = "all" | "running" | "complete";
+export type GroupStateFilter = "current" | "completed" | "archived";
 
 export type GroupRecordFilters = {
   query: string;
@@ -167,7 +167,7 @@ export const emptyGroupDraft: GroupDraft = {
 export const defaultGroupRecordFilters: GroupRecordFilters = {
   query: "",
   kind: "all",
-  state: "all",
+  state: "current",
   retentionDays: 30,
 };
 

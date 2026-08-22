@@ -24,3 +24,18 @@ func (s *Soma) SetMCPToolDescs(descs map[string]string) {
 func (s *Soma) SetProviderPolicy(policy ProviderPolicy) {
 	s.providerPolicy = policy.Clone()
 }
+
+// SetDurableTeamLoader enables restoration of nonterminal runtime-created teams.
+func (s *Soma) SetDurableTeamLoader(loader DurableTeamLoader) {
+	s.durableTeamLoader = loader
+}
+
+// SetDurableTeamStore enables exact manifest persistence as well as startup restoration.
+func (s *Soma) SetDurableTeamStore(store DurableTeamStore) {
+	s.durableTeamLoader = store
+	s.durableTeamStore = store
+}
+
+func (s *Soma) SetCommandReceiptStore(store CommandReceiptStore) {
+	s.commandReceipts = store
+}

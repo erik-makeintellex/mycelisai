@@ -148,6 +148,22 @@ func buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, ru
 			Action: "chat",
 			Href:   "/api/v1/runs/" + runID,
 		}
+	} else if toolResultExists(results, "store_config_document") {
+		result, _ := firstConfigDocumentResult(results, "store_config_document")
+		understandingSummary = configDocumentResultSummary(result)
+		executionStateSummary = understandingSummary
+		nextStep = &protocol.ExecutionNextStep{
+			Label:  "Ask Soma to use this Outcome Template.",
+			Action: "chat",
+		}
+	} else if toolResultExists(results, "activate_config_document") {
+		result, _ := firstConfigDocumentResult(results, "activate_config_document")
+		understandingSummary = configDocumentResultSummary(result)
+		executionStateSummary = understandingSummary
+		nextStep = &protocol.ExecutionNextStep{
+			Label:  "Tell Soma what outcome you want to create with this template.",
+			Action: "chat",
+		}
 	}
 
 	return &protocol.ExecutionSummary{

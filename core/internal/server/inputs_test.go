@@ -72,3 +72,31 @@ func TestHandleInputSourcesRejectsRawSecret(t *testing.T) {
 		t.Fatalf("status = %d body = %s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestHandleInputSourcesRejectsDuplicateIngressSubject(t *testing.T) {
+	srv := &AdminServer{Inputs: inputs.NewService()}
+	first := []byte(`{
+		"id":"service-a",
+		"name":"Service A",
+		"allowed_ingress_subject":"swarm.global.input.shared-events"
+	}`)
+	second := []byte(`{
+		"id":"service-b",
+		"name":"Service B",
+		"allowed_ingress_subject":"swarm.global.input.shared-events"
+	}`)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/input-sources", bytes.NewReader(first))
+	rec := httptest.NewRecorder()
+	srv.HandleInputSources(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("first status = %d body = %s", rec.Code, rec.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/input-sources", bytes.NewReader(second))
+	rec = httptest.NewRecorder()
+	srv.HandleInputSources(rec, req)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("duplicate status = %d body = %s", rec.Code, rec.Body.String())
+	}
+}

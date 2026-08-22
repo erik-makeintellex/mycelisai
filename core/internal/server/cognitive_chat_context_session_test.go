@@ -127,6 +127,8 @@ func TestBuildChatWorkspaceContextIncludesLatestTeamOutputs(t *testing.T) {
 			[]byte(`[]`),
 			"Soma",
 			string(protocol.TeamExecutionShapeDeliverable),
+			"",
+			[]byte(`null`),
 			[]byte(`["comic page"]`),
 			[]byte(`["run proof"]`),
 			[]byte(`[]`),

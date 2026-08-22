@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import type { MCPServerWithTools } from "@/store/useCortexStore";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import WorkspaceMCPRecoveryCard from "./WorkspaceMCPRecoveryCard";
+import { isDeliveredArtifact } from "@/components/teams/groupOutputClassification";
 import {
     artifactBrowsePath,
     artifactFilePath,
@@ -133,15 +134,17 @@ async function loadGroupOutputs(group: GroupRecord): Promise<OutputGroup | null>
         });
         if (!outputsRes.ok) return null;
         const outputs = await responseData<Artifact[]>(outputsRes);
-        if (!Array.isArray(outputs) || outputs.length === 0) return null;
-        const firstOutput = outputs[0];
+        const deliveredOutputs = Array.isArray(outputs) ? outputs.filter(isDeliveredArtifact) : [];
+        if (deliveredOutputs.length === 0) return null;
+        const firstOutput = deliveredOutputs[0];
         const hasReadableOutput = artifactBrowsePath(firstOutput) || artifactFilePath(firstOutput);
         if (!hasReadableOutput) return null;
         return {
             group_id: group.group_id,
             name: group.name || group.group_id,
             workspace_folder: group.workspace_folder,
-            outputs,
+            health: "completed",
+            outputs: deliveredOutputs,
         };
     } catch {
         return null;

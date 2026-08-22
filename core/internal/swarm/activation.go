@@ -129,6 +129,7 @@ func (s *Soma) ActivateBlueprint(bp *protocol.MissionBlueprint, sensorConfigs ma
 			}
 
 			team := NewTeam(m, s.nc, s.brain, s.toolExecutor)
+			team.commandReceipts = s.commandReceipts
 			if s.internalTools != nil {
 				team.SetToolDescriptions(s.internalTools.ListDescriptions())
 			}

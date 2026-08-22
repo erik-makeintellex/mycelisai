@@ -1,7 +1,14 @@
 import pytest
 
-from ops import ci
+from ops import ci, ci_pipeline
 from tests.ci_task_support import FakeContext, FakeResult
+
+CORE_TEST_COMMAND = f'go -C "{ci.CORE_DIR}" test ./... -count=1 -p 1'
+CORE_VET_COMMAND = f'go -C "{ci.CORE_DIR}" vet ./...'
+
+
+def test_console_safe_escapes_characters_missing_from_host_encoding():
+    assert ci_pipeline._console_safe("failure: \ufffd", "cp1252") == "failure: \\ufffd"
 
 
 def test_baseline_runs_expected_commands_without_e2e(monkeypatch):
@@ -19,13 +26,13 @@ def test_baseline_runs_expected_commands_without_e2e(monkeypatch):
 
     ctx = FakeContext(
         {
-            "go test ./... -count=1": FakeResult(),
+            CORE_TEST_COMMAND: FakeResult(),
         }
     )
 
     ci.baseline.body(ctx, e2e=False)
 
-    assert "go test ./... -count=1" in ctx.commands
+    assert CORE_TEST_COMMAND in ctx.commands
     assert "npx playwright test --reporter=dot" not in ctx.commands
     assert build_calls == ["build"]
     assert test_calls == ["test"]
@@ -49,13 +56,13 @@ def test_baseline_runs_playwright_when_e2e_enabled(monkeypatch):
 
     ctx = FakeContext(
         {
-            "go test ./... -count=1": FakeResult(),
+            CORE_TEST_COMMAND: FakeResult(),
         }
     )
 
     ci.baseline.body(ctx, e2e=True)
 
-    assert e2e_calls == [{"workers": "1", "server_mode": "start"}]
+    assert e2e_calls == [{"project": "chromium", "workers": "1", "server_mode": "start"}]
     assert build_calls == ["build", "build"]
     assert test_calls == ["test"]
     assert typecheck_calls == ["typecheck"]
@@ -78,7 +85,7 @@ def test_baseline_skips_playwright_when_prior_steps_failed(monkeypatch):
 
     ctx = FakeContext(
         {
-            "go test ./... -count=1": FakeResult(exited=1, stderr="core tests failed"),
+            CORE_TEST_COMMAND: FakeResult(exited=1, stderr="core tests failed"),
         }
     )
 
@@ -108,13 +115,13 @@ def test_baseline_runs_playwright_by_default(monkeypatch):
 
     ctx = FakeContext(
         {
-            "go test ./... -count=1": FakeResult(),
+            CORE_TEST_COMMAND: FakeResult(),
         }
     )
 
     ci.baseline.body(ctx)
 
-    assert e2e_calls == [{"workers": "1", "server_mode": "start"}]
+    assert e2e_calls == [{"project": "chromium", "workers": "1", "server_mode": "start"}]
     assert build_calls == ["build", "build"]
     assert test_calls == ["test"]
     assert typecheck_calls == ["typecheck"]
@@ -139,11 +146,11 @@ def test_lint_reuses_interface_lint_task(monkeypatch):
 
     ctx = FakeContext(
         {
-            "go vet ./...": FakeResult(),
+            CORE_VET_COMMAND: FakeResult(),
         }
     )
 
     ci.lint.body(ctx)
 
-    assert "go vet ./..." in ctx.commands
+    assert CORE_VET_COMMAND in ctx.commands
     assert lint_calls == ["lint"]

@@ -16,6 +16,7 @@ export type TeamWorkItemState =
 export type TeamInteractionAction =
     | 'inspect'
     | 'steer'
+    | 'verify_external_outcome'
     | 'start_work'
     | 'pause'
     | 'resume'
@@ -81,6 +82,7 @@ export interface TeamWorkItem {
     proofRefs?: string[];
     auditRefs?: string[];
     needsOperator?: boolean;
+    degradationState?: string;
     nextAction?: string;
     recoveryOptions?: string[];
     targetRef?: TargetRef;
@@ -95,5 +97,7 @@ export interface TeamWorkItem {
         expectedOutputs?: string[];
         expectedProof?: string[];
         executionShape?: string[];
+		executionMode?: string[];
+		lifecycleControls?: string[];
     };
 }

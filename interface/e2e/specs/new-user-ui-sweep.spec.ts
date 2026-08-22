@@ -1,4 +1,4 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Browser, type Page, type TestInfo } from "@playwright/test";
 
 type RouteCheck = {
   path: string;
@@ -70,15 +70,23 @@ const adminRoutes: RouteCheck[] = [
 function installErrorGuards(page: Page) {
   const consoleIssues: string[] = [];
   const pageErrors: string[] = [];
+  const networkIssues: string[] = [];
   page.on("console", (message) => {
     const text = message.text();
-    if (message.type() === "error") consoleIssues.push(text);
+    if (message.type() === "error" && !/^Failed to load resource:/i.test(text)) {
+      consoleIssues.push(text);
+    }
     if (message.type() === "warning" && /same key|unique key|hydration|validateDOMNesting/i.test(text)) {
       consoleIssues.push(text);
     }
   });
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  return { consoleIssues, pageErrors };
+  page.on("response", (response) => {
+    if (response.status() >= 500) {
+      networkIssues.push(`${response.status()} ${response.request().method()} ${response.url()}`);
+    }
+  });
+  return { consoleIssues, networkIssues, pageErrors };
 }
 
 async function collectLayoutMetrics(page: Page) {
@@ -111,18 +119,62 @@ async function expectRoute(page: Page, route: RouteCheck, testInfo: TestInfo) {
   await page.goto(route.path, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: route.heading }).first()).toBeVisible({ timeout: 20_000 });
   for (const affordance of route.affordances) {
-    await expect(page.getByText(affordance).first()).toBeVisible({ timeout: 15_000 });
+    await expect
+      .poll(async () => {
+        const matches = await page.getByText(affordance).all();
+        return (await Promise.all(matches.map((match) => match.isVisible()))).some(Boolean);
+      }, { timeout: 15_000 })
+      .toBe(true);
   }
   const metrics = await collectLayoutMetrics(page);
   expect(metrics.widthOverflow, `${route.name} should not create horizontal document overflow`).toBeLessThanOrEqual(4);
   await attachReviewArtifacts(page, testInfo, route.name);
 }
 
+async function signInFromStaleWorkUrl(browser: Browser, testInfo: TestInfo, viewport: { width: number; height: number }) {
+  const context = await browser.newContext({
+    baseURL: String(testInfo.project.use.baseURL),
+    storageState: { cookies: [], origins: [] },
+    viewport,
+  });
+  const page = await context.newPage();
+  await page.goto("/groups", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/);
+  await page.getByLabel(/Local admin username/i).fill(process.env.MYCELIS_LOCAL_ADMIN_USERNAME || "admin");
+  await page
+    .getByLabel(/Password or local API key/i)
+    .fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || "playwright-admin");
+  await page.getByRole("button", { name: /Sign in as local admin/i }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole("heading", { name: /Talk to Soma/i })).toBeVisible();
+  return { context, page };
+}
+
+async function expectNoDocumentOverflow(page: Page, label: string) {
+  await expect.poll(
+    () => page.evaluate(() => {
+      const root = document.documentElement;
+      const body = document.body;
+      if (!root || !body) return Number.POSITIVE_INFINITY;
+      return Math.max(root.scrollWidth, body.scrollWidth) - window.innerWidth;
+    }),
+    { message: `${label} should not create horizontal document overflow` },
+  ).toBeLessThanOrEqual(4);
+  await expect(page.locator("nextjs-portal")).not.toBeVisible();
+}
+
+async function openNav(page: Page, testId: string, path: RegExp, heading: RegExp | string) {
+  await page.getByTestId(testId).click();
+  await expect(page).toHaveURL(path);
+  await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible({ timeout: 20_000 });
+  await expectNoDocumentOverflow(page, testId);
+}
+
 test.describe("New user UI sweep", () => {
   test.skip(({ browserName }) => browserName !== "chromium", "The broad UX sweep is stabilized in Chromium.");
 
   test("primary routes present obvious next actions without page errors", async ({ page }, testInfo) => {
-    const { consoleIssues, pageErrors } = installErrorGuards(page);
+    const { consoleIssues, networkIssues, pageErrors } = installErrorGuards(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "false"));
 
@@ -132,10 +184,11 @@ test.describe("New user UI sweep", () => {
 
     expect(pageErrors).toEqual([]);
     expect(consoleIssues).toEqual([]);
+    expect(networkIssues).toEqual([]);
   });
 
   test("admin routes are understandable from the default gate and after enabling Admin tools", async ({ page }, testInfo) => {
-    const { consoleIssues, pageErrors } = installErrorGuards(page);
+    const { consoleIssues, networkIssues, pageErrors } = installErrorGuards(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "false"));
 
@@ -154,5 +207,50 @@ test.describe("New user UI sweep", () => {
 
     expect(pageErrors).toEqual([]);
     expect(consoleIssues).toEqual([]);
+    expect(networkIssues).toEqual([]);
   });
+
+  for (const viewport of [
+    { name: "desktop", width: 1366, height: 768 },
+    { name: "compact", width: 390, height: 844 },
+  ]) {
+    test(`authenticated ${viewport.name} journey stays understandable through visible navigation`, async ({ browser }, testInfo) => {
+      testInfo.setTimeout(90_000);
+      const { context, page } = await signInFromStaleWorkUrl(browser, testInfo, viewport);
+      const { consoleIssues, networkIssues, pageErrors } = installErrorGuards(page);
+
+      await expectNoDocumentOverflow(page, `${viewport.name} Soma`);
+      await expect(page.getByPlaceholder(/Tell Soma what you want/i)).toBeVisible();
+
+      await openNav(page, "nav-groups", /\/groups$/, /Manage focused collaboration lanes|Groups/i);
+      await page.getByRole("link", { name: "Create group", exact: true }).click();
+      await page.waitForTimeout(500);
+      expect(pageErrors, `${viewport.name} Groups page errors`).toEqual([]);
+      expect(consoleIssues, `${viewport.name} Groups console errors`).toEqual([]);
+      expect(networkIssues, `${viewport.name} Groups network errors`).toEqual([]);
+      await expect(page.getByLabel("Name")).toBeVisible();
+      await expect(page.getByLabel("Goal Statement")).toBeVisible();
+      await expectNoDocumentOverflow(page, `${viewport.name} Groups create`);
+
+      await openNav(page, "nav-resources", /\/resources$/, "Resources");
+      for (const resourceName of ["Capabilities", "Exchange", "Output Files"]) {
+        await page.getByRole("tab", { name: new RegExp(resourceName, "i") }).first().click();
+        await expectNoDocumentOverflow(page, `${viewport.name} Resources ${resourceName}`);
+      }
+
+      await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await openNav(page, "nav-memory", /\/memory$/, /Memory/i);
+      await openNav(page, "nav-docs", /\/docs(?:\?|$)/, /Docs|Documentation|Help/i);
+      await openNav(page, "nav-settings", /\/settings$/, "Settings");
+      await openNav(page, "nav-dashboard", /\/dashboard$/, /Talk to Soma/i);
+      await expect(page.getByPlaceholder(/Tell Soma what you want/i)).toBeVisible();
+
+      await attachReviewArtifacts(page, testInfo, `authenticated-${viewport.name}-journey`);
+      expect(pageErrors).toEqual([]);
+      expect(consoleIssues).toEqual([]);
+      expect(networkIssues).toEqual([]);
+      await context.close();
+    });
+  }
 });

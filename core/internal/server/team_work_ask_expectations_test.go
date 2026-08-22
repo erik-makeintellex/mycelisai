@@ -16,7 +16,7 @@ func expectTeamWorkAskInsert(mock sqlmock.Sqlmock, teamID string, state protocol
 		WithArgs(
 			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "Soma",
-			string(protocol.TeamExecutionShapeDelegatedWork), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			string(protocol.TeamExecutionShapeDelegatedWork), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			string(protocol.ApprovalPostureAutoAllowed), string(state), needsOperator,
 			degradation, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
 		).
@@ -31,7 +31,7 @@ func expectTeamWorkAskInsertFailure(mock sqlmock.Sqlmock, teamID string, err err
 		WithArgs(
 			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "Soma",
-			string(protocol.TeamExecutionShapeDelegatedWork), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			string(protocol.TeamExecutionShapeDelegatedWork), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			string(protocol.ApprovalPostureAutoAllowed), string(protocol.TeamWorkStateQueued), false,
 			"", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
 		).
@@ -44,7 +44,7 @@ func expectTeamWorkAskStatus(mock sqlmock.Sqlmock, teamID string, state protocol
 			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			string(state), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindWebAPI),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindWebAPI),
 			teamWorkAskSourceChannel, string(protocol.PayloadKindStatus), sqlmock.AnyArg(), "v1",
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
@@ -54,7 +54,7 @@ func expectTeamWorkAskUpdate(mock sqlmock.Sqlmock, state protocol.TeamWorkState,
 	mock.ExpectExec("UPDATE team_work_items").
 		WithArgs(
 			sqlmock.AnyArg(), string(state), sqlmock.AnyArg(), needsOperator, degradation,
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 }
@@ -67,6 +67,7 @@ func expectTeamWorkAskUpdateWithRetainedTextRefs(mock sqlmock.Sqlmock, state pro
 			outputRefsMatch{TeamID: "qa-team", Kind: "text_reply", Label: "Team text reply"},
 			stringListContainsMatch{Prefix: "team_status_event:"},
 			stringListContainsMatch{Prefix: "team_interaction:"},
+			sqlmock.AnyArg(),
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 }

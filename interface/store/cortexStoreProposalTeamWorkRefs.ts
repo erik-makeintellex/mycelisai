@@ -4,6 +4,7 @@ export type TeamWorkConfirmationRef = {
     id?: string;
     work_item_id?: string;
     work_id?: string;
+    team_id?: string;
     state?: string;
     status?: string;
     run_id?: string;

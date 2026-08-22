@@ -22,16 +22,16 @@ describe("ExecutionSummaryCardModel", () => {
       },
     };
 
-    expect(auditText(summary.audit_recovery)).toContain("Start or reconnect the configured ComfyUI upstream");
+    expect(auditText(summary.audit_recovery)).toContain("Start or reconnect the configured image generator");
     expect(degradationLines(summary.audit_recovery)).toEqual([
-      "Local media generation is not reachable, so Soma could not create the image output.",
+      "The configured image generator is not ready, so Soma could not create the image output.",
       "Still available: The approval, request, failed run record, and audit trail remain available for review.",
       "Not reliable: No completed image output or execution proof should be trusted for this attempt.",
-      "Safe next: Start or reconnect the configured ComfyUI upstream, then retry. If you only need text/files, ask Soma to rerun without image generation.",
+      "Safe next: Start or reconnect the configured image generator, then tell Soma to try the image again.",
     ]);
     expect(trustVerdict(summary)).toMatchObject({
       label: "Needs review",
-      detail: "Local media generation is not reachable, so Soma could not create the image output.",
+      detail: "The configured image generator is not ready, so Soma could not create the image output.",
       tone: "attention",
     });
   });

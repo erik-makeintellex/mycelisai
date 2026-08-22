@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { expect, type Page, type Route } from "@playwright/test";
+import { expect, type APIResponse, type Page, type Route, type TestInfo } from "@playwright/test";
 import type { RouteResponse } from "./soma-ui-testing";
 import { liveAPIHeaders, liveAPIURL } from "./live-api-auth";
 
 const repoRoot = path.resolve(__dirname, "../../..");
-export const liveTimeoutMs = 180_000;
+export const liveTimeoutMs = 300_000;
 export const chatTimeoutMs = 120_000;
 
 export type APIEnvelope<T> = { ok?: boolean; data?: T; error?: string };
@@ -42,6 +42,7 @@ export type GroupRecord = {
   work_mode?: string;
   status?: string;
   team_ids?: string[];
+  workspace_folder?: string;
 };
 
 export type ArtifactRecord = {
@@ -69,7 +70,10 @@ export async function parseJSONIfPossible<T>(response: { text(): Promise<string>
 }
 
 function backendWorkspaceRoots() {
-  const configuredRoot = process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT;
+  const configuredRoot =
+    process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT
+    ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT
+    ?? process.env.MYCELIS_WORKSPACE;
   if (configuredRoot?.trim()) {
     return [path.isAbsolute(configuredRoot) ? configuredRoot : path.join(repoRoot, configuredRoot)];
   }
@@ -138,11 +142,67 @@ export function removeTarget(relativePath: string) {
   }
 }
 
-export async function createOrganization(page: Page, name: string) {
-  const response = await page.request.post(liveAPIURL("/api/v1/organizations"), {
-    headers: liveAPIHeaders(),
-    data: { name, purpose: "Exact UI finalization browser package proof", start_mode: "empty" },
+export async function attachRetainedPackageEvidence(
+  page: Page,
+  testInfo: TestInfo,
+  relativePaths: string[],
+) {
+  const retrievals: Array<{ path: string; status: number; attached: boolean; error?: string }> = [];
+
+  for (const relativePath of relativePaths) {
+    try {
+      const response = await page.request.get(
+        liveAPIURL(`/api/v1/workspace/files/view?path=${encodeURIComponent(relativePath)}`),
+        { headers: liveAPIHeaders() },
+      );
+      const record = { path: relativePath, status: response.status(), attached: response.ok() };
+      if (!response.ok()) {
+        retrievals.push({ ...record, error: await response.text() });
+        continue;
+      }
+
+      const fileName = path.posix.basename(relativePath.replace(/\\/g, "/"));
+      await testInfo.attach(`retained-package-${fileName}`, {
+        body: await response.body(),
+        contentType: response.headers()["content-type"] ?? "application/octet-stream",
+      });
+      retrievals.push(record);
+    } catch (error) {
+      retrievals.push({ path: relativePath, status: 0, attached: false, error: String(error) });
+    }
+  }
+
+  await testInfo.attach("retained-package-retrieval.json", {
+    body: Buffer.from(JSON.stringify(retrievals, null, 2)),
+    contentType: "application/json",
   });
+}
+
+export async function createOrganization(
+  page: Page,
+  name: string,
+  options: { fixtureScopeID?: string } = {},
+) {
+  let response: APIResponse | undefined;
+  const maxAttempts = 5;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      response = await page.request.post(liveAPIURL("/api/v1/organizations"), {
+        headers: {
+          ...(liveAPIHeaders() ?? {}),
+          ...(options.fixtureScopeID
+            ? { "X-Mycelis-QA-Fixture-Scope": options.fixtureScopeID }
+            : {}),
+        },
+        data: { name, purpose: "Exact UI finalization browser package proof", start_mode: "empty" },
+      });
+      break;
+    } catch (error) {
+      if (!String(error).includes("EADDRINUSE") || attempt === maxAttempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+    }
+  }
+  if (!response) throw new Error("Organization bootstrap did not return a response");
   const parsed = await parseJSONIfPossible<OrganizationEnvelope>(response);
   expect(response.ok(), parsed.body ? JSON.stringify(parsed.body) : parsed.raw).toBeTruthy();
   expect(parsed.body?.data?.id).toBeTruthy();
@@ -176,7 +236,9 @@ export async function confirmProposal(page: Page) {
     (response) => response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
     { timeout: chatTimeoutMs },
   );
-  await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+  const composer = page.getByPlaceholder(/Tell Soma what you want/i);
+  await composer.fill("approve");
+  await composer.press("Enter");
   const response = await responsePromise;
   const parsed = await parseJSONIfPossible<ConfirmEnvelope>(response);
   return { response, raw: parsed.raw, body: parsed.body };

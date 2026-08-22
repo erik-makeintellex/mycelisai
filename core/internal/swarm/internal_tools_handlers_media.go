@@ -11,12 +11,21 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/exchange"
 )
+
+type generatedImageResponse struct {
+	Data []struct {
+		B64JSON       string `json:"b64_json"`
+		RevisedPrompt string `json:"revised_prompt"`
+	} `json:"data"`
+}
 
 func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map[string]any) (string, error) {
 	prompt := stringValue(args["prompt"])
@@ -35,6 +44,13 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		return "", fmt.Errorf("media provider not configured — set media.provider or media.endpoint/model_id in cognitive.yaml")
 	}
 
+	if strings.EqualFold(strings.TrimSpace(media.Type), cognitive.MediaProviderTypeForge) {
+		return r.generateForgeImage(ctx, media, prompt, size)
+	}
+	return r.generateOpenAICompatibleImage(ctx, media, prompt, size)
+}
+
+func (r *InternalToolRegistry) generateOpenAICompatibleImage(ctx context.Context, media cognitive.MediaProviderConfig, prompt, size string) (string, error) {
 	reqBody, _ := json.Marshal(map[string]any{"prompt": prompt, "n": 1, "size": size, "response_format": "b64_json", "model": media.ModelID})
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, media.Endpoint+"/images/generations", bytes.NewReader(reqBody))
 	if err != nil {
@@ -54,12 +70,7 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		return "", fmt.Errorf("media engine error (HTTP %d): %s", resp.StatusCode, string(respBody))
 	}
 
-	var imgResp struct {
-		Data []struct {
-			B64JSON       string `json:"b64_json"`
-			RevisedPrompt string `json:"revised_prompt"`
-		} `json:"data"`
-	}
+	var imgResp generatedImageResponse
 	if err := json.Unmarshal(respBody, &imgResp); err != nil {
 		return "", fmt.Errorf("image generated but response metadata could not be parsed: %w", err)
 	}
@@ -69,12 +80,67 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 	return r.finishGeneratedImage(ctx, prompt, size, imgResp)
 }
 
-func (r *InternalToolRegistry) finishGeneratedImage(ctx context.Context, prompt, size string, imgResp struct {
-	Data []struct {
+func (r *InternalToolRegistry) generateForgeImage(ctx context.Context, media cognitive.MediaProviderConfig, prompt, size string) (string, error) {
+	width, height := imageDimensions(size)
+	reqBody, _ := json.Marshal(map[string]any{
+		"prompt": prompt,
+		"width":  width,
+		"height": height,
+		"steps":  24,
+	})
+	endpoint := strings.TrimRight(strings.TrimSpace(media.Endpoint), "/")
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/sdapi/v1/txt2img", bytes.NewReader(reqBody))
+	if err != nil {
+		return "", fmt.Errorf("failed to create Forge image request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("Forge image service is not reachable at %s: %w", endpoint, err)
+	}
+	defer resp.Body.Close()
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusNotFound {
+		return "", fmt.Errorf("Forge is open at %s, but image API access is off; enable API mode in the Forge/Pinokio launch settings, restart Forge, then ask Soma to try the image again", endpoint)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Forge image generation failed (HTTP %d): %s", resp.StatusCode, string(respBody))
+	}
+	var forgeResponse struct {
+		Images []string `json:"images"`
+	}
+	if err := json.Unmarshal(respBody, &forgeResponse); err != nil {
+		return "", fmt.Errorf("Forge generated an image but its response could not be parsed: %w", err)
+	}
+	if len(forgeResponse.Images) == 0 || strings.TrimSpace(forgeResponse.Images[0]) == "" {
+		return "", fmt.Errorf("Forge returned no image data")
+	}
+	encoded := forgeResponse.Images[0]
+	if _, after, ok := strings.Cut(encoded, ","); ok && strings.HasPrefix(encoded, "data:image/") {
+		encoded = after
+	}
+	imgResp := generatedImageResponse{}
+	imgResp.Data = append(imgResp.Data, struct {
 		B64JSON       string `json:"b64_json"`
 		RevisedPrompt string `json:"revised_prompt"`
-	} `json:"data"`
-}) (string, error) {
+	}{B64JSON: encoded})
+	return r.finishGeneratedImage(ctx, prompt, size, imgResp)
+}
+
+func imageDimensions(size string) (int, int) {
+	parts := strings.SplitN(strings.ToLower(strings.TrimSpace(size)), "x", 2)
+	if len(parts) != 2 {
+		return 1024, 1024
+	}
+	width, widthErr := strconv.Atoi(parts[0])
+	height, heightErr := strconv.Atoi(parts[1])
+	if widthErr != nil || heightErr != nil || width < 64 || height < 64 || width > 2048 || height > 2048 {
+		return 1024, 1024
+	}
+	return width, height
+}
+
+func (r *InternalToolRegistry) finishGeneratedImage(ctx context.Context, prompt, size string, imgResp generatedImageResponse) (string, error) {
 	b64Content := ""
 	if len(imgResp.Data) > 0 {
 		b64Content = imgResp.Data[0].B64JSON

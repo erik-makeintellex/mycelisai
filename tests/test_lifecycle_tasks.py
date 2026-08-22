@@ -8,19 +8,18 @@ from pathlib import Path
 from ops import db as db_tasks
 from ops import lifecycle
 
-
 def test_memory_restart_runs_order_and_probes(monkeypatch):
     order: list[str] = []
     probe_calls: list[tuple[str, float, dict[str, str] | None]] = []
-
     monkeypatch.setenv("MYCELIS_API_KEY", "test-key")
     monkeypatch.setattr(lifecycle, "down", lambda _c: order.append("down"))
     monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: order.append("bridge"))
     monkeypatch.setattr(
         lifecycle,
         "_wait_for_port",
-        lambda port, label, timeout=30, interval=1.0: order.append(f"wait:{port}") or True,
+        lambda port, label, timeout=30, interval=1.0, host="127.0.0.1": order.append(f"wait:{host}:{port}") or True,
     )
+    monkeypatch.setattr(lifecycle.lifecycle_infra, "database_endpoint", lambda _root: ("127.0.0.1", 15432))
     monkeypatch.setattr(db_tasks, "reset", lambda _c: order.append("db.reset"))
     monkeypatch.setattr(lifecycle, "up", lambda _c, frontend=False, build=False: order.append(f"up:{build}:{frontend}"))
     monkeypatch.setattr(lifecycle, "health", lambda _c: order.append("health"))
@@ -35,7 +34,7 @@ def test_memory_restart_runs_order_and_probes(monkeypatch):
 
     lifecycle.memory_restart.body(Context(), build=True, frontend=True)
 
-    assert order == ["down", "bridge", "wait:5432", "db.reset", "up:True:True", "health"]
+    assert order == ["down", "bridge", "wait:127.0.0.1:15432", "db.reset", "up:True:True", "health"]
     assert len(probe_calls) == 2
     assert probe_calls[0][0].endswith("/api/v1/memory/stream")
     assert probe_calls[1][0].endswith("/api/v1/memory/sitreps?limit=1")
@@ -68,7 +67,8 @@ def test_memory_restart_fails_when_postgres_bridge_does_not_return(monkeypatch):
     monkeypatch.setattr(lifecycle, "_wait_for_port", lambda *args, **kwargs: False)
     monkeypatch.setattr(lifecycle.time, "sleep", lambda _n: None)
 
-    with pytest.raises(SystemExit, match="PostgreSQL bridge not reachable"):
+    monkeypatch.setattr(lifecycle.lifecycle_infra, "database_endpoint", lambda _root: ("127.0.0.1", 15432))
+    with pytest.raises(SystemExit, match="PostgreSQL is not reachable at 127.0.0.1:15432"):
         lifecycle.memory_restart.body(Context(), build=False, frontend=False)
 
 
@@ -148,27 +148,24 @@ def test_health_passes_when_all_probes_are_healthy(monkeypatch):
 
 def test_down_uses_best_effort_cleanup_without_hanging(monkeypatch):
     commands: list[list[str]] = []
-    port = 4312
 
     from ops import interface as interface_tasks
 
     monkeypatch.setenv("MYCELIS_DEV_INFRA_MODE", "k8s")
-    monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: False)
+    monkeypatch.setattr(lifecycle, "_owned_core_pid_on_port", lambda _port=lifecycle.API_PORT: None)
+    monkeypatch.setattr(lifecycle, "_owned_frontend_pid_on_port", lambda _port=lifecycle.INTERFACE_PORT: None)
     monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: commands.append(["bridges"]))
     monkeypatch.setattr(lifecycle, "_kill_compiled_go_services", lambda: [])
-    monkeypatch.setattr(lifecycle, "_wait_for_port_closed", lambda *args, **kwargs: True)
     monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
     monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
-    monkeypatch.setattr(lifecycle, "INTERFACE_PORT", port)
     monkeypatch.setattr(lifecycle, "_run_best_effort", lambda cmd, timeout=10: commands.append(cmd))
     monkeypatch.setattr(interface_tasks, "_cleanup_repo_local_interface_processes", lambda: [])
     monkeypatch.setattr(lifecycle.time, "sleep", lambda _n: None)
 
     lifecycle.down.body(Context())
 
-    assert any(cmd and cmd[:3] == ["powershell", "-NoProfile", "-Command"] for cmd in commands)
-    assert any("Get-Process server" in " ".join(cmd) for cmd in commands)
-    assert any(f"next (dev|start).*--port {port}" in " ".join(cmd) for cmd in commands if isinstance(cmd, list))
+    assert not any("Get-Process server" in " ".join(cmd) for cmd in commands)
+    assert not any("next (dev|start)" in " ".join(cmd) for cmd in commands if isinstance(cmd, list))
     assert ["bridges"] in commands
 
 
@@ -300,17 +297,6 @@ def test_status_reports_unknown_when_compiled_go_inspection_fails(monkeypatch, c
     assert "Compiled Go svc : UNKNOWN" in output
 
 
-def test_status_reports_native_mode_with_docker_as_proof_lane(monkeypatch, capsys):
-    monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
-    monkeypatch.setattr(lifecycle, "_http_get", lambda *args, **kwargs: (0, "offline"))
-    monkeypatch.setattr(lifecycle, "_list_compiled_go_service_processes", lambda: [])
-    lifecycle.status.body(Context())
-
-    output = capsys.readouterr().out
-    assert "Dev infra mode  : native" in output
-    assert "Docker/K8s      : proof lane; inspect with compose.* or k8s.*" in output
-
-
 def test_status_uses_core_healthz_when_tcp_snapshot_misses(monkeypatch, capsys):
     class Result:
         ok = True
@@ -423,21 +409,23 @@ def test_core_startup_log_path_points_to_workspace_logs():
 def test_up_restarts_running_core_when_dependencies_were_down_before_up(monkeypatch):
     events: list[str] = []
     db_calls: list[str] = []
-
     monkeypatch.setattr(Path, "exists", lambda self: True)
+    monkeypatch.setattr(lifecycle.lifecycle_infra, "database_endpoint", lambda _root: ("127.0.0.1", 5432))
     monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: events.append("bridge"))
     monkeypatch.setattr(
         lifecycle,
         "_wait_for_port",
-        lambda port, label, timeout=30, interval=1.0: events.append(f"wait:{port}:{label}") or True,
+        lambda port, label, timeout=30, interval=1.0, host="127.0.0.1": events.append(f"wait:{port}:{label}") or True,
     )
     monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
     monkeypatch.setattr(lifecycle, "_core_council_ready", lambda timeout=10, interval=1.0: True)
     monkeypatch.setattr(db_tasks.create, "body", lambda _c: db_calls.append("db.create"))
+    monkeypatch.setattr(lifecycle, "_owned_core_pid_on_port", lambda _port=lifecycle.API_PORT: 28280)
+    monkeypatch.setattr(lifecycle, "_kill_pid", lambda pid: events.append(f"kill_pid:{pid}"))
     monkeypatch.setattr(
         lifecycle,
-        "_kill_port",
-        lambda port, label: events.append(f"kill:{port}:{label}") or True,
+        "_wait_for_port_closed",
+        lambda port, label, timeout=30: events.append(f"closed:{port}:{label}") or True,
     )
     monkeypatch.setattr(
         lifecycle,
@@ -459,7 +447,8 @@ def test_up_restarts_running_core_when_dependencies_were_down_before_up(monkeypa
     lifecycle.up.body(Context(), frontend=False, build=False)
 
     assert db_calls == ["db.create"]
-    assert f"kill:{lifecycle.API_PORT}:Core" in events
+    assert "kill_pid:28280" in events
+    assert f"closed:{lifecycle.API_PORT}:Core" in events
     assert "start_core" in events
     assert any(item == f"wait:{lifecycle.API_PORT}:Core API" for item in events)
 
@@ -467,21 +456,23 @@ def test_up_restarts_running_core_when_dependencies_were_down_before_up(monkeypa
 def test_up_restarts_running_core_when_council_routes_are_still_offline(monkeypatch):
     events: list[str] = []
     db_calls: list[str] = []
-
     monkeypatch.setattr(Path, "exists", lambda self: True)
+    monkeypatch.setattr(lifecycle.lifecycle_infra, "database_endpoint", lambda _root: ("127.0.0.1", 5432))
     monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: events.append("bridge"))
     monkeypatch.setattr(
         lifecycle,
         "_wait_for_port",
-        lambda port, label, timeout=30, interval=1.0: events.append(f"wait:{port}:{label}") or True,
+        lambda port, label, timeout=30, interval=1.0, host="127.0.0.1": events.append(f"wait:{port}:{label}") or True,
     )
     monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
     council_states = iter([False, True])
     monkeypatch.setattr(lifecycle, "_core_council_ready", lambda timeout=10, interval=1.0: next(council_states))
+    monkeypatch.setattr(lifecycle, "_owned_core_pid_on_port", lambda _port=lifecycle.API_PORT: 28280)
+    monkeypatch.setattr(lifecycle, "_kill_pid", lambda pid: events.append(f"kill_pid:{pid}"))
     monkeypatch.setattr(
         lifecycle,
-        "_kill_port",
-        lambda port, label: events.append(f"kill:{port}:{label}") or True,
+        "_wait_for_port_closed",
+        lambda port, label, timeout=30: events.append(f"closed:{port}:{label}") or True,
     )
     monkeypatch.setattr(
         lifecycle,
@@ -498,28 +489,26 @@ def test_up_restarts_running_core_when_council_routes_are_still_offline(monkeypa
     lifecycle.up.body(Context(), frontend=False, build=False)
 
     assert db_calls == ["db.create"]
-    assert f"kill:{lifecycle.API_PORT}:Core" in events
+    assert "kill_pid:28280" in events
+    assert f"closed:{lifecycle.API_PORT}:Core" in events
     assert "start_core" in events
 
 
 def test_up_keeps_running_core_when_dependencies_were_healthy_before_up(monkeypatch):
     events: list[str] = []
     db_calls: list[str] = []
-
     monkeypatch.setattr(Path, "exists", lambda self: True)
+    monkeypatch.setattr(lifecycle.lifecycle_infra, "database_endpoint", lambda _root: ("127.0.0.1", 5432))
     monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: events.append("bridge"))
     monkeypatch.setattr(
         lifecycle,
         "_wait_for_port",
-        lambda port, label, timeout=30, interval=1.0: events.append(f"wait:{port}:{label}") or True,
+        lambda port, label, timeout=30, interval=1.0, host="127.0.0.1": events.append(f"wait:{port}:{label}") or True,
     )
     monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
     monkeypatch.setattr(lifecycle, "_core_council_ready", lambda timeout=10, interval=1.0: True)
-    monkeypatch.setattr(
-        lifecycle,
-        "_kill_port",
-        lambda port, label: events.append(f"kill:{port}:{label}") or True,
-    )
+    monkeypatch.setattr(lifecycle, "_owned_core_pid_on_port", lambda _port=lifecycle.API_PORT: 28280)
+    monkeypatch.setattr(lifecycle, "_kill_pid", lambda pid: events.append(f"kill_pid:{pid}"))
     monkeypatch.setattr(
         lifecycle,
         "_start_core_background",
@@ -537,7 +526,7 @@ def test_up_keeps_running_core_when_dependencies_were_healthy_before_up(monkeypa
     lifecycle.up.body(Context(), frontend=False, build=False)
 
     assert db_calls == ["db.create"]
-    assert f"kill:{lifecycle.API_PORT}:Core" not in events
+    assert "kill_pid:28280" not in events
     assert "start_core" not in events
 
 

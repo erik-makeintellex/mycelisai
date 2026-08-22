@@ -15,6 +15,8 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - Use `uv run inv ...` for real task execution.
 - Use `uvx --from invoke inv -l` only as a compatibility probe.
 - Do not use bare `uvx inv ...`.
+- Keep the public Invoke surface at or below 95 registered tasks. New tasks must provide distinct operator value and should replace or consolidate an existing entry when possible.
+- Do not register convenience aliases for an existing task. Documentation and automation must call the canonical owning namespace directly.
 - When invoke task behavior or task names change, update `README.md`, `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, `ops/README.md`, and any affected in-app docs surface in `interface/lib/docsManifest.ts` in the same slice.
 
 ## README Navigation Contract
@@ -25,14 +27,16 @@ This repository is Go-first for product/runtime work and Python-first for manage
 
 ## Feature Branch And Merge Quality Contract
 
-- Product/runtime feature work must start from an intentionally named feature branch unless the user explicitly asks for a different branch shape.
+- `main` is the production-promotion branch. `dev` is the shared integration branch. Product/runtime feature work must start from a clean, updated `dev` on an intentionally named `feature/*` branch unless the user explicitly asks for a different branch shape.
 - Keep each branch scoped to one reviewable slice. If work expands, split follow-on work into a new branch instead of letting one branch become a mixed backlog.
 - Before engaging teams or implementing a substantial next slice, review current branch state, the active scoreboard, canonical PRD alignment, and likely proof gates. Write down the execution shape before spawning or redirecting agents.
 - Before spawning new sub-agents for any work, review existing open agentry for reuse or closure. Reuse relevant active agents when their context matches the slice; close completed, stale, duplicate, or no-longer-relevant agents before adding more background work.
-- Do not treat local green tests as enough for merge readiness. A slice reaches merge quality only after code, docs/state, focused tests, typecheck/build gates, and any required live GUI proof pass together.
-- Before merging to `main`, review `git status --short --branch`, `git diff --check`, branch divergence, untracked files, temporary proof artifacts, and affected docs. Resolve or record every item.
-- Merge only when the branch is clean enough that `main` can be released or handed to another agent without hidden local assumptions, stale temp files, or unexplained generated output.
-- After merge, delete local feature branches that are fully merged and explicitly review remote branches before deletion. Keep unmerged/archive branches only with a named purpose.
+- Spawn narrowly scoped sub-agents without inherited long-thread context unless that history is essential. Close agents after handoff so persisted development sessions do not grow without bound.
+- A feature branch reaches integration quality only after code, docs/state, focused tests, typecheck/build gates, and any required live GUI proof pass together. Commit that proven state before merging it into `dev`.
+- After every feature merge, test the resulting `dev` state again. Run the affected integration suites, service health, and live GUI journeys needed to detect cross-slice regressions; feature-branch proof is not a substitute for post-merge integration proof.
+- Promote `dev` to `main` only from a clean, committed integration checkpoint after the required broader release preflight, deployment/runtime proof, and user-facing browser certification pass. Rerun the release smoke and health checks after the promotion.
+- Before every merge or promotion, review `git status --short --branch`, `git diff --check`, branch divergence, untracked files, temporary proof artifacts, and affected docs. Resolve or record every item.
+- After a feature is merged and its `dev` proof passes, delete the merged local feature branch. Explicitly review remote branches before deletion. Keep unmerged/archive branches only with a named purpose.
 - If urgent work must happen directly on `main`, the close-out must still follow the same branch-quality checklist before commit, push, or handoff.
 
 ## Team Orchestration And Messaging Contract
@@ -60,6 +64,8 @@ This repository is Go-first for product/runtime work and Python-first for manage
 ## Documentation Synchronization Contract
 
 - Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, or canonical terminology must include a documentation review in the same slice.
+- Whenever a confirmed task, feature, workflow, or spectrum of work changes, expands, or replaces prior behavior, perform an obsolescence review in the same slice across commands, code, configuration, tests, docs, routes, fixtures, and generated scaffolding. Remove items that no longer serve the confirmed path, update items that still apply, and record the canonical replacement in the owning docs or state file.
+- Do not retain obsolete compatibility aliases, parallel implementations, archived doctrine, or stale tests by default. Keep one only when an explicit compatibility requirement names its owner, supported lifetime, and removal gate.
 - Update the owning docs in the same change whenever meaning changed, not later as cleanup.
 - At minimum review `README.md`, `.state/V8_DEV_STATE.md`, the owning canonical/user/ops docs for the touched surface, and any affected in-app docs entry in `interface/lib/docsManifest.ts`.
 - When API behavior or payload meaning changes, review `docs/API_REFERENCE.md` in the same slice.

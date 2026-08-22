@@ -1,8 +1,11 @@
 package server
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func TestInferMutationToolsFromText_RecognizesRetainedEvocationContinuation(t *testing.T) {
@@ -15,6 +18,27 @@ func TestInferMutationToolsFromText_RecognizesRetainedEvocationContinuation(t *t
 	tools := inferMutationToolsFromText(request)
 	if !containsToolName(tools, "write_file") || !containsToolName(tools, "delegate_task") {
 		t.Fatalf("tools = %#v, want write_file and delegate_task", tools)
+	}
+}
+
+func TestProjectPackageResultContractPreservesJSONDecodedValidationPlan(t *testing.T) {
+	content := contentContractForTeamRequest("Build an interactive browser application.")
+	payload, err := json.Marshal(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatal(err)
+	}
+
+	result := projectPackageResultContract("delivery-team", decoded)
+	plan, ok := result["output_validation"].(*protocol.OutputValidationPlan)
+	if !ok {
+		t.Fatalf("output_validation = %#v, want decoded typed plan", result["output_validation"])
+	}
+	if err := plan.Validate(); err != nil {
+		t.Fatalf("decoded result plan is not runnable: %v", err)
 	}
 }
 
@@ -55,6 +79,17 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationContinuation(t *
 	if ask["ask_kind"] != "implementation" || ask["lane_role"] != "implementer" {
 		t.Fatalf("delegate ask routing = %#v", ask)
 	}
+	capabilities := confirmedActionStringSlice(ask["required_capabilities"])
+	if containsToolName(capabilities, "research_for_blueprint") || containsToolName(capabilities, "consult_council") {
+		t.Fatalf("delivery capabilities repeat completed preparation work: %#v", capabilities)
+	}
+	if !containsToolName(capabilities, "write_file") || !containsToolName(capabilities, "store_artifact") {
+		t.Fatalf("delivery capabilities = %#v, want retained output tools", capabilities)
+	}
+	constraints := confirmedActionStringSlice(ask["constraints"])
+	if !containsToolName(constraints, "Read every retained user-facing entrypoint back after writing it and validate the requested behavior before reporting completion.") {
+		t.Fatalf("constraints = %#v, want retained output readback", constraints)
+	}
 	context, ok := ask["context"].(map[string]any)
 	if !ok {
 		t.Fatalf("delegate context = %#v, want map", ask["context"])
@@ -64,6 +99,17 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationContinuation(t *
 	}
 	if context["research_council_handoff"] != "groups/mixed-output-team-b8066/planning/RESEARCH_COUNCIL_HANDOFF.md" {
 		t.Fatalf("research handoff context = %#v", context["research_council_handoff"])
+	}
+	resultContract := mapArgument(context["result_contract"])
+	if resultContract["validation_mode"] != "readback_against_exit_criteria" {
+		t.Fatalf("result contract = %#v, want readback validation mode", resultContract)
+	}
+	validationPlan, ok := resultContract["output_validation"].(*protocol.OutputValidationPlan)
+	if !ok {
+		t.Fatalf("result contract output_validation = %#v, want typed plan", resultContract["output_validation"])
+	}
+	if err := validationPlan.Validate(); err != nil {
+		t.Fatalf("result contract output validation is not runnable: %v", err)
 	}
 	exitCriteria := confirmedActionStringSlice(ask["exit_criteria"])
 	for _, want := range []string{"playable controls respond in browser", "direct launch or view path is provided for the user or another agent"} {

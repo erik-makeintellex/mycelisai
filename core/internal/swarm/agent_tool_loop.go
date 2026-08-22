@@ -3,31 +3,42 @@ package swarm
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+func appendAssistantHistory(messages *[]cognitive.ChatMessage, content string) {
+	if strings.TrimSpace(content) == "" {
+		return
+	}
+	*messages = append(*messages, cognitive.ChatMessage{Role: "assistant", Content: content})
+}
+
 type agentToolLoopResult struct {
 	resp          *cognitive.InferResponse
 	responseText  string
 	toolsUsed     []string
+	plannedCalls  []protocol.PlannedToolCall
 	artifacts     []protocol.ChatArtifactRef
 	consultations []protocol.ConsultationEntry
+	toolEvidence  []successfulToolEvidence
 }
 
-func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string) agentToolLoopResult {
+func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string, planningOnly bool, requirement *teamResultRequirement) agentToolLoopResult {
 	result := agentToolLoopResult{resp: resp, responseText: resp.Text}
 	if a.toolExecutor == nil || len(a.Manifest.Tools) == 0 {
 		return result
 	}
 
 	directAnswerPreferred := preferDirectDraftResponse(input)
+	directAnswerRoute := isDirectAnswerRoute(input)
 	reinferWithToolFeedback := func(toolName string, feedback string) bool {
-		req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "assistant", Content: result.responseText})
+		appendAssistantHistory(&req.Messages, result.responseText)
 		req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolName, feedback)})
 		updated, inferErr := a.brain.InferWithContract(a.ctx, *req)
-		if inferErr != nil {
+		if inferErr != nil || updated == nil {
 			log.Printf("Agent [%s] re-inference after tool feedback failed: %v", a.Manifest.ID, inferErr)
 			result.responseText = feedback
 			return false
@@ -39,6 +50,8 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 
 	preflightDone := map[string]bool{}
 	failedToolCalls := map[string]int{}
+	completedToolCalls := map[string]bool{}
+	contractCorrections := 0
 	if parseToolCall(result.responseText) == nil && responseSuggestsUnexecutedAction(result.responseText) {
 		req.Messages = append(req.Messages,
 			cognitive.ChatMessage{Role: "system", Content: "Policy correction: do not provide step-by-step plans when tools are available. Emit exactly one tool_call JSON now for the user's actionable request, or return a concrete blocker."},
@@ -50,7 +63,8 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		}
 	}
 
-	for i := 0; i < a.Manifest.EffectiveMaxIterations(); i++ {
+	loopLimit := resultContractLoopLimit(a.Manifest.EffectiveMaxIterations(), requirement)
+	for i := 0; i < loopLimit; i++ {
 		if interjection := a.checkInterjection(); interjection != "" {
 			req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: "[OPERATOR INTERJECTION]: " + interjection})
 			a.logTurn("interjection", interjection, "", "", "", nil, "", "")
@@ -66,12 +80,60 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 
 		toolCall := parseToolCall(result.responseText)
 		if toolCall == nil {
+			issues := resultContractIssues(requirement, result.artifacts, result.toolEvidence)
+			if len(issues) > 0 && contractCorrections < maxResultContractCorrections {
+				contractCorrections++
+				requirementPrompt := resultContractCorrectionPrompt(requirement, issues)
+				appendAssistantHistory(&req.Messages, result.responseText)
+				req.Messages = append(req.Messages,
+					cognitive.ChatMessage{Role: "system", Content: requirementPrompt},
+					cognitive.ChatMessage{Role: "user", Content: "Continue the approved delivery now and satisfy the missing result-contract evidence."},
+				)
+				updated, err := a.brain.InferWithContract(a.ctx, *req)
+				if err != nil || updated == nil {
+					log.Printf("Agent [%s] result-contract correction failed: %v", a.Manifest.ID, err)
+					break
+				}
+				result.resp = updated
+				result.responseText = updated.Text
+				continue
+			}
 			break
 		}
-		autofillToolArguments(toolCall, input)
-		if blocksProposalPlanningTool(toolCall.Name) {
+		normalizeAgentToolCallArguments(toolCall, a.TeamID, input)
+		if requirement.active() && strings.EqualFold(requirement.Kind, "project_package") && toolCall.Name == "store_artifact" {
+			if !reinferWithToolFeedback(toolCall.Name, "Project-package contracts require physical files. Do not call store_artifact. Use write_file for the next missing required file, or read_file on the written entrypoint when only structural readback remains.") {
+				break
+			}
+			continue
+		}
+		if issues := resultContractIssues(requirement, result.artifacts, result.toolEvidence); len(issues) > 0 && !resultContractEvidenceToolAllowed(requirement, toolCall.Name, result.artifacts, result.toolEvidence) {
+			feedback := resultContractCorrectionPrompt(requirement, issues) + " Do not call " + toolCall.Name + " while required package evidence is incomplete."
+			if !reinferWithToolFeedback(toolCall.Name, feedback) {
+				break
+			}
+			continue
+		}
+		fingerprint := toolCallFingerprint(toolCall)
+		if completedToolCalls[fingerprint] {
+			if !reinferWithToolFeedback(toolCall.Name, "That exact tool call already completed successfully in this turn. Do not repeat it. Return the concise final result or choose a different tool required to finish the ask.") {
+				break
+			}
+			continue
+		}
+		if directAnswerRoute && blocksProposalPlanningTool(toolCall.Name) {
+			if !reinferWithToolFeedback(toolCall.Name, "Authority correction: direct-answer mode cannot run mutation-capable tools. Use the requested read-only tool when one is available, or answer without a tool. Do not delegate, create, write, store, activate, publish, or execute commands.") {
+				break
+			}
+			continue
+		}
+		if planningOnly && blocksProposalPlanningTool(toolCall.Name) {
 			log.Printf("Agent [%s] proposal-planning tool captured without execution: %s", a.Manifest.ID, toolCall.Name)
 			result.toolsUsed = append(result.toolsUsed, toolCall.Name)
+			result.plannedCalls = append(result.plannedCalls, protocol.PlannedToolCall{
+				Name:      strings.TrimSpace(toolCall.Name),
+				Arguments: toolCall.Arguments,
+			})
 			a.logTurn("tool_call", result.responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
 			break
 		}
@@ -84,8 +146,20 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		if !a.prepareToolCall(input, toolCall, failedToolCalls, preflightDone, reinferWithToolFeedback, &result) {
 			continue
 		}
-		if !a.executeToolIteration(i, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result) {
+		evidenceCount := len(result.toolEvidence)
+		if !a.executeToolIteration(i, loopLimit, input, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result, planningOnly, requirement) {
+			if len(result.toolEvidence) > evidenceCount {
+				completedToolCalls[fingerprint] = true
+				contractCorrections = 0
+			}
 			continue
+		}
+		completedToolCalls[fingerprint] = true
+		if len(result.toolEvidence) > evidenceCount {
+			contractCorrections = 0
+		}
+		if entrypoint := currentProjectPackageEntrypointReadback(requirement, result.artifacts, result.toolEvidence); entrypoint != "" {
+			completedToolCalls[toolCallFingerprint(&toolCallPayload{Name: "read_file", Arguments: map[string]any{"path": entrypoint}})] = true
 		}
 	}
 

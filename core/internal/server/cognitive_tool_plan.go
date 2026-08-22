@@ -10,8 +10,15 @@ import (
 func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
 	var planned []protocol.PlannedToolCall
 	parsedCall, hasParsedCall := parsePlannedToolCall(agentResult.Text)
+	if configCalls, ok := explicitConfigMutationPlan(agentResult, latestRequest); ok {
+		return configCalls
+	}
 	if crossTeamCalls, ok := inferContentMarketingCrossTeamPlanFromRequest(latestRequest); ok {
 		planned = append(planned, crossTeamCalls...)
+		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
+	}
+	if continuationCalls, ok := inferTeamEvocationContinuationPlanFromRequest(latestRequest); ok {
+		planned = append(planned, continuationCalls...)
 		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
 	}
 	if inferredTeamCall, ok := inferCreateTeamPlanFromRequest(latestRequest); ok {
@@ -40,8 +47,10 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 		}
 		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
 	}
-	if continuationCalls, ok := inferTeamEvocationContinuationPlanFromRequest(latestRequest); ok {
-		planned = append(planned, continuationCalls...)
+	if len(agentResult.PlannedToolCalls) > 0 {
+		for _, call := range agentResult.PlannedToolCalls {
+			planned = append(planned, normalizePlannedToolCall(call))
+		}
 		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
 	}
 	if hasParsedCall {
@@ -71,7 +80,6 @@ func ensureWriteFileExecutionPlan(planned []protocol.PlannedToolCall, agentResul
 	if !containsToolName(mutTools, "write_file") {
 		return planned
 	}
-
 	fallback, hasFallback := inferWriteFileExecutionPlan(agentResult, latestRequest)
 	for i, call := range planned {
 		call = normalizePlannedToolCall(call)
@@ -85,7 +93,6 @@ func ensureWriteFileExecutionPlan(planned []protocol.PlannedToolCall, agentResul
 		planned[i] = normalizePlannedToolCall(call)
 		return planned
 	}
-
 	if hasFallback {
 		return append(planned, normalizePlannedToolCall(fallback))
 	}
@@ -94,6 +101,9 @@ func ensureWriteFileExecutionPlan(planned []protocol.PlannedToolCall, agentResul
 
 func deterministicGovernedMutationResult(latestRequest string, mutTools []string) (chatAgentResult, bool) {
 	planned := buildPlannedToolCalls(chatAgentResult{}, latestRequest, mutTools)
+	if result, ok := deterministicConfigMutationResult(planned, mutTools); ok {
+		return result, true
+	}
 	if len(planned) == 0 || !plannedCallsHaveWritableOutput(planned) || !plannedCallsAreDeterministicProposalSafe(planned) {
 		return chatAgentResult{}, false
 	}
@@ -107,7 +117,6 @@ func deterministicGovernedMutationResult(latestRequest string, mutTools []string
 		ToolsUsed: tools,
 	}, true
 }
-
 func plannedCallsHaveWritableOutput(planned []protocol.PlannedToolCall) bool {
 	for _, call := range planned {
 		if strings.EqualFold(strings.TrimSpace(call.Name), "write_file") {
@@ -136,14 +145,26 @@ func plannedCallsAreDeterministicProposalSafe(planned []protocol.PlannedToolCall
 }
 
 func firstPlannedOutputTarget(planned []protocol.PlannedToolCall) string {
+	// The user owns the requested deliverable. Internal planning files may be
+	// retained for Inspect, but must never headline a media proposal.
 	for _, call := range planned {
-		switch strings.TrimSpace(call.Name) {
-		case "write_file":
+		if strings.TrimSpace(call.Name) == "save_cached_image" {
+			if target := workspaceMediaTarget(call.Arguments); target != "" {
+				return target
+			}
+		}
+	}
+	for _, call := range planned {
+		if strings.TrimSpace(call.Name) == "write_file" {
 			if target := firstNonEmptyString(call.Arguments["path"], call.Arguments["package_entrypoint"], call.Arguments["package_folder"]); target != "" {
 				return target
 			}
-		case "save_cached_image":
-			if target := workspaceMediaTarget(call.Arguments); target != "" {
+		}
+	}
+	for _, call := range planned {
+		switch strings.TrimSpace(call.Name) {
+		case "write_file":
+			if target := firstNonEmptyString(call.Arguments["path"], call.Arguments["package_entrypoint"], call.Arguments["package_folder"]); target != "" && !strings.Contains(strings.ToLower(target), "/planning/") {
 				return target
 			}
 		}
@@ -236,6 +257,16 @@ func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []stri
 				resources = append(resources, fmt.Sprintf("company knowledge from %s", strings.TrimSpace(artifactID)))
 				continue
 			}
+		case "store_config_document":
+			if rawPath, ok := call.Arguments["path"].(string); ok && strings.TrimSpace(rawPath) != "" {
+				resources = append(resources, strings.TrimSpace(rawPath))
+				continue
+			}
+			resources = append(resources, "Outcome Template revision")
+			continue
+		case "activate_config_document":
+			resources = append(resources, "selected Outcome Template")
+			continue
 		case "create_team":
 			if teamID := firstNonEmptyString(call.Arguments["team_id"], call.Arguments["id"], call.Arguments["team_name"]); teamID != "" {
 				resources = append(resources, "team:"+teamID)

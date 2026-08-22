@@ -60,6 +60,10 @@ func startSomaRuntime(
 	if services.ConversationLog != nil {
 		soma.SetConversationLogger(services.ConversationLog)
 	}
+	if core.SharedDB != nil {
+		soma.SetDurableTeamStore(swarm.NewPostgresDurableTeamLoader(core.SharedDB))
+		soma.SetCommandReceiptStore(swarm.NewPostgresCommandReceiptStore(core.SharedDB))
+	}
 	wireSomaMCPDescriptions(ctx, soma, services.MCP)
 	if err := soma.Start(); err != nil {
 		log.Printf("WARN: Failed to start Soma: %v", err)

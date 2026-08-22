@@ -47,6 +47,18 @@ func executionOutputsFromToolResults(results []plannedToolExecutionResult) []pro
 			retained = true
 			href = workspaceFileOutputHref(path)
 		}
+		if toolName == "store_config_document" {
+			kind = "config_revision"
+			title = configDocumentResultTitle(result, "saved")
+			retained = true
+			result.Output = configDocumentResultSummary(result)
+		}
+		if toolName == "activate_config_document" {
+			kind = "config_activation"
+			title = configDocumentResultTitle(result, "active")
+			retained = true
+			result.Output = configDocumentResultSummary(result)
+		}
 		packageOutput := projectPackageOutputFromArgs(result.Arguments)
 		if packageOutput != nil {
 			id = packageOutput.ID

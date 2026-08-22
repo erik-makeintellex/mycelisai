@@ -30,7 +30,7 @@ type ExecutionAvailability struct {
 // and tested through the same contract.
 type MediaProviderConfig struct {
 	ProviderID   string `yaml:"provider_id,omitempty" json:"provider_id,omitempty"`
-	Type         string `yaml:"type,omitempty" json:"type,omitempty"`                   // openai_compatible, hosted_api, diffusers, comfyui, etc.
+	Type         string `yaml:"type,omitempty" json:"type,omitempty"`                   // forge, openai_compatible, hosted_api, comfyui, etc.
 	Endpoint     string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`           // provider base endpoint
 	ModelID      string `yaml:"model_id,omitempty" json:"model_id,omitempty"`           // model/workflow identifier
 	Location     string `yaml:"location,omitempty" json:"location,omitempty"`           // local | remote

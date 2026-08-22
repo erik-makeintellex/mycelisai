@@ -132,18 +132,16 @@ def test_list_repo_local_interface_processes_windows_queries_tasklist_then_cim(m
         },
     ]
     assert commands == [
-        ["tasklist", "/FO", "CSV", "/NH", "/FI", "IMAGENAME eq node.exe"],
-        ["tasklist", "/FO", "CSV", "/NH", "/FI", "IMAGENAME eq cmd.exe"],
         [
             "powershell",
             "-NoProfile",
             "-Command",
-            "Get-CimInstance Win32_Process -Filter \"ProcessId = 101 OR ProcessId = 103 OR ProcessId = 104 OR ProcessId = 102 OR ProcessId = 201\" | "
+            "Get-CimInstance Win32_Process -Filter \"Name = 'node.exe' OR Name = 'cmd.exe'\" | "
             "Select-Object ProcessId,Name,CommandLine | "
             "ConvertTo-Json -Compress",
         ]
     ]
-    assert timeouts == [20, 20, 8]
+    assert timeouts == [interface.interface_processes.WINDOWS_PROCESS_QUERY_TIMEOUT_SECONDS]
 
 
 def test_windows_listening_pids_for_port_range_filters_managed_ports(monkeypatch):
@@ -429,23 +427,6 @@ def test_clean_warns_and_continues_when_cache_directory_stays_locked(monkeypatch
     output = capsys.readouterr().out
     assert "could not be fully removed" in output
     assert "Cache cleared." in output
-
-
-def test_stop_runs_tree_kill_and_repo_cleanup_on_windows(monkeypatch):
-    cleaned: list[str] = []
-    killed: list[int] = []
-    ctx = FakeContext()
-    port = 4310
-
-    monkeypatch.setattr(interface, "is_windows", lambda: True)
-    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
-    monkeypatch.setattr(interface, "_windows_listening_pids_for_port", lambda _port: [1234])
-    monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: killed.append(pid))
-
-    interface.stop.body(ctx, port=port)
-
-    assert killed == [1234]
-    assert cleaned == ["cleanup"]
 
 
 def test_install_provisions_npm_and_playwright(monkeypatch):

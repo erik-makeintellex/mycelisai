@@ -171,13 +171,13 @@ describe('useCortexStore confirm proposal failure', () => {
         expect(result).toEqual({
             ok: false,
             runId: 'run-media-failed',
-            error: 'Local media generation is not reachable, so Soma could not create the requested image output.',
+            error: 'The configured image generator is not ready, so Soma could not create the requested image output.',
         });
         expect(useCortexStore.getState().missionChatFailure).toMatchObject({
             routeKind: 'workspace',
             type: 'unreachable',
-            summary: 'Local media generation is not reachable, so Soma could not create the requested image output.',
-            recommendedAction: expect.stringContaining('Start or reconnect the configured ComfyUI upstream'),
+            summary: 'The configured image generator is not ready, so Soma could not create the requested image output.',
+            recommendedAction: expect.stringContaining('Start or reconnect the configured image generator'),
             diagnostics: expect.stringContaining('ComfyUI engine unreachable'),
         });
         expect(warnSpy).toHaveBeenCalledWith(

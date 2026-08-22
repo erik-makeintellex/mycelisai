@@ -37,7 +37,7 @@ def test_up_frontend_uses_shared_interface_launcher(monkeypatch):
     monkeypatch.setattr(db_tasks.create, "body", lambda _c: None)
     monkeypatch.setattr(lifecycle, "_start_core_background", lambda: True)
 
-    def fake_wait_for_port(port, label, timeout=30, interval=1.0):
+    def fake_wait_for_port(port, label, timeout=30, interval=1.0, host="127.0.0.1"):
         events.append(f"wait:{port}:{label}")
         return True
 

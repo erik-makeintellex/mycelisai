@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useCallback, useMemo, useState } from "react";
+import React, { useEffect, useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { RefreshCw, Users } from "lucide-react";
 import {
   useCortexStore,
@@ -9,6 +9,7 @@ import {
   type TeamDetailEntry,
 } from "@/store/useCortexStore";
 import AgentEditorDrawer from "@/components/catalogue/AgentEditorDrawer";
+import { customizeWorkerProfilePrompt, newWorkerProfilePrompt, requestSomaPromptHandoff } from "@/components/soma/somaPromptHandoff";
 import { recoveryReviewQueueItems } from "@/components/recovery/recoveryQueue";
 import { ActiveWorkLane } from "./ActiveWorkLane";
 import TeamCard from "./TeamCard";
@@ -26,6 +27,7 @@ import { prioritizeRequestedWorkItem } from "./teamsPageWorkReview";
 const FILTERS: { value: TeamsFilter; label: string }[] = [
   { value: "all", label: "All Teams" }, { value: "standing", label: "Standing" }, { value: "mission", label: "Mission" },
 ];
+const subscribeToHydration = () => () => {};
 
 export default function TeamsPage() {
   const teamsDetail = useCortexStore((s) => s.teamsDetail);
@@ -37,12 +39,15 @@ export default function TeamsPage() {
   const teamsFilter = useCortexStore((s) => s.teamsFilter);
   const fetchTeamsDetail = useCortexStore((s) => s.fetchTeamsDetail);
   const fetchCatalogue = useCortexStore((s) => s.fetchCatalogue);
-  const createCatalogueAgent = useCortexStore((s) => s.createCatalogueAgent);
-  const updateCatalogueAgent = useCortexStore((s) => s.updateCatalogueAgent);
   const selectTeam = useCortexStore((s) => s.selectTeam);
   const setTeamsFilter = useCortexStore((s) => s.setTeamsFilter);
   const durableWorkRefreshVersion = useCortexStore(
     (s) => s.durableWorkRefreshVersion,
+  );
+  const isInteractive = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
   );
   const [isTemplateDrawerOpen, setIsTemplateDrawerOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<CatalogueAgent | null>(null);
@@ -84,24 +89,13 @@ export default function TeamsPage() {
 
   const totalAgents = teamsDetail.reduce((sum, t) => sum + t.agents.length, 0);
   const onlineAgents = teamsDetail.reduce((sum, t) => sum + t.agents.filter((a) => a.status >= 1).length, 0);
-  const sortedTemplates = useMemo(() => [...catalogueAgents].sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)), [catalogueAgents]);
+  const sortedTemplates = useMemo(
+    () => catalogueAgents
+      .filter((agent) => agent.source === "built_in" || agent.locked)
+      .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)),
+    [catalogueAgents],
+  );
   const highlightedTemplates = sortedTemplates.slice(0, 4);
-  const templateCoverage = useMemo(() => {
-    const coverage = new Map<string, CatalogueAgent[]>();
-    sortedTemplates.forEach((agent) => {
-      const keys = agent.outputs.length > 0 ? agent.outputs : [agent.role];
-      keys.forEach((key) => {
-        const trimmed = key.trim();
-        if (!trimmed) {
-          return;
-        }
-        const current = coverage.get(trimmed) ?? [];
-        current.push(agent);
-        coverage.set(trimmed, current);
-      });
-    });
-    return Array.from(coverage.entries()).slice(0, 6);
-  }, [sortedTemplates]);
   const activeTeamWork = useDurableTeamWork({
     teams: filteredTeams,
     refreshVersion: durableWorkRefreshVersion + activeWorkActions.activeWorkRefreshVersion,
@@ -132,6 +126,7 @@ export default function TeamsPage() {
         activeWorkActions.activeWorkActionError ?? activeTeamWork.degradedMessage
       }
       onAction={activeWorkActions.handleActiveWorkAction}
+      onVerifyExternalOutcome={activeWorkActions.handleExternalOutcomeVerification}
       onTeamAsk={activeWorkActions.handleTeamAsk}
       purpose={isWorkReviewView ? "review" : "active"}
       moreItemsHref="/teams?view=work"
@@ -147,23 +142,6 @@ export default function TeamsPage() {
     setEditingTemplate(null);
     setIsTemplateDrawerOpen(false);
   }, []);
-
-  const handleTemplateSave = useCallback(
-    (data: Partial<CatalogueAgent>) => {
-      if (editingTemplate) {
-        void updateCatalogueAgent(editingTemplate.id, data);
-      } else {
-        void createCatalogueAgent(data);
-      }
-      closeTemplateDrawer();
-    },
-    [
-      closeTemplateDrawer,
-      createCatalogueAgent,
-      editingTemplate,
-      updateCatalogueAgent,
-    ],
-  );
 
   return (
     <div className="h-full flex flex-col bg-cortex-bg relative">
@@ -186,7 +164,7 @@ export default function TeamsPage() {
             <p className="mt-1 text-xs text-cortex-text-muted">
               {isWorkReviewView
                 ? "Review active team work first. Open the team workspace or outputs only when the item needs more context."
-                : "Review live teams here, open focused lead workspaces, and define which reusable team-member templates Soma should apply when specializing a new lane."}
+                : "Review live teams here, open focused lead workspaces, and define which worker profiles Soma may apply when specializing a new lane."}
             </p>
           </div>
         </div>
@@ -195,6 +173,8 @@ export default function TeamsPage() {
           <select
             value={teamsFilter}
             onChange={handleFilterChange}
+            disabled={!isInteractive}
+            aria-label="Filter teams"
             className="bg-cortex-bg border border-cortex-border rounded px-2.5 py-1.5 text-xs font-mono text-cortex-text-main focus:outline-none focus:border-cortex-primary transition-colors appearance-none"
           >
             {FILTERS.map((f) => (
@@ -227,9 +207,8 @@ export default function TeamsPage() {
           <>
             <TeamsSetupPanels
                 highlightedTemplates={highlightedTemplates}
-                templateCoverage={templateCoverage}
                 isFetchingCatalogue={isFetchingCatalogue}
-                onNewTemplate={() => openTemplateDrawer(null)}
+                onNewTemplate={() => requestSomaPromptHandoff(newWorkerProfilePrompt())}
                 onEditTemplate={openTemplateDrawer}
             />
             <TeamsOutputCollaboration />
@@ -287,7 +266,8 @@ export default function TeamsPage() {
         <AgentEditorDrawer
           agent={editingTemplate}
           onClose={closeTemplateDrawer}
-          onSave={handleTemplateSave}
+          onSave={() => undefined}
+          onCustomize={(agent) => requestSomaPromptHandoff(customizeWorkerProfilePrompt(agent.name))}
         />
       )}
     </div>

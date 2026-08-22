@@ -21,6 +21,12 @@ func TestBuildPlannedToolCalls_ComplexAppAskDelegatesWithPackageContract(t *test
 	if calls[1].Arguments["path"] != "groups/"+teamID+"/planning/TEAM_EVOCATION.md" {
 		t.Fatalf("evocation path = %#v", calls[1].Arguments["path"])
 	}
+	tools := confirmedActionStringSlice(calls[0].Arguments["tools"])
+	for _, want := range []string{"write_file", "store_artifact", "research_for_blueprint", "consult_council", "read_file", "local_command"} {
+		if !containsToolName(tools, want) {
+			t.Fatalf("team tools = %#v, missing %q", tools, want)
+		}
+	}
 	if calls[2].Arguments["path"] != "groups/"+teamID+"/planning/RESEARCH_COUNCIL_HANDOFF.md" {
 		t.Fatalf("handoff path = %#v", calls[2].Arguments["path"])
 	}
@@ -41,5 +47,50 @@ func TestBuildPlannedToolCalls_ComplexAppAskDelegatesWithPackageContract(t *test
 	}
 	if !containsToolName(confirmedActionStringSlice(resultContract["expected_outputs"]), "openable application package") {
 		t.Fatalf("expected_outputs = %#v", resultContract["expected_outputs"])
+	}
+}
+
+func TestBuildPlannedToolCalls_OutcomeLanguageCreatesDeliveryTeam(t *testing.T) {
+	request := "Develop a playable browser game with a clear objective, controls, restart, and a direct launch link."
+
+	mutationTools := inferMutationToolsFromText(request)
+	for _, want := range []string{"write_file", "generate_blueprint", "delegate"} {
+		if !containsToolName(mutationTools, want) {
+			t.Fatalf("mutation tools = %#v, missing %q", mutationTools, want)
+		}
+	}
+	result, ok := deterministicGovernedMutationResult(request, mutationTools)
+	if !ok {
+		t.Fatal("natural complex deliverable must enter the governed proposal path")
+	}
+	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
+
+	teamID := firstNonEmptyString(calls[0].Arguments["team_id"])
+	if teamID == "" {
+		t.Fatal("complex deliverable must receive a Soma-generated team ID")
+	}
+	for _, call := range calls {
+		if path := firstNonEmptyString(call.Arguments["path"]); strings.HasPrefix(path, "workspace/generated/") {
+			t.Fatalf("complex deliverable leaked into general output bucket: %q", path)
+		}
+	}
+	if calls[2].Arguments["path"] != "groups/"+teamID+"/planning/RESEARCH_COUNCIL_HANDOFF.md" {
+		t.Fatalf("handoff path = %#v, want isolated team planning path", calls[2].Arguments["path"])
+	}
+	ask := mapArgument(calls[3].Arguments["ask"])
+	ownedScope := confirmedActionStringSlice(ask["owned_scope"])
+	if !containsString(ownedScope, "groups/"+teamID) {
+		t.Fatalf("owned_scope = %#v, want isolated team workspace", ownedScope)
+	}
+}
+
+func TestDeliveryTeamInferenceLeavesExplicitSingleFileAskDirect(t *testing.T) {
+	request := "Create a Python script at workspace/generated/check.py that prints the current status."
+	if requestRequiresDeliveryTeam(strings.ToLower(request)) {
+		t.Fatal("explicit single-file work must not instantiate a delivery team")
+	}
+	if got := extensionForWriteFileRequest("Research JavaScript frameworks for a browser app"); got != ".html" {
+		t.Fatalf("JavaScript extension = %q, want .html and never accidental .py", got)
 	}
 }

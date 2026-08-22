@@ -23,12 +23,14 @@ type DurableTeamWorkState = {
 export function useDurableTeamWork({
   teams,
   focusedTeamId,
+  view = "all",
   refreshVersion = 0,
   maxTeams = 8,
   pollIntervalMs = 5000,
 }: {
   teams: TeamDetailEntry[];
   focusedTeamId?: string | null;
+  view?: "all" | "attention";
   refreshVersion?: number;
   maxTeams?: number;
   pollIntervalMs?: number;
@@ -50,7 +52,8 @@ export function useDurableTeamWork({
     let cancelled = false;
 
     const load = async () => {
-      if (selectedTeams.length === 0) {
+      const selectedTeamIds = selectedTeamKey ? selectedTeamKey.split("|") : [];
+      if (selectedTeamIds.length === 0) {
         setDurableItems([]);
         setFailedTeamIds([]);
         setIsLoading(false);
@@ -61,22 +64,23 @@ export function useDurableTeamWork({
       const fetchedItems: TeamWorkItem[] = [];
       const failures: string[] = [];
 
-      await Promise.all(selectedTeams.map(async (team) => {
+      await Promise.all(selectedTeamIds.map(async (teamId) => {
         try {
-          const response = await fetch(`/api/v1/teams/${encodeURIComponent(team.id)}/work?limit=8&include_archived=false`, {
+          const viewQuery = view === "attention" ? "&view=attention" : "";
+          const response = await fetch(`/api/v1/teams/${encodeURIComponent(teamId)}/work?limit=8&include_archived=false${viewQuery}`, {
             cache: "no-store",
           });
           if (!response.ok) {
-            failures.push(team.id);
+            failures.push(teamId);
             return;
           }
           const payload = await response.json();
           const items = parseTeamWorkAPIItems(payload)
-            .map((item) => mapDurableTeamWorkItem(item, team))
+            .map((item) => mapDurableTeamWorkItem({ ...item, team_id: item.team_id ?? teamId }))
             .filter((item): item is TeamWorkItem => Boolean(item));
           fetchedItems.push(...items);
         } catch {
-          failures.push(team.id);
+          failures.push(teamId);
         }
       }));
 
@@ -90,7 +94,7 @@ export function useDurableTeamWork({
     return () => {
       cancelled = true;
     };
-  }, [pollVersion, refreshVersion, selectedTeamKey]);
+  }, [pollVersion, refreshVersion, selectedTeamKey, view]);
 
   const hasPollingWork = useMemo(
     () => durableItems.some((item) => shouldPollTeamWork(item)),

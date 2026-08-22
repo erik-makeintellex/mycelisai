@@ -21,8 +21,8 @@ describe("TeamsPage bounded ask", () => {
   const originalClearInterval = global.clearInterval;
 
   beforeEach(() => {
-    global.setInterval = vi.fn(() => 1) as any;
-    global.clearInterval = vi.fn() as any;
+    global.setInterval = vi.fn(() => 1) as unknown as typeof global.setInterval;
+    global.clearInterval = vi.fn() as unknown as typeof global.clearInterval;
     useCortexStore.setState({
       teamsDetail: mockTeams,
       isFetchingTeamsDetail: false,

@@ -275,6 +275,19 @@ func TestConfirmedReferentialActionNormalizesToGovernedMutation(t *testing.T) {
 	}
 }
 
+func TestOutcomeTemplateCommandDoesNotMatchRecurringConversationTemplate(t *testing.T) {
+	review := newTestServer().buildSomaReferentialReview(t.Context(), []chatRequestMessage{{
+		Role: "user", Content: "Save this outcome template.",
+	}})
+
+	if review.NeedsConfirmation {
+		t.Fatalf("Outcome Template command was intercepted by referential confirmation: %+v", review)
+	}
+	if containsString(review.MutationTools, "delegate") {
+		t.Fatalf("mutation tools = %v, must not route Outcome Template to delegate", review.MutationTools)
+	}
+}
+
 func decodeChatPayloadFromTestResponse(t *testing.T, body []byte) protocol.ChatResponsePayload {
 	t.Helper()
 	var resp protocol.APIResponse

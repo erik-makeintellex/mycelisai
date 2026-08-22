@@ -16,10 +16,10 @@ func (s *AdminServer) persistConfirmedActionVisibility(ctx context.Context, link
 	if err := s.logConfirmedActionConversation(ctx, link.RunID, link.AuditUser, results); err != nil {
 		errs = append(errs, err)
 	}
-	if err := s.ensureGroupsForCreatedTeams(ctx, link.AuditID, link.AuditUser, link.Scope); err != nil {
+	if err := s.ensureGroupsForCreatedTeams(ctx, link.AuditID, link.AuditUser, link.Scope, link.FixtureScopeID, results); err != nil {
 		errs = append(errs, err)
 	}
-	if err := s.persistConfirmedActionOutputArtifacts(ctx, link.RunID, results); err != nil {
+	if err := s.persistConfirmedActionOutputArtifacts(ctx, link.RunID, link.FixtureScopeID, results); err != nil {
 		errs = append(errs, err)
 	}
 	refs, err := s.persistConfirmedActionTeamWork(ctx, link, results)
@@ -38,6 +38,12 @@ func (s *AdminServer) logConfirmedActionConversation(ctx context.Context, runID,
 		return nil
 	}
 	sessionID := runID
+	startContent := "Confirmed proposal execution started."
+	if result, ok := firstConfigDocumentResult(results, "store_config_document"); ok {
+		startContent = configDocumentResultSummary(result)
+	} else if result, ok := firstConfigDocumentResult(results, "activate_config_document"); ok {
+		startContent = configDocumentResultSummary(result)
+	}
 	_, err := s.Conversations.LogTurn(ctx, protocol.ConversationTurnData{
 		RunID:     runID,
 		SessionID: sessionID,
@@ -46,7 +52,7 @@ func (s *AdminServer) logConfirmedActionConversation(ctx context.Context, runID,
 		TeamID:    "admin-core",
 		TurnIndex: 0,
 		Role:      "assistant",
-		Content:   "Confirmed proposal execution started.",
+		Content:   startContent,
 	})
 	if err != nil {
 		return err
@@ -94,7 +100,7 @@ func (s *AdminServer) logConfirmedActionConversation(ctx context.Context, runID,
 	return nil
 }
 
-func (s *AdminServer) persistConfirmedActionOutputArtifacts(ctx context.Context, runID string, results []plannedToolExecutionResult) error {
+func (s *AdminServer) persistConfirmedActionOutputArtifacts(ctx context.Context, runID, fixtureScopeID string, results []plannedToolExecutionResult) error {
 	if s.Artifacts == nil {
 		return nil
 	}
@@ -120,18 +126,27 @@ func (s *AdminServer) persistConfirmedActionOutputArtifacts(ctx context.Context,
 			"source_kind":     string(protocol.SourceKindWebAPI),
 			"source_channel":  "api.intent.confirm-action",
 		})
-		_, err := s.Artifacts.Store(ctx, artifacts.Artifact{
-			MissionID:    nil,
-			TeamID:       uuidPtrFromString(teamRef),
-			AgentID:      firstNonEmptyString(teamRef, "Soma"),
-			ArtifactType: artifactTypeForConfirmedWrite(result.Arguments, path),
-			Title:        firstNonEmptyString(outputTitle(packageOutput), result.Arguments["title"], path),
-			ContentType:  contentTypeForWrittenFile(path),
-			Content:      firstNonEmptyString(result.Arguments["content"]),
-			FilePath:     path,
-			Metadata:     metadata,
-			TrustScore:   floatPtr(0.9),
-			Status:       "approved",
+		var stored *artifacts.Artifact
+		err := s.withQAFixtureScopeLock(ctx, fixtureScopeID, func() error {
+			var storeErr error
+			stored, storeErr = s.Artifacts.Store(ctx, artifacts.Artifact{
+				MissionID:    nil,
+				TeamID:       uuidPtrFromString(teamRef),
+				AgentID:      firstNonEmptyString(teamRef, "Soma"),
+				TraceID:      runID,
+				ArtifactType: artifactTypeForConfirmedWrite(result.Arguments, path),
+				Title:        firstNonEmptyString(outputTitle(packageOutput), result.Arguments["title"], path),
+				ContentType:  contentTypeForWrittenFile(path),
+				Content:      firstNonEmptyString(result.Arguments["content"]),
+				FilePath:     path,
+				Metadata:     metadata,
+				TrustScore:   floatPtr(0.9),
+				Status:       "approved",
+			})
+			if storeErr != nil {
+				return storeErr
+			}
+			return s.claimQAFixtureResourcesLocked(ctx, fixtureScopeID, []qaFixtureResource{{Kind: "artifact", Ref: stored.ID.String()}})
 		})
 		if err != nil {
 			return err
@@ -140,35 +155,28 @@ func (s *AdminServer) persistConfirmedActionOutputArtifacts(ctx context.Context,
 	return nil
 }
 
-func confirmedActionCreatedTeamID(results []plannedToolExecutionResult) string {
-	for _, result := range results {
-		if strings.TrimSpace(result.Name) == "create_team" {
-			if teamID := confirmedActionTeamID(result.Arguments); teamID != "" {
-				return teamID
-			}
-		}
-	}
-	return ""
-}
-
-func (s *AdminServer) ensureGroupsForCreatedTeams(ctx context.Context, auditID, auditUser string, scope *protocol.ScopeValidation) error {
+func (s *AdminServer) ensureGroupsForCreatedTeams(ctx context.Context, auditID, auditUser string, scope *protocol.ScopeValidation, fixtureScopeID string, results []plannedToolExecutionResult) error {
 	if s.getDB() == nil || scope == nil {
 		return nil
 	}
+	createdTeams := confirmedActionCreatedTeamResults(results)
 	for _, planned := range scope.PlannedToolCalls {
 		if strings.TrimSpace(planned.Name) != "create_team" {
 			continue
 		}
-		if err := s.ensureGroupForCreatedTeam(ctx, auditID, auditUser, planned.Arguments); err != nil {
+		if fixtureScopeID != "" && !createdTeams[normalizeConfirmedRuntimeTeamID(confirmedActionTeamID(planned.Arguments))] {
+			continue
+		}
+		if err := s.ensureGroupForCreatedTeam(ctx, auditID, auditUser, planned.Arguments, fixtureScopeID); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *AdminServer) ensureGroupForCreatedTeam(ctx context.Context, auditID, auditUser string, args map[string]any) error {
+func (s *AdminServer) ensureGroupForCreatedTeam(ctx context.Context, auditID, auditUser string, args map[string]any, fixtureScopeID string) error {
 	merged := mergedTeamArgs(args)
-	teamID := confirmedActionTeamID(merged)
+	teamID := normalizeConfirmedRuntimeTeamID(confirmedActionTeamID(merged))
 	if teamID == "" {
 		return nil
 	}
@@ -222,10 +230,22 @@ func (s *AdminServer) ensureGroupForCreatedTeam(ctx context.Context, auditID, au
 	if err := assignGroupWorkspaceFolder(&group, ""); err != nil {
 		return err
 	}
-	if err := ensureGroupWorkspaceFolder(group.WorkspaceFolder); err != nil {
-		return err
+	resources := []qaFixtureResource{
+		{Kind: "group", Ref: group.ID},
+		{Kind: "team", Ref: teamID},
 	}
-	return s.insertGroupDB(ctx, &group)
+	if group.WorkspaceFolder != "" {
+		resources = append(resources, qaFixtureResource{Kind: "workspace_path", Ref: group.WorkspaceFolder})
+	}
+	return s.withQAFixtureScopeLock(ctx, fixtureScopeID, func() error {
+		if err := s.claimQAFixtureResourcesLocked(ctx, fixtureScopeID, resources); err != nil {
+			return err
+		}
+		if err := ensureGroupWorkspaceFolder(group.WorkspaceFolder); err != nil {
+			return err
+		}
+		return s.insertGroupDB(ctx, &group)
+	})
 }
 
 func (s *AdminServer) ensureExistingGroupIncludesTeam(ctx context.Context, auditID string, group *CollaborationGroup, teamID string) error {

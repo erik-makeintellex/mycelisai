@@ -2,21 +2,25 @@ import { expect, test } from "@playwright/test";
 import {
   type APIEnvelope,
   type GroupRecord,
+  attachRetainedPackageEvidence,
   confirmProposal,
   createOrganization,
-  expectProjectPackageMetadata,
   expectProjectPackageVisible,
   liveAPIGet,
   liveTimeoutMs,
   openLiveWorkspace,
   parseJSONIfPossible,
-  removeTarget,
   submitLiveWorkspaceChat,
   targetExists,
 } from "../support/finalization-browser-package";
+import {
+  createQAFixtureScope,
+  purgeDeliveryFixture,
+} from "../support/qa-fixture-ownership";
 
 type ConfirmData = {
   run_id?: string;
+  run_status?: string;
   verified?: boolean;
   execution_state?: string;
   proof_artifact_id?: string;
@@ -26,7 +30,9 @@ type ConfirmData = {
 
 type ProofRecord = {
   id?: string;
+  contract_id?: string;
   run_id?: string;
+  artifact_kind?: string;
   status?: string;
   proof_class?: string;
   proof_quality?: string;
@@ -41,12 +47,29 @@ type ContractRecord = {
 
 type RunEvent = { event_type?: string; payload?: Record<string, unknown> };
 type ArtifactRecord = { title?: string; file_path?: string; artifact_type?: string };
+type TeamOutputRef = {
+  kind?: string;
+  label?: string;
+  storage_ref?: string;
+  entrypoint?: string;
+  proof_ref?: string;
+};
+type TeamWorkItem = {
+  work_item_id?: string;
+  team_id?: string;
+  run_id?: string;
+  execution_shape?: string;
+  state?: string;
+  degradation_state?: string;
+  recovery_options?: string[];
+  output_refs?: TeamOutputRef[];
+};
 
 test.describe("Trusted Outcome Journey live smoke", () => {
   test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires a live Core backend");
   test.setTimeout(liveTimeoutMs);
 
-  test("proves the source-stack Ask to Revisit path with durable proof readback", async ({ page }) => {
+  test("proves the source-stack Ask to Revisit path with durable proof readback", async ({ page }, testInfo) => {
     test.slow();
     const stamp = Date.now();
     const teamID = `trusted-outcome-live-${stamp}`;
@@ -54,25 +77,34 @@ test.describe("Trusted Outcome Journey live smoke", () => {
     const folder = `groups/${teamID}/generated/first-game`;
     const entrypoint = `${folder}/index.html`;
     const packageTitle = `${teamName} First Playable`;
-    const organizationID = await createOrganization(page, `Trusted Outcome Journey ${stamp}`);
-
-    await openLiveWorkspace(page, organizationID);
+    const fixture = await createQAFixtureScope(page, `trusted-outcome-${stamp}`);
+    let organizationID: string | undefined;
+    let runID: string | undefined;
     try {
+      organizationID = await createOrganization(
+        page,
+        `Trusted Outcome Journey ${stamp}`,
+        { fixtureScopeID: fixture.id },
+      );
+      await openLiveWorkspace(page, organizationID);
       const proposal = await submitLiveWorkspaceChat(
         page,
         [
           `Create a team with team_id ${teamID} named ${teamName}.`,
-          "Ask Soma for the exact first demo deliverable: a playable browser game project package.",
+          "Have that team build the exact first demo deliverable: a playable browser game project package.",
           `Retain it at ${folder} with entrypoint ${entrypoint}.`,
+          `Use the package title ${packageTitle}.`,
           "The package metadata must include files index.html, README.md, PROOF.md, and validation notes from opening the browser game.",
+          "The self-contained HTML must start its render loop and visibly move the player while ArrowRight is held.",
+          "Read the saved entrypoint back and repair it before reporting completion if any required interaction or file is missing.",
           "After approval, return a retained project_package output with entrypoint, folder, files, validation, and proof.",
         ].join(" "),
       );
 
       expect(proposal.response.ok(), proposal.body ? JSON.stringify(proposal.body) : proposal.raw).toBeTruthy();
       expect(proposal.body?.data?.mode).toBe("proposal");
-      await expect(page.getByRole("heading", { name: /Start this\?|Approve this\?/ }).last()).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByRole("button", { name: /^(Start|Approve)$/i }).last()).toBeVisible();
+      await expect(page.getByText(/reply.*(start|approve).*to begin/i).last()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole("button", { name: /^(Start|Approve)$/i })).toHaveCount(0);
       await expect(page.getByText(teamID).last()).toBeVisible();
       await expect(page.getByText(entrypoint).last()).toBeVisible();
       expect(targetExists(entrypoint)).toBeFalsy();
@@ -80,54 +112,142 @@ test.describe("Trusted Outcome Journey live smoke", () => {
       const confirmed = await confirmProposal(page);
       expect(confirmed.response.ok(), confirmed.body ? JSON.stringify(confirmed.body) : confirmed.raw).toBeTruthy();
       const data = confirmed.body?.data as ConfirmData | undefined;
-      expect(data?.verified).toBeTruthy();
-      expect(data?.execution_state).toBe("verified");
+      expect(data?.verified).toBeFalsy();
+      expect(data?.execution_state).toBe("running");
+      expect(data?.run_status).toBe("running");
+      expect(data?.proof_artifact_id).toBeFalsy();
       expect(data?.run_id).toBeTruthy();
+      runID = data?.run_id;
+      await expect(page.getByText("Action completed", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("Result verified", { exact: true })).toHaveCount(0);
 
-      const outputs = data?.execution_summary?.outputs ?? [];
-      const projectPackage = outputs.find((output) => output.kind === "project_package");
-      expect(projectPackage, JSON.stringify(outputs)).toBeTruthy();
-      expectProjectPackageMetadata(projectPackage!, { title: packageTitle, entrypoint, folder });
-      await expect.poll(() => targetExists(entrypoint), { timeout: 30_000 }).toBeTruthy();
+      const workItem = await waitForTeamDelivery(page, teamID, data!.run_id!);
+      expect(workItem.state, JSON.stringify(workItem)).toBe("output_ready");
+      const projectPackageRef = workItem.output_refs?.find((output) => output.kind === "project_package");
+      expect(projectPackageRef, JSON.stringify(workItem.output_refs ?? [])).toBeTruthy();
+      expect(projectPackageRef?.storage_ref).toBe(folder);
+      expect(projectPackageRef?.entrypoint).toMatch(/index\.html$/);
+      expect(projectPackageRef?.proof_ref).toBeTruthy();
+      await expect.poll(() => targetExists(entrypoint), { timeout: 60_000 }).toBeTruthy();
+      for (const requiredFile of ["README.md", "PROOF.md", "project-package.json"]) {
+        expect(targetExists(`${folder}/${requiredFile}`), `${requiredFile} must exist physically`).toBeTruthy();
+      }
+
+      await expect(page.getByText("Work complete", { exact: true }).last()).toBeVisible({ timeout: 30_000 });
+      const directOpen = page.getByRole("link", { name: "Open app" }).last();
+      await expect(directOpen).toBeVisible();
+      await expect(directOpen).toHaveAttribute("href", new RegExp(encodeURIComponent(entrypoint), "i"));
+
+      await page.goto(`/dashboard?team_id=${encodeURIComponent(teamID)}`, { waitUntil: "domcontentloaded" });
       await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
 
       const outputPagePromise = page.context().waitForEvent("page");
-      await page.getByRole("button", { name: new RegExp(`Open file .*${packageTitle}`, "i") }).last().click();
+      await page.getByRole("button", { name: new RegExp(`Open app .*${packageTitle}`, "i") }).last().click();
       const outputPage = await outputPagePromise;
       await outputPage.waitForLoadState("domcontentloaded");
       await expect(outputPage).toHaveTitle(packageTitle);
-      await expect(outputPage.locator("body")).toContainText(/score|start|play|restart|game/i);
+      const canvas = outputPage.locator("canvas").first();
+      await expect(canvas).toBeVisible();
+      const beforeMove = await canvas.screenshot();
+      await outputPage.keyboard.down("ArrowRight");
+      try {
+        await expect.poll(async () => {
+          const whileMoving = await canvas.screenshot();
+          return whileMoving.equals(beforeMove);
+        }, {
+          timeout: 2_000,
+          intervals: [100, 150, 250],
+          message: "the generated browser package should visibly respond while ArrowRight is held",
+        }).toBeFalsy();
+      } finally {
+        await outputPage.keyboard.up("ArrowRight");
+      }
       await outputPage.close();
 
-      await expectProofAndRunReadback(page, data!);
+      await expectProofAndRunReadback(page, data!, projectPackageRef!.proof_ref!);
       const group = await expectGroupOutputReadback(page, teamID, packageTitle, entrypoint);
       await expectResourcesRevisit(page, folder, "index.html");
       await expectGroupsRevisit(page, group, packageTitle, entrypoint);
       await expectRunReceiptRevisit(page, data!.run_id!);
     } finally {
-      removeTarget(entrypoint);
-      removeTarget(`${folder}/README.md`);
-      removeTarget(`${folder}/PROOF.md`);
-      removeTarget(`${folder}/project-package.json`);
+		try {
+			await attachRetainedPackageEvidence(page, testInfo, [
+				entrypoint,
+				`${folder}/project-package.json`,
+				`${folder}/README.md`,
+				`${folder}/PROOF.md`,
+			]);
+		} finally {
+			await purgeDeliveryFixture(page, fixture, { teamID, organizationID, runID });
+		}
     }
   });
 });
 
-async function expectProofAndRunReadback(page: import("@playwright/test").Page, data: ConfirmData) {
+async function waitForTeamDelivery(page: import("@playwright/test").Page, teamID: string, runID: string) {
+  let latest: TeamWorkItem | undefined;
+  const refreshState = async () => {
+    const response = await liveAPIGet(page, `/api/v1/teams/${encodeURIComponent(teamID)}/work?limit=25`);
+    if (!response.ok()) return `http_${response.status()}`;
+    const items = ((await response.json()) as APIEnvelope<TeamWorkItem[]>).data ?? [];
+    latest = items.find((item) => (
+      item.run_id === runID
+      && item.team_id === teamID
+      && item.execution_shape === "delegated_work"
+    ));
+    return latest?.state ?? "missing";
+  };
+
+  await expect.poll(async () => {
+    return refreshState();
+  }, {
+    timeout: 600_000,
+    intervals: [500, 1_000, 2_000, 5_000],
+    message: `team ${teamID} should produce a candidate or expose a recoverable terminal state`,
+  }).toMatch(/^(reviewing|output_ready|degraded|needs_operator)$/);
+
+  if (latest?.state === "reviewing") {
+    await expect.poll(refreshState, {
+      timeout: 120_000,
+      intervals: [500, 1_000, 2_000, 5_000],
+      message: `team ${teamID} candidate should finish runtime validation`,
+    }).toMatch(/^(output_ready|degraded|needs_operator)$/);
+  }
+
+  expect(latest, `No correlated TeamWorkItem found for run ${runID}`).toBeTruthy();
+  if (latest?.state !== "output_ready") {
+    throw new Error(
+      `Team delivery ended ${latest?.state}: ${latest?.degradation_state ?? "unknown"}; `
+      + `recovery=${(latest?.recovery_options ?? []).join(" | ")}`,
+    );
+  }
+  return latest;
+}
+
+async function expectProofAndRunReadback(page: import("@playwright/test").Page, data: ConfirmData, outputProofRef: string) {
+  const runResponse = await liveAPIGet(page, `/api/v1/runs/${encodeURIComponent(data.run_id!)}`);
+  expect(runResponse.ok(), await runResponse.text()).toBeTruthy();
+  const run = ((await runResponse.json()) as APIEnvelope<{ status?: string }>).data;
+  expect(run?.status).toBe("completed");
+
   const proofResponse = await liveAPIGet(page, `/api/v1/trust/proof-artifacts?run_id=${encodeURIComponent(data.run_id!)}&limit=10`);
   expect(proofResponse.ok(), await proofResponse.text()).toBeTruthy();
   const proofRecords = ((await proofResponse.json()) as APIEnvelope<ProofRecord[]>).data ?? [];
   expect(proofRecords.length, JSON.stringify(proofRecords)).toBeGreaterThan(0);
-  if (data.proof_artifact_id) {
-    expect(proofRecords.some((record) => record.id === data.proof_artifact_id)).toBeTruthy();
-  }
-  expect(proofRecords.some((record) => record.status === "success" || record.proof_quality === "verified")).toBeTruthy();
+  const resultProof = proofRecords.find((record) => record.id === outputProofRef);
+  expect(resultProof, JSON.stringify(proofRecords)).toBeTruthy();
+  expect(resultProof?.artifact_kind).toBe("team_signal_result");
+  expect(resultProof?.run_id).toBe(data.run_id);
+  expect(resultProof?.contract_id).toBe(data.contract_id);
+  expect(resultProof?.status).toBe("success");
+  expect(resultProof?.proof_quality).toBe("verified");
 
   const contractResponse = await liveAPIGet(page, `/api/v1/trust/execution-contracts?run_id=${encodeURIComponent(data.run_id!)}&limit=10`);
   expect(contractResponse.ok(), await contractResponse.text()).toBeTruthy();
   const contracts = ((await contractResponse.json()) as APIEnvelope<ContractRecord[]>).data ?? [];
   expect(contracts.length, JSON.stringify(contracts)).toBeGreaterThan(0);
   if (data.contract_id) expect(contracts.some((contract) => contract.id === data.contract_id)).toBeTruthy();
+  expect(contracts.some((contract) => contract.status === "completed")).toBeTruthy();
 
   const eventResponse = await liveAPIGet(page, `/api/v1/runs/${encodeURIComponent(data.run_id!)}/events`);
   expect(eventResponse.ok(), await eventResponse.text()).toBeTruthy();

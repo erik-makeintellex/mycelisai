@@ -128,18 +128,36 @@ func retentionClassForBool(retained bool) protocol.ExecutionRetentionClass {
 }
 
 func confirmActionResponseData(proofID, contractID, proofArtifactID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult, teamWorkRefs []confirmActionTeamWorkRef, outcomeProject *protocol.OutcomeProject) map[string]any {
+	return confirmActionResponseDataForStatus(proofID, contractID, proofArtifactID, runID, auditID, runs.StatusCompleted, scope, results, teamWorkRefs, outcomeProject)
+}
+
+func confirmActionResponseDataForStatus(proofID, contractID, proofArtifactID, runID, auditID string, runStatus runs.RunStatus, scope *protocol.ScopeValidation, results []plannedToolExecutionResult, teamWorkRefs []confirmActionTeamWorkRef, outcomeProject *protocol.OutcomeProject) map[string]any {
+	verified := runStatus == runs.StatusCompleted
+	executionState := "running"
+	if verified {
+		executionState = "verified"
+	}
+	summary := buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, runID, auditID, scope, results)
+	if !verified {
+		summary.Execution.Status = protocol.ExecutionStatusRunning
+		summary.Execution.Summary = "Soma started the approved work. Completion proof will appear after the delegated team returns retained output."
+		summary.Proof.ProofID = ""
+		summary.Proof.Verified = boolPtr(false)
+		summary.AuditRecovery.RecoveryState = "waiting_for_team"
+		summary.NextStep = &protocol.ExecutionNextStep{Label: "Review active work", Action: "view_run", Href: "/api/v1/runs/" + runID}
+	}
 	data := map[string]any{
 		"confirmed":         true,
-		"verified":          true,
-		"execution_state":   "verified",
+		"verified":          verified,
+		"execution_state":   executionState,
 		"proof_id":          proofID,
 		"intent_proof_id":   proofID,
 		"contract_id":       contractID,
 		"proof_artifact_id": proofArtifactID,
 		"audit_event_id":    auditID,
 		"run_id":            runID,
-		"run_status":        runs.StatusCompleted,
-		"execution_summary": buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, runID, auditID, scope, results),
+		"run_status":        runStatus,
+		"execution_summary": summary,
 	}
 	if len(teamWorkRefs) > 0 {
 		data["team_work_refs"] = teamWorkRefs

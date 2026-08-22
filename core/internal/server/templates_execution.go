@@ -52,8 +52,7 @@ func (s *AdminServer) loadIntentProofScopeTx(tx *sql.Tx, proofID string) (*proto
 	return scope, nil
 }
 
-// createExecutionRunTx persists a durable execution record before the approved
-// action is executed so later status updates have a stable identity to target.
+// createExecutionRunTx persists the durable identity used by later execution status updates.
 func (s *AdminServer) createExecutionRunTx(ctx context.Context, tx *sql.Tx, proofID string, scope *protocol.ScopeValidation, auditUser string) (string, error) {
 	if tx == nil {
 		return "", errDBUnavailable
@@ -123,12 +122,15 @@ func (s *AdminServer) markRunCompletedTx(tx *sql.Tx, runID, proofID string) erro
 	}
 	now := time.Now()
 
-	_, err := tx.Exec(
-		`UPDATE mission_runs SET status = $1, completed_at = NOW() WHERE id = $2`,
-		runs.StatusCompleted, runID,
+	result, err := tx.Exec(
+		`UPDATE mission_runs SET status = $1, completed_at = GREATEST(NOW(), started_at) WHERE id = $2 AND status NOT IN ($1, $3)`,
+		runs.StatusCompleted, runID, runs.StatusFailed,
 	)
 	if err != nil {
 		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return nil
 	}
 
 	payload, _ := json.Marshal(map[string]any{
@@ -159,7 +161,7 @@ func (s *AdminServer) markRunFailedTx(tx *sql.Tx, runID, proofID, reason string)
 	}
 
 	_, err := tx.Exec(
-		`UPDATE mission_runs SET status = $1, completed_at = NOW() WHERE id = $2`,
+		`UPDATE mission_runs SET status = $1, completed_at = GREATEST(NOW(), started_at) WHERE id = $2`,
 		runs.StatusFailed, runID,
 	)
 	if err != nil {
@@ -182,28 +184,25 @@ func (s *AdminServer) markRunFailedTx(tx *sql.Tx, runID, proofID, reason string)
 	return err
 }
 
-func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protocol.ScopeValidation, auditUser, runID, proofID, contractID string) ([]plannedToolExecutionResult, error) {
+func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protocol.ScopeValidation, auditUser, runID, proofID, contractID, fixtureScopeID string, fixtureFenceHeld bool) ([]plannedToolExecutionResult, error) {
+	return s.executePlannedToolCallsTx(ctx, nil, scope, auditUser, runID, proofID, contractID, fixtureScopeID, fixtureFenceHeld)
+}
+
+func (s *AdminServer) executePlannedToolCallsTx(ctx context.Context, tx *sql.Tx, scope *protocol.ScopeValidation, auditUser, runID, proofID, contractID, fixtureScopeID string, fixtureFenceHeld bool) ([]plannedToolExecutionResult, error) {
 	if scope == nil || len(scope.PlannedToolCalls) == 0 {
 		return nil, fmt.Errorf("no approved execution plan was stored for this proposal")
 	}
 
 	registry := swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
-		NC:    s.NC,
-		Brain: s.Cognitive,
-		DB:    s.getDB(),
+		NC:        s.NC,
+		Brain:     s.Cognitive,
+		Catalogue: s.Catalogue,
+		DB:        s.getDB(),
 	})
 	registry.SetSoma(s.Soma)
 	mcpExec := s.plannedMCPToolExecutor()
 	executor := swarm.NewCompositeToolExecutor(registry, mcpExec)
-	toolCtx := swarm.WithToolInvocationContext(ctx, swarm.ToolInvocationContext{
-		SourceKind:    protocol.SourceKindWebAPI,
-		SourceChannel: "api.intent.confirm-action",
-		PayloadKind:   protocol.PayloadKindCommand,
-		Timestamp:     time.Now(),
-		UserLabel:     auditUser,
-		RunID:         strings.TrimSpace(runID),
-		PlanningOnly:  false,
-	})
+	toolCtx := confirmedActionToolContext(ctx, auditUser, runID, scope.ConfigRequestBoundary)
 
 	results := make([]plannedToolExecutionResult, 0, len(scope.PlannedToolCalls))
 	lastGeneratedImageArtifactID := ""
@@ -224,7 +223,41 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 		if err != nil {
 			return results, err
 		}
-		output, err := executor.CallTool(toolCtx, serverID, resolvedToolName, planned.Arguments)
+		if strings.EqualFold(resolvedToolName, "create_team") && strings.TrimSpace(fixtureScopeID) != "" && serverID != uuid.Nil {
+			return results, fmt.Errorf("scoped QA create_team must use the internal team runtime")
+		}
+		var output string
+		execute := func() error {
+			if tx != nil && isConfigDocumentMutationTool(resolvedToolName) {
+				var configErr error
+				output, configErr = s.executeConfigDocumentMutationTx(toolCtx, tx, resolvedToolName, planned.Arguments, scope, auditUser)
+				return configErr
+			}
+			if strings.EqualFold(resolvedToolName, "create_team") {
+				if err := s.ensureQAFixtureTeamCreationAvailable(toolCtx, fixtureScopeID, runID, planned.Arguments); err != nil {
+					return err
+				}
+			}
+			var callErr error
+			output, callErr = executor.CallTool(toolCtx, serverID, resolvedToolName, planned.Arguments)
+			if callErr != nil {
+				return callErr
+			}
+			if strings.EqualFold(resolvedToolName, "create_team") {
+				return s.claimConfirmedCreatedTeam(toolCtx, fixtureScopeID, planned.Arguments, output)
+			}
+			return nil
+		}
+		if strings.EqualFold(resolvedToolName, "create_team") && strings.TrimSpace(fixtureScopeID) != "" && !fixtureFenceHeld {
+			err = s.withQAFixtureScopeLock(toolCtx, fixtureScopeID, func() error {
+				if err := s.claimQAFixtureResourcesLocked(toolCtx, fixtureScopeID, []qaFixtureResource{{Kind: "run", Ref: runID}}); err != nil {
+					return err
+				}
+				return execute()
+			})
+		} else {
+			err = execute()
+		}
 		if err != nil {
 			return results, err
 		}
@@ -245,55 +278,10 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 			Output:    output,
 			Artifacts: artifacts,
 		})
-		s.auditExecutedPlannedTool(planned, resolvedToolName, auditUser)
+		if tx == nil || !isConfigDocumentMutationTool(resolvedToolName) {
+			s.auditExecutedPlannedTool(planned, resolvedToolName, auditUser)
+		}
 	}
 
 	return results, nil
-}
-
-func (s *AdminServer) auditExecutedPlannedTool(planned protocol.PlannedToolCall, resolvedToolName, auditUser string) {
-	resource := firstNonEmptyString(planned.Arguments["path"], planned.Arguments["subject"], planned.Arguments["channel"])
-	capabilityID := capabilityForPlannedTool(firstNonEmptyString(planned.ToolRef, resolvedToolName))
-	details := buildExecutionAuditDetailsForTool(planned, resolvedToolName)
-	_, _ = s.createAuditEvent(
-		protocol.TemplateChatToProposal, "confirm-action",
-		"Approved capability usage executed",
-		map[string]any{
-			"actor":           "Soma",
-			"user":            auditUser,
-			"action":          "capability_usage",
-			"result_status":   "completed",
-			"capability_used": capabilityID,
-			"resource":        resource,
-			"details":         details,
-		},
-	)
-	if resolvedToolName == "publish_signal" || resolvedToolName == "broadcast" {
-		_, _ = s.createAuditEvent(
-			protocol.TemplateChatToProposal, "confirm-action",
-			"Governed channel write executed",
-			map[string]any{
-				"actor":           "Soma",
-				"user":            auditUser,
-				"action":          "channel_written",
-				"result_status":   "completed",
-				"capability_used": capabilityID,
-				"resource":        resource,
-			},
-		)
-	}
-	if resolvedToolName == "write_file" || resolvedToolName == "promote_deployment_context" {
-		_, _ = s.createAuditEvent(
-			protocol.TemplateChatToProposal, "confirm-action",
-			"Governed artifact created",
-			map[string]any{
-				"actor":           "Soma",
-				"user":            auditUser,
-				"action":          "artifact_created",
-				"result_status":   "completed",
-				"capability_used": capabilityID,
-				"resource":        resource,
-			},
-		)
-	}
 }

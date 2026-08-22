@@ -61,7 +61,7 @@ func TestHandleGroupOutputs_ProjectsTeamOutputRefs(t *testing.T) {
 		WithArgs(teamID, 8).
 		WillReturnRows(teamWorkItemRows().AddRow(
 			workID, teamID, "", "", "", "", "Create playable package", []byte(`[]`), "Soma",
-			string(protocol.TeamExecutionShapeDeliverable), []byte(`["project package"]`), []byte(`["proof"]`), []byte(`[]`),
+			string(protocol.TeamExecutionShapeDeliverable), "", []byte(`null`), []byte(`["project package"]`), []byte(`["proof"]`), []byte(`[]`),
 			"confirmed", string(protocol.TeamWorkStateOutputReady), []byte(`null`), false, "",
 			[]byte(`[]`), jsonArray(outputRefs), []byte(`["proof-playable-package"]`), []byte(`[]`), now.Add(-2*time.Minute), now, "v1",
 		))
@@ -81,6 +81,10 @@ func TestHandleGroupOutputs_ProjectsTeamOutputRefs(t *testing.T) {
 	}
 	if first["file_path"] != "groups/qa-delivery-team/generated/first-game" {
 		t.Fatalf("file_path = %v", first["file_path"])
+	}
+	metadata := first["metadata"].(map[string]any)
+	if metadata["folder"] != "groups/qa-delivery-team/generated/first-game" || metadata["entrypoint"] != "index.html" {
+		t.Fatalf("package metadata = %#v", metadata)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)

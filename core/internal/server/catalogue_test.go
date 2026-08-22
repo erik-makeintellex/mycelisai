@@ -16,6 +16,8 @@ var catTestColumns = []string{
 	"id", "name", "role", "system_prompt", "model",
 	"tools", "inputs", "outputs",
 	"verification_strategy", "verification_rubric", "validation_command",
+	"profile_key", "description", "source", "locked",
+	"capability_refs", "context_bindings", "usage_policy",
 	"created_at", "updated_at",
 }
 
@@ -35,6 +37,8 @@ func TestHandleListCatalogue(t *testing.T) {
 			"You are a test agent", "qwen2.5",
 			[]byte(`["read_file"]`), []byte(`[]`), []byte(`[]`),
 			"semantic", []byte(`["Check output"]`), nil,
+			"default.researcher", "Researches trusted sources", "built_in", true,
+			[]byte(`["web_search"]`), []byte(`[]`), []byte(`{"selection":"soma","scope":"workspace"}`),
 			now, now)
 
 	mock.ExpectQuery("SELECT .+ FROM agent_catalogue").WillReturnRows(rows)
@@ -126,6 +130,8 @@ func TestHandleCreateCatalogue(t *testing.T) {
 		WithArgs("New Agent", "sensory",
 			sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), "user", false,
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).

@@ -1,19 +1,38 @@
-import {
-    extractRunIdFromResponse,
-    trimToNonEmpty,
-    updateProposalLifecycle,
-} from '@/store/cortexStoreChatWorkflow';
+import { extractRunIdFromResponse, trimToNonEmpty, updateProposalLifecycle } from '@/store/cortexStoreChatWorkflow';
 import { buildMissionChatFailure } from '@/lib/missionChatFailure';
 import type { ChatMessage, ConfirmProposalResult } from '@/store/cortexStoreTypes';
-import { approvalSentEvent, executionStartedEvent } from '@/store/cortexStoreProposalThreadEvents';
+import {
+    approvalSentEvent,
+    confirmationIsCompleted,
+    configurationCompletedEvent,
+    configurationCompletedMessage,
+    configurationCompletedState,
+    configurationPendingEvent,
+    configurationPendingState,
+    executionStartedEvent,
+    proposalStartedState,
+    synchronousConfigAction,
+} from '@/store/cortexStoreProposalThreadEvents';
 import { extractTeamWorkRefs, teamWorkMessage, type TeamWorkConfirmationRef } from '@/store/cortexStoreProposalTeamWorkRefs';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { ProposalData } from '@/store/cortexStoreTypesChat';
+import type { ExecutionSummaryData } from '@/store/cortexStoreTypesExecutionSummary';
 
-function recoveryTextFromExecutionSummary(summary: any) {
-    const degradation = summary?.audit_recovery?.degradation;
+type ConfirmFailureBody = {
+    error?: string;
+    data?: {
+        run_id?: string;
+        execution_summary?: ExecutionSummaryData;
+    };
+};
+
+function recoveryTextFromExecutionSummary(summary: ExecutionSummaryData | undefined) {
+    const auditRecovery = summary?.audit_recovery && typeof summary.audit_recovery === 'object'
+        ? summary.audit_recovery
+        : undefined;
+    const degradation = auditRecovery?.degradation;
     const whatFailed = trimToNonEmpty(degradation?.what_failed)
-        ?? trimToNonEmpty(summary?.audit_recovery?.blocker);
+        ?? trimToNonEmpty(auditRecovery?.blocker);
     const safeContinuation = trimToNonEmpty(degradation?.safe_continuation);
     const diagnostics = [
         trimToNonEmpty(degradation?.code),
@@ -32,35 +51,31 @@ function recoveryTextFromExecutionSummary(summary: any) {
 function isMediaDependencyFailure(message?: string | null) {
     const lower = (message ?? '').toLowerCase();
     return lower.includes('comfyui')
+        || lower.includes('forge')
         || lower.includes('media engine')
         || lower.includes('media capability')
         || lower.includes('local/private');
 }
 
 function mediaDependencyRecoveryCopy(diagnostics: string) {
+    const forgeAPIDisabled = diagnostics.toLowerCase().includes('forge')
+        && (diagnostics.toLowerCase().includes('api mode') || diagnostics.toLowerCase().includes('api access is off'));
     return {
-        summary: 'Local media generation is not reachable, so Soma could not create the requested image output.',
-        recommendedAction: 'Start or reconnect the configured ComfyUI upstream, then retry this proposal. If you only need files or text, ask Soma to rerun without image generation.',
+        summary: forgeAPIDisabled
+            ? 'Forge is open, but Soma cannot use image generation until its API mode is enabled.'
+            : 'The configured image generator is not ready, so Soma could not create the requested image output.',
+        recommendedAction: forgeAPIDisabled
+            ? "Enable API mode in Forge's Pinokio launch settings, restart Forge, then tell Soma to try the image again."
+            : 'Start or reconnect the configured image generator, then tell Soma to try the image again.',
         diagnostics,
-    };
-}
-
-const proposalStartedDetail = 'Soma handed this to the work bus. You can keep talking here while updates arrive.';
-
-function proposalStartedState(): NonNullable<ChatMessage['ui_response_state']> {
-    return {
-        kind: 'running',
-        label: 'Started',
-        detail: proposalStartedDetail,
-        tone: 'info',
     };
 }
 
 function confirmedRunMessage(runId: string | null, summary?: string | null, teamWorkRefs: TeamWorkConfirmationRef[] = []) {
     const state = runId ? `Run ${runId.slice(0, 8)} started.` : 'Proposal approved.';
     const next = runId
-        ? 'Soma handed this to the work bus and saved the run receipt.'
-        : proposalStartedDetail;
+        ? 'Soma handed this to the work bus. This is running, not a completed result or proof.'
+        : proposalStartedState().detail;
     return [state, next, teamWorkMessage(teamWorkRefs), summary].filter(Boolean).join(' ');
 }
 
@@ -80,7 +95,7 @@ export function createCortexProposalExecutionSlice(
     }
 
     return {
-        confirmProposal: async (proposalOverride?: ProposalData): Promise<ConfirmProposalResult> => {
+        confirmProposal: async (proposalOverride?: ProposalData, operatorReply?: string): Promise<ConfirmProposalResult> => {
             const { activeConfirmToken, pendingProposal } = get();
             const proposal = proposalOverride ?? pendingProposal ?? latestActiveProposal();
             const confirmToken = proposalOverride
@@ -103,16 +118,27 @@ export function createCortexProposalExecutionSlice(
                     error: 'This proposal is missing executable proof. Ask Soma to regenerate it before running.',
                 };
             }
-            set((s) => ({
-                activeMode: 'proposal',
-                missionChatError: null,
-                missionChatFailure: null,
-                missionChat: updateProposalLifecycle(s.missionChat, intentProofId, 'confirmed_pending_execution', {
-                    mode: 'proposal',
-                    ui_response_state: proposalStartedState(),
-                    thread_events: [approvalSentEvent()],
-                }),
-            }));
+            const configAction = synchronousConfigAction(proposal.tools);
+            set((s) => {
+                const conversationalReply = trimToNonEmpty(operatorReply);
+                const missionChat = conversationalReply
+                    ? [...s.missionChat, {
+                        role: 'user' as const,
+                        content: conversationalReply,
+                        timestamp: new Date().toISOString(),
+                    }]
+                    : s.missionChat;
+                return {
+                    activeMode: 'proposal',
+                    missionChatError: null,
+                    missionChatFailure: null,
+                    missionChat: updateProposalLifecycle(missionChat, intentProofId, 'confirmed_pending_execution', {
+                        mode: 'proposal',
+                        ui_response_state: configAction ? configurationPendingState(configAction) : proposalStartedState(),
+                        thread_events: [configAction ? configurationPendingEvent(configAction) : approvalSentEvent()],
+                    }),
+                };
+            });
             try {
                 const res = await fetch('/api/v1/intent/confirm-action', {
                     method: 'POST',
@@ -126,28 +152,41 @@ export function createCortexProposalExecutionSlice(
                     const proofSummary = trimToNonEmpty(body?.data?.message)
                         ?? trimToNonEmpty(body?.message)
                         ?? trimToNonEmpty(body?.data?.summary)
-                        ?? trimToNonEmpty(body?.summary);
-                    const lifecycle = runId ? 'executed' : 'confirmed_pending_execution';
+                        ?? trimToNonEmpty(body?.summary)
+                        ?? trimToNonEmpty(body?.data?.execution_summary?.execution?.summary)
+                        ?? trimToNonEmpty(body?.data?.execution_summary?.execution_summary);
+                    const completedConfigAction = configAction && confirmationIsCompleted(body, res.status)
+                        ? configAction
+                        : null;
+                    const lifecycle = completedConfigAction || runId ? 'executed' : 'confirmed_pending_execution';
                     const systemMsg: ChatMessage = {
                         role: 'system',
-                        content: confirmedRunMessage(runId, proofSummary, teamWorkRefs),
-                        mode: runId ? 'execution_result' : 'proposal',
-                        ui_response_state: runId ? undefined : proposalStartedState(),
+                        content: completedConfigAction
+                            ? configurationCompletedMessage(completedConfigAction, proofSummary)
+                            : confirmedRunMessage(runId, proofSummary, teamWorkRefs),
+                        mode: completedConfigAction || runId ? 'execution_result' : 'proposal',
+                        ui_response_state: completedConfigAction
+                            ? configurationCompletedState(completedConfigAction)
+                            : runId ? undefined : proposalStartedState(),
                         run_id: runId ?? undefined,
-                        thread_events: [executionStartedEvent(runId, teamWorkRefs)],
+                        thread_events: [completedConfigAction
+                            ? configurationCompletedEvent(completedConfigAction)
+                            : executionStartedEvent(runId, teamWorkRefs)],
                         execution_summary: body?.data?.execution_summary,
                         timestamp: new Date().toISOString(),
                     };
                     set((s) => ({
-                        activeRunId: runId,
-                        activeMode: runId ? 'execution_result' : 'proposal',
+                        activeRunId: completedConfigAction ? null : runId,
+                        activeMode: completedConfigAction || runId ? 'execution_result' : 'proposal',
                         missionChatError: null,
                         missionChatFailure: null,
                         durableWorkRefreshVersion: s.durableWorkRefreshVersion + 1,
                         missionChat: [
                             ...updateProposalLifecycle(s.missionChat, intentProofId, lifecycle, {
-                                mode: runId ? 'execution_result' : 'proposal',
-                                ui_response_state: runId ? undefined : proposalStartedState(),
+                                mode: completedConfigAction || runId ? 'execution_result' : 'proposal',
+                                ui_response_state: completedConfigAction
+                                    ? configurationCompletedState(completedConfigAction)
+                                    : runId ? undefined : proposalStartedState(),
                                 run_id: runId ?? undefined,
                             }),
                             systemMsg,
@@ -161,9 +200,9 @@ export function createCortexProposalExecutionSlice(
 
                 const text = await res.text();
                 let errMsg = 'Confirm action failed';
-                let parsedBody: any = null;
+                let parsedBody: ConfirmFailureBody | null = null;
                 try {
-                    parsedBody = JSON.parse(text);
+                    parsedBody = JSON.parse(text) as ConfirmFailureBody;
                     errMsg = parsedBody.error || errMsg;
                 } catch {
                     errMsg = text || errMsg;
@@ -246,7 +285,7 @@ export function createCortexProposalExecutionSlice(
             }
         },
 
-        cancelProposal: () => {
+        cancelProposal: (operatorReply?: string) => {
             const { pendingProposal } = get();
             if (pendingProposal?.intent_proof_id) {
                 void fetch('/api/v1/intent/cancel-action', {
@@ -255,26 +294,36 @@ export function createCortexProposalExecutionSlice(
                     body: JSON.stringify({ intent_proof_id: pendingProposal.intent_proof_id }),
                 });
             }
-            set((s) => ({
-                missionChat: pendingProposal
-                    ? [
-                        ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'cancelled', {
-                            mode: 'proposal',
-                        }),
-                        {
-                            role: 'system',
-                            content: 'Proposal cancelled. No action executed.',
-                            timestamp: new Date().toISOString(),
-                        },
-                    ]
-                    : s.missionChat,
-                pendingProposal: null,
-                activeConfirmToken: null,
-                activeRunId: null,
-                activeMode: 'answer',
-                missionChatError: null,
-                missionChatFailure: null,
-            }));
+            set((s) => {
+                const conversationalReply = trimToNonEmpty(operatorReply);
+                const missionChat = conversationalReply
+                    ? [...s.missionChat, {
+                        role: 'user' as const,
+                        content: conversationalReply,
+                        timestamp: new Date().toISOString(),
+                    }]
+                    : s.missionChat;
+                return {
+                    missionChat: pendingProposal
+                        ? [
+                            ...updateProposalLifecycle(missionChat, pendingProposal.intent_proof_id, 'cancelled', {
+                                mode: 'proposal',
+                            }),
+                            {
+                                role: 'system',
+                                content: 'Proposal cancelled. No action executed.',
+                                timestamp: new Date().toISOString(),
+                            },
+                        ]
+                        : missionChat,
+                    pendingProposal: null,
+                    activeConfirmToken: null,
+                    activeRunId: null,
+                    activeMode: 'answer',
+                    missionChatError: null,
+                    missionChatFailure: null,
+                };
+            });
         },
     };
 }

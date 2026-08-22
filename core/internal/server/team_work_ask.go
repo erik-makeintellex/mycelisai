@@ -30,6 +30,8 @@ type teamWorkAskRequest struct {
 	ExpectedProof          []string                 `json:"expected_proof,omitempty"`
 	CapabilityRequirements []string                 `json:"capability_requirements,omitempty"`
 	GovernancePosture      protocol.ApprovalPosture `json:"governance_posture,omitempty"`
+	ExecutionMode          string                   `json:"execution_mode,omitempty"`
+	WorkIntent             *protocol.WorkIntent     `json:"work_intent,omitempty"`
 	Payload                map[string]any           `json:"payload,omitempty"`
 	Async                  bool                     `json:"async,omitempty"`
 }
@@ -41,6 +43,12 @@ type teamWorkAskResult struct {
 	Subject       string                   `json:"subject"`
 	Accepted      bool                     `json:"accepted,omitempty"`
 	DispatchState string                   `json:"dispatch_state,omitempty"`
+}
+
+type teamWorkPublisher interface {
+	IsConnected() bool
+	Publish(string, []byte) error
+	Flush() error
 }
 
 // HandleTeamWorkAsk submits one bounded request to a team and records either
@@ -139,6 +147,8 @@ func newTeamWorkAskItem(teamID string, req teamWorkAskRequest) protocol.TeamWork
 		Objective:              firstNonEmptyString(req.Summary, req.Message, protocol.SummarizeTeamAsk(req.AskValue()), "Bounded team ask"),
 		Owner:                  "Soma",
 		ExecutionShape:         protocol.TeamExecutionShapeDelegatedWork,
+		ExecutionMode:          strings.TrimSpace(req.ExecutionMode),
+		WorkIntent:             protocol.NormalizeWorkIntent(req.WorkIntent),
 		State:                  protocol.TeamWorkStateQueued,
 		ExpectedOutputs:        defaultStringSlice(req.ExpectedOutputs, "Team response or retained output"),
 		ExpectedProof:          defaultStringSlice(req.ExpectedProof, "Team response event or degraded timeout proof"),
@@ -166,17 +176,24 @@ func teamWorkAskPayload(req teamWorkAskRequest) ([]byte, error) {
 }
 
 func (s *AdminServer) dispatchTeamWorkAsk(item protocol.TeamWorkItem, req teamWorkAskRequest, subject string) (string, error) {
-	if s.NC == nil || !s.NC.IsConnected() {
+	if s.NC == nil {
 		return "nats_offline", fmt.Errorf("NATS connection offline; the team ask was recorded but not sent.")
 	}
 	payload, err := teamWorkAskCommandEnvelope(item, req)
 	if err != nil {
 		return "team_ask_payload_invalid", fmt.Errorf("team ask command payload could not be prepared: %w", err)
 	}
-	if err := s.NC.Publish(subject, payload); err != nil {
+	return publishTeamWorkAsk(s.NC, subject, payload)
+}
+
+func publishTeamWorkAsk(publisher teamWorkPublisher, subject string, payload []byte) (string, error) {
+	if publisher == nil || !publisher.IsConnected() {
+		return "nats_offline", fmt.Errorf("NATS connection offline; the team ask was recorded but not sent.")
+	}
+	if err := publisher.Publish(subject, payload); err != nil {
 		return "team_ask_publish_failed", fmt.Errorf("team ask command could not be published: %w", err)
 	}
-	if err := s.NC.Flush(); err != nil {
+	if err := publisher.Flush(); err != nil {
 		return "team_ask_publish_unflushed", fmt.Errorf("team ask command could not be flushed to NATS: %w", err)
 	}
 	return "published", nil
@@ -196,6 +213,8 @@ func teamWorkAskCommandEnvelope(item protocol.TeamWorkItem, req teamWorkAskReque
 		"expected_proof":           item.ExpectedProof,
 		"capability_requirements":  item.CapabilityRequirements,
 		"governance_posture":       item.GovernancePosture,
+		"execution_mode":           item.ExecutionMode,
+		"work_intent":              item.WorkIntent,
 		"source_active_work_state": item.State,
 		"source_channel":           teamWorkAskSourceChannel,
 	}
@@ -238,6 +257,10 @@ func teamWorkAskStatusEvent(item protocol.TeamWorkItem, state protocol.TeamWorkS
 		ConfidencePosture: confidence,
 		BlockedBy:         blockedBy,
 		NextAction:        next,
+		ExpectedOutputs:   item.ExpectedOutputs,
+		ExpectedProof:     item.ExpectedProof,
+		ExecutionMode:     item.ExecutionMode,
+		WorkIntent:        item.WorkIntent,
 		SourceKind:        string(protocol.SourceKindWebAPI),
 		SourceChannel:     teamWorkAskSourceChannel,
 		PayloadKind:       string(protocol.PayloadKindStatus),

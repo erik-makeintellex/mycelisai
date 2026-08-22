@@ -5,4 +5,12 @@ The canonical Mycelis product and architecture source is:
 
 - [Mycelis Canonical PRD](../docs/architecture-library/MYCELIS_CANONICAL_PRD.md)
 
-Older versioned architecture documents were removed from the active tree. Use Git history for historical archaeology; do not add replacement V7, V8.2, or split V8.3 doctrine files.
+Scoped implementation contracts:
+
+- [Backend](../docs/architecture/BACKEND.md)
+- [Frontend](../docs/architecture/FRONTEND.md)
+- [Operations](../docs/architecture/OPERATIONS.md)
+- [API Reference](../docs/API_REFERENCE.md)
+- [AI Provider Runtime](../docs/COGNITIVE_ARCHITECTURE.md)
+
+Do not add a product-architecture archive, versioned doctrine, overview duplicate, or parallel PRD to the active tree.

@@ -33,7 +33,8 @@ Install the toolchain needed for the runtime lane you will use:
 | Go 1.26 | Core build/test |
 | Node.js 20+ | Interface build/test; hosted GitHub lanes and Interface container proof currently use Node.js 24 |
 | uv | Python environment and Invoke task runner |
-| psql 16+ and nats-server | native database and event-bus proof |
+| psql 16+ | optional client for the Dockerized development database; it does not provide a supported host server |
+| nats-server | optional host-native event-bus fallback |
 | Ollama or compatible endpoint | local/self-hosted text inference |
 
 Task runner contract: use `uv run inv ...` for real execution; use `uvx --from invoke inv -l` only as a compatibility probe; do not use bare `uvx inv ...`. Tasks are scoped to Mycelis tools, app services, data-plane dependencies, and proof lanes; host runtime lifecycle for WSL, Rancher Desktop, Docker Desktop, and OS VM repair stays outside the repo task runner.
@@ -47,7 +48,7 @@ Task runner contract: use `uv run inv ...` for real execution; use `uvx --from i
 | Local Kubernetes proof on WSL/Linux | `k3d` | preferred chart validation lane |
 | Enterprise/self-hosted cluster | Helm | use real ingress, secrets, storage, and policy controls |
 | Small control node | packaged binary | keep AI on a reachable remote service |
-| Source development | `native-infra.*` + lifecycle tasks | best for implementation, not the operator deployment story |
+| Source development | `compose.infra-up` + lifecycle tasks | Docker runs PostgreSQL/NATS; Core and Interface run locally from source |
 
 Promoted chart presets are `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, and `charts/mycelis-core/values-enterprise-windows-ai.yaml`; set `MYCELIS_K8S_VALUES_FILE` before `uv run inv k8s.deploy` or `uv run inv k8s.up`.
 ## Deployment Guidance By Host Architecture
@@ -72,9 +73,10 @@ Common runtime variables:
 - `MYCELIS_API_KEY`, `MYCELIS_WEB_SESSION_SECRET`, `MYCELIS_WEB_IDENTITY_FORWARD_SECRET`, `MYCELIS_PUBLIC_ORIGIN`: local API credential, browser-session signing, optional Interface-to-Core identity HMAC separation, and auth redirect origin
 - `MYCELIS_BREAK_GLASS_API_KEY`: optional recovery credential
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: local Core database connection
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`: native PostgreSQL bootstrap user for creating/updating the app role/database
-- `NATS_URL`: Core NATS connection
-- `MYCELIS_DEV_INFRA_MODE`: `native` for Windows/source-mode PostgreSQL/NATS; `k8s` only for explicit port-forward bridge proof
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`: deployment database credentials; development uses them only with the Dockerized pgvector/pg16 server, never a native host server
+- `NATS_URL`: the explicit NATS host used by this Core process; the broker may be shared with other applications
+- `MYCELIS_NATS_SERVICE_ID`: stable lowercase deployment identity used to distinguish Mycelis runtime and observer clients on a shared broker; default `mycelis-core`
+- `MYCELIS_DEV_INFRA_MODE`: `compose` for the supported Docker PostgreSQL/NATS development data plane; `k8s` only for clustered bridge proof; native host PostgreSQL is unsupported
 - `MYCELIS_WORKSPACE`, `MYCELIS_ARTIFACT_ROOT`: governed output root and artifact/cache root; `DATA_DIR` is still honored as a legacy artifact alias, but new runtime config should set `MYCELIS_ARTIFACT_ROOT`
 - `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
@@ -103,11 +105,15 @@ The deployed Core image resolves those files from `/core/config`; the Helm chart
 
 Use separate generated dependency/runtime roots per host: Windows editing checkout for source/review/git, WSL proof checkout for release-style validation, Compose data/output under `workspace/docker-compose/...`, and repo-local tool/cache roots visible through `uv run inv cache.status`. Do not share `.venv`, `interface/node_modules`, `.next`, or generated runtime state across Windows and WSL.
 
-For native source development, set `MYCELIS_WORKSPACE=./workspace` and `MYCELIS_ARTIFACT_ROOT=./workspace/artifacts` in `.env` so operators know where generated packages, workspace files, browser outputs, and artifact downloads land. Keep legacy `DATA_DIR` aligned with `MYCELIS_ARTIFACT_ROOT`; `System -> Deployments` reports both runtime roots for proof.
+For source development, set `MYCELIS_WORKSPACE=./workspace` and `MYCELIS_ARTIFACT_ROOT=./workspace/artifacts` in `.env` so operators know where generated packages, workspace files, browser outputs, and artifact downloads land. Keep legacy `DATA_DIR` aligned with `MYCELIS_ARTIFACT_ROOT`; `System -> Deployments` reports both runtime roots for proof.
 
-## Native Source-Mode Infrastructure
+## Local Source Development
 
-Default development runs Core and Interface from source against host-local PostgreSQL and NATS: `uv run inv native-infra.install-nats`, `uv run inv native-infra.up`, `uv run inv native-infra.status`, `uv run inv db.migrate`, then `uv run inv lifecycle.up --frontend`. `native-infra.up` creates/updates the PostgreSQL app role/database from `.env` and starts local NATS; Docker/Rancher/WSL remain separate proof lanes.
+Default development runs PostgreSQL and NATS in Docker while Core and Interface run locally from source. `uv run inv lifecycle.up --frontend` idempotently invokes `compose.infra-up` for only those two dependencies; it does not build or start containerized Core or Interface services. `lifecycle.down` stops the local app processes and leaves the reusable data plane running. Use `lifecycle.down --include-data-plane` to stop both layers without deleting volumes, or `compose.down` when only the dependency containers need to stop.
+
+The Docker `pgvector/pgvector:pg16` service is the sole development PostgreSQL server. Relational rows and pgvector embeddings share its `postgres-data` volume. Local Core connects through the configured published port (`127.0.0.1:15432` by default); Compose Core connects inside the network at `postgres:5432`. A host-installed `psql` is client-only, and a native host PostgreSQL server is unsupported.
+
+When another locally developed service shares the NATS host, keep that broker running and assign explicit service identities and subjects. Mycelis external ingress uses concrete registered `swarm.global.input.{source}` subjects; one registered source owns each subject, unknown subjects are ignored, and wildcard registrations are rejected. A Core process connects to one configured NATS host. Connecting another host requires a separately configured Core/bridge deployment rather than an implicit cross-host subscription.
 
 ## WSL/Linux Proof Checkout Handoff
 
@@ -135,9 +141,6 @@ Source-mode development:
 ```bash
 uv run inv install
 uv run inv auth.dev-key
-uv run inv native-infra.install-nats
-uv run inv native-infra.up
-uv run inv native-infra.status
 uv run inv db.migrate
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
@@ -191,10 +194,10 @@ Startup now instantiates the runtime organization only through a selected bundle
 
 ## Daily Startup Sequence
 
-Source-mode:
+Source-mode with Docker dependencies:
 
 ```bash
-uv run inv native-infra.status
+uv run inv compose.infra-health
 uv run inv db.migrate
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.status
@@ -212,7 +215,11 @@ uv run inv compose.health
 Shutdown:
 
 ```bash
+# Stop local Core and Interface; keep PostgreSQL/NATS warm.
 uv run inv lifecycle.down
+# Stop local services and the Docker data plane; preserve retained volumes.
+uv run inv lifecycle.down --include-data-plane
+# Stop only the Docker data plane when local app services are already down.
 uv run inv compose.down
 ```
 
@@ -222,7 +229,7 @@ uv run inv compose.down
 | --- | --- |
 | Interface | `http://localhost:3000` |
 | Core API | `http://localhost:8081` source, `8080` in cluster |
-| PostgreSQL | `localhost:5432` |
+| PostgreSQL | `localhost:15432` for local Core/host clients; `postgres:5432` for Compose Core |
 | NATS | `localhost:4222` |
 | Ollama | `http://127.0.0.1:11434` host-local |
 
@@ -260,7 +267,7 @@ Guarded commands: `uv run inv wsl.status`, `uv run inv wsl.refresh --branch <nam
 
 ## Troubleshooting
 
-- NATS or council responses disappear: run `uv run inv lifecycle.status`, then restart with `uv run inv lifecycle.restart --frontend`.
+- NATS, Soma, or team responses disappear: run `uv run inv lifecycle.status`, then restart with `uv run inv lifecycle.restart --frontend`.
 - Compose readiness times out on a first build: rerun with `uv run inv compose.up --build --wait-timeout=240`.
 - Windows host has no native `docker`: the Compose task may use Docker inside WSL; set `MYCELIS_WSL_DISTRO` if the default distro is not the Docker host.
 - Windows-hosted Ollama from WSL/Docker: keep `MYCELIS_COMPOSE_OLLAMA_HOST` pointed at the intended Windows service address; the task layer may relay it through WSL.
@@ -283,7 +290,7 @@ uv run inv cognitive.up
 uv run inv cognitive.status
 ```
 
-For private Pinokio media generation, use the `.env.example` `MYCELIS_MEDIA_GATEWAY_*` block and `uv run inv cognitive.media-gateway`; the gateway accepts local/private upstreams by default, returns `b64_json`, and requires `MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1` for intentional non-private upstream routing. Forge/AUTOMATIC1111 can use the direct `txt2img` adapter. ComfyUI uses `MYCELIS_MEDIA_GATEWAY_BACKEND=comfyui` plus a reviewed API-format workflow file and node mappings so the gateway can submit `/prompt`, poll `/history/{prompt_id}`, and fetch outputs through `/view`. Details live in [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md).
+For private Pinokio Forge generation, set `MYCELIS_MEDIA_TYPE=forge`, point `MYCELIS_MEDIA_ENDPOINT` at the Forge base URL (normally `http://127.0.0.1:7860`), and launch Forge with `--api` enabled. Core calls Forge directly; no additional gateway is required. Use `uv run inv cognitive.media-gateway` for ComfyUI or an OpenAI-compatible compatibility path. ComfyUI uses `MYCELIS_MEDIA_GATEWAY_BACKEND=comfyui` plus a reviewed API-format workflow file and node mappings so the gateway can submit `/prompt`, poll `/history/{prompt_id}`, and fetch outputs through `/view`. Details live in [AI Provider Runtime](COGNITIVE_ARCHITECTURE.md).
 
 ## Binary Release Process
 

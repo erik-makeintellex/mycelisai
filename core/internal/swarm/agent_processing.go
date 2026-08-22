@@ -1,8 +1,10 @@
 package swarm
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -12,13 +14,14 @@ import (
 
 // ProcessResult holds the structured output of a processMessage call.
 type ProcessResult struct {
-	Text          string                           `json:"text"`
-	ToolsUsed     []string                         `json:"tools_used,omitempty"`
-	Artifacts     []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
-	Availability  *cognitive.ExecutionAvailability `json:"availability,omitempty"`
-	ProviderID    string                           `json:"provider_id,omitempty"`
-	ModelUsed     string                           `json:"model_used,omitempty"`
-	Consultations []protocol.ConsultationEntry     `json:"consultations,omitempty"`
+	Text             string                           `json:"text"`
+	ToolsUsed        []string                         `json:"tools_used,omitempty"`
+	PlannedToolCalls []protocol.PlannedToolCall       `json:"planned_tool_calls,omitempty"`
+	Artifacts        []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
+	Availability     *cognitive.ExecutionAvailability `json:"availability,omitempty"`
+	ProviderID       string                           `json:"provider_id,omitempty"`
+	ModelUsed        string                           `json:"model_used,omitempty"`
+	Consultations    []protocol.ConsultationEntry     `json:"consultations,omitempty"`
 }
 
 func (a *Agent) processMessage(input string, priorHistory []cognitive.ChatMessage) string {
@@ -26,6 +29,14 @@ func (a *Agent) processMessage(input string, priorHistory []cognitive.ChatMessag
 }
 
 func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.ChatMessage) ProcessResult {
+	return a.processMessageStructuredWithPosture(input, priorHistory, true)
+}
+
+func (a *Agent) processMessageStructuredWithPosture(input string, priorHistory []cognitive.ChatMessage, planningOnly bool) ProcessResult {
+	return a.processMessageStructuredWithRequirement(input, priorHistory, planningOnly, nil)
+}
+
+func (a *Agent) processMessageStructuredWithRequirement(input string, priorHistory []cognitive.ChatMessage, planningOnly bool, requirement *teamResultRequirement) ProcessResult {
 	if a.brain == nil {
 		log.Printf("Agent [%s] has no brain. Skipping inference.", a.Manifest.ID)
 		return ProcessResult{Availability: &cognitive.ExecutionAvailability{
@@ -39,18 +50,45 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	}
 
 	req, profile := a.buildInferRequest(input, priorHistory)
+	if requirement.active() {
+		req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "system", Content: resultContractExecutionPrompt(requirement)})
+	}
 	resp, err := a.brain.InferWithContract(a.ctx, req)
 	if err != nil {
 		log.Printf("Agent [%s] brain freeze: %v", a.Manifest.ID, err)
 		availability := a.brain.ExecutionAvailability(profile, a.Manifest.Provider)
-		if availability.Summary == "" {
-			availability.Summary = "Soma does not have an available cognitive engine right now."
+		availability.Available = false
+		availability.Code = "provider_inference_failed"
+		availability.Summary = "The team could not complete inference with its configured cognitive engine."
+		availability.RecommendedAction = "Retry the work after checking the configured engine. If the issue persists, choose another available engine."
+		if availability.Profile == "" {
+			availability.Profile = profile
 		}
 		return ProcessResult{Availability: &availability}
 	}
+	if resp != nil && strings.TrimSpace(resp.Text) == "" {
+		req.Messages = append(req.Messages,
+			cognitive.ChatMessage{Role: "system", Content: "Recovery correction: the previous response was empty. Return a concise direct answer, emit exactly one available tool_call JSON needed to complete the ask, or state one concrete blocker. Do not return an empty response."},
+			cognitive.ChatMessage{Role: "user", Content: "Retry the latest request now under the recovery correction."},
+		)
+		recovered, recoverErr := a.brain.InferWithContract(a.ctx, req)
+		if recoverErr != nil {
+			log.Printf("Agent [%s] empty-response recovery failed: %v", a.Manifest.ID, recoverErr)
+		} else if recovered != nil {
+			resp = recovered
+		}
+	}
 
-	loop := a.runToolLoop(input, priorHistory, &req, resp, profile)
+	loop := a.runToolLoop(input, priorHistory, &req, resp, profile, planningOnly, requirement)
+	loop.artifacts = reconcileToolBackedArtifacts(loop.artifacts, loop.toolEvidence, input)
+	loop.artifacts = dedupeAgentArtifacts(loop.artifacts)
 	responseText := stripToolCallJSON(loop.responseText)
+	if strings.TrimSpace(responseText) == "" && len(loop.plannedCalls) > 0 {
+		responseText = "Soma prepared the requested governed action for approval."
+	}
+	if strings.TrimSpace(responseText) == "" && len(loop.artifacts) > 0 {
+		responseText = retainedArtifactCompletionSummary(loop.artifacts)
+	}
 	if a.internalTools != nil && len(priorHistory) > 0 && len(priorHistory)%15 == 0 {
 		histCopy := make([]cognitive.ChatMessage, len(priorHistory))
 		copy(histCopy, priorHistory)
@@ -61,6 +99,16 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	if loop.resp != nil {
 		providerID = loop.resp.Provider
 		modelUsed = loop.resp.ModelUsed
+	}
+	if issues := resultContractIssues(requirement, loop.artifacts, loop.toolEvidence); len(issues) > 0 {
+		summary := "The team exhausted its bounded correction attempts without satisfying the approved result contract: " + strings.Join(issues, "; ") + "."
+		availability := cognitive.ExecutionAvailability{
+			Available: false, Code: "result_contract_unsatisfied", Summary: summary,
+			RecommendedAction: resultContractRecoveryAction(requirement, issues),
+			Profile:           profile, ProviderID: providerID, ModelID: modelUsed,
+		}
+		a.logTurn("assistant", availability.Summary, providerID, modelUsed, "", nil, "", "")
+		return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, PlannedToolCalls: loop.plannedCalls, Artifacts: loop.artifacts, Availability: &availability, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
 	}
 	if strings.TrimSpace(responseText) == "" {
 		summary := "Soma could not produce a readable reply for that request."
@@ -77,7 +125,97 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	}
 
 	a.logTurn("assistant", responseText, providerID, modelUsed, "", nil, "", "")
-	return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, Artifacts: loop.artifacts, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
+	return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, PlannedToolCalls: loop.plannedCalls, Artifacts: loop.artifacts, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
+}
+
+func dedupeAgentArtifacts(artifacts []protocol.ChatArtifactRef) []protocol.ChatArtifactRef {
+	if len(artifacts) < 2 {
+		return artifacts
+	}
+	seen := make(map[string]struct{}, len(artifacts))
+	unique := make([]protocol.ChatArtifactRef, 0, len(artifacts))
+	for _, artifact := range artifacts {
+		if strings.EqualFold(strings.TrimSpace(artifact.Type), "project_package") {
+			merged := false
+			for index := range unique {
+				if !sameLogicalProjectPackage(unique[index], artifact) {
+					continue
+				}
+				if projectPackageCompleteness(artifact) > projectPackageCompleteness(unique[index]) {
+					unique[index] = artifact
+				}
+				merged = true
+				break
+			}
+			if merged {
+				continue
+			}
+		}
+		comparable := artifact
+		comparable.ID = ""
+		raw, err := json.Marshal(comparable)
+		key := string(raw)
+		if err != nil {
+			key = strings.Join([]string{artifact.Type, artifact.Title, artifact.ContentType, artifact.Content, artifact.URL, artifact.SavedPath, artifact.Entrypoint, artifact.Folder}, "\x00")
+		}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		unique = append(unique, artifact)
+	}
+	return unique
+}
+
+func sameLogicalProjectPackage(left, right protocol.ChatArtifactRef) bool {
+	if !strings.EqualFold(strings.TrimSpace(left.Type), "project_package") ||
+		!strings.EqualFold(strings.TrimSpace(right.Type), "project_package") {
+		return false
+	}
+	leftLocation := projectPackageLocation(left)
+	rightLocation := projectPackageLocation(right)
+	if leftLocation != "" && rightLocation != "" {
+		return strings.EqualFold(leftLocation, rightLocation)
+	}
+	return strings.EqualFold(strings.TrimSpace(left.Title), strings.TrimSpace(right.Title)) && strings.TrimSpace(left.Title) != ""
+}
+
+func projectPackageLocation(artifact protocol.ChatArtifactRef) string {
+	location := strings.TrimSpace(artifact.Folder)
+	if location == "" {
+		location = strings.TrimSpace(artifact.SavedPath)
+	}
+	if location == "" && strings.TrimSpace(artifact.Entrypoint) != "" {
+		location = filepath.Dir(strings.ReplaceAll(strings.TrimSpace(artifact.Entrypoint), "\\", "/"))
+	}
+	return strings.Trim(strings.ReplaceAll(location, "\\", "/"), "/")
+}
+
+func projectPackageCompleteness(artifact protocol.ChatArtifactRef) int {
+	score := 0
+	for _, value := range []string{artifact.Folder, artifact.SavedPath, artifact.Entrypoint, artifact.Validation} {
+		if strings.TrimSpace(value) != "" {
+			score += 2
+		}
+	}
+	if len(artifact.Files) > 0 {
+		score += 2 + len(artifact.Files)
+	}
+	if strings.Contains(strings.TrimSpace(artifact.Content), "{") {
+		score++
+	}
+	return score
+}
+
+func retainedArtifactCompletionSummary(artifacts []protocol.ChatArtifactRef) string {
+	if len(artifacts) == 1 {
+		title := strings.TrimSpace(artifacts[0].Title)
+		if title != "" {
+			return fmt.Sprintf("Created retained output: %s.", title)
+		}
+		return "Created one retained output."
+	}
+	return fmt.Sprintf("Created %d retained outputs.", len(artifacts))
 }
 
 func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMessage) (cognitive.InferRequest, string) {
@@ -85,11 +223,12 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 	if sys == "" {
 		sys = fmt.Sprintf("You are a %s in the %s team.", a.Manifest.Role, a.TeamID)
 	}
+	sys += agentProfileContextDirective(a.Manifest)
 	sys += runtimeResponseDirective()
 	if a.internalTools != nil {
 		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
 	}
-	sys += a.buildToolsBlock()
+	sys += a.buildToolsBlock(input)
 
 	messages := []cognitive.ChatMessage{{Role: "system", Content: sys}}
 	if len(priorHistory) > 0 {
@@ -104,6 +243,28 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 		profile = a.Manifest.Model
 	}
 	return cognitive.InferRequest{Profile: profile, Provider: a.Manifest.Provider, Messages: messages}, profile
+}
+
+func agentProfileContextDirective(manifest protocol.AgentManifest) string {
+	if strings.TrimSpace(manifest.ProfileRef) == "" && len(manifest.Context) == 0 {
+		return ""
+	}
+	var bindings []string
+	for _, binding := range manifest.Context {
+		label := strings.TrimSpace(binding.Kind)
+		if binding.Ref != "" {
+			label += ":" + strings.TrimSpace(binding.Ref)
+		}
+		if binding.Access != "" {
+			label += " (" + strings.TrimSpace(binding.Access) + ")"
+		}
+		if label != "" {
+			bindings = append(bindings, label)
+		}
+	}
+	return fmt.Sprintf("\n\n## Worker Profile\nProfile: %s\nSelection: %s; scope: %s.\nApproved context bindings: %s. These bindings describe intended context only and never bypass tool, mount, MCP, capability, approval, or workspace policy.\n",
+		firstNonEmptyString(manifest.ProfileRef, "custom"), firstNonEmptyString(manifest.Usage.Selection, "explicit"),
+		firstNonEmptyString(manifest.Usage.Scope, "team"), firstNonEmptyString(strings.Join(bindings, ", "), "none"))
 }
 
 func runtimeResponseDirective() string {

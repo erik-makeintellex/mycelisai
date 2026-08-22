@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  confirmProposal,
   firstDemoPackageProposal,
   fulfillJSON,
   type ArtifactRecord,
@@ -10,7 +11,6 @@ import {
   mockOrganizationWorkspace,
   openOrganization,
   sendWorkspaceMessage,
-  type ChatRequestBody,
 } from "../support/soma-ui-testing";
 
 test.describe("UI finalization first-demo degraded retry proof", () => {
@@ -47,7 +47,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
       created_at: "2026-05-16T20:20:00Z",
     }];
 
-    await mockOrganizationWorkspace(page, (_requestBody: ChatRequestBody) => firstDemoPackageProposal());
+    await mockOrganizationWorkspace(page, () => firstDemoPackageProposal());
     await page.route("**/api/v1/intent/confirm-action", async (route) => {
       confirmCalls += 1;
       if (confirmCalls === 1) {
@@ -134,7 +134,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await openOrganization(page);
     await sendWorkspaceMessage(page, firstDemoAsk);
     await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+    await confirmProposal(page);
     const failureCard = page.getByTestId("execution-summary-card").last();
     await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
     await expect(failureCard.getByText("Details and proof")).toBeVisible();
@@ -147,12 +147,13 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
 
     await sendWorkspaceMessage(page, firstDemoAsk);
     await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+    await confirmProposal(page);
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
+    await page.getByText("Proof and execution details", { exact: true }).last().click();
     await expect(page.locator(`a[href="/runs/${retryRunId}"]`).first()).toBeVisible();
 
     const outputPagePromise = page.context().waitForEvent("page");
-    await page.getByRole("button", { name: `Open file ${packageTitle} in a new browser window` }).last().click();
+    await page.getByRole("button", { name: `Open app ${packageTitle} in a new browser window` }).last().click();
     const outputPage = await outputPagePromise;
     await outputPage.waitForLoadState("domcontentloaded").catch(() => undefined);
     if (!outputPage.url().includes("/api/v1/workspace/files/view")) {

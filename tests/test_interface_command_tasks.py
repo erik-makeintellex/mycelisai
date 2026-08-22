@@ -163,7 +163,7 @@ def test_wait_for_interface_ready_fails_when_managed_server_exits(monkeypatch):
         raise AssertionError("expected managed server startup failure")
 
 
-def test_wait_for_interface_ready_prefers_reachable_port_over_exited_parent(monkeypatch):
+def test_wait_for_interface_ready_rejects_foreign_port_when_parent_exited(monkeypatch):
     class FakeServer:
         @staticmethod
         def poll():
@@ -181,7 +181,13 @@ def test_wait_for_interface_ready_prefers_reachable_port_over_exited_parent(monk
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
     monkeypatch.setattr(interface.urllib.request, "urlopen", lambda url, timeout=5: FakeHTTPResponse())
 
-    assert interface._wait_for_interface_ready("127.0.0.1", 4310, timeout_seconds=1, process=FakeServer()) == "127.0.0.1"
+    try:
+        interface._wait_for_interface_ready("127.0.0.1", 4310, timeout_seconds=1, process=FakeServer())
+    except RuntimeError as exc:
+        assert "Managed Interface server exited before it became ready" in str(exc)
+        assert "4310" in str(exc)
+    else:
+        raise AssertionError("expected managed server startup failure")
 
 
 def test_check_does_not_treat_plain_html_words_as_hydration_failure(monkeypatch, capsys):

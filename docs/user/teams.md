@@ -37,7 +37,7 @@ Default rule:
 
 For most work, Soma should launch one accountable lead first.
 
-The lead is the user-facing counterpart who keeps the mission, status, and outputs clear. If the work truly needs more coverage, the operator can add a member deliberately or the temporary team lead can request one temporary specialist with:
+The lead is the focused counterpart who keeps the Outcome goal, status, and outputs clear. If the work truly needs more coverage, the operator can add a member deliberately or the temporary team lead can request one temporary specialist with:
 
 - the missing capability
 - the owned task
@@ -59,10 +59,12 @@ Use the root Soma chat when you want the simplest path:
 
 Use `Teams` when you want to inspect or manage existing teams:
 
+- read the compact Outcome Health badge first: Healthy, Waiting, Running, Degraded, Blocked, Completed, or Archived; open details only when you need the underlying team lifecycle state
+
 - review the Active Work Lane to see whether a team is new, queued, running, output-ready, degraded, paused, or waiting on the operator
 - use `/teams?view=work` when arriving from the Dashboard review panel; this focused Review Queue starts with counts for work needing a decision, ready output, work still running, and items that can be cleared
 - in Review Work, each row should answer `Reason`, `Trust`, and `Move` before the decision actions so the operator can decide whether to inspect, respond, recover, or clear it without reading the whole team setup page first
-- treat the Dashboard Active Work lane as an attention-first slice; use `Teams` for the full durable backlog
+- treat the Dashboard Active Work lane as an attention-first slice; its API projection includes operator decisions, recovery, and ready deliverables without counting ordinary queued/running progress as review; use `Teams` for the full durable backlog
 - use the Dashboard current-work lane for the quickest read of focused workflow, active task posture, latest output, and next review action
 - use the Dashboard `Working in` picker when you want to switch Soma between `Soma root` and a specific team's focused chat/output/proof lane without leaving the main workbench
 - when a focused team has retained outputs and no active work needs attention, use the current-work lane or Work panel for immediate open/open-folder access; when work is queued, running, degraded, or waiting on the operator, the lane keeps Work as the primary next action while preserving latest-output access
@@ -77,15 +79,21 @@ Use `Teams` when you want to inspect or manage existing teams:
 
 When a team has just been created and no delegated work item exists yet, the Dashboard shows a first-deliverable launcher instead of treating the team shell as active work. Choose a starter such as `Build playable prototype`, `Write design brief`, or `Draft delivery plan`; Soma places the bounded ask in the chat input for review, then your send creates the governed work item that can run, produce output, and attach proof.
 
-Ask Team is non-blocking. When you queue a follow-on ask, the row should close the form, show a queued work item immediately, keep the workspace usable, and refresh Active Work while the team moves toward `running`, `output_ready`, or `degraded`. Async asks record a dispatch event with the team subject/channel and a recovery-deadline hint so a published command is not invisible. Synchronous readable replies now retain a `text_reply` output/proof ref, so even plain team responses have durable evidence. If the API returns a run id, output refs, proof refs, or audit refs with the accepted ask, the immediate submitted row must show those proof cues before the next durable poll. Correlated team status/result signals carry the work item back into the original row, including status-only team responses. Result signals that include retained `outputs` or `output_refs` become openable output chips on the same Active Work item, so generated files, media, package folders, proof, and audit evidence stay attached to the focused team context. When that async result has run and contract linkage, Mycelis records a team-signal proof artifact and stamps the retained output refs so Current Work can point to the proof/receipt without adding chat noise. If a deliverable team reports completion without an attached retained output, Active Work should show recovery instead of claiming the output is ready; ask Soma to have the team attach, regenerate, or route the missing deliverable. Durable output refs should store workspace-confined file or folder paths, not browser viewer URLs; the UI can then derive `Open`, `Open folder`, and package Resources actions consistently. If the team bus or worker lane is unavailable, the ask remains durable and the row should explain the degraded delivery and recovery posture instead of leaving the operator waiting on a browser request.
+Ask Team is non-blocking. When you queue a follow-on ask, the row should close the form, show a queued work item immediately, keep the workspace usable, and refresh Active Work while the team moves through `running`, optional `reviewing`, `output_ready`, or `degraded`. Async asks record durable dispatch state so a published command is not invisible. Correlated status/result signals return to the original row. Retained output refs stay attached to that team context, but an interactive package in `reviewing` is only a candidate: Core checks the exact retained digest in a browser before attaching runtime proof or completing its run. A pass advances to `output_ready`; a failed or unavailable check advances to `degraded` with a concise repair request for Soma and the same team. Missing retained outputs also degrade rather than claim completion. Durable output refs store workspace-confined paths, not viewer URLs, so the UI can derive **Open**, **Open folder**, and Resources actions consistently. If the bus or worker lane is unavailable, the ask remains durable and explains recovery instead of leaving the operator waiting on a browser request.
 
 `Clear from review` archives a durable work item so it leaves active review queues while retained outputs, proof refs, audit refs, and history remain inspectable. Use it for stale failed proposals or old test data after confirming nothing useful is waiting to be recovered.
 
 Use `Groups` when you want to review a collaboration lane without opening every team surface. The selected group includes a **Workflow Log** tab that combines the group brief, lifecycle recommendation, attached team-work rows, retained output cues, latest broadcast result, and bus/recovery signal into one operator-readable stream. It is workflow context, not a final deliverable folder and not raw NATS/bus logs. Group workspace tabs keep the selected group and panel in the URL, so an operator can return directly to `overview`, `workflow`, `outputs`, `message`, `settings`, or `create` during review handoff.
 
+Groups opens on **Current** so completed and archived history does not crowd active work. Open **Filters** to switch between **Current**, **Completed**, and **Archived**. Completed means an expired temporary collaboration that has not yet been archived; Archived means a cleared retained record. Completed history can be bounded by age. Route-selected records remain inspectable even when they sit outside the current filter.
+
+On phones and tablets, Groups shows one job at a time. Start in the group-record list, choose a group to open its workspace, and use **All groups** or browser Back to return to the list. The workspace sections remain a horizontal tab strip instead of compressing the record list and detail pane beside each other. Desktop keeps the list and selected workspace visible together.
+
 The **Create** tab is sectioned as **Basics**, **Policy**, **People**, and **Advanced** so the operator can define one part of the collaboration lane at a time instead of reading a compressed multi-column form. Start with the name and goal, then add work mode/approval posture, team or member ids, and only then any workspace/coordinator detail that matters.
 
 The **Outputs** tab is curated for user-facing deliverables. It hides planning, proof, source/support files, and team handoff records by default so a planned team does not look like it delivered real work. Use the include-internal checkbox when you intentionally need to inspect planning records such as `TEAM_EVOCATION.md`, proof files, research handoffs, or source material. A group labeled **Planned only** has retained working material but still needs a delivered output before it should be treated as complete. When you hand a file to a team, say whether it is a one-run draft/input, standing context for that team, or a final output target; Soma should keep those roles separate in the work item.
+
+Group Outputs use the same Outcome Health vocabulary as Soma and Runs: a group with retained user deliverables is Completed, an empty active output lane is Waiting, and a cleared group is Archived. Proof remains visible separately and does not rename a completed deliverable as Healthy.
 
 Standing groups and Soma-created runtime-team groups also have a dedicated workspace folder under `MYCELIS_WORKSPACE/groups/...`, visible from the group detail pane with an `Open folder` action.
 
@@ -97,7 +105,7 @@ When a group is meant to react to service, device, API, or sensor traffic, regis
 
 Use `Automations` when you want event rules to actuate work, route proposals, require approval before execution, or author propose-only Schedule Rules for reviewable cadence.
 
-Use `Resources -> Capabilities` when you need to confirm which tool refs, direct web search posture, or MCP servers are available before assigning them to a reusable agent template. Settings may deep-link into this setup path, but the operator-facing capability view lives in Resources. Capability cards should show available, needs-attention, and request posture first, with MCP structure behind Inspect.
+Use `Resources -> Worker Profiles` to inspect ready-made teammates, then use **Create with Soma** or **Customize with Soma** to prepare a governed scoped profile conversationally. Name an activated profile in a Soma request when you want that teammate specifically, or let Soma choose the smallest useful set. Use `Resources -> Capabilities` to confirm the access those profiles may request; a profile never bypasses capability health, source scope, approval, or secret policy.
 
 If Soma recommends tools that are not installed yet, it should walk you through the enablement path before launch: name the missing MCP server, name required `.env` variables without exposing secret values, point to Capabilities and the MCP library, and then bind the resulting tool refs to the team or reusable member template after you confirm.
 
@@ -116,7 +124,7 @@ If you need the higher-level boundary between direct Soma, one context-rich agen
 Most teams should have:
 - one clear lead
 - a small specialist set
-- a narrow mission
+- a narrow Outcome goal
 - readable outputs
 - a named output contract such as "brief", "test plan", "image prompt pack", "website draft", "data review", "implementation patch", or "release checklist"
 
@@ -155,7 +163,11 @@ The team lead is the user-facing counterpart for that team, not a hidden extra m
 
 After a temporary collaboration is archived, use `/groups` to review the workflow log, retained output package, and collaboration record.
 
-For permanent or standing groups, keep deliverables inside the group folder instead of the general output folders. Soma-owned team media defaults to `groups/<team-id>/media`, and Soma-owned team project packages default to `groups/<team-id>/generated/...`. Explicit operator paths are still respected when you intentionally name a different workspace-confined target. Long-running teams should also name approved input mounts or Deployment Context sources they may reuse so they do not treat every old working file as current truth.
+For every team, keep deliverables inside the team group folder instead of the general output folders. Team creation prepares `groups/<team-id>/planning`, `groups/<team-id>/source`, and `groups/<team-id>/generated`; restoring an existing runtime team repairs those folders when they are missing. Soma-owned team media defaults to `groups/<team-id>/media`, and Soma-owned team project packages default to `groups/<team-id>/generated/...`. The general generated folder is appropriate only for explicit unscoped one-file output or short-lived handoff material. Explicit operator paths are still respected when you intentionally name a different workspace-confined target. Long-running teams should also name approved input mounts or Deployment Context sources they may reuse so they do not treat every old working file as current truth.
+
+A package team is complete only when it returns a retained project package under `groups/<team-id>/generated/...` with an entrypoint and local support files that physically exist. If the request requires a playable or interactive workflow, the package must also expose and pass the requested primary interaction; opening static HTML is not enough. A loose `.py`/`.js` file, copied request text, planning brief, missing parent/dependency, or non-responsive control is not a delivered application. Valid completion returns to the Soma conversation as `Work complete`, names the retained deliverable, and provides a direct open action; run and transport evidence remain available through Details/Inspect.
+
+Active Work retains the approved execution mode and its lifecycle guidance. Open `Advanced inspect` when you need to verify whether the work is one-shot, scheduled, a continuing service, a project, or a Soma extension and which stop, retry, and recovery operations apply. Those labels describe the governed control path; they do not let a team bypass approval or policy.
 
 ## Team Creation
 

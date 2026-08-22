@@ -16,6 +16,8 @@ export function ActiveWorkAdvancedProjection({ item }: { item: TeamWorkItem }) {
     ["Expected outputs", advanced.expectedOutputs],
     ["Expected proof", advanced.expectedProof],
     ["Execution shape", advanced.executionShape],
+	["Execution mode", advanced.executionMode],
+	["Lifecycle controls", advanced.lifecycleControls],
     ["Policy", advanced.policyRef ? [advanced.policyRef] : []],
   ].filter(([, values]) => Array.isArray(values) && values.length > 0) as Array<
     [string, string[]]

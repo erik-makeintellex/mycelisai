@@ -12,7 +12,6 @@ export function GroupsHeader({
   refreshing,
   archivingExpired,
   onArchiveExpired,
-  onCreate,
   onRefresh,
 }: {
   monitor: Monitor | null;
@@ -20,7 +19,6 @@ export function GroupsHeader({
   refreshing: boolean;
   archivingExpired: boolean;
   onArchiveExpired: () => void;
-  onCreate: () => void;
   onRefresh: () => void;
 }) {
   const summary = lifecycleReport?.summary;
@@ -38,7 +36,7 @@ export function GroupsHeader({
           <h1 className="mt-2 text-base font-semibold text-cortex-text-main sm:text-lg">
             Manage focused collaboration lanes.
           </h1>
-          <p className="mt-1 max-w-3xl text-sm leading-5 text-cortex-text-muted sm:line-clamp-2">
+          <p className="mt-1 hidden max-w-3xl text-sm leading-5 text-cortex-text-muted sm:line-clamp-2">
             Select a group, inspect retained outputs, or return to Soma without
             leaving this operating surface.
           </p>
@@ -49,8 +47,8 @@ export function GroupsHeader({
               <span className="font-semibold text-cortex-text-main">
                 {reviewCount} need review
               </span>
-              <span>{expiredCount} expired</span>
-              <span>{workCount} work items</span>
+              <span className="hidden sm:inline">{expiredCount} expired</span>
+              <span className="hidden sm:inline">{workCount} work items</span>
             </div>
           ) : null}
           {expiredCount > 0 ? (
@@ -67,10 +65,10 @@ export function GroupsHeader({
             <ArrowLeft className="mr-2 h-4 w-4" />
             Open Soma
           </Link>
-          <button type="button" onClick={onCreate} className={compactButtonClassName}>
+          <Link href="/groups?panel=create" className={compactButtonClassName}>
             <Plus className="mr-2 h-4 w-4" />
             Create group
-          </button>
+          </Link>
           <button type="button" onClick={onRefresh} className={compactButtonClassName}>
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             Refresh

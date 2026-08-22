@@ -119,4 +119,28 @@ describe("ActiveWorkLane review mode", () => {
     expect(screen.getByText(/Respond or steer the work with the missing decision/i)).toBeDefined();
     expect(screen.getAllByRole("button", { name: /Respond/i }).length).toBeGreaterThan(0);
   });
+
+  it("uses one verification form for an uncertain external outcome", () => {
+    render(
+      <ActiveWorkLane
+        purpose="review"
+        items={[{
+          ...baseItem,
+          state: "degraded",
+          degradationState: "external_mutation_outcome_unknown",
+          interactions: [
+            { action: "verify_external_outcome", label: "Verify external result" },
+            { action: "recover", label: "Retry unavailable", disabled: true },
+            { action: "archive", label: "Clear from review" },
+          ],
+        }]}
+        onVerifyExternalOutcome={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Verify external result for Draft launch brief")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Submit verification" })).toBeDefined();
+    expect(screen.queryByText("Other available actions")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Retry recovery|Retry unavailable/i })).toBeNull();
+  });
 });

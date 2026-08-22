@@ -9,6 +9,24 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 )
 
+func TestDefaultConfigKeepsTextAndForgeMediaProvidersDistinct(t *testing.T) {
+	router, err := cognitive.NewRouter("../../config/cognitive.yaml", nil)
+	if err != nil {
+		t.Fatalf("load default cognitive config: %v", err)
+	}
+
+	if got := router.Config.Providers["lmstudio"].Type; got != "openai_compatible" {
+		t.Fatalf("lmstudio type = %q, want openai_compatible", got)
+	}
+	media := router.Config.Media.EffectiveProvider()
+	if media.Type != cognitive.MediaProviderTypeForge {
+		t.Fatalf("media type = %q, want forge", media.Type)
+	}
+	if media.Endpoint != "http://127.0.0.1:7860" {
+		t.Fatalf("media endpoint = %q, want local Forge", media.Endpoint)
+	}
+}
+
 // TestInfer_Mock ensures that we can inject a mock adapter
 func TestInfer_Mock(t *testing.T) {
 	// 1. Setup

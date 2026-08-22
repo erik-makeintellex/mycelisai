@@ -120,7 +120,6 @@ def test_reset_fails_fast_when_a_migration_errors(monkeypatch):
 
     monkeypatch.setattr(db_tasks, "_psql", fake_run_psql)
     monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
-
     with pytest.raises(SystemExit, match="Migration failed: 019_agent_memories.up.sql"):
         db_tasks.reset.body(None)
 
@@ -133,6 +132,7 @@ def test_migrate_skips_replay_when_schema_is_already_bootstrapped(monkeypatch, c
     monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
     monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
     monkeypatch.setattr(db_tasks, "schema_bootstrapped", lambda: True)
+    monkeypatch.setattr(db_tasks, "_apply_missing_targeted_migrations", lambda: False)
     monkeypatch.setattr(
         db_tasks,
         "_migration_files",
@@ -157,6 +157,7 @@ def test_migrate_raises_when_any_migration_errors(monkeypatch, capsys):
     monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
     monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
     monkeypatch.setattr(db_tasks, "schema_bootstrapped", lambda: False)
+    monkeypatch.setattr(db_tasks, "_apply_missing_targeted_migrations", lambda: False)
     monkeypatch.setattr(
         db_tasks,
         "_migration_files",
@@ -241,6 +242,59 @@ def test_schema_bootstrapped_requires_search_source_registry_table():
 
     assert "search_sources table" in checks
     assert "search_sources" in checks["search_sources table"]
+
+
+def test_schema_bootstrapped_requires_operator_sse_event_ledger():
+    checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
+
+    assert "operator_sse_events table" in checks
+    assert "operator_sse_events" in checks["operator_sse_events table"]
+
+
+def test_schema_bootstrapped_requires_team_signal_receipt_ledger():
+    checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
+
+    assert "team_signal_receipts table" in checks
+    assert "team_signal_receipts" in checks["team_signal_receipts table"]
+
+
+def test_schema_bootstrapped_requires_worker_profile_columns():
+    checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
+
+    assert "agent_catalogue profile_key column" in checks
+    assert "agent_catalogue" in checks["agent_catalogue profile_key column"]
+    assert db_tasks.TARGETED_SCHEMA_MIGRATIONS["agent_catalogue profile_key column"] == "056_agent_profile_library.up.sql"
+
+
+def test_targeted_worker_profile_migration_applies_when_column_is_missing(monkeypatch):
+    migration = db_tasks.MIGRATIONS_DIR / "056_agent_profile_library.up.sql"
+    applied: list[str] = []
+    monkeypatch.setattr(db_tasks, "_migration_files", lambda: [migration])
+    monkeypatch.setattr(
+        db_tasks,
+        "TARGETED_SCHEMA_MIGRATIONS",
+        {"agent_catalogue profile_key column": migration.name},
+    )
+    monkeypatch.setattr(
+        db_tasks,
+        "_run_psql",
+        lambda sql=None, file=None, dbname=None: SimpleNamespace(returncode=0, stdout="", stderr=""),
+    )
+    monkeypatch.setattr(db_tasks, "_psql", lambda sql=None, file=None, dbname=None: applied.append(file.name) or 0)
+
+    assert db_tasks._apply_missing_targeted_migrations() is True
+    assert applied == ["056_agent_profile_library.up.sql"]
+
+
+def test_schema_bootstrapped_requires_team_work_lifecycle_columns():
+    checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
+
+    for table in ("team_work_items", "team_status_events"):
+        for column in ("work_intent", "execution_mode"):
+            label = f"{table} {column} column"
+            assert label in checks
+            assert table in checks[label]
+            assert column in checks[label]
 
 
 def test_schema_bootstrapped_accepts_current_runtime_schema(monkeypatch):

@@ -10,10 +10,11 @@ import (
 func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool) {
 	trimmed := strings.TrimSpace(text)
 	lower := strings.ToLower(trimmed)
-	if trimmed == "" || !strings.Contains(lower, "team") {
+	if trimmed == "" {
 		return protocol.PlannedToolCall{}, false
 	}
-	if !requestAsksToCreateTeam(lower) {
+	explicitTeamRequest := strings.Contains(lower, "team") && requestAsksToCreateTeam(lower)
+	if !explicitTeamRequest && !requestRequiresDeliveryTeam(lower) {
 		return protocol.PlannedToolCall{}, false
 	}
 
@@ -61,13 +62,77 @@ func inferCreateTeamPlanFromRequest(text string) (protocol.PlannedToolCall, bool
 		"temporary_addition_guidance": "Add specialists only after the lead names the missing capability, owned task, proof expected, and removal point.",
 		"content_contract":            contentContract,
 		"team_evocation":              teamEvocation,
+		"profile_ref":                 defaultProfileRefForTeamRole(role),
 	}
 	if len(agents) > 0 {
 		args["agents"] = agents
 	}
 	args["required_capabilities"] = requiredCapabilitiesForContentContract(contentContract)
+	args["tools"] = executionToolsForContentContract(contentContract)
 
 	return protocol.PlannedToolCall{Name: "create_team", Arguments: args}, true
+}
+
+func defaultProfileRefForTeamRole(role string) string {
+	if strings.EqualFold(strings.TrimSpace(role), "researcher") {
+		return "default.researcher"
+	}
+	return "default.builder"
+}
+
+// requestRequiresDeliveryTeam identifies retained, multi-file product work that
+// should be executed by an isolated team even when the operator speaks only in
+// outcome language. Explicit single-file asks continue through write_file.
+func requestRequiresDeliveryTeam(lower string) bool {
+	if !requestHasDeliveryVerb(lower) {
+		return false
+	}
+	if fileCall, ok := inferWriteFilePlanFromRequest(lower); ok && shouldUseRequestedWriteFilePlan(lower, fileCall) {
+		return false
+	}
+	if requestContainsAny(lower, []string{
+		"browser app", "web app", "mobile app", "project package", "project-package",
+		"software project", "complete application", "playable",
+	}) {
+		return true
+	}
+	for _, word := range []string{"game", "application", "executable", "codebase", "website"} {
+		if hasExactWord(lower, word) {
+			return true
+		}
+	}
+	return requestContainsAny(lower, []string{"complex", "production", "production-ready", "full project"}) &&
+		requestContainsAny(lower, []string{"package", "project", "media kit", "campaign", "dataset"})
+}
+
+func requestHasDeliveryVerb(lower string) bool {
+	for _, verb := range []string{"build", "create", "develop", "deliver", "generate", "implement", "make", "produce", "ship"} {
+		if hasExactWord(lower, verb) {
+			return true
+		}
+	}
+	return false
+}
+
+func executionToolsForContentContract(contract map[string]any) []string {
+	tools := []string{}
+	needsPackageValidation := false
+	for _, capability := range requiredCapabilitiesForContentContract(contract) {
+		switch capability {
+		case "write_file", "store_artifact", "generate_image", "save_cached_image", "research_for_blueprint", "consult_council":
+			tools = append(tools, capability)
+		}
+	}
+	for _, kind := range confirmedActionStringSlice(contract["content_types"]) {
+		switch kind {
+		case "game", "application_package", "code_app":
+			needsPackageValidation = true
+		}
+	}
+	if needsPackageValidation {
+		tools = append(tools, "read_file", "local_command")
+	}
+	return uniqueOrderedTools(tools)
 }
 
 func requestAsksToCreateTeam(lower string) bool {
@@ -131,9 +196,24 @@ func specialistAgentsForTeamRequest(teamID, lower string) []map[string]any {
 func specialistAgent(teamID, suffix, role, prompt string) map[string]any {
 	return map[string]any{
 		"id":            teamID + "-" + suffix,
+		"profile_ref":   defaultProfileRefForSpecialistRole(role),
 		"role":          role,
 		"system_prompt": prompt,
 		"tools":         []string{"generate_image", "save_cached_image", "store_artifact"},
+	}
+}
+
+func defaultProfileRefForSpecialistRole(role string) string {
+	normalized := strings.ToLower(strings.TrimSpace(role))
+	switch {
+	case strings.Contains(normalized, "proof"), strings.Contains(normalized, "review"):
+		return "default.reviewer"
+	case strings.Contains(normalized, "character"), strings.Contains(normalized, "artist"), strings.Contains(normalized, "layout"), strings.Contains(normalized, "media"):
+		return "default.media-creator"
+	case strings.Contains(normalized, "story"), strings.Contains(normalized, "analyst"):
+		return "default.context-analyst"
+	default:
+		return "default.builder"
 	}
 }
 

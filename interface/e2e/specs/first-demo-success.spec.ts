@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  confirmProposal,
   expectProjectPackageVisible,
   firstDemoPackageProposal,
   fulfillJSON,
@@ -123,9 +124,10 @@ test.describe("Canonical first-demo success path", () => {
     await openOrganization(page);
     await sendWorkspaceMessage(page, "Create the exact first-demo playable browser game package with README and validation notes.");
     await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+    await confirmProposal(page);
 
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
+    await page.getByText("Proof and execution details", { exact: true }).last().click();
     await expect(page.locator(`a[href="/runs/${runId}"]`).first()).toBeVisible();
     await page.reload({ waitUntil: "domcontentloaded" });
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
@@ -145,7 +147,9 @@ test.describe("Canonical first-demo success path", () => {
 
     await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
     await page.getByRole("button", { name: /Review output/i }).last().click();
-    await page.getByRole("link", { name: `Open ${packageTitle} in Resources` }).last().click();
+    const reviewRail = page.getByTestId("soma-workbench-side-rail");
+    await expect(reviewRail).toHaveAttribute("aria-hidden", "false");
+    await reviewRail.getByRole("link", { name: `Open ${packageTitle} in Resources` }).click();
     await expect(page).toHaveURL(new RegExp(`/resources\\?tab=workspace&path=${encodeURIComponent(folder)}`));
     await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(folder).last()).toBeVisible();

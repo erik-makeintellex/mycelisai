@@ -32,8 +32,24 @@ COMPOSE_LONG_TERM_STORAGE_CHECKS = (
         "conversation templates",
         "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conversation_templates';",
     ),
+    ("config documents", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'config_documents';"),
+    ("config document activations", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activations' AND column_name = 'kind';"),
+    ("config document activation history", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activation_history' AND column_name = 'kind';"),
+    ("config document fixture ownership", "SELECT 1 FROM pg_constraint WHERE conname = 'chk_qa_fixture_resource_kind' AND pg_get_constraintdef(oid) LIKE '%config_document%';"),
+    (
+        "worker profiles",
+        "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'agent_catalogue' AND column_name = 'profile_key';",
+    ),
+    (
+        "QA fixture ownership",
+        "SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'uq_qa_fixture_resource_claim';",
+    ),
+    (
+        "released QA fixture claims",
+        "SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM qa_fixture_resources r JOIN qa_fixture_scopes s ON s.id=r.scope_id WHERE s.status='purged');",
+    ),
+    ("runtime team manifests", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'runtime_team_manifests';"),
 )
-
 
 COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = {
     "semantic context vectors": ("008_context_engine.up.sql",),
@@ -45,8 +61,18 @@ COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = {
     "managed exchange channels": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
     "managed exchange items": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
     "conversation templates": ("038_conversation_templates.up.sql",),
+    "config documents": ("061_config_documents.up.sql",),
+    "config document activations": ("061_config_documents.up.sql",),
+    "config document activation history": ("061_config_documents.up.sql",),
+    "config document fixture ownership": ("062_qa_fixture_config_documents.up.sql",),
+    "worker profiles": ("056_agent_profile_library.up.sql",),
+    "QA fixture ownership": (
+        "058_qa_fixture_ownership.up.sql",
+        "059_qa_fixture_ownership_hardening.up.sql",
+    ),
+    "released QA fixture claims": ("060_release_purged_qa_fixture_claims.up.sql",),
+    "runtime team manifests": ("063_runtime_team_manifests.up.sql",),
 }
-
 
 def compose_db_user(env_values: dict[str, str], clean_env_value: Callable[[str], str]) -> str:
     return clean_env_value(env_values.get("DB_USER") or env_values.get("POSTGRES_USER") or "mycelis")
@@ -140,6 +166,15 @@ def compose_host_port(env_values: dict[str, str], key: str, default: str) -> int
         return int(env_values.get(key, default))
     except ValueError as exc:
         raise SystemExit(f"Invalid .env.compose {key}: {env_values.get(key)!r} must be an integer port.") from exc
+
+
+def compose_host_ports(env_values: dict[str, str], api_default: int, interface_default: int) -> tuple[int, int, int, int]:
+    return (
+        compose_host_port(env_values, "MYCELIS_COMPOSE_POSTGRES_PORT", "5432"),
+        compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_PORT", "4222"),
+        compose_host_port(env_values, "MYCELIS_COMPOSE_CORE_PORT", str(api_default)),
+        compose_host_port(env_values, "MYCELIS_COMPOSE_INTERFACE_PORT", str(interface_default)),
+    )
 
 
 def print_data_plane_connection_guidance(

@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import { Users, Cpu, Eye, BookOpen, Activity, MessageSquare, Route } from 'lucide-react';
 import type { TeamDetailEntry } from '@/store/useCortexStore';
 
@@ -149,10 +150,10 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
                     <MessageSquare className="w-3 h-3" />
                     Open lead workspace
                 </a>
-                <a href="/runs" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-runs`}>
+                <Link href="/runs" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-runs`}>
                     <Route className="w-3 h-3" />
                     View runs
-                </a>
+                </Link>
             </div>
         </div>
     );

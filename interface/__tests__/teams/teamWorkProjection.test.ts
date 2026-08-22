@@ -17,6 +17,15 @@ describe("teamWorkProjection", () => {
           objective: "Build the launch package",
           owner: "Alpha lead",
           execution_shape: "deliverable",
+		  execution_mode: "team_async",
+		  work_intent: {
+			kind: "service",
+			lifecycle: {
+			  stop_action: "stop_service",
+			  retry_action: "restart_service",
+			  recovery_action: "inspect_and_restart",
+			},
+		  },
           state: "output_ready",
           expected_outputs: ["reviewable package"],
           expected_proof: ["smoke proof"],
@@ -66,6 +75,7 @@ describe("teamWorkProjection", () => {
       id: "work-1",
       title: "Build the launch package",
       state: "output_ready",
+      outcomeHealth: "completed",
       source: "durable",
       sourceLabel: "Durable team work",
       outputCount: 1,
@@ -81,6 +91,8 @@ describe("teamWorkProjection", () => {
     expect(item?.interactions.find((action) => action.action === "inspect")?.label).toBe("Open run");
     expect(item?.interactions.find((action) => action.action === "archive")?.label).toBe("Clear from review");
     expect(item?.advanced?.expectedOutputs).toEqual(["reviewable package"]);
+	expect(item?.advanced?.executionMode).toEqual(["team_async"]);
+	expect(item?.advanced?.lifecycleControls).toEqual(["stop_service", "restart_service", "inspect_and_restart"]);
     expect(item?.outputRefs?.[0]?.proof).toMatchObject({
       proof_id: "proof-envelope-1",
       path_boundary_status: "verified",
@@ -113,6 +125,38 @@ describe("teamWorkProjection", () => {
       id: "run-from-event",
       run_id: "run-from-event",
       work_item_id: "work-2",
+    });
+  });
+
+  it("requires Soma verification before an uncertain external mutation can retry", () => {
+    const item = mapDurableTeamWorkItem({
+      work_item_id: "work-external-1",
+      team_id: "team-alpha",
+      objective: "Update the customer system",
+      execution_shape: "delegated_work",
+      state: "degraded",
+      needs_operator: true,
+      degradation_state: "external_mutation_outcome_unknown",
+      recovery_options: [
+        "Ask Soma to verify the external system before deciding whether any retry is safe.",
+      ],
+    });
+
+    const recover = item?.interactions.find((action) => action.action === "recover");
+    const steer = item?.interactions.find((action) => action.action === "steer");
+    const verify = item?.interactions.find((action) => action.action === "verify_external_outcome");
+    expect(recover).toMatchObject({
+      label: "Retry unavailable",
+      disabled: true,
+      disabledReason: "Ask Soma to verify the external outcome before considering a retry.",
+    });
+    expect(steer).toMatchObject({
+      disabled: true,
+      disabledReason: "Record the observed external result in verification.",
+    });
+    expect(verify).toMatchObject({
+      label: "Verify external result",
+      disabled: false,
     });
   });
 

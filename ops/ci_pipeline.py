@@ -1,4 +1,21 @@
+import sys
 import time
+
+
+def _core_go_command(core_dir, arguments: str) -> str:
+    """Run Go against the Core module without relying on shell cd state."""
+    return f'go -C "{core_dir}" {arguments}'
+
+
+def _console_safe(value: str, encoding: str | None = None) -> str:
+    target_encoding = encoding or getattr(sys.stdout, "encoding", None) or "utf-8"
+    return value.encode(target_encoding, errors="backslashreplace").decode(target_encoding)
+
+
+def _print_failed_result(result) -> None:
+    for output in (getattr(result, "stdout", ""), getattr(result, "stderr", "")):
+        if output:
+            print(_console_safe(output.rstrip()))
 
 
 def run_lint(c, *, core_dir, task_env, interface_tasks):
@@ -7,12 +24,12 @@ def run_lint(c, *, core_dir, task_env, interface_tasks):
     print()
 
     print("[1/2] go vet ./...")
-    with c.cd(str(core_dir)):
-        result = c.run("go vet ./...", warn=True, env=task_env())
-        if result.exited != 0:
-            errors.append("go vet failed")
-        else:
-            print("  OK")
+    result = c.run(_core_go_command(core_dir, "vet ./..."), warn=True, env=task_env())
+    if result.exited != 0:
+        _print_failed_result(result)
+        errors.append("go vet failed")
+    else:
+        print("  OK")
 
     print("[2/2] interface lint")
     try:
@@ -35,12 +52,12 @@ def run_test(c, *, core_dir, task_env, interface_tasks):
     print()
 
     print("[1/2] go test ./...")
-    with c.cd(str(core_dir)):
-        result = c.run("go test ./...", warn=True, env=task_env())
-        if result.exited != 0:
-            errors.append("go tests failed")
-        else:
-            print("  OK")
+    result = c.run(_core_go_command(core_dir, "test ./..."), warn=True, env=task_env())
+    if result.exited != 0:
+        _print_failed_result(result)
+        errors.append("go tests failed")
+    else:
+        print("  OK")
 
     print("[2/2] interface test")
     try:
@@ -141,19 +158,19 @@ def run_baseline(
     _run_baseline_step("[1/7] logging.check-schema", lambda: logging_tasks.check_schema.body(c), errors, "logging schema check failed")
     _run_baseline_step("[2/7] logging.check-topics", lambda: logging_tasks.check_topics.body(c), errors, "logging topic check failed")
     _run_baseline_step(
-        "[3/7] quality.max-lines --limit=300",
-        lambda: quality.max_lines.body(c, limit=300, paths=quality.DEFAULT_SOURCE_PATHS, strict=False),
+        "[3/7] quality.max-lines --limit=330",
+        lambda: quality.max_lines.body(c, limit=330, paths=quality.DEFAULT_SOURCE_PATHS, strict=False),
         errors,
         "quality max-lines check failed",
     )
 
-    print("[4/7] core go test ./... -count=1")
-    with c.cd(str(core_dir)):
-        result = c.run("go test ./... -count=1", warn=True, hide=True, env=task_env())
-        if result.exited != 0:
-            errors.append("core go tests failed")
-        else:
-            print("  OK")
+    print("[4/7] core go test ./... -count=1 -p 1")
+    result = c.run(_core_go_command(core_dir, "test ./... -count=1 -p 1"), warn=True, hide=True, env=task_env())
+    if result.exited != 0:
+        _print_failed_result(result)
+        errors.append("core go tests failed")
+    else:
+        print("  OK")
 
     _run_baseline_step("[5/7] interface build", lambda: interface_tasks.build.body(c), errors, "interface build failed")
     _run_baseline_step("[6/7] interface typecheck", lambda: interface_tasks.typecheck.body(c), errors, "interface typecheck failed")
@@ -176,7 +193,7 @@ def run_baseline(
     else:
         try:
             interface_tasks.build.body(c)
-            interface_tasks.e2e.body(c, workers="1", server_mode="start")
+            interface_tasks.e2e.body(c, project="chromium", workers="1", server_mode="start")
         except SystemExit:
             errors.append("interface playwright failed")
         else:

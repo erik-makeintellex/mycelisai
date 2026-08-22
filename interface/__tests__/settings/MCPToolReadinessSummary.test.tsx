@@ -5,7 +5,7 @@ import { CapabilityReadinessSummary } from "@/components/settings/MCPToolReadine
 import { webResearchCapability } from "./MCPToolRegistry.testData";
 
 describe("CapabilityReadinessSummary", () => {
-    it("keeps the default readiness overview compact when many capabilities exist", () => {
+    it("summarizes capability origins without listing the full inventory", () => {
         const readyCapabilities = makeCapabilities("Ready capability", 8, "available");
         const repairCapabilities = makeCapabilities("Repair capability", 4, "degraded");
         const openAccess = vi.fn();
@@ -22,16 +22,18 @@ describe("CapabilityReadinessSummary", () => {
             />,
         );
 
-        expect(screen.getByText(/Ready capability 1/)).toBeDefined();
-        expect(screen.getByText(/Ready capability 3/)).toBeDefined();
-        expect(screen.queryByText(/Ready capability 4/)).toBeNull();
-        expect(screen.getByText(/Repair capability 1/)).toBeDefined();
-        expect(screen.getByText(/Repair capability 3/)).toBeDefined();
-        expect(screen.queryByText(/Repair capability 4/)).toBeNull();
+        expect(screen.queryByText(/Ready capability 1/)).toBeNull();
+        expect(screen.queryByText(/Repair capability 1/)).toBeNull();
+        expect(screen.getByRole("button", { name: "Built-in runtime: 12" })).toBeDefined();
+        expect(screen.getByRole("button", { name: "Host / CLI: 0" })).toBeDefined();
+        expect(screen.getByRole("button", { name: "MCP: 0" })).toBeDefined();
+        expect(screen.getByRole("button", { name: "Connector: 0" })).toBeDefined();
+        expect(screen.getByText(/No MCP server is involved/i)).toBeDefined();
+        expect(screen.getByText(/machine or container running Core/i)).toBeDefined();
         expect(screen.queryByText(/approval optional/i)).toBeNull();
 
         fireEvent.click(screen.getByRole("button", { name: /Available to add/i }));
-        fireEvent.click(screen.getByRole("button", { name: /Ready/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Built-in runtime: 12" }));
 
         expect(openAccess).toHaveBeenCalledTimes(1);
         expect(openCatalog).toHaveBeenCalledTimes(1);

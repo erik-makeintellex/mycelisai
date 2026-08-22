@@ -90,7 +90,8 @@ test.describe("Dashboard workbench live review", () => {
       (response) => response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
       { timeout: 120_000 },
     );
-    await page.getByRole("button", { name: /Approve|Start/i }).last().click();
+    await input.fill("approve");
+    await input.press("Enter");
     await expect(page.getByText(/Starting|Action completed|Result saved|work bus/i).last()).toBeVisible({ timeout: 15_000 });
     const confirmed = await confirmResponse;
     const confirmedRaw = await confirmed.text();
@@ -157,7 +158,8 @@ test.describe("Dashboard workbench live review", () => {
       (response) => response.url().includes("/api/v1/intent/confirm-action") && response.request().method() === "POST",
       { timeout: 120_000 },
     );
-    await page.getByRole("button", { name: /Approve|Start/i }).last().click();
+    await input.fill("approve");
+    await input.press("Enter");
     await expect(page.getByText(/Starting|Action completed|Result saved|work bus/i).last()).toBeVisible({ timeout: 15_000 });
     const confirmed = await confirmResponse;
     const confirmedRaw = await confirmed.text();

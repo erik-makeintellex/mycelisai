@@ -6,11 +6,14 @@ import {
     projectPackageOpenPath,
     projectPackageRevealPath,
 } from "@/lib/outputPackageModel";
+import type { OutcomeHealthState } from "@/lib/outcomeHealth";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 
 export type OutputGroup = {
     group_id: string;
     name: string;
     workspace_folder?: string;
+    health: OutcomeHealthState;
     outputs: Artifact[];
 };
 
@@ -148,6 +151,7 @@ export default function WorkspaceGroupOutputSelector({
 
             {selectedGroup ? (
                 <div className="mt-2 space-y-2">
+                    <OutcomeHealthBadge health={selectedGroup.health} />
                     <div
                         className="grid grid-cols-2 gap-2"
                         role="tablist"

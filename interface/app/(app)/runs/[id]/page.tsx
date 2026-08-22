@@ -4,7 +4,8 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
-import { ArrowLeft, Zap, MessageSquare, List, GitBranch } from 'lucide-react';
+import { ArrowLeft, Zap, MessageSquare, List, GitBranch, MessageSquareReply } from 'lucide-react';
+import { requestSomaOutputContinuation } from '@/components/soma/outputContinuation';
 
 const RunTimeline = dynamic(
     () => import('@/components/runs/RunTimeline'),
@@ -73,6 +74,13 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
         { key: 'events', label: 'Events', icon: <List className="w-3.5 h-3.5" /> },
     ];
 
+    const continueWithSoma = () => requestSomaOutputContinuation({
+        title: `run ${id.slice(0, 8)}`,
+        reference: `run:${id}`,
+        proof: id,
+        sourceLabel: 'execution receipt',
+    }, { persist: true, openSoma: true });
+
     // Events tab renders RunTimeline with its own full layout (header, auto-refresh, etc.)
     if (activeTab === 'events') {
         return (
@@ -84,7 +92,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                         className="flex items-center gap-1.5 text-cortex-text-muted hover:text-cortex-primary transition-colors text-[11px] font-mono"
                     >
                         <ArrowLeft className="w-3.5 h-3.5" />
-                        Workspace
+                        Back to Soma
                     </Link>
                     <div className="w-px h-4 bg-cortex-border" />
                     <div className="flex items-center gap-2">
@@ -109,6 +117,14 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                             </button>
                         ))}
                     </div>
+                    <button
+                        type="button"
+                        onClick={continueWithSoma}
+                        className="flex items-center gap-1.5 rounded-md border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1 text-[10px] font-semibold text-cortex-primary hover:bg-cortex-primary/15"
+                    >
+                        <MessageSquareReply className="h-3.5 w-3.5" />
+                        Continue with Soma
+                    </button>
                     <Link
                         href={`/runs/${id}/chain`}
                         className="flex items-center gap-1.5 rounded-md border border-cortex-border bg-cortex-surface px-3 py-1 text-[10px] font-mono font-bold text-cortex-text-muted hover:text-cortex-primary transition-colors"
@@ -132,7 +148,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                     className="flex items-center gap-1.5 text-cortex-text-muted hover:text-cortex-primary transition-colors text-[11px] font-mono"
                 >
                     <ArrowLeft className="w-3.5 h-3.5" />
-                    Workspace
+                    Back to Soma
                 </Link>
 
                 <div className="w-px h-4 bg-cortex-border" />
@@ -177,6 +193,15 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                         </button>
                     ))}
                 </div>
+
+                <button
+                    type="button"
+                    onClick={continueWithSoma}
+                    className="flex items-center gap-1.5 rounded-md border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1 text-[10px] font-semibold text-cortex-primary hover:bg-cortex-primary/15"
+                >
+                    <MessageSquareReply className="h-3.5 w-3.5" />
+                    Continue with Soma
+                </button>
 
                 <Link
                     href={`/runs/${id}/chain`}

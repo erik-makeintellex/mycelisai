@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Brain, BookOpen, FolderOpen, GitBranch, BookMarked, ShieldCheck, type LucideIcon } from "lucide-react";
 import BrainsPage from "@/components/settings/BrainsPage";
@@ -79,9 +80,9 @@ const RESOURCE_TABS: ResourceTab[] = [
     },
     {
         id: "roles",
-        label: "Role Library",
-        summary: "Reusable specialist roles and templates for advanced workflow work.",
-        detail: "Reusable templates",
+        label: "Worker Profiles",
+        summary: "Inspect ready-made teammates or continue with Soma to create an activated scoped profile.",
+        detail: "Reusable teammates",
         icon: BookOpen,
     },
 ];
@@ -95,16 +96,31 @@ export default function ResourcesPage() {
 }
 
 function ResourcesContent() {
+    const router = useRouter();
+    const pathname = usePathname() ?? "/resources";
     const searchParams = useSearchParams();
     const tabParam = (searchParams?.get("tab") as TabId | null) ?? null;
     const pathParam = searchParams?.get("path") ?? null;
-    const [activeTab, setActiveTab] = useState<TabId>(
-        tabParam && VALID_TABS.includes(tabParam) ? tabParam : "workspace"
-    );
+    const activeTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "workspace";
+
+    const tabHref = (tab: TabId) => {
+        const nextParams = new URLSearchParams(searchParams?.toString() ?? "");
+        if (tab === "workspace") {
+            nextParams.delete("tab");
+        } else {
+            nextParams.set("tab", tab);
+        }
+        if (tab !== "workspace") {
+            nextParams.delete("path");
+        }
+        const query = nextParams.toString();
+        return query ? `${pathname}?${query}` : pathname;
+    };
+    const selectTab = (tab: TabId) => router.push(tabHref(tab), { scroll: false });
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-cortex-bg">
-            <header className="flex-shrink-0 border-b border-cortex-border px-6 py-4">
+            <header className="flex-shrink-0 border-b border-cortex-border px-4 py-3 sm:px-6 sm:py-4">
                 <div className="flex min-w-0 flex-col gap-1">
                     <div className="min-w-0">
                         <h1 className="text-2xl font-bold text-cortex-text-main tracking-tight">
@@ -117,27 +133,35 @@ function ResourcesContent() {
                 </div>
             </header>
 
-            <div className="grid min-h-0 flex-1 gap-4 p-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+            <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3 p-3 lg:grid-cols-[16rem_minmax(0,1fr)] lg:grid-rows-1 lg:gap-4 lg:p-4">
                 <nav
-                    className="min-h-0 overflow-y-auto rounded-lg border border-cortex-border bg-cortex-surface/70 p-2"
+                    className="min-w-0 overflow-x-auto overflow-y-hidden rounded-lg border border-cortex-border bg-cortex-surface/70 p-1.5 lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:p-2"
                     aria-label="Resource type menu"
+                    role="tablist"
+                    aria-orientation="horizontal"
+                    data-testid="resource-type-tabs"
                 >
-                    <div className="px-2 pb-2 pt-1 text-[10px] font-semibold uppercase text-cortex-text-muted">
+                    <div className="hidden px-2 pb-2 pt-1 text-[10px] font-semibold uppercase text-cortex-text-muted lg:block">
                         Resource types
                     </div>
-                    <div className="space-y-1">
+                    <div className="flex w-max min-w-full gap-1 lg:block lg:w-auto lg:space-y-1">
                         {RESOURCE_TABS.map((tab) => (
                             <ResourceMenuButton
                                 key={tab.id}
                                 tab={tab}
                                 active={activeTab === tab.id}
-                                onClick={() => setActiveTab(tab.id)}
+                                href={tabHref(tab.id)}
                             />
                         ))}
                     </div>
                 </nav>
 
-                <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface/60">
+                <section
+                    id={`resource-panel-${activeTab}`}
+                    role="tabpanel"
+                    aria-labelledby={`resource-tab-${activeTab}`}
+                    className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-cortex-border bg-cortex-surface/60"
+                >
                     <ResourcePanelHeader tab={RESOURCE_TABS.find((tab) => tab.id === activeTab) ?? RESOURCE_TABS[0]} />
                     <div className="min-h-0 flex-1 overflow-y-auto">
                         {activeTab === "engines" && (
@@ -149,7 +173,7 @@ function ResourcesContent() {
                         {activeTab === "exchange" && <ExchangeInspector />}
                         {activeTab === "deployment-context" && <DeploymentContextPanel />}
                         {activeTab === "workspace" && (
-                            <WorkspaceExplorer initialPath={pathParam} onOpenToolsTab={() => setActiveTab("tools")} />
+                            <WorkspaceExplorer initialPath={pathParam} onOpenToolsTab={() => selectTab("tools")} />
                         )}
                         {activeTab === "roles" && <CataloguePage />}
                     </div>
@@ -159,15 +183,19 @@ function ResourcesContent() {
     );
 }
 
-function ResourceMenuButton({ active, onClick, tab }: { active: boolean; onClick: () => void; tab: ResourceTab }) {
+function ResourceMenuButton({ active, href, tab }: { active: boolean; href: string; tab: ResourceTab }) {
     const Icon = tab.icon;
 
     return (
-        <button
-            type="button"
-            onClick={onClick}
+        <Link
+            id={`resource-tab-${tab.id}`}
+            href={href}
+            scroll={false}
+            role="tab"
+            aria-selected={active}
+            aria-controls={`resource-panel-${tab.id}`}
             aria-current={active ? "page" : undefined}
-            className={`flex w-full items-start gap-3 rounded border px-3 py-2 text-left transition-colors ${
+            className={`flex h-11 min-w-max items-center gap-2 rounded border px-3 text-left transition-colors lg:h-auto lg:w-full lg:min-w-0 lg:items-start lg:gap-3 lg:py-2 ${
                 active
                     ? "border-cortex-primary/50 bg-cortex-primary/10 text-cortex-text-main"
                     : "border-transparent text-cortex-text-muted hover:border-cortex-border hover:bg-cortex-bg"
@@ -176,9 +204,9 @@ function ResourceMenuButton({ active, onClick, tab }: { active: boolean; onClick
             <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-cortex-primary" aria-hidden="true" />
             <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold">{tab.label}</span>
-                <span className="mt-0.5 block text-[11px] leading-4">{tab.detail}</span>
+                <span className="mt-0.5 hidden text-[11px] leading-4 lg:block">{tab.detail}</span>
             </span>
-        </button>
+        </Link>
     );
 }
 

@@ -60,13 +60,25 @@ func (r *InternalToolRegistry) registerCoordinationTools() {
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"team_id":                  map[string]any{"type": "string", "description": "Unique team ID"},
-				"name":                     map[string]any{"type": "string", "description": "Display name (optional)"},
-				"type":                     map[string]any{"type": "string", "enum": []string{"action", "expression"}, "description": "Team type (default action)"},
-				"role":                     map[string]any{"type": "string", "description": "Primary agent role (default worker)"},
-				"agent_id":                 map[string]any{"type": "string", "description": "Optional first agent ID"},
-				"system_prompt":            map[string]any{"type": "string", "description": "Optional first agent system prompt"},
-				"tools":                    map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional first agent tools"},
+				"team_id":       map[string]any{"type": "string", "description": "Unique team ID"},
+				"name":          map[string]any{"type": "string", "description": "Display name (optional)"},
+				"type":          map[string]any{"type": "string", "enum": []string{"action", "expression"}, "description": "Team type (default action)"},
+				"role":          map[string]any{"type": "string", "description": "Primary agent role (default worker)"},
+				"agent_id":      map[string]any{"type": "string", "description": "Optional first agent ID"},
+				"system_prompt": map[string]any{"type": "string", "description": "Optional first agent system prompt"},
+				"profile_ref":   map[string]any{"type": "string", "description": "Active Worker Profile document ID or locked built-in key"},
+				"profile_scope": map[string]any{
+					"type": "object", "description": "Approved scope used to select the active Worker Profile revision.",
+					"properties": map[string]any{
+						"operator_ref": map[string]any{"type": "string"}, "workspace_ref": map[string]any{"type": "string"},
+						"organization_ref": map[string]any{"type": "string"},
+					},
+				},
+				"tools": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional first agent tools"},
+				"agents": map[string]any{
+					"type": "array", "description": "Optional bounded specialist members, each with role and optional profile_ref overrides.",
+					"items": map[string]any{"type": "object"},
+				},
 				"inputs":                   map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional team input subjects"},
 				"deliveries":               map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional team delivery subjects"},
 				"staffing_mode":            map[string]any{"type": "string", "enum": []string{"lead_only_start"}, "description": "Runtime teams start with the lead only."},

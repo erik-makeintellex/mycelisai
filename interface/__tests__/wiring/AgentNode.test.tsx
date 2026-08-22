@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import React from 'react';
 
 // Mock reactflow before component import
 vi.mock('reactflow', () => {
-    const React = require('react');
     return {
         __esModule: true,
-        Handle: (props: any) =>
+        Handle: (props: Record<string, unknown>) =>
             React.createElement('div', { 'data-testid': 'react-flow-handle', ...props }),
         Position: {
             Left: 'left',
@@ -45,7 +45,7 @@ describe('AgentNode', () => {
         };
 
         // AgentNode is a memo'd component — render it as JSX
-        const { container } = render(<AgentNode {...makeNodeProps(data)} />);
+        render(<AgentNode {...makeNodeProps(data)} />);
 
         // The label should be visible
         expect(screen.getByText('Sentinel-Alpha')).toBeDefined();

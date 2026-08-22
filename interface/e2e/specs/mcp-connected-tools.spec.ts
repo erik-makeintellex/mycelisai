@@ -428,11 +428,12 @@ test.describe("Capabilities MCP workflow", () => {
     test("shows active MCP usage and installs a curated server from the library", async ({ page }) => {
         await mockConnectedToolsApis(page);
         await openConnectedTools(page);
-        await expect(page.getByRole("button", { name: /Capabilities/i })).toBeVisible();
-        await expect(page.getByText("Choose what you want to check.")).toBeVisible();
-        await expect(page.getByText("What Soma can use right now").first()).toBeVisible();
+        await expect(page.getByRole("button", { name: /Built-in runtime:/i })).toBeVisible(); await expect(page.getByRole("button", { name: /MCP:/i })).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /^Catalog/i }));
-        await expect(page.getByText(/risk medium/i).first()).toBeVisible();
+        await expect(page.getByLabel("Capability origin filters")).toBeVisible();
+        await expect(page.getByTestId("capability-catalog-list")).toHaveCSS("overflow-y", "auto");
+        await clickVisibleControl(page, page.getByLabel("Capability origin filters").getByRole("button", { name: /^MCP/i }));
+        await expect(page.getByText(/MCP · filesystem/i).first()).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /Access/i }));
         await expect(page.getByRole("button", { name: /Search sources/i })).toBeVisible();
         await expect(page.getByRole("button", { name: /Live inputs/i })).toBeVisible();
@@ -465,7 +466,6 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByText("fetch").first()).toBeVisible();
         await expect(page.getByText("Fetch MCP server installed for the current user-owned group.").first()).toBeVisible();
     });
-
     test("correlates a live team MCP-backed capability with recent Capabilities activity", async ({ page }) => {
         test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires a live Core backend");
         test.slow();

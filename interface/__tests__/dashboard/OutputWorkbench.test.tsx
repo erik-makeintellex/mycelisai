@@ -228,8 +228,9 @@ describe("OutputWorkbench", () => {
     );
 
     expect(screen.getByText("Latest output").closest("article")?.textContent).toContain("Playable output");
-    expect(screen.getByText("Use Open file to view it, or Open folder to show it in the workspace.")).toBeDefined();
-    expect(screen.getByRole("button", { name: /Open file Playable output/i })).toBeDefined();
+    expect(screen.getByText("Open the completed output to review the result.")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Open output Playable output in Mycelis" })).toBeDefined();
+    fireEvent.click(screen.getByText("Details and proof"));
     expect(screen.getByRole("button", { name: /Open local folder for Playable output/i })).toBeDefined();
     expect(screen.getByText("More outputs and verification")).toBeDefined();
   });
@@ -271,6 +272,7 @@ describe("OutputWorkbench", () => {
     );
 
     expect(screen.getByTestId("output-workbench")).toBeDefined();
+    expect(screen.getByTestId("project-package-actions").className).toContain("w-full");
     expect(screen.getByText("Launch microsite")).toBeDefined();
     expect(screen.getByText("Reviewable output package")).toBeDefined();
     expect(screen.getByText("Workspace folder")).toBeDefined();
@@ -278,11 +280,13 @@ describe("OutputWorkbench", () => {
     expect(screen.getAllByText("dist/index.html").length).toBeGreaterThan(0);
     expect(screen.getByText("Smoke test passed")).toBeDefined();
     expect(screen.getByText("Latest output")).toBeDefined();
-    expect(screen.getAllByLabelText("Outcome health: Healthy").length).toBeGreaterThan(0);
-    expect(screen.getByText("Use Open file to view it, or Open folder to show it in the workspace.")).toBeDefined();
+    expect(screen.getAllByLabelText("Outcome health: Completed").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Open app Launch microsite/i })).toBeDefined();
+    for (const disclosure of screen.getAllByText("Details and proof")) {
+      fireEvent.click(disclosure);
+    }
+    fireEvent.click(screen.getByText("More outputs and verification"));
     expect(screen.getByRole("link", { name: /Open Launch microsite in Resources/i }).getAttribute("href")).toBe("/resources?tab=workspace&path=workspace%2Fgenerated%2Flaunch");
-    const verificationDetails = screen.getByText("Verification details").closest("details");
-    expect(verificationDetails?.open).toBe(false);
     expect(screen.getByText("path verified")).toBeDefined();
     expect(screen.getByText("readback verified")).toBeDefined();
     expect(screen.getByText("sha256 b94d27b9934d")).toBeDefined();

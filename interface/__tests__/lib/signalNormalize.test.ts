@@ -77,4 +77,15 @@ describe("signal normalization", () => {
         expect(signal.message).toBe("Human-readable signal summary.");
         expect(streamSignalToDetail(signal).message).toBe("Human-readable signal summary.");
     });
+
+    it("drops non-object payloads at the stream boundary", () => {
+        const signal = normalizeIncomingSignal({
+            type: "status",
+            message: "Signal accepted.",
+            payload: ["unexpected", "array"],
+        });
+
+        expect(signal.message).toBe("Signal accepted.");
+        expect(signal.payload).toBeUndefined();
+    });
 });

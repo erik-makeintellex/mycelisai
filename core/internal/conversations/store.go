@@ -41,6 +41,10 @@ type Store struct {
 	db *sql.DB
 }
 
+type turnExecer interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+
 // NewStore creates a new conversations Store. db may be nil (degraded mode).
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
@@ -52,6 +56,19 @@ func (s *Store) LogTurn(ctx context.Context, turn protocol.ConversationTurnData)
 	if s.db == nil {
 		return "", fmt.Errorf("conversations: database not available")
 	}
+	return logTurn(ctx, s.db, turn)
+}
+
+// LogTurnTx persists a turn in the caller's transaction so a user-visible
+// receipt cannot outlive or disappear independently of the governed mutation.
+func (s *Store) LogTurnTx(ctx context.Context, tx *sql.Tx, turn protocol.ConversationTurnData) (string, error) {
+	if tx == nil {
+		return "", fmt.Errorf("conversations: transaction is required")
+	}
+	return logTurn(ctx, tx, turn)
+}
+
+func logTurn(ctx context.Context, execer turnExecer, turn protocol.ConversationTurnData) (string, error) {
 
 	id := uuid.New().String()
 	now := time.Now()
@@ -72,7 +89,7 @@ func (s *Store) LogTurn(ctx context.Context, turn protocol.ConversationTurnData)
 		}
 	}
 
-	_, err := s.db.ExecContext(ctx, `
+	_, err := execer.ExecContext(ctx, `
 		INSERT INTO conversation_turns
 			(id, run_id, session_id, tenant_id, agent_id, team_id, turn_index, role, content,
 			 provider_id, model_used, tool_name, tool_args, parent_turn_id, consultation_of, created_at)

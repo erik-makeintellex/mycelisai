@@ -19,9 +19,7 @@ test.describe('Accessibility Baseline', () => {
 
         const results = await analyzeAppWorkspace(page);
 
-        const critical = results.violations.filter(
-            (v: any) => v.impact === 'critical'
-        );
+        const critical = results.violations.filter((violation) => violation.impact === 'critical');
         expect(critical).toHaveLength(0);
     });
 
@@ -31,9 +29,7 @@ test.describe('Accessibility Baseline', () => {
 
         const results = await analyzeAppWorkspace(page);
 
-        const critical = results.violations.filter(
-            (v: any) => v.impact === 'critical'
-        );
+        const critical = results.violations.filter((violation) => violation.impact === 'critical');
         expect(critical).toHaveLength(0);
     });
 
@@ -43,9 +39,7 @@ test.describe('Accessibility Baseline', () => {
 
         const results = await analyzeAppWorkspace(page);
 
-        const critical = results.violations.filter(
-            (v: any) => v.impact === 'critical'
-        );
+        const critical = results.violations.filter((violation) => violation.impact === 'critical');
         expect(critical).toHaveLength(0);
     });
 });

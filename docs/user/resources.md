@@ -6,11 +6,8 @@
 ---
 
 ## Overview
-
 Open `/resources` directly from the main rail when you need generated files, capability readiness, workspace roots, or connected-tool posture.
-
 Current resource menu:
-
 | Resource Type | Purpose |
 |-----|---------|
 | Output Files | Open generated content folders and browse filesystem MCP-backed files inside workspace boundary |
@@ -18,15 +15,14 @@ Current resource menu:
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
 | Deployment Context | Save files or notes Soma should reuse as long-lived, scoped source context |
 | AI Engines | Global AI engine configuration and health |
-| Role Library | Reusable specialist-role definitions |
-
-The Resources page keeps these resource types in a persistent menu and renders the selected type inside a bounded work window. Long tool lists, workspace folders, exchange records, and provider forms should scroll inside that selected panel rather than turning the whole page into one long operator path.
-
+| Worker Profiles | Ready-made teammates and Soma-guided custom profile creation |
+The Resources page keeps these resource types in a persistent selector and renders the selected type inside a bounded work window. On phones and tablets, Resource types appear as one compact horizontally scrollable tab row so the selected work surface remains near the top of the screen. On desktop, the same choices use a vertical list-detail menu with short descriptions. Selection is recorded in the page URL, survives refresh, and works with browser Back. Long tool lists, workspace folders, exchange records, and provider forms scroll inside the selected panel rather than turning the whole page into one long operator path.
+Retained group outputs use the same Outcome Health labels as Soma, Teams, and Runs. A selectable group with retained user output is Completed; the badge describes operational state while proof and source material remain separate details.
 ---
 
 ## Connected Tools
 
-Connected tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, where that permission applies, what needs attention, and what can be requested. The default readiness view should be a compact status strip and row summary, not three large inventory tiles. Raw MCP/server structure stays behind Inspect.
+Connected tools are reviewed through `Resources -> Capabilities`: the user-facing question is what Soma can use, where that permission applies, what needs attention, and what can be requested. The default readiness view uses compact counts and origin summaries instead of capability inventory cards. Raw server structure stays behind Catalog details or Inspect.
 
 For web access specifically, use `Resources -> Capabilities -> Soma research access`. That lane should show whether Soma currently has approved local data, mounted-source search, public-web search, and direct Soma Search available. When public web is already available, the lane should say Soma can search now and offer **Add URL reader MCP** only for explicit supplied-URL retrieval through tools such as `fetch`. When public web is missing, it should offer **Add web search provider** or **Set up web search** and guide the operator toward a safe search provider such as built-in web, SearXNG/local API, or Brave. Built-in Mycelis Soma Search does not depend on `fetch`; add or repair `fetch` when users need Soma or a team to retrieve a specific supplied URL. The default UI should say **Soma Search** or **Research**; raw tool IDs such as `web_search` belong in Inspect/API details only.
 
@@ -37,6 +33,14 @@ Search scope must stay honest without making ordinary asks feel like configurati
 Search sources also support client-owned data: private docs, customer portals, repositories, issue trackers, file stores, intranet search, or SaaS knowledge bases. Current Capabilities show configured sources Soma may use, including source boundary, endpoint/base URL, scope, auth scheme, sensitivity/trust, status, and recovery. Use **Add search source** to name the source, choose type, provide the base URL/endpoint when the source is external or API-backed, choose auth scheme, select a secret reference, scope it to Everyone/Group/Host, and keep sensitivity/trust defaults visible. Operator-managed sources can be edited or removed from the same lane. The source list should say whether the source is ready for Soma now, ready once saved access is available, or only registered safely while another auth adapter is still needed. When Soma is asked to use a configured source, the runtime checks that the source is available, in scope for the current group or host, supported by a safe adapter, and able to resolve the referenced secret before searching it. Source records are PostgreSQL-backed and fail closed when durable persistence is unavailable. Raw tokens stay in `.env` or the configured secret backend.
 
 Local file access should use **named data mounts**, not arbitrary path guessing. Use Resources to list user-owned local folders or infrastructure shared folders that Soma may read, such as `workspace/client-docs`, a mounted network share, or a host-specific project data folder. Each mount needs a readable name, path/root, boundary description, mode such as read-only or read/write, scope (`Everyone`, `Group`, or `Host`), sensitivity/trust defaults, and recovery guidance. Once configured and in scope, mounted folders are live Soma search sources; Soma should name the mount when it uses files from it, and should not search or read unlisted paths just because they exist on the host.
+
+## Outcome Templates
+Outcome Templates help Soma ask only the few delivery questions that materially affect quality. They can define a minimum brief, defaults, expected output shape, validation expectations, capability/context references, and governance posture, then compile into the normal WorkIntent and Outcome journey. They are not saved chat prompts, automatic jobs, or a second execution system.
+There are two equivalent authoring paths:
+- Ask Soma to draft an Outcome Template, preview the resolved brief and effects, and save or activate it through governed configuration tools.
+- Write YAML or JSON under `MYCELIS_CONFIG_ROOT` (by default `MYCELIS_WORKSPACE/config`) and ask Soma or the configuration API to preview, store, and activate that file.
+Preview never persists or activates a document. Store creates an immutable revision. Activate changes the selected revision atomically and records who requested it; rollback explicitly reactivates a chosen prior revision. Running or approved work keeps the resolved template version and digest, so changing a template later does not rewrite historical authority. Configuration documents contain secret references only; put secret values in `.env` or the configured secret backend.
+Conversation Templates remain separate: they render reusable non-executing asks that return to Soma chat. Use an Outcome Template when repeated work needs a stable delivery brief and validation shape.
 
 ---
 
@@ -78,7 +82,15 @@ Current baseline posture:
 - `artifact-renderer` remains planned
 
 Key outcome:
-Operators should be able to determine "what Soma can currently use" directly from this tab. The default view should put web-access status and the compact capability overview ahead of examples or workflow education. The readiness summary should use small **Ready**, **Needs attention**, and **Available to add** controls plus short rows with one clear next action. The capability list should stay compact: capability name, purpose, availability, risk, and approval posture first; output destinations, bindings, fallback behavior, and audit details belong behind **Details and binding** unless the capability needs attention. Command examples and workflow education may remain available as expandable guidance, but they should not crowd the main status readout.
+Operators should be able to determine "what Soma can currently use" directly from this tab. The default view should put web-access status and the compact capability overview ahead of examples or workflow education. The readiness summary uses small **Ready**, **Needs attention**, and **Available to add** controls plus compact origin summaries; it does not preview an arbitrary subset of capability names. The Catalog keeps capability name, purpose, availability, origin, risk, and approval posture first; output destinations, bindings, fallback behavior, and audit details belong behind **Inspect capability details** unless the capability needs attention. Command examples and workflow education may remain available as expandable guidance, but they should not crowd the main status readout.
+
+Capability origin is separate from readiness. Overview summarizes four origins without listing every capability:
+- **Built-in runtime**: implemented inside Mycelis; no MCP server is involved.
+- **Host / CLI**: an allowlisted command or script exposed by the machine or container running Core. It is governed by Mycelis, but availability depends on that deployed host.
+- **MCP**: supplied by an installed MCP server. Catalog labels include the server name when the runtime provides it.
+- **Connector**: an external API, plugin, or provider connection that does not use MCP.
+Local image generation is a provider connection, not an MCP requirement. For Pinokio Forge, launch Forge with `--api` enabled and configure its base URL, normally `http://127.0.0.1:7860`. Soma checks the stable Forge API before proposing image work. If the Forge UI is open but API mode is off, Soma should say exactly that and direct the operator to restart Forge with `--api`; it must not create a failed run first. The saved image under `groups/<team-id>/media` is the user deliverable. Team planning files remain internal and appear only through Workflow Log or Inspect.
+Open **Catalog** for the full inventory. Filter it by origin to answer whether an action uses Mycelis runtime code, host/container tooling, or an MCP server. The inventory stays inside a bounded scrolling region and loads more entries deliberately so a large registry does not make the Resources page grow indefinitely.
 
 Capability manifest expectation:
 - every built-in MCP, external tool, local script, custom connector, or plugin must register as a governed capability before Soma or a team can use it
@@ -93,7 +105,7 @@ Capability permission groups support three configuration forms:
 
 Under the hood these still save as MCP tool-set scopes (`all`, `group`, and `host`). When the same tool-set name exists at multiple layers, scoped runtime resolution should prefer the group or host layer first, then fall back to the shared `all` layer. This lets operators keep a default capability posture while adding narrower MCP access for a project lane or a particular host.
 
-The Capabilities page opens as a focused readiness surface, not as one long MCP configuration document. Use the focus buttons to choose the current job: **Readiness** for web/search setup, **Catalog** for what Soma can use now or what needs attention, **Access** for sources/scopes/data, and **Inspect** for raw refs, provider bindings, workflow examples, and deeper technical evidence. Raw capability refs, output/write channels, provider bindings, and longer examples stay behind **Inspect capability details** or the **Inspect** focus.
+The Capabilities page opens as a focused readiness surface, not as one long MCP configuration document. Use the focus buttons to choose the current job: **Readiness** for web/search and compact origin posture, **Catalog** for the bounded, origin-filtered capability inventory, **Access** for sources/scopes/data, and **Inspect** for raw refs, provider bindings, workflow examples, and deeper technical evidence. Raw capability refs, output/write channels, provider bindings, and longer examples stay behind **Inspect capability details** or the **Inspect** focus.
 
 Inside **Access**, choose the job you are doing instead of scrolling one mixed setup page:
 
@@ -200,7 +212,7 @@ Operational behavior:
 - promotion from customer context into company knowledge should happen through a governed approval path with lineage preserved, not by rewriting the original entry in place
 - Soma operating context is stricter than ordinary deployment intake: it is normalized into admin guidance, stays globally scoped, and is intended for durable shared output/identity/stance shaping rather than personal chat preferences
 - reflection/synthesis context is separate from Soma memory and from user-private/customer/company lanes so Soma can reason about what is changing over time without mixing those meta-observations into raw source material
-- Soma, Council, and teams can recall allowed context during planning and answer generation without treating it as raw unrestricted web input
+- Soma and governed teams can recall allowed context during planning and answer generation without treating it as raw unrestricted web input
 - private user context is only intended to enter agent work when its visibility/scope and target goal sets match the user’s request; it is not company knowledge and should not be promoted silently
 - use `source_kind=web_research` or a stricter trust/sensitivity class when the content came from external sources
 
@@ -246,11 +258,9 @@ The workspace explorer is organized around three operator steps:
 
 Output Files should read top-to-bottom: choose retained group output/source scope, optionally open the current folder, then browse, preview, or create from the full-width workspace panel below.
 
-The upper access card includes **Open folder** for the current workspace path.
-Use it when an operator wants to grab generated files, media proof, project
-packages, or browser-game output from the local machine without decoding the
-storage configuration. Retained output cards in Soma, Teams, and Groups should
-also expose **Open folder** when they carry a workspace path.
+The upper access card includes **Open folder** for the current workspace path. Use it when an operator wants to grab generated files, media proof, project packages, or browser-game output from the local machine without decoding the storage configuration.
+
+Retained output cards in Soma, Teams, and Groups open their primary file in the dedicated Mycelis output canvas and also expose **Open folder** when they carry a workspace path. Use **Back to Soma** to return to the exact conversation and Outcome context. Resources browsing, local folder access, proof, and technical references remain secondary ways to inspect the same retained object.
 
 Output locations:
 - generated files, project packages, browser games, and filesystem MCP writes land under `MYCELIS_WORKSPACE`
@@ -293,17 +303,19 @@ Operational behavior:
 - workspace boundaries still apply (sandboxed filesystem rules)
 
 ---
+## Worker Profiles
+Worker Profiles define reusable teammate types Soma may assign to governed work. The catalogue is a library of inert templates, not a list of running agents. Ready-made profiles are locked so the shipped safety and access posture stays inspectable. Use **Create with Soma** for a new profile or **Customize with Soma** from a ready-made profile; Soma places a prepared request in the conversation, asks only for missing details, previews the result, and asks before saving or activating it.
+Worker Profile YAML/JSON may be previewed through the same ConfigDocument validator used by Soma. Preview proves the family fields and exact id/version/digest without saving or activating anything. Activating a stored revision means it may be selected for future teams; activation does not start an agent, connect an agent API, open a provider session, or subscribe to the work bus. When an approved delivery needs that teammate type, team creation resolves the most specific eligible revision for the operator, workspace, organization, then built-in scope, creates the live member, and retains its exact profile/provider/backend/capability lineage. Only selected members receive team-scoped runtime connections and subscriptions, which are released when the team stops. Existing teams do not change when a different revision is activated or rolled back. Legacy catalogue records remain API compatibility data and are not runtime activation authority; the primary UI does not present them as assignable profiles.
+The natural Soma sequence is: ask to save the Worker Profile YAML or JSON, approve the compact save proposal, ask Soma to activate that profile, then ask Soma to create work using `this Worker Profile` or its name. An inline save, exact activation, or rollback naming a version is governed directly and does not depend on free-form model inference. A question such as `Should I activate this Worker Profile?` remains conversation, and a save request without a document lets Soma ask for or help create the missing content. Team creation starts in the background and leaves the conversation available. To return future teams to an earlier revision, tell Soma the exact version, for example `Roll back this Worker Profile to version alpha.` Existing teams retain the snapshot they started with.
+Each profile may define:
+- a plain purpose and role
+- optional model preference, otherwise the workspace AI engine applies
+- capability references such as approved research, file, media, or review access
+- context sources and read/search/write posture
+- whether Soma, the operator, or policy automation may select it and whether its default scope is Workspace, Outcome, or Team
+- expected outputs and verification criteria
 
-## Role Library
-
-Role Library is the catalogue surface for reusable specialist definitions and templates.
-
-Typical template fields:
-- role
-- model/provider expectations
-- allowed tools
-- input/output contracts
-- validation strategy
+Profiles do not grant access by themselves. Runtime capability health, source scope, approval, secret, Outcome, and Execution Contract rules still apply. Ask Soma naturally to use a named profile, such as `Use the Research Specialist and Quality Reviewer`, or omit names and let Soma choose the smallest useful team. Teams receive a resolved profile snapshot at creation so later profile edits do not silently redefine running authority.
 
 ---
 
@@ -315,4 +327,4 @@ Use `Resources` to answer these operator questions quickly:
 3. How is external or research context classified and reviewed?
 4. What deployment knowledge has been intentionally loaded into long-term context?
 5. Are workspace file operations available?
-6. Which role definitions are available for advanced workflow work?
+6. Which ready-made worker profiles can Soma assign? Custom profiles are currently revisited through Soma or the ConfigDocument API rather than listed in the ready-made library.

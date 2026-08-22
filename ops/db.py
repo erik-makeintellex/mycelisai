@@ -4,68 +4,9 @@ from pathlib import Path
 
 from invoke import task, Collection
 from .config import CORE_DIR, ROOT_DIR
+from .db_schema import SCHEMA_COMPATIBILITY_CHECKS, TARGETED_SCHEMA_MIGRATIONS
 
 MIGRATIONS_DIR = CORE_DIR / "migrations"
-
-SCHEMA_COMPATIBILITY_CHECKS = (
-    (
-        "nodes.type column",
-        "SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema = 'public' AND table_name = 'nodes' AND column_name = 'type';",
-    ),
-    (
-        "nodes.specs column",
-        "SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema = 'public' AND table_name = 'nodes' AND column_name = 'specs';",
-    ),
-    (
-        "intent_proofs table",
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'intent_proofs';",
-    ),
-    (
-        "confirm_tokens table",
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'confirm_tokens';",
-    ),
-    (
-        "conversation_turns table",
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'conversation_turns';",
-    ),
-    (
-        "collaboration_groups table",
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'collaboration_groups';",
-    ),
-    (
-        "collaboration_groups workspace_folder column",
-        "SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema = 'public' AND table_name = 'collaboration_groups' AND column_name = 'workspace_folder';",
-    ),
-    (
-        "capability_manifests table",
-        "SELECT 1 FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'capability_manifests';",
-    ),
-    (
-        "capability_manifests health column",
-        "SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema = 'public' AND table_name = 'capability_manifests' AND column_name = 'health';",
-    ),
-    ("execution_contracts table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'execution_contracts';"),
-    ("proof_artifacts table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'proof_artifacts';"),
-    ("team_work_items table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_work_items';"),
-    ("team_interactions table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_interactions';"),
-    ("team_status_events table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_status_events';"),
-    ("outcome_projects table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'outcome_projects';"),
-    ("outcome_projects run_id text column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'outcome_projects' AND column_name = 'run_id' AND data_type = 'text';"),
-    ("outcome_projects intent_proof_id text column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'outcome_projects' AND column_name = 'intent_proof_id' AND data_type = 'text';"),
-    ("team_registry_entries table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_registry_entries';"),
-    ("trigger_rules schedule columns", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'trigger_rules' AND column_name = 'trigger_kind';"),
-    ("search_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'search_sources';"),
-    ("input_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'input_sources';"),
-)
 
 def _load_env():
     try:
@@ -200,21 +141,31 @@ def schema_bootstrapped() -> bool:
     return True
 
 
+def _apply_missing_targeted_migrations() -> bool:
+    migrations = {path.name: path for path in _migration_files()}
+    applied = False
+    for label, sql in SCHEMA_COMPATIBILITY_CHECKS:
+        migration_name = TARGETED_SCHEMA_MIGRATIONS.get(label)
+        if migration_name is None: continue
+        result = _run_psql(sql=sql)
+        if result.returncode == 0 and "1" in result.stdout.split():
+            continue
+        migration = migrations.get(migration_name)
+        if migration is None: raise SystemExit(f"Missing targeted migration: {migration_name}")
+        print(f"Applying missing runtime migration {migration_name}...")
+        if _psql(file=migration) != 0:
+            raise SystemExit(f"Migration failed: {migration_name}")
+        applied = True
+    return applied
+
+
 def _apply_migrations(strict=False):
     _load_env()
     db = os.getenv("DB_NAME", "cortex")
 
     _ensure_database_exists()
-    try:
-        from . import native_postgres
-        extensions_ready = native_postgres.ensure_extensions(db)
-    except Exception:
-        if strict:
-            raise
-        extensions_ready = True
-    if strict and not extensions_ready:
-        raise SystemExit("Failed preparing native PostgreSQL extensions.")
-
+    if not strict:
+        _apply_missing_targeted_migrations()
     if not strict and schema_bootstrapped():
         print(
             f"Schema for '{db}' already appears compatible with the current runtime; "

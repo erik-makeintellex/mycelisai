@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { CreateGroupPane } from "./CreateGroupPane";
 import { GroupCommunicationPanel } from "./GroupCommunicationPanel";
 import { GroupConfigPane } from "./GroupConfigPane";
@@ -64,20 +65,44 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
   const [activePanel, setActivePanel] = useState<GroupWorkspacePanel>(
     initialPanel ?? "overview",
   );
+  const [compactWorkspaceOpen, setCompactWorkspaceOpen] = useState(
+    Boolean(selectedGroupId || initialPanel === "create"),
+  );
 
   const selectPanel = (panel: GroupWorkspacePanel, groupId = selectedGroupId) => {
     setActivePanel(panel);
-    updateRouteState(groupId, panel);
+    if (panel === "create") setCompactWorkspaceOpen(true);
+    updateRouteState(groupId, panel, "push");
   };
 
   const selectGroup = (groupId: string) => {
     onSelectGroup(groupId);
-    selectPanel("overview", groupId);
+    setActivePanel("overview");
+    setCompactWorkspaceOpen(true);
+    updateRouteState(groupId, "overview", "push");
   };
+
+  const showGroupList = () => {
+    setCompactWorkspaceOpen(false);
+    updateRouteState(null, null, "push");
+  };
+
+  useEffect(() => {
+    const restoreRouteState = () => {
+      const params = new URL(window.location.href).searchParams;
+      const groupId = params.get("group_id");
+      const panel = parseRoutePanel(params.get("panel"));
+      if (groupId) onSelectGroup(groupId);
+      setActivePanel(panel);
+      setCompactWorkspaceOpen(Boolean(groupId) || panel === "create");
+    };
+    window.addEventListener("popstate", restoreRouteState);
+    return () => window.removeEventListener("popstate", restoreRouteState);
+  }, [onSelectGroup]);
 
   return (
     <section
-      className="flex h-[calc(100dvh-4.5rem)] min-h-0 flex-col gap-3 overflow-hidden"
+      className="flex h-full min-h-0 flex-col gap-3 overflow-hidden"
       data-testid="groups-workspace"
     >
       <GroupsHeader
@@ -86,30 +111,39 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
         refreshing={refreshing}
         archivingExpired={archivingExpired}
         onArchiveExpired={onArchiveExpired}
-        onCreate={() => selectPanel("create")}
         onRefresh={onRefresh}
       />
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3 lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]">
-        <GroupRail
-          buckets={buckets}
-          filters={recordFilters}
-          hiddenSelectedGroup={hiddenSelectedGroup}
-          lifecycleByGroupId={lifecycleByGroupId}
-          bulkMode={bulkMode}
-          selectedBulkGroupIds={bulkSelectedGroupIds}
-          bulkActionPending={bulkActionPending}
-          bulkClearOutputs={bulkClearOutputs}
-          selectedGroupId={selectedGroupId}
-          onFiltersChange={onRecordFiltersChange}
-          onSelectGroup={selectGroup}
-          onToggleBulkMode={onToggleBulkMode}
-          onToggleBulkGroup={onToggleBulkGroup}
-          onSelectAllVisible={onSelectAllVisibleBulkGroups}
-          onClearBulkSelection={onClearBulkSelection}
-          onBulkClearOutputsChange={onBulkClearOutputsChange}
-          onBulkClearGroups={onClearSelectedGroups}
-        />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg/30">
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3 lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]">
+        <div className={`${compactWorkspaceOpen ? "hidden" : "flex"} min-h-0 lg:flex`}>
+          <GroupRail
+            buckets={buckets}
+            filters={recordFilters}
+            hiddenSelectedGroup={hiddenSelectedGroup}
+            lifecycleByGroupId={lifecycleByGroupId}
+            bulkMode={bulkMode}
+            selectedBulkGroupIds={bulkSelectedGroupIds}
+            bulkActionPending={bulkActionPending}
+            bulkClearOutputs={bulkClearOutputs}
+            selectedGroupId={selectedGroupId}
+            onFiltersChange={onRecordFiltersChange}
+            onSelectGroup={selectGroup}
+            onToggleBulkMode={onToggleBulkMode}
+            onToggleBulkGroup={onToggleBulkGroup}
+            onSelectAllVisible={onSelectAllVisibleBulkGroups}
+            onClearBulkSelection={onClearBulkSelection}
+            onBulkClearOutputsChange={onBulkClearOutputsChange}
+            onBulkClearGroups={onClearSelectedGroups}
+          />
+        </div>
+        <div className={`${compactWorkspaceOpen ? "flex" : "hidden"} min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg/30 lg:flex`}>
+          <button
+            type="button"
+            onClick={showGroupList}
+            className="flex min-h-11 items-center gap-2 border-b border-cortex-border px-3 text-sm font-semibold text-cortex-primary lg:hidden"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            All groups
+          </button>
           <GroupWorkspaceTabs
             activePanel={activePanel}
             outputCount={outputSummary.artifactCount}
@@ -249,13 +283,34 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
   );
 }
 
-function updateRouteState(groupId: string | null, panel: GroupWorkspacePanel) {
+function parseRoutePanel(panel: string | null): GroupWorkspacePanel {
+  if (
+    panel === "workflow" ||
+    panel === "outputs" ||
+    panel === "message" ||
+    panel === "settings" ||
+    panel === "create"
+  ) {
+    return panel;
+  }
+  return "overview";
+}
+
+function updateRouteState(
+  groupId: string | null,
+  panel: GroupWorkspacePanel | null,
+  mode: "push" | "replace",
+) {
   if (typeof window === "undefined") return;
   const nextUrl = new URL(window.location.href);
   if (groupId) nextUrl.searchParams.set("group_id", groupId);
   else nextUrl.searchParams.delete("group_id");
-  nextUrl.searchParams.set("panel", panel);
-  window.history.replaceState(
+  if (panel) nextUrl.searchParams.set("panel", panel);
+  else nextUrl.searchParams.delete("panel");
+  const updateHistory =
+    mode === "push" ? window.history.pushState : window.history.replaceState;
+  updateHistory.call(
+    window.history,
     window.history.state,
     "",
     `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`,

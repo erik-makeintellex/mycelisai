@@ -29,10 +29,10 @@ export function SomaTeamContextSwitcher({
   const selectedTeam = focusedTeamId
     ? teamSummaries.find((team) => team.id === focusedTeamId) ?? fallbackTeamSummary(focusedTeamId)
     : null;
-  const selectedContextName = selectedTeam?.name ?? "Soma root";
+  const selectedContextName = selectedTeam?.name ?? "All work";
   const selectedContextDescription = selectedTeam
-    ? "Team chat, work, outputs, and proof"
-    : "Cross-team continuity and all work";
+    ? "Team work and outputs"
+    : "Soma coordinates across teams";
 
   useEffect(() => {
     if (!isOpen) return;
@@ -75,6 +75,7 @@ export function SomaTeamContextSwitcher({
         <div ref={pickerRef} className={compact ? "relative min-w-0 flex-1" : "relative min-w-0"}>
           <button
             type="button"
+            aria-label={`Choose work context, current ${selectedContextName}`}
             aria-haspopup="listbox"
             aria-expanded={isOpen}
             aria-controls="soma-work-context-listbox"
@@ -88,7 +89,7 @@ export function SomaTeamContextSwitcher({
                 ? "inline-flex shrink-0 items-center gap-1 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-[0.1em] text-cortex-primary"
                 : "inline-flex shrink-0 items-center gap-1 rounded-md border border-cortex-primary/25 bg-cortex-primary/10 px-1.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-cortex-primary"}>
                 <Users className="h-3 w-3" />
-                Working in
+                Work context
               </span>
               {selectedTeam ? (
                 <FolderKanban className="h-3.5 w-3.5 shrink-0 text-cortex-primary" />
@@ -99,13 +100,13 @@ export function SomaTeamContextSwitcher({
                 <span className={`${compact ? "text-xs" : "text-sm"} block truncate font-semibold text-cortex-text-main lg:inline`}>
                   {selectedContextName}
                 </span>
-                <span className={`${compact ? "hidden xl:inline" : "block"} truncate text-[11px] text-cortex-text-muted lg:ml-2 lg:inline`}>
+                <span className={`${compact ? "hidden" : "block"} truncate text-[11px] text-cortex-text-muted lg:ml-2 lg:inline`}>
                   {selectedContextDescription}
                 </span>
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
-              {selectedTeam ? <ContextStats team={selectedTeam} /> : <ContextBadge label="all work" />}
+              {selectedTeam ? <ContextStats team={selectedTeam} /> : null}
               <ChevronDown className={`h-4 w-4 text-cortex-text-muted transition-transform ${isOpen ? "rotate-180" : ""}`} />
             </span>
           </button>
@@ -127,12 +128,11 @@ export function SomaTeamContextSwitcher({
               <span className="flex min-w-0 items-center gap-2">
                 <MessageSquareText className="h-3.5 w-3.5 shrink-0 text-cortex-primary" />
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-cortex-text-main">Soma root</span>
-                  <span className="block truncate text-[11px] text-cortex-text-muted">Cross-team continuity and all work.</span>
+                  <span className="block truncate text-sm font-semibold text-cortex-text-main">All work</span>
+                  <span className="block truncate text-[11px] text-cortex-text-muted">Soma coordinates across teams.</span>
                 </span>
               </span>
               <span className="flex shrink-0 items-center gap-2">
-                <ContextBadge label="all work" />
                 {!focusedTeamId ? <Check className="h-3.5 w-3.5 text-cortex-primary" /> : null}
               </span>
             </button>
@@ -173,11 +173,12 @@ export function SomaTeamContextSwitcher({
         <Link
           href="/teams"
           aria-label="Manage teams"
+          title="Manage teams"
           className={compact
             ? "inline-flex h-8 shrink-0 items-center rounded-full border border-cortex-border px-2 text-[11px] font-semibold text-cortex-primary hover:border-cortex-primary/40 hover:bg-cortex-primary/10"
             : "justify-self-start rounded-lg border border-cortex-border px-2.5 py-2 text-xs font-semibold text-cortex-primary hover:border-cortex-primary/40 hover:bg-cortex-primary/10 lg:justify-self-end"}
         >
-          {compact ? "Teams" : "Manage teams"}
+          {compact ? <Users className="h-3.5 w-3.5" /> : "Manage teams"}
         </Link>
       </div>
     </div>

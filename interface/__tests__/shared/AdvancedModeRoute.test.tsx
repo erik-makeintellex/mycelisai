@@ -11,7 +11,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/store/useCortexStore", () => ({
-  useCortexStore: (selector: any) => selector({
+  useCortexStore: (selector: (state: {
+    advancedMode: boolean;
+    toggleAdvancedMode: typeof mockToggleAdvancedMode;
+  }) => unknown) => selector({
     advancedMode: mockAdvancedMode(),
     toggleAdvancedMode: mockToggleAdvancedMode,
   }),

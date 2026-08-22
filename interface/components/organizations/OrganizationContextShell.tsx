@@ -1387,7 +1387,7 @@ function WorkspaceDetailView({
                                             <div>
                                                 <p className="text-sm font-semibold text-cortex-text-main">Agent Type Profiles</p>
                                                 <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                                                    These guided profiles show how this Team's role types inherit the Team default or follow a type-specific AI Engine or Response Style.
+                                                    These guided profiles show how this Team&apos;s role types inherit the Team default or follow a type-specific AI Engine or Response Style.
                                                 </p>
                                             </div>
                                             <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
@@ -1779,7 +1779,7 @@ function OutputModelRoutingPanel({
                         <div className="mt-5">
                             <p className="text-sm font-semibold text-cortex-text-main">Behavior review candidates</p>
                             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                                These are Soma's first-pass local candidates when the admin has not pinned a model for a specific output type yet.
+                                These are Soma&apos;s first-pass local candidates when the admin has not pinned a model for a specific output type yet.
                             </p>
                             <div className="mt-3 grid gap-3 lg:grid-cols-2">
                                 {(routing?.review_candidates ?? []).map((candidate) => (

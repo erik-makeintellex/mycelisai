@@ -1,4 +1,4 @@
-import { request, type FullConfig } from '@playwright/test';
+import { chromium, type FullConfig } from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -9,15 +9,18 @@ export default async function globalSetup(config: FullConfig) {
     const baseURL = config.projects[0]?.use.baseURL;
     if (!baseURL) return;
     await fs.mkdir(path.dirname(STORAGE_STATE), { recursive: true });
-    const context = await request.newContext({ baseURL: String(baseURL) });
-    const response = await context.post('/auth/local?next=/dashboard', {
-        maxRedirects: 0,
-        form: {
-            username: process.env.MYCELIS_LOCAL_ADMIN_USERNAME || 'admin',
-            password: process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || 'playwright-admin',
-        },
-    });
-    if (!response.ok() && response.status() !== 303) throw new Error(`Playwright auth setup failed with ${response.status()}`);
+    const browser = await chromium.launch();
+    const context = await browser.newContext({ baseURL: String(baseURL) });
+    const page = await context.newPage();
+    await page.goto('/login?next=/dashboard');
+    await page.getByLabel(/Local admin username/i).fill(process.env.MYCELIS_LOCAL_ADMIN_USERNAME || 'admin');
+    await page.getByLabel(/Password or local API key/i).fill(
+        process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || 'playwright-admin',
+    );
+    await Promise.all([
+        page.waitForURL(/\/dashboard(?:\?|$)/),
+        page.getByRole('button', { name: /Sign in as local admin/i }).click(),
+    ]);
     await context.storageState({ path: STORAGE_STATE });
-    await context.dispose();
+    await browser.close();
 }

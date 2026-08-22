@@ -1,6 +1,5 @@
 "use client";
-
-import { AlertTriangle, Bot, Brain, ExternalLink, Eye, Globe, Megaphone, User, Zap } from "lucide-react";
+import { AlertTriangle, Bot, Brain, Eye, Globe, Megaphone, User } from "lucide-react";
 import {
     sourceNodeLabel,
     trustBadge,
@@ -23,7 +22,6 @@ import {
     COUNCIL_META,
     trustColor,
 } from "./missionControlChatHelpers";
-
 function DelegationTrace({ consultations, assistantName }: { consultations: ChatConsultation[]; assistantName: string }) {
     if (!consultations?.length) return null;
     return (
@@ -54,7 +52,6 @@ function MessageMeta({ msg, assistantName }: { msg: ChatMessage; assistantName: 
     const setInspected = useCortexStore((s) => s.setInspectedMessage);
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const askBadge = askClassBadge(msg.ask_class);
-
     if (!msg.source_node && !msg.brain) return null;
     return (
         <div className="flex items-center gap-1.5 px-1 flex-wrap">
@@ -123,6 +120,8 @@ function MessageMeta({ msg, assistantName }: { msg: ChatMessage; assistantName: 
 function isAnswerOnlyDepth(msg: ChatMessage) {
     return Boolean(
         !msg.proposal
+        && !msg.artifacts?.length
+        && !msg.consultations?.length
         && msg.mode !== "execution_result"
         && (
             msg.response_depth === "quick_box"
@@ -131,7 +130,15 @@ function isAnswerOnlyDepth(msg: ChatMessage) {
         ),
     );
 }
-
+function hasAuditableAnswerEvidence(msg: ChatMessage) {
+    const summary = msg.execution_summary;
+    const status = summary?.execution?.status?.trim().toLowerCase();
+    return Boolean(
+        summary?.execution?.shape === "tool_assisted_work"
+        && (status === "complete" || status === "completed")
+        && summary.proof,
+    );
+}
 function shouldShowSimpleThreadState(msg: ChatMessage) {
     const state = msg.ui_response_state ?? msg.execution_summary?.ui_response_state;
     const hasThreadEvents = Boolean(msg.thread_event || msg.thread_events?.length);
@@ -156,22 +163,34 @@ export default function MissionControlMessageBubble({
     const assistantName = useCortexStore((s) => s.assistantName);
     const artifactSummary = artifactResultSummary(msg.artifacts);
     const consultationSummary = consultationResultSummary(msg.consultations);
+    const responseBadge = askClassBadge(msg.ask_class);
     const answerOnlyDepth = isAnswerOnlyDepth(msg);
+    const auditableAnswerEvidence = answerOnlyDepth && hasAuditableAnswerEvidence(msg);
     const showExecutionSummary = Boolean(
         msg.execution_summary
-        && !answerOnlyDepth
         && (
-            msg.mode === "execution_result"
-            || msg.run_id
-            || msg.artifacts?.length
-            || msg.ask_class === "execution_blocker"
+            auditableAnswerEvidence || (
+                !answerOnlyDepth
+                && (
+                    msg.mode === "execution_result"
+                    || msg.run_id
+                    || msg.artifacts?.length
+                    || msg.ask_class === "execution_blocker"
+                )
+            )
         ),
+    );
+    const hasStructuredEvidence = Boolean(
+        msg.artifacts?.length || msg.consultations?.length,
     );
     const showAnswerExtras = !answerOnlyDepth;
     const showMeta = !isUser && !compactResult;
     const showTraceExtras = !isUser && showAnswerExtras && !compactResult;
+    const showStructuredEvidence = !isUser
+        && showAnswerExtras
+        && (!compactResult || hasStructuredEvidence);
     const showThreadState = !isUser && showAnswerExtras && (!compactResult || shouldShowSimpleThreadState(msg));
-    const useReceipt = compactResult && showExecutionSummary && msg.execution_summary
+    const useReceipt = (compactResult || auditableAnswerEvidence) && showExecutionSummary && msg.execution_summary
         ? shouldUseExecutionSummaryReceipt({
             summary: msg.execution_summary,
             runId: msg.run_id,
@@ -183,13 +202,7 @@ export default function MissionControlMessageBubble({
         return (
             <div className="my-1.5 flex justify-center">
                 <div className="flex w-full max-w-[720px] flex-col items-center gap-1.5 px-2">
-                    {msg.run_id ? (
-                        <a href={`/runs/${msg.run_id}`} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-cortex-success/30 bg-cortex-success/5 text-cortex-success text-[9px] font-mono hover:bg-cortex-success/10 transition-colors">
-                            <Zap className="w-3 h-3" />
-                            Mission activated &mdash; {msg.run_id.slice(0, 8)}...
-                            <ExternalLink className="w-2.5 h-2.5 opacity-60" />
-                        </a>
-                    ) : msg.thread_event || msg.thread_events?.length ? null : (
+                    {msg.thread_event || msg.thread_events?.length ? null : (
                         <span className="text-[9px] font-mono text-cortex-text-muted px-2.5 py-1 rounded-full border border-cortex-border">
                             {msg.content}
                         </span>
@@ -256,23 +269,27 @@ export default function MissionControlMessageBubble({
                     )
                 )}
                 {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}
-                {showTraceExtras && artifactSummary && (
+                {showStructuredEvidence && artifactSummary && (
                     <div className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/5 px-3 py-2">
                         <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-primary">
-                            Returned output
+                            {compactResult
+                                ? responseBadge?.label ?? "Returned output"
+                                : "Returned output"}
                         </div>
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">{artifactSummary}</p>
                     </div>
                 )}
-                {showTraceExtras && msg.ask_class === "specialist_consultation" && consultationSummary && (
+                {showStructuredEvidence && consultationSummary && (
                     <div className="rounded-lg border border-cortex-warning/20 bg-cortex-warning/5 px-3 py-2">
                         <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-warning">
-                            Specialist context
+                            {compactResult
+                                ? "Specialist support"
+                                : "Specialist context"}
                         </div>
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">{consultationSummary}</p>
                     </div>
                 )}
-                {showTraceExtras && msg.artifacts?.length ? (
+                {showStructuredEvidence && msg.artifacts?.length ? (
                     <div className="space-y-1">
                         {msg.artifacts.map((artifact, i) => <InlineArtifact key={artifact.id || `art-${i}`} artifact={artifact} />)}
                     </div>

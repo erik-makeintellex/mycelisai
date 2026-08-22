@@ -34,6 +34,8 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 }
 
 func TestAuthMiddleware_ValidToken(t *testing.T) {
+	t.Setenv("MYCELIS_LOCAL_ADMIN_USERNAME", "admin")
+	t.Setenv("MYCELIS_LOCAL_ADMIN_USER_ID", "00000000-0000-0000-0000-000000000000")
 	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		identity := IdentityFromContext(r.Context())
 		if identity == nil {

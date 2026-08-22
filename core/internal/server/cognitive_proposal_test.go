@@ -215,6 +215,9 @@ func TestBuildProposalDisplayContractExplainsTeamDeliverable(t *testing.T) {
 	if display.WorkIntent.OutputContract.LaunchHint == "" {
 		t.Fatalf("expected launch hint for app package output")
 	}
+	if display.WorkIntent.Lifecycle == nil || display.WorkIntent.Lifecycle.StopAction != protocol.WorkStopPauseProject {
+		t.Fatalf("lifecycle = %+v, want project controls", display.WorkIntent.Lifecycle)
+	}
 }
 
 func TestBuildProposalDisplayContractInfersServiceWorkIntent(t *testing.T) {
@@ -235,6 +238,28 @@ func TestBuildProposalDisplayContractInfersServiceWorkIntent(t *testing.T) {
 	}
 	if mode := proposalExecutionMode(display.WorkIntent); mode != "team_async" {
 		t.Fatalf("execution_mode = %q, want team_async", mode)
+	}
+	if display.WorkIntent.Lifecycle == nil || display.WorkIntent.Lifecycle.StopAction != protocol.WorkStopService {
+		t.Fatalf("lifecycle = %+v, want service controls", display.WorkIntent.Lifecycle)
+	}
+}
+
+func TestBuildProposalDisplayContractPreservesScheduledAppLifecycle(t *testing.T) {
+	display := buildProposalDisplayContract([]protocol.PlannedToolCall{
+		{Name: "write_file", Arguments: map[string]any{"path": "workspace/generated/report/index.html"}},
+	}, "Build an app and refresh it every week", []string{"write_file"})
+
+	if display.WorkIntent == nil {
+		t.Fatal("expected work_intent")
+	}
+	if display.WorkIntent.Kind != "scheduled" || display.WorkIntent.Cadence != "scheduled" {
+		t.Fatalf("work_intent = %+v, want scheduled app", display.WorkIntent)
+	}
+	if display.WorkIntent.Lifecycle == nil || display.WorkIntent.Lifecycle.StopAction != protocol.WorkStopDisableSchedule {
+		t.Fatalf("lifecycle = %+v, want schedule controls", display.WorkIntent.Lifecycle)
+	}
+	if mode := proposalExecutionMode(display.WorkIntent); mode != "schedule_handoff" {
+		t.Fatalf("execution_mode = %q, want schedule_handoff", mode)
 	}
 }
 

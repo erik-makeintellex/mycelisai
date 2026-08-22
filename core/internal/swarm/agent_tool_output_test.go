@@ -1,9 +1,11 @@
 package swarm
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
+	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -109,5 +111,85 @@ func TestExtractToolOutputArtifacts_PreservesProjectPackageShape(t *testing.T) {
 	}
 	if got.Validation != "Opened in browser and score increased after click." {
 		t.Fatalf("validation = %q", got.Validation)
+	}
+}
+
+func TestTeamAgentResponsePayloadPreservesStructuredArtifacts(t *testing.T) {
+	raw := teamAgentResponsePayload(ProcessResult{
+		Text: "Playable package ready.",
+		Artifacts: []protocol.ChatArtifactRef{{
+			ID:         "pkg-1",
+			Type:       "project_package",
+			Title:      "Coin Runner",
+			Entrypoint: "groups/game-team/generated/coin-runner/index.html",
+			Folder:     "groups/game-team/generated/coin-runner",
+			Files:      []string{"index.html", "README.md", "PROOF.md"},
+			Validation: "Browser interaction passed.",
+		}},
+	})
+
+	var decoded ProcessResult
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("decode team response: %v", err)
+	}
+	if decoded.Text != "Playable package ready." || len(decoded.Artifacts) != 1 {
+		t.Fatalf("decoded response = %+v", decoded)
+	}
+	if decoded.Artifacts[0].Type != "project_package" || decoded.Artifacts[0].Entrypoint == "" {
+		t.Fatalf("decoded artifact = %+v", decoded.Artifacts[0])
+	}
+}
+
+func TestDedupeAgentArtifactsIgnoresStorageIdentity(t *testing.T) {
+	artifacts := []protocol.ChatArtifactRef{
+		{ID: "first", Type: "project_package", Title: "First Playable", ContentType: "application/json", Content: `{"entrypoint":"index.html"}`},
+		{ID: "second", Type: "project_package", Title: "First Playable", ContentType: "application/json", Content: `{"entrypoint":"index.html"}`},
+	}
+
+	got := dedupeAgentArtifacts(artifacts)
+
+	if len(got) != 1 {
+		t.Fatalf("deduped artifacts = %#v, want one logical output", got)
+	}
+	if got[0].ID != "first" {
+		t.Fatalf("retained artifact id = %q, want first", got[0].ID)
+	}
+}
+
+func TestRetainedArtifactCompletionSummary(t *testing.T) {
+	got := retainedArtifactCompletionSummary([]protocol.ChatArtifactRef{{
+		Type:  "project_package",
+		Title: "First Playable",
+	}})
+	if got != "Created retained output: First Playable." {
+		t.Fatalf("summary = %q", got)
+	}
+}
+
+func TestTeamAgentResponsePayloadMarksUnavailableInferenceDegraded(t *testing.T) {
+	raw := teamAgentResponsePayload(ProcessResult{
+		Availability: &cognitive.ExecutionAvailability{
+			Available:         false,
+			Code:              "provider_timeout",
+			Summary:           "The configured engine timed out.",
+			RecommendedAction: "Retry after checking the engine.",
+			Profile:           "chat",
+			ProviderID:        "ollama",
+		},
+	})
+
+	var decoded map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("decode degraded response: %v", err)
+	}
+	if decoded["state"] != "degraded" {
+		t.Fatalf("state = %v, want degraded", decoded["state"])
+	}
+	if decoded["degradation_state"] != "provider_timeout" {
+		t.Fatalf("degradation_state = %v, want provider_timeout", decoded["degradation_state"])
+	}
+	options, ok := decoded["recovery_options"].([]any)
+	if !ok || len(options) != 1 || options[0] != "Retry after checking the engine." {
+		t.Fatalf("recovery_options = %#v", decoded["recovery_options"])
 	}
 }

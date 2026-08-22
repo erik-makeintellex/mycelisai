@@ -44,3 +44,39 @@ func TestBuildContext_IncludesGovernedMemoryBoundaries(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildContext_ScopesWorkerAwayFromOrganizationInventory(t *testing.T) {
+	r := NewInternalToolRegistry(InternalToolDeps{})
+	ctx := r.BuildContext(
+		"delivery-worker",
+		"customer-delivery",
+		"worker",
+		[]string{"swarm.team.customer-delivery.internal.command"},
+		[]string{"swarm.team.customer-delivery.signal.result"},
+		"Create and validate the retained package.",
+	)
+
+	for _, expected := range []string{
+		"### Your Identity & NATS Topology",
+		"### Scoped Execution Protocol",
+		"create, read back, and validate",
+		"retained artifact references",
+	} {
+		if !strings.Contains(ctx, expected) {
+			t.Fatalf("expected %q in worker runtime context, got:\n%s", expected, ctx)
+		}
+	}
+	for _, excluded := range []string{
+		"### Active Teams",
+		"### Installed MCP Servers & Tools",
+		"### Memory Boundaries",
+		"### Interaction Protocol",
+	} {
+		if strings.Contains(ctx, excluded) {
+			t.Fatalf("did not expect %q in scoped worker runtime context, got:\n%s", excluded, ctx)
+		}
+	}
+	if len(ctx) > 4_000 {
+		t.Fatalf("worker runtime context length = %d, want <= 4000", len(ctx))
+	}
+}

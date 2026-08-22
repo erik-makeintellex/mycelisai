@@ -3,8 +3,8 @@
  *
  * Curated registry of documentation files served by the in-app doc browser.
  * This surface is intentionally small: user guides, repo operating docs, and
- * the active architecture contracts only. Stale planning notes and superseded
- * version docs do not belong in the operator-facing documentation surface.
+ * the single product-architecture authority plus scoped implementation contracts.
+ * Planning notes and superseded doctrine do not belong in this surface.
  */
 
 export interface DocEntry {
@@ -25,9 +25,8 @@ export const DOC_MANIFEST: DocSection[] = [
     {
         section: "Start Here",
         docs: [
-            { slug: "user-docs-home", label: "Use Mycelis", path: "docs/user/README.md", description: "Operator-first entry point for Soma, teams, resources, outputs, and recovery workflows" },
+            { slug: "user-docs-home", label: "Use Mycelis", path: "docs/user/README.md", description: "Operator-first entry point for Soma, Outcomes, active work, deliverables, and recovery" },
             { slug: "soma-chat", label: "Using Soma Chat", path: "docs/user/soma-chat.md", description: "Human-first Soma prompts, compact answers, governed proposals, outputs, and recovery" },
-            { slug: "workflow-variants-plan-memory", label: "Workflow Variants + Plan Memory", path: "docs/user/workflow-variants-and-plan-memory.md", description: "Direct Soma, compact teams, multi-lane workflows, and durable plan memory" },
             { slug: "teams-guide", label: "Teams", path: "docs/user/teams.md", description: "Active team work, compact defaults, broad-ask splitting, and lead-centered workflows" },
             { slug: "resources-guide", label: "Outputs And Resources", path: "docs/user/resources.md", description: "Output files, group artifacts, capability readiness, tool repair, AI engines, and governed context" },
         ],
@@ -36,7 +35,7 @@ export const DOC_MANIFEST: DocSection[] = [
         section: "Trust And Setup",
         docs: [
             { slug: "core-concepts", label: "Core Concepts", path: "docs/user/core-concepts.md", description: "Soma, teams, memory, governance, runs, and trust in operator language" },
-            { slug: "memory-guide", label: "Memory", path: "docs/user/memory.md", description: "Trusted recall, memory lanes, governed context, and continuity rules" },
+            { slug: "memory-guide", label: "Memory", path: "docs/user/memory.md", description: "Workspace continuity, source-aware recall, governed context, and trust boundaries" },
             { slug: "governance-trust", label: "Governance & Trust", path: "docs/user/governance-trust.md", description: "Approval posture, risk classes, audit visibility, and trusted-memory precedence" },
             { slug: "settings-access", label: "Settings And Access", path: "docs/user/settings-access.md", description: "Profile, access posture, auth providers, and connected-tool/search boundaries" },
             { slug: "auth-modes", label: "Authentication Modes", path: "docs/user/auth-modes.md", description: "Local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM posture" },
@@ -48,6 +47,7 @@ export const DOC_MANIFEST: DocSection[] = [
     {
         section: "Advanced User Surfaces",
         docs: [
+            { slug: "workflow-variants-plan-memory", label: "Workflow Variants + Plan Memory", path: "docs/user/workflow-variants-and-plan-memory.md", description: "Direct Soma, compact teams, multi-lane workflows, and durable plan memory" },
             { slug: "automations-guide", label: "Automations", path: "docs/user/automations.md", description: "Event trigger rules, schedules, mission profiles, and approvals around automated work" },
         ],
     },
@@ -59,20 +59,18 @@ export const DOC_MANIFEST: DocSection[] = [
             { slug: "local-dev", label: "Local Dev Workflow", path: "docs/LOCAL_DEV_WORKFLOW.md", description: "Setup, config reference, port map, and troubleshooting guidance" },
             { slug: "operations", label: "Operations", path: "docs/architecture/OPERATIONS.md", description: "Task ownership, lifecycle, Compose, Kubernetes, CI, and release-lane sequencing" },
             { slug: "testing", label: "Testing", path: "docs/TESTING.md", description: "Unit, integration, browser, and release validation guidance" },
+            { slug: "user-acceptance", label: "User Acceptance", path: "docs/REMOTE_USER_TESTING.md", description: "Human Trusted Outcome Journey, cross-device UX review, and release evidence contract" },
             { slug: "api-reference", label: "API Reference", path: "docs/API_REFERENCE.md", description: "Endpoint table with request and response shapes" },
-            { slug: "cognitive-architecture", label: "Cognitive Architecture", path: "docs/COGNITIVE_ARCHITECTURE.md", description: "Provider routing, AI engines, local media gateway, and model/embedding configuration" },
+            { slug: "cognitive-architecture", label: "AI Provider Runtime", path: "docs/COGNITIVE_ARCHITECTURE.md", description: "Provider routing, AI engines, local media gateway, and model/embedding configuration" },
             { slug: "licensing-editions", label: "Licensing & Editions", path: "docs/licensing.md", description: "Product-edition posture for self-hosted, enterprise, and hosted layering" },
             { slug: "governance", label: "Governance System", path: "docs/governance.md", description: "Policy enforcement, approval posture, and audit-linked governance model" },
             { slug: "logging-schema", label: "Logging Standard", path: "docs/logging.md", description: "Mission-events and memory-stream logging contract and taxonomy" },
         ],
     },
     {
-        section: "Architecture Review",
+        section: "Architecture",
         docs: [
-            { slug: "architecture-index", label: "Architecture Docs Index", path: "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md", description: "Curated active architecture set; stale planning notes are excluded" },
             { slug: "mycelis-canonical-prd", label: "Mycelis Canonical PRD", path: "docs/architecture-library/MYCELIS_CANONICAL_PRD.md", description: "Single source for product thesis, UX, runtime architecture, governance, outcomes, capabilities, recovery, MVP scope, P0 delivery, and release gates" },
-            { slug: "worker-library-source-map", label: "Worker Library Source Map", path: "docs/architecture-library/WORKER_LIBRARY_SOURCE_MAP.md", description: "Central and Hermes-compatible execution backend contract, source map, security model, and phase plan" },
-            { slug: "arch-overview", label: "Architecture Overview", path: "docs/architecture/OVERVIEW.md", description: "Current implementation overview aligned to the canonical PRD" },
             { slug: "arch-backend", label: "Backend", path: "docs/architecture/BACKEND.md", description: "Go packages, APIs, DB schema, NATS, and execution pipelines" },
             { slug: "arch-frontend", label: "Frontend", path: "docs/architecture/FRONTEND.md", description: "Routes, components, Zustand, and design system" },
         ],

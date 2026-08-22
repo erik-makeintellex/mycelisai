@@ -3,19 +3,8 @@
 import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, GitBranch, Clock3, CircleDot } from "lucide-react";
 import type { MissionRun } from "@/types/events";
-
-function statusClass(status: MissionRun["status"]): string {
-    switch (status) {
-        case "completed":
-            return "bg-cortex-success/15 text-cortex-success border-cortex-success/30";
-        case "failed":
-            return "bg-cortex-danger/15 text-cortex-danger border-cortex-danger/30";
-        case "running":
-            return "bg-cortex-primary/15 text-cortex-primary border-cortex-primary/30";
-        default:
-            return "bg-cortex-border/40 text-cortex-text-muted border-cortex-border";
-    }
-}
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
+import { outcomeHealthFromRunStatus } from "@/lib/outcomeHealth";
 
 function timeLabel(iso: string): string {
     const started = new Date(iso);
@@ -25,17 +14,17 @@ function timeLabel(iso: string): string {
 
 export type ChainNode = {
     run: MissionRun;
-    children: ChainNode[];
+    childRuns: ChainNode[];
 };
 
 interface Props {
     run: MissionRun;
-    children?: ChainNode[];
+    childRuns?: ChainNode[];
 }
 
-export default function RunChainNode({ run, children = [] }: Props) {
+export default function RunChainNode({ run, childRuns = [] }: Props) {
     const [expanded, setExpanded] = useState(true);
-    const hasChildren = children.length > 0;
+    const hasChildren = childRuns.length > 0;
 
     const metadataEntries = useMemo(() => {
         const entries = run.metadata ? Object.entries(run.metadata) : [];
@@ -51,9 +40,7 @@ export default function RunChainNode({ run, children = [] }: Props) {
 
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase ${statusClass(run.status)}`}>
-                            {run.status}
-                        </span>
+                        <OutcomeHealthBadge health={run.outcome_health ?? outcomeHealthFromRunStatus(run.status)} />
                         <span className="text-[10px] font-mono font-bold text-cortex-text-main break-all">
                             {run.id}
                         </span>
@@ -105,7 +92,7 @@ export default function RunChainNode({ run, children = [] }: Props) {
                         aria-label={expanded ? "Collapse child runs" : "Expand child runs"}
                     >
                         {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                        {children.length}
+                        {childRuns.length}
                     </button>
                 )}
             </div>
@@ -113,8 +100,8 @@ export default function RunChainNode({ run, children = [] }: Props) {
             {hasChildren && expanded && (
                 <div className="border-t border-cortex-border/70 bg-cortex-bg/40 px-3 py-3 pl-6">
                     <div className="space-y-2">
-                        {children.map((child) => (
-                            <RunChainNode key={child.run.id} run={child.run} children={child.children} />
+                        {childRuns.map((child) => (
+                            <RunChainNode key={child.run.id} run={child.run} childRuns={child.childRuns} />
                         ))}
                     </div>
                 </div>

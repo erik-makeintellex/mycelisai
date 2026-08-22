@@ -27,10 +27,24 @@ export type TeamWorkAskResult = {
   auditRefs?: string[];
 };
 
+export type ExternalOutcomeResult = "committed" | "not_committed" | "still_unknown";
+
+export type ExternalOutcomeVerification = {
+  result: ExternalOutcomeResult;
+  summary: string;
+  evidenceRefs: string[];
+};
+
+type TeamWorkActionPayload = {
+  result: ExternalOutcomeResult;
+  evidence_refs: string[];
+};
+
 export async function postTeamWorkAction(
   item: TeamWorkItem,
   action: TeamInteractionAction,
   summary?: string,
+  actionPayload?: TeamWorkActionPayload,
 ): Promise<void> {
   const teamId = item.teamIds[0];
   if (!teamId) {
@@ -49,12 +63,13 @@ export async function postTeamWorkAction(
         actor_ref: "operator",
         payload_kind: "team_work_action",
         summary,
+        payload: actionPayload,
       }),
     },
   );
-  const payload = await response.json().catch(() => ({})) as TeamWorkActionResponse;
+  const responsePayload = await response.json().catch(() => ({})) as TeamWorkActionResponse;
   if (!response.ok) {
-    throw new Error(payload.error || `Could not ${action.replace("_", " ")} team work.`);
+    throw new Error(responsePayload.error || `Could not ${action.replace("_", " ")} team work.`);
   }
 }
 

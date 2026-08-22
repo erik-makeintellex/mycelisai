@@ -66,6 +66,8 @@ type TeamStatusEvent struct {
 	NextAction        string             `json:"next_action,omitempty"`
 	ExpectedOutputs   []string           `json:"expected_outputs,omitempty"`
 	ExpectedProof     []string           `json:"expected_proof,omitempty"`
+	ExecutionMode     string             `json:"execution_mode,omitempty"`
+	WorkIntent        *WorkIntent        `json:"work_intent,omitempty"`
 	OutputRefs        []TeamOutputRef    `json:"output_refs,omitempty"`
 	SourceKind        string             `json:"source_kind,omitempty"`
 	SourceChannel     string             `json:"source_channel,omitempty"`
@@ -111,6 +113,8 @@ type TeamWorkItem struct {
 	Scope                  []string           `json:"scope,omitempty"`
 	Owner                  string             `json:"owner,omitempty"`
 	ExecutionShape         TeamExecutionShape `json:"execution_shape"`
+	ExecutionMode          string             `json:"execution_mode,omitempty"`
+	WorkIntent             *WorkIntent        `json:"work_intent,omitempty"`
 	ExpectedOutputs        []string           `json:"expected_outputs,omitempty"`
 	ExpectedProof          []string           `json:"expected_proof,omitempty"`
 	CapabilityRequirements []string           `json:"capability_requirements,omitempty"`
@@ -141,6 +145,8 @@ func NormalizeTeamWorkItem(raw TeamWorkItem) TeamWorkItem {
 	item.Objective = strings.TrimSpace(item.Objective)
 	item.Owner = strings.TrimSpace(item.Owner)
 	item.ExecutionShape = normalizeTeamExecutionShape(item.ExecutionShape)
+	item.ExecutionMode = strings.TrimSpace(item.ExecutionMode)
+	item.WorkIntent = NormalizeWorkIntent(item.WorkIntent)
 	item.Scope = compactStrings(item.Scope)
 	item.ExpectedOutputs = compactStrings(item.ExpectedOutputs)
 	item.ExpectedProof = compactStrings(item.ExpectedProof)
@@ -229,6 +235,8 @@ func NormalizeTeamStatusEvent(raw TeamStatusEvent) TeamStatusEvent {
 	item.NextAction = strings.TrimSpace(item.NextAction)
 	item.ExpectedOutputs = compactStrings(item.ExpectedOutputs)
 	item.ExpectedProof = compactStrings(item.ExpectedProof)
+	item.ExecutionMode = strings.TrimSpace(item.ExecutionMode)
+	item.WorkIntent = NormalizeWorkIntent(item.WorkIntent)
 	item.AuditRefs = compactStrings(item.AuditRefs)
 	item.TargetRef = NormalizeTargetRef(item.TargetRef)
 	if item.TargetRef == nil {

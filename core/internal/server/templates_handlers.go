@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -46,6 +47,7 @@ func (s *AdminServer) handleGetIntentProof(w http.ResponseWriter, r *http.Reques
 	}
 
 	var proof protocol.IntentProof
+	var userConfirmToken sql.NullString
 	var scopeJSON []byte
 	var auditEventID *string
 	var missionID *string
@@ -57,13 +59,16 @@ func (s *AdminServer) handleGetIntentProof(w http.ResponseWriter, r *http.Reques
 		 FROM intent_proofs WHERE id = $1`,
 		proofUUID,
 	).Scan(
-		&proof.ID, &proof.TemplateID, &proof.ResolvedIntent, &proof.UserConfirmToken,
+		&proof.ID, &proof.TemplateID, &proof.ResolvedIntent, &userConfirmToken,
 		&proof.PermissionCheck, &proof.PolicyDecision, &scopeJSON, &auditEventID,
 		&missionID, &proof.Status, &proof.CreatedAt, &confirmedAt,
 	)
 	if err != nil {
 		respondAPIError(w, "intent proof not found", http.StatusNotFound)
 		return
+	}
+	if userConfirmToken.Valid {
+		proof.UserConfirmToken = userConfirmToken.String
 	}
 
 	if len(scopeJSON) > 0 {

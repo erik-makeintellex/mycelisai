@@ -105,6 +105,7 @@ export function buildMissionChatFailure({
     const routeKind = targetId === 'admin' ? 'workspace' : 'council';
     const targetLabel = routeKind === 'workspace' ? assistantName : targetId;
     const type = classifyMissionChatFailure(message, statusCode, availability);
+    const mediaSetupRequired = availability?.code === 'media_provider_not_ready';
 
     if (routeKind === 'workspace') {
         const bannerLabel = {
@@ -136,8 +137,10 @@ export function buildMissionChatFailure({
             targetId,
             targetLabel,
             type,
-            title: type === 'setup_required' ? `${assistantName} Setup Required` : `${assistantName} Chat Blocked`,
-            bannerLabel,
+            title: type === 'setup_required'
+                ? (mediaSetupRequired ? 'Image Generator Setup Required' : `${assistantName} Setup Required`)
+                : `${assistantName} Chat Blocked`,
+            bannerLabel: mediaSetupRequired ? 'Image generator setup required' : bannerLabel,
             summary,
             recommendedAction,
             diagnostics: message,

@@ -44,7 +44,7 @@ describe("GroupManagementPanel project package outputs", () => {
     );
     expect(screen.getByText("Project package")).toBeDefined();
     expect(
-      screen.getByText("dist/index.html"),
+      screen.getByText("workspace/generated/coin-runner/dist/index.html"),
     ).toBeDefined();
     expect(screen.getByText("workspace/generated/coin-runner")).toBeDefined();
     expect(screen.getByText("game.js")).toBeDefined();

@@ -46,7 +46,9 @@ export function normalizeIncomingSignal(raw: RawSignalEnvelope): StreamSignal {
         ?? (typeof meta.agent_id === 'string' && meta.agent_id.trim().length > 0 ? meta.agent_id : undefined)
         ?? (typeof meta.source_kind === 'string' ? meta.source_kind : undefined)
         ?? 'system';
-    const payload = raw.payload;
+    const payload = raw.payload && typeof raw.payload === 'object' && !Array.isArray(raw.payload)
+        ? raw.payload as StreamSignal['payload']
+        : undefined;
     const message =
         raw.message
         ?? raw.text

@@ -35,21 +35,21 @@ export function requestUrl(input: unknown): string {
     return String(input ?? '');
 }
 
-export function okJson(body: unknown) {
+export function okJson(body: unknown): Response {
     return {
         ok: true,
         status: 200,
         json: async () => body,
         text: async () => JSON.stringify(body),
-    } as any;
+    } as Response;
 }
 
-export function errorText(status: number, text: string) {
+export function errorText(status: number, text: string): Response {
     return {
         ok: false,
         status,
         text: async () => text,
-    } as any;
+    } as Response;
 }
 
 export function resetMissionControlChatStore() {

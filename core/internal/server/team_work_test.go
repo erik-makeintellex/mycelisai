@@ -64,7 +64,7 @@ func TestHandleListTeamWork_ExcludesArchivedWhenRequested(t *testing.T) {
 		WithArgs("research-team", 10).
 		WillReturnRows(teamWorkItemRows().AddRow(
 			workID, "research-team", "", "", "", "", "Review failed proof", []byte(`[]`), "Soma",
-			string(protocol.TeamExecutionShapeDelegatedWork), []byte(`["review"]`), []byte(`["proof"]`), []byte(`[]`),
+			string(protocol.TeamExecutionShapeDelegatedWork), "", []byte(`null`), []byte(`["review"]`), []byte(`["proof"]`), []byte(`[]`),
 			"auto_approved", string(protocol.TeamWorkStateDegraded), []byte(`null`), true, "missing_execution_plan",
 			[]byte(`["archive stale item"]`), []byte(`[]`), []byte(`["proof-1"]`), []byte(`["audit-1"]`), now, now, "v1",
 		))
@@ -85,6 +85,85 @@ func TestHandleListTeamWork_ExcludesArchivedWhenRequested(t *testing.T) {
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestHandleListTeamWork_DefaultViewPreservesArchivedRows(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	mock.ExpectQuery("WHERE tenant_id='default' AND team_id=\\$1[[:space:]]+ORDER BY updated_at DESC").
+		WithArgs("research-team", 20).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			"11111111-1111-1111-1111-111111111111", "research-team", "", "", "", "", "Archived work", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDelegatedWork), "", []byte(`null`), []byte(`[]`), []byte(`[]`), []byte(`[]`),
+			"auto_approved", string(protocol.TeamWorkStateArchived), []byte(`null`), false, "",
+			[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`[]`), now, now, "v1",
+		))
+
+	mux := setupMux(t, "GET /api/v1/teams/{id}/work", s.HandleListTeamWork)
+	rr := doRequest(t, mux, http.MethodGet, "/api/v1/teams/research-team/work", "")
+
+	assertStatus(t, rr, http.StatusOK)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	items := resp["data"].([]any)
+	if len(items) != 1 || items[0].(map[string]any)["state"] != string(protocol.TeamWorkStateArchived) {
+		t.Fatalf("default view did not preserve archived work: %v", items)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestHandleListTeamWork_AttentionViewFiltersOperatorWork(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	mock.ExpectQuery("state <> 'archived'.*needs_operator = TRUE OR state IN").
+		WithArgs("research-team", 10).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			"11111111-1111-1111-1111-111111111111", "research-team", "", "", "", "", "Review the retained output", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDelegatedWork), "", []byte(`null`), []byte(`["review"]`), []byte(`["proof"]`), []byte(`[]`),
+			"auto_approved", string(protocol.TeamWorkStateOutputReady), []byte(`null`), false, "",
+			[]byte(`[]`), []byte(`[]`), []byte(`["proof-1"]`), []byte(`["audit-1"]`), now, now, "v1",
+		).AddRow(
+			"22222222-2222-2222-2222-222222222222", "research-team", "", "", "", "", "Operator intervention required", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDelegatedWork), "", []byte(`null`), []byte(`["decision"]`), []byte(`["proof"]`), []byte(`[]`),
+			"auto_approved", string(protocol.TeamWorkStateRunning), []byte(`null`), true, "waiting_for_operator",
+			[]byte(`["retry"]`), []byte(`[]`), []byte(`[]`), []byte(`["audit-2"]`), now, now, "v1",
+		))
+
+	mux := setupMux(t, "GET /api/v1/teams/{id}/work", s.HandleListTeamWork)
+	rr := doRequest(t, mux, http.MethodGet, "/api/v1/teams/research-team/work?view=attention&limit=10", "")
+
+	assertStatus(t, rr, http.StatusOK)
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	items := resp["data"].([]any)
+	if len(items) != 2 {
+		t.Fatalf("expected 2 attention items, got %d", len(items))
+	}
+	if items[0].(map[string]any)["state"] != string(protocol.TeamWorkStateOutputReady) {
+		t.Fatalf("first state = %v", items[0].(map[string]any)["state"])
+	}
+	if items[1].(map[string]any)["needs_operator"] != true {
+		t.Fatalf("second needs_operator = %v", items[1].(map[string]any)["needs_operator"])
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestHandleListTeamWork_RejectsUnknownView(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	mux := setupMux(t, "GET /api/v1/teams/{id}/work", s.HandleListTeamWork)
+	rr := doRequest(t, mux, http.MethodGet, "/api/v1/teams/research-team/work?view=history", "")
+
+	assertStatus(t, rr, http.StatusBadRequest)
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unexpected database query: %v", err)
 	}
 }
 
@@ -132,6 +211,7 @@ func TestHandleListTeamStatusEvents_ReturnsTimeline(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "team_id", "work_item_id", "run_id", "intent_proof_id", "contract_id", "proof_id",
 			"state", "headline", "details", "confidence_posture", "blocked_by", "next_action",
+			"execution_mode", "work_intent",
 			"source_kind", "source_channel", "payload_kind", "audit_refs", "timestamp", "version",
 		}).AddRow(
 			"22222222-2222-2222-2222-222222222222",
@@ -147,6 +227,8 @@ func TestHandleListTeamStatusEvents_ReturnsTimeline(t *testing.T) {
 			"verified",
 			[]byte(`["waiting_on_review"]`),
 			"Watch for output",
+			"",
+			[]byte(`null`),
 			"workspace_ui",
 			"soma.team_work",
 			"team_status",

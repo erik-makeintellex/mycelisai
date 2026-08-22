@@ -133,6 +133,16 @@ def test_architecture_sync_requests_all_teams_and_reports_replies(monkeypatch, c
     assert fake_sock.closed is True
 
 
+def test_architecture_sync_directives_follow_current_outcome_delivery_gate():
+    directives = misc._architecture_sync_directives()
+    combined = " ".join(item["message"] for item in directives.values())
+
+    assert "Workspace -> Outcome" in combined
+    assert "execution-to-deliverable" in combined
+    assert "never claim completion before validated output" in combined
+    assert "memory-restart" not in combined
+
+
 def test_format_sync_reply_prefers_process_result_text():
     message = '{"text":"brief body","tools_used":["publish_signal"]}'
 
@@ -143,6 +153,16 @@ def test_format_sync_reply_prefers_wrapped_signal_text():
     message = '{"meta":{"payload_kind":"status"},"text":"wrapped brief"}'
 
     assert misc._format_sync_reply(message) == "wrapped brief"
+
+
+def test_format_sync_output_escapes_characters_missing_from_host_encoding():
+    output = misc._format_sync_output(
+        "swarm.team.test.signal.status",
+        '{"text":"plan → delivery"}',
+        "cp1252",
+    )
+
+    assert output == "[reply] swarm.team.test.signal.status: plan \\u2192 delivery"
 
 
 def test_build_worktree_triage_maps_changed_paths_to_installs_and_commands():
@@ -206,7 +226,6 @@ def test_worktree_triage_expected_targets_cover_task_contract_docs(capsys):
     misc.worktree_triage.body(ctx)
 
     output = capsys.readouterr().out
-    assert "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md" in output
     assert "docs/architecture-library/MYCELIS_CANONICAL_PRD.md" in output
     assert "docs/LOCAL_DEV_WORKFLOW.md" in output
     assert "docs/architecture/OPERATIONS.md" in output

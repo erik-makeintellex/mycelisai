@@ -13,6 +13,7 @@ import type {
 } from '@/store/cortexStoreTypes';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import { clearPersistedChat, loadOrCreateChatSessionId, loadPersistedChat, normalizeProposalData } from '@/store/cortexStoreUtils';
+import { createClientCorrelationId } from '@/store/cortexStorePersistence';
 import {
     buildChatRouteConfig,
     buildRecentMissionMessages,
@@ -32,6 +33,10 @@ export function createCortexMissionChatSlice(
         sendMissionChat: async (message: string, options?: MissionChatSendOptions) => {
             const trimmed = message.trim();
             if (!trimmed) return;
+
+            const activeWorkContext = options?.active_work_context
+                ? { ...options.active_work_context, steering_id: createClientCorrelationId() }
+                : undefined;
 
             const { councilTarget, assistantName, workspaceChatPrimed } = get();
             const {
@@ -65,6 +70,7 @@ export function createCortexMissionChatSlice(
                             team_id: teamContext?.id,
                             team_name: teamContext?.name,
                             continuation_context: options?.continuation_context,
+                            active_work_context: activeWorkContext,
                         }),
                     });
 

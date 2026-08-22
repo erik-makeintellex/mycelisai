@@ -16,6 +16,8 @@ REMOTE_USER_TESTING = ROOT / "docs" / "REMOTE_USER_TESTING.md"
 API_REFERENCE = ROOT / "docs" / "API_REFERENCE.md"
 BACKEND_ARCH = ROOT / "docs" / "architecture" / "BACKEND.md"
 DOCKER_COMPOSE = ROOT / "docker-compose.yml"
+HELM_VALUES = ROOT / "charts" / "mycelis-core" / "values.yaml"
+HELM_DEPLOYMENT = ROOT / "charts" / "mycelis-core" / "templates" / "deployment.yaml"
 CORE_DOCKERFILE = ROOT / "core" / "Dockerfile"
 V8_DEV_STATE = ROOT / ".state/V8_DEV_STATE.md"
 
@@ -73,6 +75,19 @@ def test_compose_runtime_maps_ai_host_into_provider_overrides():
     missing = [snippet for snippet in required_snippets if snippet not in text]
     assert not missing, "docker-compose.yml is missing provider endpoint overrides:\n" + "\n".join(missing)
     assert "      OLLAMA_HOST:" not in text, "docker-compose.yml should not inject legacy OLLAMA_HOST into Core"
+
+
+def test_shared_nats_service_identity_reaches_compose_and_helm():
+    compose_text = DOCKER_COMPOSE.read_text(encoding="utf-8")
+    values_text = HELM_VALUES.read_text(encoding="utf-8")
+    deployment_text = HELM_DEPLOYMENT.read_text(encoding="utf-8")
+
+    assert "MYCELIS_NATS_SERVICE_ID: ${MYCELIS_NATS_SERVICE_ID:-mycelis-core}" in compose_text
+    assert "serviceID: mycelis-core" in values_text
+    assert "url: \"\"" in values_text
+    assert "name: MYCELIS_NATS_SERVICE_ID" in deployment_text
+    assert ".Values.nats.serviceID" in deployment_text
+    assert ".Values.nats.url" in deployment_text
 
 
 def test_compose_core_image_supports_curated_stdio_mcp_launch():
@@ -176,7 +191,7 @@ def test_active_docs_cover_supported_user_access_lanes():
         (
             README,
             [
-                "Windows Docker Desktop Compose",
+                "Windows Rancher Desktop or Docker Desktop Compose",
                 "Windows + WSL Docker Compose",
                 "Kubernetes / Helm clustered deployment",
                 "open `http://localhost:3000` from the Windows browser",
@@ -345,20 +360,21 @@ def test_release_preflight_docs_prefer_lane_preset():
     assert not missing, "Release-preflight lane contract is missing from active docs:\n" + "\n".join(missing)
 
 
-def test_remote_user_testing_doc_covers_wsl_deployment_mimic_windows_browser_and_cold_start_notes():
+def test_user_acceptance_doc_keeps_wsl_optional_and_cold_start_truthful():
     text = REMOTE_USER_TESTING.read_text(encoding="utf-8")
 
     required_snippets = [
-        "clean WSL deployment-mimic checkout refreshed from git as the validation host",
-        "Windows root repo as the dev/staging worktree",
+        "Use WSL only when it supplies distinct deployment-mimic evidence",
+        "Keep the Windows root repo as the dev/staging worktree",
+        "use a clean WSL deployment-mimic checkout refreshed from git as the validation host",
         "verify `http://localhost:3000` from the Windows side with both a simple HTTP probe and a real browser launch",
         "classify it as `cold_start_first_request` instead of a clean first-pass success",
-        "do not silently relabel the run as a clean first-pass success",
+        "Do not silently relabel the run as a clean first-pass success",
         "whether the issue is a `cold_start_first_request`, a steady-state regression, or an environment/setup gap",
     ]
 
     missing = [snippet for snippet in required_snippets if snippet not in text]
-    assert not missing, "Remote user testing doc is missing WSL-proof/browser/cold-start guidance:\n" + "\n".join(missing)
+    assert not missing, "User acceptance doc is missing guarded WSL/browser/cold-start guidance:\n" + "\n".join(missing)
 
 
 def test_active_docs_reference_guarded_wsl_handoff_tasks():
@@ -414,28 +430,25 @@ def test_active_docs_reference_guarded_wsl_handoff_tasks():
     assert not missing, "Guarded WSL handoff/proof tasks are missing from active docs:\n" + "\n".join(missing)
 
 
-def test_release_proof_sequence_keeps_wsl_validate_before_browser_certification():
+def test_release_proof_sequence_keeps_wsl_conditional_before_deployment_certification():
     snippets = [
         (
             TESTING,
                 [
                     "Release-proof sequencing rule:",
-                    "validate WSL git auth repair/report behavior for `wsl.refresh`",
-                    "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence",
-                    "that task intentionally runs `ci.release-preflight --lane=runtime --no-e2e` first",
-                    "keep the newly closed focused browser proof gaps green: `/runs` workflow depth and guided Soma retry/recovery both have focused Chromium proof in production `start` mode",
-                    "rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL",
+                    "clean committed `dev` release preflight",
+                    "only when the refreshed WSL proof checkout supplies distinct deployment-mimic evidence",
+                    "`ci.release-preflight --lane=runtime --no-e2e`",
+                    "Full Compose, Kubernetes, and broader headed browser certification",
                 ],
             ),
             (
                 V8_DEV_STATE,
                 [
-                    "guarded `uv run inv wsl.validate --lane=release` path from the refreshed `mycelis-root` deployment checkout",
-                    "maps `--lane=service` and `--lane=release` to `ci.release-preflight --lane=runtime --no-e2e`",
-                    "keep the focused `/runs` and guided retry/recovery browser proofs green, refresh the WSL proof checkout from the committed slice, run `wsl.validate`, and then rerun broader headed certification from committed state",
-                    "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting the new browser-gap evidence as authoritative",
-                    "live MCP workflow correlation is now green from the refreshed WSL proof checkout",
-                    "run `wsl.validate` from the refreshed proof checkout, keep the new `/runs` and guided Soma retry/recovery browser workflow proofs green, then rerun the broader headed Chromium certification pass from committed state",
+                    "optional refreshed WSL validation when it supplies distinct evidence",
+                    "Compose and Kubernetes deployment proof",
+                    "headed browser certification",
+                    "post-promotion health and browser smoke",
                 ],
             ),
     ]
@@ -447,7 +460,7 @@ def test_release_proof_sequence_keeps_wsl_validate_before_browser_certification(
             if snippet not in text:
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
-    assert not missing, "Release-proof sequencing docs drifted from the active Slice 4 order:\n" + "\n".join(missing)
+    assert not missing, "Release-proof sequencing docs drifted from the active release order:\n" + "\n".join(missing)
 
 def test_windows_edit_wsl_proof_contract_does_not_turn_wsl_into_day_to_day_worktree():
     text = LOCAL_DEV_WORKFLOW.read_text(encoding="utf-8")

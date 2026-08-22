@@ -3,7 +3,7 @@
 import { Activity, CheckSquare, ListChecks, Wrench } from "lucide-react";
 import { recoveryReviewQueueItems } from "@/components/recovery/recoveryQueue";
 import { targetRefHref, targetRefReference } from "@/components/teams/teamWorkProjection";
-import type { OutcomeHealthState } from "@/lib/outcomeHealth";
+import { aggregateOutcomeHealth, outcomeHealthFromRunStatus } from "@/lib/outcomeHealth";
 import type { TeamDetailEntry, TeamOutputRef, TeamWorkItem } from "@/store/useCortexStore";
 import type { OutcomeProjectSummary } from "./OutcomeProjectSummary";
 import type { DashboardRailAlert, DashboardRailAlertTarget } from "./SomaOutcomeVaultPanel";
@@ -113,14 +113,11 @@ function projectedOutcomeHealth(
   items: TeamWorkItem[],
   outputRefs: TeamOutputRef[],
   recoveryCount: number,
-): OutcomeHealthState {
-  if (items.some((item) => item.outcomeHealth === "blocked" || item.state === "needs_operator")) return "blocked";
-  if (recoveryCount > 0 || items.some((item) => item.outcomeHealth === "degraded" || item.state === "degraded")) return "degraded";
-  if (items.some((item) => item.outcomeHealth === "running" || item.state === "running" || item.state === "reviewing")) return "running";
-  if (outputRefs.length > 0 || items.some((item) => item.outcomeHealth === "completed" || item.state === "output_ready")) return "completed";
-  if (items.some((item) => item.outcomeHealth === "waiting" || item.state === "queued" || item.state === "briefed" || item.state === "new" || item.state === "paused")) return "waiting";
-  if (items.length > 0 && items.every((item) => item.outcomeHealth === "archived" || item.state === "archived")) return "archived";
-  return "healthy";
+) {
+  const states = items.map((item) => item.outcomeHealth ?? outcomeHealthFromRunStatus(item.state));
+  if (recoveryCount > 0) states.push("degraded");
+  if (outputRefs.length > 0) states.push("completed");
+  return aggregateOutcomeHealth(states);
 }
 
 function railAlertKind(item: TeamWorkItem): DashboardRailAlert["kind"] {

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { AlertTriangle, BookOpen, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BookOpen, Loader2 } from "lucide-react";
 import { DocsSidebar } from "@/components/docs/DocsSidebar";
 import { MarkdownDocRenderer } from "@/components/docs/MarkdownDocRenderer";
 import type { DocEntry, DocSection } from "@/lib/docsManifest";
@@ -36,14 +36,18 @@ function DocsContent() {
   const [loadingContent, setLoadingContent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [mobileView, setMobileView] = useState<"list" | "article">(
+    searchParams?.get("doc") ? "article" : "list",
+  );
   const docRequestRef = useRef(0);
 
   const loadDoc = useCallback(
-    (entry: DocEntry) => {
+    (entry: DocEntry, openMobile = true) => {
       const requestId = docRequestRef.current + 1;
       docRequestRef.current = requestId;
       setActiveSlug(entry.slug);
       setDocLabel(entry.label);
+      if (openMobile) setMobileView("article");
       router.replace(`/docs?doc=${entry.slug}`, { scroll: false });
       setLoadingContent(true);
       setError(null);
@@ -69,6 +73,7 @@ function DocsContent() {
   );
 
   useEffect(() => {
+    let active = true;
     const requestedSlug = searchParams?.get("doc") ?? null;
     fetch("/docs-api")
       .then((response) => {
@@ -76,6 +81,7 @@ function DocsContent() {
         return response.json();
       })
       .then((data: ManifestResponse) => {
+        if (!active) return;
         if (!Array.isArray(data.sections)) {
           throw new Error("manifest response did not include sections");
         }
@@ -84,10 +90,18 @@ function DocsContent() {
         const target = requestedSlug
           ? allDocs.find((doc) => doc.slug === requestedSlug) ?? allDocs[0]
           : allDocs[0];
-        if (target) loadDoc(target);
+        if (target) loadDoc(target, Boolean(requestedSlug));
       })
-      .catch((err) => setError(`Failed to load doc manifest: ${err instanceof Error ? err.message : String(err)}`))
-      .finally(() => setLoadingManifest(false));
+      .catch((err) => {
+        if (active) setError(`Failed to load doc manifest: ${err instanceof Error ? err.message : String(err)}`);
+      })
+      .finally(() => {
+        if (active) setLoadingManifest(false);
+      });
+    return () => {
+      active = false;
+      docRequestRef.current += 1;
+    };
     // Load the initial manifest once; document clicks call loadDoc directly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -98,13 +112,14 @@ function DocsContent() {
       {loadingManifest ? (
         <LoadingState label="Loading..." />
       ) : (
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
           <DocsSidebar
             sections={sections}
             activeSlug={activeSlug}
             query={query}
             onSelect={loadDoc}
             onQueryChange={setQuery}
+            mobileHidden={mobileView === "article"}
           />
           <DocContent
             content={content}
@@ -112,6 +127,8 @@ function DocsContent() {
             loading={loadingContent}
             sections={sections}
             onSelectDoc={loadDoc}
+            onShowDocs={() => setMobileView("list")}
+            mobileHidden={mobileView === "list"}
           />
         </div>
       )}
@@ -121,7 +138,7 @@ function DocsContent() {
 
 function DocsHeader({ docLabel }: { docLabel: string }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-cortex-border bg-cortex-surface flex-shrink-0">
+    <div className="flex min-w-0 flex-shrink-0 items-center gap-3 border-b border-cortex-border bg-cortex-surface px-4 py-2.5">
       <BookOpen className="w-4 h-4 text-cortex-primary flex-shrink-0" />
       <h1 className="text-[11px] font-mono font-bold uppercase tracking-widest text-cortex-text-muted">
         Documentation and guidance
@@ -129,7 +146,7 @@ function DocsHeader({ docLabel }: { docLabel: string }) {
       {docLabel ? (
         <>
           <span className="text-cortex-border">.</span>
-          <span className="text-[11px] font-mono text-cortex-text-main">
+          <span className="min-w-0 truncate text-[11px] font-mono text-cortex-text-main">
             {docLabel}
           </span>
         </>
@@ -144,15 +161,30 @@ function DocContent({
   loading,
   sections,
   onSelectDoc,
+  onShowDocs,
+  mobileHidden,
 }: {
   content: string;
   error: string | null;
   loading: boolean;
   sections: DocSection[];
   onSelectDoc: (entry: DocEntry) => void;
+  onShowDocs: () => void;
+  mobileHidden: boolean;
 }) {
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-6">
+    <main
+      data-testid="docs-article-pane"
+      className={`${mobileHidden ? "hidden" : "flex"} min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 py-4 md:flex md:px-8 md:py-6`}
+    >
+      <button
+        type="button"
+        onClick={onShowDocs}
+        className="mb-2 inline-flex min-h-10 w-fit items-center gap-2 text-sm font-semibold text-cortex-primary md:hidden"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        All docs
+      </button>
       {loading ? (
         <LoadingState label="Loading doc..." />
       ) : error ? (
@@ -161,7 +193,7 @@ function DocContent({
           <span className="text-sm font-mono">{error}</span>
         </div>
       ) : content ? (
-        <div className="max-w-3xl">
+        <div className="w-full min-w-0 max-w-3xl">
           <MarkdownDocRenderer
             content={content}
             sections={sections}
@@ -174,7 +206,7 @@ function DocContent({
           <p className="text-sm font-mono">Select a document from the sidebar</p>
         </div>
       )}
-    </div>
+    </main>
   );
 }
 

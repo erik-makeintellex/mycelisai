@@ -111,6 +111,57 @@ func TestHandleGenerateImage_UsesMediaProviderAuthKeyEnv(t *testing.T) {
 	}
 }
 
+func TestHandleGenerateImage_UsesForgeAPIWithoutGateway(t *testing.T) {
+	var requestBody map[string]any
+	server := newSwarmLocalHTTPTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/sdapi/v1/txt2img" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"images":["aW1hZ2U="]}`))
+	}))
+
+	enabled := true
+	registry := NewInternalToolRegistry(InternalToolDeps{Brain: &cognitive.Router{Config: &cognitive.BrainConfig{
+		Media: &cognitive.MediaConfig{Provider: cognitive.MediaProviderConfig{
+			ProviderID: "pinokio-forge", Type: cognitive.MediaProviderTypeForge,
+			Endpoint: server.URL, ModelID: "forge-local", Enabled: &enabled,
+		}},
+	}}})
+
+	result, err := registry.handleGenerateImage(context.Background(), map[string]any{"prompt": "Soma portrait", "size": "768x512"})
+	if err != nil {
+		t.Fatalf("handleGenerateImage: %v", err)
+	}
+	if requestBody["width"] != float64(768) || requestBody["height"] != float64(512) {
+		t.Fatalf("dimensions = %vx%v, want 768x512", requestBody["width"], requestBody["height"])
+	}
+	if !strings.Contains(result, "Image generated for") {
+		t.Fatalf("expected generated image response, got %s", result)
+	}
+}
+
+func TestHandleGenerateImage_ExplainsForgeAPIMode(t *testing.T) {
+	server := newSwarmLocalHTTPTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.NotFound(w, nil)
+	}))
+	enabled := true
+	registry := NewInternalToolRegistry(InternalToolDeps{Brain: &cognitive.Router{Config: &cognitive.BrainConfig{
+		Media: &cognitive.MediaConfig{Provider: cognitive.MediaProviderConfig{
+			ProviderID: "pinokio-forge", Type: cognitive.MediaProviderTypeForge,
+			Endpoint: server.URL, ModelID: "forge-local", Enabled: &enabled,
+		}},
+	}}})
+
+	_, err := registry.handleGenerateImage(context.Background(), map[string]any{"prompt": "Soma portrait"})
+	if err == nil || !strings.Contains(err.Error(), "enable API mode") {
+		t.Fatalf("expected actionable Forge API error, got %v", err)
+	}
+}
+
 func TestHandleGenerateImage_ReturnsErrorOnProviderHTTPFailure(t *testing.T) {
 	server := newSwarmLocalHTTPTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "generation failed", http.StatusBadGateway)

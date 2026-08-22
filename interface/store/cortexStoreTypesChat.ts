@@ -1,4 +1,5 @@
 import type { ExecutionSummaryData, UIResponseStateProjection } from '@/store/cortexStoreTypesExecutionSummary';
+import type { CTSEnvelope } from '@/store/cortexStoreTypesRuntime';
 import type { BusScope, TaskCadence, WorkExecutionMode, WorkIntentData } from '@/store/cortexStoreTypesWorkIntent';
 export type { ExecutionSummaryData, UIResponseStateProjection } from '@/store/cortexStoreTypesExecutionSummary';
 
@@ -128,6 +129,7 @@ export interface SomaThreadEvent {
     status?: string;
     run_id?: string;
     team_id?: string;
+    work_item_id?: string;
     agent_id?: string;
     source_kind?: string;
     source_channel?: string;
@@ -169,6 +171,16 @@ export interface MissionChatContinuationContext {
     proof?: string;
 }
 
+export interface MissionChatActiveWorkContext {
+    type: 'team_work';
+    id: string;
+    run_id: string;
+    team_id: string;
+    work_item_id: string;
+    project_id?: string;
+    steering_id?: string;
+}
+
 export interface ChatContinuationIntent {
     kind: 'follow_up' | 'update' | 'fork' | 'route' | 'inspect';
     context_kind?: string;
@@ -181,6 +193,7 @@ export interface ChatContinuationIntent {
 
 export interface MissionChatSendOptions {
     continuation_context?: MissionChatContinuationContext;
+    active_work_context?: MissionChatActiveWorkContext;
 }
 
 export interface CouncilMember {
@@ -252,7 +265,12 @@ export interface StreamSignal {
     message?: string;
     timestamp?: string;
     trust_score?: number;
-    payload?: any;
+    payload?: Record<string, unknown> & {
+        trust_score?: number;
+        content_type?: CTSEnvelope['payload']['content_type'];
+        title?: string;
+        proof?: CTSEnvelope['proof'];
+    };
     topic?: string;
     source_kind?: string;
     source_channel?: string;

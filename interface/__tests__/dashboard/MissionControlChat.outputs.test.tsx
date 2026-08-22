@@ -198,18 +198,18 @@ describe('MissionControlChat output contracts', () => {
                 return {
                     ok: true,
                     json: async () => ({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', file_path: 'saved-media/test.png' }),
-                } as any;
+                } as Response;
             }
             if (url.includes('/api/v1/workspace/files/reveal')) {
                 return {
                     ok: true,
                     json: async () => ({ ok: true, data: { workspace_path: 'saved-media/test.png' } }),
-                } as any;
+                } as Response;
             }
             return {
                 ok: true,
                 json: async () => ({ ok: true, data: COUNCIL_MEMBERS }),
-            } as any;
+            } as Response;
         });
 
         render(<MissionControlChat />);
@@ -256,12 +256,12 @@ describe('MissionControlChat output contracts', () => {
                 return {
                     ok: true,
                     json: async () => ({ ok: true, data: { workspace_path: 'saved-media/campaign-voiceover.wav' } }),
-                } as any;
+                } as Response;
             }
             return {
                 ok: true,
                 json: async () => ({ ok: true, data: COUNCIL_MEMBERS }),
-            } as any;
+            } as Response;
         });
 
         render(<MissionControlChat />);

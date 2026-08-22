@@ -19,7 +19,14 @@ const mockAdvancedMode = vi.fn(() => true);
 const mockToggleAdvancedMode = vi.fn();
 const mockFetchServicesStatus = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) =>
+    useCortexStore: (selector: (state: {
+        advancedMode: boolean;
+        toggleAdvancedMode: typeof mockToggleAdvancedMode;
+        servicesStatus: never[];
+        isFetchingServicesStatus: boolean;
+        servicesStatusUpdatedAt: null;
+        fetchServicesStatus: typeof mockFetchServicesStatus;
+    }) => unknown) =>
         selector({
             advancedMode: mockAdvancedMode(),
             toggleAdvancedMode: mockToggleAdvancedMode,

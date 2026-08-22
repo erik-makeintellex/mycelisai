@@ -110,7 +110,7 @@ Schedule handoffs can now show explicit states such as `awaiting approval`, `app
 
 ## What "Healthy" Looks Like
 
-For the current V8 UX baseline, `/automations` should show:
+For the current release, `/automations` should show:
 - Active Automations tab content with the Automation Hub
 - a clear path into Trigger Rules
 - a clear path into Schedule Rules

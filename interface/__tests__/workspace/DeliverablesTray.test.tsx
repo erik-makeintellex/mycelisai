@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import type { SVGProps } from 'react';
 
 vi.mock('lucide-react', () => ({
-    Package: (props: any) => <svg data-testid="package-icon" {...props} />,
-    Clock: (props: any) => <svg data-testid="clock-icon" {...props} />,
+    Package: (props: SVGProps<SVGSVGElement>) => <svg data-testid="package-icon" {...props} />,
+    Clock: (props: SVGProps<SVGSVGElement>) => <svg data-testid="clock-icon" {...props} />,
 }));
 
 import DeliverablesTray from '@/components/workspace/DeliverablesTray';

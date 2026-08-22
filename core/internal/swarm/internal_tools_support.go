@@ -74,7 +74,7 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 
 	inputs := stringSlice(merged["inputs"])
 	if len(inputs) == 0 {
-		inputs = []string{protocol.TopicGlobalBroadcast}
+		inputs = []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID)}
 	}
 	deliveries := stringSlice(merged["deliveries"])
 	if len(deliveries) == 0 {
@@ -109,16 +109,25 @@ func runtimeTeamDescription(members []protocol.AgentManifest) string {
 }
 
 func runtimeTeamMembersFromArgs(merged map[string]any, teamID, fallbackAgentID, fallbackRole, fallbackSystemPrompt string) []protocol.AgentManifest {
-	tools := stringSlice(merged["tools"])
+	tools := runtimeTeamToolsFromArgs(merged)
 	if agents := runtimeAgentsFromRaw(merged["agents"], teamID, tools); len(agents) > 0 {
 		return agents
 	}
 	return []protocol.AgentManifest{{
 		ID:            fallbackAgentID,
+		ProfileRef:    stringValue(merged["profile_ref"]),
+		Profile:       runtimeWorkerProfileSnapshot(merged["profile_snapshot"]),
 		Role:          fallbackRole,
 		SystemPrompt:  fallbackSystemPrompt,
+		Model:         stringValue(merged["model"]),
+		Provider:      stringValue(merged["provider"]),
+		Inputs:        stringSlice(merged["inputs"]),
+		Outputs:       stringSlice(merged["outputs"]),
 		Tools:         tools,
+		Context:       runtimeContextBindings(merged["context_bindings"]),
+		Usage:         runtimeUsagePolicy(merged["usage_policy"]),
 		MaxIterations: 6,
+		Verification:  runtimeVerification(merged["verification"]),
 	}}
 }
 
@@ -172,6 +181,8 @@ func runtimeAgentFromMap(source map[string]any, teamID string, idx int, fallback
 	}
 	return protocol.AgentManifest{
 		ID:            id,
+		ProfileRef:    stringValue(source["profile_ref"]),
+		Profile:       runtimeWorkerProfileSnapshot(source["profile_snapshot"]),
 		Role:          role,
 		SystemPrompt:  firstNonEmptyString(stringValue(source["system_prompt"]), fmt.Sprintf("You are the %s for team %s. Own your bounded specialist contribution and report concise output/proof to Soma.", role, teamID)),
 		Model:         stringValue(source["model"]),
@@ -179,8 +190,84 @@ func runtimeAgentFromMap(source map[string]any, teamID string, idx int, fallback
 		Inputs:        stringSlice(source["inputs"]),
 		Outputs:       stringSlice(source["outputs"]),
 		Tools:         tools,
+		Context:       runtimeContextBindings(source["context_bindings"]),
+		Usage:         runtimeUsagePolicy(source["usage_policy"]),
 		MaxIterations: maxIterations,
+		Verification:  runtimeVerification(source["verification"]),
 	}
+}
+
+func runtimeContextBindings(raw any) []protocol.AgentContextBinding {
+	if bindings, ok := raw.([]protocol.AgentContextBinding); ok {
+		return append([]protocol.AgentContextBinding(nil), bindings...)
+	}
+	items, _ := raw.([]any)
+	bindings := make([]protocol.AgentContextBinding, 0, len(items))
+	for _, item := range items {
+		source, ok := item.(map[string]any)
+		if !ok || strings.TrimSpace(stringValue(source["kind"])) == "" {
+			continue
+		}
+		bindings = append(bindings, protocol.AgentContextBinding{
+			Kind: stringValue(source["kind"]), Ref: stringValue(source["ref"]), Access: stringValue(source["access"]),
+		})
+	}
+	return bindings
+}
+
+func runtimeUsagePolicy(raw any) protocol.AgentUsagePolicy {
+	if policy, ok := raw.(protocol.AgentUsagePolicy); ok {
+		return policy
+	}
+	source, _ := raw.(map[string]any)
+	return protocol.AgentUsagePolicy{Selection: stringValue(source["selection"]), Scope: stringValue(source["scope"])}
+}
+
+func runtimeTeamToolsFromArgs(merged map[string]any) []string {
+	tools := stringSlice(merged["tools"])
+	if len(tools) > 0 {
+		return uniqueStrings(tools)
+	}
+
+	for _, key := range []string{"required_capabilities", "allowed_capabilities"} {
+		for _, capability := range stringSlice(merged[key]) {
+			if isDirectRuntimeToolCapability(capability) {
+				tools = append(tools, capability)
+			}
+		}
+	}
+	if len(tools) == 0 {
+		tools = append(tools, "store_artifact")
+	}
+	return uniqueStrings(tools)
+}
+
+func isDirectRuntimeToolCapability(capability string) bool {
+	switch strings.TrimSpace(capability) {
+	case "write_file", "read_file", "store_artifact", "local_command",
+		"generate_image", "save_cached_image", "research_for_blueprint",
+		"consult_council", "web_search":
+		return true
+	default:
+		return false
+	}
+}
+
+func uniqueStrings(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
 }
 
 func parseTeamAskRouting(raw any) map[string]string {

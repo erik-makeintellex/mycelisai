@@ -72,6 +72,30 @@ function normalizeOutputContract(raw: unknown): WorkIntentData['output_contract'
     return hasValue ? output : undefined;
 }
 
+function normalizeLifecycleContract(raw: unknown): WorkIntentData['lifecycle'] {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const rec = raw as Record<string, unknown>;
+    const lifecycle = {
+        stop_action: pickString(rec, 'stop_action', 'stopAction'),
+        retry_action: pickString(rec, 'retry_action', 'retryAction'),
+        recovery_action: pickString(rec, 'recovery_action', 'recoveryAction'),
+        control_summary: pickString(rec, 'control_summary', 'controlSummary'),
+    };
+    return Object.values(lifecycle).some(Boolean) ? lifecycle : undefined;
+}
+
+function normalizeSideEffectContract(raw: unknown): WorkIntentData['side_effect'] {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const rec = raw as Record<string, unknown>;
+    const sideEffect = {
+        effect_kind: pickString(rec, 'effect_kind', 'effectKind') as NonNullable<WorkIntentData['side_effect']>['effect_kind'],
+        idempotency_key: pickString(rec, 'idempotency_key', 'idempotencyKey'),
+        retry_safety: pickString(rec, 'retry_safety', 'retrySafety') as NonNullable<WorkIntentData['side_effect']>['retry_safety'],
+        side_effect_state: pickString(rec, 'side_effect_state', 'sideEffectState') as NonNullable<WorkIntentData['side_effect']>['side_effect_state'],
+    };
+    return Object.values(sideEffect).some(Boolean) ? sideEffect : undefined;
+}
+
 function pickString(rec: Record<string, unknown>, snake: string, camel: string): string | undefined {
     const raw = rec[snake] ?? rec[camel];
     const value = typeof raw === 'string' ? raw : typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : '';
@@ -94,6 +118,8 @@ function normalizeWorkIntent(raw: unknown): WorkIntentData | undefined {
         service_refs: normalizeStringArray(rec.service_refs ?? rec.serviceRefs),
         project_ref: pickString(rec, 'project_ref', 'projectRef'),
         output_contract: normalizeOutputContract(rec.output_contract ?? rec.outputContract),
+        lifecycle: normalizeLifecycleContract(rec.lifecycle),
+        side_effect: normalizeSideEffectContract(rec.side_effect ?? rec.sideEffect),
     };
     const hasValue = Object.values(workIntent).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value));
     return hasValue ? workIntent : undefined;

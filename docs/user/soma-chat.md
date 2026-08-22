@@ -7,11 +7,12 @@
 
 Open `Soma` (`/dashboard`) and type naturally. Soma receives the request first, uses the current organization/workspace context, and should return either a direct answer, a governed proposal, a retained output, or a clear blocker/recovery state.
 
+Opening `/dashboard?fresh=1` starts a fresh conversation presentation; it does not erase or conceal retained Outcomes. The default Outcomes attention count is bounded to operator decisions, recovery, and ready deliverables. Ordinary queued/running work remains available through its Outcome or team progress view without appearing as review debt.
+
 The dashboard is organized as a threaded workspace:
 
-- `Start with`: a compact pinned row for common conversation shapes: plan next step, create output, or review work. Saved asks can still appear here, but the defaults stay generic so a new user sees how to talk to Soma instead of seeing a domain-specific workflow menu. Use `Create ask` to save a repeated Soma request; Mycelis stores it through the conversation-template path when Core is available and keeps a local fallback when it is not. Saved asks still enter the Soma conversation so you can adjust risky or unclear work before execution.
 - `Talk to Soma`: the primary visible heading and conversation where you ask, approve, recover, and review.
-- `Outcome Vault`: a secondary overlay drawer for saved results, work in progress, and anything that needs attention. It stays closed by default so Soma keeps the main workspace, then opens over the thread when you need delivery, recovery, or revisit detail.
+- `Outcome Vault`: a secondary overlay drawer for saved results, work in progress, and anything that needs attention. It stays closed by default so Soma keeps the main workspace, then opens over the thread when you need delivery, recovery, or revisit detail. On a phone it becomes a full-width sheet; on larger screens it stays a bounded right-side drawer without narrowing the conversation. Close it with its visible control, the shaded backdrop, or Escape. Keyboard focus stays inside while it is open and returns to `Outcomes` when it closes.
 
 When the conversation is empty, Soma should help you enter naturally instead of presenting a stack of action cards. The empty thread should briefly cue the pattern: ask for the outcome, let Soma shape the path, and approve only when work should run. Example asks are shown as quoted language only; they are not buttons or a separate workflow menu.
 
@@ -46,6 +47,8 @@ Soma should choose the lightest useful answer depth for the ask. A request for a
 
 Lightweight answers stay inside the normal conversation. A quick table, summary, or decision brief should not add approval buttons, tool-chip stacks, or run receipts unless Soma is actually proposing or reporting work. Ask `turn this into work` when you want Soma to move from answer to execution.
 
+When work will run once, on a schedule, as a continuing service, as a project, or as an extension to Soma, open `Details` to check how it can be stopped, retried, or recovered. These controls remain attached to the approved work after handoff and reload. They stay out of the default approval pause so the conversation remains readable.
+
 Before creating teams, enabling MCP servers, assigning tools, changing capability bindings, using private services, or storing recurring behavior, Soma should:
 
 1. Review the latest request and relevant prior context.
@@ -56,15 +59,17 @@ Before creating teams, enabling MCP servers, assigning tools, changing capabilit
 
 Confirming with `yes`, `confirm`, `proceed`, `do it`, or `one time` should bind to the prior inferred action instead of starting a new unrelated request.
 
+### Outcome Templates
+
+You can ask Soma to draft or check reusable Outcome Template configuration without leaving the conversation. Preview is read-only: when you provide YAML/JSON, Soma validates that exact document and says whether it is valid while making clear that nothing was saved or activated. A direct answer cannot delegate work or run another mutation in place of preview.
+
+Saving and activating are separate governed actions. Ask Soma to `save this Outcome Template` to create an immutable revision, then ask it to `use` or `activate` the saved revision when you are ready. Soma should show one compact proposal for each mutation, preserve the revision identity, and report whether the template is merely saved or actually active. Direct files under the configured Mycelis config root use the same parser, validation, digest, scope, approval, and activation rules.
+
+After activation, ask Soma naturally to `use the active Outcome Template for this work`. Soma resolves the template in the current organization/workspace scope and snapshots the exact saved version and digest into the work it shapes. Reloading the conversation does not change that identity, and a later template revision cannot silently redefine already approved work. You do not need to manage ConfigDocument or WorkIntent records to use this path; those details remain available through proof or Inspect.
+
 ## Reading The Soma Workspace
 
-The dashboard keeps Soma chat primary. A quiet current-work strip above chat summarizes:
-
-- current workflow state
-- latest retained output title and direct open/folder actions
-- review count
-- unresolved recovery work when output is ready but some proof/work still needs attention
-- the next action: `Review output` or `Review work`
+The dashboard keeps Soma chat primary. When meaningful work exists, one compact background-work indicator shows the Outcome health and whether anything needs you. Opening it reveals a bounded work list over the conversation; it never narrows Soma or turns the page into a dashboard.
 
 File paths and detailed proof stay out of the default strip unless needed. Open the review panel when you need more detail. Its tabs keep dense information out of the main chat:
 
@@ -73,9 +78,15 @@ File paths and detailed proof stay out of the default strip unless needed. Open 
 - `Trust`: what happened, evidence, run/proof links, and next step
 - `Context`: tools, saved context, and setup cues
 
+The review panel overlays the conversation instead of resizing it. It is for locating and triaging work, not for operating a substantial deliverable. On compact screens it uses an opaque full-width sheet so background text cannot compete with review content. Exact package-reference duplicates must not appear as a second output, and supporting files remain available under Details or Inspect.
+
+When a document, application, report, dataset, media item, or package becomes the object of attention, **Open output** promotes it into a dedicated Mycelis surface with enough room to read, operate, compare, or validate it instead of exposing a raw workspace-file endpoint. Completion shows one short summary and one primary **Open output** action. Folder access, Resources, proof, versions, download, and technical references are secondary. **Back to Soma** returns to the originating conversation, query, and Outcome context.
+
 When output is ready and recovery is also present, Soma should say that plainly, keep the output openable, and point you to the Work tab for recovery.
 
-Soma replies may also show small action-state cards inside the thread. These compact cards translate structured work state into user language such as `Approval sent`, `Execution started`, `Output ready`, or `Needs recovery` without repeating the same event text in multiple places or exposing raw routing subjects and system payloads. When a handoff has a run receipt, the card should offer a plain `Open run receipt` link for proof and recovery review.
+Soma replies may also show one small action-state card inside the thread. Consecutive machine updates for the same work collapse into the latest state, while the full event history remains available through proof and inspection. The card uses user language such as `Work started`, `Output ready`, or `Soma needs your direction`; technical provider, tool, status, and routing detail stays under `What happened`. The composer is the continuation path, so status events do not add repeated continuation buttons. `Work started` means the approved plan is durably queued or running; it is not completion proof. When work stops, Soma explains that no usable result was produced and suggests plain conversational choices such as trying again, using another available service, or changing the request.
+
+While work is running, keep using the same composer. Explicit guidance such as `also include a compact comparison table` or `tell the team to remove customer identifiers` is attached to that active work and passed to its team without making Soma wait for completion. Soma acknowledges the handoff in one short reply, and the final result returns to the same conversation. Questions such as `what is the team doing?` remain normal conversation rather than silently changing the work.
 
 ## Outputs
 
@@ -84,19 +95,19 @@ Soma responses can include:
 1. **Primary answer**: markdown text, code blocks, links, and tables. Table-like data should render as a real table, not as pasted aligned text. Compact labels such as `Quick answer`, `Summary`, or `Decision brief` may appear only to clarify answer depth.
 2. **Inline generated outputs**: images, audio, video, code, charts, briefs, data, documents, and media previews.
 3. **Output package**: a retained file/app/package with `Open file`, `Open folder`, proof, and Resources re-entry.
-4. **Proposal block**: a compact `Approve this?` or `Start this?` conversational pause for actions that execute or change something.
+4. **Proposal quote**: a compact summary and short work list for actions that execute or change something. Reply `approve`, `go ahead`, or `start` in the normal composer to begin; reply `cancel` to cancel; otherwise tell Soma what to change.
 5. **Recovery/blocker card**: a compact trust boundary in the thread, with what failed, what remains trusted, what is not trusted, and what can safely happen next behind `Details and proof`.
 6. **Action-state card**: the current status, route, capability use, or next step for structured Soma work.
 
-No mutation executes until you confirm. Opening `Details`, asking for more explanation, or requesting a deeper brief is not approval. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Details` unless they require immediate attention.
+No mutation executes until you confirm. Only a bounded approval reply resolves the pending proposal. A qualified reply such as `approve after changing the title` remains ordinary conversation so Soma can revise it safely. Opening `Details`, asking for more explanation, or requesting a deeper brief is not approval. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Details` unless they require immediate attention.
 
 Saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details. Use `Resources -> Output Files` for broader browsing later.
 
 When Soma is planning or reporting work, the visible plan should name the expected output shape first: table/report, app/package, code/script, media, document, dataset, or mixed output. App/package work should include a direct open path, usage notes, validation status, folder access, proof, and a way to ask Soma for follow-up changes without forcing the operator to read internal team/tool topology.
 
-Proposal details may show an `Expected output` cue. This is not a separate action to approve; it is Soma's contract for what the team or capability must bring back, such as an app/package with an openable entrypoint, a table, a document, media, code, or a dataset. The same expected output follows the approval into the run receipt and team handoff, so the work can be reviewed later against what Soma said it would deliver. When an asynchronous team returns the retained output, Current Work should carry the openable output plus proof/receipt cue even if the Soma chat only shows a compact handoff sentence. If a team later says it is done but does not attach the retained file, folder, media, package, or output ref that satisfies the contract, Soma should mark the work as needing recovery and ask the team to attach or regenerate the deliverable. The main approval card stays short, while output shape, launch hint, validation, bus/team wiring, and proof expectations stay behind `Details`.
+Proposal details may show an `Expected output` cue. This is not a separate action to approve; it is Soma's contract for what the team or capability must bring back, such as an app/package with an openable entrypoint, a table, a document, media, code, or a dataset. The same expected output follows the approval into the run receipt and team handoff, so the work can be reviewed later against what Soma said it would deliver. Outcome-language requests for a retained app, package, executable, or playable multi-file product should produce a bounded delivery-team proposal without requiring you to name the team yourself; a request for one exact file remains direct. When an asynchronous team returns an interactive package, Soma first reports that the retained candidate is being checked and stays available for conversation while Core validates it. `Work complete` with **Open app** or **Open output** appears only after the exact retained package passes its approved browser workflow. A missing attachment, entrypoint, dependency, non-responsive control, page error, failed local asset, or unavailable validator becomes recovery and asks the same team to repair or regenerate the deliverable. Packages live under the producing team's `groups/<team-id>/generated/...` folder. The main approval card stays short, while output shape, launch hint, validation, bus/team wiring, and proof expectations stay behind `Details`.
 
-Trusted compact receipts in the Soma thread should expose app/package outputs without requiring a full panel: **Open app**, **Open folder**, **Open in Resources**, validation status when available, and **Reply** for follow-up changes.
+Trusted compact receipts in the Soma thread expose the output title, Outcome health, a short completion summary, and one primary **Open output** action. Use Details for folder access, Resources, proof, versions, download, and technical references. Use the normal conversation to ask for changes; Soma keeps the delivered output and Outcome identity attached to that follow-up.
 
 Use **Reply** on a delivered output or project package when you want Soma to keep that exact output as context for the next request. Reply does not execute work by itself. It keeps the output visible, shows a compact `Continuing from` indicator, leaves the composer ready for your natural follow-up, and sends typed continuation context with the output title, workspace reference, and proof id when available. You can ask to update it, make an alternate version, generate downstream material from it, inspect it, or route it to another team; Soma classifies that follow-up separately from whether approval is required. If a file should become reusable long-term source material rather than just a one-request handoff, ask Soma to save it as governed context or use `Resources -> Deployment Context`.
 
@@ -104,7 +115,7 @@ Resources can start the same one-shot continuation flow. Use **Ask Soma with thi
 
 ## Teams And Groups
 
-Root Soma is organization-wide. Focused team lanes keep chat, active work, retained outputs, and proof scoped together through the `Working in` picker.
+Root Soma is organization-wide. When a Groups or Outcome link opens a focused conversation, the header quietly names that context. Ask Soma to change, combine, or leave that context; team selection and routing are not required controls in the default conversation.
 
 Team defaults:
 
@@ -166,7 +177,7 @@ Use these boundaries:
 
 ## Direct Drafting
 
-If you ask for plain chat content such as a short letter, note, email, or message, Soma should answer directly in chat. It should not route that request through file tools, local commands, or council delegation unless you ask to save, inspect, execute, or hand off the work.
+If you ask for plain chat content such as a short letter, note, email, or message, Soma should answer directly in chat. It should not route that request through file tools, local commands, or team delegation unless you ask to save, inspect, execute, or hand off the work.
 
 If you ask `what is your current state` or `what teams currently exist`, Soma should answer from current runtime and team state rather than giving a generic provider apology.
 

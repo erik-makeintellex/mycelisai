@@ -1,6 +1,12 @@
 package swarm
 
-import "testing"
+import (
+	"fmt"
+	"slices"
+	"testing"
+
+	"github.com/mycelis/core/pkg/protocol"
+)
 
 func TestBuildRuntimeTeamManifest_DefaultsAskRoutingHints(t *testing.T) {
 	manifest := buildRuntimeTeamManifest(map[string]any{
@@ -21,6 +27,10 @@ func TestBuildRuntimeTeamManifest_DefaultsAskRoutingHints(t *testing.T) {
 	}
 	if manifest.AskRouting["implementation"] != "implementer" {
 		t.Fatalf("implementation ask routing = %q", manifest.AskRouting["implementation"])
+	}
+	wantInput := fmt.Sprintf(protocol.TopicTeamInternalCommand, "research-team")
+	if len(manifest.Inputs) != 1 || manifest.Inputs[0] != wantInput {
+		t.Fatalf("runtime team inputs = %#v, want %q", manifest.Inputs, wantInput)
 	}
 }
 
@@ -72,5 +82,29 @@ func TestBuildRuntimeTeamManifest_PreservesSpecialistRoster(t *testing.T) {
 	}
 	if len(manifest.Members[2].Tools) == 0 || manifest.Members[2].Tools[0] != "store_artifact" {
 		t.Fatalf("fallback tools = %#v, want store_artifact fallback", manifest.Members[2].Tools)
+	}
+}
+
+func TestBuildRuntimeTeamManifest_UsesApprovedCapabilitiesAsWorkerTools(t *testing.T) {
+	manifest := buildRuntimeTeamManifest(map[string]any{
+		"team_id": "application-delivery-team",
+		"required_capabilities": []any{
+			"team_orchestration",
+			"write_file",
+			"store_artifact",
+			"read_file",
+			"local_command",
+		},
+	})
+	if manifest == nil || len(manifest.Members) != 1 {
+		t.Fatalf("manifest = %#v, want one runtime worker", manifest)
+	}
+	for _, want := range []string{"write_file", "store_artifact", "read_file", "local_command"} {
+		if !slices.Contains(manifest.Members[0].Tools, want) {
+			t.Fatalf("worker tools = %#v, want %q from approved capabilities", manifest.Members[0].Tools, want)
+		}
+	}
+	if slices.Contains(manifest.Members[0].Tools, "team_orchestration") {
+		t.Fatalf("worker tools = %#v, generic capability is not an executable tool", manifest.Members[0].Tools)
 	}
 }

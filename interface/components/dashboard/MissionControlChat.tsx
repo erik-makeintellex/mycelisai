@@ -6,6 +6,7 @@ import { useCortexStore } from "@/store/useCortexStore";
 import { SomaConversationThread } from "@/components/soma/SomaConversationThread";
 import { SomaIntentInput } from "@/components/soma/SomaIntentInput";
 import { useSomaOutputContinuation } from "@/components/soma/outputContinuation";
+import { takePendingSomaPrompt } from "@/components/soma/somaPromptHandoff";
 import type { MissionChatContinuationContext } from "@/store/cortexStoreTypes";
 import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "@/components/soma/SomaSuggestionBar";
 import CouncilCallErrorCard from "./CouncilCallErrorCard";
@@ -19,6 +20,9 @@ import OrchestrationInspector from "./OrchestrationInspector";
 import { somaPlaceholder, teamSuggestions } from "./missionControlChatUi";
 import { buildMissionChatScope } from "@/store/cortexStoreMissionChatHelpers";
 import { clearAllPersistedChat } from "@/store/cortexStoreUtils";
+import { conversationalProposalReply } from "./conversationalProposalReply";
+import { presentMissionChat } from "./missionControlChatPresentation";
+import { activeWorkContextFromMessages } from "@/store/cortexStoreThreadEvents";
 
 export default function MissionControlChat({
     simpleMode = false,
@@ -37,11 +41,16 @@ export default function MissionControlChat({
     const isMissionChatting = useCortexStore((s) => s.isMissionChatting);
     const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
     const sendMissionChat = useCortexStore((s) => s.sendMissionChat);
+    const pendingProposal = useCortexStore((s) => s.pendingProposal);
+    const confirmProposal = useCortexStore((s) => s.confirmProposal);
+    const cancelProposal = useCortexStore((s) => s.cancelProposal);
     const clearMissionChat = useCortexStore((s) => s.clearMissionChat);
     const setMissionChatScope = useCortexStore((s) => s.setMissionChatScope);
     const broadcastToSwarm = useCortexStore((s) => s.broadcastToSwarm);
     const isBroadcasting = useCortexStore((s) => s.isBroadcasting);
     const assistantName = useCortexStore((s) => s.assistantName);
+    const presentedMissionChat = useMemo(() => presentMissionChat(missionChat), [missionChat]);
+    const activeWorkContext = useMemo(() => activeWorkContextFromMessages(missionChat), [missionChat]);
     const councilTarget = useCortexStore((s) => s.councilTarget);
     const councilMembers = useCortexStore((s) => s.councilMembers);
     const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
@@ -53,6 +62,7 @@ export default function MissionControlChat({
     const [pendingContinuationContext, setPendingContinuationContext] = useState<MissionChatContinuationContext | null>(null);
     const [broadcastMode, setBroadcastMode] = useState(false);
     const [fetchedMembers, setFetchedMembers] = useState(false);
+    const [isReplyingToProposal, setIsReplyingToProposal] = useState(false);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const showAdvancedRouting = !simpleMode;
@@ -66,9 +76,21 @@ export default function MissionControlChat({
         [organizationId, currentTeamId],
     );
     const activeSuggestions = currentTeam ? teamSuggestions(currentTeam.name) : suggestions;
-    const isLoading = isMissionChatting || isBroadcasting;
+    const isLoading = isMissionChatting || isBroadcasting || isReplyingToProposal;
     const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
     useSomaOutputContinuation({ disabled: isLoading, inputRef, setInput, setContinuationContext: setPendingContinuationContext });
+
+    useEffect(() => {
+        if (isLoading) return;
+        const pendingPrompt = takePendingSomaPrompt();
+        if (!pendingPrompt) return;
+        const timeout = window.setTimeout(() => {
+            setPendingContinuationContext(null);
+            setInput(pendingPrompt);
+            inputRef.current?.focus();
+        }, 0);
+        return () => window.clearTimeout(timeout);
+    }, [isLoading]);
 
     useEffect(() => {
         setCouncilTarget("admin");
@@ -118,14 +140,33 @@ export default function MissionControlChat({
             : trimmed;
 
         if (!content) return;
-        if (isBroadcast) {
+        const proposalReply = pendingProposal && !isBroadcast
+            ? conversationalProposalReply(content)
+            : null;
+        if (proposalReply === "confirm") {
+            setInput("");
+            setPendingContinuationContext(null);
+            setIsReplyingToProposal(true);
+            void confirmProposal(pendingProposal ?? undefined, content)
+                .finally(() => setIsReplyingToProposal(false));
+        } else if (proposalReply === "cancel") {
+            setInput("");
+            setPendingContinuationContext(null);
+            cancelProposal(content);
+        } else if (isBroadcast) {
             broadcastToSwarm(content);
             setPendingContinuationContext(null);
         } else {
-            sendMissionChat(content, pendingContinuationContext ? { continuation_context: pendingContinuationContext } : undefined);
+            const options = pendingContinuationContext || activeWorkContext
+                ? {
+                    continuation_context: pendingContinuationContext ?? undefined,
+                    active_work_context: activeWorkContext ?? undefined,
+                }
+                : undefined;
+            sendMissionChat(content, options);
             setPendingContinuationContext(null);
         }
-        setInput("");
+        if (!proposalReply) setInput("");
     };
 
     const applyStarterPrompt = (prompt: string) => {
@@ -202,7 +243,7 @@ export default function MissionControlChat({
                         />
                     )
                 ) : (
-                    missionChat.map((msg, i) => (
+                    presentedMissionChat.map((msg, i) => (
                         <MissionControlMessageBubble key={i} msg={msg} compactResult={simpleMode} />
                     ))
                 )}

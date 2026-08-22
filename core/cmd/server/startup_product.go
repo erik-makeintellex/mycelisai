@@ -104,11 +104,23 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 		services.RunsManager,
 	)
 	wireAdminServices(ctx, mux, core, adminSrv, services)
+	if core.SharedDB != nil {
+		if err := server.StartTeamWorkRecoveryReconciler(ctx, adminSrv); err != nil {
+			log.Printf("WARN: Team work recovery reconciler disabled: %v", err)
+		} else {
+			log.Println("Team work recovery reconciler active.")
+		}
+	}
 	if core.SharedDB != nil && core.NC != nil && core.NC.IsConnected() {
 		if err := server.StartTeamWorkSignalProjection(ctx, adminSrv); err != nil {
 			log.Printf("WARN: Team work signal projection disabled: %v", err)
 		} else {
 			log.Println("Team work signal projection active.")
+		}
+		if err := server.StartConfirmedActionDispatch(ctx, adminSrv); err != nil {
+			log.Printf("WARN: Confirmed action dispatch disabled: %v", err)
+		} else {
+			log.Println("Confirmed action dispatch active.")
 		}
 		if err := server.StartRegisteredInputProjection(ctx, adminSrv); err != nil {
 			log.Printf("WARN: Registered input projection disabled: %v", err)
@@ -141,7 +153,7 @@ func startProductServices(ctx context.Context, core *coreRuntime) productService
 	memService := core.MemService
 	services := productServices{
 		Provisioning: provisioning.NewEngine(cogRouter),
-		Stream:       mycelisSignal.NewStreamHandler(),
+		Stream:       mycelisSignal.NewStreamHandler(sharedDB),
 		Comms:        comms.NewGatewayFromEnv(),
 		Search:       searchcap.NewService(searchcap.ConfigFromEnv(), cogRouter, memService),
 		Inputs:       inputs.NewService(),

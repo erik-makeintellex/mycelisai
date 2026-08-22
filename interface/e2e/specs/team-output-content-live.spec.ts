@@ -257,7 +257,8 @@ async function expectTeamOutputVisibleOnDashboard(page: Page, ask: TeamOutputAsk
     await page.goto(`/dashboard?team_id=${encodeURIComponent(ask.teamID)}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('soma-operating-surface')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId('focused-team-output-dock')).toHaveCount(0);
-    await expect(page.getByTestId('soma-team-context-switcher')).toContainText('Working in');
+    await expect(page.getByTestId('soma-team-context-switcher')).toHaveCount(0);
+    await expect(page.getByText(new RegExp(`Continuing ${ask.teamID}`, 'i'))).toBeVisible();
     const digest = page.getByTestId('soma-workbench-output-digest');
     await expect(digest).toBeVisible({ timeout: 30_000 });
     await expect(digest.getByText(ask.filePath).first()).toBeVisible();

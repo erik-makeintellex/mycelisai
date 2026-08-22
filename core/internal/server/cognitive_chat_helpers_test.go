@@ -129,6 +129,17 @@ func TestBuildPlannedToolCalls_StartsComplexTeamEvocationBrief(t *testing.T) {
 	}
 }
 
+func TestFirstPlannedOutputTarget_PrefersSavedMediaOverPlanningBrief(t *testing.T) {
+	calls := []protocol.PlannedToolCall{
+		{Name: "write_file", Arguments: map[string]any{"path": "groups/media-team/planning/TEAM_EVOCATION.md"}},
+		{Name: "generate_image", Arguments: map[string]any{"prompt": "Soma portrait"}},
+		{Name: "save_cached_image", Arguments: map[string]any{"folder": "groups/media-team/media", "filename": "soma-portrait.png"}},
+	}
+	if target := firstPlannedOutputTarget(calls); target != "groups/media-team/media/soma-portrait.png" {
+		t.Fatalf("target = %q, want retained image path", target)
+	}
+}
+
 func TestBuildPlannedToolCalls_PackageAskCreatesEvocationBrief(t *testing.T) {
 	request := strings.Join([]string{
 		"Create a team named First Demo Game Team and get them to build a playable browser game.",
@@ -243,13 +254,16 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationProposal(t *test
 	}
 
 	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
-	requirePlannedCallNames(t, calls, "create_team", "write_file")
+	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
 	if calls[0].Arguments["name"] != "First Demo Game Team" {
 		t.Fatalf("team name = %#v, want First Demo Game Team", calls[0].Arguments["name"])
 	}
 	path, _ := calls[1].Arguments["path"].(string)
 	if path != "groups/first-demo-game-team/planning/TEAM_EVOCATION.md" {
 		t.Fatalf("path = %q, want team evocation brief", path)
+	}
+	if calls[2].Arguments["path"] != "groups/first-demo-game-team/planning/RESEARCH_COUNCIL_HANDOFF.md" {
+		t.Fatalf("handoff path = %#v, want team-owned preparation", calls[2].Arguments["path"])
 	}
 	content, _ := calls[1].Arguments["content"].(string)
 	if !strings.Contains(content, "Team Evocation Brief") || !strings.Contains(content, "research, council review") {
@@ -288,6 +302,9 @@ func TestInferCreateTeamPlanFromRequest_DefaultResearchTeam(t *testing.T) {
 	}
 	if call.Arguments["role"] != "researcher" {
 		t.Fatalf("role = %#v", call.Arguments["role"])
+	}
+	if call.Arguments["profile_ref"] != "default.researcher" {
+		t.Fatalf("profile_ref = %#v, want default.researcher", call.Arguments["profile_ref"])
 	}
 	if call.Arguments["initial_member_count"] != 1 || call.Arguments["recommended_member_limit"] != 3 {
 		t.Fatalf("minimal staffing args = %#v, want lead-only start with bounded expansion", call.Arguments)

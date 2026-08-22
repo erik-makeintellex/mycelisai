@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import type { CatalogueAgent } from "@/store/cortexStoreTypesPlanning";
 
 export const mockTeams = [
   {
@@ -51,7 +52,7 @@ export const mockTeams = [
   },
 ];
 
-export const mockTemplates = [
+export const mockTemplates: CatalogueAgent[] = [
   {
     id: "template-marketing-writer",
     name: "Marketing Writer",
@@ -64,6 +65,8 @@ export const mockTemplates = [
     verification_strategy: "semantic",
     verification_rubric: ["clear", "on-brand"],
     validation_command: "",
+    source: "built_in",
+    locked: true,
     created_at: new Date("2026-04-07T10:00:00Z").toISOString(),
     updated_at: new Date("2026-04-07T12:00:00Z").toISOString(),
   },
@@ -79,6 +82,8 @@ export const mockTemplates = [
     verification_strategy: "semantic",
     verification_rubric: ["grounded"],
     validation_command: "",
+    source: "built_in",
+    locked: true,
     created_at: new Date("2026-04-07T09:00:00Z").toISOString(),
     updated_at: new Date("2026-04-07T11:00:00Z").toISOString(),
   },

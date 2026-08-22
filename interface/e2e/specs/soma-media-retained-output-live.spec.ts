@@ -10,7 +10,6 @@ import {
   mockOrganizationWorkspace,
   openOrganization,
   sendWorkspaceMessage,
-  type ChatRequestBody,
   type RouteResponse,
 } from "../support/soma-ui-testing";
 
@@ -197,14 +196,14 @@ test.describe("Soma media retained output proof", () => {
   test("mocked browser proof shows, opens, and locates a retained local/private media output", async ({ page }) => {
     const revealCalls = await mockRetainedMediaExecution(page);
     await mockOutputFilesMCP(page);
-    await mockOrganizationWorkspace(page, (_requestBody: ChatRequestBody) => mediaTeamProposal());
+    await mockOrganizationWorkspace(page, () => mediaTeamProposal());
 
     await openOrganization(page);
     await sendWorkspaceMessage(page, "Create a local/private media team output and retain the image for review.");
 
     await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(mediaPath).last()).toBeVisible();
-    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+    await confirmProposal(page);
 
     await expect(page.getByText("Latest output").last()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(mediaTitle).last()).toBeVisible();
@@ -225,7 +224,7 @@ test.describe("Soma media retained output proof", () => {
     await enableAdvancedMode(page);
     await page.goto("/resources?tab=workspace", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: /Output Files/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Output Files/i })).toBeVisible();
     await page.getByRole("button", { name: "Open folder saved-media" }).click();
     await page.getByRole("button", { name: "Open folder media-team-proof" }).click();
     await expect(page.getByText("storyboard-frame.png")).toBeVisible();

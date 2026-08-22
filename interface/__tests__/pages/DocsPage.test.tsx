@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { mockFetch } from '../setup';
 
 const routerReplace = vi.fn();
@@ -129,12 +129,96 @@ describe('DocsPage', () => {
         expect(routerReplace).toHaveBeenLastCalledWith('/docs?doc=workflow-variants-and-plan-memory', { scroll: false });
     });
 
+    it('uses a list-to-article flow with an obvious return action on mobile', async () => {
+        docSearchParams.delete('doc');
+        mockFetch.mockImplementation(async (input) => {
+            const url = String(input);
+            if (url === '/docs-api') {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        sections: [
+                            {
+                                section: 'Start here',
+                                docs: [
+                                    {
+                                        slug: 'getting-started',
+                                        label: 'Getting Started',
+                                        path: 'docs/user/getting-started.md',
+                                    },
+                                    {
+                                        slug: 'working-with-soma',
+                                        label: 'Working With Soma',
+                                        path: 'docs/user/working-with-soma.md',
+                                    },
+                                ],
+                            },
+                        ],
+                    }),
+                } as Response;
+            }
+            if (url.startsWith('/docs-api/')) {
+                const slug = url.split('/').pop();
+                return {
+                    ok: true,
+                    json: async () => ({
+                        slug,
+                        label: slug === 'working-with-soma' ? 'Working With Soma' : 'Getting Started',
+                        content: slug === 'working-with-soma' ? '# Work With Soma' : '# Getting Started',
+                    }),
+                } as Response;
+            }
+            throw new Error(`unexpected fetch: ${url}`);
+        });
+
+        render(<DocsPage />);
+
+        const navigation = await screen.findByTestId('docs-navigation-pane');
+        const article = screen.getByTestId('docs-article-pane');
+        expect(navigation.classList.contains('hidden')).toBe(false);
+        expect(article.classList.contains('hidden')).toBe(true);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Working With Soma' }));
+        expect(await screen.findByRole('heading', { name: 'Work With Soma' })).toBeDefined();
+        expect(navigation.classList.contains('hidden')).toBe(true);
+        expect(article.classList.contains('hidden')).toBe(false);
+
+        fireEvent.click(screen.getByRole('button', { name: 'All docs' }));
+        expect(navigation.classList.contains('hidden')).toBe(false);
+        expect(article.classList.contains('hidden')).toBe(true);
+    });
+
     it('shows manifest error state when docs manifest fetch fails', async () => {
         mockFetch.mockRejectedValueOnce(new Error('manifest-down'));
 
         render(<DocsPage />);
 
         expect(await screen.findByText(/Failed to load doc manifest/)).toBeDefined();
+    });
+
+    it('does not replace navigation after the user leaves while the manifest is loading', async () => {
+        let resolveManifest: ((response: Response) => void) | undefined;
+        mockFetch.mockImplementation(() => new Promise<Response>((resolve) => {
+            resolveManifest = resolve;
+        }));
+
+        const { unmount } = render(<DocsPage />);
+        unmount();
+
+        await act(async () => {
+            resolveManifest?.({
+                ok: true,
+                json: async () => ({
+                    sections: [{
+                        section: 'Start here',
+                        docs: [{ slug: 'getting-started', label: 'Getting Started', path: 'docs/user/getting-started.md' }],
+                    }],
+                }),
+            } as Response);
+            await Promise.resolve();
+        });
+
+        expect(routerReplace).not.toHaveBeenCalled();
     });
 
     it('shows a readable doc-load error when a selected doc fetch fails', async () => {

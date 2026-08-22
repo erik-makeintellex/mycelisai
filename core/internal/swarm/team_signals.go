@@ -2,6 +2,7 @@ package swarm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,15 +13,43 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+const teamCommandCorrelationTTL = 30 * time.Minute
+
 // handleTrigger receives an external signal and broadens it to the internal team bus.
 func (t *Team) handleTrigger(msg *nats.Msg) {
 	log.Printf("Team [%s] Triggered by [%s]", t.Manifest.Name, msg.Subject)
-	internalSubject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID)
 	payload := normalizeCommandPayload(msg.Data)
+	guidance, steering := extractTeamSteering(payload)
 	if correlation := extractTeamCommandCorrelation(t.Manifest.ID, msg.Data, payload); correlation != nil {
-		t.rememberCommandCorrelation(*correlation)
+		accepted, err := t.acceptCommand(context.Background(), *correlation, msg.Subject, steering)
+		if err != nil {
+			log.Printf("Team [%s] could not durably accept command [%s]: %v", t.Manifest.Name, correlation.commandKey(), err)
+			return
+		}
+		if !accepted {
+			log.Printf("Team [%s] ignored replayed command [%s]", t.Manifest.Name, correlation.commandKey())
+			return
+		}
+		if t.commandReceipts != nil {
+			t.publishCommandAccepted(*correlation, msg.Subject)
+		}
 	}
+	if steering {
+		t.publishAgentInterjections(guidance)
+		return
+	}
+	internalSubject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID)
 	t.nc.Publish(internalSubject, payload)
+}
+
+func (t *Team) acceptCommandCorrelation(ctx context.Context, correlation teamCommandCorrelation, sourceChannel string) (bool, error) {
+	if t.commandReceipts != nil {
+		accepted, err := t.commandReceipts.AcceptCommand(ctx, correlation, sourceChannel)
+		if err != nil || !accepted {
+			return accepted, err
+		}
+	}
+	return t.rememberCommandCorrelation(correlation), nil
 }
 
 func normalizeCommandPayload(data []byte) []byte {
@@ -94,24 +123,53 @@ func (t *Team) handleResponse(msg *nats.Msg) {
 	}
 }
 
-func (t *Team) rememberCommandCorrelation(correlation teamCommandCorrelation) {
+func (t *Team) rememberCommandCorrelation(correlation teamCommandCorrelation) bool {
 	if strings.TrimSpace(correlation.WorkItemID) == "" {
-		return
+		return true
 	}
 	correlation.TeamID = firstNonEmptySignalString(correlation.TeamID, t.Manifest.ID)
-	correlation.ExpiresAt = time.Now().UTC().Add(5 * time.Minute)
+	// Keep response correlation beyond the durable work recovery deadline.
+	// Local-model package work can legitimately take more than five minutes;
+	// expiring first would publish an orphan result and leave work queued.
+	correlation.ExpiresAt = time.Now().UTC().Add(teamCommandCorrelationTTL)
 	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.pruneExpiredCorrelationsLocked(time.Now().UTC())
+	key := correlation.commandKey()
+	if expiry, exists := t.seenCommandKeys[key]; exists && time.Now().UTC().Before(expiry) {
+		return false
+	}
+	if t.seenCommandKeys == nil {
+		t.seenCommandKeys = map[string]time.Time{}
+	}
+	t.seenCommandKeys[key] = time.Now().UTC().Add(time.Hour)
 	t.pendingCorrelations = append(t.pendingCorrelations, correlation)
-	t.mu.Unlock()
+	return true
 }
 
 func (t *Team) responseCommandCorrelation(raw []byte) *teamCommandCorrelation {
 	if explicit := correlationFromPayload(raw); explicit != nil {
 		explicit.TeamID = firstNonEmptySignalString(explicit.TeamID, t.Manifest.ID)
+		t.forgetMatchingCommandCorrelation(*explicit)
 		return explicit
 	}
 	return t.consumeCommandCorrelation()
+}
+
+func (t *Team) forgetMatchingCommandCorrelation(explicit teamCommandCorrelation) {
+	key := explicit.commandKey()
+	if strings.TrimSpace(key) == "" {
+		return
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for i, pending := range t.pendingCorrelations {
+		if pending.commandKey() != key {
+			continue
+		}
+		t.pendingCorrelations = append(t.pendingCorrelations[:i], t.pendingCorrelations[i+1:]...)
+		return
+	}
 }
 
 func (t *Team) consumeCommandCorrelation() *teamCommandCorrelation {
@@ -128,6 +186,11 @@ func (t *Team) consumeCommandCorrelation() *teamCommandCorrelation {
 }
 
 func (t *Team) pruneExpiredCorrelationsLocked(now time.Time) {
+	for key, expiry := range t.seenCommandKeys {
+		if now.After(expiry) {
+			delete(t.seenCommandKeys, key)
+		}
+	}
 	if len(t.pendingCorrelations) == 0 {
 		return
 	}
@@ -187,10 +250,15 @@ func correlationFromMap(values map[string]any) *teamCommandCorrelation {
 		return nil
 	}
 	return &teamCommandCorrelation{
-		WorkItemID: workItemID,
-		TeamID:     signalString(values["team_id"]),
-		RunID:      signalString(values["run_id"]),
+		WorkItemID:     workItemID,
+		TeamID:         signalString(values["team_id"]),
+		RunID:          signalString(values["run_id"]),
+		IdempotencyKey: signalString(values["idempotency_key"]),
 	}
+}
+
+func (c teamCommandCorrelation) commandKey() string {
+	return firstNonEmptySignalString(c.IdempotencyKey, c.WorkItemID)
 }
 
 func correlatedTeamResponsePayload(raw []byte, correlation *teamCommandCorrelation) []byte {
@@ -209,9 +277,15 @@ func correlatedTeamResponsePayload(raw []byte, correlation *teamCommandCorrelati
 		payload["details"] = string(raw)
 	}
 	if signalString(payload["state"]) == "" {
-		payload["state"] = "output_ready"
+		if teamResponseHasBlocker(payload) {
+			payload["state"] = string(protocol.TeamWorkStateDegraded)
+			payload["needs_operator"] = true
+		} else {
+			payload["state"] = string(protocol.TeamWorkStateOutputReady)
+		}
 	}
 	payload["work_item_id"] = correlation.WorkItemID
+	payload["idempotency_key"] = correlation.commandKey()
 	payload["team_id"] = firstNonEmptySignalString(correlation.TeamID, "")
 	if correlation.RunID != "" {
 		payload["run_id"] = correlation.RunID
@@ -223,26 +297,32 @@ func correlatedTeamResponsePayload(raw []byte, correlation *teamCommandCorrelati
 	return out
 }
 
-func correlationRunID(correlation *teamCommandCorrelation) string {
-	if correlation == nil {
-		return ""
-	}
-	return correlation.RunID
-}
-
-func signalString(value any) string {
-	text, ok := value.(string)
-	if !ok {
-		return ""
-	}
-	return strings.TrimSpace(text)
-}
-
-func firstNonEmptySignalString(values ...string) string {
-	for _, value := range values {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			return trimmed
+func teamResponseHasBlocker(payload map[string]any) bool {
+	for _, key := range []string{"blocker", "blocked_by", "error"} {
+		if signalString(payload[key]) != "" {
+			return true
 		}
 	}
-	return ""
+	for _, key := range []string{"blockers", "errors"} {
+		if values, ok := payload[key].([]any); ok && len(values) > 0 {
+			return true
+		}
+	}
+	switch strings.ToLower(firstNonEmptySignalString(
+		signalString(payload["status"]),
+		signalString(payload["result"]),
+	)) {
+	case "blocked", "degraded", "failed", "failure", "incomplete", "needs_operator":
+		return true
+	}
+	text := strings.ToLower(strings.TrimSpace(firstNonEmptySignalString(
+		signalString(payload["text"]),
+		signalString(payload["details"]),
+	)))
+	for _, prefix := range []string{"blocked:", "failed:", "incomplete:", "could not "} {
+		if strings.HasPrefix(text, prefix) {
+			return true
+		}
+	}
+	return false
 }

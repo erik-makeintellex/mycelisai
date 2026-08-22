@@ -130,17 +130,23 @@ export function localMediaDependencyRecovery(degradation?: RecoveryDegradationLi
   ].filter(Boolean).join(" ").toLowerCase();
   if (
     !joined.includes("comfyui")
+    && !joined.includes("forge")
     && !joined.includes("media engine")
     && !joined.includes("media capability")
     && !joined.includes("local/private")
   ) {
     return null;
   }
+  const forgeAPIDisabled = joined.includes("forge") && (joined.includes("api mode") || joined.includes("api access is off"));
   return {
-    failed: "Local media generation is not reachable, so Soma could not create the image output.",
+    failed: forgeAPIDisabled
+      ? "Forge is open, but Soma cannot use image generation until its API mode is enabled."
+      : "The configured image generator is not ready, so Soma could not create the image output.",
     trusted: "The approval, request, failed run record, and audit trail remain available for review.",
     invalid: "No completed image output or execution proof should be trusted for this attempt.",
-    recovery: "Start or reconnect the configured ComfyUI upstream, then retry. If you only need text/files, ask Soma to rerun without image generation.",
+    recovery: forgeAPIDisabled
+      ? "Enable API mode in Forge's Pinokio launch settings, restart Forge, then tell Soma to try the image again."
+      : "Start or reconnect the configured image generator, then tell Soma to try the image again.",
   };
 }
 

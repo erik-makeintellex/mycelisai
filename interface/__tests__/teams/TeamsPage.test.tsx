@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { mockFetch } from "../setup";
+import type { CatalogueAgent, TeamDetail } from "@/store/cortexStoreTypesPlanning";
 
 vi.mock("@/components/teams/TeamDetailDrawer", () => ({
   __esModule: true,
-  default: ({ team, onClose }: any) => (
+  default: ({ team, onClose }: { team: TeamDetail; onClose: () => void }) => (
     <div data-testid="team-detail-drawer">
       <span>Drawer: {team.name}</span>
       <button onClick={onClose}>Close</button>
@@ -14,7 +15,7 @@ vi.mock("@/components/teams/TeamDetailDrawer", () => ({
 
 vi.mock("@/components/catalogue/AgentEditorDrawer", () => ({
   __esModule: true,
-  default: ({ agent, onClose }: any) => (
+  default: ({ agent, onClose }: { agent: CatalogueAgent | null; onClose: () => void }) => (
     <div data-testid="agent-editor-drawer">
       <span>{agent ? `Editing: ${agent.name}` : "Creating new template"}</span>
       <button onClick={onClose}>Close template drawer</button>
@@ -23,6 +24,7 @@ vi.mock("@/components/catalogue/AgentEditorDrawer", () => ({
 }));
 
 import TeamsPage from "@/components/teams/TeamsPage";
+import { takePendingSomaPrompt } from "@/components/soma/somaPromptHandoff";
 import { useCortexStore } from "@/store/useCortexStore";
 import { mockTeamWorkFetch, mockTeams, mockTemplates } from "./TeamsPage.fixtures";
 
@@ -32,8 +34,8 @@ describe("TeamsPage", () => {
 
   beforeEach(() => {
     window.history.pushState({}, "", "/teams");
-    global.setInterval = vi.fn(() => 1) as any;
-    global.clearInterval = vi.fn() as any;
+    global.setInterval = vi.fn(() => 1) as unknown as typeof global.setInterval;
+    global.clearInterval = vi.fn() as unknown as typeof global.clearInterval;
     useCortexStore.setState({
       teamsDetail: [],
       isFetchingTeamsDetail: false,
@@ -70,7 +72,7 @@ describe("TeamsPage", () => {
     expect(
       screen.getByText(/Specialize new teams through Soma/i),
     ).toBeDefined();
-    expect(screen.getByText(/Soma team-member templates/i)).toBeDefined();
+    expect(screen.getByRole("heading", { name: /Worker profiles/i })).toBeDefined();
     expect(
       screen
         .getByRole("link", { name: /Open guided team creation/i })
@@ -80,15 +82,12 @@ describe("TeamsPage", () => {
     expect(screen.getAllByText("Audience Researcher").length).toBeGreaterThan(
       0,
     );
-    expect(screen.getAllByText(/campaign copy/i).length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(/Agent type, model, and MCP access/i),
-    ).toBeDefined();
+    expect(screen.getByText(/Name one when you ask Soma/i)).toBeDefined();
     expect(
       screen
-        .getByRole("link", { name: /Manage MCP tools/i })
+        .getByRole("link", { name: /Manage all profiles/i })
         .getAttribute("href"),
-    ).toBe("/resources?tab=tools");
+    ).toBe("/resources?tab=roles");
     expect(screen.getByText(/Outputs and active collaboration/i)).toBeDefined();
     expect(screen.getByTestId("active-work-lane")).toBeDefined();
     expect(screen.getByText("Active work lane")).toBeDefined();
@@ -96,7 +95,7 @@ describe("TeamsPage", () => {
       expect(screen.getByText("Draft launch package")).toBeDefined();
     });
     expect(screen.getByText("Durable team-work state loaded.")).toBeDefined();
-    expect(screen.getAllByText("Output ready").length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText("Outcome health: Completed").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Durable team work").length).toBeGreaterThan(0);
     expect(screen.queryByText("Projection fallback")).toBeNull();
     expect(screen.queryByText(/Durable TeamWorkItem records were unavailable/i)).toBeNull();
@@ -119,7 +118,7 @@ describe("TeamsPage", () => {
     ).toBe("/dashboard");
     expect(
       screen
-        .getByRole("link", { name: /Open full role library/i })
+        .getByRole("link", { name: /Manage all profiles/i })
         .getAttribute("href"),
     ).toBe("/resources?tab=roles");
     expect(screen.getByText(/2 teams/)).toBeDefined();
@@ -159,7 +158,7 @@ describe("TeamsPage", () => {
           String(url).includes("/api/v1/teams/team-bravo/work?limit=8&include_archived=false"),
         ).length,
       ).toBeGreaterThan(1);
-    });
+    }, { timeout: 5000 });
   });
 
   it("posts recover and steer actions as durable team-work evidence", async () => {
@@ -258,7 +257,7 @@ describe("TeamsPage", () => {
     expect(screen.queryByText("nats.output.alpha")).toBeNull();
   });
 
-  it("opens the team-member template drawer from the teams page", () => {
+  it("hands worker profile creation to Soma without opening the legacy editor", () => {
     useCortexStore.setState({
       teamsDetail: mockTeams,
       catalogueAgents: mockTemplates,
@@ -266,11 +265,10 @@ describe("TeamsPage", () => {
 
     render(<TeamsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: /new template/i }));
-    expect(screen.getByTestId("agent-editor-drawer")).toBeDefined();
-    expect(screen.getByText("Creating new template")).toBeDefined();
+    window.history.replaceState({}, "", "/dashboard");
+    fireEvent.click(screen.getByRole("button", { name: /create with soma/i }));
 
-    fireEvent.click(screen.getByRole("button", { name: /Marketing Writer/i }));
-    expect(screen.getByText("Editing: Marketing Writer")).toBeDefined();
+    expect(screen.queryByTestId("agent-editor-drawer")).toBeNull();
+    expect(takePendingSomaPrompt()).toContain("create a reusable Worker Profile");
   });
 });

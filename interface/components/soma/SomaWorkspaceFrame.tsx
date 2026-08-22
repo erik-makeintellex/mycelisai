@@ -1,22 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Boxes, FileText, Radio, ShieldCheck, Sparkles, X } from "lucide-react";
-import {
-  outputWorkbenchDigest,
-} from "./OutputWorkbenchDigest";
+import { outputWorkbenchDigest } from "./OutputWorkbenchDigest";
 import { OutputWorkbench } from "./OutputWorkbench";
 import { SomaCurrentWorkLane } from "./SomaCurrentWorkLane";
 
 type PanelKey = "work" | "output" | "trust" | "context";
-
 function SlotPanel({
   icon,
   label,
   description,
   children,
   className = "",
+  framed = true,
   showHeader = true,
 }: {
   icon: React.ReactNode;
@@ -24,19 +22,18 @@ function SlotPanel({
   description?: string;
   children: React.ReactNode;
   className?: string;
+  framed?: boolean;
   showHeader?: boolean;
 }) {
   return (
-    <section className={`min-w-0 rounded-xl border border-cortex-border bg-cortex-bg p-2.5 ${className}`}>
+    <section className={`${framed ? "min-w-0 overflow-hidden rounded-xl border border-cortex-border bg-cortex-bg p-2.5" : "min-w-0"} ${className}`}>
       {showHeader ? (
         <div className="mb-2 flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-[0.16em] text-cortex-text-muted">
           <span className="text-cortex-primary">{icon}</span>
           {label}
         </div>
       ) : null}
-      {description ? (
-        <p className="sr-only">{description}</p>
-      ) : null}
+      {description ? <p className="sr-only">{description}</p> : null}
       {children}
     </section>
   );
@@ -65,6 +62,8 @@ export function SomaWorkspaceFrame({
 }) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<PanelKey>("work");
+  const sideRailRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const sideRailId = "soma-workbench-panel";
   const panels = [
     {
@@ -109,6 +108,7 @@ export function SomaWorkspaceFrame({
   const primaryPanelKey = primaryPanel ?? (outputPanel ? "output" : "work");
   const primaryReviewPanel = panels.find((panel) => panel.key === primaryPanelKey) ?? outputPanel ?? panels[0];
   const selectedPanel = panels.find((panel) => panel.key === activePanel) ?? outputPanel ?? panels[0];
+  const isDedicatedOutputReview = selectedPanel?.key === "output";
   const hasPanels = panels.length > 0;
   const baseReviewCount = reviewCount ?? outputDigest?.count ?? panels.length;
   const visibleReviewCount = primaryReviewPanel?.key === "output"
@@ -129,6 +129,50 @@ export function SomaWorkspaceFrame({
   const recoveryReviewCopy = recoveryReviewCount > 0
     ? `${recoveryReviewCount} recovery ${recoveryReviewCount === 1 ? "item" : "items"} also ${recoveryReviewCount === 1 ? "needs" : "need"} review.`
     : null;
+
+  useEffect(() => {
+    if (!isPanelOpen) return;
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const closeButton = sideRailRef.current?.querySelector<HTMLButtonElement>('button[aria-label="Close work panel"]');
+    closeButton?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsPanelOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(sideRailRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? []);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        sideRailRef.current?.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !sideRailRef.current?.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !sideRailRef.current?.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousBodyOverflow;
+      previousFocusRef.current?.focus();
+    };
+  }, [isPanelOpen]);
 
   const togglePanel = () => {
     setIsPanelOpen((open) => {
@@ -173,12 +217,21 @@ export function SomaWorkspaceFrame({
       {hasPanels ? (
         <>
           <div
+            ref={sideRailRef}
             id={sideRailId}
+            role={isPanelOpen ? "dialog" : undefined}
+            aria-modal={isPanelOpen ? "true" : undefined}
+            aria-label={isFocusedWorkReview ? "Review work" : "Review output"}
             aria-hidden={!isPanelOpen}
-            className={`fixed bottom-3 right-3 top-3 z-40 flex w-[min(92vw,440px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface/95 p-3 shadow-2xl shadow-black/20 backdrop-blur transition duration-200 ${
-              isPanelOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
+            className={`fixed inset-x-2 bottom-2 top-2 z-40 flex min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3 shadow-2xl shadow-black/20 transition-[width,transform,opacity] duration-200 sm:bottom-3 sm:left-auto sm:right-3 sm:top-3 sm:bg-cortex-surface/95 sm:backdrop-blur ${
+              isDedicatedOutputReview
+                ? "sm:w-[calc(100vw-1.5rem)] lg:w-[calc(100vw-20rem)]"
+                : "sm:w-[min(calc(100vw-1.5rem),520px)]"
+            } ${
+              isPanelOpen ? "visible translate-x-0 opacity-100" : "invisible pointer-events-none translate-x-full opacity-0"
             }`}
             data-testid="soma-workbench-side-rail"
+            data-review-surface={isDedicatedOutputReview ? "output" : "compact"}
             tabIndex={isPanelOpen ? 0 : -1}
           >
             {isPanelOpen ? (
@@ -225,8 +278,8 @@ export function SomaWorkspaceFrame({
                               : "border-cortex-border text-cortex-text-muted hover:border-cortex-primary/30 hover:text-cortex-text-main"
                           }`}
                         >
-                          <span className="hidden sm:inline">{panel.label}</span>
-                          <span className="sm:hidden">{panel.icon}</span>
+                          {panel.icon}
+                          <span>{panel.label}</span>
                         </button>
                       ))}
                     </div>
@@ -234,23 +287,24 @@ export function SomaWorkspaceFrame({
                 </div>
                 {selectedPanel ? (
                   <div
-                    className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
+                    className="mt-3 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pr-1"
                     data-testid="soma-workbench-panel-scroll"
                   >
                     <SlotPanel
                       icon={selectedPanel.icon}
                       label={selectedPanel.title}
+                      framed={!isDedicatedOutputReview}
+                      className={isDedicatedOutputReview ? "" : undefined}
                     >
-                      <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className={`mb-3 flex items-start justify-between gap-3 ${isDedicatedOutputReview ? "border-b border-cortex-border pb-3" : ""}`}>
                         <p className="text-xs leading-5 text-cortex-text-muted">
                           {selectedPanel.description}
                         </p>
-                        <Link
-                          href={selectedPanel.href}
-                          className="shrink-0 rounded-lg border border-cortex-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-main hover:border-cortex-primary/40"
-                        >
-                          {isFocusedWorkReview ? "Open inbox" : "Open page"}
-                        </Link>
+                        {!isDedicatedOutputReview ? (
+                          <Link href={selectedPanel.href} className="shrink-0 rounded-lg border border-cortex-border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-main hover:border-cortex-primary/40">
+                            {isFocusedWorkReview ? "Open inbox" : "Open page"}
+                          </Link>
+                        ) : null}
                       </div>
                       {selectedPanel.content}
                     </SlotPanel>

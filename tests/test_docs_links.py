@@ -8,7 +8,6 @@ ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 DOCS_HOME = ROOT / "docs" / "README.md"
 DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
-ARCH_INDEX = ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md"
 CANONICAL_PRD = ROOT / "docs" / "architecture-library" / "MYCELIS_CANONICAL_PRD.md"
 V8_DEV_STATE = ROOT / ".state" / "V8_DEV_STATE.md"
 
@@ -33,7 +32,24 @@ def _assert_links_resolve(path: Path) -> None:
 
 
 def test_readme_docs_home_and_architecture_links_resolve():
-    for path in (README, DOCS_HOME, ARCH_INDEX, CANONICAL_PRD, ROOT / "architecture" / "README.md"):
+    for path in (README, DOCS_HOME, CANONICAL_PRD, ROOT / "architecture" / "README.md"):
+        _assert_links_resolve(path)
+
+
+def test_all_active_documentation_links_resolve():
+    documentation = {
+        README,
+        ROOT / "AGENTS.md",
+        ROOT / "ops" / "README.md",
+        ROOT / "core" / "README.md",
+        ROOT / "interface" / "README.md",
+        ROOT / "cli" / "README.md",
+        ROOT / "core" / "internal" / "registry" / "README.md",
+        *sorted((ROOT / "docs").rglob("*.md")),
+        *sorted((ROOT / "architecture").rglob("*.md")),
+    }
+
+    for path in sorted(documentation):
         _assert_links_resolve(path)
 
 
@@ -47,11 +63,22 @@ def test_docs_manifest_paths_resolve_and_exposes_canonical_prd():
     assert 'path: "docs/architecture-library/MYCELIS_CANONICAL_PRD.md"' in text
 
 
+def test_all_user_docs_are_exposed_in_help_manifest():
+    text = DOCS_MANIFEST.read_text(encoding="utf-8")
+    manifest_paths = set(re.findall(r'path:\s*"([^"]+)"', text))
+    user_docs = {
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "docs" / "user").glob("*.md")
+    }
+
+    missing = sorted(user_docs - manifest_paths)
+    assert not missing, f"User docs missing from the in-app Help manifest: {missing}"
+
+
 def test_readme_style_pages_expose_project_navigation_and_tocs():
     required = {
         README: "## README TOC",
         DOCS_HOME: "## Docs TOC",
-        ARCH_INDEX: "## TOC",
         ROOT / "architecture" / "README.md": "# Architecture",
         ROOT / "ops" / "README.md": "## TOC",
         ROOT / "core" / "README.md": "## TOC",
@@ -80,7 +107,8 @@ def test_canonical_prd_covers_full_product_architecture_and_release_contract():
         "The prime architecture rule is twofold",
         "protect confidence while making complexity disappear",
         "Ask\n-> Understand\n-> Approve\n-> Execute\n-> Deliver\n-> Trust\n-> Recover\n-> Revisit",
-        "compact Start with shelf",
+        "no separate dashboard headline band or persistent launcher strip above the thread",
+        "The dashboard must not require a launcher strip, Button Studio, routing picker, team picker, mode selector, or status-pill cluster before conversation.",
         "large Talk to Soma thread as the primary canvas",
         "header Outcomes button that opens Outcome Vault on demand",
         "Explore",
@@ -111,9 +139,8 @@ def test_canonical_prd_covers_full_product_architecture_and_release_contract():
 def test_active_navigation_points_to_single_architecture_prd():
     surfaces = {
         README: ["MYCELIS_CANONICAL_PRD.md", ".state/V8_DEV_STATE.md"],
-        DOCS_HOME: ["MYCELIS_CANONICAL_PRD.md", "Architecture Docs Index"],
-        ARCH_INDEX: ["MYCELIS_CANONICAL_PRD.md", "Do not restore split V7, V8.2, or V8.3 architecture documents"],
-        V8_DEV_STATE: ["MYCELIS_CANONICAL_PRD.md", "canonical PRD alignment"],
+        DOCS_HOME: ["MYCELIS_CANONICAL_PRD.md", "Product architecture has one active document"],
+        V8_DEV_STATE: ["MYCELIS_CANONICAL_PRD.md", "Canonical PRD alignment"],
     }
 
     missing: list[str] = []
@@ -146,6 +173,8 @@ def test_old_architecture_docs_are_deleted_not_archived_or_exposed():
         "docs/architecture-library/V8_SECRET_STORAGE_AND_CREDENTIAL_BOUNDARY.md",
         "docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md",
         "docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md",
+        "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
+        "docs/architecture-library/WORKER_LIBRARY_SOURCE_MAP.md",
     ]
 
     present = [path for path in stale_paths if (ROOT / path).exists()]
@@ -154,7 +183,6 @@ def test_old_architecture_docs_are_deleted_not_archived_or_exposed():
             README.read_text(encoding="utf-8"),
             DOCS_HOME.read_text(encoding="utf-8"),
             DOCS_MANIFEST.read_text(encoding="utf-8"),
-            ARCH_INDEX.read_text(encoding="utf-8"),
         ]
     )
     exposed = [path for path in stale_paths if path in combined_navigation]
@@ -163,10 +191,19 @@ def test_old_architecture_docs_are_deleted_not_archived_or_exposed():
     assert not exposed, "Superseded docs should not be exposed: " + str(exposed)
 
 
+def test_product_architecture_library_contains_only_the_canonical_prd():
+    architecture_library = ROOT / "docs" / "architecture-library"
+    active_files = sorted(path.name for path in architecture_library.iterdir() if path.is_file())
+
+    assert active_files == ["MYCELIS_CANONICAL_PRD.md"]
+
+
 def test_docs_review_contract_remains_visible():
     required_snippets = {
         ROOT / "AGENTS.md": [
             "Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, or canonical terminology must include a documentation review in the same slice.",
+            "perform an obsolescence review in the same slice across commands, code, configuration, tests, docs, routes, fixtures, and generated scaffolding",
+            "record the canonical replacement in the owning docs or state file",
             "docs/architecture-library/MYCELIS_CANONICAL_PRD.md",
         ],
         README: [

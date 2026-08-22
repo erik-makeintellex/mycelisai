@@ -127,6 +127,31 @@ func TestPersistConfirmedActionTeamWork_DeliverableOutputReadyHasRefs(t *testing
 	}
 }
 
+func TestPersistConfirmedDeliverableWorkItems_DoesNotPromotePlanningFiles(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	link := testConfirmedActionTeamWorkLink(&protocol.ScopeValidation{})
+
+	refs, err := s.persistConfirmedDeliverableWorkItems(t.Context(), link, []plannedToolExecutionResult{{
+		Name: "write_file",
+		Arguments: map[string]any{
+			"team_id": "game-delivery-team",
+			"path":    "groups/game-delivery-team/planning/TEAM_EVOCATION.md",
+			"content": "Internal planning only",
+		},
+		Output: "Wrote planning brief",
+	}})
+	if err != nil {
+		t.Fatalf("persistConfirmedDeliverableWorkItems: %v", err)
+	}
+	if len(refs) != 0 {
+		t.Fatalf("refs = %#v, planning files must not become user-ready deliverables", refs)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unexpected persistence for planning output: %v", err)
+	}
+}
+
 func TestOutputRefsForTeamWork_NormalizesViewerURLFolderForDeliverable(t *testing.T) {
 	link := testConfirmedActionTeamWorkLink(&protocol.ScopeValidation{})
 
@@ -210,7 +235,7 @@ func expectTeamWorkItemInsertWithPosture(mock sqlmock.Sqlmock, teamID string, sh
 		WithArgs(
 			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "Soma",
-			string(shape), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			string(shape), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			string(protocol.ApprovalPostureRequired), string(state), needsOperator,
 			degradation, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "v1",
 		).
@@ -223,7 +248,7 @@ func expectTeamStatusEventInsert(mock sqlmock.Sqlmock, teamID string, state prot
 			sqlmock.AnyArg(), teamID, sqlmock.AnyArg(), sqlmock.AnyArg(),
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			string(state), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindWebAPI),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindWebAPI),
 			"api.intent.confirm-action", string(protocol.PayloadKindStatus), sqlmock.AnyArg(), "v1",
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
@@ -247,7 +272,7 @@ func expectTeamWorkItemUpdateWithPosture(mock sqlmock.Sqlmock, state protocol.Te
 	mock.ExpectExec("UPDATE team_work_items").
 		WithArgs(
 			sqlmock.AnyArg(), string(state), sqlmock.AnyArg(), needsOperator, degradation,
-			sqlmock.AnyArg(), outputRefs, sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), outputRefs, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 }

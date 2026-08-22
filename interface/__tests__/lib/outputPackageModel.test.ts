@@ -4,11 +4,14 @@ import {
   OUTPUT_PACKAGE_OPEN_LABEL,
   OUTPUT_PACKAGE_RESOURCES_LABEL,
   joinWorkspacePath,
+  outputCanvasHref,
+  outputCanvasSourceHref,
   parentWorkspacePath,
   projectPackageOpenPath,
   projectPackageResourcesHref,
   projectPackageRevealPath,
   resourcesWorkspaceHref,
+  somaReturnHref,
   workspaceBrowserPath,
   workspaceFileHref,
 } from "@/lib/outputPackageModel";
@@ -39,5 +42,30 @@ describe("outputPackageModel", () => {
     expect(projectPackageOpenPath({ filePath: "workspace/logs/playable.html" })).toBe("workspace/logs/playable.html");
     expect(projectPackageRevealPath({ filePath: "workspace/logs/playable.html" })).toBe("workspace/logs");
     expect(projectPackageResourcesHref({ filePath: "workspace/logs/playable.html" })).toBe("/resources?tab=workspace&path=workspace%2Flogs");
+  });
+
+  it("builds a retained-output canvas link with the exact Soma context", () => {
+    const href = outputCanvasHref({
+      label: "Playable game",
+      url: "/api/v1/workspace/files/view?path=groups%2Fgame-team%2Fgenerated%2Fgame%2Findex.html",
+      storagePath: "groups/game-team/generated/game/index.html",
+      returnTo: "/dashboard?team_id=game-team&outcome_id=outcome-7#latest",
+      proofArtifactId: "proof-7",
+    });
+    const parsed = new URL(href!, "http://mycelis.local");
+
+    expect(parsed.pathname).toBe("/outputs/view");
+    expect(parsed.searchParams.get("label")).toBe("Playable game");
+    expect(parsed.searchParams.get("path")).toBe("groups/game-team/generated/game/index.html");
+    expect(parsed.searchParams.get("return_to")).toBe("/dashboard?team_id=game-team&outcome_id=outcome-7#latest");
+    expect(parsed.searchParams.get("proof")).toBe("proof-7");
+    expect(parsed.searchParams.get("source")).toBe("/api/v1/workspace/files/view?path=groups%2Fgame-team%2Fgenerated%2Fgame%2Findex.html");
+  });
+
+  it("limits the canvas to retained workspace files and safe Soma return URLs", () => {
+    expect(outputCanvasSourceHref("https://example.com/untrusted.html")).toBeNull();
+    expect(outputCanvasHref({ label: "External", url: "https://example.com/untrusted.html" })).toBeNull();
+    expect(somaReturnHref("https://example.com/dashboard?team_id=other")).toBe("/dashboard");
+    expect(somaReturnHref("/groups?group_id=other")).toBe("/dashboard");
   });
 });

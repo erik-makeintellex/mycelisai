@@ -10,7 +10,6 @@ import (
 
 	coreServer "github.com/mycelis/core/internal/server"
 	"github.com/mycelis/core/internal/swarm"
-	"github.com/nats-io/nats.go"
 )
 
 func main() {
@@ -33,12 +32,12 @@ func main() {
 		log.Fatal("FATAL: MYCELIS_API_KEY not set. Server refuses to start without authentication.")
 	}
 
-	natsURL := os.Getenv("NATS_URL")
-	if natsURL == "" {
-		natsURL = nats.DefaultURL // nats://localhost:4222
+	natsConfig, err := resolveNATSRuntimeConfig()
+	if err != nil {
+		log.Fatalf("FATAL: invalid NATS runtime configuration: %v", err)
 	}
 
-	core := startCoreRuntime(ctx, natsURL)
+	core := startCoreRuntime(ctx, natsConfig)
 	defer core.DrainNATS()
 
 	mux := http.NewServeMux()

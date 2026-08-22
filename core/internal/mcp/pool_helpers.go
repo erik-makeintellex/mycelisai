@@ -10,12 +10,25 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-const mcpConnectTimeout = 15 * time.Second
+const (
+	mcpConnectTimeout = 60 * time.Second
+	mcpStatusTimeout  = 3 * time.Second
+)
 
 func withMCPConnectTimeout(ctx context.Context, fn func(context.Context) error) error {
 	connectCtx, cancel := context.WithTimeout(ctx, mcpConnectTimeout)
 	defer cancel()
 	return fn(connectCtx)
+}
+
+func mcpStatusContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), mcpStatusTimeout)
+}
+
+func (p *ClientPool) updateStatus(ctx context.Context, id uuid.UUID, status string, message string) error {
+	statusCtx, cancel := mcpStatusContext(ctx)
+	defer cancel()
+	return p.service.UpdateStatus(statusCtx, id, status, message)
 }
 
 func convertTools(serverID uuid.UUID, tools []mcp.Tool) ([]ToolDef, error) {

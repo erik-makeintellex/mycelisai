@@ -1,19 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { mockFetch } from '../setup';
+import type { CatalogueAgent } from '@/store/useCortexStore';
+
+type AgentCardProps = {
+    agent: CatalogueAgent;
+    onSelect: (agent: CatalogueAgent) => void;
+};
 
 // Mock child components to isolate CataloguePage logic
 vi.mock('@/components/catalogue/AgentCard', () => ({
     __esModule: true,
-    default: ({ agent, onSelect, onDelete }: any) => (
+    default: ({ agent, onSelect }: AgentCardProps) => (
         <div data-testid={`agent-card-${agent.id}`}>
             <span>{agent.name}</span>
             <span>{agent.role}</span>
             <button data-testid={`select-${agent.id}`} onClick={() => onSelect(agent)}>
                 Select
-            </button>
-            <button data-testid={`delete-${agent.id}`} onClick={() => onDelete(agent.id)}>
-                Delete
             </button>
         </div>
     ),
@@ -21,7 +23,7 @@ vi.mock('@/components/catalogue/AgentCard', () => ({
 
 vi.mock('@/components/catalogue/AgentEditorDrawer', () => ({
     __esModule: true,
-    default: ({ agent, onClose, onSave }: any) => (
+    default: ({ agent, onClose }: { agent: CatalogueAgent | null; onClose: () => void }) => (
         <div data-testid="editor-drawer">
             <span>{agent ? `Editing: ${agent.name}` : 'Creating new agent'}</span>
             <button onClick={onClose}>Close</button>
@@ -30,14 +32,16 @@ vi.mock('@/components/catalogue/AgentEditorDrawer', () => ({
 }));
 
 import CataloguePage from '@/components/catalogue/CataloguePage';
+import { takePendingSomaPrompt } from '@/components/soma/somaPromptHandoff';
 import { useCortexStore } from '@/store/useCortexStore';
-import type { CatalogueAgent } from '@/store/useCortexStore';
 
 const mockAgents: CatalogueAgent[] = [
     {
         id: 'agent-001',
         name: 'Coder Bot',
         role: 'cognitive',
+        source: 'built_in',
+        locked: true,
         system_prompt: 'You are a coder.',
         model: 'qwen2.5-coder:7b-instruct',
         tools: ['read_file', 'write_file'],
@@ -51,6 +55,8 @@ const mockAgents: CatalogueAgent[] = [
         id: 'agent-002',
         name: 'Sensor Node',
         role: 'sensory',
+        source: 'user',
+        locked: false,
         tools: [],
         inputs: [],
         outputs: ['sensor.data'],
@@ -62,6 +68,8 @@ const mockAgents: CatalogueAgent[] = [
 
 describe('CataloguePage', () => {
     beforeEach(() => {
+        window.history.replaceState({}, '', '/dashboard');
+        window.sessionStorage.clear();
         useCortexStore.setState({
             catalogueAgents: [],
             isFetchingCatalogue: false,
@@ -81,54 +89,43 @@ describe('CataloguePage', () => {
 
         render(<CataloguePage />);
 
-        // Both agent cards should render
+        // The default view shows only ready-made profiles.
         expect(screen.getByTestId('agent-card-agent-001')).toBeDefined();
-        expect(screen.getByTestId('agent-card-agent-002')).toBeDefined();
-
-        // Agent names should be visible
         expect(screen.getByText('Coder Bot')).toBeDefined();
-        expect(screen.getByText('Sensor Node')).toBeDefined();
+        expect(screen.queryByTestId('agent-card-agent-002')).toBeNull();
+        expect(screen.getByText('Worker profiles')).toBeDefined();
 
-        // Header should show "Agent Catalogue"
-        expect(screen.getByText('Agent Catalogue')).toBeDefined();
+        expect(screen.queryByText('Sensor Node')).toBeNull();
+        expect(screen.getByText('1 ready-made profiles')).toBeDefined();
     });
 
-    it('New Agent button is present and opens the editor drawer', () => {
+    it('hands custom profile creation to Soma without writing a legacy row', () => {
         useCortexStore.setState({
             catalogueAgents: mockAgents,
         });
 
         render(<CataloguePage />);
 
-        // "New Agent" button should be present
-        const newBtn = screen.getByText('New Agent');
+        const newBtn = screen.getByText('Create with Soma');
         expect(newBtn).toBeDefined();
 
         // No drawer initially
         expect(screen.queryByTestId('editor-drawer')).toBeNull();
 
-        // Click New Agent
         fireEvent.click(newBtn);
-
-        // Drawer should now be open in "create" mode
-        expect(screen.getByTestId('editor-drawer')).toBeDefined();
-        expect(screen.getByText('Creating new agent')).toBeDefined();
+        expect(screen.queryByTestId('editor-drawer')).toBeNull();
+        expect(takePendingSomaPrompt()).toContain('create a reusable Worker Profile');
     });
 
-    it('delete action on an agent card calls the store delete action', () => {
-        const deleteFn = vi.fn();
+    it('opens ready-made profile inspection', () => {
+        const selectAgent = vi.fn();
         useCortexStore.setState({
             catalogueAgents: mockAgents,
-            deleteCatalogueAgent: deleteFn,
+            selectCatalogueAgent: selectAgent,
         });
 
         render(<CataloguePage />);
-
-        // Click the delete button on agent-001
-        fireEvent.click(screen.getByTestId('delete-agent-001'));
-
-        // The store's deleteCatalogueAgent should have been called
-        expect(deleteFn).toHaveBeenCalledTimes(1);
-        expect(deleteFn).toHaveBeenCalledWith('agent-001');
+        fireEvent.click(screen.getByTestId('select-agent-001'));
+        expect(selectAgent).toHaveBeenCalledWith(mockAgents[0]);
     });
 });

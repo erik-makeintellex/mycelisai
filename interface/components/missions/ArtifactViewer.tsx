@@ -5,7 +5,7 @@ import {
     Package,
     Code,
     FileText,
-    Image,
+    Image as ImageIcon,
     Music,
     Database,
     File,
@@ -14,7 +14,6 @@ import {
     CheckCircle,
     XCircle,
     Loader2,
-    Shield,
 } from "lucide-react";
 import {
     useCortexStore,
@@ -38,7 +37,7 @@ function artifactIcon(type: ArtifactType) {
         case "document":
             return FileText;
         case "image":
-            return Image;
+            return ImageIcon;
         case "audio":
             return Music;
         case "data":
@@ -308,8 +307,6 @@ function ArtifactDetailPanel({
     onApprove: () => void;
     onReject: () => void;
 }) {
-    const Icon = artifactIcon(artifact.artifact_type);
-
     const formatDate = (ts: string) => {
         try {
             return new Date(ts).toLocaleString([], {
@@ -366,7 +363,7 @@ function ArtifactDetailPanel({
         if (artifact.artifact_type === "image" || ct.includes("image")) {
             return (
                 <div className="flex items-center justify-center p-6 text-cortex-text-muted/60">
-                    <Image className="w-6 h-6 mr-2 opacity-40" />
+                    <ImageIcon className="w-6 h-6 mr-2 opacity-40" />
                     <span className="font-mono text-xs">Image preview not available</span>
                 </div>
             );
@@ -422,7 +419,10 @@ function ArtifactDetailPanel({
             {/* Detail header */}
             <div className="h-12 border-b border-cortex-border bg-cortex-surface/50 backdrop-blur-sm flex items-center justify-between px-4 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                    <Icon className="w-4 h-4 text-cortex-primary" />
+                    {React.createElement(artifactIcon(artifact.artifact_type), {
+                        className: "w-4 h-4 text-cortex-primary",
+                        "aria-hidden": true,
+                    })}
                     <span className="text-xs font-mono font-bold text-cortex-text-main truncate max-w-[200px]">
                         {artifact.title}
                     </span>

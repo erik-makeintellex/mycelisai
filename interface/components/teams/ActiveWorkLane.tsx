@@ -5,9 +5,9 @@ import { Radio } from "lucide-react";
 import {
   type TeamInteraction,
   type TeamWorkItem,
-  type TeamWorkItemState,
 } from "@/store/useCortexStore";
-import { teamWorkStateLabel } from "@/lib/deliveryRuntimeLanguage";
+import { outcomeHealthFromRunStatus } from "@/lib/outcomeHealth";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 import { ActiveWorkAdvancedProjection } from "./ActiveWorkAdvancedProjection";
 import { ActiveWorkActionControl } from "./ActiveWorkActionControl";
 import { ActiveWorkEvidence } from "./ActiveWorkEvidence";
@@ -17,26 +17,15 @@ import {
   compactNextAction,
   compactTitle,
   isStaleFailedPlanItem,
+  needsExternalMutationVerification,
 } from "./activeWorkCompact";
+import { ExternalOutcomeVerificationForm } from "./ExternalOutcomeVerificationForm";
+import type { ExternalOutcomeVerification } from "./teamWorkActions";
 import { ReviewDecisionGuide } from "./ReviewDecisionGuide";
 import { ReviewQueueSummary } from "./ReviewQueueSummary";
 import { TeamAskForm } from "./TeamAskForm";
 import { WorkReviewInbox } from "./WorkReviewInbox";
 import { WorkTruthSummary } from "./WorkTruthSummary";
-
-const stateStyles: Record<TeamWorkItemState, string> = {
-  new: "border-cortex-primary/25 bg-cortex-primary/10 text-cortex-primary",
-  briefed: "border-cortex-primary/25 bg-cortex-primary/10 text-cortex-primary",
-  queued: "border-cortex-border bg-cortex-bg text-cortex-text-muted",
-  running: "border-cortex-success/25 bg-cortex-success/10 text-cortex-success",
-  reviewing: "border-cortex-info/25 bg-cortex-info/10 text-cortex-info",
-  paused: "border-cortex-border bg-cortex-bg text-cortex-text-muted",
-  output_ready:
-    "border-cortex-primary/30 bg-cortex-primary/10 text-cortex-primary",
-  degraded: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-  needs_operator: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-  archived: "border-cortex-border bg-cortex-bg text-cortex-text-muted",
-};
 
 type LanePurpose = "active" | "review";
 
@@ -52,6 +41,7 @@ export function ActiveWorkLane({
   moreItemsHref = "/teams",
   purpose = "active",
   onAction,
+  onVerifyExternalOutcome,
   onTeamAsk,
 }: {
   title?: string;
@@ -65,6 +55,10 @@ export function ActiveWorkLane({
   moreItemsHref?: string;
   purpose?: LanePurpose;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
+  onVerifyExternalOutcome?: (
+    item: TeamWorkItem,
+    verification: ExternalOutcomeVerification,
+  ) => Promise<void> | void;
   onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
   const visibleItems =
@@ -89,6 +83,7 @@ export function ActiveWorkLane({
         statusLabel={statusLabel}
         degradedMessage={degradedMessage}
         onAction={onAction}
+        onVerifyExternalOutcome={onVerifyExternalOutcome}
         onTeamAsk={onTeamAsk}
       />
     );
@@ -147,6 +142,7 @@ export function ActiveWorkLane({
               compact={compact}
               reviewMode={isReviewPurpose}
               onAction={onAction}
+              onVerifyExternalOutcome={onVerifyExternalOutcome}
               onTeamAsk={onTeamAsk}
             />
           ))
@@ -172,14 +168,20 @@ function WorkItemRow({
   compact = false,
   reviewMode = false,
   onAction,
+  onVerifyExternalOutcome,
   onTeamAsk,
 }: {
   item: TeamWorkItem;
   compact?: boolean;
   reviewMode?: boolean;
   onAction?: (item: TeamWorkItem, action: TeamInteraction) => void;
+  onVerifyExternalOutcome?: (
+    item: TeamWorkItem,
+    verification: ExternalOutcomeVerification,
+  ) => Promise<void> | void;
   onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
+  const needsExternalVerification = needsExternalMutationVerification(item);
   const visibleActions = compact || isStaleFailedPlanItem(item)
     ? compactActions(item)
     : item.interactions;
@@ -192,11 +194,7 @@ function WorkItemRow({
       <div className={compact ? "space-y-3" : "flex flex-wrap items-start justify-between gap-3"}>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] ${stateStyles[item.state]}`}
-            >
-              {teamWorkStateLabel(item.state)}
-            </span>
+            <OutcomeHealthBadge health={item.outcomeHealth ?? outcomeHealthFromRunStatus(item.state)} />
             {!compact && item.sourceLabel ? (
               <span className="rounded-full border border-cortex-border bg-cortex-surface px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-text-muted">
                 {item.sourceLabel}
@@ -236,11 +234,18 @@ function WorkItemRow({
           <WorkTruthSummary item={item} compact={compact} />
           {compact || reviewMode ? null : <ReviewDecisionGuide item={item} />}
           <ActiveWorkEvidence item={item} />
+          {needsExternalVerification ? (
+            <ExternalOutcomeVerificationForm
+              item={item}
+              compact={compact}
+              onVerify={onVerifyExternalOutcome}
+            />
+          ) : null}
           {compact || isStaleFailedPlanItem(item) ? null : (
             <TeamAskForm item={item} onTeamAsk={onTeamAsk} />
           )}
         </div>
-        <div className={compact ? "flex flex-wrap gap-2" : "grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:justify-end"}>
+        {needsExternalVerification ? null : <div className={compact ? "flex flex-wrap gap-2" : "grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:justify-end"}>
           {reviewMode && !compact ? (
             <p className="col-span-3 w-full font-mono text-[10px] uppercase tracking-[0.14em] text-cortex-text-muted sm:text-right">
               Decision actions
@@ -255,7 +260,7 @@ function WorkItemRow({
               compact={compact}
             />
           ))}
-        </div>
+        </div>}
       </div>
       {item.advanced ? <ActiveWorkAdvancedProjection item={item} /> : null}
     </article>

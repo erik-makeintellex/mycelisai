@@ -50,7 +50,7 @@ export function outputWorkbenchDigest({
       ...(storagePath ? { storagePath } : {}),
       proofArtifactId: primaryOutput.proofArtifactId ?? null,
       replyReference: storagePath ?? primaryOutput.url ?? null,
-      health: primaryOutput.proofArtifactId ? "healthy" : "completed",
+      health: "completed",
       count: outputs.length + packages.length,
     };
   }
@@ -79,7 +79,7 @@ export function outputWorkbenchDigest({
     validation: primaryPackage.validation ?? null,
     proofArtifactId: primaryPackage.proof_artifact_id ?? null,
     replyReference: storagePath ?? itemUrl(primaryPackage) ?? null,
-    health: primaryPackage.validation || primaryPackage.proof_artifact_id ? "healthy" : "completed",
+    health: "completed",
     count: outputs.length + packages.length,
   };
 }
@@ -115,8 +115,8 @@ export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkben
       data-testid="soma-workbench-output-digest"
       aria-label="Latest output"
     >
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <div className="min-w-0 text-xs leading-5">
+      <div className="flex min-w-0 flex-col items-start gap-2" data-testid="soma-output-digest-layout">
+        <div className="min-w-0 max-w-full text-xs leading-5">
           <span className="font-semibold text-cortex-text-main">{label}: </span>
           <span className="font-semibold text-cortex-text-main">{digest.text}</span>
           <OutcomeHealthBadge health={digest.health ?? "completed"} className="ml-2 align-middle" />
@@ -130,7 +130,7 @@ export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkben
             </span>
           ) : null}
         </div>
-        <span className="inline-flex shrink-0 flex-wrap items-center gap-1">
+        <div className="flex w-full flex-wrap items-center gap-1">
           {digest.resourcesHref ? (
             <a
               href={digest.resourcesHref}
@@ -165,7 +165,7 @@ export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkben
               Reply
             </button>
           ) : null}
-        </span>
+        </div>
       </div>
     </aside>
   );

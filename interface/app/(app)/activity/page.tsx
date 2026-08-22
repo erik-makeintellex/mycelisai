@@ -48,23 +48,16 @@ export default function ActivityPage() {
     return () => clearInterval(interval);
   }, [advancedMode, fetchRecentRuns, fetchServicesStatus, initializeStream]);
 
-  useEffect(() => {
-    if (!advancedMode) return;
-    if (recentRuns.length === 0) {
-      setSelectedRunId(null);
-      return;
-    }
-    if (!selectedRunId || !recentRuns.some((run) => run.id === selectedRunId)) {
-      setSelectedRunId(recentRuns[0].id);
-    }
-  }, [advancedMode, recentRuns, selectedRunId]);
+  const effectiveSelectedRunId = recentRuns.some((run) => run.id === selectedRunId)
+    ? selectedRunId
+    : recentRuns[0]?.id ?? null;
 
   useEffect(() => {
     if (!advancedMode) return;
-    if (selectedRunId) {
-      void fetchRunTimeline(selectedRunId);
+    if (effectiveSelectedRunId) {
+      void fetchRunTimeline(effectiveSelectedRunId);
     }
-  }, [advancedMode, fetchRunTimeline, selectedRunId]);
+  }, [advancedMode, effectiveSelectedRunId, fetchRunTimeline]);
 
   const activeRuns = useMemo(
     () => recentRuns.filter((run) => run.status === "running"),
@@ -75,8 +68,8 @@ export default function ActivityPage() {
     [streamLogs],
   );
   const selectedRun = useMemo(
-    () => recentRuns.find((run) => run.id === selectedRunId) ?? null,
-    [recentRuns, selectedRunId],
+    () => recentRuns.find((run) => run.id === effectiveSelectedRunId) ?? null,
+    [effectiveSelectedRunId, recentRuns],
   );
   const nats = services.find((svc) => svc.name === "nats");
   const groupsBus = services.find((svc) => svc.name === "groups_bus");
@@ -146,7 +139,7 @@ export default function ActivityPage() {
         <section className="grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
           <RunList
             runs={recentRuns}
-            selectedRunId={selectedRunId}
+            selectedRunId={effectiveSelectedRunId}
             isFetching={isFetchingRuns}
             onSelect={setSelectedRunId}
           />

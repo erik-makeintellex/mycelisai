@@ -10,6 +10,7 @@ import (
 
 var (
 	ErrInvalidInput = errors.New("invalid input source")
+	ErrSubjectInUse = errors.New("input source subject already registered")
 	ErrNotFound     = errors.New("input source not found")
 	ErrUnavailable  = errors.New("input source store unavailable")
 
@@ -187,6 +188,8 @@ func ErrorStatus(err error) int {
 	switch {
 	case errors.Is(err, ErrInvalidInput):
 		return 400
+	case errors.Is(err, ErrSubjectInUse):
+		return 409
 	case errors.Is(err, ErrNotFound):
 		return 404
 	case errors.Is(err, ErrUnavailable):

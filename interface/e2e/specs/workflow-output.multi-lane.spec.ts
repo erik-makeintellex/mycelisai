@@ -53,6 +53,7 @@ test.describe("Workflow output multi-lane package", () => {
                 return;
             }
 
+            const body = route.request().postDataJSON() as { expiry?: string };
             const created: GroupRecord = {
                 group_id: "group-multilane-release",
                 name: "Release Readiness Workflow temporary workflow",
@@ -63,7 +64,7 @@ test.describe("Workflow output multi-lane package", () => {
                 coordinator_profile: "Release workflow coordinator",
                 approval_policy_ref: "browser-proof",
                 status: "active",
-                expiry: "2026-04-18T18:00:00Z",
+                expiry: body.expiry ?? new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
                 created_by: "owner",
                 created_at: "2026-04-15T20:01:00Z",
             };
@@ -183,7 +184,7 @@ test.describe("Workflow output multi-lane package", () => {
         await page.getByRole("button", { name: "Release Readiness Workflow temporary workflow" }).click();
 
         await expect(page.getByRole("heading", { name: "Release Readiness Workflow temporary workflow" })).toBeVisible();
-        await expect(page.getByTestId("groups-output-summary")).toContainText("3 outputs");
+        await expect(page.getByTestId("groups-output-summary")).toContainText("3 delivered");
         await page.getByRole("tab", { name: /Outputs/i }).click();
         await expect(page.getByText("Planning lane package", { exact: true })).toBeVisible();
         await expect(page.getByText("Validation lane checklist", { exact: true })).toBeVisible();

@@ -19,36 +19,21 @@ func TestTeamWorkSignalProjection_ResultPersistsOutputRefs(t *testing.T) {
 	mockTeamWorkItem(mock, "research-team", workID, protocol.TeamWorkStateRunning, false, "", now)
 	expectProjectedStatusEvent(mock, "research-team", workID, protocol.TeamWorkStateOutputReady, protocol.PayloadKindResult, now)
 	expectProjectedTeamWorkUpdateWithOutputs(mock, workID, protocol.TeamWorkStateOutputReady, false, "", outputRefsMatch{
-		TeamID:     "research-team",
-		WorkItemID: workID,
-		Kind:       "project_package",
-		Label:      "Playable prototype",
-		StorageRef: "groups/research-team/generated/prototype",
-		Entrypoint: "index.html",
-		ProofRef:   "proof-1",
+		TeamID: "research-team", WorkItemID: workID, Kind: "project_package", Label: "Playable prototype",
+		StorageRef: "groups/research-team/generated/prototype", Entrypoint: "index.html", ProofRef: "proof-1",
 	})
 	expectProjectedInteraction(mock, "research-team", workID, "output_ready", protocol.PayloadKindResult, now)
 
 	raw := mustSignalEnvelope(t, protocol.SignalEnvelope{
 		Meta: protocol.SignalMeta{
-			Timestamp:     now,
-			SourceKind:    protocol.SourceKindInternalTool,
-			SourceChannel: "swarm.team.research-team.internal.trigger",
-			PayloadKind:   protocol.PayloadKindResult,
-			TeamID:        "research-team",
-			AgentID:       "builder",
+			Timestamp: now, SourceKind: protocol.SourceKindInternalTool,
+			SourceChannel: "swarm.team.research-team.internal.trigger", PayloadKind: protocol.PayloadKindResult,
+			TeamID: "research-team", AgentID: "builder",
 		},
 		Payload: json.RawMessage(`{
-			"work_item_id":"` + workID + `",
-			"summary":"Prototype ready",
-			"outputs":[{
-				"id":"prototype-package",
-				"kind":"project_package",
-				"title":"Playable prototype",
-				"folder":"groups/research-team/generated/prototype",
-				"entrypoint":"index.html",
-				"validation":"local smoke passed"
-			}]
+			"work_item_id":"` + workID + `", "summary":"Prototype ready",
+			"outputs":[{"id":"prototype-package","kind":"project_package","title":"Playable prototype",
+			"folder":"groups/research-team/generated/prototype","entrypoint":"index.html","validation":"local smoke passed"}]
 		}`),
 	})
 
@@ -70,32 +55,21 @@ func TestTeamWorkSignalProjection_ResultPersistsNormalizedOutputRefs(t *testing.
 	mockTeamWorkItem(mock, "media-team", workID, protocol.TeamWorkStateRunning, false, "", now)
 	expectProjectedStatusEvent(mock, "media-team", workID, protocol.TeamWorkStateOutputReady, protocol.PayloadKindResult, now)
 	expectProjectedTeamWorkUpdateWithOutputs(mock, workID, protocol.TeamWorkStateOutputReady, false, "", outputRefsMatch{
-		TeamID:     "media-team",
-		WorkItemID: workID,
-		Kind:       "media",
-		Label:      "Comic page",
+		TeamID: "media-team", WorkItemID: workID, Kind: "media", Label: "Comic page",
 		StorageRef: "groups/media-team/media/comic-page.png",
 	})
 	expectProjectedInteraction(mock, "media-team", workID, "output_ready", protocol.PayloadKindResult, now)
 
 	raw := mustSignalEnvelope(t, protocol.SignalEnvelope{
 		Meta: protocol.SignalMeta{
-			Timestamp:     now,
-			SourceKind:    protocol.SourceKindInternalTool,
-			SourceChannel: "swarm.team.media-team.internal.trigger",
-			PayloadKind:   protocol.PayloadKindResult,
-			TeamID:        "media-team",
-			AgentID:       "artist",
+			Timestamp: now, SourceKind: protocol.SourceKindInternalTool,
+			SourceChannel: "swarm.team.media-team.internal.trigger", PayloadKind: protocol.PayloadKindResult,
+			TeamID: "media-team", AgentID: "artist",
 		},
 		Payload: json.RawMessage(`{
-			"work_item_id":"` + workID + `",
-			"summary":"Image ready",
-			"output_refs":[{
-				"output_id":"comic-page-output",
-				"kind":"media",
-				"label":"Comic page",
-				"storage_ref":"groups/media-team/media/comic-page.png"
-			}]
+			"work_item_id":"` + workID + `", "summary":"Image ready",
+			"output_refs":[{"output_id":"comic-page-output","kind":"media","label":"Comic page",
+			"storage_ref":"groups/media-team/media/comic-page.png"}]
 		}`),
 	})
 
@@ -109,26 +83,14 @@ func TestTeamWorkSignalProjection_ResultPersistsNormalizedOutputRefs(t *testing.
 }
 
 func TestOutputRefFromMapNormalizesViewerURLToWorkspaceStorageRef(t *testing.T) {
-	item := protocol.TeamWorkItem{
-		TeamID:     "first-demo-game-team",
-		WorkItemID: "work-1",
-		RunID:      "run-1",
-		ProofID:    "proof-1",
-	}
-	env := protocol.SignalEnvelope{
-		Meta: protocol.SignalMeta{
-			TeamID: "first-demo-game-team",
-			RunID:  "run-1",
-		},
-	}
+	item := protocol.TeamWorkItem{TeamID: "first-demo-game-team", WorkItemID: "work-1", RunID: "run-1", ProofID: "proof-1"}
+	env := protocol.SignalEnvelope{Meta: protocol.SignalMeta{TeamID: "first-demo-game-team", RunID: "run-1"}}
 
 	ref, ok := outputRefFromMap(item, env, map[string]any{
-		"id":           "playable-package",
-		"kind":         "project_package",
-		"output_class": "user_deliverable",
-		"title":        "Playable package",
-		"storage_ref":  "/api/v1/workspace/files/view?path=groups%2Ffirst-demo-game-team%2Fgenerated%2Ffirst-game%2Findex.html",
-		"entrypoint":   "groups/first-demo-game-team/generated/first-game/index.html",
+		"id": "playable-package", "kind": "project_package", "output_class": "user_deliverable",
+		"title":       "Playable package",
+		"storage_ref": "/api/v1/workspace/files/view?path=groups%2Ffirst-demo-game-team%2Fgenerated%2Ffirst-game%2Findex.html",
+		"entrypoint":  "groups/first-demo-game-team/generated/first-game/index.html",
 	})
 	if !ok {
 		t.Fatal("outputRefFromMap returned no ref")
@@ -145,18 +107,12 @@ func TestOutputRefFromMapNormalizesViewerURLToWorkspaceStorageRef(t *testing.T) 
 }
 
 func TestOutputRefFromMapDerivesFilePathFromViewerHrefForMedia(t *testing.T) {
-	item := protocol.TeamWorkItem{
-		TeamID:     "media-team",
-		WorkItemID: "work-1",
-	}
+	item := protocol.TeamWorkItem{TeamID: "media-team", WorkItemID: "work-1"}
 	env := protocol.SignalEnvelope{Meta: protocol.SignalMeta{TeamID: "media-team"}}
 
 	ref, ok := outputRefFromMap(item, env, map[string]any{
-		"id":     "comic-page",
-		"kind":   "media",
-		"title":  "Comic page",
-		"folder": "groups/media-team/media",
-		"href":   "/api/v1/workspace/files/view?path=groups%2Fmedia-team%2Fmedia%2Fcomic-page.png",
+		"id": "comic-page", "kind": "media", "title": "Comic page", "folder": "groups/media-team/media",
+		"href": "/api/v1/workspace/files/view?path=groups%2Fmedia-team%2Fmedia%2Fcomic-page.png",
 	})
 	if !ok {
 		t.Fatal("outputRefFromMap returned no ref")
@@ -166,12 +122,46 @@ func TestOutputRefFromMapDerivesFilePathFromViewerHrefForMedia(t *testing.T) {
 	}
 }
 
+func TestProjectedSignalOutputRefsAcceptsAgentArtifacts(t *testing.T) {
+	item := protocol.TeamWorkItem{TeamID: "game-team", WorkItemID: "work-1", RunID: "run-1"}
+	env := protocol.SignalEnvelope{Meta: protocol.SignalMeta{TeamID: "game-team", RunID: "run-1"}}
+	payload := map[string]any{
+		"artifacts": []any{map[string]any{
+			"id": "playable-package", "type": "project_package", "title": "Playable package",
+			"folder":     "groups/game-team/generated/first-game",
+			"entrypoint": "groups/game-team/generated/first-game/index.html", "validation": "Browser play test passed.",
+		}},
+	}
+
+	refs := projectedSignalOutputRefs(item, env, payload)
+	if len(refs) != 1 {
+		t.Fatalf("output refs = %+v, want one structured artifact", refs)
+	}
+	if refs[0].Kind != "project_package" || refs[0].StorageRef != "groups/game-team/generated/first-game" {
+		t.Fatalf("output ref = %+v", refs[0])
+	}
+	if refs[0].Entrypoint != "index.html" {
+		t.Fatalf("entrypoint = %q, want relative package entrypoint", refs[0].Entrypoint)
+	}
+}
+
+func TestStampTeamOutputRefsUsesAuthoritativeCompletionProof(t *testing.T) {
+	refs := []protocol.TeamOutputRef{{OutputID: "output-1", ProofRef: "intent-proof", ProofID: "worker-proof"}}
+
+	stamped := stampTeamOutputRefsWithProof(refs, "completion-proof")
+
+	if len(stamped) != 1 || stamped[0].ProofRef != "completion-proof" || stamped[0].ProofID != "completion-proof" {
+		t.Fatalf("stamped refs = %#v", stamped)
+	}
+	if refs[0].ProofRef != "intent-proof" || refs[0].ProofID != "worker-proof" {
+		t.Fatalf("input refs were mutated: %#v", refs)
+	}
+}
+
 func expectProjectedTeamWorkUpdateWithOutputs(mock sqlmock.Sqlmock, workID string, state protocol.TeamWorkState, needsOperator bool, degradation string, outputs sqlmock.Argument) {
 	mock.ExpectExec("UPDATE team_work_items").
-		WithArgs(
-			workID, string(state), sqlmock.AnyArg(), needsOperator, degradation,
-			sqlmock.AnyArg(), outputs, sqlmock.AnyArg(), sqlmock.AnyArg(),
-		).
+		WithArgs(workID, string(state), sqlmock.AnyArg(), needsOperator, degradation,
+			sqlmock.AnyArg(), outputs, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 }
 

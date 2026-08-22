@@ -38,6 +38,23 @@ func recoveryActionForTeamWorkItem(item protocol.TeamWorkItem) recoveryAction {
 	if action.ApprovalPosture == "" {
 		action.ApprovalPosture = protocol.ApprovalPostureAutoAllowed
 	}
+	if item.DegradationState == protocol.TeamWorkDegradationExternalMutationVerifiedNotCommitted ||
+		(protocol.WorkIntentHasExternalMutation(item.WorkIntent) && item.WorkIntent.SideEffect.SideEffectState == protocol.WorkSideEffectVerifiedNotCommitted) {
+		action.ID = "create_governed_external_mutation_proposal"
+		action.Label = "Create new governed proposal"
+		action.ApprovalPosture = protocol.ApprovalPostureRequired
+		action.RetryTarget = ""
+		action.TargetState = protocol.TeamWorkStateNeedsOperator
+		return action
+	}
+	if item.DegradationState == protocol.TeamWorkDegradationExternalMutationUnknown ||
+		(protocol.WorkIntentHasExternalMutation(item.WorkIntent) && item.WorkIntent.SideEffect.SideEffectState == protocol.WorkSideEffectUnknown) {
+		action.ID = "verify_external_mutation_outcome"
+		action.Label = "Verify external outcome"
+		action.RetryTarget = ""
+		action.TargetState = protocol.TeamWorkStateNeedsOperator
+		return action
+	}
 	if strings.Contains(strings.ToLower(item.DegradationState), "media") || capabilityID == "media_generation" || capabilityID == "media_output" {
 		action.ID = "retry_media_capability"
 		action.Label = "Retry media capability"
@@ -48,6 +65,12 @@ func recoveryActionForTeamWorkItem(item protocol.TeamWorkItem) recoveryAction {
 }
 
 func recoveryOptionFromAction(action recoveryAction) string {
+	if action.ID == "verify_external_mutation_outcome" {
+		return "Verify the external system outcome before retrying or trusting completion."
+	}
+	if action.ID == "create_governed_external_mutation_proposal" {
+		return "Ask Soma to create a new governed proposal before attempting this external mutation again."
+	}
 	parts := []string{"Retry"}
 	if action.CapabilityID != "" {
 		parts = append(parts, action.CapabilityID)

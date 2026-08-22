@@ -36,7 +36,7 @@ func TestEnsureGroupForCreatedTeamMirrorsConfirmedCreateTeam(t *testing.T) {
 		"name":    "Research Team",
 		"role":    "researcher",
 		"goal":    "Map optimal agentry architecture.",
-	})
+	}, "")
 	if err != nil {
 		t.Fatalf("ensure group for created team: %v", err)
 	}
@@ -87,6 +87,28 @@ func TestExecutionOutputsFromToolResultsRetainsTeamAndCodeFile(t *testing.T) {
 	}
 	if outputs[1].RetentionClass != protocol.ExecutionRetentionClassRetained {
 		t.Fatalf("file retention = %q", outputs[1].RetentionClass)
+	}
+}
+
+func TestExecutionOutputsFromToolResultsNamesUntypedConfigurationStateForOperators(t *testing.T) {
+	outputs := executionOutputsFromToolResults([]plannedToolExecutionResult{
+		{Name: "store_config_document", Output: "revision stored"},
+		{Name: "activate_config_document", Output: "revision active"},
+	})
+
+	if len(outputs) != 2 {
+		t.Fatalf("outputs = %#v, want 2", outputs)
+	}
+	if outputs[0].Kind != "config_revision" || outputs[0].Title != "Configuration saved" {
+		t.Fatalf("stored template output = %#v", outputs[0])
+	}
+	if outputs[1].Kind != "config_activation" || outputs[1].Title != "Configuration active" {
+		t.Fatalf("active template output = %#v", outputs[1])
+	}
+	for _, output := range outputs {
+		if output.Retained == nil || !*output.Retained || output.RetentionClass != protocol.ExecutionRetentionClassRetained {
+			t.Fatalf("configuration output must remain retained: %#v", output)
+		}
 	}
 }
 
@@ -193,6 +215,7 @@ func TestPersistConfirmedActionOutputArtifactsStoresSlugTeamWriteFile(t *testing
 	err := s.persistConfirmedActionOutputArtifacts(
 		t.Context(),
 		"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+		"",
 		[]plannedToolExecutionResult{
 			{
 				Name:      "create_team",

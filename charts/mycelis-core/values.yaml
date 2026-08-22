@@ -156,6 +156,9 @@ env:
 # NATS JetStream Configuration
 nats:
   enabled: true
+  # Leave url empty to use this Helm release's bundled NATS service.
+  url: ""
+  serviceID: mycelis-core
   config:
     jetstream:
       enabled: true

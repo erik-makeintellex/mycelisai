@@ -52,6 +52,7 @@ type ProofArtifactInput struct {
 	Degradation      any
 	Recovery         any
 	Payload          any
+	Intermediate     bool
 }
 
 func (s *Store) UpsertContract(ctx context.Context, input ContractInput) (string, error) {
@@ -185,8 +186,10 @@ func RecordProofArtifact(ctx context.Context, exec SQLExecutor, input ProofArtif
 		return "", fmt.Errorf("trust: insert proof artifact: %w", err)
 	}
 
-	if err := updateContractFromProof(ctx, exec, id, input, status, validationSource, evidenceStrength, proofQuality); err != nil {
-		return "", err
+	if !input.Intermediate {
+		if err := updateContractFromProof(ctx, exec, id, input, status, validationSource, evidenceStrength, proofQuality); err != nil {
+			return "", err
+		}
 	}
 	return id, nil
 }

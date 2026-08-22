@@ -46,11 +46,15 @@ func TestExecuteToolIteration_PersistsMCPFailureToExchange(t *testing.T) {
 
 	ok := agent.executeToolIteration(
 		0,
+		6,
+		"Run the MCP tool.",
 		&cognitive.InferRequest{Profile: "chat"},
 		&toolCallPayload{Name: "browser_search", Arguments: map[string]any{"query": "governed MCP visibility"}},
 		map[string]int{},
 		func(string, string) bool { return true },
 		&agentToolLoopResult{responseText: `{"tool_call":{"name":"browser_search"}}`},
+		false,
+		nil,
 	)
 	if ok {
 		t.Fatal("expected MCP failure iteration to return false")
@@ -87,11 +91,15 @@ func TestExecuteToolIteration_PersistsMCPCompletionToExchange(t *testing.T) {
 	result := &agentToolLoopResult{responseText: `{"tool_call":{"name":"browser_search"}}`}
 	ok := agent.executeToolIteration(
 		0,
+		6,
+		"Run the MCP tool.",
 		req,
 		&toolCallPayload{Name: "browser_search", Arguments: map[string]any{"query": "workspace brief"}},
 		map[string]int{},
 		func(string, string) bool { return true },
 		result,
+		false,
+		nil,
 	)
 	if !ok {
 		t.Fatal("expected MCP completion iteration to succeed")

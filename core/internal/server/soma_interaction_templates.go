@@ -173,6 +173,9 @@ func matchSomaInteractionTemplate(text string) somaInteractionMatch {
 func matchedSomaInteractionThemes(lower string) []somaInteractionTheme {
 	var matched []somaInteractionTheme
 	for _, theme := range defaultSomaInteractionThemes() {
+		if theme.ID == "recurring_behavior" && requestContainsAny(lower, []string{"outcome template", "outcome-template"}) {
+			continue
+		}
 		for _, phrase := range theme.Phrases {
 			if strings.Contains(lower, normalizeIntentText(phrase)) {
 				matched = append(matched, theme)

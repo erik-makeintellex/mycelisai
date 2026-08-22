@@ -31,6 +31,12 @@ func (s *Soma) HandleCreateTeam(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing ID or Name", http.StatusBadRequest)
 		return
 	}
+	for _, member := range manifest.Members {
+		if member.ProfileRef != "" || member.Profile != nil {
+			http.Error(w, "Worker Profile selection must be resolved through Soma", http.StatusBadRequest)
+			return
+		}
+	}
 	if manifest.Type == "" {
 		manifest.Type = TeamTypeAction
 	}
@@ -67,10 +73,9 @@ func (s *Soma) HandleCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Source is a caller label, not authority to select an arbitrary bus channel.
+	// Operator commands always enter through the guarded user-intent lane.
 	subject := protocol.TopicGlobalInputUser
-	if payload.Source != "" {
-		subject = fmt.Sprintf(protocol.TopicGlobalInputFmt, payload.Source)
-	}
 	if err := s.nc.Publish(subject, []byte(payload.Content)); err != nil {
 		log.Printf("Failed to publish command: %v", err)
 		http.Error(w, "Failed to inject command", http.StatusInternalServerError)

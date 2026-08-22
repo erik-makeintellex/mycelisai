@@ -58,17 +58,20 @@ const (
 type TrustValidationSource string
 
 const (
-	TrustValidationSourceIntentProof   TrustValidationSource = "intent_proof"
-	TrustValidationSourceConfirmAction TrustValidationSource = "confirm_action"
-	TrustValidationSourceTeamSignal    TrustValidationSource = "team_signal"
+	TrustValidationSourceIntentProof    TrustValidationSource = "intent_proof"
+	TrustValidationSourceConfirmAction  TrustValidationSource = "confirm_action"
+	TrustValidationSourceTeamSignal     TrustValidationSource = "team_signal"
+	TrustValidationSourceRetainedOutput TrustValidationSource = "retained_output_validation"
+	TrustValidationSourceRuntimeOutput  TrustValidationSource = "runtime_output_validation"
 )
 
 type TrustEvidenceStrength string
 
 const (
-	TrustEvidenceStrengthIntentOnly TrustEvidenceStrength = "intent_only"
-	TrustEvidenceStrengthRunAudit   TrustEvidenceStrength = "run_audit"
-	TrustEvidenceStrengthDegraded   TrustEvidenceStrength = "degraded"
+	TrustEvidenceStrengthIntentOnly     TrustEvidenceStrength = "intent_only"
+	TrustEvidenceStrengthRunAudit       TrustEvidenceStrength = "run_audit"
+	TrustEvidenceStrengthRetainedOutput TrustEvidenceStrength = "retained_output"
+	TrustEvidenceStrengthDegraded       TrustEvidenceStrength = "degraded"
 )
 
 type TrustProofQuality string

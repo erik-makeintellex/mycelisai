@@ -64,7 +64,7 @@ func inferTeamEvocationContinuationPlanFromRequest(text string) ([]protocol.Plan
 				"approval_posture":      string(protocol.ApprovalPostureRequired),
 				"owned_scope":           []string{groupWorkspaceFolderForTeamID(teamID)},
 				"constraints":           teamEvocationDelegationConstraints(),
-				"required_capabilities": requiredCapabilitiesForContentContract(contract),
+				"required_capabilities": deliveryCapabilitiesForContentContract(contract),
 				"exit_criteria":         confirmedActionStringSlice(contract["acceptance_criteria"]),
 				"evidence_required":     confirmedActionStringSlice(contract["proof_required"]),
 				"context": map[string]any{
@@ -73,11 +73,12 @@ func inferTeamEvocationContinuationPlanFromRequest(text string) ([]protocol.Plan
 					"research_council_handoff":     researchPath,
 					"research_team_responsibility": "Prepare domain/stack/options review, unknowns, and specialist recommendations before implementation.",
 					"delivery_team_responsibility": "Use the handoff to produce the retained user-facing output package and proof.",
+					"result_contract":              projectPackageResultContract(teamID, contract),
 				},
 			},
 			"expected_outputs":      confirmedActionStringSlice(contract["expected_outputs"]),
 			"expected_proof":        confirmedActionStringSlice(contract["proof_required"]),
-			"required_capabilities": requiredCapabilitiesForContentContract(contract),
+			"required_capabilities": deliveryCapabilitiesForContentContract(contract),
 			"evocation_brief":       briefPath,
 			"research_handoff":      researchPath,
 		},
@@ -140,7 +141,7 @@ func buildTeamEvocationDeliveryPlan(request, teamID, briefPath string, contract 
 				"approval_posture":      string(protocol.ApprovalPostureRequired),
 				"owned_scope":           []string{groupWorkspaceFolderForTeamID(teamID)},
 				"constraints":           teamEvocationDelegationConstraints(),
-				"required_capabilities": requiredCapabilitiesForContentContract(contract),
+				"required_capabilities": deliveryCapabilitiesForContentContract(contract),
 				"exit_criteria":         confirmedActionStringSlice(contract["acceptance_criteria"]),
 				"evidence_required":     confirmedActionStringSlice(contract["proof_required"]),
 				"context": map[string]any{
@@ -154,7 +155,7 @@ func buildTeamEvocationDeliveryPlan(request, teamID, briefPath string, contract 
 			},
 			"expected_outputs":      confirmedActionStringSlice(contract["expected_outputs"]),
 			"expected_proof":        confirmedActionStringSlice(contract["proof_required"]),
-			"required_capabilities": requiredCapabilitiesForContentContract(contract),
+			"required_capabilities": deliveryCapabilitiesForContentContract(contract),
 			"evocation_brief":       briefPath,
 			"research_handoff":      researchPath,
 		},
@@ -162,7 +163,24 @@ func buildTeamEvocationDeliveryPlan(request, teamID, briefPath string, contract 
 	return []protocol.PlannedToolCall{researchCall, delegateCall}
 }
 
+func deliveryCapabilitiesForContentContract(contract map[string]any) []string {
+	capabilities := requiredCapabilitiesForContentContract(contract)
+	delivery := make([]string, 0, len(capabilities))
+	for _, capability := range capabilities {
+		switch capability {
+		case "research_for_blueprint", "consult_council":
+			continue
+		default:
+			delivery = append(delivery, capability)
+		}
+	}
+	return uniqueOrderedTools(delivery)
+}
+
 func requestAsksTeamToDeliver(lower string) bool {
+	if requestRequiresDeliveryTeam(lower) {
+		return true
+	}
 	if !requestContainsAny(lower, []string{"team", "teams"}) {
 		return false
 	}
@@ -170,7 +188,8 @@ func requestAsksTeamToDeliver(lower string) bool {
 }
 
 func requestAsksToContinueTeamEvocation(lower string) bool {
-	if !requestContainsAny(lower, []string{"brief", "evocation", "handoff", "retained", "research", "council"}) {
+	if !requestContainsAny(lower, []string{"brief", "evocation", "handoff"}) &&
+		!(hasExactWord(lower, "research") && hasExactWord(lower, "council")) {
 		return false
 	}
 	return requestContainsAny(lower, []string{
@@ -241,19 +260,23 @@ func teamEvocationDelegationGoal(request string, contract map[string]any) string
 func teamEvocationDelegationConstraints() []string {
 	return []string{
 		"Do not return another planning-only response as the final deliverable.",
+		"Research and council preparation is already retained in the handoff; read it and execute the delivery instead of repeating preparation unless the handoff names a concrete unresolved blocker.",
 		"Keep team-generated internal scratch separate from user-facing retained outputs.",
 		"Provide a direct launch, view, or open path for every user-facing deliverable.",
+		"Read every retained user-facing entrypoint back after writing it and validate the requested behavior before reporting completion.",
+		"Do not describe a package as validated when required files, interaction checks, or proof are incomplete.",
 		"Report validation defects back through Soma as repair work instead of silently editing outside the approved scope.",
 	}
 }
 
 func projectPackageResultContract(teamID string, contract map[string]any) map[string]any {
-	return map[string]any{
+	result := map[string]any{
 		"kind":                 "project_package",
 		"entrypoint_required":  true,
 		"folder_required":      true,
 		"files_required":       []string{"README.md", "PROOF.md", "project-package.json"},
 		"validation_required":  true,
+		"validation_mode":      "readback_against_exit_criteria",
 		"proof_ref_required":   true,
 		"repair_channel":       "soma",
 		"team_id":              teamID,
@@ -262,4 +285,8 @@ func projectPackageResultContract(teamID string, contract map[string]any) map[st
 		"proof_required":       confirmedActionStringSlice(contract["proof_required"]),
 		"source_material_mode": "internal_sources_hidden_until_requested",
 	}
+	if plan, err := protocol.DecodeOutputValidationPlan(contract["output_validation"]); err == nil {
+		result["output_validation"] = plan
+	}
+	return result
 }

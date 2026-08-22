@@ -17,6 +17,20 @@ export interface WorkOutputContractData {
     validation?: string[];
 }
 
+export interface WorkLifecycleContractData {
+    stop_action?: string;
+    retry_action?: string;
+    recovery_action?: string;
+    control_summary?: string;
+}
+
+export interface WorkSideEffectContractData {
+    effect_kind?: "read" | "external_mutation";
+    idempotency_key?: string;
+    retry_safety?: "safe" | "unsafe" | "unknown";
+    side_effect_state?: "not_started" | "accepted" | "committed" | "unknown";
+}
+
 export interface WorkIntentData {
     kind?: string;
     objective?: string;
@@ -29,4 +43,6 @@ export interface WorkIntentData {
     service_refs?: string[];
     project_ref?: string;
     output_contract?: WorkOutputContractData;
+    lifecycle?: WorkLifecycleContractData;
+    side_effect?: WorkSideEffectContractData;
 }

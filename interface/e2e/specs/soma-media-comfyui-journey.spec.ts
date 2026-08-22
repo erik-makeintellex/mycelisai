@@ -12,7 +12,6 @@ import {
   mockOrganizationWorkspace,
   openOrganization,
   sendWorkspaceMessage,
-  type ChatRequestBody,
   type RouteResponse,
 } from "../support/soma-ui-testing";
 
@@ -156,23 +155,23 @@ async function mockUnavailableComfyUIExecution(pageRoute: Route) {
 
 test.describe("Soma ComfyUI media journey", () => {
   test("mocked unavailable local media provider shows trusted degradation guidance", async ({ page }) => {
-    await mockOrganizationWorkspace(page, (_requestBody: ChatRequestBody) => mediaTeamProposal());
+    await mockOrganizationWorkspace(page, () => mediaTeamProposal());
     await page.route("**/api/v1/intent/confirm-action", mockUnavailableComfyUIExecution);
 
     await openOrganization(page);
     await sendWorkspaceMessage(page, "Create a local/private ComfyUI media team output.");
 
     await expect(page.getByText("I can start that.").last()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /^(Start|Approve)$/i }).last().click();
+    await confirmProposal(page);
 
     const failureCard = page.getByTestId("execution-summary-card").last();
     await expect(failureCard.getByText("Needs review").first()).toBeVisible({ timeout: 20_000 });
     await expect(failureCard.getByText("Details and proof")).toBeVisible();
     await failureCard.getByText("Details and proof").click();
-    await expect(failureCard).toContainText("Local media generation is not reachable, so Soma could not create the image output.");
+    await expect(failureCard).toContainText("The configured image generator is not ready, so Soma could not create the image output.");
     await expect(failureCard).toContainText("Still available: The approval, request, failed run record, and audit trail remain available for review.");
     await expect(failureCard).toContainText("Not reliable: No completed image output or execution proof should be trusted for this attempt.");
-    await expect(failureCard).toContainText("Safe next: Start or reconnect the configured ComfyUI upstream, then retry. If you only need text/files, ask Soma to rerun without image generation.");
+    await expect(failureCard).toContainText("Safe next: Start or reconnect the configured image generator, then tell Soma to try the image again.");
     await expect(page.getByText("Run proof + retained output")).toHaveCount(0);
   });
 
@@ -277,5 +276,36 @@ test.describe("Soma ComfyUI media journey", () => {
     expect(record?.output_refs).toEqual(
       expect.arrayContaining([expect.objectContaining({ proof_artifact_id: data?.proof_artifact_id })]),
     );
+  });
+
+  test("live Forge preflight explains API mode before proposal or team creation", async ({ page }) => {
+    test.skip(
+      !process.env.PLAYWRIGHT_LIVE_FORGE_PREFLIGHT,
+      "requires live Core and Forge UI with API mode disabled; set PLAYWRIGHT_LIVE_FORGE_PREFLIGHT=1",
+    );
+    test.setTimeout(liveTimeoutMs);
+
+    const optionsResponse = await page.request.get("http://127.0.0.1:7860/sdapi/v1/options");
+    expect(optionsResponse.status()).toBe(404);
+
+    const stamp = Date.now();
+    const organizationId = await createOrganization(page, `QA Forge Preflight ${stamp}`);
+    await openLiveWorkspace(page, organizationId);
+
+    const result = await submitLiveWorkspaceChat(
+      page,
+      "Create a small research team, research the name Soma, and generate an image that best expresses Soma with the local Forge image generator.",
+    );
+
+    expect(result.response.status(), result.body ? JSON.stringify(result.body) : result.raw).toBe(503);
+    const blocker = result.body?.data as unknown as { code?: string } | undefined;
+    expect(blocker?.code).toBe("media_provider_not_ready");
+    await expect(page.getByText("Image generator setup required").last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Forge is open, but image generation is not enabled.").last()).toBeVisible();
+    await expect(page.getByText(/Enable API mode in the Forge\/Pinokio launch settings/i).last()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open Resources" }).last()).toBeVisible();
+    await expect(page.getByText(/Proposal ready/i)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Approve/i })).toHaveCount(0);
+    await expect(page.getByText(/TEAM_EVOCATION\.md/i)).toHaveCount(0);
   });
 });

@@ -20,16 +20,16 @@ const (
 
 // TeamManifest defines the configuration for a Swarm Team.
 type TeamManifest struct {
-	ID          string                   `yaml:"id"`
-	Name        string                   `yaml:"name"`
-	Type        TeamType                 `yaml:"type"`
-	Description string                   `yaml:"description"`
-	Provider    string                   `yaml:"provider,omitempty"`
-	AskRouting  map[string]string        `yaml:"ask_routing,omitempty"`
-	Members     []protocol.AgentManifest `yaml:"members"`
-	Inputs      []string                 `yaml:"inputs"`
-	Deliveries  []string                 `yaml:"deliveries"`
-	Schedule    *protocol.ScheduleConfig `yaml:"schedule,omitempty"`
+	ID          string                   `json:"id" yaml:"id"`
+	Name        string                   `json:"name" yaml:"name"`
+	Type        TeamType                 `json:"type" yaml:"type"`
+	Description string                   `json:"description" yaml:"description"`
+	Provider    string                   `json:"provider,omitempty" yaml:"provider,omitempty"`
+	AskRouting  map[string]string        `json:"ask_routing,omitempty" yaml:"ask_routing,omitempty"`
+	Members     []protocol.AgentManifest `json:"members" yaml:"members"`
+	Inputs      []string                 `json:"inputs" yaml:"inputs"`
+	Deliveries  []string                 `json:"deliveries" yaml:"deliveries"`
+	Schedule    *protocol.ScheduleConfig `json:"schedule,omitempty" yaml:"schedule,omitempty"`
 }
 
 // Team represents a running instance of a TeamManifest.
@@ -52,24 +52,30 @@ type Team struct {
 	mcpServerNames      map[uuid.UUID]string
 	mcpToolDescs        map[string]string
 	pendingCorrelations []teamCommandCorrelation
+	seenCommandKeys     map[string]time.Time
+	commandReceipts     CommandReceiptStore
+	subscriptions       []*nats.Subscription
+	agents              []*Agent
 }
 
 type teamCommandCorrelation struct {
-	WorkItemID string
-	TeamID     string
-	RunID      string
-	ExpiresAt  time.Time
+	WorkItemID     string
+	TeamID         string
+	RunID          string
+	IdempotencyKey string
+	ExpiresAt      time.Time
 }
 
 // NewTeam creates a new Team instance.
 func NewTeam(manifest *TeamManifest, nc *nats.Conn, brain *cognitive.Router, toolExec MCPToolExecutor) *Team {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Team{
-		Manifest:     manifest,
-		nc:           nc,
-		brain:        brain,
-		toolExecutor: toolExec,
-		ctx:          ctx,
-		cancel:       cancel,
+		Manifest:        manifest,
+		nc:              nc,
+		brain:           brain,
+		toolExecutor:    toolExec,
+		ctx:             ctx,
+		cancel:          cancel,
+		seenCommandKeys: map[string]time.Time{},
 	}
 }

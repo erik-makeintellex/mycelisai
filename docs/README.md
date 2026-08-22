@@ -17,20 +17,20 @@ The in-app Help area should stay user-first. Its default path should help someon
 
 These are the best entry points for someone using Mycelis through the product or in-app docs browser:
 
-- **User Docs Home**: `./user/README.md`
-- **Deployment Method Selection**: `./user/deployment-methods.md`
-- **Core Concepts**: `./user/core-concepts.md`
-- **Using Soma Chat**: `./user/soma-chat.md`
-- **Workflow Variants And Plan Memory**: `./user/workflow-variants-and-plan-memory.md`
-- **Teams**: `./user/teams.md`
-- **Governance & Trust**: `./user/governance-trust.md`
-- **Automations**: `./user/automations.md`
-- **Resources**: `./user/resources.md`
-- **Memory**: `./user/memory.md`
-- **Settings And Access**: `./user/settings-access.md`
-- **Authentication Modes**: `./user/auth-modes.md`
-- **System Status & Recovery**: `./user/system-status-recovery.md`
-- **Run Timeline**: `./user/run-timeline.md`
+- [User Docs Home](user/README.md)
+- [Deployment Method Selection](user/deployment-methods.md)
+- [Core Concepts](user/core-concepts.md)
+- [Using Soma Chat](user/soma-chat.md)
+- [Workflow Variants And Plan Memory](user/workflow-variants-and-plan-memory.md)
+- [Teams](user/teams.md)
+- [Governance And Trust](user/governance-trust.md)
+- [Automations](user/automations.md)
+- [Resources](user/resources.md)
+- [Memory](user/memory.md)
+- [Settings And Access](user/settings-access.md)
+- [Authentication Modes](user/auth-modes.md)
+- [System Status And Recovery](user/system-status-recovery.md)
+- [Run Timeline](user/run-timeline.md)
 
 User guidance rules:
 - lead with the action a user is trying to complete
@@ -43,41 +43,41 @@ User guidance rules:
 
 These are the active contributor support surfaces for changing or reviewing the repo. Product and architecture authority stays in the Canonical PRD unless a support doc is explicitly referenced from it.
 
-- **Repository Entry Point**: `../README.md`
-- **Operations**: `./architecture/OPERATIONS.md`
-- **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
-- **Cognitive Architecture Reference**: `./COGNITIVE_ARCHITECTURE.md`
-- **API Reference**: `./API_REFERENCE.md`
-- **Logging Standard**: `./logging.md`
-- **Ops README**: `../ops/README.md`
-- **Core README**: `../core/README.md`
-- **Interface README**: `../interface/README.md`
+- [Repository Entry Point](../README.md)
+- [Operations](architecture/OPERATIONS.md)
+- [Local Dev Workflow](LOCAL_DEV_WORKFLOW.md)
+- [AI Provider Runtime](COGNITIVE_ARCHITECTURE.md)
+- [API Reference](API_REFERENCE.md)
+- [Logging Standard](logging.md)
+- [Ops README](../ops/README.md)
+- [Core README](../core/README.md)
+- [Interface README](../interface/README.md)
 
 ## Architecture Contracts
 
-The active architecture library is intentionally singular. It is not a holding area for old version notes, doctrine fragments, or temporary execution plans.
+Product architecture has one active document and no archive inside the docs tree:
 
-- **Architecture Docs Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
-- **Mycelis Canonical PRD**: `./architecture-library/MYCELIS_CANONICAL_PRD.md`
-- **Worker Library Source Map**: `./architecture-library/WORKER_LIBRARY_SOURCE_MAP.md`
+- [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
+
+Backend, Frontend, Operations, API, Testing, and user guides are scoped implementation or operating contracts. They support the PRD without becoming additional product doctrine.
 
 ## Testing And Release
 
 Use these when the goal is verification, release proof, or workflow-complete validation:
 
-- **Testing Guide**: `./TESTING.md`
-- **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
-- **Mycelis Canonical PRD**: `./architecture-library/MYCELIS_CANONICAL_PRD.md`
-- **Governance System**: `./governance.md`
-- **Licensing & Editions**: `./licensing.md`
+- [Testing Guide](TESTING.md)
+- [User Acceptance Runbook](REMOTE_USER_TESTING.md)
+- [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
+- [Governance System](governance.md)
+- [Licensing And Editions](licensing.md)
 
 ## Agent And Maintainer Notes
 
 These files are useful for Codex, maintainers, and architecture reviewers, but they should not be treated as ordinary user-facing product docs:
 
-- **Repository Standards**: `../AGENTS.md`
-- **Active Development State**: `../.state/V8_DEV_STATE.md`
-- **Mycelis Canonical PRD**: `./architecture-library/MYCELIS_CANONICAL_PRD.md`
+- [Repository Standards](../AGENTS.md)
+- [Active Development State](../.state/V8_DEV_STATE.md)
+- [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
 
 Keep these out of the normal operator path unless the task is repo maintenance, architecture review, or delivery-state inspection.
 

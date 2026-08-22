@@ -42,12 +42,12 @@ describe("SomaTeamContextSwitcher", () => {
     );
 
     expect(screen.queryByRole("tablist")).toBeNull();
-    expect(screen.getByRole("button", { name: /Soma root/i }).getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByRole("button", { name: /current All work/i }).getAttribute("aria-expanded")).toBe("false");
 
-    fireEvent.click(screen.getByRole("button", { name: /Soma root/i }));
+    fireEvent.click(screen.getByRole("button", { name: /current All work/i }));
 
     const listbox = screen.getByRole("listbox", { name: /choose current workflow/i });
-    expect(screen.getByRole("button", { name: /Soma root/i }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("button", { name: /current All work/i }).getAttribute("aria-expanded")).toBe("true");
     expect(within(listbox).getAllByRole("option").length).toBe(13);
     expect(within(listbox).getByRole("option", { name: /Workflow 12/i })).toBeDefined();
 
@@ -73,7 +73,7 @@ describe("SomaTeamContextSwitcher", () => {
     expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Focused team");
 
     fireEvent.click(screen.getByRole("button", { name: /Focused team/i }));
-    fireEvent.click(screen.getByRole("option", { name: /Soma root/i }));
+    fireEvent.click(screen.getByRole("option", { name: /All work/i }));
 
     expect(onRootSelect).toHaveBeenCalledTimes(1);
   });
@@ -90,9 +90,9 @@ describe("SomaTeamContextSwitcher", () => {
       />,
     );
 
-    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Working in");
-    expect(screen.getByRole("link", { name: /Manage teams/i }).textContent).toContain("Teams");
-    expect(screen.getByRole("button", { name: /Soma root/i }).className).toContain("rounded-full");
+    expect(screen.getByTestId("soma-team-context-switcher").textContent).toContain("Work context");
+    expect(screen.getByRole("link", { name: /Manage teams/i }).getAttribute("title")).toBe("Manage teams");
+    expect(screen.getByRole("button", { name: /current All work/i }).className).toContain("rounded-full");
   });
 
   it("hydrates from no visible teams into the workflow picker without changing hook order", () => {
@@ -119,7 +119,7 @@ describe("SomaTeamContextSwitcher", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Soma root/i }));
+    fireEvent.click(screen.getByRole("button", { name: /current All work/i }));
     fireEvent.click(screen.getByRole("option", { name: /Workflow 1/i }));
 
     expect(onTeamSelect).toHaveBeenCalledWith("team-1");

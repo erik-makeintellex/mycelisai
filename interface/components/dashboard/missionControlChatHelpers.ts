@@ -128,20 +128,20 @@ export function consultationResultSummary(consultations?: ChatConsultation[]): s
     return `Soma checked with ${memberLabels[0]}, ${memberLabels[1]}, and ${memberLabels.length - 2} more specialists while shaping this answer.`;
 }
 
-export function toolToActivity(log: { type?: string; payload?: Record<string, string>; message?: string }): string {
-    const payload = (log.payload ?? {}) as Record<string, string>;
-    const tool = payload.tool ?? payload.tool_name ?? "";
+export function toolToActivity(log: { type?: string; payload?: Record<string, unknown>; message?: string }): string {
+    const payload = log.payload ?? {};
+    const tool = textPayloadValue(payload.tool) ?? textPayloadValue(payload.tool_name) ?? "";
     switch (tool) {
         case "consult_council":
-            return `Consulting ${payload.member ?? "council"}...`;
+            return `Consulting ${textPayloadValue(payload.member) ?? "council"}...`;
         case "generate_blueprint":
             return "Generating mission blueprint...";
         case "research_for_blueprint":
             return "Researching past missions...";
         case "write_file":
-            return `Writing ${payload.path ?? "file"}...`;
+            return `Writing ${textPayloadValue(payload.path) ?? "file"}...`;
         case "read_file":
-            return `Reading ${payload.path ?? "file"}...`;
+            return `Reading ${textPayloadValue(payload.path) ?? "file"}...`;
         case "search_memory":
             return "Searching memory...";
         case "recall":
@@ -155,6 +155,10 @@ export function toolToActivity(log: { type?: string; payload?: Record<string, st
         default:
             return tool ? `${tool.replace(/_/g, " ")}...` : (log.message ?? "Working...");
     }
+}
+
+function textPayloadValue(value: unknown): string | undefined {
+    return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function ensureSentence(text: string): string {

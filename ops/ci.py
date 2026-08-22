@@ -6,7 +6,6 @@ Usage:
     uv run inv ci.test
     uv run inv ci.build
     uv run inv ci.check
-    uv run inv ci.deploy
 """
 
 import ipaddress
@@ -255,15 +254,10 @@ def release_preflight(c, lane="baseline", e2e=True, strict_toolchain=False, serv
         runtime_posture=runtime_posture,
         runtime_posture_check=_runtime_posture_check,
         toolchain_check=toolchain_check,
+        lint=lint,
         baseline=baseline,
         service_check=service_check,
     )
-
-
-@task
-def deploy(c):
-    """Build + Docker + K8s deploy."""
-    ci_release.run_deploy(c, lint_task=lint, test_task=test)
 
 
 ns = Collection("ci")
@@ -276,4 +270,3 @@ ns.add_task(service_check, name="service-check")
 ns.add_task(toolchain_check, name="toolchain-check")
 ns.add_task(entrypoint_check, name="entrypoint-check")
 ns.add_task(release_preflight, name="release-preflight")
-ns.add_task(deploy)

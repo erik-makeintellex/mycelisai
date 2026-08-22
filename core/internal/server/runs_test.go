@@ -39,6 +39,55 @@ func withRunsManager(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 	}, mock
 }
 
+// GET /api/v1/runs/{id}
+
+func TestHandleGetRun(t *testing.T) {
+	runsOpt, mock := withRunsManager(t)
+	s := newTestServer(runsOpt)
+	runID := "bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	now := time.Now()
+
+	mock.ExpectQuery("SELECT .+ FROM mission_runs WHERE").
+		WithArgs(runID).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "mission_id", "tenant_id", "status", "run_depth",
+			"parent_run_id", "started_at", "completed_at",
+		}).AddRow(runID, "mission-1", "default", "running", 0, "", now, nil))
+
+	mux := setupMux(t, "GET /api/v1/runs/{id}", s.handleGetRun)
+	rr := doRequest(t, mux, "GET", "/api/v1/runs/"+runID, "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var response map[string]any
+	assertJSON(t, rr, &response)
+	data, ok := response["data"].(map[string]any)
+	if !ok || data["id"] != runID {
+		t.Fatalf("run response = %#v", response)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet DB expectations: %v", err)
+	}
+}
+
+func TestHandleGetRun_NotFound(t *testing.T) {
+	runsOpt, mock := withRunsManager(t)
+	s := newTestServer(runsOpt)
+	mock.ExpectQuery("SELECT .+ FROM mission_runs WHERE").
+		WithArgs("missing-run").
+		WillReturnRows(sqlmock.NewRows(nil))
+
+	mux := setupMux(t, "GET /api/v1/runs/{id}", s.handleGetRun)
+	rr := doRequest(t, mux, "GET", "/api/v1/runs/missing-run", "")
+	assertStatus(t, rr, http.StatusNotFound)
+}
+
+func TestHandleGetRun_NilStore(t *testing.T) {
+	s := newTestServer()
+	mux := setupMux(t, "GET /api/v1/runs/{id}", s.handleGetRun)
+	rr := doRequest(t, mux, "GET", "/api/v1/runs/run-1", "")
+	assertStatus(t, rr, http.StatusServiceUnavailable)
+}
+
 // ── GET /api/v1/runs/{id}/events ───────────────────────────────────
 
 func TestHandleGetRunEvents(t *testing.T) {

@@ -155,7 +155,7 @@ func expectRawTeamStatusEventInsert(mock sqlmock.Sqlmock, event protocol.TeamSta
 			event.EventID, event.TeamID, event.WorkItemID, sqlmock.AnyArg(),
 			sqlmock.AnyArg(), event.ContractID, event.ProofID,
 			string(event.State), event.Headline, event.Details, event.ConfidencePosture,
-			sqlmock.AnyArg(), event.NextAction, event.SourceKind, event.SourceChannel,
+			sqlmock.AnyArg(), event.NextAction, event.ExecutionMode, sqlmock.AnyArg(), event.SourceKind, event.SourceChannel,
 			event.PayloadKind, sqlmock.AnyArg(), event.Version,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))

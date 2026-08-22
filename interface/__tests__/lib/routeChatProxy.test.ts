@@ -113,6 +113,28 @@ describe('chat proxy routes', () => {
         expect(headers.get('X-Mycelis-Web-Identity-Signature')).toBe('signed-proof');
     });
 
+	it('forwards the opt-in QA fixture scope without forwarding arbitrary headers', async () => {
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), {
+			status: 200,
+			headers: { 'content-type': 'application/json' },
+		})));
+
+		await postWorkspaceChat(new Request('http://localhost/api/v1/chat', {
+			method: 'POST',
+			body: JSON.stringify({ messages: [] }),
+			headers: {
+				'Content-Type': 'application/json',
+				'x-mycelis-qa-fixture-scope': '11111111-1111-1111-1111-111111111111',
+				'x-untrusted-test-header': 'do-not-forward',
+			},
+		}));
+
+		const init = vi.mocked(fetch).mock.calls[0]?.[1] as RequestInit;
+		const headers = init.headers as Headers;
+		expect(headers.get('X-Mycelis-QA-Fixture-Scope')).toBe('11111111-1111-1111-1111-111111111111');
+		expect(headers.has('x-untrusted-test-header')).toBe(false);
+	});
+
     it('proxies search-source reads and preserves query parameters', async () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true, data: [] }), {
             status: 200,

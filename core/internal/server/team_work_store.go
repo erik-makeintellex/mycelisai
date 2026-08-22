@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -10,25 +11,41 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+type teamWorkListView string
+
+const (
+	teamWorkListViewAll       teamWorkListView = ""
+	teamWorkListViewAttention teamWorkListView = "attention"
+)
+
 func (s *AdminServer) listTeamWorkItemsDB(ctx context.Context, teamID string, limit int, includeArchived bool) ([]protocol.TeamWorkItem, error) {
+	return s.listTeamWorkItemsByViewDB(ctx, teamID, limit, includeArchived, teamWorkListViewAll)
+}
+
+func (s *AdminServer) listTeamWorkItemsByViewDB(ctx context.Context, teamID string, limit int, includeArchived bool, view teamWorkListView) ([]protocol.TeamWorkItem, error) {
 	db := s.getDB()
 	if db == nil {
 		return nil, errors.New("database not available")
 	}
 	archivedFilter := ""
-	if !includeArchived {
+	if !includeArchived || view == teamWorkListViewAttention {
 		archivedFilter = "AND state <> 'archived'"
+	}
+	viewFilter := ""
+	if view == teamWorkListViewAttention {
+		viewFilter = "AND (needs_operator = TRUE OR state IN ('needs_operator','reviewing','output_ready','degraded'))"
 	}
 	rows, err := db.QueryContext(ctx, `
 		SELECT id::text, team_id, COALESCE(run_id::text,''), COALESCE(intent_proof_id::text,''),
 		       COALESCE(contract_id,''), COALESCE(proof_id,''), objective, scope, owner,
-		       execution_shape, expected_outputs, expected_proof, capability_requirements,
+		       execution_shape, execution_mode, work_intent, expected_outputs, expected_proof, capability_requirements,
 		       governance_posture, state, COALESCE(last_event, 'null'::jsonb), needs_operator,
 		       degradation_state, recovery_options, output_refs, proof_refs, audit_refs,
 		       created_at, updated_at, version
 		FROM team_work_items
 		WHERE tenant_id='default' AND team_id=$1
 		`+archivedFilter+`
+		`+viewFilter+`
 		ORDER BY updated_at DESC
 		LIMIT $2`, strings.TrimSpace(teamID), limit)
 	if err != nil {
@@ -58,7 +75,7 @@ func (s *AdminServer) getTeamWorkItemDB(ctx context.Context, teamID, workItemID 
 	return scanTeamWorkItem(db.QueryRowContext(ctx, `
 		SELECT id::text, team_id, COALESCE(run_id::text,''), COALESCE(intent_proof_id::text,''),
 		       COALESCE(contract_id,''), COALESCE(proof_id,''), objective, scope, owner,
-		       execution_shape, expected_outputs, expected_proof, capability_requirements,
+		       execution_shape, execution_mode, work_intent, expected_outputs, expected_proof, capability_requirements,
 		       governance_posture, state, COALESCE(last_event, 'null'::jsonb), needs_operator,
 		       degradation_state, recovery_options, output_refs, proof_refs, audit_refs,
 		       created_at, updated_at, version
@@ -66,6 +83,22 @@ func (s *AdminServer) getTeamWorkItemDB(ctx context.Context, teamID, workItemID 
 		WHERE tenant_id='default' AND team_id=$1 AND id=$2`,
 		strings.TrimSpace(teamID), workItemID,
 	))
+}
+
+func (s *AdminServer) getTeamWorkItemForUpdateTx(ctx context.Context, tx *sql.Tx, teamID, workItemID string) (protocol.TeamWorkItem, error) {
+	if tx == nil {
+		return protocol.TeamWorkItem{}, errors.New("database transaction not available")
+	}
+	return scanTeamWorkItem(tx.QueryRowContext(ctx, `
+		SELECT id::text, team_id, COALESCE(run_id::text,''), COALESCE(intent_proof_id::text,''),
+		       COALESCE(contract_id,''), COALESCE(proof_id,''), objective, scope, owner,
+		       execution_shape, execution_mode, work_intent, expected_outputs, expected_proof, capability_requirements,
+		       governance_posture, state, COALESCE(last_event, 'null'::jsonb), needs_operator,
+		       degradation_state, recovery_options, output_refs, proof_refs, audit_refs,
+		       created_at, updated_at, version
+		FROM team_work_items
+		WHERE tenant_id='default' AND team_id=$1 AND id=$2
+		FOR UPDATE`, strings.TrimSpace(teamID), workItemID))
 }
 
 func (s *AdminServer) insertTeamWorkItemDB(ctx context.Context, item *protocol.TeamWorkItem) error {
@@ -94,20 +127,23 @@ func (s *AdminServer) insertTeamWorkItemExec(ctx context.Context, exec teamWorkS
 	return exec.QueryRowContext(ctx, `
 		INSERT INTO team_work_items (
 			id, tenant_id, team_id, run_id, intent_proof_id, contract_id, proof_id,
-			objective, scope, owner, execution_shape, expected_outputs, expected_proof,
+			objective, scope, owner, execution_shape, execution_mode, work_intent, expected_outputs, expected_proof,
 			capability_requirements, governance_posture, state, needs_operator,
-			degradation_state, recovery_options, output_refs, proof_refs, audit_refs, version
+			degradation_state, recovery_options, output_refs, proof_refs, audit_refs, version,
+			recovery_deadline_at
 		) VALUES (
 			$1, 'default', $2, $3, $4, NULLIF($5,''), NULLIF($6,''),
-			$7, $8, $9, $10, $11, $12,
-			$13, $14, $15, $16,
-			$17, $18, $19, $20, $21, $22
+			$7, $8, $9, $10, $11, $12, $13, $14,
+			$15, $16, $17, $18,
+			$19, $20, $21, $22, $23, $24,
+			CASE WHEN $17 IN ('queued','running') THEN NOW() + INTERVAL '15 minutes' ELSE NULL END
 		)
 		RETURNING created_at, updated_at`,
 		item.WorkItemID, item.TeamID, nullableUUID(item.RunID), nullableUUID(item.IntentProofID),
 		item.ContractID, item.ProofID, item.Objective, jsonArray(item.Scope), item.Owner,
-		string(item.ExecutionShape), jsonArray(item.ExpectedOutputs), jsonArray(item.ExpectedProof),
-		jsonArray(item.CapabilityRequirements), string(item.GovernancePosture), string(item.State),
+		string(item.ExecutionShape), item.ExecutionMode, jsonObjectOrNil(workIntentMap(item.WorkIntent)),
+		jsonArray(item.ExpectedOutputs), jsonArray(item.ExpectedProof), jsonArray(item.CapabilityRequirements),
+		string(item.GovernancePosture), string(item.State),
 		item.NeedsOperator, item.DegradationState, jsonArray(item.RecoveryOptions),
 		jsonArray(item.OutputRefs), jsonArray(item.ProofRefs), jsonArray(item.AuditRefs), item.Version,
 	).Scan(&item.CreatedAt, &item.UpdatedAt)
@@ -136,17 +172,19 @@ func (s *AdminServer) insertTeamStatusEventExec(ctx context.Context, exec teamWo
 		INSERT INTO team_status_events (
 			id, tenant_id, team_id, work_item_id, run_id, intent_proof_id, contract_id, proof_id,
 			state, headline, details, confidence_posture, blocked_by, next_action,
+			execution_mode, work_intent,
 			source_kind, source_channel, payload_kind, audit_refs, version
 		) VALUES (
 			$1, 'default', $2, $3, $4, $5, NULLIF($6,''), NULLIF($7,''),
-			$8, $9, $10, $11, $12, $13,
-			$14, $15, $16, $17, $18
+			$8, $9, $10, $11, $12, $13, $14, $15,
+			$16, $17, $18, $19, $20
 		)
 		RETURNING timestamp`,
 		event.EventID, event.TeamID, event.WorkItemID, nullableUUID(event.RunID),
 		nullableUUID(event.IntentProofID), event.ContractID, event.ProofID,
 		string(event.State), event.Headline, event.Details, event.ConfidencePosture,
-		jsonArray(event.BlockedBy), event.NextAction, event.SourceKind, event.SourceChannel,
+		jsonArray(event.BlockedBy), event.NextAction, event.ExecutionMode,
+		jsonObjectOrNil(workIntentMap(event.WorkIntent)), event.SourceKind, event.SourceChannel,
 		event.PayloadKind, jsonArray(event.AuditRefs), event.Version,
 	).Scan(&event.Timestamp); err != nil {
 		return err
@@ -197,11 +235,16 @@ func (s *AdminServer) updateTeamWorkItemLastEventExec(ctx context.Context, exec 
 		    output_refs=$7,
 		    proof_refs=$8,
 		    audit_refs=$9,
+		    work_intent=$10,
+		    recovery_deadline_at=CASE
+		        WHEN $2 IN ('output_ready','degraded','needs_operator','archived') THEN NULL
+		        ELSE recovery_deadline_at
+		    END,
 		    updated_at=NOW()
 		WHERE id=$1 AND tenant_id='default'`,
 		item.WorkItemID, string(item.State), eventJSON, item.NeedsOperator,
 		item.DegradationState, jsonArray(item.RecoveryOptions), jsonArray(item.OutputRefs),
-		jsonArray(item.ProofRefs), jsonArray(item.AuditRefs),
+		jsonArray(item.ProofRefs), jsonArray(item.AuditRefs), jsonObjectOrNil(workIntentMap(item.WorkIntent)),
 	)
 	return err
 }
@@ -215,6 +258,7 @@ func (s *AdminServer) listTeamStatusEventsDB(ctx context.Context, teamID, workIt
 		SELECT id::text, team_id, work_item_id::text, COALESCE(run_id::text,''),
 		       COALESCE(intent_proof_id::text,''), COALESCE(contract_id,''), COALESCE(proof_id,''),
 		       state, headline, details, confidence_posture, blocked_by, next_action,
+		       execution_mode, work_intent,
 		       source_kind, source_channel, payload_kind, audit_refs, timestamp, version
 		FROM team_status_events
 		WHERE tenant_id='default' AND team_id=$1 AND work_item_id=$2

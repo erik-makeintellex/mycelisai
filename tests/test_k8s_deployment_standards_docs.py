@@ -15,8 +15,8 @@ def test_k8s_docs_define_clustered_open_standards_as_target_deployment():
         (
             README,
             [
-                "Kubernetes / Helm: target self-hosted and enterprise deployment contract using standard Kubernetes resources",
-                "Docker Compose: rapid local development, demo, and same-machine proof runtime; it is not the target clustered deployment contract",
+                "Deployment target contract: Kubernetes / Helm targets self-hosted and enterprise deployment using standard Kubernetes resources",
+                "Docker Compose remains rapid local development, demo, and same-machine proof runtime, not the clustered deployment contract",
                 "uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml",
                 "Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy",
             ],

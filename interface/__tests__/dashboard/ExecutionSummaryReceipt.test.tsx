@@ -5,6 +5,24 @@ import { OUTPUT_CONTINUATION_EVENT } from "@/components/soma/outputContinuation"
 import type { ExecutionSummaryData } from "@/store/useCortexStore";
 
 describe("ExecutionSummaryReceipt", () => {
+  it("keeps an approval run pending until the team result is explicitly verified", () => {
+    const summary: ExecutionSummaryData = {
+      execution_mode: "team_async",
+      execution: {
+        status: "completed",
+        summary: "The approved work was handed to the team.",
+      },
+      proof: [{ run_id: "run-pending-1" }],
+    };
+
+    render(<ExecutionSummaryReceipt summary={summary} runId="run-pending-1" />);
+
+    expect(screen.getByText("Work started")).toBeDefined();
+    expect(screen.getByText(/after the team returns a verified result/i)).toBeDefined();
+    expect(screen.queryByText("Result verified")).toBeNull();
+    expect(screen.queryByText("Result saved")).toBeNull();
+  });
+
   it("reveals generated app packages with launch, resources, and reply paths", () => {
     const continuation = vi.fn();
     window.addEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
@@ -76,5 +94,83 @@ describe("ExecutionSummaryReceipt", () => {
       proof: "proof-brief-1",
     });
     window.removeEventListener(OUTPUT_CONTINUATION_EVENT, continuation);
+  });
+
+  it("keeps technical run inspection secondary when no deliverable exists yet", () => {
+    const summary: ExecutionSummaryData = {
+      execution: {
+        shape: "team_execution",
+        status: "verified",
+        summary: "Team work started.",
+      },
+      proof: [{ run_id: "run-work-1" }],
+    };
+
+    render(<ExecutionSummaryReceipt summary={summary} runId="run-work-1" />);
+
+    expect(screen.queryByRole("link", { name: /^Run$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Continue with Soma/i })).toBeNull();
+
+    fireEvent.click(screen.getByText("Proof and execution details"));
+    expect(screen.getByRole("link", { name: /Inspect run receipt/i }).getAttribute("href"))
+      .toBe("/runs/run-work-1");
+  });
+
+  it("explains the saved-but-inactive Outcome Template state without opening proof", () => {
+    const summary: ExecutionSummaryData = {
+      execution: {
+        shape: "guided_proposal",
+        status: "completed",
+        summary: "The reusable Outcome Template is saved and remains inactive until you ask Soma to use it.",
+      },
+      outputs: [{
+        kind: "config_revision",
+        output_class: "user_deliverable",
+        title: "Outcome Template saved",
+        retained: true,
+        proof: { proof_id: "proof-template-1", execution_status: "verified" },
+      }],
+      proof: [{ run_id: "run-template-1" }],
+    };
+
+    render(<ExecutionSummaryReceipt summary={summary} runId="run-template-1" />);
+
+    expect(screen.getByText(/saved and remains inactive until you ask Soma to use it/i)).toBeDefined();
+    expect(screen.getByText("Outcome Template saved")).toBeDefined();
+  });
+
+  it("does not present team planning files as completed user output", () => {
+    const summary: ExecutionSummaryData = {
+      execution: {
+        shape: "team_execution",
+        status: "verified",
+        summary: "Created the team and queued delivery work.",
+      },
+      outputs: [{
+        kind: "file",
+        output_class: "planning",
+        title: "Team evocation brief",
+        path: "groups/game-team/planning/TEAM_EVOCATION.md",
+        url: "/api/v1/workspace/files/view?path=groups%2Fgame-team%2Fplanning%2FTEAM_EVOCATION.md",
+        retained: true,
+      }],
+      proof: [{ run_id: "run-planning-1" }],
+    };
+
+    render(<ExecutionSummaryReceipt
+      summary={summary}
+      runId="run-planning-1"
+      artifacts={[{
+        id: "planning-artifact",
+        type: "file",
+        title: "Team evocation brief",
+        output_class: "planning",
+        saved_path: "groups/game-team/planning/TEAM_EVOCATION.md",
+      }]}
+    />);
+
+    expect(screen.getByText("Work started")).toBeDefined();
+    expect(screen.getByText(/deliverable will appear here only after/i)).toBeDefined();
+    expect(screen.queryByText("Team evocation brief")).toBeNull();
   });
 });

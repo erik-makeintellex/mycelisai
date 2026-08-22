@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import { ActiveWorkLane } from "@/components/teams/ActiveWorkLane";
 import { mergeTeamWorkItems, useTeamWorkActionHandler } from "@/components/teams/useTeamWorkActionHandler";
@@ -17,7 +17,6 @@ import {
   teamOutputWorkbenchItems,
 } from "./OutputWorkbench";
 import { outputWorkbenchDigest } from "./OutputWorkbenchDigest";
-import { SomaActionShelf } from "./SomaActionShelf";
 import { SomaCausalSummary } from "./SomaCausalSummary";
 import { SomaEvidencePanel, type SomaEvidenceItem } from "./SomaEvidencePanel";
 import {
@@ -28,7 +27,6 @@ import {
 } from "./SomaOperatingSurfaceSupport";
 import { SomaOutcomeVaultHeaderButton, SomaOutcomeVaultOverlay } from "./SomaOutcomeVaultOverlay";
 import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "./SomaSuggestionBar";
-import { SomaTeamContextSwitcher } from "./SomaTeamContextSwitcher";
 import { SomaWorkspaceFrame } from "./SomaWorkspaceFrame";
 import { useDurableTeamWork } from "./useDurableTeamWork";
 import { useOutcomeProjectSummary } from "./useOutcomeProjects";
@@ -49,7 +47,6 @@ export function SomaOperatingSurface({
   organizationName,
   activeMode,
   focusedTeamId,
-  governancePosture,
   evidenceItems,
   activeWorkSlot,
   outputSlot,
@@ -61,7 +58,6 @@ export function SomaOperatingSurface({
   organizationName?: string | null;
   activeMode?: string | null;
   focusedTeamId?: string | null;
-  governancePosture?: string;
   evidenceItems?: SomaEvidenceItem[];
   activeWorkSlot?: React.ReactNode;
   outputSlot?: React.ReactNode;
@@ -74,7 +70,6 @@ export function SomaOperatingSurface({
   const durableWorkRefreshVersion = useCortexStore((state) => state.durableWorkRefreshVersion);
   const selectTeam = useCortexStore((state) => state.selectTeam);
   const selectedTeamId = useCortexStore((state) => state.selectedTeamId);
-  const sendMissionChat = useCortexStore((state) => state.sendMissionChat);
   const activeWorkActions = useTeamWorkActionHandler(selectTeam);
   const evidence = evidenceItems ?? defaultSomaEvidence;
   const somaMessages = somaMessagesNewestFirst(missionChat);
@@ -91,6 +86,7 @@ export function SomaOperatingSurface({
   const teamWork = useDurableTeamWork({
     teams: teamsDetail,
     focusedTeamId: effectiveFocusedTeamId,
+    view: "attention",
     refreshVersion: durableWorkRefreshVersion + activeWorkActions.activeWorkRefreshVersion,
   });
   const teamOutputItems = teamOutputWorkbenchItems(teamWork.outputRefs);
@@ -126,7 +122,9 @@ export function SomaOperatingSurface({
   const hasOutputReviewContent = mergedOutputItems.length > 0 || mergedProjectPackages.length > 0;
   const hasTrustReviewContent = missionChat.length > 0;
   const hasContextReviewContent = Boolean(effectiveFocusedTeamId) || hasWorkContextChoices;
-  const scopeCopy = organizationName ? `Ready to coordinate work for ${organizationName}` : "Ready to help create or resume an AI Organization";
+  const scopeCopy = organizationName
+    ? `Workspace: ${organizationName}`
+    : "Ask, continue, or revisit an Outcome in this Workspace";
   const activeWorkNode = activeWorkSlot ?? (
     hasWorkReviewContent ? (
       <ActiveWorkLane
@@ -138,6 +136,7 @@ export function SomaOperatingSurface({
         statusLabel={activeWorkActions.activeWorkActionNotice ?? teamWork.statusLabel}
         degradedMessage={activeWorkActions.activeWorkActionError ?? teamWork.degradedMessage}
         onAction={handleActiveWorkAction}
+        onVerifyExternalOutcome={activeWorkActions.handleExternalOutcomeVerification}
         onTeamAsk={activeWorkActions.handleTeamAsk}
         frame={false}
         purpose="review"
@@ -165,20 +164,8 @@ export function SomaOperatingSurface({
   const trustNode = trustSlot ?? (hasTrustReviewContent ? <SomaCausalSummary messages={missionChat} /> : undefined);
   const contextNode = contextSlot ?? (hasContextReviewContent ? <SomaEvidencePanel items={evidence} compact /> : undefined);
   const [vaultOpen, setVaultOpen] = useState(false);
-
-  const clearFocusedContext = () => {
-    selectTeam(null);
-    if (typeof window !== "undefined" && window.location.pathname === "/dashboard") {
-      window.history.replaceState(null, "", "/dashboard");
-    }
-  };
-
-  const focusTeamContext = (teamId: string) => {
-    selectTeam(teamId);
-    if (typeof window !== "undefined" && window.location.pathname === "/dashboard") {
-      window.history.replaceState(null, "", `/dashboard?team_id=${encodeURIComponent(teamId)}`);
-    }
-  };
+  const openVault = useCallback(() => setVaultOpen(true), []);
+  const closeVault = useCallback(() => setVaultOpen(false), []);
 
   async function handleActiveWorkAction(item: TeamWorkItem, action: TeamInteraction) {
     await activeWorkActions.handleActiveWorkAction(item, action);
@@ -190,17 +177,12 @@ export function SomaOperatingSurface({
     }
   }
 
-  const handlePinnedAction = (prompt: string) => {
-    void sendMissionChat(prompt);
-  };
-
   return (
     <section
       className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-cortex-border bg-cortex-surface shadow-[0_18px_40px_rgba(0,0,0,0.18)]"
       data-testid="soma-operating-surface"
     >
       <h1 className="sr-only">Soma workspace</h1>
-      <SomaActionShelf onRunAction={handlePinnedAction} />
       <div className="min-h-0 flex-1 p-2.5 lg:p-3">
         <div className="relative">
           <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg shadow-sm">
@@ -214,38 +196,19 @@ export function SomaOperatingSurface({
                   <p className="truncate text-xs text-cortex-text-muted">
                     {scopeCopy}
                   </p>
-                  {hasWorkContextChoices ? (
-                    <div className="mt-1.5">
-                      <SomaTeamContextSwitcher
-                        teams={teamsDetail}
-                        workItems={teamWork.items}
-                        focusedTeamId={effectiveFocusedTeamId}
-                        onRootSelect={clearFocusedContext}
-                        onTeamSelect={focusTeamContext}
-                        compact
-                      />
-                    </div>
+                  {focusedTeam ? (
+                    <p className="mt-1 text-xs text-cortex-primary">
+                      Continuing {focusedTeam.name}
+                    </p>
                   ) : null}
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-1.5 text-[11px] font-semibold text-cortex-text-muted">
-                <span className="rounded-full border border-cortex-success/25 bg-cortex-success/10 px-2.5 py-1 text-cortex-success">
-                  Ready
-                </span>
-                {displayedMode ? (
-                  <span className="max-w-[12rem] truncate rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">
-                    {displayedMode}
-                  </span>
-                ) : null}
-                <span className="rounded-full border border-cortex-border bg-cortex-surface px-2.5 py-1">
-                  {governancePosture ?? "Governed"}
-                </span>
-                {!vaultOpen ? (
-                  <SomaOutcomeVaultHeaderButton
-                    attentionCount={attentionWorkCount + (hasOutputReviewContent ? 1 : 0)}
-                    onOpen={() => setVaultOpen(true)}
-                  />
-                ) : null}
+                <SomaOutcomeVaultHeaderButton
+                  attentionCount={attentionWorkCount + (hasOutputReviewContent ? 1 : 0)}
+                  expanded={vaultOpen}
+                  onOpen={openVault}
+                />
               </div>
             </div>
             <div className="min-h-0 flex-1 p-2 lg:p-3">
@@ -276,7 +239,7 @@ export function SomaOperatingSurface({
             projectSummary={outcomeProjectSummary}
             recoveryCount={unresolvedWorkReviewCount}
             alerts={outcomeVaultAlerts}
-            onClose={() => setVaultOpen(false)}
+            onClose={closeVault}
           />
         </div>
       </div>

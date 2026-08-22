@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { MissionEvent } from "@/store/useCortexStore";
 import EventCard from "./EventCard";
-import RunReceipt from "./RunReceipt";
+import RunReceipt, { buildRunReceipt } from "./RunReceipt";
 
 // ── Terminal event types — stop polling ───────────────────────
 
@@ -20,14 +20,24 @@ function StatusBadge({ events }: { events: MissionEvent[] }) {
     const last = events[events.length - 1];
     if (!last) return null;
 
-    if (last.event_type === "mission.completed") {
+    const receiptStatus = buildRunReceipt(events, last.run_id).status;
+
+    if (receiptStatus === "degraded") {
+        return (
+            <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-cortex-warning/10 text-cortex-warning border border-cortex-warning/30">
+                degraded
+            </span>
+        );
+    }
+
+    if (receiptStatus === "completed") {
         return (
             <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-cortex-success/15 text-cortex-success border border-cortex-success/30">
                 completed
             </span>
         );
     }
-    if (last.event_type === "mission.failed") {
+    if (receiptStatus === "failed") {
         return (
             <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-cortex-danger/15 text-cortex-danger border border-cortex-danger/30">
                 failed

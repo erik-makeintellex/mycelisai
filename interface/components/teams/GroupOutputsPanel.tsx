@@ -16,6 +16,7 @@ import {
   workspaceFileHref,
 } from "@/lib/outputPackageModel";
 import { Badge } from "./GroupDetailPane";
+import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 
 export function OutputsPanel({
   archived,
@@ -32,9 +33,12 @@ export function OutputsPanel({
 }) {
   return (
     <section className="rounded-xl border border-cortex-border bg-cortex-bg p-4">
-      <h3 className="text-sm font-semibold text-cortex-text-main">
-        {archived ? "Retained outputs" : "Recent outputs"}
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-cortex-text-main">
+          {archived ? "Retained outputs" : "Recent outputs"}
+        </h3>
+        <OutcomeHealthBadge health={archived ? "archived" : outputSummary.deliveredCount > 0 ? "completed" : "waiting"} />
+      </div>
       <div
         className="mt-2 flex flex-wrap gap-2"
         data-testid="groups-output-summary"
@@ -144,7 +148,7 @@ function ArtifactRow({ artifact }: { artifact: Artifact }) {
       {projectPackage ? (
         <ProjectPackage
           artifact={artifact}
-          entrypoint={entrypoint}
+          entrypoint={packagePath ?? entrypoint}
           folder={folder}
           files={files}
           validation={validation}

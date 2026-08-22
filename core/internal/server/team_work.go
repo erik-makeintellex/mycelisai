@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,17 +18,33 @@ func (s *AdminServer) HandleListTeamWork(w http.ResponseWriter, r *http.Request)
 		respondAPIError(w, "team_id is required", http.StatusBadRequest)
 		return
 	}
-	items, err := s.listTeamWorkItemsDB(
+	view, err := parseTeamWorkListView(r.URL.Query().Get("view"))
+	if err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	items, err := s.listTeamWorkItemsByViewDB(
 		r.Context(),
 		teamID,
 		parseLimit(r.URL.Query().Get("limit"), 20),
 		parseBoolDefault(r.URL.Query().Get("include_archived"), true),
+		view,
 	)
 	if err != nil {
 		respondAPIError(w, "Failed to list team work: "+err.Error(), http.StatusServiceUnavailable)
 		return
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(items))
+}
+
+func parseTeamWorkListView(value string) (teamWorkListView, error) {
+	view := teamWorkListView(strings.TrimSpace(value))
+	switch view {
+	case teamWorkListViewAll, teamWorkListViewAttention:
+		return view, nil
+	default:
+		return "", fmt.Errorf("unsupported team work view %q", value)
+	}
 }
 
 // HandleCreateTeamWork records a durable team-work item without starting runtime execution.

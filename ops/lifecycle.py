@@ -2,7 +2,7 @@
 Lifecycle management for the Mycelis development stack.
 
 Provides unified start/stop/status/health commands that handle the full
-dependency graph: native infra or explicit port-forwards -> core server -> frontend.
+dependency graph: Dockerized data services -> local core server -> local frontend.
 
 All probes are Python-native (socket/urllib) — no shell wrappers.
 """
@@ -29,6 +29,8 @@ from .config import (
     powershell,
 )
 from . import db as db_tasks
+from . import lifecycle_infra
+from . import service_ownership
 from . import lifecycle_status
 from .lifecycle_processes import COMPILED_GO_PROCESS_HINTS, WINDOWS_COMPILED_GO_PROCESS_NAMES
 
@@ -99,14 +101,14 @@ def _status_service_alive(key: str, port: int) -> bool:
     return lifecycle_status.status_service_alive(key, port, _http_get, _port_open, API_HOST)
 
 
-def _wait_for_port(port: int, label: str, timeout: int = 30, interval: float = 1.0) -> bool:
+def _wait_for_port(port: int, label: str, timeout: int = 30, interval: float = 1.0, host: str = "127.0.0.1") -> bool:
     """Block until a port is open or timeout expires. Returns True on success."""
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if _port_open(port):
+        if _port_open(port, host=host):
             return True
         time.sleep(interval)
-    print(f"  TIMEOUT waiting for {label} on port {port} ({timeout}s)")
+    print(f"  TIMEOUT waiting for {label} at {host}:{port} ({timeout}s)")
     return False
 
 
@@ -140,10 +142,7 @@ def _wait_for_http_ok(
 
 
 def _dev_infra_mode() -> str:
-    mode = os.environ.get("MYCELIS_DEV_INFRA_MODE", "native").strip().lower()
-    if mode not in {"", "native", "k8s"}:
-        raise SystemExit("Invalid MYCELIS_DEV_INFRA_MODE. Use native or k8s.")
-    return mode
+    return lifecycle_infra.dev_infra_mode(ROOT_DIR)
 
 
 def _core_council_ready(timeout: int = 10, interval: float = 1.0) -> bool:
@@ -202,6 +201,14 @@ def _find_pid_on_port(port: int) -> int | None:
     return None
 
 
+def _owned_core_pid_on_port(port: int = API_PORT) -> int | None:
+    return service_ownership.owned_core_pid_on_port(port, find_pid_on_port_func=_find_pid_on_port, is_windows_func=is_windows, matches_compiled_go_service_func=_matches_compiled_go_service, run=subprocess.run)
+
+def _owned_frontend_pid_on_port(port: int = INTERFACE_PORT) -> int | None:
+    from .interface_env import _normalize_process_text
+
+    return service_ownership.owned_frontend_pid_on_port(port, is_windows_func=is_windows, normalize_process_text=_normalize_process_text, run=subprocess.run)
+
 def _kill_pid(pid: int):
     """Kill a process by PID without failing the workflow on slow OS cleanup."""
     try:
@@ -237,8 +244,7 @@ def _run_best_effort(cmd: list[str], timeout: int = 5):
 
 def _remaining_managed_services() -> list[str]:
     """Return managed service labels that still have listening ports."""
-    infra_mode = _dev_infra_mode()
-    keys = ("core", "frontend") if infra_mode in {"", "native"} else ("postgres", "nats", "core", "frontend")
+    keys = lifecycle_infra.managed_process_keys(_dev_infra_mode())
     return [
         svc["label"]
         for key, svc in SERVICES.items()
@@ -373,8 +379,7 @@ def _kill_compiled_go_services() -> list[dict[str, str | int]]:
 
 
 def _service_keys_by_label(labels: list[str]) -> list[str]:
-    infra_mode = _dev_infra_mode()
-    allowed = ("core", "frontend") if infra_mode in {"", "native"} else ("postgres", "nats", "core", "frontend")
+    allowed = lifecycle_infra.managed_process_keys(_dev_infra_mode())
     keys: list[str] = []
     for key, svc in SERVICES.items():
         if key in allowed and svc["label"] in labels:
@@ -417,10 +422,7 @@ def _start_port_forward(svc: str, forward: str):
 def _ensure_bridge():
     """Ensure PostgreSQL and NATS are reachable for source-mode Core."""
     infra_mode = _dev_infra_mode()
-    if infra_mode in {"", "native"}:
-        from . import native_infra
-
-        native_infra.ensure_for_lifecycle(timeout=30)
+    if lifecycle_infra.ensure_compose_data_plane(infra_mode):
         return
 
     # Kubernetes bridge mode remains available for explicit clustered proof.
@@ -507,21 +509,22 @@ def status(c):
     """Show health of every service in the dev stack."""
     print("=== Mycelis Stack Status ===\n")
 
-    print(f"  Dev infra mode  : {_dev_infra_mode() or 'native'}")
-    print("  Docker/K8s      : proof lane; inspect with compose.* or k8s.*")
+    lifecycle_infra.print_development_status(_dev_infra_mode())
 
+    db_host, db_port = lifecycle_infra.database_endpoint(ROOT_DIR)
     # Service ports
     for key, svc in SERVICES.items():
-        port = svc["port"]
+        port = db_port if key == "postgres" else svc["port"]
         label = svc["label"]
-        alive = _status_service_alive(key, port)
+        alive = _port_open(port, host=db_host) if key == "postgres" else _status_service_alive(key, port)
         tag = "UP" if alive else "DOWN"
         pid_info = ""
         if alive:
             pid = _find_pid_on_port(port)
             if pid:
                 pid_info = f" (PID {pid})"
-        print(f"  {label:<16}: {tag}{pid_info}  [:{port}]")
+        endpoint = f"{db_host}:{port}" if key == "postgres" else f":{port}"
+        print(f"  {label:<16}: {tag}{pid_info}  [{endpoint}]")
 
     # Deep probe: Core API health
     print()
@@ -566,14 +569,15 @@ def status(c):
 def up(c, frontend=False, build=False):
     """
     Bring up the full dev stack (idempotent).
-    Order: native infra or explicit port-forwards -> core server -> (optional) frontend.
+    Order: configured data plane -> local core server -> (optional) local frontend.
     """
     print("=== Mycelis Stack Up ===\n")
 
     # Capture dependency state before we touch bridges. If Core is already up while one
     # of these is down, Core is likely running in degraded mode and should be restarted
     # after dependencies are healthy.
-    deps_were_down_before_up = (not _port_open(5432)) or (not _port_open(4222))
+    db_host, db_port = lifecycle_infra.database_endpoint(ROOT_DIR)
+    deps_were_down_before_up = (not _port_open(db_port, host=db_host)) or (not _port_open(4222))
 
     # 0. Optionally build
     if build:
@@ -591,12 +595,12 @@ def up(c, frontend=False, build=False):
     print()
 
     print("[2/4] Waiting for dependencies...")
-    pg_ok = _wait_for_port(5432, "PostgreSQL", timeout=30)
+    pg_ok = _wait_for_port(db_port, "PostgreSQL", timeout=30, host=db_host)
     nats_ok = _wait_for_port(4222, "NATS", timeout=30)
 
     if not pg_ok:
         print("  WARN: PostgreSQL not yet reachable — Core will retry for 90s after start.")
-        print("        If this persists, check: uv run inv k8s.status")
+        print("        If this persists, check: uv run inv compose.infra-health")
     else:
         print("  PostgreSQL ready")
 
@@ -607,22 +611,22 @@ def up(c, frontend=False, build=False):
         print("  NATS ready")
     print()
 
-    # 2.5. Ensure the expected application database exists before Core starts.
-    # This keeps bootstrap listeners from crashing when a fresh cluster comes up
-    # without the cortex database already provisioned.
     print("[2.5/4] Ensuring cortex database exists...")
     db_tasks.create.body(c)
     print("  cortex database ready")
     print()
 
-    # 3. Core server — allow up to 120s since Core waits up to 90s for its own deps
     print("[3/4] Starting Core server...")
     if _port_open(API_PORT):
+        core_pid = _owned_core_pid_on_port(API_PORT)
+        if core_pid is None:
+            raise SystemExit(f"STACK UP FAILED: Core API port {API_PORT} is occupied by a non-repo process. Stop that service or configure a different MYCELIS_API_PORT before release proof.")
         print(f"  Core already running on :{API_PORT}")
         council_ready = _core_council_ready(timeout=3, interval=0.5)
         if deps_were_down_before_up or not council_ready:
             print("  Restarting Core to exit degraded startup mode after dependency recovery...")
-            _kill_port(API_PORT, "Core")
+            _kill_pid(core_pid)
+            _wait_for_port_closed(API_PORT, "Core")
             if _start_core_background():
                 if _wait_for_port(API_PORT, "Core API", timeout=120):
                     print(f"  Core restarted on :{API_PORT}")
@@ -659,6 +663,8 @@ def up(c, frontend=False, build=False):
     if frontend:
         print("[4/4] Starting Frontend...")
         if _port_open(INTERFACE_PORT):
+            if _owned_frontend_pid_on_port(INTERFACE_PORT) is None:
+                raise SystemExit(f"STACK UP FAILED: Interface port {INTERFACE_PORT} is occupied by a non-repo process. Stop that service or configure a different Interface port before release proof.")
             print(f"  Frontend already running on :{INTERFACE_PORT}")
         else:
             from . import interface as interface_tasks
@@ -678,55 +684,36 @@ def up(c, frontend=False, build=False):
     print("\nStack ready. Run 'uv run inv lifecycle.status' to verify.")
 
 
-@task
-def down(c):
+@task(help={"include_data_plane": "Also stop Compose PostgreSQL and NATS without deleting volumes."})
+def down(c, include_data_plane=False):
     """
-    Stop all dev stack services cleanly.
-    Order: core -> frontend -> compiled Go cleanup -> infra bridge cleanup when enabled.
+    Stop local app services, optionally including the Compose data plane.
+    Order: core -> frontend -> compiled Go cleanup -> optional data-plane shutdown.
     """
     print("=== Mycelis Stack Down ===\n")
-
-    # 1. Core
     print("[1/4] Stopping Core...")
-    if _kill_port(API_PORT, "Core"):
-        pass
-    else:
-        # Fallback: kill by process name
-        if is_windows():
-            _run_best_effort(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-Command",
-                    "Get-Process server -ErrorAction SilentlyContinue | Stop-Process -Force",
-                ]
-            )
-        else:
-            _run_best_effort(["pkill", "-f", "bin/server"])
+    core_pid = _owned_core_pid_on_port(API_PORT)
+    if core_pid is not None:
+        _kill_pid(core_pid)
         _wait_for_port_closed(API_PORT, "Core")
-        print("  Core stopped (by name)")
+        print(f"  Core stopped (PID {core_pid})")
+    elif _port_open(API_PORT):
+        print(f"  Core port {API_PORT} is held by a non-repo process; left untouched.")
+    else:
+        print("  Core not running")
 
-    # 2. Frontend
     print("[2/4] Stopping Frontend...")
-    if not _kill_port(INTERFACE_PORT, "Frontend"):
-        if is_windows():
-            _run_best_effort(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-Command",
-                    "Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | "
-                    f"Where-Object {{ $_.CommandLine -match 'next (dev|start).*--port {INTERFACE_PORT}' }} | "
-                    "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
-                ],
-            )
-        else:
-            _run_best_effort(["pkill", "-f", f"next (dev|start).*--port {INTERFACE_PORT}"])
-
+    frontend_pid = _owned_frontend_pid_on_port(INTERFACE_PORT)
+    if frontend_pid is not None:
+        _kill_pid(frontend_pid)
         if _wait_for_port_closed(INTERFACE_PORT, "Frontend"):
-            print("  Frontend stopped (by command line)")
+            print(f"  Frontend stopped (PID {frontend_pid})")
         else:
-            print("  Frontend not running")
+            print(f"  WARN: repo-local Frontend PID {frontend_pid} did not release port {INTERFACE_PORT}")
+    elif _port_open(INTERFACE_PORT):
+        print(f"  Frontend port {INTERFACE_PORT} is held by a non-repo process; left untouched.")
+    else:
+        print("  Frontend not running")
     from . import interface as interface_tasks
     remaining_interface = interface_tasks._cleanup_repo_local_interface_processes()
     if remaining_interface:
@@ -737,16 +724,14 @@ def down(c):
             + "). Re-run lifecycle.down or inspect Interface node workers."
         )
 
-    # 3. Compiled Go helpers
     print("[3/4] Cleaning compiled Go services...")
     remaining_compiled = _kill_compiled_go_services()
 
-    # 4. Infra bridge cleanup
-    if _dev_infra_mode() == "k8s":
+    infra_mode = _dev_infra_mode()
+    if infra_mode == "k8s":
         print("[4/4] Stopping Kubernetes port-forwards...")
         _kill_bridges()
 
-        # Also kill any remaining kubectl port-forward processes
         if is_windows():
             _run_best_effort(
                 ["powershell", "-NoProfile", "-Command",
@@ -754,9 +739,10 @@ def down(c):
             )
         else:
             _run_best_effort(["pkill", "-f", "kubectl port-forward"])
+    elif include_data_plane:
+        lifecycle_infra.stop_compose_data_plane(c)
     else:
-        print("[4/4] Native infrastructure: left running")
-        print("  PostgreSQL and NATS are development dependencies; inspect them with native-infra.status.")
+        lifecycle_infra.print_retained_data_plane(infra_mode)
 
     remaining = []
     deadline = time.time() + 8
@@ -766,10 +752,18 @@ def down(c):
             break
         time.sleep(0.5)
     if remaining:
-        # Windows can report the listener a moment after the first kill wave; retry by port.
         for key in _service_keys_by_label(remaining):
             svc = SERVICES[key]
-            _kill_port(svc["port"], svc["label"])
+            if key == "core":
+                pid = _owned_core_pid_on_port(svc["port"])
+                if pid is not None:
+                    _kill_pid(pid)
+            elif key == "frontend":
+                pid = _owned_frontend_pid_on_port(svc["port"])
+                if pid is not None:
+                    _kill_pid(pid)
+            else:
+                _kill_port(svc["port"], svc["label"])
 
         deadline = time.time() + 5
         while time.time() < deadline:
@@ -791,7 +785,7 @@ def down(c):
             + "). Re-run lifecycle.down or inspect the reported ports/PIDs with lifecycle.status."
         )
 
-    print("\nAll services stopped.")
+    lifecycle_infra.print_shutdown_summary(infra_mode, bool(include_data_plane))
 
 
 @task
@@ -889,10 +883,11 @@ def memory_restart(c, build=False, frontend=False):
 
     print("[2/6] Restoring database bridge...")
     _ensure_bridge()
-    if not _wait_for_port(5432, "PostgreSQL", timeout=30):
+    db_host, db_port = lifecycle_infra.database_endpoint(ROOT_DIR)
+    if not _wait_for_port(db_port, "PostgreSQL", timeout=30, host=db_host):
         raise SystemExit(
-            "MEMORY RESTART FAILED: PostgreSQL bridge not reachable on 127.0.0.1:5432. "
-            "Run 'uv run inv k8s.up' or 'uv run inv k8s.bridge' and retry."
+            f"MEMORY RESTART FAILED: PostgreSQL is not reachable at {db_host}:{db_port}. "
+            "Run 'uv run inv compose.infra-up' and retry."
         )
     print()
 

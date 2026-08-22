@@ -112,9 +112,9 @@ export function SettingsGuidedWorkflow({
   onSelect: (tab: SettingsTabId) => void;
 }) {
   return (
-    <section className="rounded-3xl border border-cortex-border bg-cortex-surface px-5 py-5 shadow-sm">
+    <section className="min-w-0 overflow-hidden rounded-3xl border border-cortex-border bg-cortex-surface px-4 py-4 shadow-sm sm:px-5 sm:py-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="max-w-2xl space-y-2">
+        <div className="min-w-0 max-w-2xl space-y-2">
           <p className="text-[11px] font-mono uppercase tracking-[0.24em] text-cortex-primary">
             Guided setup path
           </p>
@@ -124,7 +124,7 @@ export function SettingsGuidedWorkflow({
             the workspace to operators.
           </p>
         </div>
-        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
+        <div className="min-w-0 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
           <p className="font-medium text-cortex-text-main">
             Setup has four concrete checks
           </p>
@@ -134,7 +134,7 @@ export function SettingsGuidedWorkflow({
           </p>
         </div>
       </div>
-      <div className="mt-5 grid gap-3 lg:grid-cols-3">
+      <div className="mt-5 grid min-w-0 gap-3 lg:grid-cols-3">
         {DEFAULT_WORKFLOW_CARDS.map((card) => (
           <WorkflowCard
             key={card.id}
@@ -144,13 +144,13 @@ export function SettingsGuidedWorkflow({
           />
         ))}
       </div>
-      <div className="mt-5 rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-4">
+      <div className="mt-5 min-w-0 rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 rounded-lg border border-cortex-primary/25 bg-cortex-surface p-2 text-cortex-primary">
               <Globe className="h-4 w-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-cortex-text-main">Need web access?</p>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-cortex-text-muted">
                 Open the Capabilities lane to check Soma search, public web providers, and optional Fetch MCP for specific URLs.
@@ -159,7 +159,7 @@ export function SettingsGuidedWorkflow({
           </div>
           <Link
             href="/resources?tab=tools#web-access"
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/10"
+            className="inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/10 sm:w-auto sm:shrink-0"
           >
             Open web access setup
             <ArrowRight className="h-4 w-4" />
@@ -167,11 +167,11 @@ export function SettingsGuidedWorkflow({
         </div>
       </div>
       {advancedMode ? (
-        <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
+        <div className="mt-5 min-w-0 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
           <p className="text-sm font-semibold text-cortex-text-main">
             Admin tools are open
           </p>
-          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-3">
             {ADVANCED_WORKFLOW_CARDS.map((card) => (
               <WorkflowCard
                 key={`${card.id}-${card.title}`}
@@ -212,13 +212,13 @@ function WorkflowCard({
   const className = `mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary`;
   return (
     <div
-      className={`rounded-2xl border px-4 py-4 transition-colors ${
+      className={`min-w-0 rounded-2xl border px-4 py-4 transition-colors ${
         active ? "border-cortex-primary/40 bg-cortex-primary/10" : "border-cortex-border bg-cortex-bg"
       }`}
     >
       <div className="flex items-center gap-2 text-cortex-primary">
         <Icon className="h-4 w-4" />
-        <p className="text-sm font-semibold text-cortex-text-main">{title}</p>
+        <p className="min-w-0 text-sm font-semibold text-cortex-text-main">{title}</p>
       </div>
       <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{summary}</p>
       {href ? (

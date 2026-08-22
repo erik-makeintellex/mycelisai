@@ -46,7 +46,7 @@ func TestSoma_Integration(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Publish via Global Bus
-	err := nc.Publish("swarm.global.input.cli.command", []byte("hello swarm"))
+	err := nc.Publish("swarm.global.input.user", []byte("hello swarm"))
 	if err != nil {
 		t.Fatalf("Publish failed: %v", err)
 	}
@@ -57,5 +57,39 @@ func TestSoma_Integration(t *testing.T) {
 		// Success
 	case <-time.After(2 * time.Second):
 		t.Errorf("Timeout waiting for Axon to route message")
+	}
+}
+
+func TestSoma_DoesNotRouteRegisteredServiceInputAsOperatorIntent(t *testing.T) {
+	s, nc := startTestNATS(t)
+	defer s.Shutdown()
+	defer nc.Close()
+
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistry("."), nil, nil, nil, nil)
+	if err := soma.Start(); err != nil {
+		t.Fatalf("Soma start failed: %v", err)
+	}
+	defer soma.Shutdown()
+
+	routed := make(chan struct{}, 1)
+	if _, err := nc.Subscribe("swarm.team.genesis.internal.command", func(*nats.Msg) {
+		routed <- struct{}{}
+	}); err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if err := nc.Flush(); err != nil {
+		t.Fatalf("flush subscriptions: %v", err)
+	}
+	if err := nc.Publish("swarm.global.input.shared-service-proof", []byte(`{"value":42}`)); err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+	if err := nc.Flush(); err != nil {
+		t.Fatalf("flush publish: %v", err)
+	}
+
+	select {
+	case <-routed:
+		t.Fatal("registered service input was routed as operator intent")
+	case <-time.After(250 * time.Millisecond):
 	}
 }

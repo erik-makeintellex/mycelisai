@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
 import { useCortexStore } from "@/store/useCortexStore";
+import { useBrowserSearch, useClientReady } from "@/lib/browserLocation";
 
 export default function AdvancedModeRoute({
     children,
@@ -20,17 +21,15 @@ export default function AdvancedModeRoute({
 }) {
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
-    const [advancedFromQuery, setAdvancedFromQuery] = useState(false);
-    const [hasMounted, setHasMounted] = useState(false);
+    const hasMounted = useClientReady();
+    const search = useBrowserSearch();
+    const advancedFromQuery = new URLSearchParams(search).get("advanced") === "1";
 
     useEffect(() => {
-        setHasMounted(true);
-        const requested = new URLSearchParams(window.location.search).get("advanced") === "1";
-        setAdvancedFromQuery(requested);
-        if (requested && !advancedMode) {
+        if (advancedFromQuery && !advancedMode) {
             toggleAdvancedMode();
         }
-    }, [advancedMode, toggleAdvancedMode]);
+    }, [advancedFromQuery, advancedMode, toggleAdvancedMode]);
 
     if (!hasMounted) {
         return (

@@ -20,6 +20,7 @@ type Soma struct {
 	axon               *Axon
 	teams              map[string]*Team
 	mu                 sync.RWMutex
+	spawnMu            sync.Mutex
 	ctx                context.Context
 	cancel             context.CancelFunc
 	registry           *Registry
@@ -33,6 +34,9 @@ type Soma struct {
 	eventEmitter       protocol.EventEmitter
 	conversationLogger protocol.ConversationLogger
 	providerPolicy     ProviderPolicy
+	durableTeamLoader  DurableTeamLoader
+	durableTeamStore   DurableTeamStore
+	commandReceipts    CommandReceiptStore
 }
 
 // NewSoma creates a new Soma instance with composite tool support.

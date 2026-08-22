@@ -6,6 +6,20 @@ import { normalizeIncomingSignal } from '@/lib/signalNormalize';
 import { chatMessageFromThreadSignal } from '@/store/cortexStoreThreadEvents';
 
 let eventSourceRef: EventSource | null = null;
+const RECENT_EVENT_ID_LIMIT = 256;
+const recentEventIds = new Set<string>();
+
+function hasRecentEventId(eventId: string): boolean {
+    return eventId.length > 0 && recentEventIds.has(eventId);
+}
+
+function rememberEventId(eventId: string): void {
+    if (eventId.length === 0 || recentEventIds.has(eventId)) return;
+    recentEventIds.add(eventId);
+    if (recentEventIds.size <= RECENT_EVENT_ID_LIMIT) return;
+    const oldestEventId = recentEventIds.values().next().value;
+    if (oldestEventId) recentEventIds.delete(oldestEventId);
+}
 
 export function createCortexStreamSlice(
     set: CortexSet,
@@ -23,10 +37,12 @@ export function createCortexStreamSlice(
             const source = new EventSource('/api/v1/stream');
 
             source.onopen = () => {
+                if (eventSourceRef !== source) return;
                 set({ isStreamConnected: true, streamConnectionState: 'online' });
             };
 
             source.onmessage = (event) => {
+                if (eventSourceRef !== source || hasRecentEventId(event.lastEventId)) return;
                 try {
                     const signal = normalizeIncomingSignal(JSON.parse(event.data));
                     const { nodes } = get();
@@ -76,15 +92,19 @@ export function createCortexStreamSlice(
                     }
 
                     set(patch);
+                    rememberEventId(event.lastEventId);
                 } catch (error) {
                     console.error('Stream parse error', error);
                 }
             };
 
             source.onerror = () => {
-                set({ isStreamConnected: false, streamConnectionState: 'offline' });
-                eventSourceRef = null;
-                source.close();
+                if (eventSourceRef !== source) return;
+                const closed = source.readyState === EventSource.CLOSED;
+                set({
+                    isStreamConnected: false,
+                    streamConnectionState: closed ? 'offline' : 'connecting',
+                });
             };
 
             eventSourceRef = source;
@@ -95,6 +115,7 @@ export function createCortexStreamSlice(
                 eventSourceRef.close();
                 eventSourceRef = null;
             }
+            recentEventIds.clear();
             set({ isStreamConnected: false, streamConnectionState: 'idle' });
         },
     };

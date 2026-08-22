@@ -20,6 +20,7 @@ export function compactActions(item: TeamWorkItem) {
 
 export function compactTitle(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) return STALE_FAILED_PLAN_REVIEW_COPY.title;
+  if (needsExternalMutationVerification(item)) return "External result needs verification";
   if (item.state === "degraded") return DEGRADED_TEAM_WORK_REVIEW_COPY.title;
   if (item.state === "needs_operator") return NEEDS_OPERATOR_REVIEW_COPY.title;
   if (item.state === "queued" && isRecoveryRequest(item)) return QUEUED_RECOVERY_REVIEW_COPY.title;
@@ -29,6 +30,9 @@ export function compactTitle(item: TeamWorkItem) {
 export function compactDescription(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) {
     return STALE_FAILED_PLAN_REVIEW_COPY.description;
+  }
+  if (needsExternalMutationVerification(item)) {
+    return "The external action may have completed, so retrying now could apply it twice.";
   }
   if (item.state === "degraded") {
     return DEGRADED_TEAM_WORK_REVIEW_COPY.description;
@@ -46,6 +50,9 @@ export function compactNextAction(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) {
     return STALE_FAILED_PLAN_REVIEW_COPY.nextAction;
   }
+  if (needsExternalMutationVerification(item)) {
+    return "Tell Soma what you observed so it can verify the external result before considering a retry.";
+  }
   if (item.state === "degraded") {
     return item.nextAction ?? "Recover this work item when the team runtime is available, or archive it if this was only test data.";
   }
@@ -58,6 +65,9 @@ export function compactNextAction(item: TeamWorkItem) {
 export function reviewReason(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) {
     return STALE_FAILED_PLAN_REVIEW_COPY.reason;
+  }
+  if (needsExternalMutationVerification(item)) {
+    return "The request reached an external system, but Mycelis could not confirm whether the change completed.";
   }
   if (item.state === "degraded") {
     return DEGRADED_TEAM_WORK_REVIEW_COPY.reason;
@@ -75,6 +85,9 @@ export function trustedState(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) {
     return STALE_FAILED_PLAN_REVIEW_COPY.trustedState;
   }
+  if (needsExternalMutationVerification(item)) {
+    return "Trusted: the request, approval, and attempt record. Not trusted yet: whether the external change completed.";
+  }
   if (item.state === "degraded" || item.state === "needs_operator") {
     return item.state === "degraded" ? DEGRADED_TEAM_WORK_REVIEW_COPY.trustedState : NEEDS_OPERATOR_REVIEW_COPY.trustedState;
   }
@@ -87,6 +100,9 @@ export function trustedState(item: TeamWorkItem) {
 export function recommendedReviewChoice(item: TeamWorkItem) {
   if (isStaleFailedPlanItem(item)) {
     return STALE_FAILED_PLAN_REVIEW_COPY.recommendedChoice;
+  }
+  if (needsExternalMutationVerification(item)) {
+    return "Tell Soma what you can observe in the external system. Do not retry until the result is verified.";
   }
   if (item.state === "degraded") {
     return DEGRADED_TEAM_WORK_REVIEW_COPY.recommendedChoice;
@@ -107,4 +123,8 @@ export function isStaleFailedPlanItem(item: TeamWorkItem) {
 
 function isRecoveryRequest(item: TeamWorkItem) {
   return /recovery requested/i.test(`${item.title} ${item.description ?? ""} ${item.nextAction ?? ""}`);
+}
+
+export function needsExternalMutationVerification(item: TeamWorkItem) {
+  return item.degradationState === "external_mutation_outcome_unknown";
 }

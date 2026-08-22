@@ -6,7 +6,7 @@ import {
   type TeamWorkItem,
   type TeamWorkItemState,
 } from "@/store/useCortexStore";
-import { normalizeOutcomeHealth } from "@/lib/outcomeHealth";
+import { normalizeOutcomeHealth, outcomeHealthFromRunStatus } from "@/lib/outcomeHealth";
 import {
   isRecord,
   objectValue,
@@ -32,6 +32,8 @@ type TeamWorkAPIRecord = {
   scope?: unknown;
   owner?: unknown;
   execution_shape?: unknown;
+	execution_mode?: unknown;
+	work_intent?: unknown;
   expected_outputs?: unknown;
   expected_proof?: unknown;
   capability_requirements?: unknown;
@@ -166,6 +168,13 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
   const auditRefs = firstNonEmptyStringArray(raw.audit_refs, lastEvent?.audit_refs);
   const nextAction = stringValue(lastEvent?.next_action);
   const targetRef = normalizeTargetRef(raw.target_ref ?? lastEvent?.target_ref);
+	const workIntent = objectValue<Record<string, unknown>>(raw.work_intent);
+	const lifecycle = objectValue<Record<string, unknown>>(workIntent?.lifecycle);
+	const lifecycleControls = unique([
+		stringValue(lifecycle?.stop_action),
+		stringValue(lifecycle?.retry_action),
+		stringValue(lifecycle?.recovery_action),
+	].filter((value): value is string => Boolean(value)));
   const description = [
     stringValue(lastEvent?.headline),
     stringValue(lastEvent?.details),
@@ -178,7 +187,9 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
     title: objective,
     description: description || expectedOutputs.map((item) => `Output: ${item}`).join(" "),
     state,
-    outcomeHealth: normalizeOutcomeHealth(raw.outcome_health),
+    outcomeHealth: typeof raw.outcome_health === "string" && raw.outcome_health.trim()
+      ? normalizeOutcomeHealth(raw.outcome_health)
+      : outcomeHealthFromRunStatus(state),
     ownerLabel: stringValue(raw.owner) || (team ? `${team.name} lead` : "Team lead"),
     scopeLabel: executionShapeLabel(stringValue(raw.execution_shape)),
     updatedAt: stringValue(raw.updated_at) ?? stringValue(raw.created_at),
@@ -191,6 +202,7 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
       runId,
       needsOperator: raw.needs_operator === true,
       executionShape: stringValue(raw.execution_shape),
+      degradationState: stringValue(raw.degradation_state),
     }),
     source: "durable",
     sourceLabel: "Durable team work",
@@ -199,6 +211,7 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
     proofRefs,
     auditRefs,
     needsOperator: raw.needs_operator === true,
+    degradationState: stringValue(raw.degradation_state) ?? undefined,
     nextAction: nextAction ?? undefined,
     recoveryOptions,
     targetRef,
@@ -208,6 +221,8 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
       capabilityIds: stringArray(raw.capability_requirements),
       policyRef: stringValue(raw.governance_posture) ?? undefined,
       executionShape: stringValue(raw.execution_shape) ? [stringValue(raw.execution_shape) as string] : [],
+		executionMode: stringValue(raw.execution_mode) ? [stringValue(raw.execution_mode) as string] : [],
+		lifecycleControls,
     },
   };
 }

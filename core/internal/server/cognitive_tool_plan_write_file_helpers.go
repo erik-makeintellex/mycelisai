@@ -224,10 +224,11 @@ func defaultWriteFilePathForRequest(latestRequest string) string {
 func extensionForWriteFileRequest(text string) string {
 	lower := strings.ToLower(text)
 	switch {
-	case strings.Contains(lower, "python") || strings.Contains(lower, "script"):
-		return ".py"
-	case strings.Contains(lower, "html") || strings.Contains(lower, "browser"):
+	case strings.Contains(lower, "javascript") || strings.Contains(lower, "typescript") ||
+		strings.Contains(lower, "html") || strings.Contains(lower, "browser"):
 		return ".html"
+	case hasExactWord(lower, "python") || hasExactWord(lower, "script"):
+		return ".py"
 	case strings.Contains(lower, "json"):
 		return ".json"
 	case strings.Contains(lower, "yaml") || strings.Contains(lower, " yml"):

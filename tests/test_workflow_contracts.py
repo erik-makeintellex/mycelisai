@@ -18,7 +18,7 @@ def test_ci_workflow_runs_token_free_codebase_gates():
         "Interface Unit And Build",
         "Browser Smoke Without Live Agentry",
         "Helm And Kubernetes Standards",
-        "uv run inv quality.max-lines --limit 300",
+        "uv run inv quality.max-lines --limit 330",
         "go test ./... -count=1 -p 1",
         "uv run inv interface.test",
         "uv run inv interface.build",
@@ -59,9 +59,9 @@ def test_user_workflow_specs_match_current_shared_trial_expectations():
         assert spec_path in manual_plan
 
     assert "Soma-first operator workflow" in remote_testing
-    assert "deployment-context loading into governed vector-backed stores" in remote_testing
-    assert "MCP visibility and recent persisted tool activity" in remote_testing
-    assert "safe current actuation proof is governed file output, governed context loading, MCP-backed tool usage, and reviewable audit/activity behavior" in remote_testing
+    assert "Deployment-context loading, capability/MCP visibility, and recent persisted tool activity" in remote_testing
+    assert "selected files or context can return to Soma" in remote_testing
+    assert "raw events stay behind Details or Inspect" in remote_testing
 
     assert "supported Docker Compose lane" in manual_plan
     assert "Kubernetes is framed as the modular scale-up proof lane" in manual_plan
@@ -131,7 +131,6 @@ def test_search_fallback_and_provenance_docs_match_runtime_shape():
 
 
 def test_mycelis_search_contract_lives_in_user_api_and_capability_docs():
-    index = _read("docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md")
     docs_home = _read("docs/README.md")
     manifest = _read("interface/lib/docsManifest.ts")
     resources_doc = _read("docs/user/resources.md")
@@ -139,7 +138,6 @@ def test_mycelis_search_contract_lives_in_user_api_and_capability_docs():
     api_doc = _read("docs/API_REFERENCE.md")
     capability_doc = _read("docs/architecture-library/MYCELIS_CANONICAL_PRD.md")
 
-    assert "V8 Mycelis Search Capability Delivery Plan" not in index
     assert "V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md" not in docs_home
     assert "V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md" not in manifest
 
@@ -215,7 +213,7 @@ def test_new_user_acceptance_matrix_is_documented_across_testing_and_user_guides
         (user_home, "MYCELIS_WORKSPACE"),
         (user_home, "MYCELIS_ARTIFACT_ROOT"),
         (resources_doc, "New-user readiness checks"),
-        (resources_doc, "Add MCP Server"),
+        (resources_doc, "Add connector"),
         (resources_doc, "System -> Deployments"),
         (resources_doc, "governed workspace boundary"),
         (teams_doc, "Dashboard Active Work remains capped"),

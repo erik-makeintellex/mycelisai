@@ -76,6 +76,28 @@ func TestRecoveryOptionFromActionDescribesRetryContract(t *testing.T) {
 	}
 }
 
+func TestRecoveryActionRequiresVerificationForUnknownExternalMutation(t *testing.T) {
+	item := protocol.TeamWorkItem{
+		WorkItemID:       "work-external-1",
+		DegradationState: "external_mutation_outcome_unknown",
+		WorkIntent: protocol.NormalizeWorkIntent(&protocol.WorkIntent{SideEffect: &protocol.WorkSideEffectContract{
+			EffectKind:      protocol.WorkEffectExternalMutation,
+			RetrySafety:     protocol.WorkRetryUnknown,
+			SideEffectState: protocol.WorkSideEffectUnknown,
+		}}),
+	}
+	action := recoveryActionForTeamWorkItem(item)
+	if action.ID != "verify_external_mutation_outcome" || action.Label != "Verify external outcome" {
+		t.Fatalf("action = %#v", action)
+	}
+	if action.RetryTarget != "" || action.TargetState != protocol.TeamWorkStateNeedsOperator {
+		t.Fatalf("verification action must not carry retry target: %#v", action)
+	}
+	if got := recoveryOptionFromAction(action); got != "Verify the external system outcome before retrying or trusting completion." {
+		t.Fatalf("option = %q", got)
+	}
+}
+
 func containsRecoveryProof(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {

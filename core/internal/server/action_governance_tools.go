@@ -41,6 +41,8 @@ func capabilityForPlannedTool(name string) string {
 		return "media_generation"
 	case "save_cached_image":
 		return "media_output"
+	case "preview_config_document", "store_config_document", "activate_config_document":
+		return "config_documents"
 	case "delegate":
 		return "review"
 	case "publish_signal", "broadcast":
@@ -65,7 +67,7 @@ func capabilityRiskForTool(name string, arguments map[string]any) string {
 		default:
 			return "medium"
 		}
-	case "generate_image", "save_cached_image", "write_file", "create_team", "delegate", "delegate_task", "remember", "summarize_conversation":
+	case "generate_image", "save_cached_image", "write_file", "create_team", "delegate", "delegate_task", "remember", "summarize_conversation", "store_config_document", "activate_config_document":
 		return "medium"
 	default:
 		return "low"
@@ -101,6 +103,8 @@ func estimateActionCost(name string, arguments map[string]any) float64 {
 		return 0.55
 	case "delegate":
 		return 0.6
+	case "store_config_document", "activate_config_document":
+		return 0.1
 	case "generate_blueprint":
 		return 0.2
 	default:

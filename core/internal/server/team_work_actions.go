@@ -1,25 +1,36 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/mycelis/core/pkg/protocol"
 )
 
 type teamWorkActionRequest struct {
-	Action        protocol.TeamWorkAction `json:"action"`
-	Summary       string                  `json:"summary,omitempty"`
-	ActorRef      string                  `json:"actor_ref,omitempty"`
-	SourceKind    string                  `json:"source_kind,omitempty"`
-	SourceChannel string                  `json:"source_channel,omitempty"`
-	PayloadKind   string                  `json:"payload_kind,omitempty"`
-	Payload       map[string]any          `json:"payload,omitempty"`
-	AuditRefs     []string                `json:"audit_refs,omitempty"`
+	Action         protocol.TeamWorkAction `json:"action"`
+	Summary        string                  `json:"summary,omitempty"`
+	ActorRef       string                  `json:"actor_ref,omitempty"`
+	SourceKind     string                  `json:"source_kind,omitempty"`
+	SourceChannel  string                  `json:"source_channel,omitempty"`
+	PayloadKind    string                  `json:"payload_kind,omitempty"`
+	Payload        map[string]any          `json:"payload,omitempty"`
+	AuditRefs      []string                `json:"audit_refs,omitempty"`
+	IdempotencyKey string                  `json:"idempotency_key,omitempty"`
+	Result         string                  `json:"result,omitempty"`
+	EvidenceRefs   []string                `json:"evidence_refs,omitempty"`
+	ExpectedRunID  string                  `json:"-"`
+	RecordedAt     time.Time               `json:"-"`
 }
+
+var errTeamWorkActionRejected = errors.New("team work action rejected")
 
 // HandleTeamWorkAction applies a durable operator control to an existing work item.
 // POST /api/v1/teams/{id}/work/{workItemId}/actions
@@ -43,50 +54,126 @@ func (s *AdminServer) HandleTeamWorkAction(w http.ResponseWriter, r *http.Reques
 		respondAPIError(w, "action is required", http.StatusBadRequest)
 		return
 	}
+	if action == protocol.TeamWorkActionVerifyExternalOutcome {
+		if req.Result == "" && req.Payload != nil {
+			req.Result, _ = req.Payload["result"].(string)
+		}
+		if len(req.EvidenceRefs) == 0 && req.Payload != nil {
+			req.EvidenceRefs = stringSliceFromAny(req.Payload["evidence_refs"])
+		}
+		req.Result = protocol.NormalizeWorkExternalOutcomeResult(req.Result)
+		if req.Result == "" {
+			respondAPIError(w, "result must be committed, not_committed, or still_unknown", http.StatusBadRequest)
+			return
+		}
+		if strings.TrimSpace(req.Summary) == "" {
+			respondAPIError(w, "summary is required for verify_external_outcome", http.StatusBadRequest)
+			return
+		}
+		req.EvidenceRefs = mergeStrings(nil, req.EvidenceRefs)
+		req.ActorRef = auditUserLabelFromRequest(r)
+		req.RecordedAt = time.Now().UTC()
+		req.SourceKind = string(protocol.SourceKindWorkspaceUI)
+		req.SourceChannel = "teams.external_outcome_verification"
+		req.PayloadKind = "external_outcome_verification"
+		req.AuditRefs = nil
+	}
 	if requiresActionDetail(action) && strings.TrimSpace(req.Summary) == "" && len(req.Payload) == 0 {
 		respondAPIError(w, "summary or payload is required for "+string(action), http.StatusBadRequest)
 		return
 	}
 
-	item, err := s.getTeamWorkItemDB(r.Context(), teamID, workItemID)
+	item, steeringKey, err := s.applyTeamWorkAction(r.Context(), teamID, workItemID, req, action)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			respondAPIError(w, "team work item not found", http.StatusNotFound)
 			return
 		}
-		respondAPIError(w, "Failed to load team work: "+err.Error(), http.StatusServiceUnavailable)
+		if errors.Is(err, errTeamWorkActionRejected) {
+			message := strings.TrimPrefix(err.Error(), errTeamWorkActionRejected.Error()+": ")
+			respondAPIError(w, message, http.StatusBadRequest)
+			return
+		}
+		respondAPIError(w, "Failed to update team work: "+err.Error(), http.StatusServiceUnavailable)
 		return
+	}
+	if steeringKey != "" {
+		if err := s.DispatchOutbox.Activate(r.Context(), steeringKey); err != nil {
+			log.Printf("team steering %s remains staged for dispatch recovery: %v", steeringKey, err)
+		}
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(item))
+}
+
+func (s *AdminServer) applyTeamWorkAction(
+	ctx context.Context,
+	teamID string,
+	workItemID string,
+	req teamWorkActionRequest,
+	action protocol.TeamWorkAction,
+) (protocol.TeamWorkItem, string, error) {
+	db := s.getDB()
+	if db == nil {
+		return protocol.TeamWorkItem{}, "", errors.New("database not available")
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return protocol.TeamWorkItem{}, "", err
+	}
+	defer tx.Rollback()
+
+	item, err := s.getTeamWorkItemForUpdateTx(ctx, tx, teamID, workItemID)
+	if err != nil {
+		return protocol.TeamWorkItem{}, "", err
+	}
+	if expected := strings.TrimSpace(req.ExpectedRunID); expected != "" && item.RunID != expected {
+		return protocol.TeamWorkItem{}, "", fmt.Errorf("%w: active work no longer matches this run", errTeamWorkActionRejected)
 	}
 	targetState, err := protocol.ApplyTeamWorkAction(item, action)
 	if err != nil {
-		respondAPIError(w, err.Error(), http.StatusBadRequest)
-		return
+		return protocol.TeamWorkItem{}, "", fmt.Errorf("%w: %v", errTeamWorkActionRejected, err)
 	}
-
-	item.State = targetState
+	if action == protocol.TeamWorkActionVerifyExternalOutcome {
+		item, err = protocol.ApplyExternalOutcomeVerification(item, protocol.WorkExternalOutcomeVerification{
+			Result: req.Result, ActorRef: req.ActorRef, Summary: req.Summary,
+			EvidenceRefs: req.EvidenceRefs, RecordedAt: req.RecordedAt,
+		})
+		if err != nil {
+			return protocol.TeamWorkItem{}, "", fmt.Errorf("%w: %v", errTeamWorkActionRejected, err)
+		}
+	} else {
+		item.State = targetState
+	}
 	applyTeamWorkActionPosture(&item)
 	if err := protocol.ValidateTeamWorkItem(item); err != nil {
-		respondAPIError(w, err.Error(), http.StatusBadRequest)
-		return
+		return protocol.TeamWorkItem{}, "", fmt.Errorf("%w: %v", errTeamWorkActionRejected, err)
 	}
 	event := teamWorkActionStatusEvent(item, req, action)
-	if err := s.insertTeamStatusEventDB(r.Context(), &event); err != nil {
-		respondAPIError(w, "Failed to record team work status: "+err.Error(), http.StatusInternalServerError)
-		return
+	if err := s.insertTeamStatusEventExec(ctx, tx, &event); err != nil {
+		return protocol.TeamWorkItem{}, "", err
 	}
-	if err := s.updateTeamWorkItemLastEventDB(r.Context(), &item, event); err != nil {
-		respondAPIError(w, "Failed to update team work: "+err.Error(), http.StatusInternalServerError)
-		return
+	if err := s.updateTeamWorkItemLastEventExec(ctx, tx, &item, event); err != nil {
+		return protocol.TeamWorkItem{}, "", err
 	}
+	item.LastEvent = &event
 	interaction := teamWorkActionInteraction(item, req, action)
-	if err := s.insertTeamInteractionDB(r.Context(), &interaction); err != nil {
-		respondAPIError(w, "Failed to record team work interaction: "+err.Error(), http.StatusInternalServerError)
-		return
+	if err := s.insertTeamInteractionExec(ctx, tx, &interaction); err != nil {
+		return protocol.TeamWorkItem{}, "", err
+	}
+	steeringKey := ""
+	if action == protocol.TeamWorkActionSteer && item.RunID != "" && item.IntentProofID != "" {
+		steeringKey, err = s.stageTeamWorkSteeringTx(ctx, tx, item, req)
+		if err != nil {
+			return protocol.TeamWorkItem{}, "", err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return protocol.TeamWorkItem{}, "", err
 	}
 	if !event.Timestamp.IsZero() {
 		item.UpdatedAt = event.Timestamp
 	}
-	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(item))
+	return item, steeringKey, nil
 }
 
 func applyTeamWorkActionPosture(item *protocol.TeamWorkItem) {
@@ -100,11 +187,23 @@ func applyTeamWorkActionPosture(item *protocol.TeamWorkItem) {
 }
 
 func requiresActionDetail(action protocol.TeamWorkAction) bool {
-	return action == protocol.TeamWorkActionSteer || action == protocol.TeamWorkActionRecover
+	return action == protocol.TeamWorkActionSteer || action == protocol.TeamWorkActionRecover || action == protocol.TeamWorkActionVerifyExternalOutcome
 }
 
 func teamWorkActionStatusEvent(item protocol.TeamWorkItem, req teamWorkActionRequest, action protocol.TeamWorkAction) protocol.TeamStatusEvent {
 	headline, details, nextAction := teamWorkActionCopy(action)
+	confidence := "operator_recorded"
+	blockedBy := []string(nil)
+	if action == protocol.TeamWorkActionVerifyExternalOutcome {
+		headline, details, nextAction = teamWorkExternalOutcomeCopy(req.Result)
+		confidence = "operator_attested"
+		switch req.Result {
+		case protocol.WorkExternalOutcomeNotCommitted:
+			blockedBy = []string{"new_governed_soma_proposal_required"}
+		case protocol.WorkExternalOutcomeStillUnknown:
+			blockedBy = []string{protocol.TeamWorkDegradationExternalMutationUnknown}
+		}
+	}
 	if summary := strings.TrimSpace(req.Summary); summary != "" {
 		details = summary
 	}
@@ -118,11 +217,17 @@ func teamWorkActionStatusEvent(item protocol.TeamWorkItem, req teamWorkActionReq
 		State:             item.State,
 		Headline:          headline,
 		Details:           details,
-		ConfidencePosture: "operator_recorded",
+		ConfidencePosture: confidence,
+		BlockedBy:         blockedBy,
 		NextAction:        nextAction,
+		ExpectedOutputs:   item.ExpectedOutputs,
+		ExpectedProof:     item.ExpectedProof,
+		ExecutionMode:     item.ExecutionMode,
+		WorkIntent:        item.WorkIntent,
+		OutputRefs:        item.OutputRefs,
 		SourceKind:        defaultString(req.SourceKind, "workspace_ui"),
 		SourceChannel:     defaultString(req.SourceChannel, "teams.active_work"),
-		PayloadKind:       defaultString(req.PayloadKind, "team_work_action"),
+		PayloadKind:       defaultString(req.PayloadKind, teamWorkActionPayloadKind(action)),
 		AuditRefs:         mergeStrings(item.AuditRefs, req.AuditRefs),
 		Version:           "v1",
 	}
@@ -133,6 +238,12 @@ func teamWorkActionInteraction(item protocol.TeamWorkItem, req teamWorkActionReq
 	if summary == "" {
 		headline, _, _ := teamWorkActionCopy(action)
 		summary = headline
+	}
+	payload := req.Payload
+	if action == protocol.TeamWorkActionVerifyExternalOutcome {
+		payload = map[string]any{
+			"result": req.Result, "evidence_refs": req.EvidenceRefs, "recorded_at": req.RecordedAt,
+		}
 	}
 	return protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
 		TeamID:        item.TeamID,
@@ -146,52 +257,9 @@ func teamWorkActionInteraction(item protocol.TeamWorkItem, req teamWorkActionReq
 		ActorRef:      defaultString(req.ActorRef, "operator"),
 		Verb:          string(action),
 		Summary:       summary,
-		PayloadKind:   defaultString(req.PayloadKind, "team_work_action"),
-		Payload:       req.Payload,
+		PayloadKind:   defaultString(req.PayloadKind, teamWorkActionPayloadKind(action)),
+		Payload:       payload,
 		AuditRefs:     mergeStrings(item.AuditRefs, req.AuditRefs),
 		Version:       "v1",
 	})
-}
-
-func teamWorkActionCopy(action protocol.TeamWorkAction) (string, string, string) {
-	switch action {
-	case protocol.TeamWorkActionStartWork:
-		return "Team work started", "The operator moved this durable work item into active execution.", "Watch for team status, retained output, or proof."
-	case protocol.TeamWorkActionPause:
-		return "Team work paused", "The operator paused this durable work item.", "Resume or archive this work when ready."
-	case protocol.TeamWorkActionResume:
-		return "Resume requested", "The operator returned this durable work item to the queue.", "Wait for the team to continue or add steering guidance."
-	case protocol.TeamWorkActionArchive:
-		return "Team work archived", "The operator archived this durable work item. Retained outputs and proof remain inspectable.", "Review retained proof or start a new work item."
-	case protocol.TeamWorkActionSteer:
-		return "Team steering recorded", "The operator added steering guidance to this durable work item.", "Review the guidance and continue from the retained work state."
-	case protocol.TeamWorkActionRecover:
-		return "Recovery requested", "The operator moved this degraded work item back to the queue for safe continuation.", "Watch for new status, retained output, or proof."
-	default:
-		return "Team work updated", "The operator updated this durable work item.", "Review the latest state."
-	}
-}
-
-func defaultString(value, fallback string) string {
-	if strings.TrimSpace(value) == "" {
-		return fallback
-	}
-	return strings.TrimSpace(value)
-}
-
-func mergeStrings(left, right []string) []string {
-	seen := map[string]struct{}{}
-	merged := make([]string, 0, len(left)+len(right))
-	for _, value := range append(left, right...) {
-		trimmed := strings.TrimSpace(value)
-		if trimmed == "" {
-			continue
-		}
-		if _, ok := seen[trimmed]; ok {
-			continue
-		}
-		seen[trimmed] = struct{}{}
-		merged = append(merged, trimmed)
-	}
-	return merged
 }

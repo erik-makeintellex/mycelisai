@@ -42,7 +42,7 @@ export default function MatrixGrid() {
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 return res.json();
             })
-            .then((data) => {
+            .then((data: MatrixConfig) => {
                 setConfig(data);
                 setEditedProfiles({ ...data.profiles });
             })
@@ -74,8 +74,8 @@ export default function MatrixGrid() {
             setEditedProfiles({ ...updated.profiles });
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Unable to save AI engine settings");
         } finally {
             setSaving(false);
         }
@@ -260,7 +260,7 @@ function ProviderConfigModal({
     providerId: string;
     provider: ProviderInfo;
     onClose: () => void;
-    onSaved: (data: any) => void;
+    onSaved: (data: ProviderInfo) => void;
 }) {
     const [endpoint, setEndpoint] = useState(provider.endpoint ?? "");
     const [modelId, setModelId] = useState(provider.model_id ?? "");
@@ -288,8 +288,8 @@ function ProviderConfigModal({
             }
             const data = await res.json();
             onSaved(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Unable to save provider settings");
         } finally {
             setSaving(false);
         }

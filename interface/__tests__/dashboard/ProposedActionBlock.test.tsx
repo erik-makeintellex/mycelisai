@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import ProposedActionBlock from '@/components/dashboard/ProposedActionBlock';
 import { useCortexStore, type ChatMessage } from '@/store/useCortexStore';
 
@@ -60,15 +60,17 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
         expect(screen.getByText(/i can start that/i)).toBeDefined();
-        expect(screen.getByText(/approve this\?/i)).toBeDefined();
         expect(screen.getByText(/hand this to the bus after approval/i)).toBeDefined();
+        expect(screen.getByText(/reply.*approve.*to begin, or tell me what to change/i)).toBeDefined();
         expect(screen.queryByText(/what i will do/i)).toBeNull();
         expect(screen.getByText(/hand the work to the right team through the team bus/i)).toBeDefined();
         expect(screen.getByText(/create a hello_world\.py file in your workspace\./i)).toBeDefined();
         expect(screen.getByText(/a new python file will be saved to workspace\/logs\/hello_world\.py after approval\./i)).toBeDefined();
         expect(screen.getAllByText(/workspace\/logs\/hello_world\.py/i).length).toBeGreaterThan(0);
         expect(screen.queryByText(/this action will change your workspace, so soma needs your approval before running it\./i)).toBeNull();
-        expect(screen.getAllByText(/needs approval/i).length).toBeGreaterThan(0);
+        expect(
+            screen.getByText(/reply "approve" to begin, or tell me what to change/i),
+        ).toBeTruthy();
         expect(screen.queryByText(/risk medium/i)).toBeNull();
         expect(screen.queryByText(/current team bus/i)).toBeNull();
         expect(screen.queryByText(/no bus connection/i)).toBeNull();
@@ -94,41 +96,12 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/file changes/i)).toBeDefined();
     });
 
-    it('dispatches confirm and adjust actions', async () => {
-        const confirmProposal = vi.fn().mockResolvedValue({ ok: true, runId: null });
-        const cancelProposal = vi.fn();
-        useCortexStore.setState({ confirmProposal, cancelProposal });
-
+    it('keeps approval inside the conversation instead of rendering action buttons', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        fireEvent.click(screen.getByRole('button', { name: /^approve$/i }));
-
-        await waitFor(() => expect(confirmProposal).toHaveBeenCalledTimes(1));
-        expect(confirmProposal).toHaveBeenCalledWith(expect.objectContaining({
-            confirm_token: 'ct-123',
-            intent_proof_id: 'ip-123',
-        }));
-
-        fireEvent.click(screen.getByRole('button', { name: /adjust/i }));
-        expect(cancelProposal).toHaveBeenCalledTimes(1);
-    });
-
-    it('shows immediate execution feedback after approval click', async () => {
-        let resolveConfirm!: (value: { ok: boolean; runId: string | null }) => void;
-        const confirmProposal = vi.fn(() => new Promise<{ ok: boolean; runId: string | null }>((resolve) => {
-            resolveConfirm = resolve;
-        }));
-        useCortexStore.setState({ confirmProposal, cancelProposal: vi.fn() });
-
-        render(<ProposedActionBlock message={buildMessage()} />);
-
-        fireEvent.click(screen.getByRole('button', { name: /^approve$/i }));
-
-        expect(screen.getByRole('button', { name: /starting/i })).toBeDefined();
-        expect(screen.getByText(/handoff starting/i)).toBeDefined();
-        resolveConfirm({ ok: true, runId: 'run-1' });
-
-        await waitFor(() => expect(screen.queryByRole('button', { name: /starting/i })).toBeNull());
+        expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
+        expect(screen.queryByRole('button', { name: /adjust/i })).toBeNull();
+        expect(screen.getByRole('button', { name: /^details$/i })).toBeDefined();
     });
 
     it('renders terminal lifecycle messaging and hides actions for cancelled proposals', () => {
@@ -156,13 +129,31 @@ describe('ProposedActionBlock', () => {
         expect(screen.queryByText(/action completed/i)).toBeNull();
     });
 
-    it('renders a verified execution label when run proof exists', () => {
+    it('keeps delegated work pending when approval only produced a run id', () => {
         render(<ProposedActionBlock message={buildMessage({ proposal_status: 'executed', run_id: 'run-123' })} />);
 
-        expect(screen.getByText(/action completed/i)).toBeDefined();
-        expect(screen.getByText(/result saved/i)).toBeDefined();
-        expect(screen.getByRole('link', { name: /open run details/i }).getAttribute('href')).toBe('/runs/run-123');
+        expect(screen.getByText(/waiting for result/i)).toBeDefined();
+        expect(screen.getByText(/approved, still running/i)).toBeDefined();
+        expect(screen.queryByText(/action completed/i)).toBeNull();
+        expect(screen.queryByText(/result verified/i)).toBeNull();
         expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
+    });
+
+    it('labels delegated work verified only with an explicit verified terminal result', () => {
+        render(<ProposedActionBlock message={buildMessage({
+            proposal_status: 'executed',
+            run_id: 'run-123',
+            execution_summary: {
+                execution: { shape: 'team_execution', status: 'verified' },
+                proof: [{ run_id: 'run-123', verified: true }],
+            },
+        })} />);
+
+        expect(screen.getByText(/result verified/i)).toBeDefined();
+        expect(screen.getByText(/result saved/i)).toBeDefined();
+        expect(screen.getByText(/proof is available in trust/i)).toBeDefined();
+        expect(screen.queryByRole('link', { name: /open run details/i })).toBeNull();
+        expect(screen.queryByText(/action completed/i)).toBeNull();
     });
 
     it('renders a failed lifecycle without offering approval actions', () => {
@@ -177,8 +168,8 @@ describe('ProposedActionBlock', () => {
     it('renders approval-required governance summary by default', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        expect(screen.getByText(/approve this\?/i)).toBeDefined();
-        expect(screen.getByRole('button', { name: /^approve$/i })).toBeDefined();
+        expect(screen.getByText(/reply.*approve.*to begin/i)).toBeDefined();
+        expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
     });
 
     it('shows scheduled or long-running task posture and bus scope after inspection', () => {
@@ -186,6 +177,7 @@ describe('ProposedActionBlock', () => {
             proposal: {
                 ...buildMessage().proposal!,
                 work_intent: {
+					kind: 'service',
                     cadence: 'continuous',
                     schedule_summary: 'Watch the incident channel every 5 minutes.',
                     bus_scope: 'current_team',
@@ -195,6 +187,12 @@ describe('ProposedActionBlock', () => {
                         primary_deliverable: 'Playable browser package with proof.',
                         launch_hint: 'Return an openable entrypoint and folder access.',
                     },
+					lifecycle: {
+						stop_action: 'stop_service',
+						retry_action: 'restart_service',
+						recovery_action: 'inspect_and_restart',
+						control_summary: 'You can stop the service or inspect its last trusted state.',
+					},
                 },
             },
         })} />);
@@ -206,6 +204,9 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/when it runs/i)).toBeDefined();
         expect(screen.getByText(/keep running/i)).toBeDefined();
         expect(screen.getByText(/watch the incident channel every 5 minutes/i)).toBeDefined();
+		expect(screen.getByText(/control:/i)).toBeDefined();
+		expect(screen.getByText(/stop service/i)).toBeDefined();
+		expect(screen.getByText(/inspect its last trusted state/i)).toBeDefined();
         expect(screen.getByText(/team connection/i)).toBeDefined();
         expect(screen.getByText(/current team/i)).toBeDefined();
         expect(screen.getByText('swarm.team.ops.signal.status')).toBeDefined();
@@ -233,9 +234,8 @@ describe('ProposedActionBlock', () => {
             },
         })} />);
 
-        expect(screen.getByText(/start this\?/i)).toBeDefined();
-        expect(screen.getByText(/this stays inside current policy/i)).toBeDefined();
-        expect(screen.getAllByText(/ready/i).length).toBeGreaterThan(0);
+        expect(screen.getByText(/say start and i will hand it off/i)).toBeDefined();
+        expect(screen.getByText(/reply.*start.*to begin/i)).toBeDefined();
         expect(screen.queryByText(/risk low/i)).toBeNull();
         expect(screen.queryByText(/auto approve/i)).toBeNull();
 
@@ -245,7 +245,7 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/risk: low, estimated cost 0\.20/i)).toBeDefined();
         expect(screen.getByText(/low-risk action/i)).toBeDefined();
         expect(screen.getByText(/planning/i)).toBeDefined();
-        expect(screen.getByRole('button', { name: /^start$/i })).toBeDefined();
+        expect(screen.queryByRole('button', { name: /^start$/i })).toBeNull();
     });
 
     it('keeps a proposal visible but blocks execution when executable proof is missing', () => {
@@ -257,8 +257,8 @@ describe('ProposedActionBlock', () => {
             },
         })} />);
 
-        expect(screen.getByRole('button', { name: /cannot run yet/i }).hasAttribute('disabled')).toBe(true);
-        expect(screen.getByText(/missing the information soma needs to run it/i)).toBeDefined();
+        expect(screen.queryByRole('button', { name: /cannot run yet/i })).toBeNull();
+        expect(screen.getByText(/cannot start this version yet/i)).toBeDefined();
     });
 
     it('blocks execution when a token exists but proof linkage is missing', () => {
@@ -270,7 +270,7 @@ describe('ProposedActionBlock', () => {
             },
         })} />);
 
-        expect(screen.getByRole('button', { name: /cannot run yet/i }).hasAttribute('disabled')).toBe(true);
-        expect(screen.getByText(/missing the information soma needs to run it/i)).toBeDefined();
+        expect(screen.queryByRole('button', { name: /cannot run yet/i })).toBeNull();
+        expect(screen.getByText(/cannot start this version yet/i)).toBeDefined();
     });
 });
