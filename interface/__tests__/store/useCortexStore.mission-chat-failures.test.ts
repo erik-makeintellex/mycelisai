@@ -114,6 +114,24 @@ describe('useCortexStore mission chat failures', () => {
         expect(content).toBe('Image generator setup required. Review setup.');
     });
 
+    it('replaces obsolete generic operational-alert redirects with actionable workspace guidance', () => {
+        const content = buildMissionChatBlockerContent({
+            routeKind: 'workspace',
+            targetId: 'admin',
+            targetLabel: 'Soma',
+            type: 'unreachable',
+            title: 'Soma Chat Blocked',
+            bannerLabel: 'Workspace chat unreachable',
+            summary: 'Soma or the local API proxy is currently unreachable from this client.',
+            recommendedAction: 'Open System Status and verify Core, NATS, and the local proxy are online.',
+            diagnostics: 'Soma chat unreachable',
+        }, 'Workspace chat unreachable. Review the operational alert for the safe next step.\\\n&#x20;&#x20;');
+
+        expect(content).toBe(
+            'Workspace chat unreachable. Soma or the local API proxy is currently unreachable from this client. Next: Open System Status and verify Core, NATS, and the local proxy are online.',
+        );
+    });
+
     it('routes Soma failures through the workspace contract when no council target is selected', async () => {
         useCortexStore.setState({
             councilTarget: 'admin',
