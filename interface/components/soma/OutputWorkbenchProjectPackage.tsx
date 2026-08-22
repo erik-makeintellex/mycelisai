@@ -102,11 +102,11 @@ export function OutputWorkbenchProjectPackage({
               <a
                 href={resourcesHref}
                 className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-border/80 bg-cortex-bg/70 px-2.5 text-[11px] font-semibold text-cortex-text-main transition-colors hover:border-cortex-primary/45 hover:bg-cortex-primary/10 hover:text-cortex-primary"
-                title={`Browse ${title} in Resources`}
-                aria-label={`Open ${title} in Resources`}
+                title={`Inspect ${title} resource location`}
+                aria-label={`Inspect resource location for ${title}`}
               >
                 <FolderOpen className="h-3 w-3" />
-                {OUTPUT_PACKAGE_RESOURCES_LABEL}
+                Inspect location
               </a>
             ) : null}
           <button
