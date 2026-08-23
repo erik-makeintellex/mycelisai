@@ -42,13 +42,13 @@ function DocsContent() {
   const docRequestRef = useRef(0);
 
   const loadDoc = useCallback(
-    (entry: DocEntry, openMobile = true) => {
+    (entry: DocEntry, openMobile = true, updateURL = true) => {
       const requestId = docRequestRef.current + 1;
       docRequestRef.current = requestId;
       setActiveSlug(entry.slug);
       setDocLabel(entry.label);
       if (openMobile) setMobileView("article");
-      router.replace(`/docs?doc=${entry.slug}`, { scroll: false });
+      if (updateURL) router.replace(`/docs?doc=${entry.slug}`, { scroll: false });
       setLoadingContent(true);
       setError(null);
 
@@ -90,7 +90,7 @@ function DocsContent() {
         const target = requestedSlug
           ? allDocs.find((doc) => doc.slug === requestedSlug) ?? allDocs[0]
           : allDocs[0];
-        if (target) loadDoc(target, Boolean(requestedSlug));
+        if (target) loadDoc(target, Boolean(requestedSlug), Boolean(requestedSlug));
       })
       .catch((err) => {
         if (active) setError(`Failed to load doc manifest: ${err instanceof Error ? err.message : String(err)}`);
