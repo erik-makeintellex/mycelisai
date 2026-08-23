@@ -27,8 +27,29 @@ func TestTeamWorkResultThreadEvent_ReturnsDirectPackageLink(t *testing.T) {
 	if event.Payload.HrefLabel != "Open app" || !strings.Contains(event.Payload.Href, "groups%2Fgame-team%2Fgenerated%2Ffirst-game%2Findex.html") {
 		t.Fatalf("open action = %q %q", event.Payload.HrefLabel, event.Payload.Href)
 	}
-	if !strings.Contains(event.Payload.Detail, "One deliverable is ready to open") {
+	if !strings.Contains(event.Payload.Detail, "Ready to open: Playable game.") {
 		t.Fatalf("detail = %q", event.Payload.Detail)
+	}
+}
+
+func TestTeamWorkResultThreadEvent_SummarizesMultipleDeliverables(t *testing.T) {
+	item := protocol.TeamWorkItem{
+		TeamID:     "app-team",
+		WorkItemID: "work-1",
+		RunID:      "run-1",
+		State:      protocol.TeamWorkStateOutputReady,
+		OutputRefs: []protocol.TeamOutputRef{
+			{Kind: "project_package", Label: "Playable app", StorageRef: "groups/app-team/generated/app", Entrypoint: "index.html"},
+			{Kind: "document", Label: "Proof notes", StorageRef: "groups/app-team/generated/app/PROOF.md"},
+		},
+	}
+
+	event := teamWorkResultThreadEvent(item, protocol.TeamStatusEvent{})
+	if !strings.Contains(event.Payload.Detail, "Ready to review: Playable app plus 1 more deliverable.") {
+		t.Fatalf("detail = %q", event.Payload.Detail)
+	}
+	if event.Payload.HrefLabel != "Open app" {
+		t.Fatalf("open action = %q", event.Payload.HrefLabel)
 	}
 }
 
