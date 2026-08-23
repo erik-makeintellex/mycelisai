@@ -244,6 +244,12 @@ func TestApprovedResultContractDegradesWithoutRequiredWritesAndReadback(t *testi
 	if result.Availability.RecommendedAction == "" {
 		t.Fatal("expected concrete recovery action")
 	}
+	if strings.Contains(result.Text, "Everything requested exists") || strings.Contains(result.Text, "Created retained output") {
+		t.Fatalf("degraded result returned completion-style text: %q", result.Text)
+	}
+	if !strings.Contains(result.Text, "needs repair") {
+		t.Fatalf("degraded result text = %q, want repair-oriented wording", result.Text)
+	}
 	if len(result.Artifacts) != 1 || len(result.Artifacts[0].Files) != 1 || result.Artifacts[0].Files[0] != "index.html" {
 		t.Fatalf("artifact invented support files: %#v", result.Artifacts)
 	}

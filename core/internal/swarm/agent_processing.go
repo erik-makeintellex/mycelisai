@@ -86,9 +86,6 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 	if strings.TrimSpace(responseText) == "" && len(loop.plannedCalls) > 0 {
 		responseText = "Soma prepared the requested governed action for approval."
 	}
-	if strings.TrimSpace(responseText) == "" && len(loop.artifacts) > 0 {
-		responseText = retainedArtifactCompletionSummary(loop.artifacts)
-	}
 	if a.internalTools != nil && len(priorHistory) > 0 && len(priorHistory)%15 == 0 {
 		histCopy := make([]cognitive.ChatMessage, len(priorHistory))
 		copy(histCopy, priorHistory)
@@ -108,7 +105,11 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 			Profile:           profile, ProviderID: providerID, ModelID: modelUsed,
 		}
 		a.logTurn("assistant", availability.Summary, providerID, modelUsed, "", nil, "", "")
+		responseText = resultContractDegradedResponseText(requirement)
 		return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, PlannedToolCalls: loop.plannedCalls, Artifacts: loop.artifacts, Availability: &availability, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
+	}
+	if strings.TrimSpace(responseText) == "" && len(loop.artifacts) > 0 {
+		responseText = retainedArtifactCompletionSummary(loop.artifacts)
 	}
 	if strings.TrimSpace(responseText) == "" {
 		summary := "Soma could not produce a readable reply for that request."
@@ -216,6 +217,13 @@ func retainedArtifactCompletionSummary(artifacts []protocol.ChatArtifactRef) str
 		return "Created one retained output."
 	}
 	return fmt.Sprintf("Created %d retained outputs.", len(artifacts))
+}
+
+func resultContractDegradedResponseText(requirement *teamResultRequirement) string {
+	if requirement != nil && strings.EqualFold(strings.TrimSpace(requirement.Kind), "project_package") {
+		return "Team output needs repair before it can be delivered."
+	}
+	return "Team work needs repair before it can be delivered."
 }
 
 func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMessage) (cognitive.InferRequest, string) {

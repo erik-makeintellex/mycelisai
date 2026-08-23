@@ -66,6 +66,14 @@ export const DEGRADED_TEAM_WORK_REVIEW_COPY = {
   recommendedChoice: "Recover when the runtime dependency is available, or archive if this attempt is no longer useful.",
 } as const;
 
+export const RESULT_CONTRACT_UNSATISFIED_REVIEW_COPY = {
+  title: "Output is not playable yet",
+  description: "The team stopped because the required runnable output was not validated. No playable output should be trusted for this attempt.",
+  trustedState: "Trusted: the failed run record, validation failure, and audit trail. Not trusted: any implied runnable output from this attempt.",
+  reason: "The result contract was not satisfied, so Soma cannot present this as completed or playable.",
+  recommendedChoice: "Ask Soma to retry with the same expected output, change the request, or clear this attempt from review.",
+} as const;
+
 export const NEEDS_OPERATOR_REVIEW_COPY = {
   title: "Team needs your response",
   description: "The team is waiting for missing direction before it can continue.",

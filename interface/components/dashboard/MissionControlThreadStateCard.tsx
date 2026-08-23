@@ -10,6 +10,14 @@ function currentSomaHref() {
     return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
+function isResultContractUnsatisfied(event: NonNullable<ChatMessage["thread_events"]>[number]) {
+    return [
+        event.status,
+        event.detail,
+        event.target_reference,
+    ].some((value) => typeof value === "string" && value.toLowerCase().includes("result_contract_unsatisfied"));
+}
+
 export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessage }) {
     if (msg.proposal && !(msg.thread_event || msg.thread_events?.length)) return null;
 
@@ -48,9 +56,14 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
                 <div className={hasStateBlock ? "mt-2 border-t border-current/10 pt-2" : ""}>
                     {threadEvents.map((event, index) => {
                         const needsDirection = event.kind === "attention_required";
-                        const eventLabel = needsDirection ? "Soma needs your direction" : event.label || event.title;
+                        const contractUnsatisfied = needsDirection && isResultContractUnsatisfied(event);
+                        const eventLabel = contractUnsatisfied
+                            ? "Output is not playable yet"
+                            : needsDirection ? "Soma needs your direction" : event.label || event.title;
                         const eventDetail = needsDirection
-                            ? "This work stopped before a usable result was produced. Nothing new should be trusted yet."
+                            ? contractUnsatisfied
+                                ? "The team did not produce a validated runnable output. Nothing new should be trusted yet."
+                                : "This work stopped before a usable result was produced. Nothing new should be trusted yet."
                             : event.detail;
                         const canvasHref = event.kind === "result_ready" && event.href
                             ? outputCanvasHref({

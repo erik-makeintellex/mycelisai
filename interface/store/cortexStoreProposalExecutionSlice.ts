@@ -31,20 +31,48 @@ function recoveryTextFromExecutionSummary(summary: ExecutionSummaryData | undefi
         ? summary.audit_recovery
         : undefined;
     const degradation = auditRecovery?.degradation;
+    const code = trimToNonEmpty(degradation?.code);
     const whatFailed = trimToNonEmpty(degradation?.what_failed)
         ?? trimToNonEmpty(auditRecovery?.blocker);
     const safeContinuation = trimToNonEmpty(degradation?.safe_continuation);
     const diagnostics = [
-        trimToNonEmpty(degradation?.code),
+        code,
         whatFailed,
         trimToNonEmpty(degradation?.trusted_state),
         trimToNonEmpty(degradation?.invalidated_proof),
         safeContinuation,
     ].filter(Boolean).join(' | ');
     return {
+        code,
         whatFailed,
         safeContinuation,
         diagnostics: trimToNonEmpty(diagnostics),
+    };
+}
+
+function failureThreadEvent({
+    runId,
+    recovery,
+}: {
+    runId?: string | null;
+    recovery: ReturnType<typeof recoveryTextFromExecutionSummary>;
+}): NonNullable<ChatMessage['thread_events']>[number] {
+    const code = recovery.code ?? 'approved_execution_failed';
+    const contractUnsatisfied = code === 'result_contract_unsatisfied';
+    return {
+        kind: 'attention_required',
+        label: contractUnsatisfied ? 'Output is not playable yet' : 'Soma needs your direction',
+        detail: contractUnsatisfied
+            ? 'The team stopped because the required runnable output was not validated. No playable output should be trusted for this attempt.'
+            : recovery.whatFailed ?? 'This work stopped before a usable result was produced.',
+        tone: 'warning',
+        status: code,
+        run_id: runId ?? undefined,
+        source_kind: 'web_api',
+        source_channel: 'api.intent.confirm-action',
+        payload_kind: 'soma_thread_event',
+        target_reference: code,
+        timestamp: new Date().toISOString(),
     };
 }
 
@@ -252,6 +280,7 @@ export function createCortexProposalExecutionSlice(
                             mode: 'blocker',
                             run_id: failureRunId ?? undefined,
                             execution_summary: failureExecutionSummary,
+                            thread_events: [failureThreadEvent({ runId: failureRunId, recovery })],
                             timestamp: new Date().toISOString(),
                         },
                     ],

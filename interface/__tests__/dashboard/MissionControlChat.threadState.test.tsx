@@ -217,6 +217,37 @@ describe('MissionControlChat thread state cards', () => {
         expect(screen.queryByText('Execution started - Soma accepted the approved work.')).toBeNull();
     });
 
+    it('states when a contract-unsatisfied game output is not playable', () => {
+        useCortexStore.setState({
+            missionChat: [{
+                role: 'system',
+                content: 'Output is not playable yet',
+                mode: 'blocker',
+                run_id: 'run-game-failed',
+                thread_event: {
+                    kind: 'attention_required',
+                    label: 'Output is not playable yet',
+                    detail: 'The team stopped because the required runnable output was not validated.',
+                    tone: 'warning',
+                    status: 'result_contract_unsatisfied',
+                    run_id: 'run-game-failed',
+                    source_kind: 'web_api',
+                    source_channel: 'api.intent.confirm-action',
+                    payload_kind: 'soma_thread_event',
+                    target_reference: 'result_contract_unsatisfied',
+                },
+            }],
+            councilMembers: COUNCIL_MEMBERS,
+            councilTarget: 'admin',
+        });
+
+        render(<MissionControlChat simpleMode />);
+
+        expect(screen.getByText('Output is not playable yet')).toBeDefined();
+        expect(screen.getByText('The team did not produce a validated runnable output. Nothing new should be trusted yet.')).toBeDefined();
+        expect(screen.getByText(/Tell Soma to try again, use another available service, or change the request/i)).toBeDefined();
+    });
+
     it('returns completed team work as a concise directly openable result', () => {
         useCortexStore.setState({
             missionChat: [{

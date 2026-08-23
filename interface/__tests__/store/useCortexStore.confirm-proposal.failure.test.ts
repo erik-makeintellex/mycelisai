@@ -106,6 +106,71 @@ describe('useCortexStore confirm proposal failure', () => {
         expect(useCortexStore.getState().pendingProposal).toBeNull();
     });
 
+    it('returns contract-unsatisfied failures as an attention thread event', async () => {
+        useCortexStore.setState({
+            pendingProposal: {
+                intent: 'Create a playable voxel browser game',
+                teams: 1,
+                agents: 3,
+                tools: ['delegate_task'],
+                risk_level: 'medium',
+                confirm_token: 'ct-game',
+                intent_proof_id: 'ip-game',
+            },
+            activeConfirmToken: 'ct-game',
+            missionChat: [{
+                role: 'council',
+                content: 'Proposed execution path',
+                mode: 'proposal',
+                proposal: {
+                    intent: 'Create a playable voxel browser game',
+                    teams: 1,
+                    agents: 3,
+                    tools: ['delegate_task'],
+                    risk_level: 'medium',
+                    confirm_token: 'ct-game',
+                    intent_proof_id: 'ip-game',
+                },
+                proposal_status: 'active',
+            }],
+            activeMode: 'proposal',
+        });
+        mockFetch.mockResolvedValue({
+            ok: false,
+            status: 500,
+            text: async () => JSON.stringify({
+                error: 'result contract unsatisfied',
+                data: {
+                    run_id: 'run-game-failed',
+                    execution_summary: {
+                        execution: { shape: 'delegated_work', status: 'failed' },
+                        audit_recovery: {
+                            recovery_state: 'failed',
+                            degradation: {
+                                code: 'result_contract_unsatisfied',
+                                what_failed: 'The team did not retain a runnable browser game package.',
+                                invalidated_proof: 'No playable output should be trusted.',
+                                safe_continuation: 'Retry with the same app package contract.',
+                                requires_attention: true,
+                            },
+                        },
+                    },
+                },
+            }),
+        });
+
+        await useCortexStore.getState().confirmProposal();
+
+        const lastMessage = useCortexStore.getState().missionChat.at(-1);
+        expect(lastMessage?.thread_events?.[0]).toMatchObject({
+            kind: 'attention_required',
+            label: 'Output is not playable yet',
+            status: 'result_contract_unsatisfied',
+            target_reference: 'result_contract_unsatisfied',
+        });
+        expect(lastMessage?.content).toBe('The team did not retain a runnable browser game package.');
+    });
+
     it('turns local media engine outages into actionable recovery copy', async () => {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
