@@ -45,6 +45,12 @@ func (s *Service) searchMountedFolder(ctx context.Context, req Request, resp Res
 	hits := []mountedFolderHit{}
 	filesSeen := 0
 	now := time.Now().UTC()
+	resultKind := "mounted_folder"
+	interpretation := "mounted_folder_results_are_operator_configured_local_data"
+	if normalizeSourceToken(source.Provider) == ProviderCodeContext || isCodeContextSourceType(source.SourceType) {
+		resultKind = ProviderCodeContext
+		interpretation = "code_context_results_are_operator_configured_repository_or_code_folder_refs"
+	}
 	walkErr := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -88,7 +94,7 @@ func (s *Service) searchMountedFolder(ctx context.Context, req Request, resp Res
 				URL:              "mount://" + source.ID + "/" + rel,
 				LocalSourceID:    source.ID + ":" + rel,
 				Snippet:          mountedSnippet(text, terms),
-				SourceKind:       "mounted_folder",
+				SourceKind:       resultKind,
 				TrustClass:       firstString(source.TrustClass, "bounded_internal"),
 				SensitivityClass: source.SensitivityClass,
 				RetrievedAt:      now,
@@ -122,10 +128,13 @@ func (s *Service) searchMountedFolder(ctx context.Context, req Request, resp Res
 	}
 	resp.Count = len(resp.Results)
 	resp.Provider = ProviderLocalSources
+	if resultKind == ProviderCodeContext {
+		resp.Provider = ProviderCodeContext
+	}
 	resp.Metadata["mounted_folder_files_scanned"] = filesSeen
 	resp.Metadata["mounted_folder_source_id"] = source.ID
 	resp.Metadata["mounted_folder_source_name"] = source.Name
-	resp.Metadata["interpretation"] = "mounted_folder_results_are_operator_configured_local_data"
+	resp.Metadata["interpretation"] = interpretation
 	return resp, nil
 }
 

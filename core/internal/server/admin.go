@@ -9,6 +9,7 @@ import (
 	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/capabilities"
 	"github.com/mycelis/core/internal/catalogue"
+	"github.com/mycelis/core/internal/codecontext"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
@@ -77,6 +78,7 @@ type AdminServer struct {
 	LoopScheduler       *LoopScheduler
 	TemplateBundlesPath string
 	Search              *searchcap.Service
+	CodeContext         *codecontext.Service
 	Inputs              *inputs.Service
 	Capabilities        *capabilities.Service
 	MCPToolExecutor     swarm.MCPToolExecutor

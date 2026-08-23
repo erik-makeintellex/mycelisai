@@ -86,6 +86,7 @@ Use Capabilities to inspect:
 - recent persisted MCP activity
 - active search posture, including `local_sources`, self-hosted `searxng`, operator-owned `local_api`, optional `brave`, and disabled blockers
 - configured search sources, including public web providers, local/shared sources, explicit URL retrieval, and private or client-owned authenticated data sources
+- native `code_context` repository/code-folder sources, with snapshot and index status visible in Access and raw refs or digests kept behind Inspect
 - named local data mounts, including user-owned folders and infrastructure shared folders Soma may read under explicit scope and boundary
 
 Soma should use the Mycelis-owned `web_search` path when search is configured. Brave is optional; self-hosted SearXNG and local API search do not require Brave tokens. The `fetch` MCP is also optional: add or repair it when Soma needs to retrieve a specific supplied URL, not as a prerequisite for built-in search.

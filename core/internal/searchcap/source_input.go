@@ -88,7 +88,7 @@ func normalizeSourceInput(input SourceInput) (Source, error) {
 }
 
 func normalizeRegistryEndpoint(sourceType, raw string) (string, error) {
-	if isMountedFolderSourceType(sourceType) {
+	if isMountedFolderSourceType(sourceType) || isCodeContextSourceType(sourceType) {
 		return normalizeMountedFolderPath(raw)
 	}
 	if err := validateRegistryEndpoint(raw); err != nil {
@@ -161,7 +161,7 @@ func normalizeRegistryAuthScheme(raw string) string {
 }
 
 func requiresRegistryEndpoint(sourceType string) bool {
-	if isMountedFolderSourceType(sourceType) {
+	if isMountedFolderSourceType(sourceType) || isCodeContextSourceType(sourceType) {
 		return true
 	}
 	switch sourceType {
@@ -209,6 +209,15 @@ func normalizeRegistryValue(raw, fallback string) string {
 func isMountedFolderSourceType(sourceType string) bool {
 	switch normalizeSourceToken(sourceType) {
 	case ProviderMountedFolder, "local_mount", "data_mount", "shared_folder", "mounted_files":
+		return true
+	default:
+		return false
+	}
+}
+
+func isCodeContextSourceType(sourceType string) bool {
+	switch normalizeSourceToken(sourceType) {
+	case ProviderCodeContext, "repository", "code_repository", "local_code_folder", "code_folder":
 		return true
 	default:
 		return false

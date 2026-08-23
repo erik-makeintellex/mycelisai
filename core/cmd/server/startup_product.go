@@ -11,6 +11,7 @@ import (
 	"github.com/mycelis/core/internal/bootstrap"
 	"github.com/mycelis/core/internal/capabilities"
 	"github.com/mycelis/core/internal/catalogue"
+	"github.com/mycelis/core/internal/codecontext"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
@@ -46,6 +47,7 @@ type productServices struct {
 	Inception       *inception.Store
 	Comms           *comms.Gateway
 	Search          *searchcap.Service
+	CodeContext     *codecontext.Service
 	Inputs          *inputs.Service
 	InternalTools   *swarm.InternalToolRegistry
 	EventStore      *events.Store
@@ -156,6 +158,7 @@ func startProductServices(ctx context.Context, core *coreRuntime) productService
 		Stream:       mycelisSignal.NewStreamHandler(sharedDB),
 		Comms:        comms.NewGatewayFromEnv(),
 		Search:       searchcap.NewService(searchcap.ConfigFromEnv(), cogRouter, memService),
+		CodeContext:  codecontext.NewService(codecontext.ConfigFromEnv()),
 		Inputs:       inputs.NewService(),
 	}
 	if memService != nil && cogRouter != nil {
@@ -207,16 +210,17 @@ func startProductServices(ctx context.Context, core *coreRuntime) productService
 	log.Printf("Mycelis Search capability provider: %s", services.Search.Provider())
 	if core.NC != nil {
 		services.InternalTools = swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
-			NC:        core.NC,
-			Brain:     cogRouter,
-			Mem:       memService,
-			Architect: services.MetaArchitect,
-			Catalogue: services.Catalogue,
-			Inception: services.Inception,
-			Comms:     services.Comms,
-			DB:        sharedDB,
-			Exchange:  services.Exchange,
-			Search:    services.Search,
+			NC:          core.NC,
+			Brain:       cogRouter,
+			Mem:         memService,
+			Architect:   services.MetaArchitect,
+			Catalogue:   services.Catalogue,
+			Inception:   services.Inception,
+			Comms:       services.Comms,
+			DB:          sharedDB,
+			Exchange:    services.Exchange,
+			Search:      services.Search,
+			CodeContext: services.CodeContext,
 		})
 	}
 	if core.NC != nil {

@@ -1,0 +1,56 @@
+version: soma_commands.v1
+commands:
+  - id: code_context.query
+    handler: code_context.query
+    title: Query code context
+    summary: Query registered native code context sources and return bounded source refs without exposing raw graph internals.
+    user_quote: "Find the code that matters here."
+    category: Code context
+    capability_id: code_context
+    input_schema_ref: internal_tool.code_context.query.input
+    output_schema_ref: code_context_refs.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist], groups: [registered_code_sources]}
+    governance: {risk_class: medium-risk, approval_posture: not_required, audit_required: true, private_data_touch: false}
+    delivery: {output_kinds: [source_refs, citations], proof_required: true, recovery_posture: configure_or_refresh_code_source}
+    context_assertions: [source_refs_are_not_authority, raw_graph_internals_hidden, verify_source_before_editing]
+    ui_visibility: {default_surface: soma_thread, operator_label: Code context}
+    availability: {mode: builtin, requires: [registered_code_source]}
+    metadata:
+      graph_internals: hidden
+      fact_boundary: extracted_refs_only
+  - id: code_context.impact
+    handler: code_context.impact
+    title: Review code impact
+    summary: Review likely impact for a file, symbol, package, or phrase using extracted refs plus clearly labeled inferred relationships.
+    user_quote: "What will this change touch?"
+    category: Code context
+    capability_id: code_context
+    input_schema_ref: internal_tool.code_context.impact.input
+    output_schema_ref: code_context_impact.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist], groups: [registered_code_sources]}
+    governance: {risk_class: medium-risk, approval_posture: not_required, audit_required: true, private_data_touch: false}
+    delivery: {output_kinds: [impact_refs, affected_tests, citations], proof_required: true, recovery_posture: inspect_source_or_refresh_code_source}
+    context_assertions: [inferences_labeled, verify_source_before_editing, source_refs_are_not_authority]
+    ui_visibility: {default_surface: soma_thread, operator_label: Code impact}
+    availability: {mode: builtin, requires: [registered_code_source]}
+    metadata:
+      graph_internals: hidden
+      fact_boundary: extracted_and_inferred_split
+  - id: code_context.explain
+    handler: code_context.explain
+    title: Explain code context
+    summary: Explain a file or symbol from registered native code context using source-derived facts and citable refs.
+    user_quote: "Explain this part of the code."
+    category: Code context
+    capability_id: code_context
+    input_schema_ref: internal_tool.code_context.explain.input
+    output_schema_ref: code_context_explain.v1
+    scope: {default: workspace, roles: [soma, team_lead, specialist], groups: [registered_code_sources]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: true, private_data_touch: false}
+    delivery: {output_kinds: [explanation, source_refs, citations], proof_required: true, recovery_posture: inspect_source_or_refresh_code_source}
+    context_assertions: [extracted_facts_cited, raw_graph_internals_hidden, verify_source_before_editing]
+    ui_visibility: {default_surface: soma_thread, operator_label: Code explain}
+    availability: {mode: builtin, requires: [registered_code_source]}
+    metadata:
+      graph_internals: hidden
+      fact_boundary: extracted_refs_only

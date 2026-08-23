@@ -18,6 +18,8 @@ func CompileDocument(
 		return CompileOutcomeTemplateDocument(document, operatorValues, policyValues)
 	case protocol.ConfigDocumentKindWorkerProfile:
 		return CompileWorkerProfileDocument(document)
+	case protocol.ConfigDocumentKindCodeContextSource:
+		return CompileCodeContextSourceDocument(document)
 	default:
 		return nil, fmt.Errorf("unsupported config document kind %q", document.Kind)
 	}

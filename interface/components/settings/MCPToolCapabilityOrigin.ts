@@ -50,7 +50,14 @@ export function capabilityOrigin(capability: CapabilityManifest): CapabilityOrig
     ) {
         return "host";
     }
-    if (source === "builtin" || source === "internal_tool" || source.startsWith("internal_")) {
+    if (
+        source === "builtin"
+        || source === "internal_tool"
+        || source === "code_context"
+        || source.startsWith("internal_")
+        || id.startsWith("code_context")
+        || id.startsWith("code-context")
+    ) {
         return "builtin";
     }
     return "connector";

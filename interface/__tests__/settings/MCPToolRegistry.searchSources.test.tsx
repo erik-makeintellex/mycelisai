@@ -69,19 +69,52 @@ describe('MCPToolRegistry search sources', () => {
             sensitivity_class: 'public',
             trust_class: 'bounded_external',
             status: 'available',
+        }, {
+            id: 'workspace-code',
+            name: 'Workspace code map',
+            provider: 'code_context',
+            source_type: 'code_context',
+            scope_kind: 'host',
+            scope_ref: 'dev-workstation',
+            boundary: 'Approved workspace repository source',
+            auth_scheme: 'none',
+            mode: 'snapshot',
+            sensitivity_class: 'governed',
+            trust_class: 'trusted_internal',
+            status: 'available',
+            code_context: {
+                scope: 'workspace repository',
+                snapshot_status: 'ready',
+                last_snapshot_at: '2026-08-22T10:00:00Z',
+                snapshot_ref: 'snapshot:workspace-code:abc123',
+                snapshot_digest: 'sha256:abc123',
+                index_status: 'stale',
+                last_indexed_at: '2026-08-21T09:30:00Z',
+                index_ref: 'index:workspace-code:def456',
+                index_digest: 'sha256:def456',
+                refresh_action: 'Refresh code context map after repository changes.',
+            },
         }]);
 
         render(<MCPToolRegistry />);
         openAccessFocus();
 
         await waitFor(() => expect(screen.getByText('Approved docs')).toBeDefined());
-        expect(screen.getByText(/Approved places Soma may search: public web, approved local or mounted data, and private APIs/i)).toBeDefined();
+        expect(screen.getByText(/Approved places Soma may search: public web, approved local or mounted data, code context, and private APIs/i)).toBeDefined();
         expect(screen.getByText(/Approved knowledge collection/i)).toBeDefined();
         expect(screen.getByText('Public web research')).toBeDefined();
         expect(screen.getAllByText(/Public web/i).length).toBeGreaterThan(0);
         expect(screen.getAllByText(/Visible to everyone/i).length).toBeGreaterThan(0);
         expect(screen.getAllByText(/No secret needed/i).length).toBeGreaterThan(0);
         expect(screen.getAllByText(/Ready for Soma to use when this scope is allowed/i).length).toBeGreaterThan(0);
+        expect(screen.getByText('Workspace code map')).toBeDefined();
+        expect(screen.getAllByText(/Code context/i).length).toBeGreaterThan(0);
+        expect(screen.getByText(/Native code context/i)).toBeDefined();
+        expect(screen.getByText(/Snapshot ready/i)).toBeDefined();
+        expect(screen.getByText(/Index stale/i)).toBeDefined();
+        expect(screen.getAllByText('workspace repository').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('2026-08-22T10:00:00Z').length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Refresh code context map after repository changes/i).length).toBeGreaterThan(0);
 
         fireEvent.click(screen.getByRole('button', { name: /Add search source/i }));
         fireEvent.change(screen.getByLabelText('Source name'), { target: { value: 'Team research API' } });

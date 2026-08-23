@@ -18,8 +18,9 @@ type ConfigDocumentRiskLevel string
 type ConfigDocumentEffectAction string
 
 const (
-	ConfigDocumentKindOutcomeTemplate ConfigDocumentKind = "OutcomeTemplate"
-	ConfigDocumentKindWorkerProfile   ConfigDocumentKind = "WorkerProfile"
+	ConfigDocumentKindOutcomeTemplate   ConfigDocumentKind = "OutcomeTemplate"
+	ConfigDocumentKindWorkerProfile     ConfigDocumentKind = "WorkerProfile"
+	ConfigDocumentKindCodeContextSource ConfigDocumentKind = "CodeContextSource"
 
 	ConfigDocumentScopeBuiltIn      ConfigDocumentScopeKind = "built_in"
 	ConfigDocumentScopeOrganization ConfigDocumentScopeKind = "organization"
@@ -117,7 +118,7 @@ func ValidateConfigDocument(document ConfigDocument) []ConfigDocumentValidationI
 	if document.APIVersion != ConfigDocumentAPIVersionV1 {
 		add("config.unsupported_api_version", "apiVersion", fmt.Sprintf("unsupported apiVersion %q", document.APIVersion))
 	}
-	if document.Kind != ConfigDocumentKindOutcomeTemplate && document.Kind != ConfigDocumentKindWorkerProfile {
+	if document.Kind != ConfigDocumentKindOutcomeTemplate && document.Kind != ConfigDocumentKindWorkerProfile && document.Kind != ConfigDocumentKindCodeContextSource {
 		add("config.unsupported_kind", "kind", fmt.Sprintf("unsupported config document kind %q", document.Kind))
 	}
 
@@ -157,6 +158,9 @@ func ValidateConfigDocument(document ConfigDocument) []ConfigDocumentValidationI
 		validateConfigDocumentSpecSecrets(spec, "spec", &issues)
 		if document.Kind == ConfigDocumentKindWorkerProfile {
 			issues = append(issues, ValidateWorkerProfileSpec(document.Spec)...)
+		}
+		if document.Kind == ConfigDocumentKindCodeContextSource {
+			issues = append(issues, ValidateCodeContextSourceSpec(document.Spec)...)
 		}
 	}
 

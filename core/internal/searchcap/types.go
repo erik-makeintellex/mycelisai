@@ -13,6 +13,7 @@ const (
 	ProviderLocalAPI      = "local_api"
 	ProviderBrave         = "brave"
 	ProviderMountedFolder = "mounted_folder"
+	ProviderCodeContext   = "code_context"
 )
 
 type Embedder interface {

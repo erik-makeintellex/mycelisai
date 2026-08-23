@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/mycelis/core/internal/catalogue"
+	"github.com/mycelis/core/internal/codecontext"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/exchange"
@@ -96,49 +97,52 @@ type InternalTool struct {
 
 // InternalToolRegistry holds all built-in tools and their dependencies.
 type InternalToolRegistry struct {
-	tools     map[string]*InternalTool
-	nc        *nats.Conn
-	brain     *cognitive.Router
-	mem       *memory.Service
-	architect *cognitive.MetaArchitect
-	catalogue *catalogue.Service
-	inception *inception.Store
-	comms     *comms.Gateway
-	db        *sql.DB
-	exchange  *exchange.Service
-	search    *searchcap.Service
-	somaRef   *Soma
-	manifests map[string]somacommands.Command
+	tools       map[string]*InternalTool
+	nc          *nats.Conn
+	brain       *cognitive.Router
+	mem         *memory.Service
+	architect   *cognitive.MetaArchitect
+	catalogue   *catalogue.Service
+	inception   *inception.Store
+	comms       *comms.Gateway
+	db          *sql.DB
+	exchange    *exchange.Service
+	search      *searchcap.Service
+	codeContext *codecontext.Service
+	somaRef     *Soma
+	manifests   map[string]somacommands.Command
 }
 
 // InternalToolDeps bundles all optional dependencies for the internal tools.
 type InternalToolDeps struct {
-	NC        *nats.Conn
-	Brain     *cognitive.Router
-	Mem       *memory.Service
-	Architect *cognitive.MetaArchitect
-	Catalogue *catalogue.Service
-	Inception *inception.Store
-	Comms     *comms.Gateway
-	DB        *sql.DB
-	Exchange  *exchange.Service
-	Search    *searchcap.Service
+	NC          *nats.Conn
+	Brain       *cognitive.Router
+	Mem         *memory.Service
+	Architect   *cognitive.MetaArchitect
+	Catalogue   *catalogue.Service
+	Inception   *inception.Store
+	Comms       *comms.Gateway
+	DB          *sql.DB
+	Exchange    *exchange.Service
+	Search      *searchcap.Service
+	CodeContext *codecontext.Service
 }
 
 // NewInternalToolRegistry creates and populates the built-in tool set.
 func NewInternalToolRegistry(deps InternalToolDeps) *InternalToolRegistry {
 	r := &InternalToolRegistry{
-		tools:     make(map[string]*InternalTool),
-		nc:        deps.NC,
-		brain:     deps.Brain,
-		mem:       deps.Mem,
-		architect: deps.Architect,
-		catalogue: deps.Catalogue,
-		inception: deps.Inception,
-		comms:     deps.Comms,
-		db:        deps.DB,
-		exchange:  deps.Exchange,
-		search:    deps.Search,
+		tools:       make(map[string]*InternalTool),
+		nc:          deps.NC,
+		brain:       deps.Brain,
+		mem:         deps.Mem,
+		architect:   deps.Architect,
+		catalogue:   deps.Catalogue,
+		inception:   deps.Inception,
+		comms:       deps.Comms,
+		db:          deps.DB,
+		exchange:    deps.Exchange,
+		search:      deps.Search,
+		codeContext: deps.CodeContext,
 	}
 	r.registerAll()
 	r.applyCommandManifests()
@@ -186,6 +190,7 @@ func (r *InternalToolRegistry) registerAll() {
 	r.registerCoordinationTools()
 	r.registerExchangeAndPlanningTools()
 	r.registerDocsTools()
+	r.registerCodeContextTools()
 	r.registerMemoryAndArtifactTools()
 	r.registerExecutionAndMediaTools()
 	r.registerConfigurationTools()

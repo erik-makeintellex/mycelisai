@@ -165,6 +165,8 @@ func sourceProvider(source Source) string {
 	switch {
 	case provider == ProviderLocalSources || sourceType == ProviderLocalSources || sourceType == "knowledge_collection":
 		return ProviderLocalSources
+	case provider == ProviderCodeContext || isCodeContextSourceType(sourceType):
+		return ProviderMountedFolder
 	case provider == ProviderMountedFolder || isMountedFolderSourceType(sourceType):
 		return ProviderMountedFolder
 	case provider == ProviderLocalAPI || sourceType == ProviderLocalAPI || sourceType == "private_api" || sourceType == "authenticated_api" || sourceType == "client_or_public_api":

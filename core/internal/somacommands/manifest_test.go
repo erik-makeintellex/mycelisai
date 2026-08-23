@@ -40,3 +40,20 @@ func TestDefaultCommandManifestExposesSearchPosture(t *testing.T) {
 		t.Fatalf("web_search should require proof: %+v", command.Delivery)
 	}
 }
+
+func TestDefaultCommandManifestExposesCodeContextPosture(t *testing.T) {
+	registry, err := somacommands.LoadDefault()
+	if err != nil {
+		t.Fatalf("LoadDefault: %v", err)
+	}
+	command, ok := registry.ByHandler()["code_context.impact"]
+	if !ok {
+		t.Fatal("code_context.impact manifest missing")
+	}
+	if command.CapabilityID != "code_context" {
+		t.Fatalf("capability_id = %q", command.CapabilityID)
+	}
+	if !command.Delivery.ProofRequired || command.Metadata["graph_internals"] != "hidden" {
+		t.Fatalf("unexpected code context manifest: %+v", command)
+	}
+}
