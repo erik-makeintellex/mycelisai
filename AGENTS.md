@@ -72,6 +72,15 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - When testing or task-running behavior changes, review `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md` in the same slice.
 - Slice close-out should explicitly report which docs changed and which touched docs were reviewed but left unchanged.
 
+## Native Code Context Map Standard
+
+- Mycelis may use local code-structure maps as a native governed source/capability for repository understanding, impact review, implementation planning, and proof grounding. This is not support for an external graph service and must not create a new primary product surface.
+- Code context maps are source aids, not authority. Verify relevant source files before editing or asserting behavior, and use exact file/path refs in findings and proof.
+- Prefer deterministic local extraction for structure. LLMs may interpret or summarize the map, but they must not be required to construct parser facts such as files, symbols, imports, references, or extracted edges.
+- Keep extracted facts separate from inferred relationships. Any inferred edge, ownership, or impact claim must be labeled as inferred and remain behind Inspect or proof details unless the user asks for depth.
+- Generated graph/index/cache artifacts are runtime or workspace artifacts. Do not commit them unless an explicit fixture or migration test names why the file belongs in source control.
+- When broad code changes are planned and a native code context map exists, consult it for impact before editing. If it is unavailable or stale, proceed with `rg`, source reads, and tests, and record the missing map only when it affects delivery confidence.
+
 ## Runtime Config And Proof Boundary
 
 - `.env` is the repo-local secret store across runtime paths. Use secret references in committed config and never store raw secrets in UI, logs, state files, or architecture docs.
