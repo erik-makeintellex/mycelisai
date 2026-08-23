@@ -42,7 +42,7 @@ type MockConnectedToolsOptions = {
         direct_soma_interaction: boolean;
         requires_hosted_api_token: boolean;
         max_results: number;
-        sources?: Array<Record<string, string | undefined>>;
+        sources?: Array<Record<string, unknown>>;
         blocker?: {
             code: string;
             message: string;
@@ -466,6 +466,52 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByText("fetch").first()).toBeVisible();
         await expect(page.getByText("Fetch MCP server installed for the current user-owned group.").first()).toBeVisible();
     });
+
+    test("adds repository code folder access without exposing technical refs by default", async ({ page }) => {
+        const sources: Array<Record<string, unknown>> = [];
+        await mockConnectedToolsApis(page, {
+            searchStatus: {
+                provider: "builtin_web",
+                enabled: true,
+                configured: true,
+                supports_local_sources: true,
+                supports_public_web: true,
+                soma_tool_name: "web_search",
+                direct_soma_interaction: true,
+                requires_hosted_api_token: false,
+                max_results: 8,
+                sources,
+            },
+        });
+        await page.route("**/api/v1/search/sources", async (route) => {
+            if (route.request().method() === "POST") {
+                const body = await route.request().postDataJSON() as Record<string, unknown>;
+                sources.push({ id: "workspace-repo-map", managed: true, status: "available", ...body });
+                await fulfillJSON(route, 200, { ok: true, data: sources.at(-1) });
+                return;
+            }
+            await fulfillJSON(route, 200, { ok: true, data: { sources } });
+        });
+
+        await openConnectedTools(page);
+        await clickVisibleControl(page, page.getByRole("button", { name: /^Access/i }));
+        await expect(page.getByRole("button", { name: /Search sources/i })).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("button", { name: /Add search source/i }));
+        await page.getByLabel("Source name").fill("Workspace repository map");
+        await page.getByLabel("Source kind").selectOption("code_context");
+        await page.getByLabel("Approved repository or code folder path").fill("core");
+        await page.getByLabel("Search boundary").fill("Approved runtime source tree");
+        await page.getByLabel("Visible to").selectOption("group");
+        await page.getByLabel("Group name").fill("runtime-review");
+        await clickVisibleControl(page, page.getByRole("button", { name: /^Add search source$/i }).last());
+
+        await expect(page.getByText("Workspace repository map", { exact: true })).toBeVisible();
+        await expect(page.getByText(/Repository or code folder/i).first()).toBeVisible();
+        await expect(page.getByText(/Visible to one group/i).first()).toBeVisible();
+        await expect(page.getByText(/Inspect technical refs/i)).toBeVisible();
+        await expect(page.getByText(/Snapshot ref/i)).toHaveCount(0);
+    });
+
     test("correlates a live team MCP-backed capability with recent Capabilities activity", async ({ page }) => {
         test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires a live Core backend");
         test.slow();

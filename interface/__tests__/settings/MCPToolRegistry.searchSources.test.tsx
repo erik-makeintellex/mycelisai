@@ -92,7 +92,7 @@ describe('MCPToolRegistry search sources', () => {
                 last_indexed_at: '2026-08-21T09:30:00Z',
                 index_ref: 'index:workspace-code:def456',
                 index_digest: 'sha256:def456',
-                refresh_action: 'Refresh code context map after repository changes.',
+                refresh_action: 'Refresh the repository map after repository changes.',
             },
         }]);
 
@@ -100,7 +100,7 @@ describe('MCPToolRegistry search sources', () => {
         openAccessFocus();
 
         await waitFor(() => expect(screen.getByText('Approved docs')).toBeDefined());
-        expect(screen.getByText(/Approved places Soma may search: public web, approved local or mounted data, code context, and private APIs/i)).toBeDefined();
+        expect(screen.getByText(/Approved places Soma may search: public web, approved local or mounted data, repository\/code folder context, and private APIs/i)).toBeDefined();
         expect(screen.getByText(/Approved knowledge collection/i)).toBeDefined();
         expect(screen.getByText('Public web research')).toBeDefined();
         expect(screen.getAllByText(/Public web/i).length).toBeGreaterThan(0);
@@ -108,13 +108,13 @@ describe('MCPToolRegistry search sources', () => {
         expect(screen.getAllByText(/No secret needed/i).length).toBeGreaterThan(0);
         expect(screen.getAllByText(/Ready for Soma to use when this scope is allowed/i).length).toBeGreaterThan(0);
         expect(screen.getByText('Workspace code map')).toBeDefined();
-        expect(screen.getAllByText(/Code context/i).length).toBeGreaterThan(0);
-        expect(screen.getByText(/Native code context/i)).toBeDefined();
+        expect(screen.getAllByText(/Repository or code folder/i).length).toBeGreaterThan(0);
+        expect(screen.getByText(/Repository map for Soma/i)).toBeDefined();
         expect(screen.getByText(/Snapshot ready/i)).toBeDefined();
         expect(screen.getByText(/Index stale/i)).toBeDefined();
         expect(screen.getAllByText('workspace repository').length).toBeGreaterThan(0);
         expect(screen.getAllByText('2026-08-22T10:00:00Z').length).toBeGreaterThan(0);
-        expect(screen.getAllByText(/Refresh code context map after repository changes/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Refresh the repository map after repository changes/i).length).toBeGreaterThan(0);
 
         fireEvent.click(screen.getByRole('button', { name: /Add search source/i }));
         fireEvent.change(screen.getByLabelText('Source name'), { target: { value: 'Team research API' } });
@@ -219,6 +219,41 @@ describe('MCPToolRegistry search sources', () => {
             endpoint: 'workspace/client-docs',
             scope_kind: 'host',
             scope_ref: 'workstation-1',
+            auth_scheme: 'none',
+        });
+    });
+
+    it('adds repository code-folder sources as Soma-searchable context', async () => {
+        mockSearchSourceRegistry([]);
+
+        render(<MCPToolRegistry />);
+        openAccessFocus();
+
+        await waitFor(() => expect(screen.getByText(/No configured sources reported/i)).toBeDefined());
+        fireEvent.click(screen.getByRole('button', { name: /Add search source/i }));
+        fireEvent.change(screen.getByLabelText('Source name'), { target: { value: 'Workspace repository map' } });
+        fireEvent.change(screen.getByLabelText('Source kind'), { target: { value: 'code_context' } });
+        fireEvent.change(screen.getByLabelText('Approved repository or code folder path'), { target: { value: 'core' } });
+        fireEvent.change(screen.getByLabelText('Search boundary'), { target: { value: 'Approved Mycelis runtime source tree' } });
+        fireEvent.change(screen.getByLabelText('Visible to'), { target: { value: 'group' } });
+        fireEvent.change(screen.getByLabelText('Group name'), { target: { value: 'runtime-review' } });
+        fireEvent.click(screen.getAllByRole('button', { name: /^Add search source$/i }).at(-1)!);
+
+        await waitFor(() => expect(screen.getByText(/Added Workspace repository map/i)).toBeDefined());
+        await waitFor(() => expect(screen.getByText('Workspace repository map')).toBeDefined());
+        expect(screen.getAllByText(/Repository or code folder/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Visible to one group/i).length).toBeGreaterThan(0);
+        const postCall = mockFetch.mock.calls.find(([url, init]) => (
+            url === '/api/v1/search/sources' && (init as RequestInit | undefined)?.method === 'POST'
+        ));
+        const body = JSON.parse(((postCall?.[1] as RequestInit).body ?? '{}') as string);
+        expect(body).toMatchObject({
+            name: 'Workspace repository map',
+            source_type: 'code_context',
+            endpoint: 'core',
+            boundary: 'Approved Mycelis runtime source tree',
+            scope_kind: 'group',
+            scope_ref: 'runtime-review',
             auth_scheme: 'none',
         });
     });
