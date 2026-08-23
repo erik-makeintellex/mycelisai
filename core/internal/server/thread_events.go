@@ -130,11 +130,29 @@ func completionProofRef(item protocol.TeamWorkItem) string {
 
 func completedTeamWorkDetail(status protocol.TeamStatusEvent, outputs []protocol.TeamOutputRef) string {
 	base := firstNonEmptyString(status.Details, status.Headline, "The team returned its deliverable.")
-	count := len(outputs)
-	if count == 1 {
-		return base + " One deliverable is ready to open."
+	if summary := completedOutputSummary(outputs); summary != "" {
+		return base + " " + summary
 	}
-	return fmt.Sprintf("%s %d deliverables are ready to review.", base, count)
+	return base
+}
+
+func completedOutputSummary(outputs []protocol.TeamOutputRef) string {
+	count := len(outputs)
+	if count == 0 {
+		return ""
+	}
+	label := firstNonEmptyString(outputs[0].Label, outputs[0].OutputID, "deliverable")
+	if count == 1 {
+		return fmt.Sprintf("Ready to open: %s.", label)
+	}
+	return fmt.Sprintf("Ready to review: %s plus %s.", label, moreDeliverablesLabel(count-1))
+}
+
+func moreDeliverablesLabel(count int) string {
+	if count == 1 {
+		return "1 more deliverable"
+	}
+	return fmt.Sprintf("%d more deliverables", count)
 }
 
 func firstTeamOutputOpenTarget(outputs []protocol.TeamOutputRef) (string, string, string) {
