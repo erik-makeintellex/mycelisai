@@ -65,7 +65,7 @@ export function SearchSourceAddForm({
     return (
         <form onSubmit={submit} className="mt-4 rounded-lg border border-cortex-border bg-cortex-bg/60 p-3">
             <p className="mb-3 text-[11px] leading-4 text-cortex-text-muted">
-                Add a place Soma may search after the configured scope allows it: public web, approved local or mounted data, or a private API.
+                Add a place Soma may search after the configured scope allows it: public web, approved local or mounted data, repository/code folders, or a private API.
             </p>
             <div className="grid gap-3 md:grid-cols-2">
                 <SourceField label="Source name">
@@ -76,6 +76,7 @@ export function SearchSourceAddForm({
                         <option value="public_web">Public web</option>
                         <option value="local_sources">Approved Mycelis data</option>
                         <option value="mounted_folder">Approved local or mounted data</option>
+                        <option value="code_context">Repository or code folder</option>
                         <option value="knowledge_collection">Approved knowledge collection</option>
                         <option value="local_api">Private API</option>
                     </select>
@@ -158,9 +159,9 @@ export function emptySourceLabel(addSupported: boolean): string {
 
 function validateSearchSourceDraft(draft: SearchSourceDraft): string | null {
     if (!draft.name.trim()) return "Name the search source.";
-    if (requiresEndpoint(draft.source_type) && !draft.endpoint?.trim()) return isMountedFolderSource(draft.source_type) ? "Add the approved folder path Soma may search." : "Add the address Soma may use for this source.";
-    if (draft.endpoint?.trim() && !isMountedFolderSource(draft.source_type) && !/^https?:\/\/[^/\s]+/i.test(draft.endpoint.trim())) return "Use a full http(s) endpoint.";
-    if (draft.endpoint?.trim() && isMountedFolderSource(draft.source_type) && /^https?:\/\//i.test(draft.endpoint.trim())) return "Use a local or shared folder path, not an http(s) URL.";
+    if (requiresEndpoint(draft.source_type) && !draft.endpoint?.trim()) return isPathBackedSource(draft.source_type) ? "Add the approved folder path Soma may search." : "Add the address Soma may use for this source.";
+    if (draft.endpoint?.trim() && !isPathBackedSource(draft.source_type) && !/^https?:\/\/[^/\s]+/i.test(draft.endpoint.trim())) return "Use a full http(s) endpoint.";
+    if (draft.endpoint?.trim() && isPathBackedSource(draft.source_type) && /^https?:\/\//i.test(draft.endpoint.trim())) return "Use a local or shared folder path, not an http(s) URL.";
     if (!draft.boundary.trim()) return "Describe the boundary Soma may search.";
     if (draft.scope_kind !== "all" && !draft.scope_ref?.trim()) return "Add the group or host name allowed to use this source.";
     if (draft.auth_scheme !== "none") {
@@ -172,15 +173,20 @@ function validateSearchSourceDraft(draft: SearchSourceDraft): string | null {
 }
 
 function requiresEndpoint(sourceType: string): boolean {
-    return sourceType === "public_web" || sourceType === "local_api" || isMountedFolderSource(sourceType);
+    return sourceType === "public_web" || sourceType === "local_api" || isPathBackedSource(sourceType);
 }
 
 function isMountedFolderSource(sourceType: string): boolean {
     return sourceType === "mounted_folder";
 }
 
+function isPathBackedSource(sourceType: string): boolean {
+    return isMountedFolderSource(sourceType) || sourceType === "code_context";
+}
+
 function sourceAddressLabel(sourceType: string): string {
     if (isMountedFolderSource(sourceType)) return "Approved folder path";
+    if (sourceType === "code_context") return "Approved repository or code folder path";
     if (sourceType === "local_api") return "Private API address";
     if (sourceType === "public_web") return "Public web search address";
     return "Search address";
@@ -188,6 +194,7 @@ function sourceAddressLabel(sourceType: string): string {
 
 function sourceAddressPlaceholder(sourceType: string): string {
     if (isMountedFolderSource(sourceType)) return "workspace/client-docs";
+    if (sourceType === "code_context") return "core or workspace/repos/customer-app";
     if (sourceType === "local_api") return "https://private-search.example.test/api";
     if (sourceType === "public_web") return "https://web-search.example.test";
     return "Optional search address";

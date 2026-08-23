@@ -22,7 +22,7 @@ export function SearchSourceList({
                 {title}
             </p>
             <p className="mt-1 text-[11px] leading-4 text-cortex-text-muted">
-                Approved places Soma may search: public web, approved local or mounted data, code context, and private APIs.
+                Approved places Soma may search: public web, approved local or mounted data, repository/code folder context, and private APIs.
             </p>
             <div className="mt-2 grid gap-2">
                 {sources.slice(0, compact ? 2 : undefined).map((source) => (
@@ -99,22 +99,22 @@ function CodeContextSourceSummary({ source }: { source: SearchCapabilitySource }
     const actionLabel = needsRepair
         ? (codeContext?.repair_action ?? source.recovery ?? "Repair code context map before Soma relies on impact refs.")
         : needsRefresh
-        ? (codeContext?.refresh_action ?? "Refresh code context map after repository changes.")
-        : (codeContext?.refresh_action ?? "Refresh code context map when the source changes.");
+        ? (codeContext?.refresh_action ?? "Refresh the repository map after source changes.")
+        : (codeContext?.refresh_action ?? "Refresh the repository map when the source changes.");
 
     return (
         <div className="mt-2 rounded-lg border border-cortex-border bg-cortex-bg/60 px-2.5 py-2">
             <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded border border-cortex-border bg-cortex-surface px-1.5 py-0.5 text-[9px] font-mono uppercase text-cortex-text-muted">
                     <Code2 className="h-3 w-3" />
-                    Native code context
+                    Repository map for Soma
                 </span>
                 <span className={codeContextStatusClass(snapshotStatus)}>Snapshot {statusText(snapshotStatus)}</span>
                 <span className={codeContextStatusClass(indexStatus)}>Index {statusText(indexStatus)}</span>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <CodeContextFact label="Scope" value={codeContext?.scope ?? scopeLabel(source)} />
-                <CodeContextFact label="Last snapshot" value={codeContext?.last_snapshot_at ?? "Not reported"} />
+                <CodeContextFact label="Allowed code area" value={codeContext?.scope ?? scopeLabel(source)} />
+                <CodeContextFact label="Last mapped" value={codeContext?.last_snapshot_at ?? "Not reported"} />
                 <CodeContextFact label="Last index" value={codeContext?.last_indexed_at ?? "Not reported"} />
                 <div className={`rounded-lg border px-2.5 py-2 ${needsRepair ? "border-cortex-warning/25 bg-cortex-warning/10" : "border-cortex-border bg-cortex-surface"}`}>
                     <p className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider text-cortex-text-muted">
@@ -152,7 +152,7 @@ function sourceTypeLabel(type: string): string {
     if (type === "local_api") return "Private API";
     if (type === "mounted_folder") return "Approved local or mounted data";
     if (type === "knowledge_collection") return "Approved knowledge collection";
-    if (type === "code_context") return "Code context";
+    if (type === "code_context") return "Repository or code folder";
     return type.replace(/_/g, " ");
 }
 
@@ -174,10 +174,10 @@ function sourceStatusClass(source: SearchCapabilitySource): string {
 function sourceReadinessLabel(source: SearchCapabilitySource): string {
     if (sourceIsCodeContext(source)) {
         if (sourceNeedsCodeContextRepair(source)) {
-            return source.recovery || source.code_context?.repair_action || "Repair code context map before Soma relies on impact refs.";
+            return source.recovery || source.code_context?.repair_action || "Repair the repository map before Soma relies on impact references.";
         }
         if (sourceNeedsCodeContextRefresh(source)) {
-            return source.code_context?.refresh_action || "Refresh code context map before relying on stale impact refs.";
+            return source.code_context?.refresh_action || "Refresh the repository map before relying on stale impact references.";
         }
     }
     if (!sourceIsReady(source.status)) {

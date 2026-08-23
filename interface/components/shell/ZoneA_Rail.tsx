@@ -170,6 +170,7 @@ export function ZoneA() {
 
 function NavItem({ icon: Icon, label, href, title, description, onClick, testId, collapsed = false }: { icon: LucideIcon; label: string; href: string; title?: string; description?: string; onClick?: () => void; testId?: string; collapsed?: boolean }) {
     const pathname = usePathname();
+    const router = useRouter();
     const isActive = pathname === href || pathname?.startsWith(href + '/') === true;
     const classes = `
         flex items-center justify-center ${collapsed ? '' : 'md:justify-start'} w-full p-2.5 rounded-lg transition-all duration-200
@@ -200,7 +201,17 @@ function NavItem({ icon: Icon, label, href, title, description, onClick, testId,
     }
 
     return (
-        <Link href={href} title={title ?? label} className={classes} data-testid={testId}>
+        <Link
+            href={href}
+            title={title ?? label}
+            className={classes}
+            data-testid={testId}
+            onClick={(event) => {
+                if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                router.push(href);
+            }}
+        >
             {content}
         </Link>
     );
