@@ -1,6 +1,6 @@
 # Mycelis Canonical PRD
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
-> Status: Canonical | Last Updated: 2026-08-16 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
+> Status: Canonical | Last Updated: 2026-08-23 | Purpose: Single source of product, architecture, UX, runtime, and MVP delivery truth for Mycelis.
 ## Product Thesis
 Mycelis is a Soma-centered governed cognitive operating environment. It is not an agent console, chatbot shell, MCP registry, or workflow dashboard. The product value is that a person can talk with Soma, shape meaningful work, approve governed execution, receive durable outputs, inspect proof, recover failures, and revisit the outcome later without learning infrastructure vocabulary. The prime architecture rule is twofold: every decision must be technically correct and must make the system easier to trust without exposing unnecessary complexity.
 The default product language is:
@@ -16,6 +16,36 @@ The architecture exists to protect confidence while making complexity disappear.
 The V8.3 release target is operational embodiment: prove Mycelis through visible execution, durable deliverables, recoverable work, understandable trust, and clean deployment reality. The risk is no longer insufficient architecture. The risk is doctrine expansion without product proof.
 Release success means a non-technical user can complete the journey from ask to trusted revisit without needing to understand agents, MCP, workflows, runs, topology, or infrastructure. A technical user can still inspect proof and runtime detail when needed. If runtime correctness improves but user trust or usability declines, the architecture moved in the wrong direction.
 Architecture stability rule: the architecture is stable, not frozen. Future work should extend, refine, harden, and express the current Workspace/Outcome/Soma/execution-spine model instead of replacing it or creating parallel concepts. Outcome is the organizing identity across Soma conversations, deliverables, active work, recovery, proof, history, and continuity; Workspace is the user-owned container that can hold one Outcome or hundreds. The existing Soma, Groups, Resources, Runs, Recovery, and Administration surfaces should become progressively Workspace-aware and Outcome-aware rather than Outcome-replaced. Runtime machinery translates machine work into user work, so ExecutionContracts, runs, teams, capabilities, MCP, NATS, vector retrieval, storage, event routing, autonomy, adaptive teams, providers, and new capability types should compose through the existing spine and remain primarily behind Details or Inspect unless surfacing them directly improves Outcome, Deliverable, Trust, Recovery, or Continuity value.
+
+## Clean Deployment And First-Boot Contract
+
+A production-ready Mycelis deployment must work from a completely clean environment. A clean environment may have empty PostgreSQL/pgvector storage, empty NATS/JetStream state, and empty generated workspace folders. It must not depend on leftover groups, runs, outputs, vectors, conversations, MCP rows, stale fixture data, previous local files, or retained NATS subjects from an older deployment.
+
+The only valid first-boot inputs are committed code, migrations, bundled configuration, mounted operator configuration, `.env` or deployment secret references, configured storage roots, and reachable infrastructure services. Runtime startup may create idempotent built-in/system bootstrap state, but that state must be classified as bootstrap support rather than user history. Valid bootstrap support includes schema, exchange registries, capability manifests, built-in Soma/runtime organization identity from the selected startup bundle, locked built-in worker/profile templates, provider defaults, configured MCP connection rows, configured search/input source definitions, and required workspace/artifact directories.
+
+The following objects must be absent until the operator or an approved workflow creates them:
+
+- Outcomes, user-created groups, user-created teams, deliverables, generated packages, and retained artifacts
+- runs, WorkIntent records, execution contracts, proof records, and recovery items
+- conversation turns, continuity vectors, code-context snapshots, and learned context
+- external input events, buffered source messages, and team command/result receipts
+
+First boot must therefore satisfy two outcomes at once:
+
+- the app is ready enough for the user to ask Soma, configure access, and create the first Outcome
+- the UI is visibly empty of old work, with no false review counts, stale failed cards, orphan output links, or inherited generated folders
+
+Clean-deployment proof requires this sequence:
+
+1. Start with empty app tables or a newly migrated database and empty generated workspace folders.
+2. Bring up the configured PostgreSQL/pgvector and NATS data plane.
+3. Start Core and Interface from the candidate build.
+4. Verify health, auth, Soma, Resources, Groups, Docs, Settings, and capability status without relying on prior rows.
+5. Confirm Groups and Runs are empty while bootstrap-only registries and built-in runtime identities are present and identifiable.
+6. Create one first Outcome through Soma, prove async bus handoff, isolated workspace output, completion summary, direct open/reply/recover actions, and cleanup.
+7. Restart Core and verify bootstrap is idempotent: no duplicate registries, teams, MCP servers, or capability rows, and no user history appears unless the first Outcome created it.
+
+Any first-boot failure must become a setup or recovery state with a direct next action, not a raw API error. Missing secrets, providers, bundles, folders, migrations, NATS, or PostgreSQL must explain what is trusted, what is unavailable, and where the operator or Soma can repair configuration.
 ## Workspace Outcome Hierarchy
 The operator lives inside a Workspace. A Workspace contains Outcomes. Each Outcome contains deliverables, active lanes, proof, recovery, history, and continuity. Runs, teams, capabilities, WorkIntent, ExecutionContracts, transport, storage, and infrastructure are runtime implementation unless the operator intentionally opens Details or Inspect.
 The canonical abstraction stack is `Operator -> Soma -> Workspace -> Outcome -> Deliverables -> Execution -> Capabilities -> Infrastructure`.
