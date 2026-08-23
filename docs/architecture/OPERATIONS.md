@@ -107,7 +107,7 @@ uv run inv lifecycle.health
 uv run inv lifecycle.restart --frontend
 uv run inv lifecycle.down
 uv run inv lifecycle.down --include-data-plane
-uv run inv lifecycle.memory-restart --frontend
+uv run inv lifecycle.first-boot-proof
 ```
 
 `lifecycle.status` is the fast local snapshot. It reports process/port state and confirms Core through `/healthz` plus Ollama through `/api/tags` over loopback fallbacks. Use `lifecycle.health` for the deeper endpoint proof gate before claiming service readiness; its cognitive-status probe uses a longer client timeout than the endpoint's bounded provider probes so failures return as evidence instead of socket timeouts.
@@ -247,13 +247,10 @@ Runtime checks must start clean, verify readiness, run proof once services are h
 Clean first-boot release proof must exercise the normal data-plane path and the normal app startup path:
 
 ```bash
-uv run inv compose.infra-up
-uv run inv db.reset
-uv run inv lifecycle.up --frontend
-uv run inv lifecycle.health
+uv run inv lifecycle.first-boot-proof
 ```
 
-Then verify the product state, not only the ports: Groups and Runs are empty, generated workspace folders contain no old user work, NATS has no stale user-work streams/messages, and any rows created by startup are classified bootstrap support rather than user history. The next gate is one Soma-created Outcome from ask to approved execution, isolated deliverable, validation, direct open/reply/recover actions, and scoped cleanup.
+The task stops local app services, keeps Dockerized PostgreSQL/NATS volumes available, resets the app database, clears generated workspace output roots while preserving local mounts, starts Core/Interface, runs health checks, verifies empty user product state, restarts Core/Interface, and verifies bootstrap row counts remain stable. The next gate is one Soma-created Outcome from ask to approved execution, isolated deliverable, validation, direct open/reply/recover actions, and scoped cleanup.
 
 ## VI. CI/CD
 

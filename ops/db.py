@@ -83,7 +83,7 @@ def _require_postgres(dbname="postgres"):
         raise SystemExit(
             f"Cannot connect to PostgreSQL at {host}:{port}. "
             "Start the bridge with 'uv run inv k8s.bridge' or use "
-            "'uv run inv lifecycle.memory-restart', which now restores the bridge before reset."
+            "'uv run inv lifecycle.first-boot-proof', which restores the bridge before reset."
         )
 
 

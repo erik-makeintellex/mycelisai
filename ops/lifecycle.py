@@ -32,8 +32,8 @@ from . import db as db_tasks
 from . import lifecycle_infra
 from . import service_ownership
 from . import lifecycle_status
+from .lifecycle_first_boot import first_boot_proof
 from .lifecycle_processes import COMPILED_GO_PROCESS_HINTS, WINDOWS_COMPILED_GO_PROCESS_NAMES
-
 # ── Port / Service Definitions ───────────────────────────────────────
 
 SERVICES = {
@@ -942,4 +942,4 @@ ns.add_task(up)
 ns.add_task(down)
 ns.add_task(health)
 ns.add_task(restart)
-ns.add_task(memory_restart, name="memory-restart")
+ns.add_task(first_boot_proof, name="first-boot-proof")

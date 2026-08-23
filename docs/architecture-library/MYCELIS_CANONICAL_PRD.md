@@ -18,33 +18,10 @@ Release success means a non-technical user can complete the journey from ask to 
 Architecture stability rule: the architecture is stable, not frozen. Future work should extend, refine, harden, and express the current Workspace/Outcome/Soma/execution-spine model instead of replacing it or creating parallel concepts. Outcome is the organizing identity across Soma conversations, deliverables, active work, recovery, proof, history, and continuity; Workspace is the user-owned container that can hold one Outcome or hundreds. The existing Soma, Groups, Resources, Runs, Recovery, and Administration surfaces should become progressively Workspace-aware and Outcome-aware rather than Outcome-replaced. Runtime machinery translates machine work into user work, so ExecutionContracts, runs, teams, capabilities, MCP, NATS, vector retrieval, storage, event routing, autonomy, adaptive teams, providers, and new capability types should compose through the existing spine and remain primarily behind Details or Inspect unless surfacing them directly improves Outcome, Deliverable, Trust, Recovery, or Continuity value.
 
 ## Clean Deployment And First-Boot Contract
-
-A production-ready Mycelis deployment must work from a completely clean environment. A clean environment may have empty PostgreSQL/pgvector storage, empty NATS/JetStream state, and empty generated workspace folders. It must not depend on leftover groups, runs, outputs, vectors, conversations, MCP rows, stale fixture data, previous local files, or retained NATS subjects from an older deployment.
-
-The only valid first-boot inputs are committed code, migrations, bundled configuration, mounted operator configuration, `.env` or deployment secret references, configured storage roots, and reachable infrastructure services. Runtime startup may create idempotent built-in/system bootstrap state, but that state must be classified as bootstrap support rather than user history. Valid bootstrap support includes schema, exchange registries, capability manifests, built-in Soma/runtime organization identity from the selected startup bundle, locked built-in worker/profile templates, provider defaults, configured MCP connection rows, configured search/input source definitions, and required workspace/artifact directories.
-
-The following objects must be absent until the operator or an approved workflow creates them:
-
-- Outcomes, user-created groups, user-created teams, deliverables, generated packages, and retained artifacts
-- runs, WorkIntent records, execution contracts, proof records, and recovery items
-- conversation turns, continuity vectors, code-context snapshots, and learned context
-- external input events, buffered source messages, and team command/result receipts
-
-First boot must therefore satisfy two outcomes at once:
-
-- the app is ready enough for the user to ask Soma, configure access, and create the first Outcome
-- the UI is visibly empty of old work, with no false review counts, stale failed cards, orphan output links, or inherited generated folders
-
-Clean-deployment proof requires this sequence:
-
-1. Start with empty app tables or a newly migrated database and empty generated workspace folders.
-2. Bring up the configured PostgreSQL/pgvector and NATS data plane.
-3. Start Core and Interface from the candidate build.
-4. Verify health, auth, Soma, Resources, Groups, Docs, Settings, and capability status without relying on prior rows.
-5. Confirm Groups and Runs are empty while bootstrap-only registries and built-in runtime identities are present and identifiable.
-6. Create one first Outcome through Soma, prove async bus handoff, isolated workspace output, completion summary, direct open/reply/recover actions, and cleanup.
-7. Restart Core and verify bootstrap is idempotent: no duplicate registries, teams, MCP servers, or capability rows, and no user history appears unless the first Outcome created it.
-
+A production-ready deployment must work from empty PostgreSQL/pgvector storage, empty NATS/JetStream state, and empty generated workspace folders. It must not depend on leftover groups, runs, outputs, vectors, conversations, MCP rows, fixture data, local files, or retained NATS subjects.
+Valid first-boot inputs are committed code, migrations, bundled or mounted configuration, `.env`/secret references, configured storage roots, and reachable infrastructure. Startup may create only idempotent bootstrap support such as schema, exchange registries, capability manifests, built-in Soma/runtime identity, locked built-in worker/profile templates, provider defaults, configured MCP/search/input source rows, and required directories.
+Outcomes, user-created groups/teams, deliverables, generated packages, artifacts, runs, WorkIntent, contracts, proof, recovery, conversations, continuity vectors, code snapshots, external input events, source buffers, and team command/result receipts must be absent until the operator or an approved workflow creates them. The first UI must be ready to ask Soma and configure access while visibly empty of old work, false review counts, stale failed cards, orphan output links, or inherited generated folders.
+Clean-deployment proof starts empty, brings up the configured data plane, starts Core/Interface, verifies health/auth/Soma/Resources/Groups/Docs/Settings/capabilities without prior rows, confirms Groups and Runs are empty while bootstrap registries are identifiable, creates one first Outcome through Soma, proves async bus handoff, isolated output, completion summary, direct open/reply/recover actions and cleanup, then restarts Core and verifies idempotent bootstrap with no duplicate registries, teams, MCP servers, or capability rows.
 Any first-boot failure must become a setup or recovery state with a direct next action, not a raw API error. Missing secrets, providers, bundles, folders, migrations, NATS, or PostgreSQL must explain what is trusted, what is unavailable, and where the operator or Soma can repair configuration.
 ## Workspace Outcome Hierarchy
 The operator lives inside a Workspace. A Workspace contains Outcomes. Each Outcome contains deliverables, active lanes, proof, recovery, history, and continuity. Runs, teams, capabilities, WorkIntent, ExecutionContracts, transport, storage, and infrastructure are runtime implementation unless the operator intentionally opens Details or Inspect.
@@ -334,27 +311,10 @@ Non-goals for MVP:
 | P0.12 | Release hygiene and promotion proof | COMPLETE | Trust | Use the staged `feature/* -> dev -> main` delivery path; commit coherent feature slices only after focused proof, retest each merged `dev` state with affected integration and live GUI journeys, and promote only a clean committed release candidate after full browser/release proof. Release preflight must run lint before later stages, browser gates must retain exact JSON/JUnit evidence, permissive UI self-skips are release failures, and prerequisite-gated skips must name the dependency and be exercised separately when it is available. Runtime and test-fixture lint must stay at zero errors without weakening product rules, and PostgreSQL/NATS-backed runtime paths must replace stale local/test-only proof. The discipline is implemented and the promoted local candidate passed exact `dev` release preflight plus post-promotion `main` source health and headed desktop/compact Soma browser smoke; future candidates must repeat this gate. |
 | P0.13 | Cross-device operating surface | COMPLETE | Ask, Approve, Deliver, Recover, Revisit | Shared UI contracts support compact, medium, workspace, and wide layouts without a framework rewrite. Primary mobile journeys keep navigation, peer workspace tabs, Soma composer, Outcome Health, deliverables, approval, recovery, Docs, and guided Settings reachable; selection survives refresh and Back; live device-matrix proof finds no blocking overflow, overlap, hydration, console, or page errors. Resources establishes the route-selector pattern; Groups uses compact list-to-detail with an explicit return path; Memory uses URL-backed focused views; Docs uses a mobile list-to-article flow with bounded table/code scrolling; Settings compresses into one readable mobile column. Dashboard Outcomes and Review stay closed by default, overlay rather than narrowing Soma, become full-width compact sheets, contain keyboard focus, support visible/backdrop/Escape dismissal where applicable, return focus to their opener, and keep the bounded composer reachable. Output cards stack descriptive content above wrapping actions, bound long references, remove exact package-reference duplicates, preserve distinct supporting files, and scroll vertically without horizontal overflow. Owner/execution-scoped acceptance fixtures record exact provenance at Core creation boundaries, reject freshness inference, resume interrupted cleanup, and purge only their PostgreSQL/runtime/workspace resources without touching shared NATS state. Preserve this acceptance through release certification. |
 
-## Testing And Release Gates
-Visible UI changes require both functional tests and live user-experience review. The reviewer must inspect layout density, scroll behavior, text-field reachability, panel overlap, card size, plain-language copy, and whether the screen matches the target Soma workspace concept.
-Required proof lanes:
-- unit tests for typed state, cards, projections, and API adapters
-- Go tests for runtime, persistence, governance, and event correlation
-- docs tests for live links and canonical PRD coverage
-- Playwright headless proof for repeatability
-- headed browser proof for actual user experience
-- affected integration and live-journey proof again after each feature merges into `dev`
-- release preflight from a clean committed `dev` state before promotion to `main`, followed by post-promotion smoke and health proof
+## Testing, Release, And Docs Gates
+Visible UI changes require functional tests plus live user-experience review of density, scroll ownership, reachable fields, overlap, card size, copy, and fit to the Soma workspace concept.
+Required proof lanes: focused unit/component tests, Go runtime/persistence tests, docs-link proof, repeatable Playwright, headed browser proof for actual user experience, post-merge `dev` integration proof, clean `dev` release preflight, and post-promotion smoke/health proof.
 
-## Documentation Contract
-This PRD is the canonical architecture/product document. Keep support docs, but do not recreate split doctrine.
-Allowed supporting docs:
-- `README.md` for repo entry, command contract, and contributor navigation
-- `.state/V8_DEV_STATE.md` for active implementation state
-- `docs/README.md` for docs navigation
-- `docs/user/*` for operator help
-- `docs/API_REFERENCE.md` for API behavior
-- `docs/TESTING.md` for validation
-- `docs/architecture/OPERATIONS.md`, `BACKEND.md`, and `FRONTEND.md` for implementation support
-- `ops/README.md`, `core/README.md`, and `interface/README.md` for owned subsystem operations
+This PRD is the canonical architecture/product document. Supporting docs stay bounded: `README.md` for repo entry, `.state/V8_DEV_STATE.md` for live implementation state, `docs/README.md` and `docs/user/*` for operator help, `docs/API_REFERENCE.md` for API behavior, `docs/TESTING.md` for validation, `docs/architecture/{OPERATIONS,BACKEND,FRONTEND}.md` for implementation support, and owned subsystem READMEs for local operation.
 
-Removed architecture details must be promoted here if still current. Otherwise they should be deleted and left to Git history.
+Promote current architecture truth here; delete obsolete doctrine and let Git history preserve the past.
