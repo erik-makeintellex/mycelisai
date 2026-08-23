@@ -105,7 +105,7 @@ export function MissionControlEmptyState({
         : `Ask naturally, like a business request. ${assistantName} will clarify, shape, or ask before running anything meaningful.`;
 
     return (
-        <div className="flex h-full flex-col items-center justify-center px-6 text-cortex-text-muted">
+        <div className="flex h-full flex-col items-center justify-center px-4 text-cortex-text-muted sm:px-6">
             {showAdvancedRouting && broadcastMode ? (
                 <Megaphone className="w-8 h-8 mb-2 opacity-20" />
             ) : (
@@ -117,13 +117,13 @@ export function MissionControlEmptyState({
                     Start with the result you want, then let {assistantName} help shape the path.
                 </p>
             </div>
-            <div className="mt-3 max-w-2xl rounded-xl border border-cortex-border/70 bg-cortex-bg/45 px-4 py-2 text-center text-xs leading-5 text-cortex-text-muted">
+            <div className="mt-2 max-w-2xl rounded-xl border border-cortex-border/70 bg-cortex-bg/45 px-3 py-2 text-center text-xs leading-5 text-cortex-text-muted sm:mt-3 sm:px-4">
                 <span>{engagementCue}</span>
-                <span className="mx-2 text-cortex-border">|</span>
-                <span>Approve only when it should run.</span>
+                <span className="mx-2 hidden text-cortex-border sm:inline">|</span>
+                <span className="hidden sm:inline">Approve only when it should run.</span>
             </div>
             {simpleMode ? (
-                <div className="mt-3 w-full max-w-2xl">
+                <div className="mt-3 hidden w-full max-w-2xl sm:block">
                     <SomaSuggestionBar suggestions={suggestions} />
                 </div>
             ) : null}
