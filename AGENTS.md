@@ -67,6 +67,7 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, or canonical terminology must include a documentation review in the same slice.
 - Whenever a confirmed task, feature, workflow, or spectrum of work changes, expands, or replaces prior behavior, perform an obsolescence review in the same slice across commands, code, configuration, tests, docs, routes, fixtures, and generated scaffolding. Remove items that no longer serve the confirmed path, update items that still apply, and record the canonical replacement in the owning docs or state file.
 - Do not retain obsolete compatibility aliases, parallel implementations, archived doctrine, or stale tests by default. Keep one only when an explicit compatibility requirement names its owner, supported lifetime, and removal gate.
+- User-facing Soma proposal, completion, and deliverable copy must foreground the actual Outcome result target. Internal handoff/planning files such as team evocation briefs belong behind Details, proof, or Inspect when a delegated result contract exists.
 - Update the owning docs in the same change whenever meaning changed, not later as cleanup.
 - At minimum review `README.md`, `.state/V8_DEV_STATE.md`, the owning canonical/user/ops docs for the touched surface, and any affected in-app docs entry in `interface/lib/docsManifest.ts`.
 - When API behavior or payload meaning changes, review `docs/API_REFERENCE.md` in the same slice.
