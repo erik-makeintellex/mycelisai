@@ -1,10 +1,8 @@
 package swarm
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/mycelis/core/pkg/protocol"
 )
@@ -61,7 +59,7 @@ func TestInteractivePackageAcceptsFamiliarVisibleControlLabel(t *testing.T) {
 		AcceptanceCriteria: []string{"primary control changes the application"}, ReadbackRequired: true,
 	}
 	entrypoint := "groups/team/generated/app/index.html"
-	content := `<button data-mycelis-primary-action onclick="status.textContent='restarted'">Restart</button><p data-mycelis-validation-surface id="status">Ready</p>`
+	content := `<button data-mycelis-primary-action onclick="document.getElementById('status').textContent='restarted'">Restart</button><p data-mycelis-validation-surface id="status">Ready</p>`
 	evidence := []successfulToolEvidence{
 		{ToolName: "write_file", Path: entrypoint, Content: content},
 		{ToolName: "read_file", Path: entrypoint, Content: content},
@@ -101,6 +99,7 @@ func TestInteractivePackageReadbackRequiresApprovedValidationTargets(t *testing.
 
 	repaired := strings.Replace(content, "<button ", `<button data-mycelis-primary-action `, 1)
 	repaired = strings.Replace(repaired, `<p id="status"`, `<p data-mycelis-validation-surface id="status"`, 1)
+	repaired = strings.Replace(repaired, "status.textContent", "document.getElementById('status').textContent", 1)
 	evidence = append(evidence,
 		successfulToolEvidence{ToolName: "write_file", Path: entrypoint, Content: repaired},
 		successfulToolEvidence{ToolName: "read_file", Path: entrypoint, Content: repaired},
@@ -108,6 +107,41 @@ func TestInteractivePackageReadbackRequiresApprovedValidationTargets(t *testing.
 	artifacts = reconcileToolBackedArtifacts(nil, evidence, "Create an interactive browser app.")
 	if issues := resultContractIssues(requirement, artifacts, evidence); len(issues) != 0 {
 		t.Fatalf("repaired validation targets still fail: %v", issues)
+	}
+}
+
+func TestTextChangeValidationMustMutateObservedSurface(t *testing.T) {
+	entrypoint := "groups/team/generated/app/index.html"
+	plan := &protocol.OutputValidationPlan{
+		Kind: protocol.OutputValidationInteractiveBrowser, Required: true,
+		Probe: &protocol.OutputValidationProbe{
+			Action:  protocol.OutputValidationAction{Kind: protocol.OutputValidationActionClick, Target: "[data-mycelis-primary-action]"},
+			Observe: protocol.OutputValidationObservation{Kind: protocol.OutputValidationObserveTextChange, Target: "[data-mycelis-validation-surface]"},
+		},
+	}
+	requirement := &teamResultRequirement{
+		Kind: "project_package", ExpectedOutputs: []string{"interactive browser app"},
+		EntrypointRequired: true, ReadbackRequired: true, OutputValidation: plan,
+	}
+	wrongTarget := `<p>Use Run to start.</p><button data-mycelis-primary-action onclick="document.getElementById('other').textContent='changed'">Run</button><p id="status" data-mycelis-validation-surface>Ready</p><p id="other">Other</p>`
+	evidence := []successfulToolEvidence{
+		{ToolName: "write_file", Path: entrypoint, Content: wrongTarget},
+		{ToolName: "read_file", Path: entrypoint, Content: wrongTarget},
+	}
+	artifacts := reconcileToolBackedArtifacts(nil, evidence, "Create an interactive browser app.")
+	issues := strings.Join(resultContractIssues(requirement, artifacts, evidence), ";")
+	if !strings.Contains(issues, "text-change observation target") {
+		t.Fatalf("issues = %q, want observed-surface mutation failure", issues)
+	}
+
+	repaired := strings.Replace(wrongTarget, "getElementById('other')", "getElementById('status')", 1)
+	evidence = []successfulToolEvidence{
+		{ToolName: "write_file", Path: entrypoint, Content: repaired},
+		{ToolName: "read_file", Path: entrypoint, Content: repaired},
+	}
+	artifacts = reconcileToolBackedArtifacts(nil, evidence, "Create an interactive browser app.")
+	if issues := resultContractIssues(requirement, artifacts, evidence); len(issues) != 0 {
+		t.Fatalf("observed-surface mutation was rejected: %v", issues)
 	}
 }
 
@@ -240,7 +274,7 @@ func TestProjectPackageReadbackWaitsForInspectableInteractiveWrite(t *testing.T)
 		t.Fatal("readback was allowed before the interactive write exposed approved validation targets")
 	}
 
-	repaired := `<p>Use Run to start.</p><button data-mycelis-primary-action onclick="status.textContent='changed'">Run</button><p data-mycelis-validation-surface id="status">Ready</p>`
+	repaired := `<p>Use Run to start.</p><button data-mycelis-primary-action onclick="document.getElementById('status').textContent='changed'">Run</button><p data-mycelis-validation-surface id="status">Ready</p>`
 	evidence = append(evidence, successfulToolEvidence{ToolName: "write_file", Path: entrypoint, Content: repaired})
 	artifacts = reconcileToolBackedArtifacts(artifacts, evidence, "Create an interactive browser app.")
 	if !resultContractEvidenceToolAllowed(requirement, "read_file", artifacts, evidence) {
@@ -270,46 +304,5 @@ func TestToolEvidencePreservesPathCaseWhileMatchingCaseInsensitively(t *testing.
 	}
 	if issues := resultContractIssues(requirement, artifacts, evidence); len(issues) != 0 {
 		t.Fatalf("case-insensitive evidence comparison failed: %v", issues)
-	}
-}
-
-func TestAgentTriggerRequestReplyReturnsDegradedTruthInsteadOfModelProse(t *testing.T) {
-	server, nc := startTestNATS(t)
-	defer server.Shutdown()
-	defer nc.Close()
-
-	provider := &resultContractProvider{responses: []string{"The requested package is complete."}}
-	agent := resultContractTestAgent(provider, nil)
-	agent.nc = nc
-	subject := "test.team.agent.result-contract"
-	if _, err := nc.Subscribe(subject, agent.handleTrigger); err != nil {
-		t.Fatal(err)
-	}
-	if err := nc.Flush(); err != nil {
-		t.Fatal(err)
-	}
-	raw, err := json.Marshal(protocol.TeamAsk{
-		Goal: "Create retained work.",
-		Context: map[string]any{
-			"run_id": "run-1", "contract_id": "contract-1", "intent_proof_id": "proof-1",
-			"result_contract": map[string]any{"kind": "project_package", "entrypoint_required": true},
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	reply, err := nc.Request(subject, raw, 2*time.Second)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(reply.Data)
-	for _, want := range []string{"Work unavailable", "result_contract_unsatisfied", "Recovery:"} {
-		if !strings.Contains(text, want) {
-			t.Fatalf("reply = %q, missing %q", text, want)
-		}
-	}
-	if strings.Contains(text, "The requested package is complete") {
-		t.Fatalf("degraded reply leaked model completion prose: %q", text)
 	}
 }

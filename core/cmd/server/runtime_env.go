@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 
@@ -15,6 +16,7 @@ type databaseRuntimeConfig struct {
 	User     string
 	Password string
 	Name     string
+	SSLMode  string
 }
 
 type localAuthRuntimeConfig struct {
@@ -34,18 +36,23 @@ func resolveDatabaseConfig() databaseRuntimeConfig {
 		User:     envOrDefault("DB_USER", "mycelis"),
 		Password: envOrDefault("DB_PASSWORD", "password"),
 		Name:     envOrDefault("DB_NAME", "cortex"),
+		SSLMode:  envOrDefault("DB_SSLMODE", "disable"),
 	}
 }
 
 func (cfg databaseRuntimeConfig) connectionString() string {
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s",
-		cfg.User,
-		cfg.Password,
-		cfg.Host,
-		cfg.Port,
-		cfg.Name,
-	)
+	postgresURL := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(cfg.User, cfg.Password),
+		Host:   fmt.Sprintf("%s:%s", cfg.Host, cfg.Port),
+		Path:   "/" + strings.TrimLeft(cfg.Name, "/"),
+	}
+	query := postgresURL.Query()
+	if strings.TrimSpace(cfg.SSLMode) != "" {
+		query.Set("sslmode", strings.TrimSpace(cfg.SSLMode))
+	}
+	postgresURL.RawQuery = query.Encode()
+	return postgresURL.String()
 }
 
 func envOrDefault(key, fallback string) string {

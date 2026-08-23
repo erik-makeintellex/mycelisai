@@ -95,7 +95,7 @@ func TestApprovedResultContractRuntimeReadFailureRemainsDegraded(t *testing.T) {
 
 func TestApprovedResultContractRuntimeReadsLatestRepairedEntrypoint(t *testing.T) {
 	invalid := `<button onclick="status.textContent='changed'">Run</button><p id="status">Ready</p>`
-	repaired := `<p>Use Run to start.</p><button data-mycelis-primary-action onclick="status.textContent='changed'">Run</button><p data-mycelis-validation-surface id="status">Ready</p>`
+	repaired := `<p>Use Run to start.</p><button data-mycelis-primary-action onclick="document.getElementById('status').textContent='changed'">Run</button><p data-mycelis-validation-surface id="status">Ready</p>`
 	provider := &resultContractProvider{responses: []string{
 		writeToolCall("index.html", invalid),
 		writeToolCall("index.html", repaired),
@@ -160,7 +160,7 @@ func TestApprovedResultContractWritesReferencedLocalDependencyBeforeReadback(t *
 }
 
 func TestApprovedResultContractCountsAutoScaffoldedProjectPackageSupportFiles(t *testing.T) {
-	entrypoint := `<p>Controls: Click Play.</p><button data-mycelis-primary-action onclick="score.textContent='Score 1'">Play</button><p data-mycelis-validation-surface id="score">Score 0</p>`
+	entrypoint := `<p>Controls: Click Play.</p><button data-mycelis-primary-action onclick="document.getElementById('score').textContent='Score 1'">Play</button><p data-mycelis-validation-surface id="score">Score 0</p>`
 	provider := &resultContractProvider{responses: []string{
 		`{"tool_call":{"name":"write_file","arguments":{"path":"groups/delivery-team/generated/package/index.html","content":` + quotedJSON(entrypoint) + `,"package_kind":"project_package","package_title":"Playable Package","package_folder":"groups/delivery-team/generated/package","package_entrypoint":"groups/delivery-team/generated/package/index.html","package_files":["index.html","README.md","PROOF.md","project-package.json"]}}}`,
 		"unexpected extra inference",

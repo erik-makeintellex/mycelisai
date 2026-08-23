@@ -270,11 +270,15 @@ func teamEvocationDelegationConstraints() []string {
 }
 
 func projectPackageResultContract(teamID string, contract map[string]any) map[string]any {
+	packageFolder := "groups/" + strings.Trim(strings.TrimSpace(teamID), "/") + "/generated/package"
+	packageEntrypoint := strings.TrimRight(packageFolder, "/") + "/index.html"
 	result := map[string]any{
 		"kind":                 "project_package",
 		"entrypoint_required":  true,
 		"folder_required":      true,
 		"files_required":       []string{"index.html", "README.md", "PROOF.md", "project-package.json"},
+		"package_folder":       packageFolder,
+		"package_entrypoint":   packageEntrypoint,
 		"validation_required":  true,
 		"validation_mode":      "readback_against_exit_criteria",
 		"proof_ref_required":   true,

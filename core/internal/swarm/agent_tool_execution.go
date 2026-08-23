@@ -142,6 +142,9 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 	updated, err := a.brain.InferWithContract(a.ctx, *req)
 	if err != nil || updated == nil {
 		log.Printf("Agent [%s] re-inference failed: %v", a.Manifest.ID, err)
+		if len(result.toolEvidence) > 0 {
+			result.runtimeRecoveryAllowed = true
+		}
 		return false
 	}
 	result.resp = updated

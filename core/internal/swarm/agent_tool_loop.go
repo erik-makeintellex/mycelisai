@@ -24,6 +24,9 @@ type agentToolLoopResult struct {
 	artifacts     []protocol.ChatArtifactRef
 	consultations []protocol.ConsultationEntry
 	toolEvidence  []successfulToolEvidence
+	// runtimeRecoveryAllowed means the agent made concrete retained-output
+	// progress, then the cognitive loop failed before satisfying proof.
+	runtimeRecoveryAllowed bool
 }
 
 func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string, planningOnly bool, requirement *teamResultRequirement) agentToolLoopResult {
@@ -41,6 +44,9 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		if inferErr != nil || updated == nil {
 			log.Printf("Agent [%s] re-inference after tool feedback failed: %v", a.Manifest.ID, inferErr)
 			result.responseText = feedback
+			if len(result.toolEvidence) > 0 {
+				result.runtimeRecoveryAllowed = true
+			}
 			return false
 		}
 		result.resp = updated
@@ -92,6 +98,9 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 				updated, err := a.brain.InferWithContract(a.ctx, *req)
 				if err != nil || updated == nil {
 					log.Printf("Agent [%s] result-contract correction failed: %v", a.Manifest.ID, err)
+					if len(result.toolEvidence) > 0 {
+						result.runtimeRecoveryAllowed = true
+					}
 					break
 				}
 				result.resp = updated
@@ -152,6 +161,9 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 				completedToolCalls[fingerprint] = true
 				contractCorrections = 0
 			}
+			if result.runtimeRecoveryAllowed {
+				break
+			}
 			continue
 		}
 		completedToolCalls[fingerprint] = true
@@ -163,5 +175,8 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		}
 	}
 
+	if a.completeProjectPackageRuntimeFallback(input, requirement, &result, planningOnly) {
+		result.artifacts = reconcileToolBackedArtifacts(result.artifacts, result.toolEvidence, input)
+	}
 	return result
 }

@@ -40,6 +40,12 @@ func TestBuildPlannedToolCalls_ComplexAppAskDelegatesWithPackageContract(t *test
 	if resultContract["team_id"] != teamID {
 		t.Fatalf("result contract team_id = %#v, want %q", resultContract["team_id"], teamID)
 	}
+	if resultContract["package_folder"] != "groups/"+teamID+"/generated/package" {
+		t.Fatalf("package_folder = %#v", resultContract["package_folder"])
+	}
+	if resultContract["package_entrypoint"] != "groups/"+teamID+"/generated/package/index.html" {
+		t.Fatalf("package_entrypoint = %#v", resultContract["package_entrypoint"])
+	}
 	for _, want := range []string{"index.html", "README.md", "PROOF.md", "project-package.json"} {
 		if !containsToolName(confirmedActionStringSlice(resultContract["files_required"]), want) {
 			t.Fatalf("files_required = %#v, missing %q", resultContract["files_required"], want)

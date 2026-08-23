@@ -12,6 +12,7 @@ func TestResolveDatabaseConfigDefaults(t *testing.T) {
 	t.Setenv("DB_USER", "")
 	t.Setenv("DB_PASSWORD", "")
 	t.Setenv("DB_NAME", "")
+	t.Setenv("DB_SSLMODE", "")
 
 	cfg := resolveDatabaseConfig()
 
@@ -29,6 +30,9 @@ func TestResolveDatabaseConfigDefaults(t *testing.T) {
 	}
 	if cfg.Name != "cortex" {
 		t.Fatalf("Name = %q, want default", cfg.Name)
+	}
+	if cfg.SSLMode != "disable" {
+		t.Fatalf("SSLMode = %q, want disable", cfg.SSLMode)
 	}
 }
 
@@ -85,15 +89,31 @@ func TestResolveDatabaseConfigUsesEnvironment(t *testing.T) {
 	t.Setenv("DB_USER", "compose-user")
 	t.Setenv("DB_PASSWORD", "compose-pass")
 	t.Setenv("DB_NAME", "compose-db")
+	t.Setenv("DB_SSLMODE", "require")
 
 	cfg := resolveDatabaseConfig()
 
-	if cfg.Host != "postgres" || cfg.Port != "5544" || cfg.User != "compose-user" || cfg.Password != "compose-pass" || cfg.Name != "compose-db" {
+	if cfg.Host != "postgres" || cfg.Port != "5544" || cfg.User != "compose-user" || cfg.Password != "compose-pass" || cfg.Name != "compose-db" || cfg.SSLMode != "require" {
 		t.Fatalf("unexpected config: %#v", cfg)
 	}
 
 	got := cfg.connectionString()
-	want := "postgres://compose-user:compose-pass@postgres:5544/compose-db"
+	want := "postgres://compose-user:compose-pass@postgres:5544/compose-db?sslmode=require"
+	if got != want {
+		t.Fatalf("connectionString = %q, want %q", got, want)
+	}
+}
+
+func TestDatabaseConnectionStringDefaultsToLocalDockerSSLMode(t *testing.T) {
+	t.Setenv("DB_HOST", "127.0.0.1")
+	t.Setenv("DB_PORT", "15432")
+	t.Setenv("DB_USER", "mycelis")
+	t.Setenv("DB_PASSWORD", "password")
+	t.Setenv("DB_NAME", "cortex")
+	t.Setenv("DB_SSLMODE", "")
+
+	got := resolveDatabaseConfig().connectionString()
+	want := "postgres://mycelis:password@127.0.0.1:15432/cortex?sslmode=disable"
 	if got != want {
 		t.Fatalf("connectionString = %q, want %q", got, want)
 	}

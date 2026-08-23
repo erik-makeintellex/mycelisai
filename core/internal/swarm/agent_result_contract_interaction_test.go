@@ -37,7 +37,7 @@ func TestInteractivePackageReadbackWaitsForStateChangingInteraction(t *testing.T
 		t.Fatal("readback was allowed before the interactive write exposed a state-changing effect")
 	}
 
-	repaired := `<p>Click Run to update the status.</p><button data-mycelis-primary-action onclick="status.textContent='Changed'">Run</button><main data-mycelis-validation-surface id="status">Ready</main>`
+	repaired := `<p>Click Run to update the status.</p><button data-mycelis-primary-action onclick="document.getElementById('status').textContent='Changed'">Run</button><main data-mycelis-validation-surface id="status">Ready</main>`
 	evidence = append(evidence, successfulToolEvidence{ToolName: "write_file", Path: entrypoint, Content: repaired})
 	artifacts = reconcileToolBackedArtifacts(artifacts, evidence, "Create an interactive browser app.")
 	if !resultContractEvidenceToolAllowed(requirement, "read_file", artifacts, evidence) {

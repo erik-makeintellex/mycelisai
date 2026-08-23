@@ -304,7 +304,6 @@ Operational behavior:
 - all tool calls run through the same API request contract used by other resource channels: `{"arguments": {...}}`
 - workspace boundaries still apply (sandboxed filesystem rules)
 
----
 ## Worker Profiles
 Worker Profiles define reusable teammate types Soma may assign to governed work. The catalogue is a library of inert templates, not a list of running agents. Ready-made profiles are locked so the shipped safety and access posture stays inspectable. Use **Create with Soma** for a conversational draft, **Customize with Soma** from a ready-made profile, or paste/edit a Worker Profile YAML/JSON draft directly in Resources. The inline draft panel previews the exact document through the same ConfigDocument validator used by Soma, then hands the exact draft back to Soma when you choose save or activation.
 Worker Profile YAML/JSON preview proves the family fields and exact id/version/digest without saving or activating anything. Activating a stored revision means it may be selected for future teams; activation does not start an agent, connect an agent API, open a provider session, or subscribe to the work bus. When an approved delivery needs that teammate type, team creation resolves the most specific eligible revision for the operator, workspace, organization, then built-in scope, creates the live member, and retains its exact profile/provider/backend/capability lineage. Profile `inputs` and `outputs` describe the teammate's expected brief fields and deliverables; they are not NATS subjects unless an advanced runtime field explicitly names a valid bus subject. Only selected members receive team-scoped runtime connections and subscriptions, which are released when the team stops. Existing teams do not change when a different revision is activated or rolled back. Legacy catalogue records remain API compatibility data and are not runtime activation authority; the primary UI does not present them as assignable profiles.
@@ -318,9 +317,6 @@ Each profile may define:
 - expected outputs and verification criteria
 
 Profiles do not grant access by themselves. Runtime capability health, source scope, approval, secret, Outcome, and Execution Contract rules still apply. Ask Soma naturally to use a named profile, such as `Use the Research Specialist and Quality Reviewer`, or omit names and let Soma choose the smallest useful team. Teams receive a resolved profile snapshot at creation so later profile edits do not silently redefine running authority.
-
----
-
 ## Operational Guidance
 
 Use `Resources` to answer these operator questions quickly:

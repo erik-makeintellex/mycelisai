@@ -56,6 +56,9 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 	resp, err := a.brain.InferWithContract(a.ctx, req)
 	if err != nil {
 		log.Printf("Agent [%s] brain freeze: %v", a.Manifest.ID, err)
+		if fallback, ok := a.tryInitialProjectPackageRuntimeFallback(input, requirement, planningOnly); ok {
+			return fallback
+		}
 		availability := a.brain.ExecutionAvailability(profile, a.Manifest.Provider)
 		availability.Available = false
 		availability.Code = "provider_inference_failed"

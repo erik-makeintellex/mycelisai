@@ -314,7 +314,6 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payloadBytes, _ := json.Marshal(chatPayload)
-
 	envelope := protocol.CTSEnvelope{
 		Meta: protocol.CTSMeta{
 			SourceNode: "admin",

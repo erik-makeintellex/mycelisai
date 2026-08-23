@@ -58,7 +58,7 @@ func TestDeliverableResultOutputIssue_AcceptsGenericInteractiveApplicationPackag
 	if err := os.MkdirAll(folder, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	content := `<p>Use Run to update the status.</p><button data-mycelis-primary-action onclick="status.textContent='Changed'">Run</button><main data-mycelis-validation-surface id="status">Ready</main>`
+	content := `<p>Use Run to update the status.</p><button data-mycelis-primary-action onclick="document.getElementById('status').textContent='Changed'">Run</button><main data-mycelis-validation-surface id="status">Ready</main>`
 	if err := os.WriteFile(filepath.Join(folder, "index.html"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}

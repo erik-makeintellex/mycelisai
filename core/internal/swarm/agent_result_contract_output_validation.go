@@ -11,13 +11,12 @@ import (
 
 var (
 	outputValidationAttributeSelector       = regexp.MustCompile(`^\[([a-zA-Z_:][a-zA-Z0-9_:.-]*)\]$`)
-	outputValidationNamedFunction           = regexp.MustCompile(`(?m)\bfunction\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\([^)]*\)\s*\{`)
-	outputValidationScriptContent           = regexp.MustCompile(`(?is)<script\b[^>]*>(.*?)</script>`)
 	resultContractInteractiveHandlerPattern = regexp.MustCompile(`(?i)(?:addEventListener\s*\(\s*["'](?:click|pointerdown|touchstart|keydown|keyup)|on(?:click|pointerdown|touchstart|keydown)\s*=)`)
 	resultContractInteractiveEffectPattern  = regexp.MustCompile(`(?is)(?:\.(?:textContent|innerText|innerHTML|value|checked|disabled|hidden|className)\s*=|\.classList\.(?:add|remove|toggle|replace)\s*\(|\.style\.[A-Za-z][A-Za-z0-9-]*\s*=|\.dataset\.[A-Za-z_$][A-Za-z0-9_$]*\s*=|\.setAttribute\s*\(|\.(?:appendChild|append|prepend|remove|replaceChildren|insertAdjacentHTML)\s*\(|\b(?:requestAnimationFrame|setTimeout|setInterval)\s*\(|\b(?:fillRect|clearRect|strokeRect|drawImage|fillText|strokeText|putImageData|arc|lineTo|moveTo|bezierCurveTo|quadraticCurveTo)\s*\(|\.(?:play|pause)\s*\(|\b(?:localStorage|sessionStorage)\.setItem\s*\()`)
 	resultContractVisibleControlPattern     = regexp.MustCompile(`(?i)\b(?:click|tap|press|use|move|drag|select|arrow|space|wasd|control|start|restart|run|play|submit|save|reset|open|add|next)\b`)
 	resultContractScriptOrStylePattern      = regexp.MustCompile(`(?is)<(?:script|style)\b[^>]*>.*?</(?:script|style)>`)
 	resultContractHTMLTagPattern            = regexp.MustCompile(`(?s)<[^>]+>`)
+	textChangeMutationProperty              = `(?:textContent|innerText|innerHTML|value)`
 )
 
 func resultContractRequiresPrimaryInteraction(requirement *teamResultRequirement) bool {
@@ -110,159 +109,65 @@ func outputValidationAnimationLoopIssues(plan *protocol.OutputValidationPlan, co
 	return resultContractDormantAnimationLoopIssues(content)
 }
 
-func resultContractDormantAnimationLoopIssues(content string) []string {
-	scanContent := javascriptCodeOnly(outputValidationJavaScript(content))
-	issues := make([]string, 0, 1)
-	for _, match := range outputValidationNamedFunction.FindAllStringSubmatchIndex(scanContent, -1) {
-		name := scanContent[match[2]:match[3]]
-		bodyEnd, ok := javascriptBlockEnd(scanContent, match[1]-1)
-		if !ok {
-			continue
-		}
-		body := scanContent[match[1]:bodyEnd]
-		selfSchedule := regexp.MustCompile(`\brequestAnimationFrame\s*\(\s*` + regexp.QuoteMeta(name) + `\s*\)`)
-		if !selfSchedule.MatchString(body) {
-			continue
-		}
-		outside := scanContent[:match[0]] + strings.Repeat(" ", bodyEnd-match[0]+1) + scanContent[bodyEnd+1:]
-		bootstrap := regexp.MustCompile(
-			`(?:\b` + regexp.QuoteMeta(name) + `\s*\(|\b(?:requestAnimationFrame|setTimeout|setInterval)\s*\(\s*` + regexp.QuoteMeta(name) + `\b|\baddEventListener\s*\([^;]*,\s*` + regexp.QuoteMeta(name) + `\s*\))`,
-		)
-		if !bootstrap.MatchString(outside) {
-			issues = append(issues, fmt.Sprintf("animation loop %s is defined but never started", name))
-		}
+func outputValidationTextChangeIssues(plan *protocol.OutputValidationPlan, content string) []string {
+	if plan == nil || plan.Probe == nil || plan.Probe.Observe.Kind != protocol.OutputValidationObserveTextChange {
+		return nil
 	}
-	return uniqueResultContractStrings(issues)
+	target := strings.TrimSpace(plan.Probe.Observe.Target)
+	if target == "" || outputValidationTextChangeTargetMutated(content, target) {
+		return nil
+	}
+	return []string{"entrypoint readback does not mutate approved text-change observation target " + target}
 }
 
-func outputValidationJavaScript(content string) string {
-	matches := outputValidationScriptContent.FindAllStringSubmatch(content, -1)
-	if len(matches) == 0 {
-		return content
+func outputValidationTextChangeTargetMutated(content, target string) bool {
+	script := outputValidationJavaScript(content)
+	targets := []string{target}
+	targets = append(targets, outputValidationTargetElementIDs(content, target)...)
+	for _, candidate := range targets {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" {
+			continue
+		}
+		quoted := regexp.QuoteMeta(candidate)
+		if regexp.MustCompile(`(?is)(?:querySelector|getElementById)\(\s*["']` + quoted + `["']\s*\)\s*\.\s*` + textChangeMutationProperty + `\s*=`).MatchString(script) {
+			return true
+		}
+		if strings.HasPrefix(candidate, "#") {
+			id := strings.TrimPrefix(candidate, "#")
+			if regexp.MustCompile(`(?is)(?:getElementById)\(\s*["']` + regexp.QuoteMeta(id) + `["']\s*\)\s*\.\s*` + textChangeMutationProperty + `\s*=`).MatchString(script) {
+				return true
+			}
+		}
+		variablePattern := regexp.MustCompile(`(?is)(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(?:document\.)?(?:querySelector|getElementById)\(\s*["']` + quoted + `["']\s*\)`)
+		for _, match := range variablePattern.FindAllStringSubmatch(script, -1) {
+			if len(match) < 2 {
+				continue
+			}
+			if regexp.MustCompile(`(?m)\b` + regexp.QuoteMeta(match[1]) + `\s*\.\s*` + textChangeMutationProperty + `\s*=`).MatchString(script) {
+				return true
+			}
+		}
 	}
-	var source strings.Builder
-	for _, match := range matches {
-		source.WriteString(match[1])
-		source.WriteByte('\n')
-	}
-	return source.String()
+	return false
 }
 
-func javascriptBlockEnd(content string, open int) (int, bool) {
-	depth, quote, escaped := 0, byte(0), false
-	lineComment, blockComment := false, false
-	for index := open; index < len(content); index++ {
-		current := content[index]
-		next := byte(0)
-		if index+1 < len(content) {
-			next = content[index+1]
-		}
-		if lineComment {
-			if current == '\n' {
-				lineComment = false
-			}
-			continue
-		}
-		if blockComment {
-			if current == '*' && next == '/' {
-				blockComment = false
-				index++
-			}
-			continue
-		}
-		if quote != 0 {
-			if escaped {
-				escaped = false
-			} else if current == '\\' {
-				escaped = true
-			} else if current == quote {
-				quote = 0
-			}
-			continue
-		}
-		if current == '/' && next == '/' {
-			lineComment = true
-			index++
-			continue
-		}
-		if current == '/' && next == '*' {
-			blockComment = true
-			index++
-			continue
-		}
-		if current == '\'' || current == '"' || current == '`' {
-			quote = current
-			continue
-		}
-		switch current {
-		case '{':
-			depth++
-		case '}':
-			depth--
-			if depth == 0 {
-				return index, true
-			}
+func outputValidationTargetElementIDs(content, target string) []string {
+	match := outputValidationAttributeSelector.FindStringSubmatch(strings.TrimSpace(target))
+	if len(match) != 2 {
+		return nil
+	}
+	attribute := regexp.QuoteMeta(match[1])
+	targetTagPattern := regexp.MustCompile(`(?is)<[^>]*\s` + attribute + `(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?[^>]*>`)
+	idPattern := regexp.MustCompile(`(?is)\sid\s*=\s*["']([^"']+)["']`)
+	ids := []string{}
+	for _, tag := range targetTagPattern.FindAllString(content, -1) {
+		match := idPattern.FindStringSubmatch(tag)
+		if len(match) == 2 && strings.TrimSpace(match[1]) != "" {
+			ids = append(ids, "#"+strings.TrimSpace(match[1]))
 		}
 	}
-	return 0, false
-}
-
-func javascriptCodeOnly(content string) string {
-	result := []byte(content)
-	quote, escaped := byte(0), false
-	lineComment, blockComment := false, false
-	for index := 0; index < len(result); index++ {
-		current := result[index]
-		next := byte(0)
-		if index+1 < len(result) {
-			next = result[index+1]
-		}
-		if lineComment {
-			result[index] = ' '
-			if current == '\n' {
-				lineComment = false
-				result[index] = '\n'
-			}
-			continue
-		}
-		if blockComment {
-			result[index] = ' '
-			if current == '*' && next == '/' {
-				blockComment = false
-				result[index+1] = ' '
-				index++
-			}
-			continue
-		}
-		if quote != 0 {
-			result[index] = ' '
-			if escaped {
-				escaped = false
-			} else if current == '\\' {
-				escaped = true
-			} else if current == quote {
-				quote = 0
-			}
-			continue
-		}
-		if current == '/' && next == '/' {
-			lineComment = true
-			result[index], result[index+1] = ' ', ' '
-			index++
-			continue
-		}
-		if current == '/' && next == '*' {
-			blockComment = true
-			result[index], result[index+1] = ' ', ' '
-			index++
-			continue
-		}
-		if current == '\'' || current == '"' || current == '`' {
-			quote = current
-			result[index] = ' '
-		}
-	}
-	return string(result)
+	return uniqueResultContractStrings(ids)
 }
 
 func outputValidationTargetPresent(content, selector string) bool {
@@ -283,17 +188,24 @@ func outputValidationExecutionInstruction(plan *protocol.OutputValidationPlan) s
 	if strings.TrimSpace(plan.Probe.Action.Key) != "" {
 		action = fmt.Sprintf("%s action for key %s", plan.Probe.Action.Kind, plan.Probe.Action.Key)
 	}
-	return fmt.Sprintf(
+	instruction := fmt.Sprintf(
 		" The entrypoint must implement the approved %s and include observation target %s exactly; that action must visibly change the observed surface. Bind handlers through the approved marker or a stable element ID, never a positional selector such as nth-child. Every selector used before addEventListener must resolve to an element in the same entrypoint. Give the approved primary control one unambiguous state-changing effect; broader or secondary handlers must not also match that control or immediately undo its effect. The action must mutate state that the DOM or render loop actually consumes, and the rendered before/after state must differ; do not only assign an otherwise-unused intermediate value.",
 		action,
 		plan.Probe.Observe.Target,
 	)
+	if plan.Probe.Observe.Kind == protocol.OutputValidationObserveTextChange {
+		instruction += " For text_change validation, the approved action must update the observed element's textContent, innerText, innerHTML, or value to different user-visible text; do not rely only on canvas pixels, CSS class changes, console output, or hidden state."
+	}
+	return instruction
 }
 
 func outputValidationCorrectionInstruction(plan *protocol.OutputValidationPlan, issues []string) string {
 	joined := strings.Join(issues, " ")
 	if strings.Contains(joined, "defined but never started") {
 		return " Start the retained animation or render loop explicitly after defining it (for example by invoking the loop once), then read the entrypoint back."
+	}
+	if strings.Contains(joined, "text-change observation target") {
+		return " Overwrite the entrypoint so the primary action handler updates the approved observation surface's textContent, innerText, innerHTML, or value, then read the entrypoint back."
 	}
 	if plan == nil || plan.Probe == nil || !strings.Contains(joined, "approved validation target") {
 		return ""

@@ -104,6 +104,12 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationContinuation(t *
 	if resultContract["validation_mode"] != "readback_against_exit_criteria" {
 		t.Fatalf("result contract = %#v, want readback validation mode", resultContract)
 	}
+	if resultContract["package_folder"] != "groups/mixed-output-team-b8066/generated/package" {
+		t.Fatalf("package_folder = %#v", resultContract["package_folder"])
+	}
+	if resultContract["package_entrypoint"] != "groups/mixed-output-team-b8066/generated/package/index.html" {
+		t.Fatalf("package_entrypoint = %#v", resultContract["package_entrypoint"])
+	}
 	for _, want := range []string{"index.html", "README.md", "PROOF.md", "project-package.json"} {
 		if !containsToolName(confirmedActionStringSlice(resultContract["files_required"]), want) {
 			t.Fatalf("files_required = %#v, missing %q", resultContract["files_required"], want)
