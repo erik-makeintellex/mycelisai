@@ -68,9 +68,9 @@ func (s *AdminServer) reconcileOneOverdueTeamWork(ctx context.Context) (bool, er
 	if err != nil {
 		return false, err
 	}
+	projectOverdueRecovery(&item)
 	item.State = protocol.TeamWorkStateDegraded
 	item.NeedsOperator = true
-	projectOverdueRecovery(&item)
 	if protocol.WorkIntentHasExternalMutation(item.WorkIntent) {
 		if err := persistTeamWorkIntentTx(ctx, tx, item); err != nil {
 			return false, err
@@ -98,6 +98,15 @@ func (s *AdminServer) reconcileOneOverdueTeamWork(ctx context.Context) (bool, er
 }
 
 func projectOverdueRecovery(item *protocol.TeamWorkItem) {
+	if item.State == protocol.TeamWorkStateReviewing {
+		item.DegradationState = "runtime_validation_deadline_exceeded"
+		item.RecoveryOptions = []string{
+			"Ask Soma to repair or re-run validation for the retained output after checking the package and validator.",
+			"Steer the producing team with what failed before retrying validation.",
+			"Archive the work if this attempt is no longer useful.",
+		}
+		return
+	}
 	if protocol.WorkIntentHasExternalMutation(item.WorkIntent) {
 		item.DegradationState = "external_mutation_outcome_unknown"
 		item.WorkIntent.SideEffect.SideEffectState = protocol.WorkSideEffectUnknown
@@ -135,6 +144,10 @@ func overdueTeamWorkStatusEvent(item protocol.TeamWorkItem) protocol.TeamStatusE
 		headline = "External change needs verification"
 		details = "The external system accepted work, but no terminal result proves whether its change committed."
 		blockedBy = []string{"external_mutation_outcome_unknown"}
+	} else if item.DegradationState == "runtime_validation_deadline_exceeded" {
+		headline = "Output validation needs recovery"
+		details = "The retained output did not finish validation before the recovery deadline."
+		blockedBy = []string{"runtime_validation_deadline_exceeded"}
 	}
 	return protocol.NormalizeTeamStatusEvent(protocol.TeamStatusEvent{
 		EventID: uuid.NewString(), TeamID: item.TeamID, WorkItemID: item.WorkItemID,
@@ -150,11 +163,15 @@ func overdueTeamWorkStatusEvent(item protocol.TeamWorkItem) protocol.TeamStatusE
 }
 
 func overdueTeamWorkInteraction(item protocol.TeamWorkItem) protocol.TeamInteraction {
+	summary := "The durable recovery deadline elapsed without a terminal result."
+	if item.DegradationState == "runtime_validation_deadline_exceeded" {
+		summary = "The runtime validation deadline elapsed without a terminal validation result."
+	}
 	return protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
 		InteractionID: uuid.NewString(), TeamID: item.TeamID, WorkItemID: item.WorkItemID,
 		RunID: item.RunID, IntentProofID: item.IntentProofID, ContractID: item.ContractID,
 		SourceKind: string(protocol.SourceKindSystem), SourceChannel: "team-work.recovery-reconciler",
-		ActorRef: "Soma", Verb: "degraded", Summary: "The durable recovery deadline elapsed without a terminal result.",
+		ActorRef: "Soma", Verb: "degraded", Summary: summary,
 		PayloadKind: string(protocol.PayloadKindError),
 		Payload:     map[string]any{"degradation_state": item.DegradationState, "recovery_options": item.RecoveryOptions}, Version: "v1",
 	})

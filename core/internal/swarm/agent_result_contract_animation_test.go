@@ -42,7 +42,7 @@ func TestAnimationLoopPreflightBlocksReadbackUntilRepair(t *testing.T) {
 	entrypoint := "groups/team/generated/app/index.html"
 	plan := &protocol.OutputValidationPlan{Kind: protocol.OutputValidationInteractiveBrowser, Required: true}
 	requirement := &teamResultRequirement{Kind: "project_package", EntrypointRequired: true, ReadbackRequired: true, OutputValidation: plan}
-	dormant := `<script>function gameLoop(){render();requestAnimationFrame(gameLoop)}</script>`
+	dormant := `<p>Click Run to start.</p><button onclick="status.textContent='Started'">Run</button><main id="status">Ready</main><script>function gameLoop(){render();requestAnimationFrame(gameLoop)}</script>`
 	evidence := []successfulToolEvidence{{ToolName: "write_file", Path: entrypoint, Content: dormant}}
 	artifacts := reconcileToolBackedArtifacts(nil, evidence, "Create an interactive browser app.")
 	if resultContractEvidenceToolAllowed(requirement, "read_file", artifacts, evidence) {

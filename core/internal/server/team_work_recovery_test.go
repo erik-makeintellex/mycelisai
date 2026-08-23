@@ -80,6 +80,41 @@ func TestReconcileOneOverdueTeamWorkProjectsRecoverableState(t *testing.T) {
 	}
 }
 
+func TestReconcileOneOverdueReviewingTeamWorkUsesValidationRecovery(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	workID := "11111111-1111-1111-1111-111111111111"
+	teamID := "delivery-team"
+	mock.MatchExpectationsInOrder(true)
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id::text, team_id.*recovery_deadline_at <= NOW").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "team_id"}).AddRow(workID, teamID))
+	mock.ExpectQuery("SELECT id::text, team_id.*FOR UPDATE").
+		WithArgs(teamID, workID).
+		WillReturnRows(teamWorkItemRows().AddRow(
+			workID, teamID, "", "", "", "", "Build a retained package", []byte(`[]`), "Soma",
+			string(protocol.TeamExecutionShapeDeliverable), "", []byte(`null`), []byte(`["project package"]`), []byte(`["runtime proof"]`), []byte(`[]`),
+			"approved", string(protocol.TeamWorkStateReviewing), []byte(`null`), false, "",
+			[]byte(`[]`), []byte(`[]`), []byte(`[]`), []byte(`[]`), now, now, "v1",
+		))
+	expectValidationRecoveryStatusEvent(mock, teamID, workID, now)
+	expectTeamWorkAskUpdate(mock, protocol.TeamWorkStateDegraded, true, "runtime_validation_deadline_exceeded")
+	expectRecoveryInteraction(mock, teamID, workID, now)
+	mock.ExpectCommit()
+
+	reconciled, err := s.reconcileOneOverdueTeamWork(t.Context())
+	if err != nil {
+		t.Fatalf("reconcile overdue reviewing work: %v", err)
+	}
+	if !reconciled {
+		t.Fatal("reconciled = false, want true")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestProjectOverdueExternalMutationRequiresVerification(t *testing.T) {
 	item := protocol.TeamWorkItem{WorkIntent: protocol.NormalizeWorkIntent(&protocol.WorkIntent{
 		SideEffect: &protocol.WorkSideEffectContract{
@@ -126,6 +161,43 @@ func TestProjectOverdueExternalMutationRequiresVerificationBeforeRetry(t *testin
 		if strings.Contains(option, "invoice-2026-08-11") {
 			t.Fatalf("unverified recovery exposed retry key: %#v", item.RecoveryOptions)
 		}
+	}
+}
+
+func TestProjectOverdueReviewingUsesValidationRecovery(t *testing.T) {
+	item := protocol.TeamWorkItem{State: protocol.TeamWorkStateReviewing}
+	projectOverdueRecovery(&item)
+	if item.DegradationState != "runtime_validation_deadline_exceeded" {
+		t.Fatalf("degradation = %q", item.DegradationState)
+	}
+	if len(item.RecoveryOptions) != 3 || !strings.Contains(strings.ToLower(item.RecoveryOptions[0]), "validation") {
+		t.Fatalf("recovery options = %#v", item.RecoveryOptions)
+	}
+	event := overdueTeamWorkStatusEvent(item)
+	if event.Headline != "Output validation needs recovery" || event.BlockedBy[0] != "runtime_validation_deadline_exceeded" {
+		t.Fatalf("event = %#v", event)
+	}
+}
+
+func TestUpdateTeamWorkItemReviewingSetsShortValidationDeadline(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	workID := "11111111-1111-1111-1111-111111111111"
+	item := protocol.TeamWorkItem{WorkItemID: workID, TeamID: "app-team", State: protocol.TeamWorkStateReviewing}
+	event := protocol.TeamStatusEvent{TeamID: "app-team", WorkItemID: workID, State: protocol.TeamWorkStateReviewing}
+
+	mock.ExpectExec(`UPDATE team_work_items[\s\S]*WHEN \$2='reviewing'[\s\S]*INTERVAL '2 minutes'`).
+		WithArgs(
+			workID, string(protocol.TeamWorkStateReviewing), sqlmock.AnyArg(), false, "",
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+		).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	if err := s.updateTeamWorkItemLastEventExec(t.Context(), s.getDB(), &item, event); err != nil {
+		t.Fatalf("update reviewing item: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
 	}
 }
 
@@ -205,6 +277,17 @@ func expectRecoveryStatusEvent(mock sqlmock.Sqlmock, teamID, workID string, now 
 		WithArgs(
 			sqlmock.AnyArg(), teamID, workID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
 			string(protocol.TeamWorkStateDegraded), "Team work needs recovery", sqlmock.AnyArg(), "operator_attention",
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindSystem),
+			"team-work.recovery-reconciler", string(protocol.PayloadKindError), sqlmock.AnyArg(), "v1",
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"timestamp"}).AddRow(now))
+}
+
+func expectValidationRecoveryStatusEvent(mock sqlmock.Sqlmock, teamID, workID string, now time.Time) {
+	mock.ExpectQuery("INSERT INTO team_status_events").
+		WithArgs(
+			sqlmock.AnyArg(), teamID, workID, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			string(protocol.TeamWorkStateDegraded), "Output validation needs recovery", sqlmock.AnyArg(), "operator_attention",
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), string(protocol.SourceKindSystem),
 			"team-work.recovery-reconciler", string(protocol.PayloadKindError), sqlmock.AnyArg(), "v1",
 		).

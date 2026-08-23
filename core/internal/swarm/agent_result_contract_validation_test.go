@@ -44,7 +44,7 @@ func TestInteractivePackageReadbackRequiresHandlerAndVisibleInstructions(t *test
 		t.Fatalf("issues = %q, want visible-control repair", issues)
 	}
 
-	withInstructionsContent := `<p>Use ArrowRight to move.</p><canvas></canvas><script>document.addEventListener('keydown', move)</script>`
+	withInstructionsContent := `<p>Use ArrowRight to move.</p><canvas></canvas><script>document.addEventListener('keydown', move); function move(){ document.body.dataset.moved = 'true'; }</script>`
 	withInstructions := []successfulToolEvidence{
 		{ToolName: "write_file", Path: entrypoint, Content: withInstructionsContent},
 		{ToolName: "read_file", Path: entrypoint, Content: withInstructionsContent},
@@ -136,7 +136,7 @@ func TestInteractivePackageRequiresFreshReadbackAfterRepairWrite(t *testing.T) {
 	evidence := []successfulToolEvidence{
 		{ToolName: "write_file", Path: entrypoint, Content: `<canvas></canvas><script>document.addEventListener('keydown', move)</script>`},
 		{ToolName: "read_file", Path: entrypoint, Content: `<canvas></canvas><script>document.addEventListener('keydown', move)</script>`},
-		{ToolName: "write_file", Path: entrypoint, Content: `<p>Controls: Hold ArrowRight to move.</p><canvas></canvas><script>document.addEventListener('keydown', move)</script>`},
+		{ToolName: "write_file", Path: entrypoint, Content: `<p>Controls: Hold ArrowRight to move.</p><canvas></canvas><script>document.addEventListener('keydown', move); function move(){ document.body.dataset.moved = 'true'; }</script>`},
 	}
 	artifacts := reconcileToolBackedArtifacts(nil, evidence, "Create a playable project package.")
 

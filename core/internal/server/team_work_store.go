@@ -136,7 +136,11 @@ func (s *AdminServer) insertTeamWorkItemExec(ctx context.Context, exec teamWorkS
 			$7, $8, $9, $10, $11, $12, $13, $14,
 			$15, $16, $17, $18,
 			$19, $20, $21, $22, $23, $24,
-			CASE WHEN $17 IN ('queued','running') THEN NOW() + INTERVAL '15 minutes' ELSE NULL END
+			CASE
+				WHEN $17='reviewing' THEN NOW() + INTERVAL '2 minutes'
+				WHEN $17 IN ('queued','running') THEN NOW() + INTERVAL '15 minutes'
+				ELSE NULL
+			END
 		)
 		RETURNING created_at, updated_at`,
 		item.WorkItemID, item.TeamID, nullableUUID(item.RunID), nullableUUID(item.IntentProofID),
@@ -238,6 +242,8 @@ func (s *AdminServer) updateTeamWorkItemLastEventExec(ctx context.Context, exec 
 		    work_intent=$10,
 		    recovery_deadline_at=CASE
 		        WHEN $2 IN ('output_ready','degraded','needs_operator','archived') THEN NULL
+		        WHEN $2='reviewing' THEN LEAST(COALESCE(recovery_deadline_at, NOW() + INTERVAL '2 minutes'), NOW() + INTERVAL '2 minutes')
+		        WHEN $2 IN ('queued','running') AND recovery_deadline_at IS NULL THEN NOW() + INTERVAL '15 minutes'
 		        ELSE recovery_deadline_at
 		    END,
 		    updated_at=NOW()

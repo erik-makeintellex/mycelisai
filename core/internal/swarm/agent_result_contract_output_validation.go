@@ -14,7 +14,8 @@ var (
 	outputValidationNamedFunction           = regexp.MustCompile(`(?m)\bfunction\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\([^)]*\)\s*\{`)
 	outputValidationScriptContent           = regexp.MustCompile(`(?is)<script\b[^>]*>(.*?)</script>`)
 	resultContractInteractiveHandlerPattern = regexp.MustCompile(`(?i)(?:addEventListener\s*\(\s*["'](?:click|pointerdown|touchstart|keydown|keyup)|on(?:click|pointerdown|touchstart|keydown)\s*=)`)
-	resultContractVisibleControlPattern     = regexp.MustCompile(`(?i)\b(?:click|tap|press|use|move|drag|select|arrow|space|wasd|control|start|restart|run|submit|save|reset|open|add|next)\b`)
+	resultContractInteractiveEffectPattern  = regexp.MustCompile(`(?is)(?:\.(?:textContent|innerText|innerHTML|value|checked|disabled|hidden|className)\s*=|\.classList\.(?:add|remove|toggle|replace)\s*\(|\.style\.[A-Za-z][A-Za-z0-9-]*\s*=|\.dataset\.[A-Za-z_$][A-Za-z0-9_$]*\s*=|\.setAttribute\s*\(|\.(?:appendChild|append|prepend|remove|replaceChildren|insertAdjacentHTML)\s*\(|\b(?:requestAnimationFrame|setTimeout|setInterval)\s*\(|\b(?:fillRect|clearRect|strokeRect|drawImage|fillText|strokeText|putImageData|arc|lineTo|moveTo|bezierCurveTo|quadraticCurveTo)\s*\(|\.(?:play|pause)\s*\(|\b(?:localStorage|sessionStorage)\.setItem\s*\()`)
+	resultContractVisibleControlPattern     = regexp.MustCompile(`(?i)\b(?:click|tap|press|use|move|drag|select|arrow|space|wasd|control|start|restart|run|play|submit|save|reset|open|add|next)\b`)
 	resultContractScriptOrStylePattern      = regexp.MustCompile(`(?is)<(?:script|style)\b[^>]*>.*?</(?:script|style)>`)
 	resultContractHTMLTagPattern            = regexp.MustCompile(`(?s)<[^>]+>`)
 )
@@ -23,12 +24,19 @@ func resultContractRequiresPrimaryInteraction(requirement *teamResultRequirement
 	if requirement == nil {
 		return false
 	}
+	if requirement.OutputValidation != nil &&
+		requirement.OutputValidation.Required &&
+		requirement.OutputValidation.Kind == protocol.OutputValidationInteractiveBrowser {
+		return true
+	}
 	values := append(append([]string{}, requirement.ExpectedOutputs...), requirement.AcceptanceCriteria...)
 	for _, value := range values {
 		lower := strings.ToLower(value)
 		if strings.Contains(lower, "playable") || strings.Contains(lower, "browser game") ||
+			strings.Contains(lower, "interactive browser") || strings.Contains(lower, "interactive app") ||
+			strings.Contains(lower, "web app") || strings.Contains(lower, "web application") ||
 			strings.Contains(lower, "controls respond") || strings.Contains(lower, "primary user workflow") ||
-			strings.Contains(lower, "primary control") {
+			strings.Contains(lower, "primary control") || strings.Contains(lower, "primary interaction") {
 			return true
 		}
 	}
@@ -66,6 +74,13 @@ func resultContractExposesPrimaryControl(content string) bool {
 	return resultContractVisibleControlPattern.MatchString(visibleText)
 }
 
+func resultContractExposesInspectablePrimaryInteraction(content string) bool {
+	return resultContractInteractiveHandlerPattern.MatchString(content) &&
+		resultContractExposesPrimaryControl(content) &&
+		resultContractInteractiveEffectPattern.MatchString(content) &&
+		len(resultContractDormantAnimationLoopIssues(content)) == 0
+}
+
 func outputValidationRequirement(raw any) *protocol.OutputValidationPlan {
 	plan, err := protocol.DecodeOutputValidationPlan(raw)
 	if err != nil || !plan.Required {
@@ -92,6 +107,10 @@ func outputValidationAnimationLoopIssues(plan *protocol.OutputValidationPlan, co
 	if plan == nil || !plan.Required || plan.Kind != protocol.OutputValidationInteractiveBrowser {
 		return nil
 	}
+	return resultContractDormantAnimationLoopIssues(content)
+}
+
+func resultContractDormantAnimationLoopIssues(content string) []string {
 	scanContent := javascriptCodeOnly(outputValidationJavaScript(content))
 	issues := make([]string, 0, 1)
 	for _, match := range outputValidationNamedFunction.FindAllStringSubmatchIndex(scanContent, -1) {
