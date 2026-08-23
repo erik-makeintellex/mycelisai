@@ -274,7 +274,7 @@ func projectPackageResultContract(teamID string, contract map[string]any) map[st
 		"kind":                 "project_package",
 		"entrypoint_required":  true,
 		"folder_required":      true,
-		"files_required":       []string{"README.md", "PROOF.md", "project-package.json"},
+		"files_required":       []string{"index.html", "README.md", "PROOF.md", "project-package.json"},
 		"validation_required":  true,
 		"validation_mode":      "readback_against_exit_criteria",
 		"proof_ref_required":   true,

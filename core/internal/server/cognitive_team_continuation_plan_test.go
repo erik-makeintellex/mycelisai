@@ -104,6 +104,11 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationContinuation(t *
 	if resultContract["validation_mode"] != "readback_against_exit_criteria" {
 		t.Fatalf("result contract = %#v, want readback validation mode", resultContract)
 	}
+	for _, want := range []string{"index.html", "README.md", "PROOF.md", "project-package.json"} {
+		if !containsToolName(confirmedActionStringSlice(resultContract["files_required"]), want) {
+			t.Fatalf("files_required = %#v, missing %q", resultContract["files_required"], want)
+		}
+	}
 	validationPlan, ok := resultContract["output_validation"].(*protocol.OutputValidationPlan)
 	if !ok {
 		t.Fatalf("result contract output_validation = %#v, want typed plan", resultContract["output_validation"])

@@ -83,7 +83,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			issues := resultContractIssues(requirement, result.artifacts, result.toolEvidence)
 			if len(issues) > 0 && contractCorrections < maxResultContractCorrections {
 				contractCorrections++
-				requirementPrompt := resultContractCorrectionPrompt(requirement, issues)
+				requirementPrompt := resultContractCorrectionPrompt(requirement, issues, result.artifacts, result.toolEvidence)
 				appendAssistantHistory(&req.Messages, result.responseText)
 				req.Messages = append(req.Messages,
 					cognitive.ChatMessage{Role: "system", Content: requirementPrompt},
@@ -108,7 +108,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			continue
 		}
 		if issues := resultContractIssues(requirement, result.artifacts, result.toolEvidence); len(issues) > 0 && !resultContractEvidenceToolAllowed(requirement, toolCall.Name, result.artifacts, result.toolEvidence) {
-			feedback := resultContractCorrectionPrompt(requirement, issues) + " Do not call " + toolCall.Name + " while required package evidence is incomplete."
+			feedback := resultContractCorrectionPrompt(requirement, issues, result.artifacts, result.toolEvidence) + " Do not call " + toolCall.Name + " while required package evidence is incomplete."
 			if !reinferWithToolFeedback(toolCall.Name, feedback) {
 				break
 			}

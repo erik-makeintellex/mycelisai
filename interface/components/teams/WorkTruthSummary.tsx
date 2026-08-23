@@ -37,8 +37,11 @@ export function WorkTruthSummary({ item, compact = false }: { item: TeamWorkItem
       : item.state === "output_ready"
         ? "Output ready for review"
         : "Work state retained";
-  const outputText =
-    packageCount > 0
+  const outputText = isDegraded
+    ? outputCount > 0
+      ? "No trusted output yet"
+      : "No retained output yet"
+    : packageCount > 0
       ? `${packageCount} package${packageCount === 1 ? "" : "s"} retained`
       : outputCount > 0
         ? `${outputCount} output${outputCount === 1 ? "" : "s"} retained`

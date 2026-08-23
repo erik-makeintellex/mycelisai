@@ -245,13 +245,15 @@ func renderTeamAskResultContract(sb *strings.Builder, context map[string]any) {
 	expectedOutputs := stringSlice(contract["expected_outputs"])
 	acceptanceCriteria := stringSlice(contract["acceptance_criteria"])
 	proofRequirements := stringSlice(contract["proof_required"])
+	packageFolder := strings.TrimSpace(stringValue(contract["package_folder"]))
+	packageEntrypoint := strings.TrimSpace(stringValue(contract["package_entrypoint"]))
 	entrypointRequired := boolValue(contract["entrypoint_required"])
 	folderRequired := boolValue(contract["folder_required"])
 	validationRequired := boolValue(contract["validation_required"])
 	proofRequired := boolValue(contract["proof_ref_required"])
 	repairChannel := strings.TrimSpace(stringValue(contract["repair_channel"]))
 	if kind == "" && len(files) == 0 && len(expectedOutputs) == 0 && len(acceptanceCriteria) == 0 && len(proofRequirements) == 0 &&
-		!entrypointRequired && !folderRequired && !validationRequired && !proofRequired && repairChannel == "" {
+		packageFolder == "" && packageEntrypoint == "" && !entrypointRequired && !folderRequired && !validationRequired && !proofRequired && repairChannel == "" {
 		return
 	}
 
@@ -261,6 +263,12 @@ func renderTeamAskResultContract(sb *strings.Builder, context map[string]any) {
 	}
 	if len(files) > 0 {
 		sb.WriteString(fmt.Sprintf("- Required files: %s\n", strings.Join(files, ", ")))
+	}
+	if packageFolder != "" {
+		sb.WriteString(fmt.Sprintf("- Package folder: %s\n", packageFolder))
+	}
+	if packageEntrypoint != "" {
+		sb.WriteString(fmt.Sprintf("- Entrypoint: %s\n", packageEntrypoint))
 	}
 	renderTeamAskContractList(sb, "Expected outputs", expectedOutputs)
 	renderTeamAskContractList(sb, "Acceptance criteria", acceptanceCriteria)

@@ -181,8 +181,8 @@ func TestContentContract_InteractiveBrowserOutputCarriesRunnableProbe(t *testing
 		t.Fatalf("output validation plan is not runnable: %v", err)
 	}
 	if plan.Probe.Action.Kind != protocol.OutputValidationActionClick ||
-		plan.Probe.Observe.Kind != protocol.OutputValidationObserveVisualChange {
-		t.Fatalf("probe = %#v, want generic click and visual-change probe", plan.Probe)
+		plan.Probe.Observe.Kind != protocol.OutputValidationObserveTextChange {
+		t.Fatalf("probe = %#v, want generic click and text-change probe", plan.Probe)
 	}
 }
 

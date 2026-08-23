@@ -105,6 +105,35 @@ func (executor *resultContractToolExecutor) CallTool(_ context.Context, _ uuid.U
 			executor.files = map[string]string{}
 		}
 		executor.files[path] = stringValue(args["content"])
+		if strings.EqualFold(strings.TrimSpace(stringValue(args["package_kind"])), "project_package") {
+			folder := strings.TrimSpace(stringValue(args["package_folder"]))
+			if folder == "" {
+				folder = path
+				if index := strings.LastIndex(folder, "/"); index >= 0 {
+					folder = folder[:index]
+				}
+			}
+			entrypoint := strings.TrimSpace(stringValue(args["package_entrypoint"]))
+			if entrypoint == "" {
+				entrypoint = path
+			}
+			title := strings.TrimSpace(stringValue(args["package_title"]))
+			if title == "" {
+				title = "Generated project package"
+			}
+			return mustJSON(map[string]any{
+				"message": "completed:" + name,
+				"artifact": protocol.ChatArtifactRef{
+					Type:        "project_package",
+					Title:       title,
+					ContentType: "application/vnd.mycelis.project+json",
+					SavedPath:   folder,
+					Entrypoint:  entrypoint,
+					Folder:      folder,
+					Files:       projectPackageSupportFileNames(args),
+				},
+			}), nil
+		}
 	case "read_file", "read_text_file":
 		if content, ok := executor.readOverride[path]; ok {
 			return content, nil
@@ -209,7 +238,9 @@ func TestApprovedResultContractCorrectsProseUntilWriteAndReadbackExist(t *testin
 	if strings.Join(executor.calls, ",") != "write_file,read_file" {
 		t.Fatalf("tool calls = %v", executor.calls)
 	}
-	if len(result.Artifacts) != 1 || len(result.Artifacts[0].Files) != 1 || result.Artifacts[0].Files[0] != "index.html" {
+	if len(result.Artifacts) != 1 ||
+		!testStringSliceContains(result.Artifacts[0].Files, "index.html") ||
+		!testStringSliceContains(result.Artifacts[0].Files, "project-package.json") {
 		t.Fatalf("artifacts = %#v", result.Artifacts)
 	}
 	if !strings.Contains(result.Artifacts[0].Validation, "Structural readback") || !strings.Contains(result.Artifacts[0].Validation, "server/live validation") {
@@ -236,7 +267,7 @@ func TestApprovedResultContractDegradesWithoutRequiredWritesAndReadback(t *testi
 	if result.Availability == nil || result.Availability.Code != "result_contract_unsatisfied" {
 		t.Fatalf("availability = %#v", result.Availability)
 	}
-	for _, missing := range []string{"README.md", "PROOF.md", "project-package.json", "readback"} {
+	for _, missing := range []string{"README.md", "PROOF.md", "readback"} {
 		if !strings.Contains(result.Availability.Summary, missing) {
 			t.Fatalf("summary = %q, missing %q", result.Availability.Summary, missing)
 		}
@@ -250,8 +281,12 @@ func TestApprovedResultContractDegradesWithoutRequiredWritesAndReadback(t *testi
 	if !strings.Contains(result.Text, "needs repair") {
 		t.Fatalf("degraded result text = %q, want repair-oriented wording", result.Text)
 	}
-	if len(result.Artifacts) != 1 || len(result.Artifacts[0].Files) != 1 || result.Artifacts[0].Files[0] != "index.html" {
-		t.Fatalf("artifact invented support files: %#v", result.Artifacts)
+	if len(result.Artifacts) != 1 ||
+		!testStringSliceContains(result.Artifacts[0].Files, "index.html") ||
+		!testStringSliceContains(result.Artifacts[0].Files, "project-package.json") ||
+		testStringSliceContains(result.Artifacts[0].Files, "README.md") ||
+		testStringSliceContains(result.Artifacts[0].Files, "PROOF.md") {
+		t.Fatalf("artifact file evidence crossed the support-file boundary: %#v", result.Artifacts)
 	}
 	if result.Artifacts[0].Validation != "" {
 		t.Fatalf("artifact invented validation: %#v", result.Artifacts[0])
@@ -295,4 +330,13 @@ func resultContractTestAgent(provider cognitive.LLMProvider, executor MCPToolExe
 	}, "delivery-team", nil, router, executor)
 	agent.SetToolDescriptions(map[string]string{"write_file": "Write retained output.", "read_file": "Read retained output."})
 	return agent
+}
+
+func testStringSliceContains(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
 }

@@ -101,6 +101,39 @@ describe("teamWorkProjection", () => {
     expect(teamOutputRefsFromItems(item ? [item] : [])).toHaveLength(1);
   });
 
+  it("excludes degraded output refs from global completed-output surfaces", () => {
+    const completed = mapDurableTeamWorkItem({
+      work_item_id: "work-complete",
+      team_id: "team-alpha",
+      objective: "Playable package",
+      state: "output_ready",
+      output_refs: [{
+        output_id: "output-complete",
+        kind: "project_package",
+        label: "Playable package",
+        storage_ref: "generated/current",
+        entrypoint: "index.html",
+      }],
+    });
+    const degraded = mapDurableTeamWorkItem({
+      work_item_id: "work-degraded",
+      team_id: "team-alpha",
+      objective: "Failed current ask",
+      state: "degraded",
+      output_refs: [{
+        output_id: "output-stale",
+        kind: "project_package",
+        label: "Older package",
+        storage_ref: "generated/older",
+        entrypoint: "index.html",
+      }],
+    });
+
+    expect(teamOutputRefsFromItems([completed!, degraded!]).map((output) => output.output_id)).toEqual([
+      "output-complete",
+    ]);
+  });
+
   it("falls back to the last event target ref when the work item does not carry one", () => {
     const item = mapDurableTeamWorkItem({
       work_item_id: "work-2",

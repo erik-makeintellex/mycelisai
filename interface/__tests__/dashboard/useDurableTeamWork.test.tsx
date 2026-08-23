@@ -58,6 +58,25 @@ describe("useDurableTeamWork", () => {
             ],
             updated_at: "2026-05-17T18:01:00Z",
           },
+          {
+            work_item_id: "work-degraded",
+            team_id: "team-alpha",
+            objective: "Failed current ask",
+            execution_shape: "delegated_work",
+            state: "degraded",
+            output_refs: [
+              {
+                output_id: "out-stale",
+                team_id: "team-alpha",
+                work_item_id: "work-degraded",
+                kind: "project_package",
+                label: "Older stale package",
+                storage_ref: "generated/old/package",
+                entrypoint: "index.html",
+              },
+            ],
+            updated_at: "2026-05-17T17:59:00Z",
+          },
         ],
       }),
     });
@@ -73,6 +92,7 @@ describe("useDurableTeamWork", () => {
       outputCount: 1,
     });
     expect(result.current.outputRefs).toHaveLength(1);
+    expect(result.current.outputRefs[0]?.output_id).toBe("out-1");
     expect(result.current.items.map((item) => item.id)).not.toContain("work-archived");
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/v1/teams/team-alpha/work?limit=8&include_archived=false",

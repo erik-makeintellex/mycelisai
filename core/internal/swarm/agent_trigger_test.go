@@ -81,6 +81,8 @@ func TestNormalizeTeamTriggerInput_RendersActionableResultContract(t *testing.T)
 			"result_contract":{
 				"kind":"project_package",
 				"files_required":["README.md","PROOF.md","project-package.json"],
+				"package_folder":"groups/app-team/generated/package",
+				"package_entrypoint":"groups/app-team/generated/package/index.html",
 				"entrypoint_required":true,
 				"folder_required":true,
 				"validation_required":true,
@@ -97,6 +99,8 @@ func TestNormalizeTeamTriggerInput_RendersActionableResultContract(t *testing.T)
 		"Output contract:",
 		"Kind: project_package",
 		"Required files: README.md, PROOF.md, project-package.json",
+		"Package folder: groups/app-team/generated/package",
+		"Entrypoint: groups/app-team/generated/package/index.html",
 		"Expected outputs:\n- Openable retained package",
 		"Acceptance criteria:\n- Entrypoint opens",
 		"Proof requirements:\n- Readback evidence",

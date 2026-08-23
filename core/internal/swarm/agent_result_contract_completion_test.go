@@ -159,6 +159,43 @@ func TestApprovedResultContractWritesReferencedLocalDependencyBeforeReadback(t *
 	}
 }
 
+func TestApprovedResultContractCountsAutoScaffoldedProjectPackageSupportFiles(t *testing.T) {
+	entrypoint := `<p>Controls: Click Play.</p><button data-mycelis-primary-action onclick="score.textContent='Score 1'">Play</button><p data-mycelis-validation-surface id="score">Score 0</p>`
+	provider := &resultContractProvider{responses: []string{
+		`{"tool_call":{"name":"write_file","arguments":{"path":"groups/delivery-team/generated/package/index.html","content":` + quotedJSON(entrypoint) + `,"package_kind":"project_package","package_title":"Playable Package","package_folder":"groups/delivery-team/generated/package","package_entrypoint":"groups/delivery-team/generated/package/index.html","package_files":["index.html","README.md","PROOF.md","project-package.json"]}}}`,
+		"unexpected extra inference",
+	}}
+	executor := &resultContractToolExecutor{}
+	agent := resultContractTestAgent(provider, executor)
+	requirement := &teamResultRequirement{
+		Kind: "project_package", TeamID: "delivery-team",
+		FilesRequired:      []string{"index.html", "README.md", "PROOF.md", "project-package.json"},
+		EntrypointRequired: true, FolderRequired: true, ReadbackRequired: true,
+		OutputValidation: &protocol.OutputValidationPlan{
+			Kind: protocol.OutputValidationInteractiveBrowser, Required: true,
+			Probe: &protocol.OutputValidationProbe{
+				Action:  protocol.OutputValidationAction{Kind: protocol.OutputValidationActionClick, Target: "[data-mycelis-primary-action]"},
+				Observe: protocol.OutputValidationObservation{Kind: protocol.OutputValidationObserveTextChange, Target: "[data-mycelis-validation-surface]"},
+			},
+		},
+	}
+
+	result := agent.processMessageStructuredWithRequirement("Build an approved project package.", nil, false, requirement)
+
+	if result.Availability != nil {
+		t.Fatalf("auto-scaffolded support files were not trusted as package evidence: %+v", result.Availability)
+	}
+	if provider.calls != 1 {
+		t.Fatalf("provider calls = %d, want one package write followed by runtime readback", provider.calls)
+	}
+	if got := strings.Join(executor.calls, ","); got != "write_file,read_file" {
+		t.Fatalf("tool calls = %s", got)
+	}
+	if len(result.Artifacts) != 1 || len(result.Artifacts[0].Files) != 4 {
+		t.Fatalf("artifact files = %#v", result.Artifacts)
+	}
+}
+
 func TestProjectPackageRejectsDivergentLatestReadback(t *testing.T) {
 	entrypoint := "groups/team/generated/app/index.html"
 	written := "<!doctype html><title>Expected</title>"

@@ -184,6 +184,42 @@ describe("ActiveWorkLane", () => {
     expect(screen.getByText("Recovery: Retry with retained context")).toBeDefined();
   });
 
+  it("keeps degraded retained outputs behind failure context instead of opening them", () => {
+    render(
+      <ActiveWorkLane
+        items={[
+          {
+            ...baseItem,
+            state: "degraded",
+            runId: "run-failed",
+            outputRefs: [
+              {
+                output_id: "out-stale",
+                team_id: "team-alpha",
+                work_item_id: "work-1",
+                kind: "project_package",
+                label: "Older playable package",
+                storage_ref: "workspace/generated/older",
+                entrypoint: "index.html",
+                proof_ref: "proof-failed",
+              },
+            ],
+            auditRefs: ["audit-failed"],
+            recoveryOptions: ["Retry with retained context"],
+            interactions: [{ action: "recover", label: "Recover" }],
+          },
+        ]}
+        onAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("No trusted output yet")).toBeDefined();
+    expect(screen.queryByRole("link", { name: /Older playable package/i })).toBeNull();
+    expect(screen.getByText("Failure context")).toBeDefined();
+    expect(screen.getByText("1 retained output reference withheld until recovery completes.")).toBeDefined();
+    expect(screen.getByRole("link", { name: /Run proof/i }).getAttribute("href")).toBe("/runs/run-failed");
+  });
+
   it("keeps the default lane compact when a visible item cap is provided", () => {
     const items = Array.from({ length: 5 }, (_, index) => ({
       ...baseItem,

@@ -104,6 +104,7 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 	extractedArtifacts := false
 	if toolMessage, toolArtifacts, ok := extractToolOutputArtifacts(toolResult); ok {
 		result.artifacts = append(result.artifacts, toolArtifacts...)
+		recordProjectPackageSupportEvidence(result, toolArtifacts)
 		extractedArtifacts = len(toolArtifacts) > 0
 		toolResult = toolMessage
 		if toolResult == "" {
@@ -146,6 +147,33 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 	result.resp = updated
 	result.responseText = updated.Text
 	return true
+}
+
+func recordProjectPackageSupportEvidence(result *agentToolLoopResult, artifacts []protocol.ChatArtifactRef) {
+	if result == nil || len(artifacts) == 0 {
+		return
+	}
+	existingWrites := evidencePaths(result.toolEvidence, "write_file")
+	for _, artifact := range artifacts {
+		if !strings.EqualFold(strings.TrimSpace(artifact.Type), "project_package") || strings.TrimSpace(artifact.Folder) == "" {
+			continue
+		}
+		folder := cleanEvidencePath(artifact.Folder)
+		for _, file := range artifact.Files {
+			path := cleanEvidencePath(file)
+			if path == "" {
+				continue
+			}
+			if folder != "" && !pathWithinFolder(path, folder) {
+				path = strings.TrimRight(folder, "/") + "/" + strings.TrimLeft(path, "/")
+			}
+			if evidenceContainsPath(existingWrites, path) {
+				continue
+			}
+			result.toolEvidence = append(result.toolEvidence, successfulToolEvidence{ToolName: "write_file", Path: path})
+			existingWrites = append(existingWrites, path)
+		}
+	}
 }
 
 func (a *Agent) executeRuntimeOwnedEntrypointReadback(i int, entrypoint string, failedToolCalls map[string]int, result *agentToolLoopResult, planningOnly bool) (string, error) {

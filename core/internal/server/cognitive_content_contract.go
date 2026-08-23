@@ -129,6 +129,10 @@ func interactiveBrowserValidationPlanForRequest(lower string) *protocol.OutputVa
 			duration = 600
 		}
 		plan.Probe.Action = protocol.OutputValidationAction{Kind: kind, Key: candidate.key, DurationMS: duration}
+		plan.Probe.Observe = protocol.OutputValidationObservation{
+			Kind:   protocol.OutputValidationObserveVisualChange,
+			Target: "[data-mycelis-validation-surface]",
+		}
 		return plan
 	}
 	return plan
@@ -149,7 +153,7 @@ func defaultInteractiveBrowserValidationPlan() *protocol.OutputValidationPlan {
 				Target: "[data-mycelis-primary-action]",
 			},
 			Observe: protocol.OutputValidationObservation{
-				Kind:   protocol.OutputValidationObserveVisualChange,
+				Kind:   protocol.OutputValidationObserveTextChange,
 				Target: "[data-mycelis-validation-surface]",
 			},
 		},

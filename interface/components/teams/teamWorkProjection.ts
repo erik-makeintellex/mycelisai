@@ -230,7 +230,7 @@ export function mapDurableTeamWorkItem(raw: TeamWorkAPIRecord, team?: TeamDetail
 export function teamOutputRefsFromItems(items: TeamWorkItem[]): TeamOutputRef[] {
   const seen = new Set<string>();
   return sortTeamOutputRefsNewestFirst(items
-    .filter((item) => item.source === "durable")
+    .filter((item) => item.source === "durable" && item.state === "output_ready")
     .flatMap((item) => item.outputRefs ?? []))
     .filter((output) => {
       const key = output.output_id || `${output.team_id}-${output.work_item_id}-${output.label}-${output.storage_ref ?? ""}`;

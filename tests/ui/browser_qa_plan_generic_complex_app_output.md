@@ -97,6 +97,56 @@ uv run inv interface.e2e --server-mode=start --project=chromium --workers=1 --gr
 uv run inv interface.e2e --server-mode=start --project=chromium --workers=1 --grep "Resources workspace files"
 ```
 
+## Next Proof Order After Runtime And UX Fixes
+
+The latest retained Playwright result is a passing `groups.spec.ts` shard, so treat it as partial retained-output UI coverage only. It is not the generic complex-app acceptance proof.
+
+Run from a clean local source stack:
+
+```powershell
+git status --short --branch
+uv run inv lifecycle.down
+uv run inv compose.infra-up
+uv run inv compose.infra-health
+uv run inv db.migrate
+uv run inv core.compile
+uv run inv lifecycle.up --frontend
+uv run inv lifecycle.health
+$env:PLAYWRIGHT_LIVE_BACKEND="1"
+$env:PLAYWRIGHT_TEAM_WORK_GUI_LIVE="1"
+$env:PLAYWRIGHT_TEAM_WORK_API="1"
+```
+
+Then run proof serially and stop at the first unexpected failure:
+
+```powershell
+uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-natural-delivery-routing-live.spec.ts
+uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/trusted-outcome-journey-live.spec.ts
+uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/soma-browser-game-p0-live.spec.ts
+uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/team-output-content-live.spec.ts
+uv run inv interface.e2e --headed --server-mode=start --project=chromium --workers=1 --spec=e2e/specs/ui-finalization-browser-package-retry.spec.ts
+uv run inv interface.e2e --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/active-work-api.spec.ts
+uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/active-work-ask-live.spec.ts
+```
+
+Expected states:
+- Natural delivery and Trusted Outcome must pass with proposal approval returning `execution_state=running`, the composer enabled during work, a correlated `TeamWorkItem`, terminal `output_ready`, retained `project_package`, and visible state change after opening the app. `degraded`, `needs_operator`, `result_contract_unsatisfied`, or `runtime_validation_deadline_exceeded` is an honest failure boundary but not an acceptance pass for this fix.
+- P0 browser game is the complex-output stress gate. It must prove nonblank generated graphics, controls, movement/interaction, support files, and package metadata; a blank canvas or unchanged visual signature blocks release.
+- Team output content must prove retained output visibility from Dashboard, Groups, Resources, opened file, folder reveal, and run-conversation proof.
+- Mocked retry must pass unless a live forced-failure spec replaces it; until then, record live failure injection as unproven and retain this mocked regression.
+- Active-work API may pass with `output_ready` or an expected bounded degradation (`nats_offline`, `team_response_timeout`, or `team_response_unreadable`) that sets `needs_operator=true`; the GUI ask proof must show queued/running continuity, output-ready review, or degraded recovery without blocking the operator.
+
+Inspect artifacts after each command:
+- `interface/test-results/playwright-results.json`, `interface/test-results/playwright-results.xml`, and `.last-run.json`.
+- Per-spec folders under `interface/test-results/`, including screenshots, traces, attached retained package evidence, and any before/after interaction captures.
+- Retained package files referenced by the run: `index.html`, `README.md`, `PROOF.md`, `project-package.json`, and `validation-report.json` when emitted by `interface/scripts/validate-generated-output.mjs`.
+- API readbacks for the accepted `run_id`: TeamWorkItem, status events, proof artifacts, execution contract, run events/receipt, Groups outputs, and Resources workspace folder.
+
+Cleanup requirements:
+- Prefer specs with `createQAFixtureScope` and verify their `purgeDeliveryFixture` cleanup completed for the owned organization, team, run, group, and workspace folder.
+- For specs without fixture ownership, remove only the generated folder or entrypoint named by that spec; do not delete unrelated retained workspace files.
+- Before rerunning after a failure, clear stale Soma/team context for the failed QA organization so older successful output cannot satisfy the new ask.
+
 Required environment depends on the selected live lane:
 - `PLAYWRIGHT_LIVE_BACKEND=1` for Soma/Core live delivery specs.
 - `PLAYWRIGHT_TEAM_WORK_GUI_LIVE=1` for `/teams` ask GUI proof.

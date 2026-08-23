@@ -11,13 +11,53 @@ export function ActiveWorkEvidence({ item }: { item: TeamWorkItem }) {
     ...outputRefs.flatMap((output) => [output.proof_ref, output.proof_id]),
   ]);
   const auditRefs = item.auditRefs ?? [];
+  const outputRefsNeedRecovery = item.state === "degraded" || item.state === "needs_operator";
+  const visibleOutputRefs = outputRefsNeedRecovery ? [] : outputRefs;
   const hiddenRefs = Math.max(outputRefs.length - 3, 0) + Math.max(proofRefs.length - 3, 0) + Math.max(auditRefs.length - 2, 0);
   if (!item.runId && outputRefs.length === 0 && proofRefs.length === 0 && auditRefs.length === 0) {
     return null;
   }
 
+  if (outputRefsNeedRecovery) {
+    return (
+      <details className="mt-3 rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-[11px] text-cortex-text-muted">
+        <summary className="cursor-pointer font-mono uppercase tracking-[0.14em] text-cortex-text-muted">
+          Failure context
+        </summary>
+        {outputRefs.length > 0 ? (
+          <p className="mt-2 leading-5">
+            {outputRefs.length} retained output reference{outputRefs.length === 1 ? "" : "s"} withheld until recovery completes.
+          </p>
+        ) : null}
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <EvidenceContext item={item} outputRefs={[]} proofRefs={proofRefs} auditRefs={auditRefs} hiddenRefs={hiddenRefs} />
+        </div>
+      </details>
+    );
+  }
+
   return (
     <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
+      <EvidenceContext item={item} outputRefs={visibleOutputRefs} proofRefs={proofRefs} auditRefs={auditRefs} hiddenRefs={hiddenRefs} />
+    </div>
+  );
+}
+
+function EvidenceContext({
+  item,
+  outputRefs,
+  proofRefs,
+  auditRefs,
+  hiddenRefs,
+}: {
+  item: TeamWorkItem;
+  outputRefs: NonNullable<TeamWorkItem["outputRefs"]>;
+  proofRefs: string[];
+  auditRefs: string[];
+  hiddenRefs: number;
+}) {
+  return (
+    <>
       {item.runId ? (
         <Link
           href={`/runs/${encodeURIComponent(item.runId)}`}
@@ -57,7 +97,7 @@ export function ActiveWorkEvidence({ item }: { item: TeamWorkItem }) {
           +{hiddenRefs} more in inspect
         </span>
       ) : null}
-    </div>
+    </>
   );
 }
 
