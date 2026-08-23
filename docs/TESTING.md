@@ -8,7 +8,6 @@
 - [User Interaction Delivery Gate](#user-interaction-delivery-gate)
 - [Finalization Concretization Gate](#finalization-concretization-gate)
 - [Full GUI Coverage Matrix](#full-gui-coverage-matrix)
-- [Backend/API -> UI Target Plan](#backendapi---ui-target-plan)
 - [Clean Run Discipline](#clean-run-discipline)
 - [Quick Reference](#quick-reference)
 - [Tier 1: Backend Unit Tests](#tier-1-backend-unit-tests)
@@ -61,10 +60,7 @@ Promotion test order:
 Use this gate whenever deployment, startup, persistence, storage roots, migrations, fixture cleanup, or bootstrap behavior changes. The proof must show Mycelis can start from empty product state and does not rely on leftovers from prior development runs.
 
 ```bash
-uv run inv compose.infra-up
-uv run inv db.reset
-uv run inv lifecycle.up --frontend
-uv run inv lifecycle.health
+uv run inv lifecycle.first-boot-proof
 ```
 
 Acceptance:
@@ -74,6 +70,8 @@ Acceptance:
 - A Core restart after first boot must not duplicate bootstrap rows or create user work.
 - The first Soma-created Outcome must create its folders, retained output refs, proof/recovery records, and open-file/open-folder links from configuration plus approved execution only.
 - Missing prerequisites must render guided setup or recovery states, not raw backend errors or silent empty results.
+
+The task preserves the data-plane volumes and local workspace mounts, but it intentionally resets the application database and clears generated workspace output roots. Use it only when a fresh proof boundary is intended.
 
 ## User Interaction Delivery Gate
 Do not claim thorough release readiness from unit, type, or headless-only proof when the slice changes what the operator sees or approves.
@@ -103,27 +101,6 @@ Current local-source GUI certification posture:
 - Green focused proof includes signed-in `/login` -> `/dashboard` entry, Soma governance, Resources Output Files, Capabilities, Settings, Accessibility baseline, homepage/navigation/layout/package/team/groups/system/mobile/compression, and the new-user acceptance surfaces in [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md). Dense-panel proof uses `clickVisibleControl` in `interface/e2e/support/click-visible-control.ts`, Settings/Auth follows the Advanced Settings -> Auth Providers and Resources contract, and the accessibility baseline keeps critical checks active while `color-contrast` remains split out after axe timeouts in headed Chromium.
 - New-user delivery proof is not accepted from unit/type/build evidence alone. After local source services are intentionally up, run the focused headed GUI matrix for login/dashboard orientation, MCP/Resources, Active Work, output/proof/recovery, and desktop/mobile compression; record any skipped live-backend gates as blockers or explicit environment skips in `.state/V8_DEV_STATE.md`.
 - `new-user-ui-sweep.spec.ts` is the integrated fresh-user navigation gate. It starts from an unauthenticated stale work URL, proves login lands at Soma, then uses visible navigation through Groups creation, Resources Output Files/Capabilities/Exchange, Memory, Docs, Settings, and back to Soma at desktop and compact-phone widths. Keep page exceptions, hydration/React console errors, `5xx` responses, and document-level horizontal overflow at zero. Run it visibly against the source stack with `uv run inv interface.e2e --headed --server-mode=external --project=chromium --workers=1 --spec=e2e/specs/new-user-ui-sweep.spec.ts`.
-## Backend/API -> UI Target Plan
-When backend/API behavior changes, attach this block before review:
-
-```md
-Backend/API -> UI Target Plan
-- Backend/API change:
-  - <route/payload/runtime contract delta>
-- UI surfaces impacted:
-  - <page/component/store paths>
-- Expected terminal state(s):
-  - <direct answer|proposal|execution result|blocker|recovery state|degraded execution|awaiting approval|retry required|partial completion>
-- Runtime contract:
-  - <ExecutionContract/ProofArtifact/CapabilityManifestState fields touched>
-- Output/proof/event shape:
-  - <output refs, proof refs, audit refs, emitted events>
-- Recovery/degradation expectation:
-  - <what succeeded, what failed, what remains trusted, what requires retry/operator attention>
-- Evidence commands:
-  - <unit/component/type/build/focused browser/live-backend/deployment docs gates>
-```
-No backend/API review is complete without a mapped UI target and evidence result. For propose-only schedule handoff approval changes, prove backend success plus invalid/not-found/conflict/attached-run guards, UI state badges/actions/store behavior, focused Schedule Rules browser proof, and API/user/state/testing doc review.
 ## Clean Run Discipline
 - Stop prior Core/Interface services before runtime or integration tests with `uv run inv lifecycle.down`; Dockerized PostgreSQL and NATS remain reusable and are inspected with `uv run inv compose.infra-health`. Use `lifecycle.down --include-data-plane` only when the proof requires the dependency containers stopped too; it preserves named volumes.
 - Do not keep full Docker/K8s app stacks running during ordinary source work; use local Core/Interface with Dockerized PostgreSQL/NATS, then intentionally bring up containerized Core/Interface or Kubernetes for deployment proof.
@@ -221,12 +198,6 @@ When complex generated projects such as playable games are packaged as `project_
 
 ## Product Delivery Proof
 For product-facing work, include relevant unit/component tests, focused browser proof for the user workflow, API proof for each touched workflow step, live-backend proof when Core/proxy/runtime contracts changed, docs review, explicit pass/fail evidence, and one hands-on browser review against `http://127.0.0.1:3000` when Soma entry, teams, outputs, proof, recovery, resources, auth, or heavy surfaces change. Log in as the intended role, confirm the signed-in Soma operating environment, ask for direct and governed work, verify create/ask/approve/execute/output/proof/recovery/reload through UI and API where touched, inspect Active Work, open outputs/proof, try degraded/retry when available, and record whether the page feels like one operating environment rather than a long topology console. UI-affecting slices must review the visual result as part of proof, not only whether the added feature works: check hierarchy, density, layout rhythm, copy, control placement, responsive behavior, and whether the surface optimizes toward the target expression of a Soma-centered governed cognitive operating environment. `dashboard-workbench-live-review.spec.ts` is the focused live proof for this posture: it uses `/dashboard`, submits a governed content-generation request, approves it, verifies retained output/folder feedback, and records page-scroll versus workbench-rail scroll metrics. Environment-gated provider proof, such as offline local media, must be recorded as `BLOCKED` or an explicit live skip in state rather than treated as covered by mocked proof alone.
-For output block, media readiness, and team-managed review, use:
-- `uv run inv compose.up --build --wait-timeout=240`
-- `uv run inv compose.health`
-- `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
-- `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/team-creation.spec.ts`
-
 For source-Core or full-Compose proof, keep the four `MYCELIS_COMPOSE_*_PORT` host bindings explicit in `.env.compose`. `compose.up` uses those same PostgreSQL, NATS, Core, and Interface bindings for readiness. The canonical database paths are `127.0.0.1:15432` for local Core/host clients and `postgres:5432` for Compose Core; local Core defaults `DB_SSLMODE=disable` for the Dockerized development data plane. A listener from a native host PostgreSQL server is unsupported and must not satisfy readiness.
 If the media engine is offline, record a blocker instead of treating missing media as passed. Gateway unit proof uses `uv run pytest tests/test_media_gateway.py -q` and does not require Pinokio to be running.
 ## Tier 1: Backend Unit Tests
@@ -288,13 +259,9 @@ uv run inv core.smoke
 
 Also run `logging.check-schema` and `logging.check-topics` when event, log, or NATS subject behavior changes.
 
-## Memory Restart Validation
+## Memory And Storage Validation
 
-Run when memory, continuity, retained outputs, semantic storage, or restart behavior changes:
-
-```bash
-uv run inv lifecycle.memory-restart --frontend
-```
+Run `uv run inv lifecycle.first-boot-proof` when memory, continuity, retained outputs, semantic storage, startup, or restart behavior changes. It replaces the older memory-only restart path by proving empty product state, generated-root cleanup, Core/Interface startup, and restart-stable bootstrap rows together.
 
 For Compose long-term storage, pair migrations with:
 ```bash

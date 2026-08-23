@@ -169,8 +169,9 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **Down local app**: `uv run inv lifecycle.down` (retains Compose PostgreSQL/NATS)
 - **Down local app + data plane**: `uv run inv lifecycle.down --include-data-plane` (preserves named volumes)
 - **Health**: `uv run inv lifecycle.health`
-- **Memory Restart**: `uv run inv lifecycle.memory-restart --frontend`
+- **Clean First Boot Proof**: `uv run inv lifecycle.first-boot-proof`
 - `lifecycle.up` now ensures the `cortex` database exists before Core starts, so the bootstrap listener does not crash when a fresh bridge comes up after a reboot or cluster reset
+- `lifecycle.first-boot-proof` intentionally resets the application database and clears generated workspace output roots, then proves Core/Interface can start from clean product state, keep Groups/Runs/Outcomes/conversations/vectors empty before the first ask, keep NATS JetStream empty, and restart without duplicating bootstrap rows. It preserves the Dockerized data-plane volumes and local workspace mounts.
 - `lifecycle.down` now treats repo-local Interface worker residue as part of the teardown contract, not just bound ports
 - shutdown summaries name the exact boundary: local app only, local app plus Compose data plane, or local app plus Kubernetes port-forwards; independently managed Ollama and host runtimes remain untouched
 - `lifecycle.status` reports a quick service snapshot and validates Core through `/healthz` plus Ollama through `/api/tags` across accepted loopback hosts so endpoint-reachable services are not reported down from a single TCP miss

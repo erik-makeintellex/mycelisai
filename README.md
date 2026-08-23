@@ -193,13 +193,10 @@ uv run inv api.delivery-proof
 Clean first-boot proof starts from schema/config, not historical runtime data:
 
 ```bash
-uv run inv compose.infra-up
-uv run inv db.reset
-uv run inv lifecycle.up --frontend
-uv run inv lifecycle.health
+uv run inv lifecycle.first-boot-proof
 ```
 
-After the candidate starts, Groups and Runs should be empty, generated workspace folders should contain no old user work, and any rows that appear before the first ask must be explainable bootstrap support such as registries, built-in runtime identity, MCP defaults, nodes, or capability manifests.
+The task stops local app services, preserves the Dockerized PostgreSQL/NATS data plane, resets the application database, clears generated workspace roots while preserving local mounts, starts Core/Interface, runs health checks, verifies empty user product state, restarts Core/Interface, and verifies bootstrap row counts are stable. After the candidate starts, Groups and Runs should be empty, generated workspace folders should contain no old user work, and any rows that appear before the first ask must be explainable bootstrap support such as registries, built-in runtime identity, MCP defaults, nodes, or capability manifests.
 
 Compose launch and readiness use the same configurable host ports from `.env.compose`: `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`. The repository default publishes PostgreSQL on `15432`; local Core uses `DB_HOST=127.0.0.1`, `DB_PORT=15432`, and `DB_SSLMODE=disable` by default for the Dockerized local data plane, while Compose Core uses the container address `postgres:5432`.
 

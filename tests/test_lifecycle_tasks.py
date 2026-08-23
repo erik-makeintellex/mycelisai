@@ -205,11 +205,12 @@ def test_down_kills_detected_compiled_go_services(monkeypatch):
             [],
         ]
     )
-
     from ops import interface as interface_tasks
 
     monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: False)
     monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: None)
+    monkeypatch.setattr(lifecycle, "_owned_core_pid_on_port", lambda _port: None)
+    monkeypatch.setattr(lifecycle, "_owned_frontend_pid_on_port", lambda _port: None)
     monkeypatch.setattr(lifecycle, "_wait_for_port_closed", lambda *args, **kwargs: True)
     monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
     monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
@@ -218,7 +219,6 @@ def test_down_kills_detected_compiled_go_services(monkeypatch):
     monkeypatch.setattr(lifecycle, "_list_compiled_go_service_processes", lambda: next(scans))
     monkeypatch.setattr(interface_tasks, "_cleanup_repo_local_interface_processes", lambda: [])
     monkeypatch.setattr(lifecycle.time, "sleep", lambda _n: None)
-
     lifecycle.down.body(Context())
 
     assert killed == [111]

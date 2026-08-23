@@ -406,7 +406,6 @@ function ServicesTab() {
                 </div>
             </div>
 
-            {/* Service cards */}
             {loading ? (
                 <div className="flex items-center justify-center py-10 text-cortex-text-muted text-xs">
                     <Loader2 className="w-4 h-4 animate-spin mr-2" /> Probing services…
@@ -421,7 +420,6 @@ function ServicesTab() {
                 </div>
             )}
 
-            {/* Global lifecycle commands */}
             <div className="rounded-lg border border-cortex-border bg-cortex-surface/50 p-4 space-y-2">
                 <h4 className="text-[10px] uppercase tracking-wider text-cortex-text-muted font-semibold">Lifecycle Commands</h4>
                 {[
@@ -430,6 +428,7 @@ function ServicesTab() {
                     { label: "Restart", cmd: "uv run inv lifecycle.restart --build --frontend" },
                     { label: "Status", cmd: "uv run inv lifecycle.status" },
                     { label: "Health check", cmd: "uv run inv lifecycle.health" },
+                    { label: "First boot proof", cmd: "uv run inv lifecycle.first-boot-proof" },
                 ].map(({ label, cmd }) => (
                     <div key={cmd} className="flex items-center gap-2">
                         <span className="text-[10px] text-cortex-text-muted w-24 flex-shrink-0">{label}</span>

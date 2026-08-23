@@ -100,6 +100,7 @@ describe('System Page (V8.1 advanced diagnostics)', () => {
         await act(async () => { render(<SystemPage />); });
         expect(screen.getByText('uv run inv lifecycle.up --build --frontend')).toBeDefined();
         expect(screen.getByText('uv run inv lifecycle.down')).toBeDefined();
+        expect(screen.getByText('uv run inv lifecycle.first-boot-proof')).toBeDefined();
         expect(screen.queryByText(/uvx inv lifecycle/i)).toBeNull();
     });
 });
