@@ -46,6 +46,9 @@ func TestBuildPlannedToolCalls_ComplexAppAskDelegatesWithPackageContract(t *test
 	if resultContract["package_entrypoint"] != "groups/"+teamID+"/generated/package/index.html" {
 		t.Fatalf("package_entrypoint = %#v", resultContract["package_entrypoint"])
 	}
+	if target := firstPlannedOutputTarget(calls); target != "groups/"+teamID+"/generated/package/index.html" {
+		t.Fatalf("proposal target = %q, want user-facing package entrypoint", target)
+	}
 	for _, want := range []string{"index.html", "README.md", "PROOF.md", "project-package.json"} {
 		if !containsToolName(confirmedActionStringSlice(resultContract["files_required"]), want) {
 			t.Fatalf("files_required = %#v, missing %q", resultContract["files_required"], want)
@@ -68,6 +71,9 @@ func TestBuildPlannedToolCalls_OutcomeLanguageCreatesDeliveryTeam(t *testing.T) 
 	result, ok := deterministicGovernedMutationResult(request, mutationTools)
 	if !ok {
 		t.Fatal("natural complex deliverable must enter the governed proposal path")
+	}
+	if strings.Contains(result.Text, "TEAM_EVOCATION.md") || !strings.Contains(result.Text, "/generated/package/index.html") {
+		t.Fatalf("proposal text = %q, want generated package target instead of planning brief", result.Text)
 	}
 	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
 	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
