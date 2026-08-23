@@ -35,6 +35,18 @@ func requestAsksForMedia(text string) bool {
 		"do not make an image",
 		"without image generation",
 		"no image generation",
+		"image generation is unavailable",
+		"if image generation is unavailable",
+		"when image generation is unavailable",
+		"image providers are unavailable",
+		"if image providers are unavailable",
+		"browser-native",
+		"browser native",
+		"code-generated",
+		"code generated",
+		"generated in code",
+		"no external assets",
+		"without external assets",
 		"text-only",
 		"text only",
 	}) {
@@ -80,6 +92,22 @@ func mediaDeliverableCalls(text, teamID, titleSeed string) (protocol.PlannedTool
 	}
 	return protocol.PlannedToolCall{Name: "generate_image", Arguments: imageArgs},
 		protocol.PlannedToolCall{Name: "save_cached_image", Arguments: saveArgs}, true
+}
+
+func filterOptionalMediaGenerationPlan(text string, planned []protocol.PlannedToolCall) []protocol.PlannedToolCall {
+	if requestAsksForMedia(text) {
+		return planned
+	}
+	filtered := planned[:0]
+	for _, call := range planned {
+		switch strings.TrimSpace(call.Name) {
+		case "generate_image", "save_cached_image":
+			continue
+		default:
+			filtered = append(filtered, call)
+		}
+	}
+	return filtered
 }
 
 func mediaPromptForRequest(request string) string {

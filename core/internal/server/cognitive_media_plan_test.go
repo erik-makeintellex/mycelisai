@@ -3,6 +3,8 @@ package server
 import (
 	"strings"
 	"testing"
+
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func TestBuildPlannedToolCalls_ComicTeamIncludesSpecialistsAndMediaDeliverable(t *testing.T) {
@@ -35,4 +37,55 @@ func TestBuildPlannedToolCalls_ComicTeamIncludesSpecialistsAndMediaDeliverable(t
 	if !containsString(tools, "generate_image") || !containsString(tools, "save_cached_image") {
 		t.Fatalf("tools = %#v, want media tools", tools)
 	}
+}
+
+func TestRequestAsksForMedia_AllowsCodeGeneratedGameVisualsWithoutImageProvider(t *testing.T) {
+	requests := []string{
+		"Create a runnable browser game with code-generated voxel-style media and no external assets.",
+		"Build a browser-native game using code generated graphics and sound cues.",
+		"Use generated in code visuals; do not generate an image.",
+		"Use code-generated voxel visuals; if image generation is unavailable, keep everything browser-native.",
+	}
+	for _, request := range requests {
+		if requestAsksForMedia(request) {
+			t.Fatalf("requestAsksForMedia(%q) = true, want false for self-contained browser output", request)
+		}
+	}
+}
+
+func TestRequestAsksForMedia_StillRoutesExplicitImageRequests(t *testing.T) {
+	requests := []string{
+		"Generate an image of a voxel game hero.",
+		"Create artwork for the marketing card.",
+		"Make a comic book page using local ComfyUI.",
+	}
+	for _, request := range requests {
+		if !requestAsksForMedia(request) {
+			t.Fatalf("requestAsksForMedia(%q) = false, want true for explicit media generation", request)
+		}
+	}
+}
+
+func TestFilterOptionalMediaGenerationPlan_DropsProviderCallsForCodeGeneratedOutput(t *testing.T) {
+	planned := []protocol.PlannedToolCall{
+		{Name: "create_team"},
+		{Name: "generate_image"},
+		{Name: "save_cached_image"},
+		{Name: "write_file"},
+	}
+	filtered := filterOptionalMediaGenerationPlan(
+		"Create a runnable browser game with code-generated voxel visuals, no external assets, and browser-native audio.",
+		planned,
+	)
+	requirePlannedCallNames(t, filtered, "create_team", "write_file")
+}
+
+func TestFilterOptionalMediaGenerationPlan_KeepsProviderCallsForExplicitImages(t *testing.T) {
+	planned := []protocol.PlannedToolCall{
+		{Name: "create_team"},
+		{Name: "generate_image"},
+		{Name: "save_cached_image"},
+	}
+	filtered := filterOptionalMediaGenerationPlan("Generate an image of a voxel game hero.", planned)
+	requirePlannedCallNames(t, filtered, "create_team", "generate_image", "save_cached_image")
 }

@@ -108,3 +108,39 @@ func TestBuildRuntimeTeamManifest_UsesApprovedCapabilitiesAsWorkerTools(t *testi
 		t.Fatalf("worker tools = %#v, generic capability is not an executable tool", manifest.Members[0].Tools)
 	}
 }
+
+func TestBuildRuntimeTeamManifest_TreatsWorkerInputsAsMetadataNotBusSubjects(t *testing.T) {
+	manifest := buildRuntimeTeamManifest(map[string]any{
+		"team_id": "voxel-game-team",
+		"inputs":  []any{"game_brief", "style_reference", "target_platform"},
+		"outputs": []any{"project_package", "playtest_notes"},
+	})
+	if manifest == nil || len(manifest.Members) != 1 {
+		t.Fatalf("manifest = %#v, want one runtime worker", manifest)
+	}
+	wantInput := fmt.Sprintf(protocol.TopicTeamInternalCommand, "voxel-game-team")
+	if len(manifest.Inputs) != 1 || manifest.Inputs[0] != wantInput {
+		t.Fatalf("team bus inputs = %#v, want only %q", manifest.Inputs, wantInput)
+	}
+	if !slices.Equal(manifest.Members[0].Inputs, []string{"game_brief", "style_reference", "target_platform"}) {
+		t.Fatalf("worker input metadata = %#v", manifest.Members[0].Inputs)
+	}
+	if !slices.Equal(manifest.Members[0].Outputs, []string{"project_package", "playtest_notes"}) {
+		t.Fatalf("worker output metadata = %#v", manifest.Members[0].Outputs)
+	}
+}
+
+func TestRuntimeTeamInputSubjectsKeepsExplicitNATSSubjects(t *testing.T) {
+	got := runtimeTeamInputSubjects("research-team", []string{
+		"research_question",
+		"swarm.global.input.research",
+		"swarm.team.research-team.internal.command",
+	})
+	want := []string{
+		fmt.Sprintf(protocol.TopicTeamInternalCommand, "research-team"),
+		"swarm.global.input.research",
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("runtime team input subjects = %#v, want %#v", got, want)
+	}
+}

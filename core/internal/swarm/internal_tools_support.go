@@ -72,10 +72,7 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 	}
 	members := runtimeTeamMembersFromArgs(merged, teamID, agentID, role, systemPrompt)
 
-	inputs := stringSlice(merged["inputs"])
-	if len(inputs) == 0 {
-		inputs = []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID)}
-	}
+	inputs := runtimeTeamInputSubjects(teamID, stringSlice(merged["inputs"]))
 	deliveries := stringSlice(merged["deliveries"])
 	if len(deliveries) == 0 {
 		if teamType == TeamTypeExpression {

@@ -17,7 +17,7 @@ func (t *Team) Start() error {
 	log.Printf("Team [%s] (%s) Online.", t.Manifest.Name, t.Manifest.Type)
 	t.normalizeRuntimeProviderRouting()
 
-	for _, subject := range t.Manifest.Inputs {
+	for _, subject := range runtimeTeamInputSubjects(t.Manifest.ID, t.Manifest.Inputs) {
 		subscription, err := t.nc.Subscribe(subject, t.handleTrigger)
 		if err != nil {
 			return fmt.Errorf("team %s subscribe to input %s: %w", t.Manifest.ID, subject, err)

@@ -161,6 +161,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isMutation, mutTools, plannedToolCalls := executableMutationPlan(isMutation, agentResult, latestUserText, mutTools)
+	plannedToolCalls = filterOptionalMediaGenerationPlan(latestUserText, plannedToolCalls)
 	if isMutation {
 		if !s.resolveThreadConfigurationMutationsOrRespond(
 			w, r, sessionID, req.Messages, latestUserText, req.OrganizationID, req.TeamID,
