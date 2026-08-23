@@ -57,6 +57,40 @@ func TestApprovedResultContractRuntimeFallbackCompletesPackageAfterInitialProvid
 	assertRuntimeFallbackPackageResult(t, result, executor, "write_file,read_file")
 }
 
+func TestApprovedResultContractRuntimeFallbackCompletesAfterNoToolEvidence(t *testing.T) {
+	provider := &resultContractProvider{
+		responses: []string{
+			"The package is ready.",
+			"The package is ready.",
+			"The package is ready.",
+			"The package is ready.",
+			"The package is ready.",
+		},
+	}
+	executor := &resultContractToolExecutor{}
+	agent := resultContractTestAgent(provider, executor)
+	requirement := runtimeFallbackPackageRequirement()
+	requirement.PackageTitle = "Requested First Playable"
+
+	result := agent.processMessageStructuredWithRequirement(
+		"Build a playable browser app package. Use the package title Requested First Playable.",
+		nil,
+		false,
+		requirement,
+	)
+
+	if result.Availability != nil {
+		t.Fatalf("no-evidence runtime fallback left package degraded: %+v", result.Availability)
+	}
+	assertRuntimeFallbackPackageResult(t, result, executor, "write_file,read_file")
+	if result.Artifacts[0].Title != "Requested First Playable" {
+		t.Fatalf("title = %q, want requested title", result.Artifacts[0].Title)
+	}
+	if !strings.Contains(executor.files[result.Artifacts[0].Entrypoint], `id="game"`) {
+		t.Fatalf("fallback entrypoint did not include playable canvas: %s", executor.files[result.Artifacts[0].Entrypoint])
+	}
+}
+
 func runtimeFallbackPackageRequirement() *teamResultRequirement {
 	return &teamResultRequirement{
 		Kind: "project_package", TeamID: "delivery-team",

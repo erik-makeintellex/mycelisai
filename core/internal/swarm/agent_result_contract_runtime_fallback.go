@@ -1,9 +1,7 @@
 package swarm
 
 import (
-	"encoding/json"
 	"fmt"
-	"html"
 	"log"
 	"strings"
 
@@ -59,11 +57,13 @@ func initialProjectPackageRuntimeFallbackAllowed(requirement *teamResultRequirem
 
 func (a *Agent) completeProjectPackageRuntimeFallback(input string, requirement *teamResultRequirement, result *agentToolLoopResult, planningOnly bool) bool {
 	if a == nil || a.toolExecutor == nil || result == nil ||
+		planningOnly ||
 		!requirement.active() || !strings.EqualFold(strings.TrimSpace(requirement.Kind), "project_package") ||
 		len(resultContractIssues(requirement, result.artifacts, result.toolEvidence)) == 0 {
 		return false
 	}
-	if !result.runtimeRecoveryAllowed && !resultContractSafeRuntimeFallback(requirement, result) {
+	if !result.runtimeRecoveryAllowed && !resultContractSafeRuntimeFallback(requirement, result) &&
+		!resultContractEmptyEvidenceRuntimeFallbackAllowed(requirement, result) {
 		return false
 	}
 	folder := resultContractDefaultFolder(requirement)
@@ -71,7 +71,7 @@ func (a *Agent) completeProjectPackageRuntimeFallback(input string, requirement 
 	if folder == "" || entrypoint == "" {
 		return false
 	}
-	title := runtimeFallbackProjectPackageTitle(input)
+	title := runtimeFallbackProjectPackageTitle(input, requirement)
 	files := runtimeFallbackProjectPackageFiles(requirement)
 	validation := "Runtime-owned recovery completed after provider inference stopped before the approved package contract was satisfied. Structural readback and live validation remain authoritative."
 	args := map[string]any{
@@ -176,6 +176,13 @@ func resultContractSafeRuntimeFallback(requirement *teamResultRequirement, resul
 	return true
 }
 
+func resultContractEmptyEvidenceRuntimeFallbackAllowed(requirement *teamResultRequirement, result *agentToolLoopResult) bool {
+	if requirement == nil || result == nil || len(result.toolEvidence) != 0 || len(result.artifacts) != 0 {
+		return false
+	}
+	return initialProjectPackageRuntimeFallbackAllowed(requirement)
+}
+
 func withoutProjectPackageArtifacts(artifacts []protocol.ChatArtifactRef) []protocol.ChatArtifactRef {
 	filtered := make([]protocol.ChatArtifactRef, 0, len(artifacts))
 	for _, artifact := range artifacts {
@@ -207,7 +214,13 @@ func runtimeFallbackProjectPackageFiles(requirement *teamResultRequirement) []st
 	return uniqueResultContractStrings(files)
 }
 
-func runtimeFallbackProjectPackageTitle(input string) string {
+func runtimeFallbackProjectPackageTitle(input string, requirement *teamResultRequirement) string {
+	if requirement != nil && strings.TrimSpace(requirement.PackageTitle) != "" {
+		return strings.TrimSpace(requirement.PackageTitle)
+	}
+	if title := extractRequestedPackageTitle(input); title != "" {
+		return title
+	}
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
 		return "Recovered project package"
@@ -216,86 +229,4 @@ func runtimeFallbackProjectPackageTitle(input string) string {
 		trimmed = strings.TrimSpace(trimmed[:54]) + "..."
 	}
 	return "Recovered package: " + trimmed
-}
-
-func runtimeFallbackProjectPackageHTML(title string, requirement *teamResultRequirement) string {
-	escapedTitle := html.EscapeString(title)
-	actionText := "Use the primary action below to confirm the package changes state."
-	if requirement != nil && len(requirement.AcceptanceCriteria) > 0 {
-		actionText = html.EscapeString("Contract focus: " + strings.Join(requirement.AcceptanceCriteria, "; "))
-	}
-	keyHandler := ""
-	if requirement != nil && requirement.OutputValidation != nil && requirement.OutputValidation.Probe != nil &&
-		(requirement.OutputValidation.Probe.Action.Kind == protocol.OutputValidationActionKeyPress ||
-			requirement.OutputValidation.Probe.Action.Kind == protocol.OutputValidationActionKeyHold) {
-		key := html.EscapeString(requirement.OutputValidation.Probe.Action.Key)
-		keyHandler = `
-window.addEventListener('keydown', (event) => {
-  if (!expectedKey || event.key.toLowerCase() === expectedKey.toLowerCase()) {
-    advance('Key action accepted.');
-  }
-});`
-		if key == "" {
-			key = "any key"
-		}
-		actionText += " Keyboard action: " + key + "."
-	}
-	payload := map[string]any{
-		"runtime_owned": true,
-		"recovered":     true,
-		"purpose":       "approved project package fallback",
-	}
-	payloadJSON, _ := json.Marshal(payload)
-	expectedKey := ""
-	if requirement != nil && requirement.OutputValidation != nil && requirement.OutputValidation.Probe != nil {
-		expectedKey = requirement.OutputValidation.Probe.Action.Key
-	}
-	return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>` + escapedTitle + `</title>
-  <style>
-    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #10151d; color: #eef5ff; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at top left, #1e3b38, #10151d 52%); }
-    main { width: min(760px, calc(100vw - 32px)); border: 1px solid #38535f; border-radius: 18px; padding: 28px; background: rgba(17, 24, 34, .92); box-shadow: 0 24px 70px rgba(0,0,0,.35); }
-    h1 { margin: 0 0 10px; font-size: clamp(1.8rem, 4vw, 3rem); }
-    p { color: #bfd0df; line-height: 1.55; }
-    .surface { margin: 22px 0; padding: 18px; border-radius: 14px; background: #17242c; border: 1px solid #31535b; font-weight: 700; color: #90f0dd; }
-    button { appearance: none; border: 0; border-radius: 999px; padding: 14px 22px; background: #7ee4cf; color: #06231f; font-weight: 800; cursor: pointer; }
-    button + button { margin-left: 10px; background: #263543; color: #dbe8f3; }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>` + escapedTitle + `</h1>
-    <p>` + actionText + `</p>
-    <div class="surface" data-mycelis-validation-surface id="validationSurface">Ready for interaction. Score: 0</div>
-    <button data-mycelis-primary-action id="primaryAction" type="button">Play</button>
-    <button id="resetAction" type="button">Restart</button>
-  </main>
-  <script type="application/json" id="mycelis-package-proof">` + html.EscapeString(string(payloadJSON)) + `</script>
-  <script>
-    const surface = document.querySelector('[data-mycelis-validation-surface]');
-    const primary = document.querySelector('[data-mycelis-primary-action]');
-    const reset = document.getElementById('resetAction');
-    const expectedKey = ` + fmt.Sprintf("%q", expectedKey) + `;
-    let score = 0;
-    function advance(reason) {
-      score += 1;
-      surface.textContent = reason + ' Score: ' + score;
-      surface.dataset.state = 'changed-' + score;
-    }
-    primary.addEventListener('click', () => advance('Primary action completed.'));
-    primary.addEventListener('pointerdown', () => surface.dataset.pointer = 'ready');
-    reset.addEventListener('click', () => {
-      score = 0;
-      surface.textContent = 'Ready for interaction. Score: 0';
-      surface.dataset.state = 'reset';
-    });` + keyHandler + `
-  </script>
-</body>
-</html>
-`
 }

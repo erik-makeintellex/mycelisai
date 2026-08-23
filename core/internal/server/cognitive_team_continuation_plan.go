@@ -73,7 +73,7 @@ func inferTeamEvocationContinuationPlanFromRequest(text string) ([]protocol.Plan
 					"research_council_handoff":     researchPath,
 					"research_team_responsibility": "Prepare domain/stack/options review, unknowns, and specialist recommendations before implementation.",
 					"delivery_team_responsibility": "Use the handoff to produce the retained user-facing output package and proof.",
-					"result_contract":              projectPackageResultContract(teamID, contract),
+					"result_contract":              projectPackageResultContract(teamID, contract, trimmed),
 				},
 			},
 			"expected_outputs":      confirmedActionStringSlice(contract["expected_outputs"]),
@@ -150,7 +150,7 @@ func buildTeamEvocationDeliveryPlan(request, teamID, briefPath string, contract 
 					"research_council_handoff":     researchPath,
 					"research_team_responsibility": "Prepare domain/stack/options review, unknowns, and specialist recommendations before implementation.",
 					"delivery_team_responsibility": "Use the handoff to produce the retained user-facing output package and proof.",
-					"result_contract":              projectPackageResultContract(teamID, contract),
+					"result_contract":              projectPackageResultContract(teamID, contract, request),
 				},
 			},
 			"expected_outputs":      confirmedActionStringSlice(contract["expected_outputs"]),
@@ -269,9 +269,15 @@ func teamEvocationDelegationConstraints() []string {
 	}
 }
 
-func projectPackageResultContract(teamID string, contract map[string]any) map[string]any {
-	packageFolder := "groups/" + strings.Trim(strings.TrimSpace(teamID), "/") + "/generated/package"
-	packageEntrypoint := strings.TrimRight(packageFolder, "/") + "/index.html"
+func projectPackageResultContract(teamID string, contract map[string]any, request string) map[string]any {
+	packageFolder := firstNonEmptyString(
+		extractRequestedPackageFolder(request),
+		"groups/"+strings.Trim(strings.TrimSpace(teamID), "/")+"/generated/package",
+	)
+	packageEntrypoint := firstNonEmptyString(
+		extractRequestedPackageEntrypoint(request),
+		strings.TrimRight(packageFolder, "/")+"/index.html",
+	)
 	result := map[string]any{
 		"kind":                 "project_package",
 		"entrypoint_required":  true,
@@ -288,6 +294,9 @@ func projectPackageResultContract(teamID string, contract map[string]any) map[st
 		"acceptance_criteria":  confirmedActionStringSlice(contract["acceptance_criteria"]),
 		"proof_required":       confirmedActionStringSlice(contract["proof_required"]),
 		"source_material_mode": "internal_sources_hidden_until_requested",
+	}
+	if title := extractRequestedPackageTitle(request); title != "" {
+		result["package_title"] = title
 	}
 	if plan, err := protocol.DecodeOutputValidationPlan(contract["output_validation"]); err == nil {
 		result["output_validation"] = plan

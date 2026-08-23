@@ -32,7 +32,7 @@ func TestProjectPackageResultContractPreservesJSONDecodedValidationPlan(t *testi
 		t.Fatal(err)
 	}
 
-	result := projectPackageResultContract("delivery-team", decoded)
+	result := projectPackageResultContract("delivery-team", decoded, "Build an interactive browser application.")
 	plan, ok := result["output_validation"].(*protocol.OutputValidationPlan)
 	if !ok {
 		t.Fatalf("output_validation = %#v, want decoded typed plan", result["output_validation"])

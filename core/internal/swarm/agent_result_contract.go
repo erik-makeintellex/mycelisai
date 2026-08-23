@@ -19,6 +19,7 @@ const (
 type teamResultRequirement struct {
 	Kind               string
 	TeamID             string
+	PackageTitle       string
 	PackageFolder      string
 	PackageEntrypoint  string
 	FilesRequired      []string
@@ -64,6 +65,7 @@ func teamResultRequirementFromTrigger(data []byte, planningOnly bool) *teamResul
 	requirement := &teamResultRequirement{
 		Kind:               strings.TrimSpace(stringValue(contract["kind"])),
 		TeamID:             strings.TrimSpace(stringValue(contract["team_id"])),
+		PackageTitle:       strings.TrimSpace(stringValue(contract["package_title"])),
 		PackageFolder:      cleanEvidencePath(stringValue(contract["package_folder"])),
 		PackageEntrypoint:  cleanEvidencePath(stringValue(contract["package_entrypoint"])),
 		FilesRequired:      stringSlice(contract["files_required"]),

@@ -97,6 +97,35 @@ func TestBuildPlannedToolCalls_OutcomeLanguageCreatesDeliveryTeam(t *testing.T) 
 	}
 }
 
+func TestBuildPlannedToolCalls_UsesRequestedPackageTargetAndTitle(t *testing.T) {
+	request := strings.Join([]string{
+		"Create a team with team_id qa-game-team named QA Game Team.",
+		"Have that team build a playable browser game project package.",
+		"Retain it at groups/qa-game-team/generated/first-game with entrypoint groups/qa-game-team/generated/first-game/index.html.",
+		"Use the package title QA Game Team First Playable.",
+		"After approval, return a retained project_package output with entrypoint, folder, files, validation, and proof.",
+	}, " ")
+
+	calls := plannedCallsFromWrongBlueprint(request, []string{"generate_blueprint", "delegate"})
+	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
+
+	ask := mapArgument(calls[3].Arguments["ask"])
+	context := mapArgument(ask["context"])
+	resultContract := mapArgument(context["result_contract"])
+	if resultContract["package_folder"] != "groups/qa-game-team/generated/first-game" {
+		t.Fatalf("package_folder = %#v", resultContract["package_folder"])
+	}
+	if resultContract["package_entrypoint"] != "groups/qa-game-team/generated/first-game/index.html" {
+		t.Fatalf("package_entrypoint = %#v", resultContract["package_entrypoint"])
+	}
+	if resultContract["package_title"] != "QA Game Team First Playable" {
+		t.Fatalf("package_title = %#v", resultContract["package_title"])
+	}
+	if target := firstPlannedOutputTarget(calls); target != "groups/qa-game-team/generated/first-game/index.html" {
+		t.Fatalf("proposal target = %q, want requested entrypoint", target)
+	}
+}
+
 func TestDeliveryTeamInferenceLeavesExplicitSingleFileAskDirect(t *testing.T) {
 	request := "Create a Python script at workspace/generated/check.py that prints the current status."
 	if requestRequiresDeliveryTeam(strings.ToLower(request)) {

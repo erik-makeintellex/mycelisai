@@ -85,6 +85,11 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 	loop := a.runToolLoop(input, priorHistory, &req, resp, profile, planningOnly, requirement)
 	loop.artifacts = reconcileToolBackedArtifacts(loop.artifacts, loop.toolEvidence, input)
 	loop.artifacts = dedupeAgentArtifacts(loop.artifacts)
+	if len(resultContractIssues(requirement, loop.artifacts, loop.toolEvidence)) > 0 &&
+		a.completeProjectPackageRuntimeFallback(input, requirement, &loop, planningOnly) {
+		loop.artifacts = reconcileToolBackedArtifacts(loop.artifacts, loop.toolEvidence, input)
+		loop.artifacts = dedupeAgentArtifacts(loop.artifacts)
+	}
 	responseText := stripToolCallJSON(loop.responseText)
 	if strings.TrimSpace(responseText) == "" && len(loop.plannedCalls) > 0 {
 		responseText = "Soma prepared the requested governed action for approval."

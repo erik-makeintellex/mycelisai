@@ -23,6 +23,9 @@ func resultContractExecutionPrompt(requirement *teamResultRequirement) string {
 		if target := resultContractDefaultEntrypoint(requirement); target != "" {
 			prompt += " Write the first user-facing entrypoint to " + target + "."
 		}
+		if title := strings.TrimSpace(requirement.PackageTitle); title != "" {
+			prompt += " Use package_title=" + title + " for the retained package metadata and HTML title."
+		}
 		if folder := resultContractDefaultFolder(requirement); folder != "" {
 			prompt += " Keep the retained package inside " + folder + " and include package_kind=project_package, package_folder, package_entrypoint, and package_files with index.html, README.md, PROOF.md, and project-package.json on the entrypoint write."
 		}
