@@ -4,6 +4,7 @@
 - [Current Validation Contract](#current-validation-contract)
 - [Cross-Device Certification Matrix](#cross-device-certification-matrix)
 - [Thorough Release Testing Contract](#thorough-release-testing-contract)
+- [Clean First-Boot Proof](#clean-first-boot-proof)
 - [User Interaction Delivery Gate](#user-interaction-delivery-gate)
 - [Finalization Concretization Gate](#finalization-concretization-gate)
 - [Full GUI Coverage Matrix](#full-gui-coverage-matrix)
@@ -55,6 +56,24 @@ Promotion test order:
    - or, when Compose is already up and should stay running, `uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=<focused-live-spec>`
 5. Broader headed Chromium MVP certification after the clean release lane:
    - run the critical GUI matrix described in [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md) sequentially
+
+## Clean First-Boot Proof
+Use this gate whenever deployment, startup, persistence, storage roots, migrations, fixture cleanup, or bootstrap behavior changes. The proof must show Mycelis can start from empty product state and does not rely on leftovers from prior development runs.
+
+```bash
+uv run inv compose.infra-up
+uv run inv db.reset
+uv run inv lifecycle.up --frontend
+uv run inv lifecycle.health
+```
+
+Acceptance:
+- PostgreSQL/pgvector, NATS/JetStream, and generated workspace folders start without user history.
+- Before the first ask, Groups, Runs, Outcomes, deliverables, conversations, recovery items, continuity vectors, generated packages, and user-created teams are empty.
+- Startup may recreate only idempotent bootstrap support such as schema, exchange registries, capability manifests, configured MCP/search/input definitions, built-in runtime identity, provider defaults, and required directories.
+- A Core restart after first boot must not duplicate bootstrap rows or create user work.
+- The first Soma-created Outcome must create its folders, retained output refs, proof/recovery records, and open-file/open-folder links from configuration plus approved execution only.
+- Missing prerequisites must render guided setup or recovery states, not raw backend errors or silent empty results.
 
 ## User Interaction Delivery Gate
 Do not claim thorough release readiness from unit, type, or headless-only proof when the slice changes what the operator sees or approves.

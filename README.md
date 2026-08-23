@@ -84,6 +84,7 @@ The compatibility baseline is now inside the canonical PRD. Older versioned arch
 Use `.state/V8_DEV_STATE.md` for the active scoreboard. Its active snapshot and immediate next actions are the current execution truth; older dated boards remain historical evidence only through Git history unless explicitly copied into the active snapshot.
 
 Current configuration delivery boundary:
+- `ACTIVE` clean deployment and first boot is now a release gate. A clean deployment may start with empty PostgreSQL/pgvector tables, empty generated workspace folders, and empty NATS/JetStream state; Core must recreate only idempotent bootstrap/runtime support from code/config/secrets while Groups, Runs, Outcomes, deliverables, conversations, vectors, and user-created teams remain empty until the first operator ask.
 - `COMPLETE` P0.3a provides shared `ConfigDocument` validation, preview, immutable revision, activation, rollback, and the first Outcome Template compiler. Soma-authored configuration and direct YAML/JSON pass through the same governed pipeline. Authenticated visible browser proof covers read-only preview plus retained save, approval, activation, reload, exact version/digest application, and scoped cleanup in one conversational journey.
 - `ACTIVE` generated-output reliability is the current practical release gate. Manual use exposed that app/game requests can still degrade into planning-only teams, loose general-bucket scripts, missing parent folders, unclear run pages, or completion states without a usable artifact. The next proof must start clean and show Soma creating a bounded delivery team, producing an isolated `groups/<team-id>/generated/...` package, validating it, reporting completion in chat, and returning direct open/reply/recover actions.
 - `IN_REVIEW` P0.9 provides progress-aware package correction, exact latest-entrypoint readback, local dependency closure, browser interaction validation, retained proof, and direct embedded opening as the target contract. It remains accepted only after the clean-slate generated-output journey passes manual novice review and live GUI proof.
@@ -188,6 +189,17 @@ uv run inv compose.health
 uv run inv ci.baseline
 uv run inv api.delivery-proof
 ```
+
+Clean first-boot proof starts from schema/config, not historical runtime data:
+
+```bash
+uv run inv compose.infra-up
+uv run inv db.reset
+uv run inv lifecycle.up --frontend
+uv run inv lifecycle.health
+```
+
+After the candidate starts, Groups and Runs should be empty, generated workspace folders should contain no old user work, and any rows that appear before the first ask must be explainable bootstrap support such as registries, built-in runtime identity, MCP defaults, nodes, or capability manifests.
 
 Compose launch and readiness use the same configurable host ports from `.env.compose`: `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`. The repository default publishes PostgreSQL on `15432`; local Core uses `DB_HOST=127.0.0.1`, `DB_PORT=15432`, and `DB_SSLMODE=disable` by default for the Dockerized local data plane, while Compose Core uses the container address `postgres:5432`.
 

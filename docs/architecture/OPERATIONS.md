@@ -78,7 +78,7 @@ uv run inv db.reset
 uv run inv db.status
 ```
 
-`db.migrate` is forward-bootstrap aware: compatible schemas are not replayed as a cleanup mechanism, and compatibility includes capability manifests, execution/proof artifacts, team-work lifecycle, collaboration-group workspaces, OutcomeProject/TeamRegistry ownership, search sources, Worker Profiles, exact runtime-team manifests, dispatch outbox, operator SSE ledger, durable team command/result receipts, and QA fixture ownership. Known late slices are checked individually and their targeted migrations run when only that contract is missing. Fixture migration checks fail closed on query errors; hardening releases terminal claims and deterministically resolves pre-index duplicates before adding its global ownership index. Use `db.reset` for an intentional fresh rebuild. Use `db.clear-runtime-context` before fresh Soma/team GUI proof when stale conversations, team work, run/proof handshakes, or temp memory would influence the experience; it dry-runs by default and requires `--yes` to delete rows. Owner-scoped retained-fixture cleanup is separately exposed through the opt-in test API, rejects pre-existing team/runtime/workspace state, commits actual created-team and workspace ownership independently of the outer execution transaction, fences creation and purge with the same PostgreSQL advisory lock, resumes interrupted purges, releases active resource leases after successful purge, and never deletes shared NATS storage.
+`db.migrate` is forward-bootstrap aware: compatible schemas are not replayed as a cleanup mechanism, and compatibility includes capability manifests, execution/proof artifacts, team-work lifecycle, collaboration-group workspaces, OutcomeProject/TeamRegistry ownership, search sources, Worker Profiles, exact runtime-team manifests, dispatch outbox, operator SSE ledger, durable team command/result receipts, and QA fixture ownership. Known late slices are checked individually and their targeted migrations run when only that contract is missing. Fixture migration checks fail closed on query errors; hardening releases terminal claims and deterministically resolves pre-index duplicates before adding its global ownership index. Use `db.reset` for an intentional fresh rebuild. Clean-deployment proof then starts the candidate and verifies first boot from code/config/secrets, not historical rows: Groups, Runs, Outcomes, deliverables, conversations, vectors, generated files, and user-created teams must remain empty until the first operator ask, while idempotent bootstrap support such as exchange registries, capability manifests, configured MCP defaults, nodes, and built-in runtime identities may be recreated and must not duplicate across restart. Use `db.clear-runtime-context` before fresh Soma/team GUI proof when stale conversations, team work, run/proof handshakes, or temp memory would influence the experience; it dry-runs by default and requires `--yes` to delete rows. Owner-scoped retained-fixture cleanup is separately exposed through the opt-in test API, rejects pre-existing team/runtime/workspace state, commits actual created-team and workspace ownership independently of the outer execution transaction, fences creation and purge with the same PostgreSQL advisory lock, resumes interrupted purges, releases active resource leases after successful purge, and never deletes shared NATS storage.
 
 ### Auth Tasks (`ops/auth.py`)
 
@@ -243,6 +243,17 @@ Use [Testing](../TESTING.md) for gate details. Operational summary:
 - visible live-window proof: `wsl.validate --lane=release --headed-browser` or focused `interface.e2e --headed --live-backend`
 
 Runtime checks must start clean, verify readiness, run proof once services are healthy, and shut down unless a follow-on check needs them.
+
+Clean first-boot release proof must exercise the normal data-plane path and the normal app startup path:
+
+```bash
+uv run inv compose.infra-up
+uv run inv db.reset
+uv run inv lifecycle.up --frontend
+uv run inv lifecycle.health
+```
+
+Then verify the product state, not only the ports: Groups and Runs are empty, generated workspace folders contain no old user work, NATS has no stale user-work streams/messages, and any rows created by startup are classified bootstrap support rather than user history. The next gate is one Soma-created Outcome from ask to approved execution, isolated deliverable, validation, direct open/reply/recover actions, and scoped cleanup.
 
 ## VI. CI/CD
 
