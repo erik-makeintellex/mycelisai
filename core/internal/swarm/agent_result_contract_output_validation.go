@@ -11,6 +11,7 @@ import (
 
 var (
 	outputValidationAttributeSelector       = regexp.MustCompile(`^\[([a-zA-Z_:][a-zA-Z0-9_:.-]*)\]$`)
+	outputValidationDrawingEffectPattern    = regexp.MustCompile(`(?is)\b(?:fillRect|clearRect|strokeRect|drawImage|fillText|strokeText|putImageData|arc|lineTo|moveTo|bezierCurveTo|quadraticCurveTo)\s*\(`)
 	resultContractInteractiveHandlerPattern = regexp.MustCompile(`(?i)(?:addEventListener\s*\(\s*["'](?:click|pointerdown|touchstart|keydown|keyup)|on(?:click|pointerdown|touchstart|keydown)\s*=)`)
 	resultContractInteractiveEffectPattern  = regexp.MustCompile(`(?is)(?:\.(?:textContent|innerText|innerHTML|value|checked|disabled|hidden|className)\s*=|\.classList\.(?:add|remove|toggle|replace)\s*\(|\.style\.[A-Za-z][A-Za-z0-9-]*\s*=|\.dataset\.[A-Za-z_$][A-Za-z0-9_$]*\s*=|\.setAttribute\s*\(|\.(?:appendChild|append|prepend|remove|replaceChildren|insertAdjacentHTML)\s*\(|\b(?:requestAnimationFrame|setTimeout|setInterval)\s*\(|\b(?:fillRect|clearRect|strokeRect|drawImage|fillText|strokeText|putImageData|arc|lineTo|moveTo|bezierCurveTo|quadraticCurveTo)\s*\(|\.(?:play|pause)\s*\(|\b(?:localStorage|sessionStorage)\.setItem\s*\()`)
 	resultContractVisibleControlPattern     = regexp.MustCompile(`(?i)\b(?:click|tap|press|use|move|drag|select|arrow|space|wasd|control|start|restart|run|play|submit|save|reset|open|add|next)\b`)
@@ -120,6 +121,17 @@ func outputValidationTextChangeIssues(plan *protocol.OutputValidationPlan, conte
 	return []string{"entrypoint readback does not mutate approved text-change observation target " + target}
 }
 
+func outputValidationVisualChangeIssues(plan *protocol.OutputValidationPlan, content string) []string {
+	if plan == nil || plan.Probe == nil || plan.Probe.Observe.Kind != protocol.OutputValidationObserveVisualChange {
+		return nil
+	}
+	target := strings.TrimSpace(plan.Probe.Observe.Target)
+	if target == "" || outputValidationVisualChangeTargetMutated(content, target) {
+		return nil
+	}
+	return []string{"entrypoint readback does not mutate approved visual-change observation target " + target}
+}
+
 func outputValidationTextChangeTargetMutated(content, target string) bool {
 	script := outputValidationJavaScript(content)
 	targets := []string{target}
@@ -147,6 +159,22 @@ func outputValidationTextChangeTargetMutated(content, target string) bool {
 			if regexp.MustCompile(`(?m)\b` + regexp.QuoteMeta(match[1]) + `\s*\.\s*` + textChangeMutationProperty + `\s*=`).MatchString(script) {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func outputValidationVisualChangeTargetMutated(content, target string) bool {
+	if outputValidationCanvasTargetRendered(content, target) {
+		return true
+	}
+	script := outputValidationJavaScript(content)
+	targets := []string{target}
+	targets = append(targets, outputValidationTargetElementIDs(content, target)...)
+	for _, candidate := range targets {
+		if outputValidationTargetHasDirectMutation(script, candidate, `(?:textContent|innerText|innerHTML|className|value|hidden|disabled)`) ||
+			outputValidationTargetHasMethodMutation(script, candidate) {
+			return true
 		}
 	}
 	return false
@@ -203,6 +231,9 @@ func outputValidationCorrectionInstruction(plan *protocol.OutputValidationPlan, 
 	joined := strings.Join(issues, " ")
 	if strings.Contains(joined, "defined but never started") {
 		return " Start the retained animation or render loop explicitly after defining it (for example by invoking the loop once), then read the entrypoint back."
+	}
+	if strings.Contains(joined, "visual-change observation target") {
+		return " Overwrite the entrypoint so the approved visual observation marker is on the surface that actually changes, such as the canvas, or mutate that marked surface visibly during the approved action; then read the entrypoint back."
 	}
 	if strings.Contains(joined, "text-change observation target") {
 		return " Overwrite the entrypoint so the primary action handler updates the approved observation surface's textContent, innerText, innerHTML, or value, then read the entrypoint back."

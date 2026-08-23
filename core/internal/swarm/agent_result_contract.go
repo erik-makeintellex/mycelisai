@@ -134,6 +134,7 @@ func resultContractEntrypointNeedsRepair(requirement *teamResultRequirement, art
 		return true
 	}
 	return len(outputValidationTargetIssues(requirement.OutputValidation, content)) > 0 ||
+		len(outputValidationVisualChangeIssues(requirement.OutputValidation, content)) > 0 ||
 		len(outputValidationAnimationLoopIssues(requirement.OutputValidation, content)) > 0
 }
 
@@ -286,6 +287,7 @@ func resultContractIssues(requirement *teamResultRequirement, artifacts []protoc
 		}
 		issues = append(issues, outputValidationTargetIssues(requirement.OutputValidation, content)...)
 		issues = append(issues, outputValidationTextChangeIssues(requirement.OutputValidation, content)...)
+		issues = append(issues, outputValidationVisualChangeIssues(requirement.OutputValidation, content)...)
 		issues = append(issues, outputValidationAnimationLoopIssues(requirement.OutputValidation, content)...)
 	}
 	return uniqueResultContractStrings(issues)
