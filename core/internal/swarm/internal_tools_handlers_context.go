@@ -40,7 +40,7 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamIn
 	sb.WriteString("6. If the interaction reveals a durable lesson, inferred pattern, contradiction, user-trajectory shift, or meta-observation -> publish a managed exchange `LearningCandidate` to `organization.learning.candidates`; include `classification`, `memory_layer=REFLECTION_MEMORY`, `confidence`, `review_required`, `tags`, `continuity_key`, and `created_at`. Do not write it directly to memory.\n")
 	sb.WriteString("7. Check if specialist knowledge is needed -> `consult_council`\n")
 	sb.WriteString("8. Check if actionable work should be delegated -> `delegate_task`\n")
-	sb.WriteString("9. For software/dev tasks, prefer quick ephemeral code execution and bounded validation (`local_command`) before introducing new MCP dependencies\n")
+	sb.WriteString("9. For software/dev tasks, use `code_context.query`, `code_context.impact`, or `code_context.explain` when registered code sources can ground orientation or impact review; verify source files before edits, then prefer quick ephemeral code execution and bounded validation (`local_command`) before introducing new MCP dependencies\n")
 	sb.WriteString("10. For web access tasks, default to coder-owned ephemeral web code first; use adaptive engine/query strategy\n")
 	sb.WriteString("11. Check if installed MCP tools can fulfill remaining external integration requirements or provide easier execution\n")
 	sb.WriteString("12. MCP Translation Procedure: map user intent -> operation/target/constraints/output, pick the narrowest installed MCP tool, then execute with minimal valid arguments\n")

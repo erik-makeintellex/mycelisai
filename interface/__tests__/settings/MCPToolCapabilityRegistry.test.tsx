@@ -21,6 +21,13 @@ describe("CapabilityRegistryPanel", () => {
                         source: "mcp",
                         bound_server_name: "filesystem",
                     },
+                    {
+                        ...webResearchCapability,
+                        id: "code_context:query",
+                        name: "Code context query",
+                        source: "code_context",
+                        category: "source_context",
+                    },
                 ]}
                 error={null}
                 isLoading={false}
@@ -32,13 +39,19 @@ describe("CapabilityRegistryPanel", () => {
         expect(screen.getByTestId("capability-catalog-list").className).toContain("overflow-y-auto");
         expect(screen.getAllByText("Host / CLI").length).toBeGreaterThan(0);
         expect(screen.getByText("MCP · filesystem")).toBeDefined();
+        expect(screen.getByText("Code context query")).toBeDefined();
 
         fireEvent.click(within(filters).getByRole("button", { name: /Host \/ CLI.*1/i }));
         expect(screen.getByText("Host command: hostname")).toBeDefined();
         expect(screen.queryByText("Read file")).toBeNull();
+        expect(screen.queryByText("Code context query")).toBeNull();
 
         fireEvent.click(within(filters).getByRole("button", { name: /^MCP.*1/i }));
         expect(screen.getByText("Read file")).toBeDefined();
         expect(screen.queryByText("Host command: hostname")).toBeNull();
+
+        fireEvent.click(within(filters).getByRole("button", { name: /Built-in runtime.*1/i }));
+        expect(screen.getByText("Code context query")).toBeDefined();
+        expect(screen.queryByText("Read file")).toBeNull();
     });
 });

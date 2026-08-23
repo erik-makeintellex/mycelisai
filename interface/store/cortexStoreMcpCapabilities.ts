@@ -62,7 +62,61 @@ function normalizeSearchSource(value: unknown): SearchCapabilitySource | null {
         trust_class: stringField(raw.trust_class) ?? 'unknown',
         status: stringField(raw.status) ?? stringField(raw.availability_status) ?? 'available',
         recovery: stringField(raw.recovery),
+        code_context: normalizeCodeContextSource(raw),
     };
+}
+
+function normalizeCodeContextSource(raw: Record<string, unknown>): SearchCapabilitySource['code_context'] {
+    const sourceType = stringField(raw.source_type) ?? stringField(raw.type);
+    const provider = stringField(raw.provider);
+    const nested = objectField(raw.code_context)
+        ?? objectField(raw.codeContext)
+        ?? objectField(raw.index)
+        ?? {};
+    const snapshot = objectField(nested.snapshot) ?? {};
+    const index = objectField(nested.index) ?? {};
+    const isCodeContext = sourceType === 'code_context' || provider === 'code_context' || Object.keys(nested).length > 0;
+    if (!isCodeContext) return undefined;
+
+    return pruneEmptyObject({
+        scope: stringField(raw.code_scope)
+            ?? stringField(raw.repository_scope)
+            ?? stringField(nested.scope),
+        snapshot_status: stringField(raw.snapshot_status)
+            ?? stringField(nested.snapshot_status)
+            ?? stringField(snapshot.status),
+        last_snapshot_at: stringField(raw.last_snapshot_at)
+            ?? stringField(raw.snapshot_at)
+            ?? stringField(nested.last_snapshot_at)
+            ?? stringField(snapshot.last_snapshot_at)
+            ?? stringField(snapshot.updated_at),
+        snapshot_ref: stringField(raw.snapshot_ref)
+            ?? stringField(nested.snapshot_ref)
+            ?? stringField(snapshot.ref)
+            ?? stringField(snapshot.id),
+        snapshot_digest: stringField(raw.snapshot_digest)
+            ?? stringField(nested.snapshot_digest)
+            ?? stringField(snapshot.digest),
+        index_status: stringField(raw.index_status)
+            ?? stringField(nested.index_status)
+            ?? stringField(index.status),
+        last_indexed_at: stringField(raw.last_indexed_at)
+            ?? stringField(raw.indexed_at)
+            ?? stringField(nested.last_indexed_at)
+            ?? stringField(index.last_indexed_at)
+            ?? stringField(index.updated_at),
+        index_ref: stringField(raw.index_ref)
+            ?? stringField(nested.index_ref)
+            ?? stringField(index.ref)
+            ?? stringField(index.id),
+        index_digest: stringField(raw.index_digest)
+            ?? stringField(nested.index_digest)
+            ?? stringField(index.digest),
+        refresh_action: stringField(raw.refresh_action)
+            ?? stringField(nested.refresh_action),
+        repair_action: stringField(raw.repair_action)
+            ?? stringField(nested.repair_action),
+    });
 }
 
 function isCapabilityManifest(value: unknown): value is CapabilityManifest {
@@ -131,6 +185,16 @@ function stringField(value: unknown): string | undefined {
 
 function booleanField(value: unknown): boolean | undefined {
     return typeof value === 'boolean' ? value : undefined;
+}
+
+function objectField(value: unknown): Record<string, unknown> | undefined {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? value as Record<string, unknown>
+        : undefined;
+}
+
+function pruneEmptyObject<T extends Record<string, unknown>>(value: T): T | undefined {
+    return Object.values(value).some((item) => item !== undefined) ? value : undefined;
 }
 
 function stringArrayField(value: unknown): string[] | undefined {

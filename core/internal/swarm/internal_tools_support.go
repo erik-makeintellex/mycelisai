@@ -243,7 +243,8 @@ func isDirectRuntimeToolCapability(capability string) bool {
 	switch strings.TrimSpace(capability) {
 	case "write_file", "read_file", "store_artifact", "local_command",
 		"generate_image", "save_cached_image", "research_for_blueprint",
-		"consult_council", "web_search":
+		"consult_council", "web_search", "code_context.query",
+		"code_context.impact", "code_context.explain":
 		return true
 	default:
 		return false

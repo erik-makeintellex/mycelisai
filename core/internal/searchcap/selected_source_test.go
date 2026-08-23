@@ -194,6 +194,42 @@ func TestServiceSelectedMountedFolderSearchesLiveFiles(t *testing.T) {
 	}
 }
 
+func TestServiceSelectedCodeContextSearchesRepositoryFiles(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "engine.go"), []byte("package engine\n\nfunc BuildOutcomeMap() {}\n"), 0o600); err != nil {
+		t.Fatalf("write code file: %v", err)
+	}
+	svc := NewService(Config{Provider: ProviderDisabled, MaxResults: 5}, nil, nil)
+	source := seedManagedSource(t, svc, SourceInput{
+		Name:       "Runtime repository map",
+		Provider:   ProviderCodeContext,
+		SourceType: ProviderCodeContext,
+		Endpoint:   root,
+		Boundary:   "operator-approved repository",
+		Status:     "available",
+	})
+
+	resp, err := svc.Search(context.Background(), Request{Query: "BuildOutcomeMap", SourceID: source.ID})
+	if err != nil {
+		t.Fatalf("Search code context: %v", err)
+	}
+	if resp.Status != "ok" || resp.Count != 1 {
+		t.Fatalf("resp = %+v", resp)
+	}
+	if resp.Provider != ProviderCodeContext {
+		t.Fatalf("provider = %q", resp.Provider)
+	}
+	if resp.Results[0].SourceKind != ProviderCodeContext || resp.Results[0].Title != "engine.go" {
+		t.Fatalf("code context result = %+v", resp.Results[0])
+	}
+	if resp.Results[0].ProviderMetadata["source_type"] != ProviderCodeContext {
+		t.Fatalf("metadata = %+v", resp.Results[0].ProviderMetadata)
+	}
+	if resp.Metadata["interpretation"] != "code_context_results_are_operator_configured_repository_or_code_folder_refs" {
+		t.Fatalf("interpretation = %+v", resp.Metadata)
+	}
+}
+
 func TestServiceLocalSourcesIncludesAvailableMountedFolders(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "research.txt"), []byte("Mounted data search should be live to Soma."), 0o600); err != nil {

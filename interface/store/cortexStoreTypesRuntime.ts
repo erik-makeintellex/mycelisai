@@ -253,6 +253,21 @@ export interface SearchCapabilitySource {
     trust_class: string;
     status: string;
     recovery?: string;
+    code_context?: CodeContextSourceStatus;
+}
+
+export interface CodeContextSourceStatus {
+    scope?: string;
+    snapshot_status?: string;
+    last_snapshot_at?: string;
+    snapshot_ref?: string;
+    snapshot_digest?: string;
+    index_status?: string;
+    last_indexed_at?: string;
+    index_ref?: string;
+    index_digest?: string;
+    refresh_action?: string;
+    repair_action?: string;
 }
 
 export interface SearchCapabilityStatus {

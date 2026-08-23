@@ -154,6 +154,42 @@ func TestValidateConfigDocumentDoesNotTreatOrdinaryRefsAsSecrets(t *testing.T) {
 	}
 }
 
+func TestValidateConfigDocumentAcceptsCodeContextSource(t *testing.T) {
+	document := validConfigDocument()
+	document.Kind = ConfigDocumentKindCodeContextSource
+	document.Metadata.ID = "code-context-source"
+	document.Metadata.Name = "Code source"
+	document.Spec = json.RawMessage(`{
+		"source_id":"mycelis-core",
+		"source_type":"repository",
+		"root_path":"core",
+		"include_globs":["**/*.go"],
+		"languages":["go"],
+		"extraction_version":"code-context-fixture-v1"
+	}`)
+
+	if issues := ValidateConfigDocument(document); len(issues) != 0 {
+		t.Fatalf("ValidateConfigDocument() issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCodeContextSourceFailsClosed(t *testing.T) {
+	document := validConfigDocument()
+	document.Kind = ConfigDocumentKindCodeContextSource
+	document.Spec = json.RawMessage(`{"source_id":"Bad Source","source_type":"graphify","root_path":"../outside"}`)
+
+	issues := ValidateConfigDocument(document)
+	for _, code := range []string{
+		"spec.code_context.invalid_source_id",
+		"spec.code_context.unsupported_source_type",
+		"spec.code_context.invalid_root_path",
+	} {
+		if !hasConfigDocumentIssue(issues, code) {
+			t.Fatalf("ValidateConfigDocument() issues = %+v, want %s", issues, code)
+		}
+	}
+}
+
 func TestCanonicalConfigDocumentDigestIgnoresSpecObjectKeyOrder(t *testing.T) {
 	first := validConfigDocument()
 	first.Spec = json.RawMessage(`{"z":3,"nested":{"b":2,"a":1},"items":[{"y":2,"x":1}]}`)
