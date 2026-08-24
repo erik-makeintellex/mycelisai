@@ -167,5 +167,5 @@ Before accepting an auth-mode change:
 5. A user cannot access an organization without internal Mycelis membership.
 6. Approval authority follows internal role, not external group alone.
 7. Access-denied recovery points to Settings, System Status, and owner/admin action.
-8. `/login` explains the enabled path clearly: local owner login for self-hosted nodes, Google Workspace SSO only when configured, and allowed-domain guidance when domain restrictions are active.
+8. `/login` explains the enabled path clearly: local owner login for self-hosted nodes, a provider-neutral not-configured state when enterprise SSO is unavailable, the configured provider action when an adapter is enabled, and allowed-domain guidance only when restrictions are active.
 9. After login, `/dashboard` opens directly into Soma; Settings and System surfaces expose role, provider, and scope when the operator needs to inspect identity.

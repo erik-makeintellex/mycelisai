@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                     <div>
                         <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">Sign in to operate Mycelis.</h1>
                         <p className="mt-4 max-w-xl text-lg leading-8 text-cortex-text-muted">
-                            Sign in, then start with Soma. Local owner access keeps self-hosted nodes recoverable, and configured Google Workspace SSO lets approved workspace accounts enter the same governed Soma workflow.
+                            Sign in, then start with Soma. Local owner access keeps self-hosted nodes recoverable, and configured enterprise SSO lets approved accounts enter the same governed Soma workflow.
                         </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -96,8 +96,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                         </div>
                     ) : (
                         <p className="rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm leading-6 text-cortex-text-muted">
-                            Google Workspace login appears after `MYCELIS_AUTH_GOOGLE_CLIENT_ID`, `MYCELIS_AUTH_GOOGLE_CLIENT_SECRET`, and `MYCELIS_AUTH_GOOGLE_REDIRECT_URI` are configured.
-                            Personal Gmail accounts are rejected when Workspace SSO is enabled for this deployment.
+                            Enterprise SSO is not configured for this deployment.
                         </p>
                     )}
                 </section>
