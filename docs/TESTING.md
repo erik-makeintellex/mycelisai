@@ -226,7 +226,7 @@ Run:
 uv run inv interface.e2e
 ```
 
-Use `--server-mode=start` for production-start proof and `--live-backend` when the spec must hit a real Core backend. Invoke manages server lifecycle, browser cache, serial workers, and cleanup.
+Use `--server-mode=start` for production-start proof and `--live-backend` when the spec must hit a real Core backend. Invoke manages server lifecycle, serial workers, and cleanup. Playwright browser binaries live under the managed project cache and receive a disk-derived quota; Interface install and E2E fail before browser downloads or execution when the filesystem reserve, aggregate cache budget, or Playwright share is exceeded. Review `uv run inv cache.status`, then use `uv run inv cache.clean` when disposable repo caches must be reclaimed.
 
 ## Tier 4: Integration Tests
 

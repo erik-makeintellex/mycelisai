@@ -186,6 +186,51 @@ def managed_cache_paths(root: Path | None = None) -> dict[str, Path]:
     }
 
 
+def _cache_float(name: str, default: float) -> float:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise SystemExit(f"Invalid {name}={raw!r}; expected a positive GiB value.") from exc
+    if value <= 0:
+        raise SystemExit(f"Invalid {name}={raw!r}; expected a positive GiB value.")
+    return value
+
+
+def managed_cache_policy(root: Path | None = None) -> dict[str, float]:
+    """Derive bounded cache budgets from the cache volume's current capacity."""
+    cache_root = Path(root or PROJECT_CACHE_ROOT)
+    usage_path = cache_root
+    while not usage_path.exists() and usage_path.parent != usage_path:
+        usage_path = usage_path.parent
+    usage = shutil.disk_usage(usage_path)
+    gib = float(1024 ** 3)
+    total_gb = usage.total / gib
+    free_gb = usage.free / gib
+    reserve_gb = _cache_float(
+        "MYCELIS_CACHE_MIN_FREE_GB",
+        max(8.0, min(64.0, total_gb * 0.05)),
+    )
+    available_for_cache_gb = max(1.0, free_gb - reserve_gb)
+    cache_max_gb = _cache_float(
+        "MYCELIS_CACHE_MAX_GB",
+        min(64.0, max(4.0, available_for_cache_gb * 0.25)),
+    )
+    playwright_max_gb = _cache_float(
+        "MYCELIS_PLAYWRIGHT_CACHE_MAX_GB",
+        min(12.0, max(2.0, cache_max_gb * 0.25)),
+    )
+    return {
+        "total_gb": total_gb,
+        "free_gb": free_gb,
+        "reserve_gb": reserve_gb,
+        "cache_max_gb": cache_max_gb,
+        "playwright_max_gb": min(playwright_max_gb, cache_max_gb),
+    }
+
+
 def ensure_managed_cache_dirs(root: Path | None = None) -> dict[str, Path]:
     paths = managed_cache_paths(root=root)
     for path in paths.values():
@@ -198,6 +243,7 @@ def managed_cache_env(
     root: Path | None = None,
 ) -> dict[str, str]:
     paths = managed_cache_paths(root=root)
+    policy = managed_cache_policy(root=paths["root"])
     env = {
         "MYCELIS_PROJECT_CACHE_ROOT": str(paths["root"]),
         "UV_CACHE_DIR": str(paths["uv"]),
@@ -207,6 +253,9 @@ def managed_cache_env(
         "GOCACHE": str(paths["go_build"]),
         "GOMODCACHE": str(paths["go_mod"]),
         "PLAYWRIGHT_BROWSERS_PATH": str(paths["playwright"]),
+        "MYCELIS_CACHE_MIN_FREE_GB": f'{policy["reserve_gb"]:.2f}',
+        "MYCELIS_CACHE_MAX_GB": f'{policy["cache_max_gb"]:.2f}',
+        "MYCELIS_PLAYWRIGHT_CACHE_MAX_GB": f'{policy["playwright_max_gb"]:.2f}',
         "NEXT_TELEMETRY_DISABLED": "1",
         "PYTHONPYCACHEPREFIX": str(paths["pycache"]),
         "PYTHONIOENCODING": "utf-8",

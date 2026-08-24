@@ -96,7 +96,7 @@ uv run inv cache.guard
 uv run inv cache.clean
 ```
 
-`cache.guard` checks both the repository volume and the user-profile/system volume by default, because package caches and local tool state can exhaust the system drive even when the workspace drive has room. `cache.clean` remains limited to repo-owned caches; it reports Docker or unrelated user data separately and does not delete Docker volumes or user files.
+`cache.guard` checks the repository, managed-cache, user-profile/system, and locally visible Docker-storage volumes because one can exhaust independently of the others. The default adaptive policy reserves 5% of the cache filesystem (bounded to 8-64 GiB), caps aggregate managed caches at 25% of currently available space above that reserve (maximum 64 GiB), and caps Playwright at 25% of that managed budget (maximum 12 GiB). Override those GiB decisions with `MYCELIS_CACHE_MIN_FREE_GB`, `MYCELIS_CACHE_MAX_GB`, and `MYCELIS_PLAYWRIGHT_CACHE_MAX_GB`. Heavy tasks fail closed with current usage and recovery guidance. `cache.clean` remains limited to repo-owned caches; it does not delete Docker volumes or unrelated user files.
 
 ### Lifecycle Tasks (`ops/lifecycle.py`)
 
