@@ -90,7 +90,54 @@ This repository is Go-first for product/runtime work and Python-first for manage
 
 - `.env` is the repo-local secret store across runtime paths. Use secret references in committed config and never store raw secrets in UI, logs, state files, or architecture docs.
 - `.env.compose` is for Compose topology and non-secret runtime shape; secret-like values from `.env` are authoritative over stale Compose values.
-- Windows is the source-edit and git surface. WSL is the release-proof environment for install, build, tests, Compose, and live GUI validation.
+- Mycelis development is platform-aware but platform-agnostic. Do not assume Windows, WSL, Linux, Docker Desktop, Rancher Desktop, or Kubernetes is the active runtime just because a prior session used it. Discover the current host, checkout location, configured Docker owner, service endpoints, and proof lane before starting or judging services.
+- Prefer the configured service targets over host folklore. Read process env plus `.env`, `.env.compose`, task defaults, Compose/Helm values, and the active proof command before choosing addresses, ports, storage roots, or provider endpoints.
+- Do not treat `localhost`, `127.0.0.1`, `0.0.0.0`, `host.docker.internal`, a Windows LAN IP, an in-cluster service name, or a port-forward as interchangeable. Each name is valid only from a particular network namespace. Prove reachability from the process that will use it.
+- `0.0.0.0` is a bind/listen address, not a client/probe target. Service probes and browser/API clients should use the configured reachable host such as `127.0.0.1`, a published host port, a service DNS name, or an operator-facing URL.
+- Windows remains a valid editing, git, browser, and local-service surface when configured; WSL/Linux remains a valid development and proof surface when configured. The current environment, not historical habit, decides where install/build/test/Compose/browser proof runs.
+- When working from WSL or Linux, keep performance-sensitive checkouts, virtualenvs, Node modules, Go caches, Playwright browsers, generated outputs, and tool caches on the native Linux filesystem unless the task explicitly proves a mounted Windows path. Avoid `/mnt/*` for hot build/test paths by default.
+- When working from Windows, keep Windows-only cleanup and host-service actions scoped to repo-owned artifacts or explicitly approved user-profile caches. Do not delete Docker volumes, WSL distros, Rancher/Desktop state, or shared package caches as a substitute for configured cleanup tasks.
+
+## Configured Service Target Standard
+
+- Before starting, stopping, testing, or declaring a service healthy, identify the active target set:
+  - Core API bind/probe: `PORT`, `MYCELIS_API_HOST`, `MYCELIS_API_PORT`, or `MYCELIS_API_BASE_URL`.
+  - Interface bind/probe: `MYCELIS_INTERFACE_BIND_HOST`, `MYCELIS_INTERFACE_HOST`, `MYCELIS_INTERFACE_PORT`, `INTERFACE_PORT`, `PLAYWRIGHT_PORT`, and the browser URL actually opened.
+  - PostgreSQL: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_NAME`, `DB_SSLMODE`, plus Compose/K8s port mappings when applicable.
+  - NATS: `NATS_URL`, `MYCELIS_NATS_SERVICE_ID`, and any monitor/published port.
+  - Compose: `MYCELIS_DOCKER_HOST`, `MYCELIS_WSL_DISTRO`, `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_NATS_MONITOR_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, `MYCELIS_COMPOSE_INTERFACE_PORT`, `MYCELIS_COMPOSE_OLLAMA_HOST`, `MYCELIS_OUTPUT_BLOCK_MODE`, and `MYCELIS_OUTPUT_HOST_PATH`.
+  - Kubernetes/Helm: active namespace, values file, ingress/operator URL, port-forward targets, storage class/PVC roots, and `MYCELIS_K8S_*` provider endpoints.
+  - AI providers: provider-specific `MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT`, `MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID`, enabled flags, media endpoint variables, and Compose/K8s adapter variables. Do not rely on legacy `OLLAMA_HOST` as the Mycelis provider-routing contract.
+  - Storage roots: `MYCELIS_WORKSPACE`, `MYCELIS_ARTIFACT_ROOT`, `DATA_DIR`, `MYCELIS_CONFIG_ROOT`, Compose output mounts, and any Playwright backend workspace probe override.
+- Record the active target set in close-out when it influenced proof. Use addresses without secrets: include hostnames, ports, lane, and provider posture, but never API keys, session secrets, OAuth secrets, tokens, or raw credentials.
+- Service proof must exercise the same route the user or runtime will use:
+  - Browser proof uses the delivered UI address, not a convenient alternate port.
+  - Interface proxy proof uses its configured Core target.
+  - Core proof uses its configured database, NATS, workspace, artifact roots, and provider endpoints.
+  - Docker/Compose proof validates from inside the relevant container when the dependency is consumed inside the container.
+  - WSL-to-Windows or container-to-host AI proof must run from WSL and from a container when Core will run in Docker.
+  - Kubernetes proof validates the cluster service/ingress/port-forward that the release lane names, not local source services.
+- Treat missing target discovery as a blocker for live proof, not a reason to guess. If the configured target is absent, malformed, loopback-only from the wrong namespace, or unreachable, report `BLOCKED` with the exact probe command and failing endpoint.
+- Do not silently fall back from one lane to another. A passing mocked browser test, source-mode route, or alternate local service cannot certify a Compose, WSL, Kubernetes, remote, or production-facing lane.
+- Start services through their owning task or platform lane:
+  - Source development: `uv run inv compose.infra-up`, `uv run inv db.migrate`, `uv run inv lifecycle.up --frontend`, and `uv run inv lifecycle.health` when the repo is configured for local source Core/Interface.
+  - Full Compose: `uv run inv compose.up`, `uv run inv compose.health`, and storage health tasks when validating packaged single-host runtime.
+  - Kubernetes: `uv run inv k8s.deploy`, `uv run inv k8s.wait`, `uv run inv k8s.bridge` or the configured ingress path when validating clustered runtime.
+  - Existing external services: prove health through configured probes and do not restart or replace them unless the task explicitly owns that service.
+- Stop services only inside the active lane's ownership boundary. `lifecycle.down` stops repo-owned local app services and preserves reusable data-plane dependencies unless `--include-data-plane` is intentionally requested. Do not stop Ollama, WSL, Docker, Rancher Desktop, Kubernetes, or shared brokers unless the user explicitly asks or the owning task documents that behavior.
+- When Docker is uninstalled, unavailable, or intentionally moved to another host, do not keep probing the stale Docker endpoint. Switch to the configured Docker owner or mark Docker-backed live proof `BLOCKED` until the configured owner is healthy.
+- When services are already running, first determine whether they are repo-owned and match the configured target. A port occupied by another project is not proof; it is a conflict to resolve or record.
+- For AI endpoints, prove the exact API shape:
+  - Ollama native health uses `/api/tags`.
+  - OpenAI-compatible provider routing typically uses a `/v1` base URL.
+  - Compose maps `MYCELIS_COMPOSE_OLLAMA_HOST` into provider-specific `/v1` endpoints for Core containers.
+  - Media providers such as Forge/ComfyUI use their own configured readiness/API paths.
+- Keep setup and proof failure language precise:
+  - Incomplete `.venv` blocks repo task execution.
+  - Docker/data-plane failure blocks live backend proof.
+  - Core or Interface down usually explains browser `500`/`503` network failures.
+  - AI endpoint refusal blocks live AI-backed proof, but not non-AI unit/type/mocked browser gates.
+  - A provider/model unavailable state is not equivalent to a UI regression unless the UI fails to show the expected normalized blocker/recovery path.
 
 ## Feature Status Standard
 
