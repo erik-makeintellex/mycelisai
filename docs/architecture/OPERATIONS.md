@@ -175,6 +175,8 @@ Use `--live-backend` for browser proof that must hit a real Core backend.
 
 ### Logging & Quality Gates (`ops/logging.py`, `ops/quality.py`)
 
+Playwright is a repository-scoped exclusive runtime. The Interface E2E task holds a PID/session lease under `workspace/runtime/instance-locks` for its full lifecycle, including port selection and cleanup. Never bypass that lease by starting a second repo-local Playwright run: wait for the recorded owner, and stop only processes whose repository and port ownership have been verified.
+
 ```bash
 uv run inv logging.check-schema
 uv run inv logging.check-topics
