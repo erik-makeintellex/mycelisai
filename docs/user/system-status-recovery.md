@@ -3,6 +3,8 @@
 
 Use product-level recovery first. Open infrastructure detail only when the visible Outcome or Soma alert cannot explain the safe next action.
 
+For an interactive generated package, a saved folder or visible `Output ready` card is not final validation. If the approved control does not visibly change the marked app surface, Soma must keep the work in review or recovery and ask the producing team to repair it; structural readback or runtime fallback cannot override that browser result.
+
 ## User-Facing Recovery
 
 When work degrades, Mycelis should explain:

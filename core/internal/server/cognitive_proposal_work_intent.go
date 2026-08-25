@@ -26,7 +26,7 @@ func buildProposalWorkIntent(planned []protocol.PlannedToolCall, latestRequest s
 	case requestContainsAny(text, []string{"app", "application", "game", "playable", "package", "project"}):
 		kind = "project"
 	}
-	output := inferProposalOutputContract(latestRequest, paths, display)
+	output := inferProposalOutputContract(latestRequest, paths, firstPlannedOutputTarget(planned), display)
 	if kind == "one_shot" && (output.Shape == "app_package" || output.Shape == "mixed_output") {
 		kind = "project"
 	}
@@ -43,7 +43,7 @@ func buildProposalWorkIntent(planned []protocol.PlannedToolCall, latestRequest s
 	}
 }
 
-func inferProposalOutputContract(latestRequest string, paths []string, display proposalDisplayContract) *protocol.WorkOutputContract {
+func inferProposalOutputContract(latestRequest string, paths []string, primaryTarget string, display proposalDisplayContract) *protocol.WorkOutputContract {
 	text := strings.ToLower(strings.Join(append([]string{latestRequest, display.ExpectedResult}, paths...), " "))
 	shape := "document"
 	launchHint := ""
@@ -72,7 +72,7 @@ func inferProposalOutputContract(latestRequest string, paths []string, display p
 	}
 	return &protocol.WorkOutputContract{
 		Shape:              shape,
-		PrimaryDeliverable: firstNonEmptyString(firstString(paths), display.ExpectedResult),
+		PrimaryDeliverable: firstNonEmptyString(primaryTarget, firstString(paths), display.ExpectedResult),
 		Retention:          "user_deliverable",
 		LaunchHint:         launchHint,
 		Validation:         validation,

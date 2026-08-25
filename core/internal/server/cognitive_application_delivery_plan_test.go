@@ -124,6 +124,19 @@ func TestBuildPlannedToolCalls_UsesRequestedPackageTargetAndTitle(t *testing.T) 
 	if target := firstPlannedOutputTarget(calls); target != "groups/qa-game-team/generated/first-game/index.html" {
 		t.Fatalf("proposal target = %q, want requested entrypoint", target)
 	}
+	display := buildProposalDisplayContract(calls, request, []string{"create_team", "write_file", "delegate_task"})
+	if !strings.Contains(display.ExpectedResult, "groups/qa-game-team/generated/first-game/index.html") {
+		t.Fatalf("expected_result = %q, want requested package entrypoint", display.ExpectedResult)
+	}
+	if strings.Contains(display.ExpectedResult, "TEAM_EVOCATION.md") || strings.Contains(display.ExpectedResult, "RESEARCH_COUNCIL_HANDOFF.md") {
+		t.Fatalf("expected_result = %q, planning handoff must not replace the user deliverable", display.ExpectedResult)
+	}
+	if display.WorkIntent == nil || display.WorkIntent.OutputContract == nil {
+		t.Fatalf("work intent output contract = %#v", display.WorkIntent)
+	}
+	if got := display.WorkIntent.OutputContract.PrimaryDeliverable; got != "groups/qa-game-team/generated/first-game/index.html" {
+		t.Fatalf("primary deliverable = %q, want requested package entrypoint", got)
+	}
 }
 
 func TestDeliveryTeamInferenceLeavesExplicitSingleFileAskDirect(t *testing.T) {

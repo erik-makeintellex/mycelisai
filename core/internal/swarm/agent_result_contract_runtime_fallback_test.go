@@ -91,6 +91,36 @@ func TestApprovedResultContractRuntimeFallbackCompletesAfterNoToolEvidence(t *te
 	}
 }
 
+func TestApprovedResultContractRuntimeFallbackRepairsCompleteWritesWithoutReadback(t *testing.T) {
+	requirement := runtimeFallbackPackageRequirement()
+	entrypoint := requirement.PackageEntrypoint
+	partial := `<canvas data-mycelis-validation-surface></canvas>`
+	evidence := []successfulToolEvidence{
+		{ToolName: "write_file", Path: entrypoint, Content: partial},
+		{ToolName: "write_file", Path: requirement.PackageFolder + "/README.md", Content: "# Usage"},
+		{ToolName: "write_file", Path: requirement.PackageFolder + "/PROOF.md", Content: "# Proof"},
+		{ToolName: "write_file", Path: requirement.PackageFolder + "/project-package.json", Content: `{}`},
+	}
+	artifact := protocol.ChatArtifactRef{
+		Type: "project_package", Title: "Partial package", SavedPath: requirement.PackageFolder,
+		Folder: requirement.PackageFolder, Entrypoint: entrypoint,
+		Files: []string{"index.html", "README.md", "PROOF.md", "project-package.json"},
+	}
+	result := &agentToolLoopResult{artifacts: []protocol.ChatArtifactRef{artifact}, toolEvidence: evidence}
+	executor := &resultContractToolExecutor{files: map[string]string{entrypoint: partial}}
+	agent := resultContractTestAgent(&resultContractProvider{responses: []string{"unused"}}, executor)
+
+	if !agent.completeProjectPackageRuntimeFallback("Build the approved package.", requirement, result, false) {
+		t.Fatal("runtime fallback did not repair complete writes that lacked trusted readback")
+	}
+	if got := strings.Join(executor.calls, ","); got != "write_file,read_file" {
+		t.Fatalf("tool calls = %s, want bounded replacement and readback", got)
+	}
+	if issues := resultContractIssues(requirement, result.artifacts, result.toolEvidence); len(issues) != 0 {
+		t.Fatalf("runtime fallback left contract issues: %v", issues)
+	}
+}
+
 func runtimeFallbackPackageRequirement() *teamResultRequirement {
 	return &teamResultRequirement{
 		Kind: "project_package", TeamID: "delivery-team",

@@ -67,6 +67,8 @@ Saving and activating are separate governed actions. Ask Soma to `save this Outc
 
 After activation, ask Soma naturally to `use the active Outcome Template for this work`. Soma resolves the template in the current organization/workspace scope and snapshots the exact saved version and digest into the work it shapes. Reloading the conversation does not change that identity, and a later template revision cannot silently redefine already approved work. You do not need to manage ConfigDocument or WorkIntent records to use this path; those details remain available through proof or Inspect.
 
+For delegated delivery, the visible expected-output cue names the requested user-facing file or package before internal planning and handoff files. Those internal files remain inspectable evidence, not the primary result.
+
 ## Reading The Soma Workspace
 
 The dashboard keeps Soma chat primary. When meaningful work exists, one compact background-work indicator shows the Outcome health and whether anything needs you. Opening it reveals a bounded work list over the conversation; it never narrows Soma or turns the page into a dashboard.

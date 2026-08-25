@@ -69,13 +69,17 @@ export async function parseJSONIfPossible<T>(response: { text(): Promise<string>
   }
 }
 
-function backendWorkspaceRoots() {
+export function backendWorkspaceRoots() {
   const configuredRoot =
     process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT
     ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT
     ?? process.env.MYCELIS_WORKSPACE;
   if (configuredRoot?.trim()) {
-    return [path.isAbsolute(configuredRoot) ? configuredRoot : path.join(repoRoot, configuredRoot)];
+    if (path.isAbsolute(configuredRoot)) return [configuredRoot];
+    return [
+      path.join(repoRoot, configuredRoot),
+      path.join(repoRoot, "core", configuredRoot),
+    ];
   }
   return [
     path.join(repoRoot, "core", "workspace"),
