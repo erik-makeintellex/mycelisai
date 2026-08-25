@@ -15,7 +15,7 @@
 | **Interface Auth** | | |
 | `/auth/local` | POST | Interface-local owner login. Accepts form fields `username` and `password`, verifies against deployment env, and writes a signed `mycelis_web_session` cookie. |
 | `/auth/google/start` | GET | Starts Google Workspace OIDC login when `MYCELIS_AUTH_GOOGLE_*` env is configured. |
-| `/auth/google/callback` | GET | Completes Google OIDC login, validates allowed Workspace domain, maps `MYCELIS_AUTH_ADMIN_EMAILS` to admin role, and writes a signed web session. |
+| `/auth/google/callback` | GET | Completes Google OIDC login after validating and consuming the short-lived OAuth state. The callback verifies token audience, verified email, and the configured Workspace-domain policy, maps only `MYCELIS_AUTH_ADMIN_EMAILS` to admin, then writes a signed web session. Every exit clears the state cookie and returns a normalized login error; provider response bodies, tokens, exception messages, and client secrets are not logged or returned. |
 | `/auth/session` | GET | Returns current Interface session posture: authenticated user, role, provider, and enabled login providers. |
 | `/auth/logout` | POST | Clears the Interface web session and redirects to `/login`. |
 
