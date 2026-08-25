@@ -21,6 +21,9 @@ def test_managed_cache_env_points_to_workspace_tool_cache(monkeypatch, tmp_path)
     assert env["GOCACHE"] == str(tmp_path / "tool-cache" / "go-build")
     assert env["GOMODCACHE"] == str(tmp_path / "tool-cache" / "go-mod")
     assert env["PLAYWRIGHT_BROWSERS_PATH"] == str(tmp_path / "tool-cache" / "playwright")
+    assert float(env["MYCELIS_CACHE_MIN_FREE_GB"]) > 0
+    assert float(env["MYCELIS_CACHE_MAX_GB"]) > 0
+    assert float(env["MYCELIS_PLAYWRIGHT_CACHE_MAX_GB"]) > 0
     assert env["NEXT_TELEMETRY_DISABLED"] == "1"
     assert env["PYTHONPYCACHEPREFIX"] == str(tmp_path / "tool-cache" / "pycache")
 
@@ -131,7 +134,7 @@ def test_cache_guard_fails_when_free_space_is_below_threshold(monkeypatch, tmp_p
     try:
         cache.guard.body(Context(), min_free_gb=8)
     except SystemExit as exc:
-        assert "DISK HEADROOM CHECK FAILED" in str(exc)
+        assert "DISK/CACHE POLICY CHECK FAILED" in str(exc)
     else:
         raise AssertionError("cache.guard should fail under low disk headroom")
 
@@ -175,5 +178,42 @@ def test_cache_status_reports_disk_headroom(monkeypatch, tmp_path, capsys):
     cache.status.body(Context())
 
     output = capsys.readouterr().out
+    assert "Adaptive policy:" in output
     assert "Disk headroom:" in output
-    assert "Docker image layers and unrelated user data" in output
+    assert "Docker storage shares this volume" in output
+
+
+def test_managed_cache_policy_scales_and_honors_caps(monkeypatch, tmp_path):
+    gib = 1024 ** 3
+    monkeypatch.setattr(config.shutil, "disk_usage", lambda _path: shutil._ntuple_diskusage(200 * gib, 100 * gib, 100 * gib))
+    monkeypatch.delenv("MYCELIS_CACHE_MIN_FREE_GB", raising=False)
+    monkeypatch.delenv("MYCELIS_CACHE_MAX_GB", raising=False)
+    monkeypatch.delenv("MYCELIS_PLAYWRIGHT_CACHE_MAX_GB", raising=False)
+
+    policy = config.managed_cache_policy(tmp_path)
+
+    assert policy["reserve_gb"] == 10.0
+    assert policy["cache_max_gb"] == 22.5
+    assert policy["playwright_max_gb"] == 5.625
+
+
+def test_cache_guard_fails_when_playwright_exceeds_adaptive_budget(monkeypatch, tmp_path):
+    project_root = tmp_path / "workspace" / "tool-cache"
+    playwright = project_root / "playwright"
+    playwright.mkdir(parents=True)
+    monkeypatch.setattr(cache, "PROJECT_CACHE_ROOT", project_root)
+    monkeypatch.setattr(cache, "_disk_targets", lambda paths=None: [("repo", tmp_path)])
+    monkeypatch.setattr(cache.shutil, "disk_usage", lambda _path: shutil._ntuple_diskusage(100, 20, 80))
+    monkeypatch.setattr(cache, "_path_size_bytes", lambda path: 3 * 1024 ** 3 if path == playwright else 4 * 1024 ** 3)
+    monkeypatch.setattr(
+        cache,
+        "managed_cache_policy",
+        lambda root=None: {"reserve_gb": 8.0, "cache_max_gb": 10.0, "playwright_max_gb": 2.0},
+    )
+
+    try:
+        cache.ensure_disk_headroom(min_free_gb=1)
+    except SystemExit as exc:
+        assert "Playwright cache uses 3.00 GiB; budget is 2.00 GiB" in str(exc)
+    else:
+        raise AssertionError("cache guard should fail when Playwright exceeds its budget")

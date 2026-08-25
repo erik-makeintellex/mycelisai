@@ -14,6 +14,7 @@ from .config import (
     ROOT_DIR,
     ensure_managed_cache_dirs,
     is_windows,
+    managed_cache_policy,
 )
 
 ns = Collection("cache")
@@ -100,7 +101,10 @@ def _existing_usage_path(path: Path) -> Path:
 def _disk_targets(paths: tuple[Path, ...] | list[Path] | None = None) -> list[tuple[str, Path]]:
     # Heavy work can exhaust the user/system volume even when the repo and its
     # managed caches live elsewhere, so default guards cover both locations.
-    requested = paths or [PROJECT_CACHE_ROOT, ROOT_DIR, Path.home()]
+    requested = list(paths) if paths else [PROJECT_CACHE_ROOT, ROOT_DIR, Path.home()]
+    docker_root = Path("/var/lib/docker")
+    if paths is None and docker_root.exists():
+        requested.append(docker_root)
     deduped: dict[int, tuple[str, Path]] = {}
     for raw_path in requested:
         usage_path = _existing_usage_path(Path(raw_path))
@@ -118,6 +122,8 @@ def ensure_disk_headroom(
     paths: tuple[Path, ...] | list[Path] | None = None,
     reason: str = "",
 ) -> None:
+    policy = managed_cache_policy(root=PROJECT_CACHE_ROOT)
+    required_free_gb = max(float(min_free_gb), policy["reserve_gb"])
     failures: list[str] = []
     heading = f"=== DISK HEADROOM CHECK{f' ({reason})' if reason else ''} ==="
     print(heading)
@@ -128,14 +134,26 @@ def ensure_disk_headroom(
             f"  - {label}: free {_format_size(usage.free)} / total {_format_size(usage.total)}"
             f" ({free_gb:.1f} GiB free)"
         )
-        if free_gb < float(min_free_gb):
+        if free_gb < required_free_gb:
             failures.append(f"{label} has only {free_gb:.1f} GiB free")
 
-    print("  Note: this guard covers repo/cache and user/system volumes; Docker storage remains separately managed.")
+    project_cache_size_gb = _path_size_bytes(PROJECT_CACHE_ROOT) / float(1024 ** 3)
+    playwright_path = ensure_managed_cache_dirs(root=PROJECT_CACHE_ROOT)["playwright"]
+    playwright_size_gb = _path_size_bytes(playwright_path) / float(1024 ** 3)
+    print(
+        f"  Cache budget: {project_cache_size_gb:.2f}/{policy['cache_max_gb']:.2f} GiB managed; "
+        f"Playwright {playwright_size_gb:.2f}/{policy['playwright_max_gb']:.2f} GiB"
+    )
+    if project_cache_size_gb > policy["cache_max_gb"]:
+        failures.append(f"managed cache uses {project_cache_size_gb:.2f} GiB; budget is {policy['cache_max_gb']:.2f} GiB")
+    if playwright_size_gb > policy["playwright_max_gb"]:
+        failures.append(f"Playwright cache uses {playwright_size_gb:.2f} GiB; budget is {policy['playwright_max_gb']:.2f} GiB")
+
+    print("  Note: this guard covers repo/cache, user/system, and locally visible Docker-storage filesystems; Docker objects remain separately managed.")
     if failures:
         print("  Suggested recovery: uv run inv cache.status -> uv run inv cache.clean -> docker system df")
         raise SystemExit(
-            f"DISK HEADROOM CHECK FAILED: need at least {min_free_gb} GiB free.\n- "
+            f"DISK/CACHE POLICY CHECK FAILED: need at least {required_free_gb:.1f} GiB free and caches within budget.\n- "
             + "\n- ".join(failures)
         )
 
@@ -202,6 +220,12 @@ def status(c):
     user_paths = _user_cache_paths()
 
     print("=== CACHE STATUS ===")
+    policy = managed_cache_policy(root=PROJECT_CACHE_ROOT)
+    print(
+        f"Adaptive policy: reserve={policy['reserve_gb']:.2f} GiB, "
+        f"managed-cache={policy['cache_max_gb']:.2f} GiB, "
+        f"playwright={policy['playwright_max_gb']:.2f} GiB"
+    )
     print(f"Project cache root: {project_paths['root']}")
     for name, path in project_paths.items():
         if name == "root":
@@ -225,10 +249,10 @@ def status(c):
             f"  - {label}: free {_format_size(usage.free)} / total {_format_size(usage.total)}"
             f" ({free_gb:.1f} GiB free)"
         )
-    print("  Note: Docker image layers and unrelated user data are reported or cleaned through their owning tools.")
+    print("  Note: Docker storage shares this volume when deduplicated above; Docker objects and unrelated user data remain owned by their tools.")
 
 
-@task(help={"min_free_gb": "Minimum free disk headroom in GiB required before heavy build/test work (default: 8)."})
+@task(help={"min_free_gb": "Minimum free disk headroom in GiB; adaptive filesystem reserve may require more (default: 8)."})
 def guard(c, min_free_gb=DEFAULT_MIN_FREE_GB):
     """Fail fast when the repo/cache volume is too full for repeated build and test churn."""
     del c

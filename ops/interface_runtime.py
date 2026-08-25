@@ -487,7 +487,6 @@ def _print_ascii_safe(text: str):
     print(text.encode("ascii", "replace").decode("ascii"), end="")
 
 # ── Lifecycle ────────────────────────────────────────────────
-
 @task
 def dev(c):
     """Start Interface (Next.js) in Dev Mode. Stops existing instance first."""
@@ -497,6 +496,7 @@ def dev(c):
 @task
 def install(c):
     """Install Interface dependencies."""
+    ensure_disk_headroom(min_free_gb=12, reason="interface install and Playwright browser cache")
     print("Installing Interface Dependencies...")
     run_interface_command(c, "npm ci")
     print("Installing Playwright Chromium browser...")
@@ -606,7 +606,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     the Next.js proxy instead of relying entirely on route stubs.
     """
     print("Running Playwright E2E Tests...")
-    ensure_disk_headroom(min_free_gb=8 if server_mode == "start" else 6, reason=f"interface e2e ({server_mode})")
+    ensure_disk_headroom(min_free_gb=8 if server_mode == "start" else 6, reason=f"interface e2e and Playwright cache ({server_mode})")
     cmd = _build_playwright_command(project=project, spec=spec, workers=workers, headed=headed)
     chosen_port = INTERFACE_PORT if server_mode == "external" else _pick_interface_port(INTERFACE_PORT)
     env = _build_playwright_env(live_backend=live_backend, port=chosen_port)

@@ -214,6 +214,8 @@ Service-control boundary: `lifecycle.down` stops local Core, Interface, repo-own
 
 `lifecycle.status` is the quick local snapshot and now confirms Core through `/healthz` plus Ollama through `/api/tags` across loopback fallbacks; use `lifecycle.health` for deeper endpoint proof, `uv run inv api.delivery-proof` for API self-use, and `uv run inv ci.entrypoint-check` for runner matrix proof. The deeper health gate gives `/api/v1/cognitive/status` enough time to return bounded provider evidence instead of timing out at the client edge.
 
+Invoke-managed tool caches use one disk-aware policy rooted at `MYCELIS_PROJECT_CACHE_ROOT`. The default policy reserves 5% of the cache filesystem (bounded to 8-64 GiB), gives all managed caches at most 25% of space remaining above that reserve (capped at 64 GiB), and gives Playwright at most 25% of the managed budget (capped at 12 GiB). Heavy install/build/browser gates fail before churn when either free space or a cache quota is exceeded. Operators may pin GiB values with `MYCELIS_CACHE_MIN_FREE_GB`, `MYCELIS_CACHE_MAX_GB`, and `MYCELIS_PLAYWRIGHT_CACHE_MAX_GB`; `uv run inv cache.status` shows the effective policy.
+
 ## Development Contract
 
 A slice is not complete unless:
