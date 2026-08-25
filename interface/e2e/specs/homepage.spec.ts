@@ -11,11 +11,13 @@ test.describe('Authenticated front door', () => {
         await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/);
         await expect(page.getByRole('heading', { name: /Sign in to operate Mycelis/i })).toBeVisible();
         await expect(page.getByText(/Sign in, then start with Soma/i)).toBeVisible();
-        await expect(page.getByText(/Personal Gmail accounts are rejected/i)).toBeVisible();
         const googleLink = page.getByRole('link', { name: /Sign in with Google Workspace/i });
         if (await googleLink.count()) {
             await expect(googleLink).toHaveAttribute('href', /\/auth\/google\/start\?next=%2Fdashboard/);
             await expect(page.getByText(/Accepted Google account domain/i)).toBeVisible();
+            await expect(page.getByText(/Personal Gmail accounts are rejected/i)).toBeVisible();
+        } else {
+            await expect(page.getByText(/Enterprise SSO is not configured for this deployment/i)).toBeVisible();
         }
         await context.close();
     });
