@@ -218,6 +218,8 @@ Invoke-managed tool caches use one disk-aware policy rooted at `MYCELIS_PROJECT_
 
 ## Development Contract
 
+Authored source files target 350 lines and may use at most 10% tolerance, for a hard ceiling of 385 lines. Run `uv run inv quality.max-lines --limit 385`; legacy exceptions are exact no-regression caps and must be removed once a file reaches the ceiling.
+
 A slice is not complete unless:
 - tests pass
 - documentation is updated where meaning changed

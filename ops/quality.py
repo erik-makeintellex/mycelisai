@@ -54,6 +54,9 @@ GENERATED_SUFFIXES = (
     "_pb2_grpc.py",
 )
 LEGACY_CAPS_PATH = ROOT_DIR / "ops" / "quality_legacy_caps.txt"
+SOURCE_LINE_TARGET = 350
+SOURCE_LINE_TOLERANCE_PERCENT = 10
+DEFAULT_MAX_LINES = SOURCE_LINE_TARGET + (SOURCE_LINE_TARGET * SOURCE_LINE_TOLERANCE_PERCENT // 100)
 
 
 def _parse_paths(paths: str) -> list[Path]:
@@ -140,12 +143,12 @@ def _load_legacy_caps(path: Path = LEGACY_CAPS_PATH) -> dict[str, int]:
 
 @task(
     help={
-        "limit": "Maximum allowed lines per file (default: 330).",
+        "limit": "Maximum allowed lines per file (default: 385; 350 target plus 10% tolerance).",
         "paths": "Comma-separated paths to scan (default: main source tree).",
         "strict": "Ignore legacy caps and fail on every over-limit file.",
     }
 )
-def max_lines(_c, limit=330, paths=DEFAULT_SOURCE_PATHS, strict=False):
+def max_lines(_c, limit=DEFAULT_MAX_LINES, paths=DEFAULT_SOURCE_PATHS, strict=False):
     """
     Enforce maximum file length with temporary no-regression caps for legacy files.
     """

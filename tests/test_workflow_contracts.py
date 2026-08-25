@@ -18,7 +18,7 @@ def test_ci_workflow_runs_token_free_codebase_gates():
         "Interface Unit And Build",
         "Browser Smoke Without Live Agentry",
         "Helm And Kubernetes Standards",
-        "uv run inv quality.max-lines --limit 330",
+        "uv run inv quality.max-lines --limit 385",
         "go test ./... -count=1 -p 1",
         "uv run inv interface.test",
         "uv run inv interface.build",

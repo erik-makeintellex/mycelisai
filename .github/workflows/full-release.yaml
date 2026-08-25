@@ -110,7 +110,7 @@ jobs:
       - name: Repo Hygiene And Python Tests
         run: |
           uv run inv ci.entrypoint-check
-          uv run inv quality.max-lines --limit 330
+          uv run inv quality.max-lines --limit 385
           uv run inv logging.check-schema
           uv run inv logging.check-topics
           uv run pytest -q
