@@ -29,6 +29,17 @@
 - `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required; `interface.check` retries transient Windows socket-reuse failures after heavy browser proof before treating a route as failed.
 - Worker Profile changes must prove seeded locked built-ins; ConfigDocument validation; operator, workspace, organization, and built-in activation precedence from a trusted request boundary; missing/inactive/cross-scope failure; forged-lineage rejection; explicit-field preservation; capability/context/verification hydration; exact record/version/digest/tenant/scope manifest lineage; replacement and rollback behavior for new teams without mutating existing manifests; full manifest restoration across Core restart through focused persistence tests; owned QA cleanup; and the headed `soma-worker-profile-lineage-live.spec.ts` save A -> activate A -> team A -> save B -> activate B -> team B -> rollback A -> team A2 -> browser navigation/re-fetch journey. Recognized inline save, exact activate, and versioned rollback commands must build deterministic governed proposals without provider inference; source-less saves and decision questions must remain conversational. Each team confirmation must return `202 running` with pending dispatch, restore the Soma composer, and hydrate its exact snapshot after the transaction commits. The primary UI must not present legacy catalogue CRUD rows as assignable profiles. Rebuild `core/bin/server.exe` before external live proof; restarting a stale binary is not proof.
 - Playwright starts/stops the managed Next.js app, seeds a local admin web session for ordinary specs, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant; managed Playwright/build/test invocations are serial for a workspace and port.
+
+### Focused Google Workspace authentication proof
+
+Run the Interface auth suites for changes to login availability, OAuth start/callback handling, session creation, or Workspace policy:
+
+```bash
+cd interface
+npm test -- --run __tests__/lib/webAuth.test.ts __tests__/auth/googleStartRoute.test.ts __tests__/auth/googleCallbackRoute.test.ts __tests__/pages/LoginPage.test.tsx
+```
+
+The callback suite must prove invalid state is rejected before Google is contacted and cleared on exit; successful allowed-domain identity creates a signed session; invalid audience, unverified email, personal Gmail, and non-allowed domains fail closed; and provider failures expose only normalized phases/status without response bodies, tokens, exception messages, or client secrets. The start-route suite owns configured-origin and hosted-domain-hint behavior, while the login rendering suite owns provider-neutral unconfigured copy and provider-specific guidance only when that adapter is enabled. A real account sign-in remains an environment-gated manual/browser proof and credentials must never be placed in fixtures, command output, or browser artifacts.
 ## Cross-Device Certification Matrix
 Responsive acceptance proves the product journey, not only that a route renders at a smaller viewport:
 | Mode | Reference Viewport | Required Jobs |

@@ -116,6 +116,8 @@ Use Google Workspace through OIDC/OAuth for enterprise SSO.
 
 The login page shows the accepted Workspace domain list from the same Google Workspace policy used to build the OAuth `hd` request hint and callback domain validation. Google sign-in and restart links should use a full document navigation into `/auth/google/start` so the browser enters the OAuth redirect flow cleanly instead of treating the route as an in-app RSC transition. If Google account selection returns a domain error, choose an account from the displayed accepted domain list or use the local owner login while correcting `MYCELIS_AUTH_ALLOWED_DOMAINS` / `MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN`.
 
+The registered Google redirect URI must exactly match `MYCELIS_AUTH_GOOGLE_REDIRECT_URI`, and the start and callback routes must use the same browser origin. The `hd` request value is only an account-selection hint; Mycelis enforces the allowed domain after Google returns a verified identity. OAuth state is short-lived and single-use in the browser: an expired, missing, or mismatched state is rejected before token exchange, cleared, and must be restarted from `/login`. Keep client secrets and returned tokens in the deployment secret boundary only—never in the UI, chat, logs, state files, or committed configuration.
+
 For local source development, keep the Google values in repo-root `.env`. The Interface auth server also reads that file when Next runs from `interface/`, so `/login` should still show **Sign in with Google Workspace** without duplicating secrets into `interface/.env.local`.
 
 ## GitHub

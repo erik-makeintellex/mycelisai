@@ -57,7 +57,8 @@ export async function GET(request: NextRequest) {
             return redirectToLogin(request, "google_tokeninfo");
         }
         const info = await infoResponse.json() as GoogleTokenInfo;
-        if (info.aud !== config.googleClientId || !info.email || info.email_verified === false || info.email_verified === "false") {
+        const emailVerified = info.email_verified === true || info.email_verified === "true";
+        if (info.aud !== config.googleClientId || !info.email || !emailVerified) {
             return redirectToLogin(request, "google_identity");
         }
         const domain = (info.hd || info.email.split("@")[1] || "").toLowerCase();
@@ -79,7 +80,10 @@ export async function GET(request: NextRequest) {
         response.cookies.set(WEB_SESSION_COOKIE, await createSessionToken(session, config.sessionSecret), sessionCookieOptions());
         return response;
     } catch (error) {
-        console.warn("[auth/google] callback failed", { phase: "exception", error: error instanceof Error ? error.message : String(error) });
+        console.warn("[auth/google] callback failed", {
+            phase: "exception",
+            errorType: error instanceof Error ? error.name : "UnknownError",
+        });
         return redirectToLogin(request, "google_exception");
     }
 }
@@ -97,11 +101,8 @@ function safeNext(value: string | null): string {
 }
 
 async function logGoogleAuthFailure(phase: string, response: Response) {
-    const body = await response.json().catch(() => ({})) as { error?: unknown; error_description?: unknown };
     console.warn("[auth/google] callback failed", {
         phase,
         status: response.status,
-        error: typeof body.error === "string" ? body.error : undefined,
-        description: typeof body.error_description === "string" ? body.error_description : undefined,
     });
 }
