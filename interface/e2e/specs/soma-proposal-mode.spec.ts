@@ -42,6 +42,8 @@ test.describe("Soma proposal mode", () => {
 
         await expect(page.getByText("I can start that.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText(/reply.*start.*to begin/i)).toBeVisible();
+        await expect(page.getByText(/ready to start.*stay here for questions or changes/i)).toBeVisible();
+        await expect(page.getByText(/team bus/i)).toHaveCount(0);
         await expect(page.getByText("Handoff starting. You can keep talking to Soma while the team works.")).toHaveCount(0);
         await expect(page.getByText("create a hello_world.py file in your workspace.")).toBeVisible();
         await expect(page.getByText("A new Python file will be saved to workspace/logs/hello_world.py after approval.")).toBeVisible();

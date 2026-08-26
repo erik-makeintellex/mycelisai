@@ -60,18 +60,19 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
         expect(screen.getByText(/i can start that/i)).toBeDefined();
-        expect(screen.getByText(/hand this to the bus after approval/i)).toBeDefined();
-        expect(screen.getByText(/reply.*approve.*to begin, or tell me what to change/i)).toBeDefined();
+        expect(screen.getByText(/once you approve, i’ll start the work and stay here for questions or changes/i)).toBeDefined();
+        expect(screen.getByText(/reply.*approve.*to start.*ask a question or tell me what to change/i)).toBeDefined();
         expect(screen.queryByText(/what i will do/i)).toBeNull();
-        expect(screen.getByText(/hand the work to the right team through the team bus/i)).toBeDefined();
+        expect(screen.getByText(/bring in the right team and keep their work connected to this conversation/i)).toBeDefined();
         expect(screen.getByText(/create a hello_world\.py file in your workspace\./i)).toBeDefined();
         expect(screen.getByText(/a new python file will be saved to workspace\/logs\/hello_world\.py after approval\./i)).toBeDefined();
         expect(screen.getAllByText(/workspace\/logs\/hello_world\.py/i).length).toBeGreaterThan(0);
         expect(screen.queryByText(/this action will change your workspace, so soma needs your approval before running it\./i)).toBeNull();
         expect(
-            screen.getByText(/reply "approve" to begin, or tell me what to change/i),
+            screen.getByText(/reply "approve" to start.*ask a question or tell me what to change/i),
         ).toBeTruthy();
         expect(screen.queryByText(/risk medium/i)).toBeNull();
+        expect(screen.queryByText(/\bbus\b/i)).toBeNull();
         expect(screen.queryByText(/current team bus/i)).toBeNull();
         expect(screen.queryByText(/no bus connection/i)).toBeNull();
         expect(screen.queryByText(/unless you approve bus wiring/i)).toBeNull();
@@ -168,7 +169,7 @@ describe('ProposedActionBlock', () => {
     it('renders approval-required governance summary by default', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        expect(screen.getByText(/reply.*approve.*to begin/i)).toBeDefined();
+        expect(screen.getByText(/reply.*approve.*to start.*ask a question/i)).toBeDefined();
         expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
     });
 
@@ -234,8 +235,8 @@ describe('ProposedActionBlock', () => {
             },
         })} />);
 
-        expect(screen.getByText(/say start and i will hand it off/i)).toBeDefined();
-        expect(screen.getByText(/reply.*start.*to begin/i)).toBeDefined();
+        expect(screen.getByText(/ready to start.*stay here for questions or changes/i)).toBeDefined();
+        expect(screen.getByText(/reply.*start.*to begin.*ask a question or tell me what to change/i)).toBeDefined();
         expect(screen.queryByText(/risk low/i)).toBeNull();
         expect(screen.queryByText(/auto approve/i)).toBeNull();
 

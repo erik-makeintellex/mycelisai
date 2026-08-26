@@ -30,16 +30,21 @@ function primaryTeamLabel(proposal: ChatMessage["proposal"]): string {
     return "the right team";
 }
 
+function sentence(value: string): string {
+    const trimmed = value.trim();
+    return trimmed ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}` : "";
+}
+
 function approvalPlanBullets(proposal: ChatMessage["proposal"], operatorSummary: string, expectedResult: string): string[] {
     const tools = proposal?.tools ?? [];
     const teamLabel = primaryTeamLabel(proposal);
     const bullets: string[] = [];
+    if (expectedResult) bullets.push(sentence(expectedResult));
+    if (operatorSummary) bullets.push(sentence(operatorSummary));
     if (tools.some((tool) => /^(create_team|delegate|delegate_task)$/i.test(tool))) {
-        bullets.push(`Hand the work to ${teamLabel} through the team bus.`);
+        bullets.push(`Bring in ${teamLabel} and keep their work connected to this conversation.`);
     }
-    if (operatorSummary) bullets.push(operatorSummary);
-    if (expectedResult) bullets.push(expectedResult);
-    if (!bullets.length) bullets.push("Start the approved work and keep the result tied to this conversation.");
+    if (!bullets.length) bullets.push("Start the work and bring the result back to this conversation.");
     return [...new Set(bullets)].slice(0, 3);
 }
 
@@ -96,8 +101,8 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const approvalExplanation = explainApprovalPosture(proposal, approvalRequired, approvalMode);
     const planBullets = approvalPlanBullets(proposal, operatorSummary, expectedResult);
     const runHelp = approvalRequired
-        ? "I will hand this to the bus after approval and keep this thread open for questions while the team works."
-        : "This stays inside current policy. Say start and I will hand it off while keeping the thread live.";
+        ? "Once you approve, I’ll start the work and stay here for questions or changes while it runs."
+        : "This is ready to start. I’ll stay here for questions or changes while it runs.";
 
     const lifecycleLabel = renderedLifecycle === "cancelled"
             ? "Cancelled"
@@ -139,8 +144,8 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     canRunProposal ? (
                         <p className="text-sm font-medium leading-6 text-cortex-primary">
                             {approvalRequired
-                                ? 'Reply "approve" to begin, or tell me what to change.'
-                                : 'Reply "start" to begin, or tell me what to change.'}
+                                ? 'Reply "approve" to start. You can also ask a question or tell me what to change.'
+                                : 'Reply "start" to begin. You can also ask a question or tell me what to change.'}
                         </p>
                     ) : (
                         <p className="text-sm leading-6 text-red-300">
