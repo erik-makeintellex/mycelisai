@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 vi.mock('reactflow', async () => import('../mocks/reactflow'));
 
@@ -40,6 +40,7 @@ describe('MissionControlChat execution summary media previews', () => {
 
         expect((await screen.findByAltText('Launch hero image')).getAttribute('src')).toBe(imageHref);
         expect(container.querySelector(`audio[src="${audioHref}"]`)).toBeTruthy();
+        fireEvent.click(screen.getByText('Details and follow-up'));
         expect(screen.getByRole('button', { name: /Open local folder for Launch hero image/i })).toBeDefined();
         expect(screen.queryByRole('button', { name: /Open local folder for Launch voiceover/i })).toBeNull();
     });

@@ -93,6 +93,7 @@ describe("SomaWorkspaceFrame", () => {
     expect(digest.getByText("Owner note")).toBeDefined();
     expect(digest.queryByText("generated/owner-note.md")).toBeNull();
     expect(digest.getByRole("button", { name: /Open file Owner note/i })).toBeDefined();
+    fireEvent.click(digest.getByText("Details and follow-up"));
     expect(digest.getByRole("button", { name: /Open local folder for Owner note/i })).toBeDefined();
     expect(screen.queryByTestId("output-workbench")).toBeNull();
 
@@ -179,6 +180,7 @@ describe("SomaWorkspaceFrame", () => {
     const lane = screen.getByTestId("soma-current-work-lane");
     expect(within(lane).getByText("Work needs review")).toBeDefined();
     expect(within(lane).getByText("Generated page")).toBeDefined();
+    fireEvent.click(within(lane).getByText("Details and follow-up"));
     expect(within(lane).getByRole("button", { name: /Open local folder for Generated page/i })).toBeDefined();
     const toggle = screen.getByTestId("soma-workbench-panel-toggle");
     expect(toggle.textContent).toContain("Review work");

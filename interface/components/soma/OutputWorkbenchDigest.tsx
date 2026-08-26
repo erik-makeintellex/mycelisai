@@ -149,6 +149,15 @@ export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkben
               Details and follow-up
             </summary>
             <div className="mt-2 flex w-full flex-wrap items-center gap-1.5">
+              {workspacePath ? (
+                <OutputAccessActions
+                  label={digest.text}
+                  url={digest.url}
+                  storagePath={digest.storagePath}
+                  folderLabel="Open folder"
+                  showOpen={false}
+                />
+              ) : null}
               {digest.resourcesHref ? (
                 <a
                   href={digest.resourcesHref}

@@ -215,7 +215,6 @@ describe('MissionControlChat execution summary', () => {
     });
 
     it('renders confirmed generated file outputs as openable links on system run messages', async () => {
-        const openWindow = vi.spyOn(window, 'open').mockReturnValue(null);
         mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
             const url = requestUrl(input);
             if (url.includes('/api/v1/council/members')) return okJson({ ok: true, data: COUNCIL_MEMBERS });
@@ -259,9 +258,9 @@ describe('MissionControlChat execution summary', () => {
         expect(screen.getByText('Result saved')).toBeDefined();
         expect(screen.getByRole('link', { name: /Inspect run receipt/i }).getAttribute('href')).toBe('/runs/run-game-123456');
 
-        fireEvent.click(screen.getByRole('button', { name: new RegExp(`Open file ${filePath} in a new browser window`) }));
-        expect(openWindow).toHaveBeenCalledWith(href, '_blank', 'noopener,noreferrer');
+        expect(screen.getByRole('button', { name: new RegExp(`Open file ${filePath} in Mycelis`) })).toBeDefined();
 
+        fireEvent.click(screen.getByText('Details and follow-up'));
         fireEvent.click(screen.getByRole('button', { name: new RegExp(`Open local folder for ${filePath}`) }));
         await waitFor(() => {
             expect(mockFetch).toHaveBeenCalledWith('/api/v1/workspace/files/reveal?path=workspace%2Flogs%2Fqa_team_click_game.html', { method: 'POST' });
@@ -269,7 +268,6 @@ describe('MissionControlChat execution summary', () => {
     });
 
     it('renders generated project packages as deliverable review cards', async () => {
-        const openWindow = vi.spyOn(window, 'open').mockReturnValue(null);
         mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
             const url = requestUrl(input);
             if (url.includes('/api/v1/council/members')) return okJson({ ok: true, data: COUNCIL_MEMBERS });
@@ -317,9 +315,10 @@ describe('MissionControlChat execution summary', () => {
         expect(screen.queryByText('entry: workspace/generated/coin-runner/index.html')).toBeNull();
         expect(screen.queryByText('game.js')).toBeNull();
 
-        fireEvent.click(screen.getByRole('button', { name: /Open app Coin Runner Game in a new browser window/i }));
-        expect(openWindow).toHaveBeenCalledWith(href, '_blank', 'noopener,noreferrer');
+        expect(screen.getByRole('button', { name: /Open app Coin Runner Game in Mycelis/i })).toBeDefined();
 
+        fireEvent.click(screen.getByText('Details and follow-up'));
+        expect(screen.getByRole('link', { name: /Open Coin Runner Game in Resources/i }).getAttribute('href')).toBe('/resources?tab=workspace&path=workspace%2Fgenerated%2Fcoin-runner');
         fireEvent.click(screen.getByRole('button', { name: /Open local folder for Coin Runner Game/i }));
         await waitFor(() => {
             expect(mockFetch).toHaveBeenCalledWith('/api/v1/workspace/files/reveal?path=workspace%2Fgenerated%2Fcoin-runner', { method: 'POST' });
