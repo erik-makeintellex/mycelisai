@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, FileText, RotateCcw, ShieldCheck } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, FileText, RotateCcw, ShieldCheck } from "lucide-react";
 import type { MissionEvent } from "@/store/useCortexStore";
 import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
 
@@ -29,6 +29,7 @@ type Receipt = {
   trust: string;
   next: string;
   outputRefs: string[];
+  outputLinks: Array<{ label: string; href: string }>;
   proofRefs: string[];
   approvedWork?: ApprovedWork;
   failure?: string;
@@ -78,6 +79,24 @@ function outputRefsFrom(value: unknown) {
   });
 }
 
+function outputLinksFrom(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const ref = record(item);
+    if (!ref) return [];
+    const storage = text(ref.storage_ref) ?? text(ref.path) ?? text(ref.file_path) ?? "";
+    const entrypoint = text(ref.entrypoint) ?? "";
+    const path = entrypoint && storage && !storage.endsWith(entrypoint)
+      ? `${storage.replace(/[\\/]+$/, "")}/${entrypoint}`
+      : entrypoint || storage || text(ref.url) || "";
+    if (!path) return [];
+    const href = /^(https?:)?\/\//i.test(path) || path.startsWith("/")
+      ? path
+      : `/api/v1/workspace/files/view?path=${encodeURIComponent(path)}`;
+    return [{ label: text(ref.label) ?? text(ref.title) ?? "Open retained output", href }];
+  });
+}
+
 function approvedWorkFrom(events: MissionEvent[]): ApprovedWork | undefined {
   let intent: Record<string, unknown> | undefined;
   let executionMode: string | undefined;
@@ -112,6 +131,11 @@ export function buildRunReceipt(events: MissionEvent[], runId: string): Receipt 
   const failedEvent = events.find((event) => event.event_type === "mission.failed" || event.event_type === "tool.failed");
   const completed = terminal?.event_type === "mission.completed";
   const failed = Boolean(failedEvent) || terminal?.event_type === "mission.failed";
+  const degradedEvent = [...events].reverse().find((event) => {
+    const payload = event.payload ?? {};
+    return [payload.state, payload.outcome_health, payload.degradation_state]
+      .some((value) => text(value)?.toLowerCase() === "degraded" || text(value)?.toLowerCase().includes("failed"));
+  });
   const approvedWork = approvedWorkFrom(events);
   const outputEvents = events.filter((event) => /artifact|output|file|media/i.test(event.event_type));
   const proofEvents = events.filter((event) => /proof|audit|completed|failed/i.test(event.event_type) || event.audit_event_id);
@@ -124,11 +148,15 @@ export function buildRunReceipt(events: MissionEvent[], runId: string): Receipt 
       return [...direct, ...outputRefsFrom(payload.output_refs), ...outputRefsFrom(payload.outputs)];
     }),
   );
+  const outputLinks = events.flatMap((event) => {
+    const payload = event.payload ?? {};
+    return [...outputLinksFrom(payload.output_refs), ...outputLinksFrom(payload.outputs)];
+  }).filter((link, index, links) => links.findIndex((candidate) => candidate.href === link.href) === index);
   const expectsRetainedOutput = Boolean(
     approvedWork?.primaryDeliverable || approvedWork?.retention?.toLowerCase() === "user_deliverable",
   );
   const missingRequiredOutput = completed && expectsRetainedOutput && outputRefs.length === 0;
-  const status: ReceiptStatus = failed ? "failed" : missingRequiredOutput ? "degraded" : completed ? "completed" : "running";
+  const status: ReceiptStatus = failed ? "failed" : degradedEvent || missingRequiredOutput ? "degraded" : completed ? "completed" : "running";
   const proofRefs = unique(
     proofEvents.flatMap((event) => {
       const payload = event.payload ?? {};
@@ -142,7 +170,9 @@ export function buildRunReceipt(events: MissionEvent[], runId: string): Receipt 
       ];
     }),
   );
-  const result = missingRequiredOutput
+  const result = degradedEvent
+    ? payloadText(degradedEvent, ["headline", "details", "operator_summary", "summary"]) ?? "A retained candidate exists, but validation found a problem."
+    : missingRequiredOutput
     ? "The run completed, but the approved deliverable was not retained."
     : payloadText(terminal ?? events[events.length - 1], ["operator_summary", "summary", "message", "result"]) ??
     (completed
@@ -154,16 +184,20 @@ export function buildRunReceipt(events: MissionEvent[], runId: string): Receipt 
 
   return {
     status,
-    headline: failed ? "Run needs recovery" : missingRequiredOutput ? "Run needs output recovery" : completed ? "Run completed" : "Run in progress",
+    headline: failed ? "Run needs recovery" : degradedEvent ? "Output needs repair" : missingRequiredOutput ? "Run needs output recovery" : completed ? "Run completed" : "Run in progress",
     result,
-    trust: missingRequiredOutput
+    trust: degradedEvent
+      ? "The retained candidate can be inspected, but it is not a verified final result until the reported validation problem is repaired."
+      : missingRequiredOutput
       ? "Completion evidence remains trusted. The required output is missing, so the result is not ready to rely on."
       : completed
       ? "Completed run evidence is available. Use the event stream only when you need deeper audit detail."
       : failed
         ? "The run record and failure evidence remain trusted. Completed output proof is not reliable for this attempt."
         : "This receipt is provisional until the run reaches a terminal state.",
-    next: missingRequiredOutput
+    next: degradedEvent
+      ? payloadText(degradedEvent, ["next_action"]) ?? "Open the candidate for inspection, then ask Soma to repair and revalidate it."
+      : missingRequiredOutput
       ? "Recover or rerun the owning work and retain the approved output before acceptance."
       : completed
       ? "Review the output and proof, then return to Soma or the owning workflow."
@@ -171,6 +205,7 @@ export function buildRunReceipt(events: MissionEvent[], runId: string): Receipt 
         ? "Review the failure, adjust the request or dependency, then retry from Soma or the owning workflow."
         : "Wait for completion, or inspect events if the run stalls.",
     outputRefs,
+    outputLinks,
     proofRefs,
     approvedWork,
     failure,
@@ -213,6 +248,25 @@ export default function RunReceipt({ events, runId }: { events: MissionEvent[]; 
         <div className="mt-3 rounded-md border border-cortex-danger/30 bg-cortex-danger/10 p-3 text-sm text-cortex-danger">
           <span className="font-mono text-[10px] font-bold uppercase tracking-widest">Failure: </span>
           {receipt.failure}
+        </div>
+      ) : null}
+
+      {receipt.outputLinks.length > 0 ? (
+        <div className="mt-3 rounded-md border border-cortex-primary/30 bg-cortex-primary/5 p-3">
+          <p className="text-sm font-semibold text-cortex-text-main">
+            {receipt.status === "degraded" ? "Retained candidate" : "Result"}
+          </p>
+          {receipt.status === "degraded" ? (
+            <p className="mt-1 text-xs leading-5 text-amber-300">This output is available to inspect, but validation has not passed.</p>
+          ) : null}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {receipt.outputLinks.map((output) => (
+              <a key={output.href} href={output.href} className="inline-flex items-center gap-1.5 rounded-lg bg-cortex-primary px-3 py-2 text-sm font-semibold text-cortex-bg hover:bg-cortex-primary/90">
+                {receipt.status === "degraded" ? `Open unverified ${output.label.toLowerCase()}` : output.label}
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            ))}
+          </div>
         </div>
       ) : null}
 

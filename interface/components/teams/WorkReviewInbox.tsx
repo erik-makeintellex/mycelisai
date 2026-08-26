@@ -169,9 +169,12 @@ function ReviewDetailPane({
   onTeamAsk?: (item: TeamWorkItem, message: string) => Promise<void> | void;
 }) {
   const needsExternalVerification = needsExternalMutationVerification(item);
-  const secondaryActions = needsExternalVerification ? [] : item.interactions.filter((action) => (
-    !action.disabled && action.action !== primaryReviewAction(item)?.action
-  ));
+  const primary = primaryReviewAction(item);
+  const retainedCandidate = item.state === "degraded" ? firstOutputAction(item.outputRefs, "Open unverified output") : null;
+  const secondaryActions = needsExternalVerification ? [] : [
+    ...(retainedCandidate && retainedCandidate.href !== primary?.href ? [retainedCandidate] : []),
+    ...item.interactions.filter((action) => !action.disabled && action.action !== primary?.action),
+  ];
   return (
     <article className="min-w-0 rounded-xl border border-cortex-border bg-cortex-bg p-4" aria-label={`Review details for ${item.title}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -284,12 +287,12 @@ function enabledAction(item: TeamWorkItem, action: TeamInteraction["action"]) {
   return item.interactions.find((candidate) => candidate.action === action && !candidate.disabled) ?? null;
 }
 
-function firstOutputAction(outputs?: TeamOutputRef[]): TeamInteraction | null {
+function firstOutputAction(outputs?: TeamOutputRef[], label = "Open output"): TeamInteraction | null {
   const output = outputs?.find((candidate) => outputURL(candidate));
   if (!output) return null;
   return {
     action: "inspect",
-    label: "Open output",
+    label,
     href: outputURL(output) ?? undefined,
   };
 }

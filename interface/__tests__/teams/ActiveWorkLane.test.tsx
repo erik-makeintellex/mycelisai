@@ -184,7 +184,7 @@ describe("ActiveWorkLane", () => {
     expect(screen.getByText("Recovery: Retry with retained context")).toBeDefined();
   });
 
-  it("keeps degraded retained outputs behind failure context instead of opening them", () => {
+  it("labels degraded retained outputs as unverified while keeping them inspectable", () => {
     render(
       <ActiveWorkLane
         items={[
@@ -214,9 +214,11 @@ describe("ActiveWorkLane", () => {
     );
 
     expect(screen.getByText("No trusted output yet")).toBeDefined();
-    expect(screen.queryByRole("link", { name: /Older playable package/i })).toBeNull();
+    expect(screen.getByRole("link", { name: /Unverified: Older playable package/i }).getAttribute("href")).toBe(
+      "/api/v1/workspace/files/view?path=workspace%2Fgenerated%2Folder%2Findex.html",
+    );
     expect(screen.getByText("Failure context")).toBeDefined();
-    expect(screen.getByText("1 retained output reference withheld until recovery completes.")).toBeDefined();
+    expect(screen.getByText(/Retained candidate available for inspection/i)).toBeDefined();
     expect(screen.getByRole("link", { name: /Run proof/i }).getAttribute("href")).toBe("/runs/run-failed");
   });
 
