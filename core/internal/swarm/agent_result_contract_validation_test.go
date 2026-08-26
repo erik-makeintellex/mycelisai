@@ -155,10 +155,29 @@ func TestOutputValidationExecutionInstructionRequiresRenderedStateTransition(t *
 	}
 
 	instruction := outputValidationExecutionInstruction(plan)
-	for _, required := range []string{"ArrowRight", "one unambiguous state-changing effect", "must not also match that control", "render loop actually consumes", "before/after state must differ", "unused intermediate"} {
+	for _, required := range []string{"ArrowRight", "one unambiguous state-changing effect", "must not also match that control", "render loop actually consumes", "before/after state must differ", "unused intermediate", "game canvas itself"} {
 		if !strings.Contains(instruction, required) {
 			t.Fatalf("instruction = %q, want %q", instruction, required)
 		}
+	}
+}
+
+func TestHeldKeyVisualValidationRequiresCanvasMarker(t *testing.T) {
+	plan := &protocol.OutputValidationPlan{
+		Kind: protocol.OutputValidationInteractiveBrowser, Required: true,
+		Probe: &protocol.OutputValidationProbe{
+			Action:  protocol.OutputValidationAction{Kind: protocol.OutputValidationActionKeyHold, Key: "ArrowRight"},
+			Observe: protocol.OutputValidationObservation{Kind: protocol.OutputValidationObserveVisualChange, Target: "[data-mycelis-validation-surface]"},
+		},
+	}
+	statusOnly := `<canvas id="game"></canvas><p data-mycelis-validation-surface>Ready</p><script>const ctx=game.getContext('2d');addEventListener('keydown',()=>ctx.fillRect(1,1,2,2));</script>`
+	if issues := outputValidationVisualChangeIssues(plan, statusOnly); len(issues) != 1 || !strings.Contains(issues[0], "rendered canvas") {
+		t.Fatalf("status marker issues = %v, want rendered canvas requirement", issues)
+	}
+	canvasMarked := strings.Replace(statusOnly, `<canvas id="game"`, `<canvas data-mycelis-validation-surface id="game"`, 1)
+	canvasMarked = strings.Replace(canvasMarked, ` data-mycelis-validation-surface>Ready`, `>Ready`, 1)
+	if issues := outputValidationVisualChangeIssues(plan, canvasMarked); len(issues) != 0 {
+		t.Fatalf("canvas marker rejected: %v", issues)
 	}
 }
 

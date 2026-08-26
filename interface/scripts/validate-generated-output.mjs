@@ -76,7 +76,7 @@ async function observeBefore(page, probe, evidencePath, evidenceRefs) {
   }
 }
 
-async function performAction(page, probe) {
+async function performAction(page, probe, observeDuringHold) {
   const action = probe.action;
   const actionTarget = action.target ? page.locator(action.target).first() : null;
   switch (action.kind) {
@@ -95,6 +95,7 @@ async function performAction(page, probe) {
       await page.keyboard.down(action.key);
       try {
         await page.waitForTimeout(Math.min(Math.max(action.duration_ms || 500, 1), 10_000));
+        await observeDuringHold?.();
       } finally {
         await page.keyboard.up(action.key);
       }
@@ -198,9 +199,15 @@ async function validate(request, chromium) {
     if (request.plan.probe && !loadError) {
       try {
         const before = await observeBefore(page, request.plan.probe, request.evidence_path, report.evidence_refs);
-        await performAction(page, request.plan.probe);
-        await page.waitForTimeout(DEFAULT_SETTLE_MS);
-        report.probe = await observeAfter(page, request.plan.probe, before, request.evidence_path, report.evidence_refs);
+        let observedDuringAction = false;
+        await performAction(page, request.plan.probe, async () => {
+          report.probe = await observeAfter(page, request.plan.probe, before, request.evidence_path, report.evidence_refs);
+          observedDuringAction = true;
+        });
+        if (!observedDuringAction) {
+          await page.waitForTimeout(DEFAULT_SETTLE_MS);
+          report.probe = await observeAfter(page, request.plan.probe, before, request.evidence_path, report.evidence_refs);
+        }
         if (!report.probe.passed) report.diagnostics.push(diagnostic("probe_observation_unchanged", "The requested interaction did not produce its expected observable effect."));
       } catch (error) {
         report.probe = {

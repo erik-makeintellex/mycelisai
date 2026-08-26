@@ -126,10 +126,26 @@ func outputValidationVisualChangeIssues(plan *protocol.OutputValidationPlan, con
 		return nil
 	}
 	target := strings.TrimSpace(plan.Probe.Observe.Target)
+	if plan.Probe.Action.Kind == protocol.OutputValidationActionKeyHold && !outputValidationTargetIsCanvas(content, target) {
+		return []string{"entrypoint readback must place the approved held-key visual-change observation target on the rendered canvas"}
+	}
 	if target == "" || outputValidationVisualChangeTargetMutated(content, target) {
 		return nil
 	}
 	return []string{"entrypoint readback does not mutate approved visual-change observation target " + target}
+}
+
+func outputValidationTargetIsCanvas(content, target string) bool {
+	trimmed := strings.TrimSpace(target)
+	if match := outputValidationAttributeSelector.FindStringSubmatch(trimmed); len(match) == 2 {
+		attribute := regexp.QuoteMeta(match[1])
+		return regexp.MustCompile(`(?i)<canvas\b[^>]*\s` + attribute + `(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?(?:\s|/?>)`).MatchString(content)
+	}
+	if strings.HasPrefix(trimmed, "#") {
+		id := regexp.QuoteMeta(strings.TrimPrefix(trimmed, "#"))
+		return regexp.MustCompile(`(?i)<canvas\b[^>]*\sid\s*=\s*["']` + id + `["'][^>]*>`).MatchString(content)
+	}
+	return true
 }
 
 func outputValidationTextChangeTargetMutated(content, target string) bool {
@@ -224,6 +240,9 @@ func outputValidationExecutionInstruction(plan *protocol.OutputValidationPlan) s
 	if plan.Probe.Observe.Kind == protocol.OutputValidationObserveTextChange {
 		instruction += " For text_change validation, the approved action must update the observed element's textContent, innerText, innerHTML, or value to different user-visible text; do not rely only on canvas pixels, CSS class changes, console output, or hidden state."
 	}
+	if plan.Probe.Action.Kind == protocol.OutputValidationActionKeyHold && plan.Probe.Observe.Kind == protocol.OutputValidationObserveVisualChange {
+		instruction += " Place the approved observation marker on the game canvas itself; changing a separate status label does not prove held-key visual movement."
+	}
 	return instruction
 }
 
@@ -231,6 +250,9 @@ func outputValidationCorrectionInstruction(plan *protocol.OutputValidationPlan, 
 	joined := strings.Join(issues, " ")
 	if strings.Contains(joined, "defined but never started") {
 		return " Start the retained animation or render loop explicitly after defining it (for example by invoking the loop once), then read the entrypoint back."
+	}
+	if strings.Contains(joined, "held-key visual-change observation target") {
+		return " Overwrite the entrypoint so the approved observation marker is on the rendered game canvas and the held key visibly changes canvas pixels before keyup, then read the entrypoint back."
 	}
 	if strings.Contains(joined, "visual-change observation target") {
 		return " Overwrite the entrypoint so the approved visual observation marker is on the surface that actually changes, such as the canvas, or mutate that marked surface visibly during the approved action; then read the entrypoint back."
