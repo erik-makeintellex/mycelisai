@@ -81,10 +81,13 @@ describe("UsersPage", () => {
             expect(screen.getByTestId("deployment-access-model")).toBeDefined();
         });
 
-        expect(screen.getByText("Hosted control plane").closest("button")).toHaveProperty("disabled", true);
-        expect(screen.getByLabelText("Identity Mode")).toHaveProperty("disabled", true);
-        expect(screen.getByLabelText("Shared Agent Specificity Owner")).toHaveProperty("disabled", true);
-        expect(screen.getByTestId("save-access-model")).toHaveProperty("disabled", true);
+        expect(screen.getByText("Hosted control plane").closest("button")).toBeNull();
+        expect(screen.queryByRole("combobox", { name: "Identity Mode" })).toBeNull();
+        expect(screen.getByLabelText("Identity Mode").textContent).toBe("Local only");
+        expect(screen.getByLabelText("Identity Mode").tagName).toBe("OUTPUT");
+        expect(screen.getByLabelText("Shared Agent Specificity Owner").textContent).toBe("Root admin only");
+        expect(screen.getByText("Self-hosted release").closest("[aria-current='true']")).toBeDefined();
+        expect(screen.getByTestId("deployment-access-ownership").textContent).toContain("Deployment-owned");
         expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
@@ -127,8 +130,9 @@ describe("UsersPage", () => {
 
         expect(screen.queryByTestId("users-management-panel")).toBeNull();
         expect(screen.queryByTestId("users-add-button")).toBeNull();
-        expect(screen.getByLabelText("Identity Mode")).toHaveProperty("disabled", true);
-        expect(screen.getByTestId("save-access-model")).toHaveProperty("disabled", true);
+        expect(screen.queryByRole("combobox", { name: "Identity Mode" })).toBeNull();
+        expect(screen.getByLabelText("Identity Mode").textContent).toBe("Local only");
+        expect(screen.getByTestId("deployment-access-ownership").textContent).toContain("Deployment-owned");
     });
 
     it("shows break-glass principal posture when hybrid recovery is active", async () => {

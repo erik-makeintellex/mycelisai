@@ -133,13 +133,11 @@ export default function UsersPage() {
     const [authSource, setAuthSource] = useState("local_api_key");
     const [effectiveRole, setEffectiveRole] = useState<UserRole>("owner");
     const [breakGlass, setBreakGlass] = useState(false);
-    const [savingAccessModel, setSavingAccessModel] = useState(false);
 
     const activeCount = useMemo(() => users.filter((u) => u.status === "active").length, [users]);
     const currentUserRole = currentUser?.role ?? "owner";
     const showsEnterpriseDirectory = accessManagementTier === "enterprise";
     const canManageEnterpriseDirectory = showsEnterpriseDirectory && currentUserRole === "owner";
-    const canManageAccessModel = false;
 
     const refreshCurrentUser = async () => {
         setSyncing(true);
@@ -227,34 +225,6 @@ export default function UsersPage() {
         setUsers((prev) => prev.filter((u) => u.id !== id));
     };
 
-    const saveAccessModel = async () => {
-        if (!canManageAccessModel) return;
-        const nextTier: AccessManagementTier = productEdition === "self_hosted_release" ? "release" : "enterprise";
-        setSavingAccessModel(true);
-        setNotice(null);
-        try {
-            const res = await fetch("/api/v1/user/settings", {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    access_management_tier: nextTier,
-                    product_edition: productEdition,
-                    identity_mode: identityMode,
-                    shared_agent_specificity_owner: sharedAgentSpecificityOwner,
-                }),
-            });
-            if (!res.ok) {
-                throw new Error("save failed");
-            }
-            setAccessManagementTier(nextTier);
-            setNotice("Deployment access model saved for this environment owner view.");
-        } catch {
-            setNotice("Could not save the deployment access model. Keep using the current review posture until the backend is reachable.");
-        } finally {
-            setSavingAccessModel(false);
-        }
-    };
-
     return (
         <div className="space-y-6">
             <section className="rounded-xl border border-cortex-border bg-cortex-surface/60 p-4 space-y-4" data-testid="deployment-access-model">
@@ -270,53 +240,41 @@ export default function UsersPage() {
 
                 <div className="grid gap-3 lg:grid-cols-3">
                     {(Object.keys(EDITION_COPY) as ProductEdition[]).map((edition) => (
-                        <button
-                            key={edition}
-                            type="button"
-                            onClick={() => canManageAccessModel && setProductEdition(edition)}
-                            disabled={!canManageAccessModel}
+                        <div
+                            key={edition} aria-current={productEdition === edition ? "true" : undefined}
                             className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
                                 productEdition === edition ? "border-cortex-primary/40 bg-cortex-primary/10" : "border-cortex-border bg-cortex-bg"
-                            } ${!canManageAccessModel ? "cursor-default" : "hover:border-cortex-primary/30"}`}
+                            }`}
                         >
                             <p className="text-sm font-semibold text-cortex-text-main">{EDITION_COPY[edition].label}</p>
                             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{EDITION_COPY[edition].summary}</p>
-                        </button>
+                        </div>
                     ))}
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-2">
-                    <label className="flex flex-col gap-1 text-sm">
+                    <div className="flex flex-col gap-1 text-sm">
                         <span className="text-cortex-text-main font-semibold">Identity Mode</span>
-                        <select
+                        <output
                             aria-label="Identity Mode"
-                            value={identityMode}
-                            onChange={(e) => setIdentityMode(toIdentityMode(e.target.value))}
-                            disabled={!canManageAccessModel}
-                            className="px-3 py-2 rounded bg-cortex-bg border border-cortex-border text-cortex-text-main"
+                            className="rounded border border-cortex-border bg-cortex-bg px-3 py-2 text-cortex-text-main"
                         >
-                            <option value="local_only">Local only</option>
-                            <option value="hybrid">Hybrid</option>
-                            <option value="federated">Federated</option>
-                        </select>
+                            {identityMode === "local_only" ? "Local only" : identityMode === "hybrid" ? "Hybrid" : "Federated"}
+                        </output>
                         <span className="text-xs leading-5 text-cortex-text-muted">{IDENTITY_COPY[identityMode]}</span>
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm">
+                    </div>
+                    <div className="flex flex-col gap-1 text-sm">
                         <span className="text-cortex-text-main font-semibold">Shared Agent Specificity Owner</span>
-                        <select
+                        <output
                             aria-label="Shared Agent Specificity Owner"
-                            value={sharedAgentSpecificityOwner}
-                            onChange={(e) => setSharedAgentSpecificityOwner(toSharedAgentSpecificityOwner(e.target.value))}
-                            disabled={!canManageAccessModel}
-                            className="px-3 py-2 rounded bg-cortex-bg border border-cortex-border text-cortex-text-main"
+                            className="rounded border border-cortex-border bg-cortex-bg px-3 py-2 text-cortex-text-main"
                         >
-                            <option value="root_admin">Root admin only</option>
-                            <option value="delegated_owner">Delegated owner</option>
-                        </select>
+                            {sharedAgentSpecificityOwner === "root_admin" ? "Root admin only" : "Delegated owner"}
+                        </output>
                         <span className="text-xs leading-5 text-cortex-text-muted">
                             Shared Soma and specialist output specificity stays organization-owned. Ordinary user chats can request temporary formatting, but they do not redefine shared output posture.
                         </span>
-                    </label>
+                    </div>
                 </div>
 
                 <div className="rounded-lg border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted space-y-2">
@@ -340,15 +298,12 @@ export default function UsersPage() {
                     <p className="text-xs leading-5 text-cortex-text-muted">
                         Current access layer resolves to <span className="font-mono text-cortex-text-main">{productEdition === "self_hosted_release" ? "release" : "enterprise"}</span> based on the selected product edition.
                     </p>
-                    <button
-                        type="button"
-                        onClick={saveAccessModel}
-                        disabled={!canManageAccessModel || savingAccessModel}
-                        className="px-3 py-2 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10 disabled:opacity-50"
-                        data-testid="save-access-model"
+                    <span
+                        className="rounded border border-cortex-border px-3 py-2 text-xs font-mono text-cortex-text-muted"
+                        data-testid="deployment-access-ownership"
                     >
-                        {savingAccessModel ? "Saving..." : "Deployment-owned"}
-                    </button>
+                        Deployment-owned
+                    </span>
                 </div>
             </section>
 

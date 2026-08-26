@@ -20,7 +20,10 @@ Workspace/output roots are confirmed from `System -> Deployments`, while
 capability install, web-access setup, and filesystem workspace browsing remain
 in `Resources`. Settings includes a direct **Open web access setup** shortcut so
 an operator who asked Soma how to enable web access does not have to discover
-the Resources path by trial and error.
+the Resources path by trial and error. Guided setup actions select the named
+Settings section, reflect it in the URL, and move focus and the viewport to its
+content; their aligned action row makes each card behave as navigation rather
+than an apparently inert state toggle.
 
 Settings is not the default Soma workspace. Use Soma for normal work, groups, and execution requests; use Settings when you need account, provider, or access posture.
 
@@ -33,6 +36,7 @@ Current expectations:
 - profile preferences may change how the interface names the operator or assistant
 - the authenticated Soma shell defaults to the dark `midnight-cortex` theme before hydration; saved `aero-light`, `midnight-cortex`, or `system` preferences are applied before the shell paints so login does not flash between themes
 - deploy-owned edition and access posture are read-only here
+- deployment-owned identity mode, shared-agent ownership, and edition posture render as values rather than disabled dropdowns or buttons
 - profile edits must not override `.env` or deployment-owned auth configuration
 
 ## People And Access

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { mockFetch } from '../setup';
 import React, { type ComponentType } from 'react';
 
@@ -36,6 +36,7 @@ const mockToggleAdvancedMode = vi.fn();
 const mockFetchUserSettings = vi.fn(async () => undefined);
 const mockUpdateAssistantName = vi.fn(async () => true);
 const mockUpdateTheme = vi.fn(async () => true);
+const mockScrollIntoView = vi.fn();
 vi.mock('next/navigation', () => ({
     useSearchParams: () => mockSearchParams,
 }));
@@ -67,6 +68,8 @@ import SettingsPage from '@/app/(app)/settings/page';
 
 describe('Settings Page (app/settings/page.tsx)', () => {
     beforeEach(() => {
+        HTMLElement.prototype.scrollIntoView = mockScrollIntoView;
+        mockScrollIntoView.mockClear();
         mockFetch.mockImplementation(async (input) => {
             const url = String(input);
             if (url.includes('/api/v1/user/me')) {
@@ -169,6 +172,8 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.getByRole('option', { name: 'Midnight Cortex' })).toBeDefined();
         expect(screen.getByRole('option', { name: 'System' })).toBeDefined();
         expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-current')).toBe('page');
+        expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-controls')).toBe('settings-section-content');
+        expect(screen.getByRole('tabpanel').getAttribute('aria-labelledby')).toBe('settings-tab-profile');
     });
 
     it('uses a shrink-safe mobile section selector without changing tab semantics', async () => {
@@ -210,11 +215,16 @@ describe('Settings Page (app/settings/page.tsx)', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Open AI Engines' }));
         });
         expect(screen.getByRole('tab', { name: 'AI Engines' }).getAttribute('aria-current')).toBe('page');
+        expect(window.location.search).toBe('?tab=engines');
+        expect(window.location.hash).toBe('#settings-section-content');
+        await waitFor(() => expect(mockScrollIntoView).toHaveBeenCalled());
+        expect(document.activeElement?.id).toBe('settings-section-content');
 
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Open Profile' }));
         });
         expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-current')).toBe('page');
+        expect(window.location.search).toBe('?tab=profile');
     });
 
     it('explains advanced deep links without mounting connected tools until advanced mode is active', async () => {
@@ -231,6 +241,10 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         });
 
         expect(mockToggleAdvancedMode).toHaveBeenCalled();
+        expect(window.location.search).toBe('?tab=tools');
+        expect(window.location.hash).toBe('#settings-section-content');
+        await waitFor(() => expect(mockScrollIntoView).toHaveBeenCalled());
+        expect(document.activeElement?.id).toBe('settings-section-content');
         expect(screen.queryByTestId('mcp-tool-registry')).toBeNull();
 
         mockAdvancedMode.mockReturnValue(true);

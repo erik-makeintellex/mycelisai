@@ -209,10 +209,10 @@ function WorkflowCard({
   active: boolean;
   onSelect: () => void;
 }) {
-  const className = `mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary`;
+  const className = `mt-4 inline-flex min-h-11 items-center gap-2 self-start rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary`;
   return (
     <div
-      className={`min-w-0 rounded-2xl border px-4 py-4 transition-colors ${
+      className={`flex h-full min-w-0 flex-col rounded-2xl border px-4 py-4 transition-colors ${
         active ? "border-cortex-primary/40 bg-cortex-primary/10" : "border-cortex-border bg-cortex-bg"
       }`}
     >
@@ -220,7 +220,7 @@ function WorkflowCard({
         <Icon className="h-4 w-4" />
         <p className="min-w-0 text-sm font-semibold text-cortex-text-main">{title}</p>
       </div>
-      <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{summary}</p>
+      <p className="mt-2 flex-1 text-sm leading-6 text-cortex-text-muted">{summary}</p>
       {href ? (
         <Link href={href} className={className}>
           {buttonLabel}

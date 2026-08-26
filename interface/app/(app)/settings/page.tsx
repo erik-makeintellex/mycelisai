@@ -61,12 +61,25 @@ function SettingsContent() {
         ? candidateTab
         : "profile";
 
+    const selectSettingsTab = (tab: TabId) => {
+        setSelectedTab(tab);
+        const targetUrl = new URL(window.location.href);
+        targetUrl.searchParams.set("tab", tab);
+        targetUrl.hash = "settings-section-content";
+        window.history.replaceState({}, "", targetUrl);
+        window.requestAnimationFrame(() => {
+            const section = document.getElementById("settings-section-content");
+            section?.scrollIntoView({ behavior: "smooth", block: "start" });
+            section?.focus({ preventScroll: true });
+        });
+    };
+
     const openRequestedAdvancedTab = () => {
         if (!requestedAdvancedTab) return;
         if (!advancedMode) {
             toggleAdvancedMode();
         }
-        setSelectedTab(requestedAdvancedTab);
+        selectSettingsTab(requestedAdvancedTab);
     };
 
     return (
@@ -86,7 +99,7 @@ function SettingsContent() {
                 {requestedAdvancedTab && !advancedMode ? (
                     <AdvancedDeepLinkNotice requestedTab={requestedAdvancedTab} onOpen={openRequestedAdvancedTab} />
                 ) : null}
-                <SettingsGuidedWorkflow advancedMode={advancedMode} activeTab={activeTab} onSelect={setSelectedTab} />
+                <SettingsGuidedWorkflow advancedMode={advancedMode} activeTab={activeTab} onSelect={selectSettingsTab} />
 
                 {/* Tabs */}
                 <div
@@ -95,20 +108,26 @@ function SettingsContent() {
                     data-testid="settings-section-tabs"
                     className="grid min-w-0 grid-cols-2 gap-1 border-b border-cortex-border sm:flex sm:flex-wrap sm:items-center"
                 >
-                    <Tab label="Profile" icon={User} active={activeTab === "profile"} onClick={() => setSelectedTab("profile")} />
-                    <Tab label="Mission Profiles" icon={Layers} active={activeTab === "profiles"} onClick={() => setSelectedTab("profiles")} />
-                    {isAdmin && <Tab label="People & Access" icon={Shield} active={activeTab === "users"} onClick={() => setSelectedTab("users")} />}
+                    <Tab id="profile" label="Profile" icon={User} active={activeTab === "profile"} onClick={() => selectSettingsTab("profile")} />
+                    <Tab id="profiles" label="Mission Profiles" icon={Layers} active={activeTab === "profiles"} onClick={() => selectSettingsTab("profiles")} />
+                    {isAdmin && <Tab id="users" label="People & Access" icon={Shield} active={activeTab === "users"} onClick={() => selectSettingsTab("users")} />}
                     {advancedMode && isAdmin && (
                         <>
-                            <Tab label="AI Engines" icon={Brain} active={activeTab === "engines"} onClick={() => setSelectedTab("engines")} />
-                            <Tab label="Auth Providers" icon={KeyRound} active={activeTab === "auth"} onClick={() => setSelectedTab("auth")} />
-                            <Tab label="Capabilities" icon={Wrench} active={activeTab === "tools"} onClick={() => setSelectedTab("tools")} />
+                            <Tab id="engines" label="AI Engines" icon={Brain} active={activeTab === "engines"} onClick={() => selectSettingsTab("engines")} />
+                            <Tab id="auth" label="Auth Providers" icon={KeyRound} active={activeTab === "auth"} onClick={() => selectSettingsTab("auth")} />
+                            <Tab id="tools" label="Capabilities" icon={Wrench} active={activeTab === "tools"} onClick={() => selectSettingsTab("tools")} />
                         </>
                     )}
                 </div>
             </div>
 
-            <div className="max-w-5xl mx-auto w-full min-w-0 px-4 py-5 min-h-[400px] sm:px-6 sm:py-6">
+            <div
+                id="settings-section-content"
+                role="tabpanel"
+                aria-labelledby={`settings-tab-${activeTab}`}
+                tabIndex={-1}
+                className="max-w-5xl mx-auto w-full min-w-0 scroll-mt-4 px-4 py-5 min-h-[400px] outline-none sm:px-6 sm:py-6"
+            >
                 {activeTab === "profile" && <ProfileSettings />}
                 {activeTab === "engines" && advancedMode && <BrainsPage />}
                 {activeTab === "auth" && advancedMode && <AuthProvidersPage />}
@@ -176,11 +195,13 @@ function AdvancedDeepLinkNotice({ requestedTab, onOpen }: { requestedTab: TabId;
 }
 
 function Tab({
+    id,
     label,
     icon: Icon,
     active,
     onClick,
 }: {
+    id: TabId;
     label: string;
     icon: LucideIcon;
     active: boolean;
@@ -188,8 +209,10 @@ function Tab({
 }) {
     return (
         <button
+            id={`settings-tab-${id}`}
             type="button"
             role="tab"
+            aria-controls="settings-section-content"
             aria-selected={active}
             aria-current={active ? "page" : undefined}
             onClick={onClick}
@@ -205,4 +228,3 @@ function Tab({
         </button>
     );
 }
-
