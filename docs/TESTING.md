@@ -209,6 +209,8 @@ When complex generated projects such as playable games are packaged as `project_
 
 Interactive generated-output acceptance requires more than a retained package and `Output ready` projection. The live gate must sample the marked changing surface while the approved input is still held and fail if pixels or declared observable state remain unchanged. QA fixture teardown must own an independent request context so timeout or page closure cannot prevent exact-scope purge.
 
+Run and work-review proof must also cover failed validation with retained files: recovery stays the primary recommendation, **Open unverified output** opens the exact retained entrypoint, the warning prevents acceptance as verified work, and run/audit evidence remains under proof or details rather than replacing output access.
+
 ## Product Delivery Proof
 
 Repository-local Playwright execution is single-owner. `uv run inv interface.e2e` acquires `workspace/runtime/instance-locks/interface-e2e.json` before selecting ports, starting or reusing services, writing shared reports, or creating live fixtures. A second run fails fast with the owning PID/host; it must wait instead of killing processes or overwriting artifacts. The lease is released on success or failure, and an orphaned same-host PID lease is reclaimed. This applies to managed, external-server, and live-backend modes because their reports and retained-state proof still share repository resources. Parallel development should use focused unit/package tests concurrently, then queue shared browser and lifecycle proof deliberately.

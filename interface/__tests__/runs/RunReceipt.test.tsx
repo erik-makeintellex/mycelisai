@@ -123,6 +123,32 @@ describe("RunReceipt model", () => {
     expect(receipt.next).toMatch(/retain the approved output/i);
   });
 
+  it("opens a retained candidate directly while clearly marking failed validation", () => {
+    const events = [event("team_work.status", {
+      state: "degraded",
+      headline: "Deliverable needs repair",
+      next_action: "Ask Soma to repair the primary interaction.",
+      output_refs: [{
+        label: "Generated project package",
+        storage_ref: "groups/delivery-team/generated/package",
+        entrypoint: "index.html",
+      }],
+    })];
+    const receipt = buildRunReceipt(events, "run-abc");
+    expect(receipt.status).toBe("degraded");
+    expect(receipt.outputLinks).toEqual([{
+      label: "Generated project package",
+      href: "/api/v1/workspace/files/view?path=groups%2Fdelivery-team%2Fgenerated%2Fpackage%2Findex.html",
+    }]);
+
+    render(<RunReceipt runId="run-abc" events={events} />);
+    expect(screen.getByText("Output needs repair")).toBeDefined();
+    expect(screen.getByText(/validation has not passed/i)).toBeDefined();
+    expect(screen.getByRole("link", { name: /Open unverified generated project package/i }).getAttribute("href")).toBe(
+      "/api/v1/workspace/files/view?path=groups%2Fdelivery-team%2Fgenerated%2Fpackage%2Findex.html",
+    );
+  });
+
   it("renders failed runs as recoverable work with trust and inspect evidence", () => {
     render(
       <RunReceipt

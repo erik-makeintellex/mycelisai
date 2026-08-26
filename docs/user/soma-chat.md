@@ -103,6 +103,8 @@ Soma responses can include:
 
 No mutation executes until you confirm. Only a bounded approval reply resolves the pending proposal. A qualified reply such as `approve after changing the title` remains ordinary conversation so Soma can revise it safely. Opening `Details`, asking for more explanation, or requesting a deeper brief is not approval. Risk, cost, resources, capability details, proof intent, and team/tool wiring should stay behind `Details` unless they require immediate attention.
 
+When a retained result fails validation, Mycelis must not present the run receipt as though it were the result. Recovery remains the recommended next step, but the retained candidate stays directly inspectable through an **Open unverified output** action with a clear warning. The run receipt remains secondary proof.
+
 Saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details. Use `Resources -> Output Files` for broader browsing later.
 
 When Soma is planning or reporting work, the visible plan should name the expected output shape first: table/report, app/package, code/script, media, document, dataset, or mixed output. App/package work should include a direct open path, usage notes, validation status, folder access, proof, and a way to ask Soma for follow-up changes without forcing the operator to read internal team/tool topology.

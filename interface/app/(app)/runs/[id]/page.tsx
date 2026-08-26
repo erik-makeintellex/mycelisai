@@ -6,6 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
 import { ArrowLeft, Zap, MessageSquare, List, GitBranch, MessageSquareReply } from 'lucide-react';
 import { requestSomaOutputContinuation } from '@/components/soma/outputContinuation';
+import RunReceipt from '@/components/runs/RunReceipt';
+import type { MissionEvent } from '@/store/useCortexStore';
 
 const RunTimeline = dynamic(
     () => import('@/components/runs/RunTimeline'),
@@ -24,6 +26,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState<Tab>('conversation');
     const [runStatus, setRunStatus] = useState<string | undefined>(undefined);
+    const [runEvents, setRunEvents] = useState<MissionEvent[]>([]);
 
     // Fetch run metadata to determine status (for ConversationLog polling + interjection visibility)
     useEffect(() => {
@@ -34,13 +37,19 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                 if (!res.ok) return;
                 const body = await res.json();
                 const events = body.data ?? body ?? [];
+                if (!cancelled) setRunEvents(events);
                 const hasCompleted = events.some((e: { event_type: string }) => e.event_type === 'mission.completed');
                 const hasFailed = events.some((e: { event_type: string }) => e.event_type === 'mission.failed');
                 const hasCancelled = events.some((e: { event_type: string }) => e.event_type === 'mission.cancelled');
+                const hasDegraded = events.some((e: MissionEvent) => {
+                    const payload = e.payload ?? {};
+                    return payload.state === 'degraded' || payload.outcome_health === 'degraded' || Boolean(payload.degradation_state);
+                });
                 if (!cancelled) {
                     if (hasCompleted) setRunStatus('completed');
                     else if (hasFailed) setRunStatus('failed');
                     else if (hasCancelled) setRunStatus('cancelled');
+                    else if (hasDegraded) setRunStatus('degraded');
                     else setRunStatus('running');
                 }
             } catch {
@@ -166,7 +175,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                             ? 'bg-cortex-success/15 text-cortex-success border-cortex-success/30'
                             : runStatus === 'failed'
                                 ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                                : runStatus === 'cancelled'
+                            : runStatus === 'cancelled' || runStatus === 'degraded'
                                     ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                                     : 'bg-cortex-primary/10 text-cortex-primary border-cortex-primary/30'
                     }`}>
@@ -214,6 +223,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
 
             {/* Conversation content */}
             <div className="max-w-2xl mx-auto px-4 py-6">
+                {runEvents.length > 0 ? <RunReceipt events={runEvents} runId={id} /> : null}
                 <ConversationLog runId={id} runStatus={runStatus} />
             </div>
         </div>

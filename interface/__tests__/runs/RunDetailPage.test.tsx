@@ -130,6 +130,36 @@ describe('RunDetailPage (/runs/[id])', () => {
         expect(screen.getByText('completed')).toBeDefined();
     });
 
+    it('shows direct retained-candidate access on the default conversation tab', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ data: [{
+                id: 'event-1',
+                run_id: 'test-run-123-abcd-5678',
+                tenant_id: 'default',
+                event_type: 'team_work.status',
+                severity: 'warning',
+                emitted_at: new Date().toISOString(),
+                payload: {
+                    state: 'degraded',
+                    headline: 'Deliverable needs repair',
+                    output_refs: [{
+                        label: 'Generated project package',
+                        storage_ref: 'groups/delivery/generated/package',
+                        entrypoint: 'index.html',
+                    }],
+                },
+            }] }),
+        }));
+
+        await act(async () => {
+            render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
+        });
+
+        expect(screen.getByText('Output needs repair')).toBeDefined();
+        expect(screen.getByRole('link', { name: /Open unverified generated project package/i })).toBeDefined();
+    });
+
     it('shows running status with animated pulse dot', async () => {
         // Mock fetch to return no terminal events -> running
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({

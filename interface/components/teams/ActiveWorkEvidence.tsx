@@ -24,13 +24,9 @@ export function ActiveWorkEvidence({ item }: { item: TeamWorkItem }) {
         <summary className="cursor-pointer font-mono uppercase tracking-[0.14em] text-cortex-text-muted">
           Failure context
         </summary>
-        {outputRefs.length > 0 ? (
-          <p className="mt-2 leading-5">
-            {outputRefs.length} retained output reference{outputRefs.length === 1 ? "" : "s"} withheld until recovery completes.
-          </p>
-        ) : null}
+        {outputRefs.length > 0 ? <p className="mt-2 leading-5">Retained candidate available for inspection; validation must pass before acceptance.</p> : null}
         <div className="mt-2 flex flex-wrap gap-1.5">
-          <EvidenceContext item={item} outputRefs={[]} proofRefs={proofRefs} auditRefs={auditRefs} hiddenRefs={hiddenRefs} />
+          <EvidenceContext item={item} outputRefs={outputRefs} proofRefs={proofRefs} auditRefs={auditRefs} hiddenRefs={hiddenRefs} unverified />
         </div>
       </details>
     );
@@ -49,12 +45,14 @@ function EvidenceContext({
   proofRefs,
   auditRefs,
   hiddenRefs,
+  unverified = false,
 }: {
   item: TeamWorkItem;
   outputRefs: NonNullable<TeamWorkItem["outputRefs"]>;
   proofRefs: string[];
   auditRefs: string[];
   hiddenRefs: number;
+  unverified?: boolean;
 }) {
   return (
     <>
@@ -70,7 +68,7 @@ function EvidenceContext({
       {outputRefs.slice(0, 3).map((output) => (
         <EvidenceLink
           key={output.output_id}
-          label={output.label || "Output"}
+          label={unverified ? `Unverified: ${output.label || "Output"}` : output.label || "Output"}
           href={outputURL(output)}
           muted={!outputURL(output)}
         />
