@@ -41,7 +41,7 @@ func serveValidationFixtures(t *testing.T) *httptest.Server {
 <canvas id="game" width="160" height="80"></canvas><script>
 const c=document.querySelector('#game'),x=c.getContext('2d');let px=10,right=false;
 function draw(){x.fillStyle='#000';x.fillRect(0,0,160,80);x.fillStyle='#0f0';x.fillRect(px,20,12,12);if(right)px+=2;requestAnimationFrame(draw)}
-addEventListener('keydown',e=>{if(e.key==='ArrowRight')right=true});addEventListener('keyup',e=>{if(e.key==='ArrowRight')right=false});draw();</script>`)
+addEventListener('keydown',e=>{if(e.key==='ArrowRight')right=true});addEventListener('keyup',e=>{if(e.key==='ArrowRight'){right=false;px=10}});draw();</script>`)
 	})
 	mux.HandleFunc("/actions", func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, `<!doctype html><title>actions</title><button id="click" onclick="document.querySelector('#status').textContent='changed'">Run</button>

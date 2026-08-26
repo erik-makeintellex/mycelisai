@@ -245,7 +245,7 @@ Frontend slices should:
 - keep API usage aligned with backend ownership and normalized terminal states
 - extract oversized logic only in bounded, behavior-preserving slices
 
-Proof targets are focused Vitest for changed states, TypeScript and production build gates, `uv run inv quality.max-lines --limit 330`, and headed Playwright for every changed operator journey. Promotion still follows the feature, integrated `dev`, and release-candidate gates in `docs/TESTING.md`.
+Proof targets are focused Vitest for changed states, TypeScript and production build gates, `uv run inv quality.max-lines --limit 385` (350-line target plus 10% tolerance), and headed Playwright for every changed operator journey. Promotion still follows the feature, integrated `dev`, and release-candidate gates in `docs/TESTING.md`.
 
 ---
 

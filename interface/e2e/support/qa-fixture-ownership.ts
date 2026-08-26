@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { request as playwrightRequest, type APIRequestContext, type Page } from "@playwright/test";
 import type { APIEnvelope, GroupRecord } from "./finalization-browser-package";
 import { liveAPIHeaders, liveAPIURL } from "./live-api-auth";
 
@@ -15,6 +15,7 @@ export type QAFixtureScope = {
   id: string;
   ownerRef: string;
   executionRef: string;
+  api: APIRequestContext;
 };
 
 export type QAFixtureResource = {
@@ -27,26 +28,31 @@ export async function createQAFixtureScope(
   executionRef: string,
 ): Promise<QAFixtureScope> {
   const ownerRef = "playwright";
-  const response = await page.request.post(liveAPIURL("/api/v1/testing/fixture-scopes"), {
+  const api = await playwrightRequest.newContext({ extraHTTPHeaders: liveAPIHeaders() });
+  const response = await api.post(liveAPIURL("/api/v1/testing/fixture-scopes"), {
     headers: jsonHeaders(),
     data: { owner_ref: ownerRef, execution_ref: executionRef, ttl_seconds: 86_400 },
   });
   if (!response.ok()) {
+    await api.dispose();
     throw new Error(`Create QA fixture scope failed (${response.status()}): ${await response.text()}`);
   }
   const body = await response.json() as APIEnvelope<{ id: string }>;
-  if (!body.data?.id) throw new Error("Create QA fixture scope returned no scope ID");
+  if (!body.data?.id) {
+    await api.dispose();
+    throw new Error("Create QA fixture scope returned no scope ID");
+  }
 	await page.setExtraHTTPHeaders({ "X-Mycelis-QA-Fixture-Scope": body.data.id });
-  return { id: body.data.id, ownerRef, executionRef };
+  return { id: body.data.id, ownerRef, executionRef, api };
 }
 
 export async function registerQAFixtureResources(
-  page: Page,
+  _page: Page,
   scope: QAFixtureScope,
   resources: QAFixtureResource[],
 ) {
   if (resources.length === 0) return;
-  const response = await page.request.post(
+  const response = await scope.api.post(
     liveAPIURL(`/api/v1/testing/fixture-scopes/${encodeURIComponent(scope.id)}/resources`),
     {
       headers: jsonHeaders(),
@@ -78,7 +84,7 @@ export async function purgeDeliveryFixture(
     try {
       const teamID = options.teamID;
       let teamExists = false;
-      const response = await page.request.get(liveAPIURL("/api/v1/groups"), { headers: liveAPIHeaders() });
+      const response = await scope.api.get(liveAPIURL("/api/v1/groups"), { headers: liveAPIHeaders() });
       if (!response.ok()) {
         throw new Error(`Discover QA fixture groups failed (${response.status()}): ${await response.text()}`);
       }
@@ -91,7 +97,7 @@ export async function purgeDeliveryFixture(
           resources.push({ kind: "workspace_path", ref: group.workspace_folder });
         }
       }
-      const workResponse = await page.request.get(
+      const workResponse = await scope.api.get(
         liveAPIURL(`/api/v1/teams/${encodeURIComponent(teamID)}/work?limit=100`),
         { headers: liveAPIHeaders() },
       );
@@ -118,7 +124,7 @@ export async function purgeDeliveryFixture(
     cleanupError = error;
   }
   try {
-    const response = await page.request.post(
+    const response = await scope.api.post(
       liveAPIURL(`/api/v1/testing/fixture-scopes/${encodeURIComponent(scope.id)}/purge`),
       {
         headers: jsonHeaders(),
@@ -135,7 +141,8 @@ export async function purgeDeliveryFixture(
   } catch (error) {
     cleanupError = cleanupError ?? error;
   } finally {
-    await page.setExtraHTTPHeaders({});
+    await page.setExtraHTTPHeaders({}).catch(() => undefined);
+    await scope.api.dispose().catch(() => undefined);
   }
   if (cleanupError) throw cleanupError;
   if (discoveryError) throw discoveryError;

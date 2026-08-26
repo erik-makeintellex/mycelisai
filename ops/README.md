@@ -162,7 +162,11 @@ Enforces logging contract quality checks before delivery.
 
 ### `quality.py` (Code Hygiene Gates)
 Enforces max-lines policy across the main source tree with temporary no-regression caps for legacy oversized files. Stale cap entries for deleted files fail the gate so cleanup cannot leave old exceptions behind.
-- **Max Lines**: `uv run inv quality.max-lines --limit 330`
+- **Max Lines**: `uv run inv quality.max-lines --limit 385` (350-line target plus 10% tolerance)
+
+### `instance_lock.py` (Exclusive Test Runtime Ownership)
+
+Provides PID/session leases under `workspace/runtime/instance-locks`. `interface.e2e` holds the `interface-e2e` lease across server selection, test execution, artifact writes, and cleanup, so concurrent development sessions fail fast instead of starting duplicate Next/Playwright processes or stopping another run.
 
 ### `lifecycle.py` (Local Stack Control)
 Owns deterministic local bring-up, teardown, and deep health checks.

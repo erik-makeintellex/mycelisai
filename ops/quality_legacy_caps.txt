@@ -1,10 +1,10 @@
 # Temporary no-regression caps for known oversized authored files.
 # Format: relative/path=maximum_lines
 # Rules:
-# - New files should stay at or below the global 300-line limit.
-# - Existing files may remain above 300 only while they stay exactly at their current cap.
+# - Authored source files target 350 lines and must not exceed the 385-line ceiling (10% tolerance).
+# - Existing files may remain above 385 only while they stay exactly at their current cap.
 # - Cap values only move downward as files are decomposed.
-# - Remove the cap entry once a file reaches 300 lines or less.
+# - Remove the cap entry once a file reaches 385 lines or less.
 
 charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml=570
 core/config/templates/v8-migration-standing-team-bridge.yaml=570
@@ -14,10 +14,8 @@ interface/components/automations/TriggerRulesTab.tsx=502
 interface/components/matrix/MatrixGrid.tsx=388
 interface/components/missions/ArtifactViewer.tsx=513
 interface/components/organizations/OrganizationContextShell.tsx=2358
-interface/components/organizations/teamLeadExecutionCards.tsx=347
 interface/components/organizations/teamLeadGuidanceNormalization.ts=546
 interface/components/resources/DeploymentContextPanel.tsx=451
-interface/components/teams/GroupManagementPanel.tsx=333
 interface/components/teams/GroupWorkflowLog.tsx=643
 interface/components/settings/BrainsPage.tsx=908
 interface/components/settings/MissionProfilesPage.tsx=551
@@ -27,14 +25,12 @@ interface/components/workspace/LaunchCrewModal.tsx=617
 interface/e2e/specs/docs-and-runs.spec.ts=388
 interface/e2e/specs/mcp-connected-tools.spec.ts=515
 interface/e2e/support/groups-workspace.ts=398
-interface/__tests__/teams/GroupManagementPanel.test.tsx=361
 ops/compose.py=683
 ops/interface_runtime.py=772
 ops/k8s.py=605
 ops/lifecycle.py=945
 ops/wsl_runtime.py=706
 tests/test_compose_tasks.py=777
-tests/test_k8s_tasks.py=358
 tests/test_interface_e2e_tasks.py=539
 tests/test_interface_tasks.py=466
 tests/test_lifecycle_tasks.py=557

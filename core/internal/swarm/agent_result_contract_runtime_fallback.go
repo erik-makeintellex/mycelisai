@@ -156,8 +156,7 @@ func resultContractSafeRuntimeFallback(requirement *teamResultRequirement, resul
 		return false
 	}
 	artifact := firstProjectPackageArtifact(result.artifacts)
-	if artifact == nil || !hasCurrentReadbackEvidence(result.toolEvidence, artifact.Entrypoint) ||
-		resultContractNeedsRequiredWrites(requirement, result.artifacts, result.toolEvidence) {
+	if artifact == nil || resultContractNeedsRequiredWrites(requirement, result.artifacts, result.toolEvidence) {
 		return false
 	}
 	issues := resultContractIssues(requirement, result.artifacts, result.toolEvidence)
@@ -165,7 +164,9 @@ func resultContractSafeRuntimeFallback(requirement *teamResultRequirement, resul
 		return false
 	}
 	for _, issue := range issues {
-		if strings.Contains(issue, "primary interaction") ||
+		if strings.Contains(issue, "missing successful structural readback") ||
+			strings.Contains(issue, "entrypoint readback") ||
+			strings.Contains(issue, "primary interaction") ||
 			strings.Contains(issue, "approved validation target") ||
 			strings.Contains(issue, "text-change observation target") ||
 			strings.Contains(issue, "animation loop") {

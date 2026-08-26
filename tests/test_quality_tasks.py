@@ -7,6 +7,12 @@ import pytest
 from ops import quality
 
 
+def test_default_line_ceiling_is_target_plus_ten_percent():
+    assert quality.SOURCE_LINE_TARGET == 350
+    assert quality.SOURCE_LINE_TOLERANCE_PERCENT == 10
+    assert quality.DEFAULT_MAX_LINES == 385
+
+
 def _write_lines(path: Path, count: int):
     path.write_text("\n".join(f"line {i}" for i in range(count)) + "\n", encoding="utf-8")
 

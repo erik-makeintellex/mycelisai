@@ -15,7 +15,6 @@ import (
 
 const teamCommandCorrelationTTL = 30 * time.Minute
 
-// handleTrigger receives an external signal and broadens it to the internal team bus.
 func (t *Team) handleTrigger(msg *nats.Msg) {
 	log.Printf("Team [%s] Triggered by [%s]", t.Manifest.Name, msg.Subject)
 	payload := normalizeCommandPayload(msg.Data)
@@ -79,10 +78,10 @@ func normalizeCommandPayload(data []byte) []byte {
 	return append([]byte(nil), trimmed...)
 }
 
-// handleResponse receives an internal signal and broadens it to the external team bus.
 func (t *Team) handleResponse(msg *nats.Msg) {
 	log.Printf("Team [%s] Response: %s", t.Manifest.Name, string(msg.Data))
 	correlation := t.responseCommandCorrelation(msg.Data)
+	published := false
 	for _, subject := range t.Manifest.Deliveries {
 		payload := msg.Data
 		switch {
@@ -119,7 +118,10 @@ func (t *Team) handleResponse(msg *nats.Msg) {
 				payload = wrapped
 			}
 		}
-		t.nc.Publish(subject, payload)
+		published = t.publishResponse(subject, payload) || published
+	}
+	if published {
+		t.flushResponses()
 	}
 }
 

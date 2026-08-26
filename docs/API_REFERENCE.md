@@ -254,6 +254,8 @@ For output contracts without required runtime interaction, the resulting `team_s
 
 ## Directed Execution Payloads
 
+Bounded `project_package` runtime recovery may construct only the approved package shape after complete safe writes or provider failure, and must establish its own current readback. It cannot convert a semantic or browser-interaction failure into trusted completion; interactive packages remain subject to the digest-bound browser validator.
+
 `execution_summary` is the additive directed-execution contract for Soma-facing runtime responses. It is optional for compatibility, but meaningful Soma actions should populate it as they move into the directed-execution model.
 
 The object can include:
