@@ -40,8 +40,8 @@ export default function ProfileSettings() {
     };
 
     return (
-        <div className="space-y-6 max-w-lg">
-            <div className="p-6 rounded-lg border border-cortex-border bg-cortex-surface shadow-sm space-y-4">
+        <div className="w-full min-w-0 max-w-lg space-y-6">
+            <div className="min-w-0 space-y-4 rounded-lg border border-cortex-border bg-cortex-surface p-6 shadow-sm">
                 <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider">Identity</h3>
                 <div className="space-y-2">
                     <label className="text-cortex-text-main text-sm block" htmlFor="assistant-name">
@@ -55,7 +55,7 @@ export default function ProfileSettings() {
                             onChange={(e) => setNameDraft(e.target.value)}
                             placeholder="Soma"
                             maxLength={48}
-                            className="flex-1 bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-sm text-cortex-text-main focus:outline-none focus:ring-1 focus:ring-cortex-primary"
+                            className="min-w-0 flex-1 bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-sm text-cortex-text-main focus:outline-none focus:ring-1 focus:ring-cortex-primary"
                         />
                         <button
                             type="button"
@@ -72,7 +72,7 @@ export default function ProfileSettings() {
                     {saveMessage && <p className="text-xs font-mono text-cortex-text-muted">{saveMessage}</p>}
                 </div>
             </div>
-            <div className="p-6 rounded-lg border border-cortex-border bg-cortex-surface shadow-sm space-y-4">
+            <div className="min-w-0 space-y-4 rounded-lg border border-cortex-border bg-cortex-surface p-6 shadow-sm">
                 <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider">Appearance</h3>
                 <div className="space-y-2">
                     <label className="text-cortex-text-main text-sm block" htmlFor="theme-select">
@@ -83,7 +83,7 @@ export default function ProfileSettings() {
                             id="theme-select"
                             value={themeDraft}
                             onChange={(e) => setThemeDraft(e.target.value as typeof themeDraft)}
-                            className="flex-1 bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-sm text-cortex-text-main focus:outline-none focus:ring-1 focus:ring-cortex-primary"
+                            className="min-w-0 flex-1 bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-sm text-cortex-text-main focus:outline-none focus:ring-1 focus:ring-cortex-primary"
                         >
                             <option value="aero-light">Aero Light</option>
                             <option value="midnight-cortex">Midnight Cortex</option>

@@ -438,6 +438,7 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByRole("button", { name: /Search sources/i })).toBeVisible();
         await expect(page.getByRole("button", { name: /Live inputs/i })).toBeVisible();
         await expect(page.getByRole("button", { name: /Service connections/i })).toBeVisible();
+        await clickVisibleControl(page, page.getByRole("button", { name: /Search sources/i }));
         await expect(page.getByText("Self-hosted public web").first()).toBeVisible();
         await expect(page.getByText("operator-owned public web search").first()).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /Inspect/i }));
@@ -511,5 +512,4 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByText(/Inspect technical refs/i)).toBeVisible();
         await expect(page.getByText(/Snapshot ref/i)).toHaveCount(0);
     });
-
 });
