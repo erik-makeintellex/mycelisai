@@ -105,13 +105,13 @@ Default approval frame:
 
 ```text
 Soma
-I can start that. I will hand this to the work bus after approval and keep this thread open.
+I can start that. Once you approve, I’ll start the work and stay here for questions or changes while it runs.
 
-- Shape the project workspace.
-- Hand the work to the right team.
-- Save the deliverable to Outcomes.
+- You’ll get a saved deliverable you can open from this conversation.
+- I’ll shape the project workspace around that result.
+- I’ll bring in the right team and keep their work connected here.
 
-Reply "approve" to begin, or tell me what to change.
+Reply "approve" to start. You can also ask a question or tell me what to change.
 Details
 ```
 

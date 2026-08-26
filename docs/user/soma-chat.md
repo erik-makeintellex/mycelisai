@@ -97,7 +97,7 @@ Soma responses can include:
 1. **Primary answer**: markdown text, code blocks, links, and tables. Table-like data should render as a real table, not as pasted aligned text. Compact labels such as `Quick answer`, `Summary`, or `Decision brief` may appear only to clarify answer depth.
 2. **Inline generated outputs**: images, audio, video, code, charts, briefs, data, documents, and media previews.
 3. **Output package**: a retained file/app/package with `Open file`, `Open folder`, proof, and Resources re-entry.
-4. **Proposal quote**: a compact summary and short work list for actions that execute or change something. Reply `approve`, `go ahead`, or `start` in the normal composer to begin; reply `cancel` to cancel; otherwise tell Soma what to change.
+4. **Proposal quote**: a result-first summary and short work list for actions that execute or change something. Soma keeps the conversation open so you can ask a question or change direction before and during the work. Reply `approve`, `go ahead`, or `start` in the normal composer to begin; reply `cancel` to cancel; otherwise tell Soma what to change. Internal routing stays under `Details`.
 5. **Recovery/blocker card**: a compact trust boundary in the thread, with what failed, what remains trusted, what is not trusted, and what can safely happen next behind `Details and proof`.
 6. **Action-state card**: the current status, route, capability use, or next step for structured Soma work.
 
