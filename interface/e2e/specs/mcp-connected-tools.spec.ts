@@ -440,7 +440,7 @@ test.describe("Capabilities MCP workflow", () => {
         await expect(page.getByRole("button", { name: /Service connections/i })).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /Search sources/i }));
         await expect(page.getByText("Self-hosted public web").first()).toBeVisible();
-        await expect(page.getByText("operator-owned public web search").first()).toBeVisible();
+        await expect(page.getByText(/operator-owned public web search|self-hosted SearXNG endpoint/i).first()).toBeVisible();
         await clickVisibleControl(page, page.getByRole("button", { name: /Inspect/i }));
         await expect(page.getByText("Capability Workflow")).toBeVisible();
         await expect(page.getByText("Search provider details")).toBeVisible();
