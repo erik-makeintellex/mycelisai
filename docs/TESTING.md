@@ -211,6 +211,8 @@ Interactive generated-output acceptance requires more than a retained package an
 
 Run and work-review proof must also cover failed validation with retained files: recovery stays the primary recommendation, **Open unverified output** opens the exact retained entrypoint, the warning prevents acceptance as verified work, and run/audit evidence remains under proof or details rather than replacing output access.
 
+For code-rendered visual requests, focused contract proof must check semantic coverage of the named entities, relationships, and perspective—not only file existence. Browser proof must use the exact accessible primary control, confirm decorative SVG layers do not intercept it, observe the marked visible surface changing, review console/assets, and include a human visual check for hierarchy, overlaps, clipping, contrast, responsive composition, and placeholder-level output.
+
 ## Product Delivery Proof
 
 Repository-local Playwright execution is single-owner. `uv run inv interface.e2e` acquires `workspace/runtime/instance-locks/interface-e2e.json` before selecting ports, starting or reusing services, writing shared reports, or creating live fixtures. A second run fails fast with the owning PID/host; it must wait instead of killing processes or overwriting artifacts. The lease is released on success or failure, and an orphaned same-host PID lease is reclaimed. This applies to managed, external-server, and live-backend modes because their reports and retained-state proof still share repository resources. Parallel development should use focused unit/package tests concurrently, then queue shared browser and lifecycle proof deliberately.

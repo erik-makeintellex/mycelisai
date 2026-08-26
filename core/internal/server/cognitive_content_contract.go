@@ -34,6 +34,10 @@ func contentContractForTeamRequest(request string) map[string]any {
 		types = append(types, "application_package")
 		outputs = append(outputs, "openable application package")
 		criteria = append(criteria, applicationPackageAcceptanceCriteria()...)
+		if requestAsksForCodeRenderedVisual(lower) {
+			criteria = append(criteria, codeRenderedVisualAcceptanceCriteria()...)
+			proof = append(proof, "visual review against the named subject, relationships, requested perspective, and interaction")
+		}
 		proof = append(proof, applicationPackageProofRequirements()...)
 	}
 	if requestAsksForCodeArtifact(lower) && !strings.Contains(lower, "game") {
@@ -97,12 +101,29 @@ func contentContractForTeamRequest(request string) map[string]any {
 
 func interactiveBrowserValidationPlan(lower string, types []string) *protocol.OutputValidationPlan {
 	interactive := slices.Contains(types, "game") || requestContainsAny(lower, []string{
-		"browser", "web app", "web application", "index.html", ".html",
+		"browser", "web app", "web application", "web page", "webpage", "svg", "index.html", ".html",
 	})
 	if !interactive {
 		return nil
 	}
 	return interactiveBrowserValidationPlanForRequest(lower)
+}
+
+func requestAsksForCodeRenderedVisual(lower string) bool {
+	return requestContainsAny(lower, []string{
+		"svg", "scalable vector graphic", "vector markup", "html canvas", "canvas code", "css art",
+	})
+}
+
+func codeRenderedVisualAcceptanceCriteria() []string {
+	return []string{
+		"the visual substantially depicts the named subject, entities, relationships, and requested perspective instead of a token diagram or placeholder",
+		"labels, hierarchy, directional connections, legend, and explanatory copy make the visual understandable without reading source code",
+		"the composition explicitly explains the requested actor's place and role within the depicted system",
+		"the primary action is an obvious keyboard-accessible control and decorative SVG layers cannot intercept pointer events",
+		"data-mycelis-validation-surface marks the visible content that actually changes after the primary action",
+		"visual review confirms semantic coverage, responsive layout, readable contrast, and absence of overlaps or clipped labels",
+	}
 }
 
 func interactiveBrowserValidationPlanForRequest(lower string) *protocol.OutputValidationPlan {
