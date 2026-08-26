@@ -158,6 +158,29 @@ func TestInferCreateTeamPlanFromRequest_ContentContractCoversTableAndAppOutputs(
 	}
 }
 
+func TestContentContract_SVGInfrastructureVisualRequiresSemanticAndWorkingDelivery(t *testing.T) {
+	request := "Create a web page and using SVG code imagine and create an image of the Mycelis infrastructure and your place in it."
+	contract := contentContractForTeamRequest(request)
+	criteria := strings.Join(confirmedActionStringSlice(contract["acceptance_criteria"]), "\n")
+	for _, want := range []string{
+		"substantially depicts the named subject", "relationships", "requested perspective",
+		"legend", "actor's place and role", "keyboard-accessible", "cannot intercept pointer events",
+		"visible content that actually changes", "responsive layout",
+	} {
+		if !strings.Contains(criteria, want) {
+			t.Fatalf("criteria = %q, missing %q", criteria, want)
+		}
+	}
+	proof := strings.Join(confirmedActionStringSlice(contract["proof_required"]), "\n")
+	if !strings.Contains(proof, "visual review against the named subject") {
+		t.Fatalf("proof = %q, missing semantic visual review", proof)
+	}
+	plan, ok := contract["output_validation"].(*protocol.OutputValidationPlan)
+	if !ok || plan.Probe == nil || plan.Probe.Action.Kind != protocol.OutputValidationActionClick {
+		t.Fatalf("output_validation = %#v, want required click validation", contract["output_validation"])
+	}
+}
+
 func TestContentContract_PackageMetadataDoesNotImplyTableData(t *testing.T) {
 	contract := contentContractForTeamRequest("Build a browser game package. The package metadata must include index.html, README.md, and validation notes.")
 	contentTypes := confirmedActionStringSlice(contract["content_types"])
