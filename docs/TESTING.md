@@ -148,7 +148,7 @@ uv run inv api.delivery-proof
 uv run inv logging.check-schema
 uv run inv logging.check-topics
 ```
-`wsl.validate --lane=release` runs `compose.health` before each live browser spec because those specs execute through separate WSL shell invocations. Use `--headed-browser` on that same task when acceptance evidence must include visible live Playwright windows. `lifecycle.health` and `compose.health` are the service-readiness gates for source and packaged lanes; their cognitive-status checks allow enough client time for the endpoint's bounded provider probes, while disabled text providers are not valid health candidates and should not be counted as online or allowed to stall the gate.
+`wsl.validate --lane=release` runs `compose.health` before each live browser spec because those specs execute through separate WSL shell invocations. Use `--headed-browser` on that same task when acceptance evidence must include visible live Playwright windows. `lifecycle.health` and `compose.health` are the service-readiness gates for source and packaged lanes; their cognitive-status checks allow enough client time for the endpoint's bounded provider probes, while disabled text providers are not valid health candidates and should not be counted as online or allowed to stall the gate. Release posture rejects loopback AI endpoints except when a WSL source endpoint exactly matches the scheme and port of the configured `host.docker.internal` Compose endpoint, which is the bounded Windows-host relay contract for mirrored networking.
 Focused live-backend examples:
 ```bash
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts

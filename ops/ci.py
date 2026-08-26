@@ -122,6 +122,24 @@ def _is_loopback_or_unspecified_host(host: str) -> bool:
     return address.is_loopback or address.is_unspecified
 
 
+def _is_wsl_windows_relay_endpoint(raw: str, env_values: dict[str, str]) -> bool:
+    if not running_in_wsl():
+        return False
+    endpoint = urlparse(raw)
+    compose_endpoint = urlparse(env_values.get("MYCELIS_COMPOSE_OLLAMA_HOST", ""))
+    if (compose_endpoint.hostname or "").lower() != "host.docker.internal":
+        return False
+    try:
+        host_is_loopback = ipaddress.ip_address(endpoint.hostname or "").is_loopback
+    except ValueError:
+        host_is_loopback = (endpoint.hostname or "").lower() == "localhost"
+    return (
+        host_is_loopback
+        and endpoint.scheme == compose_endpoint.scheme
+        and endpoint.port == compose_endpoint.port
+    )
+
+
 def _probe_http_endpoint(url: str, timeout: float = 3.0) -> tuple[int, str]:
     try:
         request = urllib.request.Request(url, headers={"Accept": "application/json"})
@@ -139,7 +157,8 @@ def _probe_http_endpoint(url: str, timeout: float = 3.0) -> tuple[int, str]:
 def _runtime_posture_check(c):
     print("=== RUNTIME POSTURE ===")
     cache_tasks.ensure_disk_headroom(min_free_gb=12, reason="release preflight posture")
-    endpoints = _configured_ai_endpoints()
+    env_values = _runtime_posture_env_values()
+    endpoints = _configured_ai_endpoints(env_values)
     if not endpoints:
         raise SystemExit(
             "RUNTIME POSTURE CHECK FAILED: no explicit AI endpoint configured in process env, .env.compose, or .env. "
@@ -154,10 +173,13 @@ def _runtime_posture_check(c):
             print(f"  [FAIL] {label}: invalid endpoint URL '{raw}'")
             continue
         host = parsed.hostname or ""
-        if _is_loopback_or_unspecified_host(host):
+        is_wsl_relay = _is_wsl_windows_relay_endpoint(raw, env_values)
+        if _is_loopback_or_unspecified_host(host) and not is_wsl_relay:
             failures.append(f"{env_name}: loopback or unspecified host '{host}' is not allowed")
             print(f"  [FAIL] {label}: loopback or unspecified host '{host}' is not allowed")
             continue
+        if is_wsl_relay:
+            print(f"  [INFO] {label}: using the matching WSL Windows-host relay")
 
         reachable = False
         for probe_url in _probe_urls_for_endpoint(env_name, raw):

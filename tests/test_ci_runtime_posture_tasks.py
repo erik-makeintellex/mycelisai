@@ -96,8 +96,21 @@ def test_runtime_posture_check_rejects_loopback_ai_endpoint(monkeypatch):
         ci._runtime_posture_check(FakeContext({}))
 
 
-def test_runtime_posture_check_probes_compose_ai_endpoint_with_fallback(monkeypatch):
+def test_wsl_windows_relay_accepts_only_matching_loopback_endpoint(monkeypatch):
+    monkeypatch.setattr(ci, "running_in_wsl", lambda: True)
+    values = {"MYCELIS_COMPOSE_OLLAMA_HOST": "http://host.docker.internal:11434"}
+
+    assert ci._is_wsl_windows_relay_endpoint("http://127.0.0.1:11434/v1", values)
+    assert not ci._is_wsl_windows_relay_endpoint("http://127.0.0.1:12434/v1", values)
+    assert not ci._is_wsl_windows_relay_endpoint(
+        "http://127.0.0.1:11434/v1",
+        {"MYCELIS_COMPOSE_OLLAMA_HOST": "http://192.168.50.156:11434"},
+    )
+
+
+def test_runtime_posture_check_probes_compose_ai_endpoint_with_fallback(monkeypatch, tmp_path):
     monkeypatch.setattr(ci.cache_tasks, "ensure_disk_headroom", lambda **_kwargs: None)
+    monkeypatch.setattr(ci, "ROOT_DIR", tmp_path)
     monkeypatch.setenv("MYCELIS_COMPOSE_OLLAMA_HOST", "http://10.0.0.5:11434")
     monkeypatch.setattr(ci, "running_in_wsl", lambda: False)
 
@@ -119,8 +132,9 @@ def test_runtime_posture_check_probes_compose_ai_endpoint_with_fallback(monkeypa
     ]
 
 
-def test_runtime_posture_check_probes_wsl_localhost_mirror_for_host_docker_internal(monkeypatch):
+def test_runtime_posture_check_probes_wsl_localhost_mirror_for_host_docker_internal(monkeypatch, tmp_path):
     monkeypatch.setattr(ci.cache_tasks, "ensure_disk_headroom", lambda **_kwargs: None)
+    monkeypatch.setattr(ci, "ROOT_DIR", tmp_path)
     monkeypatch.setenv("MYCELIS_COMPOSE_OLLAMA_HOST", "http://host.docker.internal:11434")
     monkeypatch.setattr(ci, "running_in_wsl", lambda: True)
 
