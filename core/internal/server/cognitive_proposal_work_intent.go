@@ -49,7 +49,7 @@ func inferProposalOutputContract(latestRequest string, paths []string, primaryTa
 	launchHint := ""
 	validation := []string{"Retained output is reviewable from Soma, Groups, or Resources."}
 	switch {
-	case requestContainsAny(text, []string{"game", "playable", "browser app", "index.html", "project-package", "application"}):
+	case requestContainsAny(text, []string{"game", "playable", "browser app", "web page", "webpage", "index.html", "project-package", "application"}):
 		shape = "app_package"
 		launchHint = "Return an openable entrypoint and folder access."
 		validation = []string{"Open the entrypoint.", "Confirm the primary interaction works.", "Retain proof and repair notes."}
