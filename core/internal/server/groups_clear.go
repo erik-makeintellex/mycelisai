@@ -95,7 +95,7 @@ func (s *AdminServer) clearGroup(ctx context.Context, group *CollaborationGroup,
 	} else {
 		result.WorkspaceRemoved = removed
 	}
-	if archived, archiveErr := s.archiveGroupOutputArtifactsDB(ctx, group.TeamIDs); archiveErr != nil {
+	if archived, archiveErr := s.archiveGroupOutputArtifactsDB(ctx, group.TeamIDs, group.WorkspaceFolder); archiveErr != nil {
 		result.Warnings = append(result.Warnings, archiveErr.Error())
 	} else {
 		result.ArtifactsArchived = archived
@@ -127,10 +127,14 @@ func removeGroupWorkspaceFolder(folder string) (bool, error) {
 	return true, nil
 }
 
-func (s *AdminServer) archiveGroupOutputArtifactsDB(ctx context.Context, teamIDs []string) (int64, error) {
+func (s *AdminServer) archiveGroupOutputArtifactsDB(ctx context.Context, teamIDs []string, workspaceFolder string) (int64, error) {
 	db := s.getDB()
 	if db == nil {
 		return 0, errors.New("database not available")
+	}
+	folder, err := normalizeRequestedGroupWorkspaceFolder(workspaceFolder)
+	if err != nil {
+		return 0, err
 	}
 	var total int64
 	for _, rawTeamID := range teamIDs {
@@ -139,14 +143,14 @@ func (s *AdminServer) archiveGroupOutputArtifactsDB(ctx context.Context, teamIDs
 			continue
 		}
 		var res sql.Result
-		var err error
+		var updateErr error
 		if teamID, parseErr := uuid.Parse(teamRef); parseErr == nil {
-			res, err = db.ExecContext(ctx, `UPDATE artifacts SET status=$1 WHERE team_id=$2`, "archived", teamID)
+			res, updateErr = db.ExecContext(ctx, `UPDATE artifacts SET status=$1 WHERE team_id=$2 AND (file_path=$3 OR left(file_path, length($3)+1)=$3||'/')`, "archived", teamID, folder)
 		} else {
-			res, err = db.ExecContext(ctx, `UPDATE artifacts SET status=$1 WHERE agent_id=$2`, "archived", teamRef)
+			res, updateErr = db.ExecContext(ctx, `UPDATE artifacts SET status=$1 WHERE agent_id=$2 AND (file_path=$3 OR left(file_path, length($3)+1)=$3||'/')`, "archived", teamRef, folder)
 		}
-		if err != nil {
-			return total, err
+		if updateErr != nil {
+			return total, updateErr
 		}
 		rows, _ := res.RowsAffected()
 		total += rows

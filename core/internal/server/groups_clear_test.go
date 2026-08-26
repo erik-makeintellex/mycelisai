@@ -63,7 +63,7 @@ func TestHandleClearGroup_WithOutputsRemovesWorkspaceAndArchivesArtifacts(t *tes
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	expectGroupLoad(mock, "group-clear", groupStatusArchived, now)
 	mock.ExpectExec("UPDATE artifacts SET status").
-		WithArgs("archived", "cleanup-lead").
+		WithArgs("archived", "cleanup-lead", "groups/cleanup-team").
 		WillReturnResult(sqlmock.NewResult(0, 2))
 
 	rr := doAuthenticatedRequest(t, mux, http.MethodPost, "/api/v1/groups/group-clear/clear", `{"include_outputs":true}`)

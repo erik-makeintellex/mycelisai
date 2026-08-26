@@ -158,6 +158,25 @@ func TestStampTeamOutputRefsUsesAuthoritativeCompletionProof(t *testing.T) {
 	}
 }
 
+func TestMergeTeamOutputRefsReplacesCorrectedOutputWithSameID(t *testing.T) {
+	existing := []protocol.TeamOutputRef{
+		{OutputID: "package", Kind: "project_package", StorageRef: "groups/app-team/generated/stale", Entrypoint: "missing.html"},
+		{OutputID: "notes", Kind: "document", StorageRef: "groups/app-team/generated/notes.md"},
+	}
+	incoming := []protocol.TeamOutputRef{{
+		OutputID: "package", Kind: "project_package", StorageRef: "groups/app-team/generated/repaired", Entrypoint: "index.html",
+	}}
+
+	merged := mergeTeamOutputRefs(existing, incoming)
+
+	if len(merged) != 2 {
+		t.Fatalf("merged refs = %#v, want corrected package and unrelated notes", merged)
+	}
+	if merged[0].OutputID != "notes" || merged[1].StorageRef != "groups/app-team/generated/repaired" {
+		t.Fatalf("merged refs = %#v, stale package was not replaced", merged)
+	}
+}
+
 func expectProjectedTeamWorkUpdateWithOutputs(mock sqlmock.Sqlmock, workID string, state protocol.TeamWorkState, needsOperator bool, degradation string, outputs sqlmock.Argument) {
 	mock.ExpectExec("UPDATE team_work_items").
 		WithArgs(workID, string(state), sqlmock.AnyArg(), needsOperator, degradation,

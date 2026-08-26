@@ -2,6 +2,8 @@ package server
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -18,6 +20,15 @@ func TestHandleGroupOutputs_ProjectsTeamOutputRefs(t *testing.T) {
 	mux := setupMux(t, "GET /api/v1/groups/{id}/outputs", s.HandleGroupOutputs)
 
 	now := time.Now().UTC()
+	root := t.TempDir()
+	t.Setenv("MYCELIS_WORKSPACE", root)
+	packageFolder := filepath.Join(root, "groups", "qa-delivery-team", "generated", "first-game")
+	if err := os.MkdirAll(packageFolder, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(packageFolder, "index.html"), []byte("<!doctype html>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	teamID := "qa-delivery-team"
 	workID := "22222222-2222-2222-2222-222222222222"
 	mock.ExpectQuery("SELECT id::text, tenant_id, name, goal_statement, work_mode").
@@ -88,6 +99,33 @@ func TestHandleGroupOutputs_ProjectsTeamOutputRefs(t *testing.T) {
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
+func TestGroupRetainsTeamOutputRefRequiresOwnedLiveTarget(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("MYCELIS_WORKSPACE", root)
+	group := &CollaborationGroup{WorkspaceFolder: "groups/owned-team"}
+	target := filepath.Join(root, "groups", "owned-team", "generated", "app")
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(target, "index.html"), []byte("ready"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ref := protocol.TeamOutputRef{Kind: "project_package", StorageRef: "groups/owned-team/generated/app", Entrypoint: "index.html"}
+	if !groupRetainsTeamOutputRef(group, ref) {
+		t.Fatal("live group-owned entrypoint was not retained")
+	}
+	ref.Entrypoint = "missing.html"
+	if groupRetainsTeamOutputRef(group, ref) {
+		t.Fatal("missing entrypoint was presented")
+	}
+	ref.StorageRef = "groups/unrelated-team/generated/app"
+	ref.Entrypoint = "index.html"
+	if groupRetainsTeamOutputRef(group, ref) {
+		t.Fatal("unrelated team output was presented")
 	}
 }
 

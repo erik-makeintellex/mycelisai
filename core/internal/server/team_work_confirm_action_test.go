@@ -152,6 +152,43 @@ func TestPersistConfirmedDeliverableWorkItems_DoesNotPromotePlanningFiles(t *tes
 	}
 }
 
+func TestPersistConfirmedDeliverableWorkItems_DegradesMissingProjectPackage(t *testing.T) {
+	opt, mock := withDB(t)
+	s := newTestServer(opt)
+	now := time.Now().UTC()
+	t.Setenv("MYCELIS_WORKSPACE", t.TempDir())
+	link := testConfirmedActionTeamWorkLink(&protocol.ScopeValidation{WorkIntent: &protocol.WorkIntent{
+		Kind: "project", OutputContract: &protocol.WorkOutputContract{Shape: "app_package", PrimaryDeliverable: "Browser app"},
+	}})
+
+	mock.ExpectBegin()
+	expectTeamWorkItemInsertWithPosture(mock, "app-team", protocol.TeamExecutionShapeDeliverable, protocol.TeamWorkStateDegraded, true, "incomplete_deliverable_files", now)
+	expectTeamStatusEventInsert(mock, "app-team", protocol.TeamWorkStateDegraded, now)
+	expectTeamWorkItemUpdateWithPosture(mock, protocol.TeamWorkStateDegraded, true, "incomplete_deliverable_files", sqlmock.AnyArg())
+	expectTeamInteractionInsert(mock, "app-team", "degraded", now)
+	mock.ExpectCommit()
+
+	refs, err := s.persistConfirmedDeliverableWorkItems(t.Context(), link, []plannedToolExecutionResult{{
+		Name: "write_file",
+		Arguments: map[string]any{
+			"team_id": "app-team", "path": "groups/app-team/generated/app/index.html",
+			"package_kind": "project_package", "package_folder": "groups/app-team/generated/app",
+			"package_entrypoint": "groups/app-team/generated/app/index.html",
+		},
+		Output: "claimed package completion",
+	}})
+	if err != nil {
+		t.Fatalf("persistConfirmedDeliverableWorkItems: %v", err)
+	}
+	assertTeamWorkRef(t, refs, "app-team", protocol.TeamWorkStateDegraded, 0)
+	if len(refs[0].OutputRefs) != 0 {
+		t.Fatalf("unverified output refs = %#v, want none", refs[0].OutputRefs)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
+	}
+}
+
 func TestOutputRefsForTeamWork_NormalizesViewerURLFolderForDeliverable(t *testing.T) {
 	link := testConfirmedActionTeamWorkLink(&protocol.ScopeValidation{})
 

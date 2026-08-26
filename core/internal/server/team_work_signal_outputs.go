@@ -134,11 +134,17 @@ func mergeTeamOutputRefs(existing, incoming []protocol.TeamOutputRef) []protocol
 	if len(incoming) == 0 {
 		return existing
 	}
+	incomingKeys := make(map[string]bool, len(incoming))
+	for _, ref := range incoming {
+		if key := teamOutputRefKey(ref); key != "" {
+			incomingKeys[key] = true
+		}
+	}
 	merged := make([]protocol.TeamOutputRef, 0, len(existing)+len(incoming))
 	seen := map[string]bool{}
 	for _, ref := range existing {
 		key := teamOutputRefKey(ref)
-		if key == "" || seen[key] {
+		if key == "" || seen[key] || incomingKeys[key] {
 			continue
 		}
 		seen[key] = true

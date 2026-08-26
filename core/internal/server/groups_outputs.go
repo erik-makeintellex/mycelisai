@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -68,7 +69,7 @@ func (s *AdminServer) listGroupOutputsWithOptions(ctx context.Context, group *Co
 				seen[key] = struct{}{}
 			}
 		}
-		refItems, err := s.listGroupOutputRefs(ctx, teamRef, limit, includeInternal)
+		refItems, err := s.listGroupOutputRefs(ctx, group, teamRef, limit, includeInternal)
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +97,7 @@ func (s *AdminServer) listGroupOutputsWithOptions(ctx context.Context, group *Co
 	return outputs, nil
 }
 
-func (s *AdminServer) listGroupOutputRefs(ctx context.Context, teamRef string, limit int, includeInternal bool) ([]artifacts.Artifact, error) {
+func (s *AdminServer) listGroupOutputRefs(ctx context.Context, group *CollaborationGroup, teamRef string, limit int, includeInternal bool) ([]artifacts.Artifact, error) {
 	items, err := s.listTeamWorkItemsDB(ctx, teamRef, limit, true)
 	if err != nil {
 		return nil, err
@@ -107,10 +108,36 @@ func (s *AdminServer) listGroupOutputRefs(ctx context.Context, teamRef string, l
 			if !includeInternal && !isUserDeliverableTeamOutputRef(ref) {
 				continue
 			}
+			if !groupRetainsTeamOutputRef(group, ref) {
+				continue
+			}
 			outputs = append(outputs, artifactFromTeamOutputRef(item, ref))
 		}
 	}
 	return outputs, nil
+}
+
+func groupRetainsTeamOutputRef(group *CollaborationGroup, ref protocol.TeamOutputRef) bool {
+	if group == nil {
+		return false
+	}
+	groupFolder, err := normalizeRequestedGroupWorkspaceFolder(group.WorkspaceFolder)
+	if err != nil {
+		return false
+	}
+	retainedPath := strings.Trim(strings.ReplaceAll(firstNonEmptyString(ref.StorageRef, ref.Entrypoint), "\\", "/"), "/")
+	if retainedPath != groupFolder && !strings.HasPrefix(retainedPath, groupFolder+"/") {
+		return false
+	}
+	if strings.EqualFold(strings.TrimSpace(ref.Kind), "project_package") {
+		retainedPath = teamWorkEntrypointPath(ref)
+	}
+	target, _, err := resolveWorkspacePath(retainedPath, false)
+	if err != nil {
+		return false
+	}
+	info, err := os.Stat(target)
+	return err == nil && !info.IsDir()
 }
 
 func artifactFromTeamOutputRef(item protocol.TeamWorkItem, ref protocol.TeamOutputRef) artifacts.Artifact {

@@ -130,42 +130,55 @@ export function OutputWorkbenchCompactDigest({ digest }: { digest: OutputWorkben
             </span>
           ) : null}
         </div>
-        <div className="flex w-full flex-wrap items-center gap-1">
-          {digest.resourcesHref ? (
-            <a
-              href={digest.resourcesHref}
-              className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-border/80 bg-cortex-bg/70 px-2.5 text-[11px] font-semibold text-cortex-text-main transition-colors hover:border-cortex-primary/45 hover:bg-cortex-primary/10 hover:text-cortex-primary"
-              title={`Browse ${digest.text} in Resources`}
-              aria-label={`Open ${digest.text} in Resources`}
-            >
-              <FolderOpen className="h-3 w-3" />
-              {OUTPUT_PACKAGE_RESOURCES_LABEL}
-            </a>
-          ) : null}
+        <div className="w-full">
           <OutputAccessActions
             label={digest.text}
             url={digest.url}
             storagePath={digest.storagePath}
             openLabel={openLabel}
             folderLabel="Open folder"
+            primary
+            showFolder={false}
+            openInCanvas
+            proofArtifactId={digest.proofArtifactId}
           />
-          {digest.replyReference || digest.url || workspacePath ? (
-            <button
-              type="button"
-              onClick={() => requestSomaOutputContinuation({
-                title: digest.text,
-                reference: digest.replyReference ?? workspacePath ?? digest.url,
-                proof: digest.proofArtifactId,
-              })}
-              className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"
-              title={`Reply to ${digest.text} in Soma`}
-              aria-label={`Reply to ${digest.text} in Soma`}
-            >
-              <MessageSquareReply className="h-3 w-3" />
-              Reply
-            </button>
-          ) : null}
         </div>
+        {(digest.resourcesHref || digest.replyReference || digest.url || workspacePath) ? (
+          <details className="w-full border-t border-cortex-border/60 pt-2">
+            <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-[0.08em] text-cortex-text-muted hover:text-cortex-text-main">
+              Details and follow-up
+            </summary>
+            <div className="mt-2 flex w-full flex-wrap items-center gap-1.5">
+              {digest.resourcesHref ? (
+                <a
+                  href={digest.resourcesHref}
+                  className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-border/80 bg-cortex-bg/70 px-2.5 text-[11px] font-semibold text-cortex-text-main transition-colors hover:border-cortex-primary/45 hover:bg-cortex-primary/10 hover:text-cortex-primary"
+                  title={`Browse ${digest.text} in Resources`}
+                  aria-label={`Open ${digest.text} in Resources`}
+                >
+                  <FolderOpen className="h-3 w-3" />
+                  {OUTPUT_PACKAGE_RESOURCES_LABEL}
+                </a>
+              ) : null}
+              {digest.replyReference || digest.url || workspacePath ? (
+                <button
+                  type="button"
+                  onClick={() => requestSomaOutputContinuation({
+                    title: digest.text,
+                    reference: digest.replyReference ?? workspacePath ?? digest.url,
+                    proof: digest.proofArtifactId,
+                  })}
+                  className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 text-[11px] font-semibold text-cortex-primary transition-colors hover:border-cortex-primary/60 hover:bg-cortex-primary/15"
+                  title={`Reply to ${digest.text} in Soma`}
+                  aria-label={`Reply to ${digest.text} in Soma`}
+                >
+                  <MessageSquareReply className="h-3 w-3" />
+                  Reply
+                </button>
+              ) : null}
+            </div>
+          </details>
+        ) : null}
       </div>
     </aside>
   );

@@ -62,9 +62,9 @@ export default function ExecutionSummaryReceipt({
             {configStateSummary
               ? configStateSummary
               : digest?.isProjectPackage
-              ? "App/package output is ready. Open it, browse it in Resources, or reply to Soma for changes."
+              ? `${digest.text} is ready. Open the app now; follow-up and proof stay available in details.`
               : digest
-                ? "Latest output is ready. Use Open file or open the review panel for proof."
+                ? `${digest.text} is ready. Open it now; follow-up and proof stay available in details.`
                 : trust.detail}
           </p>
         </div>

@@ -1,6 +1,8 @@
 package server
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -29,6 +31,50 @@ func TestExecutionOutputsFromToolResultsAddsReadmeFromProjectPackageContract(t *
 	files := outputs[0].Files
 	if len(files) != 2 || files[0] != "index.html" || files[1] != "README.md" {
 		t.Fatalf("files = %#v, want index.html and README.md", files)
+	}
+}
+
+func TestConfirmedProjectPackageOutputIssueRequiresTeamScopedRetainedEntrypoint(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("MYCELIS_WORKSPACE", root)
+	packageFolder := "groups/app-team/generated/app"
+	target := filepath.Join(root, packageFolder)
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(target, "index.html"), []byte("<!doctype html><title>Ready</title>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	item := protocol.TeamWorkItem{TeamID: "app-team", OutputRefs: []protocol.TeamOutputRef{{
+		Kind: "project_package", StorageRef: packageFolder, Entrypoint: "index.html",
+	}}}
+	if issue := confirmedProjectPackageOutputIssue(item); issue != "" {
+		t.Fatalf("valid retained package issue = %q", issue)
+	}
+	item.OutputRefs = append(item.OutputRefs, protocol.TeamOutputRef{
+		Kind: "project_package", StorageRef: packageFolder, Entrypoint: "missing.html",
+	})
+	if issue := confirmedProjectPackageOutputIssue(item); issue != "incomplete_deliverable_files" {
+		t.Fatalf("second missing package issue = %q", issue)
+	}
+	item.OutputRefs = item.OutputRefs[:1]
+
+	item.OutputRefs[0].Entrypoint = "missing.html"
+	if issue := confirmedProjectPackageOutputIssue(item); issue != "incomplete_deliverable_files" {
+		t.Fatalf("missing entrypoint issue = %q", issue)
+	}
+	item.OutputRefs[0] = protocol.TeamOutputRef{
+		Kind: "project_package", StorageRef: "workspace/generated/app", Entrypoint: "index.html",
+	}
+	if issue := confirmedProjectPackageOutputIssue(item); issue != "invalid_deliverable_shape" {
+		t.Fatalf("general-bucket package issue = %q", issue)
+	}
+	item.OutputRefs[0] = protocol.TeamOutputRef{
+		Kind: "project_package", StorageRef: "groups/app-team/planning/app", Entrypoint: "index.html",
+	}
+	if issue := confirmedProjectPackageOutputIssue(item); issue != "invalid_deliverable_shape" {
+		t.Fatalf("planning-folder package issue = %q", issue)
 	}
 }
 

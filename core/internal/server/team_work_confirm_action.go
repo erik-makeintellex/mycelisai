@@ -177,6 +177,21 @@ func (s *AdminServer) persistConfirmedDeliverableWorkItems(ctx context.Context, 
 		item.ExpectedOutputs = mergeExpectedOutputs(expectedOutputsFromDeliverableResult(result, outputs), expectedOutputsFromWorkIntent(link.Scope))
 		item.ExpectedProof = []string{"Confirmed execution run", "Retained output reference"}
 		item.OutputRefs = outputRefsForTeamWork(link, item.WorkItemID, teamID, outputs)
+		if issue := confirmedProjectPackageOutputIssue(item); issue != "" {
+			item.State = protocol.TeamWorkStateDegraded
+			item.NeedsOperator = true
+			item.DegradationState = issue
+			item.RecoveryOptions = []string{"Repair the package inside the assigned team workspace and return a retained entrypoint that passes structural readback."}
+			item.OutputRefs = nil
+			item.LastEvent = confirmedActionStatusEvent(link, item, protocol.TeamWorkStateDegraded, "Team output needs repair", "The confirmed package did not pass retained-file verification.", "operator_attention", item.RecoveryOptions[0])
+			interaction := confirmedActionInteraction(link, item, "degraded", item.LastEvent.Details, result.Name, result.Arguments)
+			if err := s.persistTeamWorkItemWithLifecycle(ctx, &item, []protocol.TeamStatusEvent{*item.LastEvent}, interaction); err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			refs = append(refs, confirmActionTeamWorkRefForItem(item))
+			continue
+		}
 		item.LastEvent = confirmedActionStatusEvent(link, item, protocol.TeamWorkStateOutputReady, "Team output ready", "The confirmed deliverable request completed and produced retained output proof.", "verified", "Review the retained output and proof package.")
 		events := []protocol.TeamStatusEvent{
 			*confirmedActionStatusEvent(link, item, protocol.TeamWorkStateQueued, "Team work queued", "The confirmed deliverable request entered durable team work.", "verified", ""),
@@ -191,6 +206,23 @@ func (s *AdminServer) persistConfirmedDeliverableWorkItems(ctx context.Context, 
 		refs = append(refs, confirmActionTeamWorkRefForItem(item))
 	}
 	return refs, errors.Join(errs...)
+}
+
+func confirmedProjectPackageOutputIssue(item protocol.TeamWorkItem) string {
+	for _, ref := range item.OutputRefs {
+		if !strings.EqualFold(strings.TrimSpace(ref.Kind), "project_package") {
+			continue
+		}
+		teamRoot := "groups/" + strings.Trim(strings.TrimSpace(item.TeamID), "/") + "/generated/"
+		storageRef := strings.Trim(strings.ReplaceAll(strings.TrimSpace(ref.StorageRef), "\\", "/"), "/")
+		if strings.TrimSpace(ref.Entrypoint) == "" || !strings.HasPrefix(storageRef+"/", teamRoot) {
+			return "invalid_deliverable_shape"
+		}
+		if issue := projectPackageFileIssue(item, ref); issue != "" {
+			return issue
+		}
+	}
+	return ""
 }
 
 func (s *AdminServer) persistTeamWorkItemWithLifecycle(ctx context.Context, item *protocol.TeamWorkItem, events []protocol.TeamStatusEvent, interaction protocol.TeamInteraction) error {

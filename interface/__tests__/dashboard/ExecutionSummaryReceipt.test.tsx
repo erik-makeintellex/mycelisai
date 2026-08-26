@@ -45,13 +45,19 @@ describe("ExecutionSummaryReceipt", () => {
 
     render(<ExecutionSummaryReceipt summary={summary} runId="run-game-1" />);
 
-    expect(screen.getByText(/App\/package output is ready/i)).toBeDefined();
+    expect(screen.getByText(/Coin Runner Game is ready\. Open the app now/i)).toBeDefined();
     expect(screen.getByText("App/package:")).toBeDefined();
     expect(screen.getByText("Coin Runner Game")).toBeDefined();
     expect(screen.getByText("Browser opened and score increased after click.")).toBeDefined();
+    expect(screen.getAllByRole("button", { name: /Open app Coin Runner Game/i })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /Open Coin Runner Game in Resources/i }).closest("details")?.open).toBe(false);
+    expect(screen.getByRole("button", { name: /Reply to Coin Runner Game in Soma/i }).closest("details")?.open).toBe(false);
+    expect(screen.getByRole("link", { name: /Inspect run receipt/i }).closest("details")?.open).toBe(false);
+
+    fireEvent.click(screen.getByText("Details and follow-up"));
+
     expect(screen.getByRole("link", { name: /Open Coin Runner Game in Resources/i }).getAttribute("href"))
       .toBe("/resources?tab=workspace&path=workspace%2Fgenerated%2Fcoin-runner");
-    expect(screen.getByRole("button", { name: /Open app Coin Runner Game/i })).toBeDefined();
 
     fireEvent.click(screen.getByRole("button", { name: /Reply to Coin Runner Game in Soma/i }));
 
@@ -85,6 +91,11 @@ describe("ExecutionSummaryReceipt", () => {
 
     render(<ExecutionSummaryReceipt summary={summary} runId="run-brief-1" />);
 
+    expect(screen.getByText(/Launch brief is ready\. Open it now/i)).toBeDefined();
+    expect(screen.getAllByRole("button", { name: /Open file Launch brief/i })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /Reply to Launch brief in Soma/i }).closest("details")?.open).toBe(false);
+
+    fireEvent.click(screen.getByText("Details and follow-up"));
     fireEvent.click(screen.getByRole("button", { name: /Reply to Launch brief in Soma/i }));
 
     expect(continuation).toHaveBeenCalled();
