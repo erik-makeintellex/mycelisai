@@ -54,21 +54,20 @@ export function TeamsOutputCollaboration() {
 
 export function TeamsWorkReviewIntro() {
   return (
-    <div className="rounded-2xl border border-cortex-primary/30 bg-cortex-primary/10 px-4 py-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="rounded-xl border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-3 sm:rounded-2xl sm:px-4 sm:py-4">
+      <div className="flex flex-col gap-2 sm:gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-semibold text-cortex-text-main">
             Decide what happens to this work
           </p>
-          <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
-            Start with the review item. It shows why attention is needed, what
-            remains trusted, and the safest next move. Clear stale test data from review;
-            recover only when you want Soma to retry from retained context.
+          <p className="mt-1 text-xs leading-5 text-cortex-text-muted sm:text-sm sm:leading-6">
+            <span className="sm:hidden">Choose an item, check what remains trusted, then take its safest next action.</span>
+            <span className="hidden sm:inline">Start with the review item. It shows why attention is needed, what remains trusted, and the safest next move. Clear stale test data from review; recover only when you want Soma to retry from retained context.</span>
           </p>
         </div>
         <Link
           href="/teams"
-          className="inline-flex items-center justify-center rounded-2xl border border-cortex-border px-4 py-2 text-sm font-semibold text-cortex-text-main hover:border-cortex-primary/40"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cortex-border px-4 py-2 text-sm font-semibold text-cortex-text-main hover:border-cortex-primary/40 sm:rounded-2xl"
         >
           Open all teams
         </Link>

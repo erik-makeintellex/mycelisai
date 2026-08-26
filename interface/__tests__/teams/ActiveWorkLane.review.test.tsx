@@ -44,6 +44,9 @@ describe("ActiveWorkLane review mode", () => {
     );
 
     const summary = screen.getByLabelText("Review queue summary");
+    expect(summary.className).toContain("grid-cols-2");
+    expect(summary.className).toContain("lg:grid-cols-4");
+    expect(within(summary).getByLabelText("Needs decision: 1").className).toContain("px-2 py-1.5");
     expect(within(summary).getByLabelText("Needs decision: 1")).toBeDefined();
     expect(within(summary).getByLabelText("Ready output: 1")).toBeDefined();
     expect(within(summary).getByLabelText("Still working: 1")).toBeDefined();

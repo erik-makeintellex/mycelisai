@@ -23,6 +23,7 @@ import {
 import { useDurableTeamWork } from "@/components/soma/useDurableTeamWork";
 import { mergeTeamWorkItems, useTeamWorkActionHandler } from "./useTeamWorkActionHandler";
 import { prioritizeRequestedWorkItem } from "./teamsPageWorkReview";
+import { useBrowserSearch } from "@/lib/browserLocation";
 
 const FILTERS: { value: TeamsFilter; label: string }[] = [
   { value: "all", label: "All Teams" }, { value: "standing", label: "Standing" }, { value: "mission", label: "Mission" },
@@ -52,10 +53,9 @@ export default function TeamsPage() {
   const [isTemplateDrawerOpen, setIsTemplateDrawerOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<CatalogueAgent | null>(null);
   const activeWorkActions = useTeamWorkActionHandler(selectTeam);
-  const teamsSearchParams =
-    typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-  const isWorkReviewView = teamsSearchParams?.get("view") === "work";
-  const requestedWorkItemId = teamsSearchParams?.get("work_item_id") || null;
+  const teamsSearchParams = new URLSearchParams(useBrowserSearch());
+  const isWorkReviewView = teamsSearchParams.get("view") === "work";
+  const requestedWorkItemId = teamsSearchParams.get("work_item_id") || null;
 
   useEffect(() => {
     fetchTeamsDetail();
@@ -145,11 +145,10 @@ export default function TeamsPage() {
 
   return (
     <div className="h-full flex flex-col bg-cortex-bg relative">
-      <div className="px-6 py-4 border-b border-cortex-border bg-cortex-surface/50 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-start gap-3">
-          <Users className="w-5 h-5 text-cortex-primary mt-0.5" />
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
+      <div className="relative flex flex-shrink-0 flex-col gap-2 border-b border-cortex-border bg-cortex-surface/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
+        <div className={`min-w-0 ${isWorkReviewView ? "pr-12 sm:pr-0" : ""}`}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <Users className="h-5 w-5 shrink-0 text-cortex-primary" />
               <h1 className="text-sm font-mono font-bold text-cortex-text-main uppercase tracking-wider">
                 {isWorkReviewView ? "Recovery and Review" : "Team Lead Workspaces"}
               </h1>
@@ -157,37 +156,43 @@ export default function TeamsPage() {
                 {filteredTeams.length} team
                 {filteredTeams.length !== 1 ? "s" : ""}
               </span>
-              <span className="text-[10px] font-mono text-cortex-success">
-                {onlineAgents}/{totalAgents} agents online
+              <span className="text-[10px] font-mono text-cortex-success" aria-label={`${onlineAgents} of ${totalAgents} agents online`}>
+                {isWorkReviewView
+                  ? `${onlineAgents}/${totalAgents} online`
+                  : `${onlineAgents}/${totalAgents} agents online`}
               </span>
             </div>
             <p className="mt-1 text-xs text-cortex-text-muted">
               {isWorkReviewView
-                ? "Review active team work first. Open the team workspace or outputs only when the item needs more context."
+                ? "Review work that needs a decision, recovery, or output check."
                 : "Review live teams here, open focused lead workspaces, and define which worker profiles Soma may apply when specializing a new lane."}
             </p>
-          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <select
-            value={teamsFilter}
-            onChange={handleFilterChange}
-            disabled={!isInteractive}
-            aria-label="Filter teams"
-            className="bg-cortex-bg border border-cortex-border rounded px-2.5 py-1.5 text-xs font-mono text-cortex-text-main focus:outline-none focus:border-cortex-primary transition-colors appearance-none"
-          >
-            {FILTERS.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
+        <div className={isWorkReviewView
+          ? "absolute right-3 top-2 flex items-center gap-2 sm:static sm:self-auto"
+          : "flex items-center gap-2 self-end sm:self-auto"}>
+          {!isWorkReviewView ? (
+            <select
+              value={teamsFilter}
+              onChange={handleFilterChange}
+              disabled={!isInteractive}
+              aria-label="Filter teams"
+              className="bg-cortex-bg border border-cortex-border rounded px-2.5 py-1.5 text-xs font-mono text-cortex-text-main focus:outline-none focus:border-cortex-primary transition-colors appearance-none"
+            >
+              {FILTERS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
 
           <button
             onClick={fetchTeamsDetail}
             disabled={isFetching}
-            className="p-1.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main transition-colors disabled:opacity-50"
+            aria-label="Refresh teams"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main transition-colors disabled:opacity-50 sm:min-h-8 sm:min-w-8"
           >
             <RefreshCw
               className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`}
@@ -196,7 +201,7 @@ export default function TeamsPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 space-y-3 overflow-y-auto p-3 sm:space-y-4 sm:p-6">
         {isWorkReviewView ? (
           <>
             <TeamsWorkReviewIntro />
@@ -215,7 +220,7 @@ export default function TeamsPage() {
             {activeWorkLane}
           </>
         )}
-        {filteredTeams.length > 0 ? (
+        {!isWorkReviewView && filteredTeams.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredTeams.map((team) => (
               <TeamCard
@@ -226,7 +231,7 @@ export default function TeamsPage() {
               />
             ))}
           </div>
-        ) : (
+        ) : !isWorkReviewView ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-cortex-text-muted">
             <Users className="w-12 h-12 mb-3 opacity-20" />
             <p className="text-sm font-mono">No teams found</p>
@@ -256,7 +261,7 @@ export default function TeamsPage() {
               </a>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {isDrawerOpen && selectedTeam && (

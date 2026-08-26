@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { mockFetch } from "../setup";
 import type { CatalogueAgent, TeamDetail } from "@/store/cortexStoreTypesPlanning";
 
@@ -66,11 +67,18 @@ describe("TeamsPage review route", () => {
 
     expect(screen.getByText("Recovery and Review")).toBeDefined();
     expect(screen.getByText("Decide what happens to this work")).toBeDefined();
+    expect(screen.getByText(/Review work that needs a decision, recovery, or output check/i)).toBeDefined();
+    expect(screen.queryByRole("combobox", { name: "Filter teams" })).toBeNull();
+    expect(screen.getAllByRole("link", { name: /Open all teams/i })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Refresh teams" }).className).toContain("min-h-11");
+    expect(screen.getByRole("button", { name: "Refresh teams" }).parentElement?.className).toContain("absolute right-3 top-2");
     await waitFor(() => {
       expect(screen.getByText("Draft launch package")).toBeDefined();
     });
     expect(screen.getByLabelText("Review queue summary")).toBeDefined();
     expect(screen.getByTestId("work-review-inbox")).toBeDefined();
+    expect(screen.getByTestId("work-review-monitor").className).not.toContain("min-h-[26rem]");
+    expect(screen.getByTestId("work-review-monitor").className).toContain("lg:h-[min(32rem,calc(100vh-15rem))]");
     expect(screen.getByRole("list", { name: "Review work items" })).toBeDefined();
     expect(screen.getByLabelText("Review details for Playwright bounded team ask proof")).toBeDefined();
     expect(screen.getAllByRole("button", { name: /Clear from review/i }).length).toBeGreaterThan(0);
@@ -79,12 +87,27 @@ describe("TeamsPage review route", () => {
     expect(screen.getByText("Other available actions")).toBeDefined();
     expect(screen.getByText(/Clear this from review. Nothing ran/i)).toBeDefined();
     expect(screen.queryByText("Archived stale proof")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Alpha Squad/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Bravo Ops/i })).toBeNull();
     const pageText = document.body.textContent ?? "";
     expect(pageText.indexOf("Active work lane")).toBe(-1);
     expect(pageText.indexOf("Work to review")).toBeLessThan(
       pageText.indexOf("Team context"),
     );
     expect(screen.getByRole("link", { name: /Open all teams/i }).getAttribute("href")).toBe("/teams");
+  });
+
+  it("keeps the server snapshot independent of the browser review query", () => {
+    useCortexStore.setState({
+      teamsDetail: mockTeams,
+      catalogueAgents: mockTemplates,
+    });
+    window.history.replaceState({}, "", "/teams?view=work&work_item_id=work-bravo-recover");
+
+    const serverMarkup = renderToString(<TeamsPage />);
+
+    expect(serverMarkup).toContain("Team Lead Workspaces");
+    expect(serverMarkup).not.toContain("Recovery and Review");
   });
 
   it("prioritizes a work item opened from Outcome Vault", async () => {

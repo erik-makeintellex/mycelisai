@@ -27,13 +27,13 @@ export function ReviewQueueSummary({ items }: { items: TeamWorkItem[] }) {
 
   return (
     <div
-      className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"
+      className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4"
       aria-label="Review queue summary"
     >
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2"
+          className="rounded-lg border border-cortex-border bg-cortex-bg px-2 py-1.5 sm:px-3 sm:py-2"
           aria-label={`${stat.label}: ${stat.value}`}
         >
           <p className={`font-mono text-base font-semibold ${stat.tone}`}>

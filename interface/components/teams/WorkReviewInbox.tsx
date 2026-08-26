@@ -83,9 +83,12 @@ export function WorkReviewInbox({
         </div>
       ) : null}
 
-      <div className="mt-4 grid min-h-[26rem] gap-3 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.2fr)]">
-        <div className="min-h-0 rounded-xl border border-cortex-border bg-cortex-bg p-2">
-          <div className="max-h-[34rem] space-y-2 overflow-y-auto pr-1" role="list" aria-label="Review work items">
+      <div
+        className="mt-4 grid gap-3 lg:h-[min(32rem,calc(100vh-15rem))] lg:min-h-[22rem] lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.2fr)]"
+        data-testid="work-review-monitor"
+      >
+        <div className="min-h-0 rounded-xl border border-cortex-border bg-cortex-bg p-2 lg:h-full">
+          <div className="max-h-[24rem] space-y-2 overflow-y-auto pr-1 lg:max-h-full" role="list" aria-label="Review work items">
             {items.map((item) => (
               <ReviewListRow
                 key={item.id}
@@ -176,7 +179,7 @@ function ReviewDetailPane({
     ...item.interactions.filter((action) => !action.disabled && action.action !== primary?.action),
   ];
   return (
-    <article className="min-w-0 rounded-xl border border-cortex-border bg-cortex-bg p-4" aria-label={`Review details for ${item.title}`}>
+    <article className="min-w-0 rounded-xl border border-cortex-border bg-cortex-bg p-4 lg:h-full lg:overflow-y-auto" aria-label={`Review details for ${item.title}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-cortex-primary">
