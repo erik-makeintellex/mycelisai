@@ -146,7 +146,7 @@ Type `approve` or `go ahead` for the revised work.
 Expected:
 
 - visible queued/running feedback appears immediately
-- no approval, adjust, team-routing, or run-navigation button is required
+- one clear **Approve** or **Start** button is present when execution is pending; no separate adjust, team-routing, or run-navigation button is required
 - Soma remains available while NATS-backed work continues
 - progress is correlated to the same Outcome
 - the UI does not navigate the user into a raw event chain as the primary experience

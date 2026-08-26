@@ -64,7 +64,7 @@ async function proposeAndConfirm(page: Page, request: string, expectedTool: stri
   expect(JSON.stringify(proposal.body)).toContain(expectedTool);
   const thread = page.getByTestId("soma-conversation-thread");
   await expect(thread.getByText("I can start that.").last()).toBeVisible({ timeout: 30_000 });
-  await expect(thread.getByText(/reply.*(?:approve|start).*to begin/i).last()).toBeVisible();
+  await expect(thread.getByText(/or reply.*(?:approve|start)/i).last()).toBeVisible();
   const completed = await confirmProposal(page);
   expect(completed.response.ok(), completed.body ? JSON.stringify(completed.body) : completed.raw).toBeTruthy();
   return completed;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { useCortexStore, type ChatMessage } from "@/store/useCortexStore";
 import ProposedActionDetails from "./ProposedActionDetails";
 import ProposalLifecycleProof from "./ProposalLifecycleProof";
@@ -67,7 +67,10 @@ function hasVerifiedTerminalResult(message: ChatMessage): boolean {
 
 export default function ProposedActionBlock({ message }: { message: ChatMessage }) {
     const assistantName = useCortexStore((s) => s.assistantName);
+    const confirmProposal = useCortexStore((s) => s.confirmProposal);
     const [detailsOpen, setDetailsOpen] = useState(false);
+    const [approvalPending, setApprovalPending] = useState(false);
+    const [approvalError, setApprovalError] = useState<string | null>(null);
     const detailsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -103,6 +106,15 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const runHelp = approvalRequired
         ? "Once you approve, I’ll start the work and stay here for questions or changes while it runs."
         : "This is ready to start. I’ll stay here for questions or changes while it runs.";
+
+    const approve = async () => {
+        if (approvalPending || !canRunProposal) return;
+        setApprovalPending(true);
+        setApprovalError(null);
+        const result = await confirmProposal(proposal, approvalRequired ? "approve" : "start");
+        if (!result.ok) setApprovalError(result.error ?? "Soma could not start this proposal.");
+        setApprovalPending(false);
+    };
 
     const lifecycleLabel = renderedLifecycle === "cancelled"
             ? "Cancelled"
@@ -142,17 +154,28 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
 
                 {isActionable ? (
                     canRunProposal ? (
-                        <p className="text-sm font-medium leading-6 text-cortex-primary">
-                            {approvalRequired
-                                ? 'Reply "approve" to start. You can also ask a question or tell me what to change.'
-                                : 'Reply "start" to begin. You can also ask a question or tell me what to change.'}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => void approve()}
+                                disabled={approvalPending}
+                                className="inline-flex items-center gap-2 rounded-lg bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90 disabled:cursor-wait disabled:opacity-60"
+                            >
+                                <Check className="h-4 w-4" />
+                                {approvalPending ? "Starting…" : approvalRequired ? "Approve" : "Start"}
+                            </button>
+                            <p className="text-sm font-medium leading-6 text-cortex-primary">
+                                Or reply “{approvalRequired ? "approve" : "start"}”. You can also ask a question or request a change.
+                            </p>
+                        </div>
                     ) : (
                         <p className="text-sm leading-6 text-red-300">
                             I cannot start this version yet. Ask me to regenerate the proposal before approving it.
                         </p>
                     )
                 ) : null}
+
+                {approvalError ? <p role="alert" className="text-sm leading-6 text-red-300">{approvalError}</p> : null}
 
                 <button
                     type="button"

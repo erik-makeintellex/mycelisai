@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ProposedActionBlock from '@/components/dashboard/ProposedActionBlock';
 import { useCortexStore, type ChatMessage } from '@/store/useCortexStore';
 
@@ -61,7 +61,8 @@ describe('ProposedActionBlock', () => {
 
         expect(screen.getByText(/i can start that/i)).toBeDefined();
         expect(screen.getByText(/once you approve, i’ll start the work and stay here for questions or changes/i)).toBeDefined();
-        expect(screen.getByText(/reply.*approve.*to start.*ask a question or tell me what to change/i)).toBeDefined();
+        expect(screen.getByRole('button', { name: /^approve$/i })).toBeDefined();
+        expect(screen.getByText(/or reply.*approve.*ask a question or request a change/i)).toBeDefined();
         expect(screen.queryByText(/what i will do/i)).toBeNull();
         expect(screen.getByText(/bring in the right team and keep their work connected to this conversation/i)).toBeDefined();
         expect(screen.getByText(/create a hello_world\.py file in your workspace\./i)).toBeDefined();
@@ -69,7 +70,7 @@ describe('ProposedActionBlock', () => {
         expect(screen.getAllByText(/workspace\/logs\/hello_world\.py/i).length).toBeGreaterThan(0);
         expect(screen.queryByText(/this action will change your workspace, so soma needs your approval before running it\./i)).toBeNull();
         expect(
-            screen.getByText(/reply "approve" to start.*ask a question or tell me what to change/i),
+            screen.getByText(/or reply.*approve.*ask a question or request a change/i),
         ).toBeTruthy();
         expect(screen.queryByText(/risk medium/i)).toBeNull();
         expect(screen.queryByText(/\bbus\b/i)).toBeNull();
@@ -97,10 +98,11 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/file changes/i)).toBeDefined();
     });
 
-    it('keeps approval inside the conversation instead of rendering action buttons', () => {
+    it('offers one primary approval action inside the conversation', async () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /^approve$/i }));
+        await waitFor(() => expect(useCortexStore.getState().confirmProposal).toHaveBeenCalledWith(buildMessage().proposal, 'approve'));
         expect(screen.queryByRole('button', { name: /adjust/i })).toBeNull();
         expect(screen.getByRole('button', { name: /^details$/i })).toBeDefined();
     });
@@ -169,8 +171,8 @@ describe('ProposedActionBlock', () => {
     it('renders approval-required governance summary by default', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        expect(screen.getByText(/reply.*approve.*to start.*ask a question/i)).toBeDefined();
-        expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
+        expect(screen.getByText(/or reply.*approve.*ask a question/i)).toBeDefined();
+        expect(screen.getByRole('button', { name: /^approve$/i })).toBeDefined();
     });
 
     it('shows scheduled or long-running task posture and bus scope after inspection', () => {
@@ -236,7 +238,8 @@ describe('ProposedActionBlock', () => {
         })} />);
 
         expect(screen.getByText(/ready to start.*stay here for questions or changes/i)).toBeDefined();
-        expect(screen.getByText(/reply.*start.*to begin.*ask a question or tell me what to change/i)).toBeDefined();
+        expect(screen.getByRole('button', { name: /^start$/i })).toBeDefined();
+        expect(screen.getByText(/or reply.*start.*ask a question or request a change/i)).toBeDefined();
         expect(screen.queryByText(/risk low/i)).toBeNull();
         expect(screen.queryByText(/auto approve/i)).toBeNull();
 
@@ -246,7 +249,7 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/risk: low, estimated cost 0\.20/i)).toBeDefined();
         expect(screen.getByText(/low-risk action/i)).toBeDefined();
         expect(screen.getByText(/planning/i)).toBeDefined();
-        expect(screen.queryByRole('button', { name: /^start$/i })).toBeNull();
+        expect(screen.getByRole('button', { name: /^start$/i })).toBeDefined();
     });
 
     it('keeps a proposal visible but blocks execution when executable proof is missing', () => {
