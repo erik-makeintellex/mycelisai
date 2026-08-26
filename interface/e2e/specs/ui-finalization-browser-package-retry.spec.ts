@@ -152,18 +152,13 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await page.getByText("Proof and execution details", { exact: true }).last().click();
     await expect(page.locator(`a[href="/runs/${retryRunId}"]`).first()).toBeVisible();
 
-    const outputPagePromise = page.context().waitForEvent("page");
-    await page.getByRole("button", { name: `Open app ${packageTitle} in a new browser window` }).last().click();
-    const outputPage = await outputPagePromise;
-    await outputPage.waitForLoadState("domcontentloaded").catch(() => undefined);
-    if (!outputPage.url().includes("/api/v1/workspace/files/view")) {
-      await outputPage.goto(`/api/v1/workspace/files/view?path=${encodeURIComponent(entrypoint)}`, { waitUntil: "domcontentloaded" });
-    }
-    await expect(outputPage).toHaveTitle(packageTitle);
-    await expect(outputPage.locator("body")).toContainText("README.md");
-    await outputPage.reload({ waitUntil: "domcontentloaded" });
-    await expect(outputPage.locator("body")).toContainText("validation-notes.md");
-    await outputPage.close();
+    await page.getByRole("button", { name: `Open app ${packageTitle} in Mycelis` }).last().click();
+    await expect(page).toHaveURL(/\/outputs\/view\?/);
+    const outputFrame = page.frameLocator("iframe").first();
+    await expect(outputFrame.locator("body")).toContainText("README.md");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.frameLocator("iframe").first().locator("body")).toContainText("validation-notes.md");
+    await page.getByRole("link", { name: "Back to Soma" }).click();
 
     await page.goto("/groups?group_id=group-first-demo-package&advanced=1", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "First Demo Game Team temporary workflow" })).toBeVisible({ timeout: 20_000 });

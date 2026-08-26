@@ -49,7 +49,15 @@ test.describe("Trusted Outcome Journey", () => {
     await expect(outputPage.getByText("Recover, trust, and revisit this output.")).toBeVisible();
     if (outputPage !== page) await outputPage.close();
 
-    await clickVisibleControl(page, page.getByRole("button", { name: /Open .*folder/i }).last());
+    if (outputPage === page) {
+      await page.goBack({ waitUntil: "domcontentloaded" });
+      const backToSoma = page.getByRole("link", { name: "Back to Soma" });
+      if (await backToSoma.isVisible()) await backToSoma.click();
+    }
+
+    const digest = page.getByTestId("soma-workbench-output-digest").last();
+    await digest.getByText("Details and follow-up").click();
+    await clickVisibleControl(page, digest.getByRole("button", { name: /Open .*folder/i }));
     await expect(page.getByText(/Folder opened|Folder access blocked|Opened folder/i).last()).toBeVisible();
 
     const proof = await apiFetch<Envelope<{ run_id?: string; confidence?: string; summary?: string }>>(

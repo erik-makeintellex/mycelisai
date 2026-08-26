@@ -132,18 +132,13 @@ test.describe("Canonical first-demo success path", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
 
-    const outputPagePromise = page.context().waitForEvent("page");
-    await page.getByRole("button", { name: `Open app ${packageTitle} in a new browser window` }).last().click();
-    const outputPage = await outputPagePromise;
-    await outputPage.waitForLoadState("domcontentloaded").catch(() => undefined);
-    if (!outputPage.url().includes("/api/v1/workspace/files/view")) {
-      await outputPage.goto(`/api/v1/workspace/files/view?path=${encodeURIComponent(entrypoint)}`, { waitUntil: "domcontentloaded" });
-    }
-    await expect(outputPage).toHaveTitle(packageTitle);
-    await expect(outputPage.locator("canvas#game")).toBeVisible();
-    await outputPage.reload({ waitUntil: "domcontentloaded" });
-    await expect(outputPage.locator("body")).toContainText("validation-notes.md");
-    await outputPage.close();
+    await page.getByRole("button", { name: `Open app ${packageTitle} in Mycelis` }).last().click();
+    await expect(page).toHaveURL(/\/outputs\/view\?/);
+    const outputFrame = page.frameLocator("iframe").first();
+    await expect(outputFrame.locator("canvas#game")).toBeVisible();
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.frameLocator("iframe").first().locator("body")).toContainText("validation-notes.md");
+    await page.getByRole("link", { name: "Back to Soma" }).click();
 
     await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
     await page.getByRole("button", { name: /Review output/i }).last().click();

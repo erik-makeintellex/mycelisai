@@ -273,7 +273,9 @@ export async function expectProjectPackageVisible(page: Page, expected: {
   // forcing raw entrypoint metadata into the primary work lane.
   await expect(page.getByText(expected.folder).last()).toBeVisible();
   await expect(page.getByRole("button", { name: new RegExp(`Open app .*${expected.title}`, "i") }).last()).toBeVisible();
-  await expect(page.getByRole("button", { name: /Open .*folder/i }).last()).toBeVisible();
+  const digest = page.getByTestId("soma-workbench-output-digest").last();
+  await digest.getByText("Details and follow-up").click();
+  await expect(digest.getByRole("button", { name: /Open .*folder/i })).toBeVisible();
 }
 
 export async function fulfillJSON(route: Route, status: number, body: unknown) {

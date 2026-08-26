@@ -233,9 +233,9 @@ test.describe("Dashboard focused-team output proof", () => {
     await page.goto(`/dashboard?team_id=${focusedTeamId}`, { waitUntil: "domcontentloaded" });
     await expectFocusedDashboardLane(page);
 
-    const digestFolderButton = page
-      .getByTestId("soma-workbench-output-digest")
-      .getByRole("button", { name: /Open local folder/i });
+    const digest = page.getByTestId("soma-workbench-output-digest");
+    await digest.getByText("Details and follow-up").click();
+    const digestFolderButton = digest.getByRole("button", { name: /Open local folder/i });
     await digestFolderButton.click();
     await expect(digestFolderButton).toContainText("Folder opened");
 

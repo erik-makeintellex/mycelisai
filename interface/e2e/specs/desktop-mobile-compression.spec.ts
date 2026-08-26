@@ -50,6 +50,7 @@ test.describe("Desktop/mobile compression proof", () => {
     const digest = page.getByTestId("soma-workbench-output-digest");
     await expect(digest).toBeVisible();
     await expect(digest.getByText("Coin Runner package")).toBeVisible();
+    await digest.getByText("Details and follow-up").click();
     await expect(digest.getByRole("button", { name: /Open local folder/i })).toBeVisible();
     await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveAttribute("aria-expanded", "false");
     const reviewToggle = page.getByTestId("soma-workbench-panel-toggle");

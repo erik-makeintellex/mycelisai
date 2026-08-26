@@ -205,20 +205,19 @@ test.describe("Soma media retained output proof", () => {
     await expect(page.getByText(mediaPath).last()).toBeVisible();
     await confirmProposal(page);
 
-    await expect(page.getByText("Latest output").last()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Output ready").last()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(mediaTitle).last()).toBeVisible();
     await expect(page.getByRole("img", { name: mediaTitle })).toBeVisible();
     await expect(page.getByRole("button", { name: new RegExp(`Open file .*${mediaTitle}`, "i") }).last()).toBeVisible();
 
-    const outputPagePromise = page.context().waitForEvent("page");
-    await page.getByRole("button", { name: new RegExp(`Open file .*${mediaTitle}`, "i") }).last().click();
-    const outputPage = await outputPagePromise;
-    await outputPage.waitForLoadState("domcontentloaded").catch(() => undefined);
-    expect(outputPage.url()).toContain("/api/v1/workspace/files/view");
-    expect(outputPage.url()).toContain(encodeURIComponent(mediaPath));
-    await outputPage.close();
+    await page.getByRole("button", { name: new RegExp(`Open file .*${mediaTitle} in Mycelis`, "i") }).last().click();
+    await expect(page).toHaveURL(/\/outputs\/view\?/);
+    await expect(page.locator("iframe")).toHaveAttribute("src", new RegExp(encodeURIComponent(mediaPath)));
+    await page.getByRole("link", { name: "Back to Soma" }).click();
 
-    await page.getByRole("button", { name: new RegExp(`Open .*folder .*${mediaTitle}`, "i") }).last().click();
+    const outputDigest = page.getByTestId("soma-workbench-output-digest").last();
+    await outputDigest.getByText("Details and follow-up").click();
+    await outputDigest.getByRole("button", { name: new RegExp(`Open .*folder .*${mediaTitle}`, "i") }).click();
     await expect.poll(() => revealCalls.some((url) => url.includes(encodeURIComponent(mediaPath)))).toBe(true);
 
     await enableAdvancedMode(page);
