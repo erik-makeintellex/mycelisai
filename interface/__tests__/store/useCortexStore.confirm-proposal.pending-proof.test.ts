@@ -56,7 +56,7 @@ describe('useCortexStore confirm proposal pending proof', () => {
             ui_response_state: {
                 kind: 'running',
                 label: 'Started',
-                detail: 'Soma handed this to the work bus. You can keep talking here while updates arrive.',
+                detail: 'Soma started the work. You can keep talking here while updates arrive.',
                 tone: 'info',
             },
             thread_events: [{
@@ -73,17 +73,17 @@ describe('useCortexStore confirm proposal pending proof', () => {
         expect(useCortexStore.getState().missionChat.at(-1)).toMatchObject({
             role: 'system',
             mode: 'proposal',
-            content: 'Proposal approved. Soma handed this to the work bus. You can keep talking here while updates arrive.',
+            content: 'Proposal approved. Soma started the work. You can keep talking here while updates arrive.',
             ui_response_state: {
                 kind: 'running',
                 label: 'Started',
-                detail: 'Soma handed this to the work bus. You can keep talking here while updates arrive.',
+                detail: 'Soma started the work. You can keep talking here while updates arrive.',
                 tone: 'info',
             },
             thread_events: [{
                 kind: 'execution_started',
                 label: 'Work started',
-                detail: 'Soma handed this to the work bus. You can keep talking here while updates arrive.',
+                detail: 'Soma started the work. You can keep talking here while updates arrive.',
                 tone: 'info',
                 status: 'running',
                 source_kind: 'web_api',
@@ -135,7 +135,7 @@ describe('useCortexStore confirm proposal pending proof', () => {
             ui_response_state: {
                 kind: 'running',
                 label: 'Started',
-                detail: 'Soma handed this to the work bus. You can keep talking here while updates arrive.',
+                detail: 'Soma started the work. You can keep talking here while updates arrive.',
                 tone: 'info',
             },
         });

@@ -66,7 +66,7 @@ async function listTemplateRevisions(page: Page, documentID: string) {
 async function expectNaturalApproval(page: Page) {
   const thread = page.getByTestId("soma-conversation-thread");
   await expect(thread.getByText("I can start that.").last()).toBeVisible({ timeout: 30_000 });
-  await expect(thread.getByText(/reply.*(?:approve|start).*to begin/i).last()).toBeVisible();
+  await expect(thread.getByText(/or reply.*(?:approve|start)/i).last()).toBeVisible();
   await expect.soft(thread.getByText(rawRuntimeVocabulary)).toHaveCount(0);
 }
 

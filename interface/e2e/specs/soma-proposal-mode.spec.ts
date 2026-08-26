@@ -34,6 +34,27 @@ function workIntentProposalEnvelope() {
 }
 
 test.describe("Soma proposal mode", () => {
+    test("starts a pending proposal from its primary action", async ({ page }) => {
+        await mockOrganizationWorkspace(page, () => proposalEnvelope());
+        let confirmationCalls = 0;
+        await page.route("**/api/v1/intent/confirm-action", async (route) => {
+            confirmationCalls += 1;
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ ok: true, data: { run_id: "run-button-approval" } }),
+            });
+        });
+
+        await openOrganization(page);
+        await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
+        await page.getByRole("button", { name: /^Start$/i }).click();
+
+        await expect.poll(() => confirmationCalls).toBe(1);
+        await expect(page.getByText(/Soma started the work.*running, not complete/i)).toBeVisible();
+        await expect(page.getByRole("button", { name: /^(Start|Approve)$/i })).toHaveCount(0);
+    });
+
     test("routes mutating requests through proposal mode and keeps cancel explicit", async ({ page }) => {
         const workspace = await mockOrganizationWorkspace(page, () => proposalEnvelope());
 
@@ -41,14 +62,14 @@ test.describe("Soma proposal mode", () => {
         await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
 
         await expect(page.getByText("I can start that.")).toBeVisible({ timeout: 20_000 });
-        await expect(page.getByText(/reply.*start.*to begin/i)).toBeVisible();
+        await expect(page.getByText(/or reply.*start/i)).toBeVisible();
         await expect(page.getByText(/ready to start.*stay here for questions or changes/i)).toBeVisible();
         await expect(page.getByText(/team bus/i)).toHaveCount(0);
         await expect(page.getByText("Handoff starting. You can keep talking to Soma while the team works.")).toHaveCount(0);
         await expect(page.getByText("create a hello_world.py file in your workspace.")).toBeVisible();
         await expect(page.getByText("A new Python file will be saved to workspace/logs/hello_world.py after approval.")).toBeVisible();
         await expect(page.getByText("workspace/logs/hello_world.py", { exact: true })).toHaveCount(0);
-        await expect(page.getByRole("button", { name: /^(Start|Approve)$/i })).toHaveCount(0);
+        await expect(page.getByRole("button", { name: /^Start$/i })).toBeVisible();
         await expect(page.getByText(/RISK MEDIUM/i)).toHaveCount(0);
         await expect(page.getByRole("button", { name: /^Details$/i })).toBeVisible();
 
@@ -67,7 +88,7 @@ test.describe("Soma proposal mode", () => {
         await sendWorkspaceMessage(page, "Keep a media review lane running for this team.");
 
         await expect(page.getByText("I can start that.")).toBeVisible({ timeout: 20_000 });
-        await expect(page.getByText(/reply.*start.*to begin/i)).toBeVisible();
+        await expect(page.getByText(/or reply.*start/i)).toBeVisible();
         await expect(page.getByText("swarm.team.media.signal.status")).toHaveCount(0);
         await expect(page.getByText("Team connection")).toHaveCount(0);
 		await expect(page.getByText("Control:")).toHaveCount(0);

@@ -67,10 +67,10 @@ test.describe("Natural Soma delivery routing", () => {
       expect(proposalData?.payload?.tools_used).toEqual(
         expect.arrayContaining(["create_team", "write_file", "delegate_task"]),
       );
-      await expect(page.getByText(/reply.*(start|approve).*to begin/i).last()).toBeVisible();
+      await expect(page.getByText(/or reply.*(start|approve)/i).last()).toBeVisible();
       const handoff = page.getByText(/Bring in application-delivery-team-[a-z0-9]+ and keep their work connected to this conversation/i).last();
       await expect(handoff).toBeVisible();
-      await expect(page.getByRole("button", { name: /^(Start|Approve)$/i })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /^(Start|Approve)$/i })).toBeVisible();
 
       teamID = (await handoff.textContent())?.match(/application-delivery-team-[a-z0-9]+/i)?.[0];
       expect(teamID).toMatch(/^application-delivery-team-/);

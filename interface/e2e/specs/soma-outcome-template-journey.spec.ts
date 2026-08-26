@@ -142,7 +142,7 @@ async function expectCompactProposal(page: Page, action: "store" | "activate" = 
   await expect(page.getByText(action === "activate"
     ? /saved template will become active and ready to shape new work/i
     : /saved template that asks for the launch name, owner, and target date/i)).toBeVisible();
-  await expect(page.getByText(/reply.*approve.*to begin/i)).toBeVisible();
+  await expect(page.getByText(/or reply.*approve/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /^Details$/i }).last()).toBeVisible();
   await expect(page.getByText(rawJargon)).toHaveCount(0);
 }

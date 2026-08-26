@@ -27,7 +27,7 @@ import type { ProposalData } from '@/store/cortexStoreTypesChat';
 function confirmedRunMessage(runId: string | null, summary?: string | null, teamWorkRefs: TeamWorkConfirmationRef[] = []) {
     const state = runId ? `Run ${runId.slice(0, 8)} started.` : 'Proposal approved.';
     const next = runId
-        ? 'Soma handed this to the work bus. This is running, not a completed result or proof.'
+        ? 'Soma started the work. This is running, not a completed result or proof.'
         : proposalStartedState().detail;
     return [state, next, teamWorkMessage(teamWorkRefs), summary].filter(Boolean).join(' ');
 }

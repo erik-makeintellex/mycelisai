@@ -3,7 +3,7 @@ import type { TeamWorkConfirmationRef } from '@/store/cortexStoreProposalTeamWor
 
 export type SynchronousConfigAction = 'store' | 'activate';
 
-const proposalStartedDetail = 'Soma handed this to the work bus. You can keep talking here while updates arrive.';
+const proposalStartedDetail = 'Soma started the work. You can keep talking here while updates arrive.';
 
 export function proposalStartedState(): NonNullable<ChatMessage['ui_response_state']> {
     return { kind: 'running', label: 'Started', detail: proposalStartedDetail, tone: 'info' };
@@ -19,7 +19,7 @@ export function executionStartedEvent(
         kind: 'execution_started',
         label: 'Work started',
         detail: runId
-            ? 'Soma handed this to the work bus. It is running, not complete, and you can keep talking here.'
+            ? 'Soma started the work. It is running, not complete, and you can keep talking here.'
             : proposalStartedDetail,
         tone: 'info',
         status: 'running',
