@@ -97,6 +97,31 @@ func TestBuildPlannedToolCalls_OutcomeLanguageCreatesDeliveryTeam(t *testing.T) 
 	}
 }
 
+func TestBuildPlannedToolCalls_SVGWebPageStaysOnCodePackagePath(t *testing.T) {
+	request := "Create a web page and using SVG code imagine and create an image of the Mycelis infrastructure and your place in it."
+	mutationTools := inferMutationToolsFromText(request)
+	for _, want := range []string{"write_file", "generate_blueprint", "delegate"} {
+		if !containsToolName(mutationTools, want) {
+			t.Fatalf("mutation tools = %#v, missing %q", mutationTools, want)
+		}
+	}
+	for _, forbidden := range []string{"generate_image", "save_cached_image"} {
+		if containsToolName(mutationTools, forbidden) {
+			t.Fatalf("mutation tools = %#v, SVG web page must not require %q", mutationTools, forbidden)
+		}
+	}
+	result, ok := deterministicGovernedMutationResult(request, mutationTools)
+	if !ok {
+		t.Fatal("SVG web page must enter the governed application delivery path")
+	}
+	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
+	display := buildProposalDisplayContract(calls, request, result.ToolsUsed)
+	if display.WorkIntent == nil || display.WorkIntent.OutputContract == nil || display.WorkIntent.OutputContract.Shape != "app_package" {
+		t.Fatalf("work intent = %#v, want app_package output", display.WorkIntent)
+	}
+}
+
 func TestBuildPlannedToolCalls_UsesRequestedPackageTargetAndTitle(t *testing.T) {
 	request := strings.Join([]string{
 		"Create a team with team_id qa-game-team named QA Game Team.",

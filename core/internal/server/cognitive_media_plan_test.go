@@ -45,6 +45,8 @@ func TestRequestAsksForMedia_AllowsCodeGeneratedGameVisualsWithoutImageProvider(
 		"Build a browser-native game using code generated graphics and sound cues.",
 		"Use generated in code visuals; do not generate an image.",
 		"Use code-generated voxel visuals; if image generation is unavailable, keep everything browser-native.",
+		"Create a web page and using SVG code imagine and create an image of the Mycelis infrastructure and your place in it.",
+		"Draw the architecture as a scalable vector graphic embedded in HTML.",
 	}
 	for _, request := range requests {
 		if requestAsksForMedia(request) {

@@ -251,7 +251,7 @@ func requestAsksForTableOrData(lower string) bool {
 }
 
 func requestAsksForApplicationPackage(lower string) bool {
-	if requestContainsAny(lower, []string{"browser app", "web app", "mobile app"}) {
+	if requestContainsAny(lower, []string{"browser app", "web app", "web page", "webpage", "mobile app"}) {
 		return true
 	}
 	for _, word := range []string{"app", "application", "executable", "package", "deployable", "tool"} {

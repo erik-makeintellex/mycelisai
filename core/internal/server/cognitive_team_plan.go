@@ -91,7 +91,7 @@ func requestRequiresDeliveryTeam(lower string) bool {
 		return false
 	}
 	if requestContainsAny(lower, []string{
-		"browser app", "web app", "mobile app", "project package", "project-package",
+		"browser app", "web app", "web page", "webpage", "mobile app", "project package", "project-package",
 		"software project", "complete application", "playable",
 	}) {
 		return true
