@@ -217,12 +217,12 @@ test.describe('Teams Workspace (/teams)', () => {
                 return await emptyState.isVisible().catch(() => false) ? 'empty' : 'pending';
             })
             .not.toBe('pending');
-        const count = await cards.count();
-        if (count === 0) {
-            await expect(emptyState).toBeVisible();
+        if (await emptyState.isVisible().catch(() => false)) {
             return;
         }
 
+        await expect(cards.first()).toBeVisible();
+        const count = await cards.count();
         await expect(openChatLinks).toHaveCount(count);
         await expect(viewRunsLinks).toHaveCount(count);
         await expect(page.locator('a[data-testid$="-view-wiring"]')).toHaveCount(0);

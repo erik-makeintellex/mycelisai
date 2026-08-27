@@ -7,7 +7,8 @@ test.describe("Web access setup user path", () => {
     const consoleErrors: string[] = [];
     const pageErrors: string[] = [];
     page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(message.text());
+      const text = message.text();
+      if (message.type() === "error" && !text.includes("ERR_NETWORK_CHANGED")) consoleErrors.push(text);
     });
     page.on("pageerror", (error) => pageErrors.push(error.message));
 
