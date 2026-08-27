@@ -91,6 +91,28 @@ func TestApprovedResultContractRuntimeFallbackCompletesAfterNoToolEvidence(t *te
 	}
 }
 
+func TestRuntimeFallbackDoesNotClaimRichGameAcceptance(t *testing.T) {
+	requirement := runtimeFallbackPackageRequirement()
+	requirement.AcceptanceCriteria = []string{
+		"Player can move, jump, attack, and collide with the level",
+		"Enemies, health, key pickup, locked door, win, fail, and restart states work",
+		"Generated music and action sounds respond to play",
+	}
+
+	if initialProjectPackageRuntimeFallbackAllowed(requirement) {
+		t.Fatal("generic runtime fallback must not certify a rich game contract")
+	}
+}
+
+func TestRuntimeFallbackAllowsGenericPrimaryInteractionAcceptance(t *testing.T) {
+	requirement := runtimeFallbackPackageRequirement()
+	requirement.AcceptanceCriteria = []string{"Primary interaction changes the application state"}
+
+	if !initialProjectPackageRuntimeFallbackAllowed(requirement) {
+		t.Fatal("generic primary interaction remains eligible for bounded recovery")
+	}
+}
+
 func TestApprovedResultContractRuntimeFallbackRepairsCompleteWritesWithoutReadback(t *testing.T) {
 	requirement := runtimeFallbackPackageRequirement()
 	entrypoint := requirement.PackageEntrypoint

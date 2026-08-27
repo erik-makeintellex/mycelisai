@@ -150,8 +150,8 @@ func TestBuildPlannedToolCalls_UsesRequestedPackageTargetAndTitle(t *testing.T) 
 		t.Fatalf("proposal target = %q, want requested entrypoint", target)
 	}
 	display := buildProposalDisplayContract(calls, request, []string{"create_team", "write_file", "delegate_task"})
-	if !strings.Contains(display.ExpectedResult, "groups/qa-game-team/generated/first-game/index.html") {
-		t.Fatalf("expected_result = %q, want requested package entrypoint", display.ExpectedResult)
+	if !strings.Contains(display.ExpectedResult, "QA Game Team First Playable") || strings.Contains(display.ExpectedResult, "groups/") {
+		t.Fatalf("expected_result = %q, want named result without storage path", display.ExpectedResult)
 	}
 	if strings.Contains(display.ExpectedResult, "TEAM_EVOCATION.md") || strings.Contains(display.ExpectedResult, "RESEARCH_COUNCIL_HANDOFF.md") {
 		t.Fatalf("expected_result = %q, planning handoff must not replace the user deliverable", display.ExpectedResult)

@@ -67,12 +67,14 @@ test.describe("Natural Soma delivery routing", () => {
       expect(proposalData?.payload?.tools_used).toEqual(
         expect.arrayContaining(["create_team", "write_file", "delegate_task"]),
       );
-      await expect(page.getByText(/or reply.*(start|approve)/i).last()).toBeVisible();
-      const handoff = page.getByText(/Bring in application-delivery-team-[a-z0-9]+ and keep their work connected to this conversation/i).last();
-      await expect(handoff).toBeVisible();
-      await expect(page.getByRole("button", { name: /^(Start|Approve)$/i })).toBeVisible();
-
-      teamID = (await handoff.textContent())?.match(/application-delivery-team-[a-z0-9]+/i)?.[0];
+      const proposalCard = page.getByTestId("soma-proposal").last();
+      await expect(proposalCard.getByText(/or reply.*(start|approve)/i)).toBeVisible();
+      await expect(proposalCard.getByRole("button", { name: /^(Start|Approve)$/i })).toBeVisible();
+      await expect(proposalCard.getByText(/Bring in application-delivery-team-/i)).toHaveCount(0);
+      await proposalCard.getByRole("button", { name: /^Details$/ }).click();
+      const teamResource = proposalCard.getByText(/application-delivery-team-[a-z0-9]+/i).last();
+      await expect(teamResource).toBeVisible();
+      teamID = (await teamResource.textContent())?.match(/application-delivery-team-[a-z0-9]+/i)?.[0];
       expect(teamID).toMatch(/^application-delivery-team-/);
       const confirmationStartedAt = Date.now();
       const confirmed = await confirmProposal(page);

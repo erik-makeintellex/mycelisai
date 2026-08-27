@@ -171,6 +171,9 @@ func containsExactString(values []string, want string) bool {
 }
 
 func specialistAgentsForTeamRequest(teamID, lower string) []map[string]any {
+	if hasExactWord(lower, "game") && !hasExactWord(lower, "comic") {
+		return nil
+	}
 	if !requestContainsAny(lower, []string{"comic", "artist", "character", "dialogue", "lines", "specialist", "specialists", "members"}) {
 		return nil
 	}

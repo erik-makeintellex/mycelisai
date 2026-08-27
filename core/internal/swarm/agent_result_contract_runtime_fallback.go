@@ -49,8 +49,27 @@ func initialProjectPackageRuntimeFallbackAllowed(requirement *teamResultRequirem
 	if requirement.OutputValidation == nil || !requirement.OutputValidation.Required {
 		return false
 	}
+	if !runtimeFallbackCanSatisfyAcceptance(requirement.AcceptanceCriteria) {
+		return false
+	}
 	if len(runtimeFallbackProjectPackageFiles(requirement)) == 0 {
 		return false
+	}
+	return true
+}
+
+func runtimeFallbackCanSatisfyAcceptance(criteria []string) bool {
+	for _, criterion := range criteria {
+		normalized := strings.ToLower(strings.TrimSpace(criterion))
+		if normalized == "" {
+			continue
+		}
+		genericInteraction := strings.Contains(normalized, "primary") &&
+			(strings.Contains(normalized, "interaction") || strings.Contains(normalized, "control")) &&
+			(strings.Contains(normalized, "change") || strings.Contains(normalized, "state"))
+		if !genericInteraction {
+			return false
+		}
 	}
 	return true
 }

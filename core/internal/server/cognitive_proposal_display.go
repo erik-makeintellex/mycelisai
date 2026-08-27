@@ -70,7 +70,11 @@ func buildProposalDisplayContractForTeam(planned []protocol.PlannedToolCall, lat
 				label := firstNonEmptyString(name, teamID, "the requested team")
 				display.OperatorSummary = fmt.Sprintf("Create %s and start its first retained deliverable.", label)
 				if target := firstPlannedOutputTarget(planned); target != "" && !strings.Contains(strings.ToLower(target), "/planning/") {
-					display.ExpectedResult = fmt.Sprintf("%s will be created, then Soma will deliver the requested result at %q after validation, with run proof.", label, target)
+					if title := extractRequestedPackageTitle(latestRequest); title != "" {
+						display.ExpectedResult = fmt.Sprintf("%s will be created, then Soma will deliver %q after validation, with run proof.", label, title)
+					} else {
+						display.ExpectedResult = fmt.Sprintf("%s will be created, then Soma will deliver the requested result after validation, with run proof.", label)
+					}
 				} else {
 					display.ExpectedResult = fmt.Sprintf("%s will be created, then Soma will produce reviewable outputs at %s with run proof.", label, quotedProposalPaths(paths))
 				}

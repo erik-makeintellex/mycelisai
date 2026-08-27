@@ -83,6 +83,23 @@ describe('ProposedActionBlock', () => {
         expect(screen.queryByText(/delegate \(internal\)/i)).toBeNull();
     });
 
+    it('keeps a new team identifier behind Details when the named result is already clear', () => {
+        const message = buildMessage();
+        message.proposal = {
+            ...message.proposal!,
+            operator_summary: 'Create Moonlit Keep Game Team and start its first playable.',
+            expected_result: 'Moonlit Keep First Playable will be ready to open after validation.',
+            affected_resources: ['team:moonlit-keep-game-123'],
+            tools: ['create_team', 'write_file', 'delegate_task'],
+        };
+        render(<ProposedActionBlock message={message} />);
+
+        expect(screen.getByText(/moonlit keep first playable will be ready/i)).toBeDefined();
+        expect(screen.queryByText(/moonlit-keep-game-123/i)).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /^details$/i }));
+        expect(screen.getByText(/moonlit-keep-game-123/i)).toBeDefined();
+    });
+
     it('reveals advanced execution details only after inspection', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 

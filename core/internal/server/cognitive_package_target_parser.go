@@ -43,19 +43,23 @@ func extractRequestedPackageEntrypoint(input string) string {
 }
 
 func extractRequestedPackageTitle(input string) string {
-	const marker = "use the package title "
 	lower := strings.ToLower(input)
-	index := strings.Index(lower, marker)
-	if index < 0 {
-		return ""
-	}
-	rest := strings.TrimSpace(input[index+len(marker):])
-	for _, delimiter := range []string{"\n", ". ", ".\n"} {
-		if cut := strings.Index(rest, delimiter); cut >= 0 {
-			rest = rest[:cut]
+	for _, marker := range []string{"use the package title ", "package title ", "titled "} {
+		index := strings.Index(lower, marker)
+		if index < 0 {
+			continue
+		}
+		rest := strings.TrimSpace(input[index+len(marker):])
+		for _, delimiter := range []string{"\n", ". ", ".\n"} {
+			if cut := strings.Index(rest, delimiter); cut >= 0 {
+				rest = rest[:cut]
+			}
+		}
+		if title := strings.Trim(strings.TrimSpace(rest), `"'.,;`); title != "" {
+			return title
 		}
 	}
-	return strings.Trim(strings.TrimSpace(rest), `"'.,;`)
+	return ""
 }
 
 func cleanWorkspaceTargetToken(value string) string {

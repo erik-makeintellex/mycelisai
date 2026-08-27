@@ -41,7 +41,9 @@ function approvalPlanBullets(proposal: ChatMessage["proposal"], operatorSummary:
     const bullets: string[] = [];
     if (expectedResult) bullets.push(sentence(expectedResult));
     if (operatorSummary) bullets.push(sentence(operatorSummary));
-    if (tools.some((tool) => /^(create_team|delegate|delegate_task)$/i.test(tool))) {
+    const createsTeam = tools.some((tool) => /^create_team$/i.test(tool));
+    const delegates = tools.some((tool) => /^(delegate|delegate_task)$/i.test(tool));
+    if (delegates && !createsTeam) {
         bullets.push(`Bring in ${teamLabel} and keep their work connected to this conversation.`);
     }
     if (!bullets.length) bullets.push("Start the work and bring the result back to this conversation.");
@@ -128,7 +130,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
 
 
     return (
-        <div className="mt-3 max-w-[min(100%,680px)] border-l-2 border-cortex-primary/50 py-1 pl-4 pr-2">
+        <div data-testid="soma-proposal" className="mt-3 max-w-[min(100%,680px)] border-l-2 border-cortex-primary/50 py-1 pl-4 pr-2">
             <div className="space-y-3">
                 <div>
                     <div className="text-xs font-semibold text-cortex-text-muted">Soma</div>

@@ -34,6 +34,20 @@ func TestInferCreateTeamPlanFromRequest_ExplicitTeamNameStillWins(t *testing.T) 
 	}
 }
 
+func TestInferCreateTeamPlanFromRequest_GameCopyrightConstraintDoesNotCreateComicTeam(t *testing.T) {
+	request := "Create a team to build an original gothic browser game without copying franchise characters, story, dialogue, or assets."
+	call, ok := inferCreateTeamPlanFromRequest(request)
+	if !ok {
+		t.Fatal("expected create_team plan")
+	}
+	if call.Arguments["staffing_mode"] != "lead_only_start" || call.Arguments["initial_member_count"] != 1 {
+		t.Fatalf("team args = %#v, want one lead for bounded game delivery", call.Arguments)
+	}
+	if _, exists := call.Arguments["agents"]; exists {
+		t.Fatalf("game request inherited comic specialists: %#v", call.Arguments["agents"])
+	}
+}
+
 func TestInferCreateTeamPlanFromRequest_BackendChoosesStewardName(t *testing.T) {
 	call, ok := inferCreateTeamPlanFromRequest("Create a standing team to watch generated content and react to changes.")
 	if !ok {

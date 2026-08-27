@@ -197,8 +197,8 @@ func TestBuildProposalDisplayContractExplainsTeamDeliverable(t *testing.T) {
 	if display.OperatorSummary != "Create Game Team and start its first retained deliverable." {
 		t.Fatalf("operator summary = %q", display.OperatorSummary)
 	}
-	if !strings.Contains(display.ExpectedResult, "workspace/generated/game-team-first-game/index.html") {
-		t.Fatalf("expected_result = %q, want retained output path", display.ExpectedResult)
+	if display.ExpectedResult != "Game Team will be created, then Soma will deliver the requested result after validation, with run proof." {
+		t.Fatalf("expected_result = %q, want result-first delivery copy", display.ExpectedResult)
 	}
 	if len(display.AffectedResources) != 2 {
 		t.Fatalf("affected_resources = %#v, want team and file path", display.AffectedResources)
