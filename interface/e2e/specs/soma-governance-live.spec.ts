@@ -66,7 +66,7 @@ test.describe('Soma governed mutation live contract', () => {
         expect(mutation.body?.data?.mode).toBe('proposal');
         expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
         await expect(page.getByText('I can start that.')).toBeVisible({ timeout: 30_000 });
-        await expect(page.getByText(/Reply "start" to begin/i)).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Start' }).last()).toBeVisible();
     });
 
     test('Scenario C+D: fresh mutation proposal stays side-effect free until confirm, and cancel remains safe + persistent', async ({ page }) => {
@@ -146,13 +146,13 @@ test.describe('Soma governed mutation live contract', () => {
                 })
                 .toBeTruthy();
 
-            await expect(page.getByText(/Latest output is ready/i)).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByText('Output ready', { exact: true }).last()).toBeVisible({ timeout: 30_000 });
             await page.getByText('Proof and execution details', { exact: true }).last().click();
             await expect(page.getByRole('link', { name: /Inspect run receipt/i })).toBeVisible({ timeout: 30_000 });
 
             await page.reload({ waitUntil: 'domcontentloaded' });
             await waitForOrganizationWorkspaceReady(page);
-            await expect(page.getByText(/Latest output is ready/i)).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByText('Output ready', { exact: true }).last()).toBeVisible({ timeout: 30_000 });
             await page.getByText('Proof and execution details', { exact: true }).last().click();
             await expect(page.getByRole('link', { name: /Inspect run receipt/i })).toBeVisible({ timeout: 30_000 });
         } finally {

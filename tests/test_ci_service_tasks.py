@@ -80,6 +80,49 @@ def test_service_check_skips_live_backend_browser_proof_when_prereqs_fail(monkey
     assert e2e_calls == []
 
 
+def test_service_check_retries_one_transient_lifecycle_up_failure(monkeypatch):
+    up_calls: list[tuple[bool, bool]] = []
+    sleeps: list[int] = []
+
+    def transient_up(_ctx, **kwargs):
+        up_calls.append((kwargs["frontend"], kwargs["build"]))
+        if len(up_calls) == 1:
+            raise SystemExit(1)
+
+    monkeypatch.setattr(ci.lifecycle.up, "body", transient_up)
+    monkeypatch.setattr(ci.ci_release.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(ci.db_tasks, "schema_bootstrapped", lambda: True)
+    monkeypatch.setattr(ci.lifecycle.health, "body", lambda _ctx: None)
+    monkeypatch.setattr(ci.interface_tasks.build, "body", lambda _ctx: None)
+    monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **_kwargs: None)
+
+    ci.service_check.body(FakeContext({}), live_backend=True)
+
+    assert up_calls == [(False, False), (False, False)]
+    assert sleeps == [2, 3]
+
+
+def test_service_check_fails_after_two_lifecycle_up_attempts(monkeypatch):
+    up_calls: list[tuple[bool, bool]] = []
+    build_calls: list[str] = []
+
+    def failed_up(_ctx, **kwargs):
+        up_calls.append((kwargs["frontend"], kwargs["build"]))
+        raise SystemExit(1)
+
+    monkeypatch.setattr(ci.lifecycle.up, "body", failed_up)
+    monkeypatch.setattr(ci.ci_release.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(ci.db_tasks, "schema_bootstrapped", lambda: True)
+    monkeypatch.setattr(ci.lifecycle.health, "body", lambda _ctx: None)
+    monkeypatch.setattr(ci.interface_tasks.build, "body", lambda _ctx: build_calls.append("build"))
+
+    with pytest.raises(SystemExit):
+        ci.service_check.body(FakeContext({}), live_backend=True)
+
+    assert up_calls == [(False, False), (False, False)]
+    assert build_calls == []
+
+
 def test_service_check_skips_migrate_when_schema_is_already_initialized(monkeypatch):
     health_calls: list[str] = []
     up_calls: list[tuple[bool, bool]] = []

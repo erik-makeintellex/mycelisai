@@ -9,6 +9,20 @@ RELEASE_PREFLIGHT_LANES = {
 }
 
 
+def _bring_up_services(lifecycle, context, *, attempts=2, backoff_seconds=2):
+    """Retry one idempotent bring-up after the baseline releases local resources."""
+    for attempt in range(1, attempts + 1):
+        try:
+            lifecycle.up.body(context, frontend=False, build=False)
+            return True
+        except SystemExit:
+            if attempt == attempts:
+                return False
+            print(f"  RETRY: lifecycle bring-up was not ready; retrying in {backoff_seconds}s")
+            time.sleep(backoff_seconds)
+    return False
+
+
 def run_service_check(c, *, live_backend, lifecycle, db_tasks, interface_tasks):
     errors = []
     print("=== SERVICE CHECK ===")
@@ -16,10 +30,9 @@ def run_service_check(c, *, live_backend, lifecycle, db_tasks, interface_tasks):
 
     if live_backend:
         print("[1/3] lifecycle.up --frontend=false --build=false")
-        try:
-            lifecycle.up.body(c, frontend=False, build=False)
+        if _bring_up_services(lifecycle, c):
             print("  OK")
-        except SystemExit:
+        else:
             errors.append("lifecycle up failed")
         print("[1.5/3] db.migrate")
         if db_tasks.schema_bootstrapped():
