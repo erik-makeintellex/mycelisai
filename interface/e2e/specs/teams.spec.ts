@@ -233,24 +233,30 @@ test.describe('Teams Workspace (/teams)', () => {
     });
 
     test('clicking a team card opens and closes the detail drawer', async ({ page }) => {
-        test.slow();
+        await page.route('**/api/v1/teams/detail', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify([{
+                    id: 'team-drawer-proof',
+                    name: 'Drawer Proof Team',
+                    role: 'action',
+                    type: 'mission',
+                    mission_id: 'mission-drawer-proof',
+                    mission_intent: 'Prove the team detail drawer',
+                    inputs: ['swarm.team.team-drawer-proof.internal.command'],
+                    deliveries: ['swarm.team.team-drawer-proof.signal.result'],
+                    agents: [],
+                }]),
+            });
+        });
+        await page.reload({ waitUntil: 'domcontentloaded' });
+
         const cards = page.getByRole('button')
             .filter({ hasText: 'Open lead workspace' })
             .filter({ hasText: 'View runs' });
-        const emptyState = page.getByText('No teams found', { exact: true });
-        await expect
-            .poll(async () => {
-                if ((await cards.count()) > 0) return 'cards';
-                return await emptyState.isVisible().catch(() => false) ? 'empty' : 'pending';
-            })
-            .not.toBe('pending');
-        const count = await cards.count();
-        if (count === 0) {
-            await expect(emptyState).toBeVisible({ timeout: 15000 });
-            return;
-        }
-
         const firstCard = cards.first();
+        await expect(firstCard).toContainText('Drawer Proof Team');
         await firstCard.click();
 
         const drawer = page.locator('div.w-\\[480px\\]');
