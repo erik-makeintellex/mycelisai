@@ -9,14 +9,15 @@ RELEASE_PREFLIGHT_LANES = {
 }
 
 
-def _bring_up_services(lifecycle, context, *, attempts=2, backoff_seconds=2):
+def _bring_up_services(lifecycle, context, *, attempts=2, backoff_seconds=10):
     """Retry one idempotent bring-up after the baseline releases local resources."""
     for attempt in range(1, attempts + 1):
         try:
             lifecycle.up.body(context, frontend=False, build=False)
             return True
-        except SystemExit:
+        except SystemExit as exc:
             if attempt == attempts:
+                print(f"  ERROR: lifecycle bring-up failed after {attempts} attempts ({exc})")
                 return False
             print(f"  RETRY: lifecycle bring-up was not ready; retrying in {backoff_seconds}s")
             time.sleep(backoff_seconds)

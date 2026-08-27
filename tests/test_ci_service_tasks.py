@@ -99,7 +99,7 @@ def test_service_check_retries_one_transient_lifecycle_up_failure(monkeypatch):
     ci.service_check.body(FakeContext({}), live_backend=True)
 
     assert up_calls == [(False, False), (False, False)]
-    assert sleeps == [2, 3]
+    assert sleeps == [10, 3]
 
 
 def test_service_check_fails_after_two_lifecycle_up_attempts(monkeypatch):

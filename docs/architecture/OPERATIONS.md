@@ -171,7 +171,7 @@ uv run inv team.architecture-sync
 
 `team.architecture-sync` is a bounded coordination check, not an autonomous implementation run. Its standing-team prompts follow the current Workspace/Outcome hierarchy and Ask-to-Recover journey, with validated execution-to-deliverable handoff as the active release gate.
 
-Use `--live-backend` for browser proof that must hit a real Core backend. Service certification permits one serial, two-second retry of the idempotent lifecycle bring-up after managed browser cleanup; persistent startup failure remains a hard gate and does not fall through to browser proof.
+Use `--live-backend` for browser proof that must hit a real Core backend. Service certification permits one serial retry after a ten-second backoff for the idempotent lifecycle bring-up following managed browser cleanup; persistent startup failure remains a hard gate and does not fall through to browser proof.
 
 ### Logging & Quality Gates (`ops/logging.py`, `ops/quality.py`)
 
