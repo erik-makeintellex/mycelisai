@@ -2,6 +2,7 @@ package swarm
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -56,6 +57,18 @@ type toolCallPayload struct {
 	Arguments map[string]any `json:"arguments"`
 }
 
+// toolCallParseFailure is provider output that names a tool but is unsafe to
+// execute. Keeping the tool name lets the cognitive loop request a correction
+// without converting truncated mutation calls into empty-argument calls.
+type toolCallParseFailure struct {
+	ToolName string
+	Reason   string
+}
+
+func (failure *toolCallParseFailure) Error() string {
+	return fmt.Sprintf("malformed tool call for %s: %s", failure.ToolName, failure.Reason)
+}
+
 // parseToolCall extracts a tool_call JSON block from LLM response text.
 // Handles both compact and pretty-printed JSON from LLMs:
 //
@@ -65,10 +78,15 @@ type toolCallPayload struct {
 //
 // Returns nil if no tool call is found.
 func parseToolCall(text string) *toolCallPayload {
+	call, _ := parseToolCallForExecution(text)
+	return call
+}
+
+func parseToolCallForExecution(text string) (*toolCallPayload, *toolCallParseFailure) {
 	keyword := `"tool_call"`
 	idx := strings.Index(text, keyword)
 	if idx == -1 {
-		return parseOperationCall(text)
+		return parseOperationCall(text), nil
 	}
 
 	// Walk backwards from "tool_call" to find the opening brace.
@@ -85,15 +103,18 @@ func parseToolCall(text string) *toolCallPayload {
 		}
 	}
 	if start == -1 {
-		return nil
+		return nil, nil
 	}
 
 	end := scanJSONObject(text, start)
 	if end == -1 {
 		if loose := parseLooseToolCall(text[start:]); loose != nil {
-			return loose
+			if blocksProposalPlanningTool(loose.Name) {
+				return nil, &toolCallParseFailure{ToolName: loose.Name, Reason: "truncated JSON"}
+			}
+			return loose, nil
 		}
-		return nil
+		return nil, nil
 	}
 
 	var wrapper struct {
@@ -102,14 +123,30 @@ func parseToolCall(text string) *toolCallPayload {
 	if err := json.Unmarshal([]byte(text[start:end]), &wrapper); err != nil {
 		log.Printf("[parseToolCall] JSON unmarshal failed: %v (excerpt: %s)", err, truncateLog(text[start:end], 200))
 		if loose := parseLooseToolCall(text[start:end]); loose != nil {
-			return loose
+			if blocksProposalPlanningTool(loose.Name) {
+				return nil, &toolCallParseFailure{ToolName: loose.Name, Reason: "invalid JSON"}
+			}
+			return loose, nil
 		}
-		return nil
+		return nil, nil
 	}
 	if wrapper.ToolCall.Name == "" {
-		return parseOperationCall(text)
+		return parseOperationCall(text), nil
 	}
-	return &wrapper.ToolCall
+	return &wrapper.ToolCall, nil
+}
+
+func validateMutationToolCall(call *toolCallPayload) *toolCallParseFailure {
+	if call == nil || call.Name != "write_file" {
+		return nil
+	}
+	if strings.TrimSpace(stringValue(call.Arguments["path"])) == "" {
+		return &toolCallParseFailure{ToolName: call.Name, Reason: "missing required path"}
+	}
+	if strings.TrimSpace(stringValue(call.Arguments["content"])) == "" {
+		return &toolCallParseFailure{ToolName: call.Name, Reason: "missing required content"}
+	}
+	return nil
 }
 
 func parseLooseToolCall(text string) *toolCallPayload {

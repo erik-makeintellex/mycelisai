@@ -3,6 +3,7 @@
 import { AlertTriangle, ExternalLink, Zap } from "lucide-react";
 import { responseStateToneClass } from "@/components/soma/SomaCausalSummaryState";
 import { outputCanvasHref } from "@/lib/outputPackageModel";
+import { progressForChatMessage, progressForThreadEvent } from "@/lib/teamWorkProgress";
 import type { ChatMessage } from "@/store/useCortexStore";
 
 function currentSomaHref() {
@@ -22,6 +23,7 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
     if (msg.proposal && !(msg.thread_event || msg.thread_events?.length)) return null;
 
     const state = msg.ui_response_state ?? msg.execution_summary?.ui_response_state;
+    const progress = progressForChatMessage(msg);
     const threadEvents = (msg.thread_events ?? (msg.thread_event ? [msg.thread_event] : [])).slice(-1);
     const hasProposalMeta = false;
     const hasStateBlock = Boolean(state || hasProposalMeta);
@@ -55,6 +57,7 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
             {threadEvents.length ? (
                 <div className={hasStateBlock ? "mt-2 border-t border-current/10 pt-2" : ""}>
                     {threadEvents.map((event, index) => {
+                        const eventProgress = progressForThreadEvent(event);
                         const needsDirection = event.kind === "attention_required";
                         const contractUnsatisfied = needsDirection && isResultContractUnsatisfied(event);
                         const eventLabel = contractUnsatisfied
@@ -75,6 +78,9 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
                             : null;
                         return (
                         <div key={event.id ?? `${event.kind}-${index}`}>
+                            <p className="mb-1 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-cortex-text-muted">
+                                {eventProgress.label}
+                            </p>
                             <div className="flex flex-wrap items-center justify-between gap-2">
                                 <span className="text-sm font-semibold text-cortex-text-main">
                                     {eventLabel}
@@ -121,6 +127,8 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
                         );
                     })}
                 </div>
+            ) : progress ? (
+                <p className="text-sm font-semibold text-cortex-text-main">{progress.label}</p>
             ) : null}
         </div>
     );

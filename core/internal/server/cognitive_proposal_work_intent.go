@@ -23,7 +23,7 @@ func buildProposalWorkIntent(planned []protocol.PlannedToolCall, latestRequest s
 		runtimePosture = "Keep the approved work active until the operator or policy stops it."
 	case requestContainsAny(text, []string{"extend soma", "soma itself", "plugin", "capability extension"}):
 		kind = "self_extension"
-	case requestContainsAny(text, []string{"app", "application", "game", "playable", "package", "project"}):
+	case requestContainsAny(text, []string{"app", "application", "game", "platformer", "playable", "package", "project"}):
 		kind = "project"
 	}
 	output := inferProposalOutputContract(latestRequest, paths, firstPlannedOutputTarget(planned), display)
@@ -49,7 +49,7 @@ func inferProposalOutputContract(latestRequest string, paths []string, primaryTa
 	launchHint := ""
 	validation := []string{"Retained output is reviewable from Soma, Groups, or Resources."}
 	switch {
-	case requestContainsAny(text, []string{"game", "playable", "browser app", "web page", "webpage", "index.html", "project-package", "application"}):
+	case requestContainsAny(text, []string{"game", "platformer", "playable", "browser app", "web page", "webpage", "index.html", "project-package", "application"}):
 		shape = "app_package"
 		launchHint = "Return an openable entrypoint and folder access."
 		validation = []string{"Open the entrypoint.", "Confirm the primary interaction works.", "Retain proof and repair notes."}
@@ -70,13 +70,21 @@ func inferProposalOutputContract(latestRequest string, paths []string, primaryTa
 	if shape == "app_package" {
 		outputValidation = interactiveBrowserValidationPlanForRequest(text)
 	}
+	acceptanceCriteria := []string(nil)
+	semanticValidationRequired := false
+	if shape == "app_package" {
+		acceptanceCriteria = confirmedActionStringSlice(contentContractForTeamRequest(latestRequest)["acceptance_criteria"])
+		semanticValidationRequired = len(acceptanceCriteria) > 0
+	}
 	return &protocol.WorkOutputContract{
-		Shape:              shape,
-		PrimaryDeliverable: firstNonEmptyString(primaryTarget, firstString(paths), display.ExpectedResult),
-		Retention:          "user_deliverable",
-		LaunchHint:         launchHint,
-		Validation:         validation,
-		OutputValidation:   outputValidation,
+		Shape:                      shape,
+		PrimaryDeliverable:         firstNonEmptyString(primaryTarget, firstString(paths), display.ExpectedResult),
+		Retention:                  "user_deliverable",
+		LaunchHint:                 launchHint,
+		Validation:                 validation,
+		AcceptanceCriteria:         acceptanceCriteria,
+		SemanticValidationRequired: semanticValidationRequired,
+		OutputValidation:           outputValidation,
 	}
 }
 

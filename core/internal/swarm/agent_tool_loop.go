@@ -84,7 +84,13 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			result.responseText = updated.Text
 		}
 
-		toolCall := parseToolCall(result.responseText)
+		toolCall, parseFailure := parseToolCallForExecution(result.responseText)
+		if parseFailure != nil {
+			if !reinferWithToolFeedback(parseFailure.ToolName, "Tool call correction: "+parseFailure.Error()+". Return one complete, valid tool_call JSON object with every required argument. The malformed call was not executed.") {
+				break
+			}
+			continue
+		}
 		if toolCall == nil {
 			issues := resultContractIssues(requirement, result.artifacts, result.toolEvidence)
 			if len(issues) > 0 && contractCorrections < maxResultContractCorrections {
@@ -110,6 +116,12 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			break
 		}
 		normalizeAgentToolCallArguments(toolCall, a.TeamID, input)
+		if validationFailure := validateMutationToolCall(toolCall); validationFailure != nil {
+			if !reinferWithToolFeedback(validationFailure.ToolName, "Tool call correction: "+validationFailure.Error()+". Return one complete, valid tool_call JSON object with every required argument. The invalid call was not executed.") {
+				break
+			}
+			continue
+		}
 		if requirement.active() && strings.EqualFold(requirement.Kind, "project_package") && toolCall.Name == "store_artifact" {
 			if !reinferWithToolFeedback(toolCall.Name, "Project-package contracts require physical files. Do not call store_artifact. Use write_file for the next missing required file, or read_file on the written entrypoint when only structural readback remains.") {
 				break

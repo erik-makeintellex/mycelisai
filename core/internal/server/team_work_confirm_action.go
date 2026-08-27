@@ -181,9 +181,15 @@ func (s *AdminServer) persistConfirmedDeliverableWorkItems(ctx context.Context, 
 			item.State = protocol.TeamWorkStateDegraded
 			item.NeedsOperator = true
 			item.DegradationState = issue
-			item.RecoveryOptions = []string{"Repair the package inside the assigned team workspace and return a retained entrypoint that passes structural readback."}
+			recovery := "Repair the package inside the assigned team workspace and return a retained entrypoint that passes structural readback."
+			details := "The confirmed package did not pass retained-file verification."
+			if issue == semanticAcceptanceUnverified {
+				recovery = "Validate every approved acceptance criterion and return explicit retained evidence for each result."
+				details = "The confirmed package has not supplied explicit evidence for every approved acceptance criterion."
+			}
+			item.RecoveryOptions = []string{recovery}
 			item.OutputRefs = nil
-			item.LastEvent = confirmedActionStatusEvent(link, item, protocol.TeamWorkStateDegraded, "Team output needs repair", "The confirmed package did not pass retained-file verification.", "operator_attention", item.RecoveryOptions[0])
+			item.LastEvent = confirmedActionStatusEvent(link, item, protocol.TeamWorkStateDegraded, "Team output needs repair", details, "operator_attention", item.RecoveryOptions[0])
 			interaction := confirmedActionInteraction(link, item, "degraded", item.LastEvent.Details, result.Name, result.Arguments)
 			if err := s.persistTeamWorkItemWithLifecycle(ctx, &item, []protocol.TeamStatusEvent{*item.LastEvent}, interaction); err != nil {
 				errs = append(errs, err)
@@ -209,6 +215,9 @@ func (s *AdminServer) persistConfirmedDeliverableWorkItems(ctx context.Context, 
 }
 
 func confirmedProjectPackageOutputIssue(item protocol.TeamWorkItem) string {
+	if semanticValidationRequired(item) {
+		return semanticAcceptanceUnverified
+	}
 	for _, ref := range item.OutputRefs {
 		if !strings.EqualFold(strings.TrimSpace(ref.Kind), "project_package") {
 			continue

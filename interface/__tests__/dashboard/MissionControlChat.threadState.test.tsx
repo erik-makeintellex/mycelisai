@@ -110,6 +110,7 @@ describe('MissionControlChat thread state cards', () => {
         render(<MissionControlChat simpleMode />);
 
         expect(screen.getByTestId('soma-thread-state-card')).toBeDefined();
+        expect(screen.getByText('Building')).toBeDefined();
         expect(screen.getByText('Work started')).toBeDefined();
         expect(screen.queryByText('running')).toBeNull();
         expect(screen.getByText('Soma handed this to the work bus. It is running, not complete, and you can keep talking here.')).toBeDefined();
@@ -180,6 +181,7 @@ describe('MissionControlChat thread state cards', () => {
         render(<MissionControlChat simpleMode />);
 
         expect(screen.getAllByTestId('soma-thread-state-card')).toHaveLength(1);
+        expect(screen.getByText('Recovery')).toBeDefined();
         expect(screen.getByText('Soma needs your direction')).toBeDefined();
         expect(screen.getByText(/Tell Soma to try again, use another available service, or change the request/i)).toBeDefined();
         expect(screen.queryByText('degraded')).toBeNull();
@@ -244,6 +246,7 @@ describe('MissionControlChat thread state cards', () => {
         render(<MissionControlChat simpleMode />);
 
         expect(screen.getByText('Output is not playable yet')).toBeDefined();
+        expect(screen.getByText('Recovery')).toBeDefined();
         expect(screen.getByText('The team did not produce a validated runnable output. Nothing new should be trusted yet.')).toBeDefined();
         expect(screen.getByText(/Tell Soma to try again, use another available service, or change the request/i)).toBeDefined();
     });
@@ -274,6 +277,7 @@ describe('MissionControlChat thread state cards', () => {
         render(<MissionControlChat simpleMode />);
 
         expect(screen.getByText('Work complete')).toBeDefined();
+        expect(screen.getByText('Ready')).toBeDefined();
         expect(screen.getByText(/One deliverable is ready to open/i)).toBeDefined();
         const outputLink = screen.getByRole('link', { name: /Open app/i });
         expect(outputLink.getAttribute('href')).toContain('/outputs/view?');

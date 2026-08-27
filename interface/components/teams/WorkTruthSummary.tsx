@@ -2,8 +2,10 @@
 
 import { AlertTriangle, CheckCircle2, Radio } from "lucide-react";
 import type { TeamWorkItem } from "@/store/useCortexStore";
+import { progressForDurableState } from "@/lib/teamWorkProgress";
 
 export function WorkTruthSummary({ item, compact = false }: { item: TeamWorkItem; compact?: boolean }) {
+  const progress = progressForDurableState(item.state);
   const outputRefs = item.outputRefs ?? [];
   const outputCount = item.outputCount ?? outputRefs.length;
   const packageCount = outputRefs.filter(
@@ -30,13 +32,11 @@ export function WorkTruthSummary({ item, compact = false }: { item: TeamWorkItem
       : "border-cortex-border bg-cortex-surface text-cortex-text-muted";
   const stateText = isDegraded
     ? canRecover
-      ? "Needs recovery"
-      : "Degraded, recovery not connected"
-    : isActive
-      ? "Running, output may still change"
-      : item.state === "output_ready"
-        ? "Output ready for review"
-        : "Work state retained";
+      ? progress.label
+      : "Recovery not connected"
+    : item.state === "paused"
+      ? "Building · paused"
+      : progress.label;
   const outputText = isDegraded
     ? outputCount > 0
       ? "No trusted output yet"

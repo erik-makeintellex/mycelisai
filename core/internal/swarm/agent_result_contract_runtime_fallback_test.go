@@ -113,6 +113,49 @@ func TestRuntimeFallbackAllowsGenericPrimaryInteractionAcceptance(t *testing.T) 
 	}
 }
 
+func TestRuntimeFallbackRequiresExplicitEligibility(t *testing.T) {
+	requirement := runtimeFallbackPackageRequirement()
+	requirement.RuntimeFallbackEligible = false
+	if initialProjectPackageRuntimeFallbackAllowed(requirement) {
+		t.Fatal("generic acceptance text alone must not authorize runtime fallback")
+	}
+}
+
+func TestRuntimeFallbackRejectsEmptyOrMixedAcceptance(t *testing.T) {
+	for name, criteria := range map[string][]string{
+		"empty": nil,
+		"mixed": {"Primary interaction changes the application state and defeats enemies"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			requirement := runtimeFallbackPackageRequirement()
+			requirement.AcceptanceCriteria = criteria
+			if initialProjectPackageRuntimeFallbackAllowed(requirement) {
+				t.Fatal("runtime fallback must fail closed")
+			}
+		})
+	}
+}
+
+func TestRuntimeFallbackDoesNotRepairRichCompleteWrites(t *testing.T) {
+	requirement := runtimeFallbackPackageRequirement()
+	requirement.AcceptanceCriteria = []string{"Enemies, health, key, door, win, fail, and restart states work"}
+	entrypoint := requirement.PackageEntrypoint
+	partial := `<canvas data-mycelis-validation-surface></canvas>`
+	result := &agentToolLoopResult{
+		artifacts: []protocol.ChatArtifactRef{{Type: "project_package", Folder: requirement.PackageFolder, Entrypoint: entrypoint}},
+		toolEvidence: []successfulToolEvidence{
+			{ToolName: "write_file", Path: entrypoint, Content: partial},
+			{ToolName: "write_file", Path: requirement.PackageFolder + "/README.md", Content: "# Usage"},
+			{ToolName: "write_file", Path: requirement.PackageFolder + "/PROOF.md", Content: "# Proof"},
+			{ToolName: "write_file", Path: requirement.PackageFolder + "/project-package.json", Content: `{}`},
+		},
+	}
+	agent := resultContractTestAgent(&resultContractProvider{responses: []string{"unused"}}, &resultContractToolExecutor{})
+	if agent.completeProjectPackageRuntimeFallback("Build the approved game.", requirement, result, false) {
+		t.Fatal("generic fallback must not replace a rich candidate")
+	}
+}
+
 func TestApprovedResultContractRuntimeFallbackRepairsCompleteWritesWithoutReadback(t *testing.T) {
 	requirement := runtimeFallbackPackageRequirement()
 	entrypoint := requirement.PackageEntrypoint
@@ -146,11 +189,13 @@ func TestApprovedResultContractRuntimeFallbackRepairsCompleteWritesWithoutReadba
 func runtimeFallbackPackageRequirement() *teamResultRequirement {
 	return &teamResultRequirement{
 		Kind: "project_package", TeamID: "delivery-team",
-		PackageFolder:      "groups/delivery-team/generated/package",
-		PackageEntrypoint:  "groups/delivery-team/generated/package/index.html",
-		FilesRequired:      []string{"index.html", "README.md", "PROOF.md", "project-package.json"},
-		ExpectedOutputs:    []string{"interactive browser app"},
-		EntrypointRequired: true, FolderRequired: true, ReadbackRequired: true,
+		PackageFolder:           "groups/delivery-team/generated/package",
+		PackageEntrypoint:       "groups/delivery-team/generated/package/index.html",
+		FilesRequired:           []string{"index.html", "README.md", "PROOF.md", "project-package.json"},
+		ExpectedOutputs:         []string{"interactive browser app"},
+		AcceptanceCriteria:      []string{"Primary interaction changes the application state"},
+		RuntimeFallbackEligible: true,
+		EntrypointRequired:      true, FolderRequired: true, ReadbackRequired: true,
 		OutputValidation: &protocol.OutputValidationPlan{
 			Kind: protocol.OutputValidationInteractiveBrowser, Required: true,
 			Probe: &protocol.OutputValidationProbe{

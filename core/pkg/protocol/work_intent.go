@@ -63,12 +63,14 @@ type WorkExternalOutcomeVerification struct {
 
 // WorkOutputContract names the expected deliverable shape for approved work.
 type WorkOutputContract struct {
-	Shape              string                `json:"shape,omitempty"`
-	PrimaryDeliverable string                `json:"primary_deliverable,omitempty"`
-	Retention          string                `json:"retention,omitempty"`
-	LaunchHint         string                `json:"launch_hint,omitempty"`
-	Validation         []string              `json:"validation,omitempty"`
-	OutputValidation   *OutputValidationPlan `json:"output_validation,omitempty"`
+	Shape                      string                `json:"shape,omitempty"`
+	PrimaryDeliverable         string                `json:"primary_deliverable,omitempty"`
+	Retention                  string                `json:"retention,omitempty"`
+	LaunchHint                 string                `json:"launch_hint,omitempty"`
+	Validation                 []string              `json:"validation,omitempty"`
+	AcceptanceCriteria         []string              `json:"acceptance_criteria,omitempty"`
+	SemanticValidationRequired bool                  `json:"semantic_validation_required,omitempty"`
+	OutputValidation           *OutputValidationPlan `json:"output_validation,omitempty"`
 }
 
 // WorkLifecycleContract describes operator controls for an approved work mode.

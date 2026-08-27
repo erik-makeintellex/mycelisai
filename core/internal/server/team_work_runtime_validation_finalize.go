@@ -35,6 +35,7 @@ func (s *AdminServer) finalizeTeamWorkValidation(
 	} else if currentDigest != payload.ContentDigest {
 		return nil // A newer retained candidate owns its own digest-keyed validation job.
 	}
+	passed, degradation = applySemanticCompletionGate(current, report, passed, degradation)
 	validationRef := path.Join(payload.EvidenceRef, "validation-report.json")
 	if err := retainServerValidationReport(payload.EvidenceRef, report); err != nil {
 		return err

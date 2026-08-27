@@ -116,6 +116,7 @@ func cloneWorkOutputContract(raw *WorkOutputContract) *WorkOutputContract {
 	}
 	copy := *raw
 	copy.Validation = append([]string(nil), raw.Validation...)
+	copy.AcceptanceCriteria = append([]string(nil), raw.AcceptanceCriteria...)
 	copy.OutputValidation = NormalizeOutputValidationPlan(raw.OutputValidation)
 	return &copy
 }

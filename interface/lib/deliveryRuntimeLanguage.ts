@@ -1,4 +1,5 @@
 import type { TeamWorkItemState } from "@/store/useCortexStore";
+import { progressForDurableState } from "@/lib/teamWorkProgress";
 
 export type OutputFolderState = "idle" | "opening" | "opened" | "failed";
 export type TeamWorkStateGroup = "not_started" | "running" | "needs_review" | "output_ready" | "needs_recovery" | "archived";
@@ -18,15 +19,15 @@ export interface RecoveryTrustCopy {
 }
 
 export const TEAM_WORK_STATE_LABELS: Record<TeamWorkItemState, string> = {
-  new: "Ready to brief",
-  briefed: "Ready to start",
+  new: "Planning",
+  briefed: "Planning",
   queued: "Queued",
-  running: "In progress",
-  reviewing: "In review",
-  paused: "Paused",
-  output_ready: "Output ready",
-  degraded: "Needs recovery",
-  needs_operator: "Needs response",
+  running: "Building",
+  reviewing: "Validating",
+  paused: "Building · paused",
+  output_ready: "Ready",
+  degraded: "Recovery",
+  needs_operator: "Recovery · response needed",
   archived: "Archived",
 };
 
@@ -94,7 +95,7 @@ export const OUTPUT_READY_REVIEW_COPY = {
 } as const;
 
 export function teamWorkStateLabel(state: TeamWorkItemState) {
-  return TEAM_WORK_STATE_LABELS[state];
+  return TEAM_WORK_STATE_LABELS[state] ?? progressForDurableState(state).label;
 }
 
 export function teamWorkStateGroup(state: TeamWorkItemState): TeamWorkStateGroup {

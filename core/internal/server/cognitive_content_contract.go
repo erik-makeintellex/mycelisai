@@ -14,7 +14,8 @@ func contentContractForTeamRequest(request string) map[string]any {
 	outputs := []string{}
 	proof := []string{"retained output path", "operator-readable summary", "recovery note if incomplete"}
 	preparation := []string{}
-	if strings.Contains(lower, "game") {
+	gameRequest := requestContainsAny(lower, []string{"game", "platformer"})
+	if gameRequest {
 		types = append(types, "game")
 		outputs = append(outputs, "openable browser game package")
 		criteria = append(criteria, gameAcceptanceCriteria()...)
@@ -30,7 +31,7 @@ func contentContractForTeamRequest(request string) map[string]any {
 		)
 		proof = append(proof, "table schema or column rationale", "source/assumption notes")
 	}
-	if requestAsksForApplicationPackage(lower) && !strings.Contains(lower, "game") {
+	if requestAsksForApplicationPackage(lower) && !gameRequest {
 		types = append(types, "application_package")
 		outputs = append(outputs, "openable application package")
 		criteria = append(criteria, applicationPackageAcceptanceCriteria()...)
@@ -40,7 +41,7 @@ func contentContractForTeamRequest(request string) map[string]any {
 		}
 		proof = append(proof, applicationPackageProofRequirements()...)
 	}
-	if requestAsksForCodeArtifact(lower) && !strings.Contains(lower, "game") {
+	if requestAsksForCodeArtifact(lower) && !gameRequest {
 		types = append(types, "code_app")
 		outputs = append(outputs, "reviewable code or script package")
 		criteria = append(criteria,

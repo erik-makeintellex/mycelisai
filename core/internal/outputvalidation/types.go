@@ -83,17 +83,25 @@ type ProbeResult struct {
 	After       string      `json:"after,omitempty"`
 }
 
+// CriterionEvidence binds an explicit acceptance criterion to retained proof.
+type CriterionEvidence struct {
+	Criterion    string   `json:"criterion"`
+	Passed       bool     `json:"passed"`
+	EvidenceRefs []string `json:"evidence_refs,omitempty"`
+}
+
 // Report is the typed, digest-bound result returned by any output validator adapter.
 type Report struct {
-	Status        Status        `json:"status"`
-	ContentDigest string        `json:"content_digest"`
-	LaunchURL     string        `json:"launch_url"`
-	StartedAt     time.Time     `json:"started_at"`
-	FinishedAt    time.Time     `json:"finished_at"`
-	Diagnostics   []Diagnostic  `json:"diagnostics,omitempty"`
-	EvidenceRefs  []EvidenceRef `json:"evidence_refs,omitempty"`
-	Checks        []CheckResult `json:"checks,omitempty"`
-	Probe         *ProbeResult  `json:"probe,omitempty"`
+	Status            Status              `json:"status"`
+	ContentDigest     string              `json:"content_digest"`
+	LaunchURL         string              `json:"launch_url"`
+	StartedAt         time.Time           `json:"started_at"`
+	FinishedAt        time.Time           `json:"finished_at"`
+	Diagnostics       []Diagnostic        `json:"diagnostics,omitempty"`
+	EvidenceRefs      []EvidenceRef       `json:"evidence_refs,omitempty"`
+	Checks            []CheckResult       `json:"checks,omitempty"`
+	Probe             *ProbeResult        `json:"probe,omitempty"`
+	CriterionEvidence []CriterionEvidence `json:"criterion_evidence,omitempty"`
 }
 
 // Validator allows the server to replace Playwright without changing projection semantics.

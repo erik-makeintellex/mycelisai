@@ -30,15 +30,15 @@ describe("deliveryRuntimeLanguage", () => {
     ];
 
     expect(states.map((state) => [state, teamWorkStateLabel(state), teamWorkStateGroup(state)])).toEqual([
-      ["new", "Ready to brief", "not_started"],
-      ["briefed", "Ready to start", "not_started"],
+      ["new", "Planning", "not_started"],
+      ["briefed", "Planning", "not_started"],
       ["queued", "Queued", "running"],
-      ["running", "In progress", "running"],
-      ["reviewing", "In review", "needs_review"],
-      ["paused", "Paused", "running"],
-      ["output_ready", "Output ready", "output_ready"],
-      ["degraded", "Needs recovery", "needs_recovery"],
-      ["needs_operator", "Needs response", "needs_review"],
+      ["running", "Building", "running"],
+      ["reviewing", "Validating", "needs_review"],
+      ["paused", "Building · paused", "running"],
+      ["output_ready", "Ready", "output_ready"],
+      ["degraded", "Recovery", "needs_recovery"],
+      ["needs_operator", "Recovery · response needed", "needs_review"],
       ["archived", "Archived", "archived"],
     ]);
   });

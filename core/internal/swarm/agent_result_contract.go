@@ -17,21 +17,22 @@ const (
 )
 
 type teamResultRequirement struct {
-	Kind               string
-	TeamID             string
-	PackageTitle       string
-	PackageFolder      string
-	PackageEntrypoint  string
-	FilesRequired      []string
-	ExpectedOutputs    []string
-	AcceptanceCriteria []string
-	ProofRequirements  []string
-	EntrypointRequired bool
-	FolderRequired     bool
-	ReadbackRequired   bool
-	DownstreamProofRef bool
-	RepairChannel      string
-	OutputValidation   *protocol.OutputValidationPlan
+	Kind                    string
+	TeamID                  string
+	PackageTitle            string
+	PackageFolder           string
+	PackageEntrypoint       string
+	FilesRequired           []string
+	ExpectedOutputs         []string
+	AcceptanceCriteria      []string
+	RuntimeFallbackEligible bool
+	ProofRequirements       []string
+	EntrypointRequired      bool
+	FolderRequired          bool
+	ReadbackRequired        bool
+	DownstreamProofRef      bool
+	RepairChannel           string
+	OutputValidation        *protocol.OutputValidationPlan
 }
 
 type successfulToolEvidence struct {
@@ -63,21 +64,22 @@ func teamResultRequirementFromTrigger(data []byte, planningOnly bool) *teamResul
 		return nil
 	}
 	requirement := &teamResultRequirement{
-		Kind:               strings.TrimSpace(stringValue(contract["kind"])),
-		TeamID:             strings.TrimSpace(stringValue(contract["team_id"])),
-		PackageTitle:       strings.TrimSpace(stringValue(contract["package_title"])),
-		PackageFolder:      cleanEvidencePath(stringValue(contract["package_folder"])),
-		PackageEntrypoint:  cleanEvidencePath(stringValue(contract["package_entrypoint"])),
-		FilesRequired:      stringSlice(contract["files_required"]),
-		ExpectedOutputs:    stringSlice(contract["expected_outputs"]),
-		AcceptanceCriteria: stringSlice(contract["acceptance_criteria"]),
-		ProofRequirements:  stringSlice(contract["proof_required"]),
-		EntrypointRequired: boolValue(contract["entrypoint_required"]),
-		FolderRequired:     boolValue(contract["folder_required"]),
-		ReadbackRequired:   boolValue(contract["validation_required"]),
-		DownstreamProofRef: boolValue(contract["proof_ref_required"]),
-		RepairChannel:      strings.TrimSpace(stringValue(contract["repair_channel"])),
-		OutputValidation:   outputValidationRequirement(contract["output_validation"]),
+		Kind:                    strings.TrimSpace(stringValue(contract["kind"])),
+		TeamID:                  strings.TrimSpace(stringValue(contract["team_id"])),
+		PackageTitle:            strings.TrimSpace(stringValue(contract["package_title"])),
+		PackageFolder:           cleanEvidencePath(stringValue(contract["package_folder"])),
+		PackageEntrypoint:       cleanEvidencePath(stringValue(contract["package_entrypoint"])),
+		FilesRequired:           stringSlice(contract["files_required"]),
+		ExpectedOutputs:         stringSlice(contract["expected_outputs"]),
+		AcceptanceCriteria:      stringSlice(contract["acceptance_criteria"]),
+		RuntimeFallbackEligible: boolValue(contract["runtime_fallback_eligible"]),
+		ProofRequirements:       stringSlice(contract["proof_required"]),
+		EntrypointRequired:      boolValue(contract["entrypoint_required"]),
+		FolderRequired:          boolValue(contract["folder_required"]),
+		ReadbackRequired:        boolValue(contract["validation_required"]),
+		DownstreamProofRef:      boolValue(contract["proof_ref_required"]),
+		RepairChannel:           strings.TrimSpace(stringValue(contract["repair_channel"])),
+		OutputValidation:        outputValidationRequirement(contract["output_validation"]),
 	}
 	if len(requirement.AcceptanceCriteria) == 0 {
 		requirement.AcceptanceCriteria = append([]string(nil), ask.ExitCriteria...)

@@ -49,6 +49,9 @@ func initialProjectPackageRuntimeFallbackAllowed(requirement *teamResultRequirem
 	if requirement.OutputValidation == nil || !requirement.OutputValidation.Required {
 		return false
 	}
+	if !requirement.RuntimeFallbackEligible {
+		return false
+	}
 	if !runtimeFallbackCanSatisfyAcceptance(requirement.AcceptanceCriteria) {
 		return false
 	}
@@ -59,19 +62,11 @@ func initialProjectPackageRuntimeFallbackAllowed(requirement *teamResultRequirem
 }
 
 func runtimeFallbackCanSatisfyAcceptance(criteria []string) bool {
-	for _, criterion := range criteria {
-		normalized := strings.ToLower(strings.TrimSpace(criterion))
-		if normalized == "" {
-			continue
-		}
-		genericInteraction := strings.Contains(normalized, "primary") &&
-			(strings.Contains(normalized, "interaction") || strings.Contains(normalized, "control")) &&
-			(strings.Contains(normalized, "change") || strings.Contains(normalized, "state"))
-		if !genericInteraction {
-			return false
-		}
+	if len(criteria) != 1 {
+		return false
 	}
-	return true
+	normalized := strings.ToLower(strings.TrimSpace(criteria[0]))
+	return normalized == "primary interaction changes the application state"
 }
 
 func (a *Agent) completeProjectPackageRuntimeFallback(input string, requirement *teamResultRequirement, result *agentToolLoopResult, planningOnly bool) bool {
@@ -79,6 +74,9 @@ func (a *Agent) completeProjectPackageRuntimeFallback(input string, requirement 
 		planningOnly ||
 		!requirement.active() || !strings.EqualFold(strings.TrimSpace(requirement.Kind), "project_package") ||
 		len(resultContractIssues(requirement, result.artifacts, result.toolEvidence)) == 0 {
+		return false
+	}
+	if !requirement.RuntimeFallbackEligible || !runtimeFallbackCanSatisfyAcceptance(requirement.AcceptanceCriteria) {
 		return false
 	}
 	if !result.runtimeRecoveryAllowed && !resultContractSafeRuntimeFallback(requirement, result) &&

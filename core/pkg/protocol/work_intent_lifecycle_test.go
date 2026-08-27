@@ -43,7 +43,9 @@ func TestNormalizeWorkIntentAddsLifecycleWithoutOverwritingExplicitContract(t *t
 		OutputContract: &WorkOutputContract{
 			Shape: " App_Package ", PrimaryDeliverable: " dist/app.zip ",
 			Retention: " User_Deliverable ", LaunchHint: " Open index.html ",
-			Validation: []string{" playable ", "", "playable", " audio "},
+			Validation:                 []string{" playable ", "", "playable", " audio "},
+			AcceptanceCriteria:         []string{" Win state works ", "", "Win state works"},
+			SemanticValidationRequired: true,
 			OutputValidation: &OutputValidationPlan{
 				Kind: " INTERACTIVE_BROWSER ", Required: true,
 				Checks: []OutputValidationCheck{" LOAD ", "", "load", " NO_PAGE_ERRORS "},
@@ -73,6 +75,9 @@ func TestNormalizeWorkIntentAddsLifecycleWithoutOverwritingExplicitContract(t *t
 	}
 	if len(explicit.OutputContract.Validation) != 2 || explicit.OutputContract.Validation[1] != "audio" {
 		t.Fatalf("expected compact validation requirements, got %#v", explicit.OutputContract.Validation)
+	}
+	if len(explicit.OutputContract.AcceptanceCriteria) != 1 || explicit.OutputContract.AcceptanceCriteria[0] != "Win state works" || !explicit.OutputContract.SemanticValidationRequired {
+		t.Fatalf("expected semantic acceptance posture to survive normalization, got %#v", explicit.OutputContract)
 	}
 	plan := explicit.OutputContract.OutputValidation
 	if plan == nil || plan.Kind != OutputValidationInteractiveBrowser || len(plan.Checks) != 2 {
