@@ -17,6 +17,11 @@ export interface OutputCanvasHrefInput {
   storagePath?: string | null;
   returnTo?: string | null;
   proofArtifactId?: string | null;
+  teamId?: string | null;
+  runId?: string | null;
+  workItemId?: string | null;
+  outputId?: string | null;
+  contentDigest?: string | null;
 }
 
 export function normalizeWorkspacePath(path?: string | null) {
@@ -99,13 +104,24 @@ export function somaReturnHref(returnTo?: string | null) {
   }
 }
 
-export function outputCanvasHref({ label, url, storagePath, returnTo, proofArtifactId }: OutputCanvasHrefInput) {
+export function outputCanvasHref(input: OutputCanvasHrefInput) {
+  const { label, url, storagePath, returnTo, proofArtifactId } = input;
   const source = outputCanvasSourceHref(url, storagePath);
   if (!source) return null;
   const params = new URLSearchParams({ source, label: label.trim() || "Retained output" });
   const normalizedPath = normalizeWorkspacePath(storagePath);
   if (normalizedPath) params.set("path", normalizedPath);
   if (proofArtifactId?.trim()) params.set("proof", proofArtifactId.trim());
+  const trustedParams = {
+    team_id: input.teamId,
+    run_id: input.runId,
+    work_item_id: input.workItemId,
+    output_id: input.outputId,
+    digest: input.contentDigest,
+  };
+  for (const [key, value] of Object.entries(trustedParams)) {
+    if (value?.trim()) params.set(key, value.trim());
+  }
   params.set("return_to", somaReturnHref(returnTo));
   return `${OUTPUT_CANVAS_PATH}?${params.toString()}`;
 }

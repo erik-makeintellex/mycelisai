@@ -10,11 +10,20 @@ import (
 const continuationContextHeader = "[OUTPUT CONTINUATION CONTEXT]"
 
 type chatContinuationContext struct {
-	Kind      string `json:"kind,omitempty"`
-	Title     string `json:"title,omitempty"`
-	Reference string `json:"reference,omitempty"`
-	Proof     string `json:"proof,omitempty"`
-	Intent    string `json:"intent,omitempty"`
+	Kind               string               `json:"kind,omitempty"`
+	Title              string               `json:"title,omitempty"`
+	Reference          string               `json:"reference,omitempty"`
+	Proof              string               `json:"proof,omitempty"`
+	Intent             string               `json:"intent,omitempty"`
+	TeamID             string               `json:"team_id,omitempty"`
+	RunID              string               `json:"run_id,omitempty"`
+	WorkItemID         string               `json:"work_item_id,omitempty"`
+	OutputID           string               `json:"output_id,omitempty"`
+	SourceDigest       string               `json:"source_digest,omitempty"`
+	SourceVersion      string               `json:"source_version,omitempty"`
+	RevisionTarget     string               `json:"revision_target,omitempty"`
+	SourceWorkIntent   *protocol.WorkIntent `json:"-"`
+	OwnershipValidated bool                 `json:"-"`
 }
 
 type chatActiveWorkContext struct {
@@ -74,10 +83,16 @@ func normalizeChatContinuationContext(input *chatContinuationContext) (*chatCont
 		return nil, nil
 	}
 	out := &chatContinuationContext{
-		Kind:      cleanContinuationField(input.Kind, 40),
-		Title:     cleanContinuationField(input.Title, 180),
-		Reference: cleanContinuationField(input.Reference, 500),
-		Proof:     cleanContinuationField(input.Proof, 160),
+		Kind:          cleanContinuationField(input.Kind, 40),
+		Title:         cleanContinuationField(input.Title, 180),
+		Reference:     cleanContinuationField(input.Reference, 500),
+		Proof:         cleanContinuationField(input.Proof, 160),
+		TeamID:        cleanContinuationField(input.TeamID, 120),
+		RunID:         cleanContinuationField(input.RunID, 80),
+		WorkItemID:    cleanContinuationField(input.WorkItemID, 80),
+		OutputID:      cleanContinuationField(input.OutputID, 160),
+		SourceDigest:  cleanContinuationField(input.SourceDigest, 256),
+		SourceVersion: cleanContinuationField(input.SourceVersion, 80),
 	}
 	if out.Kind == "" {
 		out.Kind = "output"
@@ -91,6 +106,13 @@ func normalizeChatContinuationContext(input *chatContinuationContext) (*chatCont
 	for _, value := range []string{out.Title, out.Reference, out.Proof} {
 		if containsRouteMarker(value) {
 			return nil, fmt.Errorf("continuation_context contains reserved route marker")
+		}
+	}
+	for label, value := range map[string]string{"run_id": out.RunID, "work_item_id": out.WorkItemID} {
+		if value != "" {
+			if err := validateOptionalUUID(label, value); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return out, nil
@@ -114,11 +136,14 @@ func chatContinuationIntent(ctx *chatContinuationContext) *protocol.ChatContinua
 		kind == protocol.ContinuationIntentFork ||
 		kind == protocol.ContinuationIntentRoute
 	return &protocol.ChatContinuationIntent{
-		Kind:             kind,
-		ContextKind:      ctx.Kind,
-		TargetTitle:      ctx.Title,
-		Reference:        ctx.Reference,
-		Proof:            ctx.Proof,
+		Kind:        kind,
+		ContextKind: ctx.Kind,
+		TargetTitle: ctx.Title,
+		Reference:   ctx.Reference,
+		Proof:       ctx.Proof,
+		TeamID:      ctx.TeamID, RunID: ctx.RunID, WorkItemID: ctx.WorkItemID,
+		OutputID: ctx.OutputID, SourceDigest: ctx.SourceDigest,
+		SourceVersion: ctx.SourceVersion, RevisionTarget: ctx.RevisionTarget,
 		RequiresProposal: requiresProposal,
 		Reason:           continuationIntentReason(kind),
 	}
@@ -206,6 +231,16 @@ func prependContinuationContext(messages []chatRequestMessage, ctx *chatContinua
 	if ctx.Intent != "" {
 		lines = append(lines, "Continuation intent: "+ctx.Intent+".")
 	}
+	if ctx.OwnershipValidated {
+		lines = append(lines,
+			"Owning team: "+ctx.TeamID+".",
+			"Source run: "+ctx.RunID+".",
+			"Source work item: "+ctx.WorkItemID+".",
+			"Source output: "+ctx.OutputID+".",
+			"Immutable source digest: "+ctx.SourceDigest+".",
+			"Distinct revision target: "+ctx.RevisionTarget+".",
+		)
+	}
 	lines = append(lines, "Use this as grounding context only; it does not authorize execution, file writes, team handoff, or proof changes.")
 
 	out := make([]chatRequestMessage, 0, len(messages)+1)
@@ -224,6 +259,9 @@ func continuationContextAuditMap(ctx *chatContinuationContext) map[string]any {
 		"reference": ctx.Reference,
 		"proof":     ctx.Proof,
 		"intent":    ctx.Intent,
+		"team_id":   ctx.TeamID, "run_id": ctx.RunID, "work_item_id": ctx.WorkItemID,
+		"output_id": ctx.OutputID, "source_digest": ctx.SourceDigest,
+		"source_version": ctx.SourceVersion, "revision_target": ctx.RevisionTarget,
 	}
 }
 
@@ -239,5 +277,8 @@ func continuationIntentAuditMap(intent *protocol.ChatContinuationIntent) map[str
 		"proof":             intent.Proof,
 		"requires_proposal": intent.RequiresProposal,
 		"reason":            intent.Reason,
+		"team_id":           intent.TeamID, "run_id": intent.RunID, "work_item_id": intent.WorkItemID,
+		"output_id": intent.OutputID, "source_digest": intent.SourceDigest,
+		"source_version": intent.SourceVersion, "revision_target": intent.RevisionTarget,
 	}
 }

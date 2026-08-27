@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowLeft, FileWarning } from "lucide-react";
+import { ArrowLeft, FileWarning, MessageSquareReply } from "lucide-react";
 import OutputAccessActions from "./OutputAccessActions";
 import { OutputProofDetails } from "./OutputWorkbenchProofDetails";
 import { normalizeWorkspacePath, outputCanvasSourceHref, somaReturnHref } from "@/lib/outputPackageModel";
+import { savePendingSomaOutputContinuation } from "./outputContinuation";
 
 export interface OutputCanvasProps {
   label?: string | null;
@@ -11,9 +12,17 @@ export interface OutputCanvasProps {
   storagePath?: string | null;
   returnTo?: string | null;
   proofArtifactId?: string | null;
+  teamId?: string | null;
+  runId?: string | null;
+  workItemId?: string | null;
+  outputId?: string | null;
+  contentDigest?: string | null;
 }
 
-export function OutputCanvas({ label, source, storagePath, returnTo, proofArtifactId }: OutputCanvasProps) {
+export function OutputCanvas({
+  label, source, storagePath, returnTo, proofArtifactId,
+  teamId, runId, workItemId, outputId, contentDigest,
+}: OutputCanvasProps) {
   const title = label?.trim() || "Retained output";
   const path = normalizeWorkspacePath(storagePath);
   const outputHref = outputCanvasSourceHref(source, path);
@@ -34,7 +43,25 @@ export function OutputCanvas({ label, source, storagePath, returnTo, proofArtifa
           <p className="text-xs text-cortex-text-muted">Retained output</p>
         </div>
         {outputHref ? (
-          <div className="hidden sm:block">
+          <div className="hidden items-center gap-2 sm:flex">
+            <a
+              href={somaHref}
+              onClick={() => savePendingSomaOutputContinuation({
+                title,
+                reference: path ?? outputHref,
+                proof: proofArtifactId,
+                sourceLabel: "playable output",
+                teamId,
+                runId,
+                workItemId,
+                outputId,
+                contentDigest,
+              })}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-cortex-primary bg-cortex-primary px-3 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90"
+            >
+              <MessageSquareReply className="h-4 w-4" />
+              Ask Soma for changes
+            </a>
             <OutputAccessActions
               label={title}
               url={outputHref}
@@ -45,6 +72,22 @@ export function OutputCanvas({ label, source, storagePath, returnTo, proofArtifa
           </div>
         ) : null}
       </header>
+
+      {outputHref ? (
+        <div className="shrink-0 border-b border-cortex-border bg-cortex-surface px-3 pb-2 sm:hidden">
+          <a
+            href={somaHref}
+            onClick={() => savePendingSomaOutputContinuation({
+              title, reference: path ?? outputHref, proof: proofArtifactId,
+              sourceLabel: "playable output", teamId, runId, workItemId, outputId, contentDigest,
+            })}
+            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-cortex-primary bg-cortex-primary px-3 text-sm font-semibold text-cortex-bg"
+          >
+            <MessageSquareReply className="h-4 w-4" />
+            Ask Soma for changes
+          </a>
+        </div>
+      ) : null}
 
       <div className="min-h-0 flex-1 p-2 sm:p-3">
         {outputHref ? (

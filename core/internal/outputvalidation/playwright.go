@@ -126,7 +126,55 @@ func normalizeRequest(request Request) (Request, error) {
 	if err := validatePlan(request.Plan); err != nil {
 		return Request{}, err
 	}
+	if err := validateCriterionMappings(request.AcceptanceCriteria, request.CriterionMappings, request.Plan); err != nil {
+		return Request{}, err
+	}
 	return request, nil
+}
+
+func validateCriterionMappings(criteria []string, mappings []CriterionMapping, plan Plan) error {
+	if len(criteria) > 32 {
+		return errors.New("browser validation supports at most 32 acceptance criteria")
+	}
+	if len(criteria) != len(mappings) {
+		return errors.New("every acceptance criterion requires one explicit validation mapping")
+	}
+	for index, criterion := range criteria {
+		criterion = strings.TrimSpace(criterion)
+		mapping := mappings[index]
+		if criterion == "" || len(criterion) > 1_000 || strings.TrimSpace(mapping.Criterion) != criterion {
+			return errors.New("criterion validation mappings must preserve exact criterion order and text")
+		}
+		switch mapping.Source {
+		case CriterionSourceUnsupported:
+		case CriterionSourceProbe:
+			if plan.Probe == nil {
+				return errors.New("probe criterion mapping requires a validation probe")
+			}
+		case CriterionSourceJourney:
+			if len(mapping.Journey) == 0 || len(mapping.Journey) > 8 {
+				return errors.New("criterion journey requires between 1 and 8 probes")
+			}
+			for _, probe := range mapping.Journey {
+				probePlan := plan
+				probePlan.Probe = &probe
+				if err := probePlan.Validate(); err != nil {
+					return fmt.Errorf("invalid criterion journey: %w", err)
+				}
+			}
+		case CriterionSourceCheck:
+			found := false
+			for _, check := range plan.Checks {
+				found = found || check == mapping.Check
+			}
+			if !found {
+				return fmt.Errorf("criterion mapping references absent check %q", mapping.Check)
+			}
+		default:
+			return fmt.Errorf("unsupported criterion mapping source %q", mapping.Source)
+		}
+	}
+	return nil
 }
 
 func validatePlan(plan Plan) error {

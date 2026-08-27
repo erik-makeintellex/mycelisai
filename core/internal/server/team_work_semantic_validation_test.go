@@ -80,3 +80,41 @@ func TestProposalPersistsSemanticAcceptancePosture(t *testing.T) {
 		t.Fatalf("normalized contract lost semantic posture: %#v", normalized.OutputContract)
 	}
 }
+
+func TestCriterionMappingsAreExactAndFailClosed(t *testing.T) {
+	criteria := []string{
+		"Primary interaction changes the application state",
+		"Output loads successfully",
+		"Win and restart are testable",
+	}
+	mappings := criterionMappings(criteria)
+	if len(mappings) != len(criteria) {
+		t.Fatalf("mappings = %#v", mappings)
+	}
+	if mappings[0].Source != outputvalidation.CriterionSourceProbe ||
+		mappings[1].Source != outputvalidation.CriterionSourceCheck ||
+		mappings[2].Source != outputvalidation.CriterionSourceUnsupported {
+		t.Fatalf("unexpected mappings: %#v", mappings)
+	}
+	for index := range criteria {
+		if mappings[index].Criterion != criteria[index] {
+			t.Fatalf("criterion text/order changed: %#v", mappings)
+		}
+	}
+}
+
+func TestGameCriteriaHaveExecutablePlannerOwnedJourneys(t *testing.T) {
+	criteria := gameAcceptanceCriteria()
+	mappings := criterionMappings(criteria)
+	if len(mappings) != len(criteria) {
+		t.Fatalf("mappings = %#v", mappings)
+	}
+	for index, mapping := range mappings {
+		if mapping.Criterion != criteria[index] || mapping.Source != outputvalidation.CriterionSourceJourney || len(mapping.Journey) == 0 {
+			t.Fatalf("game criterion %q is not executable: %#v", criteria[index], mapping)
+		}
+	}
+	if len(mappings[6].Journey) != 2 {
+		t.Fatalf("fail/restart criterion must retain both transitions: %#v", mappings[6])
+	}
+}

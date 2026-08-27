@@ -123,7 +123,7 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationContinuation(t *
 		t.Fatalf("result contract output validation is not runnable: %v", err)
 	}
 	exitCriteria := confirmedActionStringSlice(ask["exit_criteria"])
-	for _, want := range []string{"playable controls respond in browser", "direct launch or view path is provided for the user or another agent"} {
+	for _, want := range []string{"visible game instructions identify controls, objective, and restart", "playable controls move the player and change the visible game surface"} {
 		if !containsToolName(exitCriteria, want) {
 			t.Fatalf("exit criteria = %#v, missing %q", exitCriteria, want)
 		}

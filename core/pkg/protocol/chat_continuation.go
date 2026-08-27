@@ -18,6 +18,13 @@ type ChatContinuationIntent struct {
 	TargetTitle      string                 `json:"target_title,omitempty"`
 	Reference        string                 `json:"reference,omitempty"`
 	Proof            string                 `json:"proof,omitempty"`
+	TeamID           string                 `json:"team_id,omitempty"`
+	RunID            string                 `json:"run_id,omitempty"`
+	WorkItemID       string                 `json:"work_item_id,omitempty"`
+	OutputID         string                 `json:"output_id,omitempty"`
+	SourceDigest     string                 `json:"source_digest,omitempty"`
+	SourceVersion    string                 `json:"source_version,omitempty"`
+	RevisionTarget   string                 `json:"revision_target,omitempty"`
 	RequiresProposal bool                   `json:"requires_proposal"`
 	Reason           string                 `json:"reason,omitempty"`
 }

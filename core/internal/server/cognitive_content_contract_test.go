@@ -84,7 +84,7 @@ func TestInferCreateTeamPlanFromRequest_ContentContractCoversMixedGameMediaText(
 		}
 	}
 	criteria := strings.Join(confirmedActionStringSlice(contract["acceptance_criteria"]), "\n")
-	for _, want := range []string{"playable controls", "winning route", "play-tests", "Soma as a repair request", "direct launch", "music or action audio", "visual review", "structure matches"} {
+	for _, want := range []string{"playable controls", "winning route", "play-tests", "health state", "key and score state", "win state", "fail state", "audio control", "visual review", "structure matches"} {
 		if !strings.Contains(criteria, want) {
 			t.Fatalf("criteria = %q, missing %q", criteria, want)
 		}

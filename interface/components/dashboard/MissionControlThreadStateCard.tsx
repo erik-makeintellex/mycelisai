@@ -74,6 +74,9 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
                                 url: event.href,
                                 storagePath: event.target_reference,
                                 returnTo: "/dashboard",
+                                teamId: event.team_id,
+                                runId: event.run_id ?? msg.run_id,
+                                workItemId: event.work_item_id,
                             })
                             : null;
                         return (
@@ -102,6 +105,9 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
                                             url: event.href,
                                             storagePath: event.target_reference,
                                             returnTo: currentSomaHref(),
+                                            teamId: event.team_id,
+                                            runId: event.run_id ?? msg.run_id,
+                                            workItemId: event.work_item_id,
                                         });
                                         if (destination) window.location.assign(destination);
                                     } : undefined}

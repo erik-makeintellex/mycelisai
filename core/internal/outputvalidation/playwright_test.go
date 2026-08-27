@@ -56,6 +56,47 @@ func TestPlaywrightValidatorPassesTypedRequestWithoutShell(t *testing.T) {
 	}
 }
 
+func TestPlaywrightValidatorPreservesCriterionMappings(t *testing.T) {
+	validator, err := NewPlaywrightValidator(PlaywrightConfig{ScriptPath: "validator.mjs"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := validRequest(t)
+	request.AcceptanceCriteria = []string{"Primary interaction changes the application state"}
+	request.CriterionMappings = []CriterionMapping{{Criterion: request.AcceptanceCriteria[0], Source: CriterionSourceProbe}}
+	validator.run = func(_ context.Context, _ string, _ []string, _ string, input []byte) processResult {
+		var received Request
+		if err := json.Unmarshal(input, &received); err != nil {
+			t.Fatal(err)
+		}
+		if len(received.CriterionMappings) != 1 || received.CriterionMappings[0].Criterion != request.AcceptanceCriteria[0] {
+			t.Fatalf("criterion mapping lost: %#v", received)
+		}
+		report := Report{Status: StatusPassed, ContentDigest: received.ContentDigest, LaunchURL: received.LaunchURL,
+			StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC(), CriterionEvidence: []CriterionEvidence{{
+				Criterion: received.AcceptanceCriteria[0], Passed: true, EvidenceRefs: []string{"proof/report.json"},
+			}}}
+		encoded, _ := json.Marshal(report)
+		return processResult{stdout: encoded}
+	}
+	report, err := validator.Validate(context.Background(), request)
+	if err != nil || len(report.CriterionEvidence) != 1 {
+		t.Fatalf("Validate() = (%#v, %v)", report, err)
+	}
+}
+
+func TestPlaywrightValidatorRejectsIncompleteCriterionMapping(t *testing.T) {
+	validator, err := NewPlaywrightValidator(PlaywrightConfig{ScriptPath: "validator.mjs"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := validRequest(t)
+	request.AcceptanceCriteria = []string{"Win state is testable"}
+	if _, err := validator.Validate(context.Background(), request); err == nil {
+		t.Fatal("expected unmapped criterion rejection")
+	}
+}
+
 func TestPlaywrightValidatorUnavailableWhenRunnerMissing(t *testing.T) {
 	validator, err := NewPlaywrightValidator(PlaywrightConfig{
 		NodeBinary: "definitely-not-a-mycelis-node-runtime",

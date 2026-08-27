@@ -169,6 +169,11 @@ export interface MissionChatContinuationContext {
     title: string;
     reference?: string;
     proof?: string;
+    team_id?: string;
+    run_id?: string;
+    work_item_id?: string;
+    output_id?: string;
+    content_digest?: string;
 }
 
 export interface MissionChatActiveWorkContext {

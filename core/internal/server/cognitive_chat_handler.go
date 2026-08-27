@@ -47,6 +47,13 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	req.Messages = normalizeRetryRequest(req.Messages)
 	latestUserText := latestUserMessageContent(req.Messages)
 	continuationContext = applyContinuationIntent(continuationContext, latestUserText)
+	if continuationContext != nil && s.getDB() != nil && (continuationContext.Intent == "update" || continuationContext.Intent == "fork") {
+		continuationContext, err = s.resolveOutputContinuationOwnership(r.Context(), continuationContext)
+		if err != nil {
+			respondAPIError(w, err.Error(), http.StatusConflict)
+			return
+		}
+	}
 	continuationIntent := chatContinuationIntent(continuationContext)
 	if shouldSteerActiveWork(activeWorkContext, latestUserText) {
 		s.respondActiveWorkSteering(
@@ -161,6 +168,11 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isMutation, mutTools, plannedToolCalls := executableMutationPlan(isMutation, agentResult, latestUserText, mutTools)
+	if revisionCalls, ok := buildTrustedOutputRevisionPlan(continuationContext, latestUserText); ok {
+		isMutation = true
+		mutTools = mergeTeamSignalStrings(mutTools, []string{"write_file", "delegate_task"})
+		plannedToolCalls = revisionCalls
+	}
 	plannedToolCalls = filterOptionalMediaGenerationPlan(latestUserText, plannedToolCalls)
 	if isMutation {
 		if !s.resolveThreadConfigurationMutationsOrRespond(
@@ -202,6 +214,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		effectiveTools := toolsForPlannedCalls(plannedToolCalls, mutTools)
 		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
 		display := buildProposalDisplayContractForTeam(plannedToolCalls, latestUserText, effectiveTools, focusedTeamID)
+		display.WorkIntent = inheritRevisionWorkIntent(display.WorkIntent, continuationContext, latestUserText)
 		if !s.applyThreadOutcomeTemplateOrRespond(
 			w, r, sessionID, req.Messages, latestUserText, req.OrganizationID,
 			req.TeamID, auditActorIDFromRequest(r), &display,

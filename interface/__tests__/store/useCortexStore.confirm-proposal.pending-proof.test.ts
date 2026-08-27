@@ -81,11 +81,11 @@ describe('useCortexStore confirm proposal pending proof', () => {
                 tone: 'info',
             },
             thread_events: [{
-                kind: 'execution_started',
-                label: 'Work started',
-                detail: 'Soma started the work. You can keep talking here while updates arrive.',
+                kind: 'execution_update',
+                label: 'Work queued',
+                detail: 'Soma handed off the approved work. It is queued until the team accepts it.',
                 tone: 'info',
-                status: 'running',
+                status: 'queued',
                 source_kind: 'web_api',
                 source_channel: 'api.intent.confirm-action',
                 payload_kind: 'soma_thread_event',
@@ -221,7 +221,7 @@ describe('useCortexStore confirm proposal pending proof', () => {
         expect(state.activeRunId).toBe('run-config-active');
         expect(state.missionChat.at(-1)).toMatchObject({
             run_id: 'run-config-active',
-            thread_events: [{ kind: 'execution_started', status: 'running' }],
+            thread_events: [{ kind: 'execution_update', status: 'queued' }],
         });
         expect(JSON.stringify(state.missionChat)).not.toMatch(/Template saved|Template active/);
     });

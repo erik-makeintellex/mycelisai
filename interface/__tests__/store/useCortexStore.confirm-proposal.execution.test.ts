@@ -75,9 +75,9 @@ describe('useCortexStore confirm proposal execution', () => {
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('not a completed result or proof');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).not.toContain('Active Work');
         expect(useCortexStore.getState().missionChat.at(-1)?.thread_events?.[0]).toMatchObject({
-            kind: 'execution_started',
-            label: 'Work started',
-            status: 'running',
+            kind: 'execution_update',
+            label: 'Work queued',
+            status: 'queued',
             target_reference: 'run:run-123',
             source_kind: 'web_api',
             source_channel: 'api.intent.confirm-action',

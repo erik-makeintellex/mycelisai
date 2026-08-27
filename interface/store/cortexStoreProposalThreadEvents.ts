@@ -15,14 +15,16 @@ export function executionStartedEvent(
 ): NonNullable<ChatMessage['thread_events']>[number] {
     const activeWork = teamWorkRefs.find((ref) => ref.team_id && (ref.work_item_id || ref.work_id || ref.id));
     const workItemId = activeWork?.work_item_id ?? activeWork?.work_id ?? activeWork?.id;
+    const durableState = (activeWork?.state ?? activeWork?.status)?.trim().toLowerCase();
+    const isRunning = durableState === 'running';
     return {
-        kind: 'execution_started',
-        label: 'Work started',
-        detail: runId
-            ? 'Soma started the work. It is running, not complete, and you can keep talking here.'
-            : proposalStartedDetail,
+        kind: isRunning ? 'execution_started' : 'execution_update',
+        label: isRunning ? 'Work started' : 'Work queued',
+        detail: isRunning
+            ? 'The team accepted the work. It is running, not complete, and you can keep talking here.'
+            : 'Soma handed off the approved work. It is queued until the team accepts it.',
         tone: 'info',
-        status: 'running',
+        status: isRunning ? 'running' : 'queued',
         run_id: runId ?? undefined,
         team_id: activeWork?.team_id,
         work_item_id: workItemId,

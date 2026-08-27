@@ -291,6 +291,7 @@ func resultContractIssues(requirement *teamResultRequirement, artifacts []protoc
 		issues = append(issues, outputValidationTextChangeIssues(requirement.OutputValidation, content)...)
 		issues = append(issues, outputValidationVisualChangeIssues(requirement.OutputValidation, content)...)
 		issues = append(issues, outputValidationAnimationLoopIssues(requirement.OutputValidation, content)...)
+		issues = append(issues, semanticAcceptanceEntrypointIssues(requirement.AcceptanceCriteria, content)...)
 	}
 	return uniqueResultContractStrings(issues)
 }

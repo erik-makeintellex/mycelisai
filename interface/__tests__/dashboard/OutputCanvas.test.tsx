@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { OutputCanvas } from "@/components/soma/OutputCanvas";
+import { takePendingSomaOutputContinuation } from "@/components/soma/outputContinuation";
 
 describe("OutputCanvas", () => {
   it("gives retained work the main surface and returns to the exact Soma context", () => {
@@ -11,6 +12,11 @@ describe("OutputCanvas", () => {
         storagePath="groups/game-team/generated/game/index.html"
         returnTo="/dashboard?team_id=game-team&outcome_id=outcome-7#latest"
         proofArtifactId="proof-7"
+        teamId="game-team"
+        runId="run-7"
+        workItemId="work-7"
+        outputId="output-7"
+        contentDigest="sha256:moonlit"
       />,
     );
 
@@ -26,6 +32,20 @@ describe("OutputCanvas", () => {
     expect(screen.getByText("groups/game-team/generated/game/index.html")).toBeDefined();
     expect(screen.getByText("proof proof-7")).toBeDefined();
     expect(screen.getByRole("button", { name: /Open local folder for Playable game/i })).toBeDefined();
+
+    const revisionLink = screen.getAllByRole("link", { name: "Ask Soma for changes" })[0];
+    revisionLink.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    fireEvent.click(revisionLink);
+    expect(takePendingSomaOutputContinuation()).toMatchObject({
+      title: "Playable game",
+      reference: "groups/game-team/generated/game/index.html",
+      proof: "proof-7",
+      teamId: "game-team",
+      runId: "run-7",
+      workItemId: "work-7",
+      outputId: "output-7",
+      contentDigest: "sha256:moonlit",
+    });
   });
 
   it("keeps unavailable output neutral and does not present backend noise as degradation", () => {

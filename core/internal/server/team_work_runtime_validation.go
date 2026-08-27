@@ -23,10 +23,12 @@ const (
 )
 
 type teamWorkValidationDispatchPayload struct {
-	Plan          protocol.OutputValidationPlan `json:"plan"`
-	ContentDigest string                        `json:"content_digest"`
-	LaunchURL     string                        `json:"launch_url"`
-	EvidenceRef   string                        `json:"evidence_ref"`
+	Plan               protocol.OutputValidationPlan       `json:"plan"`
+	ContentDigest      string                              `json:"content_digest"`
+	LaunchURL          string                              `json:"launch_url"`
+	EvidenceRef        string                              `json:"evidence_ref"`
+	AcceptanceCriteria []string                            `json:"acceptance_criteria,omitempty"`
+	CriterionMappings  []outputvalidation.CriterionMapping `json:"criterion_mappings,omitempty"`
 }
 
 func requiredTeamWorkValidationPlan(item protocol.TeamWorkItem) *protocol.OutputValidationPlan {
@@ -61,9 +63,69 @@ func prepareTeamWorkValidation(item protocol.TeamWorkItem, refs []protocol.TeamO
 		shortDigest = shortDigest[:12]
 	}
 	evidenceRef := path.Join("groups", item.TeamID, "proof", "runtime-validation", item.WorkItemID, shortDigest)
+	criteria := []string(nil)
+	if item.WorkIntent != nil && item.WorkIntent.OutputContract != nil {
+		criteria = append(criteria, item.WorkIntent.OutputContract.AcceptanceCriteria...)
+	}
 	return &teamWorkValidationDispatchPayload{
 		Plan: *plan, ContentDigest: digest, LaunchURL: launchURL, EvidenceRef: evidenceRef,
+		AcceptanceCriteria: criteria, CriterionMappings: criterionMappings(criteria),
 	}, nil
+}
+
+func criterionMappings(criteria []string) []outputvalidation.CriterionMapping {
+	mappings := make([]outputvalidation.CriterionMapping, 0, len(criteria))
+	for _, criterion := range criteria {
+		mapping := outputvalidation.CriterionMapping{Criterion: criterion, Source: outputvalidation.CriterionSourceUnsupported}
+		switch normalizeSemanticCriterion(criterion) {
+		case "primary interaction changes the application state":
+			mapping.Source = outputvalidation.CriterionSourceProbe
+		case "visible game instructions identify controls, objective, and restart":
+			mapping = gameJourneyMapping(criterion, validationClick("[data-mycelis-game-instructions]", outputvalidation.ObserveElementVisible, "[data-mycelis-game-instructions]"))
+		case "playable controls move the player and change the visible game surface":
+			mapping = gameJourneyMapping(criterion, validationKeyHold("ArrowRight", "#game", outputvalidation.ObserveVisualChange))
+		case "attack changes enemy, hazard, or score state":
+			mapping = gameJourneyMapping(criterion, validationClick(`[data-mycelis-validation-action="attack"]`, outputvalidation.ObserveTextChange, "#score"))
+		case "hazard contact changes health state":
+			mapping = gameJourneyMapping(criterion, validationClick(`[data-mycelis-validation-action="hazard"]`, outputvalidation.ObserveTextChange, "#health"))
+		case "key pickup changes key and score state":
+			mapping = gameJourneyMapping(criterion, validationClick(`[data-mycelis-validation-action="key"]`, outputvalidation.ObserveTextChange, "#keyState"))
+		case "team play-tests the documented winning route through the locked door objective to win state":
+			mapping = gameJourneyMapping(criterion,
+				validationClick("[data-mycelis-game-instructions]", outputvalidation.ObserveElementVisible, "[data-mycelis-game-instructions]"),
+				validationClick(`[data-mycelis-validation-action="win"]`, outputvalidation.ObserveTextChange, "#goalState"))
+		case "fail state can transition through restart to the initial objective":
+			mapping = gameJourneyMapping(criterion,
+				validationClick(`[data-mycelis-validation-action="fail"]`, outputvalidation.ObserveTextChange, "#goalState"),
+				validationClick(`[data-mycelis-validation-action="restart"]`, outputvalidation.ObserveTextChange, "#goalState"))
+		case "audio control changes its visible state":
+			mapping = gameJourneyMapping(criterion, validationClick(`[data-mycelis-validation-action="audio"]`, outputvalidation.ObserveTextChange, `[data-mycelis-validation-action="audio"]`))
+		case revisionAcceptanceCriterion:
+			mapping = gameJourneyMapping(criterion, validationClick(`[data-mycelis-validation-action="revision"]`, outputvalidation.ObserveTextChange, `[data-mycelis-revision-state]`))
+		case "output loads successfully":
+			mapping.Source, mapping.Check = outputvalidation.CriterionSourceCheck, outputvalidation.CheckLoad
+		case "output has no page errors":
+			mapping.Source, mapping.Check = outputvalidation.CriterionSourceCheck, outputvalidation.CheckNoPageErrors
+		case "output has no failed local assets":
+			mapping.Source, mapping.Check = outputvalidation.CriterionSourceCheck, outputvalidation.CheckNoFailedLocalAsset
+		}
+		mappings = append(mappings, mapping)
+	}
+	return mappings
+}
+
+func gameJourneyMapping(criterion string, probes ...outputvalidation.Probe) outputvalidation.CriterionMapping {
+	return outputvalidation.CriterionMapping{Criterion: criterion, Source: outputvalidation.CriterionSourceJourney, Journey: probes}
+}
+
+func validationClick(actionTarget string, observation outputvalidation.Observation, observationTarget string) outputvalidation.Probe {
+	return outputvalidation.Probe{Action: outputvalidation.ProbeAction{Kind: outputvalidation.ActionClick, Target: actionTarget},
+		Observe: outputvalidation.ProbeObservation{Kind: observation, Target: observationTarget}}
+}
+
+func validationKeyHold(key, target string, observation outputvalidation.Observation) outputvalidation.Probe {
+	return outputvalidation.Probe{Action: outputvalidation.ProbeAction{Kind: outputvalidation.ActionKeyHold, Key: key, DurationMS: 600},
+		Observe: outputvalidation.ProbeObservation{Kind: observation, Target: target}}
 }
 
 func (s *AdminServer) stageTeamWorkValidationTx(ctx context.Context, tx *sql.Tx, item protocol.TeamWorkItem, payload teamWorkValidationDispatchPayload) (string, error) {
@@ -104,7 +166,8 @@ func (s *AdminServer) dispatchClaimedTeamWorkValidation(ctx context.Context, out
 	}
 	report, err := s.OutputValidator.Validate(ctx, outputvalidation.Request{
 		LaunchURL: payload.LaunchURL, ContentDigest: payload.ContentDigest,
-		EvidencePath: evidencePath, Plan: payload.Plan,
+		EvidencePath: evidencePath, Plan: payload.Plan, AcceptanceCriteria: payload.AcceptanceCriteria,
+		CriterionMappings: payload.CriterionMappings,
 	})
 	if err != nil || report.Status == outputvalidation.StatusUnavailable || report.Status == outputvalidation.StatusError {
 		if err == nil {

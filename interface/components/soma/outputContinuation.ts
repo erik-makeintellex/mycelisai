@@ -6,6 +6,11 @@ export type OutputContinuationDetail = {
   reference?: string | null;
   proof?: string | null;
   sourceLabel?: string | null;
+  teamId?: string | null;
+  runId?: string | null;
+  workItemId?: string | null;
+  outputId?: string | null;
+  contentDigest?: string | null;
 };
 
 export const OUTPUT_CONTINUATION_EVENT = "mycelis:soma-output-continuation";
@@ -43,6 +48,11 @@ export function outputContinuationContext(detail: OutputContinuationDetail): Mis
     title: detail.title.trim() || "Delivered output",
     reference: detail.reference?.trim() || undefined,
     proof: detail.proof?.trim() || undefined,
+    team_id: detail.teamId?.trim() || undefined,
+    run_id: detail.runId?.trim() || undefined,
+    work_item_id: detail.workItemId?.trim() || undefined,
+    output_id: detail.outputId?.trim() || undefined,
+    content_digest: detail.contentDigest?.trim() || undefined,
   };
 }
 

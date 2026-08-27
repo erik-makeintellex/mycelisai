@@ -88,6 +88,22 @@ describe("cortexStoreThreadEvents", () => {
         });
     });
 
+    it("keeps queued confirmation truth distinct from accepted building work", () => {
+        const queued = executionStartedEvent("run-queued", [{
+            team_id: "game-team", work_item_id: "work-queued", state: "queued",
+        }]);
+        const building = executionStartedEvent("run-building", [{
+            team_id: "game-team", work_item_id: "work-building", state: "running",
+        }]);
+
+        expect(queued).toMatchObject({
+            kind: "execution_update", label: "Work queued", status: "queued",
+        });
+        expect(building).toMatchObject({
+            kind: "execution_started", label: "Work started", status: "running",
+        });
+    });
+
     it("stops attaching conversation after the correlated result is ready", () => {
         expect(activeWorkContextFromMessages([{
             role: "system",

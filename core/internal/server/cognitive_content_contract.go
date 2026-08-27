@@ -200,17 +200,14 @@ func requestNeedsTeamPreparation(lower string, types []string) bool {
 
 func gameAcceptanceCriteria() []string {
 	return []string{
-		"visible in-app instructions name the primary control and objective",
-		"playable controls respond in browser",
-		"visible game loop renders without a blank canvas",
-		"collision or boundary rules affect play",
-		"objective, win/fail state, and restart are testable",
-		"known winning route or walkthrough is documented",
-		"team play-tests the route from start to win before delivery",
-		"validation defects are reported back through Soma as a repair request before direct output edits",
-		"direct launch or view path is provided for the user or another agent",
-		"matching music or action audio exists when the game request asks for media or sound",
-		"controls, objective, and recovery/restart instructions are documented",
+		"visible game instructions identify controls, objective, and restart",
+		"playable controls move the player and change the visible game surface",
+		"attack changes enemy, hazard, or score state",
+		"hazard contact changes health state",
+		"key pickup changes key and score state",
+		"team play-tests the documented winning route through the locked door objective to win state",
+		"fail state can transition through restart to the initial objective",
+		"audio control changes its visible state",
 	}
 }
 
@@ -221,6 +218,7 @@ func gameProofRequirements() []string {
 		"Soma repair-turn transcript when validation finds defects",
 		"chat, Outcome, or Resources launch reference for opening the generated content",
 		"audio unlock/playback check when sound or music is part of the request",
+		`deterministic game validation hooks: [data-mycelis-game-instructions], #game, #health, #score, #keyState, #goalState, and buttons carrying data-mycelis-validation-action="attack|hazard|key|win|fail|restart|audio"`,
 	}
 }
 

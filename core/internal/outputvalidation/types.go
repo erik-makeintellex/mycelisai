@@ -46,11 +46,30 @@ const (
 
 // Request binds validation to the exact launch target and retained content digest.
 type Request struct {
-	LaunchURL     string `json:"launch_url"`
-	ContentDigest string `json:"content_digest"`
-	EvidencePath  string `json:"evidence_path"`
-	Plan          Plan   `json:"plan"`
+	LaunchURL          string             `json:"launch_url"`
+	ContentDigest      string             `json:"content_digest"`
+	EvidencePath       string             `json:"evidence_path"`
+	Plan               Plan               `json:"plan"`
+	AcceptanceCriteria []string           `json:"acceptance_criteria,omitempty"`
+	CriterionMappings  []CriterionMapping `json:"criterion_mappings,omitempty"`
 }
+
+// CriterionMapping declares the only runtime observation authorized to prove
+// an exact acceptance criterion. Unsupported criteria are retained explicitly
+// so adapters fail closed without attempting a browser run.
+type CriterionMapping struct {
+	Criterion string  `json:"criterion"`
+	Source    string  `json:"source"`
+	Check     Check   `json:"check,omitempty"`
+	Journey   []Probe `json:"journey,omitempty"`
+}
+
+const (
+	CriterionSourceCheck       = "check"
+	CriterionSourceProbe       = "probe"
+	CriterionSourceJourney     = "journey"
+	CriterionSourceUnsupported = "unsupported"
+)
 
 // Diagnostic is a bounded, operator-readable validation finding.
 type Diagnostic struct {

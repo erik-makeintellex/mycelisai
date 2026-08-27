@@ -47,6 +47,9 @@ func resultContractCorrectionPrompt(requirement *teamResultRequirement, issues [
 			break
 		}
 	}
+	if strings.Contains(strings.Join(focusedIssues, " "), "missing semantic validation target") {
+		prompt += " Overwrite the entrypoint to include every named semantic validation target as a visible functional control or state surface, wire each control to the requested gameplay state, preserve the rest of the package, then read the entrypoint back."
+	}
 	prompt += outputValidationCorrectionInstruction(requirement.OutputValidation, focusedIssues)
 	return prompt
 }

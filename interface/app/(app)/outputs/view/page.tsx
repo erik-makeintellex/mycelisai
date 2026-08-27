@@ -6,6 +6,11 @@ interface OutputCanvasSearchParams {
   path?: string | string[];
   return_to?: string | string[];
   proof?: string | string[];
+  team_id?: string | string[];
+  run_id?: string | string[];
+  work_item_id?: string | string[];
+  output_id?: string | string[];
+  digest?: string | string[];
 }
 
 function first(value?: string | string[]) {
@@ -26,6 +31,11 @@ export default async function OutputCanvasPage({
         storagePath={first(params?.path)}
         returnTo={first(params?.return_to)}
         proofArtifactId={first(params?.proof)}
+        teamId={first(params?.team_id)}
+        runId={first(params?.run_id)}
+        workItemId={first(params?.work_item_id)}
+        outputId={first(params?.output_id)}
+        contentDigest={first(params?.digest)}
       />
     </div>
   );

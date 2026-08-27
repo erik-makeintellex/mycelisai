@@ -97,7 +97,7 @@ test.describe("Live Soma P0 browser game delivery", () => {
     expect(confirmed.body?.data?.execution_state).toBe("running");
       expect(confirmed.body?.data?.run_id).toBeTruthy();
       runID = confirmed.body?.data?.run_id;
-    await expect(page.getByText("Work started", { exact: true }).last()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/^(Work queued|Work started)$/).last()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByPlaceholder(/Tell Soma what you want/i)).toBeEnabled();
     const workItem = await waitForGameDelivery(page, teamID, runID!);
     const projectPackage = workItem.output_refs?.find((output) => output.kind === "project_package");

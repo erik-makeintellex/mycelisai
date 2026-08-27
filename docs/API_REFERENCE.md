@@ -256,6 +256,10 @@ For output contracts without required runtime interaction, the resulting `team_s
 
 `work_intent.output_contract` may include `acceptance_criteria` and `semantic_validation_required`. Interactive validation reports may return criterion-level records shaped as `{criterion, passed, evidence_refs}`. When semantic validation is required, structural files, readback, or one generic browser state change cannot alone advance work to `output_ready`; every durable criterion needs passing referenced evidence. Missing semantic proof produces `semantic_acceptance_unverified`, preserves the candidate for inspection, and keeps recovery explicit. Runtime-owned generic package recovery is eligible only for the canonical generic primary-interaction contract and fails closed for empty, mixed, or rich criteria.
 
+Browser validation requests carry the exact ordered acceptance criteria plus explicit `check`, `probe`, `journey`, or `unsupported` mappings. Journey mappings contain bounded typed actions and observations; adapters emit criterion evidence only when that criterion's own checks pass. Unsupported criteria fail before browser launch. Game-shaped contracts currently require deterministic instructions, canvas/HUD state, and validation-action hooks for movement, attack, hazard/health, key/score, win, fail/restart, and audio so runtime proof exercises requested behavior rather than grading prose.
+
+Output continuation context may carry `team_id`, `run_id`, `work_item_id`, `output_id`, and `content_digest` in addition to title/reference/proof. Mutating update or fork requests validate those fields against one retained durable output, compute its immutable source digest, inherit its prior output contract, and plan a distinct revision folder. Identity or digest mismatch blocks mutation.
+
 ## Directed Execution Payloads
 
 Bounded `project_package` runtime recovery may construct only the approved package shape after complete safe writes or provider failure, and must establish its own current readback. It cannot convert a semantic or browser-interaction failure into trusted completion; interactive packages remain subject to the digest-bound browser validator.

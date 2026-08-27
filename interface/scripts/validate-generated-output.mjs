@@ -32,6 +32,20 @@ function validateRequest(request) {
   if (!request.content_digest || typeof request.content_digest !== "string") throw new Error("content_digest is required");
   if (!path.isAbsolute(request.evidence_path || "")) throw new Error("evidence_path must be absolute");
   if (!request.plan || !Array.isArray(request.plan.checks)) throw new Error("plan.checks must be an array");
+	request.acceptance_criteria ??= [];
+	request.criterion_mappings ??= [];
+	if (!Array.isArray(request.acceptance_criteria) || !Array.isArray(request.criterion_mappings) ||
+	    request.acceptance_criteria.length !== request.criterion_mappings.length) {
+	  throw new Error("every acceptance criterion requires one explicit validation mapping");
+	}
+	if (request.acceptance_criteria.length > 32) throw new Error("at most 32 acceptance criteria are supported");
+	request.acceptance_criteria.forEach((criterion, index) => {
+	  const mapping = request.criterion_mappings[index];
+	  if (typeof criterion !== "string" || !criterion.trim() || criterion.length > 1_000 || mapping?.criterion !== criterion) {
+	    throw new Error("criterion mappings must preserve exact criterion order and text");
+	  }
+	  if (!["check", "probe", "journey", "unsupported"].includes(mapping.source)) throw new Error("unsupported criterion mapping source");
+	});
 }
 
 function hash(buffer) {
@@ -165,7 +179,15 @@ async function validate(request, chromium) {
     diagnostics: [],
     evidence_refs: [],
     checks: [],
+	criterion_evidence: [],
   };
+	const unsupported = request.criterion_mappings.filter((mapping) => mapping.source === "unsupported");
+	if (unsupported.length > 0) {
+	  report.status = "failed";
+	  report.finished_at = now();
+	  report.diagnostics.push(diagnostic("unsupported_semantic_criteria", `No deterministic browser observation is defined for: ${unsupported.map((item) => item.criterion).join(" | ")}`));
+	  return retainReport(report, request.evidence_path);
+	}
   const pageErrors = [];
   const failedAssets = new Set();
   let browser;
@@ -233,6 +255,33 @@ async function validate(request, chromium) {
       report.diagnostics.push(diagnostic(`check_${item.check}_failed`, item.detail || `${item.check} failed`));
     }
     report.status = report.checks.every((item) => item.passed) && (!report.probe || report.probe.passed) ? "passed" : "failed";
+	const reportRef = path.join(request.evidence_path, "validation-report.json");
+	for (const mapping of request.criterion_mappings) {
+	  let passed;
+	  if (mapping.source === "journey") {
+	    await page.reload({ waitUntil: "domcontentloaded" });
+	    passed = true;
+	    for (const probe of mapping.journey || []) {
+	      try {
+	        const before = await observeBefore(page, probe, request.evidence_path, report.evidence_refs);
+	        let result;
+	        await performAction(page, probe, async () => { result = await observeAfter(page, probe, before, request.evidence_path, report.evidence_refs); });
+	        if (!result) { await page.waitForTimeout(DEFAULT_SETTLE_MS); result = await observeAfter(page, probe, before, request.evidence_path, report.evidence_refs); }
+	        passed = passed && result.passed;
+	      } catch (error) {
+	        passed = false;
+	        report.diagnostics.push(diagnostic("criterion_journey_failed", `${mapping.criterion}: ${error.message || error}`));
+	        break;
+	      }
+	    }
+	  } else {
+	    passed = mapping.source === "probe"
+	      ? report.probe?.passed === true
+	      : report.checks.some((item) => item.check === mapping.check && item.passed);
+	  }
+	  report.criterion_evidence.push({ criterion: mapping.criterion, passed, ...(passed ? { evidence_refs: [reportRef] } : {}) });
+	}
+	if (report.criterion_evidence.some((item) => !item.passed)) report.status = "failed";
   } catch (error) {
     report.status = "unavailable";
     report.diagnostics.push(diagnostic("browser_runtime_unavailable", error.message || error));

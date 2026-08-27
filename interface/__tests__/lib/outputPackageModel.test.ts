@@ -51,6 +51,11 @@ describe("outputPackageModel", () => {
       storagePath: "groups/game-team/generated/game/index.html",
       returnTo: "/dashboard?team_id=game-team&outcome_id=outcome-7#latest",
       proofArtifactId: "proof-7",
+      teamId: "game-team",
+      runId: "run-7",
+      workItemId: "work-7",
+      outputId: "output-7",
+      contentDigest: "sha256:moonlit",
     });
     const parsed = new URL(href!, "http://mycelis.local");
 
@@ -59,6 +64,11 @@ describe("outputPackageModel", () => {
     expect(parsed.searchParams.get("path")).toBe("groups/game-team/generated/game/index.html");
     expect(parsed.searchParams.get("return_to")).toBe("/dashboard?team_id=game-team&outcome_id=outcome-7#latest");
     expect(parsed.searchParams.get("proof")).toBe("proof-7");
+    expect(parsed.searchParams.get("team_id")).toBe("game-team");
+    expect(parsed.searchParams.get("run_id")).toBe("run-7");
+    expect(parsed.searchParams.get("work_item_id")).toBe("work-7");
+    expect(parsed.searchParams.get("output_id")).toBe("output-7");
+    expect(parsed.searchParams.get("digest")).toBe("sha256:moonlit");
     expect(parsed.searchParams.get("source")).toBe("/api/v1/workspace/files/view?path=groups%2Fgame-team%2Fgenerated%2Fgame%2Findex.html");
   });
 
