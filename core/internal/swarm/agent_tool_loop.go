@@ -37,10 +37,16 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 
 	directAnswerPreferred := preferDirectDraftResponse(input)
 	directAnswerRoute := isDirectAnswerRoute(input)
+	inferenceAttempt := 2
+	infer := func(reason string) (*cognitive.InferResponse, error) {
+		attempt := inferenceAttempt
+		inferenceAttempt++
+		return a.inferWithExecutionBounds(*req, reason, attempt)
+	}
 	reinferWithToolFeedback := func(toolName string, feedback string) bool {
 		appendAssistantHistory(&req.Messages, result.responseText)
 		req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolName, feedback)})
-		updated, inferErr := a.brain.InferWithContract(a.ctx, *req)
+		updated, inferErr := infer("tool_feedback")
 		if inferErr != nil || updated == nil {
 			log.Printf("Agent [%s] re-inference after tool feedback failed: %v", a.Manifest.ID, inferErr)
 			result.responseText = feedback
@@ -58,12 +64,13 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 	failedToolCalls := map[string]int{}
 	completedToolCalls := map[string]bool{}
 	contractCorrections := 0
+	unsafeCorrectionUsed := map[string]bool{}
 	if parseToolCall(result.responseText) == nil && responseSuggestsUnexecutedAction(result.responseText) {
 		req.Messages = append(req.Messages,
 			cognitive.ChatMessage{Role: "system", Content: "Policy correction: do not provide step-by-step plans when tools are available. Emit exactly one tool_call JSON now for the user's actionable request, or return a concrete blocker."},
 			cognitive.ChatMessage{Role: "user", Content: "Re-answer the latest request now under the policy correction."},
 		)
-		if repaired, repairErr := a.brain.InferWithContract(a.ctx, *req); repairErr == nil && repaired != nil {
+		if repaired, repairErr := infer("policy_correction"); repairErr == nil && repaired != nil {
 			result.resp = repaired
 			result.responseText = repaired.Text
 		}
@@ -75,7 +82,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: "[OPERATOR INTERJECTION]: " + interjection})
 			a.logTurn("interjection", interjection, "", "", "", nil, "", "")
 			log.Printf("Agent [%s] processing interjection: %s", a.Manifest.ID, truncateLog(interjection, 100))
-			updated, err := a.brain.InferWithContract(a.ctx, *req)
+			updated, err := infer("interjection")
 			if err != nil {
 				log.Printf("Agent [%s] interjection re-inference failed: %v", a.Manifest.ID, err)
 				break
@@ -86,6 +93,12 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 
 		toolCall, parseFailure := parseToolCallForExecution(result.responseText)
 		if parseFailure != nil {
+			target := "unsafe:" + strings.TrimSpace(parseFailure.ToolName)
+			if unsafeCorrectionUsed[target] {
+				log.Printf("Agent [%s] inference correction suppressed reason=malformed_tool target=%s", a.Manifest.ID, parseFailure.ToolName)
+				break
+			}
+			unsafeCorrectionUsed[target] = true
 			if !reinferWithToolFeedback(parseFailure.ToolName, "Tool call correction: "+parseFailure.Error()+". Return one complete, valid tool_call JSON object with every required argument. The malformed call was not executed.") {
 				break
 			}
@@ -101,7 +114,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 					cognitive.ChatMessage{Role: "system", Content: requirementPrompt},
 					cognitive.ChatMessage{Role: "user", Content: "Continue the approved delivery now and satisfy the missing result-contract evidence."},
 				)
-				updated, err := a.brain.InferWithContract(a.ctx, *req)
+				updated, err := infer("result_contract")
 				if err != nil || updated == nil {
 					log.Printf("Agent [%s] result-contract correction failed: %v", a.Manifest.ID, err)
 					if len(result.toolEvidence) > 0 {
@@ -117,6 +130,12 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		}
 		normalizeAgentToolCallArguments(toolCall, a.TeamID, input)
 		if validationFailure := validateMutationToolCall(toolCall); validationFailure != nil {
+			target := "unsafe:" + strings.TrimSpace(validationFailure.ToolName)
+			if unsafeCorrectionUsed[target] {
+				log.Printf("Agent [%s] inference correction suppressed reason=invalid_tool target=%s", a.Manifest.ID, validationFailure.ToolName)
+				break
+			}
+			unsafeCorrectionUsed[target] = true
 			if !reinferWithToolFeedback(validationFailure.ToolName, "Tool call correction: "+validationFailure.Error()+". Return one complete, valid tool_call JSON object with every required argument. The invalid call was not executed.") {
 				break
 			}

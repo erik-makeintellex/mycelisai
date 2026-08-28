@@ -108,7 +108,7 @@ func TestResultContractEvidenceToolAllowedRestrictsIncompleteProjectPackage(t *t
 	}
 }
 
-func TestResultContractExecutionPromptCarriesAcceptanceIntoInteractivePackage(t *testing.T) {
+func TestResultContractExecutionPromptReferencesSingleAuthoritativePackageBrief(t *testing.T) {
 	requirement := &teamResultRequirement{
 		Kind: "project_package", FilesRequired: []string{"README.md"},
 		AcceptanceCriteria: []string{"primary control changes the application"},
@@ -119,8 +119,8 @@ func TestResultContractExecutionPromptCarriesAcceptanceIntoInteractivePackage(t 
 	}
 	prompt := resultContractExecutionPrompt(requirement)
 	for _, want := range []string{
-		"README.md",
-		"primary control changes the application",
+		"PACKAGE CONTRACT v1",
+		"exactly one tool_call JSON object",
 		"visibly explain the primary control",
 		"keydown",
 		"never a positional selector",
@@ -131,6 +131,11 @@ func TestResultContractExecutionPromptCarriesAcceptanceIntoInteractivePackage(t 
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("execution prompt = %q, missing %q", prompt, want)
+		}
+	}
+	for _, duplicated := range []string{"README.md", "primary control changes the application"} {
+		if strings.Contains(prompt, duplicated) {
+			t.Fatalf("execution policy repeated package brief value %q: %s", duplicated, prompt)
 		}
 	}
 }

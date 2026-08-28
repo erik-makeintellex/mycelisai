@@ -96,7 +96,7 @@ func TestNormalizeTeamTriggerInput_RendersActionableResultContract(t *testing.T)
 	}`))
 
 	for _, want := range []string{
-		"Output contract:",
+		"PACKAGE CONTRACT v1",
 		"Kind: project_package",
 		"Required files: README.md, PROOF.md, project-package.json",
 		"Package folder: groups/app-team/generated/package",
@@ -117,5 +117,32 @@ func TestNormalizeTeamTriggerInput_RendersActionableResultContract(t *testing.T)
 	}
 	if strings.Contains(got, "result_contract") {
 		t.Fatalf("rendered prompt exposed raw result contract:\n%s", got)
+	}
+}
+
+func TestNormalizeTeamTriggerInput_RendersPackageCriteriaAndProofOnce(t *testing.T) {
+	got := normalizeTeamTriggerInput([]byte(`{
+		"ask_kind":"implementation",
+		"goal":"Build the retained package.",
+		"exit_criteria":["Primary workflow works","Additional operator check"],
+		"evidence_required":["Readback evidence","Additional operator proof"],
+		"context":{"result_contract":{
+			"kind":"project_package",
+			"acceptance_criteria":["Primary workflow works"],
+			"proof_required":["Readback evidence"]
+		}}
+	}`))
+	for _, duplicated := range []string{"Primary workflow works", "Readback evidence"} {
+		if strings.Count(got, duplicated) != 1 {
+			t.Fatalf("%q rendered %d times:\n%s", duplicated, strings.Count(got, duplicated), got)
+		}
+	}
+	for _, additional := range []string{"Additional operator check", "Additional operator proof"} {
+		if strings.Count(got, additional) != 1 {
+			t.Fatalf("unique top-level requirement %q was lost:\n%s", additional, got)
+		}
+	}
+	if strings.Count(got, "PACKAGE CONTRACT v1") != 1 {
+		t.Fatalf("package contract rendered more than once:\n%s", got)
 	}
 }

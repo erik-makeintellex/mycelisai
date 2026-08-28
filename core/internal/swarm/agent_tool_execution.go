@@ -139,7 +139,7 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 	}
 	appendAssistantHistory(&req.Messages, result.responseText)
 	req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolCall.Name, toolResult)})
-	updated, err := a.brain.InferWithContract(a.ctx, *req)
+	updated, err := a.inferWithExecutionBounds(*req, "tool_result", i+2)
 	if err != nil || updated == nil {
 		log.Printf("Agent [%s] re-inference failed: %v", a.Manifest.ID, err)
 		if len(result.toolEvidence) > 0 {

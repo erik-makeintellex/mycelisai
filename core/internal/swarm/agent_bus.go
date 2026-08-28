@@ -185,10 +185,15 @@ func normalizeTeamTriggerInput(data []byte) string {
 
 func renderTeamAskPrompt(ask protocol.TeamAsk) string {
 	var sb strings.Builder
-	sb.WriteString("You have received a structured team ask.\n")
-	sb.WriteString("Use the ask to stay aligned on mission, scope, and proof needs.\n")
-	sb.WriteString("Do not force your response into a rigid template unless the ask explicitly requires one.\n")
-	sb.WriteString("Deliver the best output for the job while making sure it satisfies the ask goal, constraints, and required evidence.\n")
+	contract := teamAskResultContract(ask.Context)
+	if len(contract) > 0 {
+		sb.WriteString("You have received a governed package ask. The PACKAGE CONTRACT below is the authoritative execution brief.\n")
+	} else {
+		sb.WriteString("You have received a structured team ask.\n")
+		sb.WriteString("Use the ask to stay aligned on mission, scope, and proof needs.\n")
+		sb.WriteString("Do not force your response into a rigid template unless the ask explicitly requires one.\n")
+		sb.WriteString("Deliver the best output for the job while making sure it satisfies the ask goal, constraints, and required evidence.\n")
+	}
 	sb.WriteString(fmt.Sprintf("Ask kind: %s\n", ask.AskKind))
 	sb.WriteString(fmt.Sprintf("Lane role: %s\n", ask.LaneRole))
 	sb.WriteString(fmt.Sprintf("Goal: %s\n", ask.Goal))
@@ -210,19 +215,21 @@ func renderTeamAskPrompt(ask protocol.TeamAsk) string {
 			sb.WriteString(fmt.Sprintf("- %s\n", item))
 		}
 	}
-	if len(ask.ExitCriteria) > 0 {
+	exitCriteria := withoutContractDuplicates(ask.ExitCriteria, stringSlice(contract["acceptance_criteria"]))
+	if len(exitCriteria) > 0 {
 		sb.WriteString("Exit criteria:\n")
-		for _, item := range ask.ExitCriteria {
+		for _, item := range exitCriteria {
 			sb.WriteString(fmt.Sprintf("- %s\n", item))
 		}
 	}
-	if len(ask.EvidenceRequired) > 0 {
+	evidenceRequired := withoutContractDuplicates(ask.EvidenceRequired, stringSlice(contract["proof_required"]))
+	if len(evidenceRequired) > 0 {
 		sb.WriteString("Evidence required:\n")
-		for _, item := range ask.EvidenceRequired {
+		for _, item := range evidenceRequired {
 			sb.WriteString(fmt.Sprintf("- %s\n", item))
 		}
 	}
-	renderTeamAskResultContract(&sb, ask.Context)
+	renderTeamAskResultContract(&sb, contract)
 	if ask.Context != nil {
 		if raw, err := json.Marshal(compactTeamAskContext(ask.Context)); err == nil {
 			sb.WriteString(fmt.Sprintf("Context: %s\n", string(raw)))
@@ -232,12 +239,34 @@ func renderTeamAskPrompt(ask protocol.TeamAsk) string {
 	return sb.String()
 }
 
-func renderTeamAskResultContract(sb *strings.Builder, context map[string]any) {
+func teamAskResultContract(context map[string]any) map[string]any {
 	if len(context) == 0 {
-		return
+		return nil
 	}
-	contract, ok := context["result_contract"].(map[string]any)
-	if !ok || len(contract) == 0 {
+	contract, _ := context["result_contract"].(map[string]any)
+	return contract
+}
+
+func withoutContractDuplicates(items, contractItems []string) []string {
+	contractSet := make(map[string]struct{}, len(contractItems))
+	for _, item := range contractItems {
+		contractSet[strings.TrimSpace(item)] = struct{}{}
+	}
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		trimmed := strings.TrimSpace(item)
+		if trimmed == "" {
+			continue
+		}
+		if _, duplicate := contractSet[trimmed]; !duplicate {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
+func renderTeamAskResultContract(sb *strings.Builder, contract map[string]any) {
+	if len(contract) == 0 {
 		return
 	}
 	kind := strings.TrimSpace(stringValue(contract["kind"]))
@@ -257,7 +286,7 @@ func renderTeamAskResultContract(sb *strings.Builder, context map[string]any) {
 		return
 	}
 
-	sb.WriteString("Output contract:\n")
+	sb.WriteString("PACKAGE CONTRACT v1\n")
 	if kind != "" {
 		sb.WriteString(fmt.Sprintf("- Kind: %s\n", kind))
 	}

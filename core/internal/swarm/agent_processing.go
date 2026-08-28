@@ -51,9 +51,9 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 
 	req, profile := a.buildInferRequest(input, priorHistory)
 	if requirement.active() {
-		req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "system", Content: resultContractExecutionPrompt(requirement)})
+		req.Messages = append([]cognitive.ChatMessage{{Role: "system", Content: resultContractExecutionPrompt(requirement)}}, req.Messages...)
 	}
-	resp, err := a.brain.InferWithContract(a.ctx, req)
+	resp, err := a.inferWithExecutionBounds(req, "initial", 1)
 	if err != nil {
 		log.Printf("Agent [%s] brain freeze: %v", a.Manifest.ID, err)
 		if fallback, ok := a.tryInitialProjectPackageRuntimeFallback(input, requirement, planningOnly); ok {
@@ -74,7 +74,7 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 			cognitive.ChatMessage{Role: "system", Content: "Recovery correction: the previous response was empty. Return a concise direct answer, emit exactly one available tool_call JSON needed to complete the ask, or state one concrete blocker. Do not return an empty response."},
 			cognitive.ChatMessage{Role: "user", Content: "Retry the latest request now under the recovery correction."},
 		)
-		recovered, recoverErr := a.brain.InferWithContract(a.ctx, req)
+		recovered, recoverErr := a.inferWithExecutionBounds(req, "empty_response", 2)
 		if recoverErr != nil {
 			log.Printf("Agent [%s] empty-response recovery failed: %v", a.Manifest.ID, recoverErr)
 		} else if recovered != nil {
@@ -248,7 +248,16 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 
 	messages := []cognitive.ChatMessage{{Role: "system", Content: sys}}
 	if len(priorHistory) > 0 {
-		messages = append(messages, priorHistory...)
+		for _, message := range priorHistory {
+			if message.Role == "system" {
+				messages = append(messages, message)
+			}
+		}
+		for _, message := range priorHistory {
+			if message.Role != "system" {
+				messages = append(messages, message)
+			}
+		}
 	}
 	messages = append(messages, cognitive.ChatMessage{Role: "user", Content: input})
 	a.logTurn("system", sys, "", "", "", nil, "", "")

@@ -8,27 +8,13 @@ import (
 )
 
 func resultContractExecutionPrompt(requirement *teamResultRequirement) string {
-	files := strings.Join(requirement.FilesRequired, ", ")
-	if files == "" {
-		files = "the approved retained outputs"
-	}
-	prompt := "Approved result contract is active. Execute it through tool calls before returning final prose. " +
-		"Use write_file once for each required physical output (" + files + "). For project packages, do not call store_artifact and do not read a missing support file to discover it; write each required file directly. " +
+	prompt := "Execution policy for the governed package ask: the structured user message contains the sole authoritative PACKAGE CONTRACT v1. " +
+		"Do not repeat, relax, or replace its targets or acceptance rubric. Emit exactly one tool_call JSON object per response until its evidence is complete. " +
+		"Use write_file once for each missing physical output. For project packages, do not call store_artifact and do not read a missing support file to discover it; write each required file directly. " +
 		"After writing the entrypoint, read back that entrypoint only unless the contract explicitly requires other readbacks."
-	if len(requirement.AcceptanceCriteria) > 0 {
-		prompt += " Implement these acceptance criteria in the retained output: " + strings.Join(requirement.AcceptanceCriteria, "; ") + "."
-	}
 	if strings.EqualFold(requirement.Kind, "project_package") {
 		prompt += " When the requested application is interactive, its entrypoint must visibly explain the primary control and implement that control with a standard click, pointer, touch, keydown, or keyup handler that retained validation can inspect."
-		if target := resultContractDefaultEntrypoint(requirement); target != "" {
-			prompt += " Write the first user-facing entrypoint to " + target + "."
-		}
-		if title := strings.TrimSpace(requirement.PackageTitle); title != "" {
-			prompt += " Use package_title=" + title + " for the retained package metadata and HTML title."
-		}
-		if folder := resultContractDefaultFolder(requirement); folder != "" {
-			prompt += " Keep the retained package inside " + folder + " and include package_kind=project_package, package_folder, package_entrypoint, and package_files with index.html, README.md, PROOF.md, and project-package.json on the entrypoint write."
-		}
+		prompt += " On the entrypoint write, include the package_kind, package_folder, package_entrypoint, and package_files metadata named by the contract."
 	}
 	prompt += outputValidationExecutionInstruction(requirement.OutputValidation)
 	return prompt + " Continue until the evidence is complete or a concrete tool blocker prevents progress."

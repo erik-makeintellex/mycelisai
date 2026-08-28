@@ -23,7 +23,7 @@ providers:
         data_boundary: ""
         usage_policy: ""
         token_budget_profile: standard
-        max_output_tokens: 1024
+        max_output_tokens: 2048
         roles_allowed: []
         enabled: false
     local-sovereign:
@@ -49,7 +49,7 @@ providers:
         data_boundary: local_only
         usage_policy: local_first
         token_budget_profile: standard
-        max_output_tokens: 1024
+        max_output_tokens: 2048
         roles_allowed:
             - all
         enabled: true
