@@ -85,3 +85,30 @@ func TestToolLoopCorrectsUnsafeWriteWithoutExecutingIt(t *testing.T) {
 		})
 	}
 }
+
+func TestToolLoopRenewsUnsafeCorrectionAfterSuccessfulEvidence(t *testing.T) {
+	firstMalformed := `{"tool_call":{"name":"write_file","arguments":{"path":"groups/delivery-team/generated/one.txt","content":"broken`
+	secondMalformed := `{"tool_call":{"name":"write_file","arguments":{"path":"groups/delivery-team/generated/two.txt","content":"broken`
+	provider := &resultContractProvider{responses: []string{
+		firstMalformed,
+		`{"tool_call":{"name":"write_file","arguments":{"path":"groups/delivery-team/generated/one.txt","content":"one"}}}`,
+		secondMalformed,
+		`{"tool_call":{"name":"write_file","arguments":{"path":"groups/delivery-team/generated/two.txt","content":"two"}}}`,
+		"Both files are ready.",
+	}}
+	executor := &resultContractToolExecutor{}
+	agent := resultContractTestAgent(provider, executor)
+
+	result := agent.processMessageStructuredWithPosture("Write both files.", nil, false)
+
+	if provider.calls != 5 || len(executor.calls) != 2 {
+		t.Fatalf("provider calls=%d executor calls=%v", provider.calls, executor.calls)
+	}
+	if executor.files["groups/delivery-team/generated/one.txt"] != "one" ||
+		executor.files["groups/delivery-team/generated/two.txt"] != "two" {
+		t.Fatalf("written files = %v", executor.files)
+	}
+	if result.Text != "Both files are ready." {
+		t.Fatalf("result text = %q", result.Text)
+	}
+}

@@ -42,7 +42,7 @@ func (a *Agent) prepareToolCall(input string, toolCall *toolCallPayload, failedT
 	return false
 }
 
-func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, req *cognitive.InferRequest, toolCall *toolCallPayload, failedToolCalls map[string]int, reinfer func(string, string) bool, result *agentToolLoopResult, planningOnly bool, requirement *teamResultRequirement) bool {
+func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, req *cognitive.InferRequest, toolCall *toolCallPayload, failedToolCalls map[string]int, reinfer func(string, string) bool, result *agentToolLoopResult, planningOnly bool, requirement *teamResultRequirement, projectPackageBase []cognitive.ChatMessage) bool {
 	fingerprint := toolCallFingerprint(toolCall)
 	log.Printf("Agent [%s] tool_call [%d/%d]: %s", a.Manifest.ID, i+1, iterationLimit, toolCall.Name)
 	result.toolsUsed = append(result.toolsUsed, toolCall.Name)
@@ -137,8 +137,16 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 		a.persistMCPExchangeResult(serverID, toolCall.Name, "completed", preview, map[string]any{"arguments": toolCall.Arguments, "result_preview": preview})
 		a.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{"state": "completed", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "result_preview": truncateLog(toolResult, 500), "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
 	}
-	appendAssistantHistory(&req.Messages, result.responseText)
-	req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolCall.Name, toolResult)})
+	if projectPackageHistoryEnabled(requirement) {
+		latest := compactProjectPackageToolOutcome(toolCall.Name, true)
+		if issues := resultContractIssues(requirement, result.artifacts, result.toolEvidence); len(issues) > 0 {
+			latest.Content = resultContractCorrectionPrompt(requirement, issues, result.artifacts, result.toolEvidence)
+		}
+		req.Messages = compactProjectPackageInferenceHistory(projectPackageBase, result.toolEvidence, latest)
+	} else {
+		appendAssistantHistory(&req.Messages, result.responseText)
+		req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolCall.Name, toolResult)})
+	}
 	updated, err := a.inferWithExecutionBounds(*req, "tool_result", i+2)
 	if err != nil || updated == nil {
 		log.Printf("Agent [%s] re-inference failed: %v", a.Manifest.ID, err)

@@ -16,8 +16,11 @@ func TestSemanticAcceptanceEntrypointIssuesRequiresGameHooks(t *testing.T) {
 	if !strings.Contains(issues, `data-mycelis-validation-action="hazard"`) || !strings.Contains(issues, "#health") {
 		t.Fatalf("issues = %q, want missing hazard and health targets", issues)
 	}
-	if strings.Contains(issues, "attack") || strings.Contains(issues, "#score") {
-		t.Fatalf("issues = %q, present targets should pass", issues)
+	if strings.Contains(issues, `missing semantic validation target [data-mycelis-validation-action="attack"]`) || strings.Contains(issues, "missing semantic validation target #score") {
+		t.Fatalf("issues = %q, present target hooks should not be reported missing", issues)
+	}
+	if !strings.Contains(issues, "attack action does not mutate governed") {
+		t.Fatalf("issues = %q, target-only attack facade should fail functional validation", issues)
 	}
 }
 

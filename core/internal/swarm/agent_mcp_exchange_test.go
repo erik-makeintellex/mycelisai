@@ -55,6 +55,7 @@ func TestExecuteToolIteration_PersistsMCPFailureToExchange(t *testing.T) {
 		&agentToolLoopResult{responseText: `{"tool_call":{"name":"browser_search"}}`},
 		false,
 		nil,
+		nil,
 	)
 	if ok {
 		t.Fatal("expected MCP failure iteration to return false")
@@ -99,6 +100,7 @@ func TestExecuteToolIteration_PersistsMCPCompletionToExchange(t *testing.T) {
 		func(string, string) bool { return true },
 		result,
 		false,
+		nil,
 		nil,
 	)
 	if !ok {

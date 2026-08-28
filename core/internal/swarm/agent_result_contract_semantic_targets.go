@@ -43,7 +43,28 @@ func semanticAcceptanceEntrypointIssues(criteria []string, content string) []str
 			issues = append(issues, fmt.Sprintf("entrypoint readback is missing semantic validation target %s", target))
 		}
 	}
+	if semanticAcceptanceRequiresFunctionalGame(criteria) {
+		issues = append(issues, functionalGameEntrypointIssues(criteria, content)...)
+	}
 	return uniqueResultContractStrings(issues)
+}
+
+func semanticAcceptanceRequiresFunctionalGame(criteria []string) bool {
+	for _, criterion := range criteria {
+		normalized := strings.ToLower(strings.TrimSpace(criterion))
+		switch normalized {
+		case "visible game instructions identify controls, objective, and restart",
+			"playable controls move the player and change the visible game surface",
+			"attack changes enemy, hazard, or score state",
+			"hazard contact changes health state",
+			"key pickup changes key and score state",
+			"team play-tests the documented winning route through the locked door objective to win state",
+			"fail state can transition through restart to the initial objective",
+			"audio control changes its visible state":
+			return true
+		}
+	}
+	return false
 }
 
 func semanticValidationTargetPresent(content, selector string) bool {

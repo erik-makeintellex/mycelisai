@@ -37,6 +37,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 
 	directAnswerPreferred := preferDirectDraftResponse(input)
 	directAnswerRoute := isDirectAnswerRoute(input)
+	projectPackageBase := projectPackageInferenceBase(req.Messages, requirement)
 	inferenceAttempt := 2
 	infer := func(reason string) (*cognitive.InferResponse, error) {
 		attempt := inferenceAttempt
@@ -44,8 +45,13 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		return a.inferWithExecutionBounds(*req, reason, attempt)
 	}
 	reinferWithToolFeedback := func(toolName string, feedback string) bool {
-		appendAssistantHistory(&req.Messages, result.responseText)
-		req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolName, feedback)})
+		latest := cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolName, feedback)}
+		if projectPackageHistoryEnabled(requirement) {
+			req.Messages = compactProjectPackageInferenceHistory(projectPackageBase, result.toolEvidence, latest)
+		} else {
+			appendAssistantHistory(&req.Messages, result.responseText)
+			req.Messages = append(req.Messages, latest)
+		}
 		updated, inferErr := infer("tool_feedback")
 		if inferErr != nil || updated == nil {
 			log.Printf("Agent [%s] re-inference after tool feedback failed: %v", a.Manifest.ID, inferErr)
@@ -66,10 +72,12 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 	contractCorrections := 0
 	unsafeCorrectionUsed := map[string]bool{}
 	if parseToolCall(result.responseText) == nil && responseSuggestsUnexecutedAction(result.responseText) {
-		req.Messages = append(req.Messages,
-			cognitive.ChatMessage{Role: "system", Content: "Policy correction: do not provide step-by-step plans when tools are available. Emit exactly one tool_call JSON now for the user's actionable request, or return a concrete blocker."},
-			cognitive.ChatMessage{Role: "user", Content: "Re-answer the latest request now under the policy correction."},
-		)
+		policy := "Policy correction: do not provide step-by-step plans when tools are available. Emit exactly one tool_call JSON now for the user's actionable request, or return a concrete blocker. Re-answer the latest request now."
+		if projectPackageHistoryEnabled(requirement) {
+			req.Messages = compactProjectPackageInferenceHistory(projectPackageBase, result.toolEvidence, cognitive.ChatMessage{Role: "user", Content: policy})
+		} else {
+			req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "system", Content: policy})
+		}
 		if repaired, repairErr := infer("policy_correction"); repairErr == nil && repaired != nil {
 			result.resp = repaired
 			result.responseText = repaired.Text
@@ -79,7 +87,12 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 	loopLimit := resultContractLoopLimit(a.Manifest.EffectiveMaxIterations(), requirement)
 	for i := 0; i < loopLimit; i++ {
 		if interjection := a.checkInterjection(); interjection != "" {
-			req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: "[OPERATOR INTERJECTION]: " + interjection})
+			latest := cognitive.ChatMessage{Role: "user", Content: "[OPERATOR INTERJECTION]: " + interjection}
+			if projectPackageHistoryEnabled(requirement) {
+				req.Messages = compactProjectPackageInferenceHistory(projectPackageBase, result.toolEvidence, latest)
+			} else {
+				req.Messages = append(req.Messages, latest)
+			}
 			a.logTurn("interjection", interjection, "", "", "", nil, "", "")
 			log.Printf("Agent [%s] processing interjection: %s", a.Manifest.ID, truncateLog(interjection, 100))
 			updated, err := infer("interjection")
@@ -109,11 +122,17 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			if len(issues) > 0 && contractCorrections < maxResultContractCorrections {
 				contractCorrections++
 				requirementPrompt := resultContractCorrectionPrompt(requirement, issues, result.artifacts, result.toolEvidence)
-				appendAssistantHistory(&req.Messages, result.responseText)
-				req.Messages = append(req.Messages,
-					cognitive.ChatMessage{Role: "system", Content: requirementPrompt},
-					cognitive.ChatMessage{Role: "user", Content: "Continue the approved delivery now and satisfy the missing result-contract evidence."},
-				)
+				if projectPackageHistoryEnabled(requirement) {
+					req.Messages = compactProjectPackageInferenceHistory(projectPackageBase, result.toolEvidence, cognitive.ChatMessage{
+						Role: "user", Content: requirementPrompt + " Continue the approved delivery now and satisfy the missing result-contract evidence.",
+					})
+				} else {
+					appendAssistantHistory(&req.Messages, result.responseText)
+					req.Messages = append(req.Messages,
+						cognitive.ChatMessage{Role: "system", Content: requirementPrompt},
+						cognitive.ChatMessage{Role: "user", Content: "Continue the approved delivery now and satisfy the missing result-contract evidence."},
+					)
+				}
 				updated, err := infer("result_contract")
 				if err != nil || updated == nil {
 					log.Printf("Agent [%s] result-contract correction failed: %v", a.Manifest.ID, err)
@@ -187,10 +206,11 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			continue
 		}
 		evidenceCount := len(result.toolEvidence)
-		if !a.executeToolIteration(i, loopLimit, input, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result, planningOnly, requirement) {
+		if !a.executeToolIteration(i, loopLimit, input, req, toolCall, failedToolCalls, reinferWithToolFeedback, &result, planningOnly, requirement, projectPackageBase) {
 			if len(result.toolEvidence) > evidenceCount {
 				completedToolCalls[fingerprint] = true
 				contractCorrections = 0
+				delete(unsafeCorrectionUsed, "unsafe:"+strings.TrimSpace(toolCall.Name))
 			}
 			if result.runtimeRecoveryAllowed {
 				break
@@ -198,6 +218,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			continue
 		}
 		completedToolCalls[fingerprint] = true
+		delete(unsafeCorrectionUsed, "unsafe:"+strings.TrimSpace(toolCall.Name))
 		if len(result.toolEvidence) > evidenceCount {
 			contractCorrections = 0
 		}
