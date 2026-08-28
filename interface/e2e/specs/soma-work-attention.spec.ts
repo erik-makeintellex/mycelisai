@@ -7,6 +7,27 @@ const repeatedWorkUpdates = [
   threadMessage("attention_required", "Work needs attention", "The configured provider timed out before returning a usable result."),
 ];
 
+const packageRecoveryUpdates = [{
+  role: "system",
+  content: "Deliverable contract incomplete",
+  mode: "blocker",
+  run_id: "run-package-recovery-1",
+  thread_event: {
+    kind: "attention_required",
+    label: "Deliverable contract incomplete",
+    detail: "locator.click: Call log at /home/operator/private using [data-mycelis-primary-action]",
+    tone: "warning",
+    status: "result_contract_unsatisfied",
+    run_id: "run-package-recovery-1",
+    team_id: "game-team",
+    work_item_id: "work-package-recovery-1",
+    target_reference: "result_contract_unsatisfied",
+    source_kind: "system",
+    source_channel: "team-work.result-projection",
+    payload_kind: "thread_event",
+  },
+}];
+
 function threadMessage(kind: "execution_started" | "attention_required", label: string, detail: string) {
   return {
     role: "system",
@@ -34,6 +55,13 @@ async function installWorkAttentionFixture(page: Page) {
   }, repeatedWorkUpdates);
 }
 
+async function installPackageRecoveryFixture(page: Page) {
+  await page.addInitScript((messages) => {
+    window.localStorage.setItem("mycelis-advanced-mode", "false");
+    window.localStorage.setItem("mycelis-workspace-chat", JSON.stringify(messages));
+  }, packageRecoveryUpdates);
+}
+
 test.describe("Soma work attention UX", () => {
   for (const viewport of [
     { name: "desktop", width: 1366, height: 768 },
@@ -58,4 +86,19 @@ test.describe("Soma work attention UX", () => {
       await expectNoHorizontalOverflow(page);
     });
   }
+
+  test("package recovery foregrounds safe same-team repair", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await installPackageRecoveryFixture(page);
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByText("Output is not playable yet")).toBeVisible();
+    await expect(page.getByText("This retained candidate is unverified and is not ready to use.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Ask Soma to have the same team repair it" })).toBeVisible();
+    await expect(page.getByText(/locator\.click/)).not.toBeVisible();
+    await expect(page.getByRole("link", { name: /Open app/i })).toHaveCount(0);
+    await page.getByText("What happened", { exact: true }).click();
+    await expect(page.getByText(/locator\.click/)).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
 });

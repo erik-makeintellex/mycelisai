@@ -50,15 +50,13 @@ func TestProjectedRecoveryOptionsPreservesNonValidationRecovery(t *testing.T) {
 }
 
 func TestProjectedRecoveryOptionsUsesNormalizedWorkerRecovery(t *testing.T) {
-	want := "Use Soma to retry the approved work after ensuring the team can write and read retained outputs."
+	want := normalizedGeneratedPackageFailure("result_contract_unsatisfied").Recovery
 	item := protocol.TeamWorkItem{
 		State:            protocol.TeamWorkStateDegraded,
 		DegradationState: "result_contract_unsatisfied",
 		RecoveryOptions:  []string{"Retry without addressing the result contract."},
 	}
-	payload := map[string]any{
-		"recovery_options": []any{"  " + want + "  ", "", want},
-	}
+	payload := map[string]any{"recovery_options": []any{"/home/user raw worker failure with selector #game"}}
 	got := projectedRecoveryOptionsForItem(item, payload)
 	if len(got) != 1 || got[0] != want {
 		t.Fatalf("recovery options = %#v, want exact normalized worker option %q", got, want)
@@ -70,7 +68,7 @@ func TestTeamWorkSignalProjection_ResultContractRecoveryReplacesStaleRecovery(t 
 	s := newTestServer(opt)
 	now := time.Now().UTC()
 	workID := "11111111-1111-1111-1111-111111111111"
-	want := "Use Soma to retry the approved work after ensuring the team can write and read retained outputs."
+	want := normalizedGeneratedPackageFailure("result_contract_unsatisfied").Recovery
 	mock.MatchExpectationsInOrder(true)
 	mockTeamWorkItem(mock, "research-team", workID, protocol.TeamWorkStateRunning, false, "", now)
 	expectProjectedStatusEvent(mock, "research-team", workID, protocol.TeamWorkStateDegraded, protocol.PayloadKindResult, now)

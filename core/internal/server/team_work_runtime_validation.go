@@ -198,7 +198,7 @@ func (s *AdminServer) retryOrFinalizeTeamWorkValidation(ctx context.Context, ite
 		LaunchURL: payload.LaunchURL, StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC(),
 		Diagnostics: []outputvalidation.Diagnostic{{Code: "validator_unavailable", Message: cause.Error(), Severity: "error"}},
 	}
-	if err := s.finalizeTeamWorkValidation(ctx, item, payload, report, false, "runtime_validation_unavailable"); err != nil {
+	if err := s.finalizeTeamWorkValidation(ctx, item, payload, report, false, runtimeValidationUnavailableClass(cause)); err != nil {
 		return err
 	}
 	return s.DispatchOutbox.MarkFailed(ctx, item.ID, cause)

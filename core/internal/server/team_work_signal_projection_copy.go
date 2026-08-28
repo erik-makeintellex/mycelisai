@@ -23,7 +23,10 @@ func projectedHeadlineForItem(item protocol.TeamWorkItem, kind protocol.SignalPa
 		return "Team deliverable needs interaction proof"
 	}
 	if item.State == protocol.TeamWorkStateDegraded && strings.HasPrefix(item.DegradationState, "runtime_validation_") {
-		return "Team deliverable needs runtime repair"
+		return normalizedGeneratedPackageFailure(item.DegradationState).Headline
+	}
+	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "result_contract_unsatisfied" {
+		return normalizedGeneratedPackageFailure(item.DegradationState).Headline
 	}
 	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "validation_plan_incomplete" {
 		return "Team deliverable cannot be checked safely"
@@ -48,7 +51,10 @@ func projectedDetailsForItem(item protocol.TeamWorkItem, payload map[string]any)
 		return "The package does not expose enough retained evidence that its documented primary control can be used."
 	}
 	if item.State == protocol.TeamWorkStateDegraded && strings.HasPrefix(item.DegradationState, "runtime_validation_") {
-		return "The retained package did not pass its approved runtime workflow check."
+		return normalizedGeneratedPackageFailure(item.DegradationState).Summary
+	}
+	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "result_contract_unsatisfied" {
+		return normalizedGeneratedPackageFailure(item.DegradationState).Summary
 	}
 	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "validation_plan_incomplete" {
 		return "The approved validation contract or retained launch target is incomplete."
@@ -73,7 +79,10 @@ func projectedNextActionForItem(item protocol.TeamWorkItem, payload map[string]a
 		return "Ask Soma to have the same team expose a clear primary control, verify that it changes the application, and return the repaired package."
 	}
 	if item.State == protocol.TeamWorkStateDegraded && (strings.HasPrefix(item.DegradationState, "runtime_validation_") || item.DegradationState == "validation_plan_incomplete") {
-		return "Ask Soma to have the same team repair the primary workflow and return a new retained candidate."
+		return normalizedGeneratedPackageFailure(item.DegradationState).Recovery
+	}
+	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "result_contract_unsatisfied" {
+		return normalizedGeneratedPackageFailure(item.DegradationState).Recovery
 	}
 	return stringField(payload, "next_action")
 }
@@ -83,7 +92,7 @@ func projectedRecoveryOptionsForItem(item protocol.TeamWorkItem, payload map[str
 		return nil
 	}
 	switch item.DegradationState {
-	case "missing_retained_output", "invalid_deliverable_shape", "incomplete_deliverable_files", "unverified_primary_interaction", "validation_plan_incomplete", "runtime_validation_failed", "runtime_validation_unavailable", "runtime_validation_stale":
+	case "missing_retained_output", "invalid_deliverable_shape", "incomplete_deliverable_files", "unverified_primary_interaction", "validation_plan_incomplete", "runtime_validation_failed", "runtime_validation_unavailable", "runtime_validation_deadline", "runtime_validation_stale", "result_contract_unsatisfied":
 		nextAction := strings.TrimSpace(projectedNextActionForItem(item, payload))
 		if nextAction != "" {
 			return []string{nextAction}

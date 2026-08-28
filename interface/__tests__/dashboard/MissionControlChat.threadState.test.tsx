@@ -247,8 +247,48 @@ describe('MissionControlChat thread state cards', () => {
 
         expect(screen.getByText('Output is not playable yet')).toBeDefined();
         expect(screen.getByText('Recovery')).toBeDefined();
-        expect(screen.getByText('The team did not produce a validated runnable output. Nothing new should be trusted yet.')).toBeDefined();
-        expect(screen.getByText(/Tell Soma to try again, use another available service, or change the request/i)).toBeDefined();
+        expect(screen.getByText('The retained package did not pass its approved interaction check.')).toBeDefined();
+        expect(screen.getByText('This retained candidate is unverified and is not ready to use.')).toBeDefined();
+        expect(screen.getByRole('button', { name: /Ask Soma to have the same team repair it/i })).toBeDefined();
+        expect(screen.queryByText(/Tell Soma to try again, use another available service, or change the request/i)).toBeNull();
+        expect(screen.queryByText('Ready', { exact: true })).toBeNull();
+        expect(screen.queryByRole('link', { name: /Open app/i })).toBeNull();
+    });
+
+    it('normalizes runtime validator noise and carries repair identity back to Soma', async () => {
+        useCortexStore.setState({
+            missionChat: [{
+                role: 'system',
+                content: 'Deliverable needs repair',
+                mode: 'blocker',
+                run_id: 'run-runtime-failed',
+                thread_event: {
+                    kind: 'attention_required',
+                    label: 'Deliverable needs repair',
+                    detail: "locator.click: Timeout 30000ms exceeded. Call log: line intercepts pointer events",
+                    tone: 'warning',
+                    status: 'runtime_validation_failed',
+                    run_id: 'run-runtime-failed',
+                    team_id: 'game-team',
+                    work_item_id: 'work-runtime-failed',
+                    target_reference: 'runtime_validation_failed',
+                    source_kind: 'system',
+                    source_channel: 'team-work.runtime-validation',
+                    payload_kind: 'thread_event',
+                },
+            }],
+            councilMembers: COUNCIL_MEMBERS,
+            councilTarget: 'admin',
+        });
+
+        render(<MissionControlChat simpleMode />);
+
+        expect(screen.getByText('The retained page opened, but its approved primary control could not be used.')).toBeDefined();
+        const rawDetail = screen.getByText(/locator\.click/);
+        expect(rawDetail.closest('details')?.open).toBe(false);
+        const repair = screen.getByRole('button', { name: /Ask Soma to have the same team repair it/i });
+        fireEvent.click(repair);
+        await waitFor(() => expect(document.activeElement).toBe(screen.getByPlaceholderText(/Tell Soma/i)));
     });
 
     it('returns completed team work as a concise directly openable result', () => {

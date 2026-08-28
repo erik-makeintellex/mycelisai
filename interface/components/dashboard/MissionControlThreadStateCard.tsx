@@ -2,21 +2,15 @@
 
 import { AlertTriangle, ExternalLink, Zap } from "lucide-react";
 import { responseStateToneClass } from "@/components/soma/SomaCausalSummaryState";
+import { requestSomaOutputContinuation } from "@/components/soma/outputContinuation";
 import { outputCanvasHref } from "@/lib/outputPackageModel";
+import { packageRecoveryPresentation } from "@/lib/teamWorkRecoveryPresentation";
 import { progressForChatMessage, progressForThreadEvent } from "@/lib/teamWorkProgress";
 import type { ChatMessage } from "@/store/useCortexStore";
 
 function currentSomaHref() {
     if (typeof window === "undefined") return "/dashboard";
     return `${window.location.pathname}${window.location.search}${window.location.hash}`;
-}
-
-function isResultContractUnsatisfied(event: NonNullable<ChatMessage["thread_events"]>[number]) {
-    return [
-        event.status,
-        event.detail,
-        event.target_reference,
-    ].some((value) => typeof value === "string" && value.toLowerCase().includes("result_contract_unsatisfied"));
 }
 
 export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessage }) {
@@ -59,13 +53,13 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
                     {threadEvents.map((event, index) => {
                         const eventProgress = progressForThreadEvent(event);
                         const needsDirection = event.kind === "attention_required";
-                        const contractUnsatisfied = needsDirection && isResultContractUnsatisfied(event);
-                        const eventLabel = contractUnsatisfied
+                        const packageRecovery = needsDirection ? packageRecoveryPresentation(event) : null;
+                        const eventLabel = packageRecovery
                             ? "Output is not playable yet"
                             : needsDirection ? "Soma needs your direction" : event.label || event.title;
                         const eventDetail = needsDirection
-                            ? contractUnsatisfied
-                                ? "The team did not produce a validated runnable output. Nothing new should be trusted yet."
+                            ? packageRecovery
+                                ? packageRecovery.detail
                                 : "This work stopped before a usable result was produced. Nothing new should be trusted yet."
                             : event.detail;
                         const canvasHref = event.kind === "result_ready" && event.href
@@ -90,7 +84,26 @@ export default function MissionControlThreadStateCard({ msg }: { msg: ChatMessag
                                 </span>
                             </div>
                             {eventDetail ? <p className="mt-1 text-sm leading-5 text-cortex-text-muted">{eventDetail}</p> : null}
-                            {needsDirection ? (
+                            {packageRecovery ? (
+                                <div className="mt-2">
+                                    <p className="text-sm leading-5 text-cortex-text-main">{packageRecovery.trust}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => requestSomaOutputContinuation({
+                                            title: event.label || event.title || "Retained package",
+                                            reference: event.target_reference,
+                                            proof: event.href,
+                                            sourceLabel: "unverified retained candidate",
+                                            teamId: event.team_id,
+                                            runId: event.run_id ?? msg.run_id,
+                                            workItemId: event.work_item_id,
+                                        })}
+                                        className="mt-2 inline-flex rounded-md border border-cortex-warning/30 bg-cortex-warning/10 px-2.5 py-1.5 text-xs font-semibold text-cortex-text-main hover:bg-cortex-warning/15"
+                                    >
+                                        {packageRecovery.actionLabel}
+                                    </button>
+                                </div>
+                            ) : needsDirection ? (
                                 <p className="mt-2 text-sm leading-5 text-cortex-text-main">
                                     Tell Soma to try again, use another available service, or change the request.
                                 </p>

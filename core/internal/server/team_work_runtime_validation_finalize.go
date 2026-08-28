@@ -68,7 +68,7 @@ func (s *AdminServer) finalizeTeamWorkValidation(
 		item.State = protocol.TeamWorkStateOutputReady
 	} else {
 		item.State = protocol.TeamWorkStateDegraded
-		item.RecoveryOptions = []string{"Ask Soma to have the same team repair the failed primary workflow, then return a new retained candidate for validation."}
+		item.RecoveryOptions = []string{runtimeValidationFailureCopy(item).Recovery}
 	}
 
 	finalResult, err := (&teamWorkSignalProjection{server: s}).isFinalLinkedTeamResult(ctx, tx, item, protocol.PayloadKindResult)
@@ -155,8 +155,9 @@ func runtimeValidationStatusEvent(item protocol.TeamWorkItem, report outputvalid
 	details := "Soma checked the approved primary workflow and retained the validation evidence."
 	nextAction := "Open the deliverable or continue refining it with Soma."
 	if !passed {
-		headline = "Deliverable needs repair"
-		details = validationDiagnosticSummary(report)
+		copy := runtimeValidationFailureCopy(item)
+		headline = copy.Headline
+		details = copy.Summary
 		nextAction = firstString(item.RecoveryOptions)
 	}
 	return protocol.TeamStatusEvent{
@@ -174,11 +175,15 @@ func runtimeValidationInteraction(item protocol.TeamWorkItem, report outputvalid
 	if passed {
 		verb = "output_ready"
 	}
+	summary := "The approved runtime workflow passed."
+	if !passed {
+		summary = runtimeValidationFailureCopy(item).Summary
+	}
 	return protocol.NormalizeTeamInteraction(protocol.TeamInteraction{
 		InteractionID: uuid.NewString(), TeamID: item.TeamID, WorkItemID: item.WorkItemID,
 		RunID: item.RunID, IntentProofID: item.IntentProofID, ContractID: item.ContractID,
 		SourceKind: string(protocol.SourceKindSystem), SourceChannel: "team-work.runtime-validation",
-		ActorRef: "soma", Verb: verb, Summary: validationDiagnosticSummary(report),
+		ActorRef: "soma", Verb: verb, Summary: summary,
 		PayloadKind: string(protocol.PayloadKindResult), PayloadRef: validationRef,
 		Payload: map[string]any{"validation_ref": validationRef, "validation_status": report.Status}, Version: "v1",
 	})
