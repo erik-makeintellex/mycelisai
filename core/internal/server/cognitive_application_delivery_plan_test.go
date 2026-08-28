@@ -97,6 +97,19 @@ func TestBuildPlannedToolCalls_OutcomeLanguageCreatesDeliveryTeam(t *testing.T) 
 	}
 }
 
+func TestBuildPlannedToolCalls_GamePackageUsesBoundedSourceFiles(t *testing.T) {
+	request := "Develop a playable browser game with movement, attack, a key, hazards, win, fail, and restart."
+	calls := plannedCallsFromWrongBlueprint(request, []string{"generate_blueprint", "delegate"})
+	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
+	contract := mapArgument(mapArgument(mapArgument(calls[3].Arguments["ask"])["context"])["result_contract"])
+	files := confirmedActionStringSlice(contract["files_required"])
+	for _, want := range []string{"index.html", "game.js", "styles.css", "README.md", "PROOF.md", "project-package.json"} {
+		if !containsToolName(files, want) {
+			t.Fatalf("files_required = %#v, missing %q", files, want)
+		}
+	}
+}
+
 func TestBuildPlannedToolCalls_SVGWebPageStaysOnCodePackagePath(t *testing.T) {
 	request := "Create a web page and using SVG code imagine and create an image of the Mycelis infrastructure and your place in it."
 	mutationTools := inferMutationToolsFromText(request)

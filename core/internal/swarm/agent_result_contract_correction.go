@@ -11,14 +11,27 @@ func focusedResultContractCorrectionIssues(issues []string) []string {
 			return []string{issue}
 		}
 	}
-	entrypointIssues := []string{}
+	markupIssues := []string{}
 	for _, issue := range issues {
-		if strings.Contains(issue, "entrypoint") || strings.Contains(issue, "animation loop") {
-			entrypointIssues = append(entrypointIssues, issue)
+		if strings.Contains(issue, "validation target") ||
+			strings.Contains(issue, "primary interaction") ||
+			strings.Contains(issue, "visible control instructions") ||
+			strings.Contains(issue, "text-change observation target") ||
+			strings.Contains(issue, "visual-change observation target") {
+			markupIssues = append(markupIssues, issue)
 		}
 	}
-	if len(entrypointIssues) > 0 {
-		return entrypointIssues
+	if len(markupIssues) > 0 {
+		return markupIssues
+	}
+	gameplayIssues := []string{}
+	for _, issue := range issues {
+		if isFunctionalGameCorrectionIssue(issue) {
+			gameplayIssues = append(gameplayIssues, issue)
+		}
+	}
+	if len(gameplayIssues) > 0 {
+		return gameplayIssues
 	}
 	for _, issue := range issues {
 		if strings.Contains(issue, "readback") {
@@ -29,4 +42,17 @@ func focusedResultContractCorrectionIssues(issues []string) []string {
 		return issues[:1]
 	}
 	return nil
+}
+
+func isFunctionalGameCorrectionIssue(issue string) bool {
+	for _, fragment := range []string{
+		"game canvas", "game entrypoint", "game-state loop", "game-state model",
+		"movement controls", "attack action", "hazard action", "key action", "win action",
+		"fail and restart", "animation loop",
+	} {
+		if strings.Contains(issue, fragment) {
+			return true
+		}
+	}
+	return false
 }

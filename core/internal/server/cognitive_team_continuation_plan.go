@@ -278,11 +278,15 @@ func projectPackageResultContract(teamID string, contract map[string]any, reques
 		extractRequestedPackageEntrypoint(request),
 		strings.TrimRight(packageFolder, "/")+"/index.html",
 	)
+	requiredFiles := []string{"index.html", "README.md", "PROOF.md", "project-package.json"}
+	if semanticAcceptanceRequiresGamePackage(confirmedActionStringSlice(contract["acceptance_criteria"])) {
+		requiredFiles = []string{"index.html", "game.js", "styles.css", "README.md", "PROOF.md", "project-package.json"}
+	}
 	result := map[string]any{
 		"kind":                      "project_package",
 		"entrypoint_required":       true,
 		"folder_required":           true,
-		"files_required":            []string{"index.html", "README.md", "PROOF.md", "project-package.json"},
+		"files_required":            requiredFiles,
 		"package_folder":            packageFolder,
 		"package_entrypoint":        packageEntrypoint,
 		"validation_required":       true,
@@ -303,4 +307,14 @@ func projectPackageResultContract(teamID string, contract map[string]any, reques
 		result["output_validation"] = plan
 	}
 	return result
+}
+
+func semanticAcceptanceRequiresGamePackage(criteria []string) bool {
+	for _, criterion := range criteria {
+		if strings.Contains(strings.ToLower(strings.TrimSpace(criterion)), "game") ||
+			strings.Contains(strings.ToLower(strings.TrimSpace(criterion)), "playable controls") {
+			return true
+		}
+	}
+	return false
 }

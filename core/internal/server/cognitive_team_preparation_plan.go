@@ -87,6 +87,7 @@ func teamPreparationBriefMarkdown(request, teamName, teamID string, contract, ev
 	writeMarkdownList(&b, "Expected outputs", confirmedActionStringSlice(contract["expected_outputs"]))
 	writeMarkdownList(&b, "Research and council preparation", confirmedActionStringSlice(contract["team_preparation"]))
 	writeMarkdownList(&b, "Suggested workstreams", confirmedActionStringSlice(evocation["suggested_workstreams"]))
+	writeMarkdownList(&b, "Recommended agent targets", confirmedActionStringSlice(evocation["agent_targets"]))
 	writeMarkdownList(&b, "Acceptance criteria", confirmedActionStringSlice(contract["acceptance_criteria"]))
 	writeMarkdownList(&b, "Proof required", confirmedActionStringSlice(contract["proof_required"]))
 	b.WriteString("## Next Soma-mediated action\n\n")

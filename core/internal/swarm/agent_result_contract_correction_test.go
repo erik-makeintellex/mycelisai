@@ -34,6 +34,32 @@ func TestResultContractCorrectionCombinesEntrypointRepairsBeforeReadback(t *test
 	}
 }
 
+func TestResultContractCorrectionSeparatesMarkupFromGameplayRepair(t *testing.T) {
+	issues := []string{
+		"entrypoint readback is missing approved validation target [data-mycelis-primary-action]",
+		"game canvas has no inspectable 2d render implementation",
+		"movement controls do not mutate game state consumed by the canvas render loop",
+	}
+	markup := focusedResultContractCorrectionIssues(issues)
+	if len(markup) != 1 || !strings.Contains(markup[0], "validation target") {
+		t.Fatalf("focused issues = %v, want markup repair first", markup)
+	}
+	gameplay := focusedResultContractCorrectionIssues(issues[1:])
+	if len(gameplay) != 2 {
+		t.Fatalf("gameplay issues = %v, want bounded gameplay repair group", gameplay)
+	}
+	requirement := &teamResultRequirement{
+		Kind: "project_package", TeamID: "game-team",
+		FilesRequired:      []string{"index.html", "game.js", "styles.css"},
+		AcceptanceCriteria: []string{"playable controls move the player and change the visible game surface"},
+	}
+	prompt := resultContractCorrectionPrompt(requirement, issues[1:], nil, nil)
+	if !strings.Contains(prompt, "groups/game-team/generated/package/game.js") ||
+		!strings.Contains(prompt, "Repair the complete state model") {
+		t.Fatalf("gameplay correction did not target game.js: %s", prompt)
+	}
+}
+
 func TestResultContractCorrectionNamesCanonicalPackageEntrypoint(t *testing.T) {
 	requirement := &teamResultRequirement{
 		Kind:          "project_package",
@@ -49,6 +75,29 @@ func TestResultContractCorrectionNamesCanonicalPackageEntrypoint(t *testing.T) {
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("correction prompt missing %q:\n%s", want, prompt)
+		}
+	}
+}
+
+func TestFunctionalGameExecutionPromptUsesSplitPackageAndRealState(t *testing.T) {
+	requirement := &teamResultRequirement{
+		Kind:          "project_package",
+		FilesRequired: []string{"index.html", "game.js", "styles.css", "README.md", "PROOF.md", "project-package.json"},
+		AcceptanceCriteria: []string{
+			"playable controls move the player and change the visible game surface",
+			"attack changes enemy, hazard, or score state",
+		},
+	}
+	prompt := resultContractExecutionPrompt(requirement)
+	for _, want := range []string{"small accessible shell", "styles.css and game.js", "canvas render loop", "one missing file per tool call"} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("prompt missing %q: %s", want, prompt)
+		}
+	}
+	correction := resultContractCorrectionPrompt(requirement, []string{"missing successful write for index.html"}, nil, nil)
+	for _, want := range []string{"game.js", "styles.css", "project-package.json"} {
+		if !strings.Contains(correction, want) {
+			t.Fatalf("correction missing required package file %q: %s", want, correction)
 		}
 	}
 }

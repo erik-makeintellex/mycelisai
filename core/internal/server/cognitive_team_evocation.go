@@ -24,7 +24,29 @@ func teamEvocationForRequest(request string, contract map[string]any) map[string
 			"What specialist roles are necessary now versus later?",
 		},
 		"suggested_workstreams": suggestedWorkstreamsForContentContract(contract),
+		"agent_targets":         agentTargetsForContentContract(contract),
 	}
+}
+
+func agentTargetsForContentContract(contract map[string]any) []string {
+	targets := []string{
+		"default.builder — accountable retained-output owner",
+		"default.reviewer — independent acceptance advisor after retained output exists",
+	}
+	for _, kind := range confirmedActionStringSlice(contract["content_types"]) {
+		switch kind {
+		case "game":
+			targets = append(targets,
+				"default.context-analyst — bounded gameplay and platform context before implementation",
+				"default.media-creator — optional original visual/audio assets only when an approved media capability is needed",
+			)
+		case "media":
+			targets = append(targets, "default.media-creator — retained media output owner")
+		case "table_data":
+			targets = append(targets, "default.context-analyst — source and data-shape advisor")
+		}
+	}
+	return uniqueOrderedTools(targets)
 }
 
 func requestNeedsTeamEvocationReview(lower string, contract map[string]any) bool {

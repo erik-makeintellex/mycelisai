@@ -117,6 +117,12 @@ func TestInferCreateTeamPlanFromRequest_ContentContractCoversMixedGameMediaText(
 	if call.Arguments["profile_ref"] != "default.builder" {
 		t.Fatalf("profile_ref = %#v, want default.builder", call.Arguments["profile_ref"])
 	}
+	targets := strings.Join(confirmedActionStringSlice(evocation["agent_targets"]), "\n")
+	for _, want := range []string{"default.builder", "default.reviewer", "default.context-analyst", "default.media-creator"} {
+		if !strings.Contains(targets, want) {
+			t.Fatalf("agent targets = %q, missing %q", targets, want)
+		}
+	}
 }
 
 func TestInferCreateTeamPlanFromRequest_ContentContractCoversTableAndAppOutputs(t *testing.T) {

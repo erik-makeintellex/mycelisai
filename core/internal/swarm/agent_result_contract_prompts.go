@@ -2,6 +2,7 @@ package swarm
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/mycelis/core/pkg/protocol"
@@ -15,6 +16,7 @@ func resultContractExecutionPrompt(requirement *teamResultRequirement) string {
 	if strings.EqualFold(requirement.Kind, "project_package") {
 		prompt += " When the requested application is interactive, its entrypoint must visibly explain the primary control and implement that control with a standard click, pointer, touch, keydown, or keyup handler that retained validation can inspect."
 		prompt += " On the entrypoint write, include the package_kind, package_folder, package_entrypoint, and package_files metadata named by the contract."
+		prompt += functionalGamePackageExecutionInstruction(requirement)
 	}
 	prompt += outputValidationExecutionInstruction(requirement.OutputValidation)
 	return prompt + " Continue until the evidence is complete or a concrete tool blocker prevents progress."
@@ -35,6 +37,10 @@ func resultContractCorrectionPrompt(requirement *teamResultRequirement, issues [
 	}
 	if strings.Contains(strings.Join(focusedIssues, " "), "missing semantic validation target") {
 		prompt += " Overwrite the entrypoint to include every named semantic validation target as a visible functional control or state surface, wire each control to the requested gameplay state, preserve the rest of the package, then read the entrypoint back."
+		prompt += functionalGamePackageExecutionInstruction(requirement)
+	}
+	if containsFunctionalGameCorrectionIssue(focusedIssues) {
+		prompt += " Overwrite the package gameplay source with write_file at " + resultContractGameScriptPath(requirement) + ". Repair the complete state model, active canvas render loop, movement, attack, hazard/health, key/score, locked-exit win, fail/restart, and audio behavior together; preserve the HTML shell and support files, then allow the runtime to read back the entrypoint."
 	}
 	prompt += outputValidationCorrectionInstruction(requirement.OutputValidation, focusedIssues)
 	return prompt
@@ -87,17 +93,17 @@ func resultContractTargetInstruction(requirement *teamResultRequirement, issues 
 			if entrypoint == "" {
 				return ""
 			}
-			return "Write the entrypoint with write_file at " + entrypoint + " and include package_kind=project_package, package_folder=" + resultContractDefaultFolder(requirement) + ", package_entrypoint=" + entrypoint + ", package_files=[index.html, README.md, PROOF.md, project-package.json]."
+			return "Write the entrypoint with write_file at " + entrypoint + " and include package_kind=project_package, package_folder=" + resultContractDefaultFolder(requirement) + ", package_entrypoint=" + entrypoint + ", package_files=[" + strings.Join(resultContractRequiredFileNames(requirement), ", ") + "]."
 		}
 		if strings.HasPrefix(issue, "missing successful write for ") {
-			return resultContractMissingWriteInstruction(issue, folder)
+			return resultContractMissingWriteInstruction(issue, folder, requirement)
 		}
 	}
 	_ = evidence
 	return ""
 }
 
-func resultContractMissingWriteInstruction(issue string, folder string) string {
+func resultContractMissingWriteInstruction(issue string, folder string, requirement *teamResultRequirement) string {
 	required := cleanEvidencePath(strings.TrimPrefix(issue, "missing successful write for "))
 	if required == "" {
 		return ""
@@ -108,9 +114,52 @@ func resultContractMissingWriteInstruction(issue string, folder string) string {
 	}
 	if strings.HasSuffix(strings.ToLower(target), ".html") {
 		parent := strings.TrimSuffix(target, "/"+pathBase(target))
-		return "Write the entrypoint with write_file at " + target + " and include package_kind=project_package, package_folder=" + parent + ", package_entrypoint=" + target + ", package_files=[index.html, README.md, PROOF.md, project-package.json]."
+		return "Write the entrypoint with write_file at " + target + " and include package_kind=project_package, package_folder=" + parent + ", package_entrypoint=" + target + ", package_files=[" + strings.Join(resultContractRequiredFileNames(requirement), ", ") + "]."
 	}
 	return "Write the missing package file with write_file at " + target + "."
+}
+
+func resultContractRequiredFileNames(requirement *teamResultRequirement) []string {
+	if requirement == nil || len(requirement.FilesRequired) == 0 {
+		return []string{"index.html"}
+	}
+	files := make([]string, 0, len(requirement.FilesRequired))
+	for _, required := range requirement.FilesRequired {
+		if name := pathBase(cleanEvidencePath(required)); name != "" {
+			files = append(files, name)
+		}
+	}
+	return uniqueResultContractStrings(files)
+}
+
+func functionalGamePackageExecutionInstruction(requirement *teamResultRequirement) string {
+	if requirement == nil || !semanticAcceptanceRequiresFunctionalGame(requirement.AcceptanceCriteria) {
+		return ""
+	}
+	return " This is a functional browser game: keep index.html a small accessible shell that loads styles.css and game.js; put the state model, canvas render loop, movement, attack, hazard, key, locked-exit win, fail/restart, and optional Web Audio behavior in game.js. Use the exact semantic targets in the contract on real controls/state surfaces. Complete one missing file per tool call, then read back index.html; do not compress the whole package into one oversized JSON mutation."
+}
+
+func containsFunctionalGameCorrectionIssue(issues []string) bool {
+	for _, issue := range issues {
+		if isFunctionalGameCorrectionIssue(issue) {
+			return true
+		}
+	}
+	return false
+}
+
+func resultContractGameScriptPath(requirement *teamResultRequirement) string {
+	folder := resultContractDefaultFolder(requirement)
+	for _, required := range requirement.FilesRequired {
+		candidate := cleanEvidencePath(required)
+		if strings.EqualFold(path.Ext(candidate), ".js") {
+			if folder != "" && !pathWithinFolder(candidate, folder) {
+				return strings.TrimRight(folder, "/") + "/" + strings.TrimLeft(candidate, "/")
+			}
+			return candidate
+		}
+	}
+	return strings.TrimRight(folder, "/") + "/game.js"
 }
 
 func resultContractRecoveryAction(requirement *teamResultRequirement, issues []string) string {
