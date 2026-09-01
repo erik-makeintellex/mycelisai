@@ -7,12 +7,13 @@ or persistence boundaries.
 
 from .api import create_app
 from .drivers import ConformanceDriver, Driver, LangGraphDriver
-from .store import InMemoryRunStore
+from .store import InMemoryRunStore, RunStore
 
 __all__ = [
     "ConformanceDriver",
     "Driver",
     "InMemoryRunStore",
     "LangGraphDriver",
+    "RunStore",
     "create_app",
 ]

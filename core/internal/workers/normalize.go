@@ -1,6 +1,8 @@
 package workers
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -61,13 +63,19 @@ func eventFromMap(raw map[string]any, fallbackRunID string, backend BackendKind)
 		kind = kindFromStatus(status)
 	}
 	event := WorkerEvent{
-		RunID:     stringValue(first(raw, "run_id", "id")),
-		Backend:   backend,
-		Kind:      kind,
-		Status:    status,
-		Message:   stringValue(raw["message"]),
-		Timestamp: time.Now().UTC(),
-		Metadata:  mapValue(raw["metadata"]),
+		EventID:      stringValue(first(raw, "event_id", "id")),
+		RunID:        stringValue(raw["run_id"]),
+		BackendRunID: fallbackRunID,
+		Backend:      backend,
+		Kind:         kind,
+		Status:       status,
+		Message:      stringValue(raw["message"]),
+		Timestamp:    time.Now().UTC(),
+		Metadata:     mapValue(raw["metadata"]),
+	}
+	if event.EventID == "" {
+		encoded, _ := json.Marshal(raw)
+		event.EventID = fmt.Sprintf("derived:%x", sha256.Sum256(encoded))
 	}
 	if event.RunID == "" {
 		event.RunID = fallbackRunID

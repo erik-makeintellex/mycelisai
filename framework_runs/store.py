@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from copy import deepcopy
 from threading import RLock
+from typing import Protocol, runtime_checkable
 
 from .domain import RunRecord
 
@@ -11,10 +12,33 @@ class StoreCapacityError(RuntimeError):
     pass
 
 
+class StoreConflictError(RuntimeError):
+    pass
+
+
+@runtime_checkable
+class RunStore(Protocol):
+    """Persistence boundary for atomic normalized run records.
+
+    Production implementations must durably preserve run identity, event order,
+    and create conflicts across process restarts.
+    """
+
+    production_ready: bool
+    storage_kind: str
+
+    def put(self, record: RunRecord) -> None: ...
+
+    def get(self, run_id: str) -> RunRecord | None: ...
+
+    def update(self, record: RunRecord) -> None: ...
+
+
 class InMemoryRunStore:
     """Bounded, process-local conformance storage; never production durable."""
 
     production_ready = False
+    storage_kind = "bounded_memory_non_production"
 
     def __init__(self, *, max_runs: int = 256, max_events_per_run: int = 256) -> None:
         if max_runs < 1 or max_events_per_run < 1:
@@ -26,6 +50,8 @@ class InMemoryRunStore:
 
     def put(self, record: RunRecord) -> None:
         with self._lock:
+            if record.run_id in self._runs:
+                raise StoreConflictError("run id already exists")
             if record.run_id not in self._runs and len(self._runs) >= self.max_runs:
                 self._prune_one_terminal_run()
             if record.run_id not in self._runs and len(self._runs) >= self.max_runs:
