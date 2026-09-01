@@ -83,7 +83,7 @@ Common runtime variables:
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
 - `MYCELIS_K8S_TEXT_MODEL_ID`: Kubernetes/Helm text model override
 - `MYCELIS_TEXT_ENGINE_API_KEY`: optional local vLLM credential, resolved by the engine launcher from the shell and then repo-local `.env` and used by Core through the `vllm` provider's `api_key_env`; no credential belongs in committed engine/provider YAML
-- `LITELLM_PROXY_API_KEY`: optional client credential for an operator-managed LiteLLM proxy; the shipped `litellm` provider remains disabled, upstream model credentials stay with the proxy, and this variable is not a proxy administration key
+- LiteLLM external-proxy inputs: `MYCELIS_PROVIDER_LITELLM_ENDPOINT`, `MYCELIS_PROVIDER_LITELLM_MODEL_ID`, `MYCELIS_PROVIDER_LITELLM_ENABLED`, and `LITELLM_PROXY_API_KEY`. The shipped provider remains disabled, upstream credentials stay with the proxy, and the key is a scoped client credential—not a proxy administration key.
 - `MYCELIS_MEDIA_ENDPOINT`, `MYCELIS_MEDIA_MODEL_ID`, `MYCELIS_MEDIA_GATEWAY_*`, `OPENAI_API_KEY`: local/private media gateway overrides and optional hosted OpenAI proof credential
 - `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, `MYCELIS_SEARCH_MAX_RESULTS`: governed search posture; default native and Helm Core search is `builtin_web`, while Compose can use self-hosted `searxng`; operators can choose `local_api` or explicit `local_sources`
 
@@ -95,6 +95,17 @@ Provider override pattern:
 - `MYCELIS_PROFILE_<PROFILE>_PROVIDER`
 
 These env overrides are for deployment-time provider definition. They are not runtime organization behavior and do not replace bundle-defined truth. The retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` must not return.
+
+Before enabling a separately operated LiteLLM proxy, preflight it without sending a completion:
+
+```bash
+uv run inv cognitive.status --litellm \
+  --litellm-endpoint=http://127.0.0.1:4000/v1 \
+  --litellm-api-key-env=LITELLM_PROXY_API_KEY \
+  --litellm-model=mycelis-default
+```
+
+Loopback proves only a host-local proxy. From Compose or Kubernetes, use an endpoint reachable from the Core container or pod and rerun the same preflight in that network context. Public endpoints must use HTTPS. A pass covers liveness, readiness, scoped-key authentication, and alias visibility only; the provider remains disabled until the separate boundary, cost, retry, data-handling, and recovery gates pass.
 
 Bootstrap truth stays:
 

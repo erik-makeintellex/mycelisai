@@ -3,7 +3,9 @@ from invoke.exceptions import Exit
 from pathlib import Path
 import os
 import re
+import urllib.request
 
+from . import cognitive_litellm
 from .config import (
     ROOT_DIR,
     ensure_managed_cache_dirs,
@@ -51,7 +53,11 @@ def _resolve_engine_secret(config, field):
     match = ENV_SECRET_REF.fullmatch(reference)
     if not match:
         raise Exit(f"{field} must be an env:NAME secret reference in engine.yaml")
-    name = match.group(1)
+    return _resolve_named_secret(match.group(1))
+
+
+def _resolve_named_secret(name):
+    """Resolve a named secret without including its value in operator output."""
     value = os.environ.get(name, "").strip()
     if not value:
         try:
@@ -270,19 +276,41 @@ def stop(c):
     print("Cognitive engine stopped.")
 
 
-@task
-def status(c):
-    """Check the status of the optional local cognitive engine services."""
+@task(help={
+    "litellm": "Preflight an externally managed LiteLLM proxy without sending a completion.",
+    "litellm_endpoint": "Explicit OpenAI-compatible proxy endpoint ending in /v1.",
+    "litellm_api_key_env": "Scoped client-key env reference; must be LITELLM_PROXY_API_KEY.",
+    "litellm_model": "Expected exact LiteLLM model alias.",
+    "timeout": "Per-request timeout in seconds (1-30).",
+})
+def status(
+    c,
+    litellm=False,
+    litellm_endpoint="",
+    litellm_api_key_env="",
+    litellm_model="",
+    timeout=5,
+):
+    """Check local cognitive services or preflight an external LiteLLM proxy."""
+    if litellm:
+        cognitive_litellm.preflight(
+            litellm_endpoint,
+            litellm_api_key_env,
+            litellm_model,
+            timeout,
+        )
+        return
+    if litellm_endpoint or litellm_api_key_env or litellm_model:
+        raise Exit("pass --litellm to use the external proxy preflight mode")
+
     _require_supported_local_engine_host()
-    import urllib.request
-    import json
 
     cfg = _load_engine_config()
 
     # Check vLLM
     text_port = cfg["text"]["port"]
     try:
-        req = urllib.request.urlopen(f"http://localhost:{text_port}/health", timeout=3)
+        urllib.request.urlopen(f"http://localhost:{text_port}/health", timeout=3)
         print(f"  Text Engine (vLLM) : UP (port {text_port})")
     except Exception:
         print(f"  Text Engine (vLLM) : DOWN (port {text_port})")
@@ -290,7 +318,7 @@ def status(c):
     # Check Media Server
     media_port = cfg["media"]["port"]
     try:
-        req = urllib.request.urlopen(f"http://localhost:{media_port}/health", timeout=3)
+        urllib.request.urlopen(f"http://localhost:{media_port}/health", timeout=3)
         print(f"  Media Engine       : UP (port {media_port})")
     except Exception:
         print(f"  Media Engine       : DOWN (port {media_port})")

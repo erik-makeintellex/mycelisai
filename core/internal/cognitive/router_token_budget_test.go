@@ -2,6 +2,7 @@ package cognitive
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -9,9 +10,24 @@ import (
 type captureAdapter struct {
 	lastOpts InferOptions
 	response *InferResponse
+	calls    int
+}
+
+type failingGatewayAdapter struct {
+	probeCalls int
+}
+
+func (a *failingGatewayAdapter) Infer(context.Context, string, InferOptions) (*InferResponse, error) {
+	return nil, errors.New("gateway inference failed")
+}
+
+func (a *failingGatewayAdapter) Probe(context.Context) (bool, error) {
+	a.probeCalls++
+	return false, errors.New("gateway unavailable")
 }
 
 func (a *captureAdapter) Infer(_ context.Context, _ string, opts InferOptions) (*InferResponse, error) {
+	a.calls++
 	a.lastOpts = opts
 	if a.response != nil {
 		return a.response, nil
@@ -77,6 +93,38 @@ func TestInferWithContract_DoesNotEstimateMissingUsage(t *testing.T) {
 	}
 	if resp.TokensUsed != 0 || r.totalTokens.Load() != 0 {
 		t.Fatalf("missing usage was estimated: response %d, recorded %d", resp.TokensUsed, r.totalTokens.Load())
+	}
+}
+
+func TestInferWithContract_ModelGatewayFailureDoesNotCrossBoundary(t *testing.T) {
+	gateway := &failingGatewayAdapter{}
+	local := &captureAdapter{}
+	r := &Router{
+		Config: &BrainConfig{
+			Providers: map[string]ProviderConfig{
+				"gateway": {
+					Type: "openai_compatible", ModelID: "mycelis-default", Enabled: true,
+					ModelGateway: true, DataBoundary: "leaves_org", Location: "remote",
+				},
+				"ollama": {
+					Type: "openai_compatible", ModelID: "qwen3:8b", Enabled: true,
+					DataBoundary: "local_only", Location: "local",
+				},
+			},
+			Profiles: map[string]string{"chat": "gateway"},
+		},
+		Adapters: map[string]LLMProvider{"gateway": gateway, "ollama": local},
+	}
+
+	_, err := r.InferWithContract(context.Background(), InferRequest{Profile: "chat", Prompt: "hello"})
+	if err == nil || err.Error() != "gateway inference failed" {
+		t.Fatalf("InferWithContract error = %v, want original gateway failure", err)
+	}
+	if gateway.probeCalls != 0 || local.calls != 0 {
+		t.Fatalf("gateway probe calls = %d, local inference calls = %d; gateway failure must fail closed", gateway.probeCalls, local.calls)
+	}
+	if r.Config.Profiles["chat"] != "gateway" {
+		t.Fatalf("chat profile rerouted to %q across gateway boundary", r.Config.Profiles["chat"])
 	}
 }
 

@@ -25,6 +25,7 @@ def test_litellm_uses_disabled_openai_compatible_provider_contract():
 
     for provider in (core_provider, chart_provider):
         assert provider["type"] == "openai_compatible"
+        assert provider["model_gateway"] is True
         assert provider["model_id"] == "mycelis-default"
         assert provider["api_key"] == ""
         assert provider["api_key_env"] == "LITELLM_PROXY_API_KEY"

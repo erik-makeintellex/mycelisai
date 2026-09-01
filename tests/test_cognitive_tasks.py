@@ -56,3 +56,39 @@ def test_engine_secret_rejects_unmanaged_reference(reference):
             {"api_key_secret_ref": reference},
             "api_key_secret_ref",
         )
+
+
+def test_status_routes_litellm_mode_without_local_engine_host_gate(monkeypatch):
+    calls = []
+    monkeypatch.setattr(cognitive, "is_windows", lambda: True)
+    monkeypatch.setattr(
+        cognitive.cognitive_litellm,
+        "preflight",
+        lambda *args: calls.append(args),
+    )
+
+    cognitive.status.body(
+        Context(),
+        litellm=True,
+        litellm_endpoint="https://gateway.example.test/v1",
+        litellm_api_key_env="LITELLM_PROXY_API_KEY",
+        litellm_model="mycelis-default",
+        timeout=7,
+    )
+
+    assert calls == [
+        (
+            "https://gateway.example.test/v1",
+            "LITELLM_PROXY_API_KEY",
+            "mycelis-default",
+            7,
+        )
+    ]
+
+
+def test_status_requires_explicit_litellm_mode_for_gateway_options():
+    with pytest.raises(Exit, match="pass --litellm"):
+        cognitive.status.body(
+            Context(),
+            litellm_endpoint="https://gateway.example.test/v1",
+        )

@@ -15,6 +15,7 @@ providers:
         enabled: false
     litellm:
         type: openai_compatible
+        model_gateway: true
         endpoint: http://127.0.0.1:4000/v1
         model_id: mycelis-default
         api_key: ""

@@ -51,12 +51,16 @@ LiteLLM proof is OpenAI-compatible transport conformance, not permission to star
 
 ```bash
 go -C core test ./internal/cognitive -count=1
-UV_CACHE_DIR=/tmp/mycelis-litellm-cache uv run --no-sync pytest tests/test_litellm_config_contract.py tests/test_k8s_chart_contract.py tests/test_runtime_deploy_contract_text.py -q
+UV_CACHE_DIR=/tmp/mycelis-litellm-cache uv run --no-sync pytest tests/test_litellm_config_contract.py tests/test_cognitive_litellm_*.py tests/test_cognitive_tasks.py tests/test_k8s_chart_contract.py tests/test_runtime_deploy_contract_text.py -q
 ```
 
 The Go gate must use a local mock upstream and prove the configured provider id survives the call, the actual response model is retained, reported token usage is exact rather than character-estimated, tool calls keep their normalized Mycelis payload, authentication uses only the resolved provider secret, and gateway failures expose neither raw upstream bodies nor secrets. The configuration gate must prove source and Helm defaults declare `litellm` as disabled, use the existing `openai_compatible` type, reference `LITELLM_PROXY_API_KEY`, and contain no raw proxy or upstream credential. It must also prove enabling the chart requires an explicit endpoint and existing Secret while leaving proxy installation external. No test in this slice installs LiteLLM, calls a hosted model, starts services, or claims budget/rate-limit enforcement.
 
 Production gateway proof is a separate later gate: authenticate the proxy, partition aliases and fallback pools by `local_only` versus approved remote boundaries, correlate usage to Mycelis scope, reconcile model/token/cost records, test bounded retry and rate-limit behavior, review logs/callbacks/caching, prove persistence and distributed limiting where configured, and confirm no browser or framework worker receives administration or upstream secrets.
+
+The current external-proxy preflight is narrower and sends no completion: `uv run inv cognitive.status --litellm --litellm-endpoint=https://gateway.example.com/v1 --litellm-api-key-env=LITELLM_PROXY_API_KEY --litellm-model=mycelis-default`.
+
+Unit proof must cover endpoint validation, public HTTPS enforcement, redirect rejection, bounded timeouts and response size, liveness/readiness, positive and negative scoped-key authentication, exact alias matching, normalized failures, and absence of secrets or response bodies in output. Go proof must cover the explicit gateway marker and boundary, keyed pseudonymous correlation for authoritative swarm scope, omission for ordinary providers, and fail-closed gateway errors with no legacy cross-provider reroute. A live preflight pass proves only reachability, readiness, authentication, and alias visibility. Hosted inference, non-swarm correlation, cost reconciliation, fallback isolation inside the proxy, retry/rate-limit behavior, logging/callback/cache posture, and persistence/Redis recovery remain separate required evidence.
 
 ### Focused Google Workspace authentication proof
 

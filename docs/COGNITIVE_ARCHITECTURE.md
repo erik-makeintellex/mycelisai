@@ -103,14 +103,25 @@ Ownership is deliberately split:
 - Gateway usage and cost records are evidence for reconciliation. They do not approve work, complete an Outcome, or replace Core mission events.
 - Prompt/response logging, callbacks, caching, and persistence remain disabled until retention, redaction, tenancy, and recovery are certified. Browser clients and framework workers never receive gateway administration or upstream secrets.
 
-The first slice is conformance-only: the disabled provider proves OpenAI-compatible requests, tool-call normalization, configured provider identity, actual gateway-reported model identity, and exact reported token usage. It does not install or start LiteLLM. Production enablement additionally requires an authenticated proxy deployment, dedicated persistence and distributed rate-limit posture where used, scoped correlation, cost reconciliation, failure-mode proof, and operations certification.
+The first slice is source conformance: the disabled provider proves OpenAI-compatible requests, tool-call normalization, configured provider identity, actual gateway-reported model identity, and total token usage when the upstream reports it. The production-certification follow-up adds `model_gateway: true`, requires an explicit `local_only` or `leaves_org` boundary, prevents legacy cross-provider recovery after a gateway failure, and turns authoritative swarm run/team/agent scope into a keyed pseudonymous OpenAI `user` token. Raw identifiers are not sent. Non-swarm call paths remain uncorrelated, so the provider stays disabled.
+
+An operator can preflight a separately operated proxy without sending a completion:
+
+```bash
+uv run inv cognitive.status --litellm \
+  --litellm-endpoint=https://gateway.example.com/v1 \
+  --litellm-api-key-env=LITELLM_PROXY_API_KEY \
+  --litellm-model=mycelis-default
+```
+
+The preflight checks liveness, readiness, scoped-key authentication, and exact alias visibility with normalized failures. It proves connectivity and configuration only. It does not prove hosted inference, all-path correlation, alias/fallback isolation, cost reconciliation, retry/rate-limit behavior, logging/callback/cache posture, persistence/Redis recovery, or Outcome delivery. Loopback HTTP is accepted for a separately operated local proxy; a public endpoint must use HTTPS, and Compose/Kubernetes must use an address reachable from the Core runtime network.
 
 ## AI Engines UI
 
 Navigate to `/settings` → **AI Engines** (Advanced mode):
 
 - Click a **profile** to change which provider it routes to
-- Click a **provider** to configure endpoint, model ID, and API keys
+- Click a **provider** to configure its endpoint, model alias, and deployment secret-reference environment name; raw API keys are rejected
 - Changes persist to `cognitive.yaml` via `PUT /api/v1/cognitive/profiles` and `PUT /api/v1/cognitive/providers/{id}`
 
 Compatibility organization contexts also expose an output-model routing layer. That layer does not replace provider configuration; it selects which configured local models are used for delivery types such as general text, research and reasoning, code generation, and vision analysis.
@@ -160,6 +171,7 @@ providers:
 
   litellm:
     type: "openai_compatible"
+    model_gateway: true
     endpoint: "http://127.0.0.1:4000/v1"
     model_id: "mycelis-default"
     api_key: ""

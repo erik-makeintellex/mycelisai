@@ -2,6 +2,7 @@ package cognitive
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -30,6 +31,7 @@ func TestOpenAIAdapter_InferLiteLLMCompatibleResponse(t *testing.T) {
 			Temperature float64       `json:"temperature"`
 			MaxTokens   int           `json:"max_tokens"`
 			Stop        []string      `json:"stop"`
+			User        string        `json:"user"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 			t.Errorf("decode request: %v", err)
@@ -42,6 +44,14 @@ func TestOpenAIAdapter_InferLiteLLMCompatibleResponse(t *testing.T) {
 		}
 		if request.Temperature != 0.2 || request.MaxTokens != 321 || len(request.Stop) != 1 || request.Stop[0] != "DONE" {
 			t.Errorf("request options = temperature %v, max_tokens %d, stop %#v", request.Temperature, request.MaxTokens, request.Stop)
+		}
+		if !strings.HasPrefix(request.User, "mycelis-v1-") {
+			t.Errorf("request user = %q, want opaque Mycelis correlation", request.User)
+		}
+		for _, rawID := range []string{"run-123", "delivery-team", "coder-1"} {
+			if strings.Contains(request.User, rawID) {
+				t.Errorf("request user exposed raw identifier %q: %q", rawID, request.User)
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -57,10 +67,12 @@ func TestOpenAIAdapter_InferLiteLLMCompatibleResponse(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	adapter, err := NewOpenAIAdapter(ProviderConfig{
-		Type:       "openai_compatible",
-		Endpoint:   server.URL + "/v1",
-		ModelID:    "team-coder",
-		AuthKeyEnv: "LITELLM_PROXY_API_KEY_TEST",
+		Type:         "openai_compatible",
+		Endpoint:     server.URL + "/v1",
+		ModelID:      "team-coder",
+		AuthKeyEnv:   "LITELLM_PROXY_API_KEY_TEST",
+		ModelGateway: true,
+		DataBoundary: "leaves_org",
 	})
 	if err != nil {
 		t.Fatalf("NewOpenAIAdapter: %v", err)
@@ -71,6 +83,7 @@ func TestOpenAIAdapter_InferLiteLLMCompatibleResponse(t *testing.T) {
 		MaxTokens:   321,
 		Stop:        []string{"DONE"},
 		Messages:    []ChatMessage{{Role: "system", Content: "stay bounded"}},
+		Correlation: InferenceCorrelation{RunID: "run-123", TeamID: "delivery-team", AgentID: "coder-1"},
 	})
 	if err != nil {
 		t.Fatalf("Infer: %v", err)
@@ -90,7 +103,16 @@ func TestOpenAIAdapter_InferLiteLLMCompatibleResponse(t *testing.T) {
 }
 
 func TestOpenAIAdapter_InferLiteLLMToolCall(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			User string `json:"user"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Errorf("decode request: %v", err)
+		}
+		if request.User != "" {
+			t.Errorf("ordinary provider sent gateway correlation user %q", request.User)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"id":"chatcmpl-tool",
@@ -112,7 +134,9 @@ func TestOpenAIAdapter_InferLiteLLMToolCall(t *testing.T) {
 		t.Fatalf("NewOpenAIAdapter: %v", err)
 	}
 
-	resp, err := adapter.Infer(context.Background(), "write the result", InferOptions{})
+	resp, err := adapter.Infer(context.Background(), "write the result", InferOptions{
+		Correlation: InferenceCorrelation{RunID: "run-ordinary", TeamID: "ordinary-team", AgentID: "ordinary-agent"},
+	})
 	if err != nil {
 		t.Fatalf("Infer: %v", err)
 	}
@@ -122,6 +146,59 @@ func TestOpenAIAdapter_InferLiteLLMToolCall(t *testing.T) {
 	}
 	if resp.ModelUsed != "anthropic/claude-sonnet-4" || resp.TokensUsed != 15 {
 		t.Fatalf("response metadata = model %q, tokens %d", resp.ModelUsed, resp.TokensUsed)
+	}
+}
+
+func TestOpenAIAdapter_ModelGatewayRequiresExplicitDataBoundary(t *testing.T) {
+	_, err := NewOpenAIAdapter(ProviderConfig{
+		Type:         "openai_compatible",
+		Endpoint:     "http://127.0.0.1:4000/v1",
+		ModelID:      "mycelis-default",
+		AuthKey:      "test-key",
+		ModelGateway: true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "explicit local_only or leaves_org") {
+		t.Fatalf("NewOpenAIAdapter error = %v, want explicit gateway boundary failure", err)
+	}
+}
+
+func TestOpaqueGatewayCorrelation_IsStableBoundedAndOpaque(t *testing.T) {
+	correlation := InferenceCorrelation{RunID: "run-123", TeamID: "delivery-team", AgentID: "coder-1"}
+	key := deriveGatewayCorrelationKey("scoped-proxy-client-key")
+	first, err := opaqueGatewayCorrelation(correlation, key)
+	if err != nil {
+		t.Fatalf("opaqueGatewayCorrelation: %v", err)
+	}
+	second, err := opaqueGatewayCorrelation(correlation, key)
+	if err != nil {
+		t.Fatalf("opaqueGatewayCorrelation repeat: %v", err)
+	}
+	changed, err := opaqueGatewayCorrelation(InferenceCorrelation{RunID: "run-124", TeamID: "delivery-team", AgentID: "coder-1"}, key)
+	if err != nil {
+		t.Fatalf("opaqueGatewayCorrelation changed: %v", err)
+	}
+	if first == "" || first != second || first == changed {
+		t.Fatalf("correlation tokens first=%q second=%q changed=%q", first, second, changed)
+	}
+	otherDeployment, err := opaqueGatewayCorrelation(correlation, deriveGatewayCorrelationKey("different-scoped-key"))
+	if err != nil {
+		t.Fatalf("opaqueGatewayCorrelation other deployment: %v", err)
+	}
+	if first == otherDeployment {
+		t.Fatal("correlation token must be deployment-key scoped")
+	}
+	if len(first) != len("mycelis-v1-")+sha256.Size*2 {
+		t.Fatalf("correlation token length = %d, want bounded digest", len(first))
+	}
+	for _, rawID := range []string{correlation.RunID, correlation.TeamID, correlation.AgentID} {
+		if strings.Contains(first, rawID) {
+			t.Fatalf("correlation token exposed raw identifier %q", rawID)
+		}
+	}
+
+	_, err = opaqueGatewayCorrelation(InferenceCorrelation{TeamID: "unsafe team/id"}, key)
+	if err == nil || strings.Contains(err.Error(), "unsafe team/id") {
+		t.Fatalf("unsafe correlation error = %v, want redacted validation failure", err)
 	}
 }
 

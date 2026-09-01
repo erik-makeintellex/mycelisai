@@ -2,20 +2,30 @@ package cognitive
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	openai "github.com/sashabaranov/go-openai"
 )
 
 type OpenAIAdapter struct {
-	client   *openai.Client
-	model    string
-	provider string
+	client       *openai.Client
+	model        string
+	provider     string
+	modelGateway bool
+	// gatewayCorrelationKey is a one-way derivative of the resolved scoped
+	// gateway client key. The raw credential is never retained in adapter-owned
+	// correlation state.
+	gatewayCorrelationKey []byte
 }
+
+var safeInferenceCorrelationID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
 
 func NewOpenAIAdapter(config ProviderConfig) (*OpenAIAdapter, error) {
 	// 1. Resolve Auth Key
@@ -26,11 +36,18 @@ func NewOpenAIAdapter(config ProviderConfig) (*OpenAIAdapter, error) {
 		}
 	}
 	// Fallback for local providers (Ollama needs dummy key)
-	if apiKey == "" && config.Type == "openai_compatible" {
+	if apiKey == "" && config.Type == "openai_compatible" && !config.ModelGateway {
 		apiKey = "dummy"
 	}
 	if apiKey == "" {
 		return nil, fmt.Errorf("missing api key")
+	}
+	if config.ModelGateway {
+		switch strings.TrimSpace(config.DataBoundary) {
+		case "local_only", "leaves_org":
+		default:
+			return nil, fmt.Errorf("model gateway requires an explicit local_only or leaves_org data boundary")
+		}
 	}
 
 	// 2. Configure Client
@@ -44,10 +61,17 @@ func NewOpenAIAdapter(config ProviderConfig) (*OpenAIAdapter, error) {
 		provider = "openai"
 	}
 
+	var gatewayCorrelationKey []byte
+	if config.ModelGateway {
+		gatewayCorrelationKey = deriveGatewayCorrelationKey(apiKey)
+	}
+
 	return &OpenAIAdapter{
-		client:   openai.NewClientWithConfig(clientConfig),
-		model:    config.ModelID,
-		provider: provider,
+		client:                openai.NewClientWithConfig(clientConfig),
+		model:                 config.ModelID,
+		provider:              provider,
+		modelGateway:          config.ModelGateway,
+		gatewayCorrelationKey: gatewayCorrelationKey,
 	}, nil
 }
 
@@ -76,6 +100,13 @@ func (a *OpenAIAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 		MaxTokens:   opts.MaxTokens,
 		Stop:        opts.Stop,
 	}
+	if a.modelGateway {
+		correlationUser, err := opaqueGatewayCorrelation(opts.Correlation, a.gatewayCorrelationKey)
+		if err != nil {
+			return nil, fmt.Errorf("invalid model gateway correlation: %w", err)
+		}
+		reqBody.User = correlationUser
+	}
 
 	resp, err := a.client.CreateChatCompletion(ctx, reqBody)
 	if err != nil {
@@ -98,6 +129,44 @@ func (a *OpenAIAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 		Provider:   a.provider,
 		TokensUsed: resp.Usage.TotalTokens,
 	}, nil
+}
+
+func deriveGatewayCorrelationKey(apiKey string) []byte {
+	derived := sha256.Sum256([]byte("mycelis:model-gateway-correlation-key:v1\x00" + apiKey))
+	key := make([]byte, len(derived))
+	copy(key, derived[:])
+	return key
+}
+
+func opaqueGatewayCorrelation(correlation InferenceCorrelation, key []byte) (string, error) {
+	values := []struct {
+		name  string
+		value string
+	}{
+		{name: "run_id", value: strings.TrimSpace(correlation.RunID)},
+		{name: "team_id", value: strings.TrimSpace(correlation.TeamID)},
+		{name: "agent_id", value: strings.TrimSpace(correlation.AgentID)},
+	}
+
+	hasScope := false
+	if len(key) != sha256.Size {
+		return "", fmt.Errorf("gateway correlation key is unavailable")
+	}
+	hash := hmac.New(sha256.New, key)
+	_, _ = hash.Write([]byte("mycelis:model-gateway-correlation:v1\x00"))
+	for _, item := range values {
+		if item.value != "" {
+			hasScope = true
+			if !safeInferenceCorrelationID.MatchString(item.value) {
+				return "", fmt.Errorf("%s is not a bounded identifier", item.name)
+			}
+		}
+		_, _ = fmt.Fprintf(hash, "%s:%d:%s\x00", item.name, len(item.value), item.value)
+	}
+	if !hasScope {
+		return "", nil
+	}
+	return fmt.Sprintf("mycelis-v1-%x", hash.Sum(nil)), nil
 }
 
 func normalizeOpenAIMessage(msg openai.ChatCompletionMessage) string {

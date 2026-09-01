@@ -56,6 +56,9 @@ type ProviderConfig struct {
 	ModelID    string `yaml:"model_id" json:"model_id"`           // e.g. "qwen2.5-coder:7b"
 	AuthKey    string `yaml:"api_key" json:"-"`                   // NEVER expose in API responses
 	AuthKeyEnv string `yaml:"api_key_env" json:"-"`               // NEVER expose in API responses
+	// ModelGateway marks an OpenAI-compatible provider as an external model
+	// gateway boundary. It never transfers routing, approval, or proof authority.
+	ModelGateway bool `yaml:"model_gateway,omitempty" json:"model_gateway,omitempty"`
 
 	// Provider orchestration metadata
 	Location           string   `yaml:"location" json:"location"`                                             // "local" | "remote"
@@ -119,6 +122,7 @@ type InferOptions struct {
 	MaxTokens   int
 	Stop        []string
 	Messages    []ChatMessage // Optional: Structured messages (overrides prompt if supported)
+	Correlation InferenceCorrelation
 }
 
 // --- Requests & Responses (Legacy/Compat) ---
@@ -129,10 +133,20 @@ type ChatMessage struct {
 }
 
 type InferRequest struct {
-	Profile  string        `json:"profile"`
-	Provider string        `json:"provider,omitempty"` // Optional explicit provider override (bypasses profile routing)
-	Prompt   string        `json:"prompt"`             // Legacy
-	Messages []ChatMessage `json:"messages,omitempty"`
+	Profile     string               `json:"profile"`
+	Provider    string               `json:"provider,omitempty"` // Optional explicit provider override (bypasses profile routing)
+	Prompt      string               `json:"prompt"`             // Legacy
+	Messages    []ChatMessage        `json:"messages,omitempty"`
+	Correlation InferenceCorrelation `json:"-"` // Internal authoritative execution scope; never accepted from API JSON.
+}
+
+// InferenceCorrelation carries only identifiers already owned by the invoking
+// Core runtime. Gateway adapters reduce it to one opaque deterministic token;
+// raw identifiers are never sent across the model boundary.
+type InferenceCorrelation struct {
+	RunID   string
+	TeamID  string
+	AgentID string
 }
 
 type InferResponse struct {

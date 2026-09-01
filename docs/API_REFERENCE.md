@@ -298,7 +298,7 @@ Provider inventory and auth contract:
 
 | Provider type | Typical provider IDs | Auth expectation | Config contract |
 | :--- | :--- | :--- | :--- |
-| `openai_compatible` | `ollama`, `vllm`, `lmstudio`, disabled `litellm`, custom gateways | `Authorization: Bearer <resolved secret>` when the upstream checks keys. Local tools such as Ollama can ignore the placeholder value; LiteLLM uses `LITELLM_PROXY_API_KEY` and keeps upstream credentials gateway-side. | `endpoint`, `model_id`, optional `api_key_env`; future `secret_ref` |
+| `openai_compatible` | `ollama`, `vllm`, `lmstudio`, disabled `litellm`, custom gateways | `Authorization: Bearer <resolved secret>` when the upstream checks keys. Local tools such as Ollama can ignore the placeholder value; LiteLLM uses `LITELLM_PROXY_API_KEY` and keeps upstream credentials gateway-side. | `endpoint`, `model_id`, optional `api_key_env`; infrastructure-owned `model_gateway`; future `secret_ref` |
 | `openai` | `production_gpt4` | `Authorization: Bearer $OPENAI_API_KEY` | `endpoint=https://api.openai.com/v1`, `api_key_env=OPENAI_API_KEY` |
 | `anthropic` | `production_claude` | `x-api-key: $ANTHROPIC_API_KEY` plus `anthropic-version` | `api_key_env=ANTHROPIC_API_KEY`, optional custom endpoint |
 | `google` | `production_gemini` | `x-goog-api-key: $GEMINI_API_KEY` | `api_key_env=GEMINI_API_KEY`, endpoint defaults to the Gemini `models` REST root |
@@ -308,5 +308,7 @@ Implementation notes:
 - provider secrets resolve through env/secret references; raw `api_key` update payloads are rejected by provider-management APIs
 - provider reads never return raw secret values; safe configuration responses may expose configured/readiness posture only
 - LiteLLM is an optional model gateway, not an execution backend: Core still owns data-boundary/provider eligibility, profiles, approvals, semantic budgets, audit, and proof; gateway fallbacks may not cross an approved boundary
+- `model_gateway` is infrastructure-owned and not a raw-key/browser control. Gateway inference from authoritative swarm scope carries only a keyed pseudonymous correlation value; direct and other non-swarm inference remains uncorrelated in this slice.
+- inference `provider` is the configured Mycelis route, `model_used` is the upstream-reported model when present, and `tokens_used` is upstream-reported total tokens—not a cost record or Outcome proof
 - the canonical secret boundary is defined in [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
 - for local-model switching and profile routing, see [Local Dev Workflow](LOCAL_DEV_WORKFLOW.md) and [AI Provider Runtime](COGNITIVE_ARCHITECTURE.md)

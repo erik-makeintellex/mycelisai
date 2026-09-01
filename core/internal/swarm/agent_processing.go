@@ -267,7 +267,16 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 	if a.Manifest.Model != "" {
 		profile = a.Manifest.Model
 	}
-	return cognitive.InferRequest{Profile: profile, Provider: a.Manifest.Provider, Messages: messages}, profile
+	return cognitive.InferRequest{
+		Profile:  profile,
+		Provider: a.Manifest.Provider,
+		Messages: messages,
+		Correlation: cognitive.InferenceCorrelation{
+			RunID:   a.runID,
+			TeamID:  a.TeamID,
+			AgentID: a.Manifest.ID,
+		},
+	}, profile
 }
 
 func agentProfileContextDirective(manifest protocol.AgentManifest) string {

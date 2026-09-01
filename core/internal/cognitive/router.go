@@ -187,6 +187,7 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 		Temperature: 0.7, // TODO: Load from Profile config
 		MaxTokens:   providerCfg.MaxOutputTokens,
 		Messages:    req.Messages,
+		Correlation: req.Correlation,
 	}
 
 	resp, err := adapter.Infer(ctx, req.Prompt, opts)
@@ -194,6 +195,12 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 		r.finalizeInferenceResponse(providerID, resp)
 	}
 	if err != nil {
+		// A configured model gateway is already the boundary selected by Core.
+		// The legacy discovery fallback is not boundary-aware, so fail closed
+		// here rather than risk re-routing this request across data boundaries.
+		if providerCfg.ModelGateway {
+			return nil, err
+		}
 		// --- Runtime Self-Recovery ---
 		// If inference fails, we should check if the provider is still healthy.
 		// If dead, we trigger AutoConfigure and retry ONCE.

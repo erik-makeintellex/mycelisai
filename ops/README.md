@@ -211,7 +211,9 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **Up**: `uv run inv cognitive.up`
 - **Stop**: `uv run inv cognitive.stop`
 - **Status**: `uv run inv cognitive.status`
+- **External model-gateway preflight**: `uv run inv cognitive.status --litellm --litellm-endpoint=https://gateway.example.com/v1 --litellm-api-key-env=LITELLM_PROXY_API_KEY --litellm-model=mycelis-default`
 - These are optional local helpers for vLLM/Diffusers experimentation, not part of the supported default Core + Interface runtime contract.
+- LiteLLM mode inspects an explicit separately operated proxy through liveness, readiness, scoped-key authentication, and alias discovery. It does not install, launch, reset, administer, or send a completion through LiteLLM, and a pass is not full production certification.
 - The repo-local vLLM/Diffusers helper lane is intended for supported Linux GPU hosts; on Windows, use Ollama locally for text and `cognitive.media-gateway` for Pinokio-hosted Forge/AUTOMATIC1111 or ComfyUI media generation.
 
 ## Clean Run Discipline for Runtime and Integration Checks
