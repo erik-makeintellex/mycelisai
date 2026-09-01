@@ -50,8 +50,9 @@ Current supported auth patterns:
 | Google Gemini | `google` | `x-goog-api-key: $GEMINI_API_KEY` | Remote hosted provider |
 
 Secret-handling rules:
-- prefer `api_key_env` for hosted providers so secrets stay in env or deployment secret stores
-- local engines can use `api_key` directly when a local compatibility server expects a simple static token
+- use `api_key_env` whenever a provider enforces a credential so secrets stay in env or deployment secret stores
+- the vLLM launcher reads `text.api_key_secret_ref: env:MYCELIS_TEXT_ENGINE_API_KEY` from `cognitive/config/engine.yaml`, resolves the named value from the shell and then the repo-local `.env`, and fails when it is unavailable; it has no committed credential or hardcoded fallback
+- local compatibility engines that ignore authentication may retain an explicitly non-secret placeholder client value
 - provider reads and browser inventory views never return stored secrets
 
 Official provider references:
@@ -113,7 +114,8 @@ providers:
     type: "openai_compatible"
     endpoint: "http://127.0.0.1:8000/v1"
     model_id: "qwen2.5-coder"
-    api_key: "mycelis-local"
+    api_key: ""
+    api_key_env: "MYCELIS_TEXT_ENGINE_API_KEY"
     enabled: false
 
   ollama:
@@ -156,6 +158,8 @@ media:
   endpoint: "http://127.0.0.1:8001/v1"
   model_id: "local-media"
 ```
+
+Set `MYCELIS_TEXT_ENGINE_API_KEY` in the shell or repo-local `.env` before starting vLLM through `uv run inv cognitive.llm` or `uv run inv cognitive.up`. Core's `vllm` provider resolves the same variable named by `api_key_env`, so the launcher and client cannot drift to separate committed credentials.
 
 The media block keeps a legacy `endpoint` and `model_id` surface for compatibility, but the typed `media.provider` record is the preferred contract when you want local-hosted or hosted media behavior to be explicit.
 

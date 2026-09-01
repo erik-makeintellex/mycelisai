@@ -87,8 +87,8 @@ providers:
         type: openai_compatible
         endpoint: http://127.0.0.1:11434/v1
         model_id: qwen2.5-coder
-        api_key: mycelis-local
-        api_key_env: ""
+        api_key: ""
+        api_key_env: MYCELIS_TEXT_ENGINE_API_KEY
         location: local
         data_boundary: local_only
         usage_policy: local_first

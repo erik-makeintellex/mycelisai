@@ -62,6 +62,7 @@ When running the Interface directly from `interface/`, server-side auth reads re
 Important files:
 - `.env.example`: starting point for local secret/runtime values
 - `.env.compose.example`: starting point for Compose topology
+- `cognitive/config/engine.yaml`: non-secret local engine shape plus secret references and framework-worker defaults
 - `core/config/cognitive.yaml`: provider profiles and default routing
 - `core/config/homepage.yaml`: deployer-editable branding/portal copy for authenticated entry surfaces
 - `core/config/policy.yaml`: governance rules
@@ -81,6 +82,7 @@ Common runtime variables:
 - `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
 - `MYCELIS_K8S_TEXT_MODEL_ID`: Kubernetes/Helm text model override
+- `MYCELIS_TEXT_ENGINE_API_KEY`: optional local vLLM credential, resolved by the engine launcher from the shell and then repo-local `.env` and used by Core through the `vllm` provider's `api_key_env`; no credential belongs in committed engine/provider YAML
 - `MYCELIS_MEDIA_ENDPOINT`, `MYCELIS_MEDIA_MODEL_ID`, `MYCELIS_MEDIA_GATEWAY_*`, `OPENAI_API_KEY`: local/private media gateway overrides and optional hosted OpenAI proof credential
 - `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, `MYCELIS_SEARCH_MAX_RESULTS`: governed search posture; default native and Helm Core search is `builtin_web`, while Compose can use self-hosted `searxng`; operators can choose `local_api` or explicit `local_sources`
 

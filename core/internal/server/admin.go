@@ -132,7 +132,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		LoopScheduler:       nil,
 		TemplateBundlesPath: "config/templates",
 		MCPToolExecutor:     mcpToolExecutor,
-		WorkerBackend:       workers.NewCentralBackend(),
+		WorkerBackend:       configuredWorkerExecutionBackend(),
 		DispatchOutbox:      dispatchoutbox.NewStore(db),
 		OutputValidator:     configuredOutputValidator(),
 	}

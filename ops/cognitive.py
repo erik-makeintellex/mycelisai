@@ -2,11 +2,19 @@ from invoke import task, Collection
 from invoke.exceptions import Exit
 from pathlib import Path
 import os
+import re
 
-from .config import ROOT_DIR, ensure_managed_cache_dirs, is_windows, managed_cache_env
+from .config import (
+    ROOT_DIR,
+    ensure_managed_cache_dirs,
+    is_windows,
+    managed_cache_env,
+    shell_command,
+)
 
 COGNITIVE_DIR = ROOT_DIR / "cognitive"
 ENGINE_CONFIG = COGNITIVE_DIR / "config" / "engine.yaml"
+ENV_SECRET_REF = re.compile(r"^env:([A-Za-z_][A-Za-z0-9_]*)$")
 
 
 def _task_env(extra=None):
@@ -35,6 +43,27 @@ def _load_engine_config():
         ) from exc
     with open(str(ENGINE_CONFIG)) as f:
         return yaml.safe_load(f)
+
+
+def _resolve_engine_secret(config, field):
+    """Resolve an engine secret reference from the shell or repo-local .env."""
+    reference = str(config.get(field, "")).strip()
+    match = ENV_SECRET_REF.fullmatch(reference)
+    if not match:
+        raise Exit(f"{field} must be an env:NAME secret reference in engine.yaml")
+    name = match.group(1)
+    value = os.environ.get(name, "").strip()
+    if not value:
+        try:
+            from dotenv import dotenv_values
+        except ImportError as exc:
+            raise Exit(
+                "python-dotenv is required to resolve cognitive engine secrets from .env"
+            ) from exc
+        value = str(dotenv_values(ROOT_DIR / ".env").get(name) or "").strip()
+    if not value:
+        raise Exit(f"{name} must be set in the shell or repo-local .env")
+    return value
 
 
 @task
@@ -66,7 +95,7 @@ def llm(c):
     max_len = text.get("max_model_len", 8192)
     quant = text.get("quantization", "awq")
     tp = text.get("tensor_parallel_size", 1)
-    api_key = text.get("api_key", "mycelis-local")
+    api_key = _resolve_engine_secret(text, "api_key_secret_ref")
 
     print(f"Starting vLLM text engine: {model}")
     print(f"  Host: {host}:{port}")
@@ -74,18 +103,18 @@ def llm(c):
     print(f"  Context: {max_len} tokens")
     print(f"  Quantization: {quant}")
 
-    cmd = (
-        f"uv run python -m vllm.entrypoints.openai.api_server "
-        f"--model {model} "
-        f"--host {host} "
-        f"--port {port} "
-        f"--gpu-memory-utilization {gpu_mem} "
-        f"--max-model-len {max_len} "
-        f"--quantization {quant} "
-        f"--tensor-parallel-size {tp} "
-        f"--api-key {api_key} "
-        f"--served-model-name qwen2.5-coder"
-    )
+    cmd = shell_command([
+        "uv", "run", "python", "-m", "vllm.entrypoints.openai.api_server",
+        "--model", str(model),
+        "--host", str(host),
+        "--port", str(port),
+        "--gpu-memory-utilization", str(gpu_mem),
+        "--max-model-len", str(max_len),
+        "--quantization", str(quant),
+        "--tensor-parallel-size", str(tp),
+        "--api-key", api_key,
+        "--served-model-name", "qwen2.5-coder",
+    ])
 
     with c.cd(str(COGNITIVE_DIR)):
         c.run(cmd, pty=not is_windows(), in_stream=False, env=_task_env())
@@ -178,7 +207,7 @@ def up(c):
         "--max-model-len", str(text.get("max_model_len", 8192)),
         "--quantization", text.get("quantization", "awq"),
         "--tensor-parallel-size", str(text.get("tensor_parallel_size", 1)),
-        "--api-key", text.get("api_key", "mycelis-local"),
+        "--api-key", _resolve_engine_secret(text, "api_key_secret_ref"),
         "--served-model-name", "qwen2.5-coder",
     ]
 

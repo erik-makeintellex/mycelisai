@@ -2,7 +2,6 @@ package workers
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -20,18 +19,17 @@ func (e *WorkerError) Error() string {
 }
 
 func statusError(prefix string, res *http.Response) error {
-	body, _ := io.ReadAll(io.LimitReader(res.Body, 2048))
-	message := strings.TrimSpace(string(body))
-	if message == "" {
-		message = res.Status
-	}
-	return WorkerBackendError("backend_http_error", prefix+": "+message, true)
+	return WorkerBackendError(
+		"backend_http_error",
+		fmt.Sprintf("%s: upstream returned HTTP %d", prefix, res.StatusCode),
+		true,
+	)
 }
 
 func runHandleFromMap(raw map[string]any, backend BackendKind, protocol Protocol) WorkerRunHandle {
 	now := time.Now().UTC()
 	runID := stringValue(first(raw, "run_id", "id"))
-	status := RunStatus(stringValue(raw["status"]))
+	status := normalizeRunStatus(stringValue(raw["status"]))
 	if status == "" {
 		status = StatusAccepted
 	}
@@ -57,8 +55,8 @@ func runHandleFromMap(raw map[string]any, backend BackendKind, protocol Protocol
 }
 
 func eventFromMap(raw map[string]any, fallbackRunID string, backend BackendKind) WorkerEvent {
-	status := RunStatus(stringValue(raw["status"]))
-	kind := EventKind(stringValue(first(raw, "kind", "type", "event")))
+	status := normalizeRunStatus(stringValue(raw["status"]))
+	kind := normalizeEventKind(stringValue(first(raw, "kind", "type", "event")))
 	if kind == "" {
 		kind = kindFromStatus(status)
 	}
@@ -220,6 +218,44 @@ func kindFromStatus(status RunStatus) EventKind {
 		return EventCancelled
 	default:
 		return EventProgress
+	}
+}
+
+func normalizeRunStatus(value string) RunStatus {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "accepted", "queued", "pending":
+		return StatusAccepted
+	case "running", "in_progress", "active":
+		return StatusRunning
+	case "approval_needed", "requires_approval", "requires_action":
+		return StatusApprovalNeeded
+	case "completed", "succeeded", "success":
+		return StatusCompleted
+	case "failed", "error":
+		return StatusFailed
+	case "cancelled", "canceled", "stopped":
+		return StatusCancelled
+	default:
+		return ""
+	}
+}
+
+func normalizeEventKind(value string) EventKind {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "accepted", "run.accepted", "run_accepted":
+		return EventAccepted
+	case "progress", "run.progress", "run_progress", "message":
+		return EventProgress
+	case "approval_needed", "requires_approval", "requires_action":
+		return EventApprovalNeeded
+	case "completed", "succeeded", "run.completed":
+		return EventCompleted
+	case "failed", "error", "run.failed":
+		return EventFailed
+	case "cancelled", "canceled", "stopped", "run.cancelled":
+		return EventCancelled
+	default:
+		return ""
 	}
 }
 

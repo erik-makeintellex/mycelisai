@@ -5,6 +5,7 @@
 - [Cross-Device Certification Matrix](#cross-device-certification-matrix)
 - [Thorough Release Testing Contract](#thorough-release-testing-contract)
 - [Clean First-Boot Proof](#clean-first-boot-proof)
+- [Framework Worker Adapter Gate](#framework-worker-adapter-gate)
 - [User Interaction Delivery Gate](#user-interaction-delivery-gate)
 - [Finalization Concretization Gate](#finalization-concretization-gate)
 - [Full GUI Coverage Matrix](#full-gui-coverage-matrix)
@@ -29,6 +30,19 @@
 - `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required. After baseline browser cleanup it may retry the idempotent lifecycle bring-up once after ten seconds; a second failure remains fatal and skips live browser proof. `interface.check` retries transient Windows socket-reuse failures after heavy browser proof before treating a route as failed.
 - Worker Profile changes must prove seeded locked built-ins; ConfigDocument validation; operator, workspace, organization, and built-in activation precedence from a trusted request boundary; missing/inactive/cross-scope failure; forged-lineage rejection; explicit-field preservation; capability/context/verification hydration; exact record/version/digest/tenant/scope manifest lineage; replacement and rollback behavior for new teams without mutating existing manifests; full manifest restoration across Core restart through focused persistence tests; owned QA cleanup; and the headed `soma-worker-profile-lineage-live.spec.ts` save A -> activate A -> team A -> save B -> activate B -> team B -> rollback A -> team A2 -> browser navigation/re-fetch journey. Recognized inline save, exact activate, and versioned rollback commands must build deterministic governed proposals without provider inference; source-less saves and decision questions must remain conversational. Each team confirmation must return `202 running` with pending dispatch, restore the Soma composer, and hydrate its exact snapshot after the transaction commits. The primary UI must not present legacy catalogue CRUD rows as assignable profiles. Rebuild `core/bin/server.exe` before external live proof; restarting a stale binary is not proof.
 - Playwright starts/stops the managed Next.js app, seeds a local admin web session for ordinary specs, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant; managed Playwright/build/test invocations are serial for a workspace and port.
+
+## Framework Worker Adapter Gate
+
+Framework-worker proof is contract proof, not permission to delegate production Outcomes. Run:
+
+```bash
+go -C core test ./internal/workers ./internal/server -count=1
+UV_CACHE_DIR=/tmp/mycelis-framework-runs-cache uv run --no-sync pytest tests/test_framework_runs_sidecar.py tests/test_k8s_chart_contract.py -q
+```
+
+The Go gate must prove `worker_runtime` defaults to `central`; unknown fields, old backend names, raw secrets, credential-bearing URLs, unsupported protocols/event/approval modes, invalid paths, and non-central fallback fail closed; `env:` resolution does not accept raw values; the normalized HTTP client covers health, capabilities, create/get/events/approval/stop; external output shapes normalize without granting `RunFinalizer`; and `NewExecutionBackend` rejects `framework_runs` until durable correlated projection exists. Server proof must show missing optional config keeps central behavior, an invalid explicit `MYCELIS_ENGINE_CONFIG_PATH` does not silently fall back, and external selection becomes an unavailable backend rather than central execution under the wrong policy.
+
+The Python gate must prove the bounded non-production store, normalized IDs/status/events, idempotent cancellation, central approval/denial, candidate-only completion metadata, dependency-gated LangGraph construction, and no generic LangGraph approval-resume claim. The chart contract must keep source, Core image, and Helm `engine.yaml` equal and secret-free. AG2, CrewAI, AutoGen, and Microsoft Agent Framework are not test-covered backends in this slice; documentation may name their architectural posture but must not claim installed or executable support.
 
 ### Focused Google Workspace authentication proof
 

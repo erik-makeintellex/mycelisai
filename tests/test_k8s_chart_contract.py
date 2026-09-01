@@ -22,6 +22,10 @@ HELPERS = ROOT / "charts" / "mycelis-core" / "templates" / "_helpers.tpl"
 INGRESS = ROOT / "charts" / "mycelis-core" / "templates" / "ingress.yaml"
 SERVICE_ACCOUNT = ROOT / "charts" / "mycelis-core" / "templates" / "serviceaccount.yaml"
 NETWORK_POLICY = ROOT / "charts" / "mycelis-core" / "templates" / "network-policy.yaml"
+CONFIG_MAP = ROOT / "charts" / "mycelis-core" / "templates" / "configmap-config.yaml"
+ENGINE_CONFIG = ROOT / "cognitive" / "config" / "engine.yaml"
+CHART_ENGINE_CONFIG = ROOT / "charts" / "mycelis-core" / "config" / "engine.yaml"
+CORE_DOCKERFILE = ROOT / "core" / "Dockerfile"
 
 
 @dataclass
@@ -56,6 +60,22 @@ class FakeContext(Context):
     @contextmanager
     def cd(self, _path: str):
         yield
+
+
+def test_worker_runtime_config_reaches_core_image_and_helm_without_secrets():
+    source = ENGINE_CONFIG.read_text(encoding="utf-8")
+    chart = CHART_ENGINE_CONFIG.read_text(encoding="utf-8")
+    config_map = CONFIG_MAP.read_text(encoding="utf-8")
+    deployment = DEPLOYMENT.read_text(encoding="utf-8")
+    dockerfile = CORE_DOCKERFILE.read_text(encoding="utf-8")
+
+    assert chart == source
+    assert 'backend: "central"' in source
+    assert 'api_key_secret_ref: ""' in source
+    assert "api_key:" not in source
+    assert 'engine.yaml: |-\n{{ .Files.Get "config/engine.yaml"' in config_map
+    assert "- key: engine.yaml\n                path: engine.yaml" in deployment
+    assert "COPY cognitive/config/engine.yaml /core/config/engine.yaml" in dockerfile
 
 
 def test_chart_exposes_first_enterprise_k8s_override_surfaces():

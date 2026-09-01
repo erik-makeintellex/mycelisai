@@ -6,6 +6,8 @@ metadata:
   labels:
     app: {{ .Chart.Name }}
 data:
+  engine.yaml: |-
+{{ .Files.Get "config/engine.yaml" | nindent 4 }}
   cognitive.yaml: |-
 {{ .Files.Get "config/cognitive.yaml" | nindent 4 }}
   policy.yaml: |-

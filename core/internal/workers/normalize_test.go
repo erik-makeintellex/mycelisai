@@ -1,6 +1,26 @@
 package workers
 
-import "testing"
+import (
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func TestStatusErrorDoesNotExposeUpstreamBody(t *testing.T) {
+	res := &http.Response{
+		StatusCode: http.StatusInternalServerError,
+		Body:       io.NopCloser(strings.NewReader(`{"secret":"leak-me"}`)),
+	}
+
+	err := statusError("framework runs request", res)
+	if strings.Contains(err.Error(), "leak-me") {
+		t.Fatalf("error exposed upstream response body: %v", err)
+	}
+	if !strings.Contains(err.Error(), "HTTP 500") {
+		t.Fatalf("error = %q, want status code", err)
+	}
+}
 
 func TestResultFromMapNormalizesOutputsAndOutputRefs(t *testing.T) {
 	result := resultFromMap(map[string]any{
@@ -53,7 +73,7 @@ func TestEventFromMapNormalizesTopLevelOutputRefs(t *testing.T) {
 				"entrypoint": "generated/game/index.html",
 			},
 		},
-	}, "run-1", BackendHermesAPI)
+	}, "run-1", BackendFrameworkRuns)
 
 	if event.Kind != EventCompleted {
 		t.Fatalf("kind = %s, want %s", event.Kind, EventCompleted)
@@ -66,5 +86,16 @@ func TestEventFromMapNormalizesTopLevelOutputRefs(t *testing.T) {
 	}
 	if got := event.Result.Outputs[0]; got.ID != "output-1" || got.Name != "Playable package" || got.URI != "generated/game/index.html" {
 		t.Fatalf("output = %#v", got)
+	}
+}
+
+func TestRunAndEventStatusAliasesNormalize(t *testing.T) {
+	handle := runHandleFromMap(map[string]any{"id": "run-1", "status": "in_progress"}, BackendFrameworkRuns, ProtocolRunsAPI)
+	if handle.Status != StatusRunning {
+		t.Fatalf("status = %q, want %q", handle.Status, StatusRunning)
+	}
+	event := eventFromMap(map[string]any{"type": "requires_action", "status": "requires_action"}, "run-1", BackendFrameworkRuns)
+	if event.Kind != EventApprovalNeeded || event.Status != StatusApprovalNeeded {
+		t.Fatalf("event = %#v", event)
 	}
 }

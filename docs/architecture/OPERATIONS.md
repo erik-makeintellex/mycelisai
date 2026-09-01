@@ -219,6 +219,7 @@ dependency bootstrap to preserve a clean lockfile and fail before validation if 
 Configuration sources:
 - `.env`: secrets and host-local runtime values
 - `.env.compose`: Compose topology
+- `cognitive/config/engine.yaml`: cognitive-engine shape and framework-neutral worker-runtime defaults
 - `core/config/cognitive.yaml`: provider profiles/routing
 - `core/config/homepage.yaml`: deployer branding/portal copy retained for authenticated entry surfaces
 - `core/config/policy.yaml`: governance
@@ -228,7 +229,35 @@ Configuration sources:
 
 Provider/media env overrides are deployment-time infrastructure configuration only. Use `MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID`, `MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, `MYCELIS_MEDIA_MODEL_ID`, and `MYCELIS_MEDIA_GATEWAY_*`; the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` must not return. `Bundle -> Instantiated Organization -> Inheritance -> Routing` remains authoritative, so do not treat env overrides as runtime organization behavior.
 
-The Helm chart mounts this runtime config tree at `/core/config`.
+The Helm chart mounts this runtime config tree at `/core/config`. The source and chart copies of `engine.yaml` are exact and contain secret references only. For the optional local vLLM launcher, `text.api_key_secret_ref` names `env:MYCELIS_TEXT_ENGINE_API_KEY`; `cognitive.llm` and `cognitive.up` resolve it from the shell first and then the repo-local `.env`, fail if it is unavailable, and do not supply a hardcoded fallback. Core's `vllm` provider resolves that same variable through `api_key_env`.
+
+Framework-worker configuration lives only under `worker_runtime` in `cognitive/config/engine.yaml`. Core checks `MYCELIS_ENGINE_CONFIG_PATH` first, then packaged `config/engine.yaml` and source `cognitive/config/engine.yaml` or `../cognitive/config/engine.yaml` paths. Source, Core image, and Helm carry the same file. Unknown fields fail closed. The committed defaults preserve central behavior:
+
+```yaml
+worker_runtime:
+  backend: central
+  base_url: ""
+  api_key_secret_ref: ""
+  capabilities_endpoint: /v1/capabilities
+  health_endpoint: /health
+  preferred_protocol: runs_api
+  session_key_strategy: org_project_run
+  approval_mode: mycelis_control_plane
+  event_stream_mode: sse
+  timeout_policy: {connect_ms: 5000, run_ms: 900000, stream_ms: 900000}
+  tool_policy: {allow_network: false, allow_files: false, allow_browser: false, allowed_tools: []}
+  fallback_backend: central
+```
+
+`framework_runs` is the only external backend name. It requires an absolute HTTP(S) `base_url` without embedded credentials, query, or fragment; absolute health/capability paths; `runs_api`; SSE; central approval; non-negative timeouts; and central fallback. `api_key_secret_ref` accepts `env:NAME` through the current deployment resolver; `secret://...` is valid only when a deployment supplies its own resolver. Never put a raw token in the YAML or URL. Core may construct and probe this client, but confirmed Outcome execution intentionally returns unavailable until durable correlated external-event projection is implemented. Do not change the committed backend from `central` as an enablement shortcut.
+
+The bundled `framework_runs` Python service is protocol-conformance tooling, not a production worker service. It binds `127.0.0.1:8091` by default (`MYCELIS_FRAMEWORK_RUNS_HOST` and `MYCELIS_FRAMEWORK_RUNS_PORT` override the local proof bind), reports `framework runs facade ready` from its health endpoint, uses bounded process-local memory, performs no authentication of inbound requests, and refuses to start unless the operator explicitly opts into the conformance driver:
+
+```bash
+MYCELIS_FRAMEWORK_RUNS_ALLOW_CONFORMANCE=1 uv run python -m framework_runs
+```
+
+Use it only on an isolated local test boundary. LangGraph remains an optional injected driver and is not installed by the root project. AG2 and CrewAI are not installed or operator-selectable in this slice; they are later adapter/import candidates. Microsoft AutoGen is not supported as a new dependency.
 
 Runtime bootstrap follows the runtime architecture and settings sections of the [Mycelis Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md): template inputs become instantiated organizations through inheritance, precedence, and policy checks.
 

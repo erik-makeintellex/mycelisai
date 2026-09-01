@@ -15,7 +15,7 @@ Public packages expose reusable contracts and helpers. Keep product runtime beha
 
 ### Private Implementation (`internal/` - packages)
 
-Private packages own API handlers, persistence, cognitive routing, governance, MCP integration, NATS orchestration, memory, worker execution backends, and service glue. `internal/workers` defines the normalized worker-library interface, central default backend, and Hermes-compatible adapter boundary used after policy allows delegated execution.
+Private packages own API handlers, persistence, cognitive routing, governance, MCP integration, NATS orchestration, memory, worker execution backends, and service glue. `internal/workers` defines the normalized worker-library interface, the central default backend, and the framework-neutral `framework_runs` client boundary. Framework-specific code stays outside Core behind that Runs API and cannot acquire Outcome authority.
 
 ### Go Dependencies (Direct)
 
@@ -98,6 +98,14 @@ Mutating or protected actions flow through policy checks, proposals, approvals, 
 ### Pipeline 6: SSE Real-Time Streaming
 
 Runtime events are streamed to the UI through normalized, route-safe state. High-volume telemetry must not substitute for operator status/result channels. Work handoffs that should appear in the Soma conversation use typed `thread_event` envelopes with operator-safe copy, run/work/proof targets, and source metadata; raw bus envelopes remain inspect-only.
+
+### Pipeline 7: Optional Framework Runs
+
+`internal/workers.WorkerBackend` normalizes create, event stream, read, stop, approval, capability, and health operations. `central` remains the default and the only backend enabled for confirmed Mycelis execution. `framework_runs` is an HTTP client for `/v1/runs`, `/v1/runs/{id}`, `/v1/runs/{id}/events`, `/v1/runs/{id}/stop`, `/v1/runs/{id}/approvals/{approval_id}`, `/v1/capabilities`, and `/health`. It normalizes common external status/event/output shapes, requires the durable `runs_api` protocol, sends credentials only after resolving a managed secret reference, and deliberately does not implement `RunFinalizer`.
+
+The Python `framework_runs` package is a bounded, process-isolated protocol facade. Its built-in conformance driver and in-memory store are non-production; the store defaults to 256 runs and 256 events per run, prunes only the oldest terminal run, and reports capacity failure while every slot is active. Its SSE endpoint is a finite snapshot of retained events rather than a production live-event bus. All returned completions carry `completion_authority=candidate`, `requires_core_validation=true`, `verified=false`, and `execution_authority=mycelis_core`. The optional `LangGraphDriver` accepts an injected compiled graph only when the optional dependency is installed. Core's execution selector rejects `framework_runs` until durable event projection is wired, so setting the external backend cannot silently bypass central policy, audit, retained-output validation, or completion proof.
+
+Framework posture was rechecked against official sources on 2026-09-01. [LangGraph](https://docs.langchain.com/oss/python/langgraph/overview) is the first adapter candidate because its documented low-level runtime centers durable execution, streaming, persistence, and human-in-the-loop control. [AG2 1.0](https://github.com/ag2ai/ag2) is distinct from AG2 Classic and is not a drop-in upgrade, so each would require an explicit adapter and conformance proof. [CrewAI](https://docs.crewai.com/) combines crews with persistent, resumable flows and remains another adapter candidate rather than an embedded authority. [Microsoft AutoGen](https://github.com/microsoft/autogen) is in maintenance mode and directs new projects to [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/overview/), which is a separate future evaluation target. None is installed or enabled by this slice, and none may replace Mycelis' Outcome, policy, approval, audit, projection, or validation boundaries.
 
 ## V. Data Contracts & Protocols
 
