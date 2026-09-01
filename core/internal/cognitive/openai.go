@@ -3,6 +3,7 @@ package cognitive
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -11,8 +12,9 @@ import (
 )
 
 type OpenAIAdapter struct {
-	client *openai.Client
-	model  string
+	client   *openai.Client
+	model    string
+	provider string
 }
 
 func NewOpenAIAdapter(config ProviderConfig) (*OpenAIAdapter, error) {
@@ -37,9 +39,15 @@ func NewOpenAIAdapter(config ProviderConfig) (*OpenAIAdapter, error) {
 		clientConfig.BaseURL = config.Endpoint
 	}
 
+	provider := strings.TrimSpace(config.Type)
+	if provider == "" {
+		provider = "openai"
+	}
+
 	return &OpenAIAdapter{
-		client: openai.NewClientWithConfig(clientConfig),
-		model:  config.ModelID,
+		client:   openai.NewClientWithConfig(clientConfig),
+		model:    config.ModelID,
+		provider: provider,
 	}, nil
 }
 
@@ -71,7 +79,7 @@ func (a *OpenAIAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 
 	resp, err := a.client.CreateChatCompletion(ctx, reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("openai inference failed: %w", err)
+		return nil, normalizedOpenAIError("openai inference", err)
 	}
 
 	if len(resp.Choices) == 0 {
@@ -79,11 +87,16 @@ func (a *OpenAIAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 	}
 
 	text := normalizeOpenAIMessage(resp.Choices[0].Message)
+	modelUsed := resp.Model
+	if strings.TrimSpace(modelUsed) == "" {
+		modelUsed = a.model
+	}
 
 	return &InferResponse{
-		Text:      text,
-		ModelUsed: a.model,
-		Provider:  "openai",
+		Text:       text,
+		ModelUsed:  modelUsed,
+		Provider:   a.provider,
+		TokensUsed: resp.Usage.TotalTokens,
 	}, nil
 }
 
@@ -144,7 +157,7 @@ func (a *OpenAIAdapter) Embed(ctx context.Context, text string, model string) ([
 		Model: openai.EmbeddingModel(model),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("embedding failed: %w", err)
+		return nil, normalizedOpenAIError("embedding", err)
 	}
 
 	if len(resp.Data) == 0 {
@@ -168,7 +181,29 @@ func (a *OpenAIAdapter) Probe(ctx context.Context) (bool, error) {
 
 	_, err := a.client.ListModels(ctx)
 	if err != nil {
-		return false, err
+		return false, normalizedOpenAIError("provider probe", err)
 	}
 	return true, nil
+}
+
+// normalizedOpenAIError retains only safe request category/status information.
+// Upstream bodies and provider messages can contain prompts, credentials, or
+// deployment details and must not cross the adapter boundary.
+func normalizedOpenAIError(operation string, err error) error {
+	if errors.Is(err, context.Canceled) {
+		return fmt.Errorf("%s canceled: %w", operation, context.Canceled)
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("%s timed out: %w", operation, context.DeadlineExceeded)
+	}
+
+	var apiErr *openai.APIError
+	if errors.As(err, &apiErr) && apiErr.HTTPStatusCode > 0 {
+		return fmt.Errorf("%s failed (status %d)", operation, apiErr.HTTPStatusCode)
+	}
+	var requestErr *openai.RequestError
+	if errors.As(err, &requestErr) && requestErr.HTTPStatusCode > 0 {
+		return fmt.Errorf("%s failed (status %d)", operation, requestErr.HTTPStatusCode)
+	}
+	return fmt.Errorf("%s failed", operation)
 }

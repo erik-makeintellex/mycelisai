@@ -51,6 +51,9 @@ AI engines define the curated model posture available to admin operators.
 Provider families:
 - local/self-hosted (Ollama, vLLM, LM Studio)
 - remote/commercial (OpenAI, Anthropic, Google)
+- optional model gateway (LiteLLM), shown disabled until an administrator connects a reviewed proxy and scoped client key
+
+LiteLLM is a transport option, not another Soma or team system. When configured, Mycelis still decides which profiles may use the provider, whether data may leave the organization, and whether approval is required. The gateway may route only inside that approved boundary; it must never turn local-only work into remote inference. The current release does not install or start LiteLLM, and ordinary users should see it only as a disabled or configured AI Engine rather than a new workflow surface.
 
 What you can do:
 - add/edit/delete providers

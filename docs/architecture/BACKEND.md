@@ -65,6 +65,12 @@ The router resolves provider policy and profile routing into a concrete model ca
 
 Adapters normalize provider-specific request/response behavior for supported model backends.
 
+### Optional Model Gateway
+
+LiteLLM is an optional external model-transport gateway behind the existing OpenAI-compatible adapter; its Python SDK does not run inside Go Core. Core remains authoritative for provider eligibility, profile/team routing, local-versus-remote data boundaries, semantic and Outcome budgets, approval, audit, correlation, and proof. A gateway may translate provider APIs, hold deployment-owned upstream credentials, enforce operational RPM/TPM or spend ceilings, and retry or load-balance only among deployments inside the same Core-approved boundary. Gateway aliases must never turn a `local_only` selection into remote inference. Gateway telemetry is evidence to reconcile with Core, not completion authority.
+
+The disabled `litellm` provider entry is a conformance and configuration boundary, not a bundled service. Before production enablement, deployment must prove authenticated access, secret isolation, stable configured-provider and actual-model provenance, exact usage/cost reconciliation, correlation to Mycelis scope, bounded retry behavior, redacted errors, and reviewed logging, callback, cache, persistence, and tenancy posture. Browser clients and framework workers never receive proxy administration or upstream provider secrets. See the [official LiteLLM documentation](https://docs.litellm.ai/) and [source repository](https://github.com/BerriAI/litellm).
+
 ### Discovery - `cognitive/discovery.go`
 
 Discovery reports provider availability and health without leaking secrets.

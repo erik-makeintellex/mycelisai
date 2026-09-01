@@ -64,9 +64,9 @@ func TestInfer_Mock(t *testing.T) {
 	}
 
 	// 4. Verify
-	// MockAdapter returns Provider="mock"
-	if resp.Provider != "mock" {
-		t.Errorf("Expected provider 'mock', got '%s'", resp.Provider)
+	// Router provenance is the configured provider ID, not the adapter family.
+	if resp.Provider != mockProviderID {
+		t.Errorf("Expected provider %q, got %q", mockProviderID, resp.Provider)
 	}
 	if resp.Text != "Explicit Mock" {
 		t.Errorf("Expected 'Explicit Mock', got '%s'", resp.Text)

@@ -104,6 +104,21 @@ spec:
               value: {{ $.Values.ai.textModelId | quote }}
             {{- end }}
             {{- end }}
+            {{- if .Values.ai.litellm.enabled }}
+            - name: MYCELIS_PROVIDER_LITELLM_ENDPOINT
+              value: {{ required "ai.litellm.endpoint is required when LiteLLM is enabled" .Values.ai.litellm.endpoint | quote }}
+            - name: MYCELIS_PROVIDER_LITELLM_MODEL_ID
+              value: {{ .Values.ai.litellm.modelId | quote }}
+            - name: MYCELIS_PROVIDER_LITELLM_API_KEY_ENV
+              value: LITELLM_PROXY_API_KEY
+            - name: MYCELIS_PROVIDER_LITELLM_ENABLED
+              value: "true"
+            - name: LITELLM_PROXY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "ai.litellm.existingSecret is required when LiteLLM is enabled" .Values.ai.litellm.existingSecret | quote }}
+                  key: {{ required "ai.litellm.secretKey is required when LiteLLM is enabled" .Values.ai.litellm.secretKey | quote }}
+            {{- end }}
             {{- if .Values.ai.mediaEndpoint }}
             - name: MYCELIS_MEDIA_ENDPOINT
               value: {{ .Values.ai.mediaEndpoint | quote }}

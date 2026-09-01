@@ -6,6 +6,7 @@
 - [Thorough Release Testing Contract](#thorough-release-testing-contract)
 - [Clean First-Boot Proof](#clean-first-boot-proof)
 - [Framework Worker Adapter Gate](#framework-worker-adapter-gate)
+- [Optional Model Gateway Gate](#optional-model-gateway-gate)
 - [User Interaction Delivery Gate](#user-interaction-delivery-gate)
 - [Finalization Concretization Gate](#finalization-concretization-gate)
 - [Full GUI Coverage Matrix](#full-gui-coverage-matrix)
@@ -43,6 +44,19 @@ UV_CACHE_DIR=/tmp/mycelis-framework-runs-cache uv run --no-sync pytest tests/tes
 The Go gate must prove `worker_runtime` defaults to `central`; unknown fields, old backend names, raw secrets, credential-bearing URLs, unsupported protocols/event/approval modes, invalid paths, and non-central fallback fail closed; `env:` resolution does not accept raw values; the normalized HTTP client covers health, capabilities, create/get/events/approval/stop; external output shapes normalize without granting `RunFinalizer`; and `NewExecutionBackend` rejects `framework_runs` until durable correlated projection exists. Server proof must show missing optional config keeps central behavior, an invalid explicit `MYCELIS_ENGINE_CONFIG_PATH` does not silently fall back, and external selection becomes an unavailable backend rather than central execution under the wrong policy.
 
 The Python gate must prove the bounded non-production store, normalized IDs/status/events, idempotent cancellation, central approval/denial, candidate-only completion metadata, dependency-gated LangGraph construction, and no generic LangGraph approval-resume claim. The chart contract must keep source, Core image, and Helm `engine.yaml` equal and secret-free. AG2, CrewAI, AutoGen, and Microsoft Agent Framework are not test-covered backends in this slice; documentation may name their architectural posture but must not claim installed or executable support.
+
+## Optional Model Gateway Gate
+
+LiteLLM proof is OpenAI-compatible transport conformance, not permission to start a proxy or relax Core policy. Run:
+
+```bash
+go -C core test ./internal/cognitive -count=1
+UV_CACHE_DIR=/tmp/mycelis-litellm-cache uv run --no-sync pytest tests/test_litellm_config_contract.py tests/test_k8s_chart_contract.py tests/test_runtime_deploy_contract_text.py -q
+```
+
+The Go gate must use a local mock upstream and prove the configured provider id survives the call, the actual response model is retained, reported token usage is exact rather than character-estimated, tool calls keep their normalized Mycelis payload, authentication uses only the resolved provider secret, and gateway failures expose neither raw upstream bodies nor secrets. The configuration gate must prove source and Helm defaults declare `litellm` as disabled, use the existing `openai_compatible` type, reference `LITELLM_PROXY_API_KEY`, and contain no raw proxy or upstream credential. It must also prove enabling the chart requires an explicit endpoint and existing Secret while leaving proxy installation external. No test in this slice installs LiteLLM, calls a hosted model, starts services, or claims budget/rate-limit enforcement.
+
+Production gateway proof is a separate later gate: authenticate the proxy, partition aliases and fallback pools by `local_only` versus approved remote boundaries, correlate usage to Mycelis scope, reconcile model/token/cost records, test bounded retry and rate-limit behavior, review logs/callbacks/caching, prove persistence and distributed limiting where configured, and confirm no browser or framework worker receives administration or upstream secrets.
 
 ### Focused Google Workspace authentication proof
 

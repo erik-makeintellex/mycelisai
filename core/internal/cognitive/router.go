@@ -191,16 +191,7 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 
 	resp, err := adapter.Infer(ctx, req.Prompt, opts)
 	if err == nil && resp != nil {
-		// Record tokens for telemetry. If the adapter didn't report token
-		// count, estimate at ~4 chars per token (conservative approximation).
-		tokens := resp.TokensUsed
-		if tokens == 0 && resp.Text != "" {
-			tokens = len(resp.Text) / 4
-			if tokens < 1 {
-				tokens = 1
-			}
-		}
-		r.RecordTokens(tokens)
+		r.finalizeInferenceResponse(providerID, resp)
 	}
 	if err != nil {
 		// --- Runtime Self-Recovery ---
@@ -233,13 +224,27 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 			}
 
 			fmt.Printf("✅ Optimized to '%s'. Retrying request...\n", newProviderID)
-			return newAdapter.Infer(ctx, req.Prompt, opts)
+			retryResp, retryErr := newAdapter.Infer(ctx, req.Prompt, opts)
+			if retryErr == nil && retryResp != nil {
+				r.finalizeInferenceResponse(newProviderID, retryResp)
+			}
+			return retryResp, retryErr
 		}
 		// If healthy (e.g. context timeout or API error), simple error return
 		return nil, err
 	}
 
 	return resp, nil
+}
+
+// finalizeInferenceResponse preserves the configured routing identity and only
+// records usage reported by the provider. Missing usage remains unknown (zero)
+// rather than being replaced with a text-length estimate.
+func (r *Router) finalizeInferenceResponse(providerID string, resp *InferResponse) {
+	resp.Provider = providerID
+	if resp.TokensUsed > 0 {
+		r.RecordTokens(resp.TokensUsed)
+	}
 }
 
 // Deprecated: Infer is alias for InferWithContract

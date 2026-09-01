@@ -129,6 +129,15 @@ ai:
     - ollama
     - local-ollama-dev
     - local-sovereign
+  # Optional independently deployed LiteLLM gateway. The chart does not install
+  # LiteLLM. Enabling this provider requires an explicit reachable endpoint and
+  # an existing Secret containing a scoped proxy/virtual client key.
+  litellm:
+    enabled: false
+    endpoint: ""
+    modelId: mycelis-default
+    existingSecret: ""
+    secretKey: litellm-proxy-api-key
   # Optional explicit media endpoint for self-hosted image or voice generation.
   mediaEndpoint: ""
 

@@ -13,6 +13,20 @@ providers:
         roles_allowed:
             - all
         enabled: false
+    litellm:
+        type: openai_compatible
+        endpoint: http://127.0.0.1:4000/v1
+        model_id: mycelis-default
+        api_key: ""
+        api_key_env: LITELLM_PROXY_API_KEY
+        location: remote
+        data_boundary: leaves_org
+        usage_policy: require_approval
+        token_budget_profile: standard
+        max_output_tokens: 1024
+        roles_allowed:
+            - all
+        enabled: false
     local-ollama-dev:
         type: ollama
         endpoint: http://127.0.0.1:11434/v1

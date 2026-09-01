@@ -8,6 +8,7 @@ This is the scoped implementation contract for model providers, routing, embeddi
 - [Provider Registry](#provider-registry)
 - [Provider Auth Contract](#provider-auth-contract)
 - [Profile Routing](#profile-routing)
+- [Optional LiteLLM Model Gateway](#optional-litellm-model-gateway)
 - [AI Engines UI](#ai-engines-ui)
 - [Live Health Probing](#live-health-probing)
 - [Configuration File](#configuration-file)
@@ -15,7 +16,7 @@ This is the scoped implementation contract for model providers, routing, embeddi
 - [Embedding](#embedding)
 - [Hardware Grading](#hardware-grading)
 
-Mycelis supports **multiple self-hosted and commercial inference engines** — configure any combination of vLLM, Ollama, LM Studio, OpenAI, Anthropic, and Google via `cognitive.yaml` or the AI Engines settings surface.
+Mycelis supports **multiple self-hosted and commercial inference engines** — configure any combination of vLLM, Ollama, LM Studio, OpenAI, Anthropic, and Google via `cognitive.yaml` or the AI Engines settings surface. An existing LiteLLM proxy may be configured as one optional OpenAI-compatible provider; Mycelis does not embed the LiteLLM Python SDK or ship a proxy service in the current slice.
 
 Media generation stays local-first. Core supports direct Forge/AUTOMATIC1111 generation with `MYCELIS_MEDIA_TYPE=forge` and the native `/sdapi/v1/txt2img` contract, so a Pinokio-hosted Forge instance does not require a second gateway process. Forge must start with API mode enabled. OpenAI-compatible and hosted providers continue to use `/v1/images/generations`; ComfyUI continues through the optional local gateway because its workflow submission and output retrieval require an adapter. Before Soma offers approval for image work, Core checks configured Forge readiness. A running UI with API mode off produces one setup instruction and no doomed proposal/run.
 
@@ -26,6 +27,7 @@ Media generation stays local-first. Core supports direct Forge/AUTOMATIC1111 gen
 | `vllm` | `openai_compatible` | `http://127.0.0.1:8000/v1` | vLLM inference server — high throughput, GPU-optimized |
 | `ollama` | `openai_compatible` | `http://127.0.0.1:11434/v1` | Ollama — local model runner, easy setup |
 | `lmstudio` | `openai_compatible` | `http://127.0.0.1:1234/v1` | LM Studio — GUI-based local inference |
+| `litellm` | `openai_compatible` | `http://127.0.0.1:4000/v1` | Optional operator-managed LiteLLM proxy; disabled by default |
 | `production_gpt4` | `openai` | `https://api.openai.com/v1` | Hosted OpenAI provider; model is configurable and credentials come from `OPENAI_API_KEY` |
 | `production_claude` | `anthropic` | — | Anthropic Claude (requires `ANTHROPIC_API_KEY`) |
 | `production_gemini` | `google` | — | Google Gemini (requires `GEMINI_API_KEY`) |
@@ -45,6 +47,7 @@ Current supported auth patterns:
 | Ollama | `openai_compatible` | Bearer-style client key is sent, but Ollama ignores the placeholder value | Default local engine, `/v1` endpoint on `11434` |
 | vLLM | `openai_compatible` | Bearer-style client key is sent; vLLM can enforce it when started with `--api-key` | Optional local engine, `/v1` endpoint on `8000` |
 | LM Studio | `openai_compatible` | Bearer-style client key is sent; LM Studio compatibility mode may ignore it | Optional local engine, `/v1` endpoint on `1234` |
+| LiteLLM proxy | `openai_compatible` | `Authorization: Bearer $LITELLM_PROXY_API_KEY` | Optional gateway only; upstream provider credentials remain gateway-owned |
 | OpenAI | `openai` | `Authorization: Bearer $OPENAI_API_KEY` | Remote hosted provider |
 | Anthropic | `anthropic` | `x-api-key: $ANTHROPIC_API_KEY` plus `anthropic-version` | Remote hosted provider |
 | Google Gemini | `google` | `x-goog-api-key: $GEMINI_API_KEY` | Remote hosted provider |
@@ -53,6 +56,7 @@ Secret-handling rules:
 - use `api_key_env` whenever a provider enforces a credential so secrets stay in env or deployment secret stores
 - the vLLM launcher reads `text.api_key_secret_ref: env:MYCELIS_TEXT_ENGINE_API_KEY` from `cognitive/config/engine.yaml`, resolves the named value from the shell and then the repo-local `.env`, and fails when it is unavailable; it has no committed credential or hardcoded fallback
 - local compatibility engines that ignore authentication may retain an explicitly non-secret placeholder client value
+- LiteLLM uses `api_key_env: LITELLM_PROXY_API_KEY`; never place a proxy master key, virtual key, or upstream provider credential in committed provider YAML
 - provider reads and browser inventory views never return stored secrets
 
 Official provider references:
@@ -61,6 +65,7 @@ Official provider references:
 - Google Gemini API: <https://ai.google.dev/api/generate-content>
 - Ollama OpenAI compatibility: <https://docs.ollama.com/api/openai-compatibility>
 - vLLM OpenAI-compatible server: <https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html>
+- LiteLLM gateway and SDK boundary: <https://docs.litellm.ai/> and <https://github.com/BerriAI/litellm>
 
 ## Profile Routing
 
@@ -78,6 +83,27 @@ profiles:
 
 - **Default Model:** `qwen2.5-coder:7b` (via Ollama).
 - **Agent Overrides:** Each agent can specify a custom `model` field to override the profile default.
+
+## Optional LiteLLM Model Gateway
+
+LiteLLM belongs between Core's cognitive router and model providers. It is not an agent orchestrator and is unrelated to the `framework_runs` execution selector:
+
+```text
+Soma / Mycelis Core
+  -> provider policy, profile/team eligibility, data boundary, approval, Outcome budget
+  -> optional LiteLLM proxy
+  -> approved local or hosted model deployment
+```
+
+Ownership is deliberately split:
+
+- Mycelis Core owns provider and profile selection, role eligibility, `local_only` versus `leaves_org`, semantic and Outcome budgets, approval, run/team correlation, audit, and proof.
+- LiteLLM may own provider-protocol translation, deployment-held upstream credentials, operational RPM/TPM and spend ceilings, and retries or load balancing among equivalent deployments already admitted to the same boundary.
+- A LiteLLM alias or fallback pool must never cross from local-only to remote inference. Core selects a policy-bounded alias; the gateway may vary only inside that alias's approved boundary.
+- Gateway usage and cost records are evidence for reconciliation. They do not approve work, complete an Outcome, or replace Core mission events.
+- Prompt/response logging, callbacks, caching, and persistence remain disabled until retention, redaction, tenancy, and recovery are certified. Browser clients and framework workers never receive gateway administration or upstream secrets.
+
+The first slice is conformance-only: the disabled provider proves OpenAI-compatible requests, tool-call normalization, configured provider identity, actual gateway-reported model identity, and exact reported token usage. It does not install or start LiteLLM. Production enablement additionally requires an authenticated proxy deployment, dedicated persistence and distributed rate-limit posture where used, scoped correlation, cost reconciliation, failure-mode proof, and operations certification.
 
 ## AI Engines UI
 
@@ -130,6 +156,17 @@ providers:
     endpoint: "http://127.0.0.1:1234/v1"
     model_id: "default"
     api_key: "lm-studio"
+    enabled: false
+
+  litellm:
+    type: "openai_compatible"
+    endpoint: "http://127.0.0.1:4000/v1"
+    model_id: "mycelis-default"
+    api_key: ""
+    api_key_env: "LITELLM_PROXY_API_KEY"
+    location: "remote"
+    data_boundary: "leaves_org"
+    usage_policy: "require_approval"
     enabled: false
 
   production_gpt4:
