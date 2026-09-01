@@ -211,7 +211,7 @@ func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Requ
 		return "", "", nil, "", false
 	}
 
-	runID, err := s.createExecutionRunTx(r.Context(), tx, proofID, scope, auditActorIDFromRequest(r))
+	runID, err := s.createExecutionRunTx(r.Context(), tx, proofID)
 	if err != nil {
 		log.Printf("CE-1: confirm-action run creation failed: %v", err)
 		respondAPIError(w, "failed to create execution record", http.StatusInternalServerError)
@@ -222,6 +222,13 @@ func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		log.Printf("CE-1: confirm-action contract persistence failed: %v", err)
 		respondAPIError(w, "failed to create execution contract", http.StatusInternalServerError)
+		return "", "", nil, "", false
+	}
+	scope = correlateConfirmedActionScope(scope, runID, proofID, contractID)
+	correlation := confirmedActionWorkerCorrelation(runID, proofID, contractID, scope, nil)
+	if _, err := s.startConfirmedActionWorkerRun(r.Context(), scope, auditActorIDFromRequest(r), correlation); err != nil {
+		log.Printf("CE-1: central worker run initialization failed: %v", err)
+		respondAPIError(w, "failed to initialize execution record", http.StatusInternalServerError)
 		return "", "", nil, "", false
 	}
 

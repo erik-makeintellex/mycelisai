@@ -1,37 +1,37 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from hashlib import sha256
 from typing import AsyncIterator
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Path, Request, status
 from fastapi.responses import StreamingResponse
 
 from .domain import (
     ApprovalDecisionRequest,
-    DriverOutcome,
+    EXTERNAL_ID_PATTERN,
     RunCreateRequest,
     RunRecord,
     utc_now,
-    wire_time,
 )
 from .drivers import ConformanceDriver, Driver
-from .store import InMemoryRunStore, StoreCapacityError
+from .lifecycle import append_event, apply_outcome, driver_exception_outcome
+from .store import (
+    InMemoryRunStore,
+    RunStore,
+    StoreCapacityError,
+    StoreConflictError,
+)
 
 
 TERMINAL_STATUSES = {"completed", "failed", "cancelled"}
-COMPLETION_CANDIDATE_METADATA = {
-    "completion_authority": "candidate",
-    "requires_core_validation": True,
-    "verified": False,
-}
 
 
 def create_app(
     *,
     driver: Driver | None = None,
-    store: InMemoryRunStore | None = None,
+    store: RunStore | None = None,
 ) -> FastAPI:
     selected_driver = driver or ConformanceDriver()
     selected_store = store or InMemoryRunStore()
@@ -46,7 +46,7 @@ def create_app(
     @app.get("/health")
     async def health(request: Request) -> dict[str, object]:
         active_driver: Driver = request.app.state.driver
-        active_store: InMemoryRunStore = request.app.state.store
+        active_store: RunStore = request.app.state.store
         return {
             "healthy": True,
             "message": "framework runs facade ready",
@@ -55,29 +55,61 @@ def create_app(
             "production_ready": bool(
                 active_driver.production_ready and active_store.production_ready
             ),
-            "storage": "bounded_memory_non_production",
+            "storage": active_store.storage_kind,
         }
 
     @app.get("/v1/capabilities")
     async def capabilities(request: Request) -> dict[str, object]:
         active_driver: Driver = request.app.state.driver
+        active_store: RunStore = request.app.state.store
+        supports_cancellation = bool(
+            getattr(active_driver, "supports_cancellation", False)
+        )
+        cancellation_mode = str(
+            getattr(active_driver, "cancellation_mode", "unsupported")
+        )
         return {
             "healthy": True,
             "supported_protocols": ["runs_api"],
             "supports_events": True,
-            "supports_cancellation": True,
+            "supports_cancellation": supports_cancellation,
             "supports_approvals": True,
             "supports_usage": False,
             "features": [
                 "normalized_runs",
                 "completion_candidates",
                 "central_approval_authority",
+                "externally_supplied_run_identity",
+                "structured_correlation",
+                "normalized_incremental_events",
                 f"driver:{active_driver.name}",
                 f"framework:{active_driver.framework}",
+                f"storage:{active_store.storage_kind}",
             ],
             "driver": active_driver.name,
             "framework": active_driver.framework,
-            "production_ready": active_driver.production_ready,
+            "production_ready": bool(
+                active_driver.production_ready and active_store.production_ready
+            ),
+            "correlation_contract": {
+                "production_required_fields": [
+                    "run_id",
+                    "intent_proof_id",
+                    "execution_contract_id",
+                    "work_item_id",
+                    "idempotency_key",
+                    "source_kind",
+                    "source_channel",
+                    "payload_kind",
+                    "graph_revision",
+                ],
+                "legacy_omission": "synthesized_run_only_non_production",
+            },
+            "cancellation_contract": {
+                "mode": cancellation_mode,
+                "synchronous_in_flight_preemption": False,
+                "safe_point_only": True,
+            },
         }
 
     @app.post("/v1/runs", status_code=status.HTTP_201_CREATED)
@@ -85,10 +117,28 @@ def create_app(
         payload: RunCreateRequest, request: Request
     ) -> dict[str, object]:
         active_driver: Driver = request.app.state.driver
-        active_store: InMemoryRunStore = request.app.state.store
+        active_store: RunStore = request.app.state.store
+        run_id = payload.run_id or str(uuid4())
+        correlation_id = payload.correlation_id or run_id
+        correlation = payload.correlation.model_dump(mode="json") if payload.correlation else {
+            "run_id": run_id,
+        }
+        correlation_complete = bool(payload.correlation and payload.correlation.complete)
+        fingerprint = _request_fingerprint(
+            payload, active_driver.name, correlation_id, correlation
+        )
+        existing = active_store.get(run_id)
+        if existing is not None:
+            if existing.request_fingerprint == fingerprint:
+                return existing.wire()
+            raise HTTPException(status_code=409, detail="run id already exists")
         now = utc_now()
         record = RunRecord(
-            run_id=str(uuid4()),
+            run_id=run_id,
+            correlation_id=correlation_id,
+            correlation=correlation,
+            correlation_complete=correlation_complete,
+            request_fingerprint=fingerprint,
             org_id=payload.org_id,
             project_id=payload.project_id,
             user_id=payload.user_id,
@@ -100,21 +150,27 @@ def create_app(
             required_features=payload.required_features,
             request_metadata=payload.metadata,
             driver_name=active_driver.name,
+            storage_kind=active_store.storage_kind,
             status="accepted",
             created_at=now,
             updated_at=now,
         )
-        _append_event(record, "accepted", "Run accepted by framework facade.")
+        append_event(record, "accepted", "Run accepted by framework facade.")
         try:
             active_store.put(record)
         except StoreCapacityError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except StoreConflictError as exc:
+            concurrent = active_store.get(run_id)
+            if concurrent and concurrent.request_fingerprint == fingerprint:
+                return concurrent.wire()
+            raise HTTPException(status_code=409, detail="run id already exists") from exc
 
         try:
-            outcome = active_driver.start(record.run_id, payload)
+            outcome = active_driver.start(record.run_id, _run_request(record))
         except Exception as exc:  # driver failures are normalized at the facade
-            outcome = _driver_exception_outcome(active_driver.name, exc)
-        _apply_outcome(record, outcome)
+            outcome = driver_exception_outcome(active_driver.name, exc)
+        apply_outcome(record, outcome)
         active_store.update(record)
         return record.wire()
 
@@ -131,8 +187,8 @@ def create_app(
         record = _require_run(request.app.state.store, run_id)
 
         async def stream() -> AsyncIterator[str]:
-            for sequence, event in enumerate(record.events, start=1):
-                yield f"id: {sequence}\ndata: {json.dumps(event, separators=(',', ':'))}\n\n"
+            for event in record.events:
+                yield f"id: {event['sequence']}\ndata: {json.dumps(event, separators=(',', ':'))}\n\n"
 
         return StreamingResponse(
             stream(),
@@ -144,7 +200,7 @@ def create_app(
     async def stop_run(
         request: Request, run_id: str = Path(min_length=1, max_length=128)
     ) -> dict[str, object]:
-        active_store: InMemoryRunStore = request.app.state.store
+        active_store: RunStore = request.app.state.store
         record = _require_run(active_store, run_id)
         if record.status == "cancelled":
             return record.wire()
@@ -153,10 +209,24 @@ def create_app(
                 status_code=409,
                 detail=f"cannot cancel terminal run with status {record.status}",
             )
+        active_driver = request.app.state.driver
+        cancel_hook = getattr(active_driver, "cancel", None)
+        if not bool(getattr(active_driver, "supports_cancellation", False)) or not callable(cancel_hook):
+            raise HTTPException(
+                status_code=409,
+                detail="framework driver does not support safe cancellation",
+            )
+        try:
+            cancel_hook(record.run_id, _run_request(record))
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail="framework cancellation failed",
+            ) from exc
         record.status = "cancelled"
         record.approval = None
         record.updated_at = utc_now()
-        _append_event(record, "cancelled", "Run cancelled by central authority.")
+        append_event(record, "cancelled", "Run cancelled by central authority.")
         active_store.update(record)
         return record.wire()
 
@@ -168,7 +238,7 @@ def create_app(
         approval_id: str = Path(min_length=1, max_length=128),
     ) -> dict[str, object]:
         active_driver: Driver = request.app.state.driver
-        active_store: InMemoryRunStore = request.app.state.store
+        active_store: RunStore = request.app.state.store
         record = _require_run(active_store, run_id)
         if payload.approval_id != approval_id:
             raise HTTPException(status_code=400, detail="approval id does not match route")
@@ -190,142 +260,67 @@ def create_app(
                     "reason": payload.reason,
                 },
             }
-            _append_event(record, "failed", record.error["message"], error=record.error)
+            append_event(record, "failed", record.error["message"], error=record.error)
             active_store.update(record)
             return record.wire()
 
-        run_request = RunCreateRequest(
-            org_id=record.org_id,
-            project_id=record.project_id,
-            user_id=record.user_id,
-            requested_by=record.requested_by,
-            intent=record.intent,
-            instructions=record.instructions,
-            input=record.input,
-            required_protocols=record.required_protocols,
-            required_features=record.required_features,
-            metadata=record.request_metadata,
-        )
+        run_request = _run_request(record, approval=payload)
         try:
             outcome = active_driver.resume_after_approval(record.run_id, run_request)
         except Exception as exc:
-            outcome = _driver_exception_outcome(active_driver.name, exc)
-        _apply_outcome(record, outcome)
+            outcome = driver_exception_outcome(active_driver.name, exc)
+        apply_outcome(record, outcome)
         active_store.update(record)
         return record.wire()
 
     return app
 
 
-def _require_run(store: InMemoryRunStore, run_id: str) -> RunRecord:
-    try:
-        UUID(run_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail="run not found") from exc
+def _require_run(store: RunStore, run_id: str) -> RunRecord:
+    if EXTERNAL_ID_PATTERN.fullmatch(run_id) is None:
+        raise HTTPException(status_code=404, detail="run not found")
     record = store.get(run_id)
     if record is None:
         raise HTTPException(status_code=404, detail="run not found")
     return record
 
 
-def _append_event(
-    record: RunRecord,
-    kind: str,
-    message: str,
-    **payload: object,
-) -> None:
-    event = {
-        "event_id": str(uuid4()),
+def _request_fingerprint(
+    payload: RunCreateRequest,
+    driver_name: str,
+    correlation_id: str,
+    correlation: dict[str, str],
+) -> str:
+    normalized = payload.model_dump(mode="json")
+    normalized["correlation_id"] = correlation_id
+    normalized["correlation"] = correlation
+    normalized["driver"] = driver_name
+    return sha256(json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def _run_request(
+    record: RunRecord, approval: ApprovalDecisionRequest | None = None
+) -> RunCreateRequest:
+    metadata = dict(record.request_metadata)
+    if approval is not None:
+        metadata["_framework_resume"] = approval.model_dump(mode="json")
+    values: dict[str, object] = {
         "run_id": record.run_id,
-        "kind": kind,
-        "status": record.status,
-        "message": message,
-        "timestamp": wire_time(utc_now()),
-        "metadata": {
-            "driver": record.driver_name,
-            "execution_authority": "mycelis_core",
-        },
-        **payload,
+        "correlation_id": record.correlation_id,
+        "org_id": record.org_id,
+        "project_id": record.project_id,
+        "user_id": record.user_id,
+        "requested_by": record.requested_by,
+        "intent": record.intent,
+        "instructions": record.instructions,
+        "input": record.input,
+        "required_protocols": record.required_protocols,
+        "required_features": record.required_features,
+        "metadata": metadata,
     }
-    record.events.append(event)
-
-
-def _apply_outcome(record: RunRecord, outcome: DriverOutcome) -> None:
-    record.status = outcome.status
-    record.updated_at = utc_now()
-    if outcome.status == "approval_needed":
-        if outcome.approval is None:
-            record.status = "failed"
-            record.error = {
-                "code": "invalid_driver_approval",
-                "message": "Driver requested approval without approval details.",
-                "recoverable": False,
-            }
-            _append_event(record, "failed", record.error["message"], error=record.error)
-            return
-        record.approval = {"id": str(uuid4()), **asdict(outcome.approval)}
-        _append_event(
-            record,
-            "approval_needed",
-            outcome.message,
-            approval=record.approval,
-        )
-        return
-    if outcome.status == "completed":
-        record.result = {
-            "summary": outcome.message,
-            "outputs": [
-                {"id": str(uuid4()), **asdict(output)} for output in outcome.outputs
-            ],
-            "metadata": {**outcome.metadata, **COMPLETION_CANDIDATE_METADATA},
-            "finished_at": wire_time(record.updated_at),
-        }
-        _append_event(
-            record,
-            "completed",
-            outcome.message,
-            result=record.result,
-            metadata={
-                "driver": record.driver_name,
-                "execution_authority": "mycelis_core",
-                **COMPLETION_CANDIDATE_METADATA,
-            },
-        )
-        return
-    if outcome.status == "failed":
-        error = outcome.error
-        record.error = (
-            asdict(error)
-            if error is not None
-            else {
-                "code": "driver_failed",
-                "message": outcome.message,
-                "recoverable": True,
-                "metadata": {},
-            }
-        )
-        _append_event(record, "failed", outcome.message, error=record.error)
-        return
-    _append_event(record, "progress", outcome.message, metadata={
-        "driver": record.driver_name,
-        "execution_authority": "mycelis_core",
-        **outcome.metadata,
-    })
-
-
-def _driver_exception_outcome(driver_name: str, exc: Exception) -> DriverOutcome:
-    from .domain import DriverError
-
-    return DriverOutcome(
-        status="failed",
-        message="Framework driver failed.",
-        error=DriverError(
-            code="framework_driver_error",
-            message="Framework driver failed.",
-            recoverable=True,
-            metadata={"driver": driver_name, "exception_type": exc.__class__.__name__},
-        ),
-    )
+    if record.correlation_complete:
+        values["correlation"] = record.correlation
+    return RunCreateRequest(**values)
 
 
 app = create_app()

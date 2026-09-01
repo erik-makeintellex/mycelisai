@@ -2,7 +2,10 @@ package workers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -10,26 +13,46 @@ import (
 )
 
 type CentralBackend struct {
-	mu   sync.RWMutex
-	runs map[string]WorkerRunHandle
+	mu           sync.RWMutex
+	runs         map[string]WorkerRunHandle
+	fingerprints map[string][sha256.Size]byte
 }
 
 func NewCentralBackend() *CentralBackend {
-	return &CentralBackend{runs: map[string]WorkerRunHandle{}}
+	return &CentralBackend{runs: map[string]WorkerRunHandle{}, fingerprints: map[string][sha256.Size]byte{}}
 }
 
 func (b *CentralBackend) CreateRun(_ context.Context, req WorkerRunRequest) (WorkerRunHandle, error) {
 	if req.Intent == "" {
 		return WorkerRunHandle{}, fmt.Errorf("worker run intent is required")
 	}
+	runID := strings.TrimSpace(req.RunID)
+	if runID == "" {
+		runID = uuid.NewString()
+	}
+	encoded, err := json.Marshal(req)
+	if err != nil {
+		return WorkerRunHandle{}, fmt.Errorf("fingerprint worker run request: %w", err)
+	}
+	fingerprint := sha256.Sum256(encoded)
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	existing, ok := b.runs[runID]
+	if ok {
+		if b.fingerprints[runID] != fingerprint {
+			return WorkerRunHandle{}, fmt.Errorf("worker run %s already exists with different request correlation", runID)
+		}
+		return existing, nil
+	}
 	now := time.Now().UTC()
 	handle := WorkerRunHandle{
-		RunID:     uuid.NewString(),
-		Backend:   BackendCentral,
-		Status:    StatusAccepted,
-		Protocol:  ProtocolRunsAPI,
-		CreatedAt: now,
-		UpdatedAt: now,
+		RunID:        runID,
+		BackendRunID: runID,
+		Backend:      BackendCentral,
+		Status:       StatusAccepted,
+		Protocol:     ProtocolRunsAPI,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 		AuditRecord: &WorkerAuditRecord{
 			Backend:      BackendCentral,
 			ActorID:      req.UserID,
@@ -40,9 +63,8 @@ func (b *CentralBackend) CreateRun(_ context.Context, req WorkerRunRequest) (Wor
 	}
 	handle.AuditRecord.RunID = handle.RunID
 
-	b.mu.Lock()
 	b.runs[handle.RunID] = handle
-	b.mu.Unlock()
+	b.fingerprints[handle.RunID] = fingerprint
 	return handle, nil
 }
 

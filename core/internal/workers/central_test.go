@@ -136,3 +136,21 @@ func TestCentralBackendRejectsEmptyIntent(t *testing.T) {
 		t.Fatal("expected empty intent error")
 	}
 }
+
+func TestCentralBackendSameRunIDRequiresStableRequestFingerprint(t *testing.T) {
+	backend := NewCentralBackend()
+	req := WorkerRunRequest{RunID: "run-1", Intent: "create output", Metadata: map[string]any{"contract": "contract-1"}}
+	first, err := backend.CreateRun(context.Background(), req)
+	if err != nil {
+		t.Fatalf("first CreateRun: %v", err)
+	}
+	second, err := backend.CreateRun(context.Background(), req)
+	if err != nil || second.RunID != first.RunID {
+		t.Fatalf("idempotent CreateRun = %#v, %v", second, err)
+	}
+	conflict := req
+	conflict.Metadata = map[string]any{"contract": "contract-2"}
+	if _, err := backend.CreateRun(context.Background(), conflict); err == nil {
+		t.Fatal("same run_id with conflicting request must fail closed")
+	}
+}

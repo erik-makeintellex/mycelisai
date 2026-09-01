@@ -11,6 +11,11 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+const (
+	confirmedActionSourceChannel          = "api.intent.confirm-action"
+	centralExecutionContractGraphRevision = "mycelis.central.execution-contract.v1"
+)
+
 func (s *AdminServer) confirmedActionWorkerBackend() workers.WorkerBackend {
 	if s.WorkerBackend != nil {
 		return s.WorkerBackend
@@ -19,14 +24,25 @@ func (s *AdminServer) confirmedActionWorkerBackend() workers.WorkerBackend {
 	return s.WorkerBackend
 }
 
-func buildConfirmedActionWorkerRunRequest(proofID string, scope *protocol.ScopeValidation, auditUser string) workers.WorkerRunRequest {
+func buildConfirmedActionWorkerRunRequest(scope *protocol.ScopeValidation, auditUser string, correlation workers.WorkerCorrelation) workers.WorkerRunRequest {
 	metadata := map[string]any{
-		"intent_proof_id":    strings.TrimSpace(proofID),
-		"source_kind":        string(protocol.SourceKindWebAPI),
-		"source_channel":     "api.intent.confirm-action",
-		"payload_kind":       string(protocol.PayloadKindCommand),
-		"planned_tool_count": 0,
+		"run_id":                correlation.RunID,
+		"intent_proof_id":       correlation.IntentProofID,
+		"execution_contract_id": correlation.ExecutionContractID,
+		"idempotency_key":       correlation.IdempotencyKey,
+		"source_kind":           correlation.SourceKind,
+		"source_channel":        correlation.SourceChannel,
+		"payload_kind":          correlation.PayloadKind,
+		"graph_revision":        correlation.GraphRevision,
+		"planned_tool_count":    0,
 	}
+	if correlation.TeamID != "" {
+		metadata["team_id"] = correlation.TeamID
+	}
+	if correlation.OutcomeID != "" {
+		metadata["outcome_id"] = correlation.OutcomeID
+	}
+	metadata["work_item_id"] = correlation.WorkItemID
 	intent := "Confirmed Soma work"
 	if scope != nil {
 		intent = firstNonEmptyString(scopeWorkObjective(scope), scope.ExecutionMode, intent)
@@ -40,14 +56,54 @@ func buildConfirmedActionWorkerRunRequest(proofID string, scope *protocol.ScopeV
 		}
 	}
 	return workers.WorkerRunRequest{
+		RunID:             correlation.RunID,
 		UserID:            strings.TrimSpace(auditUser),
 		RequestedBy:       firstNonEmptyString(auditUser, "Soma"),
 		Intent:            intent,
 		Instructions:      "Execute the operator-approved Soma proposal through governed planned tools.",
 		RequiredFeatures:  normalizeStringSlice(scopeCapabilityIDs(scope)),
 		RequiredProtocols: []workers.Protocol{workers.ProtocolRunsAPI},
+		Correlation:       correlation,
 		Metadata:          metadata,
 	}
+}
+
+func confirmedActionWorkerCorrelation(runID, proofID, contractID string, scope *protocol.ScopeValidation, outcome *protocol.OutcomeProject) workers.WorkerCorrelation {
+	teamID, workItemID := confirmedActionDispatchTargets(scope)
+	correlation := workers.WorkerCorrelation{
+		RunID:               strings.TrimSpace(runID),
+		IntentProofID:       strings.TrimSpace(proofID),
+		ExecutionContractID: strings.TrimSpace(contractID),
+		TeamID:              strings.TrimSpace(teamID),
+		WorkItemID:          strings.TrimSpace(workItemID),
+		IdempotencyKey:      "confirm-action:" + strings.TrimSpace(proofID),
+		SourceKind:          string(protocol.SourceKindWebAPI),
+		SourceChannel:       confirmedActionSourceChannel,
+		PayloadKind:         string(protocol.PayloadKindCommand),
+		GraphRevision:       centralExecutionContractGraphRevision,
+	}
+	if outcome != nil {
+		correlation.OutcomeID = strings.TrimSpace(outcome.OutcomeID)
+	}
+	return correlation
+}
+
+func (s *AdminServer) startConfirmedActionWorkerRun(ctx context.Context, scope *protocol.ScopeValidation, auditUser string, correlation workers.WorkerCorrelation) (workers.WorkerRunHandle, error) {
+	backend := s.confirmedActionWorkerBackend()
+	if _, ok := backend.(workers.RunFinalizer); !ok {
+		return workers.WorkerRunHandle{}, fmt.Errorf("worker backend lacks central finalization authority")
+	}
+	handle, err := backend.CreateRun(ctx, buildConfirmedActionWorkerRunRequest(scope, auditUser, correlation))
+	if err != nil {
+		return workers.WorkerRunHandle{}, err
+	}
+	if strings.TrimSpace(handle.RunID) != correlation.RunID {
+		return workers.WorkerRunHandle{}, fmt.Errorf("worker backend did not preserve Mycelis run identity")
+	}
+	if strings.TrimSpace(handle.BackendRunID) == "" {
+		handle.BackendRunID = handle.RunID
+	}
+	return handle, nil
 }
 
 func scopeWorkObjective(scope *protocol.ScopeValidation) string {

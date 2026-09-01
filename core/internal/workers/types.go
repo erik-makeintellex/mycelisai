@@ -85,46 +85,67 @@ type ToolPolicy struct {
 }
 
 type WorkerRunRequest struct {
-	OrgID             string         `json:"org_id,omitempty"`
-	ProjectID         string         `json:"project_id,omitempty"`
-	UserID            string         `json:"user_id,omitempty"`
-	RequestedBy       string         `json:"requested_by,omitempty"`
-	Intent            string         `json:"intent"`
-	Instructions      string         `json:"instructions,omitempty"`
-	Input             map[string]any `json:"input,omitempty"`
-	RequiredProtocols []Protocol     `json:"required_protocols,omitempty"`
-	RequiredFeatures  []string       `json:"required_features,omitempty"`
-	Metadata          map[string]any `json:"metadata,omitempty"`
+	RunID             string            `json:"run_id"`
+	OrgID             string            `json:"org_id,omitempty"`
+	ProjectID         string            `json:"project_id,omitempty"`
+	UserID            string            `json:"user_id,omitempty"`
+	RequestedBy       string            `json:"requested_by,omitempty"`
+	Intent            string            `json:"intent"`
+	Instructions      string            `json:"instructions,omitempty"`
+	Input             map[string]any    `json:"input,omitempty"`
+	RequiredProtocols []Protocol        `json:"required_protocols,omitempty"`
+	RequiredFeatures  []string          `json:"required_features,omitempty"`
+	Correlation       WorkerCorrelation `json:"correlation"`
+	Metadata          map[string]any    `json:"metadata,omitempty"`
+}
+
+// WorkerCorrelation is the non-secret control-plane identity carried across a
+// worker boundary. Mycelis owns RunID; BackendRunID is transport identity only.
+type WorkerCorrelation struct {
+	RunID               string `json:"run_id"`
+	IntentProofID       string `json:"intent_proof_id"`
+	ExecutionContractID string `json:"execution_contract_id"`
+	TeamID              string `json:"team_id,omitempty"`
+	WorkItemID          string `json:"work_item_id"`
+	OutcomeID           string `json:"outcome_id,omitempty"`
+	IdempotencyKey      string `json:"idempotency_key"`
+	SourceKind          string `json:"source_kind"`
+	SourceChannel       string `json:"source_channel"`
+	PayloadKind         string `json:"payload_kind"`
+	GraphRevision       string `json:"graph_revision"`
 }
 
 type WorkerRunHandle struct {
-	RunID       string                 `json:"run_id"`
-	Backend     BackendKind            `json:"backend"`
-	Status      RunStatus              `json:"status"`
-	Protocol    Protocol               `json:"protocol,omitempty"`
-	CreatedAt   time.Time              `json:"created_at,omitempty"`
-	UpdatedAt   time.Time              `json:"updated_at,omitempty"`
-	Approval    *WorkerApprovalRequest `json:"approval,omitempty"`
-	Result      *WorkerResult          `json:"result,omitempty"`
-	Error       *WorkerError           `json:"error,omitempty"`
-	AuditRecord *WorkerAuditRecord     `json:"audit_record,omitempty"`
-	Usage       *WorkerUsage           `json:"usage,omitempty"`
-	Metadata    map[string]any         `json:"metadata,omitempty"`
+	RunID        string                 `json:"run_id"`
+	BackendRunID string                 `json:"backend_run_id,omitempty"`
+	Backend      BackendKind            `json:"backend"`
+	Status       RunStatus              `json:"status"`
+	Protocol     Protocol               `json:"protocol,omitempty"`
+	CreatedAt    time.Time              `json:"created_at,omitempty"`
+	UpdatedAt    time.Time              `json:"updated_at,omitempty"`
+	Approval     *WorkerApprovalRequest `json:"approval,omitempty"`
+	Result       *WorkerResult          `json:"result,omitempty"`
+	Error        *WorkerError           `json:"error,omitempty"`
+	AuditRecord  *WorkerAuditRecord     `json:"audit_record,omitempty"`
+	Usage        *WorkerUsage           `json:"usage,omitempty"`
+	Metadata     map[string]any         `json:"metadata,omitempty"`
 }
 
 type WorkerEvent struct {
-	RunID     string                 `json:"run_id"`
-	Backend   BackendKind            `json:"backend"`
-	Kind      EventKind              `json:"kind"`
-	Status    RunStatus              `json:"status,omitempty"`
-	Message   string                 `json:"message,omitempty"`
-	Approval  *WorkerApprovalRequest `json:"approval,omitempty"`
-	Result    *WorkerResult          `json:"result,omitempty"`
-	Error     *WorkerError           `json:"error,omitempty"`
-	Audit     *WorkerAuditRecord     `json:"audit,omitempty"`
-	Usage     *WorkerUsage           `json:"usage,omitempty"`
-	Timestamp time.Time              `json:"timestamp"`
-	Metadata  map[string]any         `json:"metadata,omitempty"`
+	EventID      string                 `json:"event_id"`
+	RunID        string                 `json:"run_id"`
+	BackendRunID string                 `json:"backend_run_id,omitempty"`
+	Backend      BackendKind            `json:"backend"`
+	Kind         EventKind              `json:"kind"`
+	Status       RunStatus              `json:"status,omitempty"`
+	Message      string                 `json:"message,omitempty"`
+	Approval     *WorkerApprovalRequest `json:"approval,omitempty"`
+	Result       *WorkerResult          `json:"result,omitempty"`
+	Error        *WorkerError           `json:"error,omitempty"`
+	Audit        *WorkerAuditRecord     `json:"audit,omitempty"`
+	Usage        *WorkerUsage           `json:"usage,omitempty"`
+	Timestamp    time.Time              `json:"timestamp"`
+	Metadata     map[string]any         `json:"metadata,omitempty"`
 }
 
 type WorkerApprovalRequest struct {

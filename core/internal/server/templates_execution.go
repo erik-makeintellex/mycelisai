@@ -52,8 +52,9 @@ func (s *AdminServer) loadIntentProofScopeTx(tx *sql.Tx, proofID string) (*proto
 	return scope, nil
 }
 
-// createExecutionRunTx persists the durable identity used by later execution status updates.
-func (s *AdminServer) createExecutionRunTx(ctx context.Context, tx *sql.Tx, proofID string, scope *protocol.ScopeValidation, auditUser string) (string, error) {
+// createExecutionRunTx mints and persists the Mycelis-owned identity before a
+// worker backend can perform any external side effect.
+func (s *AdminServer) createExecutionRunTx(ctx context.Context, tx *sql.Tx, proofID string) (string, error) {
 	if tx == nil {
 		return "", errDBUnavailable
 	}
@@ -61,16 +62,9 @@ func (s *AdminServer) createExecutionRunTx(ctx context.Context, tx *sql.Tx, proo
 		return "", fmt.Errorf("proof_id is required")
 	}
 
-	workerRun, err := s.confirmedActionWorkerBackend().CreateRun(ctx, buildConfirmedActionWorkerRunRequest(proofID, scope, auditUser))
-	if err != nil {
-		return "", err
-	}
-	runID := strings.TrimSpace(workerRun.RunID)
-	if runID == "" {
-		return "", fmt.Errorf("worker backend returned empty run_id")
-	}
+	runID := uuid.NewString()
 	now := time.Now()
-	_, err = tx.Exec(
+	_, err := tx.ExecContext(ctx,
 		`INSERT INTO mission_runs (id, mission_id, tenant_id, status, run_depth, started_at)
 		 VALUES ($1, $2, $3, $4, $5, $6)`,
 		runID, proofID, "default", runs.StatusRunning, 0, now,

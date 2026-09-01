@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	ErrExternalExecutionUnavailable = errors.New("external worker execution is unavailable until correlated event projection is wired")
+	ErrExternalExecutionUnavailable = errors.New("external worker execution is unavailable until correlated event projection is production-certified")
 	envSecretNamePattern            = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 )
 
@@ -75,10 +75,9 @@ func NewBackend(cfg WorkerConfig, secrets SecretResolver) (WorkerBackend, error)
 	}
 }
 
-// NewExecutionBackend returns only backends that have a correlated Mycelis
-// execution and completion-projection path. Framework Runs clients are
-// constructible through NewBackend, but cannot be selected for confirmed work
-// until their events are durably consumed by the existing Outcome path.
+// NewExecutionBackend returns only production-certified execution backends.
+// Framework Runs remains fail-closed until its persistence, auth, isolation,
+// restart, and live projection gates are all proven.
 func NewExecutionBackend(cfg WorkerConfig, secrets SecretResolver) (WorkerBackend, error) {
 	backend, err := NewBackend(cfg, secrets)
 	if err != nil {

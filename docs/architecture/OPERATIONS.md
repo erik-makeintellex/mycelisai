@@ -254,7 +254,7 @@ worker_runtime:
   fallback_backend: central
 ```
 
-`framework_runs` is the only external backend name. It requires an absolute HTTP(S) `base_url` without embedded credentials, query, or fragment; absolute health/capability paths; `runs_api`; SSE; central approval; non-negative timeouts; and central fallback. `api_key_secret_ref` accepts `env:NAME` through the current deployment resolver; `secret://...` is valid only when a deployment supplies its own resolver. Never put a raw token in the YAML or URL. Core may construct and probe this client, but confirmed Outcome execution intentionally returns unavailable until durable correlated external-event projection is implemented. Do not change the committed backend from `central` as an enablement shortcut.
+`framework_runs` is the only external backend name. It requires an absolute HTTP(S) `base_url` without embedded credentials, query, or fragment; absolute health/capability paths; `runs_api`; SSE; central approval; non-negative timeouts; and central fallback. `api_key_secret_ref` accepts `env:NAME` through the current deployment resolver; `secret://...` is valid only when a deployment supplies its own resolver. Never put a raw token in the YAML or URL. The committed backend stays `central`. Do not select `framework_runs` until the exact candidate has proven durable run binding/event replay, restart reconciliation, governed approvals, idempotent stop, candidate-output validation, and fail-closed isolation. Configuration or health alone is not enablement.
 
 The bundled `framework_runs` Python service is protocol-conformance tooling, not a production worker service. It binds `127.0.0.1:8091` by default (`MYCELIS_FRAMEWORK_RUNS_HOST` and `MYCELIS_FRAMEWORK_RUNS_PORT` override the local proof bind), reports `framework runs facade ready` from its health endpoint, uses bounded process-local memory, performs no authentication of inbound requests, and refuses to start unless the operator explicitly opts into the conformance driver:
 
@@ -262,7 +262,11 @@ The bundled `framework_runs` Python service is protocol-conformance tooling, not
 MYCELIS_FRAMEWORK_RUNS_ALLOW_CONFORMANCE=1 uv run python -m framework_runs
 ```
 
-Use it only on an isolated local test boundary. LangGraph remains an optional injected driver and is not installed by the root project. AG2 and CrewAI are not installed or operator-selectable in this slice; they are later adapter/import candidates. Microsoft AutoGen is not supported as a new dependency.
+Use it only on an isolated local test boundary. Core owns the run id: the facade must accept it unchanged, return the same record for an identical create, and reject conflicting reuse. The correlation envelope carries the intent proof, execution contract, required work-item id, optional team/Outcome ids, idempotency key, source metadata, and graph revision. Completion remains candidate-only.
+
+LangGraph remains an optional injected worker-local driver and is not installed by the root project. LangGraph Agent Server is not deployed, configured, or preflighted here: doing so would add another operator service, authentication boundary, persistence/recovery owner, tenancy posture, and run control plane before the smaller framework-neutral projection is certified. Do not point `base_url` at an Agent Server and assume protocol compatibility. A later adapter requires an explicit owner and separate conformance, migration, security, recovery, and removal/lifetime decision. AG2 and CrewAI are not installed or operator-selectable in this slice; they are later adapter/import candidates. Microsoft AutoGen is not supported as a new dependency.
+
+LiteLLM is configured separately in the cognitive provider registry. A LangGraph worker may call a policy-approved LiteLLM model alias using a scoped secret, but this does not make LiteLLM a worker backend or give either component Mycelis approval, audit, retained-output, or completion authority. Certify model transport and worker execution independently.
 
 Runtime bootstrap follows the runtime architecture and settings sections of the [Mycelis Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md): template inputs become instantiated organizations through inheritance, precedence, and policy checks.
 

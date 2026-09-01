@@ -86,7 +86,7 @@ profiles:
 
 ## Optional LiteLLM Model Gateway
 
-LiteLLM belongs between Core's cognitive router and model providers. It is not an agent orchestrator and is unrelated to the `framework_runs` execution selector:
+LiteLLM belongs between a policy-approved cognitive caller and model providers. It is not an agent orchestrator and is independent from the `framework_runs` execution selector: a worker-local LangGraph graph may use an approved LiteLLM-backed model route, but the gateway receives no execution, approval, retained-output, or Outcome-completion authority.
 
 ```text
 Soma / Mycelis Core

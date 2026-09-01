@@ -33,18 +33,15 @@
 - Playwright starts/stops the managed Next.js app, seeds a local admin web session for ordinary specs, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant; managed Playwright/build/test invocations are serial for a workspace and port.
 
 ## Framework Worker Adapter Gate
-
-Framework-worker proof is contract proof, not permission to delegate production Outcomes. Run:
-
+Framework-worker proof is contract proof, not production delegation permission. `central` remains the safe default until every gate below passes; [Backend](architecture/BACKEND.md#durable-external-run-projection-target) owns the lifecycle design and [Operations](architecture/OPERATIONS.md#framework-worker-configuration) owns configuration posture. Run:
 ```bash
 go -C core test ./internal/workers ./internal/server -count=1
 UV_CACHE_DIR=/tmp/mycelis-framework-runs-cache uv run --no-sync pytest tests/test_framework_runs_sidecar.py tests/test_k8s_chart_contract.py -q
 ```
-
-The Go gate must prove `worker_runtime` defaults to `central`; unknown fields, old backend names, raw secrets, credential-bearing URLs, unsupported protocols/event/approval modes, invalid paths, and non-central fallback fail closed; `env:` resolution does not accept raw values; the normalized HTTP client covers health, capabilities, create/get/events/approval/stop; external output shapes normalize without granting `RunFinalizer`; and `NewExecutionBackend` rejects `framework_runs` until durable correlated projection exists. Server proof must show missing optional config keeps central behavior, an invalid explicit `MYCELIS_ENGINE_CONFIG_PATH` does not silently fall back, and external selection becomes an unavailable backend rather than central execution under the wrong policy.
-
-The Python gate must prove the bounded non-production store, normalized IDs/status/events, idempotent cancellation, central approval/denial, candidate-only completion metadata, dependency-gated LangGraph construction, and no generic LangGraph approval-resume claim. The chart contract must keep source, Core image, and Helm `engine.yaml` equal and secret-free. AG2, CrewAI, AutoGen, and Microsoft Agent Framework are not test-covered backends in this slice; documentation may name their architectural posture but must not claim installed or executable support.
-
+Configuration/client proof must cover the `central` default; fail-closed unknown fields, old names, raw secrets, credential URLs, unsupported modes, invalid paths, non-central fallback, and unresolved `env:` references; normalized health/capabilities/create/get/events/approval/stop; no `RunFinalizer`; missing optional config; and explicit invalid `MYCELIS_ENGINE_CONFIG_PATH` without fallback.
+Projection proof must cover Core-created identity and the unchanged `run_id` plus intent proof, execution contract, required work-item id, optional team/Outcome ids, idempotency key, source metadata, and graph revision; identical-create idempotency and conflicting reuse; durable binding/cursor/receipts; single projection of matching events; fail-closed mismatch, malformed/duplicate/stale/conflicting events; and reconnect/restart reconciliation through `GET /v1/runs/{id}` without replacement or replayed side effects.
+Control/result proof must cover Mycelis-owned matching approval/denial, rejection of self-approval or substituted ids, idempotent terminal stop, honest stream-loss recovery, unavailable selection when a required component is unavailable, unchanged central behavior, no uncertain external-to-central fallback, and `completed` remaining `verified=false` until existing path, ownership, readback, semantic/runtime, proof, and Outcome gates pass; invalid output degrades and never becomes `output_ready`.
+The focused mock-facade integration path is create -> progress -> approval -> completion candidate -> Mycelis validation, plus duplicate/restart reconciliation, stop, and failure. Python proof retains bounded-store, identity/idempotency/conflict, correlation/events, cancellation, central approval, candidate-only completion, dependency-gated worker-local LangGraph, and no generic approval-resume claims. Chart proof keeps source/image/Helm engine configuration equal and secret-free. Agent Server is not started; other named frameworks remain documentation-only adapter candidates.
 ## Optional Model Gateway Gate
 
 LiteLLM proof is OpenAI-compatible transport conformance, not permission to start a proxy or relax Core policy. Run:
