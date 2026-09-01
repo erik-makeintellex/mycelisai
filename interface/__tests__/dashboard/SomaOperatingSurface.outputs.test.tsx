@@ -48,17 +48,26 @@ vi.mock("@/components/soma/SomaWorkspaceFrame", () => ({
     expression,
     output,
     primaryPanel,
+    resultFirst,
     showOutputDigest,
+    workItemCount,
+    workStatus,
   }: {
     expression: React.ReactNode;
     output: React.ReactNode;
     primaryPanel?: string;
+    resultFirst?: boolean;
     showOutputDigest?: boolean;
+    workItemCount?: number;
+    workStatus?: string;
   }) => (
     <div
       data-testid="mock-soma-workspace-frame"
       data-primary-panel={primaryPanel ?? ""}
+      data-result-first={String(resultFirst)}
       data-show-output-digest={String(showOutputDigest)}
+      data-work-item-count={workItemCount ?? 0}
+      data-work-status={workStatus ?? ""}
     >
       {expression}
       {output}
@@ -93,8 +102,9 @@ describe("SomaOperatingSurface output projection", () => {
 
     const workspace = within(screen.getByTestId("mock-soma-workspace-frame"));
     const workbench = within(workspace.getByTestId("output-workbench"));
-    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("");
-    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("true");
+    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("output");
+    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-result-first")).toBe("true");
+    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("false");
     expect(screen.queryByTestId("focused-team-output-dock")).toBeNull();
     expect(screen.queryByTestId("soma-outcome-vault")).toBeNull();
     expect(workbench.getByText("Comic page")).toBeDefined();

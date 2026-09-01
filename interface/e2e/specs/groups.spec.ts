@@ -73,7 +73,7 @@ test.describe("Groups workspace (/groups)", () => {
     await openGroups(page);
 
     await expect(
-      page.getByRole("heading", { name: "Manage focused collaboration lanes." }),
+      page.getByRole("heading", { name: "Review active work and delivered results." }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "Standing groups" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Temporary groups" })).toBeVisible();
@@ -195,7 +195,7 @@ test.describe("Groups workspace (/groups)", () => {
       waitUntil: "domcontentloaded",
     });
 
-    await expect(page.getByRole("heading", { name: /Manage focused collaboration lanes/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Review active work and delivered results/i })).toBeVisible();
     await expect(page.getByTestId("groups-list-item-group-temp-launch")).toHaveAttribute(
       "aria-current",
       "true",
@@ -213,7 +213,7 @@ test.describe("Groups workspace (/groups)", () => {
     const harness = await mockGroupsWorkspace(page);
     await openGroups(page);
 
-    await page.getByRole("link", { name: "Create group" }).click();
+    await page.getByRole("link", { name: "Advanced group setup" }).click();
     await expect(page.getByRole("tablist", { name: "Create group sections" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Basics" })).toHaveAttribute(
       "aria-selected",

@@ -3,7 +3,7 @@ import { Check, ExternalLink, MessageSquareReply, Quote } from "lucide-react";
 import { useState } from "react";
 import { sortTeamOutputRefsNewestFirst } from "@/components/teams/teamWorkProjection";
 import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
-import type { ChatArtifactRef, ExecutionSummaryData, ExecutionSummaryItem, OutputProofEnvelope, TeamOutputRef } from "@/store/useCortexStore";
+import type { ChatArtifactRef, ExecutionSummaryData, ExecutionSummaryItem, OutputProofEnvelope, TeamOutputRef, WorkOutputContractData } from "@/store/useCortexStore";
 import ExecutionSummaryMediaPreview from "./ExecutionSummaryMediaPreview";
 import {
   artifactOutputItems,
@@ -18,6 +18,7 @@ import { OutputProofBadges, OutputProofDetails } from "./OutputWorkbenchProofDet
 import { OutputWorkbenchProjectPackage } from "./OutputWorkbenchProjectPackage";
 import { OUTPUT_PACKAGE_OPEN_LABEL, projectPackageOpenPath } from "@/lib/outputPackageModel";
 import { requestSomaOutputContinuation } from "./outputContinuation";
+import { deliverablePresentation } from "@/lib/deliverablePresentation";
 
 export type OutputWorkbenchItem = {
   text: string;
@@ -25,6 +26,10 @@ export type OutputWorkbenchItem = {
   storagePath?: string;
   proof?: OutputProofEnvelope;
   proofArtifactId?: string;
+  kind?: string;
+  type?: string;
+  contentType?: string;
+  entrypoint?: string;
 };
 export function projectPackageOutputs(outputs: ExecutionSummaryData["outputs"]) {
   return asItems(outputs).filter((item): item is ExecutionSummaryItem => (
@@ -42,6 +47,10 @@ export function outputWorkbenchItems(summary?: ExecutionSummaryData, artifacts?:
         ...(storagePath ? { storagePath } : {}),
         ...(typeof item !== "string" && item.proof ? { proof: item.proof } : {}),
         ...(typeof item !== "string" && item.proof_artifact_id ? { proofArtifactId: item.proof_artifact_id } : {}),
+        ...(typeof item !== "string" && item.kind ? { kind: item.kind } : {}),
+        ...(typeof item !== "string" && item.type ? { type: item.type } : {}),
+        ...(typeof item !== "string" && item.content_type ? { contentType: item.content_type } : {}),
+        ...(typeof item !== "string" && item.entrypoint ? { entrypoint: item.entrypoint } : {}),
       };
     })
     .filter((item): item is OutputWorkbenchItem => Boolean(item.text));
@@ -73,6 +82,8 @@ export function teamOutputWorkbenchItems(outputRefs: TeamOutputRef[]): OutputWor
       ...(output.storage_ref ? { storagePath: output.storage_ref } : {}),
       ...(output.proof ? { proof: output.proof } : {}),
       ...(output.proof_id ? { proofArtifactId: output.proof_id } : {}),
+      ...(output.kind ? { kind: output.kind } : {}),
+      ...(output.entrypoint ? { entrypoint: output.entrypoint } : {}),
     }))
     .filter((item): item is OutputWorkbenchItem => Boolean(item.text));
 }
@@ -131,11 +142,13 @@ export function OutputWorkbench({
   projectPackages,
   emptyMessage = "Soma outputs will appear here when a run, package, or retained artifact is available.",
   projectOpenLabel = OUTPUT_PACKAGE_OPEN_LABEL,
+  outputContract,
 }: {
   outputs: OutputWorkbenchItem[];
   projectPackages?: ExecutionSummaryItem[];
   emptyMessage?: string;
   projectOpenLabel?: string;
+  outputContract?: WorkOutputContractData;
 }) {
   const [copiedOutputKey, setCopiedOutputKey] = useState<string | null>(null);
   const packages = projectPackages ?? [];
@@ -176,6 +189,7 @@ export function OutputWorkbench({
           project={primaryPackage}
           index={0}
           projectOpenLabel={projectOpenLabel}
+          outputContract={outputContract}
           isPrimary
         />
       ) : null}
@@ -195,7 +209,15 @@ export function OutputWorkbench({
                 label={highlightedOutput.text}
                 url={highlightedOutput.url}
                 storagePath={highlightedOutput.storagePath}
-                openLabel="Open output"
+                openLabel={deliverablePresentation({
+                  outputContract,
+                  kind: highlightedOutput.kind,
+                  type: highlightedOutput.type,
+                  contentType: highlightedOutput.contentType,
+                  title: highlightedOutput.text,
+                  entrypoint: highlightedOutput.entrypoint,
+                  path: highlightedOutput.storagePath ?? highlightedOutput.url,
+                }).actionLabel}
                 folderLabel="Open folder"
                 primary
                 showFolder={false}

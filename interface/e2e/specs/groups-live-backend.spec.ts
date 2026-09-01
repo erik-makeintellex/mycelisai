@@ -95,7 +95,7 @@ async function gotoWithColdStartRetry(page: Page, path: string) {
 
 async function openGroupsWorkspace(page: Page, path: string) {
     await gotoWithColdStartRetry(page, path);
-    await expect(page.getByRole('heading', { name: /Manage focused collaboration lanes/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Review active work and delivered results/i })).toBeVisible();
 }
 
 test.describe('Groups retained outputs live backend contract', () => {
@@ -128,7 +128,7 @@ test.describe('Groups retained outputs live backend contract', () => {
 
         await openGroupsWorkspace(page, `/groups?group_id=${encodeURIComponent(group.group_id)}`);
 
-        await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Review active work and delivered results.' })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Open Soma' })).toHaveCount(2);
         await expect(page.getByTestId(`groups-list-item-${group.group_id}`)).toBeVisible();
         await page.getByTestId(`groups-list-item-${group.group_id}`).click();

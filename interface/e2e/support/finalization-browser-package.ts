@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { expect, type APIResponse, type Page, type Route, type TestInfo } from "@playwright/test";
+import { expect, type APIResponse, type Locator, type Page, type Route, type TestInfo } from "@playwright/test";
 import type { RouteResponse } from "./soma-ui-testing";
 import { liveAPIHeaders, liveAPIURL } from "./live-api-auth";
 
@@ -268,14 +268,37 @@ export async function expectProjectPackageVisible(page: Page, expected: {
   entrypoint: string;
   folder: string;
 }) {
-  await expect(page.getByText(expected.title).last()).toBeVisible();
-  // Compact package surfaces should prove the retained output is usable without
-  // forcing raw entrypoint metadata into the primary work lane.
-  await expect(page.getByText(expected.folder).last()).toBeVisible();
-  await expect(page.getByRole("button", { name: new RegExp(`Open app .*${expected.title}`, "i") }).last()).toBeVisible();
-  const digest = page.getByTestId("soma-workbench-output-digest").last();
-  await digest.getByText("Details and follow-up").click();
-  await expect(digest.getByRole("button", { name: /Open .*folder/i })).toBeVisible();
+  const stage = page.getByTestId("soma-result-first-stage");
+  await expect(stage).toBeVisible();
+  const workbench = stage.getByTestId("output-workbench");
+  await expect(workbench).toBeVisible();
+  const resultCard = projectPackageResultCard(page, expected.title);
+  await expect(resultCard.getByText(expected.title, { exact: true })).toBeVisible();
+  await expect(projectPackagePrimaryAction(resultCard, expected.title)).toBeVisible();
+
+  await resultCard.getByText("Details and proof", { exact: true }).click();
+  await expect(resultCard.getByText(expected.folder, { exact: true })).toBeVisible();
+  await expect(resultCard.getByRole("button", { name: new RegExp(`Open local folder for ${escapeRegExp(expected.title)}`, "i") })).toBeVisible();
+  return resultCard;
+}
+
+export function projectPackageResultCard(page: Page, title: string) {
+  return page
+    .getByTestId("soma-result-first-stage")
+    .getByTestId("output-workbench")
+    .locator("article")
+    .filter({ hasText: title })
+    .first();
+}
+
+export function projectPackagePrimaryAction(resultCard: Locator, title: string) {
+  return resultCard.getByRole("button", {
+    name: new RegExp(`(?:Play game|Open app|Open result) ${escapeRegExp(title)} in Mycelis`, "i"),
+  });
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export async function fulfillJSON(route: Route, status: number, body: unknown) {

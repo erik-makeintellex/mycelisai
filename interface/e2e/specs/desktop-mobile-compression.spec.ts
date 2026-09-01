@@ -47,36 +47,21 @@ test.describe("Desktop/mobile compression proof", () => {
     await expect(page.getByTestId("focused-team-output-dock")).toHaveCount(0);
     await expect(page.getByTestId("soma-team-context-switcher")).toHaveCount(0);
     await expect(page.getByText("Continuing First Demo Game Team")).toBeVisible();
-    const digest = page.getByTestId("soma-workbench-output-digest");
-    await expect(digest).toBeVisible();
-    await expect(digest.getByText("Coin Runner package")).toBeVisible();
-    await digest.getByText("Details and follow-up").click();
-    await expect(digest.getByRole("button", { name: /Open local folder/i })).toBeVisible();
-    await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveAttribute("aria-expanded", "false");
-    const reviewToggle = page.getByTestId("soma-workbench-panel-toggle");
-    await reviewToggle.click();
-    const panel = page.getByTestId("soma-workbench-side-rail");
-    await expect(panel).toHaveAttribute("aria-hidden", "false");
-    await expect(panel).toHaveAttribute("role", "dialog");
-    await expect(panel).toHaveAttribute("aria-modal", "true");
-    await expect(panel).toHaveCSS("opacity", "1");
-    await expect(panel.getByRole("button", { name: "Close work panel" })).toBeFocused();
-    await expect(panel.getByTestId("project-package-actions")).toBeVisible();
-    const panelWidths = await panel.evaluate((node) => ({
+    const resultStage = page.getByTestId("soma-result-first-stage");
+    await expect(resultStage).toBeVisible();
+    await expect(resultStage.getByText("Coin Runner game")).toBeVisible();
+    await expect(resultStage.getByRole("button", { name: /Play game .*Coin Runner game/i })).toBeVisible();
+    await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveCount(0);
+    const resultWidths = await resultStage.evaluate((node) => ({
       clientWidth: node.clientWidth,
       scrollWidth: node.scrollWidth,
     }));
-    expect(panelWidths.scrollWidth).toBeLessThanOrEqual(panelWidths.clientWidth + 1);
+    expect(resultWidths.scrollWidth).toBeLessThanOrEqual(resultWidths.clientWidth + 1);
     await page.screenshot({
       path: testInfo.outputPath("dashboard-output-review-desktop.png"),
       fullPage: true,
     });
     await expectNoHorizontalOverflow(page);
-
-    await page.keyboard.press("Escape");
-    await expect(panel).toHaveAttribute("aria-hidden", "true");
-    await expect(panel).toHaveCSS("visibility", "hidden");
-    await expect(reviewToggle).toBeFocused();
 
     const vaultToggle = page.getByRole("button", { name: /Open Outcome Vault/i });
     await vaultToggle.click();
@@ -87,18 +72,15 @@ test.describe("Desktop/mobile compression proof", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/dashboard?team_id=active-demo-team", { waitUntil: "domcontentloaded" });
 
-    const toggle = page.getByTestId("soma-workbench-panel-toggle");
-    await expect(toggle).toBeVisible({ timeout: 20_000 });
-    await toggle.click();
-    const panel = page.getByTestId("soma-workbench-side-rail");
-    await expect(panel).toHaveAttribute("aria-hidden", "false");
-    await expect(panel).toHaveCSS("opacity", "1");
-    await expect(panel.getByTestId("project-package-actions")).toBeVisible();
-    const panelWidths = await panel.evaluate((node) => ({
+    const resultStage = page.getByTestId("soma-result-first-stage");
+    await expect(resultStage).toBeVisible({ timeout: 20_000 });
+    await expect(resultStage.getByTestId("project-package-actions")).toBeVisible();
+    await expect(resultStage.getByRole("button", { name: /Play game .*Coin Runner game/i })).toBeVisible();
+    const resultWidths = await resultStage.evaluate((node) => ({
       clientWidth: node.clientWidth,
       scrollWidth: node.scrollWidth,
     }));
-    expect(panelWidths.scrollWidth).toBeLessThanOrEqual(panelWidths.clientWidth + 1);
+    expect(resultWidths.scrollWidth).toBeLessThanOrEqual(resultWidths.clientWidth + 1);
     await page.screenshot({
       path: testInfo.outputPath("dashboard-output-review-compact.png"),
       fullPage: true,
@@ -112,14 +94,14 @@ test.describe("Desktop/mobile compression proof", () => {
 
     await expect(page.getByTestId("soma-current-work-lane")).toBeVisible({ timeout: 20_000 });
     const toggle = page.getByTestId("soma-workbench-panel-toggle");
-    await expect(toggle).toContainText("Review work");
+    await expect(toggle).toContainText("Respond");
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await toggle.click();
 
     const panel = page.getByTestId("soma-workbench-side-rail");
     await expect(panel).toHaveAttribute("aria-hidden", "false");
-    await expect(panel.getByText("Review work")).toBeVisible();
-    await expect(panel.getByText(/Understand the item/i)).toBeVisible();
+    await expect(panel.getByText("Input needed").first()).toBeVisible();
+    await expect(panel.getByText(/Review the request/i)).toBeVisible();
     await expect(panel.getByRole("tab", { name: /Work/i })).toHaveCount(0);
     await expect(panel.getByRole("link", { name: /Open inbox/i })).toHaveAttribute("href", "/teams?view=work");
     await expect(panel.getByLabel("Review queue summary")).toBeVisible();
@@ -130,11 +112,11 @@ test.describe("Desktop/mobile compression proof", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("Dashboard Soma composer remains reachable when current work is visible", async ({ page }) => {
+  test("Dashboard Soma composer remains reachable beside a ready result", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 560 });
     await page.goto("/dashboard?team_id=active-demo-team", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByTestId("soma-current-work-lane")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("soma-result-first-stage")).toBeVisible({ timeout: 20_000 });
     const input = page.getByTestId("central-soma-chat-frame").locator("textarea").first();
     await input.click();
     await input.fill(
@@ -186,7 +168,7 @@ test.describe("Desktop/mobile compression proof", () => {
     const selector = page.getByTestId("resource-type-tabs");
     await expect(selector).toBeVisible({ timeout: 20_000 });
     const selectorBox = await selector.boundingBox();
-    expect(selectorBox?.height ?? 0).toBeLessThanOrEqual(80);
+    expect(selectorBox?.height ?? 0).toBeLessThanOrEqual(96);
 
     const capabilities = page.getByRole("tab", { name: /^Capabilities/ });
     await capabilities.click();
@@ -197,7 +179,7 @@ test.describe("Desktop/mobile compression proof", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.getByRole("tab", { name: /^Capabilities/ })).toHaveAttribute("aria-selected", "true");
     await page.goBack({ waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("tab", { name: /^Output Files/ })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: /^Deliverables/ })).toHaveAttribute("aria-selected", "true");
     await expectNoHorizontalOverflow(page);
   });
 });

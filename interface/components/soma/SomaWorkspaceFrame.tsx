@@ -49,6 +49,9 @@ export function SomaWorkspaceFrame({
   recoveryReviewCount = 0,
   reviewCount,
   showOutputDigest = true,
+  resultFirst = false,
+  workItemCount = 0,
+  workStatus,
 }: {
   expression: React.ReactNode;
   activeWork?: React.ReactNode;
@@ -59,19 +62,32 @@ export function SomaWorkspaceFrame({
   recoveryReviewCount?: number;
   reviewCount?: number;
   showOutputDigest?: boolean;
+  resultFirst?: boolean;
+  workItemCount?: number;
+  workStatus?: "active" | "needs_input" | "needs_review";
 }) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<PanelKey>("work");
   const sideRailRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const sideRailId = "soma-workbench-panel";
+  const workPanelTitle = workStatus === "needs_input"
+    ? "Input needed"
+    : workStatus === "needs_review"
+      ? "Work to review"
+      : "Current work";
+  const workPanelDescription = workStatus === "needs_input"
+    ? "Work waiting for an operator response or decision."
+    : workStatus === "needs_review"
+      ? "Work that needs recovery, a decision, or follow-up."
+      : "Work that is queued, running, or being checked by the team.";
   const panels = [
     {
       key: "work" as const,
       icon: <Radio className="h-3.5 w-3.5" />,
       label: "Work",
-      title: "Work to review",
-      description: "Work that needs a decision, check, or follow-up.",
+    title: workPanelTitle,
+    description: workPanelDescription,
       href: "/teams?view=work",
       content: activeWork,
     },
@@ -104,9 +120,13 @@ export function SomaWorkspaceFrame({
     },
   ].filter((panel) => Boolean(panel.content));
   const outputPanel = panels.find((panel) => panel.key === "output");
+  const showResultStage = Boolean(resultFirst && outputPanel);
   const outputDigest = digestFromOutputNode(output);
   const primaryPanelKey = primaryPanel ?? (outputPanel ? "output" : "work");
   const primaryReviewPanel = panels.find((panel) => panel.key === primaryPanelKey) ?? outputPanel ?? panels[0];
+  const lanePrimaryPanel = showResultStage && workItemCount > 0
+    ? panels.find((panel) => panel.key === "work") ?? primaryReviewPanel
+    : primaryReviewPanel;
   const selectedPanel = panels.find((panel) => panel.key === activePanel) ?? outputPanel ?? panels[0];
   const isDedicatedOutputReview = selectedPanel?.key === "output";
   const hasPanels = panels.length > 0;
@@ -114,14 +134,20 @@ export function SomaWorkspaceFrame({
   const visibleReviewCount = primaryReviewPanel?.key === "output"
     ? baseReviewCount + recoveryReviewCount
     : baseReviewCount;
-  const reviewLabel = primaryReviewPanel?.key === "output" ? "Review output" : "Review work";
+  const reviewLabel = lanePrimaryPanel?.key === "output"
+    ? "Review output"
+    : workStatus === "active"
+      ? "View work"
+      : workStatus === "needs_input"
+        ? "Respond to work"
+        : "Review work";
   const showClosedOutputDigest = Boolean(outputDigest && showOutputDigest);
-  const isFocusedWorkReview = primaryReviewPanel?.key === "work";
+  const isFocusedWorkReview = lanePrimaryPanel?.key === "work";
   const showCurrentWorkLane = Boolean(
     hasPanels
-      && primaryReviewPanel
+    && lanePrimaryPanel
       && (
-        primaryReviewPanel.key === "work"
+        lanePrimaryPanel.key === "work"
         || showClosedOutputDigest
         || recoveryReviewCount > 0
       ),
@@ -129,6 +155,11 @@ export function SomaWorkspaceFrame({
   const recoveryReviewCopy = recoveryReviewCount > 0
     ? `${recoveryReviewCount} recovery ${recoveryReviewCount === 1 ? "item" : "items"} also ${recoveryReviewCount === 1 ? "needs" : "need"} review.`
     : null;
+  const workPanelLead = workStatus === "needs_input"
+    ? "Review the request, then respond or open the full inbox."
+    : workStatus === "needs_review"
+      ? "Understand the issue, then recover, clear, or open the full inbox."
+      : "Follow progress here, or open the full inbox for the complete timeline.";
 
   useEffect(() => {
     if (!isPanelOpen) return;
@@ -176,8 +207,8 @@ export function SomaWorkspaceFrame({
 
   const togglePanel = () => {
     setIsPanelOpen((open) => {
-      if (!open && primaryReviewPanel) {
-        setActivePanel(primaryReviewPanel.key);
+      if (!open && lanePrimaryPanel) {
+        setActivePanel(lanePrimaryPanel.key);
       }
       return !open;
     });
@@ -189,30 +220,52 @@ export function SomaWorkspaceFrame({
       data-testid="soma-workspace-frame"
     >
       <div className="flex h-full min-h-0 min-w-0 flex-col">
-        {showCurrentWorkLane && primaryReviewPanel ? (
+    {showCurrentWorkLane && lanePrimaryPanel ? (
           <div className="mb-2 shrink-0">
             <SomaCurrentWorkLane
               digest={outputDigest}
               isPanelOpen={isPanelOpen}
               onTogglePanel={togglePanel}
               panelId={sideRailId}
-              primaryKind={primaryReviewPanel.key === "work" ? "work" : "output"}
-              reviewCount={visibleReviewCount}
+        primaryKind={lanePrimaryPanel.key === "work" ? "work" : "output"}
+        reviewCount={lanePrimaryPanel.key === "work" ? workItemCount || visibleReviewCount : visibleReviewCount}
               recoveryReviewCount={recoveryReviewCount}
               reviewLabel={reviewLabel}
-              showOutputDigest={showClosedOutputDigest}
-            />
+        showOutputDigest={showClosedOutputDigest}
+        workStatus={workStatus}
+      />
           </div>
         ) : null}
+    {showResultStage && outputPanel ? (
+      <div className="grid min-h-0 flex-1 gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.38fr)]" data-testid="soma-result-first-stage">
+        <SlotPanel
+          icon={<FileText className="h-3.5 w-3.5" />}
+          label="Result"
+          description="The trusted retained deliverable is ready to open, review, and continue."
+          className="min-h-0 lg:overflow-y-auto"
+        >
+          {outputPanel.content}
+        </SlotPanel>
         <SlotPanel
           icon={<Sparkles className="h-3.5 w-3.5" />}
           label="Soma"
-          description="Ask Soma for the next plan, change, file, decision, or follow-up."
-          className="flex min-h-0 flex-1 flex-col"
-          showHeader={false}
+          description="Ask Soma to continue, revise, explain, or follow up on this result."
+          className="flex min-h-[300px] flex-col lg:min-h-0"
         >
-          {expression}
+          <div className="min-h-0 flex-1" data-testid="soma-continuation-sidecar">{expression}</div>
         </SlotPanel>
+      </div>
+    ) : (
+      <SlotPanel
+        icon={<Sparkles className="h-3.5 w-3.5" />}
+        label="Soma"
+        description="Ask Soma for the next plan, change, file, decision, or follow-up."
+        className="flex min-h-0 flex-1 flex-col"
+        showHeader={false}
+      >
+        {expression}
+      </SlotPanel>
+    )}
       </div>
       {hasPanels ? (
         <>
@@ -221,7 +274,7 @@ export function SomaWorkspaceFrame({
             id={sideRailId}
             role={isPanelOpen ? "dialog" : undefined}
             aria-modal={isPanelOpen ? "true" : undefined}
-            aria-label={isFocusedWorkReview ? "Review work" : "Review output"}
+      aria-label={isFocusedWorkReview ? workPanelTitle : "Review output"}
             aria-hidden={!isPanelOpen}
             className={`fixed inset-x-2 bottom-2 top-2 z-40 flex min-w-0 flex-col overflow-hidden rounded-2xl border border-cortex-border bg-cortex-surface p-3 shadow-2xl shadow-black/20 transition-[width,transform,opacity] duration-200 sm:bottom-3 sm:left-auto sm:right-3 sm:top-3 sm:bg-cortex-surface/95 sm:backdrop-blur ${
               isDedicatedOutputReview
@@ -240,11 +293,11 @@ export function SomaWorkspaceFrame({
                   <div className="flex items-center justify-between gap-2 px-1">
                     <div>
                       <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-cortex-text-muted">
-                        {isFocusedWorkReview ? "Review work" : "Review"}
+            {isFocusedWorkReview ? workPanelTitle : "Review"}
                       </p>
                       <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
                         {isFocusedWorkReview
-                          ? "Understand the item, then recover, clear, or open the full inbox."
+              ? workPanelLead
                           : recoveryReviewCopy
                             ? `Output is ready. ${recoveryReviewCopy} Use the Work tab for recovery, or Trust for proof.`
                             : "Check the most useful details here. Open the full page for more."}

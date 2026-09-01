@@ -392,7 +392,7 @@ export async function mockGroupsWorkspace(page: Page) {
 
 export async function openGroups(page: Page) {
   await page.goto("/groups", { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: /Manage focused collaboration lanes/i }).waitFor();
-  await page.getByText("Group lane monitor is online.").waitFor();
+  await page.getByRole("heading", { name: /Review active work and delivered results/i }).waitFor();
+  await page.getByText("Advanced group monitor is online.").waitFor();
   await page.getByRole("heading", { name: "Standing groups" }).waitFor();
 }

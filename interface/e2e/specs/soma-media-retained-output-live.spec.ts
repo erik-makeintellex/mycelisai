@@ -102,7 +102,7 @@ async function mockRetainedMediaExecution(page: Page) {
           },
           outputs: [
             {
-              kind: "file",
+              kind: "image",
               title: mediaTitle,
               id: mediaPath,
               href: mediaHref,
@@ -205,25 +205,27 @@ test.describe("Soma media retained output proof", () => {
     await expect(page.getByText(mediaPath).last()).toBeVisible();
     await confirmProposal(page);
 
-    await expect(page.getByText("Output ready").last()).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText(mediaTitle).last()).toBeVisible();
-    await expect(page.getByRole("img", { name: mediaTitle })).toBeVisible();
-    await expect(page.getByRole("button", { name: new RegExp(`Open file .*${mediaTitle}`, "i") }).last()).toBeVisible();
+    const resultStage = page.getByTestId("soma-result-first-stage");
+    const outputWorkbench = resultStage.getByTestId("output-workbench");
+    await expect(resultStage).toBeVisible({ timeout: 20_000 });
+    await expect(outputWorkbench.getByText(mediaTitle)).toBeVisible();
+    await expect(outputWorkbench.getByRole("img", { name: mediaTitle })).toBeVisible();
+    await expect(outputWorkbench.getByRole("button", { name: `View image ${mediaTitle} in Mycelis` })).toBeVisible();
 
-    await page.getByRole("button", { name: new RegExp(`Open file .*${mediaTitle} in Mycelis`, "i") }).last().click();
+    await outputWorkbench.getByRole("button", { name: `View image ${mediaTitle} in Mycelis` }).click();
     await expect(page).toHaveURL(/\/outputs\/view\?/);
     await expect(page.locator("iframe")).toHaveAttribute("src", new RegExp(encodeURIComponent(mediaPath)));
     await page.getByRole("link", { name: "Back to Soma" }).click();
 
-    const outputDigest = page.getByTestId("soma-workbench-output-digest").last();
-    await outputDigest.getByText("Details and follow-up").click();
-    await outputDigest.getByRole("button", { name: new RegExp(`Open .*folder .*${mediaTitle}`, "i") }).click();
+    const returnedWorkbench = page.getByTestId("soma-result-first-stage").getByTestId("output-workbench");
+    await returnedWorkbench.getByText("Details and proof").click();
+    await returnedWorkbench.getByRole("button", { name: new RegExp(`Open local folder for ${mediaTitle}`, "i") }).click();
     await expect.poll(() => revealCalls.some((url) => url.includes(encodeURIComponent(mediaPath)))).toBe(true);
 
     await enableAdvancedMode(page);
     await page.goto("/resources?tab=workspace", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("tab", { name: /Output Files/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Deliverables/i })).toBeVisible();
     await page.getByRole("button", { name: "Open folder saved-media" }).click();
     await page.getByRole("button", { name: "Open folder media-team-proof" }).click();
     await expect(page.getByText("storyboard-frame.png")).toBeVisible();
@@ -268,9 +270,14 @@ test.describe("Soma media retained output proof", () => {
     expect(mediaOutput, JSON.stringify(outputs)).toBeTruthy();
 
     const outputLabel = mediaOutput!.title || mediaOutput!.id || "Team output";
-    await expect(page.getByText(/Latest output|Result saved/i).last()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(outputLabel).last()).toBeVisible();
-    await expect(page.getByRole("button", { name: new RegExp(`Open .*${outputLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.*browser window`) }).last()).toBeVisible();
-    await expect(page.getByRole("button", { name: new RegExp(`Open .*folder .*${escaped(outputLabel)}`, "i") }).last()).toBeVisible();
+    const resultStage = page.getByTestId("soma-result-first-stage");
+    const outputWorkbench = resultStage.getByTestId("output-workbench");
+    await expect(resultStage).toBeVisible({ timeout: 30_000 });
+    await expect(outputWorkbench.getByText(outputLabel)).toBeVisible();
+    await expect(outputWorkbench.getByRole("button", {
+      name: new RegExp(`(?:View image|Open result) ${escaped(outputLabel)} in Mycelis`, "i"),
+    })).toBeVisible();
+    await outputWorkbench.getByText("Details and proof").click();
+    await expect(outputWorkbench.getByRole("button", { name: new RegExp(`Open local folder for ${escaped(outputLabel)}`, "i") })).toBeVisible();
   });
 });

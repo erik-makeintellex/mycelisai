@@ -2,7 +2,7 @@
 
 import { FolderOpen, MessageSquareReply, ShieldCheck } from "lucide-react";
 import { OutcomeHealthBadge } from "@/components/shared/OutcomeHealthBadge";
-import type { ExecutionSummaryItem } from "@/store/useCortexStore";
+import type { ExecutionSummaryItem, WorkOutputContractData } from "@/store/useCortexStore";
 import {
   OUTPUT_PACKAGE_FOLDER_LABEL,
   OUTPUT_PACKAGE_RESOURCES_LABEL,
@@ -15,16 +15,19 @@ import { itemText, itemUrl } from "./ExecutionSummaryCardModel";
 import OutputAccessActions from "./OutputAccessActions";
 import { OutputProofDetails } from "./OutputWorkbenchProofDetails";
 import { requestSomaOutputContinuation } from "./outputContinuation";
+import { deliverablePresentation } from "@/lib/deliverablePresentation";
 
 export function OutputWorkbenchProjectPackage({
   project,
   index,
   projectOpenLabel,
+  outputContract,
   isPrimary = false,
 }: {
   project: ExecutionSummaryItem;
   index: number;
   projectOpenLabel: string;
+  outputContract?: WorkOutputContractData;
   isPrimary?: boolean;
 }) {
   const title = itemText(project) ?? "Project package";
@@ -34,9 +37,20 @@ export function OutputWorkbenchProjectPackage({
   const revealPath = projectPackageRevealPath({ folder: project.folder, entrypoint: project.entrypoint, filePath: project.path });
   const resourcesHref = projectPackageResourcesHref({ folder: project.folder, entrypoint: project.entrypoint, filePath: project.path });
   const files = project.files ?? [];
-  const primaryOpenLabel = projectOpenLabel === "Open file"
+  const fallbackOpenLabel = projectOpenLabel === "Open file"
     ? project.entrypoint?.toLowerCase().endsWith(".html") ? "Open app" : "Open output"
     : projectOpenLabel;
+  const primaryOpenLabel = isPrimary
+    ? deliverablePresentation({
+      outputContract,
+      kind: project.kind,
+      type: project.type,
+      contentType: project.content_type,
+      title,
+      entrypoint: project.entrypoint,
+      path: project.path ?? project.folder,
+    }).actionLabel
+    : fallbackOpenLabel;
 
   return (
     <article

@@ -218,6 +218,9 @@ export function artifactOutputItems(artifacts?: ChatArtifactRef[]) {
         text: artifact.title || artifact.type || artifact.id || "Artifact",
         url: artifact.url ?? null,
         ...((artifact.saved_path ?? artifact.folder ?? artifact.entrypoint) ? { storagePath: artifact.saved_path ?? artifact.folder ?? artifact.entrypoint } : {}),
+        ...(artifact.type ? { type: artifact.type } : {}),
+        ...(artifact.content_type ? { contentType: artifact.content_type } : {}),
+        ...(artifact.entrypoint ? { entrypoint: artifact.entrypoint } : {}),
     })) ?? [];
 }
 

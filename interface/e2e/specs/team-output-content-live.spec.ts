@@ -157,32 +157,37 @@ async function executeTeamOutput(page: Page, ask: TeamOutputAsk) {
     const runID = confirmed.body!.data!.run_id!;
     await expectConfirmedTeamWorkReadback(page, ask, runID);
 
-    await expect(page.getByText(/Action completed|Result saved|The produced output is available for review/i).last()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText('Latest output').last()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(ask.filePath).last()).toBeVisible();
-    const openButton = page.getByRole('button', { name: /Open(?: file)? .+ in a new browser window/i }).last();
-    const outputPagePromise = page.context().waitForEvent('page');
+    const resultStage = page.getByTestId('soma-result-first-stage');
+    const outputWorkbench = resultStage.getByTestId('output-workbench');
+    await expect(resultStage).toBeVisible({ timeout: 30_000 });
+    await expect(outputWorkbench.getByText('Latest output')).toBeVisible();
+    await expect(outputWorkbench.getByText(ask.filePath)).toBeVisible();
+    const openButton = outputWorkbench.getByRole('button', {
+        name: new RegExp(`Open result ${escapeRegex(ask.filePath)} in Mycelis`, 'i'),
+    });
     await openButton.click();
-    const outputPage = await outputPagePromise;
-    await outputPage.waitForLoadState('domcontentloaded');
+    await expect(page).toHaveURL(/\/outputs\/view\?/);
+    const outputFrame = page.frameLocator('iframe');
     for (const text of ask.visibleText) {
-        await expect(outputPage.locator('body')).toContainText(text);
+        await expect(outputFrame.locator('body')).toContainText(text);
     }
     if (ask.playGame) {
-        const score = outputPage.locator('#score');
+        const score = outputFrame.locator('#score');
         await expect(score).toBeVisible({ timeout: 30_000 });
         const before = Number(await score.textContent());
-        await outputPage.locator('#game').click();
+        await outputFrame.locator('#game').click();
         await expect.poll(async () => Number(await score.textContent()), {
             timeout: 10_000,
             message: 'expected playable game score to increase after interaction',
         }).toBeGreaterThan(before);
     }
-    await outputPage.close();
+    await page.getByRole('link', { name: 'Back to Soma' }).click();
+    const returnedWorkbench = page.getByTestId('soma-result-first-stage').getByTestId('output-workbench');
+    await returnedWorkbench.getByText('Details and proof').click();
     const revealResponsePromise = page.waitForResponse((response) => {
         return response.url().includes('/api/v1/workspace/files/reveal') && response.request().method() === 'POST';
     }, { timeout: 30_000 });
-    await page.getByRole('button', { name: new RegExp(`Open local folder for .*${escapeRegex(ask.filePath)}`, 'i') }).last().click();
+    await returnedWorkbench.getByRole('button', { name: new RegExp(`Open local folder for .*${escapeRegex(ask.filePath)}`, 'i') }).click();
     const revealResponse = await revealResponsePromise;
     expect(revealResponse.ok()).toBeTruthy();
     expect(revealResponse.url()).toContain(encodeURIComponent(ask.filePath));
@@ -242,7 +247,7 @@ async function expectTeamVisibleInGroups(page: Page, ask: TeamOutputAsk) {
     const group = (parsed.body?.data ?? []).find((candidate) => candidate.team_ids?.includes(ask.teamID));
     expect(group, JSON.stringify(parsed.body?.data ?? [])).toBeTruthy();
     await page.goto(`/groups?group_id=${encodeURIComponent(group!.group_id)}`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: /Manage focused collaboration lanes/i })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: /Review active work and delivered results/i })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('heading', { name: group!.name })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(ask.teamID).first()).toBeVisible();
 
@@ -259,11 +264,13 @@ async function expectTeamOutputVisibleOnDashboard(page: Page, ask: TeamOutputAsk
     await expect(page.getByTestId('focused-team-output-dock')).toHaveCount(0);
     await expect(page.getByTestId('soma-team-context-switcher')).toHaveCount(0);
     await expect(page.getByText(new RegExp(`Continuing ${ask.teamID}`, 'i'))).toBeVisible();
-    const digest = page.getByTestId('soma-workbench-output-digest');
-    await expect(digest).toBeVisible({ timeout: 30_000 });
-    await expect(digest.getByText(ask.filePath).first()).toBeVisible();
-    await expect(digest.getByRole('button', { name: /Open file/i })).toBeVisible();
-    await expect(digest.getByRole('button', { name: /Open local folder/i })).toBeVisible();
+    const resultStage = page.getByTestId('soma-result-first-stage');
+    const outputWorkbench = resultStage.getByTestId('output-workbench');
+    await expect(resultStage).toBeVisible({ timeout: 30_000 });
+    await expect(outputWorkbench.getByText(ask.filePath).first()).toBeVisible();
+    await expect(outputWorkbench.getByRole('button', { name: new RegExp(`Open result ${escapeRegex(ask.filePath)} in Mycelis`, 'i') })).toBeVisible();
+    await outputWorkbench.getByText('Details and proof').click();
+    await expect(outputWorkbench.getByRole('button', { name: /Open local folder/i })).toBeVisible();
 }
 
 async function expectTeamOutputVisibleInResources(page: Page, ask: TeamOutputAsk) {

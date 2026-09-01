@@ -28,6 +28,7 @@ import {
 import { SomaOutcomeVaultHeaderButton, SomaOutcomeVaultOverlay } from "./SomaOutcomeVaultOverlay";
 import { DEFAULT_SOMA_SUGGESTIONS, type SomaSuggestion } from "./SomaSuggestionBar";
 import { SomaWorkspaceFrame } from "./SomaWorkspaceFrame";
+import { trustVerdict } from "./ExecutionSummaryCardModel";
 import { useDurableTeamWork } from "./useDurableTeamWork";
 import { useOutcomeProjectSummary } from "./useOutcomeProjects";
 
@@ -73,16 +74,30 @@ export function SomaOperatingSurface({
   const activeWorkActions = useTeamWorkActionHandler(selectTeam);
   const evidence = evidenceItems ?? defaultSomaEvidence;
   const somaMessages = somaMessagesNewestFirst(missionChat);
+  const trustedSomaMessages = somaMessages.filter((message) => (
+    message.execution_summary
+    && trustVerdict(message.execution_summary, message.run_id, message.artifacts).tone === "trusted"
+  ));
   const effectiveFocusedTeamId = focusedTeamId || selectedTeamId || null;
   const focusedTeam = effectiveFocusedTeamId
     ? teamsDetail.find((team) => team.id === effectiveFocusedTeamId) ?? null
     : null;
+  const trustedOutputItems = actionableOutputWorkbenchItems(mergeOutputWorkbenchItems(
+    ...trustedSomaMessages.map((message) => outputWorkbenchItems(message.execution_summary, message.artifacts)),
+  ));
   const outputItems = actionableOutputWorkbenchItems(mergeOutputWorkbenchItems(
+    trustedOutputItems,
     ...somaMessages.map((message) => outputWorkbenchItems(message.execution_summary, message.artifacts)),
   ));
-  const projectPackages = somaMessages.flatMap((message) => (
+  const trustedProjectPackages = trustedSomaMessages.flatMap((message) => (
     projectPackageOutputs(message.execution_summary?.outputs)
   ));
+  const projectPackages = [
+    ...trustedProjectPackages,
+    ...somaMessages
+      .filter((message) => !trustedSomaMessages.includes(message))
+      .flatMap((message) => projectPackageOutputs(message.execution_summary?.outputs)),
+  ];
   const teamWork = useDurableTeamWork({
     teams: teamsDetail,
     focusedTeamId: effectiveFocusedTeamId,
@@ -109,7 +124,21 @@ export function SomaOperatingSurface({
   });
   const outcomeProjectSummary = durableOutcomeProjectSummary ?? projectedOutcomeProjectSummary;
   const attentionWorkCount = somaHomeWorkItems.length;
-  const unresolvedWorkReviewCount = somaHomeWorkItems.filter((item) => item.state !== "output_ready").length;
+  const currentWorkItems = somaHomeWorkItems.filter((item) => item.state !== "output_ready");
+  const needsInputCount = currentWorkItems.filter((item) => item.needsOperator || item.state === "needs_operator").length;
+  const recoveryReviewCount = currentWorkItems.filter((item) => (
+    item.state === "degraded" || Boolean(item.recoveryOptions?.length)
+  )).length;
+  const workStatus = needsInputCount > 0
+    ? "needs_input" as const
+    : recoveryReviewCount > 0
+      ? "needs_review" as const
+      : currentWorkItems.length > 0
+        ? "active" as const
+        : undefined;
+  const hasTrustedPrimaryDeliverable = teamWork.outputRefs.length > 0
+    || trustedOutputItems.length > 0
+    || trustedProjectPackages.length > 0;
   const displayedMode = activeMode ?? (focusedTeam ? focusedTeam.name : null);
   const hasWorkContextChoices = Boolean(effectiveFocusedTeamId)
     || activeWorkItems.length > 0
@@ -128,7 +157,7 @@ export function SomaOperatingSurface({
   const activeWorkNode = activeWorkSlot ?? (
     hasWorkReviewContent ? (
       <ActiveWorkLane
-        title="Recovery and review"
+        title={workStatus === "needs_input" ? "Input needed" : workStatus === "needs_review" ? "Recovery and review" : "Current work"}
         items={somaHomeWorkItems}
         emptyMessage={displayedMode && teamWork.items.length === 0
           ? `Soma is focused on ${displayedMode}. ${teamWork.emptyMessage}`
@@ -225,10 +254,13 @@ export function SomaOperatingSurface({
                 trust={trustNode}
                 output={outputNode}
                 context={contextNode}
-                primaryPanel={attentionWorkCount > 0 && !hasOutputReviewContent ? "work" : undefined}
-                recoveryReviewCount={hasOutputReviewContent ? unresolvedWorkReviewCount : 0}
-                reviewCount={attentionWorkCount > 0 && !hasOutputReviewContent ? attentionWorkCount : undefined}
-                showOutputDigest
+                primaryPanel={hasTrustedPrimaryDeliverable ? "output" : attentionWorkCount > 0 ? "work" : undefined}
+                recoveryReviewCount={hasTrustedPrimaryDeliverable ? recoveryReviewCount : 0}
+                reviewCount={!hasTrustedPrimaryDeliverable && attentionWorkCount > 0 ? attentionWorkCount : undefined}
+                showOutputDigest={!hasTrustedPrimaryDeliverable}
+                resultFirst={hasTrustedPrimaryDeliverable}
+                workItemCount={currentWorkItems.length}
+                workStatus={workStatus}
               />
             </div>
           </div>
@@ -237,7 +269,7 @@ export function SomaOperatingSurface({
             operationCount={somaHomeWorkItems.length}
             latestOutput={latestOutputDigest}
             projectSummary={outcomeProjectSummary}
-            recoveryCount={unresolvedWorkReviewCount}
+            recoveryCount={needsInputCount + recoveryReviewCount}
             alerts={outcomeVaultAlerts}
             onClose={closeVault}
           />

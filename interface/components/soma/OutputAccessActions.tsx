@@ -84,7 +84,7 @@ export default function OutputAccessActions({
     };
 
     const folderTitle = folderState === "failed"
-        ? "Could not open the local folder. Browse it from Resources -> Output Files."
+        ? "Could not open the local folder. Browse it from Resources -> Deliverables."
         : `Open the local folder containing ${label}${workspacePath ? ` (${workspacePath})` : ""}`;
 
     return (

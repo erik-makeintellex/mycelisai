@@ -31,14 +31,14 @@ export function GroupsHeader({
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
             <Users className="h-3.5 w-3.5" />
-            Groups
+            Work
           </div>
           <h1 className="mt-2 text-base font-semibold text-cortex-text-main sm:text-lg">
-            Manage focused collaboration lanes.
+            Review active work and delivered results.
           </h1>
           <p className="mt-1 hidden max-w-3xl text-sm leading-5 text-cortex-text-muted sm:line-clamp-2">
-            Select a group, inspect retained outputs, or return to Soma without
-            leaving this operating surface.
+            Start with the outcome or deliverable. Group and team details stay
+            available here for advanced review.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -67,7 +67,7 @@ export function GroupsHeader({
           </Link>
           <Link href="/groups?panel=create" className={compactButtonClassName}>
             <Plus className="mr-2 h-4 w-4" />
-            Create group
+            Advanced group setup
           </Link>
           <button type="button" onClick={onRefresh} className={compactButtonClassName}>
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -77,7 +77,7 @@ export function GroupsHeader({
       </div>
       {monitor ? (
         <p className="mt-2 text-xs text-cortex-text-muted">
-          Group lane monitor is {monitor.status || "offline"}.
+          Advanced group monitor is {monitor.status || "offline"}.
         </p>
       ) : null}
     </div>

@@ -91,7 +91,7 @@ test.describe("Groups broadcast proof visibility", () => {
   }) => {
     await mockBroadcastProofWorkspace(page);
     await page.goto("/groups", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: /Manage focused collaboration lanes/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Review active work and delivered results/i })).toBeVisible();
 
     await page.getByTestId("groups-list-item-group-broadcast-proof").click();
     await expect(page.getByRole("heading", { name: "Broadcast Proof Lane" })).toBeVisible();

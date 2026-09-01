@@ -32,7 +32,7 @@ describe("OutputWorkbench", () => {
     expect(outputWorkbenchItems(summary, [{ type: "document", title: "Launch brief", url: "/runs/run-1" }])).toEqual([{ text: "Launch brief", url: "/runs/run-1" }]);
     expect(outputWorkbenchItems(summary, [{ type: "document", title: "Operator notes", url: "/notes/1" }])).toEqual([
       { text: "Launch brief", url: "/runs/run-1" },
-      { text: "Operator notes", url: "/notes/1" },
+      { text: "Operator notes", url: "/notes/1", type: "document" },
     ]);
   });
 
@@ -66,6 +66,7 @@ describe("OutputWorkbench", () => {
         text: "Launch brief",
         url: "/api/v1/workspace/files/view?path=generated%2Flaunch%2Fbrief.md",
         storagePath: "generated/launch/brief.md",
+        kind: "file",
       },
     ]);
     expect(teamOutputProjectPackages(teamOutputs)).toEqual([
@@ -126,6 +127,7 @@ describe("OutputWorkbench", () => {
         text: "Comic page",
         url: "/api/v1/workspace/files/view?path=saved-media%2Fcomic-page.png",
         storagePath: "saved-media/comic-page.png",
+        kind: "image",
       },
     ]);
   });
@@ -229,7 +231,7 @@ describe("OutputWorkbench", () => {
 
     expect(screen.getByText("Latest output").closest("article")?.textContent).toContain("Playable output");
     expect(screen.getByText("Open the completed output to review the result.")).toBeDefined();
-    expect(screen.getByRole("button", { name: "Open output Playable output in Mycelis" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Open app Playable output in Mycelis" })).toBeDefined();
     fireEvent.click(screen.getByText("Details and proof"));
     expect(screen.getByRole("button", { name: /Open local folder for Playable output/i })).toBeDefined();
     expect(screen.getByText("More outputs and verification")).toBeDefined();
@@ -306,6 +308,35 @@ describe("OutputWorkbench", () => {
       expect(writeText).toHaveBeenCalledWith("> Launch brief\n/runs/run-1");
       expect(screen.getByRole("button", { name: "Copied output quote" })).toBeDefined();
     });
+  });
+
+  it("uses retained package metadata and output kind for primary actions", () => {
+    const { rerender } = render(
+      <OutputWorkbench
+        outputs={[]}
+        projectPackages={[{
+          kind: "project_package",
+          title: "Playable game",
+          folder: "generated/puzzle",
+          entrypoint: "index.html",
+        }]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Play game Playable game in Mycelis" })).toBeDefined();
+
+    rerender(
+      <OutputWorkbench
+        outputs={[{
+          text: "Quarterly findings",
+          url: "/api/v1/workspace/files/view?path=reports%2Fquarterly.pdf",
+          storagePath: "reports/quarterly.pdf",
+          kind: "report",
+        }]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Read report Quarterly findings in Mycelis" })).toBeDefined();
   });
 
 });

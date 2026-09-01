@@ -107,7 +107,7 @@ No mutation executes until you confirm. Only a bounded approval reply resolves t
 
 When a retained result fails validation, Mycelis must not present the run receipt as though it were the result. Recovery remains the recommended next step, but the retained candidate stays directly inspectable through an **Open unverified output** action with a clear warning. The run receipt remains secondary proof.
 
-Saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details. Use `Resources -> Output Files` for broader browsing later.
+Saved media and file outputs should appear in the same Soma output workbench with the latest output first, plain **Open file** and **Open folder** actions, visible workspace path, and collapsed verification details. Use `Resources -> Deliverables` for broader browsing later.
 
 When Soma is planning or reporting work, the visible plan should name the expected output shape first: table/report, app/package, code/script, media, document, dataset, or mixed output. App/package work should include a direct open path, usage notes, validation status, folder access, proof, and a way to ask Soma for follow-up changes without forcing the operator to read internal team/tool topology.
 
@@ -117,11 +117,11 @@ Trusted compact receipts in the Soma thread expose the output title, Outcome hea
 
 Use **Reply** on a delivered output or project package when you want Soma to keep that exact output as context for the next request. Reply does not execute work by itself. It keeps the output visible, shows a compact `Continuing from` indicator, leaves the composer ready for your natural follow-up, and sends typed continuation context with the output title, workspace reference, and proof id when available. You can ask to update it, make an alternate version, generate downstream material from it, inspect it, or route it to another team; Soma classifies that follow-up separately from whether approval is required. If a file should become reusable long-term source material rather than just a one-request handoff, ask Soma to save it as governed context or use `Resources -> Deployment Context`.
 
-Resources can start the same one-shot continuation flow. Use **Ask Soma with this** from `Resources -> Output Files -> Preview` when a selected workspace file should ground the next message, or from a saved Deployment Context entry when durable governed context should be referenced in the next turn. Soma opens with a compact `Continuing from` indicator and waits for your natural instruction; the handoff is context only, not approval to mutate, run, or promote data.
+Resources can start the same one-shot continuation flow. Use **Ask Soma with this** from `Resources -> Deliverables -> Preview` when a selected workspace file should ground the next message, or from a saved Deployment Context entry when durable governed context should be referenced in the next turn. Soma opens with a compact `Continuing from` indicator and waits for your natural instruction; the handoff is context only, not approval to mutate, run, or promote data.
 
-## Teams And Groups
+## Work And Advanced Collaboration Details
 
-Root Soma is organization-wide. When a Groups or Outcome link opens a focused conversation, the header quietly names that context. Ask Soma to change, combine, or leave that context; team selection and routing are not required controls in the default conversation.
+Root Soma is organization-wide. **Work** is the primary place to revisit active work and delivered results. When an Outcome or advanced group detail opens a focused conversation, the header quietly names that context. Ask Soma to change, combine, or leave that context; team selection and routing are not required controls in the default conversation.
 
 Team defaults:
 
@@ -130,7 +130,7 @@ Team defaults:
 - temporary specialists require a named missing capability, owned task, expected proof, and removal point
 - broad work should split into smaller lead-owned lanes instead of one large roster
 
-Groups are collaboration lanes. Use `Groups` when you want a temporary or standing lane with one selected-group workspace, Workflow Log, outputs, retained artifacts, and message/review context. The Workflow Log is the readable chat-pipeline view; it should not become raw bus logs or multiple little agent windows.
+Groups are advanced collaboration lanes behind Work, not the user's result. Open group details when you need a temporary or standing lane's selected workspace, Workflow Log, retained artifacts, or message/review context. The Workflow Log is the readable chat-pipeline view; it should not become raw bus logs or multiple little agent windows.
 
 When Soma evokes teams, planning and handoff files are working context, not final delivery. Ask Soma to continue until the group has a real user-facing output, then use Workflow Log or internal/source review only when you need the evidence trail behind that result. For long-running teams, tell Soma which files or mounted sources are standing context, which folder the team may watch or reuse, and which folder/file should count as the delivered output.
 
@@ -176,7 +176,7 @@ Use these boundaries:
 
 - ask Soma to use Mycelis docs when you want documentation explained or cited
 - use Reply or a team handoff when a file should guide this next draft or follow-up only
-- use `Resources -> Output Files -> Preview -> Ask Soma with this` when you found a workspace file outside the current thread and want it attached to the next Soma turn
+- use `Resources -> Deliverables -> Preview -> Ask Soma with this` when you found a workspace file outside the current thread and want it attached to the next Soma turn
 - use `Resources -> Deployment Context` when you want private, customer, company, or operating-context material to influence future Soma reasoning under a governed trust boundary
 - use Memory when you want to inspect retained recall, prior facts, SitReps, or continuity records already stored by the system
 - ask Soma to name which docs or context sources shaped an answer when trust matters
@@ -204,9 +204,9 @@ Useful actions:
 ## Operational Helpers
 
 - `Resources -> Capabilities`: what Soma can use, repair, or request
-- `Resources -> Output Files`: retained generated content and workspace folders
-- `Groups`: collaboration lanes, workflow logs, and group outputs
-- `Teams`: active work, team lead workspaces, and reusable member templates
+- `Resources -> Deliverables`: retained results and workspace folders
+- `Work`: active work, outcomes, and delivered results
+- advanced group/team details: collaboration lanes, workflow logs, team lead workspaces, and reusable member templates
 - `System -> Deployments`: runtime/workspace/artifact roots
 - `Advanced Mode`: high-density admin/telemetry routes when needed
 

@@ -205,7 +205,7 @@ test.describe('Guided Team Creation (/teams/create)', () => {
 
         await openGroupLink.click();
 
-        await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Review active work and delivered results.' })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Launch Delivery Team temporary workflow' })).toBeVisible();
         await expect(page.getByText('Temporary group', { exact: true })).toBeVisible();
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 delivered');

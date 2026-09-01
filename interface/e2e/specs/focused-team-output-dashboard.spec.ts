@@ -218,12 +218,18 @@ async function expectFocusedDashboardLane(page: Page) {
   await vault.getByRole("button", { name: /Close Outcome Vault/i }).click();
   await expect(page.getByTestId("soma-outcome-vault")).toHaveCount(0);
 
-  const digest = page.getByTestId("soma-workbench-output-digest");
-  await expect(digest).toBeVisible();
-  await expect(digest).toContainText("Latest:");
-  await expect(digest).toContainText(focusedOutputLabel);
-  await expect(digest).toContainText(focusedOutputPath);
-  await expect(digest).not.toContainText(olderSomaOutputLabel);
+  const resultStage = page.getByTestId("soma-result-first-stage");
+  await expect(resultStage).toBeVisible();
+  await expect(resultStage.getByTestId("soma-continuation-sidecar")).toBeVisible();
+  await expect(page.getByTestId("soma-workbench-output-digest")).toHaveCount(0);
+  await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveCount(0);
+
+  const workbench = resultStage.getByTestId("output-workbench");
+  await expect(workbench).toBeVisible();
+  const latestOutput = workbench.getByRole("article", { name: "Latest output" });
+  await expect(latestOutput).toContainText(focusedOutputLabel);
+  await expect(latestOutput).toContainText(focusedOutputPath);
+  await expect(latestOutput).not.toContainText(olderSomaOutputLabel);
 }
 
 test.describe("Dashboard focused-team output proof", () => {
@@ -233,37 +239,26 @@ test.describe("Dashboard focused-team output proof", () => {
     await page.goto(`/dashboard?team_id=${focusedTeamId}`, { waitUntil: "domcontentloaded" });
     await expectFocusedDashboardLane(page);
 
-    const digest = page.getByTestId("soma-workbench-output-digest");
-    await digest.getByText("Details and follow-up").click();
-    const digestFolderButton = digest.getByRole("button", { name: /Open local folder/i });
-    await digestFolderButton.click();
-    await expect(digestFolderButton).toContainText("Folder opened");
-
-    const panelToggle = page.getByTestId("soma-workbench-panel-toggle");
-    await expect(panelToggle).toContainText("Review output");
-    await expect(panelToggle).toContainText("2");
-    await expect(panelToggle).toHaveAttribute("aria-expanded", "false");
-    await panelToggle.click();
-    await expect(panelToggle).toHaveAttribute("aria-expanded", "true");
-
-    const rail = page.getByTestId("soma-workbench-side-rail");
-    await expect(rail).toHaveAttribute("aria-hidden", "false");
-    await expect(rail.getByRole("tab", { name: /Output/i })).toHaveAttribute("aria-selected", "true");
-    await expect(rail.getByText(focusedOutputLabel).first()).toBeVisible();
-
-    await rail.getByText("More outputs and verification").click();
-    await expect(rail.getByText(olderSomaOutputLabel).first()).toBeVisible();
-
-    const railText = await rail.textContent();
-    expect(railText?.indexOf(focusedOutputLabel)).toBeGreaterThanOrEqual(0);
-    expect(railText?.indexOf(olderSomaOutputLabel)).toBeGreaterThanOrEqual(0);
-    expect(railText!.indexOf(focusedOutputLabel)).toBeLessThan(railText!.indexOf(olderSomaOutputLabel));
+    const workbench = page.getByTestId("soma-result-first-stage").getByTestId("output-workbench");
     await expect(
-      rail.getByRole("button", { name: `Open output ${focusedOutputLabel} in Mycelis` }),
+      workbench.getByRole("button", { name: `Open output ${focusedOutputLabel} in Mycelis` }),
     ).toBeVisible();
-    await rail.getByText("Details and proof").first().click();
+    await workbench.getByText("Details and proof").first().click();
+    const folderButton = workbench.getByRole("button", {
+      name: new RegExp(`Open local folder for ${focusedOutputLabel}`),
+    });
+    await folderButton.click();
+    await expect(folderButton).toContainText("Folder opened");
+
+    await workbench.getByText("More outputs and verification").click();
+    await expect(workbench.getByText(olderSomaOutputLabel).first()).toBeVisible();
+
+    const workbenchText = await workbench.textContent();
+    expect(workbenchText?.indexOf(focusedOutputLabel)).toBeGreaterThanOrEqual(0);
+    expect(workbenchText?.indexOf(olderSomaOutputLabel)).toBeGreaterThanOrEqual(0);
+    expect(workbenchText!.indexOf(focusedOutputLabel)).toBeLessThan(workbenchText!.indexOf(olderSomaOutputLabel));
     await expect(
-      rail.getByRole("button", { name: new RegExp(`Open local folder for ${focusedOutputLabel}`) }),
+      workbench.getByRole("button", { name: new RegExp(`Open local folder for ${focusedOutputLabel}`) }),
     ).toBeVisible();
 
     await page.reload({ waitUntil: "domcontentloaded" });

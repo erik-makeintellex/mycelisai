@@ -4,6 +4,8 @@ import {
   expectProjectPackageVisible,
   firstDemoPackageProposal,
   fulfillJSON,
+  projectPackagePrimaryAction,
+  projectPackageResultCard,
   type ArtifactRecord,
   type GroupRecord,
 } from "../support/finalization-browser-package";
@@ -82,7 +84,10 @@ test.describe("Canonical first-demo success path", () => {
       await fulfillJSON(route, 200, { ok: true, data: groups });
     });
     await page.route("**/api/v1/groups/monitor", async (route) => {
-      await fulfillJSON(route, 200, { ok: true, data: { online: true, last_group_id: groups[0].group_id } });
+      await fulfillJSON(route, 200, { ok: true, data: { status: "online", last_group_id: groups[0].group_id } });
+    });
+    await page.route("**/api/v1/groups/lifecycle", async (route) => {
+      await fulfillJSON(route, 200, { ok: true, data: { summary: {}, items: [] } });
     });
     await page.route(/\/api\/v1\/groups\/([^/]+)\/outputs\?limit=8$/, async (route) => {
       await fulfillJSON(route, 200, { ok: true, data: groupOutputs });
@@ -132,7 +137,7 @@ test.describe("Canonical first-demo success path", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
 
-    await page.getByRole("button", { name: `Open app ${packageTitle} in Mycelis` }).last().click();
+    await projectPackagePrimaryAction(projectPackageResultCard(page, packageTitle), packageTitle).click();
     await expect(page).toHaveURL(/\/outputs\/view\?/);
     const outputFrame = page.frameLocator("iframe").first();
     await expect(outputFrame.locator("canvas#game")).toBeVisible();
@@ -140,17 +145,18 @@ test.describe("Canonical first-demo success path", () => {
     await expect(page.frameLocator("iframe").first().locator("body")).toContainText("validation-notes.md");
     await page.getByRole("link", { name: "Back to Soma" }).click();
 
-    await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
-    await page.getByRole("button", { name: /Review output/i }).last().click();
-    const reviewRail = page.getByTestId("soma-workbench-side-rail");
-    await expect(reviewRail).toHaveAttribute("aria-hidden", "false");
-    await reviewRail.getByRole("link", { name: `Open ${packageTitle} in Resources` }).click();
+    await projectPackageResultCard(page, packageTitle)
+      .getByRole("link", { name: `Open ${packageTitle} in Resources` })
+      .click();
     await expect(page).toHaveURL(new RegExp(`/resources\\?tab=workspace&path=${encodeURIComponent(folder)}`));
     await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(folder).last()).toBeVisible();
     await expect(page.getByText("index.html")).toBeVisible();
     await expect(page.getByText("README.md")).toBeVisible();
 
+    await page.route("**/api/v1/groups", async (route) => {
+      await fulfillJSON(route, 200, { ok: true, data: groups });
+    });
     await page.goto("/groups?group_id=group-first-demo-package-success&advanced=1", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "First Demo Game Team retained output" })).toBeVisible({ timeout: 20_000 });
     await page.getByRole("tab", { name: /Outputs/i }).click();

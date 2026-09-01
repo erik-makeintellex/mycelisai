@@ -27,14 +27,6 @@ async function pageScrollMetrics(page: Page) {
   }));
 }
 
-async function sideRailMetrics(page: Page) {
-  return page.getByTestId("soma-workbench-panel-scroll").evaluate((node) => ({
-    scrollTop: node.scrollTop,
-    clientHeight: node.clientHeight,
-    scrollHeight: node.scrollHeight,
-  }));
-}
-
 async function expectFreshDashboardWithoutStaleContent(page: Page) {
   await page.goto("/dashboard?fresh=1", { waitUntil: "domcontentloaded" });
   await expect(page.getByTestId("soma-operating-surface")).toBeVisible({ timeout: 20_000 });
@@ -103,14 +95,21 @@ test.describe("Dashboard workbench live review", () => {
       outputMatchesTarget(confirmedBody, targetPath) || Boolean(confirmedBody.data?.proof_artifact_id),
       confirmedRaw,
     ).toBeTruthy();
-    await expect(page.getByText(/Action completed|Result saved|Latest:|retained output|verified/i).last()).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText(/owner-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(/Latest:/i).last()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: /Open file .*owner-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: /Open local folder .*owner-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Action completed|Result saved|Latest output|retained output|verified/i).last()).toBeVisible({ timeout: 45_000 });
+    const resultStage = page.getByTestId("soma-result-first-stage");
+    await expect(resultStage).toBeVisible({ timeout: 30_000 });
+    await expect(resultStage.getByTestId("soma-continuation-sidecar")).toBeVisible();
+    await expect(page.getByTestId("soma-workbench-output-digest")).toHaveCount(0);
+    await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveCount(0);
+    const workbench = resultStage.getByTestId("output-workbench");
+    await expect(workbench.getByText(/owner-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(workbench.getByText(/Latest output/i).last()).toBeVisible({ timeout: 15_000 });
+    await expect(workbench.getByRole("button", { name: /Open file .*owner-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
+    await workbench.getByText("Details and proof").last().click();
+    await expect(workbench.getByRole("button", { name: /Open local folder .*owner-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("uses Soma, generates retained content, and keeps active/prior work in the workbench rail", async ({ page }, testInfo) => {
+  test("uses Soma and keeps retained content, proof, and continuation in the result-first stage", async ({ page }, testInfo) => {
     test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, "requires the live local Core/Interface stack");
     test.setTimeout(180_000);
 
@@ -121,10 +120,8 @@ test.describe("Dashboard workbench live review", () => {
     await expect(page.getByTestId("soma-operating-surface")).toBeVisible();
     await expect(page.getByTestId("soma-environment-entry")).toHaveCount(0);
     await expect(page.getByTestId("central-soma-chat-frame")).toBeVisible();
-    const workPanelToggle = page.getByTestId("soma-workbench-panel-toggle");
-    const rail = page.getByTestId("soma-workbench-side-rail");
-    await expect(workPanelToggle).toHaveCount(0);
-    await expect(rail).toHaveCount(0);
+    await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveCount(0);
+    await expect(page.getByTestId("soma-workbench-side-rail")).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath("dashboard-initial.png"), fullPage: true });
 
     const initialPageMetrics = await pageScrollMetrics(page);
@@ -191,65 +188,27 @@ test.describe("Dashboard workbench live review", () => {
     expect(outputRef?.proof?.checksum_algorithm).toBe("sha256");
     expect(outputRef?.proof?.checksum).toMatch(/^[a-f0-9]{64}$/);
 
-    await expect(page.getByText(/Result saved|Latest:/i).last()).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
-    await expect(workPanelToggle).toBeVisible({ timeout: 15_000 });
-    await expect(workPanelToggle).toContainText(/Review output/i);
-    await expect(workPanelToggle).toContainText(/[1-9]/);
-    await expect(workPanelToggle).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByText(/Latest:/i).last()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: /Open file .*operator-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
-    const folderButton = page.getByRole("button", { name: /Open local folder .*operator-note\.md/i }).last();
+    await expect(page.getByText(/Result saved|Latest output/i).last()).toBeVisible({ timeout: 45_000 });
+    const resultStage = page.getByTestId("soma-result-first-stage");
+    await expect(resultStage).toBeVisible({ timeout: 30_000 });
+    await expect(resultStage.getByTestId("soma-continuation-sidecar")).toBeVisible();
+    await expect(page.getByTestId("soma-workbench-output-digest")).toHaveCount(0);
+    await expect(page.getByTestId("soma-workbench-panel-toggle")).toHaveCount(0);
+    const workbench = resultStage.getByTestId("output-workbench");
+    await expect(workbench.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(workbench.getByText(/Latest output/i).last()).toBeVisible({ timeout: 15_000 });
+    await expect(workbench.getByRole("button", { name: /Open file .*operator-note\.md/i }).last()).toBeVisible({ timeout: 15_000 });
+    await workbench.getByText("Details and proof").last().click();
+    const folderButton = workbench.getByRole("button", { name: /Open local folder .*operator-note\.md/i }).last();
     await expect(folderButton).toBeVisible({ timeout: 15_000 });
     await folderButton.click();
     await expect(folderButton).toContainText(/Folder opened|Folder blocked/i, { timeout: 15_000 });
 
-    await workPanelToggle.click();
-    await expect(workPanelToggle).toHaveAttribute("aria-expanded", "true");
-    await expect(rail).toHaveAttribute("aria-hidden", "false");
-    await expect(rail.getByRole("tab", { name: /Output/i })).toHaveAttribute("aria-selected", "true");
-    await expect(rail.getByText(/Files, media, and packages Soma can open for you/i).first()).toBeVisible({ timeout: 30_000 });
-    await expect(rail.getByText(/operator-note\.md/i).last()).toBeVisible({ timeout: 30_000 });
-    await expect(rail.getByText(/Guided proposal/i)).toHaveCount(0);
-    await rail.getByText("Verification details").last().click();
-    await expect(rail.getByText("path verified").last()).toBeVisible({ timeout: 30_000 });
-    await expect(rail.getByText("readback verified").last()).toBeVisible({ timeout: 30_000 });
-    await expect(rail.getByText(/sha256 [a-f0-9]{12}/i).last()).toBeVisible({ timeout: 30_000 });
+    await expect(workbench.getByText(/Guided proposal/i)).toHaveCount(0);
+    await workbench.getByText("Verification details").last().click();
+    await expect(workbench.getByText("path verified").last()).toBeVisible({ timeout: 30_000 });
+    await expect(workbench.getByText("readback verified").last()).toBeVisible({ timeout: 30_000 });
+    await expect(workbench.getByText(/sha256 [a-f0-9]{12}/i).last()).toBeVisible({ timeout: 30_000 });
     await page.screenshot({ path: testInfo.outputPath("dashboard-after-output.png"), fullPage: true });
-
-    await rail.getByRole("tab", { name: /Trust/i }).click();
-    await expect(page.getByText(/Proof, recovery, and the safe next step/i).last()).toBeVisible({ timeout: 30_000 });
-    const panelScroll = page.getByTestId("soma-workbench-panel-scroll");
-    await panelScroll.evaluate((node) => {
-      node.scrollTop = 0;
-    });
-    const initialRailMetrics = await sideRailMetrics(page);
-    await panelScroll.evaluate((node) => {
-      node.addEventListener("wheel", () => {
-        node.setAttribute("data-wheel-fired", "true");
-      }, { capture: true, once: true });
-    });
-    await panelScroll.hover();
-    await page.mouse.wheel(0, 900);
-    const afterRailWheel = await sideRailMetrics(page);
-    const wheelFired = await panelScroll.getAttribute("data-wheel-fired");
-    const afterRailPageMetrics = await pageScrollMetrics(page);
-    console.log("after rail wheel metrics", afterRailWheel);
-    console.log("page metrics after rail wheel", afterRailPageMetrics);
-
-    expect(wheelFired).toBe("true");
-    if (initialRailMetrics.scrollHeight > initialRailMetrics.clientHeight) {
-      if (afterRailWheel.scrollTop <= initialRailMetrics.scrollTop) {
-        await panelScroll.evaluate((node) => {
-          node.scrollTop += 240;
-        });
-      }
-      const afterPanelScroll = await sideRailMetrics(page);
-      expect(afterPanelScroll.scrollTop).toBeGreaterThan(initialRailMetrics.scrollTop);
-    } else {
-      expect(afterRailWheel.scrollTop).toBe(initialRailMetrics.scrollTop);
-    }
-    expect(afterRailPageMetrics.scrollY).toBeLessThan(240);
   });
 });

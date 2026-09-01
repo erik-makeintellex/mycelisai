@@ -17,14 +17,14 @@ const primaryRoutes: RouteCheck[] = [
   {
     path: "/groups",
     name: "groups",
-    heading: /Manage focused collaboration lanes|Groups/i,
+    heading: /Review active work and delivered results|Work/i,
     affordances: [/Open Soma/i, /Group records/i, /Outputs|Message|Settings/i],
   },
   {
     path: "/resources",
     name: "resources",
     heading: "Resources",
-    affordances: [/Output Files/i, /Capabilities/i, /Exchange/i],
+    affordances: [/Deliverables/i, /Capabilities/i, /Exchange/i],
   },
   {
     path: "/docs",
@@ -222,8 +222,8 @@ test.describe("New user UI sweep", () => {
       await expectNoDocumentOverflow(page, `${viewport.name} Soma`);
       await expect(page.getByPlaceholder(/Tell Soma what you want/i)).toBeVisible();
 
-      await openNav(page, "nav-groups", /\/groups$/, /Manage focused collaboration lanes|Groups/i);
-      await page.getByRole("link", { name: "Create group", exact: true }).click();
+      await openNav(page, "nav-groups", /\/groups$/, /Review active work and delivered results|Work/i);
+      await page.getByRole("link", { name: "Advanced group setup", exact: true }).click();
       await page.waitForTimeout(500);
       expect(pageErrors, `${viewport.name} Groups page errors`).toEqual([]);
       expect(consoleIssues, `${viewport.name} Groups console errors`).toEqual([]);
@@ -233,7 +233,7 @@ test.describe("New user UI sweep", () => {
       await expectNoDocumentOverflow(page, `${viewport.name} Groups create`);
 
       await openNav(page, "nav-resources", /\/resources$/, "Resources");
-      for (const resourceName of ["Capabilities", "Exchange", "Output Files"]) {
+      for (const resourceName of ["Capabilities", "Exchange", "Deliverables"]) {
         await page.getByRole("tab", { name: new RegExp(resourceName, "i") }).first().click();
         await expectNoDocumentOverflow(page, `${viewport.name} Resources ${resourceName}`);
       }

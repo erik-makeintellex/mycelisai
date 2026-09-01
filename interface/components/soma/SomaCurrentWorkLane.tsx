@@ -16,6 +16,7 @@ export function SomaCurrentWorkLane({
   reviewCount,
   reviewLabel,
   showOutputDigest,
+  workStatus,
 }: {
   digest: OutputWorkbenchDigest | null;
   isPanelOpen: boolean;
@@ -26,11 +27,25 @@ export function SomaCurrentWorkLane({
   reviewCount: number;
   reviewLabel: string;
   showOutputDigest: boolean;
+  workStatus?: "active" | "needs_input" | "needs_review";
 }) {
-  const activeLabel = primaryKind === "work" ? "Work needs review" : "Output ready";
-  const nextAction = primaryKind === "work" ? "Review work" : "Review output";
+  const activeLabel = primaryKind === "output"
+    ? "Output ready"
+    : workStatus === "needs_input"
+      ? "Input needed"
+      : workStatus === "needs_review"
+        ? "Work needs review"
+        : "Work in progress";
+  const nextAction = primaryKind === "output"
+    ? "Review output"
+    : workStatus === "needs_input"
+      ? "Respond"
+      : workStatus === "needs_review"
+        ? "Review work"
+        : "View work";
+  const countLabel = primaryKind === "work" && workStatus === "active" ? "work" : "review";
+  const hideAction = primaryKind === "work" && workStatus === "active" ? "Hide work" : "Hide review";
   const visibleDigest = digest && showOutputDigest ? digest : null;
-  const hasOutputDigest = Boolean(visibleDigest);
   const recoveryHint = primaryKind === "output" && recoveryReviewCount > 0
     ? `${recoveryReviewCount} recovery ${recoveryReviewCount === 1 ? "item" : "items"} also ${recoveryReviewCount === 1 ? "needs" : "need"} review.`
     : null;
@@ -75,10 +90,10 @@ export function SomaCurrentWorkLane({
         className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-cortex-primary/30 bg-cortex-surface px-3 py-1.5 text-xs font-semibold text-cortex-text-main transition-colors hover:border-cortex-primary/60"
       >
         <PanelRightOpen className="h-3.5 w-3.5 text-cortex-primary" />
-        <span>{isPanelOpen ? "Hide review" : nextAction}</span>
+        <span>{isPanelOpen ? hideAction : nextAction}</span>
         <span
           className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-1.5 text-[10px] font-bold text-cortex-primary"
-          aria-label={`${reviewCount} review ${reviewCount === 1 ? "item" : "items"}`}
+          aria-label={`${reviewCount} ${countLabel} ${reviewCount === 1 ? "item" : "items"}`}
         >
           {reviewCount}
         </span>

@@ -85,15 +85,21 @@ vi.mock("@/components/soma/SomaWorkspaceFrame", () => ({
     expression,
     output,
     primaryPanel,
+    resultFirst,
     reviewCount,
     showOutputDigest,
+    workItemCount,
+    workStatus,
     trust,
-  }: { activeWork: React.ReactNode; context: React.ReactNode; expression: React.ReactNode; output: React.ReactNode; primaryPanel?: string; reviewCount?: number; showOutputDigest?: boolean; trust: React.ReactNode }) => (
+  }: { activeWork: React.ReactNode; context: React.ReactNode; expression: React.ReactNode; output: React.ReactNode; primaryPanel?: string; resultFirst?: boolean; reviewCount?: number; showOutputDigest?: boolean; trust: React.ReactNode; workItemCount?: number; workStatus?: string }) => (
     <div
       data-testid="mock-soma-workspace-frame"
       data-primary-panel={primaryPanel ?? ""}
+      data-result-first={String(resultFirst)}
       data-review-count={reviewCount ?? ""}
       data-show-output-digest={String(showOutputDigest)}
+      data-work-item-count={workItemCount ?? 0}
+      data-work-status={workStatus ?? ""}
     >
       {expression}
       {activeWork}
@@ -142,6 +148,8 @@ describe("SomaOperatingSurface active work actions", () => {
     expect(screen.queryByTestId("soma-team-context-switcher")).toBeNull();
     expect(screen.getByText("Continuing Alpha")).toBeDefined();
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-primary-panel")).toBe("work");
+    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-result-first")).toBe("false");
+    expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-work-status")).toBe("active");
     expect(screen.getByTestId("mock-soma-workspace-frame").getAttribute("data-show-output-digest")).toBe("true");
     expect(screen.queryByTestId("soma-action-shelf")).toBeNull();
     expect(screen.getAllByText("Soma").length).toBeGreaterThan(0);

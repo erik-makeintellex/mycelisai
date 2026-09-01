@@ -44,8 +44,8 @@ export function ZoneA() {
         (pathname === currentOrganizationHref || pathname?.startsWith(currentOrganizationHref + '/') === true);
     const primaryNav = [
         { href: '/dashboard', icon: Home, label: 'Soma', description: 'Ask and guide work', testId: 'nav-dashboard' },
-        { href: '/groups', icon: Users, label: 'Work', description: 'Active and delivered outcomes', testId: 'nav-groups' },
-        { href: '/resources', icon: FolderCog, label: 'Resources', description: 'Sources and tools', testId: 'nav-resources' },
+        { href: '/groups', icon: Users, label: 'Work', description: 'Active work and outcomes', testId: 'nav-groups' },
+        { href: '/resources', icon: FolderCog, label: 'Resources', description: 'Deliverables, sources, and tools', testId: 'nav-resources' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
             icon: Building2,

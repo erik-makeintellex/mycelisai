@@ -136,7 +136,7 @@ Raw event payloads, runtime identifiers, and transport diagnostics belong behind
 
 Key areas include:
 
-- **Output Files** for retained deliverables and workspace folders
+- **Deliverables** for retained results and workspace folders
 - **Capabilities** for readiness, catalog, access scope, servers, and repair
 - **Exchange** for governed cross-team handoffs
 - **Deployment Context** for approved long-lived source context

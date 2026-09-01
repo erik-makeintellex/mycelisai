@@ -187,7 +187,14 @@ export async function installTrustedOutcomeJourneyMocks(page: Page) {
     },
   }));
 
-  await page.route(/\/api\/v1\/groups(?:\?.*)?$/, ok({ data: [groupRecord()] }));
+  await page.route("**/api/v1/groups", ok({ data: [groupRecord()] }));
+  await page.route("**/api/v1/groups/monitor", ok({ data: { status: "online" } }));
+  await page.route("**/api/v1/groups/lifecycle", ok({
+    data: {
+      summary: { expired_active_groups: 0, review_needed_groups: 0, team_work_needing_attention: 1 },
+      items: [],
+    },
+  }));
   await page.route(`**/api/v1/groups/${j.groupId}`, ok({ data: groupRecord() }));
   await page.route(`**/api/v1/groups/${j.groupId}/outputs**`, ok({ data: [artifactRecord()] }));
   await page.route(`**/api/v1/groups/${j.groupId}/workflow-log**`, ok({

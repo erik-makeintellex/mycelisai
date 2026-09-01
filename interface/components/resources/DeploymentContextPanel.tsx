@@ -252,7 +252,7 @@ export default function DeploymentContextPanel() {
                                 <h2 className="text-sm font-semibold text-cortex-text-main">Long-term context for Soma</h2>
                             </div>
                             <p className="text-xs text-cortex-text-muted mt-2 max-w-2xl">
-                                Add files or notes that should influence future Soma/team work. Use Output Files for delivered artifacts and this lane for reusable source context.
+                                Add files or notes that should influence future Soma/team work. Use Deliverables for delivered results and this lane for reusable source context.
                             </p>
                         </div>
                         <button

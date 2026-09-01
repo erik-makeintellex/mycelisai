@@ -99,7 +99,7 @@ export function WorkspaceFilesystemUnavailable({
         return (
             <WorkspaceMCPRecoveryCard
                 title="Filesystem MCP not installed"
-                detail="Output Files needs the filesystem capability before Mycelis can browse generated files here. Install it from Capabilities, or view storage roots to confirm where generated content is mounted."
+                detail="Deliverables needs the filesystem capability before Mycelis can browse generated files here. Install it from Capabilities, or view storage roots to confirm where generated content is mounted."
                 onOpenToolsTab={onOpenToolsTab}
                 onRefresh={onRefresh}
             />

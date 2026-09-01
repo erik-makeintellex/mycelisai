@@ -17,7 +17,7 @@ export async function reviewArchivedOutputs(
     `/groups?group_id=${encodeURIComponent(group.group_id)}`,
   );
   await expect(
-    page.getByRole("heading", { name: "Manage focused collaboration lanes." }),
+    page.getByRole("heading", { name: "Review active work and delivered results." }),
   ).toBeVisible();
   const groupHeading = page.getByRole("heading", { name: group.name });
   try {

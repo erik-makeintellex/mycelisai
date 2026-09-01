@@ -96,17 +96,19 @@ describe('Resources Page (operator support)', () => {
         expect(screen.getByRole('tab', { name: /Capabilities/i })).toBeDefined();
         expect(screen.getByRole('tab', { name: /Exchange/i })).toBeDefined();
         expect(screen.getByRole('tab', { name: /Deployment Context/i })).toBeDefined();
-        expect(screen.getByRole('tab', { name: /Output Files/i })).toBeDefined();
+        expect(screen.getByRole('tab', { name: /Deliverables/i })).toBeDefined();
         expect(screen.getByRole('tab', { name: /AI Engines/i })).toBeDefined();
         expect(screen.getByRole('tab', { name: /Worker Profiles/i })).toBeDefined();
     });
 
-    it('defaults to output files tab', async () => {
+    it('defaults to deliverables and keeps setup resources secondary', async () => {
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
-            expect(screen.getByRole('tab', { name: /Output Files/i }).getAttribute('aria-selected')).toBe('true');
+            expect(screen.getByRole('tab', { name: /Deliverables/i }).getAttribute('aria-selected')).toBe('true');
         });
-        expect(screen.getByText(/Open delivered files, packages, media, and team outputs/i)).toBeDefined();
+        expect(screen.getByText('Results')).toBeDefined();
+        expect(screen.getByText('Advanced resources')).toBeDefined();
+        expect(screen.getByText(/Open the files, packages, media, and other results Soma delivered for you/i)).toBeDefined();
     });
 
     it('keeps tab=tools as the capability catalog deep link', async () => {
@@ -134,7 +136,7 @@ describe('Resources Page (operator support)', () => {
         });
     });
 
-    it('passes workspace path deep links to Output Files', async () => {
+    it('passes workspace path deep links to Deliverables', async () => {
         mockSearchParams.set('tab', 'workspace');
         mockSearchParams.set('path', 'workspace/generated/game');
         await act(async () => { render(<ResourcesPage />); });
@@ -160,6 +162,6 @@ describe('Resources Page (operator support)', () => {
     it('uses refresh-safe resource links', async () => {
         await act(async () => { render(<ResourcesPage />); });
         expect(screen.getByRole('tab', { name: /Capabilities/i }).getAttribute('href')).toBe('/resources?tab=tools');
-        expect(screen.getByRole('tab', { name: /Output Files/i }).getAttribute('href')).toBe('/resources');
+        expect(screen.getByRole('tab', { name: /Deliverables/i }).getAttribute('href')).toBe('/resources');
     });
 });

@@ -33,7 +33,7 @@
 Primary app layout is implemented in `interface/app/(app)/layout.tsx` and `interface/components/shell/ShellLayout.tsx`.
 
 Release-candidate MVP note:
-- default operator navigation keeps the natural work-support paths visible: `Soma`, `Groups`, `Resources`, and `Docs`; `Status` and `Settings` remain reachable support controls
+- default operator navigation keeps the result-first paths visible as `Soma`, `Work`, `Resources`, and `Help`; `Resources` opens on Deliverables, while group/team/configuration terminology remains advanced context and `Status` and `Settings` remain reachable support controls
 - `Activity/Runs`, `Memory`, `System`, and deeper inspect routes remain Admin tools; direct visits must show an explicit same-route release gate when Admin tools are off
 
 | Shell area | Component | Purpose |
@@ -65,9 +65,9 @@ Current `page.tsx` route count: `28`.
 | `/dashboard` | `app/(app)/dashboard/page.tsx` | Soma threaded workspace |
 | `/organizations/[id]` | `app/(app)/organizations/[id]/page.tsx` | Compatibility organization context using the Soma operating surface |
 | `/automations` | `app/(app)/automations/page.tsx` | Automation hub + tabs |
-| `/resources` | `app/(app)/resources/page.tsx` | Resources (output files, capabilities, exchange, context, AI engines, roles) |
-| `/groups` | `app/(app)/groups/page.tsx` | Collaboration lanes, workflow logs, retained outputs |
-| `/teams` | `app/(app)/teams/page.tsx` | Team workspace and review queue |
+| `/resources` | `app/(app)/resources/page.tsx` | Resources, defaulting to retained Deliverables before advanced capabilities, exchange, context, AI engines, and profiles |
+| `/groups` | `app/(app)/groups/page.tsx` | User-facing Work with collaboration lanes, workflow logs, and team structure as advanced detail |
+| `/teams` | `app/(app)/teams/page.tsx` | Advanced team workspace and review queue |
 | `/teams/create` | `app/(app)/teams/create/page.tsx` | Guided Soma team creation |
 | `/memory` | `app/(app)/memory/page.tsx` | Advanced memory explorer |
 | `/docs` | `app/(app)/docs/page.tsx` | In-app markdown docs browser |
@@ -111,8 +111,8 @@ Component ownership is organized by behavior rather than a static file-count sna
 | Folder family | Primary responsibility |
 | --- | --- |
 | `soma/`, `dashboard/`, `workspace/` | Soma conversation, compact governance, Outcome summaries, deliverables, and workspace overlays |
-| `teams/`, `organizations/` | Team/group execution review and compatibility organization contexts |
-| `resources/`, `catalogue/`, `settings/` | Output access, capabilities, providers, identity, scopes, and configuration |
+| `teams/`, `organizations/` | Work review with team/group execution and organization structure kept contextual or advanced |
+| `resources/`, `catalogue/`, `settings/` | Deliverables-first result access followed by advanced capabilities, providers, identity, scopes, and configuration |
 | `memory/`, `activity/`, `runs/`, `system/` | Admin inspection, continuity, receipts, events, and deployment health |
 | `automations/`, `approvals/`, `wiring/` | Scheduled/event-driven work, approval queues, and advanced workflow structure |
 | `shell/`, `layout/`, `shared/`, `ui/` | Navigation, responsive composition, accessibility, and reusable primitives |

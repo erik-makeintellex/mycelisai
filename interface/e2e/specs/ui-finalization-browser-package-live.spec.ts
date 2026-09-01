@@ -10,6 +10,8 @@ import {
   liveAPIGet,
   openLiveWorkspace,
   parseJSONIfPossible,
+  projectPackagePrimaryAction,
+  projectPackageResultCard,
   removeTarget,
   submitLiveWorkspaceChat,
   targetExists,
@@ -73,22 +75,17 @@ test.describe("UI finalization exact browser package live proof", () => {
       await page.goBack({ waitUntil: "domcontentloaded" });
       await expectProjectPackageVisible(page, { title: packageTitle, entrypoint, folder });
 
-      const outputPagePromise = page.context().waitForEvent("page");
-      await page.getByRole("button", { name: `Open app ${packageTitle} in a new browser window` }).last().click();
-      const outputPage = await outputPagePromise;
-      await outputPage.waitForLoadState("domcontentloaded");
-      await expect(outputPage).toHaveTitle(packageTitle);
-      await expect(outputPage.locator("canvas#game")).toBeVisible({ timeout: 30_000 });
-      await outputPage.reload({ waitUntil: "domcontentloaded" });
-      await expect(outputPage.locator("canvas#game")).toBeVisible({ timeout: 30_000 });
-      await outputPage.close();
+      await projectPackagePrimaryAction(projectPackageResultCard(page, packageTitle), packageTitle).click();
+      await expect(page).toHaveURL(/\/outputs\/view\?/);
+      await expect(page.frameLocator("iframe").first().locator("canvas#game")).toBeVisible({ timeout: 30_000 });
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(page.frameLocator("iframe").first().locator("canvas#game")).toBeVisible({ timeout: 30_000 });
+      await page.getByRole("link", { name: "Back to Soma" }).click();
 
       const resourcesFolder = `workspace/${folder}`;
-      await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
-      await page.getByRole("button", { name: /Review output/i }).last().click();
-      const reviewRail = page.getByTestId("soma-workbench-side-rail");
-      await expect(reviewRail).toHaveAttribute("aria-hidden", "false");
-      await reviewRail.getByRole("link", { name: `Open ${packageTitle} in Resources` }).click();
+      await projectPackageResultCard(page, packageTitle)
+        .getByRole("link", { name: `Open ${packageTitle} in Resources` })
+        .click();
       await expect(page).toHaveURL(new RegExp(`/resources\\?tab=workspace&path=${encodeURIComponent(resourcesFolder)}`));
       await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText(resourcesFolder).last()).toBeVisible();

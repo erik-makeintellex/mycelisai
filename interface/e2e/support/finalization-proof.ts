@@ -115,7 +115,7 @@ function defaultTeamWorkItems(teamID: string) {
             work_item_id: "work-first-demo",
             run_id: "run-first-demo",
             kind: "project_package",
-            label: "Coin Runner package",
+            label: "Coin Runner game",
             storage_ref: "generated/coin-runner",
             entrypoint: "index.html",
             proof_ref: "proof-first-demo",

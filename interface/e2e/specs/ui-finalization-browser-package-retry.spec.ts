@@ -6,6 +6,8 @@ import {
   type ArtifactRecord,
   type GroupRecord,
   expectProjectPackageVisible,
+  projectPackagePrimaryAction,
+  projectPackageResultCard,
 } from "../support/finalization-browser-package";
 import {
   mockOrganizationWorkspace,
@@ -152,7 +154,7 @@ test.describe("UI finalization first-demo degraded retry proof", () => {
     await page.getByText("Proof and execution details", { exact: true }).last().click();
     await expect(page.locator(`a[href="/runs/${retryRunId}"]`).first()).toBeVisible();
 
-    await page.getByRole("button", { name: `Open app ${packageTitle} in Mycelis` }).last().click();
+    await projectPackagePrimaryAction(projectPackageResultCard(page, packageTitle), packageTitle).click();
     await expect(page).toHaveURL(/\/outputs\/view\?/);
     const outputFrame = page.frameLocator("iframe").first();
     await expect(outputFrame.locator("body")).toContainText("README.md");

@@ -1,23 +1,23 @@
 # Resources
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Operator support surface for generated output files, capability readiness, deployment context intake, managed exchange, AI engine setup, and reusable role definitions.
+> Deliverables-first home for retained results, followed by capability readiness, deployment context, exchange, AI engine setup, and reusable role definitions.
 
 ---
 
 ## Overview
-Open `/resources` directly from the main rail when you need generated files, capability readiness, workspace roots, or connected-tool posture.
+Open `/resources` directly from the main rail when you need a delivered result. **Deliverables** is the default view; capability, context, exchange, engine, and worker-profile configuration follows under **Advanced resources**.
 Current resource menu:
 | Resource Type | Purpose |
 |-----|---------|
-| Output Files | Open generated content folders and browse filesystem MCP-backed files inside workspace boundary |
+| Deliverables | Open retained files, packages, media, and other results Soma delivered for you |
 | Capabilities | What Soma can use now, what needs attention, and what can be requested |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
 | Deployment Context | Save files or notes Soma should reuse as long-lived, scoped source context |
 | AI Engines | Global AI engine configuration and health |
 | Worker Profiles | Ready-made teammates and Soma-guided custom profile creation |
-The Resources page keeps these resource types in a persistent selector and renders the selected type inside a bounded work window. On phones and tablets, Resource types appear as one compact horizontally scrollable tab row so the selected work surface remains near the top of the screen. On desktop, the same choices use a vertical list-detail menu with short descriptions. Selection is recorded in the page URL, survives refresh, and works with browser Back. Long tool lists, workspace folders, exchange records, and provider forms scroll inside the selected panel rather than turning the whole page into one long operator path.
-Retained group outputs use the same Outcome Health labels as Soma, Teams, and Runs. A selectable group with retained user output is Completed; the badge describes operational state while proof and source material remain separate details.
+The Resources page groups the default **Deliverables** result lane ahead of **Advanced resources** and renders the selected type inside a bounded work window. On phones and tablets, the groups remain one compact horizontally scrollable selector so the selected work surface stays near the top of the screen. On desktop, the same choices use a vertical list-detail menu with short descriptions. Selection is recorded in the page URL, survives refresh, and works with browser Back. Long tool lists, workspace folders, exchange records, and provider forms scroll inside the selected panel rather than turning the whole page into one long operator path.
+Retained outputs use the same Outcome Health labels as Soma and Work. Producing group/team identity remains available as advanced detail; it is not the user's result. A selectable group with retained user output is Completed; the badge describes operational state while proof and source material remain separate details.
 ---
 
 ## Connected Tools
@@ -195,7 +195,7 @@ Event-producing services and devices should appear as registered input sources, 
 
 Deployment Context is the governed intake surface for files, notes, private/user-owned content, and deployment-shaping knowledge that should influence future Soma or team reasoning beyond one draft. In the product, this is the place to put **Context for Soma** when the material should persist, carry provenance, stay scoped, and remain inside an explicit trust boundary.
 
-It is not the same as team working files, generated outputs, or team-shared execution memory. Team working files are current Outcome inputs/support material, generated outputs live in Output Files, and team continuity belongs in `AGENT_MEMORY`; Deployment Context is for governed source material you want Soma to reuse later. It is also not the same as Soma reading Mycelis help docs: curated docs lookup is read-only and citable.
+It is not the same as team working files, generated outputs, or team-shared execution memory. Team working files are current Outcome inputs/support material, generated outputs live in Deliverables, and team continuity belongs in `AGENT_MEMORY`; Deployment Context is for governed source material you want Soma to reuse later. It is also not the same as Soma reading Mycelis help docs: curated docs lookup is read-only and citable.
 
 Typical inputs:
 - private records or diary/journal notes the user explicitly wants Soma to use
@@ -230,14 +230,14 @@ Operators should be able to answer "what governed context did we intentionally l
 
 ---
 
-## Output Files
+## Deliverables
 
-Output Files is the default `/resources` view and uses the `filesystem` MCP server directly from Resources.
+Deliverables is the default `/resources` view and uses the `filesystem` MCP server directly from Resources.
 The browser starts at the MCP-safe `workspace` root rather than the Core
 process working directory, so ordinary browse/read/write actions stay inside
 the configured mounted data boundary.
 
-Output Files now starts with a **Group outputs** selector when retained group deliverables exist. The selector only lists groups that produced retained user-facing outputs through `/api/v1/groups/{id}/outputs`; that endpoint includes artifact rows and durable team-work `output_refs` for real deliverables. Groups with no delivered output stay out of the output picker so operators do not have to scan abandoned, planning-only, or internal-only lanes.
+Deliverables starts with a **Group outputs** selector when retained group deliverables exist. The selector only lists groups that produced retained user-facing outputs through `/api/v1/groups/{id}/outputs`; that endpoint includes artifact rows and durable team-work `output_refs` for real deliverables. Groups with no delivered output stay out of the output picker so operators do not have to scan abandoned, planning-only, or internal-only lanes.
 
 Resources treats delivered work and team working material differently. Final documents, packages, media, generated files, and other user-facing deliverables appear in the output picker whether they were stored as artifacts or returned as durable team output refs. Planning files, source/support files, proof notes, and handoffs stay available through the group's Workflow Log or explicit source/internal controls, but they do not make a group appear in the delivered-output picker by themselves.
 
@@ -245,7 +245,7 @@ When a group is cleared from `Groups`, retained files stay visible here unless t
 
 When an output group is selected, Resources links back to the same group in `Groups` for **Outputs**, **Workflow Log**, and **Message** review. Use those links when you need the collaboration history, group conversation, or workflow context behind a file; keep Resources focused on opening and inspecting the generated content itself.
 
-Group workflow logs and chat-pipeline history are reviewed in `Groups -> Workflow Log`, not in `Resources -> Output Files`. Output Files should stay focused on durable artifacts that a user can open, download, preview, or reveal in the workspace. When you need the work history that led to an artifact, open the group and review its Workflow Log.
+Group workflow logs and chat-pipeline history are advanced details reviewed from Work's group detail -> Workflow Log, not in `Resources -> Deliverables`. Deliverables stays focused on durable results that a user can open, download, preview, or reveal in the workspace. When you need the work history behind a result, open its advanced group detail and review the Workflow Log.
 
 By default, selecting a group opens its retained output artifacts, such as final
 documents, packages, media, or generated files. Team-generated working files
@@ -265,7 +265,7 @@ The workspace explorer is organized around three operator steps:
 - `Preview` reads the selected generated file without leaving the Resources surface and offers **Ask Soma with this** when you want the selected file to ground the next Soma follow-up.
 - `Create` keeps small handoff-folder and handoff-file writes available without making write controls the default browse path.
 
-Output Files should read top-to-bottom: choose retained group output/source scope, optionally open the current folder, then browse, preview, or create from the full-width workspace panel below.
+Deliverables should read top-to-bottom: choose retained group output/source scope, optionally open the current folder, then browse, preview, or create from the full-width workspace panel below.
 
 The upper access card includes **Open folder** for the current workspace path. Use it when an operator wants to grab generated files, media proof, project packages, or browser-game output from the local machine without decoding the storage configuration.
 
@@ -288,15 +288,15 @@ Use `System -> Deployments` to confirm the runtime is reporting the same workspa
 
 New-user proof should verify both sides of this boundary:
 - `Resources -> Capabilities` shows whether `filesystem` is installed and connected.
-- `Resources -> Output Files` lists only groups with retained user-facing output in the group selector.
-- `Resources -> Output Files` can link the selected group into `Groups` Outputs, Workflow Log, and Message review.
-- `Resources -> Output Files` can narrow retained artifacts by contributor level before opening a file or package.
-- `Resources -> Output Files -> Include team source files` switches from curated output artifacts to the selected group's workspace source folder.
-- `Resources -> Output Files` can browse/read/write only under the governed workspace boundary and can open the current local folder through the workspace-confined reveal endpoint.
+- `Resources -> Deliverables` lists only groups with retained user-facing output in the group selector.
+- `Resources -> Deliverables` can link the selected result into advanced group Outputs, Workflow Log, and Message review.
+- `Resources -> Deliverables` can narrow retained artifacts by contributor level before opening a file or package.
+- `Resources -> Deliverables -> Include team source files` switches from curated output artifacts to the selected group's workspace source folder.
+- `Resources -> Deliverables` can browse/read/write only under the governed workspace boundary and can open the current local folder through the workspace-confined reveal endpoint.
 - `System -> Deployments` reports the deployment/workspace/artifact roots that explain where generated output will land.
 - A retained demo output or project package opened from Soma/Teams/Groups resolves to the same workspace root family instead of a hidden process working directory; team-owned packages and media should be inside the selected group folder unless the operator explicitly chose another workspace path.
 - A retained output or project package opened from Soma can be used as the source for the next Soma ask through **Reply**. Use this when the user wants an update, alternate, downstream generation, or another team to react to the delivered content without manually copying paths.
-- A selected file in `Resources -> Output Files -> Preview` can be used for the next Soma ask through **Ask Soma with this**. The action opens Soma with the file title and workspace reference attached as one-shot continuation context; it does not approve execution or promote the file into long-term context.
+- A selected file in `Resources -> Deliverables -> Preview` can be used for the next Soma ask through **Ask Soma with this**. The action opens Soma with the file title and workspace reference attached as one-shot continuation context; it does not approve execution or promote the file into long-term context.
 - A saved entry in `Resources -> Deployment Context` can also use **Ask Soma with this** when the next chat turn should reference that durable context source directly. The context remains governed by its saved visibility, sensitivity, trust, and goal-scope metadata.
 
 Supported operator actions:

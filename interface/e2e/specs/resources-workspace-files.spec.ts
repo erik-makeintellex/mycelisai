@@ -23,7 +23,7 @@ async function openWorkspaceFiles(page: Page) {
         }
     }
     await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("tab", { name: /Output Files/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /Deliverables/i })).toBeVisible();
 }
 
 async function mockWorkspaceMCP(page: Page) {

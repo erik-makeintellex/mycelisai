@@ -158,7 +158,12 @@ export default function ExecutionSummaryCard({
             <div className="space-y-2">
                 {(allOutputs.length > 0 || projectPackages.length > 0) && (
                     <SummaryRow icon={<FileText className="h-3.5 w-3.5" />} label="Outputs">
-                        <OutputWorkbench outputs={allOutputs} projectPackages={projectPackages} projectOpenLabel={OUTPUT_PACKAGE_OPEN_LABEL} />
+                        <OutputWorkbench
+                            outputs={allOutputs}
+                            projectPackages={projectPackages}
+                            projectOpenLabel={OUTPUT_PACKAGE_OPEN_LABEL}
+                            outputContract={summary.work_intent?.output_contract}
+                        />
                     </SummaryRow>
                 )}
                 {outputShape && (

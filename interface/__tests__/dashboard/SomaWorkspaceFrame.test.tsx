@@ -53,13 +53,69 @@ describe("SomaWorkspaceFrame", () => {
     expect(within(sideRail).queryByText("Active lane fallback")).toBeNull();
 
     fireEvent.click(within(sideRail).getByRole("tab", { name: /Work/i }));
-    expect(within(sideRail).getByText("Work to review")).toBeDefined();
-    expect(within(frame).getAllByText(/Work that needs a decision, check, or follow-up/i).length).toBeGreaterThan(0);
+    expect(within(sideRail).getByText("Current work")).toBeDefined();
+    expect(within(frame).getAllByText(/Work that is queued, running, or being checked/i).length).toBeGreaterThan(0);
     expect(within(sideRail).getByText("Active lane fallback")).toBeDefined();
     fireEvent.click(within(sideRail).getByRole("tab", { name: /Trust/i }));
     expect(within(sideRail).getByText("Compact trust package")).toBeDefined();
     fireEvent.click(within(sideRail).getByRole("tab", { name: /Context/i }));
     expect(within(sideRail).getByText("Context links")).toBeDefined();
+  });
+
+  it("makes a trusted retained result the main stage while keeping Soma available", () => {
+    render(
+      <SomaWorkspaceFrame
+        expression={<div>Continue with Soma</div>}
+        activeWork={<div>Background validation</div>}
+        output={(
+          <OutputWorkbench
+            outputs={[{
+              text: "Retained result",
+              url: "/api/v1/workspace/files/view?path=generated%2Fresult.html",
+            }]}
+          />
+        )}
+        primaryPanel="output"
+        resultFirst
+        showOutputDigest={false}
+        workItemCount={1}
+        workStatus="active"
+      />,
+    );
+
+    const stage = screen.getByTestId("soma-result-first-stage");
+    expect(within(stage).getByTestId("output-workbench")).toBeDefined();
+    expect(within(stage).getByText("Retained result")).toBeDefined();
+    expect(within(screen.getByTestId("soma-continuation-sidecar")).getByText("Continue with Soma")).toBeDefined();
+    expect(screen.queryByTestId("soma-workbench-output-digest")).toBeNull();
+
+    const lane = within(screen.getByTestId("soma-current-work-lane"));
+    expect(lane.getByText("Work in progress")).toBeDefined();
+    expect(lane.queryByText("Work needs review")).toBeNull();
+    expect(lane.getByRole("button", { name: /View work/i })).toBeDefined();
+    expect(lane.getByLabelText("1 work item")).toBeDefined();
+
+    fireEvent.click(lane.getByRole("button", { name: /View work/i }));
+    const sideRail = screen.getByTestId("soma-workbench-side-rail");
+    expect(within(sideRail).getAllByText("Current work").length).toBeGreaterThan(0);
+    expect(within(sideRail).getByText("Background validation")).toBeDefined();
+  });
+
+  it("labels operator-owned work as input needed", () => {
+    render(
+      <SomaWorkspaceFrame
+        expression={<div>Conversation transcript</div>}
+        activeWork={<div>Approval question</div>}
+        primaryPanel="work"
+        reviewCount={1}
+        workItemCount={1}
+        workStatus="needs_input"
+      />,
+    );
+
+    const lane = within(screen.getByTestId("soma-current-work-lane"));
+    expect(lane.getByText("Input needed")).toBeDefined();
+    expect(lane.getByRole("button", { name: /Respond/i })).toBeDefined();
   });
 
   it("keeps the first-run Soma surface focused when there is nothing to review yet", () => {
@@ -174,6 +230,8 @@ describe("SomaWorkspaceFrame", () => {
         )}
         primaryPanel="work"
         reviewCount={2}
+    workItemCount={2}
+    workStatus="needs_review"
       />,
     );
 
@@ -189,8 +247,8 @@ describe("SomaWorkspaceFrame", () => {
     fireEvent.click(toggle);
 
     const sideRail = screen.getByTestId("soma-workbench-side-rail");
-    expect(within(sideRail).getByText("Review work")).toBeDefined();
-    expect(within(sideRail).getByText(/Understand the item/i)).toBeDefined();
+    expect(within(sideRail).getAllByText("Work to review").length).toBeGreaterThan(0);
+    expect(within(sideRail).getByText(/Understand the issue/i)).toBeDefined();
     expect(within(sideRail).queryByRole("tab", { name: /Work/i })).toBeNull();
     expect(within(sideRail).getByRole("link", { name: /Open inbox/i }).getAttribute("href")).toBe("/teams?view=work");
     expect(within(sideRail).getByText("Running team task")).toBeDefined();

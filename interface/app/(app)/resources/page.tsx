@@ -42,12 +42,17 @@ type ResourceTab = {
     icon: LucideIcon;
 };
 
+type ResourceGroup = {
+    label: string;
+    tabs: ResourceTab[];
+};
+
 const RESOURCE_TABS: ResourceTab[] = [
     {
         id: "workspace",
-        label: "Output Files",
-        summary: "Open delivered files, packages, media, and team outputs retained for the user.",
-        detail: "Delivered work",
+        label: "Deliverables",
+        summary: "Open the files, packages, media, and other results Soma delivered for you.",
+        detail: "Your retained results",
         icon: FolderOpen,
     },
     {
@@ -85,6 +90,11 @@ const RESOURCE_TABS: ResourceTab[] = [
         detail: "Reusable teammates",
         icon: BookOpen,
     },
+];
+
+const RESOURCE_GROUPS: ResourceGroup[] = [
+    { label: "Results", tabs: RESOURCE_TABS.slice(0, 1) },
+    { label: "Advanced resources", tabs: RESOURCE_TABS.slice(1) },
 ];
 
 export default function ResourcesPage() {
@@ -141,17 +151,23 @@ function ResourcesContent() {
                     aria-orientation="horizontal"
                     data-testid="resource-type-tabs"
                 >
-                    <div className="hidden px-2 pb-2 pt-1 text-[10px] font-semibold uppercase text-cortex-text-muted lg:block">
-                        Resource types
-                    </div>
-                    <div className="flex w-max min-w-full gap-1 lg:block lg:w-auto lg:space-y-1">
-                        {RESOURCE_TABS.map((tab) => (
-                            <ResourceMenuButton
-                                key={tab.id}
-                                tab={tab}
-                                active={activeTab === tab.id}
-                                href={tabHref(tab.id)}
-                            />
+                    <div className="flex w-max min-w-full gap-3 lg:block lg:w-auto lg:space-y-3">
+                        {RESOURCE_GROUPS.map((group) => (
+                            <div key={group.label} role="presentation" className="min-w-0">
+                                <div className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase text-cortex-text-muted">
+                                    {group.label}
+                                </div>
+                                <div className="flex gap-1 lg:block lg:space-y-1">
+                                    {group.tabs.map((tab) => (
+                                        <ResourceMenuButton
+                                            key={tab.id}
+                                            tab={tab}
+                                            active={activeTab === tab.id}
+                                            href={tabHref(tab.id)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </nav>

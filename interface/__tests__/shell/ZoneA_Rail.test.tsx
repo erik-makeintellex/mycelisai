@@ -67,6 +67,8 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
         for (const entry of DEFAULT_NAV_ENTRIES) {
             expect(screen.getByText(entry.label)).toBeDefined();
         }
+        expect(screen.getByText('Active work and outcomes')).toBeDefined();
+        expect(screen.getByText('Deliverables, sources, and tools')).toBeDefined();
     });
 
     it('renders Settings in footer', () => {
