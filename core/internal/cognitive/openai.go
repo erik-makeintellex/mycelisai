@@ -124,10 +124,13 @@ func (a *OpenAIAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 	}
 
 	return &InferResponse{
-		Text:       text,
-		ModelUsed:  modelUsed,
-		Provider:   a.provider,
-		TokensUsed: resp.Usage.TotalTokens,
+		Text:               text,
+		ModelUsed:          modelUsed,
+		Provider:           a.provider,
+		UpstreamResponseID: resp.ID,
+		PromptTokens:       resp.Usage.PromptTokens,
+		CompletionTokens:   resp.Usage.CompletionTokens,
+		TokensUsed:         resp.Usage.TotalTokens,
 	}, nil
 }
 

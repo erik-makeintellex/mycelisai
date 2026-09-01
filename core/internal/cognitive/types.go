@@ -150,10 +150,13 @@ type InferenceCorrelation struct {
 }
 
 type InferResponse struct {
-	Text       string `json:"text"`
-	ModelUsed  string `json:"model_used"`
-	Provider   string `json:"provider"`
-	TokensUsed int    `json:"tokens_used,omitempty"`
+	Text               string `json:"text"`
+	ModelUsed          string `json:"model_used"`
+	Provider           string `json:"provider"`
+	UpstreamResponseID string `json:"upstream_response_id,omitempty"`
+	PromptTokens       int    `json:"prompt_tokens,omitempty"`
+	CompletionTokens   int    `json:"completion_tokens,omitempty"`
+	TokensUsed         int    `json:"tokens_used,omitempty"` // Compatibility alias for exact upstream total_tokens.
 }
 
 // --- Embedding Interface ---

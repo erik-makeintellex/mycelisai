@@ -41,10 +41,13 @@ func (a *captureAdapter) Probe(_ context.Context) (bool, error) {
 
 func TestInferWithContract_PreservesRouteModelAndReportedUsage(t *testing.T) {
 	adapter := &captureAdapter{response: &InferResponse{
-		Text:       "gateway response",
-		Provider:   "openai_compatible",
-		ModelUsed:  "openai/gpt-4.1-mini-2025-04-14",
-		TokensUsed: 23,
+		Text:               "gateway response",
+		Provider:           "openai_compatible",
+		ModelUsed:          "openai/gpt-4.1-mini-2025-04-14",
+		UpstreamResponseID: "chatcmpl-router-proof",
+		PromptTokens:       14,
+		CompletionTokens:   9,
+		TokensUsed:         23,
 	}}
 	r := &Router{
 		Config: &BrainConfig{
@@ -65,6 +68,9 @@ func TestInferWithContract_PreservesRouteModelAndReportedUsage(t *testing.T) {
 	}
 	if resp.ModelUsed != "openai/gpt-4.1-mini-2025-04-14" {
 		t.Fatalf("ModelUsed = %q, want gateway response model", resp.ModelUsed)
+	}
+	if resp.UpstreamResponseID != "chatcmpl-router-proof" || resp.PromptTokens != 14 || resp.CompletionTokens != 9 {
+		t.Fatalf("upstream accounting changed during route normalization: %#v", resp)
 	}
 	if resp.TokensUsed != 23 || r.totalTokens.Load() != 23 {
 		t.Fatalf("reported tokens = %d, recorded tokens = %d, want 23", resp.TokensUsed, r.totalTokens.Load())

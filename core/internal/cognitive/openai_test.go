@@ -97,8 +97,11 @@ func TestOpenAIAdapter_InferLiteLLMCompatibleResponse(t *testing.T) {
 	if resp.ModelUsed != "openai/gpt-4.1-mini-2025-04-14" {
 		t.Fatalf("ModelUsed = %q, want response model", resp.ModelUsed)
 	}
-	if resp.TokensUsed != 18 {
-		t.Fatalf("TokensUsed = %d, want reported total 18", resp.TokensUsed)
+	if resp.UpstreamResponseID != "chatcmpl-litellm" {
+		t.Fatalf("UpstreamResponseID = %q, want chatcmpl-litellm", resp.UpstreamResponseID)
+	}
+	if resp.PromptTokens != 7 || resp.CompletionTokens != 11 || resp.TokensUsed != 18 {
+		t.Fatalf("usage = prompt %d, completion %d, total %d", resp.PromptTokens, resp.CompletionTokens, resp.TokensUsed)
 	}
 }
 
@@ -144,8 +147,52 @@ func TestOpenAIAdapter_InferLiteLLMToolCall(t *testing.T) {
 	if resp.Text != wantText {
 		t.Fatalf("Text = %q, want %q", resp.Text, wantText)
 	}
-	if resp.ModelUsed != "anthropic/claude-sonnet-4" || resp.TokensUsed != 15 {
-		t.Fatalf("response metadata = model %q, tokens %d", resp.ModelUsed, resp.TokensUsed)
+	if resp.ModelUsed != "anthropic/claude-sonnet-4" || resp.UpstreamResponseID != "chatcmpl-tool" {
+		t.Fatalf("response identity = model %q, upstream response %q", resp.ModelUsed, resp.UpstreamResponseID)
+	}
+	if resp.PromptTokens != 9 || resp.CompletionTokens != 6 || resp.TokensUsed != 15 {
+		t.Fatalf("usage = prompt %d, completion %d, total %d", resp.PromptTokens, resp.CompletionTokens, resp.TokensUsed)
+	}
+}
+
+func TestInferResponse_AccountingJSONCompatibility(t *testing.T) {
+	raw, err := json.Marshal(InferResponse{
+		Text:               "ready",
+		ModelUsed:          "upstream/model",
+		Provider:           "gateway",
+		UpstreamResponseID: "chatcmpl-123",
+		PromptTokens:       3,
+		CompletionTokens:   5,
+		TokensUsed:         8,
+	})
+	if err != nil {
+		t.Fatalf("Marshal InferResponse: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatalf("Unmarshal InferResponse: %v", err)
+	}
+	wantNumbers := map[string]float64{
+		"prompt_tokens": 3, "completion_tokens": 5, "tokens_used": 8,
+	}
+	for key, want := range wantNumbers {
+		if payload[key] != want {
+			t.Fatalf("%s = %#v, want %v", key, payload[key], want)
+		}
+	}
+	if payload["upstream_response_id"] != "chatcmpl-123" {
+		t.Fatalf("upstream_response_id = %#v, want chatcmpl-123", payload["upstream_response_id"])
+	}
+
+	minimal, err := json.Marshal(InferResponse{Text: "ready", ModelUsed: "model", Provider: "provider"})
+	if err != nil {
+		t.Fatalf("Marshal minimal InferResponse: %v", err)
+	}
+	for _, field := range []string{"upstream_response_id", "prompt_tokens", "completion_tokens", "tokens_used"} {
+		if strings.Contains(string(minimal), `"`+field+`"`) {
+			t.Fatalf("missing upstream field %q was synthesized in %s", field, minimal)
+		}
 	}
 }
 
