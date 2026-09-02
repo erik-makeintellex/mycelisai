@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from collections.abc import Callable
 from contextlib import suppress
+from pathlib import Path
 from typing import Any
 
 from .interface_process_support import (
+    INTERFACE_DIR,
     _INTERFACE_PROCESS_COMMAND_HINTS,
     _INTERFACE_PROCESS_PATH_HINTS,
 )
@@ -31,6 +34,16 @@ def matches_repo_local_interface_process(
     if not any(hint in normalized_cmd for hint in _INTERFACE_PROCESS_PATH_HINTS):
         return False
     return any(hint in normalized_cmd for hint in _INTERFACE_PROCESS_COMMAND_HINTS)
+
+
+def matches_repo_local_interface_cwd(name: str, cwd: str) -> bool:
+    """Recognize Next's rewritten listener title only at the exact repo cwd."""
+    if not (name or "").lower().startswith("next-server") or not cwd:
+        return False
+    try:
+        return Path(cwd).resolve() == INTERFACE_DIR.resolve()
+    except (OSError, ValueError):
+        return False
 
 
 def list_repo_local_interface_processes(
@@ -111,15 +124,24 @@ def repo_local_interface_processes_for_pids(
 ) -> list[ProcessInfo]:
     """Filter listener PIDs down to repo-owned Interface/Playwright workers."""
     processes = process_inspection.list_processes_by_pids(pids, is_windows_func=is_windows_func, run=run)
-    return [
-        process
-        for process in processes
+    owned: list[ProcessInfo] = []
+    for process in processes:
         if matches_repo_local_interface_process(
             str(process.get("name") or ""),
             str(process.get("command") or ""),
             normalize_process_text=normalize_process_text,
-        )
-    ]
+        ):
+            owned.append(process)
+            continue
+        if is_windows_func():
+            continue
+        try:
+            cwd = os.readlink(f"/proc/{process['pid']}/cwd")
+        except OSError:
+            cwd = ""
+        if matches_repo_local_interface_cwd(str(process.get("name") or ""), cwd):
+            owned.append(process)
+    return owned
 
 
 def kill_pid_tree(
