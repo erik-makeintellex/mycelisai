@@ -2327,4 +2327,124 @@ CREATE INDEX IF NOT EXISTS idx_code_context_edges_refs
     ON code_context_edges(tenant_id, snapshot_id, from_ref, to_ref);
 -- END SOURCE: core/migrations/064_code_context.up.sql
 
+-- P0.10 Slice A: Core-owned durable authority for external worker evidence.
+-- This current-schema block is intentionally outside the immutable 773e534c
+-- source manifest. Historical migrations are not recreated after convergence.
+CREATE TABLE IF NOT EXISTS worker_run_bindings (
+    run_id UUID PRIMARY KEY REFERENCES mission_runs(id) ON DELETE CASCADE,
+    backend TEXT NOT NULL DEFAULT 'framework_runs',
+    protocol TEXT NOT NULL DEFAULT 'runs_api',
+    intent_proof_id UUID NOT NULL REFERENCES intent_proofs(id) ON DELETE CASCADE,
+    execution_contract_id UUID NOT NULL REFERENCES execution_contracts(id) ON DELETE CASCADE,
+    team_id TEXT NULL,
+    work_item_id UUID NOT NULL REFERENCES team_work_items(id) ON DELETE CASCADE,
+    outcome_id TEXT NULL,
+    idempotency_key TEXT NOT NULL UNIQUE,
+    graph_revision TEXT NOT NULL,
+    source_kind TEXT NOT NULL,
+    source_channel TEXT NOT NULL,
+    payload_kind TEXT NOT NULL,
+    request_digest TEXT NOT NULL,
+    service_version BIGINT NULL,
+    state TEXT NOT NULL DEFAULT 'create_pending',
+    run_status TEXT NULL,
+    last_event_sequence BIGINT NOT NULL DEFAULT 0,
+    cursor_version BIGINT NOT NULL DEFAULT 0,
+    binding_version BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    bound_at TIMESTAMPTZ NULL,
+    CONSTRAINT chk_worker_binding_backend CHECK (backend = 'framework_runs'),
+    CONSTRAINT chk_worker_binding_protocol CHECK (protocol = 'runs_api'),
+    CONSTRAINT chk_worker_binding_digest CHECK (request_digest ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT chk_worker_binding_state CHECK (state IN ('create_pending', 'bound', 'reconcile_required', 'terminal')),
+    CONSTRAINT chk_worker_binding_run_status CHECK (run_status IS NULL OR run_status IN ('accepted', 'running', 'approval_needed', 'completed', 'failed', 'cancelled')),
+    CONSTRAINT chk_worker_binding_versions CHECK (last_event_sequence >= 0 AND cursor_version >= 0 AND binding_version >= 0 AND (service_version IS NULL OR service_version >= 1)),
+    CONSTRAINT chk_worker_binding_payload_kind CHECK (payload_kind = 'command'),
+    CONSTRAINT chk_worker_binding_source_kind CHECK (source_kind IN ('workspace_ui', 'web_api', 'automation_trigger', 'scheduler', 'sensor', 'iot', 'internal_tool', 'mcp', 'system')),
+    CONSTRAINT chk_worker_binding_canonical_text CHECK (
+        idempotency_key = BTRIM(idempotency_key) AND idempotency_key <> '' AND
+        graph_revision = BTRIM(graph_revision) AND graph_revision <> '' AND
+        source_channel = BTRIM(source_channel) AND source_channel <> ''
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_worker_run_bindings_reconcile
+    ON worker_run_bindings(state, updated_at) WHERE state IN ('create_pending', 'reconcile_required');
+
+CREATE TABLE IF NOT EXISTS worker_event_receipts (
+    id UUID PRIMARY KEY,
+    run_id UUID NOT NULL REFERENCES worker_run_bindings(run_id) ON DELETE CASCADE,
+    event_id TEXT NOT NULL,
+    sequence BIGINT NOT NULL,
+    event_kind TEXT NOT NULL,
+    service_version BIGINT NOT NULL,
+    payload_digest TEXT NOT NULL,
+    normalized_payload JSONB NOT NULL,
+    projected_mission_event_id UUID NULL REFERENCES mission_events(id) ON DELETE SET NULL,
+    received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    projected_at TIMESTAMPTZ NULL,
+    CONSTRAINT chk_worker_event_sequence CHECK (sequence > 0 AND service_version >= 1),
+    CONSTRAINT chk_worker_event_digest CHECK (payload_digest ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT uq_worker_event_receipt_id UNIQUE (run_id, event_id),
+    CONSTRAINT uq_worker_event_receipt_sequence UNIQUE (run_id, sequence)
+);
+
+CREATE INDEX IF NOT EXISTS idx_worker_event_receipts_run
+    ON worker_event_receipts(run_id, sequence);
+
+CREATE TABLE IF NOT EXISTS worker_approval_requests (
+    id UUID PRIMARY KEY,
+    run_id UUID NOT NULL REFERENCES worker_run_bindings(run_id) ON DELETE CASCADE,
+    approval_id TEXT NOT NULL,
+    request_digest TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    risk_level TEXT NOT NULL,
+    requested_action TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'pending',
+    decision TEXT NULL,
+    decided_by TEXT NULL,
+    decision_reason TEXT NULL,
+    expires_at TIMESTAMPTZ NULL,
+    version BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_worker_approval_digest CHECK (request_digest ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT chk_worker_approval_state CHECK (state IN ('pending', 'decided', 'expired', 'withdrawn')),
+    CONSTRAINT chk_worker_approval_decision CHECK (decision IS NULL OR decision IN ('approve', 'deny')),
+    CONSTRAINT chk_worker_approval_decided CHECK ((state = 'decided' AND decision IS NOT NULL AND decided_by IS NOT NULL) OR (state <> 'decided' AND decision IS NULL)),
+    CONSTRAINT chk_worker_approval_version CHECK (version >= 0),
+    CONSTRAINT uq_worker_approval_identity UNIQUE (run_id, approval_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_worker_approval_requests_pending
+    ON worker_approval_requests(run_id, created_at) WHERE state = 'pending';
+
+CREATE TABLE IF NOT EXISTS worker_control_commands (
+    command_id UUID PRIMARY KEY,
+    run_id UUID NOT NULL REFERENCES worker_run_bindings(run_id) ON DELETE CASCADE,
+    approval_request_id UUID NULL REFERENCES worker_approval_requests(id) ON DELETE SET NULL,
+    idempotency_key TEXT NOT NULL UNIQUE,
+    kind TEXT NOT NULL,
+    expected_service_version BIGINT NOT NULL,
+    payload_digest TEXT NOT NULL,
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    state TEXT NOT NULL DEFAULT 'staged',
+    version BIGINT NOT NULL DEFAULT 0,
+    last_error TEXT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    acknowledged_at TIMESTAMPTZ NULL,
+    CONSTRAINT chk_worker_command_kind CHECK (kind IN ('approve', 'deny', 'stop')),
+    CONSTRAINT chk_worker_command_state CHECK (state IN ('staged', 'pending', 'acknowledged', 'failed', 'uncertain')),
+    CONSTRAINT chk_worker_command_digest CHECK (payload_digest ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT chk_worker_command_versions CHECK (expected_service_version >= 1 AND version >= 0),
+    CONSTRAINT chk_worker_command_approval CHECK ((kind IN ('approve', 'deny') AND approval_request_id IS NOT NULL) OR (kind = 'stop' AND approval_request_id IS NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_worker_control_commands_pending
+    ON worker_control_commands(run_id, state, created_at)
+    WHERE state IN ('staged', 'pending', 'uncertain');
+
 COMMIT;

@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -102,14 +103,12 @@ func (b *FrameworkRunsBackend) CreateRun(ctx context.Context, req WorkerRunReque
 	if err != nil {
 		return WorkerRunHandle{}, err
 	}
-	backendRunID := handle.RunID
-	if strings.TrimSpace(backendRunID) == "" {
+	if strings.TrimSpace(handle.RunID) == "" {
 		return WorkerRunHandle{}, WorkerBackendError("invalid_backend_response", "External worker backend returned no run_id.", true)
 	}
-	if backendRunID != req.RunID {
+	if handle.RunID != req.RunID {
 		return WorkerRunHandle{}, WorkerBackendError("run_identity_mismatch", "External worker backend did not preserve the authoritative Mycelis run_id.", false)
 	}
-	handle.BackendRunID = backendRunID
 	return handle, nil
 }
 
@@ -146,12 +145,22 @@ func validateWorkerCorrelation(req WorkerRunRequest) error {
 }
 
 func (b *FrameworkRunsBackend) StreamRunEvents(ctx context.Context, runID string) (<-chan WorkerEvent, error) {
+	return b.StreamRunEventsAfter(ctx, runID, 0)
+}
+
+func (b *FrameworkRunsBackend) StreamRunEventsAfter(ctx context.Context, runID string, lastSequence int64) (<-chan WorkerEvent, error) {
 	if strings.TrimSpace(runID) == "" {
 		return nil, fmt.Errorf("worker run_id is required")
+	}
+	if lastSequence < 0 {
+		return nil, fmt.Errorf("worker event cursor cannot be negative")
 	}
 	req, err := b.newRequest(ctx, http.MethodGet, "/v1/runs/"+url.PathEscape(runID)+"/events", nil)
 	if err != nil {
 		return nil, err
+	}
+	if lastSequence > 0 {
+		req.Header.Set("Last-Event-ID", strconv.FormatInt(lastSequence, 10))
 	}
 	res, err := b.Client.Do(req)
 	if err != nil {
@@ -183,13 +192,19 @@ func (b *FrameworkRunsBackend) StreamRunEvents(ctx context.Context, runID string
 				emitFrameworkStreamFailure(ctx, events, runID, "External worker returned an invalid event.")
 				return
 			}
-			if streamEventID != "" && stringValue(raw["event_id"]) == "" {
-				raw["event_id"] = streamEventID
+			sequence, parseErr := strconv.ParseInt(streamEventID, 10, 64)
+			if parseErr != nil || sequence <= 0 || strconv.FormatInt(sequence, 10) != streamEventID {
+				emitFrameworkStreamFailure(ctx, events, runID, "External worker returned an invalid SSE event cursor.")
+				return
 			}
 			streamEventID = ""
 			event, err := eventFromMap(raw, runID, BackendFrameworkRuns)
 			if err != nil {
 				emitFrameworkStreamFailure(ctx, events, runID, err.Error())
+				return
+			}
+			if event.Sequence != sequence {
+				emitFrameworkStreamFailure(ctx, events, runID, "External worker SSE cursor did not match the event sequence.")
 				return
 			}
 			select {
@@ -207,7 +222,7 @@ func (b *FrameworkRunsBackend) StreamRunEvents(ctx context.Context, runID string
 
 func emitFrameworkStreamFailure(ctx context.Context, events chan<- WorkerEvent, runID, message string) {
 	event := WorkerEvent{
-		EventID: "framework-stream-failure:" + runID, RunID: runID, BackendRunID: runID,
+		EventID: "framework-stream-failure:" + runID, RunID: runID,
 		Backend: BackendFrameworkRuns, Kind: EventFailed, Status: StatusFailed,
 		Message: message, Error: WorkerBackendError("invalid_event_stream", message, true), Timestamp: time.Now().UTC(),
 	}
@@ -233,25 +248,7 @@ func (b *FrameworkRunsBackend) GetRun(ctx context.Context, runID string) (Worker
 	if handle.RunID != canonicalRunID {
 		return WorkerRunHandle{}, WorkerBackendError("run_identity_mismatch", "External worker backend did not preserve the authoritative Mycelis run_id.", false)
 	}
-	handle.BackendRunID = canonicalRunID
 	return handle, nil
-}
-
-func (b *FrameworkRunsBackend) StopRun(ctx context.Context, runID string) error {
-	if strings.TrimSpace(runID) == "" {
-		return fmt.Errorf("worker run_id is required")
-	}
-	return b.doJSON(ctx, http.MethodPost, "/v1/runs/"+url.PathEscape(runID)+"/stop", map[string]any{}, nil)
-}
-
-func (b *FrameworkRunsBackend) SubmitApproval(ctx context.Context, runID string, approval WorkerApprovalDecision) error {
-	if strings.TrimSpace(runID) == "" || strings.TrimSpace(approval.ApprovalID) == "" {
-		return fmt.Errorf("worker run_id and approval_id are required")
-	}
-	if approval.Decision != DecisionApprove && approval.Decision != DecisionDeny {
-		return fmt.Errorf("unsupported approval decision %q", approval.Decision)
-	}
-	return b.doJSON(ctx, http.MethodPost, "/v1/runs/"+url.PathEscape(runID)+"/approvals/"+url.PathEscape(approval.ApprovalID), approval, nil)
 }
 
 func (b *FrameworkRunsBackend) GetCapabilities(ctx context.Context) (WorkerCapabilities, error) {

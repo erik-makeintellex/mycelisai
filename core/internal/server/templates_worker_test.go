@@ -23,9 +23,6 @@ func (b *recordingWorkerBackend) CreateRun(_ context.Context, req workers.Worker
 	if handle.RunID == "" {
 		handle.RunID = req.RunID
 	}
-	if handle.BackendRunID == "" {
-		handle.BackendRunID = handle.RunID
-	}
 	return handle, nil
 }
 

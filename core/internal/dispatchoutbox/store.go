@@ -11,12 +11,17 @@ import (
 )
 
 const (
-	StatusStaged    = "staged"
-	StatusPending   = "pending"
-	StatusExecuting = "executing"
-	StatusCompleted = "completed"
-	StatusFailed    = "failed"
+	StatusStaged = "staged"
+	// StatusAwaitingHandler holds committed intents whose dispatcher belongs to
+	// a later delivery slice. ClaimNext deliberately excludes these rows.
+	StatusAwaitingHandler = "awaiting_handler"
+	StatusPending         = "pending"
+	StatusExecuting       = "executing"
+	StatusCompleted       = "completed"
+	StatusFailed          = "failed"
 )
+
+const DispatchKindFrameworkRunCreate = "framework_run_create"
 
 var ErrUnavailable = errors.New("dispatch outbox unavailable")
 
@@ -77,6 +82,82 @@ ON CONFLICT (idempotency_key) DO NOTHING`,
 		return Item{}, err
 	}
 	return item, nil
+}
+
+// EnqueueFrameworkCreateTx persists a non-claimable external-create intent.
+// An identical replay is a no-op; reuse of the key with different authority
+// or payload fails closed. Slice C owns activation and dispatch.
+func (s *Store) EnqueueFrameworkCreateTx(ctx context.Context, tx *sql.Tx, item Item) (bool, error) {
+	item.DispatchKind = DispatchKindFrameworkRunCreate
+	item.Status = StatusAwaitingHandler
+	if s == nil || s.db == nil || tx == nil {
+		return false, ErrUnavailable
+	}
+	if err := validateItem(item); err != nil {
+		return false, err
+	}
+	if len(item.Recovery) == 0 {
+		item.Recovery = json.RawMessage(`{}`)
+	}
+	if item.AvailableAt.IsZero() {
+		item.AvailableAt = time.Now().UTC()
+	}
+	var inserted string
+	err := tx.QueryRowContext(ctx, `
+INSERT INTO execution_dispatch_outbox (
+    id,idempotency_key,dispatch_kind,status,run_id,intent_proof_id,
+    contract_id,team_id,work_item_id,source_kind,source_channel,
+    payload_kind,payload,available_at,recovery
+) VALUES ($1,$2,$3,$4,$5,$6,NULLIF($7,'')::uuid,NULLIF($8,''),NULLIF($9,''),$10,$11,$12,$13::jsonb,$14,$15::jsonb)
+ON CONFLICT (idempotency_key) DO NOTHING RETURNING id::text`, item.ID,
+		item.IdempotencyKey, item.DispatchKind, item.Status, item.RunID,
+		item.IntentProofID, item.ContractID, item.TeamID, item.WorkItemID,
+		item.SourceKind, item.SourceChannel, item.PayloadKind, string(item.Payload),
+		item.AvailableAt, string(item.Recovery)).Scan(&inserted)
+	if err == nil {
+		return true, nil
+	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+	var existing Item
+	err = tx.QueryRowContext(ctx, `
+SELECT id::text,idempotency_key,dispatch_kind,status,run_id,intent_proof_id::text,
+       COALESCE(contract_id::text,''),COALESCE(team_id,''),COALESCE(work_item_id,''),
+       source_kind,source_channel,payload_kind,payload,recovery
+FROM execution_dispatch_outbox WHERE idempotency_key=$1`, item.IdempotencyKey).
+		Scan(&existing.ID, &existing.IdempotencyKey, &existing.DispatchKind,
+			&existing.Status, &existing.RunID, &existing.IntentProofID,
+			&existing.ContractID, &existing.TeamID, &existing.WorkItemID,
+			&existing.SourceKind, &existing.SourceChannel, &existing.PayloadKind,
+			&existing.Payload, &existing.Recovery)
+	if err != nil {
+		return false, err
+	}
+	if exactFrameworkCreate(existing, item) {
+		return false, nil
+	}
+	return false, fmt.Errorf("framework run create idempotency conflict for %q", item.IdempotencyKey)
+}
+
+func exactFrameworkCreate(a, b Item) bool {
+	return a.IdempotencyKey == b.IdempotencyKey &&
+		a.DispatchKind == b.DispatchKind && a.Status == b.Status &&
+		a.RunID == b.RunID && a.IntentProofID == b.IntentProofID &&
+		a.ContractID == b.ContractID && a.TeamID == b.TeamID &&
+		a.WorkItemID == b.WorkItemID && a.SourceKind == b.SourceKind &&
+		a.SourceChannel == b.SourceChannel && a.PayloadKind == b.PayloadKind &&
+		jsonEqual(a.Payload, b.Payload) && jsonEqual(a.Recovery, b.Recovery)
+}
+
+func jsonEqual(a, b json.RawMessage) bool {
+	var left, right any
+	if json.Unmarshal(a, &left) != nil || json.Unmarshal(b, &right) != nil {
+		return false
+	}
+	leftCanonical, leftErr := json.Marshal(left)
+	rightCanonical, rightErr := json.Marshal(right)
+	return leftErr == nil && rightErr == nil && string(leftCanonical) == string(rightCanonical)
 }
 
 func (s *Store) Activate(ctx context.Context, idempotencyKey string) error {
@@ -217,7 +298,10 @@ func walkSecret(value any) bool {
 	case map[string]any:
 		for key, child := range typed {
 			name := strings.ToLower(strings.TrimSpace(key))
-			if !strings.HasSuffix(name, "_ref") && (name == "password" || name == "token" || name == "api_key" || name == "secret") && strings.TrimSpace(fmt.Sprint(child)) != "" {
+			sensitive := name == "password" || name == "token" || name == "access_token" ||
+				name == "bearer_token" || name == "api_key" || name == "secret" ||
+				name == "client_secret" || name == "authorization" || name == "credential"
+			if !strings.HasSuffix(name, "_ref") && sensitive && strings.TrimSpace(fmt.Sprint(child)) != "" {
 				return true
 			}
 			if walkSecret(child) {

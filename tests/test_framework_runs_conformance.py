@@ -8,7 +8,7 @@ import httpx
 import pytest
 from framework_runs.api import create_app
 from framework_runs.drivers import ConformanceDriver
-from framework_runs.store import InMemoryRunStore, RunStore
+from framework_runs.store import InMemoryRunStore
 
 @pytest.fixture
 def client() -> "ASGIClient":
@@ -121,15 +121,20 @@ def test_create_get_and_events_normalize_ids_and_completion_candidate(
         "requires_core_validation": True,
         "verified": False,
     }
-    assert run["result"]["outputs"][0]["uri"] == "workspace://candidate/result.md"
-    assert run["result"]["outputs"][0]["metadata"]["verified"] is False
+    output = run["result"]["outputs"][0]
+    assert output["uri"].startswith("candidate://core-run-normalize/")
+    assert output["size_bytes"] > 0 and len(output["sha256"]) == 64
+    assert output["metadata"]["verified"] is False
+    assert run["version"] == 2
 
     assert client.get(f"/v1/runs/{run['run_id']}").json() == run
     events_response = client.get(f"/v1/runs/{run['run_id']}/events")
     assert events_response.headers["content-type"].startswith("text/event-stream")
     events = _sse_events(events_response.text)
     assert [event["kind"] for event in events] == ["accepted", "completed"]
+    assert [event["sequence"] for event in events] == [1, 2]
     assert all(event["run_id"] == run["run_id"] for event in events)
+    assert all(event["correlation"] == run["correlation"] for event in events)
     assert events[-1]["metadata"]["completion_authority"] == "candidate"
     assert events[-1]["metadata"]["verified"] is False
 
@@ -153,20 +158,27 @@ def test_approval_lifecycle_is_central_and_resume_remains_candidate(
 
     mismatch = client.post(
         f"/v1/runs/{created['run_id']}/approvals/{approval_id}",
-        json={"approval_id": str(UUID(int=0)), "decision": "approve"},
+        json={
+            "approval_id": str(UUID(int=0)), "decision": "approve",
+            "command_id": "approve-mismatch", "expected_version": created["version"],
+            "actor_id": "operator-1",
+        },
     )
-    assert mismatch.status_code == 400
+    assert mismatch.status_code == 409
 
     approved = client.post(
         f"/v1/runs/{created['run_id']}/approvals/{approval_id}",
         json={
             "approval_id": approval_id,
             "decision": "approve",
+            "command_id": "approve-core-run-approval",
+            "expected_version": created["version"],
             "actor_id": "operator-1",
         },
     )
-    assert approved.status_code == 200
-    run = approved.json()
+    assert approved.status_code == 202
+    assert approved.json()["state"] == "applied"
+    run = client.get(f"/v1/runs/{created['run_id']}").json()
     assert run["status"] == "completed"
     assert "approval" not in run
     assert run["result"]["metadata"]["resumed_after_approval"] is True
@@ -195,12 +207,14 @@ def test_denied_approval_fails_without_framework_resume(client: "ASGIClient") ->
         json={
             "approval_id": approval_id,
             "decision": "deny",
+            "command_id": "deny-core-run-deny",
+            "expected_version": created["version"],
             "actor_id": "operator-1",
             "reason": "outside approved scope",
         },
     )
-    assert denied.status_code == 200
-    run = denied.json()
+    assert denied.status_code == 202
+    run = client.get(f"/v1/runs/{created['run_id']}").json()
     assert run["status"] == "failed"
     assert run["error"]["code"] == "approval_denied"
     assert run["error"]["metadata"]["reason"] == "outside approved scope"
@@ -216,10 +230,14 @@ def test_cancel_is_idempotent_and_cannot_regress_terminal_run(
     ).json()
     assert held["status"] == "running"
 
-    stopped = client.post(f"/v1/runs/{held['run_id']}/stop")
-    assert stopped.status_code == 200
-    assert stopped.json()["status"] == "cancelled"
-    assert client.post(f"/v1/runs/{held['run_id']}/stop").status_code == 200
+    control = {
+        "command_id": "stop-core-run-hold", "expected_version": held["version"],
+        "actor_id": "operator-1",
+    }
+    stopped = client.post(f"/v1/runs/{held['run_id']}/stop", json=control)
+    assert stopped.status_code == 202 and stopped.json()["state"] == "applied"
+    replay = client.post(f"/v1/runs/{held['run_id']}/stop", json=control)
+    assert replay.status_code == 200 and replay.json() == stopped.json()
     assert [
         event["kind"]
         for event in _sse_events(
@@ -230,7 +248,10 @@ def test_cancel_is_idempotent_and_cannot_regress_terminal_run(
     completed = client.post(
         "/v1/runs", json=_payload("core-run-complete", "Complete")
     ).json()
-    terminal_stop = client.post(f"/v1/runs/{completed['run_id']}/stop")
+    terminal_stop = client.post(f"/v1/runs/{completed['run_id']}/stop", json={
+        "command_id": "stop-terminal", "expected_version": completed["version"],
+        "actor_id": "operator-1",
+    })
     assert terminal_stop.status_code == 409
     assert client.get(f"/v1/runs/{completed['run_id']}").json()["status"] == "completed"
 
@@ -262,48 +283,6 @@ def test_bounded_store_prunes_terminal_but_never_active_run() -> None:
     assert at_capacity.status_code == 503
 
 
-def test_supplied_identity_is_stable_idempotent_and_conflict_safe() -> None:
-    store = InMemoryRunStore(max_runs=4)
-    assert isinstance(store, RunStore)
-    test_client = ASGIClient(create_app(driver=ConformanceDriver(), store=store))
-    payload = {
-        "run_id": "core-run-001",
-        "correlation": {
-            "run_id": "core-run-001",
-            "intent_proof_id": "proof-001",
-            "execution_contract_id": "contract-001",
-            "team_id": "team-001",
-            "outcome_id": "outcome-001",
-            "work_item_id": "work-001",
-            "idempotency_key": "confirm:proof-001",
-            "source_kind": "web_api",
-            "source_channel": "api.intent.confirm-action",
-            "payload_kind": "command",
-            "graph_revision": "worker-graph-v1",
-        },
-        "intent": "Produce one candidate",
-        "input": {"output": {"answer": 42}},
-    }
-    first = test_client.post("/v1/runs", json=payload)
-    repeated = test_client.post("/v1/runs", json=payload)
-    assert first.status_code == repeated.status_code == 201
-    assert repeated.json() == first.json()
-    assert first.json()["run_id"] == "core-run-001"
-    assert first.json()["correlation"] == payload["correlation"]
-    events = _sse_events(test_client.get("/v1/runs/core-run-001/events").text)
-    assert all(event["correlation"] == payload["correlation"] for event in events)
-    changed = {**payload, "correlation": {**payload["correlation"], "idempotency_key": "confirm:other"}}
-    conflict = test_client.post("/v1/runs", json=changed)
-    assert conflict.status_code == 409
-    mismatch = {**payload, "correlation": {**payload["correlation"], "run_id": "other-run"}}
-    assert test_client.post("/v1/runs", json=mismatch).status_code == 422
-    incomplete = {**payload, "run_id": "core-run-002", "correlation": {"run_id": "core-run-002"}}
-    assert test_client.post("/v1/runs", json=incomplete).status_code == 422
-    unsafe = _payload("core-run-unsafe", "Rejected identity")
-    unsafe["run_id"] = "unsafe/run"
-    assert test_client.post("/v1/runs", json=unsafe).status_code == 422
-
-
 def test_create_and_approval_payloads_forbid_unknown_fields(client: "ASGIClient") -> None:
     create_payload = _payload("core-run-extra", "Reject extra")
     create_payload["correlation_id"] = "legacy-id"
@@ -325,6 +304,9 @@ def test_create_and_approval_payloads_forbid_unknown_fields(client: "ASGIClient"
         json={
             "approval_id": approval_id,
             "decision": "approve",
+            "command_id": "approve-extra",
+            "expected_version": created["version"],
+            "actor_id": "operator-1",
             "unknown": True,
         },
     ).status_code == 422

@@ -38,8 +38,8 @@ Every architecture-transition slice runs `UV_CACHE_DIR=/tmp/mycelis-hygiene-cach
 ## Framework Runs Neutral Gate
 Framework-worker proof is contract proof, not production delegation permission. `central` remains the safe default until every gate below passes. [Backend](architecture/BACKEND.md#durable-external-run-projection-target) documents lifecycle implementation and [Operations](architecture/OPERATIONS.md#framework-worker-configuration) documents configuration posture; the canonical PRD [P0.10 referential](architecture-library/MYCELIS_CANONICAL_PRD.md#p010-framework-execution-delivery-referential) owns architecture, sequencing, and acceptance. Run:
 ```bash
-go -C core test ./internal/workers ./internal/server -count=1
-UV_CACHE_DIR=/tmp/mycelis-framework-runs-cache uv run --no-sync pytest tests/test_framework_runs_conformance.py tests/test_k8s_chart_contract.py tests/test_k8s_config_parity.py -q
+go -C core test ./internal/workerauthority ./internal/dispatchoutbox ./internal/workers ./internal/server -count=1
+UV_CACHE_DIR=/tmp/mycelis-framework-runs-cache uv run --no-sync pytest tests/test_db_current_schema.py tests/test_framework_runs_conformance.py tests/test_framework_runs_protocol_v1.py tests/test_k8s_chart_contract.py tests/test_k8s_config_parity.py -q
 ```
 Preserve the existing dependency-gated LangGraph driver regression separately; it is pre-certification contract evidence, not slice-F adapter certification:
 ```bash

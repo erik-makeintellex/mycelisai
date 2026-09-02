@@ -7,16 +7,17 @@ import (
 
 func TestCentralBackendStreamReturnsSnapshotWithoutFinalizing(t *testing.T) {
 	backend := NewCentralBackend()
-	handle, err := backend.CreateRun(context.Background(), WorkerRunRequest{
-		RunID:  "run-1",
-		UserID: "operator-1",
-		Intent: "create a retained output",
-	})
+	req := correlatedTestRunRequest("run-1", "create a retained output")
+	req.UserID = "operator-1"
+	handle, err := backend.CreateRun(context.Background(), req)
 	if err != nil {
 		t.Fatalf("CreateRun: %v", err)
 	}
 	if handle.Backend != BackendCentral || handle.Status != StatusAccepted {
 		t.Fatalf("handle backend/status = %s/%s", handle.Backend, handle.Status)
+	}
+	if handle.Version != 1 || handle.Correlation != req.Correlation {
+		t.Fatalf("central authority = %#v", handle)
 	}
 	if handle.AuditRecord == nil || handle.AuditRecord.RunID != handle.RunID {
 		t.Fatalf("expected audit record tied to run")
@@ -29,6 +30,9 @@ func TestCentralBackendStreamReturnsSnapshotWithoutFinalizing(t *testing.T) {
 	event := <-events
 	if event.EventID == "" || event.Kind != EventAccepted || event.Status != StatusAccepted {
 		t.Fatalf("snapshot event = %#v", event)
+	}
+	if event.Sequence != 1 || event.Version != handle.Version || event.Correlation != handle.Correlation {
+		t.Fatalf("snapshot cursor/correlation = %#v", event)
 	}
 	run, err := backend.GetRun(context.Background(), handle.RunID)
 	if err != nil {
@@ -69,6 +73,9 @@ func TestCentralBackendCompleteRun(t *testing.T) {
 	if run.Result.FinishedAt.IsZero() {
 		t.Fatal("expected finished timestamp")
 	}
+	if run.Version != 2 {
+		t.Fatalf("completed run version = %d", run.Version)
+	}
 }
 
 func TestCentralBackendFailRun(t *testing.T) {
@@ -93,6 +100,9 @@ func TestCentralBackendFailRun(t *testing.T) {
 	}
 	if run.Status != StatusFailed || run.Error == nil || run.Error.Code != "tool_failed" || !run.Error.Recoverable {
 		t.Fatalf("run status/error = %s/%+v", run.Status, run.Error)
+	}
+	if run.Version != 2 {
+		t.Fatalf("failed run version = %d", run.Version)
 	}
 }
 

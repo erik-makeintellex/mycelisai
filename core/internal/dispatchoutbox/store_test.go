@@ -61,6 +61,33 @@ func TestEnqueueTxRejectsRawSecrets(t *testing.T) {
 	}
 }
 
+func TestFrameworkCreateIntentIsExactAndNonClaimable(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	item := testItem()
+	item.IdempotencyKey = "framework-run-create:" + item.IdempotencyKey
+	mock.ExpectBegin()
+	tx, _ := db.BeginTx(t.Context(), nil)
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO execution_dispatch_outbox")).
+		WithArgs(item.ID, item.IdempotencyKey, DispatchKindFrameworkRunCreate,
+			StatusAwaitingHandler, item.RunID, item.IntentProofID, item.ContractID,
+			item.TeamID, item.WorkItemID, item.SourceKind, item.SourceChannel,
+			item.PayloadKind, string(item.Payload), sqlmock.AnyArg(), "{}").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(item.ID))
+	created, err := NewStore(db).EnqueueFrameworkCreateTx(t.Context(), tx, item)
+	if err != nil || !created {
+		t.Fatalf("framework create intent = %v, %v", created, err)
+	}
+	mock.ExpectRollback()
+	_ = tx.Rollback()
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestClaimNextReclaimsExpiredLease(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

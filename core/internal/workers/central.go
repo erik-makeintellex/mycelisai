@@ -44,13 +44,14 @@ func (b *CentralBackend) CreateRun(_ context.Context, req WorkerRunRequest) (Wor
 	}
 	now := time.Now().UTC()
 	handle := WorkerRunHandle{
-		RunID:        runID,
-		BackendRunID: runID,
-		Backend:      BackendCentral,
-		Status:       StatusAccepted,
-		Protocol:     ProtocolRunsAPI,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		RunID:       runID,
+		Backend:     BackendCentral,
+		Status:      StatusAccepted,
+		Protocol:    ProtocolRunsAPI,
+		Version:     1,
+		Correlation: req.Correlation,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 		AuditRecord: &WorkerAuditRecord{
 			Backend:      BackendCentral,
 			ActorID:      req.UserID,
@@ -83,7 +84,12 @@ func (b *CentralBackend) StreamRunEvents(ctx context.Context, runID string) (<-c
 				return true
 			}
 		}
-		send(WorkerEvent{EventID: "central:" + runID + ":snapshot", RunID: runID, BackendRunID: runID, Backend: BackendCentral, Kind: kindFromStatus(handle.Status), Status: handle.Status, Message: "Current central run state.", Timestamp: now})
+		send(WorkerEvent{
+			EventID: "central:" + runID + ":snapshot", RunID: runID, Backend: BackendCentral,
+			Sequence: 1, Version: handle.Version, Correlation: handle.Correlation,
+			Kind: kindFromStatus(handle.Status), Status: handle.Status,
+			Message: "Current central run state.", Timestamp: now,
+		})
 	}()
 	return events, nil
 }
@@ -120,6 +126,7 @@ func (b *CentralBackend) FailRun(_ context.Context, runID string, workerErr *Wor
 		return fmt.Errorf("worker run not found: %s", runID)
 	}
 	run.Status = StatusFailed
+	run.Version++
 	run.Error = workerErr
 	run.UpdatedAt = time.Now().UTC()
 	b.runs[runID] = run
@@ -146,6 +153,7 @@ func (b *CentralBackend) SubmitApproval(_ context.Context, runID string, decisio
 		run.Status = StatusRunning
 		run.Approval = nil
 	}
+	run.Version++
 	run.UpdatedAt = time.Now().UTC()
 	b.runs[runID] = run
 	return nil
@@ -176,6 +184,7 @@ func (b *CentralBackend) setStatus(runID string, status RunStatus) error {
 		return fmt.Errorf("worker run not found: %s", runID)
 	}
 	run.Status = status
+	run.Version++
 	run.UpdatedAt = time.Now().UTC()
 	b.runs[runID] = run
 	return nil
@@ -190,6 +199,7 @@ func (b *CentralBackend) setResult(runID string, result WorkerResult) error {
 	}
 	run.Result = &result
 	run.Status = StatusCompleted
+	run.Version++
 	run.UpdatedAt = time.Now().UTC()
 	b.runs[runID] = run
 	return nil
