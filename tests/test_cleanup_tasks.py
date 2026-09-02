@@ -82,8 +82,9 @@ def test_clean_generated_skips_active_python_environment(monkeypatch, tmp_path, 
     )
     monkeypatch.setattr(
         "ops.cleanup_support.sys.executable",
-        str(active_venv / "Scripts" / "python.exe"),
+        "/usr/bin/python3.12",
     )
+    monkeypatch.setattr("ops.cleanup_support.sys.prefix", str(active_venv))
 
     active_venv.mkdir(parents=True)
     (active_venv / "marker.txt").write_text("keep", encoding="utf-8")
@@ -101,10 +102,12 @@ def test_clean_generated_skips_active_python_environment(monkeypatch, tmp_path, 
 
 def test_remove_repo_targets_retries_readonly_cache_files(tmp_path):
     cache_dir = tmp_path / "workspace" / "tool-cache"
-    cache_dir.mkdir(parents=True)
-    readonly_file = cache_dir / "cached.txt"
+    readonly_dir = cache_dir / "go-mod" / "example.com" / "module@v1"
+    readonly_dir.mkdir(parents=True)
+    readonly_file = readonly_dir / "cached.txt"
     readonly_file.write_text("cache", encoding="utf-8")
     readonly_file.chmod(0o400)
+    readonly_dir.chmod(0o500)
 
     removed, missing = remove_repo_targets((cache_dir,), tmp_path)
 

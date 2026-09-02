@@ -1,4 +1,5 @@
 import os, shutil, stat
+from contextlib import suppress
 from pathlib import Path
 
 WORKTREE_REVIEW_TARGETS = (
@@ -152,6 +153,9 @@ def remove_repo_targets(
 def _retry_remove_readonly(function, path, excinfo) -> None:
     if not isinstance(excinfo, PermissionError):
         raise excinfo
+    parent = Path(path).parent
+    with suppress(OSError):
+        os.chmod(parent, stat.S_IRWXU)
     os.chmod(path, stat.S_IWRITE | stat.S_IREAD | stat.S_IEXEC)
     function(path)
 def report_repo_targets(
