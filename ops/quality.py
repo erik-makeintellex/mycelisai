@@ -7,7 +7,7 @@ from invoke import Collection, task
 from .config import ROOT_DIR
 
 DEFAULT_SOURCE_PATHS = (
-    "core,interface,ops,tests,scripts,agents,cli,sdk/python/src,"
+    "core,interface,ops,tests,agents,sdk/python/src,"
     "cognitive/src,docs,charts,k8s,architecture,proto,README.md,"
     "AGENTS.md,pyproject.toml"
 )
@@ -43,7 +43,6 @@ DEFAULT_EXCLUDE_DIRS = {
 }
 GENERATED_OR_LOCK_PATHS = {
     "core/go.sum": "Go module checksum lockfile",
-    "scripts/qa/go.sum": "Go module checksum lockfile",
     "interface/package-lock.json": "npm lockfile",
     "uv.lock": "uv lockfile",
     "charts/mycelis-core/Chart.lock": "Helm dependency lockfile",

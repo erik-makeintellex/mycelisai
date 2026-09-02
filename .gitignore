@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 *.py[cod]
 *$py.class
+*.egg-info/
 .venv/
 .venv-uv/
 venv/
@@ -54,7 +55,6 @@ debug_nats.py
 check_stream.py
 stream_output.txt
 architect_work_order.md
-scripts/__pycache__/
 
 kubeconfig.yaml
 kind-config.gen.yaml

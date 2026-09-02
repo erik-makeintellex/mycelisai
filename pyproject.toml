@@ -33,10 +33,13 @@ myc = "invoke.main:program.run"
 [tool.uv]
 # Prefer the project .venv over any system VIRTUAL_ENV
 managed = true
+package = true
+
+[tool.setuptools]
+packages = []
 
 [tool.uv.workspace]
 members = [
-    "cli",
     "cognitive",
 ]
 
