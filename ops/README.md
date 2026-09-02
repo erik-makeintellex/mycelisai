@@ -202,7 +202,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 
 ### `test.py` (Cross-Stack Coverage)
 - **Coverage**: `uv run inv test.coverage`
-- Use `uv run inv ci.test` for the combined Core and Interface unit gate and `uv run inv interface.e2e` for browser proof; duplicate aliases are intentionally not registered.
+- Use `uv run inv ci.test` for the combined Core, Framework Runs service, and Interface unit gate and `uv run inv interface.e2e` for browser proof; duplicate aliases are intentionally not registered.
 
 ### `cognitive.py` (Optional Local Engine Helpers)
 - **Install**: `uv run inv cognitive.install`
@@ -251,11 +251,11 @@ Stopping containers alone is not enough. The cleanup pass must also inspect and 
 
 ### `ci.py` (Delivery Gates)
 Delivery-focused validation, runner checks, and release preflight.
-- **Test**: `uv run inv ci.test` (Go tests + blocking Vitest run)
+- **Test**: `uv run inv ci.test` (Core and Framework Runs Go tests + blocking Vitest run)
 - **Entrypoint Check**: `uv run inv ci.entrypoint-check`
 - **Baseline**: `uv run inv ci.baseline` (uses the managed build lifecycle to stop repo-owned Interface servers and Playwright listeners and clear `.next`, then includes the repo-provisioned Chromium project with one worker by default; use `--no-e2e` only for intentionally narrower local debugging, and provision other engines explicitly for a separate cross-engine matrix)
 - **Service Check**: `uv run inv ci.service-check --live-backend`
-- **Release Preflight**: `uv run inv ci.release-preflight --lane=release`; every lane runs `ci.lint` first and stops before baseline/service work if lint fails. Core lint/test stages use `go -C <core>` so module selection is independent of Invoke/shell directory state, and the release baseline runs Core tests with `-p 1` so local runtime/browser probes do not race package-level resource contention. Captured Core failures print console-safe diagnostics instead of crashing on characters unsupported by the active Windows code page.
+- **Release Preflight**: `uv run inv ci.release-preflight --lane=release`; every lane runs `ci.lint` first and stops before baseline/service work if lint fails. Go stages use explicit module paths so selection is independent of Invoke/shell directory state; the release baseline runs Core tests with `-p 1` and the separate Framework Runs module once before Interface proof. Captured Go failures print console-safe diagnostics instead of crashing on characters unsupported by the active Windows code page.
 - **Lane presets**: `baseline`, `runtime`, `service`, `release` (legacy flags still supported for custom proof)
 - **Runtime Posture Gate**: `--runtime-posture` adds a 12 GiB disk-headroom check, reads explicit AI endpoints from process env plus `.env.compose` / `.env`, and fails closed when no supported endpoint contract is configured before baseline proof runs. Loopback remains invalid except for a WSL source endpoint whose scheme and port exactly match an explicit `host.docker.internal` Compose endpoint; that bounded exception represents the Windows-host relay exposed through WSL mirrored networking. The probe also mirrors `host.docker.internal` through WSL localhost before Compose relay startup.
 - Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path. On Windows, cleanup uses one bounded repo-scoped Node/cmd inventory query before terminating only matching process trees, so another project's dev server is a port conflict to report rather than a process to borrow or stop. The task runner leaves Playwright reporter selection to `interface/playwright.config.ts`, preserving both operator-readable output and JSON/JUnit evidence under `interface/test-results`.

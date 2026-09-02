@@ -7,6 +7,11 @@ def _core_go_command(core_dir, arguments: str) -> str:
     return f'go -C "{core_dir}" {arguments}'
 
 
+def _framework_runs_go_command(core_dir, arguments: str) -> str:
+    service_dir = core_dir.parent / "services" / "framework-runs"
+    return f'go -C "{service_dir}" {arguments}'
+
+
 def _console_safe(value: str, encoding: str | None = None) -> str:
     target_encoding = encoding or getattr(sys.stdout, "encoding", None) or "utf-8"
     return value.encode(target_encoding, errors="backslashreplace").decode(target_encoding)
@@ -51,7 +56,7 @@ def run_test(c, *, core_dir, task_env, interface_tasks):
     print("=== TEST ===")
     print()
 
-    print("[1/2] go test ./...")
+    print("[1/3] core go test ./...")
     result = c.run(_core_go_command(core_dir, "test ./..."), warn=True, env=task_env())
     if result.exited != 0:
         _print_failed_result(result)
@@ -59,7 +64,15 @@ def run_test(c, *, core_dir, task_env, interface_tasks):
     else:
         print("  OK")
 
-    print("[2/2] interface test")
+    print("[2/3] framework-runs go test ./...")
+    result = c.run(_framework_runs_go_command(core_dir, "test ./..."), warn=True, env=task_env())
+    if result.exited != 0:
+        _print_failed_result(result)
+        errors.append("framework-runs tests failed")
+    else:
+        print("  OK")
+
+    print("[3/3] interface test")
     try:
         interface_tasks.test.body(c)
     except SystemExit:
@@ -155,16 +168,16 @@ def run_baseline(
     print()
     cache_tasks.ensure_disk_headroom(min_free_gb=10, reason="ci baseline")
 
-    _run_baseline_step("[1/7] logging.check-schema", lambda: logging_tasks.check_schema.body(c), errors, "logging schema check failed")
-    _run_baseline_step("[2/7] logging.check-topics", lambda: logging_tasks.check_topics.body(c), errors, "logging topic check failed")
+    _run_baseline_step("[1/8] logging.check-schema", lambda: logging_tasks.check_schema.body(c), errors, "logging schema check failed")
+    _run_baseline_step("[2/8] logging.check-topics", lambda: logging_tasks.check_topics.body(c), errors, "logging topic check failed")
     _run_baseline_step(
-        "[3/7] quality.max-lines --limit=385",
+        "[3/8] quality.max-lines --limit=385",
         lambda: quality.max_lines.body(c, limit=quality.DEFAULT_MAX_LINES, paths=quality.DEFAULT_SOURCE_PATHS, strict=False),
         errors,
         "quality max-lines check failed",
     )
 
-    print("[4/7] core go test ./... -count=1 -p 1")
+    print("[4/8] core go test ./... -count=1 -p 1")
     result = c.run(_core_go_command(core_dir, "test ./... -count=1 -p 1"), warn=True, hide=True, env=task_env())
     if result.exited != 0:
         _print_failed_result(result)
@@ -172,10 +185,18 @@ def run_baseline(
     else:
         print("  OK")
 
-    _run_baseline_step("[5/7] interface build", lambda: interface_tasks.build.body(c), errors, "interface build failed")
-    _run_baseline_step("[6/7] interface typecheck", lambda: interface_tasks.typecheck.body(c), errors, "interface typecheck failed")
+    print("[5/8] framework-runs go test ./... -count=1")
+    result = c.run(_framework_runs_go_command(core_dir, "test ./... -count=1"), warn=True, hide=True, env=task_env())
+    if result.exited != 0:
+        _print_failed_result(result)
+        errors.append("framework-runs tests failed")
+    else:
+        print("  OK")
 
-    print("[7/7] interface test")
+    _run_baseline_step("[6/8] interface build", lambda: interface_tasks.build.body(c), errors, "interface build failed")
+    _run_baseline_step("[7/8] interface typecheck", lambda: interface_tasks.typecheck.body(c), errors, "interface typecheck failed")
+
+    print("[8/8] interface test")
     try:
         interface_tasks.stop.body(c)
         interface_tasks.clean.body(c)
