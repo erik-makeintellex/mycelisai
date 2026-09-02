@@ -287,7 +287,7 @@ Use [Testing](../TESTING.md) for gate details. Operational summary:
 
 Runtime checks must start clean, verify readiness, run proof once services are healthy, and shut down unless a follow-on check needs them.
 
-Clean first-boot release proof must exercise the normal data-plane path and the normal app startup path:
+Clean first-boot release proof must exercise the normal data-plane path and the normal app startup path. Requested Core or Interface readiness is mandatory; a missing Interface dependency tree reports `uv run inv interface.install` and fails instead of silently certifying a backend-only boot:
 
 ```bash
 uv run inv lifecycle.first-boot-proof

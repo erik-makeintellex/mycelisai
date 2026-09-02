@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from invoke import Context
 
 from ops import db as db_tasks
@@ -90,3 +91,30 @@ def test_up_with_build_uses_core_compile_task_body(monkeypatch):
     lifecycle.up.body(Context(), frontend=False, build=True)
 
     assert compile_calls == ["compile"]
+
+
+def test_up_frontend_readiness_failure_is_fatal(monkeypatch):
+    monkeypatch.setattr(Path, "exists", lambda self: True)
+    monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: None)
+    monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_core_council_ready", lambda timeout=10, interval=1.0: True)
+    monkeypatch.setattr(db_tasks.create, "body", lambda _c: None)
+    monkeypatch.setattr(lifecycle, "_start_core_background", lambda: True)
+    monkeypatch.setattr(
+        lifecycle,
+        "_port_open",
+        lambda port, host="127.0.0.1", timeout=1.0: port in (5432, 4222),
+    )
+    monkeypatch.setattr(
+        lifecycle,
+        "_wait_for_port",
+        lambda port, *args, **kwargs: port != lifecycle.INTERFACE_PORT,
+    )
+
+    from ops import interface as interface_tasks
+
+    monkeypatch.setattr(interface_tasks, "interface_task_env", lambda extra=None: {})
+    monkeypatch.setattr(interface_tasks, "start_dev_server_detached", lambda *args, **kwargs: None)
+
+    with pytest.raises(SystemExit, match="Frontend did not become HTTP-ready"):
+        lifecycle.up.body(Context(), frontend=True, build=False)

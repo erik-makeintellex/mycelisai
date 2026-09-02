@@ -674,10 +674,10 @@ def up(c, frontend=False, build=False):
                 host=INTERFACE_BIND_HOST,
                 port=INTERFACE_PORT,
             )
-            if _wait_for_port(INTERFACE_PORT, "Frontend", timeout=30):
+            if _wait_for_port(INTERFACE_PORT, "Frontend", timeout=30) and _wait_for_http_ok(f"http://{INTERFACE_HOST}:{INTERFACE_PORT}/", "Frontend HTTP", timeout=120):
                 print(f"  Frontend online on :{INTERFACE_PORT}")
             else:
-                print("  WARN: Frontend did not come up in time.")
+                raise SystemExit("STACK UP FAILED: Frontend did not become HTTP-ready in time. Run 'uv run inv interface.install' to restore dependencies, then rerun 'uv run inv lifecycle.up --frontend'.")
     else:
         print("[4/4] Frontend: skipped (use --frontend to include)")
 
