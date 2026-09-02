@@ -49,16 +49,9 @@ worker_runtime:
   capabilities_endpoint: "/v1/capabilities"
   health_endpoint: "/health"
   preferred_protocol: "runs_api"
-  session_key_strategy: "org_project_run"
   approval_mode: "mycelis_control_plane"
   event_stream_mode: "sse"
   timeout_policy:
     connect_ms: 5000
     run_ms: 900000
     stream_ms: 900000
-  tool_policy:
-    allow_network: false
-    allow_files: false
-    allow_browser: false
-    allowed_tools: []
-  fallback_backend: "central"

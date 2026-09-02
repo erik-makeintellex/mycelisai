@@ -9,16 +9,16 @@ council:
   mode: v8-migration-bridge
 provider_policy:
   posture: migration-bridge
-  provider: local-ollama-dev
+  provider: ollama
   kernel:
     role_providers:
-      admin: local-ollama-dev
+      admin: ollama
   council:
     role_providers:
-      architect: local-ollama-dev
-      coder: local-ollama-dev
-      creative: local-ollama-dev
-      sentry: local-ollama-dev
+      architect: ollama
+      coder: ollama
+      creative: ollama
+      sentry: ollama
 teams:
   - id: admin-core
     name: Soma

@@ -29,7 +29,6 @@ class Driver(Protocol):
 
     name: str
     framework: str
-    production_ready: bool
     supports_cancellation: bool
     cancellation_mode: str
 
@@ -50,7 +49,6 @@ class ConformanceDriver:
 
     name = "conformance"
     framework = "built_in"
-    production_ready = False
     supports_cancellation = True
     cancellation_mode = "local_held_run"
 
@@ -144,7 +142,6 @@ class LangGraphDriver:
 
     name = "langgraph"
     framework = "langgraph"
-    production_ready = False
 
     def __init__(
         self,
@@ -263,10 +260,8 @@ class LangGraphDriver:
         configurable = {
             "thread_id": run_id,
             "mycelis_run_id": run_id,
-            "correlation_id": request.correlation_id or run_id,
         }
-        if request.correlation is not None:
-            configurable.update(request.correlation.model_dump(mode="json"))
+        configurable.update(request.correlation.model_dump(mode="json"))
         return {"configurable": configurable}
 
 

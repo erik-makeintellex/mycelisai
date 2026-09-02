@@ -13,7 +13,7 @@ def main() -> None:
         )
     uvicorn.run(
         "framework_runs.api:app",
-        host=os.environ.get("MYCELIS_FRAMEWORK_RUNS_HOST", "127.0.0.1"),
+        host="127.0.0.1",
         port=int(os.environ.get("MYCELIS_FRAMEWORK_RUNS_PORT", "8091")),
     )
 

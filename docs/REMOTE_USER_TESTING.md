@@ -208,6 +208,46 @@ Expected:
 - Help content matches visible labels and workflows
 - infrastructure depth remains optional
 
+## Workflow Shape And Restart Acceptance
+
+Use one release-readiness objective to prove that Soma chooses the smallest useful
+execution shape and that durable work survives restart:
+
+```text
+Prepare a self-hosted release-readiness package for a Windows operator lane that
+uses a Windows GPU host for AI. I need a quick recommendation, a deployable
+validation plan, and a reviewable package I can resume after a reboot.
+```
+
+Exercise these four variants:
+
+1. Ask for the shortest practical recommendation. Soma should answer directly,
+   create no team or workflow group, recommend the supported Docker Compose lane
+   first with an explicit Windows AI endpoint, and keep Kubernetes as the modular
+   scale-up proof lane.
+2. Ask for the smallest useful team with a named lead, validation checklist,
+   deployment recommendation, risk review, and retained release-readiness package.
+3. Ask Soma to split broader work into compact planning, deployment-validation,
+   and review lanes. Each lane must have a visible purpose, owner, output contract,
+   and retained output.
+4. After variant 2 or 3 retains an output, restart the environment, reopen the same
+   Workspace, and ask: `Resume the release-readiness work from the retained package
+   and show me what is already done, what remains, and which lane or lead owns the
+   next step.` The same package and producing team/group must remain reviewable;
+   Soma must resume from retained evidence rather than inventing a fresh answer.
+
+The automated counterparts are:
+
+- `interface/e2e/specs/workflow-output.direct.spec.ts`
+- `interface/e2e/specs/workflow-output.compact-team.spec.ts`
+- `interface/e2e/specs/workflow-output.multi-lane.spec.ts`
+- `interface/e2e/specs/workflow-output.reload-review.spec.ts`
+
+Capture the prompt, execution shape, visible owner/output contract, retained output,
+and before/after-restart evidence. A pass requires the direct answer to resist
+unnecessary orchestration, the compact and multi-lane variants to remain legible,
+and restart review to preserve attribution and the next owner.
+
 ## Cross-Device Matrix
 
 Repeat the primary journey at minimum on:

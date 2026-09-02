@@ -18,13 +18,8 @@ class StoreConflictError(RuntimeError):
 
 @runtime_checkable
 class RunStore(Protocol):
-    """Persistence boundary for atomic normalized run records.
+    """Conformance storage boundary for normalized run records."""
 
-    Production implementations must durably preserve run identity, event order,
-    and create conflicts across process restarts.
-    """
-
-    production_ready: bool
     storage_kind: str
 
     def put(self, record: RunRecord) -> None: ...
@@ -37,7 +32,6 @@ class RunStore(Protocol):
 class InMemoryRunStore:
     """Bounded, process-local conformance storage; never production durable."""
 
-    production_ready = False
     storage_kind = "bounded_memory_non_production"
 
     def __init__(self, *, max_runs: int = 256, max_events_per_run: int = 256) -> None:

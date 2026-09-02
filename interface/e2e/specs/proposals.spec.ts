@@ -106,7 +106,7 @@ async function openCrewLauncher(page: import('@playwright/test').Page) {
 }
 
 test.describe('Mission Proposal Entry Points', () => {
-    test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, 'requires live AI Organization workspace');
+    test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, 'requires a live Soma Workspace');
 
     test('workspace exposes launch controls for mission planning', async ({ page }) => {
         const organizationId = await createLiveOrganization(page);

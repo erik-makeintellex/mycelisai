@@ -23,6 +23,7 @@ dist/
 # IDEs
 .vscode/
 .idea/
+.monokle
 *.swp
 *.swo
 

@@ -98,7 +98,10 @@ func (b *FrameworkRunsBackend) CreateRun(ctx context.Context, req WorkerRunReque
 	if err := b.doJSON(ctx, http.MethodPost, "/v1/runs", payload, &out); err != nil {
 		return WorkerRunHandle{}, err
 	}
-	handle := runHandleFromMap(out, BackendFrameworkRuns, protocol)
+	handle, err := runHandleFromMap(out, BackendFrameworkRuns, protocol)
+	if err != nil {
+		return WorkerRunHandle{}, err
+	}
 	backendRunID := handle.RunID
 	if strings.TrimSpace(backendRunID) == "" {
 		return WorkerRunHandle{}, WorkerBackendError("invalid_backend_response", "External worker backend returned no run_id.", true)
@@ -132,6 +135,11 @@ func validateWorkerCorrelation(req WorkerRunRequest) error {
 	} {
 		if strings.TrimSpace(value) == "" {
 			return fmt.Errorf("worker %s correlation is required", name)
+		}
+	}
+	for _, name := range []string{"run_id", "correlation_id", "correlation", "intent_proof_id", "execution_contract_id", "team_id", "outcome_id", "work_item_id", "idempotency_key", "source_kind", "source_channel", "payload_kind", "graph_revision"} {
+		if _, duplicated := req.Metadata[name]; duplicated {
+			return fmt.Errorf("worker metadata must not duplicate typed correlation field %q", name)
 		}
 	}
 	return nil
@@ -175,11 +183,15 @@ func (b *FrameworkRunsBackend) StreamRunEvents(ctx context.Context, runID string
 				emitFrameworkStreamFailure(ctx, events, runID, "External worker returned an invalid event.")
 				return
 			}
-			if streamEventID != "" && stringValue(first(raw, "event_id", "id")) == "" {
+			if streamEventID != "" && stringValue(raw["event_id"]) == "" {
 				raw["event_id"] = streamEventID
 			}
 			streamEventID = ""
-			event := eventFromMap(raw, runID, BackendFrameworkRuns)
+			event, err := eventFromMap(raw, runID, BackendFrameworkRuns)
+			if err != nil {
+				emitFrameworkStreamFailure(ctx, events, runID, err.Error())
+				return
+			}
 			select {
 			case <-ctx.Done():
 				return
@@ -214,8 +226,11 @@ func (b *FrameworkRunsBackend) GetRun(ctx context.Context, runID string) (Worker
 	if err := b.doJSON(ctx, http.MethodGet, "/v1/runs/"+url.PathEscape(canonicalRunID), nil, &out); err != nil {
 		return WorkerRunHandle{}, err
 	}
-	handle := runHandleFromMap(out, BackendFrameworkRuns, ProtocolRunsAPI)
-	if strings.TrimSpace(handle.RunID) != canonicalRunID {
+	handle, err := runHandleFromMap(out, BackendFrameworkRuns, ProtocolRunsAPI)
+	if err != nil {
+		return WorkerRunHandle{}, err
+	}
+	if handle.RunID != canonicalRunID {
 		return WorkerRunHandle{}, WorkerBackendError("run_identity_mismatch", "External worker backend did not preserve the authoritative Mycelis run_id.", false)
 	}
 	handle.BackendRunID = canonicalRunID
@@ -252,7 +267,7 @@ func (b *FrameworkRunsBackend) HealthCheck(ctx context.Context) (WorkerHealth, e
 	if err := b.doJSON(ctx, http.MethodGet, b.Config.HealthPath, nil, &raw); err != nil {
 		return WorkerHealth{}, err
 	}
-	healthy := truthy(raw["healthy"]) || truthy(raw["ok"]) || truthy(raw["status"])
+	healthy := boolValue(raw["healthy"])
 	return WorkerHealth{Backend: BackendFrameworkRuns, Healthy: healthy, Message: stringValue(raw["message"]), CheckedAt: time.Now().UTC(), Raw: raw}, nil
 }
 
@@ -328,12 +343,7 @@ func selectProtocol(preferred Protocol, caps WorkerCapabilities) Protocol {
 	if hasProtocol(caps.SupportedProtocols, preferred) {
 		return preferred
 	}
-	for _, protocol := range []Protocol{ProtocolRunsAPI, ProtocolResponsesAPI, ProtocolChatCompletion} {
-		if hasProtocol(caps.SupportedProtocols, protocol) {
-			return protocol
-		}
-	}
-	return ProtocolUnknown
+	return ""
 }
 
 func hasProtocol(protocols []Protocol, want Protocol) bool {

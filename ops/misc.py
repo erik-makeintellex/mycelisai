@@ -17,34 +17,71 @@ from .misc_support import (
     report_repo_targets,
 )
 
-GENERATED_ARTIFACT_TARGETS = (
-    ROOT_DIR / ".venv",
-    ROOT_DIR / "interface" / "node_modules",
-    ROOT_DIR / "interface" / ".next",
-    ROOT_DIR / "workspace" / "tool-cache",
-    ROOT_DIR / "interface" / "test-results",
-    ROOT_DIR / "interface" / "playwright-report",
-    ROOT_DIR / ".pytest_cache",
-    ROOT_DIR / "core" / "bin",
+GENERATED_ARTIFACT_RELATIVE_TARGETS = (
+    ".venv",
+    "interface/node_modules",
+    "interface/.next",
+    "workspace/tool-cache",
+    "core/workspace/tool-cache",
+    "interface/workspace/tool-cache",
+    "interface/test-results",
+    "interface/playwright-report",
+    "interface/.playwright",
+    "interface/tsconfig.tsbuildinfo",
+    "interface/next-env.d.ts",
+    ".pytest_cache",
+    "core/bin",
 )
 
-REPORT_ARTIFACT_TARGETS = (
-    ROOT_DIR / "interface" / "test-results",
-    ROOT_DIR / "interface" / "playwright-report",
-    ROOT_DIR / ".pytest_cache",
+SOURCE_TREE_CACHE_ROOTS = (
+    ".",
+    "agents",
+    "cli",
+    "cognitive",
+    "framework_runs",
+    "ops",
+    "sdk/python",
+    "tests",
 )
 
-WSL_HANDOFF_TARGETS = (
-    ROOT_DIR / ".venv",
-    ROOT_DIR / "interface" / "node_modules",
-    ROOT_DIR / "interface" / ".next",
+REPORT_ARTIFACT_RELATIVE_TARGETS = (
+    "interface/test-results",
+    "interface/playwright-report",
+    ".pytest_cache",
 )
+
+WSL_HANDOFF_RELATIVE_TARGETS = (
+    ".venv",
+    "interface/node_modules",
+    "interface/.next",
+)
+
+
+def _source_tree_pycache_targets(root_dir: Path) -> tuple[Path, ...]:
+    targets: set[Path] = set()
+    root_cache = root_dir / "__pycache__"
+    if root_cache.exists():
+        targets.add(root_cache)
+    for relative_root in SOURCE_TREE_CACHE_ROOTS[1:]:
+        source_root = root_dir / relative_root
+        if source_root.exists():
+            targets.update(source_root.rglob("__pycache__"))
+    return tuple(sorted(targets, key=lambda path: path.as_posix()))
+
+
+def _generated_artifact_targets(root_dir: Path) -> tuple[Path, ...]:
+    explicit = tuple(root_dir / path for path in GENERATED_ARTIFACT_RELATIVE_TARGETS)
+    return explicit + _source_tree_pycache_targets(root_dir)
+
+
+def _relative_targets(root_dir: Path, relative_targets: tuple[str, ...]) -> tuple[Path, ...]:
+    return tuple(root_dir / path for path in relative_targets)
 
 
 @task(name="generated")
 def clean_generated(c):
     """Remove repo-local generated artifacts that should not persist across host boundaries."""
-    targets, skipped = filter_active_runtime_targets(GENERATED_ARTIFACT_TARGETS, ROOT_DIR)
+    targets, skipped = filter_active_runtime_targets(_generated_artifact_targets(ROOT_DIR), ROOT_DIR)
     removed, missing = remove_repo_targets(tuple(targets), ROOT_DIR)
     print("=== CLEAN GENERATED ===")
     print_cleanup_summary(removed, missing)
@@ -58,7 +95,8 @@ def clean_generated(c):
 @task(name="reports")
 def clean_reports(c):
     """Remove lightweight test/report artifacts without clearing install caches."""
-    removed, missing = remove_repo_targets(REPORT_ARTIFACT_TARGETS, ROOT_DIR)
+    report_targets = _relative_targets(ROOT_DIR, REPORT_ARTIFACT_RELATIVE_TARGETS)
+    removed, missing = remove_repo_targets(report_targets, ROOT_DIR)
     print("=== CLEAN REPORTS ===")
     print_cleanup_summary(removed, missing)
 
@@ -66,7 +104,8 @@ def clean_reports(c):
 @task(name="wsl-handoff")
 def clean_wsl_handoff(c):
     """Reset cross-host generated artifacts before handing the repo off to WSL."""
-    targets, skipped = filter_active_runtime_targets(WSL_HANDOFF_TARGETS, ROOT_DIR)
+    handoff_targets = _relative_targets(ROOT_DIR, WSL_HANDOFF_RELATIVE_TARGETS)
+    targets, skipped = filter_active_runtime_targets(handoff_targets, ROOT_DIR)
     removed, missing = remove_repo_targets(tuple(targets), ROOT_DIR)
     print("=== CLEAN WSL HANDOFF ===")
     print_cleanup_summary(removed, missing)
@@ -82,7 +121,7 @@ def clean_windows_dev_residue(c):
         raise SystemExit(
             "clean.windows-dev-residue is Windows-only. Use clean.generated from the WSL checkout instead."
         )
-    targets, skipped = filter_active_runtime_targets(GENERATED_ARTIFACT_TARGETS, ROOT_DIR)
+    targets, skipped = filter_active_runtime_targets(_generated_artifact_targets(ROOT_DIR), ROOT_DIR)
     removed, missing = remove_repo_targets(tuple(targets), ROOT_DIR)
     print("=== CLEAN WINDOWS DEV RESIDUE ===")
     print_cleanup_summary(removed, missing)
@@ -94,7 +133,7 @@ def clean_windows_dev_residue(c):
 @task(name="disk-status")
 def clean_disk_status(c):
     """Report repo-local generated artifact usage and host-boundary cleanup guidance."""
-    report = report_repo_targets(GENERATED_ARTIFACT_TARGETS, ROOT_DIR)
+    report = report_repo_targets(_generated_artifact_targets(ROOT_DIR), ROOT_DIR)
     total_bytes = sum(int(item["bytes"]) for item in report)
 
     print("=== CLEAN DISK STATUS ===")

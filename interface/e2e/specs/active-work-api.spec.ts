@@ -120,7 +120,7 @@ test.describe("Active work TeamWorkItem API contract", () => {
         owner: "deployment-proof",
         expected_outputs: ["durable TeamWorkItem row"],
         expected_proof: ["POST created the work item", "GET returned the work item"],
-        capability_requirements: ["migration 042_team_work_spine"],
+        capability_requirements: ["durable TeamWorkItem persistence"],
         governance_posture: "required",
       },
     });

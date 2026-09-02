@@ -22,64 +22,52 @@ func TestStatusErrorDoesNotExposeUpstreamBody(t *testing.T) {
 	}
 }
 
-func TestResultFromMapNormalizesOutputsAndOutputRefs(t *testing.T) {
+func TestResultFromMapAcceptsExactRunsAPIOutputs(t *testing.T) {
 	result := resultFromMap(map[string]any{
 		"summary": "outputs ready",
 		"outputs": []any{
 			map[string]any{
 				"id":           "artifact-1",
 				"kind":         "file",
-				"title":        "Run package",
-				"href":         "/api/v1/workspace/files/view?path=generated%2Frun.md",
+				"name":         "Run package",
+				"uri":          "/api/v1/workspace/files/view?path=generated%2Frun.md",
 				"content_type": "text/markdown",
 			},
-		},
-		"output_refs": []any{
-			map[string]any{
-				"output_id":   "team-output-1",
-				"kind":        "team",
-				"label":       "Team brief",
-				"storage_ref": "groups/team/brief.md",
-			},
-			"proof://run-1/output-2",
 		},
 	})
 
 	if result == nil {
 		t.Fatal("resultFromMap returned nil")
 	}
-	if len(result.Outputs) != 3 {
-		t.Fatalf("outputs = %#v, want 3 normalized outputs", result.Outputs)
+	if len(result.Outputs) != 1 {
+		t.Fatalf("outputs = %#v, want one exact output", result.Outputs)
 	}
 	if got := result.Outputs[0]; got.ID != "artifact-1" || got.Kind != "file" || got.Name != "Run package" || got.URI == "" || got.ContentType != "text/markdown" {
 		t.Fatalf("outputs[0] = %#v", got)
 	}
-	if got := result.Outputs[1]; got.ID != "team-output-1" || got.Kind != "team" || got.Name != "Team brief" || got.URI != "groups/team/brief.md" {
-		t.Fatalf("outputs[1] = %#v", got)
-	}
-	if got := result.Outputs[2]; got.Kind != "reference" || got.URI != "proof://run-1/output-2" {
-		t.Fatalf("outputs[2] = %#v", got)
-	}
 }
 
-func TestEventFromMapNormalizesTopLevelOutputRefs(t *testing.T) {
-	event := eventFromMap(map[string]any{
-		"status":  "completed",
-		"summary": "team output ready",
-		"output_refs": []any{
-			map[string]any{
-				"output_id":  "output-1",
-				"label":      "Playable package",
-				"entrypoint": "generated/game/index.html",
-			},
+func TestEventFromMapRequiresExactIdentityAndVocabulary(t *testing.T) {
+	event, err := eventFromMap(map[string]any{
+		"event_id": "event-1",
+		"run_id":   "run-1",
+		"kind":     "completed",
+		"status":   "completed",
+		"result": map[string]any{
+			"summary": "team output ready",
+			"outputs": []any{map[string]any{
+				"id": "output-1", "kind": "file", "name": "Playable package", "uri": "generated/game/index.html",
+			}},
 		},
 	}, "run-1", BackendFrameworkRuns)
-
+	if err != nil {
+		t.Fatalf("eventFromMap: %v", err)
+	}
 	if event.Kind != EventCompleted {
 		t.Fatalf("kind = %s, want %s", event.Kind, EventCompleted)
 	}
 	if event.Result == nil {
-		t.Fatal("expected top-level output_refs to produce a worker result")
+		t.Fatal("expected exact result outputs")
 	}
 	if len(event.Result.Outputs) != 1 {
 		t.Fatalf("outputs = %#v, want one normalized output", event.Result.Outputs)
@@ -89,13 +77,35 @@ func TestEventFromMapNormalizesTopLevelOutputRefs(t *testing.T) {
 	}
 }
 
-func TestRunAndEventStatusAliasesNormalize(t *testing.T) {
-	handle := runHandleFromMap(map[string]any{"id": "run-1", "status": "in_progress"}, BackendFrameworkRuns, ProtocolRunsAPI)
+func TestRunAndEventAliasesFailClosed(t *testing.T) {
+	handle, err := runHandleFromMap(map[string]any{"run_id": "run-1", "status": "running"}, BackendFrameworkRuns, ProtocolRunsAPI)
+	if err != nil {
+		t.Fatalf("runHandleFromMap: %v", err)
+	}
 	if handle.Status != StatusRunning {
 		t.Fatalf("status = %q, want %q", handle.Status, StatusRunning)
 	}
-	event := eventFromMap(map[string]any{"type": "requires_action", "status": "requires_action"}, "run-1", BackendFrameworkRuns)
-	if event.Kind != EventApprovalNeeded || event.Status != StatusApprovalNeeded {
-		t.Fatalf("event = %#v", event)
+	if _, err := runHandleFromMap(map[string]any{"id": "run-1", "status": "in_progress"}, BackendFrameworkRuns, ProtocolRunsAPI); err == nil {
+		t.Fatal("legacy run aliases must fail closed")
+	}
+	if _, err := eventFromMap(map[string]any{"event_id": "event-1", "run_id": "run-1", "type": "requires_action", "status": "requires_action"}, "run-1", BackendFrameworkRuns); err == nil {
+		t.Fatal("legacy event aliases must fail closed")
+	}
+	for name, raw := range map[string]map[string]any{
+		"event id":             {"run_id": "run-1", "kind": "progress", "status": "running"},
+		"run id":               {"event_id": "event-1", "kind": "progress", "status": "running"},
+		"kind/status mismatch": {"event_id": "event-1", "run_id": "run-1", "kind": "completed", "status": "running"},
+		"approval details":     {"event_id": "event-1", "run_id": "run-1", "kind": "approval_needed", "status": "approval_needed"},
+	} {
+		if _, err := eventFromMap(raw, "run-1", BackendFrameworkRuns); err == nil {
+			t.Fatalf("missing %s must fail closed", name)
+		}
+	}
+}
+
+func TestCapabilitiesRequireExactBooleanFields(t *testing.T) {
+	caps := capabilitiesFromMap(map[string]any{"healthy": "true", "supports_events": "ok"}, BackendFrameworkRuns)
+	if caps.Healthy || caps.SupportsEvents {
+		t.Fatalf("string boolean aliases must not normalize: %#v", caps)
 	}
 }

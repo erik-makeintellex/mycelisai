@@ -5,9 +5,10 @@ import (
 	"testing"
 )
 
-func TestCentralBackendLifecycle(t *testing.T) {
+func TestCentralBackendStreamReturnsSnapshotWithoutFinalizing(t *testing.T) {
 	backend := NewCentralBackend()
 	handle, err := backend.CreateRun(context.Background(), WorkerRunRequest{
+		RunID:  "run-1",
 		UserID: "operator-1",
 		Intent: "create a retained output",
 	})
@@ -25,57 +26,22 @@ func TestCentralBackendLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StreamRunEvents: %v", err)
 	}
-	var sawCompleted bool
-	for event := range events {
-		if event.Kind == EventCompleted {
-			sawCompleted = true
-		}
-	}
-	if !sawCompleted {
-		t.Fatal("expected completed event")
+	event := <-events
+	if event.EventID == "" || event.Kind != EventAccepted || event.Status != StatusAccepted {
+		t.Fatalf("snapshot event = %#v", event)
 	}
 	run, err := backend.GetRun(context.Background(), handle.RunID)
 	if err != nil {
 		t.Fatalf("GetRun: %v", err)
 	}
-	if run.Status != StatusCompleted || run.Result == nil {
+	if run.Status != StatusAccepted || run.Result != nil {
 		t.Fatalf("run status/result = %s/%v", run.Status, run.Result)
-	}
-}
-
-func TestCentralBackendApprovalDecision(t *testing.T) {
-	backend := NewCentralBackend()
-	handle, err := backend.CreateRun(context.Background(), WorkerRunRequest{Intent: "dangerous command"})
-	if err != nil {
-		t.Fatalf("CreateRun: %v", err)
-	}
-	backend.mu.Lock()
-	run := backend.runs[handle.RunID]
-	run.Status = StatusApprovalNeeded
-	run.Approval = &WorkerApprovalRequest{ID: "approval-1", Kind: "command", RiskLevel: "high"}
-	backend.runs[handle.RunID] = run
-	backend.mu.Unlock()
-
-	err = backend.SubmitApproval(context.Background(), handle.RunID, WorkerApprovalDecision{
-		ApprovalID: "approval-1",
-		Decision:   DecisionDeny,
-		ActorID:    "operator-1",
-	})
-	if err != nil {
-		t.Fatalf("SubmitApproval: %v", err)
-	}
-	run, err = backend.GetRun(context.Background(), handle.RunID)
-	if err != nil {
-		t.Fatalf("GetRun: %v", err)
-	}
-	if run.Status != StatusFailed || run.Error == nil || run.Error.Code != "approval_denied" {
-		t.Fatalf("expected approval-denied failure, got %s/%v", run.Status, run.Error)
 	}
 }
 
 func TestCentralBackendCompleteRun(t *testing.T) {
 	backend := NewCentralBackend()
-	handle, err := backend.CreateRun(context.Background(), WorkerRunRequest{Intent: "create output"})
+	handle, err := backend.CreateRun(context.Background(), WorkerRunRequest{RunID: "run-complete", Intent: "create output"})
 	if err != nil {
 		t.Fatalf("CreateRun: %v", err)
 	}
@@ -107,7 +73,7 @@ func TestCentralBackendCompleteRun(t *testing.T) {
 
 func TestCentralBackendFailRun(t *testing.T) {
 	backend := NewCentralBackend()
-	handle, err := backend.CreateRun(context.Background(), WorkerRunRequest{Intent: "create output"})
+	handle, err := backend.CreateRun(context.Background(), WorkerRunRequest{RunID: "run-fail", Intent: "create output"})
 	if err != nil {
 		t.Fatalf("CreateRun: %v", err)
 	}
@@ -131,9 +97,16 @@ func TestCentralBackendFailRun(t *testing.T) {
 }
 
 func TestCentralBackendRejectsEmptyIntent(t *testing.T) {
-	_, err := NewCentralBackend().CreateRun(context.Background(), WorkerRunRequest{})
+	_, err := NewCentralBackend().CreateRun(context.Background(), WorkerRunRequest{RunID: "run-1"})
 	if err == nil {
 		t.Fatal("expected empty intent error")
+	}
+}
+
+func TestCentralBackendRequiresCoreRunID(t *testing.T) {
+	_, err := NewCentralBackend().CreateRun(context.Background(), WorkerRunRequest{Intent: "create output"})
+	if err == nil {
+		t.Fatal("expected missing run_id error")
 	}
 }
 
@@ -152,5 +125,12 @@ func TestCentralBackendSameRunIDRequiresStableRequestFingerprint(t *testing.T) {
 	conflict.Metadata = map[string]any{"contract": "contract-2"}
 	if _, err := backend.CreateRun(context.Background(), conflict); err == nil {
 		t.Fatal("same run_id with conflicting request must fail closed")
+	}
+}
+
+func TestCentralBackendDoesNotAdvertiseUnreachableApprovalFlow(t *testing.T) {
+	caps, err := NewCentralBackend().GetCapabilities(context.Background())
+	if err != nil || caps.SupportsApprovals {
+		t.Fatalf("central capabilities = %#v, %v", caps, err)
 	}
 }

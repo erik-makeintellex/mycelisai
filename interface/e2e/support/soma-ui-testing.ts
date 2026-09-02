@@ -6,7 +6,7 @@ export const chatPlaceholder = /Tell .* what you want to plan, review, create, o
 export const organizationHome = {
     id: organizationId,
     name: "Northstar Labs",
-    purpose: "Run a steady Soma-first AI Organization workflow.",
+    purpose: "Run a steady Soma-first Workspace workflow.",
     start_mode: "template",
     template_name: "Engineering Starter",
     team_lead_label: "Team Lead",

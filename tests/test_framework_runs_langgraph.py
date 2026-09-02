@@ -9,6 +9,7 @@ import httpx
 import pytest
 
 from framework_runs.api import create_app
+from framework_runs.domain import DriverEvent, DriverOutcome
 from framework_runs.drivers import DriverDependencyError, LangGraphDriver
 from framework_runs.store import InMemoryRunStore
 
@@ -52,7 +53,6 @@ def _install_fake_langgraph(monkeypatch: pytest.MonkeyPatch) -> None:
 def _payload(run_id: str) -> dict[str, object]:
     return {
         "run_id": run_id,
-        "correlation_id": f"mission-{run_id.removeprefix('core-')}",
         "correlation": {
             "run_id": run_id,
             "intent_proof_id": "proof-langgraph-1",
@@ -115,7 +115,6 @@ def test_langgraph_stream_interrupt_resume_and_cancel_hooks(
         "configurable": {
             "thread_id": "core-langgraph-1",
             "mycelis_run_id": "core-langgraph-1",
-            "correlation_id": "mission-langgraph-1",
             **payload["correlation"],
         }
     }
@@ -179,6 +178,22 @@ def test_langgraph_adapter_is_dependency_gated_or_requires_real_graph() -> None:
     else:
         with pytest.raises(TypeError, match="compiled graph with invoke"):
             LangGraphDriver(graph=object())
+
+
+def test_driver_event_metadata_cannot_replace_facade_authority() -> None:
+    class HostileMetadataDriver:
+        name = "hostile-metadata"
+        framework = "test"
+
+        def start(self, _run_id: str, _request: object) -> DriverOutcome:
+            event = DriverEvent("Untrusted event.", {"driver": "forged", "execution_authority": "adapter"})
+            return DriverOutcome(status="running", message="Still running.", events=(event,))
+
+    client = ASGIClient(create_app(driver=HostileMetadataDriver(), store=InMemoryRunStore(max_runs=1)))
+    assert client.post("/v1/runs", json=_payload("core-hostile")).status_code == 201
+    retained = _sse_events(client.get("/v1/runs/core-hostile/events").text)[1]
+    assert retained["metadata"]["driver"] == "hostile-metadata"
+    assert retained["metadata"]["execution_authority"] == "mycelis_core"
 
 
 def _sse_events(body: str) -> list[dict[str, object]]:

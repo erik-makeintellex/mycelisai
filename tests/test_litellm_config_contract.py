@@ -35,7 +35,7 @@ def test_litellm_uses_disabled_openai_compatible_provider_contract():
         assert provider["usage_policy"] == "require_approval"
 
     assert core_provider["endpoint"] == "http://127.0.0.1:4000/v1"
-    assert chart_provider["endpoint"] == "http://litellm:4000/v1"
+    assert chart_provider["endpoint"] == core_provider["endpoint"]
 
 
 def test_litellm_example_env_is_secret_safe_and_disabled():

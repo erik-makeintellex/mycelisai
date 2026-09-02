@@ -24,23 +24,23 @@ func TestFrameworkRunsBackendExposesNormalizedLifecycle(t *testing.T) {
 		paths = append(paths, r.Method+" "+r.URL.Path)
 		switch r.URL.Path {
 		case "/health":
-			writeJSON(t, w, map[string]any{"status": "ok"})
+			writeJSON(t, w, map[string]any{"healthy": true})
 		case "/v1/capabilities":
 			writeJSON(t, w, map[string]any{
-				"healthy": true, "protocols": []string{"runs_api"}, "events": true,
-				"cancellation": true, "approvals": true, "usage": true,
+				"healthy": true, "supported_protocols": []string{"runs_api"}, "supports_events": true,
+				"supports_cancellation": true, "supports_approvals": true, "supports_usage": true,
 			})
 		case "/v1/runs":
 			if err := json.NewDecoder(r.Body).Decode(&createPayload); err != nil {
 				t.Fatalf("decode create run request: %v", err)
 			}
-			writeJSON(t, w, map[string]any{"id": "mycelis-run-1", "status": "queued"})
+			writeJSON(t, w, map[string]any{"run_id": "mycelis-run-1", "status": "accepted"})
 		case "/v1/runs/mycelis-run-1":
-			writeJSON(t, w, map[string]any{"id": "mycelis-run-1", "status": "in_progress"})
+			writeJSON(t, w, map[string]any{"run_id": "mycelis-run-1", "status": "running"})
 		case "/v1/runs/mycelis-run-1/events":
 			w.Header().Set("Content-Type", "text/event-stream")
-			_, _ = w.Write([]byte("id: approval-event-1\nevent: run.progress\ndata: {\"type\":\"requires_action\",\"approval\":{\"approval_id\":\"approval-1\",\"summary\":\"Run command\"}}\n\n"))
-			_, _ = w.Write([]byte("data: {\"status\":\"succeeded\",\"result\":{\"summary\":\"done\",\"output_refs\":[\"proof://output-1\"]}}\n\n"))
+			_, _ = w.Write([]byte("data: {\"event_id\":\"approval-event-1\",\"run_id\":\"mycelis-run-1\",\"kind\":\"approval_needed\",\"status\":\"approval_needed\",\"approval\":{\"id\":\"approval-1\",\"summary\":\"Run command\"}}\n\n"))
+			_, _ = w.Write([]byte("data: {\"event_id\":\"completed-event-1\",\"run_id\":\"mycelis-run-1\",\"kind\":\"completed\",\"status\":\"completed\",\"result\":{\"summary\":\"done\",\"outputs\":[{\"id\":\"output-1\",\"kind\":\"reference\",\"uri\":\"proof://output-1\"}]}}\n\n"))
 		case "/v1/runs/mycelis-run-1/stop", "/v1/runs/mycelis-run-1/approvals/approval-1":
 			writeJSON(t, w, map[string]any{"ok": true})
 		default:
@@ -112,7 +112,7 @@ func TestFrameworkRunsBackendExposesNormalizedLifecycle(t *testing.T) {
 func TestFrameworkRunsBackendRejectsInvalidResponsesAndApprovals(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/capabilities" {
-			writeJSON(t, w, map[string]any{"healthy": true, "protocols": []string{"runs_api"}})
+			writeJSON(t, w, map[string]any{"healthy": true, "supported_protocols": []string{"runs_api"}})
 			return
 		}
 		writeJSON(t, w, map[string]any{"status": "accepted"})
@@ -140,10 +140,10 @@ func correlatedTestRunRequest(runID, intent string) WorkerRunRequest {
 func TestFrameworkRunsBackendRejectsMismatchedAuthoritativeRunID(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/capabilities" {
-			writeJSON(t, w, map[string]any{"healthy": true, "protocols": []string{"runs_api"}})
+			writeJSON(t, w, map[string]any{"healthy": true, "supported_protocols": []string{"runs_api"}})
 			return
 		}
-		writeJSON(t, w, map[string]any{"id": "different-run", "status": "queued"})
+		writeJSON(t, w, map[string]any{"run_id": "different-run", "status": "accepted"})
 	}))
 	defer server.Close()
 	backend := newTestFrameworkRunsBackend(t, server.URL)
@@ -156,7 +156,7 @@ func TestFrameworkRunsBackendRejectsMismatchedAuthoritativeRunID(t *testing.T) {
 
 func TestFrameworkRunsBackendGetRunRejectsMismatchedAuthoritativeRunID(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(t, w, map[string]any{"id": "different-run", "status": "in_progress"})
+		writeJSON(t, w, map[string]any{"run_id": "different-run", "status": "running"})
 	}))
 	defer server.Close()
 	backend := newTestFrameworkRunsBackend(t, server.URL)
@@ -167,12 +167,32 @@ func TestFrameworkRunsBackendGetRunRejectsMismatchedAuthoritativeRunID(t *testin
 	}
 }
 
+func TestFrameworkRunsBackendGetRunRejectsNoncanonicalReturnedIdentity(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(t, w, map[string]any{"run_id": " mycelis-run-1 ", "status": "running"})
+	}))
+	defer server.Close()
+	backend := newTestFrameworkRunsBackend(t, server.URL)
+	if _, err := backend.GetRun(context.Background(), "mycelis-run-1"); err == nil {
+		t.Fatal("expected padded returned identity to fail closed")
+	}
+}
+
 func TestFrameworkRunsBackendRequiresCompleteCorrelation(t *testing.T) {
 	backend := newTestFrameworkRunsBackend(t, "https://workers.example.test")
 	req := correlatedTestRunRequest("mycelis-run-1", "build")
 	req.Correlation.GraphRevision = ""
 	if _, err := backend.CreateRun(context.Background(), req); err == nil || !strings.Contains(err.Error(), "graph_revision") {
 		t.Fatalf("missing graph revision error = %v", err)
+	}
+}
+
+func TestFrameworkRunsBackendRejectsDuplicateCorrelationMetadata(t *testing.T) {
+	backend := newTestFrameworkRunsBackend(t, "https://workers.example.test")
+	req := correlatedTestRunRequest("mycelis-run-1", "build")
+	req.Metadata = map[string]any{"intent_proof_id": "duplicate-proof"}
+	if _, err := backend.CreateRun(context.Background(), req); err == nil || !strings.Contains(err.Error(), "duplicate typed correlation") {
+		t.Fatalf("duplicate correlation metadata error = %v", err)
 	}
 }
 

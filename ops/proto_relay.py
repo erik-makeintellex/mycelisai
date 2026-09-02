@@ -6,23 +6,38 @@ from invoke import Collection, task
 
 from .config import ROOT_DIR, SDK_DIR
 
+GO_TOOLCHAIN_IMAGE = "golang:1.26-bookworm@sha256:9fdc884aacc3bec89b20ffc69f4bb369c78210e3e4f600387b5128b12c199f81"
+PROTOBUF_COMPILER_PACKAGE = "protobuf-compiler=3.21.12-3"
+PROTOC_GEN_GO_VERSION = "v1.36.11"
+GRPCIO_TOOLS_VERSION = "1.76.0"
+PYTHON_PROTOBUF_VERSION = "6.33.5"
+
+
+def _go_generation_script() -> str:
+    return (
+        "apt-get update && "
+        f"apt-get install -y {PROTOBUF_COMPILER_PACKAGE} && "
+        "go install google.golang.org/protobuf/cmd/protoc-gen-go@"
+        f"{PROTOC_GEN_GO_VERSION} && "
+        "protoc --go_out=core --go_opt=module=github.com/mycelis/core "
+        "proto/swarm/v1/swarm.proto proto/envelope.proto"
+    )
+
+
+def _python_generator_prefix() -> str:
+    return (
+        f"uv run --with grpcio-tools=={GRPCIO_TOOLS_VERSION} "
+        f"--with protobuf=={PYTHON_PROTOBUF_VERSION} -m grpc_tools.protoc"
+    )
+
+
 # -- PROTO --
 @task
 def generate(c):
     """Generate Go and Python Protobuf stubs."""
     print("Generating Protobufs...")
-    
-    # 1. Go (Dockerized)
-    docker_pkg = "golang:1.25" 
-    script_content = (
-        "apt-get update && apt-get install -y protobuf-compiler && "
-        "go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && "
-        "go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest && "
-        "protoc --go_out=core --go_opt=module=github.com/mycelis/core "
-        "--go-grpc_out=core --go-grpc_opt=module=github.com/mycelis/core "
-        "proto/swarm/v1/swarm.proto proto/envelope.proto"
-    )
-    
+
+    script_content = _go_generation_script()
     temp_dir = ROOT_DIR / "workspace" / "tool-cache" / "proto"
     temp_dir.mkdir(parents=True, exist_ok=True)
     script_fd, script_name = tempfile.mkstemp(prefix="gen-proto-go-", suffix=".sh", dir=temp_dir)
@@ -31,52 +46,36 @@ def generate(c):
     script_path.write_text(script_content, encoding="utf-8")
 
     script_rel = script_path.relative_to(ROOT_DIR).as_posix()
-    cmd_go = f"docker run --rm -v {ROOT_DIR}:/workspace -w /workspace {docker_pkg} sh {script_rel}"
+    cmd_go = f"docker run --rm -v {ROOT_DIR}:/workspace -w /workspace {GO_TOOLCHAIN_IMAGE} sh {script_rel}"
     try:
         c.run(cmd_go)
     finally:
         if script_path.exists():
             script_path.unlink()
 
-    # 2. Python (Local)
     out_dir = SDK_DIR / "src/relay/proto"
     if not out_dir.exists():
         out_dir.mkdir(parents=True, exist_ok=True)
         
     cmd_py = (
-        f"uv run --with grpcio-tools --with protobuf -m grpc_tools.protoc "
+        f"{_python_generator_prefix()} "
         f"-Iproto "
         f"--python_out={out_dir} "
-        f"--grpc_python_out={out_dir} "
         f"proto/swarm/v1/swarm.proto"
     )
     c.run(cmd_py)
 
-    # SCIP Generation
-    # Define vars again just to be safe or use what we defined above? 
-    # Wait, 'scip_out_dir' was defined at top of function but might have been lost in my mental model of the file content. 
-    # Let me check the file content again. Step 2478 showed it WAS NOT defined.
-    # Ah, I see I missed adding the definition in the previous `multi_replace`.
-    
     scip_out_dir = SDK_DIR / "src/scip/proto"
     if not scip_out_dir.exists():
         scip_out_dir.mkdir(parents=True, exist_ok=True)
 
     cmd_py_scip = (
-        f"uv run --with grpcio-tools --with protobuf -m grpc_tools.protoc "
+        f"{_python_generator_prefix()} "
         f"-Iproto "
         f"--python_out={scip_out_dir} "
-        f"--grpc_python_out={scip_out_dir} "
         f"proto/envelope.proto"
     )
     c.run(cmd_py_scip)
-
-    # Post-process Python
-    grpc_file = out_dir / "swarm" / "v1" / "swarm_pb2_grpc.py"
-    if grpc_file.exists():
-        text = grpc_file.read_text(encoding="utf-8")
-        new_text = text.replace("import swarm.v1.swarm_pb2 as", "from . import swarm_pb2 as")
-        grpc_file.write_text(new_text, encoding="utf-8")
 
 ns_proto = Collection("proto")
 ns_proto.add_task(generate)

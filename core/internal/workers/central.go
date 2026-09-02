@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type CentralBackend struct {
@@ -28,7 +26,7 @@ func (b *CentralBackend) CreateRun(_ context.Context, req WorkerRunRequest) (Wor
 	}
 	runID := strings.TrimSpace(req.RunID)
 	if runID == "" {
-		runID = uuid.NewString()
+		return WorkerRunHandle{}, fmt.Errorf("worker run_id is required")
 	}
 	encoded, err := json.Marshal(req)
 	if err != nil {
@@ -73,7 +71,7 @@ func (b *CentralBackend) StreamRunEvents(ctx context.Context, runID string) (<-c
 	if err != nil {
 		return nil, err
 	}
-	events := make(chan WorkerEvent, 3)
+	events := make(chan WorkerEvent, 1)
 	go func() {
 		defer close(events)
 		now := time.Now().UTC()
@@ -85,15 +83,7 @@ func (b *CentralBackend) StreamRunEvents(ctx context.Context, runID string) (<-c
 				return true
 			}
 		}
-		if !send(WorkerEvent{RunID: runID, Backend: BackendCentral, Kind: EventAccepted, Status: handle.Status, Message: "Run accepted.", Timestamp: now}) {
-			return
-		}
-		if handle.Status == StatusAccepted {
-			_ = b.setStatus(runID, StatusCompleted)
-			result := WorkerResult{Summary: "Central worker accepted the run.", FinishedAt: time.Now().UTC()}
-			_ = b.setResult(runID, result)
-			send(WorkerEvent{RunID: runID, Backend: BackendCentral, Kind: EventCompleted, Status: StatusCompleted, Message: result.Summary, Result: &result, Timestamp: time.Now().UTC()})
-		}
+		send(WorkerEvent{EventID: "central:" + runID + ":snapshot", RunID: runID, BackendRunID: runID, Backend: BackendCentral, Kind: kindFromStatus(handle.Status), Status: handle.Status, Message: "Current central run state.", Timestamp: now})
 	}()
 	return events, nil
 }
@@ -168,7 +158,7 @@ func (b *CentralBackend) GetCapabilities(context.Context) (WorkerCapabilities, e
 		SupportedProtocols:   []Protocol{ProtocolRunsAPI},
 		SupportsEvents:       true,
 		SupportsCancellation: true,
-		SupportsApprovals:    true,
+		SupportsApprovals:    false,
 		SupportsUsage:        true,
 		Features:             []string{"managed_workers", "central_policy", "central_audit"},
 	}, nil
