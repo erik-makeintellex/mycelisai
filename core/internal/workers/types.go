@@ -53,6 +53,13 @@ type RunFinalizer interface {
 	FailRun(context.Context, string, *WorkerError) error
 }
 
+// GovernedControlBackend is the strict external control contract. Core owns
+// command identity and supplies the worker snapshot version used for CAS.
+type GovernedControlBackend interface {
+	StopRunCommand(context.Context, string, WorkerStopCommand) (WorkerControlReceipt, error)
+	SubmitApprovalCommand(context.Context, string, WorkerApprovalDecision) (WorkerControlReceipt, error)
+}
+
 type WorkerConfig struct {
 	Backend           BackendKind   `json:"backend" yaml:"backend"`
 	BaseURL           string        `json:"base_url,omitempty" yaml:"base_url,omitempty"`
@@ -87,7 +94,7 @@ type WorkerRunRequest struct {
 }
 
 // WorkerCorrelation is the non-secret control-plane identity carried across a
-// worker boundary. Mycelis owns RunID; BackendRunID is transport identity only.
+// worker boundary. Mycelis owns the only run identity on the wire.
 type WorkerCorrelation struct {
 	RunID               string `json:"run_id"`
 	IntentProofID       string `json:"intent_proof_id"`
@@ -103,36 +110,39 @@ type WorkerCorrelation struct {
 }
 
 type WorkerRunHandle struct {
-	RunID        string                 `json:"run_id"`
-	BackendRunID string                 `json:"backend_run_id,omitempty"`
-	Backend      BackendKind            `json:"backend"`
-	Status       RunStatus              `json:"status"`
-	Protocol     Protocol               `json:"protocol,omitempty"`
-	CreatedAt    time.Time              `json:"created_at,omitempty"`
-	UpdatedAt    time.Time              `json:"updated_at,omitempty"`
-	Approval     *WorkerApprovalRequest `json:"approval,omitempty"`
-	Result       *WorkerResult          `json:"result,omitempty"`
-	Error        *WorkerError           `json:"error,omitempty"`
-	AuditRecord  *WorkerAuditRecord     `json:"audit_record,omitempty"`
-	Usage        *WorkerUsage           `json:"usage,omitempty"`
-	Metadata     map[string]any         `json:"metadata,omitempty"`
+	RunID       string                 `json:"run_id"`
+	Backend     BackendKind            `json:"backend"`
+	Status      RunStatus              `json:"status"`
+	Protocol    Protocol               `json:"protocol,omitempty"`
+	Version     int64                  `json:"version"`
+	Correlation WorkerCorrelation      `json:"correlation"`
+	CreatedAt   time.Time              `json:"created_at,omitempty"`
+	UpdatedAt   time.Time              `json:"updated_at,omitempty"`
+	Approval    *WorkerApprovalRequest `json:"approval,omitempty"`
+	Result      *WorkerResult          `json:"result,omitempty"`
+	Error       *WorkerError           `json:"error,omitempty"`
+	AuditRecord *WorkerAuditRecord     `json:"audit_record,omitempty"`
+	Usage       *WorkerUsage           `json:"usage,omitempty"`
+	Metadata    map[string]any         `json:"metadata,omitempty"`
 }
 
 type WorkerEvent struct {
-	EventID      string                 `json:"event_id"`
-	RunID        string                 `json:"run_id"`
-	BackendRunID string                 `json:"backend_run_id,omitempty"`
-	Backend      BackendKind            `json:"backend"`
-	Kind         EventKind              `json:"kind"`
-	Status       RunStatus              `json:"status,omitempty"`
-	Message      string                 `json:"message,omitempty"`
-	Approval     *WorkerApprovalRequest `json:"approval,omitempty"`
-	Result       *WorkerResult          `json:"result,omitempty"`
-	Error        *WorkerError           `json:"error,omitempty"`
-	Audit        *WorkerAuditRecord     `json:"audit,omitempty"`
-	Usage        *WorkerUsage           `json:"usage,omitempty"`
-	Timestamp    time.Time              `json:"timestamp"`
-	Metadata     map[string]any         `json:"metadata,omitempty"`
+	EventID     string                 `json:"event_id"`
+	RunID       string                 `json:"run_id"`
+	Backend     BackendKind            `json:"backend"`
+	Sequence    int64                  `json:"sequence"`
+	Version     int64                  `json:"version"`
+	Correlation WorkerCorrelation      `json:"correlation"`
+	Kind        EventKind              `json:"kind"`
+	Status      RunStatus              `json:"status,omitempty"`
+	Message     string                 `json:"message,omitempty"`
+	Approval    *WorkerApprovalRequest `json:"approval,omitempty"`
+	Result      *WorkerResult          `json:"result,omitempty"`
+	Error       *WorkerError           `json:"error,omitempty"`
+	Audit       *WorkerAuditRecord     `json:"audit,omitempty"`
+	Usage       *WorkerUsage           `json:"usage,omitempty"`
+	Timestamp   time.Time              `json:"timestamp"`
+	Metadata    map[string]any         `json:"metadata,omitempty"`
 }
 
 type WorkerApprovalRequest struct {
@@ -146,11 +156,33 @@ type WorkerApprovalRequest struct {
 }
 
 type WorkerApprovalDecision struct {
-	ApprovalID string           `json:"approval_id"`
-	Decision   ApprovalDecision `json:"decision"`
-	ActorID    string           `json:"actor_id,omitempty"`
-	Reason     string           `json:"reason,omitempty"`
-	Metadata   map[string]any   `json:"metadata,omitempty"`
+	ApprovalID      string           `json:"approval_id"`
+	Decision        ApprovalDecision `json:"decision"`
+	CommandID       string           `json:"command_id"`
+	ExpectedVersion int64            `json:"expected_version"`
+	ActorID         string           `json:"actor_id"`
+	Reason          string           `json:"reason,omitempty"`
+	Metadata        map[string]any   `json:"metadata,omitempty"`
+}
+
+type WorkerStopCommand struct {
+	CommandID       string         `json:"command_id"`
+	ExpectedVersion int64          `json:"expected_version"`
+	ActorID         string         `json:"actor_id"`
+	Reason          string         `json:"reason,omitempty"`
+	Metadata        map[string]any `json:"metadata,omitempty"`
+}
+
+type WorkerControlReceipt struct {
+	CommandID string       `json:"command_id"`
+	RunID     string       `json:"run_id"`
+	Kind      string       `json:"kind"`
+	State     string       `json:"state"`
+	Version   int64        `json:"version"`
+	CreatedAt time.Time    `json:"created_at"`
+	UpdatedAt time.Time    `json:"updated_at"`
+	Error     *WorkerError `json:"error,omitempty"`
+	Replayed  bool         `json:"-"`
 }
 
 type WorkerResult struct {
@@ -166,6 +198,8 @@ type WorkerOutput struct {
 	Name        string         `json:"name,omitempty"`
 	URI         string         `json:"uri,omitempty"`
 	ContentType string         `json:"content_type,omitempty"`
+	SizeBytes   int64          `json:"size_bytes"`
+	SHA256      string         `json:"sha256"`
 	Metadata    map[string]any `json:"metadata,omitempty"`
 }
 

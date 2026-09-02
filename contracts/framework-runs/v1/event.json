@@ -1,0 +1,40 @@
+{
+  "event_id": "event-golden-2",
+  "sequence": 2,
+  "version": 2,
+  "run_id": "core-run-golden-1",
+  "correlation": {
+    "run_id": "core-run-golden-1",
+    "intent_proof_id": "proof-golden-1",
+    "execution_contract_id": "contract-golden-1",
+    "team_id": "team-golden-1",
+    "outcome_id": "outcome-golden-1",
+    "work_item_id": "work-golden-1",
+    "idempotency_key": "dispatch:golden-1",
+    "source_kind": "web_api",
+    "source_channel": "api.intent.confirm-action",
+    "payload_kind": "command",
+    "graph_revision": "worker-graph-v1"
+  },
+  "kind": "completed",
+  "status": "completed",
+  "message": "Candidate ready.",
+  "timestamp": "2026-09-02T12:00:01Z",
+  "result": {
+    "summary": "Candidate ready.",
+    "outputs": [],
+    "metadata": {
+      "completion_authority": "candidate",
+      "requires_core_validation": true,
+      "verified": false
+    },
+    "finished_at": "2026-09-02T12:00:01Z"
+  },
+  "metadata": {
+    "driver": "conformance",
+    "execution_authority": "mycelis_core",
+    "completion_authority": "candidate",
+    "requires_core_validation": true,
+    "verified": false
+  }
+}

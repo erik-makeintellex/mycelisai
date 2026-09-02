@@ -9,7 +9,7 @@ MIGRATIONS_DIR = Path(__file__).parents[1] / "core" / "migrations"
 BASELINE = MIGRATIONS_DIR / "001_current_schema.sql"
 SOURCE_REVISION = "773e534c09710792607d243bc5f56aab85fa5ecc"
 SOURCE_MANIFEST_SHA256 = "16b6caab761aa22668bbf12133ed980a301cdd810f469fe497bb8d84807a2cdc"
-BASELINE_SHA256 = "864baf0d300f46a3750cd8a8f412cecd3c946b366f5e4d25edda3827856ab39e"
+BASELINE_SHA256 = "9991a949be50b5b4c65f010f168005acc10438e2aced9d47e3a510f9f53c1ed9"
 SOURCE_COUNT = 63
 SOURCE_BYTES = 97_915
 TRANSACTION_WRAPPER = (b"BEGIN;\n", b"COMMIT;\n")
@@ -146,3 +146,40 @@ def test_current_schema_stops_at_code_context_064():
         b"CREATE TABLE IF NOT EXISTS code_context_edges",
     ):
         assert required in raw
+
+
+def test_current_schema_has_framework_worker_authority_invariants():
+    schema = BASELINE.read_text(encoding="utf-8")
+    for table in (
+        "worker_run_bindings",
+        "worker_event_receipts",
+        "worker_approval_requests",
+        "worker_control_commands",
+    ):
+        assert f"CREATE TABLE IF NOT EXISTS {table}" in schema
+
+    binding = schema.split("CREATE TABLE IF NOT EXISTS worker_run_bindings", 1)[1]
+    binding = binding.split("CREATE TABLE IF NOT EXISTS worker_event_receipts", 1)[0]
+    assert "run_id UUID PRIMARY KEY REFERENCES mission_runs(id)" in binding
+    assert "backend_run_id" not in binding
+    assert "backend = 'framework_runs'" in binding
+    assert "protocol = 'runs_api'" in binding
+    assert "last_event_sequence BIGINT NOT NULL DEFAULT 0" in binding
+    assert "cursor_version BIGINT NOT NULL DEFAULT 0" in binding
+    assert "request_digest ~ '^[0-9a-f]{64}$'" in binding
+
+    receipts = schema.split("CREATE TABLE IF NOT EXISTS worker_event_receipts", 1)[1]
+    receipts = receipts.split("CREATE TABLE IF NOT EXISTS worker_approval_requests", 1)[0]
+    assert "UNIQUE (run_id, event_id)" in receipts
+    assert "UNIQUE (run_id, sequence)" in receipts
+    assert "sequence > 0 AND service_version >= 1" in receipts
+
+    approvals = schema.split("CREATE TABLE IF NOT EXISTS worker_approval_requests", 1)[1]
+    approvals = approvals.split("CREATE TABLE IF NOT EXISTS worker_control_commands", 1)[0]
+    assert "state IN ('pending', 'decided', 'expired', 'withdrawn')" in approvals
+    assert "decision IS NULL OR decision IN ('approve', 'deny')" in approvals
+    assert "state = 'decided' AND decision IS NOT NULL AND decided_by IS NOT NULL" in approvals
+
+    commands = schema.split("CREATE TABLE IF NOT EXISTS worker_control_commands", 1)[1]
+    assert "kind IN ('approve', 'deny', 'stop')" in commands
+    assert "state IN ('staged', 'pending', 'acknowledged', 'failed', 'uncertain')" in commands

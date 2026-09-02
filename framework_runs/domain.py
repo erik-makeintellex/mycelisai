@@ -25,6 +25,10 @@ EventKind = Literal[
     "cancelled",
 ]
 EXTERNAL_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+SOURCE_KINDS = {
+    "workspace_ui", "web_api", "automation_trigger", "scheduler", "sensor",
+    "iot", "internal_tool", "mcp", "system",
+}
 CORRELATION_FIELDS = {
     "run_id", "correlation_id", "correlation", "intent_proof_id",
     "execution_contract_id", "team_id", "outcome_id", "work_item_id",
@@ -59,7 +63,8 @@ class RunCorrelation(BaseModel):
     @field_validator("*")
     @classmethod
     def identifiers_must_be_safe(cls, value: str) -> str:
-        value = value.strip()
+        if value != value.strip():
+            raise ValueError("correlation identifier must not contain surrounding whitespace")
         if value and EXTERNAL_ID_PATTERN.fullmatch(value) is None:
             raise ValueError("correlation identifier contains unsupported characters")
         return value
@@ -76,6 +81,14 @@ class RunCorrelation(BaseModel):
             and self.payload_kind
             and self.graph_revision
         )
+
+    @model_validator(mode="after")
+    def vocabulary_must_be_canonical(self) -> RunCorrelation:
+        if self.source_kind not in SOURCE_KINDS:
+            raise ValueError("source_kind is not canonical")
+        if self.payload_kind != "command":
+            raise ValueError("payload_kind must be command")
+        return self
 
 
 class RunCreateRequest(BaseModel):
@@ -97,15 +110,15 @@ class RunCreateRequest(BaseModel):
     @field_validator("intent")
     @classmethod
     def intent_must_not_be_blank(cls, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise ValueError("intent must not be blank")
+        if not value or value != value.strip():
+            raise ValueError("intent must be canonical non-blank text")
         return value
 
     @field_validator("run_id")
     @classmethod
     def external_ids_must_be_safe(cls, value: str) -> str:
-        value = value.strip()
+        if value != value.strip():
+            raise ValueError("identifier must not contain surrounding whitespace")
         if value and EXTERNAL_ID_PATTERN.fullmatch(value) is None:
             raise ValueError("identifier contains unsupported characters")
         return value
@@ -136,11 +149,51 @@ class RunCreateRequest(BaseModel):
 class ApprovalDecisionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    approval_id: str
+    approval_id: str = Field(min_length=1, max_length=128)
     decision: Literal["approve", "deny"]
-    actor_id: str = ""
+    command_id: str = Field(min_length=1, max_length=128)
+    expected_version: int = Field(ge=1)
+    actor_id: str = Field(min_length=1, max_length=256)
     reason: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("approval_id", "command_id")
+    @classmethod
+    def control_ids_must_be_safe(cls, value: str) -> str:
+        if EXTERNAL_ID_PATTERN.fullmatch(value) is None:
+            raise ValueError("control identifier contains unsupported characters")
+        return value
+
+    @field_validator("actor_id")
+    @classmethod
+    def actor_must_be_canonical(cls, value: str) -> str:
+        if not value.strip() or value != value.strip():
+            raise ValueError("actor_id must be canonical non-blank text")
+        return value
+
+
+class StopRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: str = Field(min_length=1, max_length=128)
+    expected_version: int = Field(ge=1)
+    actor_id: str = Field(min_length=1, max_length=256)
+    reason: str = ""
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("command_id")
+    @classmethod
+    def command_id_must_be_safe(cls, value: str) -> str:
+        if EXTERNAL_ID_PATTERN.fullmatch(value) is None:
+            raise ValueError("control identifier contains unsupported characters")
+        return value
+
+    @field_validator("actor_id")
+    @classmethod
+    def actor_must_be_canonical(cls, value: str) -> str:
+        if not value.strip() or value != value.strip():
+            raise ValueError("actor_id must be canonical non-blank text")
+        return value
 
 
 @dataclass(frozen=True)
@@ -158,6 +211,8 @@ class DriverOutput:
     name: str = ""
     uri: str = ""
     content_type: str = ""
+    size_bytes: int = 0
+    sha256: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -206,6 +261,7 @@ class RunRecord:
     status: RunStatus
     created_at: datetime
     updated_at: datetime
+    version: int = 1
     approval: dict[str, Any] | None = None
     result: dict[str, Any] | None = None
     error: dict[str, Any] | None = None
@@ -217,6 +273,7 @@ class RunRecord:
             "run_id": self.run_id,
             "correlation": self.correlation,
             "status": self.status,
+            "version": self.version,
             "created_at": wire_time(self.created_at),
             "updated_at": wire_time(self.updated_at),
             "metadata": {
@@ -238,6 +295,32 @@ class RunRecord:
             body["approval"] = self.approval
         if self.result is not None:
             body["result"] = self.result
+        if self.error is not None:
+            body["error"] = self.error
+        return body
+
+
+@dataclass
+class ControlReceipt:
+    command_id: str
+    run_id: str
+    kind: Literal["stop", "approve", "deny"]
+    state: Literal["pending", "applied", "failed"]
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    error: dict[str, Any] | None = None
+
+    def wire(self) -> dict[str, Any]:
+        body: dict[str, Any] = {
+            "command_id": self.command_id,
+            "run_id": self.run_id,
+            "kind": self.kind,
+            "state": self.state,
+            "version": self.version,
+            "created_at": wire_time(self.created_at),
+            "updated_at": wire_time(self.updated_at),
+        }
         if self.error is not None:
             body["error"] = self.error
         return body

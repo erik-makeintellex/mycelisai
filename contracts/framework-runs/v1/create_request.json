@@ -1,0 +1,26 @@
+{
+  "run_id": "core-run-golden-1",
+  "intent": "Produce one bounded candidate",
+  "correlation": {
+    "run_id": "core-run-golden-1",
+    "intent_proof_id": "proof-golden-1",
+    "execution_contract_id": "contract-golden-1",
+    "team_id": "team-golden-1",
+    "outcome_id": "outcome-golden-1",
+    "work_item_id": "work-golden-1",
+    "idempotency_key": "dispatch:golden-1",
+    "source_kind": "web_api",
+    "source_channel": "api.intent.confirm-action",
+    "payload_kind": "command",
+    "graph_revision": "worker-graph-v1"
+  },
+  "org_id": "org-golden",
+  "project_id": "project-golden",
+  "user_id": "operator-golden",
+  "requested_by": "Soma",
+  "instructions": "Return candidate evidence only.",
+  "input": {"output": {"answer": 42}},
+  "required_protocols": ["runs_api"],
+  "required_features": ["candidate_outputs"],
+  "metadata": {"purpose": "cross-language-conformance"}
+}

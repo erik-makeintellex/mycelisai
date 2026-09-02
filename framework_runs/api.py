@@ -1,26 +1,28 @@
 from __future__ import annotations
 
 import json
-from hashlib import sha256
 from typing import AsyncIterator
 
 from fastapi import FastAPI, HTTPException, Path, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from .domain import (
     ApprovalDecisionRequest,
     EXTERNAL_ID_PATTERN,
     RunCreateRequest,
     RunRecord,
+    StopRequest,
     utc_now,
 )
 from .drivers import ConformanceDriver, Driver
 from .lifecycle import append_event, apply_outcome, driver_exception_outcome
+from .http_contract import fail, install_error_handlers, parse_last_event_id, request_fingerprint
 from .store import (
     InMemoryRunStore,
     RunStore,
     StoreCapacityError,
     StoreConflictError,
+    StoreVersionError,
 )
 
 
@@ -41,6 +43,7 @@ def create_app(
     )
     app.state.driver = selected_driver
     app.state.store = selected_store
+    install_error_handlers(app)
 
     @app.get("/health")
     async def health(request: Request) -> dict[str, object]:
@@ -113,12 +116,12 @@ def create_app(
         active_store: RunStore = request.app.state.store
         run_id = payload.run_id
         correlation = payload.correlation.model_dump(mode="json")
-        fingerprint = _request_fingerprint(payload, active_driver.name, correlation)
+        fingerprint = request_fingerprint(payload, discriminator=active_driver.name)
         existing = active_store.get(run_id)
         if existing is not None:
             if existing.request_fingerprint == fingerprint:
                 return existing.wire()
-            raise HTTPException(status_code=409, detail="run id already exists")
+            fail(409, "run_conflict", "Run id already exists with different content.")
         now = utc_now()
         record = RunRecord(
             run_id=run_id,
@@ -144,12 +147,12 @@ def create_app(
         try:
             active_store.put(record)
         except StoreCapacityError as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+            fail(503, "capacity_exhausted", "All bounded run slots are active.", True)
         except StoreConflictError as exc:
             concurrent = active_store.get(run_id)
             if concurrent and concurrent.request_fingerprint == fingerprint:
                 return concurrent.wire()
-            raise HTTPException(status_code=409, detail="run id already exists") from exc
+            fail(409, "run_conflict", "Run id already exists with different content.")
 
         try:
             outcome = active_driver.start(record.run_id, _run_request(record))
@@ -170,10 +173,19 @@ def create_app(
         request: Request, run_id: str = Path(min_length=1, max_length=128)
     ) -> StreamingResponse:
         record = _require_run(request.app.state.store, run_id)
+        cursor = parse_last_event_id(request.headers.get("Last-Event-ID"))
+        if record.events:
+            first_sequence = int(record.events[0]["sequence"])
+            last_sequence = int(record.events[-1]["sequence"])
+            if cursor > last_sequence or cursor < first_sequence - 1:
+                fail(409, "cursor_gap", "Event cursor cannot be replayed.", True)
 
         async def stream() -> AsyncIterator[str]:
             for event in record.events:
-                yield f"id: {event['sequence']}\ndata: {json.dumps(event, separators=(',', ':'))}\n\n"
+                if int(event["sequence"]) <= cursor:
+                    continue
+                data = json.dumps(event, separators=(",", ":"))
+                yield f"id: {event['sequence']}\ndata: {data}\n\n"
 
         return StreamingResponse(
             stream(),
@@ -183,37 +195,48 @@ def create_app(
 
     @app.post("/v1/runs/{run_id}/stop")
     async def stop_run(
-        request: Request, run_id: str = Path(min_length=1, max_length=128)
-    ) -> dict[str, object]:
+        payload: StopRequest,
+        request: Request,
+        run_id: str = Path(min_length=1, max_length=128),
+    ) -> JSONResponse:
         active_store: RunStore = request.app.state.store
+        fingerprint = request_fingerprint(payload, discriminator=f"stop:{run_id}")
+        replay = _command_replay(active_store, payload.command_id, fingerprint)
+        if replay is not None:
+            return JSONResponse(status_code=200, content=replay)
         record = _require_run(active_store, run_id)
-        if record.status == "cancelled":
-            return record.wire()
         if record.status in TERMINAL_STATUSES:
-            raise HTTPException(
-                status_code=409,
-                detail=f"cannot cancel terminal run with status {record.status}",
-            )
+            fail(409, "invalid_run_state", "Terminal run cannot be stopped.")
+        replay = _begin_command(
+            active_store, payload.command_id, fingerprint, record,
+            payload.expected_version, "stop",
+        )
+        if replay is not None:
+            return JSONResponse(status_code=200, content=replay)
         active_driver = request.app.state.driver
         cancel_hook = getattr(active_driver, "cancel", None)
-        if not bool(getattr(active_driver, "supports_cancellation", False)) or not callable(cancel_hook):
-            raise HTTPException(
-                status_code=409,
-                detail="framework driver does not support safe cancellation",
+        supports_cancel = bool(getattr(active_driver, "supports_cancellation", False))
+        if not supports_cancel or not callable(cancel_hook):
+            error = _wire_error(
+                "unsupported_control", "Driver does not support safe cancellation."
             )
+            active_store.fail_command(payload.command_id, error)
+            fail(409, "unsupported_control", "Driver does not support safe cancellation.")
         try:
             cancel_hook(record.run_id, _run_request(record))
         except Exception as exc:
-            raise HTTPException(
-                status_code=502,
-                detail="framework cancellation failed",
-            ) from exc
+            error = _wire_error(
+                "control_failed", "Framework cancellation failed.", True
+            )
+            active_store.fail_command(payload.command_id, error)
+            fail(502, "control_failed", "Framework cancellation failed.", True)
         record.status = "cancelled"
         record.approval = None
         record.updated_at = utc_now()
+        record.version += 1
         append_event(record, "cancelled", "Run cancelled by central authority.")
-        active_store.update(record)
-        return record.wire()
+        receipt = active_store.complete_command(payload.command_id, record)
+        return JSONResponse(status_code=202, content=receipt.wire())
 
     @app.post("/v1/runs/{run_id}/approvals/{approval_id}")
     async def submit_approval(
@@ -221,21 +244,33 @@ def create_app(
         request: Request,
         run_id: str = Path(min_length=1, max_length=128),
         approval_id: str = Path(min_length=1, max_length=128),
-    ) -> dict[str, object]:
+    ) -> JSONResponse:
         active_driver: Driver = request.app.state.driver
         active_store: RunStore = request.app.state.store
+        fingerprint = request_fingerprint(payload, discriminator=f"approval:{run_id}:{approval_id}")
+        replay = _command_replay(active_store, payload.command_id, fingerprint)
+        if replay is not None:
+            return JSONResponse(status_code=200, content=replay)
         record = _require_run(active_store, run_id)
         if payload.approval_id != approval_id:
-            raise HTTPException(status_code=400, detail="approval id does not match route")
+            fail(409, "approval_mismatch", "Approval id does not match route.")
         if record.status != "approval_needed" or record.approval is None:
-            raise HTTPException(status_code=409, detail="run has no pending approval")
+            fail(409, "invalid_run_state", "Run has no pending approval.")
         if record.approval["id"] != approval_id:
-            raise HTTPException(status_code=404, detail="approval not found")
+            fail(404, "approval_not_found", "Approval not found.")
+        kind = "approve" if payload.decision == "approve" else "deny"
+        replay = _begin_command(
+            active_store, payload.command_id, fingerprint, record,
+            payload.expected_version, kind,
+        )
+        if replay is not None:
+            return JSONResponse(status_code=200, content=replay)
 
         record.approval = None
         record.updated_at = utc_now()
         if payload.decision == "deny":
             record.status = "failed"
+            record.version += 1
             record.error = {
                 "code": "approval_denied",
                 "message": "Central operator denied framework execution.",
@@ -246,8 +281,8 @@ def create_app(
                 },
             }
             append_event(record, "failed", record.error["message"], error=record.error)
-            active_store.update(record)
-            return record.wire()
+            receipt = active_store.complete_command(payload.command_id, record)
+            return JSONResponse(status_code=202, content=receipt.wire())
 
         run_request = _run_request(record, approval=payload)
         try:
@@ -255,30 +290,46 @@ def create_app(
         except Exception as exc:
             outcome = driver_exception_outcome(active_driver.name, exc)
         apply_outcome(record, outcome)
-        active_store.update(record)
-        return record.wire()
+        receipt = active_store.complete_command(payload.command_id, record)
+        return JSONResponse(status_code=202, content=receipt.wire())
 
     return app
 
 
 def _require_run(store: RunStore, run_id: str) -> RunRecord:
     if EXTERNAL_ID_PATTERN.fullmatch(run_id) is None:
-        raise HTTPException(status_code=404, detail="run not found")
+        fail(404, "run_not_found", "Run not found.")
     record = store.get(run_id)
     if record is None:
-        raise HTTPException(status_code=404, detail="run not found")
+        fail(404, "run_not_found", "Run not found.")
     return record
 
 
-def _request_fingerprint(
-    payload: RunCreateRequest,
-    driver_name: str,
-    correlation: dict[str, str],
-) -> str:
-    normalized = payload.model_dump(mode="json")
-    normalized["correlation"] = correlation
-    normalized["driver"] = driver_name
-    return sha256(json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+def _command_replay(store: RunStore, command_id: str, fingerprint: str) -> dict[str, object] | None:
+    try:
+        receipt = store.replay_command(command_id, fingerprint)
+    except StoreConflictError:
+        fail(409, "command_conflict", "Command id already has different content.")
+    return receipt.wire() if receipt is not None else None
+
+
+def _begin_command(
+    store: RunStore, command_id: str, fingerprint: str, record: RunRecord,
+    expected_version: int, kind: str,
+) -> dict[str, object] | None:
+    try:
+        receipt, created = store.begin_command(
+            command_id, fingerprint, record.run_id, expected_version, kind
+        )
+    except StoreVersionError:
+        fail(409, "version_conflict", "Run version does not match expected_version.", True)
+    except StoreConflictError:
+        fail(409, "command_conflict", "Run already has a conflicting command.")
+    return None if created else receipt.wire()
+
+
+def _wire_error(code: str, message: str, recoverable: bool = False) -> dict[str, object]:
+    return {"code": code, "message": message, "recoverable": recoverable}
 
 
 def _run_request(
