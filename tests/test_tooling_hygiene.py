@@ -53,14 +53,12 @@ def test_obsolete_cli_scripts_and_duplicate_identity_schema_are_absent():
     assert not present, f"retired tooling paths restored: {present}"
 
 
-def test_uv_workspace_omits_retired_cli_and_preserves_invoke_entrypoint():
+def test_uv_workspace_omits_retired_cli_and_console_alias():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     workspace_members = project["tool"]["uv"]["workspace"]["members"]
 
     assert "cli" not in workspace_members
-    assert project["tool"]["uv"]["package"] is True
-    assert project["tool"]["setuptools"]["packages"] == []
-    assert project["project"]["scripts"]["myc"] == "invoke.main:program.run"
+    assert "scripts" not in project["project"]
 
 
 def test_uv_lock_omits_retired_cli_package():
