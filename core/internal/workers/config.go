@@ -126,9 +126,6 @@ func validateFrameworkRunsConfig(cfg WorkerConfig, secrets SecretResolver) error
 	if cfg.TimeoutPolicy.ConnectMS < 0 || cfg.TimeoutPolicy.RunMS < 0 || cfg.TimeoutPolicy.StreamMS < 0 {
 		return fmt.Errorf("framework_runs timeout values cannot be negative")
 	}
-	if cfg.FallbackBackend != "" && cfg.FallbackBackend != BackendCentral {
-		return fmt.Errorf("framework_runs fallback_backend must be central when set")
-	}
 	return nil
 }
 

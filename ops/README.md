@@ -153,6 +153,7 @@ Keeps project and user-level tool caches off the system drive hot path and easy 
 - Project-owned backstops: root `.npmrc` keeps direct npm/npx cache local to `workspace/tool-cache`, pytest cache metadata lives in `workspace/tool-cache/pytest`, and task-managed browser runs export `PLAYWRIGHT_BROWSERS_PATH`
 - Managed subprocesses also receive the effective `MYCELIS_CACHE_MIN_FREE_GB`, `MYCELIS_CACHE_MAX_GB`, and `MYCELIS_PLAYWRIGHT_CACHE_MAX_GB` decisions. Defaults scale from the cache filesystem's total/free space; Interface install and Playwright E2E enforce the aggregate and browser-specific budgets before cache churn.
 - Suggested platform posture: on Windows, stamp the user-level cache env vars early if `C:` is the small drive; on Linux/macOS, move project/user cache roots only when the default workspace or home volume is the wrong place for repeated build churn
+- Broader checkout cleanup uses `uv run inv clean.disk-status` and `uv run inv clean.generated`; its explicit target list includes build metadata, reports, `core/workspace/tool-cache`, `interface/workspace/tool-cache`, and source-tree `__pycache__`, while excluding secrets, runtime logs, whole runtime workspaces, Compose data, Docker volumes, and the active Python environment.
 - Heavy repo-managed build/test paths run a disk-and-cache preflight before large local churn; where `/var/lib/docker` is locally visible, its filesystem joins the reserve check while Docker objects remain owned by Docker cleanup commands.
 
 ### `logging.py` (Logging Gates)

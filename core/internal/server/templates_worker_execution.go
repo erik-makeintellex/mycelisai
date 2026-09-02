@@ -26,23 +26,8 @@ func (s *AdminServer) confirmedActionWorkerBackend() workers.WorkerBackend {
 
 func buildConfirmedActionWorkerRunRequest(scope *protocol.ScopeValidation, auditUser string, correlation workers.WorkerCorrelation) workers.WorkerRunRequest {
 	metadata := map[string]any{
-		"run_id":                correlation.RunID,
-		"intent_proof_id":       correlation.IntentProofID,
-		"execution_contract_id": correlation.ExecutionContractID,
-		"idempotency_key":       correlation.IdempotencyKey,
-		"source_kind":           correlation.SourceKind,
-		"source_channel":        correlation.SourceChannel,
-		"payload_kind":          correlation.PayloadKind,
-		"graph_revision":        correlation.GraphRevision,
-		"planned_tool_count":    0,
+		"planned_tool_count": 0,
 	}
-	if correlation.TeamID != "" {
-		metadata["team_id"] = correlation.TeamID
-	}
-	if correlation.OutcomeID != "" {
-		metadata["outcome_id"] = correlation.OutcomeID
-	}
-	metadata["work_item_id"] = correlation.WorkItemID
 	intent := "Confirmed Soma work"
 	if scope != nil {
 		intent = firstNonEmptyString(scopeWorkObjective(scope), scope.ExecutionMode, intent)

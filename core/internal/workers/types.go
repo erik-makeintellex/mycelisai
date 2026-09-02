@@ -32,10 +32,7 @@ const (
 	DecisionApprove ApprovalDecision = "approve"
 	DecisionDeny    ApprovalDecision = "deny"
 
-	ProtocolRunsAPI        Protocol = "runs_api"
-	ProtocolResponsesAPI   Protocol = "responses_api"
-	ProtocolChatCompletion Protocol = "chat_completions"
-	ProtocolUnknown        Protocol = "unknown"
+	ProtocolRunsAPI Protocol = "runs_api"
 )
 
 // WorkerBackend is the single execution interface used by agentry.
@@ -57,31 +54,21 @@ type RunFinalizer interface {
 }
 
 type WorkerConfig struct {
-	Backend            BackendKind   `json:"backend" yaml:"backend"`
-	BaseURL            string        `json:"base_url,omitempty" yaml:"base_url,omitempty"`
-	APIKeySecretRef    string        `json:"api_key_secret_ref,omitempty" yaml:"api_key_secret_ref,omitempty"`
-	CapabilitiesPath   string        `json:"capabilities_endpoint,omitempty" yaml:"capabilities_endpoint,omitempty"`
-	HealthPath         string        `json:"health_endpoint,omitempty" yaml:"health_endpoint,omitempty"`
-	PreferredProtocol  Protocol      `json:"preferred_protocol,omitempty" yaml:"preferred_protocol,omitempty"`
-	SessionKeyStrategy string        `json:"session_key_strategy,omitempty" yaml:"session_key_strategy,omitempty"`
-	ApprovalMode       string        `json:"approval_mode,omitempty" yaml:"approval_mode,omitempty"`
-	EventStreamMode    string        `json:"event_stream_mode,omitempty" yaml:"event_stream_mode,omitempty"`
-	TimeoutPolicy      TimeoutPolicy `json:"timeout_policy,omitempty" yaml:"timeout_policy,omitempty"`
-	ToolPolicy         ToolPolicy    `json:"tool_policy,omitempty" yaml:"tool_policy,omitempty"`
-	FallbackBackend    BackendKind   `json:"fallback_backend,omitempty" yaml:"fallback_backend,omitempty"`
+	Backend           BackendKind   `json:"backend" yaml:"backend"`
+	BaseURL           string        `json:"base_url,omitempty" yaml:"base_url,omitempty"`
+	APIKeySecretRef   string        `json:"api_key_secret_ref,omitempty" yaml:"api_key_secret_ref,omitempty"`
+	CapabilitiesPath  string        `json:"capabilities_endpoint,omitempty" yaml:"capabilities_endpoint,omitempty"`
+	HealthPath        string        `json:"health_endpoint,omitempty" yaml:"health_endpoint,omitempty"`
+	PreferredProtocol Protocol      `json:"preferred_protocol,omitempty" yaml:"preferred_protocol,omitempty"`
+	ApprovalMode      string        `json:"approval_mode,omitempty" yaml:"approval_mode,omitempty"`
+	EventStreamMode   string        `json:"event_stream_mode,omitempty" yaml:"event_stream_mode,omitempty"`
+	TimeoutPolicy     TimeoutPolicy `json:"timeout_policy,omitempty" yaml:"timeout_policy,omitempty"`
 }
 
 type TimeoutPolicy struct {
 	ConnectMS int `json:"connect_ms,omitempty" yaml:"connect_ms,omitempty"`
 	RunMS     int `json:"run_ms,omitempty" yaml:"run_ms,omitempty"`
 	StreamMS  int `json:"stream_ms,omitempty" yaml:"stream_ms,omitempty"`
-}
-
-type ToolPolicy struct {
-	AllowNetwork bool     `json:"allow_network" yaml:"allow_network"`
-	AllowFiles   bool     `json:"allow_files" yaml:"allow_files"`
-	AllowBrowser bool     `json:"allow_browser" yaml:"allow_browser"`
-	AllowedTools []string `json:"allowed_tools,omitempty" yaml:"allowed_tools,omitempty"`
 }
 
 type WorkerRunRequest struct {

@@ -39,3 +39,4 @@ members = [
 [tool.pytest.ini_options]
 cache_dir = "workspace/tool-cache/pytest"
 pythonpath = ["."]
+testpaths = ["tests", "agents/tests", "sdk/python/tests"]

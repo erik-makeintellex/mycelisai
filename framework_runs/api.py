@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from hashlib import sha256
 from typing import AsyncIterator
-from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Path, Request, status
 from fastapi.responses import StreamingResponse
@@ -46,16 +45,13 @@ def create_app(
     @app.get("/health")
     async def health(request: Request) -> dict[str, object]:
         active_driver: Driver = request.app.state.driver
-        active_store: RunStore = request.app.state.store
         return {
             "healthy": True,
             "message": "framework runs facade ready",
             "driver": active_driver.name,
             "framework": active_driver.framework,
-            "production_ready": bool(
-                active_driver.production_ready and active_store.production_ready
-            ),
-            "storage": active_store.storage_kind,
+            "production_ready": False,
+            "storage": request.app.state.store.storage_kind,
         }
 
     @app.get("/v1/capabilities")
@@ -88,9 +84,7 @@ def create_app(
             ],
             "driver": active_driver.name,
             "framework": active_driver.framework,
-            "production_ready": bool(
-                active_driver.production_ready and active_store.production_ready
-            ),
+            "production_ready": False,
             "correlation_contract": {
                 "production_required_fields": [
                     "run_id",
@@ -103,7 +97,6 @@ def create_app(
                     "payload_kind",
                     "graph_revision",
                 ],
-                "legacy_omission": "synthesized_run_only_non_production",
             },
             "cancellation_contract": {
                 "mode": cancellation_mode,
@@ -118,15 +111,9 @@ def create_app(
     ) -> dict[str, object]:
         active_driver: Driver = request.app.state.driver
         active_store: RunStore = request.app.state.store
-        run_id = payload.run_id or str(uuid4())
-        correlation_id = payload.correlation_id or run_id
-        correlation = payload.correlation.model_dump(mode="json") if payload.correlation else {
-            "run_id": run_id,
-        }
-        correlation_complete = bool(payload.correlation and payload.correlation.complete)
-        fingerprint = _request_fingerprint(
-            payload, active_driver.name, correlation_id, correlation
-        )
+        run_id = payload.run_id
+        correlation = payload.correlation.model_dump(mode="json")
+        fingerprint = _request_fingerprint(payload, active_driver.name, correlation)
         existing = active_store.get(run_id)
         if existing is not None:
             if existing.request_fingerprint == fingerprint:
@@ -135,9 +122,7 @@ def create_app(
         now = utc_now()
         record = RunRecord(
             run_id=run_id,
-            correlation_id=correlation_id,
             correlation=correlation,
-            correlation_complete=correlation_complete,
             request_fingerprint=fingerprint,
             org_id=payload.org_id,
             project_id=payload.project_id,
@@ -288,11 +273,9 @@ def _require_run(store: RunStore, run_id: str) -> RunRecord:
 def _request_fingerprint(
     payload: RunCreateRequest,
     driver_name: str,
-    correlation_id: str,
     correlation: dict[str, str],
 ) -> str:
     normalized = payload.model_dump(mode="json")
-    normalized["correlation_id"] = correlation_id
     normalized["correlation"] = correlation
     normalized["driver"] = driver_name
     return sha256(json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -302,11 +285,9 @@ def _run_request(
     record: RunRecord, approval: ApprovalDecisionRequest | None = None
 ) -> RunCreateRequest:
     metadata = dict(record.request_metadata)
-    if approval is not None:
-        metadata["_framework_resume"] = approval.model_dump(mode="json")
     values: dict[str, object] = {
         "run_id": record.run_id,
-        "correlation_id": record.correlation_id,
+        "correlation": record.correlation,
         "org_id": record.org_id,
         "project_id": record.project_id,
         "user_id": record.user_id,
@@ -318,9 +299,12 @@ def _run_request(
         "required_features": record.required_features,
         "metadata": metadata,
     }
-    if record.correlation_complete:
-        values["correlation"] = record.correlation
-    return RunCreateRequest(**values)
+    request = RunCreateRequest(**values)
+    if approval is None:
+        return request
+    internal_metadata = dict(request.metadata)
+    internal_metadata["_framework_resume"] = approval.model_dump(mode="json")
+    return request.model_copy(update={"metadata": internal_metadata})
 
 
 app = create_app()

@@ -44,3 +44,16 @@ def test_canonical_prd_is_registered_in_active_docs():
     ]
 
     assert not missing, "Canonical PRD is not registered everywhere required:\n" + "\n".join(missing)
+
+
+def test_canonical_prd_governs_architecture_transition_hygiene():
+    text = CANONICAL_PRD.read_text(encoding="utf-8")
+
+    for required in (
+        "#### Transition hygiene gate",
+        "obsolescence review across code, configuration, tests, fixtures, docs, deployment copies, and generated artifacts",
+        "compatibility path must name its owner, supported lifetime, and removal gate",
+        "Canonical runtime configuration is authored once",
+        "may not delete secrets, complete runtime workspaces, Compose data, Docker volumes, or retained PostgreSQL/NATS state",
+    ):
+        assert required in text

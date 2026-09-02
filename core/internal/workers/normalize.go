@@ -1,8 +1,6 @@
 package workers
 
 import (
-	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -28,12 +26,15 @@ func statusError(prefix string, res *http.Response) error {
 	)
 }
 
-func runHandleFromMap(raw map[string]any, backend BackendKind, protocol Protocol) WorkerRunHandle {
+func runHandleFromMap(raw map[string]any, backend BackendKind, protocol Protocol) (WorkerRunHandle, error) {
 	now := time.Now().UTC()
-	runID := stringValue(first(raw, "run_id", "id"))
+	runID := stringValue(raw["run_id"])
+	if strings.TrimSpace(runID) == "" {
+		return WorkerRunHandle{}, WorkerBackendError("invalid_backend_response", "External worker backend returned no run_id.", true)
+	}
 	status := normalizeRunStatus(stringValue(raw["status"]))
 	if status == "" {
-		status = StatusAccepted
+		return WorkerRunHandle{}, WorkerBackendError("invalid_backend_response", "External worker backend returned an invalid run status.", true)
 	}
 	handle := WorkerRunHandle{
 		RunID:     runID,
@@ -53,17 +54,23 @@ func runHandleFromMap(raw map[string]any, backend BackendKind, protocol Protocol
 	if errMap := mapValue(raw["error"]); errMap != nil {
 		handle.Error = errorFromMap(errMap)
 	}
-	return handle
+	return handle, nil
 }
 
-func eventFromMap(raw map[string]any, fallbackRunID string, backend BackendKind) WorkerEvent {
+func eventFromMap(raw map[string]any, fallbackRunID string, backend BackendKind) (WorkerEvent, error) {
 	status := normalizeRunStatus(stringValue(raw["status"]))
-	kind := normalizeEventKind(stringValue(first(raw, "kind", "type", "event")))
+	if status == "" {
+		return WorkerEvent{}, WorkerBackendError("invalid_backend_response", "External worker returned an invalid event status.", true)
+	}
+	kind := normalizeEventKind(stringValue(raw["kind"]))
 	if kind == "" {
-		kind = kindFromStatus(status)
+		return WorkerEvent{}, WorkerBackendError("invalid_backend_response", "External worker returned an invalid event kind.", true)
+	}
+	if kind != kindFromStatus(status) {
+		return WorkerEvent{}, WorkerBackendError("invalid_backend_response", "External worker returned inconsistent event kind and status.", true)
 	}
 	event := WorkerEvent{
-		EventID:      stringValue(first(raw, "event_id", "id")),
+		EventID:      stringValue(raw["event_id"]),
 		RunID:        stringValue(raw["run_id"]),
 		BackendRunID: fallbackRunID,
 		Backend:      backend,
@@ -73,36 +80,39 @@ func eventFromMap(raw map[string]any, fallbackRunID string, backend BackendKind)
 		Timestamp:    time.Now().UTC(),
 		Metadata:     mapValue(raw["metadata"]),
 	}
-	if event.EventID == "" {
-		encoded, _ := json.Marshal(raw)
-		event.EventID = fmt.Sprintf("derived:%x", sha256.Sum256(encoded))
+	if strings.TrimSpace(event.EventID) == "" {
+		return WorkerEvent{}, WorkerBackendError("invalid_backend_response", "External worker returned an event without event_id.", true)
 	}
-	if event.RunID == "" {
-		event.RunID = fallbackRunID
+	if strings.TrimSpace(event.RunID) == "" {
+		return WorkerEvent{}, WorkerBackendError("invalid_backend_response", "External worker returned an event without run_id.", true)
+	}
+	if event.RunID != fallbackRunID {
+		return WorkerEvent{}, WorkerBackendError("run_identity_mismatch", "External worker event did not preserve the authoritative Mycelis run_id.", false)
 	}
 	if approval := mapValue(raw["approval"]); approval != nil {
 		event.Approval = approvalFromMap(approval)
 	}
+	if kind == EventApprovalNeeded && (event.Approval == nil || strings.TrimSpace(event.Approval.ID) == "") {
+		return WorkerEvent{}, WorkerBackendError("invalid_backend_response", "External worker requested approval without an approval id.", true)
+	}
 	if result := mapValue(raw["result"]); result != nil {
 		event.Result = resultFromMap(result)
-	} else if hasOutputFields(raw) {
-		event.Result = resultFromMap(raw)
 	}
 	if errMap := mapValue(raw["error"]); errMap != nil {
 		event.Error = errorFromMap(errMap)
 	}
-	return event
+	return event, nil
 }
 
 func capabilitiesFromMap(raw map[string]any, backend BackendKind) WorkerCapabilities {
 	return WorkerCapabilities{
 		Backend:              backend,
-		Healthy:              truthy(raw["healthy"]) || truthy(raw["ok"]),
-		SupportedProtocols:   protocolsFromAny(first(raw, "supported_protocols", "protocols")),
-		SupportsEvents:       truthy(first(raw, "supports_events", "events")),
-		SupportsCancellation: truthy(first(raw, "supports_cancellation", "cancellation")),
-		SupportsApprovals:    truthy(first(raw, "supports_approvals", "approvals")),
-		SupportsUsage:        truthy(first(raw, "supports_usage", "usage")),
+		Healthy:              boolValue(raw["healthy"]),
+		SupportedProtocols:   protocolsFromAny(raw["supported_protocols"]),
+		SupportsEvents:       boolValue(raw["supports_events"]),
+		SupportsCancellation: boolValue(raw["supports_cancellation"]),
+		SupportsApprovals:    boolValue(raw["supports_approvals"]),
+		SupportsUsage:        boolValue(raw["supports_usage"]),
 		Features:             stringSlice(raw["features"]),
 		Raw:                  raw,
 	}
@@ -110,7 +120,7 @@ func capabilitiesFromMap(raw map[string]any, backend BackendKind) WorkerCapabili
 
 func approvalFromMap(raw map[string]any) *WorkerApprovalRequest {
 	return &WorkerApprovalRequest{
-		ID:              stringValue(first(raw, "id", "approval_id")),
+		ID:              stringValue(raw["id"]),
 		Kind:            stringValue(raw["kind"]),
 		Summary:         stringValue(raw["summary"]),
 		RiskLevel:       stringValue(raw["risk_level"]),
@@ -129,26 +139,13 @@ func resultFromMap(raw map[string]any) *WorkerResult {
 }
 
 func outputsFromMap(raw map[string]any) []WorkerOutput {
-	outputs := workerOutputsFromAny(raw["outputs"])
-	outputRefs := workerOutputsFromAny(raw["output_refs"])
-	if len(outputRefs) == 0 {
-		return outputs
-	}
-	return append(outputs, outputRefs...)
+	return workerOutputsFromAny(raw["outputs"])
 }
 
 func workerOutputsFromAny(value any) []WorkerOutput {
 	switch items := value.(type) {
 	case []WorkerOutput:
 		return items
-	case []string:
-		outputs := make([]WorkerOutput, 0, len(items))
-		for _, item := range items {
-			if output := workerOutputFromAny(item); output != nil {
-				outputs = append(outputs, *output)
-			}
-		}
-		return outputs
 	case []map[string]any:
 		outputs := make([]WorkerOutput, 0, len(items))
 		for _, item := range items {
@@ -177,19 +174,16 @@ func workerOutputFromAny(value any) *WorkerOutput {
 	if raw := mapValue(value); raw != nil {
 		return workerOutputFromMap(raw)
 	}
-	if ref := stringValue(value); ref != "" {
-		return &WorkerOutput{Kind: "reference", URI: ref}
-	}
 	return nil
 }
 
 func workerOutputFromMap(raw map[string]any) *WorkerOutput {
 	output := WorkerOutput{
-		ID:          stringValue(first(raw, "id", "output_id", "artifact_id", "proof_artifact_id")),
-		Kind:        stringValue(first(raw, "kind", "type")),
-		Name:        stringValue(first(raw, "name", "label", "title")),
-		URI:         stringValue(first(raw, "uri", "url", "href", "open_url", "storage_ref", "entrypoint")),
-		ContentType: stringValue(first(raw, "content_type", "mime_type")),
+		ID:          stringValue(raw["id"]),
+		Kind:        stringValue(raw["kind"]),
+		Name:        stringValue(raw["name"]),
+		URI:         stringValue(raw["uri"]),
+		ContentType: stringValue(raw["content_type"]),
 		Metadata:    mapValue(raw["metadata"]),
 	}
 	if output.Kind == "" {
@@ -201,21 +195,19 @@ func workerOutputFromMap(raw map[string]any) *WorkerOutput {
 	return &output
 }
 
-func hasOutputFields(raw map[string]any) bool {
-	return first(raw, "outputs", "output_refs") != nil
-}
-
 func errorFromMap(raw map[string]any) *WorkerError {
 	return &WorkerError{
 		Code:        stringValue(raw["code"]),
 		Message:     stringValue(raw["message"]),
-		Recoverable: truthy(raw["recoverable"]),
+		Recoverable: boolValue(raw["recoverable"]),
 		Metadata:    mapValue(raw["metadata"]),
 	}
 }
 
 func kindFromStatus(status RunStatus) EventKind {
 	switch status {
+	case StatusAccepted:
+		return EventAccepted
 	case StatusApprovalNeeded:
 		return EventApprovalNeeded
 	case StatusCompleted:
@@ -230,18 +222,18 @@ func kindFromStatus(status RunStatus) EventKind {
 }
 
 func normalizeRunStatus(value string) RunStatus {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "accepted", "queued", "pending":
+	switch value {
+	case "accepted":
 		return StatusAccepted
-	case "running", "in_progress", "active":
+	case "running":
 		return StatusRunning
-	case "approval_needed", "requires_approval", "requires_action":
+	case "approval_needed":
 		return StatusApprovalNeeded
-	case "completed", "succeeded", "success":
+	case "completed":
 		return StatusCompleted
-	case "failed", "error":
+	case "failed":
 		return StatusFailed
-	case "cancelled", "canceled", "stopped":
+	case "cancelled":
 		return StatusCancelled
 	default:
 		return ""
@@ -249,18 +241,18 @@ func normalizeRunStatus(value string) RunStatus {
 }
 
 func normalizeEventKind(value string) EventKind {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "accepted", "run.accepted", "run_accepted":
+	switch value {
+	case "accepted":
 		return EventAccepted
-	case "progress", "run.progress", "run_progress", "message":
+	case "progress":
 		return EventProgress
-	case "approval_needed", "requires_approval", "requires_action":
+	case "approval_needed":
 		return EventApprovalNeeded
-	case "completed", "succeeded", "run.completed":
+	case "completed":
 		return EventCompleted
-	case "failed", "error", "run.failed":
+	case "failed":
 		return EventFailed
-	case "cancelled", "canceled", "stopped", "run.cancelled":
+	case "cancelled":
 		return EventCancelled
 	default:
 		return ""
@@ -272,20 +264,11 @@ func protocolsFromAny(value any) []Protocol {
 	out := make([]Protocol, 0, len(values))
 	for _, value := range values {
 		switch Protocol(value) {
-		case ProtocolRunsAPI, ProtocolResponsesAPI, ProtocolChatCompletion:
+		case ProtocolRunsAPI:
 			out = append(out, Protocol(value))
 		}
 	}
 	return out
-}
-
-func first(raw map[string]any, keys ...string) any {
-	for _, key := range keys {
-		if value, ok := raw[key]; ok {
-			return value
-		}
-	}
-	return nil
 }
 
 func stringValue(value any) string {
@@ -295,12 +278,9 @@ func stringValue(value any) string {
 	return ""
 }
 
-func truthy(value any) bool {
+func boolValue(value any) bool {
 	if b, ok := value.(bool); ok {
 		return b
-	}
-	if s, ok := value.(string); ok {
-		return strings.EqualFold(s, "true") || strings.EqualFold(s, "ok") || strings.EqualFold(s, "healthy")
 	}
 	return false
 }

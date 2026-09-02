@@ -33,7 +33,7 @@ test.describe("Workflow variants live backend contract", () => {
 
     const direct = await submitWorkspaceChat(
       page,
-      "Summarize the current Workspace V8 design objectives.",
+      "Summarize the current Soma Workspace design objectives.",
     );
     expect(
       direct.response.ok(),

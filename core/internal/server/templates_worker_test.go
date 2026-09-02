@@ -110,8 +110,10 @@ func TestCreateExecutionRunTxMintsBeforeWorkerInitializationAndCarriesCorrelatio
 	if backend.request.Intent != "Build a browser app" {
 		t.Fatalf("worker intent = %q", backend.request.Intent)
 	}
-	if backend.request.Metadata["intent_proof_id"] != proofID {
-		t.Fatalf("worker metadata = %#v", backend.request.Metadata)
+	for _, duplicate := range []string{"run_id", "intent_proof_id", "execution_contract_id", "idempotency_key", "source_kind", "source_channel", "payload_kind", "graph_revision", "team_id", "outcome_id", "work_item_id"} {
+		if _, found := backend.request.Metadata[duplicate]; found {
+			t.Fatalf("duplicate correlation metadata %q = %#v", duplicate, backend.request.Metadata)
+		}
 	}
 	if backend.request.RunID != runID || backend.request.Correlation.RunID != runID {
 		t.Fatalf("run correlation = %#v", backend.request)
@@ -121,11 +123,6 @@ func TestCreateExecutionRunTxMintsBeforeWorkerInitializationAndCarriesCorrelatio
 	}
 	if backend.request.Correlation.WorkItemID == "" || backend.request.Correlation.SourceKind != string(protocol.SourceKindWebAPI) || backend.request.Correlation.SourceChannel != confirmedActionSourceChannel || backend.request.Correlation.PayloadKind != string(protocol.PayloadKindCommand) || backend.request.Correlation.GraphRevision != centralExecutionContractGraphRevision {
 		t.Fatalf("execution boundary correlation = %#v", backend.request.Correlation)
-	}
-	for _, key := range []string{"work_item_id", "source_kind", "source_channel", "payload_kind", "graph_revision"} {
-		if backend.request.Metadata[key] == "" {
-			t.Fatalf("worker metadata omitted %s: %#v", key, backend.request.Metadata)
-		}
 	}
 	if backend.request.Metadata["planned_tool_count"] != 1 {
 		t.Fatalf("planned_tool_count = %#v", backend.request.Metadata["planned_tool_count"])

@@ -23,19 +23,15 @@ def append_event(
 ) -> None:
     record.event_sequence += 1
     event_metadata = {
+        **(metadata or {}),
         "driver": record.driver_name,
         "execution_authority": "mycelis_core",
-        "correlation_id": record.correlation_id,
-        "correlation": record.correlation,
-        "correlation_complete": record.correlation_complete,
-        **(metadata or {}),
     }
     record.events.append(
         {
             "event_id": str(uuid4()),
             "sequence": record.event_sequence,
             "run_id": record.run_id,
-            "correlation_id": record.correlation_id,
             "correlation": record.correlation,
             "kind": kind,
             "status": record.status,

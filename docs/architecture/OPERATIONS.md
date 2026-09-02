@@ -98,6 +98,8 @@ uv run inv cache.clean
 
 `cache.guard` checks the repository, managed-cache, user-profile/system, and locally visible Docker-storage volumes because one can exhaust independently of the others. The default adaptive policy reserves 5% of the cache filesystem (bounded to 8-64 GiB), caps aggregate managed caches at 25% of currently available space above that reserve (maximum 64 GiB), and caps Playwright at 25% of that managed budget (maximum 12 GiB). Override those GiB decisions with `MYCELIS_CACHE_MIN_FREE_GB`, `MYCELIS_CACHE_MAX_GB`, and `MYCELIS_PLAYWRIGHT_CACHE_MAX_GB`. Heavy tasks fail closed with current usage and recovery guidance. `cache.clean` remains limited to repo-owned caches; it does not delete Docker volumes or unrelated user files.
 
+For broader source-checkout hygiene, run `uv run inv clean.disk-status` before `uv run inv clean.generated`. The latter removes only its explicit dependency/build/report targets, `core/workspace/tool-cache`, `interface/workspace/tool-cache`, and discovered source-tree `__pycache__` directories. It preserves `.env`, `.env.compose`, runtime logs, whole runtime workspaces, Compose data, Docker volumes, and the Python environment executing the task.
+
 ### Lifecycle Tasks (`ops/lifecycle.py`)
 
 ```bash
@@ -246,17 +248,14 @@ worker_runtime:
   capabilities_endpoint: /v1/capabilities
   health_endpoint: /health
   preferred_protocol: runs_api
-  session_key_strategy: org_project_run
   approval_mode: mycelis_control_plane
   event_stream_mode: sse
   timeout_policy: {connect_ms: 5000, run_ms: 900000, stream_ms: 900000}
-  tool_policy: {allow_network: false, allow_files: false, allow_browser: false, allowed_tools: []}
-  fallback_backend: central
 ```
 
-`framework_runs` is the only external backend name. It requires an absolute HTTP(S) `base_url` without embedded credentials, query, or fragment; absolute health/capability paths; `runs_api`; SSE; central approval; non-negative timeouts; and central fallback. `api_key_secret_ref` accepts `env:NAME` through the current deployment resolver; `secret://...` is valid only when a deployment supplies its own resolver. Never put a raw token in the YAML or URL. The committed backend stays `central`. Do not select `framework_runs` until the exact candidate has proven durable run binding/event replay, restart reconciliation, governed approvals, idempotent stop, candidate-output validation, and fail-closed isolation. Configuration or health alone is not enablement.
+`framework_runs` is the only external backend name. It requires an absolute HTTP(S) `base_url` without embedded credentials, query, or fragment; absolute health/capability paths; `runs_api`; SSE; central approval; and non-negative timeouts. The stream timeout remains reserved for the replay/restart supervisor in delivery slices C/D and must not be presented as active enforcement before that owner lands. `api_key_secret_ref` accepts `env:NAME` through the current deployment resolver; `secret://...` is valid only when a deployment supplies its own resolver. Never put a raw token in the YAML or URL. The committed backend stays `central`; there is no automatic external-to-central fallback. Tool access remains owned by Core's existing governed capability and execution paths rather than an unenforced worker-runtime configuration field. Do not select `framework_runs` until the exact candidate has proven durable run binding/event replay, restart reconciliation, governed approvals, idempotent stop, candidate-output validation, and fail-closed isolation. Configuration or health alone is not enablement.
 
-The bundled `framework_runs` Python service is protocol-conformance tooling, not a production worker service. It binds `127.0.0.1:8091` by default (`MYCELIS_FRAMEWORK_RUNS_HOST` and `MYCELIS_FRAMEWORK_RUNS_PORT` override the local proof bind), reports `framework runs facade ready` from its health endpoint, uses bounded process-local memory, performs no authentication of inbound requests, and refuses to start unless the operator explicitly opts into the conformance driver:
+The bundled `framework_runs` Python service is protocol-conformance tooling, not a production worker service. It binds loopback-only at `127.0.0.1:8091`; `MYCELIS_FRAMEWORK_RUNS_PORT` may change the local proof port, but the host is intentionally not configurable. It reports `framework runs facade ready` from its health endpoint, uses bounded process-local memory, performs no authentication of inbound requests, and refuses to start unless the operator explicitly opts into the conformance driver:
 
 ```bash
 MYCELIS_FRAMEWORK_RUNS_ALLOW_CONFORMANCE=1 uv run python -m framework_runs

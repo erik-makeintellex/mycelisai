@@ -6,11 +6,9 @@ from uuid import UUID
 
 import httpx
 import pytest
-
 from framework_runs.api import create_app
 from framework_runs.drivers import ConformanceDriver
 from framework_runs.store import InMemoryRunStore, RunStore
-
 
 @pytest.fixture
 def client() -> "ASGIClient":
@@ -21,6 +19,34 @@ def client() -> "ASGIClient":
         )
     )
 
+
+def _payload(
+    run_id: str,
+    intent: str,
+    *,
+    input: dict[str, object] | None = None,
+    **updates: object,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "run_id": run_id,
+        "correlation": {
+            "run_id": run_id,
+            "intent_proof_id": f"proof:{run_id}",
+            "execution_contract_id": f"contract:{run_id}",
+            "team_id": "team-1",
+            "outcome_id": "outcome-1",
+            "work_item_id": f"work:{run_id}",
+            "idempotency_key": f"dispatch:{run_id}",
+            "source_kind": "web_api",
+            "source_channel": "api.intent.confirm-action",
+            "payload_kind": "command",
+            "graph_revision": "worker-graph-v1",
+        },
+        "intent": intent,
+        "input": input or {},
+    }
+    payload.update(updates)
+    return payload
 
 def test_health_and_capabilities_disclose_non_production_boundary(
     client: "ASGIClient",
@@ -48,45 +74,44 @@ def test_health_and_capabilities_disclose_non_production_boundary(
         "safe_point_only": True,
     }
     assert "completion_candidates" in capabilities["features"]
-    assert capabilities["correlation_contract"]["legacy_omission"] == "synthesized_run_only_non_production"
-
+    assert capabilities["correlation_contract"]["production_required_fields"]
 
 def test_create_get_and_events_normalize_ids_and_completion_candidate(
     client: "ASGIClient",
 ) -> None:
     response = client.post(
         "/v1/runs",
-        json={
-            "org_id": "org-1",
-            "project_id": "project-1",
-            "user_id": "operator-1",
-            "requested_by": "Soma",
-            "intent": "Produce a bounded result",
-            "required_protocols": ["runs_api"],
-            "required_features": ["candidate_outputs"],
-            "input": {
+        json=_payload(
+            "core-run-normalize",
+            "Produce a bounded result",
+            org_id="org-1",
+            project_id="project-1",
+            user_id="operator-1",
+            requested_by="Soma",
+            required_protocols=["runs_api"],
+            required_features=["candidate_outputs"],
+            input={
                 "output_kind": "document",
                 "output_name": "Result",
                 "output_uri": "workspace://candidate/result.md",
                 "output": {"body": "candidate"},
             },
-            "metadata": {"intent_proof_id": "proof-1"},
-            "ignored_go_field": "safe to ignore",
-        },
+            metadata={"purpose": "conformance"},
+        ),
     )
     assert response.status_code == 201
     run = response.json()
-    UUID(run["run_id"])
+    assert run["run_id"] == "core-run-normalize"
     assert run["status"] == "completed"
     assert run["metadata"]["execution_authority"] == "mycelis_core"
-    assert run["correlation"] == {"run_id": run["run_id"]}
-    assert run["metadata"]["correlation_complete"] is False
+    assert run["correlation"] == _payload(
+        "core-run-normalize", "unused"
+    )["correlation"]
     assert run["metadata"]["request_context"] == {
         "org_id": "org-1",
         "project_id": "project-1",
         "user_id": "operator-1",
         "requested_by": "Soma",
-        "correlation_id": run["run_id"],
         "required_protocols": ["runs_api"],
         "required_features": ["candidate_outputs"],
     }
@@ -108,19 +133,19 @@ def test_create_get_and_events_normalize_ids_and_completion_candidate(
     assert events[-1]["metadata"]["completion_authority"] == "candidate"
     assert events[-1]["metadata"]["verified"] is False
 
-
 def test_approval_lifecycle_is_central_and_resume_remains_candidate(
     client: "ASGIClient",
 ) -> None:
     created = client.post(
         "/v1/runs",
-        json={
-            "intent": "Wait for approval",
-            "input": {
+        json=_payload(
+            "core-run-approval",
+            "Wait for approval",
+            input={
                 "conformance_mode": "approval",
                 "approval_summary": "Allow bounded operation",
             },
-        },
+        ),
     ).json()
     assert created["status"] == "approval_needed"
     approval_id = created["approval"]["id"]
@@ -160,7 +185,9 @@ def test_approval_lifecycle_is_central_and_resume_remains_candidate(
 def test_denied_approval_fails_without_framework_resume(client: "ASGIClient") -> None:
     created = client.post(
         "/v1/runs",
-        json={"intent": "Deny operation", "input": {"conformance_mode": "approval"}},
+        json=_payload(
+            "core-run-deny", "Deny operation", input={"conformance_mode": "approval"}
+        ),
     ).json()
     approval_id = created["approval"]["id"]
     denied = client.post(
@@ -185,7 +212,7 @@ def test_cancel_is_idempotent_and_cannot_regress_terminal_run(
 ) -> None:
     held = client.post(
         "/v1/runs",
-        json={"intent": "Hold", "input": {"conformance_mode": "hold"}},
+        json=_payload("core-run-hold", "Hold", input={"conformance_mode": "hold"}),
     ).json()
     assert held["status"] == "running"
 
@@ -200,7 +227,9 @@ def test_cancel_is_idempotent_and_cannot_regress_terminal_run(
         )
     ] == ["accepted", "progress", "cancelled"]
 
-    completed = client.post("/v1/runs", json={"intent": "Complete"}).json()
+    completed = client.post(
+        "/v1/runs", json=_payload("core-run-complete", "Complete")
+    ).json()
     terminal_stop = client.post(f"/v1/runs/{completed['run_id']}/stop")
     assert terminal_stop.status_code == 409
     assert client.get(f"/v1/runs/{completed['run_id']}").json()["status"] == "completed"
@@ -213,16 +242,22 @@ def test_bounded_store_prunes_terminal_but_never_active_run() -> None:
             store=InMemoryRunStore(max_runs=1, max_events_per_run=8),
         )
     )
-    terminal = test_client.post("/v1/runs", json={"intent": "Complete"}).json()
+    terminal = test_client.post(
+        "/v1/runs", json=_payload("core-run-terminal", "Complete")
+    ).json()
     replacement = test_client.post(
         "/v1/runs",
-        json={"intent": "Hold", "input": {"conformance_mode": "hold"}},
+        json=_payload(
+            "core-run-replacement", "Hold", input={"conformance_mode": "hold"}
+        ),
     )
     assert replacement.status_code == 201
     assert test_client.get(f"/v1/runs/{terminal['run_id']}").status_code == 404
     at_capacity = test_client.post(
         "/v1/runs",
-        json={"intent": "Second hold", "input": {"conformance_mode": "hold"}},
+        json=_payload(
+            "core-run-second-hold", "Second hold", input={"conformance_mode": "hold"}
+        ),
     )
     assert at_capacity.status_code == 503
 
@@ -233,7 +268,6 @@ def test_supplied_identity_is_stable_idempotent_and_conflict_safe() -> None:
     test_client = ASGIClient(create_app(driver=ConformanceDriver(), store=store))
     payload = {
         "run_id": "core-run-001",
-        "correlation_id": "mission-001",
         "correlation": {
             "run_id": "core-run-001",
             "intent_proof_id": "proof-001",
@@ -255,7 +289,6 @@ def test_supplied_identity_is_stable_idempotent_and_conflict_safe() -> None:
     assert first.status_code == repeated.status_code == 201
     assert repeated.json() == first.json()
     assert first.json()["run_id"] == "core-run-001"
-    assert first.json()["correlation_id"] == "mission-001"
     assert first.json()["correlation"] == payload["correlation"]
     events = _sse_events(test_client.get("/v1/runs/core-run-001/events").text)
     assert all(event["correlation"] == payload["correlation"] for event in events)
@@ -266,17 +299,41 @@ def test_supplied_identity_is_stable_idempotent_and_conflict_safe() -> None:
     assert test_client.post("/v1/runs", json=mismatch).status_code == 422
     incomplete = {**payload, "run_id": "core-run-002", "correlation": {"run_id": "core-run-002"}}
     assert test_client.post("/v1/runs", json=incomplete).status_code == 422
-    assert test_client.post("/v1/runs", json={
-        "run_id": "unsafe/run",
-        "intent": "Rejected identity",
-    }).status_code == 422
+    unsafe = _payload("core-run-unsafe", "Rejected identity")
+    unsafe["run_id"] = "unsafe/run"
+    assert test_client.post("/v1/runs", json=unsafe).status_code == 422
+
+
+def test_create_and_approval_payloads_forbid_unknown_fields(client: "ASGIClient") -> None:
+    create_payload = _payload("core-run-extra", "Reject extra")
+    create_payload["correlation_id"] = "legacy-id"
+    assert client.post("/v1/runs", json=create_payload).status_code == 422
+    assert client.post("/v1/runs", json=_payload("core-run-duplicate", "Reject duplicate", metadata={"run_id": "duplicate"})).status_code == 422
+    assert client.post("/v1/runs", json=_payload("core-run-resume", "Reject internal control", metadata={"_framework_resume": {}})).status_code == 422
+    assert client.post("/v1/runs", json=_payload("core-run-protocol", "Reject protocol", required_protocols=["responses_api"])).status_code == 422
+    created = client.post(
+        "/v1/runs",
+        json=_payload(
+            "core-run-approval-extra",
+            "Reject approval extra",
+            input={"conformance_mode": "approval"},
+        ),
+    ).json()
+    approval_id = created["approval"]["id"]
+    assert client.post(
+        f"/v1/runs/{created['run_id']}/approvals/{approval_id}",
+        json={
+            "approval_id": approval_id,
+            "decision": "approve",
+            "unknown": True,
+        },
+    ).status_code == 422
 
 
 def test_driver_failure_does_not_expose_exception_message() -> None:
     class FailingDriver:
         name = "failing"
         framework = "test"
-        production_ready = False
 
         def start(self, run_id: str, request: object) -> object:
             raise RuntimeError("provider-secret-must-not-leak")
@@ -287,7 +344,9 @@ def test_driver_failure_does_not_expose_exception_message() -> None:
     test_client = ASGIClient(
         create_app(driver=FailingDriver(), store=InMemoryRunStore(max_runs=1))
     )
-    response = test_client.post("/v1/runs", json={"intent": "Fail safely"})
+    response = test_client.post(
+        "/v1/runs", json=_payload("core-run-fail", "Fail safely")
+    )
 
     assert response.status_code == 201
     payload = response.json()
@@ -296,14 +355,12 @@ def test_driver_failure_does_not_expose_exception_message() -> None:
     assert payload["error"]["metadata"]["exception_type"] == "RuntimeError"
     assert "provider-secret-must-not-leak" not in response.text
 
-
 def _sse_events(body: str) -> list[dict[str, object]]:
     return [
         json.loads(line.removeprefix("data: "))
         for line in body.splitlines()
         if line.startswith("data: ")
     ]
-
 
 class ASGIClient:
     """Small synchronous facade over HTTPX's non-blocking ASGI transport."""

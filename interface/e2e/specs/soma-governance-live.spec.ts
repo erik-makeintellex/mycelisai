@@ -39,7 +39,7 @@ test.describe('Soma governed mutation live contract', () => {
         const organizationId = await createOrganization(page, `QA Scenario A ${Date.now()}`);
         await openWorkspace(page, organizationId);
 
-        const { response, body } = await submitWorkspaceChat(page, 'Summarize the current Workspace V8 design objectives.');
+        const { response, body } = await submitWorkspaceChat(page, 'Summarize the current Soma Workspace design objectives.');
 
         expect(response.ok(), body ? JSON.stringify(body) : await responseText(response)).toBeTruthy();
         expect(body?.data?.mode).toBe('answer');
@@ -53,7 +53,7 @@ test.describe('Soma governed mutation live contract', () => {
         const organizationId = await createOrganization(page, `QA Scenario B ${Date.now()}`);
         await openWorkspace(page, organizationId);
 
-        const direct = await submitWorkspaceChat(page, 'Summarize the current Workspace V8 design objectives.');
+        const direct = await submitWorkspaceChat(page, 'Summarize the current Soma Workspace design objectives.');
         expect(direct.response.ok(), direct.body ? JSON.stringify(direct.body) : direct.raw).toBeTruthy();
         expect(direct.body?.data?.mode).toBe('answer');
 

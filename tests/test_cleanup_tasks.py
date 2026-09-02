@@ -17,7 +17,7 @@ def test_clean_generated_only_removes_allowlisted_paths(monkeypatch, tmp_path, c
         tmp_path / ".pytest_cache",
         tmp_path / "core" / "bin",
     )
-    monkeypatch.setattr(misc, "GENERATED_ARTIFACT_TARGETS", generated)
+    monkeypatch.setattr(misc, "_generated_artifact_targets", lambda _root: generated)
 
     for target in generated:
         target.mkdir(parents=True, exist_ok=True)
@@ -26,6 +26,11 @@ def test_clean_generated_only_removes_allowlisted_paths(monkeypatch, tmp_path, c
     runtime_data = tmp_path / "workspace" / "docker-compose" / "data"
     runtime_data.mkdir(parents=True, exist_ok=True)
     (runtime_data / "keep.txt").write_text("keep", encoding="utf-8")
+    core_runtime_data = tmp_path / "core" / "workspace" / "artifacts"
+    core_runtime_data.mkdir(parents=True, exist_ok=True)
+    (core_runtime_data / "keep.txt").write_text("keep", encoding="utf-8")
+    (tmp_path / ".env").write_text("SECRET=keep\n", encoding="utf-8")
+    (tmp_path / ".env.compose").write_text("MODE=keep\n", encoding="utf-8")
 
     misc.clean_generated.body(Context())
 
@@ -34,13 +39,47 @@ def test_clean_generated_only_removes_allowlisted_paths(monkeypatch, tmp_path, c
     for target in generated:
         assert not target.exists()
     assert runtime_data.exists()
+    assert core_runtime_data.exists()
+    assert (tmp_path / ".env").exists()
+    assert (tmp_path / ".env.compose").exists()
+
+
+def test_generated_targets_cover_known_residue_without_owning_runtime_roots(tmp_path):
+    for relative in (
+        "ops/__pycache__",
+        "sdk/python/src/relay/__pycache__",
+        "tests/__pycache__",
+    ):
+        (tmp_path / relative).mkdir(parents=True)
+
+    targets = {path.relative_to(tmp_path).as_posix() for path in misc._generated_artifact_targets(tmp_path)}
+
+    assert {
+        "core/workspace/tool-cache",
+        "interface/workspace/tool-cache",
+        "interface/.playwright",
+        "interface/tsconfig.tsbuildinfo",
+        "interface/next-env.d.ts",
+        "ops/__pycache__",
+        "sdk/python/src/relay/__pycache__",
+        "tests/__pycache__",
+    }.issubset(targets)
+    assert "core/workspace" not in targets
+    assert "workspace/docker-compose" not in targets
+    assert "workspace/logs" not in targets
+    assert ".env" not in targets
+    assert ".env.compose" not in targets
 
 
 def test_clean_generated_skips_active_python_environment(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(misc, "ROOT_DIR", tmp_path)
     active_venv = tmp_path / ".venv"
     disposable_cache = tmp_path / "interface" / ".next"
-    monkeypatch.setattr(misc, "GENERATED_ARTIFACT_TARGETS", (active_venv, disposable_cache))
+    monkeypatch.setattr(
+        misc,
+        "_generated_artifact_targets",
+        lambda _root: (active_venv, disposable_cache),
+    )
     monkeypatch.setattr(
         "ops.cleanup_support.sys.executable",
         str(active_venv / "Scripts" / "python.exe"),
@@ -92,7 +131,7 @@ def test_clean_windows_dev_residue_reports_source_only_guidance(monkeypatch, tmp
         tmp_path / ".venv",
         tmp_path / "interface" / "node_modules",
     )
-    monkeypatch.setattr(misc, "GENERATED_ARTIFACT_TARGETS", targets)
+    monkeypatch.setattr(misc, "_generated_artifact_targets", lambda _root: targets)
 
     for target in targets:
         target.mkdir(parents=True, exist_ok=True)
@@ -111,7 +150,7 @@ def test_clean_wsl_handoff_skips_active_python_environment(monkeypatch, tmp_path
     monkeypatch.setattr(misc, "ROOT_DIR", tmp_path)
     active_venv = tmp_path / ".venv"
     next_cache = tmp_path / "interface" / ".next"
-    monkeypatch.setattr(misc, "WSL_HANDOFF_TARGETS", (active_venv, next_cache))
+    monkeypatch.setattr(misc, "WSL_HANDOFF_RELATIVE_TARGETS", (".venv", "interface/.next"))
     monkeypatch.setattr(
         "ops.cleanup_support.sys.executable",
         str(active_venv / "Scripts" / "python.exe"),
@@ -134,7 +173,7 @@ def test_clean_disk_status_reports_repo_total_and_vhd_guidance(monkeypatch, tmp_
         tmp_path / ".venv",
         tmp_path / "workspace" / "tool-cache",
     )
-    monkeypatch.setattr(misc, "GENERATED_ARTIFACT_TARGETS", targets)
+    monkeypatch.setattr(misc, "_generated_artifact_targets", lambda _root: targets)
 
     first = targets[0]
     first.mkdir(parents=True, exist_ok=True)

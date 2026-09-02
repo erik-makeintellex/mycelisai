@@ -78,6 +78,15 @@ def test_worker_runtime_config_reaches_core_image_and_helm_without_secrets():
     assert "COPY cognitive/config/engine.yaml /core/config/engine.yaml" in dockerfile
 
 
+def test_chart_mounts_every_canonical_runtime_config_copy():
+    config_map = CONFIG_MAP.read_text(encoding="utf-8")
+    deployment = DEPLOYMENT.read_text(encoding="utf-8")
+
+    for config_name in ("engine.yaml", "cognitive.yaml", "policy.yaml", "homepage.yaml"):
+        assert f"{config_name}: |-" in config_map
+        assert f"- key: {config_name}\n                path: {config_name}" in deployment
+
+
 def test_chart_exposes_first_enterprise_k8s_override_surfaces():
     values_text = VALUES.read_text(encoding="utf-8")
     required_value_blocks = [

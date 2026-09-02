@@ -40,7 +40,6 @@ def test_ci_workflow_runs_token_free_codebase_gates():
 
 
 def test_user_workflow_specs_match_current_shared_trial_expectations():
-    manual_plan = _read("tests/ui/browser_qa_workflow_variants_reboot.md")
     remote_testing = _read("docs/REMOTE_USER_TESTING.md")
 
     workflow_specs = {
@@ -56,15 +55,16 @@ def test_user_workflow_specs_match_current_shared_trial_expectations():
         "interface/e2e/specs/workflow-output.multi-lane.spec.ts",
         "interface/e2e/specs/workflow-output.reload-review.spec.ts",
     ]:
-        assert spec_path in manual_plan
+        assert spec_path in remote_testing
 
     assert "Soma-first operator workflow" in remote_testing
     assert "Deployment-context loading, capability/MCP visibility, and recent persisted tool activity" in remote_testing
     assert "selected files or context can return to Soma" in remote_testing
     assert "raw events stay behind Details or Inspect" in remote_testing
 
-    assert "supported Docker Compose lane" in manual_plan
-    assert "Kubernetes is framed as the modular scale-up proof lane" in manual_plan
+    assert "supported Docker Compose lane" in remote_testing
+    assert "keep Kubernetes as the modular" in remote_testing
+    assert "scale-up proof lane" in remote_testing
     assert "Use the supported Docker Compose lane first with an explicit Windows AI endpoint" in workflow_specs["direct"]
     assert "Keep Kubernetes as the modular scale-up proof lane" in workflow_specs["direct"]
     assert "Use the self-hosted Kubernetes lane with an explicit Windows AI endpoint" not in workflow_specs["direct"]

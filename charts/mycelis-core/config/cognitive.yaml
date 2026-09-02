@@ -1,60 +1,70 @@
 providers:
     lmstudio:
         type: openai_compatible
-        endpoint: http://127.0.0.1:11434/v1
+        endpoint: http://127.0.0.1:1234/v1
         model_id: default
         api_key: lm-studio
         api_key_env: ""
         location: local
         data_boundary: local_only
         usage_policy: local_first
+        token_budget_profile: standard
+        max_output_tokens: 1024
         roles_allowed:
             - all
         enabled: false
     litellm:
         type: openai_compatible
         model_gateway: true
-        endpoint: http://litellm:4000/v1
+        endpoint: http://127.0.0.1:4000/v1
         model_id: mycelis-default
         api_key: ""
         api_key_env: LITELLM_PROXY_API_KEY
         location: remote
         data_boundary: leaves_org
         usage_policy: require_approval
+        token_budget_profile: standard
+        max_output_tokens: 1024
         roles_allowed:
             - all
         enabled: false
     local-ollama-dev:
         type: ollama
         endpoint: http://127.0.0.1:11434/v1
-        model_id: qwen2.5-coder:7b
+        model_id: qwen3:14b
         api_key: ""
         api_key_env: ""
         location: ""
         data_boundary: ""
         usage_policy: ""
+        token_budget_profile: standard
+        max_output_tokens: 2048
         roles_allowed: []
         enabled: false
     local-sovereign:
         type: ollama
         endpoint: http://127.0.0.1:11434/v1
-        model_id: qwen2.5-coder:7b
+        model_id: qwen3:14b
         api_key: ""
         api_key_env: ""
         location: ""
         data_boundary: ""
         usage_policy: ""
+        token_budget_profile: standard
+        max_output_tokens: 1024
         roles_allowed: []
         enabled: false
     ollama:
         type: openai_compatible
         endpoint: http://127.0.0.1:11434/v1
-        model_id: qwen2.5-coder:1.5b-base
+        model_id: qwen3:14b
         api_key: ollama
         api_key_env: ""
         location: local
         data_boundary: local_only
         usage_policy: local_first
+        token_budget_profile: standard
+        max_output_tokens: 2048
         roles_allowed:
             - all
         enabled: true
@@ -67,6 +77,8 @@ providers:
         location: remote
         data_boundary: leaves_org
         usage_policy: require_approval
+        token_budget_profile: extended
+        max_output_tokens: 2048
         roles_allowed:
             - architect
             - coder
@@ -80,31 +92,37 @@ providers:
         location: remote
         data_boundary: leaves_org
         usage_policy: require_approval
+        token_budget_profile: extended
+        max_output_tokens: 2048
         roles_allowed:
             - architect
         enabled: false
     production_gpt4:
         type: openai
         endpoint: https://api.openai.com/v1
-        model_id: gpt-4-turbo
+        model_id: gpt-4.1-nano
         api_key: ""
         api_key_env: OPENAI_API_KEY
         location: remote
         data_boundary: leaves_org
         usage_policy: require_approval
+        token_budget_profile: extended
+        max_output_tokens: 2048
         roles_allowed:
             - architect
             - coder
         enabled: false
     vllm:
         type: openai_compatible
-        endpoint: http://127.0.0.1:11434/v1
+        endpoint: http://127.0.0.1:8000/v1
         model_id: qwen2.5-coder
         api_key: ""
         api_key_env: MYCELIS_TEXT_ENGINE_API_KEY
         location: local
         data_boundary: local_only
         usage_policy: local_first
+        token_budget_profile: standard
+        max_output_tokens: 1024
         roles_allowed:
             - all
         enabled: false
@@ -117,5 +135,13 @@ profiles:
     overseer: local-ollama-dev
     sentry: local-ollama-dev
 media:
-    endpoint: http://127.0.0.1:8001/v1
-    model_id: stable-diffusion-xl
+    provider:
+        provider_id: media-local
+        type: forge
+        location: local
+        data_boundary: local_only
+        usage_policy: local_first
+        api_key_env: ""
+        enabled: true
+        endpoint: http://127.0.0.1:7860
+        model_id: forge-local

@@ -7,10 +7,7 @@ from ops import interface_processes
 
 
 def test_windows_process_inventory_is_bounded_and_repo_scoped():
-    repo_server = (
-        r"node E:\Business\MakeIntellex\Projects\mycelisai\scratch\interface"
-        r"\scripts\playwright-webserver.mjs"
-    )
+    repo_server = f"node {interface_processes.INTERFACE_DIR}/scripts/playwright-webserver.mjs"
     payload = json.dumps(
         [
             {"ProcessId": 4101, "Name": "node.exe", "CommandLine": repo_server},

@@ -107,13 +107,13 @@ Runtime events are streamed to the UI through normalized, route-safe state. High
 
 ### Pipeline 7: Optional Framework Runs
 
-`internal/workers.WorkerBackend` normalizes create, event stream, read, stop, approval, capability, and health operations. `central` remains the default and the only proven backend for confirmed Mycelis execution. `framework_runs` is an HTTP client for `/v1/runs`, `/v1/runs/{id}`, `/v1/runs/{id}/events`, `/v1/runs/{id}/stop`, `/v1/runs/{id}/approvals/{approval_id}`, `/v1/capabilities`, and `/health`. It normalizes common external status/event/output shapes, requires the durable `runs_api` protocol, sends credentials only after resolving a managed secret reference, and deliberately does not implement `RunFinalizer`.
+`internal/workers.WorkerBackend` exposes create, event stream, read, stop, approval, capability, and health operations. `central` remains the default and the only proven backend for confirmed Mycelis execution. `framework_runs` is an HTTP client for `/v1/runs`, `/v1/runs/{id}`, `/v1/runs/{id}/events`, `/v1/runs/{id}/stop`, `/v1/runs/{id}/approvals/{approval_id}`, `/v1/capabilities`, and `/health`. It requires the exact framework-neutral `runs_api` status, event, output, and identity vocabulary, fails closed on legacy aliases or malformed lifecycle shapes, sends credentials only after resolving a managed secret reference, and deliberately does not implement `RunFinalizer`.
 
 The Python `framework_runs` package is a bounded, process-isolated protocol facade. Its built-in conformance driver and in-memory store are non-production; the store defaults to 256 runs and 256 events per run, prunes only the oldest terminal run, and reports capacity failure while every slot is active. Its SSE endpoint is a finite snapshot of retained events rather than a production live-event bus. All returned completions carry `completion_authority=candidate`, `requires_core_validation=true`, `verified=false`, and `execution_authority=mycelis_core`. The optional `LangGraphDriver` accepts an injected compiled graph only when the optional dependency is installed. Until the durable-projection gate passes, Core's execution selector continues to reject `framework_runs`; setting configuration alone cannot bypass central policy, audit, retained-output validation, or completion proof.
 
 ### Durable external-run projection target
 
-The active projection slice keeps one authoritative Mycelis lifecycle:
+The target projection sequence keeps one authoritative Mycelis lifecycle:
 
 1. Confirmation commits the Mycelis approval, WorkIntent, ExecutionContract, Outcome/team-work visibility, dispatch record, and authoritative `run_id` before any external call.
 2. Core sends that `run_id` unchanged to the facade with a correlation envelope containing the intent proof, execution contract, required work-item id, optional team/Outcome identifiers, idempotency key, source metadata, and graph revision. The facade must treat an identical duplicate create as the same run and reject conflicting reuse.

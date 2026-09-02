@@ -25,6 +25,12 @@ EventKind = Literal[
     "cancelled",
 ]
 EXTERNAL_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+CORRELATION_FIELDS = {
+    "run_id", "correlation_id", "correlation", "intent_proof_id",
+    "execution_contract_id", "team_id", "outcome_id", "work_item_id",
+    "idempotency_key", "source_kind", "source_channel", "payload_kind",
+    "graph_revision", "_framework_resume",
+}
 
 
 def utc_now() -> datetime:
@@ -73,11 +79,10 @@ class RunCorrelation(BaseModel):
 
 
 class RunCreateRequest(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
-    run_id: str = Field(default="", max_length=128)
-    correlation_id: str = Field(default="", max_length=128)
-    correlation: RunCorrelation | None = None
+    run_id: str = Field(min_length=1, max_length=128)
+    correlation: RunCorrelation
     org_id: str = Field(default="", max_length=256)
     project_id: str = Field(default="", max_length=256)
     user_id: str = Field(default="", max_length=256)
@@ -97,7 +102,7 @@ class RunCreateRequest(BaseModel):
             raise ValueError("intent must not be blank")
         return value
 
-    @field_validator("run_id", "correlation_id")
+    @field_validator("run_id")
     @classmethod
     def external_ids_must_be_safe(cls, value: str) -> str:
         value = value.strip()
@@ -105,11 +110,23 @@ class RunCreateRequest(BaseModel):
             raise ValueError("identifier contains unsupported characters")
         return value
 
+    @field_validator("metadata")
+    @classmethod
+    def metadata_must_not_duplicate_correlation(cls, value: dict[str, Any]) -> dict[str, Any]:
+        if duplicates := CORRELATION_FIELDS.intersection(value):
+            raise ValueError(f"metadata duplicates typed correlation fields: {sorted(duplicates)}")
+        return value
+
+    @field_validator("required_protocols")
+    @classmethod
+    def required_protocols_must_be_supported(cls, value: list[str]) -> list[str]:
+        if any(protocol != "runs_api" for protocol in value):
+            raise ValueError("required_protocols contains an unsupported protocol")
+        return value
+
     @model_validator(mode="after")
     def structured_correlation_must_match(self) -> RunCreateRequest:
-        if self.correlation is None:
-            return self
-        if not self.run_id or self.correlation.run_id != self.run_id:
+        if self.correlation.run_id != self.run_id:
             raise ValueError("correlation.run_id must match top-level run_id")
         if not self.correlation.complete:
             raise ValueError("structured correlation is incomplete")
@@ -117,7 +134,7 @@ class RunCreateRequest(BaseModel):
 
 
 class ApprovalDecisionRequest(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     approval_id: str
     decision: Literal["approve", "deny"]
@@ -172,9 +189,7 @@ class DriverOutcome:
 @dataclass
 class RunRecord:
     run_id: str
-    correlation_id: str
     correlation: dict[str, str]
-    correlation_complete: bool
     request_fingerprint: str
     org_id: str
     project_id: str
@@ -200,7 +215,6 @@ class RunRecord:
     def wire(self) -> dict[str, Any]:
         body: dict[str, Any] = {
             "run_id": self.run_id,
-            "correlation_id": self.correlation_id,
             "correlation": self.correlation,
             "status": self.status,
             "created_at": wire_time(self.created_at),
@@ -210,14 +224,11 @@ class RunRecord:
                 "driver": self.driver_name,
                 "execution_authority": "mycelis_core",
                 "storage": self.storage_kind,
-                "correlation": self.correlation,
-                "correlation_complete": self.correlation_complete,
                 "request_context": {
                     "org_id": self.org_id,
                     "project_id": self.project_id,
                     "user_id": self.user_id,
                     "requested_by": self.requested_by,
-                    "correlation_id": self.correlation_id,
                     "required_protocols": self.required_protocols,
                     "required_features": self.required_features,
                 },

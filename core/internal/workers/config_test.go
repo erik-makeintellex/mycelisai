@@ -66,6 +66,9 @@ func TestFrameworkRunsConfigFailsClosed(t *testing.T) {
 		{"raw secret", "worker_runtime:\n  backend: framework_runs\n  base_url: https://workers.example.test\n  api_key_secret_ref: raw-token\n", "secret_ref"},
 		{"credential in URL", "worker_runtime:\n  backend: framework_runs\n  base_url: https://token@workers.example.test\n", "must not contain credentials"},
 		{"unknown field", "worker_runtime:\n  backend: central\n  api_key: raw-token\n", "field api_key not found"},
+		{"retired session strategy", "worker_runtime:\n  backend: central\n  session_key_strategy: org_project_run\n", "field session_key_strategy not found"},
+		{"retired tool policy", "worker_runtime:\n  backend: central\n  tool_policy: {}\n", "field tool_policy not found"},
+		{"retired fallback", "worker_runtime:\n  backend: central\n  fallback_backend: central\n", "field fallback_backend not found"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -8,7 +8,7 @@ from .config import ROOT_DIR
 
 DEFAULT_SOURCE_PATHS = (
     "core,interface,ops,tests,agents,sdk/python/src,"
-    "cognitive/src,docs,charts,k8s,architecture,proto,README.md,"
+    "cognitive/src,docs,charts,architecture,proto,README.md,"
     "AGENTS.md,pyproject.toml"
 )
 DEFAULT_HOT_PATHS = DEFAULT_SOURCE_PATHS
