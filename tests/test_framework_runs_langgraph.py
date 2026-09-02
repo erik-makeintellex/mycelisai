@@ -96,9 +96,13 @@ def test_langgraph_stream_interrupt_resume_and_cancel_hooks(
         json={
             "approval_id": approval_id,
             "decision": "approve",
+            "command_id": "approve-langgraph-1",
+            "expected_version": created["version"],
             "actor_id": "operator-1",
         },
-    ).json()
+    )
+    assert resumed.status_code == 202
+    resumed = client.get("/v1/runs/core-langgraph-1").json()
     assert resumed["status"] == "completed"
     assert resumed["result"]["outputs"][0]["metadata"]["state"] == {
         "candidate": "ready"
@@ -121,7 +125,12 @@ def test_langgraph_stream_interrupt_resume_and_cancel_hooks(
     assert isinstance(graph.calls[1][0], FakeCommand)
 
     held = client.post("/v1/runs", json=_payload("core-langgraph-2")).json()
-    assert client.post(f"/v1/runs/{held['run_id']}/stop").json()["status"] == "cancelled"
+    stopped = client.post(f"/v1/runs/{held['run_id']}/stop", json={
+        "command_id": "stop-langgraph-2", "expected_version": held["version"],
+        "actor_id": "operator-1",
+    })
+    assert stopped.status_code == 202
+    assert client.get(f"/v1/runs/{held['run_id']}").json()["status"] == "cancelled"
     assert cancellations[0][0] == "core-langgraph-2"
 
 
@@ -138,9 +147,12 @@ def test_langgraph_without_cancel_hook_fails_closed(monkeypatch: pytest.MonkeyPa
 
     created = client.post("/v1/runs", json=_payload("core-no-cancel")).json()
     events_before = client.get("/v1/runs/core-no-cancel/events").text
-    stopped = client.post("/v1/runs/core-no-cancel/stop")
+    stopped = client.post("/v1/runs/core-no-cancel/stop", json={
+        "command_id": "stop-no-cancel", "expected_version": created["version"],
+        "actor_id": "operator-1",
+    })
     assert stopped.status_code == 409
-    assert stopped.json()["detail"] == "framework driver does not support safe cancellation"
+    assert stopped.json()["error"]["code"] == "unsupported_control"
     assert client.get("/v1/runs/core-no-cancel").json() == created
     assert client.get("/v1/runs/core-no-cancel/events").text == events_before
 
@@ -159,9 +171,12 @@ def test_langgraph_failed_cancel_hook_preserves_state_and_redacts_error(
     ))
     created = client.post("/v1/runs", json=_payload("core-failed-cancel")).json()
     events_before = client.get("/v1/runs/core-failed-cancel/events").text
-    stopped = client.post("/v1/runs/core-failed-cancel/stop")
+    stopped = client.post("/v1/runs/core-failed-cancel/stop", json={
+        "command_id": "stop-failed-cancel", "expected_version": created["version"],
+        "actor_id": "operator-1",
+    })
     assert stopped.status_code == 502
-    assert stopped.json()["detail"] == "framework cancellation failed"
+    assert stopped.json()["error"]["code"] == "control_failed"
     assert "cancel-hook-secret" not in stopped.text
     assert client.get("/v1/runs/core-failed-cancel").json() == created
     assert client.get("/v1/runs/core-failed-cancel/events").text == events_before

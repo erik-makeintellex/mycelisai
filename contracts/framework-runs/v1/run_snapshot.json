@@ -1,0 +1,49 @@
+{
+  "run_id": "core-run-golden-1",
+  "correlation": {
+    "run_id": "core-run-golden-1",
+    "intent_proof_id": "proof-golden-1",
+    "execution_contract_id": "contract-golden-1",
+    "team_id": "team-golden-1",
+    "outcome_id": "outcome-golden-1",
+    "work_item_id": "work-golden-1",
+    "idempotency_key": "dispatch:golden-1",
+    "source_kind": "web_api",
+    "source_channel": "api.intent.confirm-action",
+    "payload_kind": "command",
+    "graph_revision": "worker-graph-v1"
+  },
+  "status": "completed",
+  "version": 2,
+  "created_at": "2026-09-02T12:00:00Z",
+  "updated_at": "2026-09-02T12:00:01Z",
+  "result": {
+    "summary": "Candidate ready.",
+    "outputs": [{
+      "id": "candidate-golden-1",
+      "kind": "document",
+      "name": "Golden candidate",
+      "uri": "candidate://core-run-golden-1/candidate-golden-1",
+      "content_type": "application/json",
+      "size_bytes": 13,
+      "sha256": "ecf59a2696ca44a417e20e2a7eabb1b26e82c779f8546bea354a2cc80e8e1eed",
+      "metadata": {
+        "completion_authority": "candidate",
+        "requires_core_validation": true,
+        "verified": false
+      }
+    }],
+    "metadata": {
+      "completion_authority": "candidate",
+      "requires_core_validation": true,
+      "verified": false
+    },
+    "finished_at": "2026-09-02T12:00:01Z"
+  },
+  "metadata": {
+    "driver": "conformance",
+    "execution_authority": "mycelis_core",
+    "storage": "bounded_memory_non_production",
+    "request_context": {}
+  }
+}

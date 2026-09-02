@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import asdict
+from hashlib import sha256
 from uuid import uuid4
 
 from .domain import DriverError, DriverOutcome, RunRecord, utc_now, wire_time
@@ -31,6 +33,7 @@ def append_event(
         {
             "event_id": str(uuid4()),
             "sequence": record.event_sequence,
+            "version": record.version,
             "run_id": record.run_id,
             "correlation": record.correlation,
             "kind": kind,
@@ -45,6 +48,7 @@ def append_event(
 
 def apply_outcome(record: RunRecord, outcome: DriverOutcome) -> None:
     record.updated_at = utc_now()
+    record.version += 1
     if outcome.events:
         record.status = "running"
     for event in outcome.events:
@@ -72,12 +76,22 @@ def apply_outcome(record: RunRecord, outcome: DriverOutcome) -> None:
     if outcome.status == "completed":
         outputs = []
         for output in outcome.outputs:
+            output_id = str(uuid4())
+            candidate_bytes = json.dumps(
+                output.metadata, sort_keys=True, separators=(",", ":")
+            ).encode()
             wire_output = asdict(output)
+            wire_output.update({
+                "id": output_id,
+                "uri": f"candidate://{record.run_id}/{output_id}",
+                "size_bytes": len(candidate_bytes),
+                "sha256": sha256(candidate_bytes).hexdigest(),
+            })
             wire_output["metadata"] = {
                 **output.metadata,
                 **COMPLETION_CANDIDATE_METADATA,
             }
-            outputs.append({"id": str(uuid4()), **wire_output})
+            outputs.append(wire_output)
         record.result = {
             "summary": outcome.message,
             "outputs": outputs,

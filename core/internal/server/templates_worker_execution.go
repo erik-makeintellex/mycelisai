@@ -85,9 +85,6 @@ func (s *AdminServer) startConfirmedActionWorkerRun(ctx context.Context, scope *
 	if strings.TrimSpace(handle.RunID) != correlation.RunID {
 		return workers.WorkerRunHandle{}, fmt.Errorf("worker backend did not preserve Mycelis run identity")
 	}
-	if strings.TrimSpace(handle.BackendRunID) == "" {
-		handle.BackendRunID = handle.RunID
-	}
 	return handle, nil
 }
 

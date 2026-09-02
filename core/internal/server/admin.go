@@ -33,6 +33,7 @@ import (
 	"github.com/mycelis/core/internal/state"
 	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/internal/triggers"
+	"github.com/mycelis/core/internal/workerauthority"
 	"github.com/mycelis/core/internal/workers"
 	"github.com/nats-io/nats.go"
 )
@@ -84,6 +85,7 @@ type AdminServer struct {
 	MCPToolExecutor     swarm.MCPToolExecutor
 	WorkerBackend       workers.WorkerBackend
 	DispatchOutbox      *dispatchoutbox.Store
+	WorkerAuthority     *workerauthority.Store
 	OutputValidator     outputvalidation.Validator
 }
 
@@ -134,6 +136,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		MCPToolExecutor:     mcpToolExecutor,
 		WorkerBackend:       configuredWorkerExecutionBackend(),
 		DispatchOutbox:      dispatchoutbox.NewStore(db),
+		WorkerAuthority:     workerauthority.NewStore(db),
 		OutputValidator:     configuredOutputValidator(),
 	}
 }

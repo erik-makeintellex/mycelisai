@@ -1,0 +1,9 @@
+{
+  "approval_id": "approval-golden-1",
+  "decision": "approve",
+  "command_id": "approve-golden-1",
+  "expected_version": 2,
+  "actor_id": "operator-golden",
+  "reason": "Approved within scope.",
+  "metadata": {"source": "core"}
+}
