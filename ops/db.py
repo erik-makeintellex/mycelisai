@@ -4,7 +4,11 @@ from pathlib import Path
 
 from invoke import task, Collection
 from .config import CORE_DIR, ROOT_DIR
-from .db_schema import SCHEMA_COMPATIBILITY_CHECKS, TARGETED_SCHEMA_MIGRATIONS
+from .db_schema import (
+    CANONICAL_SCHEMA_NAME,
+    PUBLIC_SCHEMA_NONEMPTY_SQL,
+    SCHEMA_COMPATIBILITY_CHECKS,
+)
 
 MIGRATIONS_DIR = CORE_DIR / "migrations"
 
@@ -65,16 +69,11 @@ def _psql(sql=None, file=None, dbname=None):
 
 
 def _migration_files():
-    """Return the canonical forward migration sequence."""
-    files = sorted(MIGRATIONS_DIR.glob("*.sql"))
-    selected = []
-    for file in files:
-        name = file.name
-        if name.endswith(".down.sql"):
-            continue
-        if name.endswith(".up.sql") or name == "001_init_memory.sql":
-            selected.append(file)
-    return selected
+    """Return only the deterministic current-schema installer."""
+    canonical = MIGRATIONS_DIR / CANONICAL_SCHEMA_NAME
+    return [canonical] if canonical.is_file() else []
+
+
 def _require_postgres(dbname="postgres"):
     """Fail fast when the local PostgreSQL bridge is unavailable."""
     host, port, _user, _password, _db = _dsn(dbname)
@@ -141,77 +140,62 @@ def schema_bootstrapped() -> bool:
     return True
 
 
-def _apply_missing_targeted_migrations() -> bool:
-    migrations = {path.name: path for path in _migration_files()}
-    applied = False
-    for label, sql in SCHEMA_COMPATIBILITY_CHECKS:
-        migration_name = TARGETED_SCHEMA_MIGRATIONS.get(label)
-        if migration_name is None: continue
-        result = _run_psql(sql=sql)
-        if result.returncode == 0 and "1" in result.stdout.split():
-            continue
-        migration = migrations.get(migration_name)
-        if migration is None: raise SystemExit(f"Missing targeted migration: {migration_name}")
-        print(f"Applying missing runtime migration {migration_name}...")
-        if _psql(file=migration) != 0:
-            raise SystemExit(f"Migration failed: {migration_name}")
-        applied = True
-    return applied
+def schema_nonempty() -> bool:
+    """Return True when the public schema contains any application table."""
+    _load_env()
+    result = _run_psql(sql=PUBLIC_SCHEMA_NONEMPTY_SQL)
+    if result.returncode != 0:
+        raise SystemExit("Failed to inspect the existing public schema before installation.")
+    return "1" in result.stdout.split()
 
 
-def _apply_migrations(strict=False):
+def _apply_migrations():
     _load_env()
     db = os.getenv("DB_NAME", "cortex")
 
     _ensure_database_exists()
-    if not strict:
-        _apply_missing_targeted_migrations()
-    if not strict and schema_bootstrapped():
+    if schema_bootstrapped():
         print(
             f"Schema for '{db}' already appears compatible with the current runtime; "
-            "skipping forward migration replay."
-        )
-        print(
-            "Use 'uv run inv db.reset' for a clean rebuild if you need to "
-            "reapply the canonical migration stack end-to-end."
+            "skipping current-schema installation."
         )
         return
+
+    if schema_nonempty():
+        raise SystemExit(
+            f"Database '{db}' has a nonempty public schema that is incompatible with this Mycelis build. "
+            "Back up any retained data, then use 'uv run inv db.reset' only for a disposable local database, "
+            "or follow an explicitly supported upgrade path. Automatic replay of historical migrations is disabled."
+        )
 
     files = _migration_files()
-    if not files:
-        print("No migration files found.")
-        return
+    if len(files) != 1 or files[0].name != CANONICAL_SCHEMA_NAME:
+        raise SystemExit(f"Missing canonical schema installer: {CANONICAL_SCHEMA_NAME}")
 
-    print(f"Applying {len(files)} migrations to '{db}'...")
-    failures = []
-    for file in files:
-        print(f"  {file.name}...", end=" ")
-        rc = _psql(file=file)
-        if rc == 0:
-            print("OK")
-            continue
+    installer = files[0]
+    print(f"Applying current schema to '{db}' from {installer.name}...", end=" ")
+    if _psql(file=installer) != 0:
         print("ERROR")
-        failures.append(file.name)
-        if strict:
-            raise SystemExit(f"Migration failed: {file.name}")
+        raise SystemExit(f"Current-schema installation failed: {installer.name}")
+    print("OK")
 
-    if failures:
-        print(f"\nMigrations with errors: {', '.join(failures)}")
-        print("Fix the failing migration or reset the database before retrying.")
-        raise SystemExit(1)
+    if not schema_bootstrapped():
+        raise SystemExit(
+            f"Current-schema installation completed but {installer.name} did not satisfy the runtime schema contract."
+        )
 
-    print("\nAll migrations applied cleanly.")
+    print("Current schema installed cleanly.")
 
 
 @task
 def migrate(c):
-    """Apply all migrations in order to the cortex database."""
-    _apply_migrations(strict=False)
+    """Install the current schema into an empty cortex database."""
+    _apply_migrations()
 
 
 @task
 def reset(c):
-    """Drop and recreate cortex database, then run all migrations."""
+    """Drop and recreate cortex database, then install the current schema."""
     _load_env()
     db = os.getenv("DB_NAME", "cortex")
     _require_postgres()
@@ -239,7 +223,7 @@ def reset(c):
     print(f"Database '{db}' recreated.")
 
     # Apply migrations
-    _apply_migrations(strict=True)
+    _apply_migrations()
 
 
 ns = Collection("db")

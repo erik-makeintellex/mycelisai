@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import builtins
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -73,33 +72,30 @@ def test_run_psql_enables_on_error_stop(monkeypatch):
     assert captured["cmd"][:3] == ["psql", "-v", "ON_ERROR_STOP=1"]
 
 
-def test_migration_files_only_include_forward_steps(monkeypatch):
-    fake_files = [
-        db_tasks.MIGRATIONS_DIR / "001_init_memory.sql",
-        db_tasks.MIGRATIONS_DIR / "020_cascade_service_manifests.down.sql",
-        db_tasks.MIGRATIONS_DIR / "020_cascade_service_manifests.up.sql",
-        db_tasks.MIGRATIONS_DIR / "031_inception_recipes.down.sql",
-        db_tasks.MIGRATIONS_DIR / "031_inception_recipes.up.sql",
-    ]
-    original_glob = Path.glob
+def test_run_psql_leaves_transaction_ownership_to_current_schema(monkeypatch, tmp_path):
+    captured = {}
+    schema = tmp_path / "001_current_schema.sql"
 
-    def fake_glob(self, pattern):
-        if self == db_tasks.MIGRATIONS_DIR:
-            return fake_files
-        return original_glob(self, pattern)
+    def fake_run(cmd, env=None, capture_output=None, text=None):
+        captured["cmd"] = cmd
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
 
-    monkeypatch.setattr(Path, "glob", fake_glob)
+    monkeypatch.setattr(db_tasks, "_dsn", lambda dbname=None: ("127.0.0.1", "5432", "mycelis", "password", dbname or "cortex"))
+    monkeypatch.setattr(db_tasks.subprocess, "run", fake_run)
 
-    selected = db_tasks._migration_files()
+    db_tasks._run_psql(file=schema)
 
-    assert [path.name for path in selected] == [
-        "001_init_memory.sql",
-        "020_cascade_service_manifests.up.sql",
-        "031_inception_recipes.up.sql",
+    assert captured["cmd"][-2:] == ["-f", str(schema)]
+    assert "--single-transaction" not in captured["cmd"]
+
+
+def test_migration_files_only_include_current_schema():
+    assert db_tasks._migration_files() == [
+        db_tasks.MIGRATIONS_DIR / "001_current_schema.sql"
     ]
 
 
-def test_reset_fails_fast_when_a_migration_errors(monkeypatch):
+def test_reset_fails_fast_when_current_schema_install_errors(monkeypatch):
     calls: list[str] = []
 
     monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
@@ -108,22 +104,24 @@ def test_reset_fails_fast_when_a_migration_errors(monkeypatch):
     monkeypatch.setattr(
         db_tasks,
         "_migration_files",
-        lambda: [db_tasks.MIGRATIONS_DIR / "001_init_memory.sql", db_tasks.MIGRATIONS_DIR / "019_agent_memories.up.sql"],
+        lambda: [db_tasks.MIGRATIONS_DIR / "001_current_schema.sql"],
     )
+    monkeypatch.setattr(db_tasks, "schema_bootstrapped", lambda: False)
+    monkeypatch.setattr(db_tasks, "schema_nonempty", lambda: False)
 
     def fake_run_psql(sql=None, file=None, dbname=None):
         if sql is not None:
             calls.append(sql)
             return 0
         calls.append(file.name)
-        return 1 if file.name == "019_agent_memories.up.sql" else 0
+        return 1 if file else 0
 
     monkeypatch.setattr(db_tasks, "_psql", fake_run_psql)
     monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
-    with pytest.raises(SystemExit, match="Migration failed: 019_agent_memories.up.sql"):
+    with pytest.raises(SystemExit, match="Current-schema installation failed: 001_current_schema.sql"):
         db_tasks.reset.body(None)
 
-    assert "019_agent_memories.up.sql" in calls
+    assert "001_current_schema.sql" in calls
 
 
 def test_migrate_skips_replay_when_schema_is_already_bootstrapped(monkeypatch, capsys):
@@ -132,11 +130,10 @@ def test_migrate_skips_replay_when_schema_is_already_bootstrapped(monkeypatch, c
     monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
     monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
     monkeypatch.setattr(db_tasks, "schema_bootstrapped", lambda: True)
-    monkeypatch.setattr(db_tasks, "_apply_missing_targeted_migrations", lambda: False)
     monkeypatch.setattr(
         db_tasks,
         "_migration_files",
-        lambda: [db_tasks.MIGRATIONS_DIR / "001_init_memory.sql"],
+        lambda: [db_tasks.MIGRATIONS_DIR / "001_current_schema.sql"],
     )
     monkeypatch.setattr(
         db_tasks,
@@ -149,33 +146,64 @@ def test_migrate_skips_replay_when_schema_is_already_bootstrapped(monkeypatch, c
 
     captured = capsys.readouterr()
     assert "already appears compatible with the current runtime" in captured.out
-    assert "uv run inv db.reset" in captured.out
+    assert "skipping current-schema installation" in captured.out
     assert migrate_calls == []
 
 
-def test_migrate_raises_when_any_migration_errors(monkeypatch, capsys):
+def test_migrate_fails_closed_for_nonempty_incompatible_schema(monkeypatch):
     monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
     monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
     monkeypatch.setattr(db_tasks, "schema_bootstrapped", lambda: False)
-    monkeypatch.setattr(db_tasks, "_apply_missing_targeted_migrations", lambda: False)
+    monkeypatch.setattr(db_tasks, "schema_nonempty", lambda: True)
     monkeypatch.setattr(
         db_tasks,
         "_migration_files",
-        lambda: [db_tasks.MIGRATIONS_DIR / "001_init_memory.sql", db_tasks.MIGRATIONS_DIR / "019_agent_memories.up.sql"],
+        lambda: pytest.fail("baseline must not run against nonempty incompatible schema"),
     )
-
-    def fake_psql(sql=None, file=None, dbname=None):
-        return 1 if file and file.name == "019_agent_memories.up.sql" else 0
-
-    monkeypatch.setattr(db_tasks, "_psql", fake_psql)
     monkeypatch.setenv("DB_NAME", "cortex")
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit, match="nonempty.*db.reset.*upgrade"):
         db_tasks.migrate.body(None)
 
-    out = capsys.readouterr().out
-    assert "Migrations with errors" in out
-    assert "Fix the failing migration or reset the database before retrying." in out
+
+def test_migrate_installs_current_schema_once_when_empty(monkeypatch):
+    applied: list[str] = []
+    compatibility = iter([False, True])
+    monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
+    monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
+    monkeypatch.setattr(db_tasks, "schema_bootstrapped", lambda: next(compatibility))
+    monkeypatch.setattr(db_tasks, "schema_nonempty", lambda: False)
+    monkeypatch.setattr(
+        db_tasks,
+        "_migration_files",
+        lambda: [db_tasks.MIGRATIONS_DIR / "001_current_schema.sql"],
+    )
+    monkeypatch.setattr(
+        db_tasks,
+        "_psql",
+        lambda sql=None, file=None, dbname=None: applied.append(file.name) or 0,
+    )
+
+    db_tasks.migrate.body(None)
+
+    assert applied == ["001_current_schema.sql"]
+
+
+def test_migrate_rejects_incomplete_post_install_schema(monkeypatch):
+    compatibility = iter([False, False])
+    monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
+    monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
+    monkeypatch.setattr(db_tasks, "schema_bootstrapped", lambda: next(compatibility))
+    monkeypatch.setattr(db_tasks, "schema_nonempty", lambda: False)
+    monkeypatch.setattr(
+        db_tasks,
+        "_migration_files",
+        lambda: [db_tasks.MIGRATIONS_DIR / "001_current_schema.sql"],
+    )
+    monkeypatch.setattr(db_tasks, "_psql", lambda **kwargs: 0)
+
+    with pytest.raises(SystemExit, match="did not satisfy the runtime schema contract"):
+        db_tasks.migrate.body(None)
 
 
 def test_reset_terminates_and_recreates_database_before_migrations(monkeypatch):
@@ -190,7 +218,7 @@ def test_reset_terminates_and_recreates_database_before_migrations(monkeypatch):
         lambda sql=None, file=None, dbname=None: calls.append((dbname or "", sql or (file.name if file else ""))) or 0,
     )
     monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
-    monkeypatch.setattr(db_tasks, "_apply_migrations", lambda strict=False: calls.append(("apply", str(strict))))
+    monkeypatch.setattr(db_tasks, "_apply_migrations", lambda: calls.append(("apply", "current")))
 
     db_tasks.reset.body(None)
 
@@ -199,7 +227,7 @@ def test_reset_terminates_and_recreates_database_before_migrations(monkeypatch):
         ("postgres", "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'cortex' AND pid <> pg_backend_pid();"),
         ("postgres", "DROP DATABASE IF EXISTS cortex;"),
         ("postgres", "CREATE DATABASE cortex OWNER mycelis;"),
-        ("apply", "True"),
+        ("apply", "current"),
     ]
 
 
@@ -263,27 +291,20 @@ def test_schema_bootstrapped_requires_worker_profile_columns():
 
     assert "agent_catalogue profile_key column" in checks
     assert "agent_catalogue" in checks["agent_catalogue profile_key column"]
-    assert db_tasks.TARGETED_SCHEMA_MIGRATIONS["agent_catalogue profile_key column"] == "056_agent_profile_library.up.sql"
 
 
-def test_targeted_worker_profile_migration_applies_when_column_is_missing(monkeypatch):
-    migration = db_tasks.MIGRATIONS_DIR / "056_agent_profile_library.up.sql"
-    applied: list[str] = []
-    monkeypatch.setattr(db_tasks, "_migration_files", lambda: [migration])
-    monkeypatch.setattr(
-        db_tasks,
-        "TARGETED_SCHEMA_MIGRATIONS",
-        {"agent_catalogue profile_key column": migration.name},
-    )
-    monkeypatch.setattr(
-        db_tasks,
-        "_run_psql",
-        lambda sql=None, file=None, dbname=None: SimpleNamespace(returncode=0, stdout="", stderr=""),
-    )
-    monkeypatch.setattr(db_tasks, "_psql", lambda sql=None, file=None, dbname=None: applied.append(file.name) or 0)
+def test_schema_bootstrapped_requires_all_code_context_tables():
+    checks = {label: sql for label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS}
 
-    assert db_tasks._apply_missing_targeted_migrations() is True
-    assert applied == ["056_agent_profile_library.up.sql"]
+    for table in (
+        "code_context_sources",
+        "code_context_snapshots",
+        "code_context_files",
+        "code_context_symbols",
+        "code_context_edges",
+    ):
+        assert f"{table} table" in checks
+        assert table in checks[f"{table} table"]
 
 
 def test_schema_bootstrapped_requires_team_work_lifecycle_columns():

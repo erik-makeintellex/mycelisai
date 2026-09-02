@@ -43,6 +43,7 @@ DEFAULT_EXCLUDE_DIRS = {
 }
 GENERATED_OR_LOCK_PATHS = {
     "core/go.sum": "Go module checksum lockfile",
+    "core/migrations/001_current_schema.sql": "mechanically generated current-schema baseline",
     "interface/package-lock.json": "npm lockfile",
     "uv.lock": "uv lockfile",
     "charts/mycelis-core/Chart.lock": "Helm dependency lockfile",

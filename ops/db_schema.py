@@ -1,6 +1,20 @@
-"""Canonical runtime schema compatibility checks and targeted repair mapping."""
+"""Canonical current-schema installer and compatibility contract."""
+
+CANONICAL_SCHEMA_NAME = "001_current_schema.sql"
+PUBLIC_SCHEMA_NONEMPTY_SQL = (
+    "SELECT 1 WHERE EXISTS (SELECT 1 FROM information_schema.tables "
+    "WHERE table_schema = 'public' AND table_type = 'BASE TABLE');"
+)
 
 SCHEMA_COMPATIBILITY_CHECKS = (
+    ("pgvector extension", "SELECT 1 FROM pg_extension WHERE extname = 'vector';"),
+    ("semantic context vectors", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'context_vectors';"),
+    ("durable agent memory", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'agent_memories';"),
+    ("retained artifacts", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'artifacts';"),
+    ("temporary continuity", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'temp_memory_channels';"),
+    ("managed exchange channels", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'exchange_channels';"),
+    ("managed exchange items", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'exchange_items';"),
+    ("conversation templates", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conversation_templates';"),
     ("nodes.type column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'nodes' AND column_name = 'type';"),
     ("nodes.specs column", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'nodes' AND column_name = 'specs';"),
     ("intent_proofs table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'intent_proofs';"),
@@ -40,18 +54,9 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("config_document_activation_history table", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activation_history' AND column_name = 'kind';"),
     ("config_document fixture ownership", "SELECT 1 FROM pg_constraint WHERE conname = 'chk_qa_fixture_resource_kind' AND pg_get_constraintdef(oid) LIKE '%config_document%';"),
     ("runtime_team_manifests table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'runtime_team_manifests';"),
+    ("code_context_sources table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'code_context_sources';"),
+    ("code_context_snapshots table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'code_context_snapshots';"),
+    ("code_context_files table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'code_context_files';"),
+    ("code_context_symbols table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'code_context_symbols';"),
+    ("code_context_edges table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'code_context_edges';"),
 )
-
-TARGETED_SCHEMA_MIGRATIONS = {
-    "agent_catalogue profile_key column": "056_agent_profile_library.up.sql",
-    "team_work_items recovery_deadline_at column": "057_team_work_recovery_deadline.up.sql",
-    "qa_fixture_scopes table": "058_qa_fixture_ownership.up.sql",
-    "qa_fixture_resources table": "058_qa_fixture_ownership.up.sql",
-    "qa_fixture resource ownership index": "059_qa_fixture_ownership_hardening.up.sql",
-    "purged QA fixture claims released": "060_release_purged_qa_fixture_claims.up.sql",
-    "config_documents table": "061_config_documents.up.sql",
-    "config_document_activations table": "061_config_documents.up.sql",
-    "config_document_activation_history table": "061_config_documents.up.sql",
-    "config_document fixture ownership": "062_qa_fixture_config_documents.up.sql",
-    "runtime_team_manifests table": "063_runtime_team_manifests.up.sql",
-}
