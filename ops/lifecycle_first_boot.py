@@ -8,7 +8,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from dotenv import load_dotenv
 from invoke import task
 
 from . import db as db_tasks
@@ -41,6 +40,8 @@ CLEAN_FIRST_BOOT_WORKSPACE_DIRS = ("groups", "generated", "artifacts", "saved-me
 
 
 def _load_env():
+    from dotenv import load_dotenv
+
     load_dotenv(str(ROOT_DIR / ".env"), override=True)
 
 

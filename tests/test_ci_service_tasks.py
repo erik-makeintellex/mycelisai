@@ -174,6 +174,7 @@ def test_entrypoint_check_verifies_runner_matrix():
     ctx = FakeContext(
         {
             "uv run inv -l": FakeResult(stdout="Available tasks:\n"),
+            "uv run myc -l": FakeResult(stdout="Available tasks:\n"),
             "uvx inv -l": FakeResult(exited=1, stderr="Package `inv` does not provide any executables.\n"),
             "uvx --from invoke inv -l": FakeResult(stdout="Available tasks:\n"),
         }
@@ -183,6 +184,7 @@ def test_entrypoint_check_verifies_runner_matrix():
 
     assert ctx.commands == [
         "uv run inv -l",
+        "uv run myc -l",
         "uvx inv -l",
         "uvx --from invoke inv -l",
     ]
@@ -192,6 +194,7 @@ def test_entrypoint_check_fails_when_bare_uvx_behavior_changes():
     ctx = FakeContext(
         {
             "uv run inv -l": FakeResult(stdout="Available tasks:\n"),
+            "uv run myc -l": FakeResult(stdout="Available tasks:\n"),
             "uvx inv -l": FakeResult(stdout="Available tasks:\n"),
             "uvx --from invoke inv -l": FakeResult(stdout="Available tasks:\n"),
         }

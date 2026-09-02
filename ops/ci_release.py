@@ -121,6 +121,11 @@ def run_entrypoint_check(c):
         raise SystemExit("ENTRYPOINT CHECK FAILED: 'uv run inv -l' did not succeed.")
     print("uv run inv -l: OK")
 
+    console_script = c.run("uv run myc -l", hide=True, warn=True)
+    if console_script.exited != 0:
+        raise SystemExit("ENTRYPOINT CHECK FAILED: 'uv run myc -l' did not succeed.")
+    print("uv run myc -l: OK")
+
     bare_uvx = c.run("uvx inv -l", hide=True, warn=True)
     bare_uvx_text = f"{bare_uvx.stdout or ''}{bare_uvx.stderr or ''}"
     expected_error = "does not provide any executables"

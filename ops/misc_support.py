@@ -42,7 +42,7 @@ WORKTREE_AREA_RULES = (
     },
     {
         "name": "Python automation",
-        "prefixes": ("agents/", "cli/", "ops/", "scripts/", "sdk/python/", "tests/"),
+        "prefixes": ("agents/", "ops/", "sdk/python/", "tests/"),
         "exact_paths": ("pyproject.toml", "tasks.py"),
         "installs": ("uv sync --all-packages --dev",),
         "commands": (

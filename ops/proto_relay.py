@@ -1,4 +1,9 @@
-from invoke import task, Collection
+import os
+import tempfile
+from pathlib import Path
+
+from invoke import Collection, task
+
 from .config import ROOT_DIR, SDK_DIR
 
 # -- PROTO --
@@ -18,12 +23,15 @@ def generate(c):
         "proto/swarm/v1/swarm.proto proto/envelope.proto"
     )
     
-    script_path = ROOT_DIR / "scripts" / "gen_proto_go.sh"
-    if not script_path.parent.exists():
-        script_path.parent.mkdir(parents=True)
+    temp_dir = ROOT_DIR / "workspace" / "tool-cache" / "proto"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    script_fd, script_name = tempfile.mkstemp(prefix="gen-proto-go-", suffix=".sh", dir=temp_dir)
+    os.close(script_fd)
+    script_path = Path(script_name)
     script_path.write_text(script_content, encoding="utf-8")
-    
-    cmd_go = f"docker run --rm -v {ROOT_DIR}:/workspace -w /workspace {docker_pkg} sh scripts/gen_proto_go.sh"
+
+    script_rel = script_path.relative_to(ROOT_DIR).as_posix()
+    cmd_go = f"docker run --rm -v {ROOT_DIR}:/workspace -w /workspace {docker_pkg} sh {script_rel}"
     try:
         c.run(cmd_go)
     finally:

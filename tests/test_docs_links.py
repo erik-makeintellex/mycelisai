@@ -43,7 +43,6 @@ def test_all_active_documentation_links_resolve():
         ROOT / "ops" / "README.md",
         ROOT / "core" / "README.md",
         ROOT / "interface" / "README.md",
-        ROOT / "cli" / "README.md",
         ROOT / "core" / "internal" / "registry" / "README.md",
         *sorted((ROOT / "docs").rglob("*.md")),
         *sorted((ROOT / "architecture").rglob("*.md")),
@@ -83,7 +82,6 @@ def test_readme_style_pages_expose_project_navigation_and_tocs():
         ROOT / "ops" / "README.md": "## TOC",
         ROOT / "core" / "README.md": "## TOC",
         ROOT / "interface" / "README.md": "## TOC",
-        ROOT / "cli" / "README.md": "## TOC",
         ROOT / "core" / "internal" / "registry" / "README.md": "## TOC",
     }
 
