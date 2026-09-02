@@ -5,6 +5,7 @@ from tests.ci_task_support import FakeContext, FakeResult
 
 CORE_TEST_COMMAND = f'go -C "{ci.CORE_DIR}" test ./... -count=1 -p 1'
 CORE_VET_COMMAND = f'go -C "{ci.CORE_DIR}" vet ./...'
+FRAMEWORK_RUNS_TEST_COMMAND = f'go -C "{ci.CORE_DIR.parent / "services" / "framework-runs"}" test ./... -count=1'
 
 
 def test_console_safe_escapes_characters_missing_from_host_encoding():
@@ -27,12 +28,14 @@ def test_baseline_runs_expected_commands_without_e2e(monkeypatch):
     ctx = FakeContext(
         {
             CORE_TEST_COMMAND: FakeResult(),
+            FRAMEWORK_RUNS_TEST_COMMAND: FakeResult(),
         }
     )
 
     ci.baseline.body(ctx, e2e=False)
 
     assert CORE_TEST_COMMAND in ctx.commands
+    assert FRAMEWORK_RUNS_TEST_COMMAND in ctx.commands
     assert "npx playwright test --reporter=dot" not in ctx.commands
     assert build_calls == ["build"]
     assert test_calls == ["test"]
@@ -57,6 +60,7 @@ def test_baseline_runs_playwright_when_e2e_enabled(monkeypatch):
     ctx = FakeContext(
         {
             CORE_TEST_COMMAND: FakeResult(),
+            FRAMEWORK_RUNS_TEST_COMMAND: FakeResult(),
         }
     )
 
@@ -86,6 +90,7 @@ def test_baseline_skips_playwright_when_prior_steps_failed(monkeypatch):
     ctx = FakeContext(
         {
             CORE_TEST_COMMAND: FakeResult(exited=1, stderr="core tests failed"),
+            FRAMEWORK_RUNS_TEST_COMMAND: FakeResult(),
         }
     )
 
@@ -116,6 +121,7 @@ def test_baseline_runs_playwright_by_default(monkeypatch):
     ctx = FakeContext(
         {
             CORE_TEST_COMMAND: FakeResult(),
+            FRAMEWORK_RUNS_TEST_COMMAND: FakeResult(),
         }
     )
 

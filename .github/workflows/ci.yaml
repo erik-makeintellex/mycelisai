@@ -96,7 +96,9 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: core/go.mod
-          cache-dependency-path: core/go.sum
+          cache-dependency-path: |
+            core/go.sum
+            services/framework-runs/go.sum
 
       - name: Install Python Tooling
         run: uv sync --all-packages --dev
@@ -104,6 +106,10 @@ jobs:
       - name: Run Go Tests
         working-directory: core
         run: go test ./... -count=1 -p 1
+
+      - name: Run Framework Runs Service Tests
+        working-directory: services/framework-runs
+        run: go test ./... -count=1
 
       - name: Run Go Vet
         working-directory: core

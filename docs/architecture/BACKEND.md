@@ -113,6 +113,8 @@ Core's current-schema authority tables bind one Mycelis run to `framework_runs`/
 
 `GovernedControlBackend` is the strict external control surface: Core supplies `command_id`, positive `expected_version`, and actor identity, and receives an exact durable receipt whose HTTP status distinguishes a new command from replay. The receipt-free `WorkerBackend.StopRun` and `SubmitApproval` methods remain only for the current central execution interface during slices A through D; `framework_runs` stop fails closed through that legacy method. Slice E owns migrating the final callers and removing the receipt-free compatibility methods after central and external control tests pass together.
 
+The production implementation is the separate Go module at `services/framework-runs`. It starts only with PostgreSQL and a canonical bearer token of at least 32 bytes, verifies that its database contains exactly its six owned tables and required invariants, and exposes the frozen seven-route API. Its journal makes accepted create/control commits durable before executor effects, leases commands for restart recovery, fences stale claims, and persists immutable candidate manifests. Production deliberately injects no executor in slice B: health may report database readiness, capabilities report `production_ready=false`, and create/stop/approval fail before persistence. The in-memory repository is retained only as a deterministic controller/HTTP conformance test double through the neutral gate; it is never selected by `cmd/framework-runs`, and slice F must remove or relocate it if it no longer supplies unique test value.
+
 ### Durable external-run projection target
 
 The target projection sequence keeps one authoritative Mycelis lifecycle:
