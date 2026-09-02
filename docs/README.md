@@ -58,6 +58,7 @@ These are the active contributor support surfaces for changing or reviewing the 
 Product architecture has one active document and no archive inside the docs tree:
 
 - [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
+- [P0.10 Framework Execution Delivery Referential](architecture-library/MYCELIS_CANONICAL_PRD.md#p010-framework-execution-delivery-referential), embedded in the canonical PRD so runtime ownership, deployment sequencing, proof, and team handoffs do not drift into a parallel plan
 
 Backend, Frontend, Operations, API, Testing, and user guides are scoped implementation or operating contracts. They support the PRD without becoming additional product doctrine.
 
