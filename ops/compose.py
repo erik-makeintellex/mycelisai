@@ -257,11 +257,17 @@ def _compose_check_results(checks: tuple[tuple[str, str], ...], env_values: dict
 
 def _compose_schema_bootstrapped(env_values: dict[str, str] | None = None) -> bool:
     env_values = env_values or _compose_effective_env()
-    base_checks = tuple(check for check in db_tasks.SCHEMA_COMPATIBILITY_CHECKS if check[0] not in db_tasks.TARGETED_SCHEMA_MIGRATIONS)
-    return all(ok for _label, ok in _compose_check_results(base_checks, env_values))
+    return all(
+        _compose_query_succeeds(sql, env_values)
+        for _label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS
+    )
+
+
+def _compose_schema_nonempty(env_values: dict[str, str]) -> bool:
+    checks = (("public schema nonempty", db_tasks.PUBLIC_SCHEMA_NONEMPTY_SQL),)
+    return all(ok for _label, ok in _compose_check_results(checks, env_values))
 
 COMPOSE_LONG_TERM_STORAGE_CHECKS = compose_storage.COMPOSE_LONG_TERM_STORAGE_CHECKS
-COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = compose_storage.COMPOSE_STORAGE_MIGRATIONS_BY_CHECK
 
 
 def _compose_storage_check_results(env_values: dict[str, str]) -> list[tuple[str, bool]]:
@@ -292,23 +298,14 @@ def _run_compose_migration_file(migration: Path, env_values: dict[str, str]):
     )
 
 
-def _run_missing_compose_storage_migrations(env_values: dict[str, str]) -> bool:
-    return compose_storage.run_missing_compose_storage_migrations(
-        env_values,
-        storage_check_results=_compose_storage_check_results,
-        migration_files=db_tasks._migration_files,
-        run_migration_file=_run_compose_migration_file,
-    )
-
-
-def _run_compose_migrations(strict: bool = False):
+def _run_compose_migrations():
     compose_storage.run_compose_migrations(
-        strict,
         effective_env=_compose_effective_env,
         schema_bootstrapped=_compose_schema_bootstrapped,
-        run_missing_storage_migrations=_run_missing_compose_storage_migrations,
+        schema_nonempty=_compose_schema_nonempty,
         migration_files=db_tasks._migration_files,
         run_migration_file=_run_compose_migration_file,
+        canonical_schema_name=db_tasks.CANONICAL_SCHEMA_NAME,
     )
 
 

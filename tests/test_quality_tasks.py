@@ -62,6 +62,7 @@ def test_generated_sources_are_skipped():
     assert quality._should_skip(Path("core/pkg/pb/swarm/swarm.pb.go"))
     assert quality._should_skip(Path("sdk/python/src/relay/proto/swarm_pb2.py"))
     assert quality._should_skip(Path("sdk/python/src/relay/proto/swarm_pb2_grpc.py"))
+    assert quality._should_skip(Path("core/migrations/001_current_schema.sql"))
     assert quality._should_skip(Path("interface/package-lock.json"))
     assert quality._should_skip(Path("uv.lock"))
 

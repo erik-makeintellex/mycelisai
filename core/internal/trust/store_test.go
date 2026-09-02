@@ -13,7 +13,7 @@ import (
 )
 
 func TestExecutionTrustMigrationDefinesContractsAndProofArtifacts(t *testing.T) {
-	raw, err := os.ReadFile(filepath.FromSlash("../../migrations/041_execution_trust_spine.up.sql"))
+	raw, err := os.ReadFile(filepath.FromSlash("../../migrations/001_current_schema.sql"))
 	if err != nil {
 		t.Fatalf("read migration: %v", err)
 	}

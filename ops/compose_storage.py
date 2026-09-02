@@ -5,74 +5,9 @@ import time
 from pathlib import Path
 from typing import Callable
 
+from .db_schema import SCHEMA_COMPATIBILITY_CHECKS
 
-COMPOSE_LONG_TERM_STORAGE_CHECKS = (
-    ("pgvector extension", "SELECT 1 FROM pg_extension WHERE extname = 'vector';"),
-    (
-        "semantic context vectors",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'context_vectors';",
-    ),
-    (
-        "durable agent memory",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'agent_memories';",
-    ),
-    ("conversation continuity", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conversation_turns';"),
-    ("retained artifacts", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'artifacts';"),
-    ("temporary continuity", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'temp_memory_channels';"),
-    ("collaboration groups", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'collaboration_groups';"),
-    (
-        "managed exchange channels",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'exchange_channels';",
-    ),
-    (
-        "managed exchange items",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'exchange_items';",
-    ),
-    (
-        "conversation templates",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conversation_templates';",
-    ),
-    ("config documents", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'config_documents';"),
-    ("config document activations", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activations' AND column_name = 'kind';"),
-    ("config document activation history", "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'config_document_activation_history' AND column_name = 'kind';"),
-    ("config document fixture ownership", "SELECT 1 FROM pg_constraint WHERE conname = 'chk_qa_fixture_resource_kind' AND pg_get_constraintdef(oid) LIKE '%config_document%';"),
-    (
-        "worker profiles",
-        "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'agent_catalogue' AND column_name = 'profile_key';",
-    ),
-    (
-        "QA fixture ownership",
-        "SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'uq_qa_fixture_resource_claim';",
-    ),
-    (
-        "released QA fixture claims",
-        "SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM qa_fixture_resources r JOIN qa_fixture_scopes s ON s.id=r.scope_id WHERE s.status='purged');",
-    ),
-    ("runtime team manifests", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'runtime_team_manifests';"),
-)
-
-COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = {
-    "semantic context vectors": ("008_context_engine.up.sql",),
-    "durable agent memory": ("019_agent_memories.up.sql", "037_scoped_memory_visibility.up.sql"),
-    "conversation continuity": ("030_conversation_turns.up.sql",),
-    "retained artifacts": ("018_artifacts.up.sql",),
-    "temporary continuity": ("033_temp_memory_channels.up.sql",),
-    "collaboration groups": ("034_collaboration_groups.up.sql",),
-    "managed exchange channels": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
-    "managed exchange items": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
-    "conversation templates": ("038_conversation_templates.up.sql",),
-    "config documents": ("061_config_documents.up.sql",),
-    "config document activations": ("061_config_documents.up.sql",),
-    "config document activation history": ("061_config_documents.up.sql",),
-    "config document fixture ownership": ("062_qa_fixture_config_documents.up.sql",),
-    "worker profiles": ("056_agent_profile_library.up.sql",),
-    "QA fixture ownership": (
-        "058_qa_fixture_ownership.up.sql",
-        "059_qa_fixture_ownership_hardening.up.sql",
-    ),
-    "released QA fixture claims": ("060_release_purged_qa_fixture_claims.up.sql",),
-    "runtime team manifests": ("063_runtime_team_manifests.up.sql",),
-}
+COMPOSE_LONG_TERM_STORAGE_CHECKS = SCHEMA_COMPATIBILITY_CHECKS
 
 def compose_db_user(env_values: dict[str, str], clean_env_value: Callable[[str], str]) -> str:
     return clean_env_value(env_values.get("DB_USER") or env_values.get("POSTGRES_USER") or "mycelis")
@@ -242,58 +177,39 @@ def run_compose_migration_file(
         raise SystemExit(f"Compose migration failed: {migration.name}")
 
 
-def run_missing_compose_storage_migrations(
-    env_values: dict[str, str],
-    *,
-    storage_check_results: Callable[[dict[str, str]], list[tuple[str, bool]]],
-    migration_files: Callable[[], list[Path]],
-    run_migration_file: Callable[[Path, dict[str, str]], None],
-) -> bool:
-    missing = [label for label, ok in storage_check_results(env_values) if not ok]
-    migration_names: list[str] = []
-    for label in missing:
-        for migration_name in COMPOSE_STORAGE_MIGRATIONS_BY_CHECK.get(label, ()):
-            if migration_name not in migration_names:
-                migration_names.append(migration_name)
-
-    if not migration_names:
-        return False
-
-    migrations_by_name = {migration.name: migration for migration in migration_files()}
-    print("Applying missing long-term storage migrations:")
-    for migration_name in migration_names:
-        migration = migrations_by_name.get(migration_name)
-        if migration is None:
-            raise SystemExit(f"Missing migration file required for Compose storage bootstrap: {migration_name}")
-        print(f"  - {migration_name}")
-        run_migration_file(migration, env_values)
-    return True
-
-
 def run_compose_migrations(
-    strict: bool,
     *,
     effective_env: Callable[[], dict[str, str]],
     schema_bootstrapped: Callable[[dict[str, str]], bool],
-    run_missing_storage_migrations: Callable[[dict[str, str]], bool],
+    schema_nonempty: Callable[[dict[str, str]], bool],
     migration_files: Callable[[], list[Path]],
     run_migration_file: Callable[[Path, dict[str, str]], None],
+    canonical_schema_name: str,
 ):
     env_values = effective_env()
-    if not strict and schema_bootstrapped(env_values):
+    if schema_bootstrapped(env_values):
         print(
             "Compose schema already appears compatible with the current runtime; "
-            "skipping forward migration replay."
+            "skipping current-schema installation."
         )
-        print(
-            "Use 'uv run inv compose.down --volumes' for a truly fresh compose rebuild "
-            "when you need to replay the canonical migration stack end-to-end."
-        )
-        run_missing_storage_migrations(env_values)
         return
 
-    for migration in migration_files():
-        run_migration_file(migration, env_values)
+    if schema_nonempty(env_values):
+        raise SystemExit(
+            "Compose PostgreSQL has a nonempty public schema that is incompatible with this Mycelis build. "
+            "Back up any retained data, then use 'uv run inv compose.down --volumes' only for disposable local data, "
+            "or follow an explicitly supported upgrade path. Automatic replay of historical migrations is disabled."
+        )
+
+    migrations = migration_files()
+    if len(migrations) != 1 or migrations[0].name != canonical_schema_name:
+        raise SystemExit(f"Missing canonical schema installer: {canonical_schema_name}")
+    run_migration_file(migrations[0], env_values)
+    if not schema_bootstrapped(env_values):
+        raise SystemExit(
+            f"Compose current-schema installation completed but {canonical_schema_name} "
+            "did not satisfy the runtime schema contract."
+        )
 
 
 def wait_for_postgres_ready(

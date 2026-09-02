@@ -197,13 +197,15 @@ def test_require_compose_env_file_has_clear_guidance(tmp_path, monkeypatch):
     assert "keep secrets in .env" in str(excinfo.value)
 
 
-def test_run_compose_migrations_executes_canonical_files(monkeypatch):
+def test_run_compose_migrations_executes_current_schema_once(monkeypatch):
     commands: list[list[str]] = []
-    files = [Path("001_init_memory.sql"), Path("002_extra.up.sql")]
+    files = [Path("001_current_schema.sql")]
+    compatibility = iter([False, True])
 
     monkeypatch.setattr(compose.db_tasks, "_migration_files", lambda: files)
     monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "mycelis", "DB_NAME": "cortex"})
-    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: False)
+    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: next(compatibility))
+    monkeypatch.setattr(compose, "_compose_schema_nonempty", lambda env_values: False)
     monkeypatch.setattr(
         compose,
         "_run_compose",
@@ -227,35 +229,21 @@ def test_run_compose_migrations_executes_canonical_files(monkeypatch):
             "-d",
             "cortex",
             "-f",
-            "/migrations/001_init_memory.sql",
-        ),
-        compose._compose_command(
-            "exec",
-            "-T",
-            "postgres",
-            "psql",
-            "-v",
-            "ON_ERROR_STOP=1",
-            "-h",
-            "127.0.0.1",
-            "-U",
-            "mycelis",
-            "-d",
-            "cortex",
-            "-f",
-            "/migrations/002_extra.up.sql",
+            "/migrations/001_current_schema.sql",
         ),
     ]
 
 
 def test_run_compose_migrations_uses_configured_db_login(monkeypatch):
     commands: list[list[str]] = []
-    files = [Path("001_init_memory.sql")]
+    files = [Path("001_current_schema.sql")]
+    compatibility = iter([False, True])
 
     for key in ("DB_USER", "DB_NAME"): monkeypatch.delenv(key, raising=False)
     monkeypatch.setattr(compose.db_tasks, "_migration_files", lambda: files)
     monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "owner", "DB_NAME": "ownerdb"})
-    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: False)
+    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: next(compatibility))
+    monkeypatch.setattr(compose, "_compose_schema_nonempty", lambda env_values: False)
     monkeypatch.setattr(
         compose,
         "_run_compose",
@@ -273,7 +261,6 @@ def test_run_compose_migrations_uses_configured_db_login(monkeypatch):
 def test_run_compose_migrations_skips_replay_when_schema_is_compatible(monkeypatch, capsys):
     monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "mycelis", "DB_NAME": "cortex"})
     monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: True)
-    monkeypatch.setattr(compose, "_run_missing_compose_storage_migrations", lambda env_values: False)
     monkeypatch.setattr(
         compose.db_tasks,
         "_migration_files",
@@ -283,65 +270,46 @@ def test_run_compose_migrations_skips_replay_when_schema_is_compatible(monkeypat
     compose._run_compose_migrations()
 
     out = capsys.readouterr().out
-    assert "skipping forward migration replay" in out
-    assert "compose.down --volumes" in out
+    assert "skipping current-schema installation" in out
 
 
-def test_run_compose_migrations_applies_missing_late_storage_when_base_schema_is_compatible(monkeypatch, capsys):
-    files = [Path("038_conversation_templates.up.sql")]
-    commands: list[list[str]] = []
-
+def test_run_compose_migrations_fails_closed_for_nonempty_incompatible_schema(monkeypatch):
     monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "mycelis", "DB_NAME": "cortex"})
-    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: True)
-    monkeypatch.setattr(
-        compose,
-        "_compose_storage_check_results",
-        lambda env_values: [
-            ("pgvector extension", True),
-            ("conversation templates", False),
-        ],
-    )
-    monkeypatch.setattr(compose.db_tasks, "_migration_files", lambda: files)
-    monkeypatch.setattr(
-        compose,
-        "_run_compose",
-        lambda args, check=True, env=None: commands.append(args) or type("Result", (), {"returncode": 0})(),
-    )
+    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: False)
+    monkeypatch.setattr(compose, "_compose_schema_nonempty", lambda env_values: True)
+    monkeypatch.setattr(compose.db_tasks, "_migration_files", lambda: pytest.fail("baseline must not run"))
 
-    compose._run_compose_migrations()
+    with pytest.raises(SystemExit, match="nonempty.*compose.down --volumes.*upgrade"):
+        compose._run_compose_migrations()
 
-    out = capsys.readouterr().out
-    assert "Applying missing long-term storage migrations" in out
-    assert commands == [
-        compose._compose_command(
-            "exec",
-            "-T",
-            "postgres",
-            "psql",
-            "-v",
-            "ON_ERROR_STOP=1",
-            "-h",
-            "127.0.0.1",
-            "-U",
-            "mycelis",
-            "-d",
-            "cortex",
-            "-f",
-            "/migrations/038_conversation_templates.up.sql",
-        )
-    ]
+
+def test_run_compose_migrations_rejects_incomplete_post_install_schema(monkeypatch):
+    compatibility = iter([False, False])
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "mycelis", "DB_NAME": "cortex"})
+    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: next(compatibility))
+    monkeypatch.setattr(compose, "_compose_schema_nonempty", lambda env_values: False)
+    monkeypatch.setattr(
+        compose.db_tasks,
+        "_migration_files",
+        lambda: [Path("001_current_schema.sql")],
+    )
+    monkeypatch.setattr(compose, "_run_compose_migration_file", lambda migration, env_values: None)
+
+    with pytest.raises(SystemExit, match="did not satisfy the runtime schema contract"):
+        compose._run_compose_migrations()
 
 
 def test_compose_schema_bootstrapped_requires_all_runtime_objects(monkeypatch):
     monkeypatch.setattr(compose.db_tasks, "SCHEMA_COMPATIBILITY_CHECKS", [("a", "sql"), ("b", "sql"), ("c", "sql")])
-    monkeypatch.setattr(compose, "_compose_check_results", lambda checks, env_values: [("a", True), ("b", True), ("c", False)])
+    responses = iter([True, True, False])
+    monkeypatch.setattr(compose, "_compose_query_succeeds", lambda sql, env_values=None: next(responses))
 
     assert compose._compose_schema_bootstrapped({"TEST_ENV": "1"}) is False
 
 
 def test_compose_schema_bootstrapped_accepts_current_runtime_schema(monkeypatch):
     monkeypatch.setattr(compose.db_tasks, "SCHEMA_COMPATIBILITY_CHECKS", [("a", "sql"), ("b", "sql")])
-    monkeypatch.setattr(compose, "_compose_check_results", lambda checks, env_values: [("a", True), ("b", True)])
+    monkeypatch.setattr(compose, "_compose_query_succeeds", lambda sql, env_values=None: True)
 
     assert compose._compose_schema_bootstrapped({"TEST_ENV": "1"}) is True
 
@@ -547,7 +515,7 @@ def test_compose_storage_health_checks_long_term_storage(monkeypatch, capsys):
     assert "Long-Term Storage Health" in out
     assert "pgvector extension" in out
     assert "semantic context vectors" in out
-    assert "conversation continuity" in out
+    assert "conversation_turns table" in out
     assert "managed exchange items" in out
     assert "Long-term storage ready" in out
 
