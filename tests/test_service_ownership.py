@@ -6,7 +6,7 @@ import pytest
 from invoke import Context
 
 from ops import db as db_tasks
-from ops import interface_runtime as interface
+from ops import interface_runtime as interface, service_ownership
 from ops import interface_processes, lifecycle
 from tests.interface_task_support import FakeContext
 
@@ -32,6 +32,62 @@ def test_cleanup_managed_interface_listeners_skips_foreign_port_range_pids():
     assert cleaned == [5102]
     assert killed == [5102]
     assert sleeps == [0.5]
+
+
+def test_rewritten_next_server_requires_exact_repo_interface_cwd(monkeypatch):
+    monkeypatch.setattr(
+        interface_processes.process_inspection,
+        "list_processes_by_pids",
+        lambda *_args, **_kwargs: [
+            {"pid": 41, "name": "next-server", "command": "next-server (v16.1.6)"},
+            {"pid": 42, "name": "next-server", "command": "next-server (v16.1.6)"},
+        ],
+    )
+    monkeypatch.setattr(
+        interface_processes.os,
+        "readlink",
+        lambda path: str(interface.INTERFACE_DIR) if path == "/proc/41/cwd" else "/srv/unrelated/interface",
+    )
+
+    processes = interface_processes.repo_local_interface_processes_for_pids(
+        [41, 42],
+        is_windows_func=lambda: False,
+        normalize_process_text=lambda value: value,
+    )
+
+    assert [process["pid"] for process in processes] == [41]
+    assert not interface_processes.matches_repo_local_interface_cwd(
+        "next-server", str(interface.INTERFACE_DIR / ".next")
+    )
+
+
+def test_frontend_ownership_falls_back_to_ss_when_lsof_is_unavailable(monkeypatch):
+    class Result:
+        stdout = 'LISTEN users:(("next-server",pid=42,fd=22))'
+
+    calls: list[list[str]] = []
+
+    def run(command, **_kwargs):
+        calls.append(command)
+        if command[0] == "lsof":
+            raise FileNotFoundError("lsof")
+        return Result()
+
+    monkeypatch.setattr(
+        service_ownership,
+        "repo_local_interface_processes_for_pids",
+        lambda pids, **_kwargs: [{"pid": pids[0]}],
+    )
+
+    pid = service_ownership.owned_frontend_pid_on_port(
+        3000,
+        is_windows_func=lambda: False,
+        normalize_process_text=lambda value: value,
+        run=run,
+    )
+
+    assert pid == 42
+    assert [call[0] for call in calls] == ["lsof", "ss"]
 
 
 def test_stop_runs_tree_kill_for_repo_owned_listener_on_windows(monkeypatch):

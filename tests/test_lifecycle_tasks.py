@@ -8,6 +8,7 @@ from pathlib import Path
 from ops import db as db_tasks
 from ops import lifecycle
 
+
 def test_memory_restart_runs_order_and_probes(monkeypatch):
     order: list[str] = []
     probe_calls: list[tuple[str, float, dict[str, str] | None]] = []
@@ -207,11 +208,9 @@ def test_down_kills_detected_compiled_go_services(monkeypatch):
     )
     from ops import interface as interface_tasks
 
-    monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: False)
-    monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: None)
     monkeypatch.setattr(lifecycle, "_owned_core_pid_on_port", lambda _port: None)
     monkeypatch.setattr(lifecycle, "_owned_frontend_pid_on_port", lambda _port: None)
-    monkeypatch.setattr(lifecycle, "_wait_for_port_closed", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: None)
     monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
     monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
     monkeypatch.setattr(lifecycle, "_run_best_effort", lambda cmd, timeout=10: None)
@@ -227,9 +226,9 @@ def test_down_kills_detected_compiled_go_services(monkeypatch):
 def test_down_fails_when_compiled_go_inspection_fails(monkeypatch):
     from ops import interface as interface_tasks
 
-    monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: False)
+    monkeypatch.setattr(lifecycle, "_owned_core_pid_on_port", lambda _port: None)
+    monkeypatch.setattr(lifecycle, "_owned_frontend_pid_on_port", lambda _port: None)
     monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: None)
-    monkeypatch.setattr(lifecycle, "_wait_for_port_closed", lambda *args, **kwargs: True)
     monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
     monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
     monkeypatch.setattr(lifecycle, "_run_best_effort", lambda cmd, timeout=10: None)
@@ -357,7 +356,8 @@ def test_status_uses_ollama_tags_when_tcp_snapshot_misses(monkeypatch, capsys):
 def test_down_fails_when_repo_local_interface_residuals_remain(monkeypatch):
     from ops import interface as interface_tasks
 
-    monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: False)
+    monkeypatch.setattr(lifecycle, "_owned_core_pid_on_port", lambda _port: None)
+    monkeypatch.setattr(lifecycle, "_owned_frontend_pid_on_port", lambda _port: None)
     monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: None)
     monkeypatch.setattr(lifecycle, "_kill_compiled_go_services", lambda: [])
     monkeypatch.setattr(lifecycle, "_wait_for_port_closed", lambda *args, **kwargs: True)

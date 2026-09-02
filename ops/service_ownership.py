@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 from typing import Callable
 
@@ -74,6 +75,12 @@ def owned_frontend_pid_on_port(
             pids = [int(line) for line in result.stdout.splitlines() if line.strip().isdigit()]
         except (subprocess.SubprocessError, OSError, ValueError):
             pids = []
+        if not pids:
+            try:
+                result = run(["ss", "-ltnp", f"sport = :{port}"], capture_output=True, text=True, timeout=5)
+                pids = sorted({int(value) for value in re.findall(r"pid=(\d+)", result.stdout)})
+            except (subprocess.SubprocessError, OSError, ValueError):
+                pids = []
     processes = repo_local_interface_processes_for_pids(
         pids,
         is_windows_func=is_windows_func,
