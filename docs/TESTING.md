@@ -330,7 +330,7 @@ Also run `logging.check-schema` and `logging.check-topics` when event, log, or N
 
 ## Memory And Storage Validation
 
-Run `uv run inv lifecycle.first-boot-proof` when memory, continuity, retained outputs, semantic storage, startup, or restart behavior changes. It replaces the older memory-only restart path by proving empty product state, generated-root cleanup, Core/Interface startup, and restart-stable bootstrap rows together.
+Run `uv run inv lifecycle.first-boot-proof` when memory, continuity, retained outputs, semantic storage, startup, or restart behavior changes. It proves empty product state, generated-root cleanup, Core/Interface startup, and restart-stable bootstrap rows together; requested Interface startup is a hard gate and reports `uv run inv interface.install` recovery when dependencies are absent.
 
 For Compose long-term storage, pair migrations with:
 ```bash
