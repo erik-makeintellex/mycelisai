@@ -1,4 +1,53 @@
-# Repository Standards
+# Mycelis Agent Rules
+
+These rules apply to all agents in this repository. The repository-specific contracts below remain in force.
+
+Priority: correctness → safety / authority → accepted architecture → tests / evidence → minimal change → token efficiency.
+
+## Read First And Scope
+
+- Search first; read narrow ranges. Inspect this file, the current task, relevant canonical PRD and owning architecture sections, files to edit, and nearby tests. Consult recovery/state when relevant. Do not scan the whole repository without reason.
+- Reuse existing Core contracts, registries, APIs, event spine, memory, execution, governance, tests, and task runners. Never invent parallel architecture. If an architecture conflict appears, stop and report the exact conflict.
+- Change only the requested scope. No opportunistic refactoring, unrelated formatting, broad renames, unnecessary dependencies, or new services when an existing seam works.
+- Inspect implementation first. Prefer small functions, stable contracts, explicit state, deterministic behavior, and fail-closed authority/security. Avoid duplicate registries, queues, approval systems, memory authority, hidden fallback, and magic provider behavior.
+
+## Authority And Effects
+
+- Preserve Human/Soma → BFF → Core → authority → execution. The browser does not orchestrate internal services. Core owns authorization; the BFF is a transport/session boundary, not a second authority.
+- NATS is transport, not authority. Models provide cognition, not authority. MCP/tool discovery, memory, provider keys, and prompts do not grant permission or establish agent identity.
+- Tool success is not Outcome success. Token EOF is not completion. An artifact candidate is not a trusted artifact.
+- Before an external effect, require the accepted contract: identity, current authority, immutable grant, capability binding, reservation when needed, durable invocation, ownership, and audit.
+- Never blindly retry an unknown external effect. Transport redelivery does not prove that an effect is safe to replay.
+- Enforce important security rules below prompts. Ask: "If the model ignores the prompt, what stops it?" If the answer is nothing, implementation is incomplete.
+
+## APIs, Events, Models, And Memory
+
+- Frontend code uses stable Mycelis APIs without exposing internal topology. Keep query, command, approval, control, and admin semantics distinct when their authority differs.
+- Browsers use Mycelis event projection, never raw NATS. Distinguish durable state from transient token data; preserve scope during reconnect/replay, make gaps explicit, and never infer success from stream close.
+- Brain semantics belong to Mycelis; provider/model routing is operational. Avoid unnecessary vendor/model coupling. Capabilities require evidence; unknown required capabilities fail closed. Embeddings follow generation privacy and egress discipline.
+- Memory is advisory context, never permission. Preserve provenance, scope, correction, deletion, and lifecycle; do not create another authoritative memory store.
+
+## Worktree Safety
+
+- Before branch or worktree mutation, inspect `git status`, the current branch, worktrees, and diff. One integration owner controls Git topology; agents must not mutate it concurrently.
+- Never destroy unknown work, wholesale-merge stale WIP, or delete untracked files without inspection. Destructive reset/deletion requires explicit task approval and recovery.
+
+## Evidence And Completion
+
+- Run the smallest owned tests first, then required gates. New behavior needs positive and negative tests, plus regression tests when relevant. Authority work requires adversarial negative proof. Do not write fake test-only implementations.
+- Completion needs current evidence: executed tests/builds, browser or DB proof, traces, artifacts, exact diffs, or reproducible commands. Old results are not current proof; fixture proof is not live proof; documentation proof is not runtime proof. State what was not verified.
+- Completion includes applicable code, tests, negative cases, migration/recovery, docs, evidence, and independent QA. An implementer does not self-certify final GO. Truth takes precedence over confidence.
+- Delegate only independent work, with one writer per overlapping code area. Use independent QA when required; keep subagent output concise. Do not spawn agents for trivial work.
+
+## Communication And Decisions
+
+- Be terse. Avoid repeating the task, obvious commands, reasoning narration, or long summaries. Use tables only when they save tokens. Default progress is at most eight lines.
+- Send useful progress for blockers, architecture conflicts, risky decisions, major phase completion, and final results. Use `STATUS: working|blocked|done`, then relevant `CHANGED`, `TEST`, `RISK`, and `NEXT` fields; omit empty fields.
+- Final responses default to `STATUS: GO | CONDITIONAL | BLOCKED`, with terse `CHANGED`, `TESTS`, real `RISKS`, and one-line `NEXT` as applicable. Target at most 120 words, or 50 for simple tasks, unless the task asks for more.
+- Resolve normal engineering choices without asking the human. Ask only for architecture conflicts, destructive actions, unknown valuable work, credential/production activation, required scope changes, or accepted-invariant changes.
+- Update the canonical owner when a contract changes. Planning notes are not product truth; do not create permanent duplicate authority docs. Retire superseded proposals when accepted text moves into canonical documentation.
+
+## Repository Standards
 
 This repository is Go-first for product/runtime work and Python-first for management automation.
 
