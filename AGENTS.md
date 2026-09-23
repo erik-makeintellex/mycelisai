@@ -47,6 +47,23 @@ Priority: correctness → safety / authority → accepted architecture → tests
 - Resolve normal engineering choices without asking the human. Ask only for architecture conflicts, destructive actions, unknown valuable work, credential/production activation, required scope changes, or accepted-invariant changes.
 - Update the canonical owner when a contract changes. Planning notes are not product truth; do not create permanent duplicate authority docs. Retire superseded proposals when accepted text moves into canonical documentation.
 
+## Development Model Routing
+
+Use the smallest model that passes the task's proof gate; optimize accepted results, not token price alone. These developer-agent choices do not configure Mycelis runtime providers.
+
+| Task | Model / effort |
+| --- | --- |
+| Narrow read-only search, inventory, evidence formatting | `gpt-6-luna` / high |
+| Routine coding, tests, automation, integration | `gpt-6-sol` / medium |
+| Concurrency, persistence, security review, difficult coding | `gpt-6-sol` / high |
+| Bounded architecture planning | `gpt-6-astra` / low |
+| Unresolved authority conflicts or hard design review | `gpt-6-astra` / high |
+
+- Give agents only the objective, owned paths, invariants, and proof gate; avoid full-history forks by default. Reuse a relevant reviewer rather than paying to reconstruct context.
+- One agent is the default; spawn only authorized, independent work. Escalate after a concrete failed proof or unresolved ambiguity, not for routine command execution. Return concise findings and source refs; do not repeat raw logs.
+- Record token usage, latency, and retries when the harness exposes them. Do not invent savings or confuse this session's primary model with future spawn settings.
+- Model/effort guidance follows [official Codex documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents); these assignments are repository operating choices, not capability guarantees.
+
 ## Repository Standards
 
 This repository is Go-first for product/runtime work and Python-first for management automation.

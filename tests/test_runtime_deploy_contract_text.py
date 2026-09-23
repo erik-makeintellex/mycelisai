@@ -68,7 +68,7 @@ def test_compose_runtime_maps_ai_host_into_provider_overrides():
     required_snippets = [
         "MYCELIS_PROVIDER_OLLAMA_ENDPOINT: ${MYCELIS_COMPOSE_OLLAMA_HOST:-http://host.docker.internal:11434}/v1",
         "MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT: ${MYCELIS_COMPOSE_OLLAMA_HOST:-http://host.docker.internal:11434}/v1",
-        'MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED: "true"',
+        'MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED: ${MYCELIS_COMPOSE_OLLAMA_ENABLED:-true}',
         "MYCELIS_PROVIDER_LOCAL_SOVEREIGN_ENDPOINT: ${MYCELIS_COMPOSE_OLLAMA_HOST:-http://host.docker.internal:11434}/v1",
     ]
 

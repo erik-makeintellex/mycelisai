@@ -94,11 +94,12 @@ Handles the rapid Docker Compose single-host runtime for development, same-machi
 - **Infra Up**: `uv run inv compose.infra-up` (postgres + nats only, Core/Interface stay down, readiness checks + owner-facing connection settings; add `--migrate` only when schema bootstrap is intentionally needed)
 - **Infra Health**: `uv run inv compose.infra-health` (PostgreSQL port/query readiness, NATS port, and NATS monitor only; no Core/UI health checks)
 - **Storage Health**: `uv run inv compose.storage-health` (post-migration PostgreSQL long-term storage gate for pgvector, semantic context vectors, durable memory, conversation continuity, artifacts, managed exchange, collaboration groups, templates, configuration revisions/activation, exact runtime-team manifests, and exact QA ownership)
-- **Warm Cognitive**: `uv run inv compose.warm-cognitive` (warms the configured Compose text model through the same Ollama endpoint Core uses before live browser proof)
+- **Warm Cognitive**: `uv run inv compose.warm-cognitive` (Ollama-only: warms its configured model through the same Ollama endpoint Core uses; does not certify vLLM)
 - **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface, with numbered stage output, optional `--wait-timeout=<seconds>`, and readiness on the configured PostgreSQL/NATS/Core/Interface host ports)
 - Compose `up` and `migrate` behave like the main `db.migrate` contract: they install the single current schema only into an empty public schema, make a true no-op when the complete schema and storage contract passes, and reject nonempty partial or incompatible schemas before executing the installer.
 - **Down**: `uv run inv compose.down`
 - **Health**: `uv run inv compose.health`
+- **Existing vLLM**: configure the explicit provider/profile settings in `.env.compose.example`; `MYCELIS_COMPOSE_OLLAMA_ENABLED=false` skips Ollama relay preparation. See [Operations](../docs/architecture/OPERATIONS.md#compose-tasks-opscomposepy). No new engine is started.
 - **Status**: `uv run inv compose.status`
 - **Logs**: `uv run inv compose.logs`
 - Compose uses `.env.compose` so host/container assumptions stay separate from the local-Kubernetes `.env` path.

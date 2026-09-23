@@ -145,3 +145,6 @@ Capture:
 - whether retry or refresh recovered
 
 Never include raw credentials, tokens, or secret environment values.
+
+
+For a Compose install using existing local vLLM, `/v1/models` must expose the configured model from the Core container. `compose.health` checks platform endpoints and text readiness; it does not prove tool calling or successful Outcome delivery. `compose.warm-cognitive` remains Ollama-only. See [Operations](../architecture/OPERATIONS.md#compose-tasks-opscomposepy). Normal recovery preserves database/NATS volumes, credentials, memory, and generated outputs; never use volume deletion or first-boot reset to repair a retained installation.

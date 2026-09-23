@@ -81,7 +81,7 @@ profiles:
   chat: "ollama"
 ```
 
-- **Default Model:** `qwen2.5-coder:7b` (via Ollama).
+- **Shipped Ollama model:** `qwen3:14b`; deployment overrides must match the actual served model. The routing example above is illustrative, not the active host configuration.
 - **Agent Overrides:** Each agent can specify a custom `model` field to override the profile default.
 
 ## Optional LiteLLM Model Gateway
@@ -267,13 +267,13 @@ Use `MYCELIS_MEDIA_GATEWAY_ALLOW_PUBLIC_UPSTREAM=1` only when intentionally rout
 ## Local Model Switching
 
 Default local posture:
-- `ollama` is the default shipped provider and profile target
+- Shipped `admin` targets `ollama`; the other default profiles target `local-ollama-dev`. Compose enables the local Ollama aliases unless explicitly disabled.
 - `vllm` and `lmstudio` stay available but disabled until you opt in
 
 To switch from Ollama to another local engine:
-1. start the target engine
+1. discover and probe an already-running target engine first; start one only when needed and owned
 2. enable its provider entry in `core/config/cognitive.yaml` or `/settings` -> **AI Engines**
-3. confirm the endpoint matches the real server:
+3. confirm the endpoint matches the real server (these loopback examples apply to host-native Core; containers require reachable service/host addresses):
    - `ollama` -> `http://127.0.0.1:11434/v1`
    - `vllm` -> `http://127.0.0.1:8000/v1`
    - `lmstudio` -> `http://127.0.0.1:1234/v1`
@@ -314,6 +314,11 @@ Mycelis uses `nomic-embed-text` (768 dimensions) for semantic vector operations:
 | :--- | :--- | :--- | :--- |
 | **Tier 1 (Min)** | 16 GB | 7B Models (Q4) | Basic Coding, CLI |
 | **Tier 2 (Rec)** | 32 GB | 14B - 32B Models | Complex Architecture, Deep Reasoning |
-| **Tier 3 (Ultra)** | 64 GB+ | 70B+ or Multi-Model | **Enterprise Core** (Current Dev Host) |
+| **Tier 3 (Ultra)** | 64 GB+ | 70B+ or Multi-Model | Enterprise sizing example |
 
-The system auto-detects resources but defaults to the 7B model for speed.
+These are illustrative sizing categories, not detected host facts or model-fit guarantees. Check GPU VRAM, quantization, context/KV-cache requirements, and measured throughput on the actual host. Model selection is explicit; a cache directory without weight shards is not an installed model.
+
+
+### Token-efficient local routing
+
+Reuse and probe existing local engines before proposing downloads or remote providers. Choose models by measured task success, latency, token usage, and retries; a cheap model that repeatedly fails is not an optimization. Compose forwards the existing vLLM model/endpoint, token-budget, and explicit profile bindings described in [Operations](architecture/OPERATIONS.md#compose-tasks-opscomposepy). Set `MYCELIS_PROVIDER_VLLM_MAX_OUTPUT_TOKENS` and `MYCELIS_PROVIDER_VLLM_TOKEN_BUDGET_PROFILE` in `.env.compose`; defaults remain 1024 and `standard`. A 512-token `conservative` output cap is a starting point for short local answers, not a claim of optimum throughput or an input-context limiter. Provider caps are shared by roles bound to that provider; the current configuration does not invent per-role budgets. Longer coding/planning output needs an evaluated capable provider and explicit profile selection. Health/model discovery never certifies tool calling, embeddings, authority, or Outcome completion; missing capability proof remains a blocker. Keep remote providers disabled unless approved and keep Core policy/egress/authority checks intact. Codex development-agent model assignments live in `AGENTS.md`, separately from product routing.

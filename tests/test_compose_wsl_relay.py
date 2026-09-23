@@ -53,3 +53,34 @@ def test_wsl_ollama_relay_missing_restart_label_is_recreated():
 
     assert values["MYCELIS_COMPOSE_OLLAMA_HOST"] == "http://host.docker.internal:11435"
     assert calls == [("127.0.0.1", 11434, 11435)]
+
+
+def test_explicitly_disabled_ollama_does_not_probe_or_start_relay():
+    def unexpected(*args):
+        raise AssertionError("Disabled Ollama must not probe, inspect, or mutate a relay")
+
+    original = {"MYCELIS_COMPOSE_OLLAMA_ENABLED": "false"}
+    result = compose_wsl_relay.prepare_host(
+        original, docker_host_mode=unexpected, running_in_wsl=unexpected,
+        clean_env_value=lambda value: value.strip(), parse_network_endpoint=unexpected,
+        relay_port=unexpected, inspect_relay_labels=unexpected,
+        wsl_http_available=unexpected, ensure_relay=unexpected,
+    )
+    assert result == original
+    assert result is not original
+
+
+def test_invalid_ollama_switch_fails_before_service_changes():
+    import pytest
+
+    def unexpected(*args):
+        raise AssertionError("Invalid configuration must not mutate services")
+
+    with pytest.raises(SystemExit, match="must be true or false"):
+        compose_wsl_relay.prepare_host(
+            {"MYCELIS_COMPOSE_OLLAMA_ENABLED": "maybe"},
+            docker_host_mode=unexpected, running_in_wsl=unexpected,
+            clean_env_value=lambda value: value.strip(), parse_network_endpoint=unexpected,
+            relay_port=unexpected, inspect_relay_labels=unexpected,
+            wsl_http_available=unexpected, ensure_relay=unexpected,
+        )

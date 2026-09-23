@@ -130,6 +130,9 @@ uv run inv compose.down
 ```
 
 Compose is the supported single-host runtime lane. `.env.compose` owns container topology; `.env` remains the secret source.
+
+For an already-running local vLLM server, first discover its exact model with `GET /v1/models` and prove that endpoint from the Core container. Set `MYCELIS_COMPOSE_OLLAMA_ENABLED=false`, `MYCELIS_PROVIDER_VLLM_ENABLED=true`, `MYCELIS_PROVIDER_VLLM_ENDPOINT=http://host.docker.internal:8000/v1`, and `MYCELIS_PROVIDER_VLLM_MODEL_ID` to the discovered model in `.env.compose`. Set each intended `MYCELIS_PROFILE_<ROLE>_PROVIDER` (`ADMIN`, `ARCHITECT`, `CHAT`, `CODER`, `CREATIVE`, `OVERSEER`, `SENTRY`) to `vllm`; profile selection remains explicit, with no provider fallback. Keep any `MYCELIS_TEXT_ENGINE_API_KEY` in `.env`. The Compose example lists these settings. Ollama stays enabled by default; explicitly disabling it also skips the WSL Ollama-native `/api/tags` relay preparation. vLLM uses the existing OpenAI-compatible provider and `/v1/models`, not an Ollama API. Normal `compose.up --build` and `compose.health` remain the owning tasks. They do not start or replace the external inference server. Model discovery and readiness do not certify tool calling, embeddings, or successful Outcome delivery. Bound short-answer output with `MYCELIS_PROVIDER_VLLM_MAX_OUTPUT_TOKENS` and `MYCELIS_PROVIDER_VLLM_TOKEN_BUDGET_PROFILE`; see [AI Provider Runtime](../COGNITIVE_ARCHITECTURE.md#token-efficient-local-routing) for routing and proof limits.
+
 Full bring-up resolves PostgreSQL, NATS, Core, and Interface readiness from the configured `MYCELIS_COMPOSE_*_PORT` host bindings. PostgreSQL is published on `15432` by default for local Core and host clients; Compose Core always uses `postgres:5432`. A host `psql` binary is client-only and must not be treated as a second development server.
 The WSL release proof health-gates each live browser spec with `compose.health` because the runner executes specs through separate WSL shell invocations.
 
@@ -319,7 +322,7 @@ Open-standard resources include Deployment, Service, ServiceAccount, Secret, Con
 
 Docker Compose is rapid local development/proof only and must not become the production deployment standard. Use Compose for single-host self-hosted runtime. Keep `MYCELIS_COMPOSE_OLLAMA_HOST` container-reachable and avoid `localhost` unless it is meaningful inside the container path. use explicit reachable AI endpoints for deployed text or media engines instead of localhost assumptions; the Helm chart applies `MYCELIS_K8S_TEXT_ENDPOINT` through provider-specific env overrides.
 
-use a reachable Windows IP or hostname such as `http://192.168.x.x:11434/v1`, not `localhost`; Compose can auto-start a WSL-host relay for `MYCELIS_COMPOSE_OLLAMA_HOST`, that relay is restartable, and `compose.warm-cognitive` proves the configured text model can complete a tiny chat before live browser proof starts.
+use a reachable Windows IP or hostname such as `http://192.168.x.x:11434/v1`, not `localhost`; Compose can auto-start a WSL-host relay for `MYCELIS_COMPOSE_OLLAMA_HOST`, that relay is restartable, and `compose.warm-cognitive` proves the configured Ollama text model can complete a tiny chat before live browser proof starts. This warm task and the WSL wrapper’s warm step are Ollama-only; they do not certify vLLM. Verify vLLM through its actual `/v1/models` and a bounded inference from the consuming container.
 
 the compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root.
 

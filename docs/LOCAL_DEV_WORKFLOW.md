@@ -79,7 +79,7 @@ Common runtime variables:
 - `MYCELIS_NATS_SERVICE_ID`: stable lowercase deployment identity used to distinguish Mycelis runtime and observer clients on a shared broker; default `mycelis-core`
 - `MYCELIS_DEV_INFRA_MODE`: `compose` for the supported Docker PostgreSQL/NATS development data plane; `k8s` only for clustered bridge proof; native host PostgreSQL is unsupported
 - `MYCELIS_WORKSPACE`, `MYCELIS_ARTIFACT_ROOT`: governed output root and artifact/cache root; `DATA_DIR` is still honored as a legacy artifact alias, but new runtime config should set `MYCELIS_ARTIFACT_ROOT`
-- `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
+- `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable Ollama endpoint; existing vLLM uses `MYCELIS_PROVIDER_VLLM_ENDPOINT` and explicit profile bindings in the [Compose setup](architecture/OPERATIONS.md#compose-tasks-opscomposepy)
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
 - `MYCELIS_K8S_TEXT_MODEL_ID`: Kubernetes/Helm text model override
 - `MYCELIS_TEXT_ENGINE_API_KEY`: optional local vLLM credential, resolved by the engine launcher from the shell and then repo-local `.env` and used by Core through the `vllm` provider's `api_key_env`; no credential belongs in committed engine/provider YAML
@@ -160,7 +160,9 @@ uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
 ```
 
-Compose home runtime:
+Compose home runtime (reuse an existing local inference server before installing another):
+
+For vLLM, discover `/v1/models`, select the exact served model, and follow the explicit provider/profile/token-budget settings in [Operations](architecture/OPERATIONS.md#compose-tasks-opscomposepy). Host-native clients can use loopback; Core containers use a proven reachable host such as `host.docker.internal:8000/v1`. Disabling Ollama skips its WSL relay, not provider readiness proof.
 
 ```bash
 uv run inv compose.up --build --wait-timeout=240

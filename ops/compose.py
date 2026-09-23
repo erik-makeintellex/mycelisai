@@ -406,7 +406,7 @@ def infra_up(c, wait_timeout=180, migrate=False):
         3,
         3,
         "Connection handoff.",
-        "Keep credentials in .env.compose or the consuming deployment's configuration surface; do not bake them into images.",
+        "Keep credentials in .env or the consuming deployment's credential store; .env.compose is topology only.",
     )
     _print_data_plane_connection_guidance(env_values)
 

@@ -131,6 +131,11 @@ def prepare_host(
     ensure_relay: Callable[[str, int, int], None],
 ) -> dict[str, str]:
     values = dict(env_values)
+    ollama_enabled = clean_env_value(values.get("MYCELIS_COMPOSE_OLLAMA_ENABLED", "true")).lower()
+    if ollama_enabled not in {"true", "false"}:
+        raise SystemExit("MYCELIS_COMPOSE_OLLAMA_ENABLED must be true or false.")
+    if ollama_enabled == "false":
+        return values
     if not (docker_host_mode() == "wsl" or running_in_wsl()):
         return values
 

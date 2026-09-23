@@ -57,6 +57,8 @@ Typical fit:
 
 Recommended path:
 
+Before startup, inspect existing local inference services. To reuse vLLM, follow [Operations](../architecture/OPERATIONS.md#compose-tasks-opscomposepy) and the commented `.env.compose.example` settings: select the exact served model, enable vLLM, disable Ollama, and explicitly bind profiles. Keep credentials in `.env`; do not copy example files over an existing configured install. This does not install or replace an inference engine.
+
 Windows Rancher Desktop or Docker Desktop:
 
 ```powershell

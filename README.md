@@ -251,7 +251,7 @@ Supported user access lanes: source-mode local development with Dockerized Postg
 
 Deployment target contract: Kubernetes / Helm targets self-hosted and enterprise deployment using standard Kubernetes resources; Docker Compose remains rapid local development, demo, and same-machine proof runtime, not the clustered deployment contract. Run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` and cover Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. Local Windows K3s proof uses `MYCELIS_K8S_BACKEND=rancher` against Rancher Desktop.
 
-AI endpoint contract: use a reachable host/IP like `http://192.168.x.x:11434/v1`, not `localhost`; for Compose point it at a host-reachable endpoint such as `http://host.docker.internal:11434`; WSL proof may auto-start a WSL-host relay for the AI endpoint when needed. Release posture permits a WSL source loopback endpoint only when its scheme and port exactly match that explicit `host.docker.internal` Compose contract, covering Windows mirrored networking without weakening other loopback checks. K8s deployments can set `MYCELIS_K8S_TEXT_ENDPOINT` plus `MYCELIS_K8S_TEXT_MODEL_ID`; the Helm chart projects provider endpoint/model env vars and opens explicit AI egress ports only when configured.
+Ollama endpoint contract: use a reachable host/IP like `http://192.168.x.x:11434/v1`, not `localhost`; for Compose point it at a host-reachable endpoint such as `http://host.docker.internal:11434`; WSL proof may auto-start a WSL-host relay for the AI endpoint when needed (Ollama only; the explicit vLLM path skips this relay). Release posture permits a WSL source loopback endpoint only when its scheme and port exactly match that explicit `host.docker.internal` Compose contract, covering Windows mirrored networking without weakening other loopback checks. K8s deployments can set `MYCELIS_K8S_TEXT_ENDPOINT` plus `MYCELIS_K8S_TEXT_MODEL_ID`; the Helm chart projects provider endpoint/model env vars and opens explicit AI egress ports only when configured.
 
 Kubernetes values contract: prefer Rancher Desktop K3s on Windows and `k3d` on WSL/Linux as the local Kubernetes backends; prefer `k3d` as the local Kubernetes backend when it is available on WSL/Linux; set `MYCELIS_K8S_BACKEND=kind` only as fallback. `MYCELIS_K8S_VALUES_FILE` may select `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`.
 
@@ -290,7 +290,9 @@ Bootstrap reminder: normal startup fails closed unless a valid bootstrap bundle 
 
 ## Cross-Platform Setup
 
-Windows is the source-edit and git surface. WSL is the guarded Compose proof checkout for install, build, tests, Compose, and live GUI validation. Rancher Desktop K3s is the Windows local Kubernetes proof lane for Helm/commercial-release parity.
+Compose can reuse an existing local vLLM server through explicit provider/profile settings; discover local availability before requesting remote infrastructure. See [Operations](docs/architecture/OPERATIONS.md#compose-tasks-opscomposepy) and `.env.compose.example`. Ollama remains the default; no inference engine is installed automatically.
+
+For an explicitly configured Windows/WSL lane, Windows is the source-edit and git surface. WSL is the guarded Compose proof checkout for install, build, tests, Compose, and live GUI validation. Native Linux and other supported configured lanes remain valid; discover the actual host and service owner first. Rancher Desktop K3s is the Windows local Kubernetes proof lane for Helm/commercial-release parity.
 
 Compose projects the same `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` references into Core and Interface. When either value is omitted, both containers use the repo-local `MYCELIS_API_KEY` fallback; deployment-specific secret values belong in `.env` and must remain identical across both services.
 
