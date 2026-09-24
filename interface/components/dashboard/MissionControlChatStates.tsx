@@ -105,7 +105,7 @@ export function MissionControlEmptyState({
         : `Ask naturally, like a business request. ${assistantName} will clarify, shape, or ask before running anything meaningful.`;
 
     return (
-        <div className="flex h-full flex-col items-center justify-center px-4 text-cortex-text-muted sm:px-6">
+        <div className="flex min-h-full flex-col items-center justify-center px-4 text-cortex-text-muted sm:px-6">
             {showAdvancedRouting && broadcastMode ? (
                 <Megaphone className="w-8 h-8 mb-2 opacity-20" />
             ) : (

@@ -44,6 +44,10 @@ describe("useCortexStore confirm proposal team work refs", () => {
             json: async () => ({
                 data: {
                     run_id: "run-work-123456",
+                    verified: false,
+                    run_status: "running",
+                    execution_state: "running",
+                    execution_summary: { execution: { status: "running" }, proof: { verified: false } },
                     team_work_refs: [{
                         work_item_id: "work-alpha-123456",
                         state: "running",

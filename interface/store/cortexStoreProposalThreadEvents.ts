@@ -69,12 +69,15 @@ export function confirmationIsCompleted(body: unknown, responseStatus: number) {
     const data = isRecord(root.data) ? root.data : root;
     const summary = isRecord(data.execution_summary) ? data.execution_summary : {};
     const execution = isRecord(summary.execution) ? summary.execution : {};
-    const statuses = [
-        data.run_status, data.execution_status,
-        execution.status, summary.execution_status,
-    ];
-    if (data.verified === false || data.execution_state === 'running' || statuses.includes('running')) return false;
-    return data.verified === true || statuses.includes('completed');
+    const proof = isRecord(summary.proof) ? summary.proof : {};
+    return data.confirmed === true
+        && data.verified === true
+        && data.execution_state === 'verified'
+        && data.run_status === 'completed'
+        && execution.status === 'completed'
+        && proof.verified === true
+        && (data.execution_status === undefined || data.execution_status === 'completed')
+        && (summary.execution_status === undefined || summary.execution_status === 'completed');
 }
 
 export function configurationPendingEvent(

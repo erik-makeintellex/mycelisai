@@ -38,27 +38,26 @@ test.describe("Trusted Outcome Journey", () => {
       folder: j.folder,
     });
 
-    const popupPromise = page.waitForEvent("popup", { timeout: 5_000 }).catch(() => null);
-    await clickVisibleControl(page, page.getByRole("button", { name: new RegExp(`Open (file|app) .*${j.packageTitle}`, "i") }).last());
-    const outputPage = (await popupPromise) ?? page;
-    if (!outputPage.url().includes("/api/v1/workspace/files/view")) {
-      await outputPage.goto(`/api/v1/workspace/files/view?path=${encodeURIComponent(j.entrypoint)}`);
-    }
-    await expect(outputPage.getByRole("heading", { name: j.packageTitle })).toBeVisible();
-    await expect(outputPage.getByText("Recover, trust, and revisit this output.")).toBeVisible();
-    if (outputPage !== page) await outputPage.close();
-
-    if (outputPage === page) {
-      await page.goBack({ waitUntil: "domcontentloaded" });
-      const backToSoma = page.getByRole("link", { name: "Back to Soma" });
-      if (await backToSoma.isVisible()) await backToSoma.click();
-    }
+    const somaURL = new URL(page.url());
+    somaURL.searchParams.delete("fresh");
+    const returnTo = `${somaURL.pathname}${somaURL.search}${somaURL.hash}`;
+    await clickVisibleControl(page, page.getByTestId("soma-result-first-stage")
+      .getByRole("button", { name: new RegExp(`Open (file|app) .*${j.packageTitle}`, "i") })
+      .filter({ visible: true }).first());
+    await expect(page).toHaveURL(/\/outputs\/view\?/);
+    const canvas = page.frameLocator(`iframe[title="${j.packageTitle}"]`);
+    await expect(canvas.getByRole("heading", { name: j.packageTitle })).toBeVisible();
+    await expect(canvas.getByText("Recover, trust, and revisit this output.")).toBeVisible();
+    const backToSoma = page.getByRole("link", { name: "Back to Soma" });
+    await expect(backToSoma).toHaveAttribute("href", returnTo);
+    await backToSoma.click();
+    await expect(page).toHaveURL(`${somaURL.origin}${returnTo}`);
 
     const resultStage = page.getByTestId("soma-result-first-stage");
     await expect(resultStage).toBeVisible();
     await expect(resultStage.getByTestId("output-workbench")).toContainText(j.packageTitle);
-    await resultStage.getByText("Details and proof").last().click();
-    await clickVisibleControl(page, resultStage.getByRole("button", { name: /Open .*folder/i }).last());
+    await resultStage.getByText("Details and proof").filter({ visible: true }).first().click();
+    await clickVisibleControl(page, resultStage.getByRole("button", { name: /Open .*folder/i }).filter({ visible: true }).first());
     await expect(page.getByText(/Folder opened|Folder access blocked|Opened folder/i).last()).toBeVisible();
 
     const proof = await apiFetch<Envelope<{ run_id?: string; confidence?: string; summary?: string }>>(
@@ -104,7 +103,7 @@ test.describe("Trusted Outcome Journey", () => {
     await expect(page.getByText("Input needed").first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: new RegExp(`(?:Open app|Open result) .*${j.packageTitle}`, "i") }).last()).toBeVisible({ timeout: 15_000 });
 
-    const reviewToggle = page.getByTestId("soma-workbench-panel-toggle");
+    const reviewToggle = page.getByTestId("soma-current-work-lane").getByRole("button", { name: /Respond/ });
     await expect(reviewToggle).toContainText("Respond", { timeout: 15_000 });
     await expect(reviewToggle).toContainText("1", { timeout: 15_000 });
     await reviewToggle.click();

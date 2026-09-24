@@ -60,7 +60,12 @@ describe('MissionControlChat execution summary', () => {
                                 capabilities: ['workflow.launch'],
                                 teams: ['Operations Team'],
                             },
-                            outputs: [{ title: 'Onboarding run package', url: '/runs/run-123' }],
+                            outputs: [{
+                                kind: 'document',
+                                title: 'Onboarding run package',
+                                path: 'generated/onboarding/run-package.md',
+                                proof: { path_boundary_status: 'verified', readback_status: 'verified' },
+                            }],
                             proof: [{ label: 'Audit proof', url: '/proof/proof-123' }],
                             audit_recovery: 'Audit event recorded; recovery snapshot available.',
                             next_step: 'Review the generated package before notifying operators.',
@@ -86,14 +91,14 @@ describe('MissionControlChat execution summary', () => {
             expect(screen.getByText('Operations Team')).toBeDefined();
             expect(screen.getByRole('link', { name: /Audit proof/i }).getAttribute('href')).toBe('/proof/proof-123');
             expect(screen.getByText('Onboarding run package')).toBeDefined();
-            expect(screen.getByRole('button', { name: /Open output Onboarding run package in a new browser window/i })).toBeDefined();
+            expect(screen.getByRole('button', { name: /Review document Onboarding run package in Mycelis/i })).toBeDefined();
             expect(screen.getByText('Review the generated package before notifying operators.')).toBeDefined();
         });
 
         fireEvent.click(screen.getByRole('button', { name: /Copy output quote for Onboarding run package/i }));
 
         await waitFor(() => {
-            expect(writeText).toHaveBeenCalledWith('> Onboarding run package\n/runs/run-123');
+            expect(writeText).toHaveBeenCalledWith('> Onboarding run package\n/api/v1/workspace/files/view?path=generated%2Fonboarding%2Frun-package.md');
             expect(screen.getByRole('button', { name: /Copied output quote/i })).toBeDefined();
         });
     });

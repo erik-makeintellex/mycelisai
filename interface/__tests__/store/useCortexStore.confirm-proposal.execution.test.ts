@@ -8,6 +8,56 @@ describe('useCortexStore confirm proposal execution', () => {
         resetCortexStore();
     });
 
+    function completedResponse(runId: string) {
+        return { data: {
+            confirmed: true,
+            run_id: runId,
+            verified: true,
+            run_status: 'completed',
+            execution_state: 'verified',
+            execution_summary: {
+                execution: { shape: 'guided_proposal', status: 'completed', summary: 'Approved action completed.' },
+                proof: { run_id: runId, verified: true, proof_id: `proof-${runId}` },
+            },
+        } };
+    }
+
+    it.each([
+        ['run id only', { run_id: 'run-sparse' }],
+        ['verified flag without proof', { run_id: 'run-sparse', verified: true }],
+        ['running with contradictory proof', {
+            run_id: 'run-sparse', verified: false, run_status: 'running', execution_state: 'running',
+            execution_summary: { execution: { status: 'completed' }, proof: { verified: true } },
+        }],
+        ['failed with contradictory proof', {
+            run_id: 'run-sparse', verified: true, run_status: 'failed', execution_state: 'failed',
+            execution_summary: { execution: { status: 'completed' }, proof: { verified: true } },
+        }],
+    ])('does not promote %s to a completed result', async (_caseName, data) => {
+        const proposal = {
+            intent: 'Write a file', teams: 1, agents: 1, tools: ['write_file'], risk_level: 'medium',
+            confirm_token: 'ct-sparse', intent_proof_id: 'ip-sparse',
+        };
+        useCortexStore.setState({
+            pendingProposal: proposal,
+            activeConfirmToken: proposal.confirm_token,
+            missionChat: [{ role: 'council', content: 'Write a file?', mode: 'proposal', proposal, proposal_status: 'active' }],
+            activeMode: 'proposal',
+        });
+        mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data }) })
+            .mockResolvedValueOnce({ ok: true, json: async () => ([]) });
+
+        expect(await useCortexStore.getState().confirmProposal()).toEqual({ ok: true, runId: 'run-sparse' });
+        const [original, receipt] = useCortexStore.getState().missionChat;
+        expect(original).toMatchObject({ proposal_status: 'confirmed_pending_execution', run_id: 'run-sparse' });
+        expect(original.execution_summary).toBeUndefined();
+        expect(receipt).toMatchObject({
+            ui_response_state: { label: 'Approval recorded' },
+            thread_events: [{ label: 'Approval recorded', status: 'confirmed' }],
+        });
+        expect(JSON.stringify([original, receipt])).not.toMatch(/Result verified|Result saved|Proof is available in Trust/);
+    });
+
     it('records an execution result and run id on successful confirmation without team work refs', async () => {
         useCortexStore.setState({
             pendingProposal: {
@@ -45,7 +95,12 @@ describe('useCortexStore confirm proposal execution', () => {
             json: async () => ({
                 data: {
                     run_id: 'run-123',
+                    verified: false,
+                    run_status: 'running',
+                    execution_state: 'running',
                     execution_summary: {
+                        execution: { shape: 'team_execution', status: 'running' },
+                        proof: { verified: false },
                         outputs: [
                             {
                                 id: 'workspace/logs/game.html',
@@ -68,6 +123,7 @@ describe('useCortexStore confirm proposal execution', () => {
 
         expect(useCortexStore.getState().activeMode).toBe('execution_result');
         expect(useCortexStore.getState().activeRunId).toBe('run-123');
+        expect(useCortexStore.getState().missionChat[0].proposal_status).toBe('confirmed_pending_execution');
         expect(useCortexStore.getState().durableWorkRefreshVersion).toBe(1);
         expect(mockFetch).toHaveBeenCalledWith('/api/v1/teams/detail');
         expect(useCortexStore.getState().missionChat.at(-1)?.content).toContain('Run run-123 started.');
@@ -121,12 +177,7 @@ describe('useCortexStore confirm proposal execution', () => {
         mockFetch
             .mockResolvedValueOnce({
                 ok: true,
-                json: async () => ({
-                    data: {
-                        run_id: 'run-rendered',
-                        verified: true,
-                    },
-                }),
+                json: async () => completedResponse('run-rendered'),
             })
             .mockResolvedValueOnce({
                 ok: true,
@@ -142,6 +193,11 @@ describe('useCortexStore confirm proposal execution', () => {
         expect(useCortexStore.getState().missionChat[0]).toMatchObject({
             proposal_status: 'executed',
             run_id: 'run-rendered',
+            execution_summary: { execution: { status: 'completed' }, proof: { verified: true } },
+        });
+        expect(useCortexStore.getState().missionChat.at(-1)).toMatchObject({
+            content: expect.stringContaining('verified result is available to review'),
+            thread_events: [{ kind: 'result_ready', status: 'completed' }],
         });
     });
 
@@ -197,12 +253,7 @@ describe('useCortexStore confirm proposal execution', () => {
         mockFetch
             .mockResolvedValueOnce({
                 ok: true,
-                json: async () => ({
-                    data: {
-                        run_id: 'run-visible',
-                        verified: true,
-                    },
-                }),
+                json: async () => completedResponse('run-visible'),
             })
             .mockResolvedValueOnce({
                 ok: true,

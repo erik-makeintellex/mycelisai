@@ -23,6 +23,7 @@ describe("OutputWorkbench path projection", () => {
     expect(outputWorkbenchItems(summary)).toEqual([
       {
         text: "generated/workbench-review/operator-note.md",
+        kind: "file",
         url: "/api/v1/workspace/files/view?path=generated%2Fworkbench-review%2Foperator-note.md",
         storagePath: "generated/workbench-review/operator-note.md",
         proofArtifactId: "proof-operator-note",

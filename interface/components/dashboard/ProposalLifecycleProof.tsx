@@ -3,18 +3,20 @@
 import { AlertTriangle, CheckCircle2, Clock3, ShieldOff, XCircle } from "lucide-react";
 import type { ProposalLifecycleStatus } from "@/store/useCortexStore";
 
-type RenderedProposalLifecycle = ProposalLifecycleStatus | "confirmed_pending_execution";
+type RenderedProposalLifecycle = ProposalLifecycleStatus | "confirmed_pending_execution" | "confirming";
 
 export default function ProposalLifecycleProof({
     lifecycle,
     runId,
+    running = false,
 }: {
     lifecycle: RenderedProposalLifecycle;
     runId?: string;
+    running?: boolean;
 }) {
     if (lifecycle === "active") return null;
 
-    const proof = proofFor(lifecycle, runId);
+    const proof = proofFor(lifecycle, runId, running);
     const Icon = proof.icon;
 
     return (
@@ -29,7 +31,15 @@ export default function ProposalLifecycleProof({
     );
 }
 
-function proofFor(lifecycle: RenderedProposalLifecycle, runId?: string) {
+function proofFor(lifecycle: RenderedProposalLifecycle, runId?: string, running = false) {
+    if (lifecycle === "confirming") {
+        return {
+            icon: Clock3,
+            label: "Approval sent",
+            detail: "Soma is checking the approval. No change is confirmed yet.",
+            className: "border-amber-400/25 bg-amber-400/10 text-amber-300",
+        };
+    }
     if (lifecycle === "executed" && runId) {
         return {
             icon: CheckCircle2,
@@ -41,8 +51,10 @@ function proofFor(lifecycle: RenderedProposalLifecycle, runId?: string) {
     if (lifecycle === "confirmed_pending_execution") {
         return {
             icon: Clock3,
-            label: "Approved, still running",
-            detail: "Approval was recorded. Wait for Soma to finish before relying on changes.",
+            label: running ? "Approved, still running" : "Approved, awaiting result",
+            detail: running
+                ? "Approval was recorded. Wait for Soma to finish before relying on changes."
+                : "Approval was recorded. Completion has not been verified.",
             className: "border-amber-400/25 bg-amber-400/10 text-amber-300",
         };
     }

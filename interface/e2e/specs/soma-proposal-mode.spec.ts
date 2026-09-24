@@ -35,14 +35,29 @@ function workIntentProposalEnvelope() {
 
 test.describe("Soma proposal mode", () => {
     test("starts a pending proposal from its primary action", async ({ page }) => {
-        await mockOrganizationWorkspace(page, () => proposalEnvelope());
+        await mockOrganizationWorkspace(page, () => {
+            const response = proposalEnvelope();
+            const body = response.body as { data: { payload: { proposal: Record<string, unknown> } } };
+            body.data.payload.proposal.execution_mode = "team_async";
+            return response;
+        });
         let confirmationCalls = 0;
         await page.route("**/api/v1/intent/confirm-action", async (route) => {
             confirmationCalls += 1;
             await route.fulfill({
                 status: 200,
                 contentType: "application/json",
-                body: JSON.stringify({ ok: true, data: { run_id: "run-button-approval" } }),
+                body: JSON.stringify({
+                    ok: true,
+                    data: {
+                        run_id: "run-button-approval",
+                        run_status: "running",
+                        confirmed: true,
+                        execution_state: "running",
+                        verified: false,
+                        execution_summary: { execution: { status: "running" }, proof: { verified: false } },
+                    },
+                }),
             });
         });
 
@@ -51,8 +66,44 @@ test.describe("Soma proposal mode", () => {
         await page.getByRole("button", { name: /^Start$/i }).click();
 
         await expect.poll(() => confirmationCalls).toBe(1);
-        await expect(page.getByText(/Soma started the work.*running, not complete/i)).toBeVisible();
+        const proposal = page.getByTestId("soma-proposal");
+        await expect(proposal.getByRole("heading", { name: "Confirmed, waiting for result" })).toBeVisible();
+        await expect(proposal.getByText("Approved, still running")).toBeVisible();
+        await expect(page.getByText("Work queued")).toBeVisible();
+        await expect(page.getByText("Action completed")).toHaveCount(0);
+        await expect(page.getByText("Result saved")).toHaveCount(0);
         await expect(page.getByRole("button", { name: /^(Start|Approve)$/i })).toHaveCount(0);
+    });
+
+    test("a run ID alone cannot claim a completed result", async ({ page }, testInfo) => {
+        await mockOrganizationWorkspace(page, () => proposalEnvelope());
+        const runId = "run-bare-approval";
+        let confirmationCalls = 0;
+        await page.route("**/api/v1/intent/confirm-action", async (route) => {
+            confirmationCalls += 1;
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ ok: true, data: { run_id: runId } }),
+            });
+        });
+
+        await openOrganization(page);
+        await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
+        await page.getByRole("button", { name: /^Start$/i }).click();
+
+        await expect.poll(() => confirmationCalls).toBe(1);
+        const proposal = page.getByTestId("soma-proposal");
+        await expect(proposal.getByRole("heading", { name: "Confirmed, waiting for result" })).toBeVisible();
+        await expect(proposal.getByText("Approved, awaiting result")).toBeVisible();
+        await expect(page.getByText("Approval recorded", { exact: true }).first()).toBeVisible();
+        await expect(page.getByText("Work queued", { exact: true })).toHaveCount(0);
+        await expect(page.getByText("Action completed")).toHaveCount(0);
+        await expect(page.getByText("Result saved")).toHaveCount(0);
+        await expect(page.getByText("Result verified")).toHaveCount(0);
+        await expect(page.getByText("Proof is available in Trust.")).toHaveCount(0);
+        await expect(page.getByRole("button", { name: /^(Start|Approve)$/i })).toHaveCount(0);
+        await testInfo.attach("bare-run-id-pending", { body: await page.screenshot(), contentType: "image/png" });
     });
 
     test("routes mutating requests through proposal mode and keeps cancel explicit", async ({ page }) => {

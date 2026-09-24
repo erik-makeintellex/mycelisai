@@ -59,8 +59,7 @@ function isDelegatedOrAsync(proposal: NonNullable<ChatMessage["proposal"]>): boo
 
 function hasVerifiedTerminalResult(message: ChatMessage): boolean {
     const status = (message.execution_summary?.execution?.status ?? message.execution_summary?.execution_status ?? "").trim().toLowerCase();
-    if (status === "verified") return true;
-    if (!["complete", "completed", "success", "succeeded"].includes(status)) return false;
+    if (!["verified", "complete", "completed", "success", "succeeded"].includes(status)) return false;
 
     const proof = message.execution_summary?.proof;
     const proofs = Array.isArray(proof) ? proof : proof ? [proof] : [];
@@ -89,9 +88,12 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const hasRunProof = Boolean(message.run_id?.trim());
     const delegatedOrAsync = isDelegatedOrAsync(proposal);
     const verifiedTerminalResult = hasVerifiedTerminalResult(message);
-    const renderedLifecycle = lifecycle === "executed" && (!hasRunProof || (delegatedOrAsync && !verifiedTerminalResult))
-        ? "confirmed_pending_execution"
-        : lifecycle;
+    const renderedLifecycle = lifecycle === "confirmed_pending_execution" && message.ui_response_state?.label === "Approval sent"
+        ? "confirming"
+        : lifecycle === "executed" && (!hasRunProof || !verifiedTerminalResult)
+            ? "confirmed_pending_execution"
+            : lifecycle;
+    const explicitlyRunning = (message.execution_summary?.execution?.status ?? message.execution_summary?.execution_status ?? "").trim().toLowerCase() === "running";
     const isActionable = renderedLifecycle === "active";
     const hasConfirmToken = Boolean(proposal.confirm_token?.trim());
     const hasIntentProof = Boolean(proposal.intent_proof_id?.trim());
@@ -120,6 +122,8 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
 
     const lifecycleLabel = renderedLifecycle === "cancelled"
             ? "Cancelled"
+        : renderedLifecycle === "confirming"
+            ? "Checking approval"
         : renderedLifecycle === "confirmed_pending_execution"
             ? "Confirmed, waiting for result"
             : renderedLifecycle === "executed"
@@ -138,7 +142,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                         {isActionable ? "I can start that." : lifecycleLabel}
                     </h3>
                 </div>
-                {!isActionable ? <ProposalLifecycleProof lifecycle={renderedLifecycle} runId={message.run_id} /> : null}
+                {!isActionable ? <ProposalLifecycleProof lifecycle={renderedLifecycle} runId={message.run_id} running={explicitlyRunning} /> : null}
 
                 <div className="space-y-2">
                     {isActionable ? (

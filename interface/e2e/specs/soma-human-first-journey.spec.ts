@@ -38,6 +38,13 @@ async function installHumanFirstFixture(page: Page) {
   });
 
   await mockTeamsWorkspace(page);
+  await page.route("**/api/v1/workspace/files/view?path=**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "<!doctype html><html><body><h1>Playable Coin Runner</h1></body></html>",
+    });
+  });
 }
 
 async function expectHumanFirstInitialState(page: Page, target: ViewportTarget) {
@@ -67,17 +74,18 @@ async function expectHumanFirstInitialState(page: Page, target: ViewportTarget) 
 }
 
 async function openAndMeasureOutputReview(page: Page) {
-  const toggle = page.getByTestId("soma-workbench-panel-toggle");
+  const toggle = page.getByRole("button", { name: "Open Outcome Vault" });
   await expect(toggle).toBeVisible();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await toggle.click();
 
-  const outputSurface = page.getByTestId("soma-workbench-side-rail");
+  const outputSurface = page.getByTestId("soma-outcome-vault-overlay").getByRole("dialog", { name: "Outcome Vault" });
   await expect(outputSurface).toHaveAttribute("role", "dialog");
-  await expect(outputSurface).toHaveAttribute("aria-hidden", "false");
+  await expect(outputSurface).toHaveAttribute("aria-modal", "true");
   await expect(outputSurface).toBeInViewport();
   await expect(page.getByRole("dialog")).toHaveCount(1);
-  await page.waitForTimeout(250);
+  await expect(outputSurface.getByText("Coin Runner game", { exact: true }).first()).toBeVisible();
+  await expect(outputSurface.getByRole("heading", { name: "Saved results" })).toBeVisible();
 
   const bounds = await outputSurface.boundingBox();
   expect(bounds).not.toBeNull();
@@ -110,14 +118,28 @@ test.describe("Soma human-first journey gate", () => {
       expect(Math.abs(frameAfter!.width - frameBefore!.width)).toBeLessThanOrEqual(1);
 
       if (target.desktop) {
-        expect(outputBounds.width / actualViewport.width).toBeGreaterThanOrEqual(0.65);
-        expect(Math.abs(actualViewport.width - outputBounds.x - outputBounds.width)).toBeLessThanOrEqual(24);
+        expect(outputBounds.width).toBeGreaterThanOrEqual(360);
+        expect(outputBounds.x + outputBounds.width).toBeLessThanOrEqual(actualViewport.width);
       } else {
+        expect(outputBounds.width / actualViewport.width).toBeGreaterThanOrEqual(0.75);
         expect(outputBounds.x).toBeGreaterThanOrEqual(0);
         expect(outputBounds.y).toBeGreaterThanOrEqual(0);
         expect(outputBounds.x + outputBounds.width).toBeLessThanOrEqual(actualViewport.width);
         expect(outputBounds.y + outputBounds.height).toBeLessThanOrEqual(actualViewport.height);
       }
+
+      await page.getByRole("button", { name: "Close Outcome Vault", exact: true }).click();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(frame.getByRole("button", { name: "Play game Coin Runner game in Mycelis" })).toBeVisible();
+      await frame.getByRole("button", { name: "Play game Coin Runner game in Mycelis" }).click();
+      await expect(page).toHaveURL(/\/outputs\/view\?/);
+      await expect(page.frameLocator('iframe[title="Coin Runner game"]').getByRole("heading", { name: "Playable Coin Runner" })).toBeVisible();
+
+      const back = page.getByRole("link", { name: "Back to Soma" });
+      await expect(back).toHaveAttribute("href", `/dashboard?team_id=${focusedTeamID}`);
+      await back.click();
+      await expect(page).toHaveURL(new RegExp(`/dashboard\\?team_id=${focusedTeamID}$`));
+      await expect(page.getByTestId("central-soma-chat-frame").getByRole("textbox")).toBeInViewport();
     });
   }
 });

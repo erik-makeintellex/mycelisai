@@ -181,9 +181,17 @@ export async function installTrustedOutcomeJourneyMocks(page: Page) {
   await page.route("**/api/v1/intent/confirm-action", ok({
     data: {
       run_id: j.runId,
+      run_status: "completed",
+      confirmed: true,
       verified: true,
-      execution_state: "completed",
-      execution_summary: { outputs: [trustedOutput()], proof_artifact_id: j.proofArtifactId },
+      execution_state: "verified",
+      execution_summary: {
+        run_id: j.runId,
+        execution: { status: "completed" },
+        outputs: [trustedOutput()],
+        proof: { verified: true, proof_id: j.proofArtifactId },
+        proof_artifact_id: j.proofArtifactId,
+      },
     },
   }));
 

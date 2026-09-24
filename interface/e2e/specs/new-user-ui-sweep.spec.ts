@@ -140,14 +140,18 @@ async function signInFromStaleWorkUrl(browser: Browser, testInfo: TestInfo, view
   const page = await context.newPage();
   await page.goto("/groups", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/);
+  await submitLocalAdminSignIn(page);
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole("heading", { name: /Talk to Soma/i })).toBeVisible();
+  return { context, page };
+}
+
+async function submitLocalAdminSignIn(page: Page) {
   await page.getByLabel(/Local admin username/i).fill(process.env.MYCELIS_LOCAL_ADMIN_USERNAME || "admin");
   await page
     .getByLabel(/Password or local API key/i)
     .fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || "playwright-admin");
   await page.getByRole("button", { name: /Sign in as local admin/i }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByRole("heading", { name: /Talk to Soma/i })).toBeVisible();
-  return { context, page };
 }
 
 async function expectNoDocumentOverflow(page: Page, label: string) {
@@ -172,6 +176,32 @@ async function openNav(page: Page, testId: string, path: RegExp, heading: RegExp
 
 test.describe("New user UI sweep", () => {
   test.skip(({ browserName }) => browserName !== "chromium", "The broad UX sweep is stabilized in Chromium.");
+
+  test("sign-out clears browser authentication and a new sign-in restores access", async ({ browser }, testInfo) => {
+    const { context, page } = await signInFromStaleWorkUrl(browser, testInfo, { width: 1366, height: 768 });
+    try {
+      const signedIn = await page.request.get("/api/auth/session");
+      expect(signedIn.status()).toBe(200);
+      expect((await signedIn.json()).data.authenticated).toBe(true);
+
+      await page.getByRole("button", { name: "Sign out" }).click();
+      await expect(page).toHaveURL(/\/login(?:\?|$)/);
+      const signedOut = await page.request.get("/api/auth/session");
+      expect((await signedOut.json()).data.authenticated).toBe(false);
+      const denied = await page.request.get("/api/v1/groups", { headers: { Accept: "application/json" } });
+      expect(denied.status()).toBe(401);
+      expect((await denied.json()).error).toBe("authentication_required");
+
+      await page.goto("/groups", { waitUntil: "domcontentloaded" });
+      await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/);
+      await submitLocalAdminSignIn(page);
+      await expect(page).toHaveURL(/\/dashboard$/);
+      const restored = await page.request.get("/api/auth/session");
+      expect((await restored.json()).data.authenticated).toBe(true);
+    } finally {
+      await context.close();
+    }
+  });
 
   test("primary routes present obvious next actions without page errors", async ({ page }, testInfo) => {
     const { consoleIssues, networkIssues, pageErrors } = installErrorGuards(page);
@@ -246,6 +276,40 @@ test.describe("New user UI sweep", () => {
       await openNav(page, "nav-dashboard", /\/dashboard$/, /Talk to Soma/i);
       await expect(page.getByPlaceholder(/Tell Soma what you want/i)).toBeVisible();
 
+      if (viewport.name === "compact") {
+        const thread = page.getByTestId("soma-conversation-thread");
+        const measure = () => thread.evaluate((element) => {
+          const child = element.firstElementChild?.getBoundingClientRect();
+          const frame = element.getBoundingClientRect();
+          const heading = Array.from(element.querySelectorAll("p"))
+            .find((paragraph) => paragraph.textContent?.trim() === "Tell Soma what outcome you want.")
+            ?.getBoundingClientRect();
+          return {
+            scrollTop: element.scrollTop,
+            scrollHeight: element.scrollHeight,
+            clientHeight: element.clientHeight,
+            childTop: child?.top ?? null,
+            childBottom: child?.bottom ?? null,
+            frameTop: frame.top,
+            frameBottom: frame.bottom,
+            headingTop: heading?.top ?? null,
+            headingBottom: heading?.bottom ?? null,
+          };
+        });
+        await expect.poll(async () => {
+          const layout = await measure();
+          return layout.scrollTop === 0
+            && layout.headingTop !== null
+            && layout.headingBottom !== null
+            && layout.headingTop >= layout.frameTop - 1
+            && layout.headingBottom <= layout.frameBottom + 1;
+        }, { message: "compact Soma introduction should start visibly at the top of its thread" }).toBe(true);
+        const layout = await measure();
+        await testInfo.attach("compact-soma-intro-layout.json", {
+          body: JSON.stringify(layout, null, 2),
+          contentType: "application/json",
+        });
+      }
       await attachReviewArtifacts(page, testInfo, `authenticated-${viewport.name}-journey`);
       expect(pageErrors).toEqual([]);
       expect(consoleIssues).toEqual([]);

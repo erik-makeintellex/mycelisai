@@ -25,6 +25,13 @@ export function WorkTruthSummary({ item, compact = false }: { item: TeamWorkItem
   const isActive = item.state === "running" || item.state === "reviewing";
   const isDegraded =
     item.state === "degraded" || item.state === "needs_operator";
+  const pendingOutputNote = outputCount > 0
+    ? item.state === "running"
+      ? "Running, output may still change"
+      : item.state === "reviewing"
+        ? "Validation in progress; output is not ready"
+        : null
+    : null;
   const summaryTone = isDegraded
     ? "border-amber-400/25 bg-amber-400/10 text-amber-200"
     : isActive
@@ -57,6 +64,12 @@ export function WorkTruthSummary({ item, compact = false }: { item: TeamWorkItem
         <span>{outputText}</span>
         <span className="px-1.5 text-cortex-text-muted/70">/</span>
         <span>{proofText}</span>
+        {pendingOutputNote ? (
+          <>
+            <span className="px-1.5 text-cortex-text-muted/70">/</span>
+            <span>{pendingOutputNote}</span>
+          </>
+        ) : null}
         {isDegraded && item.recoveryOptions?.[0] ? (
           <>
             <span className="px-1.5 text-cortex-text-muted/70">/</span>
@@ -85,6 +98,11 @@ export function WorkTruthSummary({ item, compact = false }: { item: TeamWorkItem
       <span className="inline-flex max-w-full items-center gap-1 rounded border border-cortex-border bg-cortex-surface px-2 py-1 font-mono text-cortex-text-muted">
         <span className="truncate">{outputText}</span>
       </span>
+      {pendingOutputNote ? (
+        <span className="inline-flex max-w-full items-center rounded border border-cortex-border bg-cortex-surface px-2 py-1 text-cortex-text-muted">
+          {pendingOutputNote}
+        </span>
+      ) : null}
       <span className="inline-flex max-w-full items-center gap-1 rounded border border-cortex-border bg-cortex-surface px-2 py-1 font-mono text-cortex-text-muted">
         {proofCount > 0 ? (
           <CheckCircle2 className="h-3 w-3 shrink-0 text-cortex-success" />

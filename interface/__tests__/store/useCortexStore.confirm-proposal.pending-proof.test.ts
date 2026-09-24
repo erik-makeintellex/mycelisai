@@ -54,9 +54,9 @@ describe('useCortexStore confirm proposal pending proof', () => {
             proposal_status: 'confirmed_pending_execution',
             mode: 'proposal',
             ui_response_state: {
-                kind: 'running',
-                label: 'Started',
-                detail: 'Soma started the work. You can keep talking here while updates arrive.',
+                kind: 'proposal',
+                label: 'Approval recorded',
+                detail: 'Completion has not been verified.',
                 tone: 'info',
             },
             thread_events: [{
@@ -73,19 +73,19 @@ describe('useCortexStore confirm proposal pending proof', () => {
         expect(useCortexStore.getState().missionChat.at(-1)).toMatchObject({
             role: 'system',
             mode: 'proposal',
-            content: 'Proposal approved. Soma started the work. You can keep talking here while updates arrive.',
+            content: 'Proposal approved. Approval was recorded. Completion has not been verified.',
             ui_response_state: {
-                kind: 'running',
-                label: 'Started',
-                detail: 'Soma started the work. You can keep talking here while updates arrive.',
+                kind: 'proposal',
+                label: 'Approval recorded',
+                detail: 'Completion has not been verified.',
                 tone: 'info',
             },
             thread_events: [{
                 kind: 'execution_update',
-                label: 'Work queued',
-                detail: 'Soma handed off the approved work. It is queued until the team accepts it.',
+                label: 'Approval recorded',
+                detail: 'Soma received the approval. Completion has not been verified.',
                 tone: 'info',
-                status: 'queued',
+                status: 'confirmed',
                 source_kind: 'web_api',
                 source_channel: 'api.intent.confirm-action',
                 payload_kind: 'soma_thread_event',
@@ -133,9 +133,9 @@ describe('useCortexStore confirm proposal pending proof', () => {
             proposal_status: 'confirmed_pending_execution',
             mode: 'proposal',
             ui_response_state: {
-                kind: 'running',
-                label: 'Started',
-                detail: 'Soma started the work. You can keep talking here while updates arrive.',
+                kind: 'proposal',
+                label: 'Approval sent',
+                detail: 'Soma is checking the approval.',
                 tone: 'info',
             },
         });
@@ -169,10 +169,13 @@ describe('useCortexStore confirm proposal pending proof', () => {
             json: async () => ({ data: {
                 confirmed: true,
                 run_id: 'run-config',
+                verified: true,
+                run_status: 'completed',
+                execution_state: 'verified',
                 execution_summary: { execution: {
                     status: 'completed',
                     summary: 'Outcome Template "Delivery Brief" v2 saved with digest sha256:abc.',
-                } },
+                }, proof: { run_id: 'run-config', verified: true, proof_id: 'proof-config' } },
             } }),
         });
 
@@ -196,6 +199,42 @@ describe('useCortexStore confirm proposal pending proof', () => {
         expect(JSON.stringify(state.missionChat)).not.toMatch(/work bus|Work started|Run run-config started/i);
     });
 
+    it.each([
+        ['failed execution state', { execution_state: 'failed' }],
+        ['cancelled run', { run_status: 'cancelled' }],
+        ['unknown execution state', { execution_state: 'unknown' }],
+        ['contradictory execution status', { execution_status: 'failed' }],
+        ['missing proof', { execution_summary: { execution: { status: 'completed' }, proof: { verified: false } } }],
+        ['unconfirmed response', { confirmed: false }],
+    ])('does not claim a template was saved for %s', async (_caseName, override) => {
+        const proposal = {
+            intent: 'Save the template', teams: 0, agents: 0,
+            tools: ['store_config_document'], risk_level: 'medium',
+            confirm_token: 'ct-config-negative', intent_proof_id: 'ip-config-negative',
+        };
+        useCortexStore.setState({
+            pendingProposal: proposal, activeConfirmToken: proposal.confirm_token,
+            missionChat: [{ role: 'council', content: 'Save?', mode: 'proposal', proposal, proposal_status: 'active' }],
+            activeMode: 'proposal',
+        });
+        mockFetch.mockResolvedValueOnce({
+            ok: true, status: 200,
+            json: async () => ({ data: {
+                confirmed: true, verified: true, run_id: 'run-config-negative',
+                run_status: 'completed', execution_state: 'verified',
+                execution_summary: { execution: { status: 'completed' }, proof: { verified: true } },
+                ...override,
+            } }),
+        }).mockResolvedValueOnce({ ok: true, json: async () => ([]) });
+
+        await useCortexStore.getState().confirmProposal();
+
+        const state = useCortexStore.getState();
+        expect(state.missionChat[0].proposal_status).toBe('confirmed_pending_execution');
+        expect(state.missionChat.at(-1)?.thread_events?.[0]).toMatchObject({ label: 'Approval recorded', status: 'confirmed' });
+        expect(JSON.stringify(state.missionChat)).not.toMatch(/Template saved|Template active|Result verified|Result saved/);
+    });
+
     it('keeps a config-only 202 response visible as active work', async () => {
         const proposal = {
             intent: 'Save the template', teams: 0, agents: 0,
@@ -210,7 +249,7 @@ describe('useCortexStore confirm proposal pending proof', () => {
         mockFetch.mockResolvedValue({
             ok: true, status: 202,
             json: async () => ({ data: {
-                confirmed: true, verified: false, run_id: 'run-config-active', run_status: 'running',
+                confirmed: true, verified: false, run_id: 'run-config-active', run_status: 'running', execution_state: 'running',
                 execution_summary: { execution: { status: 'running' } },
             } }),
         });

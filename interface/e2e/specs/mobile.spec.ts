@@ -12,7 +12,12 @@ test.describe('Mobile Viewport', () => {
         await expect(errorOverlay).not.toBeVisible();
 
         await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Docs' })).toBeVisible();
+        const help = page.getByRole('link', { name: 'Help', exact: true });
+        await expect(help).toBeVisible();
+        await expect(help).toHaveAttribute('href', '/docs');
+        await help.click();
+        await expect(page).toHaveURL(/\/docs(?:\?|$)/);
+        await expect(page.getByTestId('docs-navigation-pane')).toBeVisible();
     });
 
     test('hero content renders correctly on mobile', async ({ page }) => {

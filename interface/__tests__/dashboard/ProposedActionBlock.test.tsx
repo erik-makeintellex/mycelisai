@@ -137,15 +137,26 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage({ proposal_status: 'confirmed_pending_execution' })} />);
 
         expect(screen.getByText(/waiting for result/i)).toBeDefined();
-        expect(screen.getByText(/approved, still running/i)).toBeDefined();
+        expect(screen.getByText(/approved, awaiting result/i)).toBeDefined();
         expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
+    });
+
+    it('does not claim approval succeeded while confirmation is still in flight', () => {
+        render(<ProposedActionBlock message={buildMessage({
+            proposal_status: 'confirmed_pending_execution',
+            ui_response_state: { kind: 'proposal', label: 'Approval sent', tone: 'info' },
+        })} />);
+
+        expect(screen.getByText(/checking approval/i)).toBeDefined();
+        expect(screen.getByText(/no change is confirmed yet/i)).toBeDefined();
+        expect(screen.queryByText(/approved, awaiting result|approved, still running|action completed/i)).toBeNull();
     });
 
     it('does not claim verification for an executed proposal until run proof exists', () => {
         render(<ProposedActionBlock message={buildMessage({ proposal_status: 'executed' })} />);
 
         expect(screen.getByText(/waiting for result/i)).toBeDefined();
-        expect(screen.getByText(/approved, still running/i)).toBeDefined();
+        expect(screen.getByText(/approved, awaiting result/i)).toBeDefined();
         expect(screen.queryByText(/action completed/i)).toBeNull();
     });
 
@@ -153,10 +164,47 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage({ proposal_status: 'executed', run_id: 'run-123' })} />);
 
         expect(screen.getByText(/waiting for result/i)).toBeDefined();
-        expect(screen.getByText(/approved, still running/i)).toBeDefined();
+        expect(screen.getByText(/approved, awaiting result/i)).toBeDefined();
         expect(screen.queryByText(/action completed/i)).toBeNull();
         expect(screen.queryByText(/result verified/i)).toBeNull();
+        expect(screen.queryByText(/result saved/i)).toBeNull();
+        expect(screen.queryByText(/proof is available in trust/i)).toBeNull();
         expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
+    });
+
+    it('keeps a nondelegated run pending without explicit verified terminal proof', () => {
+        const message = buildMessage({ proposal_status: 'executed', run_id: 'run-123' });
+        message.proposal = { ...message.proposal!, tools: ['write_file'], team_expressions: [] };
+        render(<ProposedActionBlock message={message} />);
+
+        expect(screen.getByText(/approved, awaiting result/i)).toBeDefined();
+        expect(screen.queryByText(/action completed|result saved|proof is available in trust/i)).toBeNull();
+    });
+
+    it('shows a nondelegated result only with completed status and verified proof', () => {
+        const message = buildMessage({
+            proposal_status: 'executed', run_id: 'run-123',
+            execution_summary: {
+                execution: { shape: 'guided_proposal', status: 'completed' },
+                proof: { run_id: 'run-123', verified: true },
+            },
+        });
+        message.proposal = { ...message.proposal!, tools: ['write_file'], team_expressions: [] };
+        render(<ProposedActionBlock message={message} />);
+
+        expect(screen.getByText(/action completed/i)).toBeDefined();
+        expect(screen.getByText(/result saved/i)).toBeDefined();
+        expect(screen.getByText(/proof is available in trust/i)).toBeDefined();
+    });
+
+    it('shows a running state only when the execution summary says running', () => {
+        render(<ProposedActionBlock message={buildMessage({
+            proposal_status: 'confirmed_pending_execution', run_id: 'run-123',
+            execution_summary: { execution: { status: 'running' }, proof: { verified: false } },
+        })} />);
+
+        expect(screen.getByText(/approved, still running/i)).toBeDefined();
+        expect(screen.queryByText(/result saved|proof is available in trust/i)).toBeNull();
     });
 
     it('labels delegated work verified only with an explicit verified terminal result', () => {

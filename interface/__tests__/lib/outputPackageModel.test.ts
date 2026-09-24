@@ -77,5 +77,16 @@ describe("outputPackageModel", () => {
     expect(outputCanvasHref({ label: "External", url: "https://example.com/untrusted.html" })).toBeNull();
     expect(somaReturnHref("https://example.com/dashboard?team_id=other")).toBe("/dashboard");
     expect(somaReturnHref("/groups?group_id=other")).toBe("/dashboard");
+    expect(somaReturnHref("https://example.com/organizations/org-1")).toBe("/dashboard");
+    expect(somaReturnHref("/organizations/org-1/settings")).toBe("/dashboard");
+    expect(somaReturnHref("/organizations/org%2Fother")).toBe("/dashboard");
+  });
+
+  it("preserves the organization Soma context when returning from an output", () => {
+    const returnTo = "/organizations/org-1?team_id=team-2#latest";
+    expect(somaReturnHref(returnTo)).toBe(returnTo);
+    const href = outputCanvasHref({ label: "Result", storagePath: "generated/result.html", returnTo });
+    expect(href).not.toBeNull();
+    expect(new URL(href!, "http://mycelis.local").searchParams.get("return_to")).toBe(returnTo);
   });
 });

@@ -120,7 +120,7 @@ export default function MissionControlChat({
 
     useEffect(() => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            scrollRef.current.scrollTop = missionChat.length > 0 ? scrollRef.current.scrollHeight : 0;
         }
     }, [missionChat.length]);
 

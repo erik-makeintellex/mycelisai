@@ -16,6 +16,8 @@ The dashboard is organized as a threaded workspace:
 
 When the conversation is empty, Soma should help you enter naturally instead of presenting a stack of action cards. The empty thread should briefly cue the pattern: ask for the outcome, let Soma shape the path, and approve only when work should run. Example asks are shown as quoted language only; they are not buttons or a separate workflow menu.
 
+On compact screens, an empty conversation starts at the beginning of that guidance. Longer guidance scrolls within the conversation while the composer remains available; the introductory heading must not be clipped above the scrollable area.
+
 The default dashboard hides engine trace details for ordinary answers. Source/model badges, tool chips, consultation traces, and raw capability labels belong in advanced views, proof/review panels, Activity, or Inspect. The chat thread should show the answer first, then surface compact proposal, blocker, receipt, or recovery cards only when they change what the user can safely do next.
 
 The dashboard should not require you to scroll through setup panels before using Soma. Sign-in, role, provider, and scope details are available through Settings/System or proof details when you need to inspect them.
@@ -48,6 +50,8 @@ Soma should choose the lightest useful answer depth for the ask. A request for a
 Lightweight answers stay inside the normal conversation. A quick table, summary, or decision brief should not add approval buttons, tool-chip stacks, or run receipts unless Soma is actually proposing or reporting work. Ask `turn this into work` when you want Soma to move from answer to execution.
 
 When work will run once, on a schedule, as a continuing service, as a project, or as an extension to Soma, open `Details` to check how it can be stopped, retried, or recovered. These controls remain attached to the approved work after handoff and reload. They stay out of the default approval pause so the conversation remains readable.
+
+Approval and a run reference do not establish completion. When confirmation lacks explicit completion evidence, Soma keeps the result pending rather than showing a saved or verified result. Work that is explicitly running remains distinct from a response whose execution status is still unavailable. Template save/activation also requires coherent completed and verified evidence; a contradictory failed or unknown status never becomes a success label.
 
 Before creating teams, enabling MCP servers, assigning tools, changing capability bindings, using private services, or storing recurring behavior, Soma should:
 

@@ -91,6 +91,7 @@ describe("ActiveWorkLane", () => {
     expect(screen.getByText("Running, output may still change")).toBeDefined();
     expect(screen.getByText("1 package retained")).toBeDefined();
     expect(screen.getByText("Proof available")).toBeDefined();
+    expect(screen.queryByLabelText("Outcome health: Completed")).toBeNull();
   });
 
   it("opens retained project-package entrypoints and proof carried on output refs", () => {
@@ -125,6 +126,50 @@ describe("ActiveWorkLane", () => {
     expect(screen.getByText("1 package retained")).toBeDefined();
     expect(screen.getByText("Proof available")).toBeDefined();
     expect(screen.getByText("Proof proof-pa...")).toBeDefined();
+  });
+
+  it("keeps retained output provisional in compact running work", () => {
+    render(
+      <ActiveWorkLane
+        frame={false}
+        items={[{
+          ...baseItem,
+          outputRefs: [{
+            output_id: "out-running",
+            team_id: "team-alpha",
+            work_item_id: "work-1",
+            kind: "document",
+            label: "Draft brief",
+            storage_ref: "generated/launch/draft.md",
+          }],
+        }]}
+      />,
+    );
+
+    expect(screen.getByText("Running, output may still change")).toBeDefined();
+    expect(screen.queryByLabelText("Outcome health: Completed")).toBeNull();
+  });
+
+  it("keeps reviewing output provisional in full and compact work", () => {
+    const reviewing = {
+      ...baseItem,
+      state: "reviewing" as const,
+      outputRefs: [{
+        output_id: "out-reviewing",
+        team_id: "team-alpha",
+        work_item_id: "work-1",
+        kind: "document",
+        label: "Draft brief",
+        storage_ref: "generated/launch/draft.md",
+      }],
+    };
+    const { rerender } = render(<ActiveWorkLane items={[reviewing]} />);
+    expect(screen.getByText("Validation in progress; output is not ready")).toBeDefined();
+    expect(screen.queryByLabelText("Outcome health: Completed")).toBeNull();
+
+    rerender(<ActiveWorkLane frame={false} items={[reviewing]} />);
+    expect(screen.getByText("Validation in progress; output is not ready")).toBeDefined();
+    expect(screen.queryByLabelText("Outcome health: Completed")).toBeNull();
   });
 
   it("joins retained package folders with relative nested entrypoints", () => {
@@ -178,10 +223,13 @@ describe("ActiveWorkLane", () => {
       />,
     );
 
-    expect(screen.getAllByText("Needs recovery").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Outcome health: Degraded")).toBeDefined();
+    expect(screen.getByText("Recovery")).toBeDefined();
     expect(screen.getByText("No retained output yet")).toBeDefined();
     expect(screen.getByText("Proof pending")).toBeDefined();
     expect(screen.getByText("Recovery: Retry with retained context")).toBeDefined();
+    expect((screen.getByRole("button", { name: "Recover" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByLabelText("Outcome health: Completed")).toBeNull();
   });
 
   it("labels degraded retained outputs as unverified while keeping them inspectable", () => {

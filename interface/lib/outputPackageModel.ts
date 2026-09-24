@@ -97,7 +97,9 @@ export function somaReturnHref(returnTo?: string | null) {
   if (!returnTo) return "/dashboard";
   try {
     const parsed = new URL(returnTo, "http://mycelis.local");
-    if (parsed.origin !== "http://mycelis.local" || parsed.pathname !== "/dashboard") return "/dashboard";
+    const somaPath = parsed.pathname === "/dashboard"
+      || /^\/organizations\/[A-Za-z0-9_-]+$/.test(parsed.pathname);
+    if (parsed.origin !== "http://mycelis.local" || !somaPath) return "/dashboard";
     return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return "/dashboard";

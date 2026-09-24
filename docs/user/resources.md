@@ -18,6 +18,10 @@ Current resource menu:
 | Worker Profiles | Ready-made teammates and Soma-guided custom profile creation |
 The Resources page groups the default **Deliverables** result lane ahead of **Advanced resources** and renders the selected type inside a bounded work window. On phones and tablets, the groups remain one compact horizontally scrollable selector so the selected work surface stays near the top of the screen. On desktop, the same choices use a vertical list-detail menu with short descriptions. Selection is recorded in the page URL, survives refresh, and works with browser Back. Long tool lists, workspace folders, exchange records, and provider forms scroll inside the selected panel rather than turning the whole page into one long operator path.
 Retained outputs use the same Outcome Health labels as Soma and Work. Producing group/team identity remains available as advanced detail; it is not the user's result. A selectable group with retained user output is Completed; the badge describes operational state while proof and source material remain separate details.
+
+While work is running or being reviewed, its retained output may still change. Work keeps that warning visible alongside retained-output and proof information; a file or proof link alone does not mean the requested result is complete or trusted.
+
+Open an interactive result in Mycelis to review it in the output canvas. **Back to Soma** returns to the dashboard or organization workspace that opened it, preserving its team/query context. External URLs and unrelated routes are not accepted as return destinations.
 ---
 
 ## Connected Tools
