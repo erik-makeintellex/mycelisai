@@ -189,11 +189,13 @@ def test_old_architecture_docs_are_deleted_not_archived_or_exposed():
     assert not exposed, "Superseded docs should not be exposed: " + str(exposed)
 
 
-def test_product_architecture_library_contains_only_the_canonical_prd():
+def test_product_architecture_library_has_one_prd_and_scoped_counting_packet():
     architecture_library = ROOT / "docs" / "architecture-library"
     active_files = sorted(path.name for path in architecture_library.iterdir() if path.is_file())
 
-    assert active_files == ["MYCELIS_CANONICAL_PRD.md"]
+    assert active_files == ["G4_E10_DURABLE_INVOCATION.md", "MYCELIS_CANONICAL_PRD.md"]
+    packet = (architecture_library / active_files[0]).read_text()
+    assert "Product authority remains the [canonical PRD]" in packet
 
 
 def test_docs_review_contract_remains_visible():

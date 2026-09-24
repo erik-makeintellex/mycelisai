@@ -60,3 +60,27 @@ SCHEMA_COMPATIBILITY_CHECKS = (
     ("code_context_symbols table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'code_context_symbols';"),
     ("code_context_edges table", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'code_context_edges';"),
 )
+
+# Preserve the accepted pre-G4 compatibility gate for the bounded additive upgrade.
+BASE_SCHEMA_COMPATIBILITY_CHECKS = SCHEMA_COMPATIBILITY_CHECKS
+SCHEMA_COMPATIBILITY_CHECKS += (
+    ("effect grants", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'execution_effect_grants';"),
+    ("durable invocations", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'execution_invocations';"),
+)
+
+SCHEMA_COMPATIBILITY_CHECKS += (
+    ("effect grant state", "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='execution_effect_grant_state';"),
+    ("invocation idempotency", "SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.execution_invocations') AND conname='uq_effect_invocation_key' AND contype='u';"),
+    ("invocation recovery index", "SELECT 1 FROM pg_indexes WHERE schemaname='public' AND tablename='execution_invocations' AND indexname='idx_effect_invocations_recovery';"),
+)
+for _table, _columns in (
+    ("execution_effect_grants", ("id", "intent_proof_id", "execution_contract_id", "account_id", "user_id", "group_id", "membership_id", "capability_id", "authority_snapshot", "authority_digest", "binding_snapshot", "binding_digest", "input_snapshot", "input_digest", "unit_budget", "expires_at", "digest", "created_at")),
+    ("execution_effect_grant_state", ("grant_id", "reserved_units", "revoked_at", "revoked_by", "revoke_reason")),
+    ("execution_invocations", ("id", "grant_id", "account_id", "user_id", "group_id", "capability_id", "grant_digest", "authority_snapshot", "authority_digest", "binding_snapshot", "binding_digest", "input_snapshot", "input_digest", "idempotency_key", "reservation_units", "owner_token", "generation", "attempt", "state", "lease_until", "executing_at", "observed_at", "result", "reconciliation", "created_at", "updated_at")),
+):
+    _names = ",".join("'" + name + "'" for name in _columns)
+    SCHEMA_COMPATIBILITY_CHECKS += ((f"{_table} receipt columns", f"SELECT 1 WHERE (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='{_table}' AND column_name IN ({_names}))={len(_columns)};"),)
+
+SCHEMA_COMPATIBILITY_CHECKS += (("immutable effect grant trigger", "SELECT 1 FROM pg_trigger WHERE tgrelid=to_regclass('public.execution_effect_grants') AND tgname='trg_execution_effect_grants_immutable' AND tgenabled='O';"),)
+
+SCHEMA_COMPATIBILITY_CHECKS += (("immutable invocation identity trigger", "SELECT 1 FROM pg_trigger WHERE tgrelid=to_regclass('public.execution_invocations') AND tgname='trg_execution_invocations_identity_immutable' AND tgenabled='O';"),)

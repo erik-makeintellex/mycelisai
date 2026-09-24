@@ -26,6 +26,10 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if s.confirmInvocation(w, r, req.ConfirmToken) {
+		return
+	}
+
 	db := s.getDB()
 	if db == nil {
 		respondAPIError(w, "database not available", http.StatusServiceUnavailable)

@@ -19,6 +19,7 @@ import (
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/inputs"
+	"github.com/mycelis/core/internal/invocation"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/outputvalidation"
@@ -72,21 +73,23 @@ type AdminServer struct {
 	// Root-admin collaboration groups (DB-backed), with live bus monitor for status UI.
 	GroupBus *GroupBusMonitor
 	// V8 AI Organization entry flow support.
-	Organizations       *OrganizationStore
-	LoopProfiles        *LoopProfileStore
-	LoopResults         *LoopResultStore
-	LoopExecution       *LoopExecutionTracker
-	LoopScheduler       *LoopScheduler
-	TemplateBundlesPath string
-	Search              *searchcap.Service
-	CodeContext         *codecontext.Service
-	Inputs              *inputs.Service
-	Capabilities        *capabilities.Service
-	MCPToolExecutor     swarm.MCPToolExecutor
-	WorkerBackend       workers.WorkerBackend
-	DispatchOutbox      *dispatchoutbox.Store
-	WorkerAuthority     *workerauthority.Store
-	OutputValidator     outputvalidation.Validator
+	Organizations                  *OrganizationStore
+	LoopProfiles                   *LoopProfileStore
+	LoopResults                    *LoopResultStore
+	LoopExecution                  *LoopExecutionTracker
+	LoopScheduler                  *LoopScheduler
+	TemplateBundlesPath            string
+	Search                         *searchcap.Service
+	CodeContext                    *codecontext.Service
+	Inputs                         *inputs.Service
+	Capabilities                   *capabilities.Service
+	MCPToolExecutor                swarm.MCPToolExecutor
+	WorkerBackend                  workers.WorkerBackend
+	Invocations                    *invocation.Store
+	InvocationAdmissionUnavailable bool
+	DispatchOutbox                 *dispatchoutbox.Store
+	WorkerAuthority                *workerauthority.Store
+	OutputValidator                outputvalidation.Validator
 }
 
 func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, ex *exchange.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
@@ -135,6 +138,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		TemplateBundlesPath: "config/templates",
 		MCPToolExecutor:     mcpToolExecutor,
 		WorkerBackend:       configuredWorkerExecutionBackend(),
+		Invocations:         invocation.NewStore(db),
 		DispatchOutbox:      dispatchoutbox.NewStore(db),
 		WorkerAuthority:     workerauthority.NewStore(db),
 		OutputValidator:     configuredOutputValidator(),

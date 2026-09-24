@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from invoke import Context
+import pytest
 
 from ops import db as db_tasks
 from ops import lifecycle
@@ -88,3 +89,31 @@ def test_first_boot_proof_can_leave_services_running(monkeypatch):
     lifecycle.first_boot_proof.body(Context(), build=False, frontend=False, shutdown=False)
 
     assert events == ["down", "down"]
+
+
+def test_isolated_first_boot_uses_only_fixture_runner(monkeypatch):
+    calls = []
+    monkeypatch.setattr(lifecycle, "down", lambda _c: pytest.fail("source lifecycle down called"))
+    monkeypatch.setattr(db_tasks, "reset", lambda _c: pytest.fail("development database reset called"))
+    monkeypatch.setattr(
+        "ops.lifecycle_first_boot_isolated.run_isolated_first_boot",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    lifecycle.first_boot_proof.body(Context(), isolated=True, build=True)
+
+    assert calls == [{
+        "build": True,
+        "user_tables": lifecycle_first_boot.CLEAN_FIRST_BOOT_USER_TABLES,
+        "bootstrap_tables": lifecycle_first_boot.CLEAN_FIRST_BOOT_BOOTSTRAP_TABLES,
+    }]
+
+
+@pytest.mark.parametrize("kwargs", [{"frontend": False}, {"shutdown": False}])
+def test_isolated_first_boot_requires_full_proof_and_cleanup(monkeypatch, kwargs):
+    monkeypatch.setattr(
+        "ops.lifecycle_first_boot_isolated.run_isolated_first_boot",
+        lambda **_kwargs: pytest.fail("fixture started for an incomplete proof"),
+    )
+    with pytest.raises(SystemExit, match="requires frontend and shutdown"):
+        lifecycle.first_boot_proof.body(Context(), isolated=True, **kwargs)

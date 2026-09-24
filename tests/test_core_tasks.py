@@ -7,6 +7,7 @@ import tarfile
 import zipfile
 
 from invoke import Context
+import pytest
 
 from ops import core
 
@@ -23,9 +24,11 @@ class FakeContext(Context):
         super().__init__()
         self.commands: list[str] = []
         self.cd_paths: list[str] = []
+        self.run_kwargs: list[dict] = []
 
-    def run(self, command: str, **_kwargs) -> FakeResult:
+    def run(self, command: str, **kwargs) -> FakeResult:
         self.commands.append(command)
+        self.run_kwargs.append(kwargs)
         return FakeResult()
 
     @contextmanager
@@ -42,6 +45,37 @@ def test_compile_builds_repo_local_binary(monkeypatch):
 
     assert ctx.cd_paths == [str(core.CORE_DIR)]
     assert ctx.commands == ["go build -v -o bin/server ./cmd/server"]
+
+
+def test_core_test_defaults_to_full_package_set(monkeypatch):
+    ctx = FakeContext()
+    monkeypatch.setattr(core, "_task_env", lambda: {"GOCACHE": "/tmp/owned-go-cache"})
+
+    core.test.body(ctx)
+
+    assert ctx.cd_paths == [str(core.CORE_DIR)]
+    assert ctx.commands == ["go test ./..."]
+    assert ctx.run_kwargs == [{"env": {"GOCACHE": "/tmp/owned-go-cache"}}]
+
+
+def test_core_test_runs_focused_race_suite_without_shell_interpretation(monkeypatch):
+    ctx = FakeContext()
+    monkeypatch.setattr(core, "_task_env", lambda: {})
+
+    core.test.body(ctx, package="./internal/invocation", race=True, run="TestInvocation|TestHandleConfirmAction")
+
+    assert ctx.cd_paths == [str(core.CORE_DIR)]
+    assert ctx.commands == ["go test -race -run 'TestInvocation|TestHandleConfirmAction' -count=1 ./internal/invocation"]
+
+
+@pytest.mark.parametrize("package", ["", "/tmp/other", "-run=TestBad", "./../...", "./internal/../../other", "./internal/invocation;touch bad"])
+def test_core_test_rejects_nonpackage_target_before_running(package):
+    ctx = FakeContext()
+
+    with pytest.raises(SystemExit, match="repository-relative Go package"):
+        core.test.body(ctx, package=package)
+
+    assert ctx.commands == []
 
 
 def test_build_uses_compile_and_never_tags_latest(monkeypatch):

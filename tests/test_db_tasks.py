@@ -151,6 +151,7 @@ def test_migrate_skips_replay_when_schema_is_already_bootstrapped(monkeypatch, c
 
 
 def test_migrate_fails_closed_for_nonempty_incompatible_schema(monkeypatch):
+    monkeypatch.setattr(db_tasks, "upgrade_retained", lambda *_: False)
     monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
     monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
     monkeypatch.setattr(db_tasks, "schema_bootstrapped", lambda: False)

@@ -6,12 +6,12 @@
 
 | Field | Current state |
 | --- | --- |
-| Updated | 2026-09-23 |
-| Integration branch | `dev` |
+| Updated | 2026-09-24 |
+| Integration branch | Scoped reconstruction on `feature/g4-e10-durable-invocation`; integration target `dev`. |
 | Source-size policy | Authored source files target 350 lines with 10% tolerance; `quality.max-lines`, CI, and release proof enforce a 385-line maximum. Legacy caps remain exact no-regression exceptions only while files exceed 385 lines. |
 | Test-instance policy | Repository-local Playwright proof is single-owner across managed, external, and live-backend modes. `interface.e2e` holds a PID/session lease before port selection through final cleanup, so parallel agents fail fast rather than sharing reports, launching duplicate Interface processes, or stopping another run. |
-| Active slice | P0.10 slices A and B are `COMPLETE` on the local integration candidate. Core owns bindings, replay receipts, approval/command state, cursor/version CAS, and a non-dispatchable external-create intent. The separate Go Runs service owns authenticated protocol, PostgreSQL journaling, replay/recovery, and candidate manifests but has no executor or deployment package. B2 is `NEXT`; external execution remains unavailable. |
-| Production branch | Authenticated fetch on 2026-09-23 confirmed `main`/`origin/main` at `de95ed22` and `dev`/`origin/dev` at `4b4279e3` before local recovery documentation. `main` is an ancestor of `dev` (86 commits behind at that checkpoint). No promotion or push occurred. The operator now owns subsequent Git management; final delivery notes may remain uncommitted. |
+| Active slice | E10 counting authority checkpoint is `IN_REVIEW` for dev integration: real PostgreSQL invocation/HTTP race proof, capability race tests, 102 Python contracts, 14 docs tests, typecheck, source-size gate and isolated first boot/restart/cleanup pass. Earlier baseline:  P0.10 slices A and B are `COMPLETE` on the local integration candidate. Core owns bindings, replay receipts, approval/command state, cursor/version CAS, and a non-dispatchable external-create intent. The separate Go Runs service owns authenticated protocol, PostgreSQL journaling, replay/recovery, and candidate manifests but has no executor or deployment package. B2 is `NEXT`; external execution remains unavailable. |
+| Production branch | Authenticated fetch on 2026-09-23 confirmed `main`/`origin/main` at `de95ed22` and `dev`/`origin/dev` at `4b4279e3` before local recovery documentation. `main` is an ancestor of `dev` (86 commits behind at that checkpoint). No promotion or push occurred. The operator authorized local separation and integration on 2026-09-24; remote branches are unchanged. Recovery reference `recovery/mixed-delivery-20260924` preserves the complete candidate. |
 | Runtime posture | The 2026-09-02 first-boot and central-worker results below are historical proof, not this host’s runtime state. On 2026-09-23 this WSL2/Ubuntu checkout initially had no Mycelis containers, volumes, or local env files. Recovery uses the previously requested full Compose lane, fresh local credentials, and retained-volume-safe tasks. Existing external Open WebUI/vLLM containers are outside ownership. See Repository Recovery below for current proof and blockers. |
 | Delivery target | Trusted Outcome Journey and exact release-candidate certification remain the target shape, but every proof must now be clean-deploy compatible: the app starts from schema/config/secrets/storage roots only, shows no inherited user work, then lets Soma create the first Outcome, bounded team work, isolated deliverable, validation, completion summary, and direct open/reply/recover actions. |
 | Main release risk | Durable external framework execution remains unavailable until Core-minted run identity, exact correlation, durable binding/event replay, restart reconciliation, governed approval, idempotent stop, isolation, and candidate-result validation are implemented and proven without weakening central execution. LiteLLM separately remains uncertified for production model transport. Existing playable-output, manual novice, Compose, and Kubernetes gates remain open before promotion. |
@@ -157,3 +157,7 @@ clean feature proof
 ## Documentation Rule
 
 Do not add historical transcripts, architecture archives, temporary team plans, browser logs, or superseded doctrine here. Update this file when current status, accepted evidence, risks, or the immediate work order changes. Use Git history for prior checkpoints.
+
+## Scoped delivery reconstruction
+
+E10 counting authority, durable invocation and isolated lifecycle are the first reconstructed checkpoint. Runtime source is extracted from preserved candidate `5fcd40b8`; GUI, B2, SSO and C1 follow as separately scoped checkpoints. Current-checkpoint verification is required before integration; original candidate evidence remains historical until rerun. No remote push or production promotion.

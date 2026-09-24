@@ -4,6 +4,7 @@ from pathlib import Path
 
 from invoke import task, Collection
 from .config import CORE_DIR, ROOT_DIR
+from .db_upgrade import upgrade_retained
 from .db_schema import (
     CANONICAL_SCHEMA_NAME,
     PUBLIC_SCHEMA_NONEMPTY_SQL,
@@ -162,6 +163,8 @@ def _apply_migrations():
         return
 
     if schema_nonempty():
+        if upgrade_retained(MIGRATIONS_DIR / CANONICAL_SCHEMA_NAME, lambda sql: _run_psql(sql=sql)):
+            return
         raise SystemExit(
             f"Database '{db}' has a nonempty public schema that is incompatible with this Mycelis build. "
             "Back up any retained data, then use 'uv run inv db.reset' only for a disposable local database, "

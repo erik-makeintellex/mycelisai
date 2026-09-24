@@ -272,8 +272,8 @@ def test_run_compose_migrations_skips_replay_when_schema_is_compatible(monkeypat
     out = capsys.readouterr().out
     assert "skipping current-schema installation" in out
 
-
 def test_run_compose_migrations_fails_closed_for_nonempty_incompatible_schema(monkeypatch):
+    monkeypatch.setattr(compose.db_upgrade, "upgrade_retained", lambda *_: False)
     monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "mycelis", "DB_NAME": "cortex"})
     monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: False)
     monkeypatch.setattr(compose, "_compose_schema_nonempty", lambda env_values: True)

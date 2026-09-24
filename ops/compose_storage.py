@@ -34,6 +34,7 @@ def run_compose_psql(
             "psql",
             "-t",
             "-A",
+            "-v", "ON_ERROR_STOP=1",
             "-h",
             "127.0.0.1",
             "-U",
@@ -185,6 +186,7 @@ def run_compose_migrations(
     migration_files: Callable[[], list[Path]],
     run_migration_file: Callable[[Path, dict[str, str]], None],
     canonical_schema_name: str,
+    upgrade_retained=None,
 ):
     env_values = effective_env()
     if schema_bootstrapped(env_values):
@@ -195,6 +197,8 @@ def run_compose_migrations(
         return
 
     if schema_nonempty(env_values):
+        if upgrade_retained is not None and upgrade_retained(env_values):
+            return
         raise SystemExit(
             "Compose PostgreSQL has a nonempty public schema that is incompatible with this Mycelis build. "
             "Back up any retained data, then use 'uv run inv compose.down --volumes' only for disposable local data, "

@@ -1,3 +1,5 @@
+import re
+import shlex
 import shutil
 import tarfile
 import platform
@@ -95,10 +97,18 @@ def _package_release_archive(staging_dir: Path, archive_path: Path, target_os: s
         bundle.add(staging_dir, arcname=staging_dir.name)
 
 @task
-def test(c):
-    """Run Go Core Unit Tests."""
+def test(c, package="./...", race=False, run=""):
+    """Run Core tests; package/run select owned focused proof, race enables the detector."""
+    if not re.fullmatch(r"\./[A-Za-z0-9_./-]+", package) or ".." in package.split("/"):
+        raise SystemExit("package must be a repository-relative Go package pattern")
+    command = ["go", "test"]
+    if race:
+        command.append("-race")
+    if run:
+        command.extend(["-run", run, "-count=1"])
+    command.append(package)
     with c.cd(str(CORE_DIR)):
-        c.run("go test ./...", env=_task_env())
+        c.run(shlex.join(command), env=_task_env())
 
 
 @task

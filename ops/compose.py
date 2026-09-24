@@ -6,7 +6,7 @@ from invoke import task, Collection
 from . import compose_cognitive_warm
 from . import compose_env
 from . import compose_probe
-from . import compose_storage
+from . import compose_storage, db_upgrade
 from . import compose_wsl_relay
 from . import db as db_tasks
 from .config import (
@@ -297,7 +297,6 @@ def _run_compose_migration_file(migration: Path, env_values: dict[str, str]):
         db_name=_compose_db_name,
     )
 
-
 def _run_compose_migrations():
     compose_storage.run_compose_migrations(
         effective_env=_compose_effective_env,
@@ -306,6 +305,7 @@ def _run_compose_migrations():
         migration_files=db_tasks._migration_files,
         run_migration_file=_run_compose_migration_file,
         canonical_schema_name=db_tasks.CANONICAL_SCHEMA_NAME,
+        upgrade_retained=lambda env: db_upgrade.upgrade_retained(db_tasks.MIGRATIONS_DIR / db_tasks.CANONICAL_SCHEMA_NAME, lambda sql: _run_compose_psql(sql, env)),
     )
 
 

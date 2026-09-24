@@ -77,6 +77,10 @@ Delivery rule:
 
 ## Compatibility Baseline
 
+The active G4/E10 [minimum invocation acceptance packet](docs/architecture-library/G4_E10_DURABLE_INVOCATION.md) has independent architecture and implementation source QA GO. Counting-path authority, concurrency, process-death, unknown-effect and isolated first-boot proof pass; broader tool paths remain outside this certification.
+
+Use `uv run inv lifecycle.first-boot-proof --isolated --build` for disposable Compose startup/persistence proof beside retained services; the default first-boot task resets its configured local database. Focused Go proof uses `uv run inv core.test --package=./internal/invocation --race`; real persistence requires `MYCELIS_INVOCATION_TEST_DSN` pointing to an isolated schema-installed PostgreSQL fixture.
+
 The compatibility baseline is now inside the canonical PRD. Older versioned architecture docs were deleted from the active tree so current work does not split across historical doctrine. Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).
 
 ## Current Implementation State

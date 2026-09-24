@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/mycelis/core/internal/artifacts"
@@ -70,12 +71,17 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 
 	mcpLibrary := loadMCPLibrary(ctx, services.MCP, services.MCPPool)
 	services.Capabilities = capabilities.NewService(capabilities.Dependencies{
-		MCP:           services.MCP,
-		MCPLibrary:    mcpLibrary,
-		InternalTools: services.InternalTools,
-		Search:        services.Search,
-		DB:            core.SharedDB,
+		CountingEndpoint: os.Getenv("MYCELIS_COUNTING_ENDPOINT"),
+		MCP:              services.MCP,
+		MCPLibrary:       mcpLibrary,
+		InternalTools:    services.InternalTools,
+		Search:           services.Search,
+		DB:               core.SharedDB,
 	})
+	_, invocationRegistryErr := services.Capabilities.Refresh(ctx)
+	if invocationRegistryErr != nil {
+		log.Println("WARN: Invocation registry projection unavailable; effect admission disabled.")
+	}
 	if services.MetaArchitect != nil {
 		caps := buildSystemCapabilities(ctx, services.InternalTools, services.MCP, mcpLibrary)
 		services.MetaArchitect.SetCapabilities(caps)
@@ -105,7 +111,11 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 		services.EventStore,
 		services.RunsManager,
 	)
+	if invocationRegistryErr != nil {
+		adminSrv.InvocationAdmissionUnavailable = true
+	}
 	wireAdminServices(ctx, mux, core, adminSrv, services)
+	server.StartInvocationRecovery(ctx, adminSrv)
 	if core.SharedDB != nil {
 		if err := server.StartTeamWorkRecoveryReconciler(ctx, adminSrv); err != nil {
 			log.Printf("WARN: Team work recovery reconciler disabled: %v", err)

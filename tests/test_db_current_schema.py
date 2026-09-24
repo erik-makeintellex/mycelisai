@@ -82,7 +82,13 @@ def test_current_schema_is_the_only_installable_sql_file():
 
 def test_current_schema_matches_immutable_dev_manifest():
     raw = BASELINE.read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == BASELINE_SHA256
+    from ops.db_upgrade import BEGIN_MARKER, END_MARKER
+    start = raw.index(BEGIN_MARKER.encode())
+    end = raw.index(END_MARKER.encode()) + len(END_MARKER)
+    extension = raw[start + len(BEGIN_MARKER):end - len(END_MARKER)]
+    assert hashlib.sha256(extension).hexdigest() == "928cb8b1b823af89891f2df752f43cd2ad0910c5da460745fee3345e3f7685a5"
+    historical = raw[:start] + raw[end:].lstrip(b"\n")
+    assert hashlib.sha256(historical).hexdigest() == BASELINE_SHA256
     assert f"-- Source revision: {SOURCE_REVISION}\n".encode() in raw
     assert f"-- Source manifest SHA-256: {SOURCE_MANIFEST_SHA256}\n".encode() in raw
 

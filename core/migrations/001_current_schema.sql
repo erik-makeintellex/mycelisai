@@ -2447,4 +2447,113 @@ CREATE INDEX IF NOT EXISTS idx_worker_control_commands_pending
     ON worker_control_commands(run_id, state, created_at)
     WHERE state IN ('staged', 'pending', 'uncertain');
 
+-- BEGIN G4_E10_EXTENSION
+-- Counting-only effect admission. Grants are immutable; revocation and spent
+-- budget live in a separate row. The invocation receipt owns replay state.
+CREATE TABLE IF NOT EXISTS execution_effect_grants (
+    id UUID PRIMARY KEY,
+    intent_proof_id UUID NOT NULL UNIQUE REFERENCES intent_proofs(id),
+    execution_contract_id UUID NOT NULL REFERENCES execution_contracts(id),
+    account_id UUID NOT NULL REFERENCES accounts(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    group_id UUID NOT NULL REFERENCES groups(id),
+    membership_id UUID NOT NULL REFERENCES org_memberships(id),
+    capability_id TEXT NOT NULL,
+    authority_snapshot JSONB NOT NULL,
+    authority_digest TEXT NOT NULL,
+    binding_snapshot JSONB NOT NULL,
+    binding_digest TEXT NOT NULL,
+    input_snapshot JSONB NOT NULL,
+    input_digest TEXT NOT NULL,
+    unit_budget INTEGER NOT NULL CHECK (unit_budget BETWEEN 1 AND 100),
+    expires_at TIMESTAMPTZ NOT NULL,
+    digest TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_effect_grant_digests CHECK (
+        authority_digest ~ '^[0-9a-f]{64}$' AND binding_digest ~ '^[0-9a-f]{64}$'
+        AND input_digest ~ '^[0-9a-f]{64}$' AND digest ~ '^[0-9a-f]{64}$'
+    )
+);
+
+CREATE OR REPLACE FUNCTION reject_execution_effect_grant_mutation()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'execution effect grants are immutable';
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_execution_effect_grants_immutable ON execution_effect_grants;
+CREATE TRIGGER trg_execution_effect_grants_immutable
+    BEFORE UPDATE OR DELETE ON execution_effect_grants
+    FOR EACH ROW EXECUTE FUNCTION reject_execution_effect_grant_mutation();
+
+CREATE TABLE IF NOT EXISTS execution_effect_grant_state (
+    grant_id UUID PRIMARY KEY REFERENCES execution_effect_grants(id),
+    reserved_units INTEGER NOT NULL DEFAULT 0 CHECK (reserved_units >= 0),
+    revoked_at TIMESTAMPTZ,
+    revoked_by UUID REFERENCES users(id),
+    revoke_reason TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS execution_invocations (
+    id UUID PRIMARY KEY,
+    grant_id UUID NOT NULL REFERENCES execution_effect_grants(id),
+    account_id UUID NOT NULL REFERENCES accounts(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    group_id UUID NOT NULL REFERENCES groups(id),
+    capability_id TEXT NOT NULL,
+    grant_digest TEXT NOT NULL,
+    authority_snapshot JSONB NOT NULL,
+    authority_digest TEXT NOT NULL,
+    binding_snapshot JSONB NOT NULL,
+    binding_digest TEXT NOT NULL,
+    input_snapshot JSONB NOT NULL,
+    input_digest TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    reservation_units INTEGER NOT NULL DEFAULT 1 CHECK (reservation_units = 1),
+    owner_token UUID,
+    generation BIGINT NOT NULL DEFAULT 0 CHECK (generation >= 0),
+    attempt INTEGER NOT NULL DEFAULT 0 CHECK (attempt >= 0),
+    state TEXT NOT NULL DEFAULT 'ready' CHECK (state IN (
+        'ready','claimed','executing','observed','failed_before_effect',
+        'failed_known_no_effect','unknown_effect','verified','reconciled','cancelled'
+    )),
+    lease_until TIMESTAMPTZ,
+    executing_at TIMESTAMPTZ,
+    observed_at TIMESTAMPTZ,
+    result JSONB NOT NULL DEFAULT '{}'::jsonb,
+    reconciliation JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_effect_invocation_key UNIQUE (grant_id, idempotency_key),
+    CONSTRAINT chk_effect_invocation_key CHECK (idempotency_key = BTRIM(idempotency_key) AND idempotency_key <> '')
+);
+
+CREATE OR REPLACE FUNCTION reject_execution_invocation_identity_mutation()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF ROW(NEW.id, NEW.grant_id, NEW.account_id, NEW.user_id, NEW.group_id,
+           NEW.capability_id, NEW.grant_digest, NEW.authority_snapshot,
+           NEW.authority_digest, NEW.binding_snapshot, NEW.binding_digest,
+           NEW.input_snapshot, NEW.input_digest, NEW.idempotency_key,
+           NEW.reservation_units)
+       IS DISTINCT FROM
+       ROW(OLD.id, OLD.grant_id, OLD.account_id, OLD.user_id, OLD.group_id,
+           OLD.capability_id, OLD.grant_digest, OLD.authority_snapshot,
+           OLD.authority_digest, OLD.binding_snapshot, OLD.binding_digest,
+           OLD.input_snapshot, OLD.input_digest, OLD.idempotency_key,
+           OLD.reservation_units) THEN
+        RAISE EXCEPTION 'execution invocation identity is immutable';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_execution_invocations_identity_immutable ON execution_invocations;
+CREATE TRIGGER trg_execution_invocations_identity_immutable
+    BEFORE UPDATE ON execution_invocations
+    FOR EACH ROW EXECUTE FUNCTION reject_execution_invocation_identity_mutation();
+
+CREATE INDEX IF NOT EXISTS idx_effect_invocations_recovery
+    ON execution_invocations(state, lease_until) WHERE state IN ('ready','claimed','executing','unknown_effect');
+-- END G4_E10_EXTENSION
+
 COMMIT;

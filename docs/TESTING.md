@@ -106,17 +106,17 @@ Use this gate whenever deployment, startup, persistence, storage roots, migratio
 
 ```bash
 uv run inv lifecycle.first-boot-proof
+uv run inv lifecycle.first-boot-proof --isolated --build
 ```
 
 Acceptance:
-- PostgreSQL/pgvector, NATS/JetStream, and generated workspace folders start without user history.
-- Before the first ask, Groups, Runs, Outcomes, deliverables, conversations, recovery items, continuity vectors, generated packages, and user-created teams are empty.
+- PostgreSQL/pgvector, NATS/JetStream, and generated workspace folders start without user history; before the first ask, Groups, Runs, Outcomes, deliverables, conversations, recovery items, continuity vectors, generated packages, and user-created teams are empty.
 - Startup may recreate only idempotent bootstrap support such as schema, exchange registries, capability manifests, configured MCP/search/input definitions, built-in runtime identity, provider defaults, and required directories.
 - A Core restart after first boot must not duplicate bootstrap rows or create user work.
 - The first Soma-created Outcome must create its folders, retained output refs, proof/recovery records, and open-file/open-folder links from configuration plus approved execution only.
 - Missing prerequisites must render guided setup or recovery states, not raw backend errors or silent empty results.
 
-The task preserves the data-plane volumes and local workspace mounts, but it intentionally resets the application database and clears generated workspace output roots. Use it only when a fresh proof boundary is intended.
+The default task preserves data-plane volumes but resets the app database and generated output roots. Use `--isolated --build` while retaining Compose data: it creates a disposable project with private credentials, separate volumes/output, and loopback-only dynamic ports; installs the canonical schema; checks empty product tables and JetStream; probes Core, authenticated templates read, and Interface; restarts Core/Interface; and removes only fixture resources. Isolated mode requires Interface and shutdown. A Soma-created Outcome remains a separate live journey.
 
 ## User Interaction Delivery Gate
 Do not claim thorough release readiness from unit, type, or headless-only proof when the slice changes what the operator sees or approves.

@@ -3,11 +3,27 @@
 
 ## API TOC
 
+- [G4/E10 Counting Invocation](#g4e10-counting-invocation)
 - [Endpoints](#endpoints)
 - [Team result-contract completion](#team-result-contract-completion)
 - [Framework Runs Projection Contract](#framework-runs-projection-contract)
 - [Directed Execution Payloads](#directed-execution-payloads)
 - [Provider Auth Notes](#provider-auth-notes)
+
+## G4/E10 Counting Invocation
+
+Bounded non-secret certification; [contract and excluded paths](architecture-library/G4_E10_DURABLE_INVOCATION.md). `MYCELIS_COUNTING_ENDPOINT` explicitly enables the registry binding; empty disables it. Core-authenticated UUID must resolve to an active provisioned user/account and exactly one eligible identity-group membership with `counting.increment` permission. Local admin wildcard scope does not bypass this check. External subject/email mapping and delegated agents are not supported here.
+
+| Endpoint | Method | Request / result |
+| --- | --- | --- |
+| `/api/v1/invocations/proposals` | POST | `{group_id,counter,budget}` → existing proof/contract/confirm token. Budget 1–100; counter 1–64 letters/digits/underscore/hyphen. No effect. |
+| `/api/v1/invocations/tool-proposals` | POST | `{name:"counting.increment",arguments:{group_id,counter,budget}}` → same proposal. Model output is never execution authority. |
+| `/api/v1/intent/confirm-action` | POST | Existing `{confirm_token}` → immutable counting grant `{id,digest,...}` for this proposal. Same authenticated subject; no effect at confirmation. |
+| `/api/v1/invocations` | POST | `{grant_id,grant_digest,idempotency_key,input:{counter}}` → owned receipt. Exact duplicate returns same ID without another reservation/effect. |
+| `/api/v1/invocations/{id}` | GET | Scoped persisted receipt, state and sanitized evidence. |
+| `/api/v1/invocations/{id}/reconcile` | POST | `{observation,evidence:{source,summary,invocation_id,observed_count}}`; observation `committed`, `not_committed` or `still_unknown`. Evidence closure never retries or refunds. |
+
+Unknown fields and supplied identity/binding/credential fields are rejected. Responses use the standard API envelope: malformed request 400, absent authentication 401, authority denial 403, conflicting state 409, unavailable persistence 503. Adapter uncertainty is a durable receipt, not permission to retry; poll the receipt. A successful POST without independent count evidence is `observed`, not `verified`. Expired executing leases become `unknown_effect` through Core's bounded recovery pass. This does not certify legacy MCP/host/swarm/framework effects or provider-native tool calling.
 
 ## Endpoints
 

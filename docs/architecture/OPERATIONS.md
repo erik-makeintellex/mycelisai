@@ -110,6 +110,7 @@ uv run inv lifecycle.restart --frontend
 uv run inv lifecycle.down
 uv run inv lifecycle.down --include-data-plane
 uv run inv lifecycle.first-boot-proof
+uv run inv lifecycle.first-boot-proof --isolated --build
 ```
 
 `lifecycle.status` is the fast local snapshot. It reports process/port state and confirms Core through `/healthz` plus Ollama through `/api/tags` over loopback fallbacks. Use `lifecycle.health` for the deeper endpoint proof gate before claiming service readiness; its cognitive-status probe uses a longer client timeout than the endpoint's bounded provider probes so failures return as evidence instead of socket timeouts.
@@ -297,6 +298,8 @@ uv run inv lifecycle.first-boot-proof
 ```
 
 The task stops local app services, keeps Dockerized PostgreSQL/NATS volumes available, resets the app database, clears generated workspace output roots while preserving local mounts, starts Core/Interface, runs health checks, verifies empty user product state, restarts Core/Interface, and verifies bootstrap row counts remain stable. The next gate is one Soma-created Outcome from ask to approved execution, isolated deliverable, validation, direct open/reply/recover actions, and scoped cleanup.
+
+The `--isolated --build` form runs against a disposable full Compose project, with separate volumes, generated credentials, output root, and loopback-only dynamic ports. It does not call source lifecycle teardown or `db.reset` against the configured development database. It installs the current schema inside its own PostgreSQL container, checks empty product state and JetStream, probes Core and Interface, restarts the app containers, and removes only its fixture resources. A failed fixture teardown leaves its private fixture directory for exact project recovery; the retained `mycelis-home` project remains outside its cleanup scope.
 
 ## VI. CI/CD
 

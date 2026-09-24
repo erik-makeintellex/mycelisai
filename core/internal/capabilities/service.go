@@ -34,6 +34,7 @@ type SearchStatusProvider interface {
 }
 
 type Dependencies struct {
+	CountingEndpoint     string // Explicit opt-in; empty keeps fixture unavailable.
 	ExchangeCapabilities []exchange.CapabilityDefinition
 	MCP                  MCPRegistry
 	MCPLibrary           *mcp.Library
@@ -169,6 +170,9 @@ func (s *Service) derive(ctx context.Context, derivedAt time.Time) []Manifest {
 		out = append(out, m)
 	}
 
+	if manifest, enabled := countingManifest(s.deps.CountingEndpoint); enabled {
+		add(manifest)
+	}
 	for _, cap := range s.deps.ExchangeCapabilities {
 		add(manifestFromExchangeCapability(cap))
 	}

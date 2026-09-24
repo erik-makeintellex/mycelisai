@@ -71,6 +71,7 @@ export const DOC_MANIFEST: DocSection[] = [
         section: "Architecture",
         docs: [
             { slug: "mycelis-canonical-prd", label: "Mycelis Canonical PRD", path: "docs/architecture-library/MYCELIS_CANONICAL_PRD.md", description: "Single source for product thesis, UX, runtime architecture, governance, outcomes, capabilities, recovery, MVP scope, P0 delivery, and release gates" },
+            { slug: "g4-e10-invocation", label: "G4/E10 Invocation Contract", path: "docs/architecture-library/G4_E10_DURABLE_INVOCATION.md", description: "Bounded counting-capability authority, durable ownership, uncertainty, and acceptance gates; review status is recorded in the packet" },
             { slug: "arch-backend", label: "Backend", path: "docs/architecture/BACKEND.md", description: "Go packages, APIs, DB schema, NATS, and execution pipelines" },
             { slug: "arch-frontend", label: "Frontend", path: "docs/architecture/FRONTEND.md", description: "Routes, components, Zustand, and design system" },
         ],
