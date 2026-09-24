@@ -100,6 +100,7 @@ This repository is Go-first for product/runtime work and Python-first for manage
 
 - `main` is the production-promotion branch. `dev` is the shared integration branch. Product/runtime feature work must start from a clean, updated `dev` on an intentionally named `feature/*` branch unless the user explicitly asks for a different branch shape.
 - Keep each branch scoped to one reviewable slice. If work expands, split follow-on work into a new branch instead of letting one branch become a mixed backlog.
+- Keep one active feature branch per delivery goal; use scoped commits for its intermediate checkpoints, not additional checkpoint branches. Merge to `dev` only after proof, rerun affected integration gates, then remove the merged local feature branch and its owned temporary worktree.
 - Before engaging teams or implementing a substantial next slice, review current branch state, the active scoreboard, canonical PRD alignment, and likely proof gates. Write down the execution shape before spawning or redirecting agents.
 - Before spawning new sub-agents for any work, review existing open agentry for reuse or closure. Reuse relevant active agents when their context matches the slice; close completed, stale, duplicate, or no-longer-relevant agents before adding more background work.
 - Spawn narrowly scoped sub-agents without inherited long-thread context unless that history is essential. Close agents after handoff so persisted development sessions do not grow without bound.

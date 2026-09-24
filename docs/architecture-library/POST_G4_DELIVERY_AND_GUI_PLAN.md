@@ -8,7 +8,7 @@ This plan sequences accepted work and proof; it does not expand product authorit
 ## Starting point and delivery constraints
 
 - G4/E10 counting-path backend, architecture/implementation QA, real PostgreSQL, crash/reclaim, concurrency and isolated first boot passed. Its counting endpoint remains disabled on the retained installation.
-- Baseline is committed `dev` `7b36e734b14ff70239c2947713fd96150f5a7e6a`; delivery changes currently remain uncommitted on `feature/g4-e10-durable-invocation`. Erik owns Git reconciliation. Record the reviewed file state and deployed image identifiers until a new committed checkpoint exists; a SHA alone does not identify these changes.
+- Integration baseline is `7b36e734`. The mixed candidate and concurrent handoff are preserved through `836422f7`; preservation is not acceptance. Prime owns the single `feature/g4-e10-durable-invocation` worktree and scoped E10/GUI/B2/SSO/C1 commits. Redundant checkpoint branches are retired. After aggregate proof, merge to `dev`, rerun affected gates, then remove the merged feature/worktree; no push or promotion. C2 waits for this accepted checkpoint and its explicit authority contract.
 - Current configured lane is full Compose: UI `127.0.0.1:3000`, Core `127.0.0.1:8081`, PostgreSQL `127.0.0.1:15432`, NATS `4222`/monitor `8222`. Rediscover targets before execution; this plan is not a new health certificate.
 - Existing local vLLM on port `8000` has only small inference proof. Tool-call generation, complex package quality and embeddings are separate capabilities. Do not silently select remote inference or infer capability from a model name.
 - Do not activate framework execution, optional model gateways, experimental services or broad intervention UI merely to test navigation.
@@ -33,9 +33,9 @@ GUI repair scope: preserve truthful pending/running/completed states, provisiona
 
 ## C planning and delivery orchestration
 
-Status: C1 `COMPLETE` with independent architecture, source and final evidence QA GO; C2 `NEXT` for ownership/authority contract freeze. Preserve the operator-owned working tree and current running Compose installation; no Git topology mutation or optional worker activation. User authorized delivery orchestration on the current checkout after SSO recovery.
+Status: C1 has historical implementation/evidence QA `GO`; integration certification remains separate. C2 discovery findings are `IN_REVIEW`, not accepted architecture; runtime implementation is `BLOCKED` on the clean integration checkpoint and accepted authority contract. Preserve the running Compose installation; no worker activation, push or promotion is implied.
 
-Execution shape: reuse the three existing agents for independent source analysis, then one writer per owned area. Authority owner inspects current subject/grant/invocation and confirmation/outbox mapping. Transport owner inspects Runs client, pinned origins/TLS/credential resolution and duplicate/response-loss protocol. Independent reviewer audits proposed scope, bypasses and proof gates. Lead owns contract integration, canonical docs, shared schema/lifecycle and final proof; no agents run overlapping browser or deployment tasks.
+Execution shape: the concurrent delivery session completed three read-only reviews: authority (`c2_authority`), transport/reconciliation (`c2_protocol`), and architecture (`c2_review`). These are historical assignments, not active runtime writers. The Prime integration owner reconciled the two interrupted plan/state edits at `836422f7` and owns the exclusive integration worktree. Reuse existing independent QA for documentation and final no-loss review; only the Prime owner changes Git topology. No product-bus messages are needed for repository reconciliation. Subsequent implementation requires accepted ownership/provisioning rules and one writer per code area; shared schema/lifecycle and browser/deployment proof remain lead-owned.
 
 Freeze C against canonical PRD P0.10 and the existing G4/E10 ledger before implementation. No second registry, queue, approval or invocation authority; no external create before commit or current-authority check; no retry/fallback after uncertain acceptance. D supervisor, E controls/finalization, F adapter and broad UI remain follow-ons. Identify any missing authority contract explicitly and deliver its smallest approved prerequisite rather than inventing authority inside dispatch.
 
@@ -69,7 +69,7 @@ Existing confirmation creates team-work visibility after commit, while framework
 
 ### Active delivery team — 2026-09-24
 
-Status: `COMPLETE` for bounded B2 Compose delivery, with independent implementation/evidence QA GO. Disabled Helm packaging is rendered/tested; actual cluster enforcement remains REQUIRED. Existing G4/E10 and GUI changes remain preserved in the current checkout; operator owns Git. No merge, branch change or retained-stack activation is part of this assignment.
+Status: `COMPLETE` for bounded B2 Compose delivery, with independent implementation/evidence QA GO. Disabled Helm packaging is rendered/tested; actual cluster enforcement remains REQUIRED. This historical assignment did not authorize Git changes or retained-stack activation. Its candidate is preserved at `5fcd40b8`; current scoped integration is owned by the Prime integration owner.
 
 | Owner | Bounded work | Gate / exclusions |
 | --- | --- | --- |
