@@ -5,9 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -93,25 +95,42 @@ func canonicalBackendKind(kind BackendKind) BackendKind {
 	return BackendKind(strings.ToLower(strings.TrimSpace(string(kind))))
 }
 
-func validateFrameworkRunsConfig(cfg WorkerConfig, secrets SecretResolver) error {
-	baseURL, err := url.Parse(strings.TrimSpace(cfg.BaseURL))
-	if err != nil || baseURL.Host == "" || (baseURL.Scheme != "http" && baseURL.Scheme != "https") {
-		return fmt.Errorf("framework_runs base_url must be an absolute HTTP(S) URL")
+func validateFrameworkRunsConfig(cfg WorkerConfig, secrets SecretResolver, allowLoopbackHTTP bool) error {
+	baseURL, err := url.Parse(cfg.BaseURL)
+	if err != nil || baseURL.Host == "" || baseURL.Hostname() == "" || baseURL.Opaque != "" || cfg.BaseURL != strings.TrimSpace(cfg.BaseURL) {
+		return fmt.Errorf("framework_runs base_url must be one canonical HTTPS origin")
 	}
-	if baseURL.User != nil || baseURL.RawQuery != "" || baseURL.Fragment != "" {
-		return fmt.Errorf("framework_runs base_url must not contain credentials, query parameters, or fragments")
+	if strings.HasSuffix(baseURL.Host, ":") || (net.ParseIP(baseURL.Hostname()) != nil && net.ParseIP(baseURL.Hostname()).IsUnspecified()) {
+		return fmt.Errorf("framework_runs base_url must have a reachable canonical host and port")
 	}
-	if cfg.APIKeySecretRef != "" {
-		if !isManagedSecretRef(cfg.APIKeySecretRef) {
-			return fmt.Errorf("framework_runs api_key_secret_ref must be an env: or secret:// reference")
+	if portText := baseURL.Port(); portText != "" {
+		port, portErr := strconv.Atoi(portText)
+		if portErr != nil || port < 1 || port > 65535 || strconv.Itoa(port) != portText {
+			return fmt.Errorf("framework_runs base_url port must be canonical and between 1 and 65535")
 		}
-		if secrets == nil {
-			return fmt.Errorf("framework_runs api_key_secret_ref requires a secret resolver")
+	}
+	if baseURL.Scheme != "https" {
+		ip := net.ParseIP(baseURL.Hostname())
+		if !allowLoopbackHTTP || baseURL.Scheme != "http" || ip == nil || !ip.IsLoopback() {
+			return fmt.Errorf("framework_runs base_url must be one canonical HTTPS origin")
 		}
+	}
+	if baseURL.User != nil || strings.ContainsAny(cfg.BaseURL, "?#") || baseURL.RawQuery != "" || baseURL.ForceQuery || baseURL.Fragment != "" || baseURL.RawFragment != "" || baseURL.RawPath != "" || (baseURL.Path != "" && baseURL.Path != "/") {
+		return fmt.Errorf("framework_runs base_url must not contain credentials, query, fragment, or path prefix")
+	}
+	if cfg.APIKeySecretRef == "" || cfg.APIKeySecretRef != strings.TrimSpace(cfg.APIKeySecretRef) || !isManagedSecretRef(cfg.APIKeySecretRef) {
+		return fmt.Errorf("framework_runs api_key_secret_ref requires a managed env: or secret:// reference")
+	}
+	if secrets == nil {
+		return fmt.Errorf("framework_runs api_key_secret_ref requires a secret resolver")
 	}
 	for name, path := range map[string]string{"capabilities_endpoint": cfg.CapabilitiesPath, "health_endpoint": cfg.HealthPath} {
-		if path != "" && (!strings.HasPrefix(path, "/") || strings.HasPrefix(path, "//")) {
-			return fmt.Errorf("framework_runs %s must be an absolute API path", name)
+		want := "/v1/capabilities"
+		if name == "health_endpoint" {
+			want = "/health"
+		}
+		if path != "" && path != want {
+			return fmt.Errorf("framework_runs %s must be canonical local API path %s", name, want)
 		}
 	}
 	if cfg.PreferredProtocol != "" && cfg.PreferredProtocol != ProtocolRunsAPI {

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -29,12 +28,17 @@ type SecretResolver interface {
 // external completion is evidence for the Mycelis projection path, not direct
 // authority to finalize an Outcome.
 type FrameworkRunsBackend struct {
-	Config  WorkerConfig
-	Client  *http.Client
-	Secrets SecretResolver
+	config  WorkerConfig
+	origin  string
+	client  *http.Client
+	secrets SecretResolver
 }
 
 func NewFrameworkRunsBackend(cfg WorkerConfig, secrets SecretResolver) (*FrameworkRunsBackend, error) {
+	return newFrameworkRunsBackend(cfg, secrets, false)
+}
+
+func newFrameworkRunsBackend(cfg WorkerConfig, secrets SecretResolver, allowLoopbackHTTP bool) (*FrameworkRunsBackend, error) {
 	cfg.Backend = canonicalBackendKind(cfg.Backend)
 	if cfg.Backend == "" {
 		cfg.Backend = BackendFrameworkRuns
@@ -42,10 +46,11 @@ func NewFrameworkRunsBackend(cfg WorkerConfig, secrets SecretResolver) (*Framewo
 	if cfg.Backend != BackendFrameworkRuns {
 		return nil, fmt.Errorf("framework_runs backend kind is required")
 	}
-	if err := validateFrameworkRunsConfig(cfg, secrets); err != nil {
+	if err := validateFrameworkRunsConfig(cfg, secrets, allowLoopbackHTTP); err != nil {
 		return nil, err
 	}
-	cfg.BaseURL = strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
+	base, _ := url.Parse(cfg.BaseURL)
+	cfg.BaseURL = base.Scheme + "://" + base.Host
 	if cfg.HealthPath == "" {
 		cfg.HealthPath = "/health"
 	}
@@ -55,14 +60,9 @@ func NewFrameworkRunsBackend(cfg WorkerConfig, secrets SecretResolver) (*Framewo
 	if cfg.PreferredProtocol == "" {
 		cfg.PreferredProtocol = ProtocolRunsAPI
 	}
-	connectTimeout := durationMS(cfg.TimeoutPolicy.ConnectMS, defaultConnectTimeout)
-	runTimeout := durationMS(cfg.TimeoutPolicy.RunMS, defaultRunTimeout)
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.DialContext = (&net.Dialer{Timeout: connectTimeout, KeepAlive: 30 * time.Second}).DialContext
 	return &FrameworkRunsBackend{
-		Config:  cfg,
-		Client:  &http.Client{Transport: transport, Timeout: runTimeout},
-		Secrets: secrets,
+		config: cfg, origin: cfg.BaseURL,
+		client: newFrameworkHTTPClient(cfg.TimeoutPolicy), secrets: secrets,
 	}, nil
 }
 
@@ -77,7 +77,7 @@ func (b *FrameworkRunsBackend) CreateRun(ctx context.Context, req WorkerRunReque
 	if err != nil {
 		return WorkerRunHandle{}, err
 	}
-	protocol := selectProtocol(b.Config.PreferredProtocol, caps)
+	protocol := selectProtocol(b.config.PreferredProtocol, caps)
 	if protocol != ProtocolRunsAPI {
 		return WorkerRunHandle{}, WorkerBackendError("unsupported_protocol", "External worker backend does not expose a durable runs protocol.", true)
 	}
@@ -122,6 +122,9 @@ func validateWorkerCorrelation(req WorkerRunRequest) error {
 	if req.RunID != strings.TrimSpace(req.RunID) {
 		return fmt.Errorf("worker run_id must be canonical")
 	}
+	if err := validateFrameworkPathID("run_id", req.RunID); err != nil {
+		return err
+	}
 	for name, value := range map[string]string{
 		"intent_proof_id":       req.Correlation.IntentProofID,
 		"execution_contract_id": req.Correlation.ExecutionContractID,
@@ -149,20 +152,20 @@ func (b *FrameworkRunsBackend) StreamRunEvents(ctx context.Context, runID string
 }
 
 func (b *FrameworkRunsBackend) StreamRunEventsAfter(ctx context.Context, runID string, lastSequence int64) (<-chan WorkerEvent, error) {
-	if strings.TrimSpace(runID) == "" {
-		return nil, fmt.Errorf("worker run_id is required")
+	if err := validateFrameworkPathID("run_id", runID); err != nil {
+		return nil, err
 	}
 	if lastSequence < 0 {
 		return nil, fmt.Errorf("worker event cursor cannot be negative")
 	}
-	req, err := b.newRequest(ctx, http.MethodGet, "/v1/runs/"+url.PathEscape(runID)+"/events", nil)
+	req, err := b.newRequest(ctx, http.MethodGet, "/v1/runs/"+runID+"/events", nil)
 	if err != nil {
 		return nil, err
 	}
 	if lastSequence > 0 {
 		req.Header.Set("Last-Event-ID", strconv.FormatInt(lastSequence, 10))
 	}
-	res, err := b.Client.Do(req)
+	res, err := b.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("framework runs events request failed: %w", err)
 	}
@@ -233,19 +236,18 @@ func emitFrameworkStreamFailure(ctx context.Context, events chan<- WorkerEvent, 
 }
 
 func (b *FrameworkRunsBackend) GetRun(ctx context.Context, runID string) (WorkerRunHandle, error) {
-	canonicalRunID := strings.TrimSpace(runID)
-	if canonicalRunID == "" {
-		return WorkerRunHandle{}, fmt.Errorf("worker run_id is required")
+	if err := validateFrameworkPathID("run_id", runID); err != nil {
+		return WorkerRunHandle{}, err
 	}
 	var out map[string]any
-	if err := b.doJSON(ctx, http.MethodGet, "/v1/runs/"+url.PathEscape(canonicalRunID), nil, &out); err != nil {
+	if err := b.doJSON(ctx, http.MethodGet, "/v1/runs/"+runID, nil, &out); err != nil {
 		return WorkerRunHandle{}, err
 	}
 	handle, err := runHandleFromMap(out, BackendFrameworkRuns, ProtocolRunsAPI)
 	if err != nil {
 		return WorkerRunHandle{}, err
 	}
-	if handle.RunID != canonicalRunID {
+	if handle.RunID != runID {
 		return WorkerRunHandle{}, WorkerBackendError("run_identity_mismatch", "External worker backend did not preserve the authoritative Mycelis run_id.", false)
 	}
 	return handle, nil
@@ -253,7 +255,7 @@ func (b *FrameworkRunsBackend) GetRun(ctx context.Context, runID string) (Worker
 
 func (b *FrameworkRunsBackend) GetCapabilities(ctx context.Context) (WorkerCapabilities, error) {
 	var raw map[string]any
-	if err := b.doJSON(ctx, http.MethodGet, b.Config.CapabilitiesPath, nil, &raw); err != nil {
+	if err := b.doJSON(ctx, http.MethodGet, b.config.CapabilitiesPath, nil, &raw); err != nil {
 		return WorkerCapabilities{}, err
 	}
 	return capabilitiesFromMap(raw, BackendFrameworkRuns), nil
@@ -261,7 +263,7 @@ func (b *FrameworkRunsBackend) GetCapabilities(ctx context.Context) (WorkerCapab
 
 func (b *FrameworkRunsBackend) HealthCheck(ctx context.Context) (WorkerHealth, error) {
 	var raw map[string]any
-	if err := b.doJSON(ctx, http.MethodGet, b.Config.HealthPath, nil, &raw); err != nil {
+	if err := b.doJSON(ctx, http.MethodGet, b.config.HealthPath, nil, &raw); err != nil {
 		return WorkerHealth{}, err
 	}
 	healthy := boolValue(raw["healthy"])
@@ -273,7 +275,7 @@ func (b *FrameworkRunsBackend) doJSON(ctx context.Context, method, path string, 
 	if err != nil {
 		return err
 	}
-	res, err := b.Client.Do(req)
+	res, err := b.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("framework runs request failed: %w", err)
 	}
@@ -292,12 +294,7 @@ func (b *FrameworkRunsBackend) doJSON(ctx context.Context, method, path string, 
 }
 
 func (b *FrameworkRunsBackend) newRequest(ctx context.Context, method, path string, body any) (*http.Request, error) {
-	base, err := url.Parse(b.Config.BaseURL)
-	if err != nil {
-		return nil, fmt.Errorf("invalid framework_runs base_url: %w", err)
-	}
-	ref, err := url.Parse(path)
-	if err != nil {
+	if err := validateFrameworkRequestPath(path); err != nil {
 		return nil, err
 	}
 	var reader io.Reader
@@ -308,7 +305,7 @@ func (b *FrameworkRunsBackend) newRequest(ctx context.Context, method, path stri
 		}
 		reader = bytes.NewReader(data)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, base.ResolveReference(ref).String(), reader)
+	req, err := http.NewRequestWithContext(ctx, method, b.origin+path, reader)
 	if err != nil {
 		return nil, err
 	}
@@ -316,8 +313,8 @@ func (b *FrameworkRunsBackend) newRequest(ctx context.Context, method, path stri
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if b.Config.APIKeySecretRef != "" {
-		token, err := b.Secrets.ResolveSecret(ctx, b.Config.APIKeySecretRef)
+	if b.config.APIKeySecretRef != "" {
+		token, err := b.secrets.ResolveSecret(ctx, b.config.APIKeySecretRef)
 		if err != nil {
 			return nil, fmt.Errorf("resolve framework worker API credential: %w", err)
 		}

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
@@ -24,7 +23,7 @@ func (b *FrameworkRunsBackend) StopRunCommand(ctx context.Context, runID string,
 	if err := validateControl(runID, command.CommandID, command.ActorID, command.ExpectedVersion); err != nil {
 		return WorkerControlReceipt{}, err
 	}
-	receipt, err := b.postControl(ctx, "/v1/runs/"+url.PathEscape(runID)+"/stop", command, runID, command.CommandID)
+	receipt, err := b.postControl(ctx, "/v1/runs/"+runID+"/stop", command, runID, command.CommandID)
 	if err == nil && receipt.Kind != "stop" {
 		return WorkerControlReceipt{}, WorkerBackendError("invalid_backend_response", "External worker returned the wrong control kind.", false)
 	}
@@ -32,8 +31,8 @@ func (b *FrameworkRunsBackend) StopRunCommand(ctx context.Context, runID string,
 }
 
 func (b *FrameworkRunsBackend) SubmitApprovalCommand(ctx context.Context, runID string, approval WorkerApprovalDecision) (WorkerControlReceipt, error) {
-	if strings.TrimSpace(approval.ApprovalID) == "" {
-		return WorkerControlReceipt{}, fmt.Errorf("worker approval_id is required")
+	if err := validateFrameworkPathID("approval_id", approval.ApprovalID); err != nil {
+		return WorkerControlReceipt{}, err
 	}
 	if approval.Decision != DecisionApprove && approval.Decision != DecisionDeny {
 		return WorkerControlReceipt{}, fmt.Errorf("unsupported approval decision %q", approval.Decision)
@@ -41,7 +40,7 @@ func (b *FrameworkRunsBackend) SubmitApprovalCommand(ctx context.Context, runID 
 	if err := validateControl(runID, approval.CommandID, approval.ActorID, approval.ExpectedVersion); err != nil {
 		return WorkerControlReceipt{}, err
 	}
-	path := "/v1/runs/" + url.PathEscape(runID) + "/approvals/" + url.PathEscape(approval.ApprovalID)
+	path := "/v1/runs/" + runID + "/approvals/" + approval.ApprovalID
 	receipt, err := b.postControl(ctx, path, approval, runID, approval.CommandID)
 	if err == nil && receipt.Kind != string(approval.Decision) {
 		return WorkerControlReceipt{}, WorkerBackendError("invalid_backend_response", "External worker returned the wrong control kind.", false)
@@ -50,6 +49,9 @@ func (b *FrameworkRunsBackend) SubmitApprovalCommand(ctx context.Context, runID 
 }
 
 func validateControl(runID, commandID, actorID string, expectedVersion int64) error {
+	if err := validateFrameworkPathID("run_id", runID); err != nil {
+		return err
+	}
 	for label, value := range map[string]string{"run_id": runID, "command_id": commandID, "actor_id": actorID} {
 		if strings.TrimSpace(value) == "" || strings.TrimSpace(value) != value {
 			return fmt.Errorf("worker control %s is required and canonical", label)
@@ -66,7 +68,7 @@ func (b *FrameworkRunsBackend) postControl(ctx context.Context, path string, pay
 	if err != nil {
 		return WorkerControlReceipt{}, err
 	}
-	res, err := b.Client.Do(req)
+	res, err := b.client.Do(req)
 	if err != nil {
 		return WorkerControlReceipt{}, fmt.Errorf("framework runs control request failed: %w", err)
 	}

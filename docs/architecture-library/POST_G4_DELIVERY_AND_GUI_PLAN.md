@@ -1,21 +1,188 @@
 # Post-G4 Delivery and GUI Verification Plan
 
-Status: `COMPLETE` for bounded GUI verification and B2 private Compose deployment; live Kubernetes NetworkPolicy enforcement remains REQUIRED. Evidence is in the [scoreboard](../../.state/V8_DEV_STATE.md).
+Status: `COMPLETE` for the bounded GUI slice — expanded Compose GUI repairs pass 868 unit tests, typecheck, 39 regression cases (one intentional skip), 10 headed session/docs/output checks and three mobile checks. Independent source and final evidence QA returned GO; broader release certification is separate. Current evidence and deployment identity are in the scoreboard.
 Authority: [canonical PRD](MYCELIS_CANONICAL_PRD.md), especially P0.10; [bounded G4/E10 contract](G4_E10_DURABLE_INVOCATION.md).
-This plan sequences accepted work and proof; it does not expand product authority or certify deferred paths.
+Evidence/state: [scoreboard](../../.state/V8_DEV_STATE.md). Test ownership: [Testing](../TESTING.md); human acceptance: [runbook](../REMOTE_USER_TESTING.md).
+This plan sequences accepted work and proof; it does not expand product authority or certify deferred paths. Update or retire it as the scoreboard advances.
 
-## Delivered gates
+## Starting point and delivery constraints
 
-The Compose GUI slice passed bounded real-session and deterministic presentation checks. It does not certify a live generated Outcome, all roles, full accessibility or release promotion.
+- G4/E10 counting-path backend, architecture/implementation QA, real PostgreSQL, crash/reclaim, concurrency and isolated first boot passed. Its counting endpoint remains disabled on the retained installation.
+- Baseline is committed `dev` `7b36e734b14ff70239c2947713fd96150f5a7e6a`; delivery changes currently remain uncommitted on `feature/g4-e10-durable-invocation`. Erik owns Git reconciliation. Record the reviewed file state and deployed image identifiers until a new committed checkpoint exists; a SHA alone does not identify these changes.
+- Current configured lane is full Compose: UI `127.0.0.1:3000`, Core `127.0.0.1:8081`, PostgreSQL `127.0.0.1:15432`, NATS `4222`/monitor `8222`. Rediscover targets before execution; this plan is not a new health certificate.
+- Existing local vLLM on port `8000` has only small inference proof. Tool-call generation, complex package quality and embeddings are separate capabilities. Do not silently select remote inference or infer capability from a model name.
+- Do not activate framework execution, optional model gateways, experimental services or broad intervention UI merely to test navigation.
+- Runtime feature work starts from the operator's accepted integration checkpoint. GUI review of the current delivered candidate can proceed before Git handoff.
 
-B2 packages a disabled-by-default private Runs controller in Compose and the canonical Helm chart. The isolated full-Compose proof passed authenticated TLS/readiness, separate PostgreSQL persistence, executorless create rejection, restart/recreation, database failure/recovery, private-network denial and fixture cleanup. `production_ready=false`: no production executor or Core dispatch is enabled. The operator-approved Compose-only private control peer permits worker connectivity to authenticated Core but grants no Core credential or API authority. Kubernetes retains stricter directional policy; Helm render tests do not prove live cluster enforcement. Public internet was not contacted, and B2 network evidence is not C DNS/SSRF certification.
+## Ordered delivery and expected use
 
-Use `MYCELIS_COMPOSE_FRAMEWORK_RUNS=1` consistently for opt-in Compose up/health/status/logs/down. The first-boot proof is `uv run inv lifecycle.first-boot-proof --isolated --framework-runs --build`; it owns only its disposable project. Scoped token, dedicated database and TLS host files come from `.env` references, never committed values. No candidate-store credential is mounted before an uploader exists.
+| Order / status | Slice and owner | Expected usage / delivered behavior | Acceptance gate |
+| --- | --- | --- | --- |
+| 1 / `COMPLETE` | Bounded current GUI certification — Interface QA | Users can sign in, understand Soma, review Work, inspect Resources and read current documentation on the delivered stack. | Final real-session and deterministic presentation proof passes on Compose, with independent source and final evidence QA GO. Broader role/session-expiry/live generated Outcome gates remain open. |
+| 2 / `COMPLETE` (Compose) | P0.10 B2 — deployment owner | Operators can explicitly deploy the private Runs service for dark testing; default installation remains unchanged. | Disabled Compose overlay/Helm workload, private network, separate persistence, scoped secret references, hardened container, readiness/auth/egress negatives, restart and isolated first boot. No production executor claim. |
+| 3 / `NEXT` | P0.10 C — Core execution | Approved work can create one durably bound external run after commit. | Trusted identity mapping and invocation-reference contract frozen first; no pre-commit call, duplicate-safe create, response-loss reconciliation, pinned origin/binding, no fallback after acceptance. |
+| 4 / `REQUIRED` | P0.10 D — Core execution | Users see durable progress after disconnect or restart without duplicated work. | Transactional event receipt/projection/cursor advancement; replay, gap, wrong scope, competing consumers and poll reconciliation proof. |
+| 5 / `REQUIRED` | P0.10 E — trust/output | Users approve, deny or stop through Core and receive only validated, owned deliverables. | Control CAS and response-loss proof; immutable candidate import, path/digest/size checks, existing validation, recovery and exact cleanup; worker completion alone never completes an Outcome. |
+| 6 / `REQUIRED` | Central package completion — runtime/output | A natural request yields the requested usable package, or an honest retained candidate with repair. | Separate bounded repair slice; live Ask → Approve → Execute → Open → Interact → Proof → Revisit, with semantic criteria and original/revision ownership. |
+| 7 / `REQUIRED` | P0.10 F — adapter owner | The existing LangGraph driver becomes eligible only after the neutral contract is proven. | A–E plus B2 integration, durable interrupt/resume/restart/stop/output proof, then one non-mutating canary. |
+| 8 / `REQUIRED` | Release certification — delivery lead + independent QA | A novice can use the target deployment and trust its outputs and recovery. | Manual acceptance, fresh release preflight, target-lane deployment proof, cross-browser/device checks and operator-owned promotion. |
 
-## SSO transition
+B2 has independent GO for the configured Compose lane; Kubernetes enforcement remains REQUIRED before cluster activation. C is the next bounded Compose execution slice; D–F remain separate follow-ons. Before C, review whether existing subject/grant/binding contracts cover the exact external-create capability. Any missing lineage, credential or reservation contract needs an independently approved bounded extension; do not invent it during dispatch coding. Broader MCP, host actions, swarm and scheduler integration remain separately owned entries in the G4/E10 bypass inventory.
 
-Compose now projects the configured Google client and auth policy from root `.env`; callback state and session behavior remain bounded by the existing auth route. This does not activate an external worker or close the live generated Outcome gate.
+GUI repair scope: preserve truthful pending/running/completed states, provisional retained-output warnings, visible compact guidance, and exact Soma return context from the output canvas. A run identifier alone is not completion evidence; contradictory failure state must not display saved/verified success. Tests must retain path, proof, recovery and negative-readiness assertions. Deterministic API fixtures must match Core response semantics; they do not certify live execution.
 
-## Next boundaries
+## C planning and delivery orchestration
 
-C requires a frozen subject/grant/invocation mapping, post-commit create, pinned origin/trust/address binding, exact response-loss reconciliation and no central fallback after possible acceptance. D replay/projection, E controls/output and F adapter certification remain separate. Live generated Outcome and release gates remain open.
+Status: C1 `COMPLETE` with independent architecture, source and final evidence QA GO; C2 `NEXT` for ownership/authority contract freeze. Preserve the operator-owned working tree and current running Compose installation; no Git topology mutation or optional worker activation. User authorized delivery orchestration on the current checkout after SSO recovery.
+
+Execution shape: reuse the three existing agents for independent source analysis, then one writer per owned area. Authority owner inspects current subject/grant/invocation and confirmation/outbox mapping. Transport owner inspects Runs client, pinned origins/TLS/credential resolution and duplicate/response-loss protocol. Independent reviewer audits proposed scope, bypasses and proof gates. Lead owns contract integration, canonical docs, shared schema/lifecycle and final proof; no agents run overlapping browser or deployment tasks.
+
+Freeze C against canonical PRD P0.10 and the existing G4/E10 ledger before implementation. No second registry, queue, approval or invocation authority; no external create before commit or current-authority check; no retry/fallback after uncertain acceptance. D supervisor, E controls/finalization, F adapter and broad UI remain follow-ons. Identify any missing authority contract explicitly and deliver its smallest approved prerequisite rather than inventing authority inside dispatch.
+
+Proof order: focused Go authority/client tests and race negatives; real isolated PostgreSQL admission/outbox/concurrency/crash proof where changed; service conformance and central regression; docs/type/build gates as affected; canonical isolated first boot for schema/startup/persistence delta; independent implementation QA. Live browser smoke uses retained port 3000 only when UI/session routes change. Development coordination stays in this thread: dispatch infrastructure work must not manufacture product bus/team activity.
+
+### C1 acceptance packet — outbound client confinement
+
+Review status: C1 `COMPLETE`; independent architecture, source and final evidence QA `GO`. Workers/central race proof, 43 docs/deployment tests, line policy, isolated first boot/restart/cleanup, retained deployment/health and SSO-entry preservation pass. Evidence: `/tmp/mycelis-c1-evidence`; source hashes cover the six owned Go source/test files. Worker race is writer-reported; SSO/preservation are lead-reported. No automated new Google login or C2 execution proof claimed. C1 is a prerequisite of C, not completion of dispatch/binding or permission to enable `framework_runs`.
+
+- Reuse `workers.FrameworkRunsBackend` and `WorkerConfig`. Snapshot configuration privately at construction; callers cannot retarget the client or replace its transport after construction. Constructor requires a nonempty managed service-credential reference but performs no DNS/network or credential resolution.
+- Production client requires one operator-configured HTTPS origin, with no URL credentials, query, fragment, opaque form or path prefix other than `/`. Existing health/capability endpoint fields accept only `/health` and `/v1/capabilities`, respectively; all resolved request destinations must retain the pinned scheme/host/port. Reject wildcard bind hosts and invalid explicit ports at construction. Validate dynamic run/approval IDs as individual safe segments before route composition, then reject dot segments, encoded path escapes, network-path references and query/fragment injection before credential resolution.
+- Keep TLS certificate/hostname validation; disable environment proxy inheritance. Reject every HTTP redirect for reads, create, control and SSE, including same-origin redirects. Do not automatically retry effects. Testing may use an internal helper for explicitly isolated literal-loopback HTTP; that helper is not deployment configuration or a selectable production path.
+- This packet does not certify DNS address authorization/rebinding, custom private-CA deployment, full response-body limits, invocation admission or credential process isolation. C2 must freeze approved addresses/trust/binding revisions and prove dial-time DNS/redirect confinement before activation. TLS hostname validation and an origin pin alone do not establish that proof.
+- Preserve `NewExecutionBackend` rejection of external selection, non-claimable framework outbox rows and the central finalization path. Readiness, service bearer possession and discovered capabilities still grant no invocation permission.
+- Proof: existing lifecycle/protocol tests; real local HTTP/TLS redirect sinks with zero second contacts; wrong CA/hostname denial; valid trusted TLS; invalid configuration/path rejected before secret resolution; config-copy immutability; central/external-selection negatives; race suite and Core server regressions; docs gates. Configuration-contract changes also require canonical isolated first-boot proof. No UI behavior change or new browser certification claimed.
+
+### C2 contract discovery — next authority integration gate
+
+The counting ledger currently hard-codes its capability, permission, input and adapter. Framework staging is dormant; legacy worker requests carry audit text rather than verified identity UUIDs. Team/work ownership cannot be inferred from account/group fields. Before coding C2, freeze an explicit extension of the same ledger for external creation, with one accepted proof/grant and pinned capability/binding/input, exact authoritative user/account/group and run/contract/work references, atomic one-unit reservation, current authority at admission and execution start, and durable invocation ownership.
+
+Existing confirmation creates team-work visibility after commit, while framework binding requires an existing work-item foreign key. Identity `groups.id` is an account-scoped UUID, while collaboration team/work registry references use text identifiers without an authoritative identity-group foreign key. C2 must first approve an explicit ownership relation; it cannot cast or equate these identifier domains. C2 must establish exact work ownership inside its accepted transaction before binding/outbox staging; it cannot simply add a dispatcher case. Credentials and authenticated capability preflight must follow admission/start authorization. Generic outbox retries cannot replay an executing/unknown invocation. Lost response, restart, timeout or remote 404 never imply permission for a fresh create; reconcile only exact same-run/correlation evidence and never fall back to central after possible acceptance. Freeze precise snapshot/digest evidence returned by Runs before claiming remote reconciliation: the journal stores a normalized request digest, but GET omits it and Core currently hashes a different wrapper. Also, create replay currently checks executor availability before journal lookup, so an executor outage may return 503 for previously accepted work. Neither a matching run ID nor a 503/404 proves exact acceptance/non-effect. Required gates remain real PostgreSQL rollback/concurrency/lease/revocation proof, counted external calls, crash/response-loss negatives and independent architecture/implementation QA. D supervisor and E finalization remain separate. The preferred C2 design candidate is an explicit persisted account/group-to-runtime-team ownership relation using existing registry seams, rather than changing established team-work records into a new no-team product path. This is a proposal awaiting independent architecture review, not accepted authority. Minimal proposal input is a provisioned group UUID, bounded objective/nonsecret work input and an authorized ownership target; Core derives acting subject, account, run/work identities, graph revision, endpoint, grant and idempotency. Confirmation must consume the exact token once, mint a budget-one grant, reserve/admit one invocation, create the run and owned work row, and stage invocation-linked binding/outbox atomically. Add only necessary references to existing tables; no parallel identity or queue. Proof must deny forged/non-UUID subjects, cross-account groups, ambiguous memberships, missing permissions and unowned teams; cover pin changes, token replay, rollback with zero HTTP, duplicate/budget races, revocation-vs-start, both crash windows and forged remote acceptance evidence.
+
+## B2 execution packet
+
+1. Re-read the accepted PRD deployment target, `services/framework-runs`, existing Compose task/config seams and canonical Helm chart. Confirm A/B focused durability/authentication proof against the accepted checkpoint.
+2. Freeze owned files and deployment inputs: opt-in `deploy/compose/framework-runs.yml`, canonical `charts/mycelis-core/` additions, existing task owner and tests. Use the existing task budget; no convenience aliases.
+3. Package private Core-to-worker connectivity, separate worker store/checkpoints, scoped service credentials and future candidate-store secret references only when an uploader exists, approved destinations, TLS policy, read-only root, dropped capabilities and explicit writable mounts. No public port/Ingress, Core workspace mount or NATS credentials.
+4. Prove defaults render no enabled worker. In isolated opt-in proof, verify auth rejection, Core-only ingress, TLS/probe redirect rejection, network egress denial, restart persistence, readiness and pinned image identity. Outbound executor-client redirect/DNS/SSRF proof remains C-owned; deployment policy alone does not certify it. Plain HTTP is allowed only by the explicitly isolated local proof contract.
+5. Re-run canonical isolated first boot because deployment/persistence assumptions change. Do not reset retained PostgreSQL, NATS or workspaces.
+6. Independent security/deployment QA reviews evidence, rollback and disabled defaults. Rollback must preserve accepted run data, bindings, cursors, candidate evidence and prior image/revision; it must not rerun accepted work on central.
+
+### Active delivery team — 2026-09-24
+
+Status: `COMPLETE` for bounded B2 Compose delivery, with independent implementation/evidence QA GO. Disabled Helm packaging is rendered/tested; actual cluster enforcement remains REQUIRED. Existing G4/E10 and GUI changes remain preserved in the current checkout; operator owns Git. No merge, branch change or retained-stack activation is part of this assignment.
+
+| Owner | Bounded work | Gate / exclusions |
+| --- | --- | --- |
+| Lead | Integration, lifecycle ownership, owning docs, proof sequencing | Freeze TLS/authenticated readiness and isolated proof contract before construction. Only lead runs deployment/browser tasks. |
+| Authority agent | Runs service configuration, TLS and authenticated readiness design; then service implementation/tests after design review | Own `services/framework-runs` except Dockerfile. No executor, dispatch, G4 ledger, Git or live service mutation. |
+| Deployment agent | Dockerfile, opt-in Compose/task integration, disabled Helm package and owned tests after design review | Own Dockerfile, `deploy/compose`, relevant `ops/compose*`, chart and deployment tests. Preserve existing uncommitted deltas. No application/UI edits or live activation. |
+| Independent QA | Review design, threat boundaries, negative tests, final source and evidence | No implementation ownership or lifecycle mutation. Source GO is separate from live deployment certification. |
+
+Sequence: (1) revalidate B service tests and freeze transport/probe/network/secret contracts; (2) independent design GO; (3) disjoint service/deployment implementation; (4) focused Go/Python and Helm/default-disabled checks; (5) lead-owned isolated Compose auth/TLS/network/restart/persistence proof plus canonical isolated first boot; (6) health/preservation and required UI smoke if delivery changes the retained application; (7) documentation synchronization and independent final QA. Kubernetes rendering alone does not prove cluster NetworkPolicy enforcement; report unavailable cluster proof explicitly.
+
+No new public Invoke aliases. Existing lifecycle owners must expose any B2 opt-in cleanly and preserve defaults. Plain HTTP requires an explicit isolated-local-proof exception; remote/non-local service transport must fail closed without TLS. Secret values remain in operator-owned secret inputs and out of reports. Authenticated readiness must distinguish controller availability from `production_ready=false` because no executor exists. Exact implementation choices are frozen after team source review.
+
+Independent design review: TLS/auth/probe and control-interface binding received GO. Effective-egress review found the shared Compose bridge also permits worker-to-Core connectivity. The operator explicitly approved authenticated Core as a Compose-only control peer (2026-09-24); this exception is now in the canonical PRD. It grants no API authority or Core credential to the worker. Kubernetes retains stricter directional policy. B2 proof must show external egress denial, database-peer listener denial, and Core rejection without its own credential; do not claim Compose denies every worker-to-Core connection.
+
+Frozen transport/security decisions: Runs serves TLS on port 8091 with fail-closed cert/key validation; an explicit HTTP exception is restricted to literal loopback and is not used for Compose. Its authenticated bounded exec probe validates CA/hostname, rejects redirects and distinguishes DB/controller health from unavailable executor (`production_ready=false`). Compose consumes scoped secret references from canonical `.env`; Helm uses existing Secret references. Service `_FILE` alternatives are exclusive with direct values. No candidate-store secret is mounted before an uploader exists. Dual-network Compose requires a control-network-only listener alias and a database-side denial test; `internal: true` alone does not prove Core-only ingress. Kubernetes keeps explicit Core-only policy and needs separate cluster enforcement evidence.
+
+Preflight evidence: 68 Compose/chart/docs Python tests PASS; Runs service baseline and updated race suite PASS (seven tested packages). Independent service-source QA GO. Helm is repository-CI-pinned v3.20.2 with verified checksum, installed only under `/tmp` for proof. The disabled Helm package initially accepts explicit IPv4 `/32` dedicated-database destinations; IPv6/dynamic destination support and live cluster policy enforcement remain uncertified. Source review corrected stale API Reference success status/envelope wording to existing Go behavior without changing runtime semantics.
+
+Final B2 evidence (2026-09-24): canonical `uv run inv lifecycle.first-boot-proof --isolated --framework-runs --build` PASS. Fresh Core/Interface/PostgreSQL/NATS and private Runs startup, empty state, restart, authenticated TLS, missing/wrong credential and bad-trust denial, executorless create rejection with zero persisted runs, changed worker/database container IDs, SQL-seeded journal retention/readback, database HTTP 503/recovery, data-network ingress denial, Core credential rejection and controlled IPv4 cross-network denial pass. Public internet was not contacted; no-default-IPv4-route plus reachable-control/denied-path evidence is not C DNS/SSRF certification. Exact Runs image: `sha256:1e03f89f2d59870bd5656abb70929d34bfc83210e16ffff5ad6f18e0014b781f`.
+
+Tests: 179 deployment/lifecycle/architecture/docs/conformance Python cases, seven service race-test packages, Core worker-client race suite, eight UI docs tests, typecheck, Helm lint, Compose config, 385-line policy and whitespace PASS. Reports/source hashes: `/tmp/mycelis-b2-evidence`. Disposable project `mycelis-firstboot-8beb8ea439bcca9a` left zero containers, networks, volumes or matching fixture roots. Retained Compose health/infra/storage and preservation PASS; the optional Runs controller was not activated in the retained stack. All three reused agents completed handoff; no background work remains. No Git mutation.
+
+Product-bus coordination is intentionally skipped: this is infrastructure development, not accepted product team execution. Coordination remains in the Codex thread; no development-only NATS subjects or tool effects are introduced. Existing three agents are reused and complete at handoff.
+
+Read-only B2 team handoff (2026-09-23):
+
+- At the read-only preflight, `services/framework-runs/Dockerfile` and the Compose overlay were absent; the active B2 team now owns their implementation. Writer scope is that Dockerfile, the opt-in overlay, existing `ops/compose.py`/`ops/compose_env.py` selection, conditional canonical Helm resources, tests and owning docs. Core dispatch/selection remains excluded.
+- The service currently injects no executor and reports `production_ready=false`. Set its container listener to `0.0.0.0:8091` explicitly; the config default is loopback. Probes must use a reachable service address and existing bearer authentication without logging the secret.
+- Freeze the TLS/probe design before packaging acceptance: `services/framework-runs/cmd/framework-runs/main.go` serves plain HTTP and `internal/httpapi/server.go` protects health. Non-local deployment cannot be certified by the isolated HTTP exception.
+- Review effective network policy, not just new YAML: the existing Core chart allows broad HTTPS egress and in-cluster API ingress. B2 can prove deny-by-default worker egress; model/candidate destination behavior is not executable while no executor/uploader exists.
+- C owns outbound redirect/DNS policy in `core/internal/workers/framework_runs.go`. B2 must not claim that client proof from deployment policy alone. Before C, existing binding/outbox correlation in `core/internal/server/framework_worker_authority.go` needs the frozen external-create grant/invocation mapping; bearer possession is not user authority.
+- Existing focused checks include the Runs Go suite and its `postgres_integration` journal tests with an isolated `FRAMEWORK_RUNS_TEST_ADMIN_DSN`, Compose identity/task tests, chart/standards tests and canonical `k8s.standards`. The read-only handoff did not execute those tests or enable services.
+
+## GUI proof matrix
+
+Existing specs below are starting points, not claims that every listed case is already automated. Review route stubs, role setup and assertions before assigning evidence to a gate.
+
+| Gate | Scenarios / expected behavior | Existing starting point | Evidence and limits |
+| --- | --- | --- | --- |
+| Session and entry | Sign in from stale Work URL, correct landing/return, reload, logout/session expiry, unauthenticated denial; no key leakage. | `new-user-ui-sweep.spec.ts`, global setup | Actual UI/BFF session and logout denial/re-login are covered. Expiry and copied-token revocation remain untested; admin-only success is not tenant-isolation proof. |
+| Soma operating surface | Clear primary ask, reachable composer, readable progress, usable scrolling, next action visible. | `soma-workspace-contract.spec.ts`, `new-user-ui-sweep.spec.ts` | Desktop 1366×768 and compact 390×844 live review; keyboard/focus and 200% zoom manual checks. |
+| Navigation and resources | Soma → Work → Resources → Help → Settings → back; deep-link/reload; empty versus retained state; no history/URL race. | `new-user-ui-sweep.spec.ts`, `navigation.spec.ts`, `resources-workspace-files.spec.ts` | Check which cases use stubs. Actual retained reads must use the delivered BFF/Core route. |
+| Documentation | PRD, G4/E10 packet and acceptance guide render; links and headings match current scope. | `docs-live-authority.spec.ts`, `docs-canonical-navigation.spec.ts` | Existing docs spec now checks G4 packet navigation, headings and scope on desktop/compact viewports, including screenshots. |
+| Layout and accessibility | No horizontal overflow, clipped actions or overlapping panels; responsive menus, labels, tab order, focus return and understandable contrast. | `desktop-mobile-compression.spec.ts`, `docs-mobile.spec.ts`, `mobile.spec.ts` | Compression suite is mocked even when served by Compose. Screenshots plus visual review; no claim of a full accessibility audit. |
+| Proposal and approval | Preview bounded work, cancel safely, explicit approval, double-click/refresh without duplicate acceptance, stale/foreign confirmation denied. | `soma-proposal-mode.spec.ts`, `soma-governance-live.spec.ts` | Pair visible state with durable API evidence; current general tool paths are not G4/E10-certified by this test. |
+| Output and trust | Open named retained package, exercise real controls, observe marked surface change, inspect proof, revisit/reload and request a separate revision. | `trusted-outcome-journey.spec.ts`, `trusted-outcome-journey-live.spec.ts`, `soma-natural-delivery-routing-live.spec.ts` | Mocked success first; live generated delivery separately. Count actual completed live cases, not selected/skipped cases. |
+| Recovery | Missing provider, unavailable Core, failed validation, retained unverified output, reconnect and stale ownership show normalized recoverable states. | `soma-work-attention.spec.ts`, `soma-output-safety.spec.ts`, live journey helpers | Inject failures in stubs or isolated fixtures, not by stopping shared external services. Never label unknown effects retryable. |
+| Future invocation projection | Admitted/executing/unknown/verified/reconciled shown truthfully; reload retains state; duplicate click cannot repeat an effect. | Backend invocation tests; future bounded UI/BFF tests | `REQUIRED` only when that projection is accepted. No shipped counting GUI or universal governed-tool claim today. Full E12/E07 UI remains separate. |
+
+## Execution batches and stop conditions
+
+### Batch A — inexpensive readiness and non-mutating browser review
+
+- Inspect configured lane/targets, delivered image identity, current changes, disk/cache headroom and browser availability. Use repo `.env` secrets without printing them. Do not substitute a managed source UI on another port for delivered Compose proof.
+- Run canonical health and focused docs gates, then the existing fresh-user and live-docs specs against port 3000. Use one Playwright owner and one worker. Add headed review when a display is available; headless success does not establish a visible human review.
+- Open the G4 docs page; confirm counting certification scope and deferred paths are legible. Review screenshots for hierarchy, copy, spacing and primary actions, beyond locator success.
+- Stop for wrong target, login/BFF failure, runtime errors or false state. Fix the smallest defect, rerun that spec and its affected neighbors; do not run expensive generated-work tests through a broken session.
+
+### Batch B — deterministic interaction and negative-state coverage
+
+- Run component/typecheck gates for touched UI. Run proposal, trust, recovery and compression specs using existing mocks. These can use the delivered UI for frontend behavior but remain mocked-backend evidence.
+- Add missing assertions only for confirmed gaps: session expiry, duplicate confirmation, stale state, inaccessible primary controls or misleading unknown/failed copy. Do not create a parallel test harness.
+- Check desktop and compact layouts first. Broaden to Firefox/WebKit and mobile-specific specs for release or browser-specific changes; a skipped Chromium-only spec cannot certify another browser.
+
+### Batch C — bounded live Outcome journey
+
+Current preflight findings (2026-09-23): `BLOCKED` for the existing live journey until its owned test prerequisites are repaired. Compose does not forward `MYCELIS_QA_FIXTURE_MANAGEMENT`; scope creation must succeed before any product mutation. Host file probes must use the actual host mount `workspace/docker-compose/data/workspace`, not container-only `/data/workspace`. The live helper's popup/`Open app` assumptions need alignment with the accepted in-Mycelis output canvas and result-specific action. Purge HTTP 200 alone is insufficient: assert terminal purged status, empty warnings and absence of the unique fixture's files/work/claims. Animated-canvas screenshots alone cannot prove keyboard input caused movement; require input-attributable state/position change with a control observation. Do not bypass these gaps with unowned fixtures or relaxed assertions.
+
+- Start only after A/B pass and the exact fixture-ownership/purge APIs are proven. Inspect the spec's provider needs, expected runtime, timeout, workspace probe and credential handling.
+- Use one owned organization/group/team and one small non-production package. Verify the host-visible Compose output mount against the Core container workspace root before using file assertions; do not guess source-mode paths.
+- Capture proposal, approval, run/work IDs, retained entrypoint, validation/proof refs and actual visible interaction. Reload and revisit the same output. Keep raw implementation detail behind Inspect.
+- If the local model cannot produce the package, record the capability/semantic failure, preserve diagnostics, and repair the bounded runtime/model contract separately. Do not replace the result with a generic scaffold or silently use a remote model.
+- Purge only owner-tagged fixture resources in a timeout-safe independent request context. Require zero active fixture claims and no test-owned nonterminal work. Never clear shared NATS or whole DB/workspace state.
+
+### Batch D — release review
+
+- Repeat affected proof on the operator's integrated checkpoint and matching built images. Run broader release preflight only after the required implementation gates.
+- Follow the human acceptance runbook: a novice must explain what is ready, what needs approval, what failed, how to open the result and how to recover without an engineer translating.
+- Certify each required deployment/browser lane separately. Compose proof does not certify Kubernetes, Windows task quoting, remote ingress or provider-native tools.
+
+## Commands for the current Linux / Compose lane
+
+Run from repository root with `uv`, the repo virtualenv, Node dependencies and Playwright browsers installed. These are planned commands, not new PASS results. `interface.e2e` owns the browser lease and reports; never launch concurrent copies.
+
+```bash
+uv run inv cache.status
+uv run inv compose.health compose.infra-health compose.storage-health
+uv run --no-sync pytest -q tests/test_docs_links.py tests/test_canonical_workspace_docs.py tests/test_trusted_outcome_docs.py
+
+MYCELIS_INTERFACE_PORT=3000 PLAYWRIGHT_PORT=3000 PLAYWRIGHT_API_BASE_URL=http://127.0.0.1:8081 \
+  uv run inv interface.e2e --server-mode=external --live-backend --project=chromium --workers=1 \
+  --spec=e2e/specs/new-user-ui-sweep.spec.ts
+
+MYCELIS_INTERFACE_PORT=3000 PLAYWRIGHT_PORT=3000 PLAYWRIGHT_API_BASE_URL=http://127.0.0.1:8081 \
+  uv run inv interface.e2e --server-mode=external --live-backend --project=chromium --workers=1 \
+  --spec=e2e/specs/docs-live-authority.spec.ts
+```
+
+For the same focused visible review, add `--headed` only when a display is configured. External mode preserves the running Compose UI. The task currently targets loopback; remote-host certification needs its own reviewed runner configuration, not an assumed host override.
+
+For UI changes, run `uv run inv interface.test interface.typecheck` and the relevant browser specs; build proof uses `uv run inv interface.build` or the owning Compose build for packaged delivery. Use `--server-mode=start` only for separately labeled managed-source production-build proof.
+
+The live Outcome command, after Batch C prerequisites and workspace mapping are verified, is the same external/live command with `--spec=e2e/specs/trusted-outcome-journey-live.spec.ts`. Do not execute it just to obtain a green screenshot.
+
+## Ownership, evidence and acceptance
+
+- Lead: freeze each slice, maintain scoreboard/dependencies, own integration decisions and bounded repair. No Git mutation is requested by this planning task.
+- Deployment implementer: B2 only; Interface implementer: concrete GUI defects only. One writer per overlapping area. Parallelize independent unit work, never shared Playwright, Compose or fixture lifecycle operations.
+- Independent reviewer: inspect security/concurrency and actual proof; do not let the implementer self-certify GO. Apply the existing AGENTS task/model matrix. Execution reuses three existing agents: `execution_audit` repaired browser fixtures, `authority_audit` repaired proposal/output state after read-only B2 preparation, and `recovery_qa` independently reviews source/evidence. Lead owns final browser runs, lifecycle, docs and integration; agents finish at handoff. No concurrent browser or lifecycle work.
+- Every run records date, source/diff identity, image identifiers, target URL/lane, browser/viewport, fixture scope, command, actual pass/fail/skip counts, screenshots/trace references, API/DB evidence where applicable and cleanup result. Store transient reports in ignored runtime/test-output paths; put concise durable results in the scoreboard.
+- Preserve failure artifacts before the next run overwrites Playwright reports. Existing capture is failure-focused; a clean first-attempt pass does not automatically contain a trace. Redact credentials/session material before sharing.
+- Classify failures as UI, session/BFF, Core/data-plane, provider capability, semantic output, authority or test harness. A provider failure can pass an honest-blocker UI assertion while failing live delivery certification.
+- Exit current GUI gate only with actual-target navigation/session proof, visual review, no unexpected console/hydration/server errors, accurate trust/recovery states and complete fixture cleanup. Report untested roles, browsers and model capabilities explicitly.
+- Final release GO additionally requires neutral framework/control/finalization gates, central live delivery, independent QA and operator acceptance. No calendar estimate is asserted before the first GUI pass and B2 security review expose the remaining work.
+
+C1 docs close-out: README, canonical PRD, Operations, Testing, ops README, API Reference, this plan and scoreboard synchronized. `interface/lib/docsManifest.ts` reviewed unchanged: existing PRD/Operations/Testing/API entries own the changed content; no new public route, task or docs authority introduced. GUI behavior and Runs wire protocol remain unchanged.

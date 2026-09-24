@@ -305,9 +305,16 @@ func strictRunSnapshot(runID, status string, version int) map[string]any {
 
 func newTestFrameworkRunsBackend(t *testing.T, baseURL string) *FrameworkRunsBackend {
 	t.Helper()
-	backend, err := NewFrameworkRunsBackend(WorkerConfig{
+	cfg := WorkerConfig{
 		Backend: BackendFrameworkRuns, BaseURL: baseURL, APIKeySecretRef: "secret://framework/api",
-	}, mapSecretResolver{"secret://framework/api": "test-secret"})
+	}
+	var backend *FrameworkRunsBackend
+	var err error
+	if strings.HasPrefix(baseURL, "http://") {
+		backend, err = newFrameworkRunsBackend(cfg, mapSecretResolver{"secret://framework/api": "test-secret"}, true)
+	} else {
+		backend, err = NewFrameworkRunsBackend(cfg, mapSecretResolver{"secret://framework/api": "test-secret"})
+	}
 	if err != nil {
 		t.Fatalf("NewFrameworkRunsBackend: %v", err)
 	}
