@@ -1,0 +1,139 @@
+{{- if .Values.frameworkWorker.enabled }}
+{{- $worker := .Values.frameworkWorker }}
+{{- $authSecret := required "frameworkWorker.auth.existingSecret is required" $worker.auth.existingSecret }}
+{{- $databaseSecret := required "frameworkWorker.database.existingSecret is required" $worker.database.existingSecret }}
+{{- $tlsSecret := required "frameworkWorker.tls.existingSecret is required" $worker.tls.existingSecret }}
+{{- $serverName := required "frameworkWorker.tls.serverName is required" $worker.tls.serverName }}
+{{- $digest := required "frameworkWorker.image.digest is required" $worker.image.digest }}
+{{- $coreAuthSecret := default (include "mycelis-core.coreAuthSecretName" .) .Values.coreAuth.existingSecret }}
+{{- if and (eq $authSecret $coreAuthSecret) (eq $worker.auth.tokenKey "mycelis-api-key") }}
+{{- fail "frameworkWorker.auth must not reference the Core API credential" }}
+{{- end }}
+{{- if eq $databaseSecret (printf "%s-postgresql-secret" .Release.Name) }}
+{{- fail "frameworkWorker.database.existingSecret must not be the Core PostgreSQL Secret" }}
+{{- end }}
+{{- if not (regexMatch "^sha256:[a-fA-F0-9]{64}$" $digest) }}
+{{- fail "frameworkWorker.image.digest must be a sha256 image digest" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-framework-runs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: framework-runs
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: framework-runs
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: framework-runs
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}-framework-runs
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: framework-runs
+          image: "{{ $worker.image.repository }}@{{ $digest }}"
+          imagePullPolicy: {{ $worker.image.pullPolicy }}
+          ports:
+            - name: https
+              containerPort: 8091
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            {{- toYaml $worker.resources | nindent 12 }}
+          env:
+            - name: FRAMEWORK_RUNS_LISTEN_ADDRESS
+              value: "0.0.0.0:8091"
+            - name: FRAMEWORK_RUNS_PROBE_ADDRESS
+              value: "127.0.0.1:8091"
+            - name: FRAMEWORK_RUNS_PROBE_SERVER_NAME
+              value: {{ $serverName | quote }}
+            - name: FRAMEWORK_RUNS_CORE_TOKEN_FILE
+              value: /run/framework-runs/auth/core-token
+            - name: FRAMEWORK_RUNS_DATABASE_URL_FILE
+              value: /run/framework-runs/db/database-url
+            - name: FRAMEWORK_RUNS_TLS_CERT_FILE
+              value: /run/framework-runs/tls/tls.crt
+            - name: FRAMEWORK_RUNS_TLS_KEY_FILE
+              value: /run/framework-runs/tls/tls.key
+            - name: FRAMEWORK_RUNS_TLS_CA_FILE
+              value: /run/framework-runs/tls/ca.crt
+          startupProbe:
+            exec:
+              command: ["/framework-runs", "probe"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
+          readinessProbe:
+            exec:
+              command: ["/framework-runs", "probe"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 8091
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: auth
+              mountPath: /run/framework-runs/auth
+              readOnly: true
+            - name: database
+              mountPath: /run/framework-runs/db
+              readOnly: true
+            - name: tls
+              mountPath: /run/framework-runs/tls
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: auth
+          secret:
+            secretName: {{ $authSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ $worker.auth.tokenKey | quote }}
+                path: core-token
+        - name: database
+          secret:
+            secretName: {{ $databaseSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ $worker.database.urlKey | quote }}
+                path: database-url
+        - name: tls
+          secret:
+            secretName: {{ $tlsSecret | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ $worker.tls.certKey | quote }}
+                path: tls.crt
+              - key: {{ $worker.tls.keyKey | quote }}
+                path: tls.key
+              - key: {{ $worker.tls.caKey | quote }}
+                path: ca.crt
+{{- end }}

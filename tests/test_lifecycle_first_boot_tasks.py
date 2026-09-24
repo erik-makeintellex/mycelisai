@@ -106,7 +106,39 @@ def test_isolated_first_boot_uses_only_fixture_runner(monkeypatch):
         "build": True,
         "user_tables": lifecycle_first_boot.CLEAN_FIRST_BOOT_USER_TABLES,
         "bootstrap_tables": lifecycle_first_boot.CLEAN_FIRST_BOOT_BOOTSTRAP_TABLES,
+        "framework_runs": False,
     }]
+
+
+def test_framework_runs_first_boot_requires_isolated_fixture(monkeypatch):
+    monkeypatch.setattr(lifecycle, "down", lambda _c: pytest.fail("retained lifecycle touched"))
+    monkeypatch.setattr(db_tasks, "reset", lambda _c: pytest.fail("retained database touched"))
+    with pytest.raises(SystemExit, match="requires --isolated"):
+        lifecycle.first_boot_proof.body(Context(), framework_runs=True)
+
+
+def test_framework_runs_flag_uses_canonical_isolated_runner(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "ops.lifecycle_first_boot_isolated.run_isolated_first_boot",
+        lambda **kwargs: calls.append(kwargs),
+    )
+    lifecycle.first_boot_proof.body(Context(), isolated=True, framework_runs=True, build=True)
+    assert calls == [{
+        "build": True,
+        "user_tables": lifecycle_first_boot.CLEAN_FIRST_BOOT_USER_TABLES,
+        "bootstrap_tables": lifecycle_first_boot.CLEAN_FIRST_BOOT_BOOTSTRAP_TABLES,
+        "framework_runs": True,
+    }]
+
+
+def test_framework_runs_certification_rejects_image_reuse(monkeypatch):
+    monkeypatch.setattr(
+        "ops.lifecycle_first_boot_isolated.run_isolated_first_boot",
+        lambda **_kwargs: pytest.fail("stale worker image was accepted"),
+    )
+    with pytest.raises(SystemExit, match="requires --build"):
+        lifecycle.first_boot_proof.body(Context(), isolated=True, framework_runs=True)
 
 
 @pytest.mark.parametrize("kwargs", [{"frontend": False}, {"shutdown": False}])

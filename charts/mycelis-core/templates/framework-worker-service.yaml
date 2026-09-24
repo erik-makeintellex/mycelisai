@@ -1,0 +1,20 @@
+{{- if .Values.frameworkWorker.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-framework-runs
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: framework-runs
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: framework-runs
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: https
+      port: 8091
+      targetPort: https
+      protocol: TCP
+{{- end }}

@@ -24,6 +24,8 @@
 - Treat source-mode local run/build/test with Dockerized PostgreSQL/NATS and locally run Core/Interface as the first acceptance lane. Bring up full application Compose, Rancher K3s, WSL/Compose, or target-cluster app proof only after local evidence is acceptable.
 - Scope tasks around needed tools and Mycelis services. Do not add repo tasks that manage whole host environments such as terminating WSL distros, resetting Rancher Desktop VMs, or repairing Docker Desktop itself.
 
+B2 reuses existing task owners: `MYCELIS_COMPOSE_FRAMEWORK_RUNS=1 uv run inv compose.up --build` opts into the private Runs controller; use the same selector for health/status/logs/down. Defaults remain disabled. `uv run inv lifecycle.first-boot-proof --isolated --framework-runs --build` owns disposable deployment proof and cleanup. Requirements and secret/TLS/network boundaries are in [Operations](../docs/architecture/OPERATIONS.md); a healthy controller still has no executor. No additional public task alias is introduced.
+
 ## Components
 This directory contains the logic for the **Service Release Standard 1.0**.
 

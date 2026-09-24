@@ -60,6 +60,18 @@ spec:
         - protocol: TCP
           port: 5432
 
+    {{- if .Values.frameworkWorker.enabled }}
+    # B2: Core may reach only the internal Runs API on its private service port.
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: framework-runs
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - protocol: TCP
+          port: 8091
+    {{- end }}
+
     {{- if and .Values.ai.textEndpoint .Values.networkPolicy.aiEgress.enabled }}
     # 5. Allow explicitly configured external AI endpoint ports.
     - to:

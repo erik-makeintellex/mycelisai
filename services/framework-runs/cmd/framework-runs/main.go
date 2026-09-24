@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -23,6 +24,17 @@ func main() {
 	if err != nil {
 		logger.Error("configuration rejected", "phase", "startup")
 		os.Exit(1)
+	}
+	if len(os.Args) > 1 {
+		if len(os.Args) != 2 || os.Args[1] != "probe" {
+			logger.Error("unsupported command", "phase", "startup")
+			os.Exit(1)
+		}
+		if err := probe(settings); err != nil {
+			logger.Error("authenticated readiness probe failed", "error_type", "unready")
+			os.Exit(1)
+		}
+		return
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -48,6 +60,7 @@ func main() {
 	server := &http.Server{
 		Addr:              settings.ListenAddress,
 		Handler:           httpapi.New(service, authenticator),
+		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS13},
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      0,
@@ -61,7 +74,11 @@ func main() {
 		_ = server.Shutdown(shutdown)
 	}()
 	logger.Info("service listening", "address", settings.ListenAddress, "production_ready", false)
-	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	serve := server.ListenAndServe
+	if !settings.AllowInsecureLocalHTTP {
+		serve = func() error { return server.ListenAndServeTLS(settings.TLSCertFile, settings.TLSKeyFile) }
+	}
+	if err := serve(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Error("service stopped unexpectedly", "error_type", "http_server_failure")
 		os.Exit(1)
 	}

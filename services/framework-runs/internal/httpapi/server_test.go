@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,6 +19,10 @@ import (
 const testToken = "0123456789abcdef0123456789abcdef"
 
 type completingExecutor struct{}
+
+type unhealthyRepository struct{ journal.Repository }
+
+func (unhealthyRepository) Health(context.Context) error { return errors.New("database unavailable") }
 
 func (completingExecutor) Apply(_ context.Context, command journal.Command) (protocol.ExecutorOutcome, error) {
 	return protocol.ExecutorOutcome{Status: protocol.StatusCompleted, Result: &protocol.Result{
@@ -55,8 +60,13 @@ func TestHealthReadyButCapabilitiesAndCreateFailClosedWithoutExecutor(t *testing
 	repository := journal.NewMemoryRepository()
 	server := newServer(t, controller.New(repository, nil), "runs:api")
 	response := do(server, authorized("GET", "/health", ""))
-	if response.Code != http.StatusOK {
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"controller_ready":true`) || !strings.Contains(response.Body.String(), `"production_ready":false`) {
 		t.Fatalf("health = %d: %s", response.Code, response.Body.String())
+	}
+	unhealthy := newServer(t, controller.New(unhealthyRepository{Repository: repository}, nil), "runs:api")
+	response = do(unhealthy, authorized("GET", "/health", ""))
+	if response.Code != http.StatusServiceUnavailable || strings.Contains(response.Body.String(), `"controller_ready":true`) {
+		t.Fatalf("unready database health = %d: %s", response.Code, response.Body.String())
 	}
 	response = do(server, authorized("GET", "/v1/capabilities", ""))
 	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"production_ready":false`) {

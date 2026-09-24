@@ -31,12 +31,12 @@ FROM node:22-bookworm-slim
 
 WORKDIR /core
 
+COPY core/output-validation/package*.json /core/output-validation/
+RUN cd /core/output-validation && npm ci && PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT=120000 npx playwright install --with-deps chromium
+COPY interface/scripts/validate-generated-output.mjs /core/output-validation/validate-generated-output.mjs
 COPY --from=builder /server /server
 COPY --from=builder /app/core/config /core/config
 COPY cognitive/config/engine.yaml /core/config/engine.yaml
-COPY core/output-validation/package*.json /core/output-validation/
-RUN cd /core/output-validation && npm ci && npx playwright install --with-deps chromium
-COPY interface/scripts/validate-generated-output.mjs /core/output-validation/validate-generated-output.mjs
 
 ENV MYCELIS_OUTPUT_VALIDATOR_SCRIPT=/core/output-validation/validate-generated-output.mjs
 ENV MYCELIS_OUTPUT_VALIDATOR_WORKDIR=/core/output-validation

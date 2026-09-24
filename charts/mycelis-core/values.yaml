@@ -25,6 +25,37 @@ service:
   type: ClusterIP
   port: 8080
 
+# Slice B2 packages an internal Runs controller for explicit dark deployment.
+# It has no executor and remains disabled until its separate proof gate passes.
+frameworkWorker:
+  enabled: false
+  image:
+    repository: mycelis/framework-runs
+    digest: ""
+    pullPolicy: IfNotPresent
+  auth:
+    existingSecret: ""
+    tokenKey: core-token
+  database:
+    # A separately provisioned Runs database, never Core's database Secret.
+    existingSecret: ""
+    urlKey: database-url
+    port: 5432
+    egressCIDRs: []
+  tls:
+    existingSecret: ""
+    certKey: tls.crt
+    keyKey: tls.key
+    caKey: ca.crt
+    serverName: ""
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
 ingress:
   enabled: false
   className: ""

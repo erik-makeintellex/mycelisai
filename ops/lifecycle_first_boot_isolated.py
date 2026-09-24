@@ -21,6 +21,7 @@ from .db_schema import SCHEMA_COMPATIBILITY_CHECKS
 
 
 COMPOSE_SOURCE = ROOT_DIR / "docker-compose.yml"
+FRAMEWORK_OVERLAY_SOURCE = ROOT_DIR / "deploy" / "compose" / "framework-runs.yml"
 PORT_TARGETS = {
     "MYCELIS_COMPOSE_POSTGRES_PORT": "5432",
     "MYCELIS_COMPOSE_NATS_PORT": "4222",
@@ -153,6 +154,9 @@ def _compose_environment(fixture: Fixture) -> dict[str, str]:
     # Shell values normally override --env-file. Strip every interpolation key
     # before setting the fixture's exact values, while preserving Docker access.
     source = COMPOSE_SOURCE.read_text(encoding="utf-8")
+    overlay = fixture.root / "framework-runs.yml"
+    if overlay.exists():
+        source += "\n" + overlay.read_text(encoding="utf-8")
     variables = set(COMPOSE_VARIABLE.findall(source)) | {"COMPOSE_PROJECT_NAME"}
     environment = {key: value for key, value in os.environ.items() if key not in variables}
     environment.update(fixture.environment)
@@ -161,6 +165,9 @@ def _compose_environment(fixture: Fixture) -> dict[str, str]:
 
 def _compose(fixture: Fixture, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     compose_files = ["-f", docker_host_path(fixture.compose_file)]
+    overlay = fixture.root / "framework-runs.yml"
+    if overlay.exists():
+        compose_files.extend(["-f", docker_host_path(overlay)])
     command = docker_command(
         "compose", "--project-name", fixture.project,
         "--project-directory", docker_host_path(ROOT_DIR),
@@ -273,6 +280,11 @@ def _run_proof(fixture: Fixture, build: bool, user_tables: tuple[str, ...], boot
     _assert_empty_user_state(fixture, user_tables, "schema install")
     _assert_nats_empty(fixture)
 
+    if (fixture.root / "framework-runs.yml").exists():
+        from .lifecycle_first_boot_framework import prepare_framework_fixture
+
+        prepare_framework_fixture(fixture, build=build)
+
     if build:
         _compose(fixture, "build", "core", "interface")
     _compose(fixture, "up", "-d", "--no-build", "core", "interface")
@@ -318,13 +330,19 @@ def _repair_fixture_output_permissions(fixture: Fixture) -> None:
     if errors:
         raise SystemExit("Fixture output remains unwritable after repair; project image was retained for recovery.")
 
-def run_isolated_first_boot(*, build: bool, user_tables: tuple[str, ...], bootstrap_tables: tuple[str, ...]) -> None:
+def run_isolated_first_boot(*, build: bool, user_tables: tuple[str, ...], bootstrap_tables: tuple[str, ...], framework_runs: bool = False) -> None:
+    if framework_runs and not build:
+        raise SystemExit("Framework Runs isolated proof requires --build.")
     fixture = _make_fixture()
     armed = False
     cleaned = False
     repair_error = None
     try:
         _validate_fixture(fixture)
+        if framework_runs:
+            from .lifecycle_first_boot_framework import attach_framework_fixture
+
+            attach_framework_fixture(fixture)
         _compose(fixture, "config", "--quiet")
         if _compose(fixture, "ps", "-q").stdout.strip():
             raise SystemExit("Isolated first-boot project already owns containers; refusing to reuse it.")
@@ -332,6 +350,10 @@ def run_isolated_first_boot(*, build: bool, user_tables: tuple[str, ...], bootst
         print("Fixture ports: " + ", ".join(f"{key}={port}" for key, port in fixture.ports.items()))
         armed = True
         _run_proof(fixture, build, user_tables, bootstrap_tables)
+        if framework_runs:
+            from .lifecycle_first_boot_framework import prove_framework_fixture
+
+            prove_framework_fixture(fixture, build=build)
     finally:
         if armed:
             stopped = _compose(fixture, "stop", "core", "interface", check=False)

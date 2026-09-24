@@ -79,7 +79,7 @@ Delivery rule:
 
 The active G4/E10 [minimum invocation acceptance packet](docs/architecture-library/G4_E10_DURABLE_INVOCATION.md) has independent architecture and implementation source QA GO. Counting-path authority, concurrency, process-death, unknown-effect and isolated first-boot proof pass; broader tool paths remain outside this certification.
 
-The [post-G4 delivery and GUI verification plan](docs/architecture-library/POST_G4_DELIVERY_AND_GUI_PLAN.md) records bounded Compose GUI proof and the next B2/framework gates. The delivered GUI review passed its focused regression and real-session checks; live generated Outcome and release certification remain separate.
+The [post-G4 delivery and GUI verification plan](docs/architecture-library/POST_G4_DELIVERY_AND_GUI_PLAN.md) records bounded Compose GUI proof, B2 delivery and the remaining framework gates. The bounded GUI review is complete. B2 private Compose deployment has independent QA GO with TLS/authenticated readiness, separate worker persistence and disabled defaults; Helm rendering is proven, while live cluster policy enforcement remains open. The approved Compose-only Core control-peer exception grants connectivity, not authority. No external executor is enabled; C remains the next execution gate.
 
 Use `uv run inv lifecycle.first-boot-proof --isolated --build` for disposable Compose startup/persistence proof beside retained services; the default first-boot task resets its configured local database. Focused Go proof uses `uv run inv core.test --package=./internal/invocation --race`; real persistence requires `MYCELIS_INVOCATION_TEST_DSN` pointing to an isolated schema-installed PostgreSQL fixture.
 

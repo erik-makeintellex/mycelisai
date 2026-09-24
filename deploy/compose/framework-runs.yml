@@ -1,0 +1,90 @@
+# Explicit opt-in B2 controller package. Core remains on the central backend.
+services:
+  core:
+    environment:
+      MYCELIS_WORKER_API_KEY: ${FRAMEWORK_RUNS_CORE_TOKEN:?set scoped Runs token in .env}
+    depends_on:
+      framework-runs:
+        condition: service_healthy
+    networks:
+      default: {}
+      framework-runs-control: {}
+
+  framework-runs-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${FRAMEWORK_RUNS_DB_USER:?set dedicated Runs DB user in .env}
+      POSTGRES_PASSWORD: ${FRAMEWORK_RUNS_DB_PASSWORD:?set dedicated Runs DB password in .env}
+      POSTGRES_DB: ${FRAMEWORK_RUNS_DB_NAME:?set dedicated Runs DB name in .env}
+    volumes:
+      - framework-runs-postgres-data:/var/lib/postgresql/data
+    networks:
+      framework-runs-data: {}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  framework-runs:
+    build:
+      context: .
+      dockerfile: services/framework-runs/Dockerfile
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=64m,uid=1000,gid=1000
+    environment:
+      FRAMEWORK_RUNS_LISTEN_ADDRESS: framework-runs-control:8091
+      FRAMEWORK_RUNS_PROBE_ADDRESS: framework-runs-control:8091
+      FRAMEWORK_RUNS_PROBE_SERVER_NAME: framework-runs-control
+      FRAMEWORK_RUNS_DATABASE_URL: ${FRAMEWORK_RUNS_DATABASE_URL:?set dedicated Runs DB URL in .env}
+      FRAMEWORK_RUNS_CORE_TOKEN: ${FRAMEWORK_RUNS_CORE_TOKEN:?set scoped Runs token in .env}
+      FRAMEWORK_RUNS_TLS_CERT_FILE: /run/framework-runs/tls.crt
+      FRAMEWORK_RUNS_TLS_KEY_FILE: /run/framework-runs/tls.key
+      FRAMEWORK_RUNS_TLS_CA_FILE: /run/framework-runs/ca.crt
+    volumes:
+      - ${FRAMEWORK_RUNS_TLS_CERT_HOST_FILE:?set Runs TLS certificate path}:/run/framework-runs/tls.crt:ro
+      - ${FRAMEWORK_RUNS_TLS_KEY_HOST_FILE:?set Runs TLS private key path}:/run/framework-runs/tls.key:ro
+      - ${FRAMEWORK_RUNS_TLS_CA_HOST_FILE:?set Runs TLS CA path}:/run/framework-runs/ca.crt:ro
+    depends_on:
+      framework-runs-postgres:
+        condition: service_healthy
+    networks:
+      framework-runs-control:
+        aliases: [framework-runs-control]
+      framework-runs-data: {}
+    healthcheck:
+      test: ["CMD", "/framework-runs", "probe"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  default: {}
+  framework-runs-control:
+    internal: true
+    enable_ipv6: false
+  framework-runs-data:
+    internal: true
+    enable_ipv6: false
+
+volumes:
+  framework-runs-postgres-data:

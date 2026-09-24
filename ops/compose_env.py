@@ -5,6 +5,8 @@ import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
 
+from . import compose_framework_runs
+
 
 COMPOSE_RUNTIME_OVERRIDE_KEYS = {
     "CORS_ORIGIN",
@@ -41,7 +43,8 @@ COMPOSE_RUNTIME_OVERRIDE_KEYS = {
 }
 
 OUTPUT_BLOCK_MODES = {"local_hosted", "cluster_generated"}
-SECRET_KEY_MARKERS = ("API_KEY", "PASSWORD", "SECRET", "TOKEN")
+SECRET_KEY_MARKERS = ("API_KEY", "PASSWORD", "SECRET", "TOKEN", "DATABASE_URL")
+verify_framework_runs_health = compose_framework_runs.verify_health
 
 
 def compose_command(
@@ -53,14 +56,16 @@ def compose_command(
     docker_host_path,
     *args: str,
 ) -> list[str]:
+    compose_files = ["-f", docker_host_path(compose_file)]
+    if compose_framework_runs.enabled():
+        compose_files.extend(["-f", docker_host_path(compose_framework_runs.overlay_file(compose_file))])
     return docker_command(
         "compose",
         "--project-name",
         compose_project,
         "--env-file",
         docker_host_path(compose_env_file),
-        "-f",
-        docker_host_path(compose_file),
+        *compose_files,
         *args,
         cwd=root_dir,
     )
@@ -260,6 +265,7 @@ def validate_compose_env(env_values: dict[str, str], validate_output_block):
             "http://host.docker.internal:11434 or another container/service hostname."
         )
     validate_output_block(env_values)
+    compose_framework_runs.validate(env_values, root_dir=Path(__file__).resolve().parents[1])
 
 
 def compose_runtime_env(
@@ -274,7 +280,9 @@ def compose_runtime_env(
 ) -> dict[str, str] | None:
     host_mode = docker_host_mode()
     wsl_shell = running_in_wsl()
-    values = effective_env(env_values)
+    values = compose_framework_runs.runtime_values(
+        effective_env(env_values), docker_host_path=docker_host_path, host_mode=host_mode,
+    )
     raw_host_path = clean_env_value(values.get("MYCELIS_OUTPUT_HOST_PATH", ""))
     resolved_host_path = resolve_host_path(raw_host_path) if raw_host_path else default_output_host_path
 

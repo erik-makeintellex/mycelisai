@@ -92,6 +92,13 @@ spec:
                   name: {{ default (include "mycelis-core.coreAuthSecretName" .) .Values.coreAuth.existingSecret }}
                   key: mycelis-api-key
             {{- end }}
+            {{- if .Values.frameworkWorker.enabled }}
+            - name: MYCELIS_WORKER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "frameworkWorker.auth.existingSecret is required" .Values.frameworkWorker.auth.existingSecret | quote }}
+                  key: {{ .Values.frameworkWorker.auth.tokenKey | quote }}
+            {{- end }}
             {{- if .Values.ai.textEndpoint }}
             {{- range $providerID := .Values.ai.textProviderIds }}
             - name: MYCELIS_PROVIDER_{{ $providerID | replace "-" "_" | upper }}_ENDPOINT
@@ -150,6 +157,11 @@ spec:
             - name: config-volume
               mountPath: /core/config
               readOnly: true
+            {{- if .Values.frameworkWorker.enabled }}
+            - name: framework-runs-ca
+              mountPath: /core/framework-runs
+              readOnly: true
+            {{- end }}
       volumes:
         - name: tmp-volume
           emptyDir: {}
@@ -191,3 +203,11 @@ spec:
                 path: teams/prime-development.yaml
               - key: telemetry.yaml
                 path: teams/telemetry.yaml
+        {{- if .Values.frameworkWorker.enabled }}
+        - name: framework-runs-ca
+          secret:
+            secretName: {{ required "frameworkWorker.tls.existingSecret is required" .Values.frameworkWorker.tls.existingSecret | quote }}
+            items:
+              - key: {{ .Values.frameworkWorker.tls.caKey | quote }}
+                path: ca.crt
+        {{- end }}

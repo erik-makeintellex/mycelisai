@@ -175,23 +175,30 @@ def _assert_jetstream_empty():
         "frontend": "Also start frontend during proof (default: True).",
         "shutdown": "Stop local app services after proof; data plane remains running (default: True).",
         "isolated": "Use a disposable full Compose project and remove only its resources after proof.",
+        "framework_runs": "With --isolated, prove the opt-in private Runs controller in the disposable project.",
     }
 )
-def first_boot_proof(c, build=False, frontend=True, shutdown=True, isolated=False):
+def first_boot_proof(c, build=False, frontend=True, shutdown=True, isolated=False, framework_runs=False):
     """
     Prove a clean deployment can first-boot without historical product state.
     """
     if isolated:
         if not frontend or not shutdown:
             raise SystemExit("Isolated first-boot proof requires frontend and shutdown; its fixture is always removed.")
+        if framework_runs and not build:
+            raise SystemExit("Framework Runs first-boot certification requires --build for the current worker image.")
         from .lifecycle_first_boot_isolated import run_isolated_first_boot
 
         run_isolated_first_boot(
             build=build,
             user_tables=CLEAN_FIRST_BOOT_USER_TABLES,
             bootstrap_tables=CLEAN_FIRST_BOOT_BOOTSTRAP_TABLES,
+            framework_runs=framework_runs,
         )
         return
+
+    if framework_runs:
+        raise SystemExit("Framework Runs first-boot proof requires --isolated; retained services are never selected.")
 
     from . import lifecycle
 

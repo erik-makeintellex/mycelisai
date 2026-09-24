@@ -48,7 +48,8 @@ func (server *Server) health(response http.ResponseWriter, request *http.Request
 		return
 	}
 	writeJSON(response, http.StatusOK, map[string]any{
-		"healthy": true, "message": "framework Runs service ready",
+		"healthy": true, "controller_ready": true, "production_ready": false,
+		"message": "framework Runs controller ready; no production executor is configured",
 		"backend": "framework_runs", "protocol": "runs_api",
 	})
 }

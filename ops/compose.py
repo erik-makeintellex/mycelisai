@@ -644,7 +644,6 @@ def health(c):
     env_values = _compose_effective_env()
     _validate_compose_env(env_values)
     env_values = _prepare_wsl_ollama_host(env_values)
-
     print("=== Mycelis Compose Health ===\n")
     compose_probe.run_health(
         env_values,
@@ -654,6 +653,7 @@ def health(c):
         interface_host=INTERFACE_HOST,
         interface_port=INTERFACE_PORT,
     )
+    compose_env.verify_framework_runs_health(env_values, compose_command=_compose_command, runtime_env=_compose_runtime_env)
 
 
 @task(help={"service": "Optional compose service name.", "tail": "Number of log lines to show (default: 200)."})
