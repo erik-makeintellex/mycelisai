@@ -29,6 +29,10 @@ Priority: correctness → safety / authority → accepted architecture → tests
 
 ## Worktree Safety
 
+- **Clean Git is a mandatory delivery gate.** Start each slice from a clean worktree and index. Before handoff, starting another slice, merging, or promotion, commit the reviewed work and verify `git status --porcelain=v1 --untracked-files=all` is empty. Expected edits may remain uncommitted only while the current slice is actively being worked.
+- Inspect every registered worktree at close-out. Report its branch, HEAD, cleanliness, and any outstanding owner; a clean current checkout does not mean the repository setup is clean. Record local/upstream divergence without treating a local commit as a push or integration proof.
+- Never accumulate unrelated slices in one dirty branch or claim completion with unexplained staged, unstaged, or untracked files. Preserve inherited work, establish its owner, and isolate/review it before proceeding. If interrupted or blocked, report the exact remaining work and owner; a recovery checkpoint preserves work but does not certify it for integration.
+- Do not manufacture cleanliness by deleting unknown files, hiding changes with ignore rules or index flags, or stashing them without an explicit recovery/handoff record. Keep secrets and generated proof artifacts out of commits; commit only inspected, scoped source changes with their applicable docs and evidence.
 - Before branch or worktree mutation, inspect `git status`, the current branch, worktrees, and diff. One integration owner controls Git topology; agents must not mutate it concurrently.
 - Never destroy unknown work, wholesale-merge stale WIP, or delete untracked files without inspection. Destructive reset/deletion requires explicit task approval and recovery.
 
