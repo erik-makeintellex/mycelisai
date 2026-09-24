@@ -53,20 +53,31 @@ Priority: correctness → safety / authority → accepted architecture → tests
 
 ## Development Model Routing
 
-Use the smallest model that passes the task's proof gate; optimize accepted results, not token price alone. These developer-agent choices do not configure Mycelis runtime providers.
+Use the smallest tier that passes the task's proof gate; optimize accepted results, not token price alone. These developer-agent choices do not configure Mycelis runtime providers. Pick the tier first, then the harness model.
 
-| Task | Model / effort |
-| --- | --- |
-| Narrow read-only search, inventory, evidence formatting | `gpt-6-luna` / high |
-| Routine coding, tests, automation, integration | `gpt-6-sol` / medium |
-| Concurrency, persistence, security review, difficult coding | `gpt-6-sol` / high |
-| Bounded architecture planning | `gpt-6-astra` / low |
-| Unresolved authority conflicts or hard design review | `gpt-6-astra` / high |
+| Tier | Work | Codex | Claude | Local vLLM (`127.0.0.1:8000`) |
+| --- | --- | --- | --- | --- |
+| T0 inventory | Read-only search, file/route inventory, log triage, evidence formatting | `gpt-6-luna` / high | Haiku | Allowed: summarizing supplied text |
+| T1 routine | Specified coding, tests, UI copy, docs sync, automation | `gpt-6-sol` / medium | Sonnet | Only small scoped edits with a passing test gate |
+| T2 hard | Concurrency, persistence, schema, security fixes, difficult coding | `gpt-6-sol` / high | Opus | Not allowed |
+| T3 authority | Contract freeze, architecture conflicts, independent security QA, final GO | `gpt-6-astra` / low→high | Opus | Not allowed |
 
-- Give agents only the objective, owned paths, invariants, and proof gate; avoid full-history forks by default. Reuse a relevant reviewer rather than paying to reconstruct context.
-- One agent is the default; spawn only authorized, independent work. Escalate after a concrete failed proof or unresolved ambiguity, not for routine command execution. Return concise findings and source refs; do not repeat raw logs.
-- Record token usage, latency, and retries when the harness exposes them. Do not invent savings or confuse this session's primary model with future spawn settings.
-- Model/effort guidance follows [official Codex documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents); these assignments are repository operating choices, not capability guarantees.
+- The local model (currently Qwen2.5-Coder-14B-AWQ, 16k context, hermes tool calls) keeps data on the host and suits confidential or offline work. It never owns authority, schema, security review, or final GO, and its output needs a stronger-tier review before merge. Record the served model id; `/v1/models` is the source of truth.
+- A newly available model enters a tier only after it passes that tier's proof gate on a bounded slice. A model name is not evidence.
+- One agent is the default; spawn only authorized, independent work. Escalate a tier after a concrete failed proof or unresolved ambiguity, not for routine command execution.
+- Record model, tier, token usage, latency, and retries in close-out when the harness exposes them. Do not invent savings or confuse the lead session's model with spawn settings.
+- Harness rosters (for example local `.claude/agents/` or Codex agent config) must follow this table and the rules in this file; they are not authority. Codex effort guidance follows [official Codex documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents). All assignments are repository operating choices, not capability guarantees.
+
+## Context Execution
+
+Context is the scarcest resource on every harness. The lead keeps conclusions; files keep detail.
+
+- **Budget by window.** Local 16k: give one contract packet (at most ~4k tokens) and one owned file range at a time, with no repository sweeps. Mid tier: the packet plus owned files. Top tier: cross-file reasoning, but still range reads.
+- **Packets, not history.** Freeze contracts to a file (a session scratch path, or the owning plan once accepted). Pass implementers the packet path, owned paths, invariants, and proof gate. Never pass the thread history.
+- **Read narrowly.** Run `rg -n` first, then ranged reads. Read the PRD and scoreboard by section. Read a whole large file only when editing it.
+- **Delegate sweeps.** Broad searches run in a T0/T1 subagent. It returns at most 300 words with `file:line` refs; full output goes to a file. Spot-check the claims the lead will act on before relying on them.
+- **Evidence to files.** Logs and reports go to ignored runtime or `/tmp` paths. The thread carries commands, pass/fail/skip counts, and artifact paths, never raw logs.
+- **Reuse over respawn.** Continue a live agent that already holds the relevant context. Close agents at handoff. Do not poll background work: run it in the background and act on completion.
 
 ## Repository Standards
 
@@ -114,7 +125,7 @@ This repository is Go-first for product/runtime work and Python-first for manage
 ## Team Orchestration And Messaging Contract
 
 - The lead agent is the messaging avatar for team execution. It coordinates intent, decisions, dependencies, and proof across sub-agents and Mycelis teams instead of letting background work drift into disconnected threads.
-- When the local NATS-backed Mycelis stack is intentionally running and relevant to the slice, prefer using the product's bus-facing workflows for team coordination proof, status, and handoff checks. If the bus is unavailable or unnecessary, record that explicitly and keep coordination in the Codex thread.
+- When the local NATS-backed Mycelis stack is intentionally running and relevant to the slice, prefer using the product's bus-facing workflows for team coordination proof, status, and handoff checks. If the bus is unavailable or unnecessary, record that explicitly and keep coordination in the lead thread.
 - Team communication should mirror the product architecture: concise intent, assigned ownership, expected output, proof gate, status updates, blockers, and handoff notes. Avoid spawning parallel teams without a clear owner, bounded deliverable, and cleanup path.
 - Close-out must include what teams or agents were reused, spawned, messaged, closed, or intentionally skipped.
 
