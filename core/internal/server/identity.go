@@ -2,10 +2,13 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/mycelis/core/internal/swarm"
 )
 
 const defaultAssistantName = "Soma"
@@ -97,6 +100,10 @@ func (s *AdminServer) HandleDeleteTeam(w http.ResponseWriter, r *http.Request) {
 	}
 	found, err := s.Soma.StopTeamDurably(teamID)
 	if err != nil {
+		if errors.Is(err, swarm.ErrRuntimeTeamOwnershipActive) {
+			respondAPIError(w, "Runtime team has active operator ownership; revoke it before deletion", http.StatusConflict)
+			return
+		}
 		http.Error(w, "failed to remove durable team state", http.StatusInternalServerError)
 		return
 	}

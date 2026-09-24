@@ -2556,4 +2556,28 @@ CREATE INDEX IF NOT EXISTS idx_effect_invocations_recovery
     ON execution_invocations(state, lease_until) WHERE state IN ('ready','claimed','executing','unknown_effect');
 -- END G4_E10_EXTENSION
 
+-- BEGIN C2A_TEAM_OWNERSHIP_EXTENSION
+-- Explicit operator provisioning only: existing durable teams remain unowned.
+ALTER TABLE groups ADD CONSTRAINT uq_groups_account_id UNIQUE (account_id, id);
+ALTER TABLE runtime_team_manifests
+    ADD COLUMN owner_account_id UUID,
+    ADD COLUMN owner_group_id UUID,
+    ADD COLUMN ownership_provisioned_by UUID REFERENCES users(id) ON DELETE RESTRICT,
+    ADD COLUMN ownership_provisioned_at TIMESTAMPTZ,
+    ADD COLUMN ownership_revoked_by UUID REFERENCES users(id) ON DELETE RESTRICT,
+    ADD COLUMN ownership_revoked_at TIMESTAMPTZ,
+    ADD CONSTRAINT fk_runtime_team_owner FOREIGN KEY (owner_account_id, owner_group_id)
+        REFERENCES groups(account_id, id) MATCH FULL ON DELETE RESTRICT,
+    ADD CONSTRAINT chk_runtime_team_provisioned CHECK (
+        (owner_account_id IS NULL AND owner_group_id IS NULL
+            AND ownership_provisioned_by IS NULL AND ownership_provisioned_at IS NULL
+            AND ownership_revoked_by IS NULL AND ownership_revoked_at IS NULL)
+        OR (owner_account_id IS NOT NULL AND owner_group_id IS NOT NULL
+            AND ownership_provisioned_by IS NOT NULL AND ownership_provisioned_at IS NOT NULL)),
+    ADD CONSTRAINT chk_runtime_team_revoked CHECK (
+        (ownership_revoked_by IS NULL AND ownership_revoked_at IS NULL)
+        OR (ownership_revoked_by IS NOT NULL AND ownership_revoked_at IS NOT NULL
+            AND ownership_revoked_at >= ownership_provisioned_at));
+-- END C2A_TEAM_OWNERSHIP_EXTENSION
+
 COMMIT;

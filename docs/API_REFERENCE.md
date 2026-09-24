@@ -344,3 +344,16 @@ Implementation notes:
 - `upstream_response_id` is the opaque response-body identifier reported by the selected OpenAI-compatible upstream. It is not a LiteLLM call/spend-log request id, Mycelis run id, audit id, or proof of end-to-end correlation; none of these accounting fields is a cost record or Outcome proof
 - the canonical secret boundary is defined in [Mycelis Canonical PRD](architecture-library/MYCELIS_CANONICAL_PRD.md)
 - for local-model switching and profile routing, see [Local Dev Workflow](LOCAL_DEV_WORKFLOW.md) and [AI Provider Runtime](COGNITIVE_ARCHITECTURE.md)
+
+
+## Operator Durable-Team Ownership (C2a)
+
+| Method | Route | Meaning |
+| --- | --- | --- |
+| GET | `/api/v1/admin/runtime-teams/{teamID}/ownership?group_id=<UUID>` | Authorize operator; return exact manifest digest, opaque revision and owner/provision/revocation evidence. |
+| PUT | `/api/v1/admin/runtime-teams/{teamID}/ownership` | Bind an unassigned or explicitly revoked manifest. |
+| DELETE | `/api/v1/admin/runtime-teams/{teamID}/ownership` | Revoke the exact current owner; retain evidence. This does not delete the team. |
+
+PUT/DELETE accept only `group_id`, `expected_manifest_digest`, `expected_revision`, and `reason` (nonempty, at most 500 bytes). Read current preconditions through GET; stale preconditions fail with 409, never overwrite. Responses use the standard API envelope. Missing authentication returns 401; insufficient persisted operator authority 403; missing manifest 404; invalid input 400; unavailable persistence 503 or operation failure 500. Core derives the actor from trusted request identity, never body-supplied actor/account/tenant fields. Ownership responses contain no credentials.
+
+All methods require active persisted user/account, matching target group/account and manifest tenant, and exactly one active/unexpired NULL-group membership in an account-null system role explicitly granting `framework_runs.provision_team`. Admin labels, API keys and aggregated wildcard scopes alone do not grant provisioning. The deployment owner audits legacy manifest assignment; tenant text does not prove provenance. Existing Save preserves ownership; ordinary team deletion refuses an active owner with 409 before stopping its runtime. Revoke first, then delete. Unassigned teams remain blocked for future external invocation. C2a does not activate external execution or add a user-facing ownership UI.

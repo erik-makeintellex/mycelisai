@@ -84,3 +84,33 @@ for _table, _columns in (
 SCHEMA_COMPATIBILITY_CHECKS += (("immutable effect grant trigger", "SELECT 1 FROM pg_trigger WHERE tgrelid=to_regclass('public.execution_effect_grants') AND tgname='trg_execution_effect_grants_immutable' AND tgenabled='O';"),)
 
 SCHEMA_COMPATIBILITY_CHECKS += (("immutable invocation identity trigger", "SELECT 1 FROM pg_trigger WHERE tgrelid=to_regclass('public.execution_invocations') AND tgname='trg_execution_invocations_identity_immutable' AND tgenabled='O';"),)
+
+# G4/E10 is a supported retained baseline for the bounded C2a ALTER transaction.
+G4_SCHEMA_COMPATIBILITY_CHECKS = SCHEMA_COMPATIBILITY_CHECKS
+TEAM_OWNERSHIP_COLUMNS = (
+    ("owner_account_id", "uuid"), ("owner_group_id", "uuid"),
+    ("ownership_provisioned_by", "uuid"),
+    ("ownership_provisioned_at", "timestamp with time zone"),
+    ("ownership_revoked_by", "uuid"),
+    ("ownership_revoked_at", "timestamp with time zone"),
+)
+for _column, _type in TEAM_OWNERSHIP_COLUMNS:
+    SCHEMA_COMPATIBILITY_CHECKS += ((f"team ownership {_column}",
+        "SELECT 1 FROM information_schema.columns WHERE table_schema='public' "
+        "AND table_name='runtime_team_manifests' "
+        f"AND column_name='{_column}' AND data_type='{_type}' AND is_nullable='YES';"),)
+SCHEMA_COMPATIBILITY_CHECKS += (
+    ("team owner account/group FK", "SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.runtime_team_manifests') AND confrelid=to_regclass('public.groups') AND conname='fk_runtime_team_owner' AND contype='f' AND confmatchtype='f' AND confdeltype='r' AND convalidated AND pg_get_constraintdef(oid) LIKE 'FOREIGN KEY (owner_account_id, owner_group_id) REFERENCES groups(account_id, id)%';"),
+)
+# Exact pg16 constraint definitions fail closed on same-name weakened constraints.
+_TEAM_EVIDENCE_CONSTRAINTS = (
+    ("chk_runtime_team_provisioned", "CHECK ((((owner_account_id IS NULL) AND (owner_group_id IS NULL) AND (ownership_provisioned_by IS NULL) AND (ownership_provisioned_at IS NULL) AND (ownership_revoked_by IS NULL) AND (ownership_revoked_at IS NULL)) OR ((owner_account_id IS NOT NULL) AND (owner_group_id IS NOT NULL) AND (ownership_provisioned_by IS NOT NULL) AND (ownership_provisioned_at IS NOT NULL))))"),
+    ("chk_runtime_team_revoked", "CHECK ((((ownership_revoked_by IS NULL) AND (ownership_revoked_at IS NULL)) OR ((ownership_revoked_by IS NOT NULL) AND (ownership_revoked_at IS NOT NULL) AND (ownership_revoked_at >= ownership_provisioned_at))))"),
+    ("runtime_team_manifests_ownership_provisioned_by_fkey", "FOREIGN KEY (ownership_provisioned_by) REFERENCES users(id) ON DELETE RESTRICT"),
+    ("runtime_team_manifests_ownership_revoked_by_fkey", "FOREIGN KEY (ownership_revoked_by) REFERENCES users(id) ON DELETE RESTRICT"),
+)
+for _name, _definition in _TEAM_EVIDENCE_CONSTRAINTS:
+    SCHEMA_COMPATIBILITY_CHECKS += ((_name,
+        "SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.runtime_team_manifests') "
+        f"AND conname='{_name}' AND convalidated AND NOT condeferrable "
+        f"AND pg_get_constraintdef(oid)='{_definition}';"),)

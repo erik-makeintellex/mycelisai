@@ -57,10 +57,10 @@ export const DOC_MANIFEST: DocSection[] = [
             { slug: "docs-home", label: "Docs Home", path: "docs/README.md", description: "Clean navigation layer for user, developer, testing, release, and compatibility docs" },
             { slug: "readme", label: "Repository Overview", path: "README.md", description: "Primary development-swarm inception document and command contract" },
             { slug: "local-dev", label: "Local Dev Workflow", path: "docs/LOCAL_DEV_WORKFLOW.md", description: "Setup, config reference, port map, and troubleshooting guidance" },
-            { slug: "operations", label: "Operations", path: "docs/architecture/OPERATIONS.md", description: "Task ownership, lifecycle, Compose/local providers, opt-in private Runs TLS and isolation, Kubernetes, and release lanes" },
+            { slug: "operations", label: "Operations", path: "docs/architecture/OPERATIONS.md", description: "Task ownership, lifecycle, retained schema upgrades, operator team provisioning, Compose/local providers, private Runs isolation, Kubernetes, and release lanes" },
             { slug: "testing", label: "Testing", path: "docs/TESTING.md", description: "Unit, integration, browser, isolated first-boot/worker deployment, and release validation guidance" },
             { slug: "user-acceptance", label: "User Acceptance", path: "docs/REMOTE_USER_TESTING.md", description: "Human Trusted Outcome Journey, cross-device UX review, and release evidence contract" },
-            { slug: "api-reference", label: "API Reference", path: "docs/API_REFERENCE.md", description: "Endpoint table with request and response shapes" },
+            { slug: "api-reference", label: "API Reference", path: "docs/API_REFERENCE.md", description: "Endpoint table, operator team ownership preconditions, and request/response shapes" },
             { slug: "cognitive-architecture", label: "AI Provider Runtime", path: "docs/COGNITIVE_ARCHITECTURE.md", description: "Provider routing, token budgets, existing local engines, optional model gateways, media, and embeddings" },
             { slug: "licensing-editions", label: "Licensing & Editions", path: "docs/licensing.md", description: "Product-edition posture for self-hosted, enterprise, and hosted layering" },
             { slug: "governance", label: "Governance System", path: "docs/governance.md", description: "Policy enforcement, approval posture, and audit-linked governance model" },
@@ -70,7 +70,7 @@ export const DOC_MANIFEST: DocSection[] = [
     {
         section: "Architecture",
         docs: [
-            { slug: "mycelis-canonical-prd", label: "Mycelis Canonical PRD", path: "docs/architecture-library/MYCELIS_CANONICAL_PRD.md", description: "Single source for product thesis, UX, runtime architecture, governance, outcomes, capabilities, recovery, MVP scope, P0 delivery, and release gates" },
+            { slug: "mycelis-canonical-prd", label: "Mycelis Canonical PRD", path: "docs/architecture-library/MYCELIS_CANONICAL_PRD.md", description: "Single source for product thesis, UX, runtime architecture, governance, operator-provisioned team ownership, outcomes, capabilities, recovery, MVP scope, P0 delivery, and release gates" },
             { slug: "g4-e10-invocation", label: "G4/E10 Invocation Contract", path: "docs/architecture-library/G4_E10_DURABLE_INVOCATION.md", description: "Bounded counting-capability authority, durable ownership, uncertainty, and acceptance gates; review status is recorded in the packet" },
             { slug: "arch-backend", label: "Backend", path: "docs/architecture/BACKEND.md", description: "Go packages, APIs, DB schema, NATS, and execution pipelines" },
             { slug: "arch-frontend", label: "Frontend", path: "docs/architecture/FRONTEND.md", description: "Routes, components, Zustand, and design system" },

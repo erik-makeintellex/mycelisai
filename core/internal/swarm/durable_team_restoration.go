@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -75,6 +76,8 @@ func (l *PostgresDurableTeamLoader) LoadRuntimeTeams(ctx context.Context) ([]*Te
 }
 
 const durableRuntimeTenant = "default"
+
+var ErrRuntimeTeamOwnershipActive = errors.New("runtime team has active provisioned ownership")
 
 const persistedRuntimeTeamsQuery = `
 SELECT team_id, schema_version, manifest_digest, manifest
@@ -170,10 +173,31 @@ func (l *PostgresDurableTeamLoader) DeleteRuntimeTeam(ctx context.Context, teamI
 	if teamID == "" {
 		return fmt.Errorf("delete runtime team manifest: team identity is required")
 	}
-	if _, err := l.db.ExecContext(ctx, `DELETE FROM runtime_team_manifests WHERE tenant_id=$1 AND team_id=$2`, durableRuntimeTenant, teamID); err != nil {
+	tx, err := l.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin delete runtime team %s: %w", teamID, err)
+	}
+	defer tx.Rollback()
+	var ownerGroup sql.NullString
+	var revokedAt sql.NullTime
+	err = tx.QueryRowContext(ctx, `
+SELECT owner_group_id::text, ownership_revoked_at
+FROM runtime_team_manifests
+WHERE tenant_id=$1 AND team_id=$2
+FOR UPDATE`, durableRuntimeTenant, teamID).Scan(&ownerGroup, &revokedAt)
+	if err == sql.ErrNoRows {
+		return tx.Commit()
+	}
+	if err != nil {
+		return fmt.Errorf("read runtime team ownership %s: %w", teamID, err)
+	}
+	if ownerGroup.Valid && !revokedAt.Valid {
+		return fmt.Errorf("delete runtime team %s: %w", teamID, ErrRuntimeTeamOwnershipActive)
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM runtime_team_manifests WHERE tenant_id=$1 AND team_id=$2`, durableRuntimeTenant, teamID); err != nil {
 		return fmt.Errorf("delete runtime team %s: %w", teamID, err)
 	}
-	return nil
+	return tx.Commit()
 }
 
 const durableRuntimeTeamsQuery = `
