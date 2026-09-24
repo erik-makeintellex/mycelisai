@@ -145,10 +145,17 @@ export function webAuthRedirectURL(path: string, fallbackOrigin?: string | null)
 }
 
 export function webAuthBaseOrigin(fallbackOrigin?: string | null): string {
-    const fallback = (fallbackOrigin || "").trim();
-    if (fallback && !fallback.includes("[::]")) return fallback.replace(/\/+$/, "");
-    const configured = envValue("MYCELIS_PUBLIC_ORIGIN").trim().replace(/\/+$/, "");
-    if (configured) return configured;
+    for (const candidate of [envValue("MYCELIS_PUBLIC_ORIGIN"), fallbackOrigin]) {
+        try {
+            const url = new URL((candidate || "").trim());
+            if (!["http:", "https:"].includes(url.protocol)) continue;
+            if (["0.0.0.0", "[::]"].includes(url.hostname)) continue;
+            if (url.username || url.password) continue;
+            return url.origin;
+        } catch {
+            // Invalid or missing origins cannot become browser destinations.
+        }
+    }
     return "http://127.0.0.1:3000";
 }
 

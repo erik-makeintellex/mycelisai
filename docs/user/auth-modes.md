@@ -120,6 +120,10 @@ The registered Google redirect URI must exactly match `MYCELIS_AUTH_GOOGLE_REDIR
 
 For local source development, keep the Google values in repo-root `.env`. The Interface auth server also reads that file when Next runs from `interface/`, so `/login` should still show **Sign in with Google Workspace** without duplicating secrets into `interface/.env.local`.
 
+For full Compose, use the same repo-root `.env`: the Interface receives Google client settings, domain/admin policy, `MYCELIS_PUBLIC_ORIGIN`, and `MYCELIS_WEB_COOKIE_SECURE` at runtime. Apply changes with `uv run inv compose.up`. Google credentials are not supplied to Core or image builds. Set the public origin to the browser-facing URL and use secure cookies for HTTPS. An empty configuration keeps Google login unavailable; restore the existing registered client settings rather than creating replacement credentials. Recreating containers does not recover settings absent from `.env`. Verify the Google button, redirect, callback, and signed session using that exact browser origin.
+
+Auth redirects reject wildcard bind addresses (`0.0.0.0` and `[::]`) and use the configured public origin when the runtime supplies one. If login returns `google_token`, inspect the sanitized Interface token-exchange status: HTTP 401 indicates rejected client authentication. Verify the client ID and matching secret belong to the same Google OAuth registration, then apply `.env` changes with `uv run inv compose.up` and restart sign-in. Never reuse an earlier callback URL containing a one-time authorization code.
+
 ## GitHub
 
 Use GitHub for team login only when the organization accepts GitHub identity as a login proof.
@@ -171,3 +175,5 @@ Before accepting an auth-mode change:
 7. Access-denied recovery points to Settings, System Status, and owner/admin action.
 8. `/login` explains the enabled path clearly: local owner login for self-hosted nodes, a provider-neutral not-configured state when enterprise SSO is unavailable, the configured provider action when an adapter is enabled, and allowed-domain guidance only when restrictions are active.
 9. After login, `/dashboard` opens directly into Soma; Settings and System surfaces expose role, provider, and scope when the operator needs to inspect identity.
+
+Authentication redirects prefer configured `MYCELIS_PUBLIC_ORIGIN` over request Host/Origin values. Managed browser fixtures must set their own public origin or leave it unset; wildcard bind addresses are never browser destinations.

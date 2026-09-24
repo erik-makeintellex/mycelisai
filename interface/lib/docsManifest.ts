@@ -38,7 +38,7 @@ export const DOC_MANIFEST: DocSection[] = [
             { slug: "memory-guide", label: "Memory", path: "docs/user/memory.md", description: "Workspace continuity, source-aware recall, governed context, and trust boundaries" },
             { slug: "governance-trust", label: "Governance & Trust", path: "docs/user/governance-trust.md", description: "Approval posture, risk classes, audit visibility, and trusted-memory precedence" },
             { slug: "settings-access", label: "Settings And Access", path: "docs/user/settings-access.md", description: "Profile, access posture, auth providers, and connected-tool/search boundaries" },
-            { slug: "auth-modes", label: "Authentication Modes", path: "docs/user/auth-modes.md", description: "Local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM posture" },
+            { slug: "auth-modes", label: "Authentication Modes", path: "docs/user/auth-modes.md", description: "Local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace source/Compose setup, GitHub, and future SCIM posture" },
             { slug: "deployment-method-selection", label: "Deployment Method Selection", path: "docs/user/deployment-methods.md", description: "Choose Compose, Kubernetes, enterprise self-hosted, or edge deployment lanes" },
             { slug: "system-status-recovery", label: "System Status & Recovery", path: "docs/user/system-status-recovery.md", description: "Health signals, degraded recovery actions, and System Checks workflow" },
             { slug: "run-timeline", label: "Run Timeline", path: "docs/user/run-timeline.md", description: "Execution timelines, status changes, and run navigation paths" },

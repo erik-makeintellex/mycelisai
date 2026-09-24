@@ -90,19 +90,30 @@ describe("webAuth", () => {
         expect(decodeOAuthStateCookie("state-123:/dashboard")).toEqual({ state: "", next: "/dashboard" });
     });
 
-    it("keeps auth redirects on the public origin instead of the bind host", () => {
+    it.each(["http://[::]:3000", "http://0.0.0.0:3000", "not-a-url", "ftp://example.com"])("keeps auth redirects off invalid browser origin %s", (origin) => {
         const previous = process.env.MYCELIS_PUBLIC_ORIGIN;
         process.env.MYCELIS_PUBLIC_ORIGIN = "http://127.0.0.1:3000";
-        expect(webAuthRedirectURL("/login", "http://[::]:3000").toString()).toBe("http://127.0.0.1:3000/login");
+        expect(webAuthRedirectURL("/login", origin).toString()).toBe("http://127.0.0.1:3000/login");
         if (previous === undefined) delete process.env.MYCELIS_PUBLIC_ORIGIN;
         else process.env.MYCELIS_PUBLIC_ORIGIN = previous;
     });
 
-    it("preserves valid managed-server origins for browser proof", () => {
+    it("uses the managed-server origin when no public origin is configured", () => {
         const previous = process.env.MYCELIS_PUBLIC_ORIGIN;
-        process.env.MYCELIS_PUBLIC_ORIGIN = "http://127.0.0.1:3000";
+        process.env.MYCELIS_PUBLIC_ORIGIN = "";
         expect(webAuthRedirectURL("/dashboard", "http://127.0.0.1:3100").toString()).toBe("http://127.0.0.1:3100/dashboard");
         if (previous === undefined) delete process.env.MYCELIS_PUBLIC_ORIGIN;
         else process.env.MYCELIS_PUBLIC_ORIGIN = previous;
     });
+    it.each(["https://attacker.example", "http://127.0.0.1:3100"])("pins configured public origin instead of request origin %s", (origin) => {
+        const previous = process.env.MYCELIS_PUBLIC_ORIGIN;
+        process.env.MYCELIS_PUBLIC_ORIGIN = "https://mycelis.example";
+        try {
+            expect(webAuthRedirectURL("/login", origin).toString()).toBe("https://mycelis.example/login");
+        } finally {
+            if (previous === undefined) delete process.env.MYCELIS_PUBLIC_ORIGIN;
+            else process.env.MYCELIS_PUBLIC_ORIGIN = previous;
+        }
+    });
+
 });

@@ -38,3 +38,43 @@ def test_compose_profile_overrides_match_core_environment_contract():
     assert all(key.endswith("_PROVIDER") for key in overrides)
     core = (root / "core/internal/cognitive/env_overrides.go").read_text()
     assert 'strings.TrimSuffix(rawField, "_PROVIDER")' in core
+
+
+def test_google_sso_is_runtime_interface_configuration_only():
+    import yaml
+
+    services = yaml.safe_load(COMPOSE_FILE.read_text())["services"]
+    keys = (
+        "MYCELIS_AUTH_GOOGLE_CLIENT_ID", "MYCELIS_AUTH_GOOGLE_CLIENT_SECRET",
+        "MYCELIS_AUTH_GOOGLE_REDIRECT_URI", "MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN",
+        "MYCELIS_AUTH_ALLOWED_DOMAINS", "MYCELIS_AUTH_ADMIN_EMAILS",
+        "MYCELIS_PUBLIC_ORIGIN", "MYCELIS_WEB_COOKIE_SECURE",
+    )
+    for key in keys:
+        assert services["interface"]["environment"][key] == f"${{{key}:-}}"
+        for name, service in services.items():
+            if name != "interface":
+                assert key not in service.get("environment", {})
+            build = service.get("build", {})
+            if isinstance(build, dict):
+                assert key not in build.get("args", {})
+
+
+def test_google_secret_store_survives_compose_runtime_environment(tmp_path):
+    from ops.compose_env import load_compose_env, compose_runtime_env
+
+    (tmp_path / ".env").write_text(
+        "MYCELIS_AUTH_GOOGLE_CLIENT_SECRET=fixture-current\n"
+        "MYCELIS_AUTH_GOOGLE_CLIENT_ID=fixture-client\n"
+        "MYCELIS_AUTH_GOOGLE_REDIRECT_URI=http://127.0.0.1:3000/auth/google/callback\n"
+    )
+    topology = tmp_path / ".env.compose"
+    topology.write_text("MYCELIS_AUTH_GOOGLE_CLIENT_SECRET=fixture-stale\n")
+    values = load_compose_env(topology, lambda: None)
+    runtime = compose_runtime_env(
+        values, lambda: "local", lambda: False, lambda v: v,
+        tmp_path, str, environ={},
+    )
+    assert runtime["MYCELIS_AUTH_GOOGLE_CLIENT_SECRET"] == "fixture-current"
+    assert runtime["MYCELIS_AUTH_GOOGLE_CLIENT_ID"] == "fixture-client"
+    assert runtime["MYCELIS_AUTH_GOOGLE_REDIRECT_URI"].endswith("/auth/google/callback")

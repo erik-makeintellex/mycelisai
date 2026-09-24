@@ -4,6 +4,7 @@ import { GET } from "@/app/api/auth/google/callback/route";
 import { WEB_SESSION_COOKIE, encodeOAuthStateCookie, verifySessionToken } from "@/lib/webAuth";
 
 const AUTH_ENV = [
+  "MYCELIS_PUBLIC_ORIGIN",
   "MYCELIS_WEB_SESSION_SECRET",
   "MYCELIS_API_KEY",
   "MYCELIS_AUTH_GOOGLE_CLIENT_ID",
@@ -20,6 +21,7 @@ const fetchMock = vi.fn<typeof fetch>();
 describe("Google auth callback route", () => {
   beforeEach(() => {
     for (const key of AUTH_ENV) previousEnv.set(key, process.env[key]);
+    process.env.MYCELIS_PUBLIC_ORIGIN = "http://127.0.0.1:3000";
     process.env.MYCELIS_WEB_SESSION_SECRET = "test-session-secret";
     process.env.MYCELIS_API_KEY = "";
     process.env.MYCELIS_AUTH_GOOGLE_CLIENT_ID = "test-google-client";
@@ -115,6 +117,20 @@ describe("Google auth callback route", () => {
     expect(warn).toHaveBeenCalledWith("[auth/google] callback failed", { phase: "token_exchange", status: 401 });
     expect(JSON.stringify(warn.mock.calls)).not.toContain("invalid_client");
     expect(JSON.stringify(warn.mock.calls)).not.toContain("test-google-secret");
+  });
+
+  it.each(["http://0.0.0.0:3000", "https://attacker.example"])("keeps token failures on the configured public origin instead of %s", async (origin) => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    fetchMock.mockResolvedValueOnce(new Response("", { status: 401 }));
+    const request = callbackRequest();
+    // Next's test URL normalizer maps loopback names to localhost; model the
+    // origin actually observed behind the deployed Compose listener explicitly.
+    Object.defineProperty(request, "nextUrl", {
+      value: new URL(new URL(request.url).pathname + new URL(request.url).search, origin),
+    });
+    const response = await GET(request);
+    expect(response.headers.get("location")).toBe("http://127.0.0.1:3000/login?error=google_token");
+    expect(response.cookies.get(WEB_SESSION_COOKIE)).toBeUndefined();
   });
 
   it("does not log exception messages that may contain request credentials", async () => {

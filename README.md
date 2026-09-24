@@ -324,7 +324,7 @@ Use [Operations](docs/architecture/OPERATIONS.md) for task ownership, lifecycle,
 
 Licensing guidance lives in [Licensing](docs/licensing.md). Binary release and packaging commands live in [Local Development Workflow](docs/LOCAL_DEV_WORKFLOW.md#binary-release-process) and [Operations](docs/architecture/OPERATIONS.md).
 
-Release licensing separates the local self-hosted node from the hosted admin control plane and from full enterprise multi-user IAM, federated SAML/OIDC/SSO, optional lifecycle sync, and delegated enterprise admin/recovery flows. The current Interface always requires a signed web session; free/self-hosted nodes can use local owner login, while enterprise deployments can enable Google Workspace OIDC with internal Mycelis admin/standard roles.
+Release licensing separates the local self-hosted node from the hosted admin control plane and from full enterprise multi-user IAM, federated SAML/OIDC/SSO, optional lifecycle sync, and delegated enterprise admin/recovery flows. Compose SSO reads the existing Google client and policy settings from root `.env`; see [authentication setup](docs/user/auth-modes.md#google-workspace). The current Interface always requires a signed web session; free/self-hosted nodes can use local owner login, while enterprise deployments can enable Google Workspace OIDC with internal Mycelis admin/standard roles.
 
 ## Documentation Responsibilities
 
