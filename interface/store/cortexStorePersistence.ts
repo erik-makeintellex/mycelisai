@@ -53,9 +53,18 @@ export function loadOrCreateChatSessionId(scope?: string | null): string | null 
     }
 }
 
+// Chat is only written back after it has been read once on the client, so the
+// server-identical empty initial state can never overwrite saved history.
+let chatLoadedFromStorage = false;
+
+export function hasLoadedPersistedChat(): boolean {
+    return chatLoadedFromStorage;
+}
+
 // Soma's memory: chat survives page refreshes. Use clearPersistedChat to reset.
 export function loadPersistedChat(scope?: string | null): ChatMessage[] {
     if (typeof window === 'undefined') return [];
+    chatLoadedFromStorage = true;
     try {
         const scopedKey = buildChatStorageKey(scope);
         const raw = localStorage.getItem(scopedKey) ?? (!scope ? localStorage.getItem(CHAT_STORAGE_KEY_LEGACY) : null);

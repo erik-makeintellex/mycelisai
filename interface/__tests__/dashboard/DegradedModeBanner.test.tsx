@@ -19,6 +19,9 @@ function resetStore() {
         assistantName: "Soma",
         councilTarget: "council-sentry",
         isStatusDrawerOpen: false,
+        servicesStatus: [],
+        servicesStatusFailure: null,
+        servicesStatusUpdatedAt: null,
     });
 }
 
@@ -94,7 +97,8 @@ describe("DegradedModeBanner", () => {
         await waitFor(() => {
             expect(screen.getByText(/System in Degraded Mode/i)).toBeDefined();
         });
-        expect(screen.getByText(/Core functionality is still available/i)).toBeDefined();
+        expect(screen.getByText(/Some features may be unavailable/i)).toBeDefined();
+        expect(screen.queryByText(/Core functionality is still available/i)).toBeNull();
 
         fireEvent.click(screen.getByText("Open Status"));
         expect(useCortexStore.getState().isStatusDrawerOpen).toBe(true);
@@ -236,5 +240,20 @@ describe("DegradedModeBanner", () => {
         await waitFor(() => {
             expect(screen.getByText(/AI Engine that is configured but disabled/i)).toBeDefined();
         });
+    });
+
+    it("leads with Core API unreachable and the documented start command when Core cannot be reached", async () => {
+        useCortexStore.setState({ councilTarget: "admin" });
+        mockFetch.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
+
+        render(<DegradedModeBanner />);
+        await useCortexStore.getState().fetchServicesStatus();
+
+        await waitFor(() => {
+            expect(screen.getByText(/Core API unreachable/i)).toBeDefined();
+        });
+        expect(screen.getByText(/uv run inv lifecycle\.up --frontend/)).toBeDefined();
+        expect(screen.queryByText(/Core functionality is still available/i)).toBeNull();
+        expect(screen.getByTestId("degraded-mode-banner").getAttribute("data-reachability")).toBe("unreachable");
     });
 });

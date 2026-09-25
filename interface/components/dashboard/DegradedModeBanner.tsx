@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
+import { CORE_START_COMMAND, CORE_UNREACHABLE_TITLE, selectCoreReachability } from "@/lib/coreReachability";
 
 export default function DegradedModeBanner() {
     const services = useCortexStore((s) => s.servicesStatus);
@@ -19,6 +20,8 @@ export default function DegradedModeBanner() {
     const initializeStream = useCortexStore((s) => s.initializeStream);
     const disconnectStream = useCortexStore((s) => s.disconnectStream);
     const fetchMissions = useCortexStore((s) => s.fetchMissions);
+    const reachability = useCortexStore(selectCoreReachability);
+    const coreDown = reachability === "unreachable";
 
     const retryAll = async () => {
         await fetchServicesStatus();
@@ -43,15 +46,26 @@ export default function DegradedModeBanner() {
         return r;
     }, [services, streamConnectionState, missionChatError, missionChatFailure]);
 
-    const degraded = reasons.length > 0;
+    const degraded = coreDown || reasons.length > 0;
     if (!degraded) return null;
 
+    const tone = coreDown
+        ? "border-cortex-danger/40 bg-cortex-danger/10 text-cortex-danger"
+        : "border-cortex-warning/30 bg-cortex-warning/10 text-cortex-warning";
+
     return (
-        <div className="h-9 border-b border-cortex-warning/30 bg-cortex-warning/10 px-4 flex items-center justify-between gap-3 flex-shrink-0">
+        <div
+            role="status"
+            data-testid="degraded-mode-banner"
+            data-reachability={reachability}
+            className={`h-9 border-b px-4 flex items-center justify-between gap-3 flex-shrink-0 ${tone}`}
+        >
             <div className="flex items-center gap-2 min-w-0">
-                <AlertTriangle className="w-3.5 h-3.5 text-cortex-warning flex-shrink-0" />
-                <p className="text-[11px] font-mono text-cortex-warning truncate">
-                    System in Degraded Mode — {reasons[0]}. Core functionality is still available.
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                <p className="text-[11px] font-mono truncate">
+                    {coreDown
+                        ? `${CORE_UNREACHABLE_TITLE} — Soma and runtime features are unavailable. Start it with: ${CORE_START_COMMAND}`
+                        : `System in Degraded Mode — ${reasons[0]}. Some features may be unavailable.`}
                 </p>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">

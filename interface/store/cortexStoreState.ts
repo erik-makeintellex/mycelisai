@@ -1,4 +1,5 @@
 import type { OnEdgesChange, OnNodesChange } from 'reactflow';
+import type { ServicesStatusFailure } from '@/lib/coreReachability';
 import type { MissionChatFailure } from '@/lib/missionChatFailure';
 import type { ConversationTurn } from '@/types/conversations';
 import type {
@@ -158,6 +159,7 @@ export interface CortexMissionChatContract {
     sendMissionChat: (message: string) => Promise<void>;
     clearMissionChat: () => void;
     setMissionChatScope: (scope: string | null) => void;
+    restorePersistedClientState: () => void;
     setCouncilTarget: (id: string) => void;
     fetchCouncilMembers: () => Promise<void>;
     broadcastToSwarm: (message: string) => Promise<void>;
@@ -182,6 +184,7 @@ export interface CortexGovernanceOpsContract {
     servicesStatus: ServiceHealthStatus[];
     isFetchingServicesStatus: boolean;
     servicesStatusUpdatedAt: string | null;
+    servicesStatusFailure: ServicesStatusFailure | null;
     teamsDetail: TeamDetailEntry[];
     isFetchingTeamsDetail: boolean;
     selectedTeamId: string | null;
@@ -216,6 +219,7 @@ export interface CortexAutomationRunsContract {
     isFetchingTimeline: boolean;
     recentRuns: MissionRun[];
     isFetchingRuns: boolean;
+    runsLoadError: string | null;
     triggerRules: TriggerRule[];
     isFetchingTriggers: boolean;
     conversationTurns: ConversationTurn[] | null;

@@ -1,4 +1,5 @@
 import { extractApiData } from '@/lib/apiContracts';
+import { classifyServicesStatusFailure } from '@/lib/coreReachability';
 import type { CortexState } from '@/store/cortexStoreState';
 import type {
     AuditLogEntry,
@@ -143,7 +144,10 @@ export function createCortexGovernanceSystemSlice(
             try {
                 const res = await fetch('/api/v1/services/status');
                 if (!res.ok) {
-                    set({ isFetchingServicesStatus: false });
+                    set({
+                        isFetchingServicesStatus: false,
+                        servicesStatusFailure: classifyServicesStatusFailure(res.status),
+                    });
                     return [];
                 }
                 const payload = await res.json();
@@ -153,10 +157,14 @@ export function createCortexGovernanceSystemSlice(
                     servicesStatus: next,
                     isFetchingServicesStatus: false,
                     servicesStatusUpdatedAt: new Date().toISOString(),
+                    servicesStatusFailure: null,
                 });
                 return next;
             } catch {
-                set({ isFetchingServicesStatus: false });
+                set({
+                    isFetchingServicesStatus: false,
+                    servicesStatusFailure: classifyServicesStatusFailure(),
+                });
                 return [];
             }
         },

@@ -4,6 +4,7 @@ import React, { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Activity, Zap, Loader2 } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
+import LoadFailureState from "@/components/shared/LoadFailureState";
 
 function timeAgo(iso: string): string {
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -44,6 +45,7 @@ function RunsContent() {
     const recentRuns = useCortexStore((s) => s.recentRuns);
     const isFetchingRuns = useCortexStore((s) => s.isFetchingRuns);
     const fetchRecentRuns = useCortexStore((s) => s.fetchRecentRuns);
+    const runsLoadError = useCortexStore((s) => s.runsLoadError);
     const assistantName = useCortexStore((s) => s.assistantName);
 
     useEffect(() => {
@@ -94,7 +96,16 @@ function RunsContent() {
                     </div>
                 )}
 
-                {!isFetchingRuns && recentRuns.length === 0 && (
+                {!isFetchingRuns && runsLoadError && recentRuns.length === 0 && (
+                    <LoadFailureState
+                        title="Could not load runs"
+                        detail={runsLoadError}
+                        onRetry={() => void fetchRecentRuns()}
+                        testId="runs-load-failure"
+                    />
+                )}
+
+                {!isFetchingRuns && !runsLoadError && recentRuns.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 gap-2">
                         <Activity className="w-10 h-10 text-cortex-text-muted/20" />
                         <p className="text-sm font-mono text-cortex-text-muted">No runs yet</p>

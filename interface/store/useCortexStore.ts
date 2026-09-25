@@ -13,7 +13,7 @@ import { createCortexRuntimeSlice } from '@/store/cortexStoreRuntimeSlice';
 import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
 import { createCortexStreamSlice } from '@/store/cortexStoreStreamSlice';
 import { createCortexUserSettingsSlice } from '@/store/cortexStoreUserSettingsSlice';
-import { persistChat } from '@/store/cortexStoreUtils';
+import { hasLoadedPersistedChat, persistChat } from '@/store/cortexStoreUtils';
 export * from '@/store/cortexStoreTypes';
 
 function createCortexComposition(set: CortexSet, get: CortexGet) {
@@ -44,7 +44,7 @@ function createCortexComposition(set: CortexSet, get: CortexGet) {
 }
 
 function shouldPersistMissionChat(state: CortexState, prevState: CortexState) {
-    return (
+    return hasLoadedPersistedChat() && (
         state.missionChat !== prevState.missionChat
         || state.workspaceChatScope !== prevState.workspaceChatScope
     );

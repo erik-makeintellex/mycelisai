@@ -25,6 +25,10 @@ function resetStore() {
         missions: [],
         fetchCouncilMembers: vi.fn().mockResolvedValue(undefined),
         fetchMissions: vi.fn().mockResolvedValue(undefined),
+        missionChatFailure: null,
+        servicesStatus: [],
+        servicesStatusFailure: null,
+        servicesStatusUpdatedAt: null,
     });
 }
 
@@ -90,5 +94,29 @@ describe("StatusDrawer", () => {
 
         fireEvent.click(screen.getByLabelText("Close status drawer"));
         expect(useCortexStore.getState().isStatusDrawerOpen).toBe(false);
+    });
+
+    it("leads with the Core API root cause and marks dependents as not checked when Core is unreachable", async () => {
+        useCortexStore.setState({ isStatusDrawerOpen: true });
+        mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+
+        render(<StatusDrawer />);
+
+        const rootCause = await screen.findByTestId("status-drawer-root-cause");
+        expect(rootCause.textContent).toMatch(/Core API unreachable/i);
+        expect(rootCause.textContent).toMatch(/uv run inv lifecycle\.up --frontend/);
+        expect(screen.getAllByText("not checked (Core unreachable)").length).toBeGreaterThanOrEqual(5);
+        expect(screen.queryByText("unknown")).toBeNull();
+        expect(screen.queryByText("0 members")).toBeNull();
+
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({ data: [{ name: "nats", status: "online" }] }),
+        });
+        fireEvent.click(screen.getByRole("button", { name: /Retry/i }));
+        await waitFor(() => {
+            expect(screen.queryByTestId("status-drawer-root-cause")).toBeNull();
+        });
+        expect(screen.getByText("online")).toBeDefined();
     });
 });

@@ -39,11 +39,14 @@ export function createCortexRuntimeSlice(
             set({ isFetchingRuns: true });
             try {
                 const res = await fetch('/api/v1/runs');
-                if (!res.ok) return;
+                if (!res.ok) {
+                    set({ runsLoadError: `Could not load runs (HTTP ${res.status}).` });
+                    return;
+                }
                 const body = await res.json();
-                set({ recentRuns: body.data ?? body ?? [] });
+                set({ recentRuns: body.data ?? body ?? [], runsLoadError: null });
             } catch {
-                // offline — silent
+                set({ runsLoadError: 'Could not load runs: the Core API did not respond.' });
             } finally {
                 set({ isFetchingRuns: false });
             }

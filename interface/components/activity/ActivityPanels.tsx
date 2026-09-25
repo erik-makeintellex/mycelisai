@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { RefreshCw, type LucideIcon } from "lucide-react";
+import LoadFailureState from "@/components/shared/LoadFailureState";
+import { useCortexStore } from "@/store/useCortexStore";
 import type { MissionRun, StreamSignal } from "@/store/useCortexStore";
 
 export function timeAgo(iso?: string) {
@@ -92,6 +94,8 @@ export function RunList({
   isFetching: boolean;
   onSelect: (runID: string) => void;
 }) {
+  const runsLoadError = useCortexStore((s) => s.runsLoadError);
+  const fetchRecentRuns = useCortexStore((s) => s.fetchRecentRuns);
   return (
     <div
       id="workflow-runs"
@@ -111,7 +115,17 @@ export function RunList({
         ) : null}
       </div>
       <div className="mt-4 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg">
-        {runs.length === 0 ? (
+        {runs.length === 0 && runsLoadError ? (
+          <div className="p-3">
+            <LoadFailureState
+              title="Could not load runs"
+              detail={runsLoadError}
+              onRetry={() => void fetchRecentRuns()}
+              retrying={isFetching}
+              testId="activity-runs-load-failure"
+            />
+          </div>
+        ) : runs.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-cortex-text-muted">
             No runs yet.
           </p>

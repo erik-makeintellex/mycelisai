@@ -8,22 +8,15 @@ import type {
     CortexState,
 } from '@/store/cortexStoreState';
 import { deriveMissionChatState } from '@/store/cortexStoreChatWorkflow';
-import { loadPersistedChat } from '@/store/cortexStoreUtils';
 
 type StripActions<T> = {
     [K in keyof T as T[K] extends (...args: infer _Args) => unknown ? never : K]: T[K];
 };
 
-const initialMissionChat = loadPersistedChat(null);
+// Initial state must match the server render. Persisted chat and Advanced mode
+// are restored after mount by restorePersistedClientState (see ShellLayout).
+const initialMissionChat: CortexState['missionChat'] = [];
 const initialMissionChatState = deriveMissionChatState(initialMissionChat);
-
-function readInitialAdvancedMode(): boolean {
-    return typeof window !== 'undefined'
-        && typeof localStorage !== 'undefined'
-        && typeof localStorage.getItem === 'function'
-        ? localStorage.getItem('mycelis-advanced-mode') === 'true'
-        : false;
-}
 
 const initialDraftGraphState: StripActions<CortexDraftGraphContract> = {
     chatHistory: [],
@@ -112,6 +105,7 @@ const initialGovernanceOpsState: StripActions<CortexGovernanceOpsContract> = {
     servicesStatus: [],
     isFetchingServicesStatus: false,
     servicesStatusUpdatedAt: null,
+    servicesStatusFailure: null,
     teamsDetail: [],
     isFetchingTeamsDetail: false,
     selectedTeamId: null,
@@ -128,6 +122,7 @@ const initialAutomationRunsState: StripActions<CortexAutomationRunsContract> = {
     isFetchingTimeline: false,
     recentRuns: [],
     isFetchingRuns: false,
+    runsLoadError: null,
     triggerRules: [],
     isFetchingTriggers: false,
     conversationTurns: null,
@@ -135,7 +130,7 @@ const initialAutomationRunsState: StripActions<CortexAutomationRunsContract> = {
 };
 
 const initialProfilesSettingsState: StripActions<CortexProfilesSettingsContract> = {
-    advancedMode: readInitialAdvancedMode(),
+    advancedMode: false,
     theme: 'aero-light',
     missionProfiles: [],
     activeProfileId: null,

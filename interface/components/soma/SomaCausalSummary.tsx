@@ -1,51 +1,102 @@
-import { Sparkles } from "lucide-react";
+import { AlertTriangle, Sparkles } from "lucide-react";
 import type { ChatMessage } from "@/store/useCortexStore";
 
-function lastMessage(messages: ChatMessage[], role: ChatMessage["role"]) {
-  return [...messages].reverse().find((message) => message.role === role);
+type CausalPhase = "idle" | "pending" | "failed" | "answered";
+
+function latestIndex(messages: ChatMessage[], match: (message: ChatMessage) => boolean) {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (match(messages[i])) return i;
+  }
+  return -1;
 }
 
-function lastSomaMessage(messages: ChatMessage[]) {
-  return [...messages]
-    .reverse()
-    .find((message) => message.role !== "user" && message.role !== "system");
+function isFailure(message: ChatMessage) {
+  return message.mode === "blocker" || (message.role === "system" && /error|unreachable|failed/i.test(message.content ?? ""));
+}
+
+/** Derive what actually happened on the latest Soma turn — never claim work that did not occur. */
+export function deriveSomaCausalPhase(messages: ChatMessage[]): {
+  phase: CausalPhase;
+  user?: ChatMessage;
+  reply?: ChatMessage;
+} {
+  const userIdx = latestIndex(messages, (m) => m.role === "user");
+  const replyIdx = latestIndex(messages, (m) => m.role !== "user" && (m.role !== "system" || isFailure(m)));
+  const user = userIdx >= 0 ? messages[userIdx] : undefined;
+  const reply = replyIdx >= 0 ? messages[replyIdx] : undefined;
+  if (!user && !reply) return { phase: "idle" };
+  if (user && replyIdx < userIdx) return { phase: "pending", user };
+  if (reply && isFailure(reply)) return { phase: "failed", user, reply };
+  return { phase: "answered", user, reply };
 }
 
 export function SomaCausalSummary({
   messages,
-  fallbackAction = "Ready for your first Soma request",
   teams = ["Soma"],
-  outputs = ["Conversation guidance"],
   updated = ["Soma thread"],
 }: {
   messages: ChatMessage[];
-  fallbackAction?: string;
   teams?: string[];
-  outputs?: string[];
   updated?: string[];
 }) {
-  const latestUser = lastMessage(messages, "user");
-  const latestSoma = lastSomaMessage(messages);
-  const action = latestUser?.content?.replace(/^\[BROADCAST\]\s*/i, "").trim();
-  const produced = latestSoma?.artifacts?.length
-    ? latestSoma.artifacts.map((artifact) => artifact.title || artifact.type || "artifact")
-    : outputs;
-  const next = latestSoma ? "Review Soma's response or ask for the next action." : "Tell Soma what you want to accomplish.";
+  const { phase, user, reply } = deriveSomaCausalPhase(messages);
+  const action = user?.content?.replace(/^\[BROADCAST\]\s*/i, "").trim() || "—";
+
+  if (phase === "idle") {
+    return (
+      <section data-testid="soma-causal-summary" data-phase="idle" className="rounded-2xl border border-cortex-border bg-cortex-bg p-4">
+        <SummaryTitle />
+        <p className="mt-2 text-sm text-cortex-text-muted">
+          Nothing yet. Soma has not handled a request in this session — tell Soma what you want to accomplish.
+        </p>
+      </section>
+    );
+  }
+
+  const failed = phase === "failed";
+  const facts: Array<[string, string]> =
+    phase === "pending"
+      ? [["Understood", action], ["Status", "Waiting for Soma's response"], ["Produced", "Nothing yet"], ["Next", "Wait for the reply, or check Status if it stalls."]]
+      : failed
+        ? [
+            ["Requested", action],
+            ["Result", "Blocked — the request did not complete"],
+            ["Produced", "Nothing"],
+            ["Updated", "Nothing"],
+            ["Next", "Resolve the blocker shown in the thread, then retry."],
+          ]
+        : [
+            ["Understood", action],
+            ["Coordinated", teams.join(", ")],
+            ["Produced", reply?.artifacts?.length ? reply.artifacts.map((a) => a.title || a.type || "artifact").join(", ") : "Response in thread"],
+            ["Updated", updated.join(", ")],
+            ["Next", "Review Soma's response or ask for the next action."],
+          ];
 
   return (
-    <section className="rounded-2xl border border-cortex-primary/25 bg-cortex-primary/10 p-4">
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-cortex-primary" />
-        <p className="text-sm font-semibold text-cortex-text-main">Soma just did this</p>
-      </div>
-      <div className="mt-4 grid gap-3 lg:grid-cols-5">
-        <Fact label="Understood" value={action || fallbackAction} />
-        <Fact label="Coordinated" value={teams.join(", ")} />
-        <Fact label="Produced" value={produced.join(", ")} />
-        <Fact label="Updated" value={updated.join(", ")} />
-        <Fact label="Next" value={next} />
+    <section
+      data-testid="soma-causal-summary"
+      data-phase={phase}
+      className={`rounded-2xl border p-4 ${failed ? "border-cortex-danger/40 bg-cortex-danger/10" : "border-cortex-primary/25 bg-cortex-primary/10"}`}
+    >
+      <SummaryTitle failed={failed} />
+      <div className={`mt-4 grid gap-3 ${facts.length === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+        {facts.map(([label, value]) => (
+          <Fact key={label} label={label} value={value} />
+        ))}
       </div>
     </section>
+  );
+}
+
+function SummaryTitle({ failed = false }: { failed?: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      {failed ? <AlertTriangle className="h-4 w-4 text-cortex-danger" /> : <Sparkles className="h-4 w-4 text-cortex-primary" />}
+      <p className="text-sm font-semibold text-cortex-text-main">
+        {failed ? "Soma could not complete this" : "Soma just did this"}
+      </p>
+    </div>
   );
 }
 

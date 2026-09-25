@@ -1,8 +1,15 @@
 "use client";
 
 import React, { useEffect, useMemo } from "react";
-import { X, Brain, Shield, Wifi, Database, Radio, Users, AlertTriangle } from "lucide-react";
+import { X, Brain, Shield, Wifi, Database, Radio, Users, AlertTriangle, RefreshCw } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
+import {
+    CORE_RECOVERY_HINT,
+    CORE_UNREACHABLE_SUMMARY,
+    CORE_UNREACHABLE_TITLE,
+    NOT_CHECKED_CORE_UNREACHABLE,
+    selectCoreReachability,
+} from "@/lib/coreReachability";
 
 type Health = "healthy" | "degraded" | "failure" | "offline" | "info";
 
@@ -36,6 +43,9 @@ export default function StatusDrawer() {
     const fetchMissions = useCortexStore((s) => s.fetchMissions);
     const services = useCortexStore((s) => s.servicesStatus);
     const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
+    const isFetchingServices = useCortexStore((s) => s.isFetchingServicesStatus);
+    const reachability = useCortexStore(selectCoreReachability);
+    const coreDown = reachability === "unreachable";
 
     useEffect(() => {
         if (!isOpen) return;
@@ -50,9 +60,14 @@ export default function StatusDrawer() {
         return map;
     }, [services]);
 
-    const natsHealth = statusFromService(serviceMap.get("nats")?.status);
-    const dbHealth = statusFromService(serviceMap.get("postgres")?.status);
-    const groupBusHealth = statusFromService(serviceMap.get("groups_bus")?.status);
+    const unchecked = reachability === "unknown" ? "checking…" : "unknown";
+    const svcValue = (name: string, preferDetail = false) => {
+        if (coreDown) return NOT_CHECKED_CORE_UNREACHABLE;
+        const svc = serviceMap.get(name);
+        return (preferDetail ? svc?.detail ?? svc?.status : svc?.status) ?? unchecked;
+    };
+    const svcHealth = (name: string): Health => (coreDown ? "offline" : statusFromService(serviceMap.get(name)?.status));
+
     const sseHealth: Health = isStreamConnected
         ? "healthy"
         : streamConnectionState === "connecting"
@@ -104,9 +119,32 @@ export default function StatusDrawer() {
                     </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    <StatusRow icon={Radio} label="Council Reachability" value={`${councilMembers.length} members`} health={councilMembers.length > 0 ? "healthy" : "degraded"} />
+                    {coreDown && (
+                        <div role="alert" data-testid="status-drawer-root-cause" className={`rounded-lg border px-3 py-3 text-xs ${HEALTH_CLASS.failure}`}>
+                            <div className="flex items-center gap-2 font-mono font-bold uppercase tracking-wide">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                {CORE_UNREACHABLE_TITLE}
+                            </div>
+                            <p className="mt-1.5 text-cortex-text-main">{CORE_UNREACHABLE_SUMMARY}</p>
+                            <p className="mt-1.5 text-cortex-text-muted">{CORE_RECOVERY_HINT}</p>
+                            <button
+                                type="button"
+                                onClick={() => void fetchServicesStatus()}
+                                className="mt-2 inline-flex items-center gap-1 rounded border border-cortex-danger/40 px-2 py-1 font-mono hover:bg-cortex-danger/15"
+                            >
+                                <RefreshCw className={`w-3 h-3 ${isFetchingServices ? "animate-spin" : ""}`} />
+                                Retry
+                            </button>
+                        </div>
+                    )}
+                    <StatusRow
+                        icon={Radio}
+                        label="Council Reachability"
+                        value={coreDown ? NOT_CHECKED_CORE_UNREACHABLE : `${councilMembers.length} members`}
+                        health={coreDown ? "offline" : councilMembers.length > 0 ? "healthy" : "degraded"}
+                    />
                     <div className="space-y-2 pl-7">
-                        {councilMembers.length === 0 ? (
+                        {coreDown ? null : councilMembers.length === 0 ? (
                             <div className={`rounded-md border px-2 py-1.5 text-xs font-mono ${HEALTH_CLASS.degraded}`}>
                                 No council members reachable
                             </div>
@@ -118,23 +156,28 @@ export default function StatusDrawer() {
                             ))
                         )}
                     </div>
-                    <StatusRow icon={Wifi} label="NATS Connection" value={serviceMap.get("nats")?.status ?? "unknown"} health={natsHealth} />
-                    <StatusRow
-                        icon={Users}
-                        label="Group Bus"
-                        value={serviceMap.get("groups_bus")?.detail ?? serviceMap.get("groups_bus")?.status ?? "unknown"}
-                        health={groupBusHealth}
-                    />
+                    <StatusRow icon={Wifi} label="NATS Connection" value={svcValue("nats")} health={svcHealth("nats")} />
+                    <StatusRow icon={Users} label="Group Bus" value={svcValue("groups_bus", true)} health={svcHealth("groups_bus")} />
                     <StatusRow icon={Radio} label="SSE Stream" value={sseLabel} health={sseHealth} />
-                    <StatusRow icon={Database} label="Database" value={serviceMap.get("postgres")?.status ?? "unknown"} health={dbHealth} />
+                    <StatusRow icon={Database} label="Database" value={svcValue("postgres")} health={svcHealth("postgres")} />
                     <StatusRow
                         icon={Brain}
                         label="Active Brain"
                         value={activeBrain ? `${activeBrain.provider_name ?? activeBrain.provider_id} (${activeBrain.location})` : "none"}
                         health={activeBrain ? (activeBrain.location === "remote" ? "degraded" : "healthy") : "offline"}
                     />
-                    <StatusRow icon={Shield} label="Governance" value={governanceMode} health={govHealth} />
-                    <StatusRow icon={Users} label="Active Missions" value={String(activeMissions)} health={activeMissions > 0 ? "info" : "offline"} />
+                    <StatusRow
+                        icon={Shield}
+                        label="Governance"
+                        value={coreDown ? NOT_CHECKED_CORE_UNREACHABLE : governanceMode}
+                        health={coreDown ? "offline" : govHealth}
+                    />
+                    <StatusRow
+                        icon={Users}
+                        label="Active Missions"
+                        value={coreDown ? NOT_CHECKED_CORE_UNREACHABLE : String(activeMissions)}
+                        health={coreDown ? "offline" : activeMissions > 0 ? "info" : "offline"}
+                    />
                     {missionChatFailure && (
                         <div className="rounded-md border border-cortex-danger/40 bg-cortex-danger/10 px-3 py-2 text-xs font-mono text-cortex-danger flex items-start gap-2">
                             <AlertTriangle className="w-3.5 h-3.5 mt-0.5" />

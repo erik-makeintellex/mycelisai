@@ -21,7 +21,7 @@ export function createCortexMissionChatSlice(
     set: CortexSet,
     get: CortexGet,
 ): CortexSlice<
-    'sendMissionChat' | 'clearMissionChat' | 'setMissionChatScope' | 'broadcastToSwarm'
+    'sendMissionChat' | 'clearMissionChat' | 'setMissionChatScope' | 'restorePersistedClientState' | 'broadcastToSwarm'
 > {
     return {
         sendMissionChat: async (message: string) => {
@@ -174,6 +174,25 @@ export function createCortexMissionChatSlice(
                 activeConfirmToken: null,
                 activeRunId: null,
                 activeMode: 'answer',
+            });
+        },
+
+        restorePersistedClientState: () => {
+            const messages = loadPersistedChat(get().workspaceChatScope);
+            const derivedState = deriveMissionChatState(messages);
+            let advancedMode = false;
+            try {
+                advancedMode = localStorage.getItem('mycelis-advanced-mode') === 'true';
+            } catch {
+                advancedMode = false;
+            }
+            set({
+                missionChat: messages,
+                advancedMode,
+                pendingProposal: derivedState.pendingProposal,
+                activeConfirmToken: derivedState.activeConfirmToken,
+                activeRunId: derivedState.activeRunId,
+                activeMode: derivedState.activeMode,
             });
         },
 

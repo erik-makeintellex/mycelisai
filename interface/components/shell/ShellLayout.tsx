@@ -17,6 +17,11 @@ export function ShellLayout({ children }: ShellLayoutProps) {
     const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
     const fetchUserSettings = useCortexStore((s) => s.fetchUserSettings);
     const initializeStream = useCortexStore((s) => s.initializeStream);
+    const restorePersistedClientState = useCortexStore((s) => s.restorePersistedClientState);
+
+    useEffect(() => {
+        restorePersistedClientState();
+    }, [restorePersistedClientState]);
 
     useEffect(() => {
         fetchUserSettings();

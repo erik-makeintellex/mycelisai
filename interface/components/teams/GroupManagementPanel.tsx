@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
+import LoadFailureState from "@/components/shared/LoadFailureState";
 import { GroupWorkspacePanels } from "./GroupWorkspacePanels";
 import {
   emptyGroupDraft,
@@ -29,9 +30,8 @@ export default function GroupManagementPanel({
   const [outputs, setOutputs] = useState<Artifact[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [approvalPrompt, setApprovalPrompt] = useState<ApprovalPrompt | null>(
-    null,
-  );
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [approvalPrompt, setApprovalPrompt] = useState<ApprovalPrompt | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [broadcasting, setBroadcasting] = useState(false);
@@ -85,19 +85,16 @@ export default function GroupManagementPanel({
         fetch("/api/v1/groups", { cache: "no-store" }),
         fetch("/api/v1/groups/monitor", { cache: "no-store" }),
       ]);
-      if (!groupsRes.ok) throw new Error("Could not load groups.");
+      if (!groupsRes.ok) throw new Error(`Groups request failed (HTTP ${groupsRes.status}).`);
       const nextGroups = await getData<Group[]>(groupsRes);
       setGroups(nextGroups);
       setSelectedGroupId((current) =>
         pickSelectedGroupId(nextGroups, current, initialSelectedGroupId),
       );
       if (monitorRes.ok) setMonitor(await getData<Monitor>(monitorRes));
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Could not load groups.",
-      );
+      setLoadError(null);
+    } catch (failure) {
+      setLoadError(failure instanceof Error ? failure.message : "Could not load groups.");
     } finally {
       setRefreshing(false);
     }
@@ -264,6 +261,10 @@ export default function GroupManagementPanel({
     }
   };
 
+  if (loadError && groups.length === 0) {
+    return <LoadFailureState title="Could not load groups" detail={loadError} onRetry={() => void loadGroups()} retrying={refreshing} testId="groups-load-failure" />;
+  }
+
   return (
     <GroupWorkspacePanels
       buckets={buckets}
@@ -276,7 +277,7 @@ export default function GroupManagementPanel({
       outputSummary={outputSummary}
       draft={draft}
       notice={notice}
-      error={error}
+      error={error ?? (loadError ? `Could not refresh groups: ${loadError}` : null)}
       approvalPrompt={approvalPrompt}
       refreshing={refreshing}
       saving={saving}

@@ -1,8 +1,30 @@
-import { ShieldCheck, Sparkles } from "lucide-react";
+"use client";
+
+import { AlertTriangle, ShieldCheck, Sparkles } from "lucide-react";
+import { useCortexStore } from "@/store/useCortexStore";
+import {
+  CORE_RECOVERY_HINT,
+  CORE_UNREACHABLE_TITLE,
+  selectCoreReachability,
+  type CoreReachability,
+} from "@/lib/coreReachability";
+
+const STATUS_COPY: Record<CoreReachability, string> = {
+  online: "Ready",
+  degraded: "Degraded — some services are offline",
+  unreachable: CORE_UNREACHABLE_TITLE,
+  unknown: "Checking Core connection…",
+};
+
+const POSTURE_COPY: Record<Exclude<CoreReachability, "online">, string> = {
+  degraded: "Governed execution may be limited",
+  unreachable: "Governed execution unavailable until Core is reachable",
+  unknown: "Governance posture not yet confirmed",
+};
 
 export function SomaHeader({
   organizationName,
-  status = "Ready",
+  status,
   activeMode,
   governancePosture = "Governed execution enabled",
 }: {
@@ -11,9 +33,15 @@ export function SomaHeader({
   activeMode?: string | null;
   governancePosture?: string;
 }) {
-  const scope = organizationName
-    ? `Ready to coordinate work for ${organizationName}`
-    : "Ready to help create or resume an AI Organization";
+  const reachability = useCortexStore(selectCoreReachability);
+  const coreDown = reachability === "unreachable";
+  const scope = coreDown
+    ? "Soma cannot take requests until the Core API is reachable."
+    : organizationName
+      ? `${reachability === "online" ? "Ready to coordinate" : "Coordinating"} work for ${organizationName}`
+      : "Create or resume an AI Organization with Soma";
+  const statusLabel = status ?? STATUS_COPY[reachability];
+  const posture = reachability === "online" ? governancePosture : POSTURE_COPY[reachability];
 
   return (
     <header className="flex flex-col gap-4 border-b border-cortex-border p-5 lg:flex-row lg:items-start lg:justify-between">
@@ -29,12 +57,22 @@ export function SomaHeader({
           {scope}
         </p>
       </div>
-      <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
-        <p className="font-medium text-cortex-text-main">{status}</p>
+      <div
+        data-testid="soma-header-status"
+        data-reachability={reachability}
+        className={`rounded-2xl border px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm ${
+          coreDown ? "border-cortex-danger/40 bg-cortex-danger/10" : "border-cortex-border bg-cortex-bg"
+        }`}
+      >
+        <p className={`flex items-center gap-2 font-medium ${coreDown ? "text-cortex-danger" : "text-cortex-text-main"}`}>
+          {coreDown ? <AlertTriangle className="h-4 w-4" /> : null}
+          {statusLabel}
+        </p>
+        {coreDown ? <p className="mt-1">{CORE_RECOVERY_HINT}</p> : null}
         {activeMode ? <p className="mt-1">Mode: {activeMode}</p> : null}
         <p className="mt-1 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-cortex-primary" />
-          {governancePosture}
+          <ShieldCheck className={`h-4 w-4 ${reachability === "online" ? "text-cortex-primary" : "text-cortex-text-muted"}`} />
+          {posture}
         </p>
       </div>
     </header>

@@ -15,6 +15,8 @@ type StoreState = {
     isFetchingRuns: boolean;
     fetchRecentRuns: () => void;
     assistantName: string;
+    runsLoadError?: string | null;
+    servicesStatusFailure?: { kind: 'unreachable' | 'http_error'; at: string } | null;
 };
 
 let storeState: StoreState;
@@ -102,5 +104,22 @@ describe('RunsPage', () => {
         expect(screen.getByText('run-alpha-123')).toBeDefined();
         expect(screen.queryByText('run-complete-123')).toBeNull();
     });
-});
 
+    it('shows a load failure with Retry instead of "No runs yet" when the runs fetch failed', () => {
+        storeState = {
+            ...storeState,
+            recentRuns: [],
+            runsLoadError: 'Could not load runs (HTTP 500).',
+            servicesStatusFailure: { kind: 'unreachable', at: new Date().toISOString() },
+        };
+
+        render(<RunsPage />);
+
+        expect(screen.queryByText('No runs yet')).toBeNull();
+        const failure = screen.getByTestId('runs-load-failure');
+        expect(failure.textContent).toMatch(/Could not load runs/);
+        expect(failure.textContent).toMatch(/Core API unreachable/);
+        fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+        expect(fetchRecentRuns).toHaveBeenCalledTimes(2);
+    });
+});

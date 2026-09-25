@@ -27,8 +27,9 @@ const setStatusDrawerOpen = vi.fn();
 const fetchServicesStatus = vi.fn();
 const fetchUserSettings = vi.fn();
 const initializeStream = vi.fn();
+const restorePersistedClientState = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) => selector({ setStatusDrawerOpen, fetchServicesStatus, fetchUserSettings, initializeStream }),
+    useCortexStore: (selector: any) => selector({ setStatusDrawerOpen, fetchServicesStatus, fetchUserSettings, initializeStream, restorePersistedClientState }),
 }));
 
 import { ShellLayout } from '@/components/shell/ShellLayout';
@@ -39,6 +40,7 @@ describe('ShellLayout', () => {
         expect(fetchUserSettings).toHaveBeenCalled();
         expect(fetchServicesStatus).toHaveBeenCalled();
         expect(initializeStream).toHaveBeenCalled();
+        expect(restorePersistedClientState).toHaveBeenCalled();
     });
 
     it('renders the shell rail and workspace zones', () => {
