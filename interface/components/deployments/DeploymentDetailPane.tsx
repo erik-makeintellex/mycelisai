@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   approvalPostureSentence,
   outputsSummaryLabel,
@@ -6,6 +7,7 @@ import {
   type DeploymentRecord,
 } from "./deploymentTypes";
 import { KindBadge, StateBadge } from "./DeploymentList";
+import { ConfigViewer } from "./ConfigViewer";
 
 export function DeploymentDetailPane({
   record,
@@ -14,6 +16,8 @@ export function DeploymentDetailPane({
   record: DeploymentRecord | null;
   advancedMode: boolean;
 }) {
+  const [configViewerOpen, setConfigViewerOpen] = useState(false);
+
   if (!record) {
     return (
       <section className="min-h-0 overflow-y-auto rounded-2xl border border-cortex-border bg-cortex-surface p-4 text-sm text-cortex-text-muted">
@@ -23,7 +27,7 @@ export function DeploymentDetailPane({
   }
   return (
     <section
-      className="min-h-0 min-w-0 overflow-y-auto rounded-2xl border border-cortex-border bg-cortex-surface p-4"
+      className="relative min-h-0 min-w-0 overflow-y-auto rounded-2xl border border-cortex-border bg-cortex-surface p-4"
       data-testid="deployments-detail"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-cortex-border pb-4">
@@ -40,15 +44,20 @@ export function DeploymentDetailPane({
           </p>
         </div>
         {advancedMode ? (
-          <a
-            href={record.config_ref.path}
+          <button
+            type="button"
+            onClick={() => setConfigViewerOpen(true)}
             data-testid="deployments-view-config"
             className="inline-flex items-center justify-center rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main hover:border-cortex-primary/25"
           >
             View config
-          </a>
+          </button>
         ) : null}
       </div>
+
+      {advancedMode && configViewerOpen ? (
+        <ConfigViewer configRef={record.config_ref} onClose={() => setConfigViewerOpen(false)} />
+      ) : null}
 
       {advancedMode ? (
         <div className="mt-3 flex flex-wrap gap-3 text-[11px] font-mono uppercase tracking-[0.1em] text-cortex-text-muted">

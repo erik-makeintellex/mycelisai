@@ -180,7 +180,8 @@ describe("DeploymentsPage", () => {
         render(<DeploymentsPage />);
         await screen.findByTestId("deployments-detail");
 
-        const link = await screen.findByTestId("deployments-view-config");
-        expect(link.getAttribute("href")).toBe(allDeployments[0].config_ref.path);
+        // "View config" opens the inline ConfigViewer panel rather than
+        // navigating; ConfigViewer.test.tsx covers what it fetches and renders.
+        expect(await screen.findByTestId("deployments-view-config")).toBeTruthy();
     });
 });

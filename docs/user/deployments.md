@@ -53,7 +53,9 @@ Deployments is built from several sources (standing teams, mission teams, groups
 
 ## View Config (Advanced)
 
-With Advanced mode on, a "View config" action appears in the detail pane. It opens the deployment's underlying configuration (its team manifest, group definition, or organization template). It is hidden in simple mode because most operators only need to know what is running, not its raw configuration.
+With Advanced mode on, a "View config" button appears in the detail pane. It opens an inline panel showing the deployment's underlying configuration as read-only, verbatim text: its team manifest, group definition, or organization template (a planned department also resolves to its organization's config, and the panel labels itself "Organization config" so that's clear). It is hidden in simple mode because most operators only need to know what is running, not its raw configuration.
+
+The panel has a YAML/JSON toggle, Copy and Download buttons (downloads as `<kind>-<id>.yaml` or `.json`), and a source line naming where the document came from (file, database, or runtime, plus the file path when there is one). A "Hidden values" list names every path the server redacted before rendering; secrets such as API keys are never shown, while environment-variable references (`${env:NAME}`) stay visible so you can tell what's configured without seeing the value. If the deployment's config needs admin access you don't have, the panel says so instead of showing an error; if Core can't be reached, it shows a Retry action.
 
 ## Where Team Creation Moved
 
