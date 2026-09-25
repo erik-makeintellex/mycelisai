@@ -59,7 +59,7 @@ const defaultEvidence: SomaEvidenceItem[] = [
   {
     title: "Approval queue",
     detail: "Review gated actions, risk decisions, and pending confirmations.",
-    href: "/approvals",
+    href: "/automations?tab=approvals",
     icon: <CheckSquare className="h-4 w-4" />,
   },
   {
