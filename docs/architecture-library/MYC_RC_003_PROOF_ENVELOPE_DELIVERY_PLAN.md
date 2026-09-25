@@ -1,7 +1,7 @@
 # MYC-RC-003 Proof Envelope Delivery Plan
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.3 Convergence PRD](mycelis_soma_updated_prd_v8_3_current_state_convergence.md)
 
-> Status: `ACTIVE` - RC-003A backend (`85a5cfa9`) and UI proof readback (`85a5cfa9`) landed; acceptance waits on a green full Windows Chromium run from committed state after RC-004E settles the rail.
+> Status: `COMPLETE` (Windows proof lane) - MYC-RC-003A accepted from committed state `bb6ea007` (full Chromium `93` passed / `14` skipped / `0` failed; Vitest `123` files; tsc clean; `go vet` + `go test ./... -count=1 -p 1` green; `pytest` `327` passed; line gate and `git diff --check` clean). WSL release proof remains a separate environment gate.
 > Date: 2026-05-29
 > Purpose: deliver the minimum universal proof envelope for retained outputs, beginning with Codex task packages.
 
@@ -101,16 +101,16 @@ First-slice behavior:
 ## Delivery Sequence
 
 1. `COMPLETE` finalize proof envelope contract and owner boundaries.
-2. `IN_REVIEW` implement backend proof envelope projection for Codex package files.
+2. `COMPLETE` implement backend proof envelope projection for Codex package files.
    - add transactional artifact storage, such as `StoreTx`
    - persist the five Codex package files as artifact rows
    - carry artifact IDs into `packageOutputFile`, `OutputRef`, and package event payloads
-3. `IN_REVIEW` add UI proof readback in Output Workbench.
+3. `COMPLETE` add UI proof readback in Output Workbench.
    - preserve explicit backend proof fields
    - infer degraded legacy proof only for older package messages
    - show checksum, boundary, readback, source run/contract, and open/download affordances
-4. `IN_REVIEW` extend tests to assert checksum, path boundary, source run/contract, output ref, proof artifact, and readback status.
-5. `NEXT` run Windows-managed proof:
+4. `COMPLETE` extend tests to assert checksum, path boundary, source run/contract, output ref, proof artifact, and readback status.
+5. `COMPLETE` run Windows-managed proof:
    - `uv run inv core.test`
    - `uv run inv interface.test`
    - `uv run inv interface.typecheck`

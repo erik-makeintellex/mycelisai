@@ -220,7 +220,7 @@ Acceptance: write-file proof records checksum, path boundary verification, execu
 
 Current slice: `MYC-RC-003A` starts with Codex task packages. It adds artifact-linked package-file proof, real artifact IDs on output refs, proof/readback metadata, and Windows-managed full-browser proof while WSL remains environment-blocked.
 
-Status: `MYC-RC-003A` backend (artifact persistence, readback, `proof_envelopes` on `artifact.created`) and UI (Output Workbench proof chip and Inspect details, degraded rendering for legacy package messages without proof) are landed. Consistent with the `MYC-RC-003` plan, this slice stays uncommitted to release until full browser proof (Windows-managed `interface.e2e` live-backend run) closes the gate.
+Status: `MYC-RC-003A` backend (artifact persistence, readback, `proof_envelopes` on `artifact.created`) and UI (Output Workbench proof chip and Inspect details, degraded rendering for legacy package messages without proof) are landed and accepted on the Windows proof lane from committed state `bb6ea007` (full Chromium `93` passed, `0` failed). A live-backend walkthrough and WSL release proof remain environment-gated.
 
 ## Validation Gates
 

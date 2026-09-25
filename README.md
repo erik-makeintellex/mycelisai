@@ -43,7 +43,7 @@ Review these before planning or editing:
 1. [AGENTS.md](AGENTS.md)
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
 3. [V8 Development State](.state/V8_DEV_STATE.md)
-4. [V8.3 Current-State Convergence PRD](docs/architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md) and [MYC-RC-003 Proof Envelope Delivery Plan](docs/architecture-library/MYC_RC_003_PROOF_ENVELOPE_DELIVERY_PLAN.md) for current package-output convergence work
+4. [V8.3 Current-State Convergence PRD](docs/architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md) and [MYC-RC-003 Proof Envelope Delivery Plan](docs/architecture-library/MYC_RC_003_PROOF_ENVELOPE_DELIVERY_PLAN.md) for package-output proof, plus the [MYC-RC-004 Delivery Experience Plan](docs/architecture-library/MYC_RC_004_DELIVERY_EXPERIENCE_PLAN.md) for company starters, Deployments, and config view/clone/apply
 5. [V8.2 Production Architecture Target](architecture/v8-2.md)
 6. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
 7. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)

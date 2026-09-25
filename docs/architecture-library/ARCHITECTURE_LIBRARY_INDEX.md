@@ -30,7 +30,7 @@ This index is now intentionally narrower:
 - [README](../../README.md) is the primary inception document for active development.
 - [V8.2 Full Production Architecture](../../architecture/v8-2.md) is the canonical full production architecture, full actuation target, and current B2+ delivery frame.
 - [V8.3 Current-State Convergence PRD](mycelis_soma_updated_prd_v8_3_current_state_convergence.md) is candidate convergence authority for `MYC-RC-000` through `MYC-RC-003`; it becomes active implementation authority only through synchronized state, README, and proof updates.
-- [MYC-RC-003 Proof Envelope Delivery Plan](MYC_RC_003_PROOF_ENVELOPE_DELIVERY_PLAN.md) is the active delivery plan for proof-backed retained outputs while WSL release proof remains environment-blocked.
+- [MYC-RC-003 Proof Envelope Delivery Plan](MYC_RC_003_PROOF_ENVELOPE_DELIVERY_PLAN.md) defines proof-backed retained outputs; `MYC-RC-003A` is accepted on the Windows proof lane, and the [MYC-RC-004 Delivery Experience Plan](MYC_RC_004_DELIVERY_EXPERIENCE_PLAN.md) (company starters, Deployments, View config, governed clone/apply) is accepted the same way. WSL release proof remains environment-blocked.
 - [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the foundation and compatibility baseline for the Soma-primary operator surface.
 - [V8 Development State](../../.state/V8_DEV_STATE.md) is the live implementation scoreboard.
 
