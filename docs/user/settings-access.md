@@ -68,7 +68,7 @@ For the current release, Google Workspace is the enabled enterprise SSO path. Ot
 
 Mode summary:
 
-- local owner mode: set `MYCELIS_API_KEY`, `MYCELIS_WEB_SESSION_SECRET`, local admin name/id, optional local login password/hash, and `MYCELIS_IDENTITY_MODE=local_only`
+- local owner mode: set `MYCELIS_API_KEY`, `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` (both required, ≥32 bytes, distinct from each other and from API keys), local admin name/id, `MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256` (preferred) or `MYCELIS_LOCAL_ADMIN_PASSWORD` — never `MYCELIS_API_KEY` — and `MYCELIS_IDENTITY_MODE=local_only`
 - break-glass recovery: set a separate `MYCELIS_BREAK_GLASS_API_KEY`, username, and user id for hybrid/federated recovery
 - OIDC/OAuth: configure issuer, client id, redirect URI, scopes, and secret reference; validate issuer/audience/email/domain
 - Entra ID: use OIDC first, add tenant id and group/app-role claims, then map them to internal Mycelis roles

@@ -13,6 +13,9 @@ import (
 )
 
 func (s *AdminServer) handleListAuditLog(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, "audit:read"); !ok {
+		return
+	}
 	db := s.getDB()
 	if db == nil {
 		respondAPIError(w, "database not available", http.StatusServiceUnavailable)

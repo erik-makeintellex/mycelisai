@@ -26,6 +26,7 @@ type localAuthRuntimeConfig struct {
 	BreakGlassAPIKey   string
 	BreakGlassUsername string
 	BreakGlassUserID   string
+	ForwardSecret      string
 	DeploymentContract server.DeploymentContract
 }
 
@@ -80,6 +81,7 @@ func resolveLocalAuthRuntimeConfig() localAuthRuntimeConfig {
 		BreakGlassAPIKey:   envOrDefault("MYCELIS_BREAK_GLASS_API_KEY", ""),
 		BreakGlassUsername: envOrDefault("MYCELIS_BREAK_GLASS_USERNAME", "recovery-admin"),
 		BreakGlassUserID:   envOrDefault("MYCELIS_BREAK_GLASS_USER_ID", "00000000-0000-0000-0000-000000000001"),
+		ForwardSecret:      strings.TrimSpace(os.Getenv("MYCELIS_WEB_IDENTITY_FORWARD_SECRET")),
 		DeploymentContract: server.ResolveDeploymentContract(),
 	}
 }
@@ -109,6 +111,13 @@ func (cfg localAuthRuntimeConfig) breakGlassWarnings() []string {
 		warnings = append(warnings, "break-glass principal duplicates the primary local admin identity")
 	}
 	return warnings
+}
+
+// secretConfigurationError reports a forward secret that is set but short or
+// reuses an API credential. main refuses to start on it; AuthMiddleware also
+// answers 503 with the same named error as a second fail-closed layer.
+func (cfg localAuthRuntimeConfig) secretConfigurationError() error {
+	return server.ValidateWebIdentityForwardSecret(cfg.PrimaryAPIKey, cfg.BreakGlassAPIKey, cfg.ForwardSecret)
 }
 
 func init() {

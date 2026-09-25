@@ -5,17 +5,35 @@ ROOT = Path(__file__).resolve().parents[1]
 COMPOSE_FILE = ROOT / "docker-compose.yml"
 
 
-def test_compose_shares_web_identity_secrets_between_interface_and_core():
+def _compose_service_block(text: str, name: str) -> str:
+    import re
+
+    match = re.search(rf"^  {name}:\n(.*?)(?=^  [a-z-]+:\n|^[a-z]|\Z)", text, re.MULTILINE | re.DOTALL)
+    assert match, f"service {name} missing"
+    return match.group(1)
+
+
+def test_compose_web_secrets_are_required_and_never_fall_back_to_the_api_key():
     text = COMPOSE_FILE.read_text(encoding="utf-8")
-
-    session_secret = "MYCELIS_WEB_SESSION_SECRET: ${MYCELIS_WEB_SESSION_SECRET:-${MYCELIS_API_KEY}}"
-    forward_secret = (
-        "MYCELIS_WEB_IDENTITY_FORWARD_SECRET: "
-        "${MYCELIS_WEB_IDENTITY_FORWARD_SECRET:-${MYCELIS_API_KEY}}"
+    assert ":-${MYCELIS_API_KEY}" not in text
+    core = _compose_service_block(text, "core")
+    interface = _compose_service_block(text, "interface")
+    forward = (
+        "MYCELIS_WEB_IDENTITY_FORWARD_SECRET: ${MYCELIS_WEB_IDENTITY_FORWARD_SECRET:"
+        "?set MYCELIS_WEB_IDENTITY_FORWARD_SECRET in .env (uv run inv auth.dev-key)}"
     )
-
-    assert text.count(session_secret) == 2
-    assert text.count(forward_secret) == 2
+    session = (
+        "MYCELIS_WEB_SESSION_SECRET: ${MYCELIS_WEB_SESSION_SECRET:"
+        "?set MYCELIS_WEB_SESSION_SECRET in .env (uv run inv auth.dev-key)}"
+    )
+    assert forward in core
+    assert forward in interface
+    assert session in interface
+    # Core no longer reads the browser session secret.
+    assert "MYCELIS_WEB_SESSION_SECRET" not in core
+    for key in ("MYCELIS_LOCAL_ADMIN_USERNAME", "MYCELIS_LOCAL_ADMIN_PASSWORD", "MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256"):
+        assert f"      {key}: ${{{key}:-}}\n" in interface
+    assert "MYCELIS_LOCAL_ADMIN_PASSWORD" not in core
 
 
 def test_compose_profile_overrides_match_core_environment_contract():

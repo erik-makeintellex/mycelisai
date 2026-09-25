@@ -133,7 +133,7 @@ func TestHandleListAuditLog(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "intent", "source", "message", "timestamp", "context"}).
 			AddRow("audit-1", "chat-to-proposal", "admin", "Chat mutation detected", time.Now(), []byte(contextJSON)))
 
-	rr := doRequest(t, http.HandlerFunc(s.handleListAuditLog), "GET", "/api/v1/audit", "")
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleListAuditLog), "GET", "/api/v1/audit", "")
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp protocol.APIResponse

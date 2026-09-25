@@ -9,6 +9,7 @@ import {
     sessionCookieOptions,
     webAuthRedirectURL,
     type WebSession,
+    safeNextPath,
 } from "@/lib/webAuth";
 
 const STATE_COOKIE = "mycelis_google_state";
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
             iat: now,
             exp: now + 60 * 60 * 8,
         };
-        const response = NextResponse.redirect(webAuthRedirectURL(safeNext(saved.next) || "/dashboard", request.nextUrl.origin));
+        const response = NextResponse.redirect(webAuthRedirectURL(safeNextPath(saved.next) || "/dashboard", request.nextUrl.origin));
         response.cookies.delete(STATE_COOKIE);
         response.cookies.set(WEB_SESSION_COOKIE, await createSessionToken(session, config.sessionSecret), sessionCookieOptions());
         return response;
@@ -96,9 +97,6 @@ function redirectToLogin(request: NextRequest, error: string) {
     return response;
 }
 
-function safeNext(value: string | null): string {
-    return value && value.startsWith("/") && !value.startsWith("//") ? value : "";
-}
 
 async function logGoogleAuthFailure(phase: string, response: Response) {
     console.warn("[auth/google] callback failed", {

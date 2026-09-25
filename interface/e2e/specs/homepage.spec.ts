@@ -31,7 +31,7 @@ test.describe('Authenticated front door', () => {
         await page.goto('/groups');
         await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/);
         await page.getByLabel(/Local admin username/i).fill(process.env.MYCELIS_LOCAL_ADMIN_USERNAME || 'admin');
-        await page.getByLabel(/Password or local API key/i).fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || 'playwright-admin');
+        await page.getByLabel(/Local admin password/i).fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD ?? '');
         await page.getByRole('button', { name: /Sign in as local admin/i }).click();
         await expect(page).toHaveURL(/\/dashboard$/);
         await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();
@@ -46,7 +46,7 @@ test.describe('Authenticated front door', () => {
         const page = await context.newPage();
         await page.goto('/login');
         await page.getByLabel(/Local admin username/i).fill(process.env.MYCELIS_LOCAL_ADMIN_USERNAME || 'admin');
-        await page.getByLabel(/Password or local API key/i).fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || 'playwright-admin');
+        await page.getByLabel(/Local admin password/i).fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD ?? '');
         await page.getByRole('button', { name: /Sign in as local admin/i }).click();
         await expect(page).toHaveURL(/\/dashboard$/);
         await expect(page.getByRole('heading', { name: /Talk to Soma/i })).toBeVisible();

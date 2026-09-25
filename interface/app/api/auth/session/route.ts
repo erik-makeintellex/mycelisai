@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { WEB_SESSION_COOKIE, getWebAuthConfig, googleConfigured, verifySessionToken } from "@/lib/webAuth";
+import { WEB_SESSION_COOKIE, getWebAuthConfig, googleConfigured, localLoginConfigured, verifySessionToken } from "@/lib/webAuth";
 
 export async function GET() {
     const config = getWebAuthConfig();
@@ -12,8 +12,8 @@ export async function GET() {
             authenticated: Boolean(session),
             user: session ? { email: session.email, name: session.name, role: session.role, provider: session.provider, hd: session.hd } : null,
             providers: {
-                local: Boolean(config.sessionSecret && config.localPassword),
-                google_workspace: googleConfigured(config),
+                local: localLoginConfigured(config),
+                google_workspace: Boolean(config.sessionSecret && googleConfigured(config)),
             },
         },
     });

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCortexStore } from '@/store/useCortexStore';
 import { mockFetch } from '../setup';
 import { resetCortexStore } from './useCortexStoreTestSupport';
@@ -270,6 +270,23 @@ describe('useCortexStore resource registry', () => {
 
             expect(mockFetch).toHaveBeenCalledWith('/api/v1/audit?limit=20');
             expect(useCortexStore.getState().auditLog).toEqual(auditLog);
+        });
+
+        it('fetchAuditLog treats a 403 as an empty role-restricted state, not an error', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            useCortexStore.setState({ auditLog: [{ id: 'stale' } as never] });
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 403,
+                json: async () => ({ ok: false, error: 'Root admin role required' }),
+            });
+
+            await useCortexStore.getState().fetchAuditLog();
+
+            expect(useCortexStore.getState().auditLog).toEqual([]);
+            expect(useCortexStore.getState().isFetchingAuditLog).toBe(false);
+            expect(consoleError).not.toHaveBeenCalled();
+            consoleError.mockRestore();
         });
     });
 });

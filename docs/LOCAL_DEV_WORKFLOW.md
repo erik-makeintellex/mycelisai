@@ -71,7 +71,7 @@ Important files:
 - `charts/mycelis-core/values*.yaml`: Helm deployment shape
 
 Common runtime variables:
-- `MYCELIS_API_KEY`, `MYCELIS_WEB_SESSION_SECRET`, `MYCELIS_WEB_IDENTITY_FORWARD_SECRET`, `MYCELIS_PUBLIC_ORIGIN`: local API credential, browser-session signing, optional Interface-to-Core identity HMAC separation, and auth redirect origin
+- `MYCELIS_API_KEY`, `MYCELIS_WEB_SESSION_SECRET`, `MYCELIS_WEB_IDENTITY_FORWARD_SECRET`, `MYCELIS_PUBLIC_ORIGIN`: local API credential (Authorization Bearer header only, no `?token=` fallback), browser-session signing, and required Interface-to-Core identity HMAC secret. The two web secrets are both required, at least 32 bytes, trimmed, and distinct from each other and from any API key — there is no fallback to `MYCELIS_API_KEY`. `uv run inv auth.dev-key` generates missing web secrets in `.env`. `MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256` (preferred) or `MYCELIS_LOCAL_ADMIN_PASSWORD` sets the local sign-in password; `MYCELIS_API_KEY` is never accepted as the password.
 - `MYCELIS_BREAK_GLASS_API_KEY`: optional recovery credential
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`: local Core database connection
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`: deployment database credentials; development uses them only with the Dockerized pgvector/pg16 server, never a native host server

@@ -14,6 +14,12 @@ LOCAL_ADMIN_USERNAME_NAME = "MYCELIS_LOCAL_ADMIN_USERNAME"
 LOCAL_ADMIN_USER_ID_NAME = "MYCELIS_LOCAL_ADMIN_USER_ID"
 BREAK_GLASS_USERNAME_NAME = "MYCELIS_BREAK_GLASS_USERNAME"
 BREAK_GLASS_USER_ID_NAME = "MYCELIS_BREAK_GLASS_USER_ID"
+SESSION_SECRET_NAME = "MYCELIS_WEB_SESSION_SECRET"
+FORWARD_SECRET_NAME = "MYCELIS_WEB_IDENTITY_FORWARD_SECRET"
+LOCAL_PASSWORD_NAME = "MYCELIS_LOCAL_ADMIN_PASSWORD"
+LOCAL_PASSWORD_SHA256_NAME = "MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256"
+WEB_SECRET_NAMES = (SESSION_SECRET_NAME, FORWARD_SECRET_NAME)
+MIN_SECRET_BYTES = 32
 
 SAMPLE_VALUE = "mycelis-dev-key-change-in-prod"
 BREAK_GLASS_SAMPLE_VALUE = "mycelis-break-glass-key-change-in-prod"
@@ -21,6 +27,10 @@ LOCAL_ADMIN_SAMPLE_USERNAME = "admin"
 LOCAL_ADMIN_SAMPLE_USER_ID = "00000000-0000-0000-0000-000000000000"
 BREAK_GLASS_SAMPLE_USERNAME = "recovery-admin"
 BREAK_GLASS_SAMPLE_USER_ID = "00000000-0000-0000-0000-000000000001"
+WEB_SECRET_SAMPLES = {
+    SESSION_SECRET_NAME: "mycelis-web-session-secret-change-in-prod",
+    FORWARD_SECRET_NAME: "mycelis-web-identity-forward-secret-change-in-prod",
+}
 ENV_PATH = ROOT_DIR / ".env"
 ENV_EXAMPLE_PATH = ROOT_DIR / ".env.example"
 ENV_COMPOSE_EXAMPLE_PATH = ROOT_DIR / ".env.compose.example"
@@ -85,6 +95,8 @@ def _sync_auth_example(path: Path) -> None:
     _upsert_env_value(path, LOCAL_ADMIN_USER_ID_NAME, LOCAL_ADMIN_SAMPLE_USER_ID)
     _upsert_env_value(path, BREAK_GLASS_USERNAME_NAME, BREAK_GLASS_SAMPLE_USERNAME)
     _upsert_env_value(path, BREAK_GLASS_USER_ID_NAME, BREAK_GLASS_SAMPLE_USER_ID)
+    for name, sample in WEB_SECRET_SAMPLES.items():
+        _upsert_env_value(path, name, sample)
 
 
 def _sync_auth_examples() -> None:
@@ -99,7 +111,25 @@ def _inspect_auth_posture(path: Path) -> dict[str, str]:
         LOCAL_ADMIN_USER_ID_NAME: _read_env_value(path, LOCAL_ADMIN_USER_ID_NAME),
         BREAK_GLASS_USERNAME_NAME: _read_env_value(path, BREAK_GLASS_USERNAME_NAME),
         BREAK_GLASS_USER_ID_NAME: _read_env_value(path, BREAK_GLASS_USER_ID_NAME),
+        SESSION_SECRET_NAME: _read_env_value(path, SESSION_SECRET_NAME),
+        FORWARD_SECRET_NAME: _read_env_value(path, FORWARD_SECRET_NAME),
+        LOCAL_PASSWORD_NAME: _read_env_value(path, LOCAL_PASSWORD_NAME),
+        LOCAL_PASSWORD_SHA256_NAME: _read_env_value(path, LOCAL_PASSWORD_SHA256_NAME),
     }
+
+
+def _web_secret_problem(name: str, values: dict[str, str]) -> str:
+    """Name what is wrong with a web secret without echoing any value."""
+    value = values.get(name, "").strip()
+    if not value:
+        return f"{name} is missing; run uv run inv auth.dev-key"
+    if len(value.encode("utf-8")) < MIN_SECRET_BYTES:
+        return f"{name} must be at least {MIN_SECRET_BYTES} bytes; run uv run inv auth.dev-key"
+    others = [KEY_NAME, BREAK_GLASS_KEY_NAME] + [other for other in WEB_SECRET_NAMES if other != name]
+    reused = [other for other in others if values.get(other, "").strip() == value]
+    if reused:
+        return f"{name} must differ from {', '.join(reused)}; run uv run inv auth.dev-key"
+    return ""
 
 
 def _auth_posture_warnings(posture: dict[str, str]) -> list[str]:
@@ -140,7 +170,33 @@ def _auth_posture_warnings(posture: dict[str, str]) -> list[str]:
         and posture[LOCAL_ADMIN_USER_ID_NAME].strip() == posture[BREAK_GLASS_USER_ID_NAME].strip()
     ):
         warnings.append("break-glass principal duplicates the primary local admin identity")
+    for name in WEB_SECRET_NAMES:
+        problem = _web_secret_problem(name, posture)
+        if problem:
+            warnings.append(problem)
+    if not posture[LOCAL_PASSWORD_NAME].strip() and not posture[LOCAL_PASSWORD_SHA256_NAME].strip():
+        warnings.append(
+            f"set {LOCAL_PASSWORD_SHA256_NAME} (preferred) or {LOCAL_PASSWORD_NAME}; "
+            f"{KEY_NAME} is no longer accepted as the local admin password"
+        )
+    elif posture[LOCAL_PASSWORD_NAME].strip() and posture[LOCAL_PASSWORD_NAME].strip() in {
+        posture[name].strip() for name in (KEY_NAME, BREAK_GLASS_KEY_NAME, *WEB_SECRET_NAMES) if posture[name].strip()
+    }:
+        warnings.append(f"{LOCAL_PASSWORD_NAME} must not reuse an API key or web secret")
     return warnings
+
+
+def _ensure_web_secrets(path: Path) -> list[tuple[str, str]]:
+    """Generate missing, short or reused web secrets. Returns (name, action) pairs, never values."""
+    results: list[tuple[str, str]] = []
+    for name in WEB_SECRET_NAMES:
+        values = _inspect_auth_posture(path)
+        if _web_secret_problem(name, values):
+            _upsert_env_value(path, name, secrets.token_urlsafe(48))
+            results.append((name, "generated" if not values[name].strip() else "replaced (was missing, short or reused)"))
+        else:
+            results.append((name, "kept existing"))
+    return results
 
 
 def _print_auth_posture(path: Path, label: str) -> None:
@@ -150,6 +206,8 @@ def _print_auth_posture(path: Path, label: str) -> None:
     print(f"  break_glass_key: {_mask_secret(posture[BREAK_GLASS_KEY_NAME]) if posture[BREAK_GLASS_KEY_NAME] else '(missing)'}")
     print(f"  local_admin: {posture[LOCAL_ADMIN_USERNAME_NAME] or 'admin'} / {posture[LOCAL_ADMIN_USER_ID_NAME] or LOCAL_ADMIN_SAMPLE_USER_ID}")
     print(f"  break_glass: {posture[BREAK_GLASS_USERNAME_NAME] or BREAK_GLASS_SAMPLE_USERNAME} / {posture[BREAK_GLASS_USER_ID_NAME] or BREAK_GLASS_SAMPLE_USER_ID}")
+    for name in (*WEB_SECRET_NAMES, LOCAL_PASSWORD_SHA256_NAME, LOCAL_PASSWORD_NAME):
+        print(f"  {name}: {'set' if posture[name].strip() else '(missing)'}")
     for warning in _auth_posture_warnings(posture):
         print(f"  warning: {warning}")
 
@@ -163,7 +221,7 @@ def _print_auth_posture(path: Path, label: str) -> None:
 )
 def dev_key(_c, rotate=False, show=False, value=""):
     """
-    Ensure a local MYCELIS_API_KEY exists and keep .env.example on a sample value.
+    Ensure MYCELIS_API_KEY and distinct web session/forward secrets exist in .env.
     """
     if not ENV_PATH.exists():
         raise SystemExit("Missing .env. Copy .env.example to .env first.")
@@ -187,11 +245,18 @@ def dev_key(_c, rotate=False, show=False, value=""):
     else:
         key = existing
 
+    web_secret_actions = _ensure_web_secrets(ENV_PATH)
     _sync_auth_examples()
 
     visible = key if show else _mask_secret(key)
     print(f"{KEY_NAME}: {visible}")
     print(f"Action: {action}")
+    for name, web_action in web_secret_actions:
+        shown = f" = {_read_env_value(ENV_PATH, name)}" if show else ""
+        print(f"{name}: {web_action}{shown}")
+    posture = _inspect_auth_posture(ENV_PATH)
+    if not posture[LOCAL_PASSWORD_NAME].strip() and not posture[LOCAL_PASSWORD_SHA256_NAME].strip():
+        print(f"Local sign-in stays disabled until {LOCAL_PASSWORD_SHA256_NAME} (preferred) or {LOCAL_PASSWORD_NAME} is set in .env.")
     print("Next: restart services to apply auth key changes:")
     print("  uv run inv lifecycle.restart")
 

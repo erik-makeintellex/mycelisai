@@ -6,6 +6,7 @@ import { WEB_SESSION_COOKIE, encodeOAuthStateCookie, verifySessionToken } from "
 const AUTH_ENV = [
   "MYCELIS_PUBLIC_ORIGIN",
   "MYCELIS_WEB_SESSION_SECRET",
+  "MYCELIS_WEB_IDENTITY_FORWARD_SECRET",
   "MYCELIS_API_KEY",
   "MYCELIS_AUTH_GOOGLE_CLIENT_ID",
   "MYCELIS_AUTH_GOOGLE_CLIENT_SECRET",
@@ -15,6 +16,8 @@ const AUTH_ENV = [
   "MYCELIS_AUTH_ADMIN_EMAILS",
 ] as const;
 
+const OPEN_REDIRECT_NEXTS = ["/\\evil.example", "/%5Cevil.example", "/\t/evil.example", "//evil.example", "/%2F%2Fevil.example", "https://evil.example", "javascript:alert(1)"];
+
 const previousEnv = new Map<string, string | undefined>();
 const fetchMock = vi.fn<typeof fetch>();
 
@@ -22,7 +25,8 @@ describe("Google auth callback route", () => {
   beforeEach(() => {
     for (const key of AUTH_ENV) previousEnv.set(key, process.env[key]);
     process.env.MYCELIS_PUBLIC_ORIGIN = "http://127.0.0.1:3000";
-    process.env.MYCELIS_WEB_SESSION_SECRET = "test-session-secret";
+    process.env.MYCELIS_WEB_SESSION_SECRET = "test-session-secret-0123456789abcdef0123";
+    process.env.MYCELIS_WEB_IDENTITY_FORWARD_SECRET = "test-forward-secret-0123456789abcdef0123";
     process.env.MYCELIS_API_KEY = "";
     process.env.MYCELIS_AUTH_GOOGLE_CLIENT_ID = "test-google-client";
     process.env.MYCELIS_AUTH_GOOGLE_CLIENT_SECRET = "test-google-secret";
@@ -62,7 +66,7 @@ describe("Google auth callback route", () => {
     const sessionCookie = response.cookies.get(WEB_SESSION_COOKIE);
     expect(sessionCookie?.httpOnly).toBe(true);
     expect(sessionCookie?.sameSite).toBe("lax");
-    await expect(verifySessionToken(sessionCookie?.value, "test-session-secret")).resolves.toMatchObject({
+    await expect(verifySessionToken(sessionCookie?.value, "test-session-secret-0123456789abcdef0123")).resolves.toMatchObject({
       sub: "google-123",
       email: "erik@makeintellex.com",
       role: "admin",
@@ -83,6 +87,21 @@ describe("Google auth callback route", () => {
     expect(redirectTarget(response)).toBe("/login?error=domain");
     expect(response.cookies.get(WEB_SESSION_COOKIE)).toBeUndefined();
     expect(response.cookies.get("mycelis_google_state")?.value).toBe("");
+  });
+
+  it.each(OPEN_REDIRECT_NEXTS)("never redirects off-origin after sign-in for next=%j", async (next) => {
+    mockGoogleIdentity({ sub: "google-123", email: "erik@makeintellex.com", email_verified: true, name: "Erik", hd: "makeintellex.com", aud: "test-google-client" });
+    const response = await GET(callbackRequest(next));
+    const location = new URL(response.headers.get("location") ?? "http://invalid");
+    expect(location.origin).toBe("http://127.0.0.1:3000");
+    // A value that cannot survive the state cookie round-trip fails closed on state.
+    expect(["/dashboard", "/login?error=google_state"]).toContain(redirectTarget(response));
+  });
+
+  it("keeps a same-origin next path with query and fragment", async () => {
+    mockGoogleIdentity({ sub: "google-123", email: "erik@makeintellex.com", email_verified: true, name: "Erik", hd: "makeintellex.com", aud: "test-google-client" });
+    const response = await GET(callbackRequest("/dashboard?x=1#y"));
+    expect(response.headers.get("location")).toBe("http://127.0.0.1:3000/dashboard?x=1#y");
   });
 
   it("rejects an identity token issued for another OAuth client", async () => {
