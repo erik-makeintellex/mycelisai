@@ -1,0 +1,39 @@
+# Test fixture only (RC-004A). Lives in testdata/ so the starters loader,
+# which does not recurse, never lists it at runtime. Real starters are RC-004B.
+id: fixture-minimal-starter
+name: Fixture Minimal Starter
+description: Minimal starter bundle used by bootstrap and server tests.
+kernel:
+  mode: guided
+council:
+  mode: compact
+provider_policy:
+  provider: ollama
+starter:
+  label: Fixture studio
+  persona: studio
+  order: 10
+  sample_name: Fixture Studio
+  sample_purpose: Draft client work and hold it for approval.
+  soma_intro: "Your studio is ready. Nothing is sent until you approve."
+delivery_defaults:
+  work_mode: propose_only
+  approval_policy_ref: fixture-approve-external
+  approval_posture: approve_external_sends
+  outputs:
+    retain: true
+    proof_required: true
+  max_team_members: 3
+teams:
+  - id: fixture-delivery
+    name: Fixture Delivery
+    type: action
+    inputs: [intent]
+    deliveries: [execution_result]
+    members:
+      - id: delivery-lead
+        role: lead
+      - id: writer
+        role: writer
+      - id: reviewer
+        role: reviewer

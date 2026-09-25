@@ -14,7 +14,7 @@ import (
 func (s *AdminServer) handleListTemplatesAPI(w http.ResponseWriter, r *http.Request) {
 	view := strings.TrimSpace(r.URL.Query().Get("view"))
 	if view == "starter" || view == "organization-starters" {
-		templates, err := s.loadOrganizationStarterTemplates()
+		templates, err := s.loadOrganizationStarterCatalog()
 		if err != nil {
 			respondAPIError(w, "failed to load organization starter templates", http.StatusInternalServerError)
 			return

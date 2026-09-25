@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/mycelis/core/internal/swarm"
-	"github.com/mycelis/core/pkg/protocol"
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,6 +22,11 @@ type TemplateBundle struct {
 	Council         TemplateCouncil       `yaml:"council,omitempty"`
 	ProviderPolicy  swarm.ProviderPolicy  `yaml:"provider_policy,omitempty"`
 	Teams           []*swarm.TeamManifest `yaml:"teams,omitempty"`
+	// Starter and DeliveryDefaults are optional (RC-004A). Starter carries
+	// beginner-facing labels only; DeliveryDefaults shapes organization
+	// delivery posture. See template_starter.go.
+	Starter          *StarterLabels    `yaml:"starter,omitempty"`
+	DeliveryDefaults *DeliveryDefaults `yaml:"delivery_defaults,omitempty"`
 }
 
 type TemplateKernel struct {
@@ -137,7 +141,7 @@ func (b *TemplateBundle) Validate() error {
 	}
 
 	b.Teams = normalized
-	return nil
+	return b.validateStarterBlocks()
 }
 
 func (b *TemplateBundle) LoadTeamManifests() ([]*swarm.TeamManifest, error) {
@@ -250,48 +254,4 @@ func validateEmbeddedTeamManifest(idx int, manifest *swarm.TeamManifest) error {
 		}
 	}
 	return nil
-}
-
-func cloneTeamManifests(manifests []*swarm.TeamManifest) ([]*swarm.TeamManifest, error) {
-	cloned := make([]*swarm.TeamManifest, 0, len(manifests))
-	for idx, manifest := range manifests {
-		clone, err := cloneTeamManifest(manifest)
-		if err != nil {
-			return nil, fmt.Errorf("clone team %d: %w", idx, err)
-		}
-		cloned = append(cloned, clone)
-	}
-	return cloned, nil
-}
-
-func cloneTeamManifest(manifest *swarm.TeamManifest) (*swarm.TeamManifest, error) {
-	if manifest == nil {
-		return nil, nil
-	}
-
-	clone := *manifest
-	clone.Members = make([]protocol.AgentManifest, len(manifest.Members))
-	for idx, member := range manifest.Members {
-		clone.Members[idx] = cloneAgentManifest(member)
-	}
-	clone.Inputs = append([]string(nil), manifest.Inputs...)
-	clone.Deliveries = append([]string(nil), manifest.Deliveries...)
-	if manifest.Schedule != nil {
-		schedule := *manifest.Schedule
-		clone.Schedule = &schedule
-	}
-	return &clone, nil
-}
-
-func cloneAgentManifest(manifest protocol.AgentManifest) protocol.AgentManifest {
-	clone := manifest
-	clone.Inputs = append([]string(nil), manifest.Inputs...)
-	clone.Outputs = append([]string(nil), manifest.Outputs...)
-	clone.Tools = append([]string(nil), manifest.Tools...)
-	if manifest.Verification != nil {
-		verification := *manifest.Verification
-		verification.Rubric = append([]string(nil), manifest.Verification.Rubric...)
-		clone.Verification = &verification
-	}
-	return clone
 }

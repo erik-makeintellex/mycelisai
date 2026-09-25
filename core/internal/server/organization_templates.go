@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 	"unicode"
 
@@ -11,20 +10,21 @@ import (
 	"github.com/mycelis/core/internal/bootstrap"
 )
 
+// loadOrganizationStarterTemplates returns the summaries of every available
+// catalog entry (top-level bundles plus starters/). Unavailable starters are
+// left out so they cannot be used to create an organization.
 func (s *AdminServer) loadOrganizationStarterTemplates() ([]OrganizationTemplateSummary, error) {
-	loader := bootstrap.NewTemplateLoader(s.templateBundlesPath())
-	bundles, err := loader.LoadBundles()
+	catalog, err := s.loadOrganizationStarterCatalog()
 	if err != nil {
 		return nil, err
 	}
 
-	templates := make([]OrganizationTemplateSummary, 0, len(bundles))
-	for _, bundle := range bundles {
-		templates = append(templates, summarizeStarterBundle(bundle))
+	templates := make([]OrganizationTemplateSummary, 0, len(catalog))
+	for _, item := range catalog {
+		if item.Available {
+			templates = append(templates, item.OrganizationTemplateSummary)
+		}
 	}
-	sort.Slice(templates, func(i, j int) bool {
-		return templates[i].Name < templates[j].Name
-	})
 	return templates, nil
 }
 
