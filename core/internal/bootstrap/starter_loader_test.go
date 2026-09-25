@@ -15,7 +15,8 @@ func readFixture(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("read fixture: %v", err)
 	}
-	return string(data)
+	// Normalize CRLF so string edits in tests match on Windows checkouts.
+	return strings.ReplaceAll(string(data), "\r\n", "\n")
 }
 
 func writeFile(t *testing.T, dir, name, body string) {
