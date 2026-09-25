@@ -25,7 +25,7 @@ Use these documents instead of rebuilding a large workflow spec here:
 | Soma chat, protected prompts, generated outputs, and recovery | [Using Soma Chat](user/soma-chat.md) |
 | Choosing direct Soma, one agent, compact teams, or multi-lane work | [Workflow Variants And Plan Memory](user/workflow-variants-and-plan-memory.md) |
 | Team creation, lead-centered workspaces, and lane splitting | [Teams](user/teams.md) |
-| MCP, Connected Tools, workspace files, AI engines, and deployment context | [Resources](user/resources.md) |
+| MCP, Connected Tools, workspace files, AI engines, and Knowledge | [Resources](user/resources.md) |
 | Memory, continuity, retained knowledge, and reflection boundaries | [Memory](user/memory.md) |
 | Approval posture, risk classes, and audit visibility | [Governance And Trust](user/governance-trust.md) |
 | Run review, activity, and execution timelines | [Run Timeline](user/run-timeline.md) |

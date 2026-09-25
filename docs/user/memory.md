@@ -17,7 +17,7 @@ COLD  → Semantic vector store (long-term, searchable by meaning)
 
 All three tiers are populated automatically as agents work. They are separate from the memory-layer model below, and the HOT/WARM/COLD temperature view is operational storage posture rather than the governing authority model.
 
-You can also intentionally load governed private records, customer/deployment knowledge, approved company guidance, admin-shaped Soma operating context, and reflection/synthesis observations through **Resources → Deployment Context** so Soma has durable goal-relevant context to reuse later without mixing it into ordinary remembered facts.
+You can also intentionally load governed private records, customer/deployment knowledge, approved company guidance, admin-shaped Soma operating context, and reflection/synthesis observations through **Resources → Knowledge** so Soma has durable goal-relevant context to reuse later without mixing it into ordinary remembered facts.
 
 ---
 
@@ -108,7 +108,7 @@ That means:
 
 ## Storing a Memory
 
-Agents store memories automatically during runs (via the `remember` tool). For larger operator-provided docs and reference material, use **Resources → Deployment Context** instead of treating them as small facts.
+Agents store memories automatically during runs (via the `remember` tool). For larger operator-provided docs and reference material, use **Resources → Knowledge** instead of treating them as small facts.
 
 Use the Memory page when you want to query what is already retained, or when a smaller deliberate fact/preference/promotion is the right tool.
 
@@ -174,7 +174,7 @@ The **Agent State** tab shows the last known state of each active agent:
 
 ```
 Agent calls remember() or store_artifact()
-or operator loads Deployment Context from Resources
+or operator loads Knowledge from Resources
     ↓
 Stored in PostgreSQL (log_entries + artifacts tables)
     ↓
@@ -202,7 +202,7 @@ Important boundary:
 - **SitReps as quick history**: The SitReps tab is faster than reading full run timelines when you just need a summary of what happened in a session
 - **Memory persists across sessions**: Everything stored here survives server restarts and is available in future sessions
 - **Keep important plans out of chat-only state**: if a workflow should survive a full reboot, ask Soma to retain a plan summary, checklist, or output contract as an artifact and keep working state in temporary continuity
-- **Use Deployment Context for larger briefs**: architecture docs, MCP constraints, web research summaries, customer requirements, and approved company rollout policies belong in the dedicated governed-context intake lane so provenance and security posture stay explicit
+- **Use Knowledge for larger briefs**: architecture docs, MCP constraints, web research summaries, customer requirements, and approved company rollout policies belong in the dedicated governed-context intake lane so provenance and security posture stay explicit
 - **Use reflection/synthesis for lessons, not transcripts**: capture the distilled change, contradiction, or pattern as a Managed Exchange learning candidate first, and keep the raw conversation in trace/continuity instead
 
 Architecture reference:

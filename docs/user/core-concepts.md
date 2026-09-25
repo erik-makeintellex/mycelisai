@@ -26,6 +26,25 @@ Root admins can also configure output-model routing for the organization so all 
 
 ---
 
+## Creating an AI Organization
+
+The organization setup page offers four company starters, each with its own approval posture, so you pick the one that matches how cautious your organization should be by default:
+
+| Starter | Who approves what | Team size |
+|---------|--------------------|-----------|
+| **Client delivery studio** | Every external send is held for your approval before anything leaves the organization | Delivery lead + Reviewer |
+| **Product delivery team** | Proposed changes are built and verified with proof, then wait for your approval before deploy/write | Product lead, Builder, Verifier |
+| **Operations desk** | Bounded read-only checks run on their own; anything that changes state (config, firmware, a runbook) waits for approval | Ops lead, Runbook operator, Monitor |
+| **Governed enterprise program** | Every mutation is a proposal with proof, fully audited, and only local AI engines are used | Program lead, Analyst, Compliance reviewer |
+
+Every starter retains its outputs with proof (see [Using Soma Chat](soma-chat.md#reading-responses)) and starts at a small team size (up to 3 members) rather than provisioning a large org up front. Unavailable starters are shown disabled with the reason (for example, a missing approval-policy group).
+
+Selecting a starter prefills the organization name and purpose from a sample and copies its approval posture, audit level, and output-proof requirement onto the new organization. Departments start **planned**, not staffed — Soma proposes launching a department's team when the work needs it, and you approve that launch like any other governed mutation.
+
+When you open an organization created from a starter for the first time, its home page opens with a short quoted line from Soma introducing the organization, followed by a one-line delivery summary (who has to approve what, whether finished work is kept with proof, and the team-size limit) and a note that departments are planned and Soma will propose launching teams for you to approve. Organizations created empty, or created before this feature existed, open exactly as before — no intro or summary line.
+
+---
+
 ## Team Leads
 
 Created teams are entered through a focused lead counterpart, not through a generic shared chat bucket.

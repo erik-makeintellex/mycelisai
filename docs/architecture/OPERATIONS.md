@@ -117,6 +117,8 @@ uv run inv compose.down
 
 Compose is the supported single-host runtime lane. `.env.compose` owns container topology; `.env` remains the secret source.
 
+Organizations persist to the `organizations` table added by migration 040. A database missing that migration returns 503 from the organization API naming `uv run inv compose.migrate`; run `uv run inv compose.migrate` (Compose) or `uv run inv db.migrate` (source-mode) to apply it. `compose.migrate` detects whether the table already exists, so it is safe to rerun on existing databases.
+
 ### Kubernetes Tasks (`ops/k8s.py`)
 
 ```bash
@@ -196,12 +198,15 @@ Configuration sources:
 - `core/config/homepage.yaml`: portal copy/links
 - `core/config/policy.yaml`: governance
 - `core/config/templates/*.yaml`: bootstrap bundles/templates
+- `core/config/templates/starters/*.yaml`: organization-starter bundles (starter + delivery_defaults blocks); loaded independently of boot bundle selection, and the matching `delivery-approve-*` policy groups live in `core/config/policy.yaml`
 - `core/config/teams/*.yaml`: standing team and legacy migration inputs
 - Helm values files: cluster deployment shape
 
+Config read through View config (`/api/v1/config/...`) is redacted server-side: secret keys and credential-shaped values are hidden, and `*_env` / `*_ref` reference names stay visible. See [API Reference: View Config](../API_REFERENCE.md#view-config).
+
 Provider/media env overrides are deployment-time infrastructure configuration only. Use `MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID`, `MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_MODEL_ID`; the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` must not return. `Bundle -> Instantiated Organization -> Inheritance -> Routing` remains authoritative, so do not treat env overrides as runtime organization behavior.
 
-The Helm chart mounts this runtime config tree at `/core/config`.
+The Helm chart mounts this runtime config tree at `/core/config`, including `config/templates/starters/*.yaml` and `config/policy.yaml`, so organization starters and their approval policy groups are available in cluster deployments the same way they are locally.
 
 Runtime bootstrap follows [V8 Config and Bootstrap Model](../architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md): template inputs become instantiated organizations through inheritance, precedence, and policy checks.
 

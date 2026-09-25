@@ -255,7 +255,7 @@ Guarded commands: `uv run inv wsl.status`, `uv run inv wsl.refresh --branch <nam
 
 ## Troubleshooting
 
-- NATS or council responses disappear: run `uv run inv lifecycle.status`, then restart with `uv run inv lifecycle.restart --frontend`.
+- NATS or council responses disappear, or the UI shows "Core API unreachable": run `uv run inv lifecycle.status`, start/restart with `uv run inv lifecycle.up --frontend` (the same command the banner names), then confirm with `uv run inv lifecycle.status` again.
 - Compose readiness times out on a first build: rerun with `uv run inv compose.up --build --wait-timeout=240`.
 - Windows host has no native `docker`: the Compose task may use Docker inside WSL; set `MYCELIS_WSL_DISTRO` if the default distro is not the Docker host.
 - Windows-hosted Ollama from WSL/Docker: keep `MYCELIS_COMPOSE_OLLAMA_HOST` pointed at the intended Windows service address; the task layer may relay it through WSL.

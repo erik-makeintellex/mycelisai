@@ -49,6 +49,21 @@ The banner auto-clears once health recovers.
 
 ---
 
+## "Core API unreachable"
+
+When the interface cannot reach the Mycelis Core API at all (a network error or a 5xx from the proxy, not just one degraded service), the degraded banner, the Soma header, the causal summary, and the Status drawer all say **"Core API unreachable"** together — no surface claims readiness or completed work while Core is down. Groups and Runs show a load-failure state with `Retry` instead of a misleading empty list.
+
+To recover, in a terminal:
+
+```bash
+uv run inv lifecycle.up --frontend
+uv run inv lifecycle.status
+```
+
+Start the runtime with the first command, then confirm with the second. See [Local Development Workflow](../LOCAL_DEV_WORKFLOW.md#troubleshooting) for other Core startup issues.
+
+---
+
 ## System Checks (`/system`, Advanced mode)
 
 System Checks lets you run targeted validations:

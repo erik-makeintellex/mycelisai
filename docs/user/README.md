@@ -38,7 +38,7 @@ Concrete requests Soma should understand when the matching capability is configu
 - [Workflow Variants And Plan Memory](workflow-variants-and-plan-memory.md): when direct Soma is enough, when a team matters, and how to keep plans through a reboot.
 - [Teams](teams.md): compact team creation, lead-centered workflow, and broad-ask lane splitting.
 - [Core Concepts](core-concepts.md): operator-language explanation of Soma, Council, teams, memory, and governance.
-- [Resources](resources.md): private/context content, MCP tool structure, workspace files, AI engines, deployment context, and Connected Tools activity.
+- [Resources](resources.md): private/context content, MCP tool structure, workspace files, AI engines, Knowledge, and Connected Tools activity.
 - [Memory](memory.md): semantic search, retained knowledge, reflection context, and continuity boundaries.
 - [Settings And Access](settings-access.md): profile, People & Access, auth-provider posture, access-denied recovery, and connected-tool/search management boundaries.
 - [Authentication Modes](auth-modes.md): local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM enablement.

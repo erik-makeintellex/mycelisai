@@ -164,9 +164,9 @@ Repeat a protected action and approve it.
 
 Expected: execution state and result are visible, auditable, and retained.
 
-### 7. Deployment Context Intake
+### 7. Knowledge Intake
 
-Provide deployment context only when needed for the tested slice.
+Provide Knowledge (Resources -> Knowledge, formerly labeled "Deployment Context") only when needed for the tested slice.
 
 Expected: private context is treated as governed input, not leaked as raw backend noise.
 

@@ -21,7 +21,7 @@ UI routes expect normalized payloads with:
 | `/groups` | temporary/standing collaboration and retained outputs |
 | `/teams` | team roster and specialization review |
 | `/teams/create` | guided compact team creation |
-| `/resources` | resources, deployment context, Connected Tools |
+| `/resources` | resources, Knowledge (formerly "Deployment Context"), Connected Tools |
 | `/memory` | continuity and memory review |
 | `/system` | health, degraded state, recovery guidance |
 | `/settings` | profile, access, providers, tools, advanced controls |

@@ -1,7 +1,7 @@
 # Resources
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Advanced-mode support surface for connected tools, deployment context intake, managed exchange, workspace files, AI engine setup, and reusable role definitions.
+> Advanced-mode support surface for connected tools, Knowledge intake, managed exchange, workspace files, AI engine setup, and reusable role definitions.
 
 ---
 
@@ -15,7 +15,7 @@ Current tabs:
 |-----|---------|
 | Connected Tools | Installed MCP servers and tool capability visibility |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
-| Deployment Context | Load governed private/user records, customer context, approved company knowledge, Soma operating context, and reflection/synthesis observations into separate governed context lanes |
+| Knowledge | Load governed private/user records, customer context, approved company knowledge, Soma operating context, and reflection/synthesis observations into separate governed context lanes |
 | Workspace Files | Filesystem MCP-backed browsing and file operations inside workspace boundary |
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
@@ -105,11 +105,11 @@ Operators should be able to answer "what entered the system, how trusted is it, 
 
 ---
 
-## Deployment Context
+## Knowledge
 
-Deployment Context is the governed intake surface for private/user-owned content and deployment-shaping knowledge that should influence future Soma reasoning without being treated as ordinary Soma memory.
+Knowledge (formerly labeled "Deployment Context") is the governed intake surface for private/user-owned content and deployment-shaping knowledge that should influence future Soma reasoning without being treated as ordinary Soma memory.
 
-It is not the same as team-shared execution memory. Team-shared continuity belongs in `AGENT_MEMORY`, while Deployment Context is for governed source material and promoted doctrine.
+It is not the same as team-shared execution memory. Team-shared continuity belongs in `AGENT_MEMORY`, while Knowledge is for governed source material and promoted doctrine.
 
 Typical inputs:
 - private records or diary/journal notes the user explicitly wants Soma to use

@@ -110,7 +110,7 @@ Use at least one durable surface:
 - **Run Timeline** for the execution trace and resume context
 - **Temporary workflow groups** when you want lane ownership and archived output review
 - **Conversation templates** when the ask shape should be reused later
-- **Governed memory or deployment context** only when the material should influence future work beyond this one mission
+- **Governed memory or Knowledge** only when the material should influence future work beyond this one mission
 
 Simple rule:
 - working state belongs in temporary continuity

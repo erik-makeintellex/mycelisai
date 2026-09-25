@@ -148,6 +148,7 @@ Soma responses can include:
 - the operator should not need to leave the conversation or inspect team-delivery lanes just to review the generated result
 - non-binary outputs should render directly in chat whenever possible
 - binary or saved outputs should show a visible saved path or download link in the same conversation turn
+- retained package outputs (the Output Workbench) show a small proof chip per file — `verified` means the stored file's checksum still matches what was written, `degraded` means proof exists but readback could not confirm it (a recovery hint explains why), and `missing`/`blocked` mean the underlying artifact could not be read back at all; click **Inspect** to see the storage reference, checksum, byte count, source run/contract, and readback status
 
 3. **Delegation Trace**
 - compact cards showing which council members were consulted
