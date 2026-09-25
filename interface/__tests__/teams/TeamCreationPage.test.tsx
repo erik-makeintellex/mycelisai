@@ -98,4 +98,46 @@ describe("TeamCreationPage", () => {
         expect(screen.getAllByRole("link", { name: "Open Soma workspace" })[0].getAttribute("href")).toBe("/dashboard");
         expect(mockFetch).not.toHaveBeenCalled();
     });
+
+    it("shows a visible load-failure state (not a blank page) when Core is unreachable", async () => {
+        localStorage.setItem("mycelis-last-organization-id", "org-123");
+        localStorage.setItem("mycelis-last-organization-name", "Northstar Labs");
+        mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+
+        render(<TeamCreationPage />);
+
+        const failure = await screen.findByTestId("team-creation-org-load-failure");
+        expect(failure.textContent).toMatch(/could not be loaded/i);
+        expect(screen.getByRole("button", { name: /Retry/i })).toBeDefined();
+
+        // The rest of the page (steps 2 and 3 guidance) must still render — the page is not blank.
+        expect(screen.getByText("Create a team through Soma")).toBeDefined();
+        expect(screen.getByText(/Tell Soma what success looks like/i)).toBeDefined();
+
+        mockFetch.mockResolvedValue(
+            jsonResponse({
+                ok: true,
+                data: {
+                    id: "org-123",
+                    name: "Northstar Labs",
+                    purpose: "Ship a focused AI organization.",
+                    start_mode: "template",
+                    team_lead_label: "Launch Lead",
+                    advisor_count: 1,
+                    department_count: 2,
+                    specialist_count: 5,
+                    ai_engine_settings_summary: "Balanced",
+                    response_contract_summary: "Clear and structured",
+                    memory_personality_summary: "Stable continuity",
+                    status: "active",
+                },
+            }),
+        );
+        fireEvent.click(screen.getByRole("button", { name: /Retry/i }));
+
+        await waitFor(() =>
+            expect(screen.queryByTestId("team-creation-org-load-failure")).toBeNull(),
+        );
+        expect(await screen.findByText("Northstar Labs")).toBeDefined();
+    });
 });

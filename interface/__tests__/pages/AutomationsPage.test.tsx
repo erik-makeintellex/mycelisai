@@ -126,4 +126,18 @@ describe('Automations Page (V7)', () => {
         expect(await screen.findByTestId('approvals-tab')).toBeDefined();
         expect(screen.getByRole('button', { name: 'Approvals' })).toBeDefined();
     });
+
+    it('keeps the Active Automations body visible (not blank) when Core is unreachable', async () => {
+        // AutomationHub does not fetch anything itself, so it must render
+        // regardless of Core reachability — only the shell banner (tested
+        // separately) reflects the outage.
+        await act(async () => { render(<AutomationsPage />); });
+
+        expect(screen.getByText('Automations')).toBeDefined();
+        expect(screen.getByTestId('automations-hub-baseline')).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Trigger Rules' })).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Approvals' })).toBeDefined();
+        expect(screen.getByText('Set Up Your First Automation Chain')).toBeDefined();
+        expect(document.body.textContent?.trim().length).toBeGreaterThan(0);
+    });
 });

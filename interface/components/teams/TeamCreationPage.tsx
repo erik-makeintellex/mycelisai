@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, Bot, Building2, Loader2, Sparkles, Users } from "lucide-react";
+import { Bot, Building2, Loader2, Sparkles, Users } from "lucide-react";
 import TeamLeadInteractionPanel, { type TeamLeadPromptSuggestion } from "@/components/organizations/TeamLeadInteractionPanel";
+import LoadFailureState from "@/components/shared/LoadFailureState";
+import { ContextMetric, NextStepCard } from "@/components/teams/TeamCreationPageCards";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import { readLastOrganization, subscribeLastOrganizationChange, type LastOrganizationRef } from "@/lib/lastOrganization";
 import type { OrganizationHomePayload } from "@/lib/organizations";
@@ -38,6 +40,8 @@ export default function TeamCreationPage() {
 
     const effectiveOrganizationId = searchParams?.get("organization_id") || lastOrganization?.id || null;
 
+    const [reloadToken, setReloadToken] = useState(0);
+
     useEffect(() => {
         if (!effectiveOrganizationId) {
             setOrganization(null);
@@ -54,7 +58,7 @@ export default function TeamCreationPage() {
                 const response = await fetch(`/api/v1/organizations/${effectiveOrganizationId}/home`, { cache: "no-store" });
                 const payload = await response.json().catch(() => null);
                 if (!response.ok) {
-                    throw new Error(extractApiError(payload) || "Unable to load the current AI Organization.");
+                    throw new Error(extractApiError(payload) || `Unable to load the current AI Organization (HTTP ${response.status}).`);
                 }
                 if (cancelled) return;
                 setOrganization(extractApiData<OrganizationHomePayload>(payload));
@@ -71,7 +75,7 @@ export default function TeamCreationPage() {
         return () => {
             cancelled = true;
         };
-    }, [effectiveOrganizationId]);
+    }, [effectiveOrganizationId, reloadToken]);
 
     return (
         <div className="h-full overflow-y-auto bg-cortex-bg px-6 py-6">
@@ -143,10 +147,14 @@ export default function TeamCreationPage() {
                         ) : null}
 
                         {loadState === "error" && error ? (
-                            <div className="rounded-2xl border border-cortex-danger/30 bg-cortex-danger/10 px-4 py-4">
-                                <p className="text-sm font-semibold text-cortex-text-main">The current AI Organization could not be loaded</p>
-                                <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{error}</p>
-                                <div className="mt-4 flex flex-wrap gap-2">
+                            <div className="space-y-3">
+                                <LoadFailureState
+                                    title="The current AI Organization could not be loaded"
+                                    detail={error}
+                                    onRetry={() => setReloadToken((n) => n + 1)}
+                                    testId="team-creation-org-load-failure"
+                                />
+                                <div className="flex flex-wrap gap-2">
                                     <Link
                                         href="/dashboard"
                                         className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90"
@@ -271,29 +279,6 @@ export default function TeamCreationPage() {
                         </div>
                     </section>
                 </div>
-            </div>
-        </div>
-    );
-}
-
-function ContextMetric({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
-            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">{label}</p>
-            <p className="mt-2 text-sm font-medium text-cortex-text-main">{value}</p>
-        </div>
-    );
-}
-
-function NextStepCard({ title, detail }: { title: string; detail: string }) {
-    return (
-        <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
-            <div className="flex items-start justify-between gap-3">
-                <div>
-                    <p className="text-sm font-semibold text-cortex-text-main">{title}</p>
-                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{detail}</p>
-                </div>
-                <ArrowRight className="mt-1 h-4 w-4 text-cortex-text-muted" />
             </div>
         </div>
     );
