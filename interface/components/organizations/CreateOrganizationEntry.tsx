@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { ArrowRight, Blocks, Bot, BrainCircuit, Building2, Layers3, Loader2, Sparkles } from "lucide-react";
 import { rememberLastOrganization } from "@/lib/lastOrganization";
-import { ActionableState, ActionButton, EmptyState, HiddenLater, LoadingState, Metric, StartModeCard, WhyStartHere } from "@/components/organizations/createOrganizationEntryUi";
+import { ActionableState, ActionButton, EmptyState, HiddenLater, LoadingState, StarterCard, StarterDeliverySummary, StartModeCard, WhyStartHere } from "@/components/organizations/createOrganizationEntryUi";
 import { useCreateOrganizationEntryState } from "@/components/organizations/useCreateOrganizationEntryState";
 import { CreateOrganizationRecentList } from "@/components/organizations/createOrganizationRecentList";
 export default function CreateOrganizationEntry() {
@@ -10,7 +10,7 @@ export default function CreateOrganizationEntry() {
     const {
         templates, lastOrganization, templatesState, organizationsState, templatesError, organizationsError, selectedMode, selectedTemplateId, selectedTemplate, name, purpose, submitError, isSubmitting, openingOrganizationId,
         showDiagnosticOrganizations, diagnosticOrganizations, visibleDiagnosticOrganizations, hiddenDiagnosticCount, testingSetupCountLabel, visibleOrganizations, isTemplateMode, canSubmit, creationReadinessMessage,
-        createSectionRef, nameInputRef, setSelectedTemplateId, setSelectedMode, setName, setPurpose, setShowDiagnosticOrganizations, focusCreateFlow, rememberOrganization, openOrganization, handleCreate,
+        createSectionRef, nameInputRef, setSelectedMode, setName, setPurpose, setShowDiagnosticOrganizations, focusCreateFlow, rememberOrganization, selectStarterTemplate, openOrganization, handleCreate,
         reloadTemplates, reloadOrganizations, showRecentOrganizations } = state;
     return (
         <div className="space-y-8">
@@ -130,35 +130,15 @@ export default function CreateOrganizationEntry() {
                                 </div>
                                 <div className="grid gap-3">
                                     {templates.map((template) => (
-                                        <button
+                                        <StarterCard
                                             key={template.id}
-                                            onClick={() => setSelectedTemplateId(template.id)}
-                                            className={`rounded-2xl border p-4 text-left transition-colors ${
-                                                selectedTemplateId === template.id
-                                                    ? "border-cortex-primary/40 bg-cortex-primary/10"
-                                                    : "border-cortex-border bg-cortex-bg hover:border-cortex-primary/20"
-                                            }`}
-                                        >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div>
-                                                    <p className="text-base font-semibold text-cortex-text-main">{template.name}</p>
-                                                    <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{template.description}</p>
-                                                </div>
-                                                <span className="rounded-full border border-cortex-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
-                                                    {template.organization_type}
-                                                </span>
-                                            </div>
-                                            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                                                <Metric label="Team Lead" value={template.team_lead_label} />
-                                                <Metric label="Advisors" value={String(template.advisor_count)} />
-                                                <Metric label="Departments" value={String(template.department_count)} />
-                                                <Metric label="Specialists" value={String(template.specialist_count)} />
-                                                <Metric label="AI Engine Settings" value={template.ai_engine_settings_summary} />
-                                                <Metric label="Memory & Continuity" value={template.memory_personality_summary} />
-                                            </div>
-                                        </button>
+                                            template={template}
+                                            active={selectedTemplateId === template.id}
+                                            onSelect={() => selectStarterTemplate(template)}
+                                        />
                                     ))}
                                 </div>
+                                {selectedTemplate && <StarterDeliverySummary template={selectedTemplate} />}
                             </div>
                         )}
                     </div>
@@ -188,31 +168,6 @@ export default function CreateOrganizationEntry() {
                                 className="min-h-[120px] w-full rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-main outline-none transition-colors placeholder:text-cortex-text-muted focus:border-cortex-primary/40"
                             />
                         </label>
-                        <div className="space-y-2">
-                            <p className="text-sm font-medium text-cortex-text-main">Suggested starting points</p>
-                            <div className="flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setName("Northstar Labs");
-                                        setPurpose("Launch a focused AI product organization that can plan priorities, review work, and execute governed changes.");
-                                    }}
-                                    className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1.5 text-xs font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary"
-                                >
-                                    Product delivery organization
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setName("Skylight Works");
-                                        setPurpose("Create an AI operations organization that can review workflows, coordinate specialists, and keep execution visible.");
-                                    }}
-                                    className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1.5 text-xs font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary"
-                                >
-                                    Operations organization
-                                </button>
-                            </div>
-                        </div>
                         <div className="rounded-2xl border border-cortex-border bg-cortex-bg p-4 text-sm text-cortex-text-muted">
                             <p className="font-medium text-cortex-text-main">Selected start</p>
                             <p className="mt-1 leading-6">

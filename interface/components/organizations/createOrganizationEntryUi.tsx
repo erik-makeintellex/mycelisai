@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Loader2, RefreshCcw } from "lucide-react";
+import type { OrganizationStarterTemplate } from "@/lib/organizations";
 
 export function StartModeCard({
     active,
@@ -26,6 +27,74 @@ export function StartModeCard({
                 </div>
             </div>
         </button>
+    );
+}
+
+export function StarterCard({
+    template,
+    active,
+    onSelect,
+}: {
+    template: OrganizationStarterTemplate;
+    active: boolean;
+    onSelect: () => void;
+}) {
+    const unavailable = template.available === false;
+    const title = template.starter?.label || template.name;
+    return (
+        <button
+            type="button"
+            data-testid={`starter-card-${template.id}`}
+            onClick={onSelect}
+            disabled={unavailable}
+            aria-disabled={unavailable}
+            className={`rounded-2xl border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                active && !unavailable
+                    ? "border-cortex-primary/40 bg-cortex-primary/10"
+                    : "border-cortex-border bg-cortex-bg hover:border-cortex-primary/20"
+            }`}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <p className="text-base font-semibold text-cortex-text-main">{title}</p>
+                    <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{template.description}</p>
+                </div>
+                <span className="rounded-full border border-cortex-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
+                    {template.organization_type}
+                </span>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                <Metric label="Team Lead" value={template.team_lead_label} />
+                <Metric label="Advisors" value={String(template.advisor_count)} />
+                <Metric label="Departments" value={String(template.department_count)} />
+                <Metric label="Specialists" value={String(template.specialist_count)} />
+                <Metric label="AI Engine Settings" value={template.ai_engine_settings_summary} />
+                <Metric label="Memory & Continuity" value={template.memory_personality_summary} />
+            </div>
+            {unavailable && (
+                <p className="mt-3 text-xs leading-6 text-cortex-danger">
+                    {template.unavailable_reason || "This starter is unavailable right now."}
+                </p>
+            )}
+        </button>
+    );
+}
+
+export function StarterDeliverySummary({ template }: { template: OrganizationStarterTemplate }) {
+    const summary = template.delivery_summary;
+    if (!summary) {
+        return null;
+    }
+    return (
+        <div className="rounded-2xl border border-cortex-border bg-cortex-bg p-4 text-sm text-cortex-text-muted">
+            <p className="font-medium text-cortex-text-main">What you get with {template.starter?.label || template.name}</p>
+            <ul className="mt-2 space-y-1.5 leading-6">
+                <li>{summary.approval_posture}</li>
+                <li>{summary.output_proof}</li>
+                <li>{summary.team_shape}</li>
+                <li>Departments start as planned; Soma proposes launching teams and you approve.</li>
+            </ul>
+        </div>
     );
 }
 

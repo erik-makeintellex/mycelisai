@@ -7,8 +7,8 @@ import { readLastOrganization, rememberLastOrganization, subscribeLastOrganizati
 import type {
     OrganizationCreateRequest,
     OrganizationStartMode,
+    OrganizationStarterTemplate,
     OrganizationSummary,
-    OrganizationTemplateSummary,
 } from "@/lib/organizations";
 
 type ResourceState = "loading" | "ready" | "error";
@@ -34,7 +34,7 @@ function isDiagnosticOrganization(organization: OrganizationSummary) {
 
 export function useCreateOrganizationEntryState() {
     const router = useRouter();
-    const [templates, setTemplates] = useState<OrganizationTemplateSummary[]>([]);
+    const [templates, setTemplates] = useState<OrganizationStarterTemplate[]>([]);
     const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
     const [lastOrganization, setLastOrganization] = useState<{ id: string; name: string } | null>(null);
     const [templatesState, setTemplatesState] = useState<ResourceState>("loading");
@@ -67,6 +67,20 @@ export function useCreateOrganizationEntryState() {
         rememberLastOrganization({ id: organization.id, name: organization.name });
     };
 
+    const selectStarterTemplate = (template: OrganizationStarterTemplate) => {
+        if (template.available === false) {
+            return;
+        }
+        setSelectedMode("template");
+        setSelectedTemplateId(template.id);
+        if (template.starter?.sample_name) {
+            setName(template.starter.sample_name);
+        }
+        if (template.starter?.sample_purpose) {
+            setPurpose(template.starter.sample_purpose);
+        }
+    };
+
     const openOrganization = (organization: Pick<OrganizationSummary, "id" | "name">) => {
         if (openingOrganizationId === organization.id || isSubmitting) {
             return;
@@ -95,9 +109,14 @@ export function useCreateOrganizationEntryState() {
                 if (cancelled) {
                     return;
                 }
-                const nextTemplates = extractApiData<OrganizationTemplateSummary[]>(payload) || [];
+                const nextTemplates = extractApiData<OrganizationStarterTemplate[]>(payload) || [];
                 setTemplates(nextTemplates);
-                setSelectedTemplateId((current) => current && nextTemplates.some((template) => template.id === current) ? current : nextTemplates[0]?.id ?? "");
+                setSelectedTemplateId((current) => {
+                    if (current && nextTemplates.some((template) => template.id === current && template.available !== false)) {
+                        return current;
+                    }
+                    return nextTemplates.find((template) => template.available !== false)?.id ?? "";
+                });
                 setTemplatesState("ready");
             } catch (err) {
                 if (!cancelled) {
@@ -200,6 +219,7 @@ export function useCreateOrganizationEntryState() {
         hiddenDiagnosticCount, testingSetupCountLabel, visibleOrganizations, isTemplateMode, canSubmit,
         creationReadinessMessage, createSectionRef, nameInputRef, setSelectedTemplateId, setSelectedMode,
         setName, setPurpose, setShowDiagnosticOrganizations, focusCreateFlow, rememberOrganization,
+        selectStarterTemplate,
         openOrganization, handleCreate, reloadTemplates: () => setTemplatesReloadToken((value) => value + 1),
         reloadOrganizations: () => setOrganizationsReloadToken((value) => value + 1),
         showRecentOrganizations: organizationsState !== "ready" || organizations.length > 0,

@@ -131,6 +131,18 @@ export interface OrganizationTemplateSummary {
     memory_personality_summary: string;
 }
 
+// Starter (RC-004C) types live in ./organizationStarters.ts to keep this
+// file at the shared 300-line cap. Re-exported here for convenience.
+export type {
+    OrganizationStarterSource,
+    OrganizationStarterPersona,
+    OrganizationStarterLabels,
+    OrganizationDeliveryOutputs,
+    OrganizationDeliveryDefaults,
+    OrganizationStarterDeliverySummary,
+    OrganizationStarterTemplate,
+} from "@/lib/organizationStarters";
+
 export interface OrganizationSummary {
     id: string;
     name: string;
