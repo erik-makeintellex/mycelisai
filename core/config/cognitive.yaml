@@ -3,7 +3,10 @@ providers:
         type: openai_compatible
         endpoint: http://127.0.0.1:1234/v1
         model_id: default
-        api_key: lm-studio
+        # api_key is intentionally omitted: it is never read from YAML
+        # (ProviderConfig.AuthKey is yaml:"-"). Core auto-fills a dummy
+        # bearer token for local openai_compatible providers; use
+        # api_key_env for a real credential.
         api_key_env: ""
         location: local
         data_boundary: local_only
@@ -58,7 +61,10 @@ providers:
         type: openai_compatible
         endpoint: http://127.0.0.1:11434/v1
         model_id: qwen3:14b
-        api_key: ollama
+        # api_key is intentionally omitted: it is never read from YAML
+        # (ProviderConfig.AuthKey is yaml:"-"). Core auto-fills a dummy
+        # bearer token for local openai_compatible providers; use
+        # api_key_env for a real credential.
         api_key_env: ""
         location: local
         data_boundary: local_only

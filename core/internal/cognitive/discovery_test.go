@@ -72,8 +72,11 @@ func TestServiceDiscovery(t *testing.T) {
 	}
 }
 
-// TestRouter_AutoConfig validates that the Router automatically re-routes traffic
-// from a sick provider to a healthy one during initialization.
+// TestRouter_AutoConfig validates that AutoConfigure reports provider health
+// without rewriting profile bindings. Cross-provider substitution is only
+// ever performed through an operator-configured, same-data-boundary
+// ProfileFallbacks list resolved at request time (see availability.go); a
+// discovery/health pass must never silently reroute a profile.
 func TestRouter_AutoConfig(t *testing.T) {
 	// 1. Setup Config
 	config := &cognitive.BrainConfig{
@@ -104,12 +107,12 @@ func TestRouter_AutoConfig(t *testing.T) {
 	// OR we refactor Router to expose it.
 	// Action: I will refactor Router to expose `AutoConfigure()` to make it testable.
 
-	// Assuming r.AutoConfigure() exists (Implementing it in next step)
 	r.AutoConfigure(context.Background())
 
-	// 5. Assert Switch
+	// 5. Assert no reroute: the profile stays bound to the dead provider.
+	// AutoConfigure only reports health; it must never rewrite the binding.
 	currentProviderID := r.Config.Profiles["architect"]
-	if currentProviderID != "backup_live" {
-		t.Errorf("AutoConfig failed. Expected 'backup_live', got '%s'", currentProviderID)
+	if currentProviderID != "primary_dead" {
+		t.Errorf("AutoConfigure must not reroute profiles; expected 'primary_dead', got '%s'", currentProviderID)
 	}
 }

@@ -1,6 +1,9 @@
 package cognitive
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 var defaultExecutionProfiles = []string{
 	"admin",
@@ -69,12 +72,13 @@ func (r *Router) ExecutionAvailability(profile string, explicitProvider string) 
 	return availability
 }
 
+// EnsureDefaultProfileBindings binds profiles that have no executable
+// provider at all. It never picks an arbitrary available provider: a profile
+// is only bound when the operator has configured an explicit
+// ProfileFallbacks entry for it. Profiles with no explicit configuration stay
+// unbound and resolve through the normal unavailable/blocker path.
 func (r *Router) EnsureDefaultProfileBindings() map[string]string {
 	if r == nil || r.Config == nil {
-		return nil
-	}
-	fallbackID := r.preferredFallbackProviderID()
-	if fallbackID == "" {
 		return nil
 	}
 	if r.Config.Profiles == nil {
@@ -85,6 +89,10 @@ func (r *Router) EnsureDefaultProfileBindings() map[string]string {
 	for _, profile := range defaultExecutionProfiles {
 		current := strings.TrimSpace(r.Config.Profiles[profile])
 		if r.providerConfiguredForExecution(current) {
+			continue
+		}
+		fallbackID, _, ok := r.executionFallbackCandidate(profile, current, r.primaryBoundaryForProfile(current))
+		if !ok {
 			continue
 		}
 		r.Config.Profiles[profile] = fallbackID
@@ -128,17 +136,19 @@ func (r *Router) resolveExecutionProvider(profile string, explicitProvider strin
 		}
 		requestedProviderID = strings.TrimSpace(r.Config.Profiles[resolution.Profile])
 		if requestedProviderID == "" {
-			fallbackID := r.preferredFallbackProviderID()
-			if fallbackID == "" {
+			// No primary provider at all: fail closed to the local_only
+			// boundary (see primaryBoundaryForProfile) rather than allowing
+			// any fallback candidate regardless of boundary.
+			fallbackID, fallbackProvider, ok := r.executionFallbackCandidate(resolution.Profile, "", r.primaryBoundaryForProfile(""))
+			if !ok {
 				resolution.Code = ExecutionNoProviders
 				resolution.Summary = "Soma does not have any available AI Engines configured for chat."
 				return resolution
 			}
-			fallbackProvider := r.Config.Providers[fallbackID]
 			resolution.ProviderID = fallbackID
 			resolution.Provider = fallbackProvider
 			resolution.Code = ExecutionAvailable
-			resolution.Summary = "Soma needed a default AI Engine binding and will use the available local fallback."
+			resolution.Summary = "Soma used the operator-configured fallback AI Engine because the profile has no primary binding."
 			resolution.FallbackApplied = true
 			resolution.Available = true
 			return resolution
@@ -169,11 +179,11 @@ func (r *Router) resolveExecutionProvider(profile string, explicitProvider strin
 		return resolution
 	}
 
-	if fallbackID, fallbackProvider, applied := r.executionFallbackProvider(requestedProviderID); applied {
+	if fallbackID, fallbackProvider, applied := r.executionFallbackCandidate(resolution.Profile, requestedProviderID, normalizedDataBoundary(provider.DataBoundary)); applied {
 		resolution.ProviderID = fallbackID
 		resolution.Provider = fallbackProvider
 		resolution.Code = ExecutionAvailable
-		resolution.Summary = "Soma will use the available fallback AI Engine because the configured default is not executable."
+		resolution.Summary = "Soma used the operator-configured same-boundary fallback AI Engine because the configured default is not executable."
 		resolution.FallbackApplied = true
 		resolution.Available = true
 		return resolution
@@ -194,50 +204,104 @@ func (r *Router) resolveExecutionProvider(profile string, explicitProvider strin
 	return resolution
 }
 
-func (r *Router) executionFallbackProvider(excludeProviderID string) (string, ProviderConfig, bool) {
-	fallbackID := r.preferredFallbackProviderID()
-	if fallbackID == "" || fallbackID == strings.TrimSpace(excludeProviderID) {
-		return "", ProviderConfig{}, false
+// primaryBoundaryForProfile resolves the normalized data boundary that a
+// fallback candidate must match for profile's currently configured provider
+// (providerID). When providerID is blank, or does not resolve to a
+// configured provider, there is no primary boundary to compare against, so
+// this fails closed to DataBoundaryLocalOnly rather than treating "no
+// primary" as "boundary check does not apply". An empty/unknown DataBoundary
+// on a resolved provider is likewise normalized to DataBoundaryLocalOnly —
+// see normalizedDataBoundary.
+func (r *Router) primaryBoundaryForProfile(providerID string) string {
+	id := strings.TrimSpace(providerID)
+	if id == "" || r == nil || r.Config == nil {
+		return DataBoundaryLocalOnly
 	}
-	fallbackProvider, ok := r.Config.Providers[fallbackID]
+	provider, ok := r.Config.Providers[id]
 	if !ok {
-		return "", ProviderConfig{}, false
+		return DataBoundaryLocalOnly
 	}
-	return fallbackID, fallbackProvider, true
+	return normalizedDataBoundary(provider.DataBoundary)
 }
 
-func (r *Router) preferredFallbackProviderID() string {
-	if r == nil || r.Config == nil || len(r.Config.Providers) == 0 {
-		return ""
+// executionFallbackCandidate returns the first configured, executable
+// fallback provider for profile from the operator's explicit
+// ProfileFallbacks list. It never substitutes a provider that was not
+// explicitly listed for this profile, and it always enforces the data
+// boundary: only a candidate whose normalized DataBoundary equals the
+// caller-supplied primaryBoundary (also normalized here defensively) is
+// eligible — local_only never reaches a leaves_org provider, including when
+// either side's DataBoundary is empty/unset (empty is never treated as a
+// wildcard match). An empty/omitted ProfileFallbacks list (the default)
+// returns false: no fallback exists and the caller must fail closed.
+// Cross-boundary entries are rejected earlier, at startup, by
+// validateProfileFallbackBoundaries — this function's boundary check is a
+// second, independent guard against ever acting on one.
+func (r *Router) executionFallbackCandidate(profile string, excludeProviderID string, primaryBoundary string) (string, ProviderConfig, bool) {
+	if r == nil || r.Config == nil || len(r.Config.ProfileFallbacks) == 0 {
+		return "", ProviderConfig{}, false
 	}
-
-	candidates := []string{
-		"ollama",
-		"emergency-ollama",
-		"local-ollama-dev",
-		"local-sovereign",
-		"lmstudio",
-	}
-	for _, candidate := range candidates {
-		if r.providerConfiguredForExecution(candidate) {
-			return candidate
-		}
-	}
-
-	for providerID, provider := range r.Config.Providers {
-		if provider.Location == "remote" {
+	exclude := strings.TrimSpace(excludeProviderID)
+	requiredBoundary := normalizedDataBoundary(primaryBoundary)
+	for _, candidateID := range r.Config.ProfileFallbacks[strings.TrimSpace(profile)] {
+		candidateID = strings.TrimSpace(candidateID)
+		if candidateID == "" || candidateID == exclude {
 			continue
 		}
-		if r.providerConfiguredForExecution(providerID) {
-			return providerID
+		candidate, ok := r.Config.Providers[candidateID]
+		if !ok {
+			continue
+		}
+		if normalizedDataBoundary(candidate.DataBoundary) != requiredBoundary {
+			continue
+		}
+		if !r.providerConfiguredForExecution(candidateID) {
+			continue
+		}
+		return candidateID, candidate, true
+	}
+	return "", ProviderConfig{}, false
+}
+
+// validateProfileFallbackBoundaries rejects a ProfileFallbacks configuration
+// where any listed candidate's normalized data boundary differs from the
+// profile's primary configured provider's normalized data boundary (empty
+// treated as DataBoundaryLocalOnly on both sides — see
+// normalizedDataBoundary). This is a hard config error surfaced at startup
+// (NewRouter returns it), not a silent skip: an operator must fix a
+// cross-boundary fallback entry rather than have Core quietly ignore it.
+// A candidate ID with no matching entry in Providers is left for
+// executionFallbackCandidate to skip at request time; there is no boundary
+// to compare, so it is not a boundary violation here.
+func validateProfileFallbackBoundaries(config *BrainConfig) error {
+	if config == nil || len(config.ProfileFallbacks) == 0 {
+		return nil
+	}
+	for profile, candidates := range config.ProfileFallbacks {
+		primaryID := strings.TrimSpace(config.Profiles[profile])
+		primaryBoundary := DataBoundaryLocalOnly
+		if primaryID != "" {
+			if primaryProvider, ok := config.Providers[primaryID]; ok {
+				primaryBoundary = normalizedDataBoundary(primaryProvider.DataBoundary)
+			}
+		}
+		for _, rawCandidateID := range candidates {
+			candidateID := strings.TrimSpace(rawCandidateID)
+			if candidateID == "" {
+				continue
+			}
+			candidateProvider, ok := config.Providers[candidateID]
+			if !ok {
+				continue
+			}
+			candidateBoundary := normalizedDataBoundary(candidateProvider.DataBoundary)
+			if candidateBoundary != primaryBoundary {
+				return fmt.Errorf(
+					"profile_fallbacks[%q] lists provider %q with data_boundary %q, but profile %q's primary provider %q has data_boundary %q; every fallback entry must share the primary provider's data boundary (local_only must never list a leaves_org provider)",
+					profile, candidateID, candidateBoundary, profile, primaryID, primaryBoundary,
+				)
+			}
 		}
 	}
-
-	for providerID := range r.Config.Providers {
-		if r.providerConfiguredForExecution(providerID) {
-			return providerID
-		}
-	}
-
-	return ""
+	return nil
 }

@@ -91,7 +91,7 @@ func (r *Router) SaveConfig() error {
 		return fmt.Errorf("no config path set — cannot persist")
 	}
 
-	data, err := yaml.Marshal(r.Config)
+	data, err := yaml.Marshal(r.redactedConfigForPersistence())
 	if err != nil {
 		return fmt.Errorf("marshal config: %w", err)
 	}
@@ -102,4 +102,28 @@ func (r *Router) SaveConfig() error {
 
 	log.Printf("Cognitive config saved to %s", r.ConfigPath)
 	return nil
+}
+
+// redactedConfigForPersistence returns a shallow copy of r.Config with every
+// provider's raw AuthKey cleared. Secrets resolve at runtime only from
+// AuthKeyEnv / deployment env overrides (MYCELIS_PROVIDER_<ID>_API_KEY) and
+// must never round-trip into cognitive.yaml, a tracked file — including when
+// an env override or a UI/API save populated AuthKey in memory.
+func (r *Router) redactedConfigForPersistence() *BrainConfig {
+	if r.Config == nil {
+		return nil
+	}
+	out := &BrainConfig{
+		Profiles:         r.Config.Profiles,
+		ProfileFallbacks: r.Config.ProfileFallbacks,
+		Media:            r.Config.Media,
+	}
+	if r.Config.Providers != nil {
+		out.Providers = make(map[string]ProviderConfig, len(r.Config.Providers))
+		for id, cfg := range r.Config.Providers {
+			cfg.AuthKey = ""
+			out.Providers[id] = cfg
+		}
+	}
+	return out
 }

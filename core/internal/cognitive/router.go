@@ -3,6 +3,7 @@ package cognitive
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +13,14 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+// ErrAIEngineUnavailable is the normalized, user-facing error Core returns
+// when a bound AI Engine could not complete inference — for a direct
+// provider failure or a model-gateway failure alike. The underlying
+// adapter/transport error can carry endpoint URLs, dial detail, or other
+// operational information; it is logged server-side only via log.Printf and
+// is never included in this error's message or wrapped into it with %w.
+var ErrAIEngineUnavailable = errors.New("AI engine unavailable")
 
 // Router manages model selection and inference via Adapters.
 // Phase 5.2: Tracks cumulative token usage for telemetry reporting.
@@ -75,6 +84,18 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 	if err == nil {
 		if err := yaml.Unmarshal(data, &config); err != nil {
 			log.Printf("WARN: Failed to parse brain config: %v", err)
+		} else {
+			// A literal api_key never loads into AuthKey (yaml:"-"), so a
+			// non-empty one in the source file is otherwise silently
+			// dropped. Warn once per provider (never the value) and flag
+			// the provider so adapter init can explain why it still fails.
+			for _, id := range detectLiteralProviderAPIKeys(data) {
+				log.Printf("WARN: provider %q has a literal api_key in %s; it is not loaded (AuthKey is never read from a tracked file). Configure api_key_env with a secret reference instead.", id, configPath)
+				if provider, ok := config.Providers[id]; ok {
+					provider.LiteralAPIKeyIgnored = true
+					config.Providers[id] = provider
+				}
+			}
 		}
 	} else {
 		log.Printf("INFO: No local brain config found at %s. Relying on DB/Defaults.", configPath)
@@ -98,6 +119,15 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 	applyEnvOverrides(&config)
 	for id, provider := range config.Providers {
 		config.Providers[id] = NormalizeProviderTokenDefaults(provider)
+	}
+
+	// 3.5 Reject a cross-data-boundary ProfileFallbacks entry before any
+	// adapter is built. This is a config error, not a runtime posture: a
+	// local_only profile must never even be allowed to declare a leaves_org
+	// fallback, so Core refuses to start the cognitive engine on this
+	// config rather than silently ignore the offending entry at request time.
+	if err := validateProfileFallbackBoundaries(&config); err != nil {
+		return nil, fmt.Errorf("invalid cognitive config: %w", err)
 	}
 
 	r := &Router{
@@ -195,50 +225,26 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 		r.finalizeInferenceResponse(providerID, resp)
 	}
 	if err != nil {
-		// A configured model gateway is already the boundary selected by Core.
-		// The legacy discovery fallback is not boundary-aware, so fail closed
-		// here rather than risk re-routing this request across data boundaries.
+		// Core fails closed on inference failure. It never re-routes a
+		// request to a different provider mid-flight: cross-provider
+		// substitution only ever happens before the call, through the
+		// operator-configured, same-data-boundary ProfileFallbacks list
+		// resolved in resolveExecutionProvider above.
+		//
+		// The adapter error (err/probeErr) can carry endpoint URLs, dial
+		// detail, or other operational information, so it is logged
+		// server-side only and never placed in the returned error — for a
+		// direct provider and for a model gateway alike. A configured model
+		// gateway is already the boundary Core selected, so it is never
+		// probed (an unreachable gateway is reported the same way as any
+		// other inference failure, without an extra health round-trip).
 		if providerCfg.ModelGateway {
-			return nil, err
+			log.Printf("WARN: inference failed on gateway provider %q: %v", providerID, err)
+			return nil, fmt.Errorf("%w: provider %q", ErrAIEngineUnavailable, providerID)
 		}
-		// --- Runtime Self-Recovery ---
-		// If inference fails, we should check if the provider is still healthy.
-		// If dead, we trigger AutoConfigure and retry ONCE.
-		fmt.Printf("⚠️ Inference failed on '%s': %v. Attempting Self-Recovery...\n", providerID, err)
-
-		// 1. Probe specific provider to confirm death (avoid jitter)
 		healthy, probeErr := adapter.Probe(ctx)
-		if !healthy {
-			fmt.Printf("❌ Provider '%s' confirmed DEAD (%v). Re-calibrating Matrix...\n", providerID, probeErr)
-
-			// 2. Trigger Auto-Config (Heal)
-			r.AutoConfigure(ctx)
-
-			// 3. Retry on NEW provider
-			recovered := r.resolveExecutionProvider(req.Profile, req.Provider)
-			if !recovered.Available {
-				return nil, fmt.Errorf("recovery failed: %s", recovered.Summary)
-			}
-			newProviderID := recovered.ProviderID
-
-			if newProviderID == providerID {
-				return nil, fmt.Errorf("recovery failed: no alternative provider found (stuck on %s, probe error: %v)", providerID, probeErr)
-			}
-
-			newAdapter, ok := r.Adapters[newProviderID]
-			if !ok {
-				return nil, fmt.Errorf("recovery failed: new provider %s not init", newProviderID)
-			}
-
-			fmt.Printf("✅ Optimized to '%s'. Retrying request...\n", newProviderID)
-			retryResp, retryErr := newAdapter.Infer(ctx, req.Prompt, opts)
-			if retryErr == nil && retryResp != nil {
-				r.finalizeInferenceResponse(newProviderID, retryResp)
-			}
-			return retryResp, retryErr
-		}
-		// If healthy (e.g. context timeout or API error), simple error return
-		return nil, err
+		log.Printf("WARN: inference failed on provider %q: %v (probe healthy=%v probeErr=%v)", providerID, err, healthy, probeErr)
+		return nil, fmt.Errorf("%w: provider %q", ErrAIEngineUnavailable, providerID)
 	}
 
 	return resp, nil

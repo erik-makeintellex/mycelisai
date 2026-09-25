@@ -2,14 +2,32 @@ package cognitive
 
 import (
 	"context"
+	"strings"
 )
+
+// LiteralAPIKeyGuidanceError is the exact adapter-init error message
+// returned when a provider's ProviderConfig.LiteralAPIKeyIgnored is true and
+// no usable key was resolved from AuthKeyEnv/env override. It replaces a
+// generic "missing api key" message with an explanation of why a key the
+// operator wrote directly into cognitive.yaml no longer takes effect.
+const LiteralAPIKeyGuidanceError = "literal api_key is not supported; configure api_key_env with a secret reference"
 
 // --- Configuration V2 ---
 
 type BrainConfig struct {
 	Providers map[string]ProviderConfig `yaml:"providers" json:"providers"`
 	Profiles  map[string]string         `yaml:"profiles" json:"profiles"` // ProfileName -> ProviderID
-	Media     *MediaConfig              `yaml:"media,omitempty" json:"media,omitempty"`
+	// ProfileFallbacks declares, per profile, an explicit ordered list of
+	// alternate provider IDs Core may substitute when the profile's bound
+	// provider is not executable. Every listed provider must share the bound
+	// (primary) provider's normalized DataBoundary — local_only never lists a
+	// leaves_org provider. A mismatched entry is a hard config error at
+	// startup (see validateProfileFallbackBoundaries in router.go), not a
+	// silent skip. Omitted or empty (the default) means no fallback: the
+	// profile fails closed with a normalized unavailable error instead of
+	// silently rerouting to another provider.
+	ProfileFallbacks map[string][]string `yaml:"profile_fallbacks,omitempty" json:"profile_fallbacks,omitempty"`
+	Media            *MediaConfig        `yaml:"media,omitempty" json:"media,omitempty"`
 }
 
 type ExecutionAvailability struct {
@@ -50,12 +68,25 @@ type MediaConfig struct {
 }
 
 type ProviderConfig struct {
-	Type       string `yaml:"type" json:"type"`                   // openai, openai_compatible, anthropic, google
-	Driver     string `yaml:"-" json:"-"`                         // DB Driver type (mapped to Type)
-	Endpoint   string `yaml:"endpoint" json:"endpoint,omitempty"` // e.g. "http://localhost:11434/v1"
-	ModelID    string `yaml:"model_id" json:"model_id"`           // e.g. "qwen2.5-coder:7b"
-	AuthKey    string `yaml:"api_key" json:"-"`                   // NEVER expose in API responses
-	AuthKeyEnv string `yaml:"api_key_env" json:"-"`               // NEVER expose in API responses
+	Type     string `yaml:"type" json:"type"`                   // openai, openai_compatible, anthropic, google
+	Driver   string `yaml:"-" json:"-"`                         // DB Driver type (mapped to Type)
+	Endpoint string `yaml:"endpoint" json:"endpoint,omitempty"` // e.g. "http://localhost:11434/v1"
+	ModelID  string `yaml:"model_id" json:"model_id"`           // e.g. "qwen2.5-coder:7b"
+	// AuthKey is an in-memory-only secret (set by MYCELIS_PROVIDER_<ID>_API_KEY
+	// or an API/UI save). It is intentionally yaml:"-": it must never be read
+	// from, or written back to, cognitive.yaml, a tracked file. Configure a
+	// durable key via AuthKeyEnv (api_key_env), which names an environment
+	// variable Core reads at runtime instead.
+	AuthKey    string `yaml:"-" json:"-"`           // NEVER persisted to YAML; NEVER expose in API responses
+	AuthKeyEnv string `yaml:"api_key_env" json:"-"` // NEVER expose in API responses
+	// LiteralAPIKeyIgnored is set by the config loader (never by YAML/DB
+	// unmarshal directly — it is yaml:"-" json:"-") when the provider's
+	// source config (cognitive.yaml or the DB llm_providers overlay)
+	// declared a non-empty literal api_key. Since AuthKey is never read from
+	// a tracked file, that literal key would otherwise be silently
+	// unusable; adapters check this to return an explicit
+	// "configure api_key_env" error instead of a generic missing-key one.
+	LiteralAPIKeyIgnored bool `yaml:"-" json:"-"`
 	// ModelGateway marks an OpenAI-compatible provider as an external model
 	// gateway boundary. It never transfers routing, approval, or proof authority.
 	ModelGateway bool `yaml:"model_gateway,omitempty" json:"model_gateway,omitempty"`
@@ -68,6 +99,31 @@ type ProviderConfig struct {
 	MaxOutputTokens    int      `yaml:"max_output_tokens,omitempty" json:"max_output_tokens,omitempty"`       // bounded default output budget per provider
 	RolesAllowed       []string `yaml:"roles_allowed" json:"roles_allowed"`                                   // ["architect","coder"] or ["all"]
 	Enabled            bool     `yaml:"enabled" json:"enabled"`
+}
+
+// Data boundary values. A provider's DataBoundary is either explicit or
+// treated as DataBoundaryLocalOnly (see normalizedDataBoundary) — an
+// empty/unknown boundary is never treated as safe to bridge into
+// DataBoundaryLeavesOrg.
+const (
+	DataBoundaryLocalOnly = "local_only"
+	DataBoundaryLeavesOrg = "leaves_org"
+)
+
+// normalizedDataBoundary treats an empty or unrecognized DataBoundary as
+// DataBoundaryLocalOnly (fail closed): only the exact literal
+// DataBoundaryLeavesOrg is ever treated as leaves_org — every other value,
+// including a typo or an unknown string, normalizes to local_only rather
+// than passing through unnormalized. Shipped core/config/cognitive.yaml has
+// providers with data_boundary: "" (e.g. local-ollama-dev, local-sovereign);
+// without this normalization those entries would silently bypass the
+// same-boundary fallback check instead of being held to the safer default.
+func normalizedDataBoundary(dataBoundary string) string {
+	trimmed := strings.TrimSpace(dataBoundary)
+	if trimmed != DataBoundaryLeavesOrg {
+		return DataBoundaryLocalOnly
+	}
+	return trimmed
 }
 
 const (

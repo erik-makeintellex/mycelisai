@@ -46,32 +46,23 @@ func (r *Router) autoConfigureWithProviders(ctx context.Context, providers map[s
 	}
 	fmt.Println("----------------------------------")
 
+	// Discovery reports health only. It never rewrites a profile's bound
+	// provider: silent cross-provider rerouting is not permitted (see the
+	// operator-configured ProfileFallbacks list in availability.go, which is
+	// the only sanctioned substitution path and is applied at request-resolve
+	// time, not here).
 	for profileName, providerID := range r.Config.Profiles {
 		res, exists := discoveryResults[providerID]
 		if !exists {
 			continue
 		}
-
 		if !res.Healthy {
-			fmt.Printf("⚠️ Profile '%s' provider '%s' is DOWN. Attempting fallback...\n", profileName, providerID)
-
-			fallbackFound := false
-			for fbID, fbRes := range discoveryResults {
-				if fbRes.Healthy {
-					fmt.Printf("🔄 Re-routing '%s' to '%s'\n", profileName, fbID)
-					r.Config.Profiles[profileName] = fbID
-					fallbackFound = true
-					break
-				}
-			}
-			if !fallbackFound {
-				fmt.Printf("🔥 CRITICAL: No healthy providers found for '%s'.\n", profileName)
-			}
+			fmt.Printf("🔥 Profile '%s' provider '%s' is DOWN. No automatic reroute applied.\n", profileName, providerID)
 		}
 	}
 }
 
-// AutoConfigure probes providers and re-routes profiles if necessary.
+// AutoConfigure probes providers and reports health; it does not re-route profiles.
 func (r *Router) AutoConfigure(ctx context.Context) {
 	r.autoConfigureWithProviders(ctx, r.Adapters)
 }

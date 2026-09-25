@@ -123,8 +123,14 @@ func TestInferWithContract_ModelGatewayFailureDoesNotCrossBoundary(t *testing.T)
 	}
 
 	_, err := r.InferWithContract(context.Background(), InferRequest{Profile: "chat", Prompt: "hello"})
-	if err == nil || err.Error() != "gateway inference failed" {
-		t.Fatalf("InferWithContract error = %v, want original gateway failure", err)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrAIEngineUnavailable) {
+		t.Fatalf("InferWithContract error = %v, want ErrAIEngineUnavailable", err)
+	}
+	if strings.Contains(err.Error(), "gateway inference failed") {
+		t.Fatalf("InferWithContract error leaked raw adapter detail: %v", err)
 	}
 	if gateway.probeCalls != 0 || local.calls != 0 {
 		t.Fatalf("gateway probe calls = %d, local inference calls = %d; gateway failure must fail closed", gateway.probeCalls, local.calls)

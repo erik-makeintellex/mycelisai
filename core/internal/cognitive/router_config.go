@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 func loadFromDB(db *sql.DB, config *BrainConfig) error {
@@ -42,9 +44,23 @@ func loadFromDB(db *sql.DB, config *BrainConfig) error {
 		if len(configJSON) > 0 {
 			var extra struct {
 				ModelID string `json:"model_id"`
+				APIKey  string `json:"api_key"`
 			}
-			if err := json.Unmarshal(configJSON, &extra); err == nil && strings.TrimSpace(extra.ModelID) != "" {
-				pConfig.ModelID = extra.ModelID
+			if err := json.Unmarshal(configJSON, &extra); err == nil {
+				if strings.TrimSpace(extra.ModelID) != "" {
+					pConfig.ModelID = extra.ModelID
+				}
+				// extra.APIKey is intentionally never assigned to
+				// pConfig.AuthKey: a literal key in the DB overlay's config
+				// JSON is just as unusable as one in cognitive.yaml (AuthKey
+				// is yaml:"-" and never persisted/loaded from a tracked
+				// source). Warn once, naming the provider only, and flag it
+				// so adapter init returns explicit guidance instead of a
+				// generic missing-key error.
+				if strings.TrimSpace(extra.APIKey) != "" {
+					log.Printf("WARN: provider %q has a literal api_key in the DB llm_providers.config overlay; it is ignored. Configure api_key_env with a secret reference instead.", id)
+					pConfig.LiteralAPIKeyIgnored = true
+				}
 			}
 		}
 		config.Providers[id] = pConfig
@@ -70,4 +86,32 @@ func loadFromDB(db *sql.DB, config *BrainConfig) error {
 	}
 
 	return nil
+}
+
+// detectLiteralProviderAPIKeys scans raw cognitive.yaml bytes for a
+// non-empty literal `api_key` per provider. ProviderConfig.AuthKey is
+// yaml:"-" (never loaded from a tracked file, by design — see the L-slice
+// security fix), so a literal key in the file is otherwise silently
+// unusable. This reports which provider IDs have one, without ever
+// inspecting or returning the value itself, so NewRouter can warn the
+// operator and flag those providers for an explicit adapter-init error.
+func detectLiteralProviderAPIKeys(data []byte) []string {
+	if len(data) == 0 {
+		return nil
+	}
+	var probe struct {
+		Providers map[string]struct {
+			AuthKey string `yaml:"api_key"`
+		} `yaml:"providers"`
+	}
+	if err := yaml.Unmarshal(data, &probe); err != nil {
+		return nil
+	}
+	var found []string
+	for id, p := range probe.Providers {
+		if strings.TrimSpace(p.AuthKey) != "" {
+			found = append(found, id)
+		}
+	}
+	return found
 }

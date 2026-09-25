@@ -55,9 +55,10 @@ Current supported auth patterns:
 Secret-handling rules:
 - use `api_key_env` whenever a provider enforces a credential so secrets stay in env or deployment secret stores
 - the vLLM launcher reads `text.api_key_secret_ref: env:MYCELIS_TEXT_ENGINE_API_KEY` from `cognitive/config/engine.yaml`, resolves the named value from the shell and then the repo-local `.env`, and fails when it is unavailable; it has no committed credential or hardcoded fallback
-- local compatibility engines that ignore authentication may retain an explicitly non-secret placeholder client value
+- a literal `api_key` field in `cognitive.yaml` (or the DB `llm_providers.config` overlay) is never loaded (`ProviderConfig.AuthKey` is `yaml:"-"`); Core logs one warning naming the affected provider (never the value) and, if no usable key resolves from `api_key_env`/env override, adapter init fails with `literal api_key is not supported; configure api_key_env with a secret reference`. Core auto-fills a non-secret placeholder bearer token for local `openai_compatible` providers that ignore authentication, so no committed file needs a key at all
 - LiteLLM uses `api_key_env: LITELLM_PROXY_API_KEY`; never place a proxy master key, virtual key, or upstream provider credential in committed provider YAML
 - provider reads and browser inventory views never return stored secrets
+- saving cognitive config never writes a raw API key back to `cognitive.yaml`: `Router.SaveConfig` marshals a redacted copy with every provider's in-memory `AuthKey` cleared, so a key set only via `MYCELIS_PROVIDER_<ID>_API_KEY` or a UI/API save cannot round-trip into the tracked file; only `api_key_env` persists
 
 Official provider references:
 - OpenAI API auth: <https://platform.openai.com/docs/api-reference/authentication>
@@ -83,6 +84,8 @@ profiles:
 
 - **Shipped Ollama model:** `qwen3:14b`; deployment overrides must match the actual served model. The routing example above is illustrative, not the active host configuration.
 - **Agent Overrides:** Each agent can specify a custom `model` field to override the profile default.
+- **No silent fallback:** a profile uses only its configured provider. If that provider is disabled, unreachable, or fails inference, the request fails closed with the normalized `ErrAIEngineUnavailable` (`AI engine unavailable`) error; adapter/transport detail (endpoint, dial error) stays in Core logs only and Core never substitutes another provider on its own.
+- **`profile_fallbacks` (optional):** an operator may add a `profile_fallbacks` map to `cognitive.yaml` naming, per profile, an ordered list of alternate provider IDs Core may use when the primary is not executable, e.g. `profile_fallbacks: {chat: [ollama]}`. Every listed candidate must share the primary provider's normalized `data_boundary` (an empty/unknown boundary is treated as `local_only`); a `local_only` profile can never list a `leaves_org` fallback. A cross-boundary entry is rejected at Core startup as a config error rather than skipped silently at request time. There is no env var for `profile_fallbacks` yet.
 
 ## Optional LiteLLM Model Gateway
 
@@ -151,7 +154,6 @@ providers:
     type: "openai_compatible"
     endpoint: "http://127.0.0.1:8000/v1"
     model_id: "qwen2.5-coder"
-    api_key: ""
     api_key_env: "MYCELIS_TEXT_ENGINE_API_KEY"
     enabled: false
 
@@ -159,14 +161,12 @@ providers:
     type: "openai_compatible"
     endpoint: "http://127.0.0.1:11434/v1"
     model_id: "qwen2.5-coder:7b"
-    api_key: "ollama"
     enabled: true
 
   lmstudio:
     type: "openai_compatible"
     endpoint: "http://127.0.0.1:1234/v1"
     model_id: "default"
-    api_key: "lm-studio"
     enabled: false
 
   litellm:
@@ -174,7 +174,6 @@ providers:
     model_gateway: true
     endpoint: "http://127.0.0.1:4000/v1"
     model_id: "mycelis-default"
-    api_key: ""
     api_key_env: "LITELLM_PROXY_API_KEY"
     location: "remote"
     data_boundary: "leaves_org"

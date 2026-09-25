@@ -64,6 +64,8 @@ What you can do:
 - probe health
 - manage role routing through profiles
 
+If the engine assigned to a role is turned off or can't be reached, Mycelis does not quietly switch that role to a different engine. The request fails with a plain "AI engine unavailable" message instead of continuing on an engine you didn't choose. To fix it, turn the assigned engine back on, point it at a working server, or route that role to a different engine yourself in AI Engines. An administrator can also set up an approved backup engine for a role ahead of time; that backup is only ever used when explicitly set up this way, and it never sends local-only work to a cloud engine.
+
 ---
 
 ## Capabilities

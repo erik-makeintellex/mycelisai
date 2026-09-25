@@ -53,7 +53,12 @@ func TestInferWithContract_ProviderOverrideMissing(t *testing.T) {
 	}
 }
 
-func TestInferWithContract_ProviderOverrideFallsBackWhenDisabled(t *testing.T) {
+// TestInferWithContract_ProviderOverrideDisabledFailsClosedWithoutExplicitList
+// proves the negative case: an explicit provider override that is disabled
+// must fail closed with no substitution when no ProfileFallbacks entry names
+// an alternate — there is no more ambient/silent fallback.
+func TestInferWithContract_ProviderOverrideDisabledFailsClosedWithoutExplicitList(t *testing.T) {
+	other := &MockProvider{OutputSequence: []string{"from-b"}}
 	r := &Router{
 		Config: &BrainConfig{
 			Providers: map[string]ProviderConfig{
@@ -62,6 +67,38 @@ func TestInferWithContract_ProviderOverrideFallsBackWhenDisabled(t *testing.T) {
 			},
 			Profiles: map[string]string{
 				"chat": "provider-a",
+			},
+		},
+		Adapters: map[string]LLMProvider{
+			"provider-b": other,
+		},
+	}
+
+	_, err := r.InferWithContract(context.Background(), InferRequest{
+		Profile:  "chat",
+		Provider: "provider-a",
+		Prompt:   "hello",
+	})
+	if err == nil {
+		t.Fatal("expected error: disabled provider override must fail closed without an explicit fallback list")
+	}
+}
+
+// TestInferWithContract_ProviderOverrideFallsBackWithExplicitSameBoundaryList
+// proves the positive case: the same scenario succeeds once the operator
+// configures an explicit, same-data-boundary ProfileFallbacks entry.
+func TestInferWithContract_ProviderOverrideFallsBackWithExplicitSameBoundaryList(t *testing.T) {
+	r := &Router{
+		Config: &BrainConfig{
+			Providers: map[string]ProviderConfig{
+				"provider-a": {Enabled: false, ModelID: "disabled-model", Location: "local", DataBoundary: "local_only"},
+				"provider-b": {Enabled: true, ModelID: "fallback-model", Location: "local", DataBoundary: "local_only"},
+			},
+			Profiles: map[string]string{
+				"chat": "provider-a",
+			},
+			ProfileFallbacks: map[string][]string{
+				"chat": {"provider-b"},
 			},
 		},
 		Adapters: map[string]LLMProvider{

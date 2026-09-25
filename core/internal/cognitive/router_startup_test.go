@@ -232,6 +232,45 @@ func TestNewRouter_NoEmergencyLoopbackFallbackWithoutConfiguredProviders(t *test
 	}
 }
 
+// TestNewRouter_RejectsCrossBoundaryProfileFallbacks proves the MED security
+// finding end-to-end: a profile_fallbacks entry whose provider crosses the
+// primary provider's data boundary (a local_only profile listing a
+// leaves_org provider) must fail Router construction with a config
+// validation error, not load successfully and rely on a silent runtime skip.
+func TestNewRouter_RejectsCrossBoundaryProfileFallbacks(t *testing.T) {
+	clearProviderRoutingEnv(t)
+
+	configPath := writeTestCognitiveConfig(t, `
+providers:
+  local-ollama-dev:
+    type: openai_compatible
+    endpoint: http://127.0.0.1:11434/v1
+    model_id: qwen2.5-coder:7b
+    enabled: true
+    data_boundary: local_only
+  openai:
+    type: openai
+    endpoint: https://api.openai.com/v1
+    model_id: gpt-4.1-mini
+    enabled: true
+    data_boundary: leaves_org
+    api_key_env: OPENAI_API_KEY
+profiles:
+  chat: local-ollama-dev
+profile_fallbacks:
+  chat:
+    - openai
+`)
+
+	router, err := NewRouter(configPath, nil)
+	if err == nil {
+		t.Fatalf("expected NewRouter to reject a cross-boundary profile_fallbacks entry, got router=%+v", router)
+	}
+	if router != nil {
+		t.Fatalf("expected nil router on config validation failure, got %+v", router)
+	}
+}
+
 func TestClearProviderRoutingEnvRemovesDynamicOverrides(t *testing.T) {
 	t.Setenv("MYCELIS_PROVIDER_TEST_DYNAMIC_ENABLED", "true")
 	t.Setenv("MYCELIS_PROFILE_TEST_DYNAMIC_PROVIDER", "test-dynamic")

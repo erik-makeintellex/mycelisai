@@ -40,6 +40,9 @@ func NewOpenAIAdapter(config ProviderConfig) (*OpenAIAdapter, error) {
 		apiKey = "dummy"
 	}
 	if apiKey == "" {
+		if config.LiteralAPIKeyIgnored {
+			return nil, errors.New(LiteralAPIKeyGuidanceError)
+		}
 		return nil, fmt.Errorf("missing api key")
 	}
 	if config.ModelGateway {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,6 +31,9 @@ func NewGoogleAdapter(config ProviderConfig) (*GoogleAdapter, error) {
 		}
 	}
 	if apiKey == "" {
+		if config.LiteralAPIKeyIgnored {
+			return nil, errors.New(LiteralAPIKeyGuidanceError)
+		}
 		return nil, fmt.Errorf("missing api key for google")
 	}
 

@@ -153,32 +153,23 @@ func (t *Team) startScheduler() {
 	go t.scheduler.Start()
 }
 
+// normalizeRuntimeProviderRouting never rewrites a provider the manifest
+// names: an unavailable provider fails closed per request, and substitution
+// happens only through a cognitive same-boundary profile_fallbacks entry that
+// never reaches the manifest. The only change is that members without a
+// provider inherit the team provider.
 func (t *Team) normalizeRuntimeProviderRouting() {
 	if t == nil || t.Manifest == nil || t.brain == nil {
 		return
 	}
-
-	if explicit := strings.TrimSpace(t.Manifest.Provider); explicit != "" {
-		if availability := t.brain.ExecutionAvailability("", explicit); availability.Available && availability.FallbackApplied && availability.ProviderID != "" {
-			log.Printf("WARN: Team [%s] provider '%s' is not executable; falling back to '%s'", t.Manifest.Name, explicit, availability.ProviderID)
-			t.Manifest.Provider = availability.ProviderID
-		}
+	teamProvider := strings.TrimSpace(t.Manifest.Provider)
+	if teamProvider == "" {
+		return
 	}
-
 	for idx := range t.Manifest.Members {
 		member := &t.Manifest.Members[idx]
-		explicit := strings.TrimSpace(member.Provider)
-		if explicit == "" && strings.TrimSpace(t.Manifest.Provider) != "" {
+		if strings.TrimSpace(member.Provider) == "" {
 			member.Provider = t.Manifest.Provider
-			continue
-		}
-		if explicit == "" {
-			continue
-		}
-		availability := t.brain.ExecutionAvailability("", explicit)
-		if availability.Available && availability.FallbackApplied && availability.ProviderID != "" {
-			log.Printf("WARN: Team [%s] member [%s] provider '%s' is not executable; falling back to '%s'", t.Manifest.Name, member.ID, explicit, availability.ProviderID)
-			member.Provider = availability.ProviderID
 		}
 	}
 }
