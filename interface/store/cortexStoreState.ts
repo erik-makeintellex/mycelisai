@@ -175,10 +175,13 @@ export interface CortexGovernanceOpsContract {
     teamRoster: TeamDetail[];
     isFetchingTeamRoster: boolean;
     policyConfig: PolicyConfig | null;
+    policyLoadError: string | null;
     pendingApprovals: PendingApproval[];
+    approvalsLoadError: string | null;
     isFetchingPolicy: boolean;
     isFetchingApprovals: boolean;
     auditLog: AuditLogEntry[];
+    auditLogLoadError: string | null;
     isFetchingAuditLog: boolean;
     cognitiveStatus: CognitiveStatus | null;
     servicesStatus: ServiceHealthStatus[];
@@ -222,6 +225,7 @@ export interface CortexAutomationRunsContract {
     runsLoadError: string | null;
     triggerRules: TriggerRule[];
     isFetchingTriggers: boolean;
+    triggerRulesLoadError: string | null;
     conversationTurns: ConversationTurn[] | null;
     isFetchingConversation: boolean;
     fetchRunTimeline: (runId: string) => Promise<void>;

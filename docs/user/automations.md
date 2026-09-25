@@ -80,6 +80,8 @@ Core actions:
 - reject
 - inspect structured payload details
 
+If a fetch fails (Core unreachable, a non-OK response, or an unexpected payload), Trigger Rules, Approvals, Policy, and the Audit log now show a load-failure message with Retry instead of an empty list.
+
 ---
 
 ## Shared Teams (Advanced Mode)

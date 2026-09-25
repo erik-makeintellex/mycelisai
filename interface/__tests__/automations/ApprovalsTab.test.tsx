@@ -29,13 +29,16 @@ describe("ApprovalsTab", () => {
   beforeEach(() => {
     useCortexStore.setState({
       pendingApprovals: [],
+      approvalsLoadError: null,
       isFetchingApprovals: false,
       fetchPendingApprovals: vi.fn().mockResolvedValue(undefined),
       resolveApproval: vi.fn().mockResolvedValue(undefined),
       policyConfig: null,
+      policyLoadError: null,
       isFetchingPolicy: false,
       fetchPolicy: vi.fn().mockResolvedValue(undefined),
       updatePolicy: vi.fn().mockResolvedValue(undefined),
+      auditLogLoadError: null,
       auditLog: [
         {
           id: "audit-1",
@@ -80,4 +83,74 @@ describe("ApprovalsTab", () => {
     expect(screen.getByText(/ask: research/i)).toBeDefined();
     expect(screen.getByText(/role: researcher/i)).toBeDefined();
   }, 15000);
+
+  it("shows a load failure with Retry for the approvals queue instead of 'All Clear'", async () => {
+    const fetchPendingApprovals = vi.fn().mockResolvedValue(undefined);
+    useCortexStore.setState({
+      pendingApprovals: [],
+      approvalsLoadError: 'Could not load approvals (HTTP 500).',
+      fetchPendingApprovals,
+    });
+
+    render(<ApprovalsTab />);
+
+    expect(screen.queryByText('All Clear')).toBeNull();
+    const failure = screen.getByTestId('approvals-load-failure');
+    expect(failure.textContent).toMatch(/Could not load approvals/);
+
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    await waitFor(() => {
+      expect(fetchPendingApprovals).toHaveBeenCalled();
+    });
+  });
+
+  it("shows 'All Clear' (not a failure) after a successful empty approvals fetch", () => {
+    useCortexStore.setState({ pendingApprovals: [], approvalsLoadError: null });
+
+    render(<ApprovalsTab />);
+
+    expect(screen.getByText('All Clear')).toBeDefined();
+    expect(screen.queryByTestId('approvals-load-failure')).toBeNull();
+  });
+
+  it('shows a load failure with Retry for the audit log instead of the empty state', async () => {
+    const fetchAuditLog = vi.fn().mockResolvedValue(undefined);
+    useCortexStore.setState({
+      auditLog: [],
+      auditLogLoadError: 'Could not load the audit log (HTTP 500).',
+      fetchAuditLog,
+    });
+
+    render(<ApprovalsTab />);
+    fireEvent.click(screen.getByRole('button', { name: 'Audit' }));
+
+    const failure = await screen.findByTestId('audit-log-load-failure');
+    expect(failure.textContent).toMatch(/Could not load the audit log/);
+    expect(screen.queryByText('No recent audit activity')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    await waitFor(() => {
+      expect(fetchAuditLog).toHaveBeenCalled();
+    });
+  });
+
+  it('shows a load failure with Retry for policy instead of the group editor', async () => {
+    const fetchPolicy = vi.fn().mockResolvedValue(undefined);
+    useCortexStore.setState({
+      policyConfig: null,
+      policyLoadError: 'Could not load policy (HTTP 500).',
+      fetchPolicy,
+    });
+
+    render(<ApprovalsTab />);
+    fireEvent.click(screen.getByRole('button', { name: 'Policy' }));
+
+    const failure = await screen.findByTestId('policy-load-failure');
+    expect(failure.textContent).toMatch(/Could not load policy/);
+
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    await waitFor(() => {
+      expect(fetchPolicy).toHaveBeenCalled();
+    });
+  });
 });

@@ -12,18 +12,17 @@ import {
   ChevronDown,
   ChevronRight,
   ScrollText,
-  BadgeCheck,
-  ShieldAlert,
 } from "lucide-react";
 import {
   useCortexStore,
-  type AuditLogEntry,
   type PolicyConfig,
   type PolicyGroup,
   type PolicyRule,
 } from "@/store/useCortexStore";
 import TrustSlider from "@/components/workspace/TrustSlider";
 import ManifestationPanel from "@/components/dashboard/ManifestationPanel";
+import LoadFailureState from "@/components/shared/LoadFailureState";
+import AuditEntryCard from "@/components/automations/AuditEntryCard";
 
 type SubTab = "queue" | "policy" | "proposals" | "audit";
 
@@ -77,6 +76,7 @@ function ApprovalsQueue() {
   const isFetching = useCortexStore((s) => s.isFetchingApprovals);
   const fetchPendingApprovals = useCortexStore((s) => s.fetchPendingApprovals);
   const resolveApproval = useCortexStore((s) => s.resolveApproval);
+  const approvalsLoadError = useCortexStore((s) => s.approvalsLoadError);
 
   useEffect(() => {
     fetchPendingApprovals();
@@ -107,7 +107,14 @@ function ApprovalsQueue() {
         )}
       </div>
 
-      {pendingApprovals.length === 0 ? (
+      {!isFetching && approvalsLoadError && pendingApprovals.length === 0 ? (
+        <LoadFailureState
+          title="Could not load approvals"
+          detail={approvalsLoadError}
+          onRetry={() => void fetchPendingApprovals()}
+          testId="approvals-load-failure"
+        />
+      ) : pendingApprovals.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-cortex-text-muted">
           <ShieldCheck size={48} className="mb-4 text-cortex-success/50" />
           <h2 className="text-lg font-semibold text-cortex-text-main">
@@ -130,6 +137,7 @@ function AuditTab() {
   const auditLog = useCortexStore((s) => s.auditLog);
   const isFetchingAuditLog = useCortexStore((s) => s.isFetchingAuditLog);
   const fetchAuditLog = useCortexStore((s) => s.fetchAuditLog);
+  const auditLogLoadError = useCortexStore((s) => s.auditLogLoadError);
 
   useEffect(() => {
     void fetchAuditLog();
@@ -156,7 +164,14 @@ function AuditTab() {
         ) : null}
       </div>
 
-      {auditLog.length === 0 ? (
+      {!isFetchingAuditLog && auditLogLoadError && auditLog.length === 0 ? (
+        <LoadFailureState
+          title="Could not load the audit log"
+          detail={auditLogLoadError}
+          onRetry={() => void fetchAuditLog()}
+          testId="audit-log-load-failure"
+        />
+      ) : auditLog.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-cortex-border bg-cortex-surface px-6 py-16 text-cortex-text-muted">
           <ScrollText size={40} className="mb-3 opacity-50" />
           <h3 className="text-base font-semibold text-cortex-text-main">
@@ -178,119 +193,6 @@ function AuditTab() {
   );
 }
 
-function AuditEntryCard({ entry }: { entry: AuditLogEntry }) {
-  const approvalTone =
-    entry.approval_status === "approval_required" ||
-    entry.approval_status === "cancelled"
-      ? "text-amber-300 border-amber-400/30"
-      : "text-cortex-success border-cortex-success/30";
-  const statusTone =
-    entry.result_status === "failed" || entry.result_status === "error"
-      ? "text-red-300 border-red-400/30"
-      : entry.result_status === "pending"
-        ? "text-amber-300 border-amber-400/30"
-        : "text-cortex-success border-cortex-success/30";
-  const approvalLabel = entry.approval_status
-    ? entry.approval_status.replaceAll("_", " ")
-    : "logged";
-  const resultLabel = entry.result_status.replaceAll("_", " ");
-  const operatorSummary =
-    typeof entry.details?.operator_summary === "string"
-      ? entry.details.operator_summary
-      : "";
-  const teamID =
-    typeof entry.details?.team_id === "string" ? entry.details.team_id : "";
-  const askKind =
-    typeof entry.details?.ask_kind === "string" ? entry.details.ask_kind : "";
-  const laneRole =
-    typeof entry.details?.lane_role === "string" ? entry.details.lane_role : "";
-
-  return (
-    <div className="rounded-xl border border-cortex-border bg-cortex-surface p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-cortex-text-main">
-              {entry.action.replaceAll("_", " ")}
-            </span>
-            <span
-              className={`rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase ${statusTone}`}
-            >
-              {resultLabel}
-            </span>
-            <span
-              className={`rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase ${approvalTone}`}
-            >
-              {approvalLabel}
-            </span>
-          </div>
-          <div className="mt-1 text-xs text-cortex-text-muted">
-            {entry.actor} for {entry.user} at{" "}
-            {new Date(entry.timestamp).toLocaleString()}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-[10px] font-mono text-cortex-text-muted">
-          {entry.approval_status === "approval_required" ? (
-            <ShieldAlert size={12} className="text-amber-300" />
-          ) : (
-            <BadgeCheck size={12} className="text-cortex-success" />
-          )}
-          {entry.template_id ?? "audit"}
-        </div>
-      </div>
-
-      {operatorSummary ? (
-        <p className="mt-3 text-sm leading-6 text-cortex-text-main">
-          {operatorSummary}
-        </p>
-      ) : null}
-
-      <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-mono">
-        {entry.capability_used ? (
-          <span className="rounded border border-cortex-primary/30 bg-cortex-primary/10 px-2 py-1 text-cortex-primary">
-            Capability: {entry.capability_used}
-          </span>
-        ) : null}
-        {entry.approval_reason ? (
-          <span className="rounded border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-amber-300">
-            Reason: {entry.approval_reason.replaceAll("_", " ")}
-          </span>
-        ) : null}
-        {entry.run_id ? (
-          <span className="rounded border border-cortex-border px-2 py-1 text-cortex-text-main">
-            Run: {entry.run_id}
-          </span>
-        ) : null}
-        {entry.intent_proof_id ? (
-          <span className="rounded border border-cortex-border px-2 py-1 text-cortex-text-main">
-            Proof: {entry.intent_proof_id}
-          </span>
-        ) : null}
-        {entry.resource ? (
-          <span className="rounded border border-cortex-border px-2 py-1 text-cortex-text-main">
-            Resource: {entry.resource}
-          </span>
-        ) : null}
-        {teamID ? (
-          <span className="rounded border border-cortex-border px-2 py-1 text-cortex-text-main">
-            Team: {teamID}
-          </span>
-        ) : null}
-        {askKind ? (
-          <span className="rounded border border-cortex-border px-2 py-1 text-cortex-text-main">
-            Ask: {askKind.replaceAll("_", " ")}
-          </span>
-        ) : null}
-        {laneRole ? (
-          <span className="rounded border border-cortex-border px-2 py-1 text-cortex-text-main">
-            Role: {laneRole.replaceAll("_", " ")}
-          </span>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 // ── Policy Configuration Tab ──────────────────────────────
 
 function PolicyTab() {
@@ -298,6 +200,7 @@ function PolicyTab() {
   const isFetchingPolicy = useCortexStore((s) => s.isFetchingPolicy);
   const fetchPolicy = useCortexStore((s) => s.fetchPolicy);
   const updatePolicy = useCortexStore((s) => s.updatePolicy);
+  const policyLoadError = useCortexStore((s) => s.policyLoadError);
 
   const [draft, setDraft] = useState<PolicyConfig | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -391,6 +294,19 @@ function PolicyTab() {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 size={24} className="text-cortex-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isFetchingPolicy && policyLoadError && !draft) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <LoadFailureState
+          title="Could not load policy"
+          detail={policyLoadError}
+          onRetry={() => void fetchPolicy()}
+          testId="policy-load-failure"
+        />
       </div>
     );
   }

@@ -55,12 +55,18 @@ export function createCortexGovernanceSystemSlice(
                 const res = await fetch('/api/v1/governance/policy');
                 if (res.ok) {
                     const data = await res.json();
-                    set({ policyConfig: data, isFetchingPolicy: false });
+                    set({ policyConfig: data, isFetchingPolicy: false, policyLoadError: null });
                 } else {
-                    set({ isFetchingPolicy: false });
+                    set({
+                        isFetchingPolicy: false,
+                        policyLoadError: `Could not load policy (HTTP ${res.status}).`,
+                    });
                 }
             } catch {
-                set({ isFetchingPolicy: false });
+                set({
+                    isFetchingPolicy: false,
+                    policyLoadError: 'Could not load policy: the Core API did not respond.',
+                });
             }
         },
 
@@ -85,12 +91,25 @@ export function createCortexGovernanceSystemSlice(
                 const res = await fetch('/api/v1/governance/pending');
                 if (res.ok) {
                     const data = await res.json();
-                    set({ pendingApprovals: Array.isArray(data) ? data : [], isFetchingApprovals: false });
+                    if (!Array.isArray(data)) {
+                        set({
+                            isFetchingApprovals: false,
+                            approvalsLoadError: 'Could not load approvals: unexpected response.',
+                        });
+                        return;
+                    }
+                    set({ pendingApprovals: data, isFetchingApprovals: false, approvalsLoadError: null });
                 } else {
-                    set({ pendingApprovals: [], isFetchingApprovals: false });
+                    set({
+                        isFetchingApprovals: false,
+                        approvalsLoadError: `Could not load approvals (HTTP ${res.status}).`,
+                    });
                 }
             } catch {
-                set({ pendingApprovals: [], isFetchingApprovals: false });
+                set({
+                    isFetchingApprovals: false,
+                    approvalsLoadError: 'Could not load approvals: the Core API did not respond.',
+                });
             }
         },
 
@@ -101,12 +120,25 @@ export function createCortexGovernanceSystemSlice(
                 if (res.ok) {
                     const payload = await res.json();
                     const data = extractApiData<AuditLogEntry[] | unknown>(payload);
-                    set({ auditLog: Array.isArray(data) ? data : [], isFetchingAuditLog: false });
+                    if (!Array.isArray(data)) {
+                        set({
+                            isFetchingAuditLog: false,
+                            auditLogLoadError: 'Could not load the audit log: unexpected response.',
+                        });
+                        return;
+                    }
+                    set({ auditLog: data, isFetchingAuditLog: false, auditLogLoadError: null });
                 } else {
-                    set({ auditLog: [], isFetchingAuditLog: false });
+                    set({
+                        isFetchingAuditLog: false,
+                        auditLogLoadError: `Could not load the audit log (HTTP ${res.status}).`,
+                    });
                 }
             } catch {
-                set({ auditLog: [], isFetchingAuditLog: false });
+                set({
+                    isFetchingAuditLog: false,
+                    auditLogLoadError: 'Could not load the audit log: the Core API did not respond.',
+                });
             }
         },
 

@@ -19,11 +19,18 @@ export function createCortexAutomationRuntimeSlice(
             set({ isFetchingTriggers: true });
             try {
                 const res = await fetch('/api/v1/triggers');
-                if (!res.ok) return;
+                if (!res.ok) {
+                    set({ triggerRulesLoadError: `Could not load trigger rules (HTTP ${res.status}).` });
+                    return;
+                }
                 const body = await res.json();
-                set({ triggerRules: body.data ?? [] });
+                if (!body || typeof body !== 'object') {
+                    set({ triggerRulesLoadError: 'Could not load trigger rules: unexpected response.' });
+                    return;
+                }
+                set({ triggerRules: body.data ?? [], triggerRulesLoadError: null });
             } catch {
-                // degraded — silent
+                set({ triggerRulesLoadError: 'Could not load trigger rules: the Core API did not respond.' });
             } finally {
                 set({ isFetchingTriggers: false });
             }
