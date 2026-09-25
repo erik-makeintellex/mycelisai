@@ -35,7 +35,7 @@ type TeamDetailEntry struct {
 
 // HandleTeamsDetail returns all teams with nested agents, heartbeat status,
 // and mission context in a single aggregated response.
-// GET /api/v1/teams/detail
+// GET /api/v1/teams/detail (legacy; superseded by GET /api/v1/deployments)
 func (s *AdminServer) HandleTeamsDetail(w http.ResponseWriter, r *http.Request) {
 	entries := []TeamDetailEntry{}
 	if s.Soma == nil {

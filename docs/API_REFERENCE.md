@@ -6,6 +6,7 @@
 ## API TOC
 
 - [Endpoints](#endpoints)
+- [Deployments](#deployments)
 - [Provider Auth Notes](#provider-auth-notes)
 
 ## Endpoints
@@ -34,7 +35,9 @@
 | `/api/v1/missions/{id}/agents/{name}` | DELETE | Remove agent from an active mission |
 | **Swarm & Teams** | | |
 | `/api/v1/teams` | GET | List active teams |
-| `/api/v1/teams/detail` | GET | Team detail with agent rosters, delivery targets, and status |
+| `/api/v1/teams/detail` | GET | Legacy team detail (raw JSON, matches missions by name, declared model only). Use `/api/v1/deployments` for new work |
+| `/api/v1/deployments` | GET | Deployments aggregate across standing teams, mission teams, groups, and planned departments; filters `kind`, `organization_id`, `state`. See [Deployments](#deployments) |
+| `/api/v1/deployments/{kind}/{id}` | GET | One deployment record with members expanded; `404` when unknown, `503` when its source is unavailable |
 | `/api/swarm/teams` | POST | Create team via Soma |
 | `/api/swarm/command` | POST | Send command to specific team |
 | `/api/v1/swarm/broadcast` | POST | Fan out directive to ALL active teams |
@@ -169,6 +172,29 @@ Conversation-template instantiation is non-executing by default. Protected Soma 
 | `/api/v1/organizations/{id}/home` | GET | Load the minimal AI Organization context shell |
 | `/api/v1/organizations/{id}/output-model-routing` | GET | Read admin-configurable output-model routing for the organization, including detected output-type bindings, locally installed models, and recommended self-hosted starting points |
 | `/api/v1/organizations/{id}/output-model-routing` | PATCH | Update the organization default model or detected output-type model bindings for team and specialist output delivery |
+
+## Deployments
+
+`GET /api/v1/deployments?kind=&organization_id=&state=` returns one normalized envelope, `{"ok": true, "data": {"deployments": [...], "sources": [...], "generated_at": "..."}}`. Core builds the list server-side from four sources:
+
+| `kind` | Source | `id` | `scope.kind` |
+| :--- | :--- | :--- | :--- |
+| `standing_team` | Live Soma teams loaded from the boot bundle (mission runtime teams excluded) | team manifest id | `global` |
+| `mission_team` | `teams` rows joined to `missions`, keyed by `teams.id`; live state is matched inside the same mission only | `teams.id` (UUID) | `mission` |
+| `group` | `collaboration_groups`; returned only to root admins with `groups:read`, otherwise the `groups` source is `restricted` | group id | `global` |
+| `planned_department` | Departments of persisted organizations; nothing runs until the operator approves a launch | `<organization id>:<department id>` | `organization` |
+
+Record fields: `id`, `kind`, `name`, `purpose`, `what_runs`, `scope {kind, id, name}`, `origin` (`bundle`, `mission:<id>`, `operator`, `template:<id>`), `runtime_id`, `lifecycle_state` (`running`, `idle`, `planned`, `paused`, `archived`, `expired`, `error`), `since`, `expires_at`, `last_activity`, `members[]`, `tools[]` (`{name, source: internal|mcp|capability}`), `work_mode`, `approval_policy_ref`, `approval_posture`, `outputs_summary`, and `config_ref {kind, id, path}` (the `/api/v1/config/...` path that View config resolves).
+
+Each member has `id`, `role`, `profile`, `provider`, `model`, `provider_origin` (`manifest`, `profile`, `fallback`, `declared`, `planned`), `provider_status`, `status`, `last_heartbeat_at`, and `tools`. For teams, `provider` and `model` come from the cognitive router's execution resolution (profile = manifest `model` or `chat`, plus any explicit manifest provider), not from the declared `model` field. Only provider and model ids are returned. Endpoints, API keys, and key environment names never are.
+
+`outputs_summary` counts retained artifacts (`retained`, `by_status`, `last_output_at`). Standing teams count artifacts by member agent id, mission teams by team id, and groups sum their teams. `proof_status` is `not_recorded` until outputs carry proof envelopes. `outputs_summary` is omitted when counts are unknown and for planned departments.
+
+Filters: `kind` and `state` must be known values (`400` otherwise); `kind` also skips the other sources. `organization_id` keeps only records whose `scope` is that organization (planned departments today).
+
+Degradation: every source reports `{source, status, detail, count}` in `sources`, where `source` is `standing_teams`, `mission_teams`, `groups`, `organizations`, or `outputs` and `status` is `ok`, `degraded`, `unavailable`, or `restricted`. A failing or missing source never fails the response. With no database, standing teams and planned departments still return, and `mission_teams`, `groups`, and `outputs` report `unavailable`. Raw database errors are logged, not returned.
+
+`GET /api/v1/deployments/{kind}/{id}` returns `{"ok": true, "data": {"deployment": {...}, "sources": [...]}}`. It returns `400` for an unknown kind, `404` when the record does not exist, and `503` when the record's source is unavailable or restricted. `/api/v1/teams/detail` stays for compatibility and is legacy.
 
 ## Provider Auth Notes
 
