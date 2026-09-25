@@ -85,6 +85,7 @@ Handles the rapid Docker Compose single-host runtime for development, same-machi
 - **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface, with numbered stage output and optional `--wait-timeout=<seconds>`)
 - Compose `up` and `migrate` now behave like the main `db.migrate` contract: they bootstrap forward only when the compose `cortex` schema is not already compatible with the current runtime, and they point to `uv run inv compose.down --volumes` for a truly fresh replay.
 - Migration 040 adds the `organizations` table. An existing database missing it returns 503 from the organization API naming `uv run inv compose.migrate`; `compose.migrate` detects whether the table already exists before applying it, so rerunning it on an up-to-date database is a no-op.
+- Migration 041 adds the `operator_templates` table for governed template clones (RC-004G). An existing database missing it returns 503 from `/api/v1/config/templates/{id}/clone` and `/api/v1/config/{kind}/{id}/apply` naming `uv run inv compose.migrate`; `compose.migrate` detects whether the table already exists before applying it.
 - **Down**: `uv run inv compose.down`
 - **Health**: `uv run inv compose.health`
 - **Status**: `uv run inv compose.status`

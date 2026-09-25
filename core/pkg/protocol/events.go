@@ -40,6 +40,10 @@ const (
 	EventTriggerFired   EventType = "trigger.fired"
 	EventTriggerSkipped EventType = "trigger.skipped"
 	EventSchedulerTick  EventType = "scheduler.tick"
+
+	// Governed config mutations (RC-004G clone and apply)
+	EventTemplateCloned EventType = "template.cloned"
+	EventConfigApplied  EventType = "config.applied"
 )
 
 // EventSeverity classifies the operational significance of an event.

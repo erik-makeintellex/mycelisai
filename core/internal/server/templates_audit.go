@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"strings"
@@ -17,7 +18,16 @@ func (s *AdminServer) createAuditEvent(templateID protocol.TemplateID, source, m
 	if db == nil {
 		return "", nil // graceful: audit is non-blocking
 	}
+	return insertAuditEvent(db, templateID, source, message, ctx)
+}
 
+// auditExecer is satisfied by *sql.DB and *sql.Tx, so governed mutations can
+// write their audit record inside the mutation transaction.
+type auditExecer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
+func insertAuditEvent(db auditExecer, templateID protocol.TemplateID, source, message string, ctx map[string]any) (string, error) {
 	id := uuid.New()
 	traceID := uuid.New().String()
 	reviewCtx := protocol.ParseOperationalLogContext(ctx)

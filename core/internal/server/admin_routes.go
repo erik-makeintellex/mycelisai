@@ -37,6 +37,8 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/deployments", s.HandleListDeployments)
 	mux.HandleFunc("GET /api/v1/deployments/{kind}/{id}", s.HandleGetDeployment)
 	mux.HandleFunc("GET /api/v1/config/{kind}/{id}", s.HandleGetConfigView)
+	mux.HandleFunc("POST /api/v1/config/templates/{id}/clone", s.HandleCloneTemplate)
+	mux.HandleFunc("POST /api/v1/config/{kind}/{id}/apply", s.HandleApplyConfig)
 	mux.HandleFunc("/api/v1/user/settings", s.HandleUserSettings)
 	mux.HandleFunc("/api/v1/settings/user", s.HandleUserSettings)
 	mux.HandleFunc("GET /api/v1/groups", s.HandleListGroups)

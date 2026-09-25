@@ -8,6 +8,7 @@
 - [Endpoints](#endpoints)
 - [Deployments](#deployments)
 - [View Config](#view-config)
+- [Clone And Apply Config](#clone-and-apply-config)
 - [Provider Auth Notes](#provider-auth-notes)
 
 ## Endpoints
@@ -40,6 +41,8 @@
 | `/api/v1/deployments` | GET | Deployments aggregate across standing teams, mission teams, groups, and planned departments; filters `kind`, `organization_id`, `state`. See [Deployments](#deployments) |
 | `/api/v1/deployments/{kind}/{id}` | GET | One deployment record with members expanded; `404` when unknown, `503` when its source is unavailable |
 | `/api/v1/config/{teams\|groups\|organizations\|templates}/{id}` | GET | Read-only, redacted config document (`?format=yaml\|json`) that `config_ref.path` resolves. See [View Config](#view-config) |
+| `/api/v1/config/templates/{id}/clone` | POST | Governed clone of a template into an operator ("Custom") template; `202` preview with `confirm_token`, retry to store. See [Clone And Apply Config](#clone-and-apply-config) |
+| `/api/v1/config/{groups\|templates}/{id}/apply` | POST | Governed apply of a YAML/JSON document; always a dry-run `202` preview first, then apply with the hash-bound `confirm_token`. See [Clone And Apply Config](#clone-and-apply-config) |
 | `/api/swarm/teams` | POST | Create team via Soma |
 | `/api/swarm/command` | POST | Send command to specific team |
 | `/api/v1/swarm/broadcast` | POST | Fan out directive to ALL active teams |
@@ -233,6 +236,47 @@ Redaction is server-side and always runs before rendering:
 - Values under any key are scanned for credential shapes: `Bearer`/`Basic` tokens, known key prefixes (`sk-`, `ghp_`, `github_pat_`, `xoxb-`, `AKIA`, `AIza`, `hf_`, and others), JWTs, PEM private keys, URL passwords (`postgres://user:<redacted>@host`), sensitive URL query parameters, `NAME=value` assignments of secret names, and the argument after a sensitive CLI flag (`--api-key <redacted>`).
 
 Access follows the underlying resource: `groups` requires the root admin role with `groups:read` (`403` otherwise), as `/api/v1/groups` does; `teams`, `organizations`, and `templates` need an authenticated operator. The interface keeps View config behind Advanced mode. Errors use the normalized envelope: `400` for an unknown kind or format, `401` without an identity, `404` for an unknown id, `503` when the runtime or database behind the kind is unavailable. Raw database errors are logged, not returned.
+
+## Clone And Apply Config
+
+Clone and apply are the governed write half of View config (RC-004G). Both use the governed-confirmation pattern that group mutations use: the first call never mutates; it validates, records an audit entry, persists an intent proof, and returns `202` with a single-use confirm token (15 minute TTL). The retry with `confirm_token` consumes the token inside the same transaction as the write, so a token is spent only when the change commits.
+
+The token is bound to the document: the proof's `resolved_intent` is `<action>.<kind>.<id>@sha256:<hash>`, where the hash is SHA-256 over the canonical JSON of the parsed document (sorted keys, so the same document in YAML or JSON has the same hash). Confirming with a different document returns `409` and leaves the token unspent; request a new preview.
+
+### Clone
+
+`POST /api/v1/config/templates/{id}/clone` with `{"name": "Acme Studio", "new_id"?: "custom-acme-studio", "overrides"?: {...}}`. `{id}` is a top-level bundle, a file starter, or another operator template. The clone copies the source, deep-merges `overrides` (maps merge, lists and scalars replace; `overrides` cannot change `id`), and sets `id`, `name`, and `starter.label` to the clone's identity. `new_id` defaults to `custom-<slug of name>` and must match `^[a-z0-9][a-z0-9-]{1,62}$`. The clone is validated with the same bundle and starter rules as starter files, including `approval_policy_ref` resolution against `policy.yaml`, before any token is issued.
+
+```json
+{"ok": true, "data": {
+  "requires_approval": true,
+  "confirm_token": {"token": "7d7c...", "intent_proof_id": "3f1e...", "expires_at": "2026-09-25T18:30:00Z"},
+  "intent_proof": {"id": "3f1e...", "resolved_intent": "template.clone.template.custom-acme-studio@sha256:9b1c...", "status": "pending"},
+  "audit_event_id": "c0a8...",
+  "preview": {"kind": "template", "id": "custom-acme-studio", "source_template_id": "starter-client-delivery-studio",
+    "document_sha256": "9b1c...", "format": "yaml", "document": "id: custom-acme-studio\n...", "redactions": [],
+    "valid": true, "validation_errors": []}}}
+```
+
+Retrying the same body with `"confirm_token": "<token>"` stores the clone in `operator_templates` and returns `201` with `template {id, name, source: "operator", source_template_id, document_sha256}`, `intent_proof_id`, `audit_event_id`, `run_id`, and `mission_event_id`. Clones appear in `GET /api/v1/templates?view=organization-starters` with `source: "operator"` (labelled "Custom") and `source_template_id`, under the same availability rules as file starters; an operator template whose id shadows a file template is listed as unavailable. `GET /api/v1/config/templates/{id}` shows a clone with `source: "operator"`.
+
+### Apply
+
+`POST /api/v1/config/{kind}/{id}/apply` with `{"document": "<yaml or json text>", "format": "yaml|json", "confirm_token"?: "<token>"}` (1 MiB limit).
+
+| Kind | Applies | Document |
+| :--- | :--- | :--- |
+| `templates` | Operator templates only | The bundle, as View config shows it; `id` must equal the path id (added when missing); validated with the starter rules |
+| `groups` | Collaboration groups | `kind: CollaborationGroup` as View config shows it; only `spec` is applied, `metadata` is informational except `metadata.id`; unknown `spec` fields are rejected |
+| `teams`, `organizations` | Never (`409`) | Standing-team manifests change only through bundle files and restart; organizations use their settings endpoints |
+
+Without `confirm_token` the endpoint is a dry run. A valid document returns `202` with `requires_approval`, `intent_proof`, `confirm_token`, `audit_event_id`, `blocked: false`, and `preview {kind, id, document_sha256, diff {changed, added, removed}, valid, validation_errors}`. The diff lists dotted paths only, never values. An invalid document returns `202` with `blocked: true`, the errors, and no token. With a valid token the endpoint applies exactly the previewed document and returns `200` with `applied: true`, the diff, `intent_proof_id`, `audit_event_id`, `run_id`, `mission_event_id`, and the reloaded `result`.
+
+Write-back guard: a document is rejected with `400` and `data.write_back_violations` when any value contains the redaction marker `<redacted>`, when a secret field holds an `${env:...}` placeholder, or when it carries a literal secret (the View config redaction rules). Secrets belong in `*_env` or `*_ref` references.
+
+Events: every preview writes an audit entry (`template.clone.previewed` or `config.apply.previewed`). Every confirmed clone or apply writes, in its transaction, an audit entry, a governance run keyed by the intent proof, a `template.cloned` or `config.applied` mission event (payload: kind, id, `document_sha256`, `intent_proof_id`, actor, `source_kind: web_api`), and `mission.completed`, then publishes a best-effort signal on the run's mission-events subject.
+
+Access: the root admin role with `config:write`; groups also need `groups:write`. The interface keeps clone and apply behind Advanced mode. Errors: `400` bad body, format, document, write-back violation, invalid, expired, or used token, or a confirm of an invalid document; `401` without identity; `403` without the role or scopes; `404` unknown template, source, or group; `409` view-only kind, read-only file template, taken `new_id`, or a token issued for another document; `503` without a database, or when migration 041 is missing (the message names `uv run inv compose.migrate`).
 
 ## Provider Auth Notes
 

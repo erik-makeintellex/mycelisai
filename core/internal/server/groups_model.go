@@ -172,35 +172,19 @@ func (s *AdminServer) maybeRequireGroupApproval(w http.ResponseWriter, req creat
 	if groupID != "" {
 		intent += "." + groupID
 	}
-	auditEventID, _ := s.createAuditEvent(
-		protocol.TemplateChatToProposal,
-		"groups."+op,
-		"High-impact group mutation requested",
-		map[string]any{
+	s.respondGovernedConfirmation(w, governedConfirmRequest{
+		Intent:       intent,
+		AuditSource:  "groups." + op,
+		AuditMessage: "High-impact group mutation requested",
+		AuditContext: map[string]any{
 			"group_id":             groupID,
 			"name":                 strings.TrimSpace(req.Name),
 			"work_mode":            strings.TrimSpace(req.WorkMode),
 			"allowed_capabilities": normalizeStringSlice(req.AllowedCapabilities),
 		},
-	)
-	proof, err := s.createIntentProof(protocol.TemplateChatToProposal, intent, scope, auditEventID)
-	if err != nil || proof == nil {
-		respondAPIError(w, "failed to create approval proof", http.StatusServiceUnavailable)
-		return true
-	}
-	confirmToken, err := s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal)
-	if err != nil || confirmToken == nil {
-		respondAPIError(w, "failed to create confirm token", http.StatusServiceUnavailable)
-		return true
-	}
-
-	respondAPIJSON(w, http.StatusAccepted, protocol.NewAPISuccess(map[string]any{
-		"requires_approval": true,
-		"group_id":          groupID,
-		"intent_proof":      proof,
-		"confirm_token":     confirmToken,
-		"audit_event_id":    auditEventID,
-	}))
+		Scope: scope,
+		Extra: map[string]any{"group_id": groupID},
+	})
 	return true
 }
 

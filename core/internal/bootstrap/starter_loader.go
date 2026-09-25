@@ -75,39 +75,56 @@ func LoadStarterEntries(startersPath string, reservedIDs, policyGroups map[strin
 
 func loadStarterEntry(path string, policyGroups map[string]struct{}) *StarterEntry {
 	file := filepath.Base(path)
-	entry := &StarterEntry{
-		ID:        strings.TrimSuffix(file, filepath.Ext(file)),
-		File:      file,
-		Available: true,
-	}
-
-	bundle, err := loadTemplateBundle(path)
+	stem := strings.TrimSuffix(file, filepath.Ext(file))
+	data, err := os.ReadFile(path)
 	if err != nil {
+		entry := &StarterEntry{ID: stem, File: file}
 		entry.markUnavailable(fmt.Errorf("parse %s: %w", file, err))
+		return entry
+	}
+	return starterEntryFromDocument(file, stem, data, policyGroups)
+}
+
+// starterEntryFromDocument applies the starter availability rules to one
+// document. label names the document in reasons (a file name, or
+// "operator template <id>"); defaultID is used when the bundle has no id.
+func starterEntryFromDocument(label, defaultID string, data []byte, policyGroups map[string]struct{}) *StarterEntry {
+	entry := &StarterEntry{ID: defaultID, File: label, Available: true}
+
+	bundle, err := ParseTemplateBundle(data)
+	if err != nil {
+		entry.markUnavailable(fmt.Errorf("parse %s: %w", label, err))
 		return entry
 	}
 	if id := strings.TrimSpace(bundle.ID); id != "" {
 		entry.ID = id
 	}
 	if err := bundle.Validate(); err != nil {
-		entry.markUnavailable(fmt.Errorf("validate %s: %w", file, err))
+		entry.markUnavailable(fmt.Errorf("validate %s: %w", label, err))
 		return entry
 	}
 	// Bundle is set only once it validates, so projections never see a
 	// half-normalized bundle.
 	entry.Bundle = bundle
-	if bundle.Starter == nil {
-		entry.markUnavailable(fmt.Errorf("%s: starter bundles must declare a starter block", file))
-		return entry
-	}
-	if bundle.DeliveryDefaults == nil {
-		entry.markUnavailable(fmt.Errorf("%s: starter bundles must declare delivery_defaults", file))
-		return entry
-	}
-	if err := bundle.DeliveryDefaults.ResolveApprovalPolicy(policyGroups); err != nil {
-		entry.markUnavailable(fmt.Errorf("%s: delivery_defaults: %w", file, err))
+	if err := checkStarterBlocks(bundle, policyGroups); err != nil {
+		entry.markUnavailable(fmt.Errorf("%s: %w", label, err))
 	}
 	return entry
+}
+
+// checkStarterBlocks enforces what a starter needs beyond bundle validation:
+// a starter block, delivery_defaults, and a resolvable approval policy.
+func checkStarterBlocks(bundle *TemplateBundle, policyGroups map[string]struct{}) error {
+	if bundle.Starter == nil {
+		return fmt.Errorf("starter bundles must declare a starter block")
+	}
+	if bundle.DeliveryDefaults == nil {
+		return fmt.Errorf("starter bundles must declare delivery_defaults")
+	}
+	if err := bundle.DeliveryDefaults.ResolveApprovalPolicy(policyGroups); err != nil {
+		return fmt.Errorf("delivery_defaults: %w", err)
+	}
+	return nil
 }
 
 func (e *StarterEntry) markUnavailable(err error) {

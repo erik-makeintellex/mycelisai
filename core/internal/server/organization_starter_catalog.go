@@ -1,18 +1,26 @@
 package server
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/mycelis/core/internal/bootstrap"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+const operatorCatalogTimeout = 3 * time.Second
+
 const (
 	starterSourceBundle  = "bundle"
 	starterSourceStarter = "starter"
+	// starterSourceOperator marks an operator template (RC-004G clone),
+	// labelled "Custom" in the UI.
+	starterSourceOperator = "operator"
 )
 
 // OrganizationStarterTemplate is one item of
@@ -22,6 +30,7 @@ const (
 type OrganizationStarterTemplate struct {
 	OrganizationTemplateSummary
 	Source            string                      `json:"source"`
+	SourceTemplateID  string                      `json:"source_template_id,omitempty"`
 	Available         bool                        `json:"available"`
 	UnavailableReason string                      `json:"unavailable_reason,omitempty"`
 	Starter           *bootstrap.StarterLabels    `json:"starter,omitempty"`
@@ -67,11 +76,44 @@ func (s *AdminServer) loadOrganizationStarterCatalog() ([]OrganizationStarterTem
 		return nil, err
 	}
 	for _, entry := range entries {
+		reserved[entry.ID] = struct{}{}
 		catalog = append(catalog, projectStarterEntry(entry))
 	}
+	catalog = append(catalog, s.operatorStarterCatalog(reserved, policyGroups)...)
 
 	sortStarterCatalog(catalog)
 	return catalog, nil
+}
+
+// operatorStarterCatalog projects operator templates (RC-004G clones) with
+// the starter availability rules. Storage problems degrade to no operator
+// entries rather than failing the file catalog.
+func (s *AdminServer) operatorStarterCatalog(reserved, policyGroups map[string]struct{}) []OrganizationStarterTemplate {
+	if s.getDB() == nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), operatorCatalogTimeout)
+	defer cancel()
+	rows, err := s.listOperatorTemplates(ctx)
+	if err != nil {
+		log.Printf("[starter-catalog] operator templates unavailable: %v", err)
+		return nil
+	}
+	docs := make([]bootstrap.OperatorTemplateDocument, 0, len(rows))
+	sources := make(map[string]string, len(rows))
+	for _, row := range rows {
+		docs = append(docs, bootstrap.OperatorTemplateDocument{ID: row.ID, Document: row.Document})
+		sources[row.ID] = row.SourceTemplateID
+	}
+	entries := bootstrap.LoadOperatorStarterEntries(docs, reserved, policyGroups)
+	out := make([]OrganizationStarterTemplate, 0, len(entries))
+	for _, entry := range entries {
+		item := projectStarterEntry(entry)
+		item.Source = starterSourceOperator
+		item.SourceTemplateID = sources[entry.ID]
+		out = append(out, item)
+	}
+	return out
 }
 
 // resolveStarterCatalogEntry returns the available catalog item for id, with

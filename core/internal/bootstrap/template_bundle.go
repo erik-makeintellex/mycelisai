@@ -96,7 +96,12 @@ func loadTemplateBundle(path string) (*TemplateBundle, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ParseTemplateBundle(data)
+}
 
+// ParseTemplateBundle parses a bundle document (YAML, or JSON as a YAML
+// subset) and applies the file-loader defaults. It does not validate.
+func ParseTemplateBundle(data []byte) (*TemplateBundle, error) {
 	var bundle TemplateBundle
 	if err := yaml.Unmarshal(data, &bundle); err != nil {
 		return nil, err

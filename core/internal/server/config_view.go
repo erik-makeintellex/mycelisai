@@ -29,6 +29,7 @@ const (
 	configSourceFile     = "file"
 	configSourceDatabase = "database"
 	configSourceRuntime  = "runtime"
+	configSourceOperator = "operator"
 )
 
 // configViewKinds maps the plural route segment to the kind.
@@ -105,7 +106,7 @@ func (s *AdminServer) HandleGetConfigView(w http.ResponseWriter, r *http.Request
 	case configKindOrganization:
 		doc, err = s.organizationConfigDocument(r, id)
 	case configKindTemplate:
-		doc, err = s.templateConfigDocument(id)
+		doc, err = s.templateConfigDocument(r, id)
 	}
 	if err != nil {
 		var viewErr *configViewError

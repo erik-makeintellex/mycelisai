@@ -75,6 +75,8 @@ Supported paths:
 - create from config/API
 - clone and modify a template later
 
+Clone and modify (RC-004G): an operator clones a file bundle or starter into an operator template (`operator_templates`, migration 041) through the governed clone endpoint, then edits it through governed apply. The clone is a separate template with its own id and `source_template_id`; cloning or applying never rewrites the source file or any organization already created from it. See [Config clone and apply](V8_CONFIG_AND_BOOTSTRAP_MODEL.md#config-clone-and-apply-rc-004g).
+
 Instantiation binds:
 - stable organization identity
 - selected template source metadata

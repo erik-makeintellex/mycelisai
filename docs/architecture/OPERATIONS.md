@@ -119,6 +119,8 @@ Compose is the supported single-host runtime lane. `.env.compose` owns container
 
 Organizations persist to the `organizations` table added by migration 040. A database missing that migration returns 503 from the organization API naming `uv run inv compose.migrate`; run `uv run inv compose.migrate` (Compose) or `uv run inv db.migrate` (source-mode) to apply it. `compose.migrate` detects whether the table already exists, so it is safe to rerun on existing databases.
 
+Operator templates (governed clones of template bundles and starters, RC-004G) persist to the `operator_templates` table added by migration 041. A database missing that migration returns 503 from clone and apply naming `uv run inv compose.migrate`, and the organization-starters catalog lists file starters only; run `uv run inv compose.migrate` (Compose) or `uv run inv db.migrate` (source-mode) to apply it. `compose.migrate` detects whether the table already exists, so it is safe to rerun.
+
 ### Kubernetes Tasks (`ops/k8s.py`)
 
 ```bash

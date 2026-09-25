@@ -37,6 +37,11 @@ func (s *AdminServer) groupConfigDocument(r *http.Request, id string) (*configDo
 		"id": g.ID, "name": g.Name, "tenant_id": g.TenantID, "status": g.Status,
 		"created_by": g.CreatedBy, "created_at": configTime(g.CreatedAt), "updated_at": configTime(g.UpdatedAt),
 	}
+	return &configDocument{doc: configDoc("CollaborationGroup", meta, groupConfigSpec(g)), source: configSourceDatabase}, nil
+}
+
+// groupConfigSpec is the group spec block View config shows and apply accepts.
+func groupConfigSpec(g *CollaborationGroup) map[string]any {
 	spec := map[string]any{
 		"name":                 g.Name,
 		"goal_statement":       g.GoalStatement,
@@ -50,7 +55,7 @@ func (s *AdminServer) groupConfigDocument(r *http.Request, id string) (*configDo
 	if g.Expiry != nil {
 		spec["expiry"] = configTime(*g.Expiry)
 	}
-	return &configDocument{doc: configDoc("CollaborationGroup", meta, spec), source: configSourceDatabase}, nil
+	return spec
 }
 
 // organizationConfigDocument returns the organization home document,
@@ -82,11 +87,39 @@ func (s *AdminServer) organizationConfigDocument(r *http.Request, id string) (*c
 	return &configDocument{doc: configDoc("Organization", meta, spec), source: source}, nil
 }
 
-// templateConfigDocument returns a template bundle as loaded from disk: a
-// top-level bundle or a starter under <templates>/starters/. The file is
-// parsed generically so every field is shown, and redaction still applies.
-// Top-level bundles win an id clash, matching the starter catalog.
-func (s *AdminServer) templateConfigDocument(id string) (*configDocument, error) {
+// templateConfigDocument returns a template bundle: a file bundle (a
+// top-level bundle or a starter under <templates>/starters/) as loaded from
+// disk, else an operator template (RC-004G clone) from operator_templates.
+// Files are parsed generically so every field is shown; redaction still
+// applies. Top-level bundles win an id clash, matching the starter catalog.
+func (s *AdminServer) templateConfigDocument(r *http.Request, id string) (*configDocument, error) {
+	doc, err := s.fileTemplateDocument(id)
+	if err != nil || doc != nil {
+		return doc, err
+	}
+	if s.getDB() == nil || !operatorTemplateIDPattern.MatchString(id) {
+		return nil, configNotFound("template", id)
+	}
+	row, err := s.getOperatorTemplate(r.Context(), id)
+	if err != nil {
+		log.Printf("[config-view] operator template query: %v", err)
+		if isOperatorTemplateTableMissing(err) {
+			return nil, configNotFound("template", id)
+		}
+		return nil, configUnavailable("operator template query failed")
+	}
+	if row == nil {
+		return nil, configNotFound("template", id)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(row.Document, &body); err != nil {
+		return nil, err
+	}
+	return &configDocument{doc: body, source: configSourceOperator, sourcePath: "operator_templates/" + row.ID}, nil
+}
+
+// fileTemplateDocument finds a file bundle by id, or returns nil.
+func (s *AdminServer) fileTemplateDocument(id string) (*configDocument, error) {
 	root := s.templateBundlesPath()
 	for _, dir := range []string{"", bootstrap.StartersDirName} {
 		doc, rel, err := findTemplateFile(root, dir, id)
@@ -102,7 +135,7 @@ func (s *AdminServer) templateConfigDocument(id string) (*configDocument, error)
 			}, nil
 		}
 	}
-	return nil, configNotFound("template", id)
+	return nil, nil
 }
 
 // findTemplateFile scans one directory (non-recursive) for a YAML bundle

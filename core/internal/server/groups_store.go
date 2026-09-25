@@ -153,6 +153,21 @@ func (s *AdminServer) updateGroupDB(ctx context.Context, id string, req createGr
 	if db == nil {
 		return nil, errors.New("database not available")
 	}
+	if err := execUpdateGroup(ctx, db, id, req, updatedAuditEventID); err != nil {
+		return nil, err
+	}
+	return s.getGroupDB(ctx, id)
+}
+
+// groupExecer is satisfied by *sql.DB and *sql.Tx, so governed config apply
+// can update a group inside its confirm transaction.
+type groupExecer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+// execUpdateGroup writes the group spec fields. It returns sql.ErrNoRows when
+// no group has id.
+func execUpdateGroup(ctx context.Context, db groupExecer, id string, req createGroupRequest, updatedAuditEventID string) error {
 	res, err := db.ExecContext(ctx, `
 		UPDATE collaboration_groups
 		SET name=$2,
@@ -180,13 +195,13 @@ func (s *AdminServer) updateGroupDB(ctx context.Context, id string, req createGr
 		parseAuditUUID(updatedAuditEventID),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rowsAffected, _ := res.RowsAffected()
 	if rowsAffected == 0 {
-		return nil, sql.ErrNoRows
+		return sql.ErrNoRows
 	}
-	return s.getGroupDB(ctx, id)
+	return nil
 }
 
 func (s *AdminServer) updateGroupStatusDB(ctx context.Context, id, status, updatedAuditEventID string) (*CollaborationGroup, error) {

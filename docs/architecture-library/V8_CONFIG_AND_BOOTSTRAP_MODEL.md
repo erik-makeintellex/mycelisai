@@ -168,6 +168,16 @@ Advanced operators read effective config through `GET /api/v1/config/{teams|grou
 
 Standing-team manifests stay view-only; they change through bundle files and restart.
 
+### Config clone and apply (RC-004G)
+
+Advanced operators change config only through governed clone and apply ([API Reference: Clone And Apply Config](../API_REFERENCE.md#clone-and-apply-config)):
+
+- `POST /api/v1/config/templates/{id}/clone` creates an operator template from a file bundle, a file starter, or another operator template. The Helm-mounted templates directory is read-only, so clones live in the `operator_templates` table (migration 041: `id`, `tenant_id`, `name`, `source_template_id`, `document` JSONB, `document_sha256`, `created_by`, created/updated audit event ids, `intent_proof_id`, timestamps). Clones are validated with the starter rules, including approval-policy resolution, and appear in the organization-starters catalog as `source: "operator"` ("Custom") with the same availability rules as file starters.
+- `POST /api/v1/config/{groups|templates}/{id}/apply` applies a YAML or JSON document to a collaboration group or an operator template. File templates, standing-team manifests, and organizations are not applicable.
+- Every clone and apply is a dry run first: the first call validates, diffs (paths only), and returns `202` with an intent proof and a single-use, expiring confirm token whose intent is bound to the SHA-256 of the canonical document. The retry consumes the token in the same transaction as the write; a different document gets `409`.
+- A document holding `<redacted>`, an `${env:...}` placeholder in a secret field, or a literal secret is rejected, so a redacted View config can never be written back.
+- Every confirmed mutation records an audit entry and `template.cloned` or `config.applied` mission events in the write transaction; previews record `template.clone.previewed` or `config.apply.previewed` audit entries.
+
 ## Migration from V7 bootstrap assumptions
 
 V7 standing-team and YAML assumptions must be de-hardened into bundle-driven bootstrap. Normal startup should fail closed when required bootstrap truth is absent or ambiguous.
