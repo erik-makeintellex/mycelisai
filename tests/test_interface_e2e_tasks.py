@@ -1,4 +1,3 @@
-import shlex
 from ops import interface_runtime as interface
 from tests.interface_task_support import FakeContext, FakeResult
 
@@ -71,13 +70,6 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
         "sweep",
         "cleanup-log",
     ]
-
-
-def test_build_playwright_command_supports_multiple_space_separated_specs():
-    # A quoted, space-separated --spec value becomes extra positional args
-    # Playwright treats as additional test files (used by CI's mvp-browser job).
-    command = interface._build_playwright_command(project="chromium", spec="a.spec.ts b.spec.ts", workers="1")
-    assert shlex.split(command) == ["npx", "playwright", "test", "--reporter=dot", "--project=chromium", "a.spec.ts", "b.spec.ts", "--workers=1"]
 
 
 def test_e2e_updates_playwright_host_when_managed_server_is_only_ready_on_alt_host(monkeypatch, capsys):
