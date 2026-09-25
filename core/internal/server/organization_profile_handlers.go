@@ -37,7 +37,7 @@ func (s *AdminServer) handleUpdateDepartmentAIEngine(w http.ResponseWriter, r *h
 	}
 
 	departmentFound := false
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, ok, err := s.organizationStore().UpdateContext(r.Context(), id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home = normalizeOrganizationHome(home)
 		for index, department := range home.Departments {
 			if department.ID != departmentID {
@@ -56,6 +56,10 @@ func (s *AdminServer) handleUpdateDepartmentAIEngine(w http.ResponseWriter, r *h
 		}
 		return normalizeOrganizationHome(home)
 	})
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	if !ok {
 		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
@@ -99,7 +103,7 @@ func (s *AdminServer) handleUpdateAgentTypeAIEngine(w http.ResponseWriter, r *ht
 
 	departmentFound := false
 	agentTypeFound := false
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, ok, err := s.organizationStore().UpdateContext(r.Context(), id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home = normalizeOrganizationHome(home)
 		for departmentIndex, department := range home.Departments {
 			if department.ID != departmentID {
@@ -124,6 +128,10 @@ func (s *AdminServer) handleUpdateAgentTypeAIEngine(w http.ResponseWriter, r *ht
 		}
 		return normalizeOrganizationHome(home)
 	})
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	if !ok {
 		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
@@ -171,7 +179,7 @@ func (s *AdminServer) handleUpdateAgentTypeResponseContract(w http.ResponseWrite
 
 	departmentFound := false
 	agentTypeFound := false
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, ok, err := s.organizationStore().UpdateContext(r.Context(), id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home = normalizeOrganizationHome(home)
 		defaultProfileID := strings.TrimSpace(home.ResponseContractProfileID)
 		if defaultProfileID == "" {
@@ -200,6 +208,10 @@ func (s *AdminServer) handleUpdateAgentTypeResponseContract(w http.ResponseWrite
 		}
 		return normalizeOrganizationHome(home)
 	})
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	if !ok {
 		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return

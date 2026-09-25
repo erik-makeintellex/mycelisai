@@ -32,6 +32,7 @@ COMPOSE_LONG_TERM_STORAGE_CHECKS = (
         "conversation templates",
         "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conversation_templates';",
     ),
+    ("durable organizations", "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'organizations';"),
 )
 
 
@@ -45,6 +46,7 @@ COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = {
     "managed exchange channels": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
     "managed exchange items": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
     "conversation templates": ("038_conversation_templates.up.sql",),
+    "durable organizations": ("040_organizations.up.sql",),
 }
 
 

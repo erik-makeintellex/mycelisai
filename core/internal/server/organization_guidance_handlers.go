@@ -17,7 +17,11 @@ func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.
 		return
 	}
 
-	home, ok := s.organizationStore().Get(id)
+	home, ok, err := s.organizationStore().GetContext(r.Context(), id)
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	if !ok {
 		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return

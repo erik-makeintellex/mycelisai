@@ -10,8 +10,31 @@ import (
 )
 
 func (s *AdminServer) handleListOrganizations(w http.ResponseWriter, r *http.Request) {
-	summaries := s.organizationStore().List()
+	summaries, err := s.organizationStore().ListContext(r.Context())
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(summaries))
+}
+
+// respondOrganizationStoreError reports a storage failure without leaking driver detail.
+func respondOrganizationStoreError(w http.ResponseWriter, err error) {
+	log.Printf("[organizations] storage error: %v", err)
+	if isOrganizationTableMissing(err) {
+		respondAPIError(w, "organization storage is not migrated; run `uv run inv compose.migrate` and restart Core", http.StatusServiceUnavailable)
+		return
+	}
+	respondAPIError(w, "organization storage unavailable", http.StatusInternalServerError)
+}
+
+// isOrganizationTableMissing detects a database that has not applied migration 040.
+func isOrganizationTableMissing(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "42P01") || strings.Contains(msg, `relation "organizations" does not exist`)
 }
 
 func (s *AdminServer) emitReviewLoopEvent(orgID string, eventKind ReviewLoopEventKind) {
@@ -59,7 +82,11 @@ func (s *AdminServer) handleCreateOrganization(w http.ResponseWriter, r *http.Re
 	}
 
 	home := s.buildOrganizationHome(req, template)
-	home = s.organizationStore().Save(home)
+	home, err := s.organizationStore().SaveContext(r.Context(), home)
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	s.loopProfileStore().EnsureDefaults(home)
 	s.emitReviewLoopEvent(home.ID, ReviewLoopEventOrganizationCreated)
 	respondAPIJSON(w, http.StatusCreated, protocol.NewAPISuccess(home))
@@ -72,7 +99,11 @@ func (s *AdminServer) handleGetOrganizationHome(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	home, ok := s.organizationStore().Get(id)
+	home, ok, err := s.organizationStore().GetContext(r.Context(), id)
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	if !ok {
 		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
@@ -100,11 +131,15 @@ func (s *AdminServer) handleUpdateOrganizationAIEngine(w http.ResponseWriter, r 
 		return
 	}
 
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, ok, err := s.organizationStore().UpdateContext(r.Context(), id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home.AIEngineProfileID = string(profile.ID)
 		home.AIEngineSettingsSummary = profile.Summary
 		return normalizeOrganizationHome(home)
 	})
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	if !ok {
 		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
@@ -133,11 +168,15 @@ func (s *AdminServer) handleUpdateResponseContract(w http.ResponseWriter, r *htt
 		return
 	}
 
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, ok, err := s.organizationStore().UpdateContext(r.Context(), id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home.ResponseContractProfileID = string(profile.ID)
 		home.ResponseContractSummary = profile.Summary
 		return normalizeOrganizationHome(home)
 	})
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	if !ok {
 		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
@@ -154,7 +193,11 @@ func (s *AdminServer) handleGetOrganizationOutputModelRouting(w http.ResponseWri
 		return
 	}
 
-	home, ok := s.organizationStore().Get(id)
+	home, ok, err := s.organizationStore().GetContext(r.Context(), id)
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	if !ok {
 		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
@@ -225,7 +268,7 @@ func (s *AdminServer) handleUpdateOrganizationOutputModelRouting(w http.Response
 		})
 	}
 
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, ok, err := s.organizationStore().UpdateContext(r.Context(), id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home = normalizeOrganizationHome(home)
 		home.OutputModelRoutingMode = string(routingMode)
 		home.DefaultOutputModelID = defaultModelID
@@ -233,6 +276,10 @@ func (s *AdminServer) handleUpdateOrganizationOutputModelRouting(w http.Response
 		home.OutputModelBindings = normalizedOrganizationOutputModelBindings(normalizedBindings, defaultModelID)
 		return normalizeOrganizationHome(home)
 	})
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	if !ok {
 		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
