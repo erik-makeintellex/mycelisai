@@ -62,6 +62,8 @@ The panel has a YAML/JSON toggle, Copy and Download buttons (downloads as `<kind
 
 With Advanced mode on, the View config panel can also add two buttons that let you write configuration, not just read it. Both are governed: nothing changes until you explicitly approve a preview.
 
+Deployments only tracks team, group, and organization configs, so template configs aren't opened from here. To view or write a template's config, go to organization setup, pick "Start from template," and use the "View config" action on a starter card (also Advanced mode only): file and bundle starters offer **Clone as custom template**, and Custom (operator) starters offer **Edit and apply**. Groups still open their View config panel from Deployments as described above.
+
 - **Clone as custom template** appears on a file or bundle template. Name the clone, preview it, review the diff and validation, then approve. The clone is stored as an operator template and shows up as a **Custom** starter (see [Core Concepts](core-concepts.md#creating-an-ai-organization)) the next time you set up an AI Organization.
 - **Edit and apply** appears on a group or on a template you already cloned. It opens a plain-text editor with the current document, and always previews before it lets you approve: the preview shows which paths changed, whether the document is valid, and disables Approve when the change is blocked.
 

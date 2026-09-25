@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Loader2, RefreshCcw } from "lucide-react";
 import type { OrganizationStarterTemplate } from "@/lib/organizations";
+import { StarterConfigViewerAction } from "@/components/organizations/StarterConfigViewer";
 
 export function StartModeCard({
     active,
@@ -43,13 +44,24 @@ export function StarterCard({
     const isCustom = template.source === "operator";
     const title = template.starter?.label || template.name;
     return (
-        <button
-            type="button"
+        <div
             data-testid={`starter-card-${template.id}`}
-            onClick={onSelect}
-            disabled={unavailable}
+            role="button"
+            tabIndex={unavailable ? -1 : 0}
             aria-disabled={unavailable}
-            className={`rounded-2xl border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+            onClick={() => {
+                if (!unavailable) onSelect();
+            }}
+            onKeyDown={(event) => {
+                if (unavailable) return;
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect();
+                }
+            }}
+            className={`rounded-2xl border p-4 text-left transition-colors ${
+                unavailable ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+            } ${
                 active && !unavailable
                     ? "border-cortex-primary/40 bg-cortex-primary/10"
                     : "border-cortex-border bg-cortex-bg hover:border-cortex-primary/20"
@@ -72,6 +84,7 @@ export function StarterCard({
                     <span className="rounded-full border border-cortex-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
                         {template.organization_type}
                     </span>
+                    <StarterConfigViewerAction templateId={template.id} />
                 </div>
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -87,7 +100,7 @@ export function StarterCard({
                     {template.unavailable_reason || "This starter is unavailable right now."}
                 </p>
             )}
-        </button>
+        </div>
     );
 }
 

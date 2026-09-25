@@ -43,7 +43,7 @@ Selecting a starter prefills the organization name and purpose from a sample and
 
 When you open an organization created from a starter for the first time, its home page opens with a short quoted line from Soma introducing the organization, followed by a one-line delivery summary (who has to approve what, whether finished work is kept with proof, and the team-size limit) and a note that departments are planned and Soma will propose launching teams for you to approve. Organizations created empty, or created before this feature existed, open exactly as before — no intro or summary line.
 
-Advanced mode adds a fifth kind of starter: a **Custom** template, badged as such on its card. It is a file or bundle starter that an operator cloned and adjusted through Deployments' [Clone and apply config](deployments.md#clone-and-apply-config-advanced); it behaves like any other starter to pick from, but its configuration came from an operator edit instead of a shipped file.
+Advanced mode adds a fifth kind of starter: a **Custom** template, badged as such on its card. It is a file or bundle starter that an operator cloned and adjusted through a starter card's "View config" action (see [Clone and apply config](deployments.md#clone-and-apply-config-advanced)); it behaves like any other starter to pick from, but its configuration came from an operator edit instead of a shipped file.
 
 ---
 

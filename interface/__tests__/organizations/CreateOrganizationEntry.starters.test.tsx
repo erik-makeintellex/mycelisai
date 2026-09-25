@@ -145,7 +145,7 @@ describe("CreateOrganizationEntry starter cards", () => {
         fireEvent.click(await screen.findByRole("button", { name: "Explore Templates" }));
 
         const regulatedCard = await screen.findByTestId("starter-card-starter-governed-enterprise-program");
-        expect(regulatedCard).toHaveProperty("disabled", true);
+        expect(regulatedCard.getAttribute("aria-disabled")).toBe("true");
         expect(within(regulatedCard).getByText(regulated.unavailable_reason!)).toBeDefined();
 
         fireEvent.click(regulatedCard);
