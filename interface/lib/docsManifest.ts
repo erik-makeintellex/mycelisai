@@ -8,9 +8,8 @@
  * Security: the API route validates slugs against this manifest before
  * touching the filesystem — no arbitrary path traversal is possible.
  *
- * This manifest intentionally exposes precise, durable documentation only.
- * Temporary planning notes, strike-team plans, runbooks, and execution briefs
- * do not belong in the canonical in-app documentation surface.
+ * This manifest exposes precise, durable documentation only; temporary plans,
+ * runbooks, and execution briefs do not belong in the in-app docs surface.
  */
 
 export interface DocEntry {
@@ -49,6 +48,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/user/core-concepts.md",
                 description: "Soma, Council, Mission, Run, Brain, Event, and Trust in operator language",
             },
+            { slug: "glossary", label: "Glossary", path: "docs/user/glossary.md", description: "Organization, template, team, group, deployment, and knowledge" },
             {
                 slug: "system-status-recovery",
                 label: "System Status & Recovery",

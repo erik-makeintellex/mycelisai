@@ -28,7 +28,7 @@ const outcomes = [
     { title: "Soma orchestration", body: "One primary interface for intent, coordination, review, and output delivery.", icon: Workflow },
     { title: "AI Organizations", body: "Structured teams and roles can be shaped for planning, research, creation, review, and operations.", icon: Building2 },
     { title: "Connected tools", body: "MCP, files, search, host data, and other capabilities remain governed and reviewable.", icon: Wrench },
-    { title: "Learning and context", body: "Memory, deployment context, and retained artifacts keep useful work available.", icon: Database },
+    { title: "Learning and context", body: "Memory, knowledge, and retained artifacts keep useful work available.", icon: Database },
     { title: "Governance and audit", body: "Approvals, capability boundaries, and auditable activity keep execution controlled.", icon: ShieldCheck },
     { title: "Self-hosted control", body: "Run locally, in Compose, or in Kubernetes with deployment-owned configuration.", icon: SlidersHorizontal },
 ];

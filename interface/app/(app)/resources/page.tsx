@@ -30,7 +30,7 @@ const ExchangeInspector = dynamic(() => import("@/components/resources/ExchangeI
 
 const DeploymentContextPanel = dynamic(() => import("@/components/resources/DeploymentContextPanel"), {
     ssr: false,
-    loading: () => <TabLoading label="deployment context" />,
+    loading: () => <TabLoading label="knowledge" />,
 });
 
 type TabId = "engines" | "tools" | "workspace" | "roles" | "exchange" | "deployment-context";
@@ -78,7 +78,7 @@ function ResourcesContent() {
                 <div className="flex gap-1 border-b border-cortex-border">
                     <TabButton active={activeTab === "tools"} onClick={() => setActiveTab("tools")} icon={<Wrench size={14} />} label="Connected Tools" />
                     <TabButton active={activeTab === "exchange"} onClick={() => setActiveTab("exchange")} icon={<GitBranch size={14} />} label="Exchange" />
-                    <TabButton active={activeTab === "deployment-context"} onClick={() => setActiveTab("deployment-context")} icon={<BookMarked size={14} />} label="Deployment Context" />
+                    <TabButton active={activeTab === "deployment-context"} onClick={() => setActiveTab("deployment-context")} icon={<BookMarked size={14} />} label="Knowledge" />
                     <TabButton active={activeTab === "workspace"} onClick={() => setActiveTab("workspace")} icon={<FolderOpen size={14} />} label="Workspace Files" />
                     <TabButton active={activeTab === "engines"} onClick={() => setActiveTab("engines")} icon={<Brain size={14} />} label="AI Engines" />
                     <TabButton active={activeTab === "roles"} onClick={() => setActiveTab("roles")} icon={<BookOpen size={14} />} label="Role Library" />

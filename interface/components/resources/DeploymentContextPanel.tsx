@@ -117,13 +117,13 @@ export default function DeploymentContextPanel() {
             const res = await fetch("/api/v1/memory/deployment-context?limit=12");
             const payload = await res.json().catch(async () => ({ error: await res.text() }));
             if (!res.ok) {
-                throw new Error(typeof payload?.error === "string" ? payload.error : "Deployment context unavailable.");
+                throw new Error(typeof payload?.error === "string" ? payload.error : "Knowledge unavailable.");
             }
             setEntries(Array.isArray(payload.entries) ? payload.entries : []);
             setError(null);
         } catch (err) {
             setEntries([]);
-            setError(err instanceof Error ? err.message : "Deployment context unavailable.");
+            setError(err instanceof Error ? err.message : "Knowledge unavailable.");
         } finally {
             setLoading(false);
         }
@@ -149,7 +149,7 @@ export default function DeploymentContextPanel() {
             });
             const payload = await res.json().catch(async () => ({ error: await res.text() }));
             if (!res.ok) {
-                throw new Error(typeof payload?.error === "string" ? payload.error : "Deployment context load failed.");
+                throw new Error(typeof payload?.error === "string" ? payload.error : "Knowledge load failed.");
             }
             const result = payload as LoadResponse;
             const label = knowledgeClassLabel(result.knowledge_class);
@@ -163,7 +163,7 @@ export default function DeploymentContextPanel() {
             setError(null);
             await loadEntries();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Deployment context load failed.");
+            setError(err instanceof Error ? err.message : "Knowledge load failed.");
             setStatus("Load failed");
         } finally {
             setSubmitting(false);
@@ -236,7 +236,7 @@ export default function DeploymentContextPanel() {
                         <div>
                             <div className="flex items-center gap-2">
                                 <BookOpenText className="w-4 h-4 text-cortex-primary" />
-                                <h2 className="text-sm font-semibold text-cortex-text-main">Deployment Context Intake</h2>
+                                <h2 className="text-sm font-semibold text-cortex-text-main">Knowledge Intake</h2>
                             </div>
                             <p className="text-xs text-cortex-text-muted mt-2 max-w-2xl">
                                 Load governed knowledge into the separate context store Soma uses for RAG. Private records, diary notes, finance references, customer context, company guidance, admin-shaped Soma context, and reflection/synthesis observations stay in distinct lanes with explicit visibility and goal-set scope.
@@ -415,10 +415,10 @@ export default function DeploymentContextPanel() {
 
                     <div className="mt-4 space-y-3">
                         {loading ? (
-                            <p className="text-xs font-mono text-cortex-text-muted animate-pulse">Loading deployment context…</p>
+                            <p className="text-xs font-mono text-cortex-text-muted animate-pulse">Loading knowledge…</p>
                         ) : entries.length === 0 ? (
                             <div className="rounded-xl border border-dashed border-cortex-border p-4 text-xs text-cortex-text-muted">
-                                No deployment context loaded yet.
+                                No knowledge loaded yet.
                             </div>
                         ) : (
                             entries.map((entry) => (

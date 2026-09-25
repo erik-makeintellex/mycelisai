@@ -88,7 +88,7 @@ describe("DeploymentContextPanel", () => {
         render(<DeploymentContextPanel />);
 
         await waitFor(() => {
-            expect(screen.getByText(/No deployment context loaded yet/i)).toBeDefined();
+            expect(screen.getByText(/No knowledge loaded yet/i)).toBeDefined();
         });
 
         fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Security Notes" } });
@@ -132,7 +132,7 @@ describe("DeploymentContextPanel", () => {
         render(<DeploymentContextPanel />);
 
         await waitFor(() => {
-            expect(screen.getByText(/No deployment context loaded yet/i)).toBeDefined();
+            expect(screen.getByText(/No knowledge loaded yet/i)).toBeDefined();
         });
 
         fireEvent.change(screen.getByLabelText("Source Kind"), { target: { value: "finance_record" } });
@@ -182,7 +182,7 @@ describe("DeploymentContextPanel", () => {
         render(<DeploymentContextPanel />);
 
         await waitFor(() => {
-            expect(screen.getByText(/No deployment context loaded yet/i)).toBeDefined();
+            expect(screen.getByText(/No knowledge loaded yet/i)).toBeDefined();
         });
 
         fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Investor Workflow Shift" } });

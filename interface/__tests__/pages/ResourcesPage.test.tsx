@@ -86,7 +86,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
         await act(async () => { render(<ResourcesPage />); });
         expect(screen.getByText('Connected Tools')).toBeDefined();
         expect(screen.getByText('Exchange')).toBeDefined();
-        expect(screen.getByText('Deployment Context')).toBeDefined();
+        expect(screen.getByText('Knowledge')).toBeDefined();
         expect(screen.getByText('Workspace Files')).toBeDefined();
         expect(screen.getByText('AI Engines')).toBeDefined();
         expect(screen.getByText('Role Library')).toBeDefined();
@@ -117,7 +117,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
         mockSearchParams.set('tab', 'deployment-context');
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: 'Deployment Context' }).className).toContain('border-cortex-primary');
+            expect(screen.getByRole('button', { name: 'Knowledge' }).className).toContain('border-cortex-primary');
         });
     });
 
