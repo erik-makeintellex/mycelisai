@@ -1,3 +1,5 @@
+import type { OrganizationDeliveryDefaults } from "@/lib/organizationStarters";
+
 export type OrganizationStartMode = "template" | "empty";
 export type OrganizationAIEngineProfileId = "starter_defaults" | "balanced" | "high_reasoning" | "fast_lightweight" | "deep_planning";
 export type ResponseContractProfileId = "clear_balanced" | "structured_analytical" | "concise_direct" | "warm_supportive";
@@ -169,6 +171,8 @@ export interface OrganizationHomePayload extends OrganizationSummary {
     description?: string;
     departments?: OrganizationDepartmentSummary[];
     output_model_bindings?: OrganizationOutputModelBinding[];
+    delivery_defaults?: OrganizationDeliveryDefaults;
+    soma_intro?: string;
 }
 
 export interface OrganizationCreateRequest {

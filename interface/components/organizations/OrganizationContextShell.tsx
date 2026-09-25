@@ -72,6 +72,7 @@ import {
 import {
     ActionPill,
 } from "@/components/organizations/organizationWorkspaceChrome";
+import { OrganizationStarterIntro } from "@/components/organizations/OrganizationStarterIntro";
 
 export {
     extractOutputsFromConversation,
@@ -751,6 +752,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                     </div>
                 </section>
 
+                <OrganizationStarterIntro somaIntro={organization.soma_intro} deliveryDefaults={organization.delivery_defaults} />
                 <section className="space-y-4">
                     <div className="space-y-4">
                         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
@@ -1347,7 +1349,6 @@ function WorkspaceDetailView({
                     </button>
                 </div>
             </div>
-
             {view === "departments" ? (
                 departmentItems.length > 0 ? (
                     <div className="mt-5 grid gap-4">
@@ -1412,7 +1413,6 @@ function WorkspaceDetailView({
                                             onSubmit={() => onSubmitDepartmentAIEngineSelection(item.id)}
                                         />
                                     )}
-
                                     <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4">
                                         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                                             <div>
