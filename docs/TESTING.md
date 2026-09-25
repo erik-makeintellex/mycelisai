@@ -77,7 +77,7 @@ Minimum route families under active proof:
 - `/dashboard` and AI Organization re-entry
 - `/organizations/[id]` Soma-primary workspace
 - `/groups` temporary and standing collaboration
-- `/teams` and `/teams/create`
+- `/deployments` (standing/mission teams, groups, planned departments; `/teams` redirects here) and `/teams/create`
 - `/resources` and Connected Tools
 - `/memory`, `/system`, `/settings`
 - `/runs`, `/runs/[id]`, `/runs/[id]/chain`
@@ -212,11 +212,11 @@ The Interface Vitest gate is intentionally sequential for deterministic full-pag
 ## Tier 3: End-to-End Tests
 
 Run `uv run inv interface.e2e`. Use `--server-mode=start` for production-start proof and `--live-backend` when the spec must hit a real Core backend. Invoke manages server lifecycle, browser cache, serial workers, and cleanup. `--spec` also accepts one quoted, space-separated list of spec paths to run several files in one invocation, e.g. `--spec="e2e/specs/a.spec.ts e2e/specs/b.spec.ts"`.
-**Chromium-only policy for deep MVP specs:** mocked, no-live-backend specs proving MVP workflows (proposal/approve, team creation, workflow output retention/reload, error/recovery, codex package retention, groups, docs-and-runs) run Chromium only in CI; local ad hoc `--project=firefox`/`--project=webkit` runs remain available when a change plausibly affects another engine. GitHub CI runs this token-free set (no live backend, no Ollama) as the `mvp-browser` job, separate from `browser-smoke` (still scoped to `e2e/specs/homepage.spec.ts`):
+**Chromium-only policy for deep MVP specs:** mocked, no-live-backend specs proving MVP workflows (proposal/approve, team creation, workflow output retention/reload, error/recovery, codex package retention, groups, docs-and-runs, deployments, organization starters) run Chromium only in CI; local ad hoc `--project=firefox`/`--project=webkit` runs remain available when a change plausibly affects another engine. GitHub CI runs this token-free set (no live backend, no Ollama) as the `mvp-browser` job, separate from `browser-smoke` (still scoped to `e2e/specs/homepage.spec.ts`):
 ```bash
-uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --spec="e2e/specs/workflow-output.direct.spec.ts e2e/specs/proposals.spec.ts e2e/specs/team-creation.spec.ts e2e/specs/workflow-output.reload-review.spec.ts e2e/specs/error-scenarios.spec.ts e2e/specs/codex-package-retention.spec.ts e2e/specs/groups.spec.ts e2e/specs/docs-and-runs.spec.ts"
+uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --spec="e2e/specs/workflow-output.direct.spec.ts e2e/specs/proposals.spec.ts e2e/specs/team-creation.spec.ts e2e/specs/workflow-output.reload-review.spec.ts e2e/specs/error-scenarios.spec.ts e2e/specs/codex-package-retention.spec.ts e2e/specs/groups.spec.ts e2e/specs/docs-and-runs.spec.ts e2e/specs/deployments.spec.ts e2e/specs/organization-starters.spec.ts"
 ```
-**Windows e2e harness rules:** never run two `uv run inv interface.e2e` invocations at once (they share port 3100 and the webserver log, producing unrelated "worker process exited unexpectedly" cascades); specs that assert state after `page.reload()` must wait for the relevant network response with a bounded retry, because the throttled managed dev server can occasionally stall one reload round-trip (see `settings.spec.ts`).
+**Windows e2e harness rules:** never run two `uv run inv interface.e2e` invocations at once (they share port 3100 and the webserver log, producing unrelated "worker process exited unexpectedly" cascades), and never run Vitest during an e2e run (its Interface process cleanup can kill the Vitest process mid-suite); specs that assert state after `page.reload()` must wait for the relevant network response with a bounded retry, because the throttled managed dev server can occasionally stall one reload round-trip (see `settings.spec.ts`).
 
 `catalogue.spec.ts`, `wiring-active-delete.spec.ts`, and `wiring-edit.spec.ts` cover real MVP surfaces (Role Library, Automations "Workflow Builder" behind Advanced Mode) via a documented `test.fixme(...)` rather than a silent `test.skip()`, and are not yet in the CI `mvp-browser` set pending the noted fixture/locator gap.
 

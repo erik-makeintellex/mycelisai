@@ -222,7 +222,7 @@ jobs:
           --project=chromium
           --workers=1
           --server-mode=start
-          --spec="e2e/specs/workflow-output.direct.spec.ts e2e/specs/proposals.spec.ts e2e/specs/team-creation.spec.ts e2e/specs/workflow-output.reload-review.spec.ts e2e/specs/error-scenarios.spec.ts e2e/specs/codex-package-retention.spec.ts e2e/specs/groups.spec.ts e2e/specs/docs-and-runs.spec.ts"
+          --spec="e2e/specs/workflow-output.direct.spec.ts e2e/specs/proposals.spec.ts e2e/specs/team-creation.spec.ts e2e/specs/workflow-output.reload-review.spec.ts e2e/specs/error-scenarios.spec.ts e2e/specs/codex-package-retention.spec.ts e2e/specs/groups.spec.ts e2e/specs/docs-and-runs.spec.ts e2e/specs/deployments.spec.ts e2e/specs/organization-starters.spec.ts"
 
       - name: Upload Browser Artifacts On Failure
         if: failure()
