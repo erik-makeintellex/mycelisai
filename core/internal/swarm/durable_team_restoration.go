@@ -36,12 +36,19 @@ func NewPostgresDurableTeamLoader(db *sql.DB) *PostgresDurableTeamLoader {
 }
 
 func (l *PostgresDurableTeamLoader) LoadRuntimeTeams(ctx context.Context) ([]*TeamManifest, error) {
+	manifests, _, err := l.LoadRuntimeTeamsWithReport(ctx)
+	return manifests, err
+}
+
+// LoadRuntimeTeamsWithReport restores every valid row and quarantines each
+// invalid one as a degradation. Query-level failures still fail the load.
+func (l *PostgresDurableTeamLoader) LoadRuntimeTeamsWithReport(ctx context.Context) ([]*TeamManifest, []DurableTeamRestoreDegradation, error) {
 	if l == nil || l.db == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
-	manifests, seen, err := l.loadPersistedRuntimeTeams(ctx)
+	manifests, seen, degraded, err := l.loadPersistedRuntimeTeams(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	rows, err := l.db.QueryContext(ctx, durableRuntimeTeamsQuery,
 		durableRuntimeTenant,
@@ -55,14 +62,15 @@ func (l *PostgresDurableTeamLoader) LoadRuntimeTeams(ctx context.Context) ([]*Te
 		string(protocol.TeamWorkStatePaused),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("load restorable runtime teams: %w", err)
+		return nil, nil, fmt.Errorf("load restorable runtime teams: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		manifest, scanErr := scanDurableRuntimeTeam(rows)
+		manifest, teamID, scanErr := scanDurableRuntimeTeam(rows)
 		if scanErr != nil {
-			return nil, scanErr
+			degraded = append(degraded, DurableTeamRestoreDegradation{TeamID: teamID, Reason: scanErr.Error()})
+			continue
 		}
 		if _, exists := seen[manifest.ID]; exists {
 			continue
@@ -70,9 +78,9 @@ func (l *PostgresDurableTeamLoader) LoadRuntimeTeams(ctx context.Context) ([]*Te
 		manifests = append(manifests, manifest)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate restorable runtime teams: %w", err)
+		return nil, nil, fmt.Errorf("iterate restorable runtime teams: %w", err)
 	}
-	return manifests, nil
+	return manifests, degraded, nil
 }
 
 const durableRuntimeTenant = "default"
@@ -85,47 +93,57 @@ SELECT team_id, schema_version, manifest_digest, manifest
  WHERE tenant_id=$1
  ORDER BY team_id`
 
-func (l *PostgresDurableTeamLoader) loadPersistedRuntimeTeams(ctx context.Context) ([]*TeamManifest, map[string]struct{}, error) {
+func (l *PostgresDurableTeamLoader) loadPersistedRuntimeTeams(ctx context.Context) ([]*TeamManifest, map[string]struct{}, []DurableTeamRestoreDegradation, error) {
 	rows, err := l.db.QueryContext(ctx, persistedRuntimeTeamsQuery, durableRuntimeTenant)
 	if err != nil {
-		return nil, nil, fmt.Errorf("load persisted runtime team manifests: %w", err)
+		return nil, nil, nil, fmt.Errorf("load persisted runtime team manifests: %w", err)
 	}
 	defer rows.Close()
 
 	manifests := make([]*TeamManifest, 0)
 	seen := map[string]struct{}{}
+	degraded := make([]DurableTeamRestoreDegradation, 0)
 	for rows.Next() {
 		var teamID, schemaVersion, storedDigest string
 		var raw []byte
 		if err := rows.Scan(&teamID, &schemaVersion, &storedDigest, &raw); err != nil {
-			return nil, nil, fmt.Errorf("scan persisted runtime team manifest: %w", err)
+			degraded = append(degraded, DurableTeamRestoreDegradation{Reason: fmt.Sprintf("scan persisted runtime team manifest: %v", err)})
+			continue
 		}
-		if schemaVersion != "v1" {
-			return nil, nil, fmt.Errorf("persisted runtime team %s has unsupported schema %q", teamID, schemaVersion)
-		}
-		var manifest TeamManifest
-		if err := json.Unmarshal(raw, &manifest); err != nil {
-			return nil, nil, fmt.Errorf("decode persisted runtime team %s: %w", teamID, err)
-		}
-		canonical, err := json.Marshal(&manifest)
+		manifest, err := decodePersistedRuntimeTeam(teamID, schemaVersion, storedDigest, raw)
 		if err != nil {
-			return nil, nil, fmt.Errorf("canonicalize persisted runtime team %s: %w", teamID, err)
+			degraded = append(degraded, DurableTeamRestoreDegradation{TeamID: strings.TrimSpace(teamID), Reason: err.Error()})
+			continue
 		}
-		digest := fmt.Sprintf("sha256:%x", sha256.Sum256(canonical))
-		if storedDigest != digest {
-			return nil, nil, fmt.Errorf("persisted runtime team %s failed digest validation", teamID)
-		}
-		teamID = strings.TrimSpace(teamID)
-		if teamID == "" || strings.TrimSpace(manifest.ID) != teamID {
-			return nil, nil, fmt.Errorf("persisted runtime team identity mismatch: row=%q manifest=%q", teamID, manifest.ID)
-		}
-		seen[teamID] = struct{}{}
-		manifests = append(manifests, &manifest)
+		seen[manifest.ID] = struct{}{}
+		manifests = append(manifests, manifest)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, nil, fmt.Errorf("iterate persisted runtime team manifests: %w", err)
+		return nil, nil, nil, fmt.Errorf("iterate persisted runtime team manifests: %w", err)
 	}
-	return manifests, seen, nil
+	return manifests, seen, degraded, nil
+}
+
+func decodePersistedRuntimeTeam(teamID, schemaVersion, storedDigest string, raw []byte) (*TeamManifest, error) {
+	if schemaVersion != "v1" {
+		return nil, fmt.Errorf("persisted runtime team %s has unsupported schema %q", teamID, schemaVersion)
+	}
+	var manifest TeamManifest
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		return nil, fmt.Errorf("decode persisted runtime team %s: %w", teamID, err)
+	}
+	digest, err := runtimeTeamManifestDigest(&manifest)
+	if err != nil {
+		return nil, fmt.Errorf("canonicalize persisted runtime team %s: %w", teamID, err)
+	}
+	if storedDigest != digest {
+		return nil, fmt.Errorf("persisted runtime team %s failed digest validation", teamID)
+	}
+	teamID = strings.TrimSpace(teamID)
+	if teamID == "" || strings.TrimSpace(manifest.ID) != teamID {
+		return nil, fmt.Errorf("persisted runtime team identity mismatch: row=%q manifest=%q", teamID, manifest.ID)
+	}
+	return &manifest, nil
 }
 
 func (l *PostgresDurableTeamLoader) SaveRuntimeTeam(ctx context.Context, manifest *TeamManifest) error {
@@ -238,16 +256,16 @@ type durableTeamScanner interface {
 	Scan(dest ...any) error
 }
 
-func scanDurableRuntimeTeam(scanner durableTeamScanner) (*TeamManifest, error) {
+func scanDurableRuntimeTeam(scanner durableTeamScanner) (*TeamManifest, string, error) {
 	var teamID, name, purpose, coordinator string
 	var allowedJSON, requiredJSON []byte
 	if err := scanner.Scan(&teamID, &name, &purpose, &allowedJSON, &requiredJSON, &coordinator); err != nil {
-		return nil, fmt.Errorf("scan restorable runtime team: %w", err)
+		return nil, "", fmt.Errorf("scan restorable runtime team: %w", err)
 	}
 
 	tools, err := mergeDurableTeamTools(allowedJSON, requiredJSON)
 	if err != nil {
-		return nil, fmt.Errorf("decode restorable runtime team %s: %w", teamID, err)
+		return nil, teamID, fmt.Errorf("decode restorable runtime team %s: %w", teamID, err)
 	}
 	role := strings.TrimSpace(coordinator)
 	if role == "" {
@@ -261,10 +279,10 @@ func scanDurableRuntimeTeam(scanner durableTeamScanner) (*TeamManifest, error) {
 		"system_prompt": durableTeamSystemPrompt(teamID, purpose),
 	})
 	if manifest == nil {
-		return nil, fmt.Errorf("restorable runtime team has invalid ID %q", teamID)
+		return nil, teamID, fmt.Errorf("restorable runtime team has invalid ID %q", teamID)
 	}
 	manifest.Description = firstNonEmptyRuntimeString(purpose, manifest.Description)
-	return manifest, nil
+	return manifest, teamID, nil
 }
 
 func mergeDurableTeamTools(values ...[]byte) ([]string, error) {

@@ -2,6 +2,7 @@ package swarm
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -40,13 +41,26 @@ func (s *Soma) HandleCreateTeam(w http.ResponseWriter, r *http.Request) {
 	if manifest.Type == "" {
 		manifest.Type = TeamTypeAction
 	}
-	if err := s.SpawnTeam(&manifest); err != nil {
-		http.Error(w, err.Error(), http.StatusConflict)
+	existing, err := s.spawnTeam(s.ctx, &manifest)
+	if err != nil {
+		log.Printf("ERR: spawn runtime team %s: %v", manifest.ID, err)
+		switch {
+		case errors.Is(err, ErrRuntimeTeamManifestConflict):
+			http.Error(w, "Runtime team already runs a different manifest", http.StatusConflict)
+		case errors.Is(err, ErrRuntimeTeamInvalid):
+			http.Error(w, "Invalid runtime team manifest", http.StatusBadRequest)
+		default:
+			http.Error(w, "Runtime team unavailable", http.StatusServiceUnavailable)
+		}
 		return
 	}
+	status, code := "spawned", http.StatusCreated
+	if existing {
+		status, code = "already_exists", http.StatusOK
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"status": "spawned", "id": manifest.ID})
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]string{"status": status, "id": manifest.ID})
 }
 
 func (s *Soma) HandleListTeams(w http.ResponseWriter, _ *http.Request) {

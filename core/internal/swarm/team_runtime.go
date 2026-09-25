@@ -12,8 +12,23 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-// Start activates the Team's subscriptions and member runtime.
+// Start activates the Team's subscriptions and member runtime. Start holds the
+// team lock so a concurrent Stop observes either no runtime or all of it; a
+// failed or stopped Start releases every subscription and agent it created.
 func (t *Team) Start() error {
+	t.mu.Lock()
+	err := t.startLocked()
+	t.mu.Unlock()
+	if err != nil {
+		t.Stop()
+	}
+	return err
+}
+
+func (t *Team) startLocked() error {
+	if t.stopped {
+		return fmt.Errorf("team %s was stopped before start", t.Manifest.ID)
+	}
 	log.Printf("Team [%s] (%s) Online.", t.Manifest.Name, t.Manifest.Type)
 	t.normalizeRuntimeProviderRouting()
 
@@ -168,13 +183,17 @@ func (t *Team) normalizeRuntimeProviderRouting() {
 	}
 }
 
-// Stop shuts down the team and its scheduler (if any).
+// Stop shuts down the team and its scheduler (if any). It is idempotent and
+// permanent: a stopped team never starts again.
 func (t *Team) Stop() {
 	t.mu.Lock()
+	t.stopped = true
 	subscriptions := append([]*nats.Subscription(nil), t.subscriptions...)
 	agents := append([]*Agent(nil), t.agents...)
+	scheduler := t.scheduler
 	t.subscriptions = nil
 	t.agents = nil
+	t.scheduler = nil
 	t.mu.Unlock()
 	for _, subscription := range subscriptions {
 		if subscription != nil {
@@ -186,8 +205,8 @@ func (t *Team) Stop() {
 			agent.Stop()
 		}
 	}
-	if t.scheduler != nil {
-		t.scheduler.Stop()
+	if scheduler != nil {
+		scheduler.Stop()
 	}
 	if t.cancel != nil {
 		t.cancel()

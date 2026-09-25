@@ -66,6 +66,11 @@ func (s *Soma) ActivateBlueprint(bp *protocol.MissionBlueprint, sensorConfigs ma
 		}
 	}
 
+	// spawnMu serializes activation with SpawnTeamContext and StopTeamDurably so
+	// a same-id spawn cannot overwrite (and orphan) an activated team.
+	s.spawnMu.Lock()
+	defer s.spawnMu.Unlock()
+
 	// First pass: idempotency check against currently active teams.
 	// Keep lock scope short so team startups can happen in parallel.
 	s.mu.RLock()
@@ -150,6 +155,7 @@ func (s *Soma) ActivateBlueprint(bp *protocol.MissionBlueprint, sensorConfigs ma
 			}
 
 			if err := team.Start(); err != nil {
+				team.Stop()
 				outcomes <- startOutcome{err: fmt.Sprintf("team %s: %v", m.ID, err)}
 				return
 			}

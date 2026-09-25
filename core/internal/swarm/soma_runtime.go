@@ -27,12 +27,7 @@ func (s *Soma) Start() error {
 	}
 	manifests = s.mergeDurableTeamManifests(manifests)
 	for _, m := range manifests {
-		team := NewTeam(s.applyProviderPolicy(m), s.nc, s.brain, s.toolExecutor)
-		s.configureTeam(team, toolDescs)
-		s.teams[m.ID] = team
-		if err := team.Start(); err != nil {
-			log.Printf("ERR: Failed to start team %s: %v", m.ID, err)
-		}
+		s.startBootTeam(m, toolDescs)
 	}
 
 	if _, err = s.nc.Subscribe(protocol.TopicGlobalInputUser, s.handleGlobalInput); err != nil {
@@ -42,6 +37,26 @@ func (s *Soma) Start() error {
 		return fmt.Errorf("failed to start Axon: %w", err)
 	}
 	return nil
+}
+
+// startBootTeam registers a standing or restored team only after it starts;
+// a failure releases its runtime and is recorded as a restoration degradation.
+func (s *Soma) startBootTeam(manifest *TeamManifest, toolDescs map[string]string) {
+	// The loaded manifest is the persisted approved form; digest it before
+	// policy and Start so a post-restart identical retry stays idempotent.
+	digest, _ := runtimeTeamManifestDigest(manifest)
+	effective := s.applyProviderPolicy(manifest)
+	team := NewTeam(effective, s.nc, s.brain, s.toolExecutor)
+	team.spawnDigest = digest
+	s.configureTeam(team, toolDescs)
+	if err := team.Start(); err != nil {
+		team.Stop()
+		s.recordRestorationDegradation(manifest.ID, fmt.Sprintf("start failed: %v", err))
+		return
+	}
+	s.mu.Lock()
+	s.teams[manifest.ID] = team
+	s.mu.Unlock()
 }
 
 func (s *Soma) mergeDurableTeamManifests(standing []*TeamManifest) []*TeamManifest {
@@ -61,9 +76,9 @@ func (s *Soma) mergeDurableTeamManifests(standing []*TeamManifest) []*TeamManife
 		return merged
 	}
 
-	restored, err := s.durableTeamLoader.LoadRuntimeTeams(s.ctx)
+	restored, err := s.loadDurableTeams()
 	if err != nil {
-		log.Printf("WARN: Failed to restore durable runtime teams: %v", err)
+		s.recordRestorationDegradation("", fmt.Sprintf("load durable runtime teams: %v", err))
 		return merged
 	}
 	for _, manifest := range restored {
@@ -79,6 +94,18 @@ func (s *Soma) mergeDurableTeamManifests(standing []*TeamManifest) []*TeamManife
 		log.Printf("Soma restoring durable runtime team: %s", manifest.ID)
 	}
 	return merged
+}
+
+func (s *Soma) loadDurableTeams() ([]*TeamManifest, error) {
+	reporter, ok := s.durableTeamLoader.(DurableTeamRestoreReporter)
+	if !ok {
+		return s.durableTeamLoader.LoadRuntimeTeams(s.ctx)
+	}
+	restored, degraded, err := reporter.LoadRuntimeTeamsWithReport(s.ctx)
+	for _, item := range degraded {
+		s.recordRestorationDegradation(item.TeamID, item.Reason)
+	}
+	return restored, err
 }
 
 func (s *Soma) configureTeam(team *Team, toolDescs map[string]string) {
@@ -114,42 +141,62 @@ func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
 }
 
 // SpawnTeamContext creates a team within the caller's acknowledgement boundary.
+// An identical same-id retry succeeds without a second Start or save; a
+// different manifest for a running id fails with ErrRuntimeTeamManifestConflict.
 func (s *Soma) SpawnTeamContext(ctx context.Context, manifest *TeamManifest) error {
+	_, err := s.spawnTeam(ctx, manifest)
+	return err
+}
+
+// spawnTeam reports existing=true when an identical team was already running.
+func (s *Soma) spawnTeam(ctx context.Context, manifest *TeamManifest) (bool, error) {
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("spawn team before acknowledgement: %w", err)
+		return false, fmt.Errorf("spawn team before acknowledgement: %w: %w", ErrRuntimeTeamUnavailable, err)
+	}
+	if manifest == nil || strings.TrimSpace(manifest.ID) == "" {
+		return false, fmt.Errorf("spawn team: team identity is required: %w", ErrRuntimeTeamInvalid)
 	}
 	s.spawnMu.Lock()
 	defer s.spawnMu.Unlock()
 
-	s.mu.RLock()
-	if _, exists := s.teams[manifest.ID]; exists {
-		s.mu.RUnlock()
-		return fmt.Errorf("team %s already exists", manifest.ID)
-	}
-	s.mu.RUnlock()
-
 	effectiveManifest := s.applyProviderPolicy(manifest)
+	approved, digest, err := approvedRuntimeTeamManifest(effectiveManifest)
+	if err != nil {
+		return false, fmt.Errorf("digest team %s manifest: %w: %w", manifest.ID, ErrRuntimeTeamInvalid, err)
+	}
+	s.mu.RLock()
+	existing := s.teams[effectiveManifest.ID]
+	s.mu.RUnlock()
+	if existing != nil {
+		if sameRunningManifest(existing, digest) {
+			return true, nil
+		}
+		return false, fmt.Errorf("team %s: %w", effectiveManifest.ID, ErrRuntimeTeamManifestConflict)
+	}
+
 	team := NewTeam(effectiveManifest, s.nc, s.brain, s.toolExecutor)
+	team.spawnDigest = digest
 	if s.internalTools != nil {
 		s.configureTeam(team, s.internalTools.ListDescriptions())
 	}
 	if err := team.Start(); err != nil {
-		return err
+		team.Stop()
+		return false, fmt.Errorf("%w: %w", ErrRuntimeTeamUnavailable, err)
 	}
 	if s.durableTeamStore != nil {
 		persistCtx, cancel := context.WithTimeout(ctx, runtimeTeamPersistenceTimeout)
-		err := s.durableTeamStore.SaveRuntimeTeam(persistCtx, effectiveManifest)
+		err := s.durableTeamStore.SaveRuntimeTeam(persistCtx, approved)
 		cancel()
 		if err != nil {
 			team.Stop()
-			return fmt.Errorf("persist team %s before acknowledgement: %w", effectiveManifest.ID, err)
+			return false, fmt.Errorf("persist team %s before acknowledgement: %w: %w", effectiveManifest.ID, ErrRuntimeTeamUnavailable, err)
 		}
 	}
 	s.mu.Lock()
 	s.teams[effectiveManifest.ID] = team
 	s.mu.Unlock()
 	log.Printf("Soma Spawned New Team: %s", effectiveManifest.ID)
-	return nil
+	return false, nil
 }
 
 // ListTeams returns a snapshot of active teams.
@@ -175,21 +222,32 @@ func (s *Soma) StopTeam(teamID string) bool {
 
 // StopTeamDurably removes the persisted manifest before stopping the runtime
 // instance so a storage failure cannot make a deleted team reappear on restart.
+// spawnMu serializes it with same-id spawns; the bounded durable delete runs
+// without holding s.mu so reads are never blocked behind storage.
 func (s *Soma) StopTeamDurably(teamID string) (bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	teamID = strings.TrimSpace(teamID)
+	s.spawnMu.Lock()
+	defer s.spawnMu.Unlock()
+	s.mu.RLock()
 	team, exists := s.teams[teamID]
+	s.mu.RUnlock()
 	if !exists {
 		return false, nil
 	}
 	if s.durableTeamStore != nil {
-		if err := s.durableTeamStore.DeleteRuntimeTeam(s.ctx, teamID); err != nil {
+		deleteCtx, cancel := context.WithTimeout(s.ctx, runtimeTeamPersistenceTimeout)
+		err := s.durableTeamStore.DeleteRuntimeTeam(deleteCtx, teamID)
+		cancel()
+		if err != nil {
 			return true, err
 		}
 	}
+	s.mu.Lock()
+	if s.teams[teamID] == team {
+		delete(s.teams, teamID)
+	}
+	s.mu.Unlock()
 	team.Stop()
-	delete(s.teams, teamID)
 	log.Printf("Soma stopped Team: %s", teamID)
 	return true, nil
 }

@@ -100,7 +100,11 @@ test.describe("Active work TeamWorkItem API contract", () => {
       "BLOCKED: active-work API live proof needs PLAYWRIGHT_TEAM_WORK_API=1 or PLAYWRIGHT_ACTIVE_WORK_API_LIVE=1 with local Core and migrated team-work tables.",
     );
 
-    const teamId = process.env.PLAYWRIGHT_TEAM_WORK_API_TEAM_ID ?? "local-source-proof-team";
+    const teamId = process.env.PLAYWRIGHT_TEAM_WORK_API_TEAM_ID?.trim() ?? "";
+    test.skip(
+      !teamId,
+      "BLOCKED: active-work API live proof needs PLAYWRIGHT_TEAM_WORK_API_TEAM_ID naming a running runtime team; Core returns 404 for work on teams that are not running.",
+    );
     const initialResponse = await getTeamWork(request, teamId);
     const initialBody = await initialResponse.text();
     await skipWhenLivePrerequisiteMissing(initialResponse, initialBody);

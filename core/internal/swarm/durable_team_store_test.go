@@ -46,22 +46,74 @@ func TestPostgresDurableTeamLoaderRestoresExactManifest(t *testing.T) {
 	}
 }
 
-func TestPostgresDurableTeamLoaderRejectsDigestMismatch(t *testing.T) {
+func TestPostgresDurableTeamLoaderQuarantinesCorruptRows(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	raw, _ := encodedManifest(t, completeDurableManifest())
+	good := completeDurableManifest()
+	raw, digest := encodedManifest(t, good)
+	other := manifestRevision("other-team", "1.0.0", "sha256:profile-a")
+	otherRaw, otherDigest := encodedManifest(t, other)
 	mock.ExpectQuery("SELECT team_id, schema_version, manifest_digest, manifest").
 		WithArgs(durableRuntimeTenant).
 		WillReturnRows(sqlmock.NewRows([]string{"team_id", "schema_version", "manifest_digest", "manifest"}).
-			AddRow("delivery-team", "v1", "sha256:tampered", raw))
+			AddRow(good.ID, "v1", digest, raw).
+			AddRow("tampered-team", "v1", "sha256:tampered", raw).
+			AddRow(other.ID, "v1", otherDigest, otherRaw))
+	mock.ExpectQuery("WITH restorable AS").
+		WithArgs(legacyRuntimeTeamArgs()...).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"team_id", "name", "purpose", "allowed_capabilities", "capability_requirements", "coordinator_profile",
+		}).AddRow("legacy-bad", "Legacy", "Broken tools", []byte(`{not-json`), []byte(`[]`), ""))
 
-	_, err = NewPostgresDurableTeamLoader(db).LoadRuntimeTeams(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "digest validation") {
-		t.Fatalf("error = %v, want digest validation failure", err)
+	got, degraded, err := NewPostgresDurableTeamLoader(db).LoadRuntimeTeamsWithReport(context.Background())
+	if err != nil {
+		t.Fatalf("LoadRuntimeTeamsWithReport: %v", err)
 	}
+	if len(got) != 2 || got[0].ID != good.ID || got[1].ID != other.ID {
+		t.Fatalf("restored = %#v, want the two valid rows", got)
+	}
+	if len(degraded) != 2 || degraded[0].TeamID != "tampered-team" || !strings.Contains(degraded[0].Reason, "digest validation") ||
+		degraded[1].TeamID != "legacy-bad" {
+		t.Fatalf("degradations = %#v", degraded)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSomaRecordsLoaderRestorationDegradations(t *testing.T) {
+	_, nc := startTestNATS(t)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, nil)
+	soma.SetDurableTeamLoader(reportingLoader{
+		manifests: []*TeamManifest{manifestRevision("kept-team", "1.0.0", "sha256:profile-a")},
+		degraded:  []DurableTeamRestoreDegradation{{TeamID: "bad-team", Reason: "unsupported schema"}},
+	})
+	if err := soma.Start(); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	t.Cleanup(soma.Shutdown)
+	if ids := soma.ListTeams(); len(ids) != 1 || ids[0].ID != "kept-team" {
+		t.Fatalf("restored = %#v", ids)
+	}
+	if got := soma.RestorationDegradations(); len(got) != 1 || got[0].TeamID != "bad-team" {
+		t.Fatalf("degradations = %#v", got)
+	}
+}
+
+type reportingLoader struct {
+	manifests []*TeamManifest
+	degraded  []DurableTeamRestoreDegradation
+}
+
+func (l reportingLoader) LoadRuntimeTeams(context.Context) ([]*TeamManifest, error) {
+	return l.manifests, nil
+}
+
+func (l reportingLoader) LoadRuntimeTeamsWithReport(context.Context) ([]*TeamManifest, []DurableTeamRestoreDegradation, error) {
+	return l.manifests, l.degraded, nil
 }
 
 func TestPostgresDurableTeamStoreIsIdempotentAndRejectsReplacement(t *testing.T) {

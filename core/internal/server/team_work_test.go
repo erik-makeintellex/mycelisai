@@ -13,6 +13,9 @@ func TestHandleCreateTeamWork_DefaultsCreateTeamToNew(t *testing.T) {
 	opt, mock := withDB(t)
 	s := newTestServer(opt)
 	now := time.Now().UTC()
+	mock.ExpectQuery("SELECT EXISTS \\(SELECT 1 FROM runtime_team_manifests").
+		WithArgs("research-team").
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
 	mock.ExpectQuery("INSERT INTO team_work_items").
 		WillReturnRows(sqlmock.NewRows([]string{"created_at", "updated_at"}).AddRow(now, now))
 

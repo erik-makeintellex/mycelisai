@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -64,6 +66,15 @@ func (s *AdminServer) HandleCreateTeamWork(w http.ResponseWriter, r *http.Reques
 	item := protocol.NormalizeTeamWorkItem(req)
 	if err := protocol.ValidateTeamWorkItem(item); err != nil {
 		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	known, err := s.teamKnownForWork(r.Context(), teamID)
+	if err != nil {
+		respondAPIError(w, "Team registry unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	if !known {
+		respondAPIError(w, "Team not found", http.StatusNotFound)
 		return
 	}
 	if err := s.insertTeamWorkItemDB(r.Context(), &item); err != nil {
@@ -138,6 +149,21 @@ func (s *AdminServer) HandleCreateTeamInteraction(w http.ResponseWriter, r *http
 		return
 	}
 	respondAPIJSON(w, http.StatusCreated, protocol.NewAPISuccess(item))
+}
+
+// teamKnownForWork fails closed: work is accepted only for a running team or
+// one with a persisted runtime manifest. Lookup failure is an error, not "no".
+func (s *AdminServer) teamKnownForWork(ctx context.Context, teamID string) (bool, error) {
+	if s.Soma != nil && s.Soma.HasTeam(teamID) {
+		return true, nil
+	}
+	db := s.getDB()
+	if db == nil {
+		return false, errors.New("database not available")
+	}
+	var exists bool
+	err := db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM runtime_team_manifests WHERE tenant_id='default' AND team_id=$1)`, teamID).Scan(&exists)
+	return exists, err
 }
 
 func teamWorkPathIDs(r *http.Request) (string, string) {

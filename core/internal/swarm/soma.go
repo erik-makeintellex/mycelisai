@@ -37,6 +37,8 @@ type Soma struct {
 	durableTeamLoader  DurableTeamLoader
 	durableTeamStore   DurableTeamStore
 	commandReceipts    CommandReceiptStore
+	// restoreDegradations lists boot restoration failures, guarded by mu.
+	restoreDegradations []DurableTeamRestoreDegradation
 }
 
 // NewSoma creates a new Soma instance with composite tool support.

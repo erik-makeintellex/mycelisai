@@ -56,6 +56,10 @@ type Team struct {
 	commandReceipts     CommandReceiptStore
 	subscriptions       []*nats.Subscription
 	agents              []*Agent
+	stopped             bool
+	// spawnDigest is the canonical digest of the effective manifest captured
+	// before Start mutates runtime routing; same-id retries compare against it.
+	spawnDigest string
 }
 
 type teamCommandCorrelation struct {

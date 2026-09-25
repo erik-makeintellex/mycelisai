@@ -194,6 +194,12 @@ func (s *AdminServer) buildServiceStatuses(ctx context.Context) []ServiceStatus 
 	}
 	services = append(services, groupBusStatus)
 
+	// Durable runtime-team restoration: degraded when stored teams could not be restored.
+	if s.Soma != nil {
+		status, detail := s.Soma.RestorationHealth()
+		services = append(services, ServiceStatus{Name: "runtime_teams", Status: status, Detail: detail})
+	}
+
 	return services
 }
 
