@@ -1,7 +1,7 @@
 # MYC-RC-003 Proof Envelope Delivery Plan
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.3 Convergence PRD](mycelis_soma_updated_prd_v8_3_current_state_convergence.md)
 
-> Status: `ACTIVE`
+> Status: `ACTIVE` - RC-003A backend (`85a5cfa9`) and UI proof readback (`85a5cfa9`) landed; acceptance waits on a green full Windows Chromium run from committed state after RC-004E settles the rail.
 > Date: 2026-05-29
 > Purpose: deliver the minimum universal proof envelope for retained outputs, beginning with Codex task packages.
 
