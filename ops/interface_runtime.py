@@ -588,7 +588,7 @@ def test_coverage(c):
     help={
         "headed": "Open a visible browser window.",
         "project": "Optional Playwright project (chromium, firefox, webkit, mobile-chromium).",
-        "spec": "Optional Playwright spec path or glob.",
+        "spec": "Optional Playwright spec path or glob. Pass a single quoted, space-separated string to run several spec files in one invocation, e.g. --spec=\"e2e/specs/a.spec.ts e2e/specs/b.spec.ts\".",
         "live_backend": "Enable specs that require a real Core backend and authenticated UI proxying.",
         "workers": "Optional Playwright worker count override for stability-sensitive runs.",
         "server_mode": "Server mode for the managed UI server (dev or start, defaults to dev).",

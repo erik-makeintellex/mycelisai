@@ -211,13 +211,12 @@ The Interface Vitest gate is intentionally sequential for deterministic full-pag
 
 ## Tier 3: End-to-End Tests
 
-Run:
-
+Run `uv run inv interface.e2e`. Use `--server-mode=start` for production-start proof and `--live-backend` when the spec must hit a real Core backend. Invoke manages server lifecycle, browser cache, serial workers, and cleanup. `--spec` also accepts one quoted, space-separated list of spec paths to run several files in one invocation, e.g. `--spec="e2e/specs/a.spec.ts e2e/specs/b.spec.ts"`.
+**Chromium-only policy for deep MVP specs:** mocked, no-live-backend specs proving MVP workflows (proposal/approve, team creation, workflow output retention/reload, error/recovery, codex package retention, groups, docs-and-runs) run Chromium only in CI; local ad hoc `--project=firefox`/`--project=webkit` runs remain available when a change plausibly affects another engine. GitHub CI runs this token-free set (no live backend, no Ollama) as the `mvp-browser` job, separate from `browser-smoke` (still scoped to `e2e/specs/homepage.spec.ts`):
 ```bash
-uv run inv interface.e2e
+uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --spec="e2e/specs/workflow-output.direct.spec.ts e2e/specs/proposals.spec.ts e2e/specs/team-creation.spec.ts e2e/specs/workflow-output.reload-review.spec.ts e2e/specs/error-scenarios.spec.ts e2e/specs/codex-package-retention.spec.ts e2e/specs/groups.spec.ts e2e/specs/docs-and-runs.spec.ts"
 ```
-
-Use `--server-mode=start` for production-start proof and `--live-backend` when the spec must hit a real Core backend. Invoke manages server lifecycle, browser cache, serial workers, and cleanup.
+`catalogue.spec.ts`, `wiring-active-delete.spec.ts`, and `wiring-edit.spec.ts` cover real MVP surfaces (Role Library, Automations "Workflow Builder" behind Advanced Mode) via a documented `test.fixme(...)` rather than a silent `test.skip()`, and are not yet in the CI `mvp-browser` set pending the noted fixture/locator gap.
 
 ## Tier 4: Integration Tests
 
@@ -277,6 +276,7 @@ Deployment proof contracts:
 - Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof.
 - Kubernetes / Helm clustered deployment reached through the real ingress, remote host, IP, or hostname; the browser opens the UI through the same operator-facing address the delivered environment will actually use.
 - when the validation target is clustered deployment, run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`; Compose remains rapid local development/proof only.
+- clustered Kubernetes proof: `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` is the static chart gate that must pass before any live cluster check.
 - when the validation target is local Kubernetes, prefer `k3d`; fallback with `MYCELIS_K8S_BACKEND=kind`.
 - use `MYCELIS_K8S_TEXT_ENDPOINT` and optional `MYCELIS_K8S_MEDIA_ENDPOINT`, an explicit reachable AI host instead of a chart-baked or localhost default, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`; Compose may relay `MYCELIS_COMPOSE_OLLAMA_HOST` through the WSL host.
 - `MYCELIS_K8S_VALUES_FILE` may select `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`.

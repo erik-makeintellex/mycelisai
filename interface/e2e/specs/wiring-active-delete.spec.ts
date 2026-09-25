@@ -18,7 +18,11 @@ test.describe('Wiring Active Flow Guardrails', () => {
     test('wiring route is reachable via automations tab', async ({ page }) => {
         const opened = await openWiringTab(page);
         if (!opened) {
-            test.skip();
+            // Workflow Builder is a live MVP tab in Automations (gated behind
+            // Advanced Mode). This fixture does not enable Advanced Mode, so the
+            // tab is currently unreachable here. fixme keeps the gap visible
+            // instead of a silent skip until the fixture flips advancedMode on.
+            test.fixme(true, 'Fixture does not enable Advanced Mode, so the Workflow Builder tab never renders for this spec.');
             return;
         }
         await expect(page.getByRole('button', { name: 'Workflow Builder' })).toBeVisible();
@@ -27,7 +31,7 @@ test.describe('Wiring Active Flow Guardrails', () => {
     test('wiring path does not crash on load', async ({ page }) => {
         const opened = await openWiringTab(page);
         if (!opened) {
-            test.skip();
+            test.fixme(true, 'Fixture does not enable Advanced Mode, so the Workflow Builder tab never renders for this spec.');
             return;
         }
         await expect(page.locator('nextjs-portal')).not.toBeVisible();
