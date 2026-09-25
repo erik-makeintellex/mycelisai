@@ -7,6 +7,7 @@
 
 - [Endpoints](#endpoints)
 - [Deployments](#deployments)
+- [View Config](#view-config)
 - [Provider Auth Notes](#provider-auth-notes)
 
 ## Endpoints
@@ -38,6 +39,7 @@
 | `/api/v1/teams/detail` | GET | Legacy team detail (raw JSON, matches missions by name, declared model only). Use `/api/v1/deployments` for new work |
 | `/api/v1/deployments` | GET | Deployments aggregate across standing teams, mission teams, groups, and planned departments; filters `kind`, `organization_id`, `state`. See [Deployments](#deployments) |
 | `/api/v1/deployments/{kind}/{id}` | GET | One deployment record with members expanded; `404` when unknown, `503` when its source is unavailable |
+| `/api/v1/config/{teams\|groups\|organizations\|templates}/{id}` | GET | Read-only, redacted config document (`?format=yaml\|json`) that `config_ref.path` resolves. See [View Config](#view-config) |
 | `/api/swarm/teams` | POST | Create team via Soma |
 | `/api/swarm/command` | POST | Send command to specific team |
 | `/api/v1/swarm/broadcast` | POST | Fan out directive to ALL active teams |
@@ -195,6 +197,42 @@ Filters: `kind` and `state` must be known values (`400` otherwise); `kind` also 
 Degradation: every source reports `{source, status, detail, count}` in `sources`, where `source` is `standing_teams`, `mission_teams`, `groups`, `organizations`, or `outputs` and `status` is `ok`, `degraded`, `unavailable`, or `restricted`. A failing or missing source never fails the response. With no database, standing teams and planned departments still return, and `mission_teams`, `groups`, and `outputs` report `unavailable`. Raw database errors are logged, not returned.
 
 `GET /api/v1/deployments/{kind}/{id}` returns `{"ok": true, "data": {"deployment": {...}, "sources": [...]}}`. It returns `400` for an unknown kind, `404` when the record does not exist, and `503` when the record's source is unavailable or restricted. `/api/v1/teams/detail` stays for compatibility and is legacy.
+
+## View Config
+
+`GET /api/v1/config/{kind}/{id}?format=yaml|json` is the read-only View config surface (RC-004F). `{kind}` is `teams`, `groups`, `organizations`, or `templates`; it is the `config_ref.path` on every Deployments record. `format` defaults to `yaml`.
+
+```json
+{"ok": true, "data": {
+  "kind": "template", "id": "starter-secretive", "format": "yaml",
+  "document": "id: starter-secretive
+provider_policy:
+  openai:
+    api_key: ${env:OPENAI_API_KEY}
+    api_key_env: OPENAI_API_KEY
+",
+  "source": "file", "source_path": "templates/starters/secretive.yaml",
+  "redactions": ["provider_policy.openai.api_key"],
+  "generated_at": "2026-09-25T17:58:09Z"}}
+```
+
+| Kind | Resolves | `source` | Document |
+| :--- | :--- | :--- | :--- |
+| `teams` | A live Soma team by runtime id (standing teams, or a live mission team by `runtime_id`), else a mission team by `teams.id` | `runtime`, or `database` for a mission team that is not live | `kind: TeamManifest` with `metadata` (id, origin, mission, runtime id), `spec` (the manifest), and `members[].resolved {profile, provider, model, provider_origin, provider_status}` from the cognitive router |
+| `groups` | `collaboration_groups` by id | `database` | `kind: CollaborationGroup` with `spec` in the shape group create/update accepts |
+| `organizations` | The organization home | `database` (`runtime` for the in-memory store) | `kind: Organization`; `spec` is the home payload, including `template_id`, `delivery_defaults`, AI engine, and response contract settings |
+| `templates` | A top-level bundle, then `starters/`, matched by bundle `id` | `file`, with `source_path` relative to the templates directory | The bundle file as loaded, every field kept |
+
+`document` is text in the requested format; `redactions` lists the dotted paths (`a.b[0].c`) of every value that was hidden. Documents are built from declared fields and ids only: team members show provider and model ids, never provider blocks, endpoints, or keys.
+
+Redaction is server-side and always runs before rendering:
+
+- Keys are matched case- and separator-insensitively at any depth (`apiKey`, `API-KEY`, and `OPENAI_API_KEY` are the same). A key is secret when any segment is `password`, `passwd`, `secret(s)`, `credential(s)`, `authorization`, `bearer`, `apikey`, or `privatekey`; when its last segment is `key` or `token`; or when it ends in `api_key`, `private_key`, `client_secret`, `password`, `token`, and similar. `max_tokens`, `token_budget_profile`, and other look-alikes stay visible.
+- A secret value becomes `${env:NAME}` when a sibling `<key>_env` names a valid environment variable, otherwise `<redacted>`. Numbers, maps, and lists under a secret key are hidden too. Booleans (`secret: true`), nulls, and empty strings carry no secret and stay as they are.
+- References stay visible: `*_env`, `*_env_var`, and `*_ref` keys show the variable or reference name. A reference whose value is not a plain name or looks like a credential is redacted.
+- Values under any key are scanned for credential shapes: `Bearer`/`Basic` tokens, known key prefixes (`sk-`, `ghp_`, `github_pat_`, `xoxb-`, `AKIA`, `AIza`, `hf_`, and others), JWTs, PEM private keys, URL passwords (`postgres://user:<redacted>@host`), sensitive URL query parameters, `NAME=value` assignments of secret names, and the argument after a sensitive CLI flag (`--api-key <redacted>`).
+
+Access follows the underlying resource: `groups` requires the root admin role with `groups:read` (`403` otherwise), as `/api/v1/groups` does; `teams`, `organizations`, and `templates` need an authenticated operator. The interface keeps View config behind Advanced mode. Errors use the normalized envelope: `400` for an unknown kind or format, `401` without an identity, `404` for an unknown id, `503` when the runtime or database behind the kind is unavailable. Raw database errors are logged, not returned.
 
 ## Provider Auth Notes
 

@@ -156,6 +156,18 @@ Beginner UI should present:
 
 Advanced views may expose config origin, inheritance, and overrides.
 
+### Config exposure (View config)
+
+Advanced operators read effective config through `GET /api/v1/config/{teams|groups|organizations|templates}/{id}` ([API Reference: View Config](../API_REFERENCE.md#view-config)). The surface is read-only and every document is redacted server-side before it is rendered:
+
+- secret keys are hidden at any depth, matched case- and separator-insensitively: any key containing `password`, `passwd`, `secret`, `credential(s)`, `authorization`, `bearer`, `apikey`, or `privatekey`, and any key ending in `key` or `token` (`api_key`, `OPENAI_API_KEY`, `GITHUB_TOKEN`)
+- a hidden value becomes `${env:NAME}` when a sibling `*_env` names its variable, otherwise `<redacted>`; the document lists every hidden path in `redactions`
+- `*_env`, `*_env_var`, and `*_ref` references stay visible because they name where a secret lives, not the secret; a reference that holds a literal credential is hidden
+- credential-shaped values (bearer tokens, known key prefixes, JWTs, PEM keys, URL passwords, `NAME=value` secret assignments) are hidden under any key
+- team documents carry provider and model ids only; provider blocks from `cognitive.yaml`, which may hold literal `api_key` values, are never included
+
+Standing-team manifests stay view-only; they change through bundle files and restart.
+
 ## Migration from V7 bootstrap assumptions
 
 V7 standing-team and YAML assumptions must be de-hardened into bundle-driven bootstrap. Normal startup should fail closed when required bootstrap truth is absent or ambiguous.

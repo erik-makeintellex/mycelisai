@@ -51,6 +51,7 @@ Secret-handling rules:
 - prefer `api_key_env` for hosted providers so secrets stay in env or deployment secret stores
 - local engines can use `api_key` directly when a local compatibility server expects a simple static token
 - provider reads and browser inventory views never return stored secrets
+- View config team documents show provider and model ids only, never provider blocks; any literal key elsewhere is redacted (see [API Reference: View Config](API_REFERENCE.md#view-config))
 
 Official provider references:
 - OpenAI API auth: <https://platform.openai.com/docs/api-reference/authentication>
