@@ -117,7 +117,7 @@ Governed mutations reuse the group pattern, generalized into `requireGovernedCon
 - `POST /api/v1/config/templates/{id}/clone` body `{new_id, name, overrides}` -> `202 {requires_approval, intent_proof, confirm_token, preview}`; retry with `confirm_token` stores the clone.
 - `POST /api/v1/config/apply` body `{document, dry_run}` (YAML or JSON; `kind: TemplateBundle | CollaborationGroup`) -> always validates and returns a `preview` (created/changed fields, blockers) first; a non-dry-run without `confirm_token` returns `202` with proof and token; with a valid token it applies.
 
-Operator templates persist in a new `operator_templates` table (migration 040: id, name, source_template_id, document JSONB, created_by, audit ids) because the Helm config directory is read-only; the starter list merges file bundles and operator templates, with operator entries labelled "Custom". Apply emits `config.applied` / `template.cloned` audit and mission events. Standing-team manifests are view-only; they change only through bundle files and restart.
+Operator templates persist in a new `operator_templates` table (migration 041: id, name, source_template_id, document JSONB, created_by, audit ids) because the Helm config directory is read-only; the starter list merges file bundles and operator templates, with operator entries labelled "Custom". Apply emits `config.applied` / `template.cloned` audit and mission events. Standing-team manifests are view-only; they change only through bundle files and restart.
 
 ### Naming And Glossary
 
@@ -144,7 +144,7 @@ Operator templates persist in a new `operator_templates` table (migration 040: i
 | Team | Model | Status | Owner Scope | Output |
 | --- | --- | --- | --- | --- |
 | Delivery Contract | Opus | `ACTIVE` | this plan, schema and API contracts, redaction and governance review | accepted plan, review sign-off per slice |
-| Backend Delivery | Opus then Sonnet | `NEXT` | bundle schema, starters loader, deployments aggregate, config view/apply, migration 040 | Go handlers, tests, `docs/API_REFERENCE.md` |
+| Backend Delivery | Opus then Sonnet | `NEXT` | bundle schema, starters loader, deployments aggregate, config view/apply, migration 041 | Go handlers, tests, `docs/API_REFERENCE.md` |
 | Interface Delivery | Sonnet | `NEXT` | chips, Deployments page, config viewer, apply dialog, Knowledge rename | components, Vitest, mocked Chromium specs |
 | Docs / Mechanical | Haiku | `NEXT` | glossary, manifest, label renames, Helm mirror, index/state sync | docs and doc-test updates |
 
@@ -159,7 +159,7 @@ Every slice runs `uv run inv quality.max-lines --limit 300` and `uv run pytest t
 5. `NEXT` RC-004D Deployments aggregate API (Opus). Files: `core/internal/server/deployments.go`, `deployments_model.go`, `deployments_sources.go`, tests, `admin_routes.go`, `docs/API_REFERENCE.md`. Proof: `uv run inv core.test`. Accept: one envelope across all four kinds; mission teams keyed by id; effective provider per member; DB-down returns standing teams plus a `degraded` source note, not an error page.
 6. `NEXT` RC-004E Deployments page (Sonnet). Files: `interface/app/(app)/deployments/page.tsx`, `interface/components/deployments/*`, `interface/app/(app)/teams/page.tsx` (redirect only), `ZoneA_Rail.tsx`, organization "What's running" strip. Proof: `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/deployments.spec.ts`. Accept: a mocked standing team, mission team, group, and planned department each render with state, members/models, work mode, and proof status; Core-down shows `LoadFailureState`.
 7. `NEXT` RC-004F View config (Sonnet build, Opus redaction review). Files: `core/internal/server/config_view.go`, `config_redact.go`, tests; `interface/components/deployments/ConfigViewer.tsx`. Proof: `uv run inv core.test`, `uv run inv interface.test`, focused `deployments.spec.ts`. Accept: YAML and JSON for all four config kinds; redaction test proves no secret value leaks.
-8. `NEXT` RC-004G Clone and apply (Opus backend, Sonnet UI). Files: `governed_confirm.go`, `config_apply.go`, `core/migrations/040_operator_templates.{up,down}.sql`, `ApplyConfigDialog.tsx`. Proof: `uv run inv core.test`, `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/config-apply.spec.ts`. Accept: dry-run preview always precedes apply; no mutation without a valid `confirm_token`; audit and mission events recorded; clones appear as "Custom" starters.
+8. `NEXT` RC-004G Clone and apply (Opus backend, Sonnet UI). Files: `governed_confirm.go`, `config_apply.go`, `core/migrations/041_operator_templates.{up,down}.sql`, `ApplyConfigDialog.tsx`. Proof: `uv run inv core.test`, `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/config-apply.spec.ts`. Accept: dry-run preview always precedes apply; no mutation without a valid `confirm_token`; audit and mission events recorded; clones appear as "Custom" starters.
 9. `NEXT` RC-004H Naming and glossary (Haiku). Files: `interface/app/(app)/resources/page.tsx`, `DeploymentContextPanel.tsx` strings, `docs/user/glossary.md`, `docs/user/core-concepts.md`, `docs/user/teams.md`, `docs/user/resources.md`, `interface/lib/docsManifest.ts`. Proof: `uv run inv interface.test`, doc tests. Accept: no user-facing "Deployment Context" string remains; glossary readable in `/docs`.
 10. `NEXT` integrated proof: `uv run inv interface.e2e --project=chromium --workers=1` from committed state, then the live walkthrough once the Environment lane clears.
 
@@ -176,6 +176,13 @@ Parallelism: A precedes B, C, and G; D precedes E and F; H is independent. RC-00
 - clone and apply never mutate without a dry-run preview and a valid confirm token, and both emit audit events
 - no user-facing surface says "Deployment Context"; the glossary defines organization, template, team, group, deployment, and knowledge
 - focused specs and full Windows Chromium proof are green from committed state
+
+## Owner Decisions (2026-09-25)
+
+1. `DECIDED` Persist organizations first: new slice RC-004-0 replaces the in-memory `OrganizationStore` with a Postgres-backed store (migration 040) before starters ship. Operator templates move to migration 041.
+2. `DECIDED` Picking a starter sets delivery defaults and shows departments as planned; Soma proposes launching teams and the operator approves. No automatic team instantiation.
+3. `DECIDED` Deployments is in the main rail as a read-only view for every user; View config, clone, and apply stay behind Advanced mode.
+4. `DECIDED` Graduated approval postures: agency approves external sends; SaaS approves deploy/write actions; operations runs bounded execution with approval on high-risk actions; regulated approves every mutation with full audit.
 
 ## Explicit Non-Goals
 
