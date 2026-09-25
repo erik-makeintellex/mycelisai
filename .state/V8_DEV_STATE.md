@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-05-29
+> Updated: 2026-09-25
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `architecture/v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md` (`MYC-RC-000` candidate), `docs/architecture-library/MYC_RC_003_PROOF_ENVELOPE_DELIVERY_PLAN.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `.state/V7_DEV_STATE.md` (legacy migration input)
 
@@ -19,6 +19,45 @@ Use this file to track:
 - immediate next actions
 
 Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint source while V7 planning artifacts are being migrated.
+
+## Current Delivery Plan (2026-09-25)
+
+Review basis: backend/UI/test/config audits plus a live Windows browser walkthrough of the Interface with Core, Docker, and WSL down (only the Next.js dev server and host Ollama running). That walkthrough is the honest first-run experience on the current dev host and is the reason Operator Truth is a release lane.
+
+MVP target (unchanged): one self-hosted operator works through Soma to get direct answers, approve or cancel governed proposals, create organizations and compact teams, review retained outputs with proof after refresh, inspect runs and Connected Tools, and see visible recovery when Core or the AI host fails. Delivery lanes: Compose for local proof, WSL Compose for release proof (`BLOCKED`), Kubernetes/Helm as the clustered target.
+
+Walkthrough findings (Core unreachable):
+- `IN_REVIEW` overclaiming surfaces: the degraded banner said "Core functionality is still available", the Soma header said "Ready / Governed execution enabled", and "Soma just did this" reported coordination and produced output before any request and after a failed request.
+- `IN_REVIEW` the Status drawer showed NATS/DB/bus as "unknown" without naming the root cause (Core unreachable) or a recovery step.
+- `IN_REVIEW` `/groups` and `/runs` rendered load failures as "Nothing here yet" / "No runs yet".
+- `IN_REVIEW` hydration mismatch on `/dashboard` for returning users: the store read persisted chat and Advanced mode at module load, so the first client render differed from the server render.
+- `NEXT` `/teams/create` and `/automations` render blank bodies when Core is unreachable.
+- `NEXT` `/teams` is copy-heavy and mixes teams, team leads, groups, member templates, and mission teams without showing what is actually deployed.
+- `NEXT` the "Product delivery organization" / "Operations organization" starting points are hardcoded UI chips (`CreateOrganizationEntry.tsx`); the only real template bundle is `v8-migration-standing-team-bridge.yaml`.
+- `NEXT` "team" has three runtime meanings (boot-loaded YAML standing teams, DB `teams` rows for mission teams, `collaboration_groups`), and "Deployment Context" in Resources is a knowledge store, not runtime deployment. No UI surface shows or exports the config behind a team, template, or group.
+- `COMPLETE` working well while degraded: landing page, Docs, Settings, the chat failure card (Retry / Copy Diagnostics), and the "starter templates unavailable, start empty" fallback.
+
+Delivery lanes, owners, and models:
+
+| Lane | Model | Status | Scope | Acceptance |
+| --- | --- | --- | --- | --- |
+| Lead / Integration | Opus | `ACTIVE` | merge order, serial browser proof, state/docs sync, backend proof slice | every lane lands with proof recorded here |
+| MYC-RC-003A Backend Proof | Opus (lead) | `IN_REVIEW` | transactional package artifacts (`StoreTx`), `OutputProofEnvelope` on `OutputRef`, real disk readback (`verified`/`degraded`/`missing`/`blocked`), degraded envelopes when artifact storage is absent, `proof_envelopes` in `artifact.created` | `go test ./... -count=1 -p 1` green; checksum/bytes/readback/degraded/event-payload tests in `templates_codex_package_proof_test.go` |
+| MYC-RC-003A UI Proof | Sonnet | `IN_REVIEW` | Output Workbench proof chip + Inspect details, store preserves backend proof and infers `degraded` for legacy package messages | focused Vitest green; `codex-package-retention.spec.ts` asserts proof detail |
+| Operator Truth | Opus | `IN_REVIEW` | `lib/coreReachability.ts` (`online`/`degraded`/`unreachable`/`unknown`) derived from the existing services poll drives the banner, Soma header, causal summary, Status drawer root cause with `uv run inv lifecycle.up --frontend` recovery hint, and `LoadFailureState` error-vs-empty states on `/groups` and `/runs` | no surface claims readiness or completed work when Core is unreachable; verified in the browser with Core down |
+| Hydration fix | Haiku, then Opus (lead) | `IN_REVIEW` | the Haiku button-level gate was too narrow (the whole persisted thread mismatched); replaced with a root fix: initial store state is server-identical, `restorePersistedClientState` restores chat and Advanced mode from `ShellLayout` after mount, and chat is never written back before it has been read once | full Vitest green; browser reload shows no hydration error and restores chat history |
+| Test Framework | Sonnet | `IN_REVIEW` | CI `mvp-browser` job running the eight mocked MVP Chromium specs; dead fully-skipped specs deleted; bare skips converted to documented `test.fixme`; Chromium-only policy in `docs/TESTING.md` | YAML valid, docs/ops tests green, line gate green |
+| Delivery Experience | Opus design, then Sonnet build | `NEXT` | company starter templates (agency, SaaS product team, operations/services, regulated enterprise) as real template bundles with strong default delivery (approval policy, retained output with proof, compact team shape); one Deployments view replacing `/teams` copy (what runs, standing/temporary/mission, model and tools, work mode and approval policy, since when, outputs); read-only "View config" of the resolved YAML on team/template/group records, then clone-from-template and apply-from-file for advanced users per `V8_CONFIG_AND_BOOTSTRAP_MODEL.md`; rename Resources "Deployment Context" to Knowledge and define team/group/deployment once in Docs | simple path creates a strong-delivery organization with zero config; advanced path can view, clone, and apply config; a team deployment is fully explainable from one page |
+| Blank-route and decomposition | Sonnet | `NEXT` | error states for `/teams/create` and `/automations`; route inventory for the 14+ routes absent from the rail (promote, redirect, or delete); `OrganizationContextShell.tsx` (2389 lines) decomposition | no blank route with Core down; cap ratchets down |
+| Environment | Operator | `BLOCKED` | restore Docker Desktop or WSL Docker so Core can run; then Windows-browser-against-WSL proof | `uv run inv wsl.validate --lane=release` green |
+
+Integrated working-tree evidence (2026-09-25, uncommitted, Windows host, Core down):
+- `cd core && go test ./... -count=1 -p 1` -> pass; `uv run pytest -q` -> `327` passed (fixed two stale doc/state contract assertions); `cd interface && npx tsc --noEmit` -> clean; `npx vitest run` -> `121` files / `541` tests passed.
+- `uv run inv quality.max-lines --limit 300` -> pass; `git diff --check` -> clean. One legacy cap rose: `tests/test_interface_e2e_tasks.py` 539 -> 547 (move the multi-spec test to its own file to ratchet back).
+- `uv run inv interface.e2e --project=chromium --workers=1 --spec="e2e/specs/codex-package-retention.spec.ts e2e/specs/settings.spec.ts"` -> `8` passed.
+- `uv run inv interface.e2e --project=chromium --workers=1` -> `81` passed, `14` skipped, `1` failed: `settings.spec.ts` "theme and assistant identity save and persist after reload" is order-dependent (passed 3/3 in isolation). `NEXT` isolate its shared settings state before accepting MYC-RC-003A from committed state.
+
+Merge order: backend proof + UI proof + hydration (MYC-RC-003A) -> Operator Truth -> Test Framework CI -> focused `codex-package-retention` and full Windows Chromium proof -> Delivery Experience design review -> Delivery Experience build. The live proposal/approve/output walkthrough needs Core; until the environment lane clears, keep the focused `/runs` and guided retry/recovery browser proofs green, refresh the WSL proof checkout from the committed slice, run `wsl.validate`, and then rerun broader headed certification from committed state.
 
 ## Windows Dev + WSL Proof Baseline
 
