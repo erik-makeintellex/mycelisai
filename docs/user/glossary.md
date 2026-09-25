@@ -20,7 +20,7 @@ A governed work scope that defines how decisions are made and what authority age
 
 ## Deployment
 
-Anything currently defined to run in your organization: a team, a group, or a planned department. The Deployments page lists all active deployments, shows their state (running, idle, paused, archived), and explains what each one does.
+Anything currently defined to run in your organization: a standing team, a mission team, a group, or a planned department. The [Deployments](deployments.md) page (`/deployments`) lists every deployment, shows their state (running, idle, planned, paused, archived, expired, or error), and explains what each one does, who is on it, and what it produced.
 
 ## Knowledge
 

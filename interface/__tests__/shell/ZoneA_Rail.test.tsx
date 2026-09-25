@@ -32,6 +32,7 @@ import { ZoneA } from '@/components/shell/ZoneA_Rail';
 
 const DEFAULT_NAV_ENTRIES = [
     { href: '/dashboard', label: 'Soma' },
+    { href: '/deployments', label: 'Deployments' },
     { href: '/docs', label: 'Docs' },
 ];
 
@@ -120,10 +121,26 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
         mockAdvancedMode.mockReturnValue(true);
         render(<ZoneA />);
         expect(screen.getByText('Groups')).toBeDefined();
+        expect(screen.getByText('Automations')).toBeDefined();
+        expect(screen.getByText('Runs')).toBeDefined();
         expect(screen.getByText('Activity')).toBeDefined();
         expect(screen.getByText('Resources')).toBeDefined();
         expect(screen.getByText('Memory')).toBeDefined();
         expect(screen.getByText('System')).toBeDefined();
+    });
+
+    it('always shows Deployments in the main rail, even when advancedMode is off', () => {
+        mockAdvancedMode.mockReturnValue(false);
+        const { container } = render(<ZoneA />);
+        expect(screen.getByText('Deployments')).toBeDefined();
+        expect(container.querySelector('a[href="/deployments"]')).not.toBeNull();
+    });
+
+    it('links Automations and Runs to real surfaces when advancedMode is on', () => {
+        mockAdvancedMode.mockReturnValue(true);
+        const { container } = render(<ZoneA />);
+        expect(container.querySelector('a[href="/automations"]')).not.toBeNull();
+        expect(container.querySelector('a[href="/runs"]')).not.toBeNull();
     });
 
     it('renders Advanced toggle button', () => {

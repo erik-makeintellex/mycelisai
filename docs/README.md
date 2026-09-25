@@ -20,7 +20,8 @@ These are the best entry points for someone using Mycelis through the product:
 - **Core Concepts**: `./user/core-concepts.md`
 - **Using Soma Chat**: `./user/soma-chat.md` for central chat, concrete web-search/team/host-data prompts, outputs, and recovery
 - **Workflow Variants And Plan Memory**: `./user/workflow-variants-and-plan-memory.md`
-- **Teams**: `./user/teams.md`
+- **Deployments**: `./user/deployments.md` for what is running: standing teams, mission teams, groups, and planned departments
+- **Teams**: `./user/teams.md` for team shape and creation guidance
 - **Governance & Trust**: `./user/governance-trust.md`
 - **Automations**: `./user/automations.md`
 - **Resources**: `./user/resources.md` for Connected Tools, MCP structure review, workspace files, AI engines, and governed context

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users, Radio } from 'lucide-react';
+import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users, Radio, Boxes, Workflow, Zap } from 'lucide-react';
 import { readLastOrganization, subscribeLastOrganizationChange } from '@/lib/lastOrganization';
 import { useCortexStore } from '@/store/useCortexStore';
 
@@ -35,6 +35,7 @@ export function ZoneA() {
         (pathname === currentOrganizationHref || pathname?.startsWith(currentOrganizationHref + '/') === true);
     const primaryNav = [
         { href: '/dashboard', icon: Home, label: 'Soma', description: 'Ask first', testId: 'nav-dashboard' },
+        { href: '/deployments', icon: Boxes, label: 'Deployments', description: 'What is running', testId: 'nav-deployments' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
             icon: Building2,
@@ -47,6 +48,8 @@ export function ZoneA() {
     ];
     const advancedNav = [
         { href: '/groups', icon: Users, label: 'Groups', description: 'Operations', testId: 'nav-groups' },
+        { href: '/automations', icon: Workflow, label: 'Automations', description: 'Triggers & approvals', testId: 'nav-automations' },
+        { href: '/runs', icon: Zap, label: 'Runs', description: 'Execution history', testId: 'nav-runs' },
         { href: '/activity', icon: Radio, label: 'Activity', description: 'Runs & bus', testId: 'nav-activity' },
         { href: '/resources', icon: FolderCog, label: 'Resources', testId: 'nav-resources' },
         { href: '/memory', icon: Brain, label: 'Memory', testId: 'nav-memory' },

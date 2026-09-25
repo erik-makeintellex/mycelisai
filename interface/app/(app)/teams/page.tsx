@@ -1,7 +1,5 @@
-"use client";
+import { redirect } from 'next/navigation';
 
-import TeamsPage from "@/components/teams/TeamsPage";
-
-export default function TeamsRoutePage() {
-    return <TeamsPage />;
+export default function TeamsRedirect() {
+    redirect('/deployments');
 }

@@ -91,12 +91,8 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/user/resources.md",
                 description: "Connected Tools, MCP structure review, workspace files, AI engines, and governed private/deployment/reflection context",
             },
-            {
-                slug: "teams-guide",
-                label: "Teams",
-                path: "docs/user/teams.md",
-                description: "Compact team defaults, broad-ask splitting, and lead-centered team workflows",
-            },
+            { slug: "teams-guide", label: "Teams", path: "docs/user/teams.md", description: "Compact team defaults, broad-ask splitting, and lead-centered team creation workflows" },
+            { slug: "deployments-guide", label: "Deployments", path: "docs/user/deployments.md", description: "What's running: standing teams, mission teams, groups, and planned departments in one place" },
             {
                 slug: "memory-guide",
                 label: "Memory",

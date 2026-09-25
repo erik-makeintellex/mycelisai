@@ -18,7 +18,7 @@
 
 ## Overview
 
-The Teams area is where you review existing teams, open a team lead workspace, and create new teams through Soma.
+This page covers team shape and creation guidance. To review existing teams, groups, and planned departments — what is running, with which models, under which approval policy, and what it produced — open [Deployments](deployments.md) (`/deployments`); `/teams` now redirects there. Use this page to create new teams through Soma or the guided `/teams/create` workflow, and to keep team shape small and focused.
 
 Default rule:
 - teams should be small, explicit, and focused on the output
@@ -51,13 +51,13 @@ Use the root Soma chat when you want the simplest path:
 - "Soma, summarize what teams exist, what they are doing, and where their outputs are."
 - "Soma, review this request against recent commands, infer the team/action you think I want, include target MCP tools, and ask me to confirm before you launch it."
 
-Use `Teams` when you want to inspect or manage existing teams:
+Use [Deployments](deployments.md) (`/deployments`) when you want to inspect existing teams, groups, and planned departments:
 
-- open the team lead workspace
-- review retained outputs
-- inspect member templates
-- review or edit template role, model, and MCP/internal tool references
-- check whether a team should be archived or kept
+- see what is running, its state, and its members' models
+- open the team lead workspace from a deployment's detail pane
+- review retained outputs and their proof status
+- check work mode and approval posture in plain language
+- with Advanced mode on, view the underlying config
 
 Use `Settings -> Connected Tools` or `Resources -> Connected Tools` when you need to confirm which tool refs, direct web search posture, or MCP servers are available before assigning them to a reusable agent template. Installed server cards should show the MCP structure, and Library is the reapply/edit path for curated server config.
 
