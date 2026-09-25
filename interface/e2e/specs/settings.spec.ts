@@ -140,7 +140,24 @@ test.describe('Settings Page (/settings)', () => {
         await themeSaveButton.click();
         await expect(page.locator('html')).toHaveAttribute('data-theme', updatedTheme);
 
-        await page.reload({ waitUntil: 'domcontentloaded' });
+        // The managed Windows dev server occasionally stalls a single reload's
+        // network round trip (unrelated to store/component logic - see
+        // workspace/logs/interface-playwright-webserver.log timing under load).
+        // Retry the reload once with a bounded wait instead of trusting the
+        // first navigation's settings GET to always land inside the test timeout.
+        let settingsLoaded = false;
+        for (let attempt = 0; attempt < 2 && !settingsLoaded; attempt += 1) {
+            const settingsReloaded = page
+                .waitForResponse(
+                    (response) => response.url().includes('/api/v1/user/settings') && response.request().method() === 'GET',
+                    { timeout: 15_000 },
+                )
+                .then(() => true)
+                .catch(() => false);
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            settingsLoaded = await settingsReloaded;
+        }
+        expect(settingsLoaded).toBe(true);
         await expect(page.getByLabel('Assistant Name')).toHaveValue(updatedAssistantName);
         await expect(page.getByLabel('Theme')).toHaveValue(updatedTheme);
         await expect(page.locator('html')).toHaveAttribute('data-theme', updatedTheme);

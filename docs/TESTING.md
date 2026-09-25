@@ -216,6 +216,8 @@ Run `uv run inv interface.e2e`. Use `--server-mode=start` for production-start p
 ```bash
 uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --spec="e2e/specs/workflow-output.direct.spec.ts e2e/specs/proposals.spec.ts e2e/specs/team-creation.spec.ts e2e/specs/workflow-output.reload-review.spec.ts e2e/specs/error-scenarios.spec.ts e2e/specs/codex-package-retention.spec.ts e2e/specs/groups.spec.ts e2e/specs/docs-and-runs.spec.ts"
 ```
+**Windows e2e harness rules:** never run two `uv run inv interface.e2e` invocations at once (they share port 3100 and the webserver log, producing unrelated "worker process exited unexpectedly" cascades); specs that assert state after `page.reload()` must wait for the relevant network response with a bounded retry, because the throttled managed dev server can occasionally stall one reload round-trip (see `settings.spec.ts`).
+
 `catalogue.spec.ts`, `wiring-active-delete.spec.ts`, and `wiring-edit.spec.ts` cover real MVP surfaces (Role Library, Automations "Workflow Builder" behind Advanced Mode) via a documented `test.fixme(...)` rather than a silent `test.skip()`, and are not yet in the CI `mvp-browser` set pending the noted fixture/locator gap.
 
 ## Tier 4: Integration Tests
