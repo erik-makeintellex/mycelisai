@@ -59,9 +59,9 @@ func withTemplateBundlesPath(path string) func(*AdminServer) {
 	}
 }
 
-func mustResolveStarterTemplate(t *testing.T, s *AdminServer, id string) *OrganizationTemplateSummary {
+func mustResolveStarterTemplate(t *testing.T, s *AdminServer, id string) *OrganizationStarterTemplate {
 	t.Helper()
-	template, err := s.resolveStarterTemplate(id)
+	template, err := s.resolveStarterCatalogEntry(id)
 	if err != nil {
 		t.Fatalf("resolve starter template %s: %v", id, err)
 	}

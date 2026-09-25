@@ -1,0 +1,96 @@
+id: starter-governed-enterprise-program
+name: Governed Enterprise Program
+description: "Starter for a regulated enterprise: every mutation is a proposal with proof, fully audited, and only local AI engines are used."
+template_version: v1alpha1
+source_kind: organization_starter
+kernel:
+  mode: governed
+council:
+  mode: review-board
+provider_policy:
+  posture: starter-default
+  provider: ollama
+  allowed_providers:
+    - ollama
+  role_providers:
+    program_lead: ollama
+    analyst: ollama
+    compliance_reviewer: ollama
+starter:
+  label: Governed enterprise program
+  persona: regulated_enterprise
+  order: 40
+  sample_name: Meridian Program Office
+  sample_purpose: Produce proposals with proof, reviewed for compliance, on local AI engines only.
+  soma_intro: "Your governed program is ready. Everything I produce is a proposal with proof, and only local AI engines are used."
+delivery_defaults:
+  work_mode: execute_with_approval
+  approval_policy_ref: delivery-approve-all
+  approval_posture: approve_all_mutations
+  audit: full
+  outputs:
+    retain: true
+    proof_required: true
+  max_team_members: 3
+teams:
+  - id: governed-program
+    name: Governed Program
+    type: action
+    description: "Produces decision memos, evidence packs, and compliance reviews. Every mutation is a proposal with proof and full audit; nothing executes without operator approval."
+    members:
+      - id: program-lead
+        role: program_lead
+        system_prompt: |
+          You lead the governed enterprise program. You turn requests into a
+          short decision memo, hand evidence-gathering to the Analyst, and
+          confirm the Compliance Reviewer has signed off before any proposal
+          reaches the operator.
+
+          Rules:
+          - Every mutation is a proposal; nothing executes without approval.
+          - Every proposal is fully audited and needs a verified proof.
+          - Only local AI engines are used; never route to a hosted provider.
+        model: ""
+        max_iterations: 8
+        tools:
+          - delegate_task
+          - remember
+          - recall
+          - read_file
+          - write_file
+          - store_artifact
+          - research_for_blueprint
+      - id: analyst
+        role: analyst
+        system_prompt: |
+          You gather the evidence behind the Program Lead's decision memo:
+          sources, prior decisions, and relevant policy. Save an evidence
+          pack the Compliance Reviewer and the operator can both read before
+          anything is proposed.
+        model: ""
+        max_iterations: 8
+        tools:
+          - read_file
+          - write_file
+          - search_memory
+          - store_artifact
+          - recall
+      - id: compliance-reviewer
+        role: compliance_reviewer
+        system_prompt: |
+          You review the Program Lead's proposal and the Analyst's evidence
+          pack for policy and compliance risk before anything is sent to the
+          operator. Write a clear compliance review with any blocking
+          concerns. You never approve execution yourself — approval always
+          comes from the operator.
+        model: ""
+        max_iterations: 8
+        tools:
+          - read_file
+          - store_artifact
+          - recall
+          - list_available_tools
+    inputs:
+      - swarm.team.governed-program.internal.command
+    deliveries:
+      - swarm.team.governed-program.signal.status

@@ -17,14 +17,6 @@ const (
 	groupStatusArchived = "archived"
 )
 
-var validGroupWorkModes = map[string]struct{}{
-	"read_only":             {},
-	"propose_only":          {},
-	"execute_with_approval": {},
-	"execute_bounded":       {},
-	"resume_continuity":     {},
-}
-
 var validGroupStatuses = map[string]struct{}{
 	groupStatusActive:   {},
 	groupStatusPaused:   {},
@@ -104,7 +96,7 @@ func validateGroupReq(req createGroupRequest) error {
 	if mode == "" {
 		return fmt.Errorf("work_mode is required")
 	}
-	if _, ok := validGroupWorkModes[mode]; !ok {
+	if !protocol.IsKnownWorkMode(mode) {
 		return fmt.Errorf("invalid work_mode")
 	}
 	return nil

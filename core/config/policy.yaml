@@ -37,5 +37,42 @@ groups:
         condition: "rpm > 8000"
         action: "DENY"
 
+  # 4. Delivery Approval Postures (MYC-RC-004B)
+  # Graduated approval postures referenced by organization starters'
+  # delivery_defaults.approval_policy_ref.
+  - name: "delivery-approve-external"
+    description: "Studio starter posture: nothing leaves the organization unapproved"
+    targets: ["team:studio-delivery"]
+    rules:
+      - intent: "delivery.send.*"
+        action: "REQUIRE_APPROVAL"
+      - intent: "delivery.publish.*"
+        action: "REQUIRE_APPROVAL"
+
+  - name: "delivery-approve-changes"
+    description: "SaaS starter posture: deploy and write actions need approval"
+    targets: ["team:product-delivery"]
+    rules:
+      - intent: "delivery.deploy.*"
+        action: "REQUIRE_APPROVAL"
+      - intent: "delivery.write.*"
+        action: "REQUIRE_APPROVAL"
+
+  - name: "delivery-approve-state-change"
+    description: "Operations starter posture: bounded execution, approval on high-risk actions"
+    targets: ["team:ops-desk"]
+    rules:
+      - intent: "delivery.state_change.*"
+        action: "REQUIRE_APPROVAL"
+      - intent: "delivery.high_risk.*"
+        action: "REQUIRE_APPROVAL"
+
+  - name: "delivery-approve-all"
+    description: "Regulated starter posture: every mutation needs approval and full audit"
+    targets: ["team:governed-program"]
+    rules:
+      - intent: "delivery.*"
+        action: "REQUIRE_APPROVAL"
+
 defaults:
   default_action: "ALLOW" # Allow benign chatter and thinking

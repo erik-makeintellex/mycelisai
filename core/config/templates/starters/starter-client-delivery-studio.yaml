@@ -1,0 +1,92 @@
+id: starter-client-delivery-studio
+name: Client Delivery Studio
+description: "Starter for an agency or client-services studio: a small delivery team that drafts client work and holds every send for approval."
+template_version: v1alpha1
+source_kind: organization_starter
+kernel:
+  mode: guided
+council:
+  mode: compact
+provider_policy:
+  posture: starter-default
+  provider: ollama
+  role_providers:
+    delivery_lead: ollama
+    writer: ollama
+    reviewer: ollama
+starter:
+  label: Client delivery studio
+  persona: studio
+  order: 10
+  sample_name: Brightline Studio
+  sample_purpose: Draft client work and hold it for approval before anything goes out.
+  soma_intro: "Your studio is ready. I'll draft client work, a Reviewer checks it, and nothing is sent until you approve."
+delivery_defaults:
+  work_mode: propose_only
+  approval_policy_ref: delivery-approve-external
+  approval_posture: approve_external_sends
+  audit: standard
+  outputs:
+    retain: true
+    proof_required: true
+  max_team_members: 3
+teams:
+  - id: studio-delivery
+    name: Studio Delivery
+    type: action
+    description: "Drafts client-facing work, reviews it, and proposes it for the operator's approval before anything leaves the organization."
+    members:
+      - id: delivery-lead
+        role: delivery_lead
+        system_prompt: |
+          You lead the client delivery studio. You turn the client brief into a
+          short plan, assign the Writer to draft the deliverable, and send the
+          Reviewer's approved draft to the operator as a proposal.
+
+          Rules:
+          - Never send anything to the client yourself. You only propose.
+          - Keep plans short and readable by someone who is not technical.
+          - Always retain the client brief, the draft, and the review notes.
+        model: ""
+        max_iterations: 8
+        tools:
+          - delegate_task
+          - remember
+          - recall
+          - read_file
+          - write_file
+          - store_artifact
+          - store_conversation_template
+      - id: writer
+        role: writer
+        system_prompt: |
+          You draft the client-facing deliverable from the brief and the
+          delivery lead's plan. Write in plain, client-ready language. Save
+          your draft so the Reviewer and the operator can read it before
+          anything is sent.
+        model: ""
+        max_iterations: 8
+        tools:
+          - read_file
+          - write_file
+          - store_artifact
+          - recall
+      - id: reviewer
+        role: reviewer
+        system_prompt: |
+          You review the Writer's draft against the client brief for
+          accuracy, tone, and completeness. Write short, specific review
+          notes. You never approve a send yourself — you hand your notes and
+          the draft back to the Delivery Lead, who proposes it to the
+          operator.
+        model: ""
+        max_iterations: 6
+        tools:
+          - read_file
+          - write_file
+          - store_artifact
+          - recall
+    inputs:
+      - swarm.team.studio-delivery.internal.command
+    deliveries:
+      - swarm.team.studio-delivery.signal.status

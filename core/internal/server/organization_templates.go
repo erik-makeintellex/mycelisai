@@ -126,8 +126,12 @@ func (s *AdminServer) resolveStarterTemplate(id string) (*OrganizationTemplateSu
 	return nil, os.ErrNotExist
 }
 
-func (s *AdminServer) buildOrganizationHome(req OrganizationCreateRequest, template *OrganizationTemplateSummary) OrganizationHomePayload {
+func (s *AdminServer) buildOrganizationHome(req OrganizationCreateRequest, template *OrganizationStarterTemplate) OrganizationHomePayload {
 	responseContract := defaultResponseContractProfile()
+	var templateSummary *OrganizationTemplateSummary
+	if template != nil {
+		templateSummary = &template.OrganizationTemplateSummary
+	}
 	home := OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                        uuid.NewString(),
@@ -140,7 +144,7 @@ func (s *AdminServer) buildOrganizationHome(req OrganizationCreateRequest, templ
 			ResponseContractProfileID: string(responseContract.ID),
 			ResponseContractSummary:   responseContract.Summary,
 			MemoryPersonalitySummary:  "Set up later in Advanced mode",
-			AIEngineProfileID:         defaultAIEngineProfileID(req.StartMode, template),
+			AIEngineProfileID:         defaultAIEngineProfileID(req.StartMode, templateSummary),
 			OutputModelRoutingMode:    string(OrganizationOutputModelRoutingModeSingleModel),
 			DefaultOutputModelID:      defaultOrganizationOutputModelID(),
 		},
@@ -158,7 +162,14 @@ func (s *AdminServer) buildOrganizationHome(req OrganizationCreateRequest, templ
 		home.ResponseContractSummary = template.ResponseContractSummary
 		home.MemoryPersonalitySummary = template.MemoryPersonalitySummary
 		home.Description = template.Description
+		// Departments are copied as planned summaries only; no teams are
+		// instantiated from the starter at organization creation (RC-004
+		// owner decision 2).
 		home.Departments = append([]OrganizationDepartmentSummary(nil), template.Departments...)
+		home.DeliveryDefaults = template.DeliveryDefaults
+		if template.Starter != nil {
+			home.SomaIntro = template.Starter.SomaIntro
+		}
 	}
 
 	return normalizeOrganizationHome(home)

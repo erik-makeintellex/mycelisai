@@ -1,5 +1,7 @@
 package server
 
+import "github.com/mycelis/core/internal/bootstrap"
+
 type OrganizationStartMode string
 
 const (
@@ -171,6 +173,11 @@ type OrganizationHomePayload struct {
 	Description         string                           `json:"description,omitempty"`
 	Departments         []OrganizationDepartmentSummary  `json:"departments,omitempty"`
 	OutputModelBindings []OrganizationOutputModelBinding `json:"output_model_bindings,omitempty"`
+	// DeliveryDefaults and SomaIntro (RC-004B) are copied from the starter
+	// catalog entry at creation. Departments stay planned; no teams are
+	// instantiated from a starter at organization creation.
+	DeliveryDefaults *bootstrap.DeliveryDefaults `json:"delivery_defaults,omitempty"`
+	SomaIntro        string                      `json:"soma_intro,omitempty"`
 }
 
 type TeamLeadGuidedAction string

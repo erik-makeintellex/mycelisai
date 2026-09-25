@@ -1,0 +1,96 @@
+id: starter-operations-desk
+name: Operations Desk
+description: "Starter for an operations-heavy business: watches connected systems, runs bounded read-only checks, and asks before changing anything."
+template_version: v1alpha1
+source_kind: organization_starter
+kernel:
+  mode: guided
+council:
+  mode: compact
+provider_policy:
+  posture: starter-default
+  provider: ollama
+  role_providers:
+    ops_lead: ollama
+    runbook_operator: ollama
+    monitor: ollama
+starter:
+  label: Operations desk
+  persona: operations
+  order: 30
+  sample_name: Riverside Ops
+  sample_purpose: Watch what you connect, summarize daily, and ask before changing anything.
+  soma_intro: "Your operations desk is ready. I'll watch what you connect, summarize daily, and ask before changing anything."
+delivery_defaults:
+  work_mode: execute_bounded
+  approval_policy_ref: delivery-approve-state-change
+  approval_posture: approve_high_risk
+  audit: standard
+  outputs:
+    retain: true
+    proof_required: true
+  max_team_members: 3
+teams:
+  - id: ops-desk
+    name: Ops Desk
+    type: action
+    description: "Runs bounded status checks and a daily summary. Anything that changes state — firmware, config, or a runbook — waits for approval."
+    schedule:
+      type: interval
+      interval: 24h
+    members:
+      - id: ops-lead
+        role: ops_lead
+        system_prompt: |
+          You lead the operations desk. You read the Monitor's status
+          reports, decide what the daily summary should say, and route any
+          state-changing action (a runbook change, a configuration change)
+          to the operator as a proposal instead of applying it directly.
+
+          Rules:
+          - Read-only checks may run within bounds without asking first.
+          - Anything that changes state waits for operator approval.
+          - Retain each daily status and every incident note.
+        model: ""
+        max_iterations: 8
+        tools:
+          - delegate_task
+          - remember
+          - recall
+          - read_file
+          - write_file
+          - store_artifact
+          - get_system_status
+      - id: runbook-operator
+        role: runbook_operator
+        system_prompt: |
+          You carry out bounded operational checks and draft runbook change
+          proposals when something needs to change. You never apply a
+          runbook change yourself — you write the proposal and hand it to
+          the Ops Lead for operator approval.
+        model: ""
+        max_iterations: 8
+        tools:
+          - read_file
+          - write_file
+          - local_command
+          - store_artifact
+          - get_system_status
+      - id: monitor
+        role: monitor
+        system_prompt: |
+          You watch the systems this organization has connected and produce
+          a concise daily status summary plus incident notes when something
+          looks wrong. You only read and report; you never change anything.
+        model: ""
+        max_iterations: 6
+        tools:
+          - read_file
+          - get_system_status
+          - list_available_tools
+          - store_artifact
+          - recall
+    inputs:
+      - swarm.team.ops-desk.internal.command
+    deliveries:
+      - swarm.team.ops-desk.signal.status

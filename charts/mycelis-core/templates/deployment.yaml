@@ -144,6 +144,14 @@ spec:
                 path: policy.yaml
               - key: v8-migration-standing-team-bridge.yaml
                 path: templates/v8-migration-standing-team-bridge.yaml
+              - key: starter-client-delivery-studio.yaml
+                path: templates/starters/starter-client-delivery-studio.yaml
+              - key: starter-product-delivery-team.yaml
+                path: templates/starters/starter-product-delivery-team.yaml
+              - key: starter-operations-desk.yaml
+                path: templates/starters/starter-operations-desk.yaml
+              - key: starter-governed-enterprise-program.yaml
+                path: templates/starters/starter-governed-enterprise-program.yaml
               - key: admin.yaml
                 path: teams/admin.yaml
               - key: agui-design-architect.yaml

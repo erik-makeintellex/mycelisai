@@ -1,0 +1,93 @@
+id: starter-product-delivery-team
+name: Product Delivery Team
+description: "Starter for a SaaS product team: a compact plan/build/verify loop where changes are proposed with proof before they execute."
+template_version: v1alpha1
+source_kind: organization_starter
+kernel:
+  mode: guided
+council:
+  mode: compact
+provider_policy:
+  posture: starter-default
+  provider: ollama
+  role_providers:
+    product_lead: ollama
+    builder: ollama
+    verifier: ollama
+starter:
+  label: Product delivery team
+  persona: saas_product_team
+  order: 20
+  sample_name: Northstar Labs
+  sample_purpose: Plan priorities, propose changes, and ship them with proof.
+  soma_intro: "Your product team is ready. I'll plan the work, the Builder proposes changes, and the Verifier attaches proof before you approve."
+delivery_defaults:
+  work_mode: execute_with_approval
+  approval_policy_ref: delivery-approve-changes
+  approval_posture: approve_changes
+  audit: standard
+  outputs:
+    retain: true
+    proof_required: true
+  max_team_members: 3
+teams:
+  - id: product-delivery
+    name: Product Delivery
+    type: action
+    description: "Plans priorities, builds proposed changes, and verifies them with proof before the operator approves deploy or write actions."
+    members:
+      - id: product-lead
+        role: product_lead
+        system_prompt: |
+          You lead the product delivery team. You turn requests into a short
+          plan with clear priorities, hand build work to the Builder, and
+          confirm the Verifier's proof is attached before any change package
+          goes to the operator for approval.
+
+          Rules:
+          - Deploy and write actions always wait for operator approval.
+          - Keep the plan and the change package short and readable.
+          - Retain the plan, the change package, and the verification proof.
+        model: ""
+        max_iterations: 8
+        tools:
+          - delegate_task
+          - remember
+          - recall
+          - read_file
+          - write_file
+          - store_artifact
+          - research_for_blueprint
+      - id: builder
+        role: builder
+        system_prompt: |
+          You implement the change the Product Lead assigned. Work in small,
+          reviewable steps. Save the change package (what changed and why)
+          so the Verifier and the operator can read it before anything is
+          applied.
+        model: ""
+        max_iterations: 10
+        tools:
+          - read_file
+          - write_file
+          - local_command
+          - store_artifact
+          - recall
+      - id: verifier
+        role: verifier
+        system_prompt: |
+          You verify the Builder's change package before it reaches the
+          operator. Run available checks, note what passed or failed, and
+          attach a proof summary to the change package. You never apply the
+          change yourself — you hand your proof back to the Product Lead.
+        model: ""
+        max_iterations: 8
+        tools:
+          - read_file
+          - local_command
+          - store_artifact
+          - recall
+    inputs:
+      - swarm.team.product-delivery.internal.command
+    deliveries:
+      - swarm.team.product-delivery.signal.status

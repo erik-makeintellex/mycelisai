@@ -67,13 +67,13 @@ func (s *AdminServer) handleCreateOrganization(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var template *OrganizationTemplateSummary
+	var template *OrganizationStarterTemplate
 	if req.StartMode == OrganizationStartModeTemplate {
 		if req.TemplateID == "" {
 			respondAPIError(w, "template_id is required when start_mode is template", http.StatusBadRequest)
 			return
 		}
-		resolved, err := s.resolveStarterTemplate(req.TemplateID)
+		resolved, err := s.resolveStarterCatalogEntry(req.TemplateID)
 		if err != nil {
 			respondAPIError(w, "starter template not found", http.StatusNotFound)
 			return
