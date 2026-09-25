@@ -14,6 +14,7 @@
 - [The Detail Pane](#the-detail-pane)
 - [Source Notices](#source-notices)
 - [View Config (Advanced)](#view-config-advanced)
+- [Clone And Apply Config (Advanced)](#clone-and-apply-config-advanced)
 - [Where Team Creation Moved](#where-team-creation-moved)
 
 ## Overview
@@ -56,6 +57,17 @@ Deployments is built from several sources (standing teams, mission teams, groups
 With Advanced mode on, a "View config" button appears in the detail pane. It opens an inline panel showing the deployment's underlying configuration as read-only, verbatim text: its team manifest, group definition, or organization template (a planned department also resolves to its organization's config, and the panel labels itself "Organization config" so that's clear). It is hidden in simple mode because most operators only need to know what is running, not its raw configuration.
 
 The panel has a YAML/JSON toggle, Copy and Download buttons (downloads as `<kind>-<id>.yaml` or `.json`), and a source line naming where the document came from (file, database, or runtime, plus the file path when there is one). A "Hidden values" list names every path the server redacted before rendering; secrets such as API keys are never shown, while environment-variable references (`${env:NAME}`) stay visible so you can tell what's configured without seeing the value. If the deployment's config needs admin access you don't have, the panel says so instead of showing an error; if Core can't be reached, it shows a Retry action.
+
+## Clone And Apply Config (Advanced)
+
+With Advanced mode on, the View config panel can also add two buttons that let you write configuration, not just read it. Both are governed: nothing changes until you explicitly approve a preview.
+
+- **Clone as custom template** appears on a file or bundle template. Name the clone, preview it, review the diff and validation, then approve. The clone is stored as an operator template and shows up as a **Custom** starter (see [Core Concepts](core-concepts.md#creating-an-ai-organization)) the next time you set up an AI Organization.
+- **Edit and apply** appears on a group or on a template you already cloned. It opens a plain-text editor with the current document, and always previews before it lets you approve: the preview shows which paths changed, whether the document is valid, and disables Approve when the change is blocked.
+
+If you edit the document again after previewing, the preview is no longer valid for what you approve, so the panel asks you to preview again before Approve is enabled. If someone else changed the stored document in the meantime, approving tells you the document changed and previews it again automatically so you can see the current version before deciding.
+
+Secrets can never be written back through either flow: a document that still contains a hidden-value marker, or a literal secret where a reference belongs, is rejected before anything is stored, and the panel lists exactly which paths were rejected. If you do not have the role for this change, or the server cannot process governed writes right now, the panel says so plainly instead of showing a raw error.
 
 ## Where Team Creation Moved
 

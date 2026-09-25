@@ -120,6 +120,54 @@ describe("ConfigViewer", () => {
     });
 });
 
+describe("ConfigViewer governed entry points", () => {
+    beforeEach(() => {
+        mockFetch.mockReset();
+    });
+
+    it("shows Clone as custom template for a file template and opens the dialog", async () => {
+        mockFetch.mockResolvedValue(
+            jsonResponse(200, { ok: true, data: { ...configDoc, kind: "template", id: "starter-x", source: "file" as const } }),
+        );
+        render(
+            <ConfigViewer
+                configRef={{ kind: "template", id: "starter-x", path: "/api/v1/config/templates/starter-x" }}
+                onClose={() => {}}
+            />,
+        );
+
+        const cloneButton = await screen.findByTestId("config-viewer-clone-template");
+        expect(screen.queryByTestId("config-viewer-edit-apply")).toBeNull();
+        fireEvent.click(cloneButton);
+        expect(await screen.findByTestId("clone-template-dialog")).toBeTruthy();
+    });
+
+    it("shows Edit and apply for an operator template and for a group, not for teams", async () => {
+        mockFetch.mockResolvedValue(
+            jsonResponse(200, { ok: true, data: { ...configDoc, kind: "template", id: "custom-x", source: "operator" as const } }),
+        );
+        const { unmount } = render(
+            <ConfigViewer
+                configRef={{ kind: "template", id: "custom-x", path: "/api/v1/config/templates/custom-x" }}
+                onClose={() => {}}
+            />,
+        );
+        const applyButton = await screen.findByTestId("config-viewer-edit-apply");
+        expect(screen.queryByTestId("config-viewer-clone-template")).toBeNull();
+        fireEvent.click(applyButton);
+        expect(await screen.findByTestId("apply-config-dialog")).toBeTruthy();
+        unmount();
+
+        mockFetch.mockResolvedValue(
+            jsonResponse(200, { ok: true, data: { ...configDoc, kind: "team", id: "team-1", source: "runtime" as const } }),
+        );
+        render(<ConfigViewer configRef={configRef} onClose={() => {}} />);
+        await screen.findByTestId("config-viewer-document");
+        expect(screen.queryByTestId("config-viewer-clone-template")).toBeNull();
+        expect(screen.queryByTestId("config-viewer-edit-apply")).toBeNull();
+    });
+});
+
 describe("DeploymentDetailPane View config affordance", () => {
     beforeEach(() => {
         mockFetch.mockReset();

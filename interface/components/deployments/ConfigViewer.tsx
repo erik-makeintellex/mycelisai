@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Copy, Download, X } from "lucide-react";
 import LoadFailureState from "@/components/shared/LoadFailureState";
 import { getData, type DeploymentConfigRef } from "./deploymentTypes";
+import { CloneTemplateDialog } from "./CloneTemplateDialog";
+import { ApplyConfigDialog } from "./ApplyConfigDialog";
 
 type ConfigFormat = "yaml" | "json";
 
@@ -12,11 +14,13 @@ type ConfigDocument = {
   id: string;
   format: ConfigFormat;
   document: string;
-  source: "file" | "database" | "runtime";
+  source: "file" | "database" | "runtime" | "operator";
   source_path?: string;
   redactions: string[];
   generated_at: string;
 };
+
+type GovernanceDialog = "clone" | "apply" | null;
 
 type ViewState =
   | { status: "loading" }
@@ -64,6 +68,7 @@ export function ConfigViewer({
   const [format, setFormat] = useState<ConfigFormat>("yaml");
   const [state, setState] = useState<ViewState>({ status: "loading" });
   const [copied, setCopied] = useState(false);
+  const [dialog, setDialog] = useState<GovernanceDialog>(null);
 
   const load = useCallback(async (nextFormat: ConfigFormat) => {
     setState({ status: "loading" });
@@ -159,6 +164,10 @@ export function ConfigViewer({
         ) : null}
       </div>
 
+      {state.status === "ready" ? (
+        <GovernanceActions configRef={configRef} doc={state.doc} onOpen={setDialog} />
+      ) : null}
+
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {state.status === "loading" ? (
           <p className="text-sm text-cortex-text-muted" data-testid="config-viewer-loading">
@@ -226,6 +235,66 @@ export function ConfigViewer({
           </div>
         ) : null}
       </div>
+
+      {dialog === "clone" && state.status === "ready" ? (
+        <CloneTemplateDialog
+          sourceTemplateId={state.doc.id}
+          sourceTemplateName={state.doc.id}
+          onClose={() => setDialog(null)}
+          onCloned={() => void load(format)}
+        />
+      ) : null}
+      {dialog === "apply" && state.status === "ready" ? (
+        <ApplyConfigDialog
+          kind={configRef.kind === "template" ? "templates" : "groups"}
+          id={state.doc.id}
+          initialDocument={state.doc.document}
+          onClose={() => setDialog(null)}
+          onApplied={() => void load(format)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** "Clone as custom template" for a file/starter template; "Edit and apply" for an operator template or group. */
+function GovernanceActions({
+  configRef,
+  doc,
+  onOpen,
+}: {
+  configRef: DeploymentConfigRef;
+  doc: ConfigDocument;
+  onOpen: (dialog: GovernanceDialog) => void;
+}) {
+  const canClone = configRef.kind === "template" && doc.source === "file";
+  const canApply =
+    (configRef.kind === "template" && doc.source === "operator") || configRef.kind === "group";
+
+  if (!canClone && !canApply) return null;
+
+  return (
+    <div className="flex flex-shrink-0 items-center gap-2 border-b border-cortex-border px-4 py-2">
+      {canClone ? (
+        <button
+          type="button"
+          onClick={() => onOpen("clone")}
+          data-testid="config-viewer-clone-template"
+          className="rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 py-1.5 text-xs text-cortex-primary hover:bg-cortex-primary/15"
+        >
+          Clone as custom template
+        </button>
+      ) : null}
+      {canApply ? (
+        <button
+          type="button"
+          onClick={() => onOpen("apply")}
+          data-testid="config-viewer-edit-apply"
+          className="rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 py-1.5 text-xs text-cortex-primary hover:bg-cortex-primary/15"
+        >
+          Edit and apply
+        </button>
+      ) : null}
     </div>
   );
 }

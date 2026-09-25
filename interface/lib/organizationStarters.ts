@@ -4,7 +4,7 @@ import type { OrganizationTemplateSummary } from "@/lib/organizations";
 // Field names mirror core/internal/server/organization_starter_catalog.go
 // and core/internal/bootstrap/template_starter.go.
 
-export type OrganizationStarterSource = "bundle" | "starter";
+export type OrganizationStarterSource = "bundle" | "starter" | "operator";
 
 export type OrganizationStarterPersona =
     | "studio"

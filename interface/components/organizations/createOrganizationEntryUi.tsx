@@ -40,6 +40,7 @@ export function StarterCard({
     onSelect: () => void;
 }) {
     const unavailable = template.available === false;
+    const isCustom = template.source === "operator";
     const title = template.starter?.label || template.name;
     return (
         <button
@@ -59,9 +60,19 @@ export function StarterCard({
                     <p className="text-base font-semibold text-cortex-text-main">{title}</p>
                     <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{template.description}</p>
                 </div>
-                <span className="rounded-full border border-cortex-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
-                    {template.organization_type}
-                </span>
+                <div className="flex flex-shrink-0 items-center gap-1.5">
+                    {isCustom ? (
+                        <span
+                            data-testid={`starter-card-${template.id}-custom-badge`}
+                            className="rounded-full border border-cortex-primary/35 bg-cortex-primary/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary"
+                        >
+                            Custom
+                        </span>
+                    ) : null}
+                    <span className="rounded-full border border-cortex-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
+                        {template.organization_type}
+                    </span>
+                </div>
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 <Metric label="Team Lead" value={template.team_lead_label} />
