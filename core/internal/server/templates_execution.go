@@ -171,7 +171,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, tx *sql.Tx, s
 		s.auditExecutedPlannedTool(planned, resolvedToolName, auditUser)
 	}
 
-	packageSummary, err := s.finalizeCodexTaskBundleTx(tx, scope.PlannedToolCalls, runID, proofID)
+	packageSummary, err := s.finalizeCodexTaskBundleTx(ctx, tx, scope.PlannedToolCalls, runID, proofID)
 	if err != nil {
 		return nil, err
 	}

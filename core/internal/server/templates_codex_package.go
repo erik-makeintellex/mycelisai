@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
@@ -16,11 +17,13 @@ import (
 )
 
 type packageOutputFile struct {
-	Path        string `json:"path"`
-	Title       string `json:"title,omitempty"`
-	ContentType string `json:"content_type,omitempty"`
-	Bytes       int    `json:"bytes"`
-	SHA256      string `json:"sha256"`
+	Path        string                        `json:"path"`
+	Title       string                        `json:"title,omitempty"`
+	ContentType string                        `json:"content_type,omitempty"`
+	Bytes       int                           `json:"bytes"`
+	SHA256      string                        `json:"sha256"`
+	ArtifactID  string                        `json:"artifact_id,omitempty"`
+	Proof       *protocol.OutputProofEnvelope `json:"proof,omitempty"`
 }
 
 type packageOutputSummary struct {
@@ -38,7 +41,7 @@ type packageOutputSummary struct {
 	ProofRef    *protocol.OutputRef        `json:"proof_ref,omitempty"`
 }
 
-func (s *AdminServer) finalizeCodexTaskBundleTx(tx *sql.Tx, planned []protocol.PlannedToolCall, runID, proofID string) (*packageOutputSummary, error) {
+func (s *AdminServer) finalizeCodexTaskBundleTx(ctx context.Context, tx *sql.Tx, planned []protocol.PlannedToolCall, runID, proofID string) (*packageOutputSummary, error) {
 	basePath, slug, ok := codexPackageBaseFromCalls(planned)
 	if !ok {
 		return nil, nil
@@ -74,6 +77,9 @@ func (s *AdminServer) finalizeCodexTaskBundleTx(tx *sql.Tx, planned []protocol.P
 		ProofID:     proofID,
 		Files:       files,
 		Artifacts:   artifacts,
+	}
+	if err := s.persistCodexPackageArtifactsTx(ctx, tx, summary); err != nil {
+		return nil, err
 	}
 	summary.OutputRefs = outputRefsFromPackageSummary(summary)
 	summary.PrimaryRef, summary.ProofRef = outputRefPointers(summary.OutputRefs)
@@ -223,6 +229,7 @@ func (s *AdminServer) insertPackageArtifactEventTx(tx *sql.Tx, summary *packageO
 		"proof_path":         summary.ProofPath,
 		"proof_id":           summary.ProofID,
 		"files":              summary.Files,
+		"proof_envelopes":    proofEnvelopesFromPackageSummary(summary),
 		"output_refs":        summary.OutputRefs,
 		"primary_output_ref": summary.PrimaryRef,
 		"proof_ref":          summary.ProofRef,

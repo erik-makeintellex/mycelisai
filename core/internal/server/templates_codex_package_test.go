@@ -11,6 +11,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
+	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/pkg/protocol"
 )
@@ -20,7 +21,9 @@ func TestHandleConfirmAction_CreatesCodexTaskBundleWithProof(t *testing.T) {
 	t.Setenv("MYCELIS_WORKSPACE", workspace)
 
 	dbOpt, mock := withDB(t)
-	s := newTestServer(dbOpt)
+	s := newTestServer(dbOpt, func(s *AdminServer) {
+		s.Artifacts = artifacts.NewService(s.DB, "")
+	})
 	mock.MatchExpectationsInOrder(false)
 
 	token := "41111111-1111-1111-1111-111111111111"
@@ -67,6 +70,23 @@ func TestHandleConfirmAction_CreatesCodexTaskBundleWithProof(t *testing.T) {
 		mock.ExpectExec("INSERT INTO log_entries \\(id, trace_id, timestamp, level, source, intent, message, context\\)").
 			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "audit", "confirm-action", string(protocol.TemplateChatToProposal), sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnResult(sqlmock.NewResult(0, 1))
+	}
+	artifactIDs := []uuid.UUID{
+		uuid.MustParse("43333333-3333-3333-3333-333333333331"),
+		uuid.MustParse("43333333-3333-3333-3333-333333333332"),
+		uuid.MustParse("43333333-3333-3333-3333-333333333333"),
+		uuid.MustParse("43333333-3333-3333-3333-333333333334"),
+		uuid.MustParse("43333333-3333-3333-3333-333333333335"),
+	}
+	for _, artifactID := range artifactIDs {
+		mock.ExpectQuery("INSERT INTO artifacts").
+			WithArgs(
+				sqlmock.AnyArg(), sqlmock.AnyArg(), "codex-package", sqlmock.AnyArg(),
+				artifacts.TypeDocument, sqlmock.AnyArg(), "text/markdown",
+				sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+				sqlmock.AnyArg(), sqlmock.AnyArg(), "approved",
+			).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(artifactID, time.Now()))
 	}
 	mock.ExpectExec("INSERT INTO mission_events").
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), "default", string(protocol.EventArtifactCreated), string(protocol.SeverityInfo), "admin", "governance", sqlmock.AnyArg(), sqlmock.AnyArg()).
@@ -122,12 +142,28 @@ func TestHandleConfirmAction_CreatesCodexTaskBundleWithProof(t *testing.T) {
 	if firstRef["role"] != "primary" || firstRef["source_run_id"] == "" || firstRef["source_contract_id"] != proofID {
 		t.Fatalf("first output ref metadata = %#v", firstRef)
 	}
+	if firstRef["artifact_id"] != artifactIDs[0].String() || firstRef["proof_artifact_id"] != artifactIDs[4].String() {
+		t.Fatalf("first output ref artifact linkage = %#v", firstRef)
+	}
+	if firstRef["open_url"] != "/api/v1/artifacts/"+artifactIDs[0].String()+"/download" {
+		t.Fatalf("first output ref open_url = %#v", firstRef["open_url"])
+	}
+	firstProof, ok := firstRef["proof"].(map[string]any)
+	if !ok {
+		t.Fatalf("first output ref proof = %#v, want map", firstRef["proof"])
+	}
+	if firstProof["checksum_algorithm"] != "sha256" || firstProof["path_boundary_status"] != "verified" || firstProof["readback_status"] != "verified" {
+		t.Fatalf("first output ref proof metadata = %#v", firstProof)
+	}
 	proofRef, ok := outputRefs[4].(map[string]any)
 	if !ok {
 		t.Fatalf("proof output ref = %#v, want map", outputRefs[4])
 	}
 	if proofRef["role"] != "proof" || proofRef["storage_ref"] != "codex-task-packages/myc-rc-001/proof.md" {
 		t.Fatalf("proof output ref metadata = %#v", proofRef)
+	}
+	if proofRef["artifact_id"] != artifactIDs[4].String() {
+		t.Fatalf("proof output ref artifact id = %#v", proofRef["artifact_id"])
 	}
 	deliveryPackage, ok := data["delivery_package"].(map[string]any)
 	if !ok {

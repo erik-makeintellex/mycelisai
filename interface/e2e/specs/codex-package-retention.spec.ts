@@ -30,6 +30,42 @@ const deliveryPackage = {
     ],
 };
 
+function proofEnvelopeFor(file: { path: string; bytes: number; sha256: string }) {
+    return {
+        proof_id: `${proofId}:${file.path.split("/").pop()}`,
+        output_ref_id: `codex_task_bundle:myc-rc-001:${file.path.split("/").pop()}`,
+        artifact_id: `artifact:${file.path.split("/").pop()}`,
+        storage_ref: file.path,
+        source_run_id: runId,
+        source_contract_id: proofId,
+        execution_status: "completed",
+        path_boundary_status: "ok",
+        checksum: file.sha256,
+        checksum_algorithm: "sha256",
+        bytes: file.bytes,
+        content_type: "text/markdown",
+        created_at: "2026-05-29T00:00:00Z",
+        readback_status: "verified",
+    };
+}
+
+const outputRefs = deliveryPackage.files.map((file, index) => ({
+    id: `codex_task_bundle:myc-rc-001:${file.path.split("/").pop()}`,
+    kind: "document",
+    label: file.title,
+    storage_ref: file.path,
+    open_url: `/api/v1/artifacts/artifact:${file.path.split("/").pop()}/download`,
+    source_run_id: runId,
+    source_contract_id: proofId,
+    artifact_id: `artifact:${file.path.split("/").pop()}`,
+    package_id: "codex_task_bundle:myc-rc-001",
+    role: file.path.endsWith("proof.md") ? "proof" : index === 0 ? "primary" : "supporting",
+    status: "final",
+    bytes: file.bytes,
+    sha256: file.sha256,
+    proof: proofEnvelopeFor(file),
+}));
+
 const packageArtifacts = deliveryPackage.files.map((file) => ({
     type: "document",
     title: file.title,
@@ -92,6 +128,7 @@ async function mockConfirmAction(page: import("@playwright/test").Page) {
                 message: `Codex task bundle created under ${basePath} with proof at ${basePath}/proof.md.`,
                 package: deliveryPackage,
                 artifacts: packageArtifacts,
+                output_refs: outputRefs,
             },
         });
     });
@@ -120,6 +157,13 @@ test.describe("Codex task package retention", () => {
         await expect(workbench.getByText("Implementation Task", { exact: true })).toBeVisible();
         await expect(workbench.getByText("Package Proof", { exact: true })).toBeVisible();
         await expect(page.locator(`a[href="/runs/${runId}"]`).first()).toBeVisible();
+
+        // Proof readback: each row carries a verified status chip, and the
+        // Inspect affordance surfaces checksum/storage/run detail without raw JSON.
+        await expect(workbench.getByText("verified").first()).toBeVisible();
+        await workbench.getByText("Inspect").first().click();
+        await expect(workbench.getByText(basePath, { exact: false }).first()).toBeVisible();
+        await expect(workbench.getByText(/sha256:abc1230000000000/)).toBeVisible();
 
         await page.reload({ waitUntil: "domcontentloaded" });
         await page.getByPlaceholder(chatPlaceholder).waitFor({ timeout: 20_000 });

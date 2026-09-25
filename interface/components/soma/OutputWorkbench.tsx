@@ -1,12 +1,95 @@
 "use client";
 
-import { CheckCircle2, ClipboardList, ExternalLink, FileText, ShieldCheck } from "lucide-react";
-import type { ChatArtifactRef, DeliveryPackageFile, DeliveryPackageSummary, OutputRef } from "@/store/useCortexStore";
+import {
+    CheckCircle2,
+    ClipboardList,
+    Download,
+    ExternalLink,
+    FileText,
+    ShieldAlert,
+    ShieldCheck,
+    ShieldQuestion,
+    ShieldX,
+} from "lucide-react";
+import type {
+    ChatArtifactRef,
+    DeliveryPackageFile,
+    DeliveryPackageSummary,
+    OutputProofEnvelope,
+    OutputRef,
+} from "@/store/useCortexStore";
 
 function isProofFile(path?: string, title?: string): boolean {
     const lowerPath = path?.toLowerCase() ?? "";
     const lowerTitle = title?.toLowerCase() ?? "";
     return lowerPath.endsWith("proof.md") || lowerTitle.includes("proof");
+}
+
+const READBACK_STYLES: Record<string, { icon: typeof ShieldCheck; tone: string; label: string }> = {
+    verified: { icon: ShieldCheck, tone: "border-cortex-success/30 bg-cortex-success/10 text-cortex-success", label: "verified" },
+    degraded: { icon: ShieldAlert, tone: "border-cortex-warning/30 bg-cortex-warning/10 text-cortex-warning", label: "degraded" },
+    missing: { icon: ShieldX, tone: "border-red-500/30 bg-red-500/10 text-red-400", label: "missing" },
+    blocked: { icon: ShieldX, tone: "border-red-500/30 bg-red-500/10 text-red-400", label: "blocked" },
+};
+
+function readbackStyle(status?: string) {
+    return READBACK_STYLES[status ?? ""] ?? { icon: ShieldQuestion, tone: "border-cortex-border bg-cortex-bg text-cortex-text-muted", label: status || "unknown" };
+}
+
+function ProofChip({ proof }: { proof?: OutputProofEnvelope }) {
+    const { icon: Icon, tone, label } = readbackStyle(proof?.readback_status);
+    return (
+        <span
+            className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase ${tone}`}
+            title={proof?.recovery_hint || `readback: ${label}`}
+        >
+            <Icon className="h-2.5 w-2.5" />
+            {label}
+        </span>
+    );
+}
+
+function ProofDetails({ proof, openUrl }: { proof: OutputProofEnvelope; openUrl?: string }) {
+    const rows: [string, string | undefined][] = [
+        ["Storage ref", proof.storage_ref],
+        ["Checksum", proof.checksum ? `${proof.checksum_algorithm ?? "sha256"}:${proof.checksum.slice(0, 16)}...` : undefined],
+        ["Bytes", proof.bytes != null ? String(proof.bytes) : undefined],
+        ["Source run", proof.source_run_id],
+        ["Source contract", proof.source_contract_id],
+        ["Proof artifact", proof.artifact_id],
+        ["Path boundary", proof.path_boundary_status],
+        ["Readback status", proof.readback_status],
+        ["Created at", proof.created_at],
+    ];
+    return (
+        <div className="mt-1.5 space-y-1 rounded border border-cortex-border/60 bg-cortex-bg px-2 py-1.5">
+            {rows.filter(([, value]) => value).map(([key, value]) => (
+                <div key={key} className="flex items-baseline justify-between gap-2 text-[9px] font-mono">
+                    <span className="text-cortex-text-muted">{key}</span>
+                    <span
+                        className="max-w-[60%] truncate text-cortex-text-main"
+                        title={key === "Checksum" ? proof.checksum : value}
+                    >
+                        {value}
+                    </span>
+                </div>
+            ))}
+            {proof.recovery_hint ? (
+                <div className="rounded border border-cortex-warning/30 bg-cortex-warning/10 px-1.5 py-1 text-[9px] font-mono text-cortex-warning">
+                    {proof.recovery_hint}
+                </div>
+            ) : null}
+            {openUrl ? (
+                <a
+                    href={openUrl}
+                    className="inline-flex items-center gap-1 text-[9px] font-mono font-bold text-cortex-primary hover:underline"
+                >
+                    <Download className="h-2.5 w-2.5" />
+                    Open / download
+                </a>
+            ) : null}
+        </div>
+    );
 }
 
 function packageTitle(packageKind?: string): string {
@@ -93,24 +176,47 @@ export default function OutputWorkbench({
                     const ref = refs.find((candidate) => candidate.storage_ref === file.path || candidate.label === file.title);
                     const proofFile = isProofFile(file.path, file.title);
                     const role = ref?.role || (proofFile ? "proof" : "");
+                    const openUrl = ref?.open_url ?? artifact?.url;
                     return (
-                        <div key={`${file.path}-${file.title}`} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-2">
-                            {proofFile ? (
-                                <ShieldCheck className="h-3.5 w-3.5 text-cortex-success" />
-                            ) : (
-                                <FileText className="h-3.5 w-3.5 text-cortex-primary" />
-                            )}
-                            <div className="min-w-0">
-                                <div className="truncate text-[10px] font-mono font-bold text-cortex-text-main">
-                                    {file.title || file.path}
+                        <div key={`${file.path}-${file.title}`} className="px-3 py-2">
+                            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+                                {proofFile ? (
+                                    <ShieldCheck className="h-3.5 w-3.5 text-cortex-success" />
+                                ) : (
+                                    <FileText className="h-3.5 w-3.5 text-cortex-primary" />
+                                )}
+                                <div className="min-w-0">
+                                    <div className="truncate text-[10px] font-mono font-bold text-cortex-text-main">
+                                        {file.title || file.path}
+                                    </div>
+                                    <div className="truncate text-[9px] font-mono text-cortex-text-muted">
+                                        {file.path}
+                                    </div>
                                 </div>
-                                <div className="truncate text-[9px] font-mono text-cortex-text-muted">
-                                    {file.path}
+                                <div className="flex items-center gap-1.5">
+                                    {role ? (
+                                        <span className="text-[8px] font-mono text-cortex-text-muted">{role}</span>
+                                    ) : null}
+                                    <ProofChip proof={ref?.proof} />
+                                    {openUrl ? (
+                                        <a
+                                            href={openUrl}
+                                            className="rounded p-0.5 text-cortex-text-muted hover:bg-cortex-border hover:text-cortex-primary"
+                                            title="Open / download"
+                                        >
+                                            <Download className="h-3 w-3" />
+                                        </a>
+                                    ) : null}
                                 </div>
                             </div>
-                            <div className="text-right text-[8px] font-mono text-cortex-text-muted">
-                                {role ? role : file.bytes != null ? `${file.bytes}b` : artifact?.content_type?.replace("text/", "") ?? file.content_type?.replace("text/", "")}
-                            </div>
+                            {ref?.proof ? (
+                                <details className="mt-1">
+                                    <summary className="cursor-pointer select-none text-[8px] font-mono font-bold uppercase tracking-wider text-cortex-primary">
+                                        Inspect
+                                    </summary>
+                                    <ProofDetails proof={ref.proof} openUrl={openUrl} />
+                                </details>
+                            ) : null}
                         </div>
                     );
                 })}

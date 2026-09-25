@@ -14,17 +14,15 @@ func outputRefsFromPackageSummary(summary *packageOutputSummary) []protocol.Outp
 	}
 	refs := make([]protocol.OutputRef, 0, len(summary.Files))
 	for index, file := range summary.Files {
-		role := "supporting"
-		if isPackageProofFile(file.Path, file.Title) {
-			role = "proof"
-		} else if index == 0 {
-			role = "primary"
-		}
+		role := packageOutputFileRole(summary.Files, index)
+		refID := fmt.Sprintf("%s:%s", summary.PackageID, path.Base(file.Path))
 		refs = append(refs, protocol.OutputRef{
-			ID:               fmt.Sprintf("%s:%s", summary.PackageID, path.Base(file.Path)),
+			ID:               refID,
+			ArtifactID:       file.ArtifactID,
 			Kind:             outputKindForContentType(file.ContentType),
 			Label:            firstNonEmptyString(file.Title, path.Base(file.Path)),
 			StorageRef:       file.Path,
+			OpenURL:          artifactDownloadURL(file.ArtifactID),
 			SourceRunID:      summary.RunID,
 			SourceContractID: summary.ProofID,
 			ProofArtifactID:  proofArtifactIDForRole(summary, role),
@@ -34,6 +32,7 @@ func outputRefsFromPackageSummary(summary *packageOutputSummary) []protocol.Outp
 			ContentType:      file.ContentType,
 			Bytes:            file.Bytes,
 			SHA256:           file.SHA256,
+			Proof:            file.Proof,
 		})
 	}
 	return refs
@@ -124,5 +123,12 @@ func proofArtifactIDForRole(summary *packageOutputSummary, role string) string {
 	if summary == nil || role == "proof" {
 		return ""
 	}
-	return fmt.Sprintf("%s:%s", summary.PackageID, path.Base(summary.ProofPath))
+	return packageProofArtifactID(summary)
+}
+
+func artifactDownloadURL(artifactID string) string {
+	if strings.TrimSpace(artifactID) == "" {
+		return ""
+	}
+	return "/api/v1/artifacts/" + artifactID + "/download"
 }

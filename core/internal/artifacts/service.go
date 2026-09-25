@@ -48,6 +48,10 @@ type Service struct {
 	DataDir string // base path for file-referenced artifacts (e.g., /data/artifacts)
 }
 
+type storeQueryer interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
 // NewService creates an artifacts service.
 func NewService(db *sql.DB, dataDir string) *Service {
 	return &Service{DB: db, DataDir: dataDir}
@@ -55,6 +59,18 @@ func NewService(db *sql.DB, dataDir string) *Service {
 
 // Store persists a new artifact and returns it with generated ID.
 func (s *Service) Store(ctx context.Context, a Artifact) (*Artifact, error) {
+	return storeArtifact(ctx, s.DB, a)
+}
+
+// StoreTx persists a new artifact inside an existing transaction.
+func (s *Service) StoreTx(ctx context.Context, tx *sql.Tx, a Artifact) (*Artifact, error) {
+	return storeArtifact(ctx, tx, a)
+}
+
+func storeArtifact(ctx context.Context, q storeQueryer, a Artifact) (*Artifact, error) {
+	if q == nil {
+		return nil, fmt.Errorf("artifact store unavailable")
+	}
 	if a.Metadata == nil {
 		a.Metadata = json.RawMessage(`{}`)
 	}
@@ -87,7 +103,7 @@ func (s *Service) Store(ctx context.Context, a Artifact) (*Artifact, error) {
 		trustScore = sql.NullFloat64{Float64: *a.TrustScore, Valid: true}
 	}
 
-	row := s.DB.QueryRowContext(ctx, `
+	row := q.QueryRowContext(ctx, `
 		INSERT INTO artifacts (mission_id, team_id, agent_id, trace_id, artifact_type,
 		                       title, content_type, content, file_path, file_size_bytes,
 		                       metadata, trust_score, status)

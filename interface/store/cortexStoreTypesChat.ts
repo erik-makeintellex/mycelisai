@@ -23,8 +23,29 @@ export interface DeliveryPackageFile {
     sha256?: string;
 }
 
+export type ProofReadbackStatus = 'verified' | 'degraded' | 'missing' | 'blocked';
+
+export interface OutputProofEnvelope {
+    proof_id?: string;
+    output_ref_id?: string;
+    artifact_id?: string;
+    storage_ref?: string;
+    source_run_id?: string;
+    source_contract_id?: string;
+    execution_status?: string;
+    path_boundary_status?: string;
+    checksum?: string;
+    checksum_algorithm?: string;
+    bytes?: number;
+    content_type?: string;
+    created_at?: string;
+    readback_status?: ProofReadbackStatus | string;
+    recovery_hint?: string;
+}
+
 export interface OutputRef {
     id?: string;
+    artifact_id?: string;
     kind: string;
     label: string;
     storage_ref?: string;
@@ -39,6 +60,7 @@ export interface OutputRef {
     content_type?: string;
     bytes?: number;
     sha256?: string;
+    proof?: OutputProofEnvelope;
 }
 
 export interface DeliveryPackageSummary {

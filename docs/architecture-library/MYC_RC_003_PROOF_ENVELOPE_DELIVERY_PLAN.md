@@ -100,16 +100,16 @@ First-slice behavior:
 
 ## Delivery Sequence
 
-1. `ACTIVE` finalize proof envelope contract and owner boundaries.
-2. `NEXT` implement backend proof envelope projection for Codex package files.
+1. `COMPLETE` finalize proof envelope contract and owner boundaries.
+2. `IN_REVIEW` implement backend proof envelope projection for Codex package files.
    - add transactional artifact storage, such as `StoreTx`
    - persist the five Codex package files as artifact rows
    - carry artifact IDs into `packageOutputFile`, `OutputRef`, and package event payloads
-3. `NEXT` add UI proof readback in Output Workbench.
+3. `IN_REVIEW` add UI proof readback in Output Workbench.
    - preserve explicit backend proof fields
    - infer degraded legacy proof only for older package messages
    - show checksum, boundary, readback, source run/contract, and open/download affordances
-4. `NEXT` extend tests to assert checksum, path boundary, source run/contract, output ref, proof artifact, and readback status.
+4. `IN_REVIEW` extend tests to assert checksum, path boundary, source run/contract, output ref, proof artifact, and readback status.
 5. `NEXT` run Windows-managed proof:
    - `uv run inv core.test`
    - `uv run inv interface.test`

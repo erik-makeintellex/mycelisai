@@ -2,6 +2,7 @@ import type {
     ChatArtifactRef,
     DeliveryPackageSummary,
     ExecutionSummary,
+    OutputProofEnvelope,
     OutputRef,
 } from '@/store/cortexStoreTypes';
 
@@ -18,10 +19,36 @@ function refKind(contentType?: string, artifactType?: string): string {
     return artifactType || 'file';
 }
 
+// Legacy package messages (older backend responses, or messages restored from
+// local persistence before proof envelopes existed) never carried a `proof`
+// field. Rather than silently treating those outputs as verified, project a
+// degraded envelope from whatever legacy metadata is available so the UI can
+// be explicit that readback was never confirmed.
+function inferDegradedProof(ref: OutputRef): OutputProofEnvelope | undefined {
+    if (!ref.storage_ref && !ref.sha256 && !ref.artifact_id && !ref.proof_artifact_id) {
+        return undefined;
+    }
+    return {
+        proof_id: ref.id,
+        output_ref_id: ref.id,
+        artifact_id: ref.artifact_id ?? ref.proof_artifact_id,
+        storage_ref: ref.storage_ref,
+        source_run_id: ref.source_run_id,
+        source_contract_id: ref.source_contract_id,
+        checksum: ref.sha256,
+        checksum_algorithm: ref.sha256 ? 'sha256' : undefined,
+        bytes: ref.bytes,
+        content_type: ref.content_type,
+        readback_status: 'degraded',
+        recovery_hint: 'Backend did not report a proof envelope for this output; readback is unconfirmed.',
+    };
+}
+
 function normalizeRef(ref: OutputRef): OutputRef {
     return {
         ...ref,
         status: ref.status || 'final',
+        proof: ref.proof ?? inferDegradedProof(ref),
     };
 }
 

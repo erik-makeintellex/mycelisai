@@ -101,3 +101,56 @@ func TestArtifactsService_StoreDefaultMetadata(t *testing.T) {
 		t.Errorf("Unmet DB expectations: %v", err)
 	}
 }
+
+func TestArtifactsService_StoreTx(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Failed to mock DB: %v", err)
+	}
+	defer db.Close()
+
+	svc := NewService(db, "/data/artifacts")
+	newID := uuid.New()
+	now := time.Now()
+
+	mock.ExpectBegin()
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatalf("begin tx: %v", err)
+	}
+	mock.ExpectQuery("INSERT INTO artifacts").
+		WithArgs(
+			sqlmock.AnyArg(), sqlmock.AnyArg(),
+			"codex-package", sqlmock.AnyArg(),
+			ArtifactType("document"), "Package Proof", "text/markdown",
+			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), "approved",
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
+			AddRow(newID, now))
+	mock.ExpectCommit()
+
+	result, err := svc.StoreTx(context.Background(), tx, Artifact{
+		AgentID:       "codex-package",
+		TraceID:       "run-123",
+		ArtifactType:  TypeDocument,
+		Title:         "Package Proof",
+		ContentType:   "text/markdown",
+		Content:       "# Proof",
+		FilePath:      "codex-task-packages/myc-rc-001/proof.md",
+		FileSizeBytes: 7,
+		Status:        "approved",
+	})
+	if err != nil {
+		t.Fatalf("StoreTx failed: %v", err)
+	}
+	if result.ID != newID {
+		t.Fatalf("ID = %s, want %s", result.ID, newID)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit tx: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("Unmet DB expectations: %v", err)
+	}
+}
