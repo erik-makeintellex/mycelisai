@@ -123,8 +123,12 @@ func TestTemplateBundle_InstantiateRuntimeOrganization(t *testing.T) {
 	if len(org.Teams[0].Members) == 0 || org.Teams[0].Members[0].ID != "admin" {
 		t.Fatalf("expected admin-core members to be embedded, got %+v", org.Teams[0].Members)
 	}
-	if org.ProviderPolicy.Provider != "ollama" {
-		t.Fatalf("expected migration bridge provider default ollama, got %q", org.ProviderPolicy.Provider)
+	// Standing teams must not pin a provider; they route through configured cognitive profiles.
+	if org.ProviderPolicy.Provider != "" {
+		t.Fatalf("expected migration bridge to leave provider unpinned, got %q", org.ProviderPolicy.Provider)
+	}
+	if len(org.ProviderPolicy.Kernel.RoleProviders) != 0 || len(org.ProviderPolicy.Council.RoleProviders) != 0 {
+		t.Fatalf("expected no pinned role providers, got kernel=%v council=%v", org.ProviderPolicy.Kernel.RoleProviders, org.ProviderPolicy.Council.RoleProviders)
 	}
 }
 
