@@ -121,6 +121,20 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		config.Providers[id] = NormalizeProviderTokenDefaults(provider)
 	}
 
+	// 3.1 Fail closed on an unusable root_provider/MYCELIS_ROOT_PROVIDER
+	// before it is applied to any profile. An unset root is a no-op; a root
+	// naming an unconfigured or disabled provider is a hard config error,
+	// never a silent skip that leaves profiles quietly unbound.
+	if err := validateRootProvider(&config); err != nil {
+		return nil, fmt.Errorf("invalid cognitive config: %w", err)
+	}
+
+	// 3.2 Bind every default execution profile that still has no explicit
+	// provider to the configured root provider. Explicit bindings from
+	// cognitive.yaml, the DB overlay, or MYCELIS_PROFILE_<NAME>_PROVIDER were
+	// already applied above and always win over the root default.
+	applyRootProviderDefaults(&config)
+
 	// 3.5 Reject a cross-data-boundary ProfileFallbacks entry before any
 	// adapter is built. This is a config error, not a runtime posture: a
 	// local_only profile must never even be allowed to declare a leaves_org

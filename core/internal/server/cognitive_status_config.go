@@ -113,7 +113,21 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	respondJSON(w, result)
+	// Surface the effective root provider (root_provider/MYCELIS_ROOT_PROVIDER)
+	// and its configured model id so operators and live tests can confirm
+	// which provider unbound profiles resolve to, without exposing secrets.
+	response := map[string]any{
+		"text":  result["text"],
+		"media": result["media"],
+	}
+	if rootID := strings.TrimSpace(cfg.RootProvider); rootID != "" {
+		response["root_provider"] = rootID
+		if rootProvider, ok := cfg.Providers[rootID]; ok {
+			response["root_provider_model"] = rootProvider.ModelID
+		}
+	}
+
+	respondJSON(w, response)
 }
 
 // POST /api/v1/cognitive/infer

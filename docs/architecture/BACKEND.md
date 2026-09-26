@@ -271,15 +271,37 @@ Readiness, liveness, and dependency health routes.
 
 ## Area Contracts
 
+Fixed-key blocks for development agents. Blocks cite the PRD and source; they never restate or override it.
+
+### Area: Code Context
+- PRD: §P0.7c L370 · Scoreboard: P0.7c native code context maps
+- Owned paths: `core/internal/codecontext/**` (mycelis-core-authority) · `docker-compose.yml`, `.env.compose.example`, `ops/compose_env.py`, `ops/code-context/**` (mycelis-platform-ops) · Do-not-touch: `core/internal/server/code_context.go` routes (owned elsewhere)
+- Seams: `codecontext.sensitiveName`, `codecontext.pathAllowed`, `codecontext.confine`, `codecontext.resolveRoot`, `Service.rootAllowed`, `compose_env.validate_code_context_host_root`
+- Invariants: one `sensitiveName` exclusion (`.git`, `.env*`, keys/certs, and names containing credential/token/secret/kubeconfig/service-account, plus rc files) applies case-insensitively on walk, subpath, explain, and symlink targets; symlinks confine via `EvalSymlinks` to the resolved root; `RegisterSource` fails closed with zero configured roots; every blocked path returns one host-path-free `path_unavailable` message; `compose_env` rejects a `HOST_ROOT` whose `.git` is a directory (primary checkout) or that has a top-level `.env*`
+- Authority: `/api/v1/code-context/*` -> root admin + `code_context:read`/`write`, default deny; negatives: anon 401, standard 403; swarm `code_context.*` tools are NOT admin-gated (open finding, tracked below)
+- Proof: `go test ./internal/codecontext/...`; `uv run pytest tests/test_compose_code_context_contract.py -q`; `uv run inv quality.max-lines`
+- Pitfalls: the `token` name fragment over-excludes ordinary files (e.g. `templates_tokens.go`); inline secrets inside otherwise-allowed files are not redacted; the confine-then-read step has a TOCTOU window on the `:ro` mount; swarm `code_context.*` tools remain non-admin-gated pending A2's route-scope matrix follow-up
+- Verified: 2026-09-25 lead merge gate: go test -race ./internal/codecontext, compose code-context contract, docs links, max-lines
+
 ### Area: ConfigDocuments
-- PRD: §Declarative Configuration And Soma Authoring L167-172 · Scoreboard: P0.3a bounded discovery and Outcome Templates; P0.7b declarative configuration authoring
-- Owned paths: `core/pkg/protocol/config_document*.go`, `core/internal/configdocuments/**`, `core/internal/server/config_document*.go` (core writer) · Do-not-touch: `core/internal/server/auth*.go`, `interface/proxy.ts`, `core/config/**`
-- Seams: `protocol.ValidateConfigDocument`, `protocol.ValidateNewConfigDocument`, `protocol.CanonicalConfigDocumentDigest`, `protocol.RedactConfigDocumentForExport`, `protocol.RenderConfigDocumentExport`, `configdocuments.Store.GetRevision`, `server.HandleExportConfigDocument`, `server.requireRootAdminScope`
-- Invariants: families are OutcomeTemplate, WorkerProfile, CodeContextSource; one secret classifier (`config_document_secrets.go`) with stored rules (`ValidateConfigDocument`: read, compile, activate, rollback) and strict superset rules (`ValidateNewConfigDocument`: store, dry-run, export), no second key list; export is read-only and byte-deterministic; a redacted export omits `stored_digest`; error bodies carry no document fields
-- Authority: `GET /api/v1/config-documents/{recordId}/export` -> admin + `config_documents:read` (reads, dry-run, compile use the same; store/activate/rollback use `config_documents:write`), default deny; negatives: anon 401, standard 403, missing scope 403
-- Proof: `uv run inv core.test --package=./pkg/protocol --run='TestConfigDocument(Export|Redact)'`; `uv run inv core.test --package=./internal/server --run='TestConfigDocument' --race`; `uv run inv core.test --package=./internal/configdocuments --run='TestLegacyAdmitted|TestNewWrite'`
-- Pitfalls: never validate stored rows with strict rules (an active revision would become unloadable); `GetRevision` does not revalidate rows, so export must redact rather than trust storage; `code_context.go:145` validates request documents with stored rules instead of strict (open finding); the WorkerProfile strict decoder echoes unknown field names in its issue message, so a secret-looking key can reach a dry-run response to its own author (observed in S2; open finding); the classifier does not catch secrets embedded in string prose or JSON-in-string, `--password x` flags, schemeless `user:pass@host`, `NAME=<digits>`, numeric values under `auth`/`passphrase`, Unicode confusables, or a secret split across keys (open findings)
-- Verified: 2026-09-25 lead merge gate: protocol/server/configdocuments -race, security-qa re-review GO, e2e config-document-view, docs links, max-lines
+- PRD: §Bounded Discovery And Outcome Templates L100, L102, L169-170 · Scoreboard: P0.3a
+- Owned paths: `core/config/documents/templates/*.yaml` (mycelis-ai-runtime) · Do-not-touch: `core/config/templates/**` (bundle-loader family), `core/pkg/protocol/**`, `core/internal/configdocuments/*.go` except `delivery_posture_content_test.go`
+- Seams: `ParseDocument`, `ValidateConfigDocument`, `CompileDocument`, `CompileOutcomeTemplateDocument`, `CanonicalConfigDocumentDigest`, `HandleCreateConfigDocument`, `HandleActivateConfigDocument`
+- Invariants: approvals stay at the PRD floor; content can never lower or grant approval; `ParseDocument` and the content tests strict-decode (the production `OutcomeTemplate` spec decode is non-strict); `question_limit` must ship at 1-4 and must not rely on the compile-time clamp; no raw secrets or `swarm.*` subjects in content
+- Authority: `POST /api/v1/config-documents` and `.../activate` -> `config_documents:write`, root admin only, default deny; negatives: anon 401, standard user 403
+- Proof: `uv run inv core.test --package=./internal/configdocuments --run=TestDeliveryPosture`
+- Pitfalls: the bundle loader FATALs at startup on any stray file under `core/config/templates/`, so reference content must stay under `core/config/documents/templates/`; `scope.kind: built_in` and `source.kind: built_in` are accepted from any caller today (`config_documents.go` validates shape only) — built-in provenance forgery stays open until S3b adds a bootstrap-only guard
+- Verified: 2026-09-25 lead merge gate: go test ./internal/configdocuments -run TestDeliveryPosture, docs links, k8s config parity, max-lines
+
+### Area: Work projections
+- PRD: §Information Architecture L321-326, §Outcome Vault L136-137, §API And Event Contracts L277-284 · Scoreboard: Result-first Outcome UI
+- Owned paths: `core/internal/server/work_running*.go`, `core/pkg/protocol/work_running.go` (mycelis-core-execution) · Do-not-touch: `core/internal/server/team_work_store.go`, `core/internal/server/teams_detail.go`, `core/internal/server/auth*.go`
+- Seams: `team_work_store_scan.go:scanTeamWorkItem`, `outcome_projects_store.go:scanOutcomeProject`, `protocol.OutcomeHealthForTeamWork`, `protocol.OutcomeHealthForProject`, `protocol.AggregateOutcomeHealth`, `protocol.IsWorkRunningVisible`, `groups_auth.go:requireRootAdminScope`
+- Invariants: read-only (no writes, events, NATS, or in-memory registry); durable `team_work_items` is the only work source; `archived`/`output_ready` never shown (SQL filter plus `IsWorkRunningVisible`); health only from `protocol.OutcomeHealth*`; one items query plus one `outcome_projects` query, item under the most recently updated non-archived referencing project, archived Outcomes never group work (SQL `status <> 'archived'` plus Go guard); any source failure is `503` naming the source, never a partial list
+- Authority: `GET /api/v1/work/running` -> root admin + `groups:read`, default deny; negatives: anon 401, standard 403, admin without scope 403
+- Proof: `uv run inv core.test --package=./internal/server --run='TestWorkRunning' --race`
+- Pitfalls: `work_item_refs` is JSONB, so match with `?| $1::text[]` and `pq.Array`, not per-item lookups; L2 no GIN index on `work_item_refs`, so the link query scans tenant projects (fine at current scale; add a GIN index via mycelis-schema before it grows); summary counts are Outcome Health, not review counts, so review stays in the Work review panel; UI blocked on U1 — `WorkRunningPanel.tsx`, `useWorkRunning.ts`, and the `panel=running` branch land only after U1 merges to `dev`
+- Verified: 2026-09-25 lead merge gate: TestWorkRunning -race, real-PG query probe (security-qa), docs links, max-lines
 
 ## IX. Governance & Policy Engine
 
@@ -316,3 +338,17 @@ Startup resolves config, policy, bootstrap bundles, DB, NATS, providers, MCP pos
 ### Graceful Shutdown
 
 Shutdown should stop HTTP, streams, NATS consumers, background workers, and local service resources cleanly. Use `uv run inv lifecycle.down` or the matching runtime task for operator control.
+
+## Area Contracts
+
+Fixed-key blocks for development agents. Blocks cite the PRD and source; they never restate or override it.
+
+### Area: Model routing
+- PRD: §Projects Teams And Capability Use L155 (model gateways are transport, Core owns provider eligibility/routing) · Scoreboard: root model provider
+- Owned paths: `core/internal/cognitive/root_provider.go`, `core/internal/cognitive/root_provider_test.go` (mycelis-ai-runtime) · Do-not-touch: `core/internal/cognitive/router.go`, `types.go`, `env_overrides.go` except the `RootProvider` fields/branches already wired
+- Seams: `BrainConfig.RootProvider`, `defaultExecutionProfiles`, `validateRootProvider`, `applyRootProviderDefaults`, `NewRouter`, `server/cognitive_status_config.go` root reporting, `ops/cognitive_root.py`
+- Invariants: an explicit `Profiles[profile]` binding (`cognitive.yaml`, DB `system_config` overlay, or `MYCELIS_PROFILE_<NAME>_PROVIDER`) always wins over `RootProvider`; an unset `RootProvider` changes nothing (today's per-profile-only behavior); `RootProvider` assigns exactly one provider outright rather than a fallback list, so it never enters the `profile_fallbacks` cross-boundary partition check, which still governs only actual `profile_fallbacks` entries; a `RootProvider` naming an unconfigured or disabled provider fails `NewRouter` closed (`invalid cognitive config: root_provider ...`), never a silent skip
+- Authority: none added; root selection is startup config, not a request-scoped authorization decision
+- Proof: `go -C core test ./internal/cognitive/... ./internal/server/...`; `uv run --no-sync pytest tests/test_cognitive_root.py -q`; `uv run inv cognitive.status`
+- Pitfalls: the GPU serving the hosted variant's root vLLM is shared with dev tooling's own local vLLM use, so concurrent heavy calls contend; the Playwright assertion that a running Core's reported `root_provider` matches configuration is not implemented yet (pending); a pre-existing issue — `tests/test_framework_worker_chart.py` and `tests/test_litellm_config_contract.py` import `yaml` and fail under a bare `pytest` invocation without the project's dependency environment
+- Verified: 2026-09-25 lead merge gate: go test ./internal/cognitive/... ./internal/server/..., core.test, cognitive pytest, docs links, max-lines

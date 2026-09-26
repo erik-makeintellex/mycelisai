@@ -292,7 +292,7 @@ func clearProviderRoutingEnv(t *testing.T) {
 		if !ok {
 			continue
 		}
-		if strings.HasPrefix(key, "MYCELIS_PROVIDER_") || strings.HasPrefix(key, "MYCELIS_PROFILE_") {
+		if strings.HasPrefix(key, "MYCELIS_PROVIDER_") || strings.HasPrefix(key, "MYCELIS_PROFILE_") || key == "MYCELIS_ROOT_PROVIDER" {
 			t.Setenv(key, "")
 		}
 	}

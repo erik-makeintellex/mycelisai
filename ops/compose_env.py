@@ -18,6 +18,7 @@ COMPOSE_RUNTIME_OVERRIDE_KEYS = {
     "DB_USER",
     "MYCELIS_API_KEY",
     "MYCELIS_BOOTSTRAP_TEMPLATE_ID",
+    "MYCELIS_CODE_CONTEXT_HOST_ROOT",
     "MYCELIS_COMPOSE_CORE_PORT",
     "MYCELIS_COMPOSE_INTERFACE_PORT",
     "MYCELIS_COMPOSE_NATS_MONITOR_PORT",
@@ -256,6 +257,40 @@ def validate_output_block_config(
         host_path.mkdir(parents=True, exist_ok=True)
 
 
+def validate_code_context_host_root(env_values: dict[str, str]):
+    raw_path = clean_env_value(env_values.get("MYCELIS_CODE_CONTEXT_HOST_ROOT", ""))
+    if not raw_path:
+        return
+    host_root = resolve_host_path(raw_path)
+    if not host_root.exists() or not host_root.is_dir():
+        return
+
+    git_entry = host_root / ".git"
+    if git_entry.is_dir():
+        raise SystemExit(
+            "Invalid .env.compose MYCELIS_CODE_CONTEXT_HOST_ROOT: that path is a primary git checkout "
+            "(it has a .git directory, not a worktree .git file), so it holds the repository's .env. "
+            "Point this at a dedicated 'git worktree add --detach <path> dev' checkout instead."
+        )
+
+    try:
+        entries = list(host_root.iterdir())
+    except OSError:
+        entries = []
+    template_suffixes = (".example", ".sample", ".template")
+    if any(
+        entry.is_file()
+        and entry.name.startswith(".env")
+        and not entry.name.endswith(template_suffixes)
+        for entry in entries
+    ):
+        raise SystemExit(
+            "Invalid .env.compose MYCELIS_CODE_CONTEXT_HOST_ROOT: that directory has a real .env* file "
+            "(not a .example/.sample/.template) at its root. Point this at a dedicated worktree with no "
+            "secrets, never a checkout that holds .env."
+        )
+
+
 def validate_compose_env(env_values: dict[str, str], validate_output_block):
     ollama_host = env_values.get("MYCELIS_COMPOSE_OLLAMA_HOST", "http://host.docker.internal:11434").strip()
     if ollama_host and looks_like_container_loopback(ollama_host):
@@ -265,6 +300,7 @@ def validate_compose_env(env_values: dict[str, str], validate_output_block):
             "http://host.docker.internal:11434 or another container/service hostname."
         )
     validate_output_block(env_values)
+    validate_code_context_host_root(env_values)
     compose_framework_runs.validate(env_values, root_dir=Path(__file__).resolve().parents[1])
 
 
