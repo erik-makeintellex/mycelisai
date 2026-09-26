@@ -2597,4 +2597,22 @@ CREATE TABLE organizations (
 CREATE INDEX idx_organizations_tenant_name ON organizations(tenant_id, name, id);
 -- END ORGANIZATIONS_EXTENSION
 
+-- BEGIN ROLE_SEED_RETIREMENT_EXTENSION
+-- Retire the legacy role.* provider seeds from 006, 009 and 013 so profiles
+-- resolve to root/YAML defaults. Only exact seed (key, value) tuples are
+-- removed; operator-customized role rows are never touched. One-shot per
+-- database: the marker row is written in the same transaction, so a later
+-- operator choice that happens to equal a seed value is never retired.
+DELETE FROM system_config WHERE (key, value) IN (
+    ('role.architect', 'local-ollama-dev'), ('role.architect', 'local-sovereign'),
+    ('role.chat', 'local-ollama-dev'), ('role.chat', 'local-sovereign'),
+    ('role.coder', 'local-ollama-dev'), ('role.coder', 'local-sovereign'),
+    ('role.creative', 'local-ollama-dev'), ('role.creative', 'local-sovereign'),
+    ('role.overseer', 'local-ollama-dev'), ('role.overseer', 'local-sovereign'),
+    ('role.sentry', 'local-ollama-dev'), ('role.sentry', 'local-sovereign'))
+    AND NOT EXISTS (SELECT 1 FROM system_config WHERE key = 'schema.role_seed_retirement');
+INSERT INTO system_config (key, value) VALUES ('schema.role_seed_retirement', '1')
+    ON CONFLICT (key) DO NOTHING;
+-- END ROLE_SEED_RETIREMENT_EXTENSION
+
 COMMIT;

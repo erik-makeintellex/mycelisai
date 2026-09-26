@@ -5,7 +5,7 @@ import subprocess
 import time
 from typing import Callable
 
-from . import cognitive_root
+from . import cognitive_profiles, cognitive_root
 
 COGNITIVE_STATUS_TIMEOUT_SECONDS = 12.0
 
@@ -288,3 +288,4 @@ def _append_cognitive_health_failures(
         failures.extend(f"Root Provider: {problem}" for problem in root_problems)
     else:
         print(f"  [OK] {'Root Provider':<18} effective={effective_root}")
+    failures.extend(f"Profile Route: {f}" for f in cognitive_profiles.print_profile_routes(payload, prefix="       "))

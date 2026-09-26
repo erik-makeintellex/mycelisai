@@ -91,7 +91,9 @@ func (r *Router) SaveConfig() error {
 		return fmt.Errorf("no config path set — cannot persist")
 	}
 
+	r.mu.RLock()
 	data, err := yaml.Marshal(r.redactedConfigForPersistence())
+	r.mu.RUnlock()
 	if err != nil {
 		return fmt.Errorf("marshal config: %w", err)
 	}

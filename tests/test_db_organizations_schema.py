@@ -29,7 +29,8 @@ def test_org_block_follows_c2a_and_precedes_the_single_commit():
     commits = [m.start() for m in re.finditer(rb"^COMMIT;$", raw, re.MULTILINE)]
     assert len(commits) == 1
     assert c2a_end < org_begin < org_end < commits[0]
-    assert raw[org_end:] == db_upgrade.ORG_END_MARKER.encode() + b"\n\nCOMMIT;\n"
+    # The ROLE seed-retirement block is the only content between ORG and COMMIT.
+    assert raw[org_end:].startswith(db_upgrade.ORG_END_MARKER.encode() + b"\n\n" + db_upgrade.ROLE_BEGIN_MARKER.encode())
 
 
 def test_org_block_is_plain_create_with_authoritative_fixture_scope():
@@ -53,8 +54,10 @@ def test_compatibility_snapshots_bound_the_org_extension():
     assert db_schema.SCHEMA_COMPATIBILITY_CHECKS[:len(c2a)] == c2a
     assert db_schema.G4_SCHEMA_COMPATIBILITY_CHECKS == c2a[:len(db_schema.G4_SCHEMA_COMPATIBILITY_CHECKS)]
     assert not any("organizations" in sql for _, sql in c2a)
-    org = [sql for _, sql in db_schema.SCHEMA_COMPATIBILITY_CHECKS[len(c2a):]]
-    assert labels[len(c2a):] == ["organizations table", "organizations not-null columns",
+    full_org = db_schema.ORG_SCHEMA_COMPATIBILITY_CHECKS
+    assert db_schema.SCHEMA_COMPATIBILITY_CHECKS[:len(full_org)] == full_org
+    org = [sql for _, sql in full_org[len(c2a):]]
+    assert labels[len(c2a):len(full_org)] == ["organizations table", "organizations not-null columns",
                                  "organizations fixture scope default", "organizations primary key",
                                  "organizations document object", "organizations tenant listing index"]
     assert all("organizations" in sql for sql in org)

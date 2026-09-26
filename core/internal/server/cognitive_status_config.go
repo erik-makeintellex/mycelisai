@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -21,84 +20,50 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 	}
 
 	type engineStatus struct {
-		Status            string `json:"status"`
-		Endpoint          string `json:"endpoint,omitempty"`
-		Model             string `json:"model,omitempty"`
-		ProviderID        string `json:"provider_id,omitempty"`
-		ProviderType      string `json:"provider_type,omitempty"`
-		Location          string `json:"location,omitempty"`
-		DataBoundary      string `json:"data_boundary,omitempty"`
-		UsagePolicy       string `json:"usage_policy,omitempty"`
-		Configured        bool   `json:"configured,omitempty"`
-		Enabled           *bool  `json:"enabled,omitempty"`
-		Detail            string `json:"detail,omitempty"`
-		RecommendedAction string `json:"recommended_action,omitempty"`
-		SetupRequired     bool   `json:"setup_required,omitempty"`
+		Status       string `json:"status"`
+		Endpoint     string `json:"endpoint,omitempty"`
+		Model        string `json:"model,omitempty"`
+		ProviderID   string `json:"provider_id,omitempty"`
+		ProviderType string `json:"provider_type,omitempty"`
+		Location     string `json:"location,omitempty"`
+		DataBoundary string `json:"data_boundary,omitempty"`
+		UsagePolicy  string `json:"usage_policy,omitempty"`
+		Configured   bool   `json:"configured,omitempty"`
+		Enabled      *bool  `json:"enabled,omitempty"`
+		Detail       string `json:"detail,omitempty"`
 	}
 
-	result := map[string]*engineStatus{
-		"text":  {Status: "offline"},
-		"media": {Status: "offline"},
-	}
-
-	// Probe enabled OpenAI-compatible text engines (vLLM, Ollama, LM Studio, etc.).
-	// Disabled providers remain visible in config but must not slow or alter health.
-	cfg := s.Cognitive.Config
-	textAvailability := s.Cognitive.ExecutionAvailability("chat", "")
-	if !textAvailability.Available {
-		result["text"] = &engineStatus{
-			Status:            "offline",
-			Model:             textAvailability.ModelID,
-			Detail:            textAvailability.Summary,
-			RecommendedAction: textAvailability.RecommendedAction,
-			SetupRequired:     textAvailability.SetupRequired,
-		}
-	}
-	for provID, prov := range cfg.Providers {
-		if !prov.Enabled || (prov.Type != "openai_compatible" && prov.Type != "ollama") || prov.Endpoint == "" {
-			continue
-		}
-		adapter, ok := s.Cognitive.Adapters[provID]
-		if !ok {
-			continue
-		}
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-		alive, _ := adapter.Probe(ctx)
-		cancel()
-		if alive {
-			result["text"] = &engineStatus{
-				Status:   "online",
-				Endpoint: prov.Endpoint,
-				Model:    prov.ModelID,
-			}
-			break
-		}
-	}
+	// text.status comes from the chat profile's effective provider only;
+	// every profile carries its own availability, code, and probe result.
+	// Disabled providers are never probed.
+	text, routes, routeHealth, overlayError := s.cognitiveProfileRouteStatus(r.Context())
+	cfg := s.Cognitive.ConfigSnapshot()
+	media := &engineStatus{Status: "offline"}
 
 	// Probe media engine
 	if cfg.Media != nil {
-		media := cfg.Media.EffectiveProvider()
-		mediaEnabled := media.IsEnabled()
-		result["media"] = &engineStatus{
+		provider := cfg.Media.EffectiveProvider()
+		mediaEnabled := provider.IsEnabled()
+		media = &engineStatus{
 			Status:       "offline",
-			Endpoint:     media.Endpoint,
-			Model:        media.ModelID,
-			ProviderID:   media.ProviderID,
-			ProviderType: media.Type,
-			Location:     media.Location,
-			DataBoundary: media.DataBoundary,
-			UsagePolicy:  media.UsagePolicy,
+			Endpoint:     provider.Endpoint,
+			Model:        provider.ModelID,
+			ProviderID:   provider.ProviderID,
+			ProviderType: provider.Type,
+			Location:     provider.Location,
+			DataBoundary: provider.DataBoundary,
+			UsagePolicy:  provider.UsagePolicy,
 			Configured:   cfg.Media.IsConfigured(),
 			Enabled:      &mediaEnabled,
 		}
 
 		if !mediaEnabled {
-			result["media"].Status = "disabled"
-		} else if media.Location == cognitive.DefaultMediaRemoteLocation {
-			result["media"].Status = "configured"
-			result["media"].Detail = "Hosted media provider is configured; live provider health is checked during generation."
-		} else if strings.TrimSpace(media.Endpoint) != "" {
-			healthURL := strings.TrimSuffix(media.Endpoint, "/v1") + "/health"
+			media.Status = "disabled"
+		} else if provider.Location == cognitive.DefaultMediaRemoteLocation {
+			media.Status = "configured"
+			media.Detail = "Hosted media provider is configured; live provider health is checked during generation."
+		} else if strings.TrimSpace(provider.Endpoint) != "" {
+			healthURL := strings.TrimSuffix(provider.Endpoint, "/v1") + "/health"
 			ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 			defer cancel()
 
@@ -107,20 +72,22 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 			if err == nil {
 				resp.Body.Close()
 				if resp.StatusCode == http.StatusOK {
-					result["media"].Status = "online"
+					media.Status = "online"
 				}
 			}
 		}
 	}
 
 	// Surface the effective root provider (root_provider/MYCELIS_ROOT_PROVIDER),
-	// its model id, and every profile's effective provider with its source
-	// (override | root | default | fallback | unbound) so operators and live
-	// tests can prove what Core actually routes to, without exposing secrets.
+	// its model id, and every profile's effective route (source, availability,
+	// code, override origin, probe result) so operators and live tests can
+	// prove what Core actually routes to, without exposing secrets.
 	response := map[string]any{
-		"text":     result["text"],
-		"media":    result["media"],
-		"profiles": cfg.EffectiveProfileBindings(),
+		"text":                 text,
+		"media":                media,
+		"profiles":             routes,
+		"profile_route_health": routeHealth,
+		"overlay_error":        overlayError,
 	}
 	if rootID := strings.TrimSpace(cfg.RootProvider); rootID != "" {
 		response["root_provider"] = rootID
@@ -172,59 +139,21 @@ func (s *AdminServer) HandleCognitiveConfig(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Return the raw config struct
-	respondJSON(w, s.Cognitive.Config)
+	// Return a locked snapshot of the config struct
+	respondJSON(w, s.Cognitive.ConfigSnapshot())
 }
 
-// PUT /api/v1/cognitive/profiles
-// Updates which provider each cognitive profile uses.
-// Persists to cognitive.yaml and updates the in-memory config.
-func (s *AdminServer) HandleUpdateProfiles(w http.ResponseWriter, r *http.Request) {
-	if s.Cognitive == nil || s.Cognitive.Config == nil {
-		http.Error(w, "Cognitive Matrix Offline", http.StatusServiceUnavailable)
-		return
-	}
-
-	var req struct {
-		Profiles map[string]string `json:"profiles"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Bad JSON", http.StatusBadRequest)
-		return
-	}
-	if len(req.Profiles) == 0 {
-		http.Error(w, "No profiles provided", http.StatusBadRequest)
-		return
-	}
-
-	// Validate: every profile value must reference an existing provider
-	for profile, providerID := range req.Profiles {
-		if _, ok := s.Cognitive.Config.Providers[providerID]; !ok {
-			http.Error(w, fmt.Sprintf("Unknown provider '%s' for profile '%s'", providerID, profile), http.StatusBadRequest)
-			return
-		}
-	}
-
-	// Update in-memory config
-	for profile, providerID := range req.Profiles {
-		s.Cognitive.Config.SetProfileOverride(profile, providerID)
-	}
-
-	// Persist to YAML
-	if err := s.Cognitive.SaveConfig(); err != nil {
-		log.Printf("Failed to persist cognitive config: %v", err)
-		http.Error(w, "Failed to save config", http.StatusInternalServerError)
-		return
-	}
-
-	log.Printf("Cognitive profiles updated: %v", req.Profiles)
-	respondJSON(w, s.Cognitive.Config)
-}
+// PUT /api/v1/cognitive/profiles and DELETE .../profiles/{profile}/override
+// live in cognitive_profile_overrides.go.
 
 // PUT /api/v1/cognitive/providers/{id}
 // Updates a provider's configuration (endpoint, model_id, api_key_env).
-// Reinitializes the adapter if the endpoint or type changes.
+// Root admin + cognitive:write. It updates config and YAML only; it does not
+// rebuild the adapter.
 func (s *AdminServer) HandleUpdateProvider(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, cognitiveWriteScope); !ok {
+		return
+	}
 	if s.Cognitive == nil || s.Cognitive.Config == nil {
 		http.Error(w, "Cognitive Matrix Offline", http.StatusServiceUnavailable)
 		return
@@ -252,7 +181,7 @@ func (s *AdminServer) HandleUpdateProvider(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	existing, ok := s.Cognitive.Config.Providers[providerID]
+	existing, ok := s.Cognitive.ProviderSnapshot(providerID)
 	if !ok {
 		// Create new provider
 		existing = cognitive.ProviderConfig{}
@@ -270,7 +199,7 @@ func (s *AdminServer) HandleUpdateProvider(w http.ResponseWriter, r *http.Reques
 	if req.APIKeyEnv != "" {
 		existing.AuthKeyEnv = req.APIKeyEnv
 	}
-	s.Cognitive.Config.Providers[providerID] = existing
+	s.Cognitive.StoreProviderConfig(providerID, existing)
 
 	// Persist to YAML (AuthKey/AuthKeyEnv are json:"-" so won't leak)
 	if err := s.Cognitive.SaveConfig(); err != nil {

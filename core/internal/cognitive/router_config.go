@@ -82,13 +82,15 @@ func loadFromDB(db *sql.DB, config *BrainConfig) error {
 			continue
 		}
 		profileName := strings.TrimPrefix(key, "role.")
-		config.Profiles[profileName] = providerID
-		if strings.TrimSpace(providerID) != "" {
-			markProfileSource(config, profileName, ProfileSourceOverride)
+		// A blank role.* value is treated as if the row were absent: it
+		// never deletes the YAML default and never records an override.
+		if strings.TrimSpace(providerID) == "" {
+			continue
 		}
+		recordProfileOverride(config, profileName, strings.TrimSpace(providerID), ProfileOriginDB)
 	}
 
-	return nil
+	return rows2.Err()
 }
 
 // detectLiteralProviderAPIKeys scans raw cognitive.yaml bytes for a

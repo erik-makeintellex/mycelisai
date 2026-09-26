@@ -110,7 +110,10 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 	// 2. Load from DB (Overlay)
 	if db != nil {
 		if err := loadFromDB(db, &config); err != nil {
-			log.Printf("ERROR: Failed to load Cognitive Registry from DB: %v", err)
+			// Startup proceeds, but never silently: status reports
+			// overlay_error so operators know role.* overrides may be missing.
+			config.OverlayError = true
+			log.Printf("ERROR: Failed to load Cognitive Registry from DB (overlay_error; role.* overrides may be missing): %v", err)
 		} else {
 			log.Println("✅ Cognitive Registry Loaded from DB.")
 		}
@@ -121,6 +124,7 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 	// team/agent env-map routing path. Overrides apply at provider/profile/media
 	// config surfaces and win over YAML/DB defaults.
 	applyEnvOverrides(&config)
+	recordEnvProfileOverrides(&config)
 	for id, provider := range config.Providers {
 		config.Providers[id] = NormalizeProviderTokenDefaults(provider)
 	}
@@ -201,6 +205,7 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 	if rebound := r.EnsureDefaultProfileBindings(); len(rebound) > 0 {
 		log.Printf("INFO: rebound default cognitive profiles to fallback provider: %v", rebound)
 	}
+	r.warnMisroutedExecutionProfiles()
 
 	// 6. Discovery & Grading (startup scope)
 	// Only auto-configure if we have providers.
@@ -215,21 +220,23 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 
 // InferWithContract executes the request against the configured profile/provider
 func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*InferResponse, error) {
-	resolution := r.resolveExecutionProvider(req.Profile, req.Provider)
+	r.mu.RLock()
+	resolution := r.resolveExecutionProviderLocked(req.Profile, req.Provider)
+	providerID := resolution.ProviderID
+	adapter, ok := r.Adapters[providerID]
+	providerCfg := NormalizeProviderTokenDefaults(r.Config.Providers[providerID])
+	r.mu.RUnlock()
 	if !resolution.Available {
 		return nil, fmt.Errorf("%s", resolution.Summary)
 	}
-	providerID := resolution.ProviderID
 
 	// 2. Get Adapter
-	adapter, ok := r.Adapters[providerID]
 	if !ok {
 		return nil, fmt.Errorf("provider '%s' is not initialized at runtime", providerID)
 	}
 
 	// 3. Execute
 	// Defaults for options
-	providerCfg := NormalizeProviderTokenDefaults(r.Config.Providers[providerID])
 	opts := InferOptions{
 		Temperature: 0.7, // TODO: Load from Profile config
 		MaxTokens:   providerCfg.MaxOutputTokens,
@@ -290,7 +297,10 @@ func (r *Router) Embed(ctx context.Context, text string, model string) ([]float6
 	}
 
 	// 1. Try "embed" profile if configured
-	if providerID, ok := r.Config.Profiles["embed"]; ok {
+	r.mu.RLock()
+	providerID, ok := r.Config.Profiles["embed"]
+	r.mu.RUnlock()
+	if ok {
 		if adapter, ok := r.Adapters[providerID]; ok {
 			if ep, ok := adapter.(EmbedProvider); ok {
 				return ep.Embed(ctx, text, model)

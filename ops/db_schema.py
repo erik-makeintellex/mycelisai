@@ -137,3 +137,16 @@ SCHEMA_COMPATIBILITY_CHECKS += (
     ("organizations tenant listing index", "SELECT 1 FROM pg_indexes WHERE schemaname='public' AND tablename='organizations' "
      "AND indexname='idx_organizations_tenant_name' AND indexdef LIKE '%USING btree (tenant_id, name, id)';"),
 )
+
+# ORG-complete is the baseline for the one-shot ROLE seed-retirement block.
+ORG_SCHEMA_COMPATIBILITY_CHECKS = SCHEMA_COMPATIBILITY_CHECKS
+# Exact legacy 006/009/013 seed tuples; any other role.* value is operator-owned.
+LEGACY_ROLE_SEEDS = tuple((f"role.{role}", provider)
+                          for role in ("architect", "chat", "coder", "creative", "overseer", "sentry")
+                          for provider in ("local-ollama-dev", "local-sovereign"))
+# Durable one-shot marker: once present, seed-equal role rows are operator choices.
+ROLE_SEED_RETIREMENT_MARKER = "schema.role_seed_retirement"
+SCHEMA_COMPATIBILITY_CHECKS += (
+    ("legacy role seeds retired", "SELECT 1 FROM system_config "
+     f"WHERE key='{ROLE_SEED_RETIREMENT_MARKER}';"),
+)

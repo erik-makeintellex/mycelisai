@@ -10,7 +10,8 @@ Two views are kept strictly apart:
 
 `cognitive.status` and `compose.health` fail when the two disagree, so an
 inert root (for example Compose not forwarding MYCELIS_ROOT_PROVIDER) cannot
-pass as effective. This module never mutates config and never prints secrets.
+pass as effective. They also fail on a broken execution profile route (see
+cognitive_profiles). This module never mutates config and never prints secrets.
 
 PyYAML is not a default ops dependency, so core/config/cognitive.yaml (Core's
 own tracked, 2-space-indented config) is read with a narrow line scan.
@@ -130,10 +131,11 @@ def root_disagreements(configured, payload):
             "receives MYCELIS_ROOT_PROVIDER, or fix the configured value"
         )
     if effective_id:
-        profiles = payload.get("profiles") or {}
+        profiles = payload.get("profiles") if isinstance(payload.get("profiles"), dict) else {}
         for profile in EXECUTION_PROFILES:
-            source = str((profiles.get(profile) or {}).get("source", "unbound"))
-            if source not in ("root", "override"):
+            binding = profiles.get(profile) if isinstance(profiles.get(profile), dict) else {}
+            source = str(binding.get("source", "unbound"))
+            if source not in ("root", "override", "fallback"):
                 problems.append(f"profile {profile} source={source} although root_provider={effective_id}")
     return problems
 
@@ -161,11 +163,9 @@ def print_report(env_values=None, fetch=None):
     effective = str(payload.get("root_provider") or "")
     model = str(payload.get("root_provider_model") or "")
     print(f"  Root Provider (effective, Core): {effective or 'none'}{f' (model {model})' if model else ''}")
-    for profile, binding in sorted((payload.get("profiles") or {}).items()):
-        provider = binding.get("provider_id") or "-"
-        print(f"    {profile:<10} {provider:<20} [{binding.get('source', 'unbound')}]")
+    from . import cognitive_profiles  # late import: cognitive_profiles imports this module
 
-    problems = root_disagreements(configured, payload)
+    problems = root_disagreements(configured, payload) + cognitive_profiles.print_profile_routes(payload)
     for problem in problems:
         print(f"  [FAIL] {problem}")
     return problems

@@ -306,7 +306,7 @@ def status(
 
     disagreements = cognitive_root.print_report()
     if disagreements:
-        raise Exit("configured (env) and effective (Core) root provider disagree: " + "; ".join(disagreements))
+        raise Exit("cognitive routing failed (root disagreement or broken profile route): " + "; ".join(disagreements))
 
     _require_supported_local_engine_host()
 
