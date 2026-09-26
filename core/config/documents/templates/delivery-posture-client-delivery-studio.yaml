@@ -1,0 +1,57 @@
+apiVersion: mycelis.ai/v1
+kind: OutcomeTemplate
+metadata:
+  id: delivery-posture-client-delivery-studio
+  name: Client Delivery Studio
+  version: "1.0.0"
+  owner_id: mycelis
+  scope:
+    kind: built_in
+  enabled: true
+  source:
+    kind: built_in
+    ref: core/config/documents/templates/delivery-posture-client-delivery-studio.yaml
+  governance:
+    risk_level: low
+    approval_posture: required
+spec:
+  intent_kind: client_delivery
+  defaults:
+    target_outcome: A client-ready deliverable the operator can review and send.
+    essential_behavior:
+      - Draft the requested deliverable from the client brief.
+      - Retain the brief, the draft, and reviewer notes together.
+    quality_bar: Client-ready, accurate, and consistent with the client's brief and tone.
+    constraints:
+      - Nothing leaves the organization without the operator's explicit approval.
+    acceptance_evidence:
+      - A retained draft package with review notes attached.
+  field_rules:
+    - field: audience
+      unresolved_as: must_ask
+      question: Who is the client-facing audience for this deliverable, and what tone or format do they expect?
+      impact: 3
+    - field: delivery_form
+      unresolved_as: must_ask
+      question: What form should the delivered package take (document, slide deck, brief, or another client-ready format)?
+      impact: 2
+    - field: target_outcome
+      unresolved_as: can_infer
+    - field: essential_behavior
+      unresolved_as: can_infer
+    - field: quality_bar
+      unresolved_as: can_infer
+    - field: constraints
+      unresolved_as: can_defer
+    - field: acceptance_evidence
+      unresolved_as: can_defer
+  question_limit: 3
+  output_contract:
+    shape: client_package
+    primary_deliverable: A client-ready package with a short cover summary.
+    retention: Retain the brief, the draft, and reviewer notes with the delivered package.
+    validation:
+      - Reviewer notes are attached to the delivered package before it is proposed.
+    acceptance_criteria:
+      - The package reflects the client brief's requested audience and delivery form.
+      - Review notes accompany the package and describe what was checked.

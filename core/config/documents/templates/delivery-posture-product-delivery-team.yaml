@@ -1,0 +1,52 @@
+apiVersion: mycelis.ai/v1
+kind: OutcomeTemplate
+metadata:
+  id: delivery-posture-product-delivery-team
+  name: Product Delivery Team
+  version: "1.0.0"
+  owner_id: mycelis
+  scope:
+    kind: built_in
+  enabled: true
+  source:
+    kind: built_in
+    ref: core/config/documents/templates/delivery-posture-product-delivery-team.yaml
+  governance:
+    risk_level: low
+    approval_posture: required
+spec:
+  intent_kind: product_delivery
+  defaults:
+    target_outcome: A working increment of the product, proposed with proof before it ships.
+    audience: The requesting operator and the team reviewing the change.
+    quality_bar: Working end to end, with evidence that it was checked before proposal.
+    delivery_form: change_package
+  field_rules:
+    - field: essential_behavior
+      unresolved_as: must_ask
+      question: What must the working increment actually do once it ships?
+      impact: 3
+    - field: acceptance_evidence
+      unresolved_as: must_ask
+      question: What evidence will show the increment works (tests, a run log, a reviewable demo)?
+      impact: 2
+    - field: target_outcome
+      unresolved_as: can_infer
+    - field: audience
+      unresolved_as: can_infer
+    - field: quality_bar
+      unresolved_as: can_infer
+    - field: delivery_form
+      unresolved_as: can_infer
+    - field: constraints
+      unresolved_as: can_defer
+  question_limit: 3
+  output_contract:
+    shape: change_package
+    primary_deliverable: A working increment with an attached verification summary.
+    retention: Retain the plan, the change package, and the verification evidence together.
+    validation:
+      - Verification evidence is attached before the change package is proposed.
+    acceptance_criteria:
+      - The increment satisfies the stated essential behavior.
+      - The verification summary shows what was checked and its result.
