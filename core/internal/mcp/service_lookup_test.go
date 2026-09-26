@@ -44,6 +44,20 @@ func TestService_FindToolByName_NotFound(t *testing.T) {
 	}
 }
 
+// A tool name shared by several servers must resolve deterministically.
+func TestService_FindToolByName_DeterministicOrder(t *testing.T) {
+	svc, mock := newTestService(t)
+
+	mock.ExpectQuery(`WHERE t\.name = \$1\s+ORDER BY s\.name, s\.id, t\.id\s+LIMIT 1`).
+		WithArgs("read_file").
+		WillReturnRows(sqlmock.NewRows(findToolColumns()))
+
+	_, _, _ = svc.FindToolByName(context.Background(), "read_file")
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("lookup query is not ordered before LIMIT 1: %v", err)
+	}
+}
+
 func TestService_FindServerByName(t *testing.T) {
 	svc, mock := newTestService(t)
 	now := time.Now()

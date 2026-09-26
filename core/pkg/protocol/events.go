@@ -30,6 +30,9 @@ const (
 	EventToolInvoked   EventType = "tool.invoked"
 	EventToolCompleted EventType = "tool.completed"
 	EventToolFailed    EventType = "tool.failed"
+	// EventToolDenied: the call was refused, not run, because the agent did
+	// not declare the tool (swarm.ScopedToolExecutor).
+	EventToolDenied EventType = "tool.denied"
 
 	// Artifact lifecycle
 	EventArtifactCreated EventType = "artifact.created"

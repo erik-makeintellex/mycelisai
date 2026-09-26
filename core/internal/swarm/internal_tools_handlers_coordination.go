@@ -133,6 +133,9 @@ func (r *InternalToolRegistry) handleCreateTeam(ctx context.Context, args map[st
 		return "", err
 	}
 	manifest := buildRuntimeTeamManifest(args)
+	if err := childToolsWithinCaller(ctx, manifest); err != nil {
+		return "", err
+	}
 	if err := r.somaRef.SpawnTeamContext(ctx, manifest); err != nil {
 		return "", fmt.Errorf("create_team failed: %w", err)
 	}

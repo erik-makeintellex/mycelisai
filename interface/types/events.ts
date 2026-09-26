@@ -16,6 +16,7 @@ export type EventType =
   | 'tool.invoked'
   | 'tool.completed'
   | 'tool.failed'
+  | 'tool.denied'
   | 'artifact.created'
   | 'memory.stored'
   | 'memory.recalled'
@@ -77,6 +78,7 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
   'tool.invoked':      '#8b5cf6', // violet
   'tool.completed':    '#10b981',
   'tool.failed':       '#ef4444',
+  'tool.denied':       '#f59e0b', // amber: refused undeclared tool (warn)
   'artifact.created':  '#f59e0b',
   'memory.stored':     '#06b6d4',
   'memory.recalled':   '#06b6d4',

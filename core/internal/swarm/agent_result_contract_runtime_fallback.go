@@ -148,6 +148,10 @@ func (a *Agent) executeRuntimeOwnedPackageWrite(args map[string]any, result *age
 	})
 	serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, call.Name)
 	if err != nil {
+		if IsToolNotPermitted(err) {
+			a.recordToolDenied(call.Name, "lookup", true)
+			return "", err
+		}
 		if a.eventEmitter != nil && a.runID != "" {
 			go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolFailed, protocol.SeverityError, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": call.Name, "error": err.Error(), "phase": "lookup", "runtime_owned": true}) //nolint:errcheck
 		}

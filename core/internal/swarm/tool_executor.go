@@ -3,9 +3,9 @@ package swarm
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
-	"github.com/mycelis/core/internal/mcp"
 )
 
 // InternalServerID is the sentinel UUID used for internal (non-MCP) tools.
@@ -13,7 +13,8 @@ var InternalServerID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
 // CompositeToolExecutor unifies InternalToolRegistry and MCPToolExecutor behind
 // the same MCPToolExecutor interface. Internal tools are resolved first; if not
-// found, the call falls through to the MCP adapter.
+// found, the call falls through to the MCP adapter. It is unscoped: agents only
+// ever receive it wrapped in a ScopedToolExecutor.
 type CompositeToolExecutor struct {
 	internal *InternalToolRegistry
 	mcp      MCPToolExecutor // existing MCP adapter, may be nil
@@ -70,106 +71,117 @@ func (c *CompositeToolExecutor) CallTool(ctx context.Context, serverID uuid.UUID
 }
 
 // ---------------------------------------------------------------------------
-// ScopedToolExecutor — per-agent MCP tool filtering
+// ScopedToolExecutor: the single per-agent declared-tool choke point
 // ---------------------------------------------------------------------------
 
-// ScopedToolExecutor wraps a CompositeToolExecutor with per-agent MCP tool filtering.
-// Internal tools pass through unchanged (filtered by buildToolsBlock in agent.go).
-// MCP tools are checked against an allow-list derived from the agent's manifest.
-//
-// Backward compatible: if the agent manifest has zero mcp: references,
-// allowAll is true and all MCP tools remain accessible (pre-binding behavior).
+// ScopedToolExecutor enforces an agent's declared tool list on every lookup
+// and every call. A call is allowed only when the canonical (trimmed, exact,
+// case-sensitive) name is declared, matches a declared mcp: ref or resolved
+// toolset: entry, or is a runtime-owned base tool (runtimeOwnedBaseTools).
+// Everything else returns ToolNotPermittedError without executing.
 type ScopedToolExecutor struct {
-	inner       *CompositeToolExecutor
-	allowedMCP  []mcp.ToolRef        // parsed from agent manifest
-	serverNames map[uuid.UUID]string // serverID → server name (for ToolRef matching)
-	allowAll    bool                 // true when no mcp: refs → backward compat
+	inner       MCPToolExecutor
+	mcpLookup   MCPToolExecutor // MCP side of a composite, for mcp:-first resolution
+	scope       *agentToolScope
+	serverNames map[uuid.UUID]string // serverID -> server name (for ToolRef matching)
 }
 
-// NewScopedToolExecutor creates a scoped executor from the agent's MCP tool refs.
-// serverNames maps server UUIDs to their names for allow-list matching.
-// If mcpRefs is empty, allowAll is true (backward compatible — all MCP tools permitted).
-func NewScopedToolExecutor(inner *CompositeToolExecutor, mcpRefs []mcp.ToolRef, serverNames map[uuid.UUID]string) *ScopedToolExecutor {
-	return &ScopedToolExecutor{
-		inner:       inner,
-		allowedMCP:  mcpRefs,
-		serverNames: serverNames,
-		allowAll:    len(mcpRefs) == 0,
+// NewScopedToolExecutor scopes a composite executor to the agent's declared
+// tools. serverNames maps MCP server UUIDs to names for mcp: ref matching.
+func NewScopedToolExecutor(inner *CompositeToolExecutor, declared []string, serverNames map[uuid.UUID]string) *ScopedToolExecutor {
+	scoped := &ScopedToolExecutor{serverNames: serverNames}
+	var mcpExec MCPToolExecutor
+	if inner != nil {
+		scoped.inner = inner
+		mcpExec = inner.mcp
+		scoped.mcpLookup = inner.mcp
+	}
+	scoped.scope = newAgentToolScope(declared, toolSetResolverFor(mcpExec))
+	return scoped
+}
+
+// scopeToolExecutor wraps any executor in the declared-tool scope unless it is
+// already scoped, so no agent receives an unscoped executor.
+func scopeToolExecutor(exec MCPToolExecutor, declared []string) MCPToolExecutor {
+	switch typed := exec.(type) {
+	case nil:
+		return nil
+	case *ScopedToolExecutor:
+		return typed
+	case *CompositeToolExecutor:
+		if typed == nil {
+			return nil
+		}
+		return NewScopedToolExecutor(typed, declared, nil)
+	default:
+		return &ScopedToolExecutor{inner: exec, scope: newAgentToolScope(declared, toolSetResolverFor(exec))}
 	}
 }
 
-// FindToolByName delegates to the inner composite executor, then checks MCP tools
-// against the agent's allow-list. Internal tools pass through unless the agent
-// has an explicit MCP allow-list and that MCP tool name is also available.
+// PermitsTool reports whether the agent may use the named tool by its bare
+// name, without resolving servers. Planning capture uses it.
+func (s *ScopedToolExecutor) PermitsTool(ctx context.Context, name string) bool {
+	name = strings.TrimSpace(name)
+	return name != "" && (s.scope.allowsName(ctx, name) || runtimeOwnedBaseAllowed(ctx, name))
+}
+
+// FindToolByName resolves a tool only if the agent may use it. Declared mcp:
+// refs win a name collision with an internal tool (existing behavior).
 func (s *ScopedToolExecutor) FindToolByName(ctx context.Context, name string) (uuid.UUID, string, error) {
-	if !s.allowAll {
-		if serverID, toolName, ok := s.findAllowedMCPTool(ctx, name); ok {
+	canonical := strings.TrimSpace(name)
+	if canonical == "" {
+		return uuid.Nil, "", &ToolNotPermittedError{Tool: canonical}
+	}
+	if s.mcpLookup != nil && s.scope.mayGrantMCP(ctx) {
+		serverID, toolName, err := s.mcpLookup.FindToolByName(ctx, canonical)
+		if err == nil && serverID != uuid.Nil && toolName != "" && s.scope.allowsMCP(ctx, s.serverName(serverID), toolName) {
 			return serverID, toolName, nil
 		}
 	}
-
-	serverID, toolName, err := s.inner.FindToolByName(ctx, name)
+	permitted := s.PermitsTool(ctx, canonical)
+	// A non-composite inner has no separate MCP side, so mcp: grants are
+	// checked after its lookup instead.
+	mcpAfterLookup := s.mcpLookup == nil && s.scope.mayGrantMCP(ctx)
+	if s.inner == nil || (!permitted && !mcpAfterLookup) {
+		return uuid.Nil, "", &ToolNotPermittedError{Tool: canonical}
+	}
+	serverID, toolName, err := s.inner.FindToolByName(ctx, canonical)
 	if err != nil {
+		if !permitted {
+			return uuid.Nil, "", &ToolNotPermittedError{Tool: canonical}
+		}
 		return uuid.Nil, "", err
 	}
-
-	// Internal tools always pass (filtered by buildToolsBlock, not here)
-	if serverID == InternalServerID {
+	if toolName != "" && s.callPermitted(ctx, serverID, toolName) {
 		return serverID, toolName, nil
 	}
-
-	// MCP tool: check allow-list
-	if s.allowAll {
-		return serverID, toolName, nil
-	}
-
-	if s.mcpToolAllowed(serverID, toolName) {
-		return serverID, toolName, nil
-	}
-
-	serverName := s.serverNames[serverID]
-	if serverName == "" {
-		serverName = serverID.String()
-	}
-
-	return uuid.Nil, "", fmt.Errorf("tool %q (server %q) not authorized for this agent", toolName, serverName)
+	return uuid.Nil, "", &ToolNotPermittedError{Tool: canonical}
 }
 
-func (s *ScopedToolExecutor) findAllowedMCPTool(ctx context.Context, name string) (uuid.UUID, string, bool) {
-	if s == nil || s.inner == nil || s.inner.mcp == nil {
-		return uuid.Nil, "", false
-	}
-	serverID, toolName, err := s.inner.mcp.FindToolByName(ctx, name)
-	if err != nil || serverID == uuid.Nil {
-		return uuid.Nil, "", false
-	}
-	if !s.mcpToolAllowed(serverID, toolName) {
-		return uuid.Nil, "", false
-	}
-	return serverID, toolName, true
-}
-
-func (s *ScopedToolExecutor) mcpToolAllowed(serverID uuid.UUID, toolName string) bool {
-	if s.allowAll {
-		return true
-	}
-
-	serverName := s.serverNames[serverID]
-	if serverName == "" {
-		serverName = serverID.String() // fallback to UUID string
-	}
-
-	for _, ref := range s.allowedMCP {
-		if ref.MatchesTool(serverName, toolName) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// CallTool delegates to the inner composite executor.
-// The serverID was already validated by FindToolByName.
+// CallTool re-checks the scope so a caller holding a server ID cannot skip
+// FindToolByName, then delegates with the canonical name. Handlers see the
+// caller's scope (callerToolScopeFrom), so create_team cannot widen it.
 func (s *ScopedToolExecutor) CallTool(ctx context.Context, serverID uuid.UUID, toolName string, args map[string]any) (string, error) {
-	return s.inner.CallTool(ctx, serverID, toolName, args)
+	canonical := strings.TrimSpace(toolName)
+	if canonical == "" || s.inner == nil || !s.callPermitted(ctx, serverID, canonical) {
+		return "", &ToolNotPermittedError{Tool: canonical}
+	}
+	return s.inner.CallTool(withCallerToolScope(ctx, s.scope), serverID, canonical, args)
+}
+
+// callPermitted checks a resolved (serverID, tool). Internal tools need a bare
+// declaration or a runtime-owned base tool; MCP tools need a matching mcp: ref
+// or an exact bare declaration of that MCP tool name.
+func (s *ScopedToolExecutor) callPermitted(ctx context.Context, serverID uuid.UUID, toolName string) bool {
+	if serverID == InternalServerID {
+		return s.PermitsTool(ctx, toolName)
+	}
+	return s.scope.allowsMCP(ctx, s.serverName(serverID), toolName) || s.scope.allowsName(ctx, toolName)
+}
+
+func (s *ScopedToolExecutor) serverName(serverID uuid.UUID) string {
+	if name := s.serverNames[serverID]; name != "" {
+		return name
+	}
+	return serverID.String()
 }

@@ -186,6 +186,13 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			}
 			continue
 		}
+		if planningOnly && blocksProposalPlanningTool(toolCall.Name) && !a.toolPermittedForPlanning(toolCall.Name) {
+			a.recordToolDenied(toolCall.Name, "planning", false)
+			if !reinferWithToolFeedback(toolCall.Name, toolDeniedFeedback(toolCall.Name)) {
+				break
+			}
+			continue
+		}
 		if planningOnly && blocksProposalPlanningTool(toolCall.Name) {
 			log.Printf("Agent [%s] proposal-planning tool captured without execution: %s", a.Manifest.ID, toolCall.Name)
 			result.toolsUsed = append(result.toolsUsed, toolCall.Name)

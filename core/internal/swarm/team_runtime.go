@@ -53,10 +53,10 @@ func (t *Team) startLocked() error {
 			continue
 		}
 
+		// Every agent gets a declared-tool scope; NewAgent scopes any other executor.
 		var agentToolExec MCPToolExecutor = t.toolExecutor
 		if t.compositeExec != nil {
-			mcpRefs := mcp.ExtractMCPRefs(member.Tools)
-			agentToolExec = NewScopedToolExecutor(t.compositeExec, mcpRefs, t.mcpServerNames)
+			agentToolExec = NewScopedToolExecutor(t.compositeExec, member.Tools, t.mcpServerNames)
 		}
 
 		agent := NewAgent(t.ctx, member, t.Manifest.ID, t.nc, t.brain, agentToolExec)

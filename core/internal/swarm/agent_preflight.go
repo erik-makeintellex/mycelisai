@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func extractNATSSubject(input string) string {
@@ -96,11 +98,18 @@ func (a *Agent) runCouncilPreflight(userMember string, userInput string, call *t
 	if a == nil || a.toolExecutor == nil {
 		return "", fmt.Errorf("tool executor unavailable")
 	}
-	serverID, toolName, err := a.toolExecutor.FindToolByName(a.ctx, "consult_council")
+	// Preflight is a Core-owned step, so consult_council runs as a
+	// runtime-owned base tool even when the agent does not declare it.
+	runtimeCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
+		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, SourceKind: protocol.SourceKindSystem,
+		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand,
+		RuntimeOwned: true,
+	})
+	serverID, toolName, err := a.toolExecutor.FindToolByName(runtimeCtx, "consult_council")
 	if err != nil {
 		return "", err
 	}
-	preflightCtx, cancel := context.WithTimeout(a.ctx, 10*time.Second)
+	preflightCtx, cancel := context.WithTimeout(runtimeCtx, 10*time.Second)
 	defer cancel()
 	args := map[string]any{
 		"member":   userMember,

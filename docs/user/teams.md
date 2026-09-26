@@ -74,7 +74,7 @@ Use `Teams` when you want to inspect or manage existing teams:
 - use Ask Team or Respond on a durable active-work row to queue a bounded follow-on output or supply missing input without opening raw bus details
 - use `Open details`, `Reply to team`, `Ask for changes`, `Start task`, `Pause`, `Resume`, `Retry recovery`, or `Clear from review` when those controls are enabled for the current team state
 - inspect member templates
-- review or edit template role, model, and MCP/internal tool references
+- review or edit template role, model, and MCP/internal tool references. A member can run only the tools its template lists (exact tool names, `mcp:<server>/<tool>` or `mcp:<server>/*`, or `toolset:<name>`); a member with no tools listed runs none. Mycelis refuses any other tool call without running it and records a `tool.denied` event in the run timeline. Soma and the built-in council declare every tool their instructions ask them to use, so this does not narrow what Soma can do today.
 - check whether a team should be archived or kept
 
 The focused `/teams?view=work` review surface keeps monitoring bounded. On a desktop, the work list and selected detail share one contained two-pane monitor so a long queue does not turn the whole route into an unbounded status feed. The list owns its internal scroll, while the selected detail foregrounds the current reason, trusted state, safe move, and one primary action before secondary evidence or team context. On a compact phone, the queue summary becomes a concise 2x2 grid and the route uses one vertical scroll owner; review content stacks in reading order without horizontal overflow or a squeezed desktop split. In both layouts, **Open all teams** appears once as the route-level exit from focused review.
