@@ -13,7 +13,8 @@ import (
 )
 
 // deliveryPostureDir holds the four company delivery posture Outcome
-// Templates. It is reference content only: Core does not load it at runtime.
+// Templates. Core validates, seeds and activates them at built-in scope at
+// startup through SeedBuiltInRevisions (see builtin_seed.go).
 const deliveryPostureDir = "../../config/documents/templates"
 
 var deliveryPostureFiles = []string{

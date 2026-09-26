@@ -60,6 +60,10 @@ func (s *AdminServer) handleUpdatePolicy(w http.ResponseWriter, r *http.Request)
 		http.Error(w, `{"error":"defaults.default_action is required"}`, http.StatusBadRequest)
 		return
 	}
+	if err := governance.ValidatePolicyConfig(&cfg); err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// Update in-memory config
 	s.Guard.UpdatePolicyConfig(&cfg)

@@ -215,6 +215,8 @@ func respondConfigDocumentError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, configdocuments.ErrRevisionNotFound), errors.Is(err, sql.ErrNoRows):
 		status = http.StatusNotFound
+	case errors.Is(err, configdocuments.ErrBuiltInReserved):
+		status = http.StatusForbidden
 	case strings.Contains(err.Error(), "database not available"):
 		status = http.StatusServiceUnavailable
 	}
