@@ -15,9 +15,22 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-const purposeJoinQuery = "SELECT t.intent_proof_id, t.consumed, t.expires_at, p.resolved_intent, p.scope_validation\\s+FROM confirm_tokens t JOIN intent_proofs p"
+const purposeJoinQuery = "(?s)SELECT t.intent_proof_id, t.consumed, t.expires_at, p.resolved_intent, p.scope_validation,.+FROM confirm_tokens t JOIN intent_proofs p"
 
 func expectPurposeLookup(t *testing.T, mock sqlmock.Sqlmock, resolvedIntent string, scope protocol.ScopeValidation) {
+	t.Helper()
+	purpose := tokenPurposeMissionBlueprint
+	switch {
+	case resolvedIntent == chatActionResolvedIntent:
+		purpose = tokenPurposeChatAction
+	case strings.HasPrefix(resolvedIntent, "groups."):
+		purpose = tokenPurposeGroupMutation
+	}
+	expectBoundLookup(t, mock, resolvedIntent, scope, purpose, approverTestMinter)
+}
+
+// expectBoundLookup mocks the purpose join with the A2b mint columns.
+func expectBoundLookup(t *testing.T, mock sqlmock.Sqlmock, resolvedIntent string, scope protocol.ScopeValidation, purpose, mintedBy string) {
 	t.Helper()
 	raw, err := json.Marshal(scope)
 	if err != nil {
@@ -25,8 +38,8 @@ func expectPurposeLookup(t *testing.T, mock sqlmock.Sqlmock, resolvedIntent stri
 	}
 	mock.ExpectQuery(purposeJoinQuery).
 		WithArgs(uuid.MustParse(approverTestToken)).
-		WillReturnRows(sqlmock.NewRows([]string{"intent_proof_id", "consumed", "expires_at", "resolved_intent", "scope_validation"}).
-			AddRow(approverTestProof, false, time.Now().Add(time.Hour), resolvedIntent, raw))
+		WillReturnRows(sqlmock.NewRows([]string{"intent_proof_id", "consumed", "expires_at", "resolved_intent", "scope_validation", "purpose", "binding_digest", "minted_by"}).
+			AddRow(approverTestProof, false, time.Now().Add(time.Hour), resolvedIntent, raw, purpose, "", mintedBy))
 }
 
 func blueprintScope() protocol.ScopeValidation {
@@ -60,7 +73,7 @@ func TestConfirmTokenPurposes(t *testing.T) {
 	}
 	for _, tc := range cases {
 		scope := tc.scope
-		if got := tc.purpose(tc.intent, &scope); got != tc.want {
+		if got := tc.purpose.check(tc.intent, &scope); got != tc.want {
 			t.Errorf("%s: got %v want %v", tc.name, got, tc.want)
 		}
 	}
@@ -133,8 +146,8 @@ func TestConfirmActionLosingConcurrentConfirmGets409(t *testing.T) {
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt)
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT intent_proof_id, consumed, expires_at FROM confirm_tokens WHERE token = \\$1").
-		WillReturnRows(sqlmock.NewRows([]string{"intent_proof_id", "consumed", "expires_at"}).AddRow(approverTestProof, false, time.Now().Add(time.Hour)))
+	mock.ExpectQuery(confirmTokenTxQuery).
+		WillReturnRows(confirmTokenTxRow(false, approverTestMinter))
 	mock.ExpectExec("UPDATE confirm_tokens SET consumed = TRUE").WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectRollback()
 	rr := confirmAs(t, s, adminWithScopes("*"))
@@ -148,8 +161,8 @@ func TestConfirmActionLosingConcurrentConfirmGets409(t *testing.T) {
 
 	// An already-consumed token is also 409.
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT intent_proof_id, consumed, expires_at FROM confirm_tokens WHERE token = \\$1").
-		WillReturnRows(sqlmock.NewRows([]string{"intent_proof_id", "consumed", "expires_at"}).AddRow(approverTestProof, true, time.Now().Add(time.Hour)))
+	mock.ExpectQuery(confirmTokenTxQuery).
+		WillReturnRows(confirmTokenTxRow(true, approverTestMinter))
 	mock.ExpectRollback()
 	assertStatus(t, confirmAs(t, s, adminWithScopes("*")), http.StatusConflict)
 }

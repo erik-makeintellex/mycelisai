@@ -23,6 +23,16 @@ const (
 	approverTestProof = "22222222-2222-2222-2222-222222222222"
 )
 
+// approverTestMinter minted the fixture token (A2b Q3 proposer binding).
+var approverTestMinter = standardUserIdentity().UserID
+
+const confirmTokenTxQuery = "(?s)SELECT intent_proof_id, consumed, expires_at, COALESCE\\(purpose.+FROM confirm_tokens WHERE token = \\$1"
+
+func confirmTokenTxRow(consumed bool, mintedBy string) *sqlmock.Rows {
+	return sqlmock.NewRows([]string{"intent_proof_id", "consumed", "expires_at", "purpose", "binding_digest", "minted_by"}).
+		AddRow(approverTestProof, consumed, time.Now().Add(time.Hour), tokenPurposeChatAction, "", mintedBy)
+}
+
 func approverTestScope(approval *protocol.ApprovalPolicy) protocol.ScopeValidation {
 	return protocol.ScopeValidation{
 		Tools: []string{"write_file"},
@@ -52,9 +62,9 @@ func expectTokenAndScope(t *testing.T, mock sqlmock.Sqlmock, scope protocol.Scop
 		t.Fatal(err)
 	}
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT intent_proof_id, consumed, expires_at FROM confirm_tokens WHERE token = \\$1").
+	mock.ExpectQuery(confirmTokenTxQuery).
 		WithArgs(uuid.MustParse(approverTestToken)).
-		WillReturnRows(sqlmock.NewRows([]string{"intent_proof_id", "consumed", "expires_at"}).AddRow(approverTestProof, false, time.Now().Add(time.Hour)))
+		WillReturnRows(confirmTokenTxRow(false, approverTestMinter))
 	mock.ExpectExec("UPDATE confirm_tokens SET consumed = TRUE").
 		WithArgs(sqlmock.AnyArg(), uuid.MustParse(approverTestToken)).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -166,11 +176,14 @@ func TestConfirmActionPostureApprovalAllowsScopedAdmin(t *testing.T) {
 	}
 }
 
-// Q2: capability-risk and cost approvals stay proposer-confirmable in A2a.
-func TestConfirmActionCapabilityRiskApprovalUnchangedForStandardUser(t *testing.T) {
+// A2b Q1-A: external-data, escalation, medium-risk and cost <= 5.0 approvals
+// stay proposer-confirmable (tier 1); the proposer is recorded as the authority.
+func TestConfirmActionSelfReviewTierStaysProposerConfirmable(t *testing.T) {
 	for name, approval := range map[string]*protocol.ApprovalPolicy{
-		"capability-risk": capabilityRiskApproval(),
-		"cost":            {ApprovalRequired: true, ApprovalReason: "cost_threshold", ApprovalMode: "required", EstimatedCost: 12, ApprovalSteps: []string{"operator_review", "future_role_gate"}},
+		"external-data": {ApprovalRequired: true, ApprovalReason: "external_data_use", CapabilityRisk: "low", ExternalDataUse: true},
+		"escalation":    {ApprovalRequired: true, ApprovalReason: "escalation_preference", CapabilityRisk: "medium"},
+		"medium-risk":   {ApprovalRequired: true, ApprovalReason: "capability_risk", CapabilityRisk: "medium"},
+		"cost-at-5.0":   {ApprovalRequired: true, ApprovalReason: "cost", CapabilityRisk: "low", EstimatedCost: 5.0},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv("MYCELIS_WORKSPACE", t.TempDir())
@@ -180,8 +193,48 @@ func TestConfirmActionCapabilityRiskApprovalUnchangedForStandardUser(t *testing.
 			expectConfirmSuccess(t, mock, approverTestScope(approval), &audits)
 			rr := confirmAs(t, s, standardUserIdentity())
 			assertStatus(t, rr, http.StatusOK)
-			if !strings.Contains(strings.Join(audits, "\n"), `"approval_authority":"proposer"`) {
-				t.Fatalf("confirm audit must record approval_authority=proposer: %v", audits)
+			joined := strings.Join(audits, "\n")
+			for _, want := range []string{`"approval_authority":"proposer"`, `"approval_tier":1`, `"self_approved":true`} {
+				if !strings.Contains(joined, want) {
+					t.Fatalf("confirm audit must record %s: %v", want, audits)
+				}
+			}
+		})
+	}
+}
+
+// A2b Q1-A: high/critical capability risk and cost above 5.0 need an approver,
+// even for proofs minted before A2b (no role-gate step). The standard user is
+// refused and the token kept; an admin approver then confirms it.
+func TestConfirmActionApproverTierForHighRiskAndCost(t *testing.T) {
+	for name, approval := range map[string]*protocol.ApprovalPolicy{
+		"high-risk-pre-a2b": capabilityRiskApproval(),
+		"critical-risk":     {ApprovalRequired: true, ApprovalReason: "capability_risk", CapabilityRisk: "critical"},
+		"cost-5.01":         {ApprovalRequired: true, ApprovalReason: "cost", CapabilityRisk: "low", EstimatedCost: 5.01},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("MYCELIS_WORKSPACE", t.TempDir())
+			dbOpt, mock := withDB(t)
+			s := newTestServer(dbOpt)
+			scope := approverTestScope(approval)
+			expectTokenAndScope(t, mock, scope)
+			mock.ExpectRollback()
+			rr := confirmAs(t, s, standardUserIdentity())
+			assertStatus(t, rr, http.StatusForbidden)
+			if !strings.Contains(rr.Body.String(), "approver_required") {
+				t.Fatalf("expected approver_required, got %s", rr.Body.String())
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Fatalf("refused confirm must roll back: %v", err)
+			}
+			var audits []string
+			expectConfirmSuccess(t, mock, scope, &audits)
+			assertStatus(t, confirmAs(t, s, adminWithScopes(scopeApprovalsDecide)), http.StatusOK)
+			joined := strings.Join(audits, "\n")
+			for _, want := range []string{`"approval_authority":"approvals:decide"`, `"approval_tier":2`, `"self_approved":false`} {
+				if !strings.Contains(joined, want) {
+					t.Fatalf("confirm audit must record %s: %v", want, audits)
+				}
 			}
 		})
 	}
@@ -200,7 +253,7 @@ func TestPostureFloorAddsRoleGateEvenWhenDegraded(t *testing.T) {
 			}
 		}
 	}
-	if input := capabilityRiskApproval(); requiresApprover(&protocol.ScopeValidation{Approval: input}) || input.ApprovalSteps[1] != "future_role_gate" {
-		t.Fatal("capability-risk approvals must not be approver-gated or mutated")
+	if input := capabilityRiskApproval(); input.ApprovalSteps[1] != "future_role_gate" {
+		t.Fatal("the posture floor must not mutate its input")
 	}
 }

@@ -171,47 +171,34 @@ func (s *AdminServer) resolveGuardApproval(w http.ResponseWriter, r *http.Reques
 	respondJSON(w, map[string]string{"status": "resolved", "request_id": reqID, "action": action, "audit_id": auditID})
 }
 
-// requiresApprover reports whether a confirm needs an approver: the approval
-// was raised by policy (a posture group). Capability-risk, cost, and
-// external-data approvals stay proposer-confirmable until A2b.
+// requiresApprover reports whether a confirm needs an approver: approval tier 2
+// (policy/posture, high or critical capability risk, or cost above the
+// approver ceiling). See approverTier (A2b item 1).
 func requiresApprover(scope *protocol.ScopeValidation) bool {
-	if scope == nil || scope.Approval == nil || !scope.Approval.ApprovalRequired {
-		return false
-	}
-	if scope.Approval.ApprovalReason == approvalReasonOutcomePosture {
-		return true
-	}
-	for _, step := range scope.Approval.ApprovalSteps {
-		if step == approvalStepRoleGate {
-			return true
-		}
-	}
-	return false
+	tier, _ := approverTier(scope)
+	return tier == approverTierApprover
 }
 
 func isApprover(identity *RequestIdentity) bool {
 	return identity != nil && identity.Role == "admin" && hasScope(identity, scopeApprovalsDecide)
 }
 
-// confirmApprovalAuthority names the authority that confirmed the proposal
-// for the confirm-action audit row.
-func confirmApprovalAuthority(scope *protocol.ScopeValidation) string {
-	if requiresApprover(scope) {
-		return scopeApprovalsDecide
-	}
-	return "proposer"
-}
-
 // confirmerMayApprove is the confirm-action approver gate (A2a 3b). It runs
 // after the scope loads and before any run, contract, worker, or tool effect.
 // A denial writes a normalized blocker; the caller's transaction rolls back,
 // so the confirm token is not consumed and an approver can confirm it later.
-func confirmerMayApprove(w http.ResponseWriter, r *http.Request, scope *protocol.ScopeValidation) bool {
+func confirmerMayApprove(w http.ResponseWriter, r *http.Request, scope *protocol.ScopeValidation, tok confirmTokenRow) bool {
 	if !requiresApprover(scope) {
-		return true
+		if confirmerMayConfirmOwn(r, tok.MintedBy) { // A2b Q3: proposer-bound
+			recordConfirmAuthority(r, scope, tok)
+			return true
+		}
+		respondConfirmerNotProposer(w, r)
+		return false
 	}
 	identity := IdentityFromContext(r.Context())
 	if isApprover(identity) {
+		recordConfirmAuthority(r, scope, tok)
 		return true
 	}
 	status := http.StatusForbidden
@@ -219,7 +206,7 @@ func confirmerMayApprove(w http.ResponseWriter, r *http.Request, scope *protocol
 		status = http.StatusUnauthorized
 	}
 	const (
-		whatFailed = "This work needs admin approval. It was raised by an organization governance policy, so only an admin with approval authority can confirm it."
+		whatFailed = "This work needs admin approval. It was raised by an organization governance policy, a high-risk capability, or a cost above the approval limit, so only an admin with approval authority can confirm it."
 		nextStep   = "Ask an admin to review and confirm this proposal. Nothing ran and the proposal is still valid."
 	)
 	retryable := true

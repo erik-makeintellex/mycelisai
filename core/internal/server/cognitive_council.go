@@ -175,6 +175,13 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		effectiveTools := toolsForPlannedCalls(plannedToolCalls, mutTools)
 		chatPayload.ToolsUsed = effectiveTools
 		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
+		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, effectiveTools)
+		// A2b item 2: council runs the same posture seams as Soma chat, before
+		// anything is audited or minted. An unresolvable template fails closed.
+		if !s.applyCouncilOutcomeTemplateOrRespond(w, r, req.Messages, latestUserText, teamID, &display) {
+			return
+		}
+		approval = applyApproverTier(applyPostureApprovalFloor(approval, display.WorkIntent, s.Guard, effectiveTools))
 		scope := &protocol.ScopeValidation{
 			Tools:             effectiveTools,
 			AffectedResources: affectedResourcesForPlannedCalls(plannedToolCalls),
@@ -212,7 +219,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		proof, _ := s.createIntentProof(protocol.TemplateChatToProposal, "chat-action", scope, auditEventID)
 		var confirmToken *protocol.ConfirmToken
 		if proof != nil {
-			confirmToken, _ = s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal)
+			confirmToken, _ = s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal, confirmTokenMint{Purpose: tokenPurposeChatAction, MintedBy: auditActorIDFromRequest(r)})
 		}
 
 		var proofID string
@@ -223,7 +230,6 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		if confirmToken != nil {
 			token = confirmToken.Token
 		}
-		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, effectiveTools)
 		chatPayload.Proposal = buildMutationChatProposal(effectiveTools, proofID, token, teamID, []string{memberID}, approval, profile.snapshot(), display)
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
@@ -288,4 +294,23 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
 	log.Printf("Council chat: member=%s team=%s trust=%.1f tools=%v template=%s", memberID, teamID, envelope.TrustScore, agentResult.ToolsUsed, envelope.TemplateID)
+}
+
+// codeCouncilTemplateUnresolved marks council template work that Core could not
+// resolve or scope-validate; nothing was audited or minted.
+const codeCouncilTemplateUnresolved = "outcome_template_unresolved"
+
+// applyCouncilOutcomeTemplateOrRespond binds template work in a council turn to
+// its Outcome Template (A2b). Council carries no session or organization, so a
+// template it cannot resolve or scope-validate is refused with 409 and nothing
+// is minted.
+func (s *AdminServer) applyCouncilOutcomeTemplateOrRespond(w http.ResponseWriter, r *http.Request,
+	messages []chatRequestMessage, latestUserText, teamID string, display *proposalDisplayContract) bool {
+	if _, err := s.applyThreadOutcomeTemplate(r.Context(), "", messages, latestUserText, "", teamID,
+		auditActorIDFromRequest(r), display); err != nil {
+		respondGovernanceError(w, http.StatusConflict, err.Error(), codeCouncilTemplateUnresolved,
+			"Apply this Outcome Template through Soma in its organization")
+		return false
+	}
+	return true
 }

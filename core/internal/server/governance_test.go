@@ -1,8 +1,12 @@
 package server
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -210,5 +214,80 @@ func TestHandleUpdatePolicy_RejectsFailOpenPolicies(t *testing.T) {
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// auditRecorder captures the context JSON of every log_entries insert.
+type auditRecorder struct {
+	mu   sync.Mutex
+	ctxs []map[string]any
+}
+
+func (a *auditRecorder) Match(v driver.Value) bool {
+	b, _ := v.([]byte)
+	var m map[string]any
+	if json.Unmarshal(b, &m) != nil {
+		return false
+	}
+	a.mu.Lock()
+	a.ctxs = append(a.ctxs, m)
+	a.mu.Unlock()
+	return true
+}
+
+// A2b item 4: concurrent PUTs read previous_digest under applyMu, so each
+// requested audit's previous_digest is the preceding PUT's new_digest.
+func TestUpdatePolicyConcurrentPreviousDigestChain(t *testing.T) {
+	t.Chdir(t.TempDir())
+	os.MkdirAll("config", 0o755)
+	const n = 12
+	dbOpt, mock := withDB(t)
+	mock.MatchExpectationsInOrder(false)
+	rec := &auditRecorder{}
+	a := sqlmock.AnyArg()
+	for i := 0; i < 2*n; i++ {
+		mock.ExpectExec("INSERT INTO log_entries").WithArgs(a, a, a, a, a, a, a, rec).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+	}
+	s := newTestServer(withGuard(defaultTestPolicyConfig()), dbOpt)
+	_, initial, _ := canonicalPolicy(s.Guard.GetPolicyConfig())
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			body := fmt.Sprintf(`{"groups":[{"name":"g%d","targets":["*"],"rules":[{"intent":"x%d","action":"DENY"}]}],"defaults":{"default_action":"ALLOW"}}`, i, i)
+			if rr := putPolicy(t, s, body); rr.Code != http.StatusOK {
+				t.Errorf("PUT %d: %d %s", i, rr.Code, rr.Body.String())
+			}
+		}(i)
+	}
+	wg.Wait()
+	// sqlmock may evaluate an argument matcher more than once per insert; each
+	// PUT has a unique new_digest, so keep the first sighting in insert order.
+	var requested []map[string]any
+	once := map[any]bool{}
+	for _, c := range rec.ctxs {
+		if c["result_status"] == "requested" && !once[c["new_digest"]] {
+			once[c["new_digest"]] = true
+			requested = append(requested, c)
+		}
+	}
+	if len(requested) != n {
+		t.Fatalf("expected %d requested audits, got %d", n, len(requested))
+	}
+	prev, seen := initial, map[any]bool{}
+	for i, c := range requested {
+		if c["previous_digest"] != prev {
+			t.Fatalf("requested audit %d: previous_digest %v, want %v", i, c["previous_digest"], prev)
+		}
+		if seen[c["previous_digest"]] {
+			t.Fatalf("duplicate previous_digest at %d", i)
+		}
+		seen[c["previous_digest"]] = true
+		prev, _ = c["new_digest"].(string)
+	}
+	if _, live, _ := canonicalPolicy(s.Guard.GetPolicyConfig()); live != prev {
+		t.Fatal("live policy must be the last requested new_digest")
 	}
 }

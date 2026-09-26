@@ -53,8 +53,10 @@ func (r *Router) handleMessage(msg *nats.Msg) {
 	// nothing else. The Router is an observer, so this does not stop NATS
 	// delivery to direct subscribers.
 	if r.guard == nil || r.guard.Degraded() {
+		// A2b: only refresh agents that are already registered; a spoofed or
+		// unknown heartbeat never creates an agent or rewrites team/source.
 		if isHeartbeatEnvelope(msg.Subject, &envelope) {
-			r.updateRegistry(&envelope, msg.Subject)
+			state.GlobalRegistry.RefreshKnown(envelope.SourceAgentId)
 		}
 		return
 	}
@@ -93,15 +95,12 @@ func (r *Router) handleMessage(msg *nats.Msg) {
 	// This router component acts as the "Sidecar" or "Observer" for the Core.
 }
 
+// isHeartbeatEnvelope is exact (A2b): the canonical global heartbeat subject,
+// the agent.heartbeat event, and a non-empty source agent. No substring match.
 func isHeartbeatEnvelope(subject string, envelope *pb.MsgEnvelope) bool {
-	if strings.TrimSpace(subject) == protocol.TopicGlobalHeartbeat {
-		return true
-	}
-	if envelope == nil {
-		return strings.Contains(strings.ToLower(subject), "heartbeat")
-	}
-	return strings.Contains(strings.ToLower(subject), "heartbeat") ||
-		(envelope.GetEvent() != nil && envelope.GetEvent().EventType == "agent.heartbeat")
+	return subject == protocol.TopicGlobalHeartbeat && envelope != nil &&
+		envelope.GetEvent() != nil && envelope.GetEvent().EventType == "agent.heartbeat" &&
+		envelope.SourceAgentId != ""
 }
 
 // PublishDirect sends a message directly to NATS, bypassing Gatekeeper

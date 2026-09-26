@@ -42,7 +42,7 @@ func (s *AdminServer) handleIntentCommit(w http.ResponseWriter, r *http.Request)
 		respondError(w, "confirm_token is required. No token = no commit.", http.StatusForbidden)
 		return
 	}
-	proofID, err := s.consumeConfirmTokenFor(req.ConfirmToken, blueprintCommitPurpose)
+	proofID, err := s.consumeProposerTokenFor(r, req.ConfirmToken, blueprintCommitPurpose, blueprintBinding(&req.MissionBlueprint))
 	if err != nil {
 		respondConfirmTokenError(w, err, http.StatusForbidden)
 		return

@@ -2615,4 +2615,11 @@ INSERT INTO system_config (key, value) VALUES ('schema.role_seed_retirement', '1
     ON CONFLICT (key) DO NOTHING;
 -- END ROLE_SEED_RETIREMENT_EXTENSION
 
+-- BEGIN CONFIRM_TOKEN_BINDING_EXTENSION
+-- Confirm tokens record purpose, bound-subject digest and minting principal at
+-- mint. Legacy rows keep NULLs and are refused by Core (never backfilled).
+ALTER TABLE confirm_tokens ADD COLUMN purpose TEXT, ADD COLUMN binding_digest TEXT, ADD COLUMN minted_by TEXT;
+ALTER TABLE confirm_tokens ADD CONSTRAINT chk_confirm_tokens_purpose CHECK (purpose IS NULL OR purpose IN ('chat_action', 'mission_blueprint', 'group_mutation', 'invocation'));
+-- END CONFIRM_TOKEN_BINDING_EXTENSION
+
 COMMIT;

@@ -155,7 +155,7 @@ func parseAuditUUID(id string) *uuid.UUID {
 	return &parsed
 }
 
-func (s *AdminServer) maybeRequireGroupApproval(w http.ResponseWriter, req createGroupRequest, op string, groupID string) bool {
+func (s *AdminServer) maybeRequireGroupApproval(w http.ResponseWriter, r *http.Request, req createGroupRequest, op string, groupID string) bool {
 	if !isHighImpactGroupMutation(req) {
 		return false
 	}
@@ -198,7 +198,7 @@ func (s *AdminServer) maybeRequireGroupApproval(w http.ResponseWriter, req creat
 		respondAPIError(w, "failed to create approval proof", http.StatusServiceUnavailable)
 		return true
 	}
-	confirmToken, err := s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal)
+	confirmToken, err := s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal, confirmTokenMint{Purpose: tokenPurposeGroupMutation, MintedBy: auditActorIDFromRequest(r)})
 	if err != nil || confirmToken == nil {
 		respondAPIError(w, "failed to create confirm token", http.StatusServiceUnavailable)
 		return true

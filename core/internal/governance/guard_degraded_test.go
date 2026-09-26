@@ -71,7 +71,7 @@ func TestUpdatePolicyConfigClearsDegraded(t *testing.T) {
 
 func TestReplacePolicyPersistFailureLeavesMemoryUnchanged(t *testing.T) {
 	g := NewDegradedGuard(errors.New("boom"))
-	if err := g.ReplacePolicy(allowAllConfig(), func() error { return errors.New("disk full") }); err == nil {
+	if err := g.ReplacePolicy(allowAllConfig(), func(*PolicyConfig) error { return errors.New("disk full") }); err == nil {
 		t.Fatal("expected persist error")
 	}
 	if !g.Degraded() {
@@ -80,7 +80,7 @@ func TestReplacePolicyPersistFailureLeavesMemoryUnchanged(t *testing.T) {
 	if err := g.ReplacePolicy(nil, nil); err == nil {
 		t.Fatal("nil config must be rejected")
 	}
-	if err := g.ReplacePolicy(allowAllConfig(), func() error { return nil }); err != nil || g.Degraded() {
+	if err := g.ReplacePolicy(allowAllConfig(), func(*PolicyConfig) error { return nil }); err != nil || g.Degraded() {
 		t.Fatalf("successful replace should clear degraded: err=%v", err)
 	}
 }
@@ -157,5 +157,51 @@ func TestInterceptDeniesUnknownAction(t *testing.T) {
 	g.UpdatePolicyConfig(&PolicyConfig{Defaults: DefaultConfig{DefaultAction: "DENNY"}}) // bypasses validation on purpose
 	if proceed, action, _ := g.Intercept(eventEnvelope("alpha", "a", "x")); proceed || action != ActionDeny {
 		t.Fatalf("unknown action must fail closed, got %v %q", proceed, action)
+	}
+}
+
+// A2b item 4: the apply callback sees the live policy under applyMu, so N
+// concurrent replacements form a chain: each previous is exactly the policy
+// the preceding replacement installed (no duplicates, no stale reads).
+func TestReplacePolicyPreviousIsChainedUnderLock(t *testing.T) {
+	g := NewDegradedGuard(errors.New("boom"))
+	const n = 32
+	var mu sync.Mutex
+	var order []*PolicyConfig // previous, next pairs in apply order
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			next := allowAllConfig()
+			_ = g.ReplacePolicy(next, func(previous *PolicyConfig) error {
+				mu.Lock()
+				order = append(order, previous, next)
+				mu.Unlock()
+				return nil
+			})
+		}()
+	}
+	wg.Wait()
+	if len(order) != 2*n || order[0] != nil {
+		t.Fatalf("first replacement must see the degraded (nil) policy; got %d entries", len(order))
+	}
+	for i := 2; i < len(order); i += 2 {
+		if order[i] != order[i-1] {
+			t.Fatalf("replacement %d saw a stale previous policy", i/2)
+		}
+	}
+	if g.GetPolicyConfig() != order[len(order)-1] {
+		t.Fatal("live policy must be the last applied replacement")
+	}
+}
+
+func TestReplacePolicyAuditUnavailableChangesNothing(t *testing.T) {
+	g := NewDegradedGuard(errors.New("boom"))
+	live := allowAllConfig()
+	g.UpdatePolicyConfig(live)
+	err := g.ReplacePolicy(allowAllConfig(), func(*PolicyConfig) error { return ErrAuditUnavailable })
+	if !errors.Is(err, ErrAuditUnavailable) || g.GetPolicyConfig() != live {
+		t.Fatalf("audit failure must leave memory unchanged: err=%v", err)
 	}
 }
