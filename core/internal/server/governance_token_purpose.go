@@ -40,6 +40,8 @@ var (
 	errTokenPurposeUnknown = errors.New("confirm token predates purpose binding")
 	// errBlueprintMismatch refuses a commit body that is not the negotiated blueprint.
 	errBlueprintMismatch = errors.New("blueprint differs from the negotiated proposal")
+	// errApproverRequired refuses a tier-2 commit by a non-approver (A2b C1).
+	errApproverRequired = errors.New("this proposal needs admin approval")
 )
 
 // confirmTokenPurpose names the durable purpose a route accepts and the
@@ -63,7 +65,10 @@ var blueprintCommitPurpose = confirmTokenPurpose{column: tokenPurposeMissionBlue
 		strings.HasPrefix(intent, "groups.") || strings.HasPrefix(intent, "schedule cadence proposal") {
 		return false
 	}
-	return scope != nil && !requiresApprover(scope) && len(scope.PlannedToolCalls) == 0 &&
+	// Tier-2 blueprints are allowed here; the approver gate runs at consume.
+	// Posture-raised (chat) approvals never belong to a blueprint.
+	postureRaised := scope != nil && scope.Approval != nil && scope.Approval.ApprovalReason == approvalReasonOutcomePosture
+	return scope != nil && !postureRaised && len(scope.PlannedToolCalls) == 0 &&
 		slices.Equal(scope.AffectedResources, blueprintResources)
 }}
 
@@ -95,27 +100,30 @@ func checkTokenPurpose(row confirmTokenRow, want string) error {
 // consumeConfirmTokenFor checks existence, expiry, and purpose, then consumes
 // the token only if this call wins the single-use update.
 func (s *AdminServer) consumeConfirmTokenFor(token string, purpose confirmTokenPurpose) (string, error) {
-	return s.consumeBoundConfirmToken(nil, token, purpose, nil)
+	proofID, _, err := s.consumeBoundConfirmToken(nil, token, purpose, nil, nil)
+	return proofID, err
 }
 
 // consumeProposerTokenFor is consumeConfirmTokenFor for proposer-bound tokens
 // (A2b Q3): only the minting principal of r, or an approver, may consume it.
-// bind, when set, checks the stored binding digest before consumption.
-func (s *AdminServer) consumeProposerTokenFor(r *http.Request, token string, purpose confirmTokenPurpose, bind func(confirmTokenRow) error) (string, error) {
+// bind, when set, checks the stored binding digest before consumption. floor,
+// when set, is a server-recomputed scope whose tier also applies (the higher
+// of stored and recomputed wins). Tier 2 needs an approver (errApproverRequired).
+func (s *AdminServer) consumeProposerTokenFor(r *http.Request, token string, purpose confirmTokenPurpose, bind func(confirmTokenRow) error, floor *protocol.ScopeValidation) (string, confirmAuthority, error) {
 	if r == nil {
-		return "", errConfirmerNotProposer
+		return "", confirmAuthority{}, errConfirmerNotProposer
 	}
-	return s.consumeBoundConfirmToken(r, token, purpose, bind)
+	return s.consumeBoundConfirmToken(r, token, purpose, bind, floor)
 }
 
-func (s *AdminServer) consumeBoundConfirmToken(proposer *http.Request, token string, purpose confirmTokenPurpose, bind func(confirmTokenRow) error) (string, error) {
+func (s *AdminServer) consumeBoundConfirmToken(proposer *http.Request, token string, purpose confirmTokenPurpose, bind func(confirmTokenRow) error, floor *protocol.ScopeValidation) (string, confirmAuthority, error) {
 	db := s.getDB()
 	if db == nil {
-		return "", errDBUnavailable
+		return "", confirmAuthority{}, errDBUnavailable
 	}
 	tokenUUID, err := uuid.Parse(token)
 	if err != nil {
-		return "", errInvalidToken
+		return "", confirmAuthority{}, errInvalidToken
 	}
 	var resolvedIntent string
 	var row confirmTokenRow
@@ -129,30 +137,41 @@ func (s *AdminServer) consumeBoundConfirmToken(proposer *http.Request, token str
 		tokenUUID,
 	).Scan(&row.ProofID, &consumed, &expiresAt, &resolvedIntent, &scopeJSON, &row.Purpose, &row.BindingDigest, &row.MintedBy)
 	if err != nil {
-		return "", errTokenNotFound
+		return "", confirmAuthority{}, errTokenNotFound
 	}
 	if consumed {
-		return "", errTokenAlreadyUsed
+		return "", confirmAuthority{}, errTokenAlreadyUsed
 	}
 	if time.Now().After(expiresAt) {
-		return "", errTokenExpired
+		return "", confirmAuthority{}, errTokenExpired
 	}
 	if err := checkTokenPurpose(row, purpose.column); err != nil {
-		return "", err
+		return "", confirmAuthority{}, err
 	}
 	scope := &protocol.ScopeValidation{}
 	if len(scopeJSON) > 0 && json.Unmarshal(scopeJSON, scope) != nil {
-		return "", errTokenWrongPurpose
+		return "", confirmAuthority{}, errTokenWrongPurpose
 	}
 	if purpose.check == nil || !purpose.check(resolvedIntent, scope) {
-		return "", errTokenWrongPurpose
+		return "", confirmAuthority{}, errTokenWrongPurpose
 	}
-	if proposer != nil && !confirmerMayConfirmOwn(proposer, row.MintedBy) {
-		return "", errConfirmerNotProposer
+	var authority confirmAuthority
+	if proposer != nil {
+		effective := scope
+		if floor != nil && requiresApprover(floor) && !requiresApprover(scope) {
+			effective = floor
+		}
+		switch {
+		case requiresApprover(effective) && !isApprover(IdentityFromContext(proposer.Context())):
+			return "", authority, errApproverRequired
+		case !requiresApprover(effective) && !confirmerMayConfirmOwn(proposer, row.MintedBy):
+			return "", authority, errConfirmerNotProposer
+		}
+		authority = resolveConfirmAuthority(proposer, effective, row.MintedBy)
 	}
 	if bind != nil {
 		if err := bind(row); err != nil {
-			return "", err
+			return "", confirmAuthority{}, err
 		}
 	}
 	result, err := db.Exec(
@@ -160,12 +179,12 @@ func (s *AdminServer) consumeBoundConfirmToken(proposer *http.Request, token str
 		time.Now(), tokenUUID,
 	)
 	if err != nil {
-		return "", err
+		return "", confirmAuthority{}, err
 	}
 	if n, err := result.RowsAffected(); err != nil || n != 1 {
-		return "", errTokenAlreadyUsed
+		return "", confirmAuthority{}, errTokenAlreadyUsed
 	}
-	return row.ProofID, nil
+	return row.ProofID, authority, nil
 }
 
 // blueprintBinding refuses a commit whose body is not exactly the negotiated

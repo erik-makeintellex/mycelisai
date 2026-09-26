@@ -201,6 +201,14 @@ func confirmerMayApprove(w http.ResponseWriter, r *http.Request, scope *protocol
 		recordConfirmAuthority(r, scope, tok)
 		return true
 	}
+	respondApproverRequired(w, r)
+	return false
+}
+
+// respondApproverRequired writes the normalized tier-2 blocker. Nothing ran and
+// the token was not consumed, so an approver can confirm it later.
+func respondApproverRequired(w http.ResponseWriter, r *http.Request) {
+	identity := IdentityFromContext(r.Context())
 	status := http.StatusForbidden
 	if identity == nil {
 		status = http.StatusUnauthorized
@@ -237,5 +245,4 @@ func confirmerMayApprove(w http.ResponseWriter, r *http.Request, scope *protocol
 		"execution_state":    "blocked",
 		"execution_summary":  summary,
 	}})
-	return false
 }

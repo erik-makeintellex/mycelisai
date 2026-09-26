@@ -202,7 +202,8 @@ func TestConfirmActionRejectsNonChatTokensWithoutConsuming(t *testing.T) {
 func TestDurablePurposeRoutesTokens(t *testing.T) {
 	bp, grp := blueprintScope(), groupScope()
 	commit := func(s *AdminServer) (string, error) {
-		return s.consumeProposerTokenFor(requestAs(standardUserIdentity()), approverTestToken, blueprintCommitPurpose, nil)
+		proofID, _, err := s.consumeProposerTokenFor(requestAs(standardUserIdentity()), approverTestToken, blueprintCommitPurpose, nil, nil)
+		return proofID, err
 	}
 	group := func(s *AdminServer) (string, error) {
 		return s.consumeConfirmTokenFor(approverTestToken, groupMutationPurpose("create", ""))

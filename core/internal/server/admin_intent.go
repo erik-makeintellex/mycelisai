@@ -54,7 +54,7 @@ func (s *AdminServer) handleIntentNegotiate(w http.ResponseWriter, r *http.Reque
 		blueprint = bp
 	}
 
-	scope := buildScopeFromBlueprint(blueprint)
+	scope := buildScopeFromBlueprintFor(blueprint, userGovernanceProfileFromRequest(r))
 	auditEventID, _ := s.createAuditEvent(
 		protocol.TemplateChatToProposal, "negotiate",
 		fmt.Sprintf("Blueprint negotiation: %s", req.Intent),

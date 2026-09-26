@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -42,14 +43,21 @@ func (s *AdminServer) handleIntentCommit(w http.ResponseWriter, r *http.Request)
 		respondError(w, "confirm_token is required. No token = no commit.", http.StatusForbidden)
 		return
 	}
-	proofID, err := s.consumeProposerTokenFor(r, req.ConfirmToken, blueprintCommitPurpose, blueprintBinding(&req.MissionBlueprint))
+	// A2b C1: the tier is judged on the stored scope and on a server-side
+	// reclassification of the decoded body (the higher wins); tier 2 needs an
+	// approver, lower tiers the proposer. No client risk field is read.
+	bp := &req.MissionBlueprint
+	floor := buildScopeFromBlueprintFor(bp, userGovernanceProfileFromRequest(r))
+	proofID, authority, err := s.consumeProposerTokenFor(r, req.ConfirmToken, blueprintCommitPurpose, blueprintBinding(bp), floor)
+	if errors.Is(err, errApproverRequired) {
+		respondApproverRequired(w, r)
+		return
+	}
 	if err != nil {
 		respondConfirmTokenError(w, err, http.StatusForbidden)
 		return
 	}
-
-	bp := &req.MissionBlueprint
-	s.commitAndActivateWithProof(w, bp, buildSensorConfigs(bp), proofID)
+	s.commitAndActivateWithProof(w, bp, buildSensorConfigs(bp), proofID, authority)
 }
 
 // handleSymbioticSeed commits the built-in Symbiotic Sensors blueprint.
@@ -78,7 +86,7 @@ func (s *AdminServer) commitAndActivate(w http.ResponseWriter, bp *protocol.Miss
 	respondJSON(w, resp)
 }
 
-func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *protocol.MissionBlueprint, sensorConfigs map[string]swarm.SensorConfig, proofID string) {
+func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *protocol.MissionBlueprint, sensorConfigs map[string]swarm.SensorConfig, proofID string, authority confirmAuthority) {
 	missionID, totalAgents, ok := s.persistMissionBlueprint(w, bp)
 	if !ok {
 		return
@@ -89,7 +97,8 @@ func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *prot
 	auditEventID, _ := s.createAuditEvent(
 		protocol.TemplateChatToProposal, "commit",
 		fmt.Sprintf("Mission committed: %s", missionID),
-		map[string]any{"mission_id": missionID.String(), "teams": len(bp.Teams), "agents": totalAgents, "proof_id": proofID},
+		map[string]any{"mission_id": missionID.String(), "teams": len(bp.Teams), "agents": totalAgents, "proof_id": proofID,
+			"approval_authority": authority.Authority, "approval_tier": authority.Tier, "self_approved": authority.SelfApproved},
 	)
 
 	resp := CommitResponse{
