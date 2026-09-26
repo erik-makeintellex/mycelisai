@@ -22,10 +22,12 @@ func TestHandleDeleteBrain_HappyPath(t *testing.T) {
 			"vllm":   &stubAdapter{healthy: true},
 		},
 	)
-	s := newTestServer(cogOpt)
+	dbOpt, mock := withDirectDB(t)
+	s := newTestServer(cogOpt, dbOpt)
+	expectAudit(mock)
 
 	mux := setupMux(t, "DELETE /api/v1/brains/{id}", s.HandleDeleteBrain)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/brains/vllm", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/brains/vllm", "")
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -53,7 +55,7 @@ func TestHandleDeleteBrain_NotFound(t *testing.T) {
 	s := newTestServer(cogOpt)
 
 	mux := setupMux(t, "DELETE /api/v1/brains/{id}", s.HandleDeleteBrain)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/brains/ghost", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/brains/ghost", "")
 
 	assertStatus(t, rr, http.StatusNotFound)
 }
@@ -70,7 +72,7 @@ func TestHandleDeleteBrain_LastProvider(t *testing.T) {
 	s := newTestServer(cogOpt)
 
 	mux := setupMux(t, "DELETE /api/v1/brains/{id}", s.HandleDeleteBrain)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/brains/ollama", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/brains/ollama", "")
 
 	assertStatus(t, rr, http.StatusConflict)
 }
@@ -78,7 +80,7 @@ func TestHandleDeleteBrain_LastProvider(t *testing.T) {
 func TestHandleDeleteBrain_NilCognitive(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "DELETE /api/v1/brains/{id}", s.HandleDeleteBrain)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/brains/x", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/brains/x", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
@@ -95,10 +97,12 @@ func TestHandleProbeBrain_Healthy(t *testing.T) {
 			"ollama": &stubAdapter{healthy: true},
 		},
 	)
-	s := newTestServer(cogOpt)
+	dbOpt, mock := withDirectDB(t)
+	s := newTestServer(cogOpt, dbOpt)
+	expectAudit(mock)
 
 	mux := setupMux(t, "POST /api/v1/brains/{id}/probe", s.HandleProbeBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains/ollama/probe", "")
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains/ollama/probe", "")
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -128,10 +132,12 @@ func TestHandleProbeBrain_Unhealthy(t *testing.T) {
 			"ollama": &stubAdapter{healthy: false},
 		},
 	)
-	s := newTestServer(cogOpt)
+	dbOpt, mock := withDirectDB(t)
+	s := newTestServer(cogOpt, dbOpt)
+	expectAudit(mock)
 
 	mux := setupMux(t, "POST /api/v1/brains/{id}/probe", s.HandleProbeBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains/ollama/probe", "")
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains/ollama/probe", "")
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -155,7 +161,7 @@ func TestHandleProbeBrain_NotFound(t *testing.T) {
 	s := newTestServer(cogOpt)
 
 	mux := setupMux(t, "POST /api/v1/brains/{id}/probe", s.HandleProbeBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains/ghost/probe", "")
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains/ghost/probe", "")
 
 	assertStatus(t, rr, http.StatusNotFound)
 }
@@ -163,6 +169,6 @@ func TestHandleProbeBrain_NotFound(t *testing.T) {
 func TestHandleProbeBrain_NilCognitive(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "POST /api/v1/brains/{id}/probe", s.HandleProbeBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains/ollama/probe", "")
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains/ollama/probe", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }

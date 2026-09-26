@@ -3,6 +3,8 @@ package server
 // Mission Profiles API — named provider-routing configurations that can be activated
 // to change which AI provider handles each agent role, with optional reactive NATS
 // subscriptions that let the profile's agents watch other agents' outputs.
+// Every route except GET requires root admin + cognitive:write and is audited
+// before it changes anything (routing_mutation_authority.go).
 //
 // Endpoints:
 //   GET    /api/v1/mission-profiles
@@ -96,6 +98,9 @@ func (s *AdminServer) HandleListMissionProfiles(w http.ResponseWriter, r *http.R
 
 // POST /api/v1/mission-profiles
 func (s *AdminServer) HandleCreateMissionProfile(w http.ResponseWriter, r *http.Request) {
+	if !requireRoutingWriter(w, r) {
+		return
+	}
 	if !s.dbRequired(w) {
 		return
 	}
@@ -117,6 +122,9 @@ func (s *AdminServer) HandleCreateMissionProfile(w http.ResponseWriter, r *http.
 	}
 	if req.ContextStrategy == "" {
 		req.ContextStrategy = "fresh"
+	}
+	if _, ok := s.auditRoutingMutation(w, r, auditMissionProfileCreated, "Mission profile created", missionProfileAuditFields("", req)); !ok {
+		return
 	}
 
 	var p MissionProfile
@@ -146,6 +154,9 @@ func (s *AdminServer) HandleCreateMissionProfile(w http.ResponseWriter, r *http.
 
 // PUT /api/v1/mission-profiles/{id}
 func (s *AdminServer) HandleUpdateMissionProfile(w http.ResponseWriter, r *http.Request) {
+	if !requireRoutingWriter(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		respondAPIError(w, "Missing profile ID", http.StatusBadRequest)
@@ -168,6 +179,9 @@ func (s *AdminServer) HandleUpdateMissionProfile(w http.ResponseWriter, r *http.
 	}
 	if req.ContextStrategy == "" {
 		req.ContextStrategy = "fresh"
+	}
+	if _, ok := s.auditRoutingMutation(w, r, auditMissionProfileUpdated, "Mission profile updated", missionProfileAuditFields(id, req)); !ok {
+		return
 	}
 
 	res, err := s.DB.ExecContext(r.Context(), `
@@ -195,6 +209,9 @@ func (s *AdminServer) HandleUpdateMissionProfile(w http.ResponseWriter, r *http.
 
 // DELETE /api/v1/mission-profiles/{id}
 func (s *AdminServer) HandleDeleteMissionProfile(w http.ResponseWriter, r *http.Request) {
+	if !requireRoutingWriter(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		respondAPIError(w, "Missing profile ID", http.StatusBadRequest)
@@ -203,10 +220,8 @@ func (s *AdminServer) HandleDeleteMissionProfile(w http.ResponseWriter, r *http.
 	if !s.dbRequired(w) {
 		return
 	}
-
-	// Unsubscribe reactive engine before deleting
-	if s.Reactive != nil {
-		s.Reactive.Unsubscribe(id)
+	if _, ok := s.auditRoutingMutation(w, r, auditMissionProfileDeleted, "Mission profile deleted", map[string]any{"mission_profile_id": id}); !ok {
+		return
 	}
 
 	res, err := s.DB.ExecContext(r.Context(),
@@ -221,6 +236,21 @@ func (s *AdminServer) HandleDeleteMissionProfile(w http.ResponseWriter, r *http.
 		respondAPIError(w, "Profile not found", http.StatusNotFound)
 		return
 	}
+	// Unsubscribe the reactive engine only once the row is gone.
+	if s.Reactive != nil {
+		s.Reactive.Unsubscribe(id)
+	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]any{"id": id, "deleted": true}))
+}
+
+// missionProfileAuditFields describes a mission-profile write for the audit
+// record: its name and requested role->provider routing.
+func missionProfileAuditFields(id string, req missionProfileUpsert) map[string]any {
+	return map[string]any{
+		"mission_profile_id":   id,
+		"mission_profile_name": req.Name,
+		"role_providers":       string(req.RoleProviders),
+		"auto_start":           req.AutoStart,
+	}
 }

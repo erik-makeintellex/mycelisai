@@ -20,7 +20,9 @@ func TestHandleAddBrain_HappyPath(t *testing.T) {
 			"ollama": &stubAdapter{healthy: true},
 		},
 	)
-	s := newTestServer(cogOpt)
+	dbOpt, mock := withDirectDB(t)
+	s := newTestServer(cogOpt, dbOpt)
+	expectAudit(mock)
 
 	body := `{
 		"id": "vllm-local",
@@ -33,7 +35,7 @@ func TestHandleAddBrain_HappyPath(t *testing.T) {
 	}`
 
 	mux := setupMux(t, "POST /api/v1/brains", s.HandleAddBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains", body)
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -75,7 +77,7 @@ func TestHandleAddBrain_BadJSON(t *testing.T) {
 	s := newTestServer(cogOpt)
 
 	mux := setupMux(t, "POST /api/v1/brains", s.HandleAddBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains", "not-json")
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains", "not-json")
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -89,7 +91,7 @@ func TestHandleAddBrain_MissingID(t *testing.T) {
 
 	body := `{"type": "openai_compatible", "endpoint": "http://localhost:8000/v1"}`
 	mux := setupMux(t, "POST /api/v1/brains", s.HandleAddBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains", body)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -103,7 +105,7 @@ func TestHandleAddBrain_InvalidID(t *testing.T) {
 
 	body := `{"id": "UPPER_CASE!", "type": "openai_compatible"}`
 	mux := setupMux(t, "POST /api/v1/brains", s.HandleAddBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains", body)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -117,7 +119,7 @@ func TestHandleAddBrain_MissingType(t *testing.T) {
 
 	body := `{"id": "vllm-local"}`
 	mux := setupMux(t, "POST /api/v1/brains", s.HandleAddBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains", body)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -133,7 +135,7 @@ func TestHandleAddBrain_RejectsRawAPIKey(t *testing.T) {
 
 	body := `{"id": "hosted-openai", "type": "openai", "api_key": "sk-live-secret"}`
 	mux := setupMux(t, "POST /api/v1/brains", s.HandleAddBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains", body)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -149,7 +151,7 @@ func TestHandleAddBrain_DuplicateID(t *testing.T) {
 
 	body := `{"id": "ollama", "type": "openai_compatible"}`
 	mux := setupMux(t, "POST /api/v1/brains", s.HandleAddBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains", body)
 
 	assertStatus(t, rr, http.StatusConflict)
 }
@@ -157,7 +159,7 @@ func TestHandleAddBrain_DuplicateID(t *testing.T) {
 func TestHandleAddBrain_NilCognitive(t *testing.T) {
 	s := newTestServer() // no cognitive
 	mux := setupMux(t, "POST /api/v1/brains", s.HandleAddBrain)
-	rr := doRequest(t, mux, "POST", "/api/v1/brains", `{"id":"x","type":"openai_compatible"}`)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/brains", `{"id":"x","type":"openai_compatible"}`)
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
@@ -174,7 +176,9 @@ func TestHandleUpdateBrain_HappyPath(t *testing.T) {
 			"ollama": &stubAdapter{healthy: true},
 		},
 	)
-	s := newTestServer(cogOpt)
+	dbOpt, mock := withDirectDB(t)
+	s := newTestServer(cogOpt, dbOpt)
+	expectAudit(mock)
 
 	body := `{
 		"type": "openai_compatible",
@@ -185,7 +189,7 @@ func TestHandleUpdateBrain_HappyPath(t *testing.T) {
 		"enabled": true
 	}`
 	mux := setupMux(t, "PUT /api/v1/brains/{id}", s.HandleUpdateBrain)
-	rr := doRequest(t, mux, "PUT", "/api/v1/brains/ollama", body)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/brains/ollama", body)
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -220,7 +224,7 @@ func TestHandleUpdateBrain_NotFound(t *testing.T) {
 
 	body := `{"type": "openai_compatible"}`
 	mux := setupMux(t, "PUT /api/v1/brains/{id}", s.HandleUpdateBrain)
-	rr := doRequest(t, mux, "PUT", "/api/v1/brains/nonexistent", body)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/brains/nonexistent", body)
 
 	assertStatus(t, rr, http.StatusNotFound)
 }
@@ -235,7 +239,7 @@ func TestHandleUpdateBrain_BadJSON(t *testing.T) {
 	s := newTestServer(cogOpt)
 
 	mux := setupMux(t, "PUT /api/v1/brains/{id}", s.HandleUpdateBrain)
-	rr := doRequest(t, mux, "PUT", "/api/v1/brains/ollama", "not-json")
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/brains/ollama", "not-json")
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -250,7 +254,7 @@ func TestHandleUpdateBrain_RejectsRawAPIKey(t *testing.T) {
 	s := newTestServer(cogOpt)
 
 	mux := setupMux(t, "PUT /api/v1/brains/{id}", s.HandleUpdateBrain)
-	rr := doRequest(t, mux, "PUT", "/api/v1/brains/ollama", `{"type":"openai_compatible","api_key":"live-secret"}`)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/brains/ollama", `{"type":"openai_compatible","api_key":"live-secret"}`)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -258,6 +262,6 @@ func TestHandleUpdateBrain_RejectsRawAPIKey(t *testing.T) {
 func TestHandleUpdateBrain_NilCognitive(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "PUT /api/v1/brains/{id}", s.HandleUpdateBrain)
-	rr := doRequest(t, mux, "PUT", "/api/v1/brains/ollama", `{"type":"openai"}`)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/brains/ollama", `{"type":"openai"}`)
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }

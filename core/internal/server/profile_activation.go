@@ -10,8 +10,23 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+// missionProfileRoutingNotApplied reports an activation whose is_active flag
+// committed but whose runtime routing apply failed afterward.
+const missionProfileRoutingNotApplied = "mission_profile_routing_not_applied"
+
+// missionProfileActivationRecovery is the operator recovery for
+// missionProfileRoutingNotApplied.
+const missionProfileActivationRecovery = "The profile is marked active but routing did not change. " +
+	"Fix or re-enable the providers it names, then activate it again."
+
 // HandleActivateMissionProfile applies providers, subscriptions, and active DB state.
+// Root admin + cognitive:write, audited first, and all or nothing for routing:
+// every role->provider pair is validated before anything changes, and the
+// pairs are applied together as runtime-only overrides.
 func (s *AdminServer) HandleActivateMissionProfile(w http.ResponseWriter, r *http.Request) {
+	if !requireRoutingWriter(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		respondAPIError(w, "Missing profile ID", http.StatusBadRequest)
@@ -20,6 +35,11 @@ func (s *AdminServer) HandleActivateMissionProfile(w http.ResponseWriter, r *htt
 	if !s.dbRequired(w) {
 		return
 	}
+
+	// Serialized with profile override PUT/DELETE and provider toggles so the
+	// validation below still holds when the overrides are applied.
+	profileOverrideWriteMu.Lock()
+	defer profileOverrideWriteMu.Unlock()
 
 	p, err := s.loadMissionProfileForActivation(r, id)
 	if err == sql.ErrNoRows {
@@ -32,12 +52,46 @@ func (s *AdminServer) HandleActivateMissionProfile(w http.ResponseWriter, r *htt
 		return
 	}
 
-	s.applyMissionProfileProviders(p)
-	s.applyMissionProfileSubscriptions(id, p)
+	overrides, ok := missionProfileOverrides(p)
+	if !ok {
+		respondAPIError(w, "Profile role_providers is not a role-to-provider map; nothing applied", http.StatusBadRequest)
+		return
+	}
+	if len(overrides) > 0 {
+		if err := s.Cognitive.ValidateProfileOverrides(overrides); err != nil {
+			respondProfileOverrideRejection(w, err)
+			return
+		}
+	}
+	if _, ok := s.auditRoutingMutation(w, r, auditMissionProfileActive, "Mission profile activated", map[string]any{
+		"mission_profile_id": id, "mission_profile_name": p.Name, "role_providers": overrides,
+	}); !ok {
+		return
+	}
+
 	if err := s.markMissionProfileActive(r, id); err != nil {
 		respondAPIError(w, "Database error", http.StatusInternalServerError)
 		return
 	}
+	if len(overrides) > 0 {
+		// Runtime-only overrides, re-validated and applied under one router
+		// write lock; never written to YAML or system_config.
+		if err := s.Cognitive.SetProfileOverrides(overrides, cognitive.ProfileOriginRuntime); err != nil {
+			log.Printf("HandleActivateMissionProfile: profile %s marked active but routing not applied: %v", id, err)
+			s.recordRoutingMutationFailure(r, auditMissionProfileActive, "Mission profile activation routing not applied", map[string]any{
+				"mission_profile_id": id, "mission_profile_name": p.Name, "role_providers": overrides,
+				"code": missionProfileRoutingNotApplied, "error": err.Error(), "recovery_action": missionProfileActivationRecovery,
+			})
+			respondAPIJSON(w, http.StatusInternalServerError, protocol.APIResponse{
+				OK:    false,
+				Error: "mission profile marked active but its routing was not applied: " + err.Error(),
+				Data: map[string]any{"id": id, "code": missionProfileRoutingNotApplied,
+					"recommended_action": missionProfileActivationRecovery},
+			})
+			return
+		}
+	}
+	s.applyMissionProfileSubscriptions(id, p)
 
 	p.IsActive = true
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(p))
@@ -58,22 +112,18 @@ func (s *AdminServer) loadMissionProfileForActivation(r *http.Request, id string
 	return p, err
 }
 
-func (s *AdminServer) applyMissionProfileProviders(p MissionProfile) {
-	if s.Cognitive == nil || s.Cognitive.Config == nil {
-		return
+// missionProfileOverrides decodes the stored role->provider map. An empty
+// or null map is valid (no routing change); anything else that does not
+// decode is rejected so activation never applies part of a profile.
+func missionProfileOverrides(p MissionProfile) (map[string]string, bool) {
+	overrides := map[string]string{}
+	if len(p.RoleProviders) == 0 || string(p.RoleProviders) == "null" {
+		return overrides, true
 	}
-	var roleProviders map[string]string
-	if err := json.Unmarshal(p.RoleProviders, &roleProviders); err != nil {
-		return
+	if err := json.Unmarshal(p.RoleProviders, &overrides); err != nil {
+		return nil, false
 	}
-	// Runtime-only overrides: validated and applied under the router lock,
-	// never written to YAML or system_config. A role whose provider cannot
-	// run is skipped (and logged) instead of creating a misrouted profile.
-	for role, providerID := range roleProviders {
-		if err := s.Cognitive.SetProfileOverride(role, providerID, cognitive.ProfileOriginRuntime); err != nil {
-			log.Printf("HandleActivateMissionProfile: skipped role %q: %v", role, err)
-		}
-	}
+	return overrides, true
 }
 
 func (s *AdminServer) applyMissionProfileSubscriptions(id string, p MissionProfile) {
