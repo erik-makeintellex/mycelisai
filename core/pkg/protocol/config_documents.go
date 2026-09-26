@@ -108,8 +108,20 @@ type ConfigDocumentDryRunEffect struct {
 }
 
 // ValidateConfigDocument returns all deterministic, structured validation
-// issues. It never normalizes or mutates the supplied document.
+// issues under the stored-revision secret rules. Read, compile, activation, and
+// rollback use it so tightened detection never strands a stored revision. It
+// never normalizes or mutates the supplied document.
 func ValidateConfigDocument(document ConfigDocument) []ConfigDocumentValidationIssue {
+	return validateConfigDocument(document, configDocumentSecretsStored)
+}
+
+// ValidateNewConfigDocument applies the strict secret rules (a superset of the
+// stored rules). Every new write and dry-run preview must use it.
+func ValidateNewConfigDocument(document ConfigDocument) []ConfigDocumentValidationIssue {
+	return validateConfigDocument(document, configDocumentSecretsStrict)
+}
+
+func validateConfigDocument(document ConfigDocument, mode configDocumentSecretMode) []ConfigDocumentValidationIssue {
 	issues := make([]ConfigDocumentValidationIssue, 0)
 	add := func(code, field, message string) {
 		issues = append(issues, ConfigDocumentValidationIssue{Code: code, Field: field, Message: message})
@@ -155,7 +167,7 @@ func ValidateConfigDocument(document ConfigDocument) []ConfigDocumentValidationI
 	} else if len(spec) == 0 {
 		add("spec.empty", "spec", "config document spec must contain at least one field")
 	} else {
-		validateConfigDocumentSpecSecrets(spec, "spec", &issues)
+		validateConfigDocumentSpecSecrets(spec, "spec", &issues, mode)
 		if document.Kind == ConfigDocumentKindWorkerProfile {
 			issues = append(issues, ValidateWorkerProfileSpec(document.Spec)...)
 		}
@@ -196,7 +208,7 @@ func CanonicalConfigDocumentDigest(document ConfigDocument) (string, error) {
 // DryRunConfigDocument validates and describes the requested activation effect.
 // It is a pure protocol projection and has no store or activation side effects.
 func DryRunConfigDocument(document ConfigDocument) ConfigDocumentDryRunResult {
-	issues := ValidateConfigDocument(document)
+	issues := ValidateNewConfigDocument(document)
 	effect := ConfigDocumentDryRunEffect{
 		Action:          ConfigDocumentEffectNone,
 		DocumentID:      document.Metadata.ID,

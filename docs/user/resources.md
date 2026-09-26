@@ -330,6 +330,9 @@ Each profile may define:
 - expected outputs and verification criteria
 
 Profiles do not grant access by themselves. Runtime capability health, source scope, approval, secret, Outcome, and Execution Contract rules still apply. Ask Soma naturally to use a named profile, such as `Use the Research Specialist and Quality Reviewer`, or omit names and let Soma choose the smallest useful team. Teams receive a resolved profile snapshot at creation so later profile edits do not silently redefine running authority.
+
+### View a saved configuration
+Admins can open **Resources → Worker Profiles** and select **View config** next to any saved Outcome Template, Worker Profile, or code context source configuration to see its full saved content in a read-only viewer, with a button to copy it. Any value that looks like a password, token, or key stays hidden and shows "Some values were hidden" instead; those hidden values live only in `.env` or the configured secret backend, never in this view. This viewer is for looking and copying only; it does not import, clone, or activate anything. Saving a configuration that contains a raw password, token, or key is refused; use a secret reference instead, backed by `.env` or the configured secret backend.
 ## Operational Guidance
 
 Use `Resources` to answer these operator questions quickly:

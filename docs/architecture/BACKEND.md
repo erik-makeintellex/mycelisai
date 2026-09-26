@@ -269,6 +269,18 @@ Bootstrap, templates, resource registry, and deployment-context routes.
 ### Health
 Readiness, liveness, and dependency health routes.
 
+## Area Contracts
+
+### Area: ConfigDocuments
+- PRD: §Declarative Configuration And Soma Authoring L167-172 · Scoreboard: P0.3a bounded discovery and Outcome Templates; P0.7b declarative configuration authoring
+- Owned paths: `core/pkg/protocol/config_document*.go`, `core/internal/configdocuments/**`, `core/internal/server/config_document*.go` (core writer) · Do-not-touch: `core/internal/server/auth*.go`, `interface/proxy.ts`, `core/config/**`
+- Seams: `protocol.ValidateConfigDocument`, `protocol.ValidateNewConfigDocument`, `protocol.CanonicalConfigDocumentDigest`, `protocol.RedactConfigDocumentForExport`, `protocol.RenderConfigDocumentExport`, `configdocuments.Store.GetRevision`, `server.HandleExportConfigDocument`, `server.requireRootAdminScope`
+- Invariants: families are OutcomeTemplate, WorkerProfile, CodeContextSource; one secret classifier (`config_document_secrets.go`) with stored rules (`ValidateConfigDocument`: read, compile, activate, rollback) and strict superset rules (`ValidateNewConfigDocument`: store, dry-run, export), no second key list; export is read-only and byte-deterministic; a redacted export omits `stored_digest`; error bodies carry no document fields
+- Authority: `GET /api/v1/config-documents/{recordId}/export` -> admin + `config_documents:read` (reads, dry-run, compile use the same; store/activate/rollback use `config_documents:write`), default deny; negatives: anon 401, standard 403, missing scope 403
+- Proof: `uv run inv core.test --package=./pkg/protocol --run='TestConfigDocument(Export|Redact)'`; `uv run inv core.test --package=./internal/server --run='TestConfigDocument' --race`; `uv run inv core.test --package=./internal/configdocuments --run='TestLegacyAdmitted|TestNewWrite'`
+- Pitfalls: never validate stored rows with strict rules (an active revision would become unloadable); `GetRevision` does not revalidate rows, so export must redact rather than trust storage; `code_context.go:145` validates request documents with stored rules instead of strict (open finding); the WorkerProfile strict decoder echoes unknown field names in its issue message, so a secret-looking key can reach a dry-run response to its own author (observed in S2; open finding); the classifier does not catch secrets embedded in string prose or JSON-in-string, `--password x` flags, schemeless `user:pass@host`, `NAME=<digits>`, numeric values under `auth`/`passphrase`, Unicode confusables, or a secret split across keys (open findings)
+- Verified: 2026-09-25 lead merge gate: protocol/server/configdocuments -race, security-qa re-review GO, e2e config-document-view, docs links, max-lines
+
 ## IX. Governance & Policy Engine
 
 Deploy-owned identity posture is backend-owned: deploy-owned People & Access posture surfaced read-only, and settings PUT ignores/preserves those deploy-owned fields instead of persisting them.

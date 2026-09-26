@@ -106,6 +106,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/config-documents", s.HandleListConfigDocuments)
 	mux.HandleFunc("POST /api/v1/config-documents", s.HandleCreateConfigDocument)
 	mux.HandleFunc("GET /api/v1/config-documents/{recordId}", s.HandleGetConfigDocument)
+	mux.HandleFunc("GET /api/v1/config-documents/{recordId}/export", s.HandleExportConfigDocument)
 	mux.HandleFunc("POST /api/v1/config-documents/{recordId}/compile", s.HandleCompileConfigDocument)
 	mux.HandleFunc("POST /api/v1/config-documents/{recordId}/{action}", s.HandleActivateConfigDocument)
 	mux.HandleFunc("GET /api/v1/organizations", s.handleListOrganizations)
