@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -76,12 +77,30 @@ func (s *AdminServer) createIntentProof(templateID protocol.TemplateID, intent s
 	}, nil
 }
 
-// generateConfirmToken creates a single-use token bound to an intent proof.
-// Token expires after confirmTokenTTL (15 minutes).
-func (s *AdminServer) generateConfirmToken(proofID string, templateID protocol.TemplateID) (*protocol.ConfirmToken, error) {
+// Durable confirm-token purposes (A2b, confirm_tokens.purpose).
+const (
+	tokenPurposeChatAction       = "chat_action"
+	tokenPurposeMissionBlueprint = "mission_blueprint"
+	tokenPurposeGroupMutation    = "group_mutation"
+)
+
+// confirmTokenMint is recorded on every token at mint: its purpose, the digest
+// of the subject it is bound to (blueprints), and the minting principal.
+type confirmTokenMint struct {
+	Purpose       string
+	BindingDigest string
+	MintedBy      string
+}
+
+// generateConfirmToken creates a single-use token bound to an intent proof,
+// its purpose and its minting principal. Token expires after confirmTokenTTL.
+func (s *AdminServer) generateConfirmToken(proofID string, templateID protocol.TemplateID, mint confirmTokenMint) (*protocol.ConfirmToken, error) {
 	db := s.getDB()
 	if db == nil {
 		return nil, nil
+	}
+	if strings.TrimSpace(mint.Purpose) == "" || strings.TrimSpace(mint.MintedBy) == "" {
+		return nil, errTokenMintUnbound
 	}
 
 	token := uuid.New()
@@ -89,9 +108,9 @@ func (s *AdminServer) generateConfirmToken(proofID string, templateID protocol.T
 	expiresAt := now.Add(confirmTokenTTL)
 
 	_, err := db.Exec(
-		`INSERT INTO confirm_tokens (token, intent_proof_id, template_id, expires_at)
-		 VALUES ($1, $2, $3, $4)`,
-		token, proofID, string(templateID), expiresAt,
+		`INSERT INTO confirm_tokens (token, intent_proof_id, template_id, expires_at, purpose, binding_digest, minted_by)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		token, proofID, string(templateID), expiresAt, mint.Purpose, sql.NullString{String: mint.BindingDigest, Valid: mint.BindingDigest != ""}, mint.MintedBy,
 	)
 	if err != nil {
 		log.Printf("CE-1: confirm token insert failed: %v", err)
@@ -132,33 +151,51 @@ func (s *AdminServer) confirmIntentProof(proofID, missionID string) {
 	}
 }
 
-func (s *AdminServer) consumeConfirmTokenTx(tx *sql.Tx, token string) (string, error) {
+// confirmTokenRow is a token as recorded at mint (A2b). Empty strings stand for
+// NULL columns (legacy tokens minted before A2b).
+type confirmTokenRow struct {
+	ProofID       string
+	Purpose       string
+	BindingDigest string
+	MintedBy      string
+}
+
+// consumeConfirmTokenTx consumes a chat proposal token inside the caller's
+// transaction; a rollback leaves the token unconsumed.
+func (s *AdminServer) consumeConfirmTokenTx(tx *sql.Tx, token string) (confirmTokenRow, error) {
 	if tx == nil {
-		return "", errDBUnavailable
+		return confirmTokenRow{}, errDBUnavailable
 	}
 	tokenUUID, err := uuid.Parse(token)
 	if err != nil {
-		return "", errInvalidToken
+		return confirmTokenRow{}, errInvalidToken
 	}
 
-	var proofID string
+	var row confirmTokenRow
 	var consumed bool
 	var expiresAt time.Time
 
 	err = tx.QueryRow(
-		`SELECT intent_proof_id, consumed, expires_at FROM confirm_tokens WHERE token = $1`,
+		`SELECT intent_proof_id, consumed, expires_at, COALESCE(purpose, ''), COALESCE(binding_digest, ''), COALESCE(minted_by, '')
+		 FROM confirm_tokens WHERE token = $1`,
 		tokenUUID,
-	).Scan(&proofID, &consumed, &expiresAt)
+	).Scan(&row.ProofID, &consumed, &expiresAt, &row.Purpose, &row.BindingDigest, &row.MintedBy)
 	if err == sql.ErrNoRows {
-		return "", errTokenNotFound
+		return confirmTokenRow{}, errTokenNotFound
 	} else if err != nil {
-		return "", err
+		return confirmTokenRow{}, err
 	}
 	if consumed {
-		return "", errTokenAlreadyUsed
+		return confirmTokenRow{}, errTokenAlreadyUsed
 	}
 	if time.Now().After(expiresAt) {
-		return "", errTokenExpired
+		return confirmTokenRow{}, errTokenExpired
+	}
+	// A2b item 7: confirm-action accepts only chat proposal tokens. Blueprint,
+	// group and legacy (NULL) tokens are refused before the UPDATE, so they
+	// stay valid for their own route.
+	if err := checkTokenPurpose(row, tokenPurposeChatAction); err != nil {
+		return confirmTokenRow{}, err
 	}
 
 	result, err := tx.Exec(
@@ -166,13 +203,13 @@ func (s *AdminServer) consumeConfirmTokenTx(tx *sql.Tx, token string) (string, e
 		time.Now(), tokenUUID,
 	)
 	if err != nil {
-		return "", err
+		return confirmTokenRow{}, err
 	}
 	// Two concurrent confirms can both read consumed=false; only the one whose
 	// update wins may execute (A2a C3).
 	if n, err := result.RowsAffected(); err != nil || n != 1 {
-		return "", errTokenAlreadyUsed
+		return confirmTokenRow{}, errTokenAlreadyUsed
 	}
 
-	return proofID, nil
+	return row, nil
 }

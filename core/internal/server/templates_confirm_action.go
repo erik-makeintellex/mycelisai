@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -203,15 +202,12 @@ func confirmedConfigMutationPlan(scope *protocol.ScopeValidation) (bool, error) 
 }
 
 func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, string, *protocol.ScopeValidation, string, bool) {
-	proofID, err := s.consumeConfirmTokenTx(tx, token)
-	if errors.Is(err, errTokenAlreadyUsed) {
-		respondGovernanceError(w, http.StatusConflict, err.Error(), codeTokenAlreadyUsed, "Refresh the conversation; this proposal was already confirmed")
-		return "", "", nil, "", false
-	}
+	tok, err := s.consumeConfirmTokenTx(tx, token)
 	if err != nil {
-		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		respondConfirmTokenError(w, err, http.StatusBadRequest)
 		return "", "", nil, "", false
 	}
+	proofID := tok.ProofID
 
 	scope, err := s.loadIntentProofScopeTx(tx, proofID)
 	if err != nil {
@@ -219,7 +215,7 @@ func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Requ
 		respondAPIError(w, "failed to load approved execution plan", http.StatusInternalServerError)
 		return "", "", nil, "", false
 	}
-	if !confirmerMayApprove(w, r, scope) { // A2a 3b: before any effect; tx rollback keeps the token
+	if !confirmerMayApprove(w, r, scope, tok) { // A2a 3b: before any effect; tx rollback keeps the token
 		return "", "", nil, "", false
 	}
 

@@ -236,14 +236,15 @@ func TestChatRequestCarriesNoClientApprovalField(t *testing.T) {
 	}
 }
 
-func TestCouncilPathAppliesNoTemplateOrPostureFloor(t *testing.T) {
+// A2b item 2: council runs the same template and posture seams as Soma chat.
+func TestCouncilPathAppliesTemplateAndPostureFloor(t *testing.T) {
 	raw, err := os.ReadFile("cognitive_council.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, symbol := range []string{"applyThreadOutcomeTemplate", "applyPostureApprovalFloor"} {
-		if strings.Contains(string(raw), symbol) {
-			t.Fatalf("council path references %s", symbol)
+		if !strings.Contains(string(raw), symbol) {
+			t.Fatalf("council path must reference %s", symbol)
 		}
 	}
 }

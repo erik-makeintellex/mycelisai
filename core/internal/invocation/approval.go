@@ -84,8 +84,9 @@ func (s *Store) Propose(ctx context.Context, userID string, p Proposal) (Propose
 		return Proposed{}, err
 	}
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO confirm_tokens(token,intent_proof_id,template_id,consumed,expires_at)
-		VALUES($1,$2,$3,FALSE,$4)`, tokenID, proofID, string(protocol.TemplateChatToProposal), confirmDeadline)
+		INSERT INTO confirm_tokens(token,intent_proof_id,template_id,consumed,expires_at,purpose,binding_digest,minted_by)
+		VALUES($1,$2,$3,FALSE,$4,$5,NULL,$6)`, tokenID, proofID, string(protocol.TemplateChatToProposal), confirmDeadline,
+		TokenPurpose, userID)
 	if err != nil {
 		return Proposed{}, err
 	}
@@ -95,7 +96,11 @@ func (s *Store) Propose(ctx context.Context, userID string, p Proposal) (Propose
 	return Proposed{ProofID: proofID, ContractID: contractID, ConfirmToken: tokenID, ExpiresAt: confirmDeadline}, nil
 }
 
-// HandlesToken inspects the persisted key, not its value. A malformed counting
+// TokenPurpose is the durable confirm_tokens.purpose of invocation tokens (A2b).
+const TokenPurpose = "invocation"
+
+// HandlesToken routes by the durable purpose; a legacy token (NULL purpose)
+// falls back to the persisted key, not its value. A malformed counting
 // boundary must enter Confirm and fail closed instead of reaching legacy tools.
 func (s *Store) HandlesToken(ctx context.Context, token string) (bool, error) {
 	if s == nil || s.db == nil {
@@ -107,8 +112,8 @@ func (s *Store) HandlesToken(ctx context.Context, token string) (bool, error) {
 	}
 	var present bool
 	err = s.db.QueryRowContext(ctx, `
-		SELECT p.resolved_intent=$2 OR COALESCE(jsonb_typeof(p.scope_validation)='object' AND p.scope_validation ? 'invocation_boundary',FALSE)
-		FROM confirm_tokens t JOIN intent_proofs p ON p.id=t.intent_proof_id WHERE t.token=$1`, token, CapabilityID).Scan(&present)
+		SELECT COALESCE(t.purpose=$3,FALSE) OR (t.purpose IS NULL AND (p.resolved_intent=$2 OR COALESCE(jsonb_typeof(p.scope_validation)='object' AND p.scope_validation ? 'invocation_boundary',FALSE)))
+		FROM confirm_tokens t JOIN intent_proofs p ON p.id=t.intent_proof_id WHERE t.token=$1`, token, CapabilityID, TokenPurpose).Scan(&present)
 	if err == sql.ErrNoRows {
 		return false, nil
 	}

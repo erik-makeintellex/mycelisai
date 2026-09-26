@@ -55,7 +55,7 @@ func (s *AdminServer) HandleCreateGroup(w http.ResponseWriter, r *http.Request) 
 		respondAPIError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if s.maybeRequireGroupApproval(w, req, "create", "") {
+	if s.maybeRequireGroupApproval(w, r, req, "create", "") {
 		return
 	}
 
@@ -126,7 +126,7 @@ func (s *AdminServer) HandleUpdateGroup(w http.ResponseWriter, r *http.Request) 
 		respondAPIError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if s.maybeRequireGroupApproval(w, req, "update", id) {
+	if s.maybeRequireGroupApproval(w, r, req, "update", id) {
 		return
 	}
 

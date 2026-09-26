@@ -70,10 +70,10 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithInlineToolCall(t *tes
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("SELECT intent_proof_id, consumed, expires_at FROM confirm_tokens WHERE token = \\$1").
+	mock.ExpectQuery(confirmTokenTxQuery).
 		WithArgs(tokenUUID).
-		WillReturnRows(sqlmock.NewRows([]string{"intent_proof_id", "consumed", "expires_at"}).
-			AddRow(proofID, false, expiresAt))
+		WillReturnRows(sqlmock.NewRows([]string{"intent_proof_id", "consumed", "expires_at", "purpose", "binding_digest", "minted_by"}).
+			AddRow(proofID, false, expiresAt, tokenPurposeChatAction, "", localAdminIdentityForTest().UserID))
 	mock.ExpectExec("UPDATE confirm_tokens SET consumed = TRUE, consumed_at = \\$1 WHERE token = \\$2 AND consumed = FALSE").
 		WithArgs(sqlmock.AnyArg(), tokenUUID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -117,7 +117,7 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithInlineToolCall(t *tes
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	reqBody := `{"confirm_token":"` + token + `"}`
-	rr := doRequest(t, http.HandlerFunc(s.HandleConfirmAction), http.MethodPost, "/api/v1/intent/confirm-action", reqBody)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleConfirmAction), http.MethodPost, "/api/v1/intent/confirm-action", reqBody)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp protocol.APIResponse

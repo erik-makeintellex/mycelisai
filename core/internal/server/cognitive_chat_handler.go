@@ -221,7 +221,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		) {
 			return
 		}
-		approval = applyPostureApprovalFloor(approval, display.WorkIntent, s.Guard, effectiveTools)
+		approval = applyApproverTier(applyPostureApprovalFloor(approval, display.WorkIntent, s.Guard, effectiveTools))
 		scope := &protocol.ScopeValidation{
 			Tools:                 effectiveTools,
 			AffectedResources:     affectedResourcesForPlannedCalls(plannedToolCalls),
@@ -263,7 +263,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		proof, _ := s.createIntentProof(protocol.TemplateChatToProposal, "chat-action", scope, auditEventID)
 		var confirmToken *protocol.ConfirmToken
 		if proof != nil {
-			confirmToken, _ = s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal)
+			confirmToken, _ = s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal, confirmTokenMint{Purpose: tokenPurposeChatAction, MintedBy: auditActorIDFromRequest(r)})
 		}
 
 		var proofID string

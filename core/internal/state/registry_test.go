@@ -1,7 +1,9 @@
 package state_test
 
 import (
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/mycelis/core/internal/state"
 )
@@ -69,5 +71,43 @@ func TestActiveThreshold(t *testing.T) {
 	agents := reg.GetAgentsByTeam("shadow")
 	if len(agents) != 1 {
 		t.Error("Should see active agent")
+	}
+}
+
+func TestRefreshKnownNeverCreatesOrRewrites(t *testing.T) {
+	reg := state.NewRegistry()
+	if reg.RefreshKnown("unknown") || reg.RefreshKnown("") {
+		t.Fatal("refresh must not succeed for an unknown or empty agent")
+	}
+	if _, ok := reg.Get("unknown"); ok {
+		t.Fatal("refresh must never create an agent")
+	}
+	reg.UpdateHeartbeat("known", "alpha", "swarm:base", state.StatusIdle)
+	before, _ := reg.Get("known")
+	time.Sleep(2 * time.Millisecond)
+	if !reg.RefreshKnown("known") {
+		t.Fatal("refresh must succeed for a registered agent")
+	}
+	after, _ := reg.Get("known")
+	if !after.LastHeartbeat.After(before.LastHeartbeat) {
+		t.Fatal("last seen must advance")
+	}
+	if after.TeamID != "alpha" || after.SourceURI != "swarm:base" || after.Status != before.Status {
+		t.Fatalf("refresh must not rewrite metadata: %+v", after)
+	}
+}
+
+func TestRefreshKnownConcurrent(t *testing.T) {
+	reg := state.NewRegistry()
+	reg.UpdateHeartbeat("known", "alpha", "swarm:base", state.StatusIdle)
+	var wg sync.WaitGroup
+	for i := 0; i < 16; i++ {
+		wg.Add(2)
+		go func() { defer wg.Done(); reg.RefreshKnown("known") }()
+		go func() { defer wg.Done(); _ = reg.GetActiveAgents() }()
+	}
+	wg.Wait()
+	if got, _ := reg.Get("known"); got.TeamID != "alpha" {
+		t.Fatalf("team changed: %+v", got)
 	}
 }

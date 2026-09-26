@@ -96,7 +96,7 @@ func TestGenerateConfirmToken(t *testing.T) {
 	mock.ExpectExec("INSERT INTO confirm_tokens").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	token, err := s.generateConfirmToken("proof-id-123", protocol.TemplateChatToProposal)
+	token, err := s.generateConfirmToken("proof-id-123", protocol.TemplateChatToProposal, confirmTokenMint{Purpose: tokenPurposeChatAction, MintedBy: "u-std"})
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestGenerateConfirmToken(t *testing.T) {
 func TestGenerateConfirmToken_NilDB(t *testing.T) {
 	s := newTestServer()
 
-	token, err := s.generateConfirmToken("proof-id", protocol.TemplateChatToProposal)
+	token, err := s.generateConfirmToken("proof-id", protocol.TemplateChatToProposal, confirmTokenMint{Purpose: tokenPurposeChatAction, MintedBy: "u-std"})
 	if err != nil {
 		t.Fatalf("Expected nil error for nil DB, got: %v", err)
 	}
