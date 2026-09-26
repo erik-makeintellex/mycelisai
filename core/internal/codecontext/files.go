@@ -6,19 +6,20 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 )
 
 func (s *Service) search(ctx context.Context, source Source, query, subpath string, limit int) ([]Ref, int, error) {
 	limit = normalizeLimit(limit)
 	q := strings.ToLower(strings.TrimSpace(query))
-	files, err := collectFiles(source.Root, subpath)
+	rootReal, err := resolveRoot(source.Root)
+	if err != nil {
+		return nil, 0, err
+	}
+	files, err := collectFiles(rootReal, subpath)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -27,9 +28,11 @@ func (s *Service) search(ctx context.Context, source Source, query, subpath stri
 		if err := ctx.Err(); err != nil {
 			return refs, len(files), err
 		}
-		rel, _ := filepath.Rel(source.Root, file)
-		rel = filepath.ToSlash(rel)
-		content, err := os.ReadFile(file)
+		rel := file.rel
+		if file.size > maxReadBytes {
+			continue
+		}
+		content, err := os.ReadFile(file.real)
 		if err != nil || len(content) > maxReadBytes {
 			continue
 		}
@@ -58,13 +61,25 @@ func (s *Service) search(ctx context.Context, source Source, query, subpath stri
 }
 
 func (s *Service) explainFile(source Source, rawPath string) ([]Fact, []Ref, error) {
-	file, rel, err := resolveSourcePath(source.Root, rawPath)
+	rootReal, err := resolveRoot(source.Root)
 	if err != nil {
 		return nil, nil, err
 	}
-	content, err := os.ReadFile(file)
+	lexical, err := resolveSourcePath(rootReal, rawPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("read source file: %w", err)
+		return nil, nil, err
+	}
+	file, isDir, err := confine(rootReal, lexical)
+	if err != nil || isDir {
+		return nil, nil, errPathUnavailable
+	}
+	rel := file.rel
+	if file.size > maxReadBytes {
+		return nil, nil, fmt.Errorf("source file is too large for bounded explain")
+	}
+	content, err := os.ReadFile(file.real)
+	if err != nil {
+		return nil, nil, errPathUnavailable
 	}
 	if len(content) > maxReadBytes {
 		return nil, nil, fmt.Errorf("source file is too large for bounded explain")
@@ -85,64 +100,6 @@ func (s *Service) explainFile(source Source, rawPath string) ([]Fact, []Ref, err
 		refs = append(refs, Ref{SourceID: source.ID, SnapshotRef: source.SnapshotRef, CommitOrDigest: digest, FilePath: rel, LineStart: sym.Line, LineEnd: sym.Line, Symbol: sym.Name, Snippet: sym.Declaration, Score: 1, Provenance: "extracted:symbol"})
 	}
 	return facts, refs, nil
-}
-
-func collectFiles(root, subpath string) ([]string, error) {
-	start := root
-	if strings.TrimSpace(subpath) != "" {
-		resolved, _, err := resolveSourcePath(root, subpath)
-		if err != nil {
-			return nil, err
-		}
-		start = resolved
-	}
-	info, err := os.Stat(start)
-	if err != nil {
-		return nil, err
-	}
-	if !info.IsDir() {
-		return []string{start}, nil
-	}
-	files := []string{}
-	err = filepath.WalkDir(start, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if len(files) >= maxFilesScanned {
-			return filepath.SkipDir
-		}
-		if d.IsDir() {
-			if shouldSkipDir(d.Name()) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if includeFile(d.Name()) {
-			files = append(files, p)
-		}
-		return nil
-	})
-	sort.Strings(files)
-	return files, err
-}
-
-func resolveSourcePath(root, raw string) (string, string, error) {
-	normalized := strings.ReplaceAll(strings.TrimSpace(raw), "\\", "/")
-	normalized = strings.TrimPrefix(path.Clean(normalized), "./")
-	if normalized == "" || normalized == "." {
-		return "", "", fmt.Errorf("source path is required")
-	}
-	var target string
-	if filepath.IsAbs(normalized) {
-		target = filepath.Clean(normalized)
-	} else {
-		target = filepath.Clean(filepath.Join(root, filepath.FromSlash(normalized)))
-	}
-	rel, err := filepath.Rel(root, target)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", "", fmt.Errorf("path escapes code context source boundary")
-	}
-	return target, filepath.ToSlash(rel), nil
 }
 
 func inferImpact(target string, refs []Ref) []InferredImpact {
@@ -223,28 +180,6 @@ func lineNumberAt(text string, offset int) int {
 		return 1
 	}
 	return strings.Count(text[:offset], "\n") + 1
-}
-
-func shouldSkipDir(name string) bool {
-	switch strings.ToLower(name) {
-	case ".git", ".hg", ".svn", "node_modules", "vendor", "dist", "build", "coverage", ".next", ".turbo", ".cache", "tmp", "temp", "workspace", "saved-media":
-		return true
-	default:
-		return false
-	}
-}
-
-func includeFile(name string) bool {
-	lower := strings.ToLower(name)
-	if strings.HasPrefix(lower, ".env") || strings.Contains(lower, "secret") {
-		return false
-	}
-	switch filepath.Ext(lower) {
-	case ".go", ".ts", ".tsx", ".js", ".jsx", ".py", ".sql", ".yaml", ".yml", ".json", ".md", ".css", ".html":
-		return true
-	default:
-		return false
-	}
 }
 
 func normalizeLimit(limit int) int {
