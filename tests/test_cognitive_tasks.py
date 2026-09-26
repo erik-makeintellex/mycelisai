@@ -7,6 +7,12 @@ from invoke.exceptions import Exit
 from ops import cognitive
 
 
+@pytest.fixture(autouse=True)
+def _no_live_core(monkeypatch):
+    """Never reach a real Core from unit tests; tests opt in to a payload."""
+    monkeypatch.setattr(cognitive.cognitive_root, "fetch_core_status", lambda values: (None, "stubbed"))
+
+
 @pytest.mark.parametrize(
     "task_func",
     [
@@ -116,6 +122,22 @@ providers:
         cognitive.status.body(Context())
 
     out = capsys.readouterr().out
-    assert "Root Provider" in out
-    assert "vllm" in out
+    assert "Root Provider (configured, env): vllm" in out
     assert "Qwen/Qwen2.5-Coder-14B-Instruct-AWQ" in out
+    assert "Root Provider (effective, Core): UNKNOWN" in out
+
+
+def test_status_fails_when_configured_and_effective_root_disagree(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(cognitive, "is_windows", lambda: False)
+    monkeypatch.setattr(cognitive.cognitive_root, "ROOT_DIR", tmp_path)
+    monkeypatch.setenv("MYCELIS_ROOT_PROVIDER", "vllm")
+    monkeypatch.setattr(
+        cognitive.cognitive_root,
+        "fetch_core_status",
+        lambda values: ({"text": {"status": "online"}, "profiles": {}}, ""),
+    )
+
+    with pytest.raises(Exit, match="disagree"):
+        cognitive.status.body(Context())
+
+    assert "effective root_provider=(unset)" in capsys.readouterr().out

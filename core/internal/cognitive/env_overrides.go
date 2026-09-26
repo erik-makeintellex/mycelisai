@@ -200,6 +200,7 @@ func applyProfileEnvOverride(config *BrainConfig, rawField string, value string)
 	profileID := resolveProfileKey(rawProfile, config.Profiles)
 	providerID := resolveProviderReference(value, config.Providers)
 	config.Profiles[profileID] = providerID
+	markProfileSource(config, profileID, ProfileSourceOverride)
 	log.Printf("DEBUG: Applied profile env override MYCELIS_PROFILE_%s_PROVIDER=%s", rawProfile, providerID)
 }
 

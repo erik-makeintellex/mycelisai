@@ -6,11 +6,34 @@ import (
 	"strings"
 )
 
+// Profile binding sources, reported per profile by the cognitive status API.
+const (
+	// ProfileSourceDefault is a binding shipped in cognitive.yaml profiles.
+	ProfileSourceDefault = "default"
+	// ProfileSourceRoot is a binding applied from root_provider.
+	ProfileSourceRoot = "root"
+	// ProfileSourceOverride is an operator override: a non-empty
+	// MYCELIS_PROFILE_<NAME>_PROVIDER, a DB system_config role.<name> row,
+	// or a runtime profile update.
+	ProfileSourceOverride = "override"
+	// ProfileSourceFallback is an explicit same-boundary ProfileFallbacks
+	// rebind applied at startup.
+	ProfileSourceFallback = "fallback"
+	// ProfileSourceUnbound is reported for an execution profile with no
+	// binding at all.
+	ProfileSourceUnbound = "unbound"
+)
+
+// ProfileBinding is one profile's effective provider and where it came from.
+type ProfileBinding struct {
+	ProviderID string `json:"provider_id,omitempty"`
+	ModelID    string `json:"model_id,omitempty"`
+	Source     string `json:"source"`
+}
+
 // validateRootProvider fails Core startup closed when RootProvider is set but
 // unusable, instead of letting an unknown or disabled root silently leave
-// every unbound profile unresolved. An unset RootProvider is not validated:
-// today's behavior (a profile with no explicit binding stays unbound) is
-// preserved exactly.
+// profiles on their shipped defaults. An unset RootProvider is not validated.
 func validateRootProvider(config *BrainConfig) error {
 	if config == nil {
 		return nil
@@ -35,14 +58,85 @@ func validateRootProvider(config *BrainConfig) error {
 	return nil
 }
 
-// applyRootProviderDefaults binds every defaultExecutionProfiles entry that
-// has no explicit Profiles[profile] binding to config.RootProvider. It never
-// overwrites an explicit binding: one set in cognitive.yaml, the DB
-// system_config overlay, or MYCELIS_PROFILE_<NAME>_PROVIDER always wins,
-// because applyEnvOverrides and loadFromDB both run before this and already
-// populated Profiles for every profile with an explicit source. A blank
-// RootProvider is a no-op, so an operator who never sets root_provider /
-// MYCELIS_ROOT_PROVIDER sees no behavior change at all.
+// markLoadedProfilesAsDefault tags every binding loaded from cognitive.yaml
+// as a shipped default and snapshots it for persistence. It must run before
+// the DB overlay and env overrides, which tag their own bindings as
+// overrides.
+func markLoadedProfilesAsDefault(config *BrainConfig) {
+	if config == nil {
+		return
+	}
+	config.yamlProfileDefaults = make(map[string]string, len(config.Profiles))
+	for profile, providerID := range config.Profiles {
+		if strings.TrimSpace(providerID) == "" {
+			continue
+		}
+		config.yamlProfileDefaults[profile] = providerID
+		markProfileSource(config, profile, ProfileSourceDefault)
+	}
+}
+
+func markProfileSource(config *BrainConfig, profile, source string) {
+	if config.ProfileSources == nil {
+		config.ProfileSources = make(map[string]string)
+	}
+	config.ProfileSources[profile] = source
+}
+
+// SetProfileOverride binds profile to providerID as an operator override,
+// which wins over root_provider and the shipped defaults.
+func (c *BrainConfig) SetProfileOverride(profile, providerID string) {
+	if c == nil {
+		return
+	}
+	if c.Profiles == nil {
+		c.Profiles = make(map[string]string)
+	}
+	c.Profiles[profile] = providerID
+	markProfileSource(c, profile, ProfileSourceOverride)
+}
+
+// ProfileSource reports where profile's current binding came from. A bound
+// profile with no recorded source (a config built in code) is a default.
+func (c *BrainConfig) ProfileSource(profile string) string {
+	if c == nil || strings.TrimSpace(c.Profiles[profile]) == "" {
+		return ProfileSourceUnbound
+	}
+	if source := c.ProfileSources[profile]; source != "" {
+		return source
+	}
+	return ProfileSourceDefault
+}
+
+// EffectiveProfileBindings reports every execution profile plus any other
+// bound profile with its effective provider, model, and source.
+func (c *BrainConfig) EffectiveProfileBindings() map[string]ProfileBinding {
+	out := make(map[string]ProfileBinding)
+	if c == nil {
+		return out
+	}
+	add := func(profile string) {
+		providerID := strings.TrimSpace(c.Profiles[profile])
+		out[profile] = ProfileBinding{
+			ProviderID: providerID,
+			ModelID:    strings.TrimSpace(c.Providers[providerID].ModelID),
+			Source:     c.ProfileSource(profile),
+		}
+	}
+	for _, profile := range defaultExecutionProfiles {
+		add(profile)
+	}
+	for profile := range c.Profiles {
+		add(profile)
+	}
+	return out
+}
+
+// applyRootProviderDefaults binds every defaultExecutionProfiles entry to
+// config.RootProvider unless an operator override pins it. Root replaces the
+// shipped cognitive.yaml defaults; it never replaces an override from
+// MYCELIS_PROFILE_<NAME>_PROVIDER or the DB overlay, which applyEnvOverrides
+// and loadFromDB tag before this runs. A blank RootProvider is a no-op.
 func applyRootProviderDefaults(config *BrainConfig) {
 	if config == nil {
 		return
@@ -57,13 +151,34 @@ func applyRootProviderDefaults(config *BrainConfig) {
 
 	var bound []string
 	for _, profile := range defaultExecutionProfiles {
-		if strings.TrimSpace(config.Profiles[profile]) != "" {
+		if config.ProfileSource(profile) == ProfileSourceOverride {
 			continue
 		}
 		config.Profiles[profile] = rootID
+		markProfileSource(config, profile, ProfileSourceRoot)
 		bound = append(bound, profile)
 	}
 	if len(bound) > 0 {
-		log.Printf("DEBUG: Applied root_provider %q to unbound profiles: %v", rootID, bound)
+		log.Printf("INFO: Applied root_provider %q to profiles without an operator override: %v", rootID, bound)
 	}
+}
+
+// persistableProfiles returns the profile map to write to cognitive.yaml:
+// a root-derived binding is written back as its shipped default (or
+// omitted), so unsetting root_provider later restores the defaults.
+func (c *BrainConfig) persistableProfiles() map[string]string {
+	if c == nil || c.Profiles == nil {
+		return nil
+	}
+	out := make(map[string]string, len(c.Profiles))
+	for profile, providerID := range c.Profiles {
+		if c.ProfileSources[profile] == ProfileSourceRoot {
+			if def, ok := c.yamlProfileDefaults[profile]; ok {
+				out[profile] = def
+			}
+			continue
+		}
+		out[profile] = providerID
+	}
+	return out
 }

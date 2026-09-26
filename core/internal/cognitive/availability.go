@@ -96,6 +96,7 @@ func (r *Router) EnsureDefaultProfileBindings() map[string]string {
 			continue
 		}
 		r.Config.Profiles[profile] = fallbackID
+		markProfileSource(r.Config, profile, ProfileSourceFallback)
 		rebound[profile] = fallbackID
 	}
 	if len(rebound) == 0 {

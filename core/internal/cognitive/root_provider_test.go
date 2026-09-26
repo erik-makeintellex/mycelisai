@@ -74,17 +74,20 @@ func TestApplyRootProviderDefaults_UnsetLeavesProfilesUntouched(t *testing.T) {
 	}
 }
 
-func TestApplyRootProviderDefaults_FillsUnboundProfilesOnly(t *testing.T) {
+func TestApplyRootProviderDefaults_OverrideSurvivesDefaultsReplaced(t *testing.T) {
 	cfg := &BrainConfig{
 		RootProvider: "vllm",
-		Profiles: map[string]string{
-			"chat": "ollama", // explicit binding must survive
-		},
+		Profiles:     map[string]string{"coder": "local-ollama-dev"},
 	}
+	markLoadedProfilesAsDefault(cfg)         // coder is a shipped default
+	cfg.SetProfileOverride("chat", "ollama") // chat is an operator override
 	applyRootProviderDefaults(cfg)
 
-	if cfg.Profiles["chat"] != "ollama" {
-		t.Fatalf("expected explicit profile binding to win over root_provider, got %q", cfg.Profiles["chat"])
+	if cfg.Profiles["chat"] != "ollama" || cfg.ProfileSource("chat") != ProfileSourceOverride {
+		t.Fatalf("expected override to win over root_provider, got %q (%s)", cfg.Profiles["chat"], cfg.ProfileSource("chat"))
+	}
+	if cfg.Profiles["coder"] != "vllm" || cfg.ProfileSource("coder") != ProfileSourceRoot {
+		t.Fatalf("expected root to replace the shipped default, got %q (%s)", cfg.Profiles["coder"], cfg.ProfileSource("coder"))
 	}
 	for _, profile := range defaultExecutionProfiles {
 		if profile == "chat" {
@@ -126,7 +129,7 @@ profiles:
 	}
 }
 
-func TestNewRouter_ExplicitProfileOverrideWinsOverRootProvider(t *testing.T) {
+func TestNewRouter_EnvOverrideWinsAndRootReplacesYAMLDefault(t *testing.T) {
 	clearProviderRoutingEnv(t)
 
 	configPath := writeTestCognitiveConfig(t, `
@@ -154,8 +157,8 @@ profiles:
 		t.Fatalf("NewRouter: %v", err)
 	}
 
-	if got := router.Config.Profiles["chat"]; got != "ollama" {
-		t.Fatalf("expected YAML-explicit chat profile to win over root_provider, got %q", got)
+	if got := router.Config.Profiles["chat"]; got != "vllm" {
+		t.Fatalf("expected root_provider to replace the YAML default chat binding, got %q", got)
 	}
 	if got := router.Config.Profiles["admin"]; got != "ollama" {
 		t.Fatalf("expected env-explicit admin profile to win over root_provider, got %q", got)

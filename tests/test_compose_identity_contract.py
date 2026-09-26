@@ -36,6 +36,12 @@ def test_compose_profile_overrides_match_core_environment_contract():
     ):
         assert f"{key}: ${{{key}:-{default}}}" in text
     assert all(key.endswith("_PROVIDER") for key in overrides)
+    # Per-profile overrides default to empty (no override) so the root
+    # provider, then the shipped cognitive.yaml defaults, decide routing.
+    for key in overrides:
+        assert f"{key}: ${{{key}:-}}" in text
+    assert "MYCELIS_ROOT_PROVIDER: ${MYCELIS_ROOT_PROVIDER:-}" in text
+    assert ":-ollama}" not in text and ":-local-ollama-dev}" not in text
     core = (root / "core/internal/cognitive/env_overrides.go").read_text()
     assert 'strings.TrimSuffix(rawField, "_PROVIDER")' in core
 

@@ -90,17 +90,18 @@ profiles:
 
 ## Root Provider
 
-`root_provider` in `cognitive.yaml` (overridden by `MYCELIS_ROOT_PROVIDER`) names a default provider for every execution profile (`admin`, `architect`, `chat`, `coder`, `creative`, `overseer`, `sentry`) that has no explicit binding of its own. It exists for deployments — such as the hosted variant — that want one local model to answer for every agent type by default, while still letting an operator pin an individual profile elsewhere.
+`root_provider` in `cognitive.yaml` (overridden by `MYCELIS_ROOT_PROVIDER`) names the provider every execution profile (`admin`, `architect`, `chat`, `coder`, `creative`, `overseer`, `sentry`) resolves to unless an operator pins that profile. It exists for deployments — such as the hosted variant — that want one local model to answer for every agent type, while still letting an operator pin an individual profile elsewhere.
 
 ```yaml
-root_provider: vllm   # every unbound profile above resolves to "vllm"
+root_provider: vllm   # every execution profile resolves to "vllm" unless overridden
 ```
 
-- **Precedence:** an explicit `Profiles[profile]` entry (from `cognitive.yaml`, the DB overlay, or `MYCELIS_PROFILE_<NAME>_PROVIDER`) always wins over `root_provider`. `root_provider` only fills profiles that are otherwise unbound.
-- **Configurable, not mandatory:** leaving `root_provider` unset keeps today's behavior exactly — an unbound profile stays unbound and fails closed through the normal unavailable path (or an explicit `profile_fallbacks` entry).
-- **Fails closed:** a `root_provider` that names a provider not present in `providers`, or present but `enabled: false`, is a hard config error at Core startup (`invalid cognitive config: root_provider ...`), never a silent skip that leaves profiles quietly unresolved.
-- **Reporting:** `GET /api/v1/cognitive/status` includes `root_provider` and `root_provider_model` when one is configured; `uv run inv cognitive.status` prints the same effective root provider, model id, and endpoint.
-- The hosted variant's documented posture is `MYCELIS_ROOT_PROVIDER=vllm` pointing at the local vLLM server; see `.env.compose.example`.
+- **Precedence (highest first):** (1) an operator override — a non-empty `MYCELIS_PROFILE_<NAME>_PROVIDER`, a DB `system_config` `role.<name>` row, or a runtime profile update; (2) `root_provider`/`MYCELIS_ROOT_PROVIDER`; (3) the profile defaults shipped in `cognitive.yaml`. Root therefore replaces the shipped `profiles:` bindings. An empty env value counts as unset, so Compose's `${MYCELIS_PROFILE_<NAME>_PROVIDER:-}` is not an override.
+- **Source tracking:** Core records where each binding came from (`default`, `root`, `override`, or `fallback` for an explicit `profile_fallbacks` rebind). Persisting profiles back to `cognitive.yaml` writes a root-derived binding as its shipped default, so unsetting the root restores the defaults.
+- **Configurable, not mandatory:** leaving `root_provider` unset keeps today's behavior exactly — every profile keeps its shipped or overridden binding.
+- **Fails closed:** a `root_provider` that names a provider not present in `providers`, or present but `enabled: false`, is a hard config error at Core startup (`invalid cognitive config: root_provider ...`). There is no cross-boundary fallback.
+- **Reporting:** `GET /api/v1/cognitive/status` includes `root_provider`, `root_provider_model`, and `profiles` (each execution profile's effective `provider_id`, `model_id`, and `source`). `uv run inv cognitive.status` prints Core's effective view next to the env-derived value labelled "configured (env)" and fails when they disagree; `compose.health` applies the same check.
+- The hosted variant's documented posture is `MYCELIS_ROOT_PROVIDER=vllm` pointing at the local vLLM server, with per-profile variables left unset; see `.env.compose.example`.
 
 ## Optional LiteLLM Model Gateway
 
