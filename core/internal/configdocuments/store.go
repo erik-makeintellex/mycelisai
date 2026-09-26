@@ -75,6 +75,9 @@ func (s *Store) StoreRevision(ctx context.Context, tenantID, actorID string, doc
 	if err := s.available(); err != nil {
 		return nil, err
 	}
+	if err := guardPublicStore(actorID, document); err != nil {
+		return nil, err
+	}
 	return storeRevision(ctx, s.db, tenantID, actorID, document)
 }
 
@@ -84,9 +87,14 @@ func (s *Store) StoreRevisionTx(ctx context.Context, tx *sql.Tx, tenantID, actor
 	if tx == nil {
 		return nil, fmt.Errorf("config documents: transaction is required")
 	}
+	if err := guardPublicStore(actorID, document); err != nil {
+		return nil, err
+	}
 	return storeRevision(ctx, tx, tenantID, actorID, document)
 }
 
+// storeRevision is the single insert path. Public callers reach it only after
+// guardPublicStore; SeedBuiltInRevisions is the only built-in caller.
 func storeRevision(ctx context.Context, queryer revisionQueryRower, tenantID, actorID string, document protocol.ConfigDocument) (*RevisionRecord, error) {
 	tenantID, err := requiredValue("tenant_id", tenantID)
 	if err != nil {
@@ -96,7 +104,9 @@ func storeRevision(ctx context.Context, queryer revisionQueryRower, tenantID, ac
 	if err != nil {
 		return nil, err
 	}
-	if issues := protocol.ValidateConfigDocument(document); len(issues) != 0 {
+	// New writes use the strict secret rules; stored rows revalidate with the
+	// stored rules so tightened detection cannot strand an active revision.
+	if issues := protocol.ValidateNewConfigDocument(document); len(issues) != 0 {
 		return nil, &ValidationError{Issues: issues}
 	}
 	digest, err := protocol.CanonicalConfigDocumentDigest(document)

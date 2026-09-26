@@ -98,12 +98,12 @@ func TestAddQAFixtureResourceAcceptsExactOrganizationScope(t *testing.T) {
 	scopeID := "11111111-1111-1111-1111-111111111111"
 	organizationID := "qa-organization"
 	now := time.Now().UTC()
-	s.organizationStore().Save(OrganizationHomePayload{
+	seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{ID: organizationID, Name: "QA Organization"},
 		QAFixtureScopeID:    scopeID,
 	})
-	if boundScope, ok := s.organizationStore().QAFixtureScope(organizationID); !ok || boundScope != scopeID {
-		t.Fatalf("organization fixture scope = %q, %v", boundScope, ok)
+	if boundScope, ok, err := s.organizationStore().QAFixtureScope(t.Context(), organizationID); err != nil || !ok || boundScope != scopeID {
+		t.Fatalf("organization fixture scope = %q, %v, %v", boundScope, ok, err)
 	}
 	if err := s.validateQAFixtureResource(
 		t.Context(), nil, qaFixtureScope{ID: scopeID},
@@ -247,9 +247,6 @@ func TestPurgeQAFixtureScopeConfirmedClosesScopeAndRemovesOrganization(t *testin
 	t.Setenv("MYCELIS_QA_FIXTURE_MANAGEMENT", "true")
 	withDatabase, mock := withDB(t)
 	s := newTestServer(withDatabase)
-	s.organizationStore().Save(OrganizationHomePayload{
-		OrganizationSummary: OrganizationSummary{ID: "qa-organization", Name: "QA Organization"},
-	})
 	scopeID := "11111111-1111-1111-1111-111111111111"
 	now := time.Now().UTC()
 	scopeRows := func(status string) *sqlmock.Rows {
@@ -274,6 +271,8 @@ func TestPurgeQAFixtureScopeConfirmedClosesScopeAndRemovesOrganization(t *testin
 		WithArgs(scopeID, qaFixtureTenantID).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 	mock.ExpectBegin()
+	mock.ExpectExec("DELETE FROM organizations").WithArgs("qa-organization", qaFixtureTenantID, scopeID).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 	mock.ExpectBegin()
 	mock.ExpectExec("DELETE FROM qa_fixture_resources").WithArgs(scopeID).
@@ -293,9 +292,6 @@ func TestPurgeQAFixtureScopeConfirmedClosesScopeAndRemovesOrganization(t *testin
 		}`)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected confirmed purge, got %d: %s", rr.Code, rr.Body.String())
-	}
-	if _, ok := s.organizationStore().Get("qa-organization"); ok {
-		t.Fatal("confirmed purge left the owned organization in memory")
 	}
 	for _, expected := range []string{`"status":"purged"`, `"nats_untouched":true`, `"qa-organization"`} {
 		if !strings.Contains(rr.Body.String(), expected) {

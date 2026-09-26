@@ -55,6 +55,9 @@ func NewEngine(path string) (*Engine, error) {
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse policy yaml: %w", err)
 	}
+	if err := ValidatePolicyConfig(&config); err != nil {
+		return nil, fmt.Errorf("invalid policy: %w", err)
+	}
 
 	return &Engine{Config: &config}, nil
 }

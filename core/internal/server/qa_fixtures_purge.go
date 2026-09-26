@@ -30,9 +30,11 @@ func deleteQAFixtureDatabaseResources(
 	ctx context.Context,
 	tx *sql.Tx,
 	tenantID string,
+	scopeID string,
 	resources []qaFixtureResource,
 	deleted map[string]int64,
-) error {
+) ([]string, error) {
+	var removedOrganizations []string
 	configRefs := make([]string, 0)
 	for _, resource := range resources {
 		if resource.Kind == "config_document" {
@@ -40,19 +42,30 @@ func deleteQAFixtureDatabaseResources(
 		}
 	}
 	if err := deleteQAFixtureConfigDocuments(ctx, tx, tenantID, configRefs, deleted); err != nil {
-		return fmt.Errorf("delete fixture config documents: %w", err)
+		return nil, fmt.Errorf("delete fixture config documents: %w", err)
 	}
-	for _, kind := range []string{"artifact", "group", "team", "outcome", "run"} {
+	for _, kind := range []string{"organization", "artifact", "group", "team", "outcome", "run"} {
 		for _, resource := range resources {
 			if resource.Kind != kind {
 				continue
 			}
+			if kind == "organization" {
+				removed, err := deleteQAFixtureOrganization(ctx, tx, tenantID, scopeID, resource, deleted)
+				if err != nil {
+					return nil, fmt.Errorf("delete fixture %s %q: %w", resource.Kind, resource.Ref, err)
+				}
+				if removed {
+					removedOrganizations = append(removedOrganizations, resource.Ref)
+				}
+				continue
+			}
 			if err := deleteQAFixtureDatabaseResource(ctx, tx, tenantID, resource, deleted); err != nil {
-				return fmt.Errorf("delete fixture %s %q: %w", resource.Kind, resource.Ref, err)
+				return nil, fmt.Errorf("delete fixture %s %q: %w", resource.Kind, resource.Ref, err)
 			}
 		}
 	}
-	return nil
+	sort.Strings(removedOrganizations)
+	return removedOrganizations, nil
 }
 
 func deleteQAFixtureDatabaseResource(
@@ -102,25 +115,59 @@ func deleteQAFixtureDatabaseResource(
 	return nil
 }
 
-func (s *AdminServer) stopQAFixtureProducers(
-	resources []qaFixtureResource,
-) ([]string, []string) {
-	var stoppedTeams, removedOrganizations []string
+// deleteQAFixtureOrganization removes an organization row only when its
+// authoritative qa_fixture_scope_id column equals the purging scope. A claimed
+// organization that still exists outside that scope (non-fixture or another
+// scope) fails the purge transaction as unowned; an already-absent row is a
+// no-op so an interrupted purge can resume. id::text keeps a non-UUID legacy
+// ref from raising a cast error.
+func deleteQAFixtureOrganization(
+	ctx context.Context,
+	tx *sql.Tx,
+	tenantID string,
+	scopeID string,
+	resource qaFixtureResource,
+	deleted map[string]int64,
+) (bool, error) {
+	if scopeID == "" {
+		return false, unownedFixtureResource(resource)
+	}
+	result, err := tx.ExecContext(ctx, `
+		DELETE FROM organizations
+		WHERE id::text=$1 AND tenant_id=$2 AND qa_fixture_scope_id=$3`,
+		resource.Ref, tenantID, scopeID)
+	if err != nil {
+		return false, err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	if rows > 0 {
+		deleted["organizations"] += rows
+		return true, nil
+	}
+	var exists bool
+	if err := tx.QueryRowContext(ctx, `
+		SELECT EXISTS (SELECT 1 FROM organizations WHERE id::text=$1 AND tenant_id=$2)`,
+		resource.Ref, tenantID).Scan(&exists); err != nil {
+		return false, err
+	}
+	if exists {
+		return false, unownedFixtureResource(resource)
+	}
+	return false, nil
+}
+
+func (s *AdminServer) stopQAFixtureProducers(resources []qaFixtureResource) []string {
+	var stoppedTeams []string
 	for _, resource := range resources {
-		switch resource.Kind {
-		case "team":
-			if s.Soma != nil && s.Soma.StopTeam(resource.Ref) {
-				stoppedTeams = append(stoppedTeams, resource.Ref)
-			}
-		case "organization":
-			if s.organizationStore().Delete(resource.Ref) {
-				removedOrganizations = append(removedOrganizations, resource.Ref)
-			}
+		if resource.Kind == "team" && s.Soma != nil && s.Soma.StopTeam(resource.Ref) {
+			stoppedTeams = append(stoppedTeams, resource.Ref)
 		}
 	}
 	sort.Strings(stoppedTeams)
-	sort.Strings(removedOrganizations)
-	return stoppedTeams, removedOrganizations
+	return stoppedTeams
 }
 
 func cleanupQAFixtureWorkspaceResources(resources []qaFixtureResource) ([]string, []string) {

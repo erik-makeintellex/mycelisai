@@ -221,6 +221,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		) {
 			return
 		}
+		approval = applyPostureApprovalFloor(approval, display.WorkIntent, s.Guard, effectiveTools)
 		scope := &protocol.ScopeValidation{
 			Tools:                 effectiveTools,
 			AffectedResources:     affectedResourcesForPlannedCalls(plannedToolCalls),

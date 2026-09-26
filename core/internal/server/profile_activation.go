@@ -66,7 +66,7 @@ func (s *AdminServer) applyMissionProfileProviders(p MissionProfile) {
 		return
 	}
 	for role, providerID := range roleProviders {
-		s.Cognitive.Config.Profiles[role] = providerID
+		s.Cognitive.Config.SetProfileOverride(role, providerID)
 	}
 	if err := s.Cognitive.SaveConfig(); err != nil {
 		log.Printf("HandleActivateMissionProfile SaveConfig: %v", err)

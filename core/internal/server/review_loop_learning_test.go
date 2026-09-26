@@ -10,7 +10,7 @@ import (
 
 func TestHandleListLearningInsights_ReturnsSafeReadableInsights(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopResultStore().Add(home.ID, ReviewLoopResult{
 		ID:             "result-1",
 		LoopID:         DefaultDepartmentReviewLoopID,

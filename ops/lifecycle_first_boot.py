@@ -25,6 +25,7 @@ CLEAN_FIRST_BOOT_USER_TABLES = (
     "conversation_turns",
     "groups",
     "mission_runs",
+    "organizations",
     "outcome_projects",
     "proof_artifacts",
     "runtime_team_manifests",

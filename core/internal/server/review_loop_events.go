@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -33,14 +34,14 @@ func loopEventTriggerLabel(eventKind ReviewLoopEventKind) string {
 	return "event:" + string(eventKind)
 }
 
-func (s *AdminServer) triggerReviewLoopsForEvent(orgID string, eventKind ReviewLoopEventKind) (loopEventDispatchStats, error) {
+func (s *AdminServer) triggerReviewLoopsForEvent(ctx context.Context, orgID string, eventKind ReviewLoopEventKind) (loopEventDispatchStats, error) {
 	if !isAllowedReviewLoopEventKind(eventKind) {
 		return loopEventDispatchStats{}, fmt.Errorf("review event must be one of the allowed internal review events")
 	}
 
-	home, ok := s.organizationStore().Get(orgID)
-	if !ok {
-		return loopEventDispatchStats{}, fmt.Errorf("organization not found")
+	home, err := s.organizationStore().Get(ctx, orgID)
+	if err != nil {
+		return loopEventDispatchStats{}, err
 	}
 
 	home = normalizeOrganizationHome(home)

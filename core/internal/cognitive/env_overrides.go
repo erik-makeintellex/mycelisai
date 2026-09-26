@@ -34,6 +34,12 @@ func applyEnvOverrides(config *BrainConfig) {
 		return len(providerOverrideFields[i]) > len(providerOverrideFields[j])
 	})
 
+	// rootProviderRaw captures MYCELIS_ROOT_PROVIDER as seen (before provider
+	// alias resolution). It is resolved against config.Providers only after
+	// the full env pass so a MYCELIS_PROVIDER_*_* override processed later in
+	// os.Environ() (unordered) still registers the provider it names.
+	rootProviderRaw := ""
+
 	for _, env := range os.Environ() {
 		key, value, ok := strings.Cut(env, "=")
 		if !ok {
@@ -55,6 +61,8 @@ func applyEnvOverrides(config *BrainConfig) {
 		}
 
 		switch key {
+		case "MYCELIS_ROOT_PROVIDER":
+			rootProviderRaw = value
 		case "MYCELIS_MEDIA_ENDPOINT":
 			if config.Media == nil {
 				config.Media = &MediaConfig{}
@@ -115,6 +123,11 @@ func applyEnvOverrides(config *BrainConfig) {
 			config.Media.Provider.Enabled = &enabled
 			log.Printf("DEBUG: Applied media env override MYCELIS_MEDIA_ENABLED=%s", value)
 		}
+	}
+
+	if rootProviderRaw != "" {
+		config.RootProvider = resolveProviderReference(rootProviderRaw, config.Providers)
+		log.Printf("DEBUG: Applied root provider env override MYCELIS_ROOT_PROVIDER=%s", config.RootProvider)
 	}
 }
 
@@ -187,6 +200,7 @@ func applyProfileEnvOverride(config *BrainConfig, rawField string, value string)
 	profileID := resolveProfileKey(rawProfile, config.Profiles)
 	providerID := resolveProviderReference(value, config.Providers)
 	config.Profiles[profileID] = providerID
+	markProfileSource(config, profileID, ProfileSourceOverride)
 	log.Printf("DEBUG: Applied profile env override MYCELIS_PROFILE_%s_PROVIDER=%s", rawProfile, providerID)
 }
 

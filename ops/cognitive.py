@@ -6,6 +6,7 @@ import re
 import urllib.request
 
 from . import cognitive_litellm
+from . import cognitive_root
 from .config import (
     ROOT_DIR,
     ensure_managed_cache_dirs,
@@ -302,6 +303,10 @@ def status(
         return
     if litellm_endpoint or litellm_api_key_env or litellm_model:
         raise Exit("pass --litellm to use the external proxy preflight mode")
+
+    disagreements = cognitive_root.print_report()
+    if disagreements:
+        raise Exit("configured (env) and effective (Core) root provider disagree: " + "; ".join(disagreements))
 
     _require_supported_local_engine_host()
 

@@ -103,6 +103,10 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		config.Profiles = make(map[string]string)
 	}
 
+	// Tag the cognitive.yaml bindings as shipped defaults before any
+	// override source runs; root_provider may replace defaults only.
+	markLoadedProfilesAsDefault(&config)
+
 	// 2. Load from DB (Overlay)
 	if db != nil {
 		if err := loadFromDB(db, &config); err != nil {
@@ -120,6 +124,19 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 	for id, provider := range config.Providers {
 		config.Providers[id] = NormalizeProviderTokenDefaults(provider)
 	}
+
+	// 3.1 Fail closed on an unusable root_provider/MYCELIS_ROOT_PROVIDER
+	// before it is applied to any profile. An unset root is a no-op; a root
+	// naming an unconfigured or disabled provider is a hard config error,
+	// never a silent skip that leaves profiles quietly unbound.
+	if err := validateRootProvider(&config); err != nil {
+		return nil, fmt.Errorf("invalid cognitive config: %w", err)
+	}
+
+	// 3.2 Bind every default execution profile to the root provider unless
+	// an operator override (DB overlay or MYCELIS_PROFILE_<NAME>_PROVIDER,
+	// tagged above) pins it. Root replaces the cognitive.yaml defaults.
+	applyRootProviderDefaults(&config)
 
 	// 3.5 Reject a cross-data-boundary ProfileFallbacks entry before any
 	// adapter is built. This is a config error, not a runtime posture: a

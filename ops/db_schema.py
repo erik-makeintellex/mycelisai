@@ -114,3 +114,26 @@ for _name, _definition in _TEAM_EVIDENCE_CONSTRAINTS:
         "SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.runtime_team_manifests') "
         f"AND conname='{_name}' AND convalidated AND NOT condeferrable "
         f"AND pg_get_constraintdef(oid)='{_definition}';"),)
+
+# C2A-complete (the retained stack) is the baseline for the bounded ORG CREATE transaction.
+C2A_SCHEMA_COMPATIBILITY_CHECKS = SCHEMA_COMPATIBILITY_CHECKS
+ORGANIZATION_COLUMNS = (
+    ("id", "uuid"), ("tenant_id", "text"), ("name", "text"), ("purpose", "text"),
+    ("template_id", "text"), ("qa_fixture_scope_id", "text"), ("document", "jsonb"),
+    ("created_at", "timestamp with time zone"), ("updated_at", "timestamp with time zone"),
+)
+_org_columns = " OR ".join(f"(column_name='{c}' AND data_type='{t}')" for c, t in ORGANIZATION_COLUMNS)
+_org_constraint = ("SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.organizations') "
+                   "AND convalidated AND NOT condeferrable AND ")
+SCHEMA_COMPATIBILITY_CHECKS += (
+    ("organizations table", "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='organizations';"),
+    ("organizations not-null columns", "SELECT 1 WHERE (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' "
+     f"AND table_name='organizations' AND is_nullable='NO' AND ({_org_columns}))={len(ORGANIZATION_COLUMNS)};"),
+    ("organizations fixture scope default", "SELECT 1 FROM information_schema.columns WHERE table_schema='public' "
+     "AND table_name='organizations' AND column_name='qa_fixture_scope_id' AND column_default='''''::text';"),
+    ("organizations primary key", _org_constraint + "contype='p' AND pg_get_constraintdef(oid)='PRIMARY KEY (id)';"),
+    ("organizations document object", _org_constraint + "conname='chk_organizations_document_object' "
+     "AND pg_get_constraintdef(oid)='CHECK ((jsonb_typeof(document) = ''object''::text))';"),
+    ("organizations tenant listing index", "SELECT 1 FROM pg_indexes WHERE schemaname='public' AND tablename='organizations' "
+     "AND indexname='idx_organizations_tenant_name' AND indexdef LIKE '%USING btree (tenant_id, name, id)';"),
+)

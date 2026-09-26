@@ -15,9 +15,8 @@ func (s *AdminServer) handleTriggerLoop(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	home, ok := s.organizationStore().Get(orgID)
+	home, ok := s.loadOrganizationForRequest(w, r, orgID)
 	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
 	}
 
@@ -44,8 +43,7 @@ func (s *AdminServer) handleListLoopResults(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if _, ok := s.organizationStore().Get(orgID); !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
+	if _, ok := s.loadOrganizationForRequest(w, r, orgID); !ok {
 		return
 	}
 
@@ -59,8 +57,7 @@ func (s *AdminServer) handleListLoopActivity(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if _, ok := s.organizationStore().Get(orgID); !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
+	if _, ok := s.loadOrganizationForRequest(w, r, orgID); !ok {
 		return
 	}
 
@@ -74,8 +71,7 @@ func (s *AdminServer) handleListLearningInsights(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if _, ok := s.organizationStore().Get(orgID); !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
+	if _, ok := s.loadOrganizationForRequest(w, r, orgID); !ok {
 		return
 	}
 
@@ -89,9 +85,8 @@ func (s *AdminServer) handleListAutomations(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	home, ok := s.organizationStore().Get(orgID)
+	home, ok := s.loadOrganizationForRequest(w, r, orgID)
 	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
 	}
 

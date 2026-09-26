@@ -83,6 +83,11 @@ def test_current_schema_is_the_only_installable_sql_file():
 def test_current_schema_matches_immutable_dev_manifest():
     raw = BASELINE.read_bytes()
     from ops.db_upgrade import BEGIN_MARKER, END_MARKER, C2A_BEGIN_MARKER, C2A_END_MARKER
+    from ops.db_upgrade import ORG_BEGIN_MARKER, ORG_END_MARKER
+    org_start = raw.index(ORG_BEGIN_MARKER.encode())
+    org_end = raw.index(ORG_END_MARKER.encode()) + len(ORG_END_MARKER)
+    # The ORG block is pinned in test_db_organizations_schema.py; strip it first.
+    raw = raw[:org_start] + raw[org_end:].lstrip(b"\n")
     c2a_start = raw.index(C2A_BEGIN_MARKER.encode())
     c2a_end = raw.index(C2A_END_MARKER.encode()) + len(C2A_END_MARKER)
     # Removing the new extension must leave the accepted G4 and historical bytes exact.

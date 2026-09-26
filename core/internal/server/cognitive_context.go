@@ -69,7 +69,7 @@ func (s *AdminServer) buildChatWorkspaceContext(ctx context.Context, organizatio
 
 	home, hasOrganization := OrganizationHomePayload{}, false
 	if organizationID != "" {
-		home, hasOrganization = s.organizationStore().Get(organizationID)
+		home, hasOrganization = s.lookupOrganizationBestEffort(ctx, organizationID, "chat-context")
 	}
 
 	manifests := []*swarm.TeamManifest(nil)

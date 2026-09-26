@@ -20,16 +20,15 @@ func (s *Service) normalizeSourceInput(input SourceInput) (Source, error) {
 	if err != nil {
 		return Source{}, fmt.Errorf("resolve root_path: %w", err)
 	}
-	abs = filepath.Clean(abs)
-	if !s.rootAllowed(abs) {
-		return Source{}, fmt.Errorf("root_path must stay inside an approved code context root")
+	// Resolve symlinks before the boundary check so a link inside an approved
+	// root cannot register a directory outside it.
+	abs, err = resolveRoot(filepath.Clean(abs))
+	if err != nil || !s.rootAllowed(abs) {
+		return Source{}, fmt.Errorf("root_path must be an existing directory inside an approved code context root")
 	}
 	info, err := os.Stat(abs)
-	if err != nil {
-		return Source{}, fmt.Errorf("root_path not found: %w", err)
-	}
-	if !info.IsDir() {
-		return Source{}, fmt.Errorf("root_path must be a directory")
+	if err != nil || !info.IsDir() {
+		return Source{}, fmt.Errorf("root_path must be an existing directory inside an approved code context root")
 	}
 	sourceType := normalizeSourceToken(input.SourceType)
 	switch sourceType {
@@ -92,14 +91,19 @@ func (s *Service) normalizeSourceInput(input SourceInput) (Source, error) {
 	}, nil
 }
 
-func (s *Service) rootAllowed(abs string) bool {
+// rootAllowed fails closed: a registered root must resolve inside a
+// configured root and must not sit under an excluded or sensitive directory.
+func (s *Service) rootAllowed(real string) bool {
 	for _, source := range s.sources {
-		root := filepath.Clean(source.Root)
-		if rel, err := filepath.Rel(root, abs); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		root, err := resolveRoot(source.Root)
+		if err != nil {
+			continue
+		}
+		if rel, ok := relWithin(root, real); ok && pathAllowed(rel, true) {
 			return true
 		}
 	}
-	return len(s.sources) == 0
+	return false
 }
 
 func allowedCodeContextScope(scope string) bool {

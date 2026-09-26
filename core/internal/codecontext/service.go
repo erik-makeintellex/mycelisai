@@ -2,6 +2,7 @@ package codecontext
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -104,6 +105,9 @@ func (s *Service) Index(ctx context.Context, sourceID string) (Response, error) 
 		return resp, nil
 	}
 	refs, scanned, err := s.search(ctx, *source, ".", "", 1)
+	if pathBlocked(&resp, err) {
+		return resp, nil
+	}
 	if err != nil {
 		return resp, err
 	}
@@ -137,6 +141,9 @@ func (s *Service) Query(ctx context.Context, req Request) (Response, error) {
 		return resp, nil
 	}
 	refs, scanned, err := s.search(ctx, *source, resp.Query, req.Path, req.Limit)
+	if pathBlocked(&resp, err) {
+		return resp, nil
+	}
 	if err != nil {
 		return resp, err
 	}
@@ -170,6 +177,9 @@ func (s *Service) Impact(ctx context.Context, req Request) (Response, error) {
 		query = filepath.Base(req.Path)
 	}
 	refs, scanned, err := s.search(ctx, *source, query, "", req.Limit)
+	if pathBlocked(&resp, err) {
+		return resp, nil
+	}
 	if err != nil {
 		return resp, err
 	}
@@ -209,6 +219,9 @@ func (s *Service) Explain(ctx context.Context, req Request) (Response, error) {
 		resp.Count = len(refs)
 	} else {
 		refs, scanned, err := s.search(ctx, *source, target, "", req.Limit)
+		if pathBlocked(&resp, err) {
+			return resp, nil
+		}
 		if err != nil {
 			return resp, err
 		}
@@ -258,4 +271,15 @@ func (s *Service) selectSource(sourceID string) *Source {
 		}
 	}
 	return nil
+}
+
+// pathBlocked turns a boundary refusal into the normal blocked response so
+// excluded, missing and escaping paths all look the same to the caller.
+func pathBlocked(resp *Response, err error) bool {
+	if !errors.Is(err, errPathUnavailable) {
+		return false
+	}
+	resp.Status = "blocked"
+	resp.Blocker = &Blocker{Code: "path_unavailable", Message: errPathUnavailable.Error(), NextAction: "Use a source-relative path to an indexed source file inside the registered code boundary."}
+	return true
 }

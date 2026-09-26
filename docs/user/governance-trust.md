@@ -22,6 +22,7 @@ Approval posture is shaped by:
 - capability risk
 - external data use
 - estimated cost
+- the delivery posture, when work uses a posture Outcome Template: a posture can only add an approval requirement (shown with the reason `outcome_posture`), never lower one, and if the governance policy cannot load, posture-shaped work requires approval. Approval is not yet tied to a specific approver role.
 
 Current profile inputs include:
 - role

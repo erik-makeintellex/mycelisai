@@ -9,7 +9,7 @@ import (
 
 func TestHandleUpdateOrganizationAIEngine_StoresCuratedProfile(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                      "org-123",
 			Name:                    "Northstar Labs",
@@ -30,7 +30,7 @@ func TestHandleUpdateOrganizationAIEngine_StoresCuratedProfile(t *testing.T) {
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/ai-engine", s.handleUpdateOrganizationAIEngine)
 	mux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
 
-	updateRR := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/ai-engine", `{"profile_id":"high_reasoning"}`)
+	updateRR := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/ai-engine", `{"profile_id":"high_reasoning"}`)
 	assertStatus(t, updateRR, http.StatusOK)
 
 	var updateResp protocol.APIResponse
@@ -66,7 +66,7 @@ func TestHandleUpdateOrganizationAIEngine_StoresCuratedProfile(t *testing.T) {
 
 func TestHandleUpdateOrganizationAIEngine_RejectsInvalidProfile(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                      "org-123",
 			Name:                    "Northstar Labs",
@@ -81,13 +81,13 @@ func TestHandleUpdateOrganizationAIEngine_RejectsInvalidProfile(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/ai-engine", s.handleUpdateOrganizationAIEngine)
 
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/ai-engine", `{"profile_id":"llama3.2"}`)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/ai-engine", `{"profile_id":"llama3.2"}`)
 	assertStatus(t, rr, http.StatusBadRequest)
 }
 
 func TestHandleUpdateDepartmentAIEngine_SetsOverride(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                      "org-123",
 			Name:                    "Northstar Labs",
@@ -108,7 +108,7 @@ func TestHandleUpdateDepartmentAIEngine_SetsOverride(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/ai-engine", s.handleUpdateDepartmentAIEngine)
 
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/ai-engine", `{"profile_id":"high_reasoning"}`)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/ai-engine", `{"profile_id":"high_reasoning"}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp protocol.APIResponse
@@ -135,7 +135,7 @@ func TestHandleUpdateDepartmentAIEngine_SetsOverride(t *testing.T) {
 
 func TestHandleUpdateDepartmentAIEngine_RevertsToOrganizationDefault(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                      "org-123",
 			Name:                    "Northstar Labs",
@@ -156,7 +156,7 @@ func TestHandleUpdateDepartmentAIEngine_RevertsToOrganizationDefault(t *testing.
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/ai-engine", s.handleUpdateDepartmentAIEngine)
 
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/ai-engine", `{"revert_to_organization_default":true}`)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/ai-engine", `{"revert_to_organization_default":true}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp protocol.APIResponse
@@ -183,7 +183,7 @@ func TestHandleUpdateDepartmentAIEngine_RevertsToOrganizationDefault(t *testing.
 
 func TestDepartmentAIEngineInheritance_PersistsAcrossOrganizationUpdates(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                      "org-123",
 			Name:                    "Northstar Labs",
@@ -206,7 +206,7 @@ func TestDepartmentAIEngineInheritance_PersistsAcrossOrganizationUpdates(t *test
 	updateMux.HandleFunc("PATCH /api/v1/organizations/{id}/ai-engine", s.handleUpdateOrganizationAIEngine)
 	updateMux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
 
-	updateRR := doRequest(t, updateMux, "PATCH", "/api/v1/organizations/"+created.ID+"/ai-engine", `{"profile_id":"fast_lightweight"}`)
+	updateRR := doAuthenticatedRequest(t, updateMux, "PATCH", "/api/v1/organizations/"+created.ID+"/ai-engine", `{"profile_id":"fast_lightweight"}`)
 	assertStatus(t, updateRR, http.StatusOK)
 
 	homeRR := doRequest(t, updateMux, "GET", "/api/v1/organizations/"+created.ID+"/home", "")

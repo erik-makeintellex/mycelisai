@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -9,6 +10,9 @@ import (
 )
 
 func (s *AdminServer) handleUpdateDepartmentAIEngine(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, organizationsWriteScope); !ok {
+		return
+	}
 	id := strings.TrimSpace(r.PathValue("id"))
 	departmentID := strings.TrimSpace(r.PathValue("departmentId"))
 	if id == "" || departmentID == "" {
@@ -37,7 +41,7 @@ func (s *AdminServer) handleUpdateDepartmentAIEngine(w http.ResponseWriter, r *h
 	}
 
 	departmentFound := false
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, err := s.organizationStore().UpdateChecked(r.Context(), id, func(home OrganizationHomePayload) (OrganizationHomePayload, error) {
 		home = normalizeOrganizationHome(home)
 		for index, department := range home.Departments {
 			if department.ID != departmentID {
@@ -54,14 +58,10 @@ func (s *AdminServer) handleUpdateDepartmentAIEngine(w http.ResponseWriter, r *h
 			home.Departments[index] = department
 			break
 		}
-		return normalizeOrganizationHome(home)
+		return organizationProfileTargetResult(home, departmentFound, true)
 	})
-	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
-		return
-	}
-	if !departmentFound {
-		respondAPIError(w, "department not found", http.StatusNotFound)
+	if err != nil {
+		respondOrganizationStoreError(w, err)
 		return
 	}
 
@@ -69,6 +69,9 @@ func (s *AdminServer) handleUpdateDepartmentAIEngine(w http.ResponseWriter, r *h
 }
 
 func (s *AdminServer) handleUpdateAgentTypeAIEngine(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, organizationsWriteScope); !ok {
+		return
+	}
 	id := strings.TrimSpace(r.PathValue("id"))
 	departmentID := strings.TrimSpace(r.PathValue("departmentId"))
 	agentTypeID := strings.TrimSpace(r.PathValue("agentTypeId"))
@@ -99,7 +102,7 @@ func (s *AdminServer) handleUpdateAgentTypeAIEngine(w http.ResponseWriter, r *ht
 
 	departmentFound := false
 	agentTypeFound := false
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, err := s.organizationStore().UpdateChecked(r.Context(), id, func(home OrganizationHomePayload) (OrganizationHomePayload, error) {
 		home = normalizeOrganizationHome(home)
 		for departmentIndex, department := range home.Departments {
 			if department.ID != departmentID {
@@ -122,18 +125,10 @@ func (s *AdminServer) handleUpdateAgentTypeAIEngine(w http.ResponseWriter, r *ht
 			home.Departments[departmentIndex] = department
 			break
 		}
-		return normalizeOrganizationHome(home)
+		return organizationProfileTargetResult(home, departmentFound, agentTypeFound)
 	})
-	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
-		return
-	}
-	if !departmentFound {
-		respondAPIError(w, "department not found", http.StatusNotFound)
-		return
-	}
-	if !agentTypeFound {
-		respondAPIError(w, "agent type profile not found", http.StatusNotFound)
+	if err != nil {
+		respondOrganizationStoreError(w, err)
 		return
 	}
 
@@ -141,6 +136,9 @@ func (s *AdminServer) handleUpdateAgentTypeAIEngine(w http.ResponseWriter, r *ht
 }
 
 func (s *AdminServer) handleUpdateAgentTypeResponseContract(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, organizationsWriteScope); !ok {
+		return
+	}
 	id := strings.TrimSpace(r.PathValue("id"))
 	departmentID := strings.TrimSpace(r.PathValue("departmentId"))
 	agentTypeID := strings.TrimSpace(r.PathValue("agentTypeId"))
@@ -171,7 +169,7 @@ func (s *AdminServer) handleUpdateAgentTypeResponseContract(w http.ResponseWrite
 
 	departmentFound := false
 	agentTypeFound := false
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, err := s.organizationStore().UpdateChecked(r.Context(), id, func(home OrganizationHomePayload) (OrganizationHomePayload, error) {
 		home = normalizeOrganizationHome(home)
 		defaultProfileID := strings.TrimSpace(home.ResponseContractProfileID)
 		if defaultProfileID == "" {
@@ -198,20 +196,29 @@ func (s *AdminServer) handleUpdateAgentTypeResponseContract(w http.ResponseWrite
 			home.Departments[departmentIndex] = department
 			break
 		}
-		return normalizeOrganizationHome(home)
+		return organizationProfileTargetResult(home, departmentFound, agentTypeFound)
 	})
-	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
-		return
-	}
-	if !departmentFound {
-		respondAPIError(w, "department not found", http.StatusNotFound)
-		return
-	}
-	if !agentTypeFound {
-		respondAPIError(w, "agent type profile not found", http.StatusNotFound)
+	if err != nil {
+		respondOrganizationStoreError(w, err)
 		return
 	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
+}
+
+var (
+	errOrganizationDepartmentNotFound = errors.New("department not found")
+	errOrganizationAgentTypeNotFound  = errors.New("agent type profile not found")
+)
+
+// organizationProfileTargetResult aborts the locked update (no write) when the
+// addressed department or agent type does not exist.
+func organizationProfileTargetResult(home OrganizationHomePayload, departmentFound, agentTypeFound bool) (OrganizationHomePayload, error) {
+	if !departmentFound {
+		return home, errOrganizationDepartmentNotFound
+	}
+	if !agentTypeFound {
+		return home, errOrganizationAgentTypeNotFound
+	}
+	return normalizeOrganizationHome(home), nil
 }

@@ -72,7 +72,10 @@ func (s *AdminServer) validateQAFixtureResource(
 ) error {
 	switch resource.Kind {
 	case "organization":
-		fixtureScopeID, ok := s.organizationStore().QAFixtureScope(resource.Ref)
+		fixtureScopeID, ok, err := s.organizationStore().QAFixtureScope(ctx, resource.Ref)
+		if err != nil {
+			return err
+		}
 		if !ok {
 			return unownedFixtureResource(resource)
 		}

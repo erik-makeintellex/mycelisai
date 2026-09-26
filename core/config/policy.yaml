@@ -37,5 +37,31 @@ groups:
         condition: "rpm > 8000"
         action: "DENY"
 
+  # 4. Delivery posture approval floors (stricter-only)
+  # posture:<outcome-template-id> groups apply only to Soma work shaped by that
+  # Outcome Template. They may only REQUIRE_APPROVAL, carry no condition, and
+  # use an anchored regex over planned tool names and capability ids. They can
+  # never lower an approval decision. operations-desk has no group on purpose.
+  - name: "Posture: Governed Enterprise"
+    description: "Every planned mutation requires approval"
+    targets: ["posture:delivery-posture-governed-enterprise"]
+    rules:
+      - intent: "^.*$"
+        action: "REQUIRE_APPROVAL"
+
+  - name: "Posture: Client Delivery Studio"
+    description: "Client-facing file, media and artifact output requires approval"
+    targets: ["posture:delivery-posture-client-delivery-studio"]
+    rules:
+      - intent: "^(file_output|media_output|write_file|store_artifact|generate_image)$"
+        action: "REQUIRE_APPROVAL"
+
+  - name: "Posture: Product Delivery Team"
+    description: "File output and team orchestration require approval"
+    targets: ["posture:delivery-posture-product-delivery-team"]
+    rules:
+      - intent: "^(file_output|team_orchestration|write_file|create_team|delegate_task)$"
+        action: "REQUIRE_APPROVAL"
+
 defaults:
   default_action: "ALLOW" # Allow benign chatter and thinking

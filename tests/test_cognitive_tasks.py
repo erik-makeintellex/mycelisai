@@ -7,6 +7,12 @@ from invoke.exceptions import Exit
 from ops import cognitive
 
 
+@pytest.fixture(autouse=True)
+def _no_live_core(monkeypatch):
+    """Never reach a real Core from unit tests; tests opt in to a payload."""
+    monkeypatch.setattr(cognitive.cognitive_root, "fetch_core_status", lambda values: (None, "stubbed"))
+
+
 @pytest.mark.parametrize(
     "task_func",
     [
@@ -92,3 +98,46 @@ def test_status_requires_explicit_litellm_mode_for_gateway_options():
             Context(),
             litellm_endpoint="https://gateway.example.test/v1",
         )
+
+
+def test_status_prints_root_provider_before_windows_gate(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(cognitive, "is_windows", lambda: True)
+    monkeypatch.setattr(cognitive.cognitive_root, "ROOT_DIR", tmp_path)
+    config_dir = tmp_path / "core" / "config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "cognitive.yaml").write_text(
+        """
+root_provider: vllm
+providers:
+  vllm:
+    type: openai_compatible
+    endpoint: http://host.docker.internal:8000/v1
+    model_id: Qwen/Qwen2.5-Coder-14B-Instruct-AWQ
+    enabled: true
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(Exit, match="not supported on Windows hosts"):
+        cognitive.status.body(Context())
+
+    out = capsys.readouterr().out
+    assert "Root Provider (configured, env): vllm" in out
+    assert "Qwen/Qwen2.5-Coder-14B-Instruct-AWQ" in out
+    assert "Root Provider (effective, Core): UNKNOWN" in out
+
+
+def test_status_fails_when_configured_and_effective_root_disagree(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(cognitive, "is_windows", lambda: False)
+    monkeypatch.setattr(cognitive.cognitive_root, "ROOT_DIR", tmp_path)
+    monkeypatch.setenv("MYCELIS_ROOT_PROVIDER", "vllm")
+    monkeypatch.setattr(
+        cognitive.cognitive_root,
+        "fetch_core_status",
+        lambda values: ({"text": {"status": "online"}, "profiles": {}}, ""),
+    )
+
+    with pytest.raises(Exit, match="disagree"):
+        cognitive.status.body(Context())
+
+    assert "effective root_provider=(unset)" in capsys.readouterr().out
