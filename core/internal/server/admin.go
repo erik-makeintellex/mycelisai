@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/capabilities"
@@ -152,6 +153,9 @@ func (s *AdminServer) handleApprovals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, ok := requireRootAdminScope(w, r, scopeGovernanceRead); !ok {
+		return
+	}
 	if s.Guard == nil {
 		http.Error(w, "Governance disabled", http.StatusNotImplemented)
 		return
@@ -162,48 +166,25 @@ func (s *AdminServer) handleApprovals(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(pending)
 }
 
-// POST /admin/approvals/{id}
+// POST /admin/approvals/{id} (legacy alias; root admin, approvals:decide)
 func (s *AdminServer) handleApprovalAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	// Extract ID from path
-	// /admin/approvals/req-123
-	id := r.URL.Path[len("/admin/approvals/"):]
-	if id == "" {
-		http.Error(w, "Missing ID", http.StatusBadRequest)
+	if _, ok := requireApprover(w, r); !ok {
 		return
 	}
-
-	var payload struct {
-		Action string `json:"action"` // APPROVE or DENY
-	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Bad JSON", http.StatusBadRequest)
+	id := strings.TrimPrefix(r.URL.Path, "/admin/approvals/")
+	if id == "" || id == r.URL.Path {
+		respondAPIError(w, "missing approval request ID", http.StatusBadRequest)
 		return
 	}
-
-	approved := payload.Action == "APPROVE"
-
-	msg, err := s.Guard.Resolve(id, approved, "admin-api")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+	action, ok := decodeApprovalDecision(w, r)
+	if !ok {
 		return
 	}
-
-	if approved && msg != nil {
-		// Re-inject into the system
-		if err := s.Router.PublishDirect(msg); err != nil {
-			log.Printf("Failed to re-publish approved msg: %v", err)
-			http.Error(w, "Failed to re-publish", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"resolved"}`))
+	s.resolveGuardApproval(w, r, id, action, "/admin/approvals")
 }
 
 // GET /agents

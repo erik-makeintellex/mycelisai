@@ -48,27 +48,24 @@ func (r *Router) handleMessage(msg *nats.Msg) {
 		return
 	}
 
-	// 2. Governance Check
-	if r.guard != nil {
-		allowed, action, reqID := r.guard.Intercept(&envelope)
-		if !allowed {
-			if action == governance.ActionRequireApproval {
-				log.Printf("📢 Published Approval Request %s", reqID)
-
-				// Publish Governance Request Event
-				// Topic: swarm.governance.needed
-				_, err := proto.Marshal(&envelope)
-				if err == nil {
-					// Publish the RequestID so UI can fetch details or subscribe
-					// Alternatively publish the entire envelope or a specific GovernanceEvent
-					r.nc.Publish("swarm.governance.needed", []byte(reqID))
-				}
-
-				// We also emit a log or metric?
-			}
-			// Stop processing this message (Drop or Park)
-			return
+	// 2. Governance Check. A nil or degraded guard fails closed: Core only
+	// keeps liveness visible (heartbeats update the registry) and reacts to
+	// nothing else. The Router is an observer, so this does not stop NATS
+	// delivery to direct subscribers.
+	if r.guard == nil || r.guard.Degraded() {
+		if isHeartbeatEnvelope(msg.Subject, &envelope) {
+			r.updateRegistry(&envelope, msg.Subject)
 		}
+		return
+	}
+	if allowed, action, reqID := r.guard.Intercept(&envelope); !allowed {
+		if action == governance.ActionRequireApproval {
+			log.Printf("📢 Published Approval Request %s", reqID)
+			// Publish the RequestID so the UI can fetch details.
+			r.nc.Publish("swarm.governance.needed", []byte(reqID))
+		}
+		// Stop processing this message (Drop or Park)
+		return
 	}
 
 	// 3. Heartbeat / Registry Update

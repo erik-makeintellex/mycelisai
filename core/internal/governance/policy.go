@@ -62,10 +62,12 @@ func NewEngine(path string) (*Engine, error) {
 	return &Engine{Config: &config}, nil
 }
 
-// Evaluate determines the action for a given request
-// simple evaluation: check if target matches group, then check intent, then condition
-// Evaluate determines the action for a given request
+// Evaluate determines the action for a given request: check if target matches
+// group, then intent, then condition. With no loaded config it fails closed.
 func (e *Engine) Evaluate(teamID, agentID, intent string, context map[string]interface{}) string {
+	if e == nil || e.Config == nil {
+		return ActionDeny
+	}
 	// 1. Find matching groups
 	for _, group := range e.Config.Groups {
 		if e.matchesTarget(group.Targets, teamID, agentID) {

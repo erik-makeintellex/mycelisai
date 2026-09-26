@@ -29,9 +29,9 @@ func TestHandleServicesStatus_AllOffline(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected data array, got %T", resp["data"])
 	}
-	// Should have 8 services: nats, postgres, cognitive, ollama, reactive, scheduler, comms, groups_bus
-	if len(data) != 8 {
-		t.Fatalf("expected 8 services, got %d", len(data))
+	// 9 services: nats, postgres, cognitive, ollama, reactive, scheduler, comms, groups_bus, governance
+	if len(data) != 9 {
+		t.Fatalf("expected 9 services, got %d", len(data))
 	}
 
 	// All should be offline since nothing is wired
@@ -41,6 +41,9 @@ func TestHandleServicesStatus_AllOffline(t *testing.T) {
 		statusMap[svc["name"].(string)] = svc["status"].(string)
 	}
 
+	if statusMap["governance"] != "degraded" {
+		t.Errorf("expected governance=degraded with no guard, got %v", statusMap["governance"])
+	}
 	if statusMap["nats"] != "offline" {
 		t.Errorf("expected nats=offline, got %v", statusMap["nats"])
 	}

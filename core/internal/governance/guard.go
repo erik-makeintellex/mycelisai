@@ -3,21 +3,21 @@ package governance
 import (
 	"fmt"
 	"log"
-	"os"
 	"sync"
 	"time"
 
 	pb "github.com/mycelis/core/pkg/pb/swarm"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"gopkg.in/yaml.v3"
 )
 
-// Guard intercepts and manages approvals
+// Guard intercepts and manages approvals. Engine.Config is swapped only under
+// mu; readers take a snapshot under mu.RLock. A nil Config means degraded.
 type Guard struct {
 	Engine        *Engine
 	PendingBuffer map[string]*pb.ApprovalRequest
 	mu            sync.RWMutex
+	applyMu       sync.Mutex // serializes ReplacePolicy (persist + swap)
 }
 
 func NewGuard(policyPath string) (*Guard, error) {
@@ -67,7 +67,12 @@ func (g *Guard) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
 		intent = msg.GetEvent().EventType
 	}
 
-	action := g.Engine.Evaluate(msg.TeamId, msg.SourceAgentId, intent, ctx)
+	cfg := g.policySnapshot()
+	if cfg == nil {
+		// Degraded: no loaded policy is authority, so nothing is allowed.
+		return false, ActionDeny, ""
+	}
+	action := (&Engine{Config: cfg}).Evaluate(msg.TeamId, msg.SourceAgentId, intent, ctx)
 
 	if action == ActionAllow {
 		return true, action, ""
@@ -84,7 +89,24 @@ func (g *Guard) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
 		return false, action, reqID
 	}
 
-	return true, ActionAllow, ""
+	// Unknown action (validation should make this unreachable): fail closed.
+	log.Printf("DENY: Guard saw unknown policy action %q for %s", action, intent)
+	return false, ActionDeny, ""
+}
+
+// policySnapshot returns the live policy pointer under the read lock. Policy
+// configs are never mutated after they are swapped in, so the snapshot is safe
+// to evaluate without holding the lock.
+func (g *Guard) policySnapshot() *PolicyConfig {
+	if g == nil {
+		return nil
+	}
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	if g.Engine == nil {
+		return nil
+	}
+	return g.Engine.Config
 }
 
 func (g *Guard) createApprovalRequest(msg *pb.MsgEnvelope, reason string) string {
@@ -114,6 +136,14 @@ func (g *Guard) ListPending() []*pb.ApprovalRequest {
 		list = append(list, req)
 	}
 	return list
+}
+
+// PendingRequest returns one pending request without resolving it.
+func (g *Guard) PendingRequest(reqID string) (*pb.ApprovalRequest, bool) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	req, ok := g.PendingBuffer[reqID]
+	return req, ok
 }
 
 // Resolve manually approves or denies a request
@@ -159,34 +189,36 @@ func (g *Guard) ValidateIngress(subject string, data []byte) error {
 	return nil
 }
 
-// GetPolicyConfig returns the current policy configuration.
+// GetPolicyConfig returns the current policy configuration (nil when degraded).
 func (g *Guard) GetPolicyConfig() *PolicyConfig {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	return g.Engine.Config
+	return g.policySnapshot()
 }
 
-// UpdatePolicyConfig replaces the in-memory policy configuration.
+// UpdatePolicyConfig replaces the in-memory policy configuration. A non-nil
+// config clears the degraded state.
 func (g *Guard) UpdatePolicyConfig(cfg *PolicyConfig) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	if g.Engine == nil {
+		g.Engine = &Engine{}
+	}
 	g.Engine.Config = cfg
 }
 
-// SavePolicyToFile writes the current policy configuration back to a YAML file.
-func (g *Guard) SavePolicyToFile(path string) error {
-	g.mu.RLock()
-	cfg := g.Engine.Config
-	g.mu.RUnlock()
-
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal policy config: %w", err)
+// ReplacePolicy persists cfg first and swaps it into memory only when persist
+// succeeds, so a failed write leaves the live policy unchanged. Concurrent
+// replacements are serialized so file and memory cannot diverge.
+func (g *Guard) ReplacePolicy(cfg *PolicyConfig, persist func() error) error {
+	if cfg == nil {
+		return fmt.Errorf("policy config is required")
 	}
-
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to write policy file: %w", err)
+	g.applyMu.Lock()
+	defer g.applyMu.Unlock()
+	if persist != nil {
+		if err := persist(); err != nil {
+			return err
+		}
 	}
-
+	g.UpdatePolicyConfig(cfg)
 	return nil
 }

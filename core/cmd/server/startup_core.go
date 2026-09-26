@@ -106,10 +106,15 @@ func loadCognitiveRouter(sharedDB *sql.DB) *cognitive.Router {
 }
 
 func loadGovernanceGuard() *governance.Guard {
-	guard, err := governance.NewGuard("config/policy.yaml")
+	return loadGovernanceGuardFrom("config/policy.yaml")
+}
+
+// loadGovernanceGuardFrom never returns nil. A missing or invalid policy starts
+// Core with a degraded, fail-closed guard that an admin policy PUT can repair.
+func loadGovernanceGuardFrom(path string) *governance.Guard {
+	guard, err := governance.NewGuard(path)
 	if err != nil {
-		log.Printf("WARN: Governance Policy not loaded: %v. Allowing all.", err)
-		return nil
+		return governance.NewDegradedGuard(err)
 	}
 	log.Println("Governance Guard Active.")
 	return guard

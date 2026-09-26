@@ -136,7 +136,7 @@ func TestValidateConfirmToken_InvalidFormat(t *testing.T) {
 	dbOpt, _ := withDB(t)
 	s := newTestServer(dbOpt)
 
-	_, err := s.validateConfirmToken("not-a-uuid")
+	_, err := s.consumeConfirmTokenFor("not-a-uuid", blueprintCommitPurpose)
 	if err != errInvalidToken {
 		t.Errorf("Expected errInvalidToken, got: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestValidateConfirmToken_InvalidFormat(t *testing.T) {
 func TestValidateConfirmToken_NilDB(t *testing.T) {
 	s := newTestServer()
 
-	_, err := s.validateConfirmToken("11111111-1111-1111-1111-111111111111")
+	_, err := s.consumeConfirmTokenFor("11111111-1111-1111-1111-111111111111", blueprintCommitPurpose)
 	if err != errDBUnavailable {
 		t.Errorf("Expected errDBUnavailable, got: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestValidateConfirmToken_NotFound(t *testing.T) {
 	mock.ExpectQuery("SELECT .+ FROM confirm_tokens").
 		WillReturnRows(sqlmock.NewRows([]string{"intent_proof_id", "consumed", "expires_at"}))
 
-	_, err := s.validateConfirmToken("11111111-1111-1111-1111-111111111111")
+	_, err := s.consumeConfirmTokenFor("11111111-1111-1111-1111-111111111111", blueprintCommitPurpose)
 	if err != errTokenNotFound {
 		t.Errorf("Expected errTokenNotFound, got: %v", err)
 	}

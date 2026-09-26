@@ -12,11 +12,31 @@ import (
 // match NATS team:/agent: targets, so Evaluate is unaffected by them.
 const PostureTargetPrefix = "posture:"
 
-// ValidatePolicyConfig enforces the posture-group contract. Groups without a
-// posture target keep their existing, unvalidated semantics.
+// ValidatePolicyConfig is the single check shared by startup load and the
+// admin PUT. Every action (default and rule) must be exactly ALLOW, DENY, or
+// REQUIRE_APPROVAL. A policy with no restricting rule and an ALLOW default
+// (including an empty file) is an allow-everything policy and is rejected, so
+// such a file starts Core degraded. Posture groups also keep their contract.
 func ValidatePolicyConfig(cfg *PolicyConfig) error {
 	if cfg == nil {
 		return fmt.Errorf("policy config is required")
+	}
+	if !isKnownAction(cfg.Defaults.DefaultAction) {
+		return fmt.Errorf("defaults.default_action must be %s, %s, or %s, got %q", ActionAllow, ActionDeny, ActionRequireApproval, cfg.Defaults.DefaultAction)
+	}
+	restricting := false
+	for index, group := range cfg.Groups {
+		for ruleIndex, rule := range group.Rules {
+			if !isKnownAction(rule.Action) {
+				return fmt.Errorf("policy group %d (%q) rule %d: action must be %s, %s, or %s, got %q", index, group.Name, ruleIndex, ActionAllow, ActionDeny, ActionRequireApproval, rule.Action)
+			}
+			if !isPostureGroup(group) && rule.Action != ActionAllow {
+				restricting = true
+			}
+		}
+	}
+	if cfg.Defaults.DefaultAction == ActionAllow && !restricting {
+		return fmt.Errorf("an ALLOW default needs at least one DENY or REQUIRE_APPROVAL rule; an empty or allow-only policy is not accepted")
 	}
 	for index, group := range cfg.Groups {
 		if !isPostureGroup(group) {
@@ -103,14 +123,10 @@ func (e *Engine) PostureRequiresApproval(postureID string, tools, capabilityIDs 
 	return false, ""
 }
 
-// PostureRequiresApproval reads the live policy under the guard lock.
+// PostureRequiresApproval evaluates a snapshot of the live policy; a nil or
+// degraded guard requires approval for any posture-scoped work.
 func (g *Guard) PostureRequiresApproval(postureID string, tools, capabilityIDs []string) (bool, string) {
-	if g == nil {
-		return true, ""
-	}
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	return g.Engine.PostureRequiresApproval(postureID, tools, capabilityIDs)
+	return (&Engine{Config: g.policySnapshot()}).PostureRequiresApproval(postureID, tools, capabilityIDs)
 }
 
 func containsString(values []string, want string) bool {
@@ -120,4 +136,8 @@ func containsString(values []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func isKnownAction(action string) bool {
+	return action == ActionAllow || action == ActionDeny || action == ActionRequireApproval
 }

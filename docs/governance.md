@@ -104,6 +104,17 @@ Release review should treat governance as:
 
 not only as a raw allow/deny/intercept subsystem.
 
+Governance authority (A2a):
+- reading the policy or pending Guard approvals requires a root admin with `governance:read`; replacing the policy requires `governance:write`; approving or rejecting a Guard-parked message requires `approvals:decide` (an admin `*` covers all). Anonymous callers get 401 and other principals 403. See the Governance Policy rows in `docs/API_REFERENCE.md`
+- policy replacement and approval decisions are audit-first (`governance_policy_update`, `governance_approval_resolved`); if the audit row cannot be written, nothing changes
+- every policy action must be exactly `ALLOW`, `DENY`, or `REQUIRE_APPROVAL`, and an `ALLOW` default needs at least one restricting rule; an empty, typo'd, or allow-only policy is invalid (PUT returns 400)
+- if `core/config/policy.yaml` is missing or invalid (including empty), Core still starts but governance is degraded and fails closed: the Gatekeeper denies everything except heartbeats, posture-shaped work requires approval, and `/api/v1/services/status` shows `governance: degraded`. Fix the file and restart Core, or PUT a valid policy as an admin to recover without a restart
+- the Gatekeeper observes the NATS bus: a DENY stops Core from reacting (registry, audit trace, approval request), not delivery to direct subscribers
+- a policy PUT persists to the policy file inside the running Core; a redeploy restores the shipped policy
+- confirming a proposal whose approval was raised by a posture policy requires a root admin with `approvals:decide`; anyone else sees a "needs admin approval" blocker, nothing runs, and the proposal stays confirmable by an admin. Capability-risk and cost approvals are still confirmed by the proposer
+- confirm tokens are single-use and purpose-bound: a token only works on the path it was issued for (chat proposal, blueprint commit, or one group operation), and a wrong-path token is rejected without being used up
+- still open (A2b): an approver queue, role gates for capability-risk and cost approvals, and confirm tokens bound to a principal
+
 ## Operator Guidance
 
 - treat mutating and external work as governed by default

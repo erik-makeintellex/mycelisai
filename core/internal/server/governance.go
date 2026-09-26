@@ -2,11 +2,13 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 // defaultPolicyPath is the disk location for persisting policy changes.
@@ -25,64 +27,83 @@ type pendingApprovalJSON struct {
 }
 
 // handleGetPolicy returns the current governance policy configuration as JSON.
-// GET /api/v1/governance/policy
+// GET /api/v1/governance/policy (root admin, governance:read)
 func (s *AdminServer) handleGetPolicy(w http.ResponseWriter, r *http.Request) {
-	if s.Guard == nil {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"Governance engine not initialized"}`, http.StatusServiceUnavailable)
+	if _, ok := requireRootAdminScope(w, r, scopeGovernanceRead); !ok {
 		return
 	}
-
-	cfg := s.Guard.GetPolicyConfig()
-	respondJSON(w, cfg)
+	if s.Guard == nil || s.Guard.Degraded() {
+		respondGovernanceError(w, http.StatusServiceUnavailable, "Governance policy is unavailable", governancePolicyUnavailableCode, governancePolicyRecommendedAction)
+		return
+	}
+	respondJSON(w, s.Guard.GetPolicyConfig())
 }
 
-// handleUpdatePolicy replaces the entire governance policy configuration.
-// It persists the new config to disk at the default policy path.
-// PUT /api/v1/governance/policy
+// handleUpdatePolicy replaces the governance policy. Order is fail-closed:
+// authority, bounded decode, validation, audit (requested), atomic file write,
+// memory swap, audit result. A valid PUT also clears a degraded guard.
+// PUT /api/v1/governance/policy (root admin, governance:write)
 func (s *AdminServer) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
-	if s.Guard == nil {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"Governance engine not initialized"}`, http.StatusServiceUnavailable)
+	if _, ok := requireRootAdminScope(w, r, scopeGovernanceWrite); !ok {
 		return
 	}
-
+	if s.Guard == nil {
+		respondGovernanceError(w, http.StatusServiceUnavailable, "Governance engine not initialized", "governance_unavailable", "")
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxPolicyBodyBytes)
 	var cfg governance.PolicyConfig
 	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"invalid JSON body"}`, http.StatusBadRequest)
-		return
-	}
-
-	// Validate: at least defaults must be set
-	if cfg.Defaults.DefaultAction == "" {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"defaults.default_action is required"}`, http.StatusBadRequest)
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			respondAPIError(w, "policy body exceeds 1 MiB", http.StatusRequestEntityTooLarge)
+			return
+		}
+		respondAPIError(w, "invalid JSON body", http.StatusBadRequest)
 		return
 	}
 	if err := governance.ValidatePolicyConfig(&cfg); err != nil {
 		respondAPIError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	// Update in-memory config
-	s.Guard.UpdatePolicyConfig(&cfg)
-
-	// Persist to disk
-	if err := s.Guard.SavePolicyToFile(defaultPolicyPath); err != nil {
-		log.Printf("Failed to persist policy to disk: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"policy updated in memory but failed to persist to disk"}`, http.StatusInternalServerError)
+	data, newDigest, err := canonicalPolicy(&cfg)
+	if err != nil {
+		respondAPIError(w, "policy could not be encoded", http.StatusBadRequest)
 		return
 	}
-
-	log.Printf("Governance policy updated and persisted to %s", defaultPolicyPath)
-	respondJSON(w, map[string]string{"status": "updated"})
+	_, previousDigest, _ := canonicalPolicy(s.Guard.GetPolicyConfig())
+	auditCtx := func(status string) map[string]any {
+		return map[string]any{
+			"action":              "governance_policy_update",
+			"previous_digest":     previousDigest,
+			"new_digest":          newDigest,
+			"group_count":         len(cfg.Groups),
+			"posture_group_count": postureGroupCount(&cfg),
+			"result_status":       status,
+		}
+	}
+	auditID := s.auditGovernance(r, "governance-policy", "Governance policy update requested", auditCtx("requested"))
+	if auditID == "" {
+		respondGovernanceError(w, http.StatusServiceUnavailable, "Audit is unavailable; the policy was not changed", governanceAuditUnavailableCode, "Restore the audit store and retry")
+		return
+	}
+	if err := s.Guard.ReplacePolicy(&cfg, func() error { return writePolicyFileAtomic(defaultPolicyPath, data) }); err != nil {
+		log.Printf("governance: policy persist failed; live policy unchanged: %v", err)
+		s.auditGovernance(r, "governance-policy", "Governance policy update failed", auditCtx("failed"))
+		respondAPIError(w, "policy could not be persisted; the live policy was not changed", http.StatusInternalServerError)
+		return
+	}
+	s.auditGovernance(r, "governance-policy", "Governance policy update applied", auditCtx("applied"))
+	log.Printf("Governance policy updated and persisted to %s (digest %s)", defaultPolicyPath, newDigest)
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]string{"status": "applied", "digest": newDigest, "audit_id": auditID}))
 }
 
 // handleGetPendingApprovals returns all pending approval requests in a simplified JSON format.
-// GET /api/v1/governance/pending
+// GET /api/v1/governance/pending (root admin, governance:read)
 func (s *AdminServer) handleGetPendingApprovals(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, scopeGovernanceRead); !ok {
+		return
+	}
 	if s.Guard == nil {
 		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, `{"error":"Governance engine not initialized"}`, http.StatusServiceUnavailable)
@@ -121,59 +142,35 @@ func (s *AdminServer) handleGetPendingApprovals(w http.ResponseWriter, r *http.R
 }
 
 // handleResolveApproval resolves a pending approval request by approving or rejecting it.
-// POST /api/v1/governance/resolve/{id}
+// POST /api/v1/governance/resolve/{id} (root admin, approvals:decide)
 func (s *AdminServer) handleResolveApproval(w http.ResponseWriter, r *http.Request) {
-	if s.Guard == nil {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"Governance engine not initialized"}`, http.StatusServiceUnavailable)
+	if _, ok := requireApprover(w, r); !ok {
 		return
 	}
-
 	reqID := r.PathValue("id")
 	if reqID == "" {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"missing approval request ID"}`, http.StatusBadRequest)
+		respondAPIError(w, "missing approval request ID", http.StatusBadRequest)
 		return
 	}
+	action, ok := decodeApprovalDecision(w, r)
+	if !ok {
+		return
+	}
+	s.resolveGuardApproval(w, r, reqID, action, "/api/v1/governance/resolve")
+}
 
+// decodeApprovalDecision accepts only {"action":"APPROVE"|"REJECT"}.
+func decodeApprovalDecision(w http.ResponseWriter, r *http.Request) (string, bool) {
 	var payload struct {
-		Action string `json:"action"` // "APPROVE" or "REJECT"
+		Action string `json:"action"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"invalid JSON body"}`, http.StatusBadRequest)
-		return
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&payload); err != nil {
+		respondAPIError(w, "invalid JSON body", http.StatusBadRequest)
+		return "", false
 	}
-
 	if payload.Action != "APPROVE" && payload.Action != "REJECT" {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"action must be APPROVE or REJECT"}`, http.StatusBadRequest)
-		return
+		respondAPIError(w, "action must be APPROVE or REJECT", http.StatusBadRequest)
+		return "", false
 	}
-
-	approved := payload.Action == "APPROVE"
-	msg, err := s.Guard.Resolve(reqID, approved, "governance-api")
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusNotFound)
-		return
-	}
-
-	// If approved and there is a message to re-inject, publish it back into the system
-	if approved && msg != nil {
-		if s.Router != nil {
-			if err := s.Router.PublishDirect(msg); err != nil {
-				log.Printf("Failed to re-publish approved message %s: %v", reqID, err)
-				w.Header().Set("Content-Type", "application/json")
-				http.Error(w, `{"error":"resolved but failed to re-publish message"}`, http.StatusInternalServerError)
-				return
-			}
-		}
-	}
-
-	respondJSON(w, map[string]string{
-		"status":     "resolved",
-		"request_id": reqID,
-		"action":     payload.Action,
-	})
+	return payload.Action, true
 }

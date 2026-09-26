@@ -200,6 +200,9 @@ func (s *AdminServer) buildServiceStatuses(ctx context.Context) []ServiceStatus 
 		services = append(services, ServiceStatus{Name: "runtime_teams", Status: status, Detail: detail})
 	}
 
+	// Governance policy: degraded (fail-closed) when no policy is loaded.
+	services = append(services, s.governanceServiceStatus())
+
 	return services
 }
 
