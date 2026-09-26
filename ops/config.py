@@ -20,9 +20,9 @@ ROOT_DIR = Path(__file__).parent.parent.resolve() # tasks/../ -> root
 CORE_DIR = ROOT_DIR / "core"
 SDK_DIR = ROOT_DIR / "sdk/python"
 WORKSPACE_DIR = ROOT_DIR / "workspace"
-PROJECT_CACHE_ROOT = Path(
-    os.environ.get("MYCELIS_PROJECT_CACHE_ROOT", str(WORKSPACE_DIR / "tool-cache"))
-)
+# PROJECT_CACHE_ROOT is resolved after `main_checkout_root` below (a linked
+# worktree with no cache of its own defaults to the main checkout's, so a
+# fresh worktree does not fail `core.test` on missing Playwright browsers).
 
 WINDOWS_TOOL_PATHS = (
     Path(r"C:\Program Files\Rancher Desktop\resources\resources\win32\bin"),
@@ -294,6 +294,33 @@ def main_checkout_root(checkout_root: Path | None = None) -> Path | None:
         common_dir = (checkout_root / common_dir).resolve()
     root = common_dir.parent
     return root if root != checkout_root and root.is_dir() else None
+
+
+def default_project_cache_root(checkout_root: Path | None = None) -> Path:
+    """Resolve the default `MYCELIS_PROJECT_CACHE_ROOT` for this checkout.
+
+    An explicit `MYCELIS_PROJECT_CACHE_ROOT` always wins and is returned
+    as-is. Otherwise, a linked worktree (no tool-cache of its own) defaults
+    to the main checkout's `workspace/tool-cache` so caches already fetched
+    there (Playwright browsers, uv/pip/npm, Go build/module caches) are
+    reused instead of missing from scratch: those are content-addressed or
+    read-mostly, so sharing them is safe; nothing is ever copied on disk.
+    If the main checkout has no cache either, this keeps today's
+    per-checkout default so callers still get a valid, creatable path.
+    """
+    env_value = os.environ.get("MYCELIS_PROJECT_CACHE_ROOT", "").strip()
+    if env_value:
+        return Path(env_value)
+    checkout_root = checkout_root or ROOT_DIR
+    local_default = checkout_root / "workspace" / "tool-cache"
+    main_root = main_checkout_root(checkout_root)
+    if main_root is None:
+        return local_default
+    shared_default = main_root / "workspace" / "tool-cache"
+    return shared_default if shared_default.is_dir() else local_default
+
+
+PROJECT_CACHE_ROOT = default_project_cache_root()
 
 
 def resolve_env_file(name: str, checkout_root: Path | None = None) -> Path | None:
