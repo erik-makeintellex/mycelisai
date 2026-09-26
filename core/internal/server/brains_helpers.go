@@ -96,7 +96,7 @@ func (s *AdminServer) brainStatus(ctx context.Context, id string, enabled bool) 
 	if !enabled {
 		return "disabled"
 	}
-	adapter, ok := s.Cognitive.Adapters[id]
+	adapter, ok := s.Cognitive.AdapterSnapshot(id)
 	if !ok {
 		return "offline"
 	}

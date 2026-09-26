@@ -69,10 +69,10 @@ Provider families:
 
 LiteLLM is a transport option, not another Soma or team system. When configured, Mycelis still decides which profiles may use the provider, whether data may leave the organization, and whether approval is required. The gateway may route only inside that approved boundary; it must never turn local-only work into remote inference. The current release does not install or start LiteLLM, and ordinary users should see it only as a disabled or configured AI Engine rather than a new workflow surface.
 
-What you can do:
+What you can do (admin-only — every change here, including a health probe, requires an admin account with cognitive-write access; other users see the panel but their changes are refused and nothing changes):
 - add/edit/delete providers
 - probe health
-- manage role routing through profiles
+- manage role routing through profiles, including activating a mission profile
 
 If the engine assigned to a role is turned off or can't be reached, Mycelis does not quietly switch that role to a different engine. The request fails with a plain "AI engine unavailable" message instead of continuing on an engine you didn't choose. To fix it, turn the assigned engine back on, point it at a working server, or route that role to a different engine yourself in AI Engines. An administrator can also set up an approved backup engine for a role ahead of time; that backup is only ever used when explicitly set up this way, and it never sends local-only work to a cloud engine.
 

@@ -19,11 +19,12 @@ func TestHandleDeleteMissionProfile_HappyPath(t *testing.T) {
 	dbOpt, mock := withDirectDB(t)
 	s := newTestServer(dbOpt)
 
+	expectAudit(mock)
 	mock.ExpectExec("DELETE FROM mission_profiles").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	mux := setupMux(t, "DELETE /api/v1/mission-profiles/{id}", s.HandleDeleteMissionProfile)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/mission-profiles/p-1", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/mission-profiles/p-1", "")
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -45,11 +46,12 @@ func TestHandleDeleteMissionProfile_NotFound(t *testing.T) {
 	dbOpt, mock := withDirectDB(t)
 	s := newTestServer(dbOpt)
 
+	expectAudit(mock)
 	mock.ExpectExec("DELETE FROM mission_profiles").
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
 	mux := setupMux(t, "DELETE /api/v1/mission-profiles/{id}", s.HandleDeleteMissionProfile)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/mission-profiles/ghost", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/mission-profiles/ghost", "")
 
 	assertStatus(t, rr, http.StatusNotFound)
 }
@@ -57,7 +59,7 @@ func TestHandleDeleteMissionProfile_NotFound(t *testing.T) {
 func TestHandleDeleteMissionProfile_NilDB(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "DELETE /api/v1/mission-profiles/{id}", s.HandleDeleteMissionProfile)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/mission-profiles/p-1", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/mission-profiles/p-1", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
@@ -65,11 +67,12 @@ func TestHandleDeleteMissionProfile_DBError(t *testing.T) {
 	dbOpt, mock := withDirectDB(t)
 	s := newTestServer(dbOpt)
 
+	expectAudit(mock)
 	mock.ExpectExec("DELETE FROM mission_profiles").
 		WillReturnError(fmt.Errorf("fk constraint"))
 
 	mux := setupMux(t, "DELETE /api/v1/mission-profiles/{id}", s.HandleDeleteMissionProfile)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/mission-profiles/p-1", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/mission-profiles/p-1", "")
 
 	assertStatus(t, rr, http.StatusInternalServerError)
 }
@@ -82,9 +85,9 @@ func TestHandleActivateMissionProfile_HappyPath(t *testing.T) {
 	dbOpt, mock := withDirectDB(t)
 	cogOpt := withCognitive(t,
 		map[string]cognitive.ProviderConfig{
-			"ollama": {Type: "openai_compatible", Enabled: true},
+			"ollama": {Type: "openai_compatible", ModelID: "m-ollama", Enabled: true},
 		},
-		map[string]cognitive.LLMProvider{},
+		map[string]cognitive.LLMProvider{"ollama": &stubAdapter{healthy: true}},
 	)
 	s := newTestServer(dbOpt, cogOpt)
 
@@ -95,7 +98,8 @@ func TestHandleActivateMissionProfile_HappyPath(t *testing.T) {
 			AddRow("p-1", "Default", sql.NullString{}, []byte(`{"chat":"ollama"}`), []byte(`[]`),
 				"fresh", false, false, "default", now, now))
 
-	// Step 2: Transaction — deactivate others + activate this one
+	// Step 2: audit, then the transaction — deactivate others + activate this one
+	expectAudit(mock)
 	mock.ExpectBegin()
 	mock.ExpectExec("UPDATE mission_profiles SET is_active=false").
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -104,7 +108,7 @@ func TestHandleActivateMissionProfile_HappyPath(t *testing.T) {
 	mock.ExpectCommit()
 
 	mux := setupMux(t, "POST /api/v1/mission-profiles/{id}/activate", s.HandleActivateMissionProfile)
-	rr := doRequest(t, mux, "POST", "/api/v1/mission-profiles/p-1/activate", "")
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mission-profiles/p-1/activate", "")
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -116,6 +120,9 @@ func TestHandleActivateMissionProfile_HappyPath(t *testing.T) {
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unmet DB expectations: %v", err)
 	}
+	if state := s.Cognitive.ProfileOverrideState("chat"); state.ProviderID != "ollama" || state.Origin != cognitive.ProfileOriginRuntime {
+		t.Errorf("chat override = %+v, want ollama/runtime", state)
+	}
 }
 
 func TestHandleActivateMissionProfile_NotFound(t *testing.T) {
@@ -126,7 +133,7 @@ func TestHandleActivateMissionProfile_NotFound(t *testing.T) {
 		WillReturnError(sql.ErrNoRows)
 
 	mux := setupMux(t, "POST /api/v1/mission-profiles/{id}/activate", s.HandleActivateMissionProfile)
-	rr := doRequest(t, mux, "POST", "/api/v1/mission-profiles/ghost/activate", "")
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mission-profiles/ghost/activate", "")
 
 	assertStatus(t, rr, http.StatusNotFound)
 }
@@ -134,7 +141,7 @@ func TestHandleActivateMissionProfile_NotFound(t *testing.T) {
 func TestHandleActivateMissionProfile_NilDB(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "POST /api/v1/mission-profiles/{id}/activate", s.HandleActivateMissionProfile)
-	rr := doRequest(t, mux, "POST", "/api/v1/mission-profiles/p-1/activate", "")
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mission-profiles/p-1/activate", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
@@ -146,7 +153,7 @@ func TestHandleActivateMissionProfile_DBSelectError(t *testing.T) {
 		WillReturnError(fmt.Errorf("connection reset"))
 
 	mux := setupMux(t, "POST /api/v1/mission-profiles/{id}/activate", s.HandleActivateMissionProfile)
-	rr := doRequest(t, mux, "POST", "/api/v1/mission-profiles/p-1/activate", "")
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mission-profiles/p-1/activate", "")
 
 	assertStatus(t, rr, http.StatusInternalServerError)
 }

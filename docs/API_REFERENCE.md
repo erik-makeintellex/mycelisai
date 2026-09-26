@@ -198,18 +198,18 @@ Core accepts the API key only as an `Authorization: Bearer <key>` header; the ea
 | `/healthz` | GET | Health check |
 | **Brains (Provider CRUD)** | | |
 | `/api/v1/brains` | GET | List all providers with health status, location, data boundary |
-| `/api/v1/brains` | POST | Add a new provider using env/secret references — hot-injects into running router, immediate probe. Raw `api_key` values are rejected. |
-| `/api/v1/brains/{id}` | PUT | Update provider config using env/secret references. Raw `api_key` values are rejected. |
-| `/api/v1/brains/{id}` | DELETE | Remove provider — rejected if last remaining |
-| `/api/v1/brains/{id}/toggle` | PUT | Enable/disable provider — persists to cognitive.yaml |
-| `/api/v1/brains/{id}/policy` | PUT | Update usage_policy + roles_allowed — persists to cognitive.yaml |
-| `/api/v1/brains/{id}/probe` | POST | Live health check — returns `{"alive":bool,"latency_ms":int}` |
+| `/api/v1/brains` | POST | Scope: root admin + `cognitive:write`, default deny (anon `401`, standard/scope-missing admin `403`, no change on denial). Audited first as `cognitive_provider_added` (source `cognitive-routing-mutation`); audit/DB unavailable -> `503`, nothing changes. Add a new provider using env/secret references — hot-injects into running router, immediate probe. Raw `api_key` values are rejected. |
+| `/api/v1/brains/{id}` | PUT | Scope: root admin + `cognitive:write`, default deny (same negatives as above). Audited first as `cognitive_provider_updated`. Update provider config using env/secret references; raw `api_key` values are rejected. A full update that would leave a provider an execution profile still resolves to non-executable (disabled, or a blank/whitespace `model_id`) returns `409 provider_bound` (`provider_id`, `profiles`, `recommended_action`) and changes nothing; the same edit on an unbound provider is allowed. |
+| `/api/v1/brains/{id}` | DELETE | Scope: root admin + `cognitive:write`, default deny (same negatives as above). Audited first as `cognitive_provider_deleted`. Remove provider — rejected if last remaining, or if any execution profile still resolves to it (`409 provider_bound`). |
+| `/api/v1/brains/{id}/toggle` | PUT | Scope: root admin + `cognitive:write`, default deny (same negatives as above). Audited first as `cognitive_provider_toggled`. Enable/disable provider — persists to cognitive.yaml. Disabling a provider an execution profile still resolves to returns `409 provider_bound` and changes nothing. |
+| `/api/v1/brains/{id}/policy` | PUT | Scope: root admin + `cognitive:write`, default deny (same negatives as above). Audited first as `cognitive_provider_policy_updated`. Update usage_policy + roles_allowed — persists to cognitive.yaml. |
+| `/api/v1/brains/{id}/probe` | POST | Scope: root admin + `cognitive:write` (gated because it causes outbound egress), default deny (same negatives as above). Audited first as `cognitive_provider_probed`. Live health check — returns `{"alive":bool,"latency_ms":int}`. |
 | **Mission Profiles** | | |
 | `/api/v1/mission-profiles` | GET | List all profiles (role_providers, subscriptions, active flag) |
-| `/api/v1/mission-profiles` | POST | Create profile — name, role_providers, subscriptions, context_strategy, auto_start |
-| `/api/v1/mission-profiles/{id}` | PUT | Update profile config |
-| `/api/v1/mission-profiles/{id}` | DELETE | Delete profile — unsubscribes reactive engine first |
-| `/api/v1/mission-profiles/{id}/activate` | POST | Activate profile — applies role routing, registers NATS subscriptions, marks active in DB |
+| `/api/v1/mission-profiles` | POST | Scope: root admin + `cognitive:write`, default deny (anon `401`, standard/scope-missing admin `403`, no row written). Audited first as `mission_profile_created`; audit/DB unavailable -> `503`. Create profile — name, role_providers, subscriptions, context_strategy, auto_start. |
+| `/api/v1/mission-profiles/{id}` | PUT | Scope: root admin + `cognitive:write`, default deny (same negatives as above). Audited first as `mission_profile_updated`. Update profile config. |
+| `/api/v1/mission-profiles/{id}` | DELETE | Scope: root admin + `cognitive:write`, default deny (same negatives as above). Audited first as `mission_profile_deleted`. Delete profile — unsubscribes reactive engine only after the row is gone. |
+| `/api/v1/mission-profiles/{id}/activate` | POST | Scope: root admin + `cognitive:write`, default deny (same negatives as above). Audited first as `mission_profile_activated`. Activation is all-or-nothing: every role->provider pair is validated before anything changes (malformed `role_providers` -> `400`; an invalid pair -> the S6c rejection, `400`, `409` if env-pinned, `503` if the execution router is offline), then applied together as runtime overrides and the profile is marked active. If routing fails after `is_active` is committed, the response is `500 mission_profile_routing_not_applied` with `recommended_action`, the row stays active, and a failure audit is written (`mission_profile_activated`, `result_status=failed_after_commit`, with profile id/name, `role_providers`, `code`, `error`, `recovery_action`). |
 | **Context Snapshots** | | |
 | `/api/v1/context/snapshot` | POST | Save a context snapshot (messages, run_state, role_providers, source_profile) |
 | `/api/v1/context/snapshots` | GET | List 20 most recent snapshots (no messages payload) |

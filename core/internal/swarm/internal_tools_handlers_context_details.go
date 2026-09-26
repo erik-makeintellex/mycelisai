@@ -83,11 +83,13 @@ func (r *InternalToolRegistry) writeAgentTopology(sb *strings.Builder, agentID, 
 
 func (r *InternalToolRegistry) writeCognitiveStatus(sb *strings.Builder) {
 	sb.WriteString("### Cognitive Engine\n")
-	if r.brain == nil || r.brain.Config == nil {
+	// ConfigSnapshot copies the routing table under the router lock, so a
+	// concurrent provider or profile mutation cannot race this iteration.
+	cfg := r.brain.ConfigSnapshot()
+	if cfg == nil {
 		sb.WriteString("- (Cognitive engine offline)\n\n")
 		return
 	}
-	cfg := r.brain.Config
 	for id, prov := range cfg.Providers {
 		if prov.Endpoint == "" {
 			continue

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
@@ -42,6 +43,9 @@ func (r *Router) AddProvider(id string, cfg ProviderConfig) error {
 	if r.Config.Providers == nil {
 		r.Config.Providers = make(map[string]ProviderConfig)
 	}
+	if r.Adapters == nil {
+		r.Adapters = make(map[string]LLMProvider)
+	}
 	r.Config.Providers[id] = cfg
 	r.Adapters[id] = adapter
 	r.mu.Unlock()
@@ -49,7 +53,10 @@ func (r *Router) AddProvider(id string, cfg ProviderConfig) error {
 }
 
 // UpdateProvider replaces an existing adapter in-place without restart.
-// If api_key is empty, the existing key is preserved.
+// If api_key is empty, the existing key is preserved. The adapter is built
+// outside the lock; the write re-checks under the lock that the provider
+// still exists with the same credentials, so a concurrent RemoveProvider is
+// never resurrected and a concurrent key change is never overwritten.
 func (r *Router) UpdateProvider(id string, cfg ProviderConfig) error {
 	r.mu.RLock()
 	existing, exists := r.Config.Providers[id]
@@ -69,6 +76,18 @@ func (r *Router) UpdateProvider(id string, cfg ProviderConfig) error {
 		return fmt.Errorf("build adapter: %w", err)
 	}
 	r.mu.Lock()
+	current, stillExists := r.Config.Providers[id]
+	if !stillExists {
+		r.mu.Unlock()
+		return fmt.Errorf("provider %q not found", id)
+	}
+	if current.AuthKey != existing.AuthKey || current.AuthKeyEnv != existing.AuthKeyEnv {
+		r.mu.Unlock()
+		return fmt.Errorf("provider %q changed concurrently; retry", id)
+	}
+	if r.Adapters == nil {
+		r.Adapters = make(map[string]LLMProvider)
+	}
 	r.Config.Providers[id] = cfg
 	r.Adapters[id] = adapter
 	r.mu.Unlock()
@@ -84,12 +103,20 @@ func (r *Router) RemoveProvider(id string) error {
 	return r.SaveConfig()
 }
 
+// saveConfigMu serializes SaveConfig's snapshot-and-write so two concurrent
+// saves cannot land out of order (an older snapshot overwriting a newer one).
+// Lock order is saveConfigMu then Router.mu; SaveConfig must never be called
+// while holding Router.mu (RWMutex is not re-entrant).
+var saveConfigMu sync.Mutex
+
 // SaveConfig persists the current BrainConfig back to the YAML file.
 // Only writes providers (without secrets) and profiles — safe for runtime updates.
 func (r *Router) SaveConfig() error {
 	if r.ConfigPath == "" {
 		return fmt.Errorf("no config path set — cannot persist")
 	}
+	saveConfigMu.Lock()
+	defer saveConfigMu.Unlock()
 
 	r.mu.RLock()
 	data, err := yaml.Marshal(r.redactedConfigForPersistence())

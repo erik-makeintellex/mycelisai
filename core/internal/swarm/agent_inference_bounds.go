@@ -55,17 +55,23 @@ func systemMessagesFirst(messages []cognitive.ChatMessage) []cognitive.ChatMessa
 }
 
 func (a *Agent) inferenceLogConfig(req cognitive.InferRequest) (string, string, int) {
+	// Read the routing table only through the router's locked accessors: a
+	// concurrent provider toggle or profile override must not race this log.
 	providerID := strings.TrimSpace(req.Provider)
-	if providerID == "" && a.brain != nil && a.brain.Config != nil {
-		providerID = strings.TrimSpace(a.brain.Config.Profiles[req.Profile])
+	var config cognitive.ProviderConfig
+	found := false
+	if a.brain != nil {
+		if providerID != "" {
+			config, found = a.brain.ProviderSnapshot(providerID)
+		} else {
+			providerID, config, found = a.brain.ProfileProviderSnapshot(req.Profile)
+		}
 	}
 	modelID, maxOutput := "unknown", 0
-	if a.brain != nil && a.brain.Config != nil {
-		if config, ok := a.brain.Config.Providers[providerID]; ok {
-			config = cognitive.NormalizeProviderTokenDefaults(config)
-			modelID = firstNonEmptyString(strings.TrimSpace(config.ModelID), "unknown")
-			maxOutput = config.MaxOutputTokens
-		}
+	if found {
+		config = cognitive.NormalizeProviderTokenDefaults(config)
+		modelID = firstNonEmptyString(strings.TrimSpace(config.ModelID), "unknown")
+		maxOutput = config.MaxOutputTokens
 	}
 	return firstNonEmptyString(providerID, "auto"), modelID, maxOutput
 }

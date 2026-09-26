@@ -10,15 +10,22 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 )
 
+// Provider routes touch provider config and adapters only through the
+// Router's locked accessors (ConfigSnapshot, ProviderSnapshot,
+// StoreProviderConfig, AdapterSnapshot, AddProvider, UpdateProvider,
+// RemoveProvider). Every mutating route, and the probe, requires root admin
+// + cognitive:write and is audited first (routing_mutation_authority.go).
+
 // GET /api/v1/brains — list all providers with enriched metadata + health status.
 func (s *AdminServer) HandleListBrains(w http.ResponseWriter, r *http.Request) {
-	if s.Cognitive == nil || s.Cognitive.Config == nil {
+	cfg := s.Cognitive.ConfigSnapshot()
+	if cfg == nil {
 		respondJSON(w, map[string]any{"ok": true, "data": []BrainEntry{}})
 		return
 	}
 
-	entries := make([]BrainEntry, 0, len(s.Cognitive.Config.Providers))
-	for id, prov := range s.Cognitive.Config.Providers {
+	entries := make([]BrainEntry, 0, len(cfg.Providers))
+	for id, prov := range cfg.Providers {
 		prov = cognitive.NormalizeProviderTokenDefaults(prov)
 		entries = append(entries, brainEntryFromProvider(id, prov, s.brainStatus(r.Context(), id, prov.Enabled)))
 	}
@@ -28,20 +35,16 @@ func (s *AdminServer) HandleListBrains(w http.ResponseWriter, r *http.Request) {
 
 // PUT /api/v1/brains/{id}/toggle — enable or disable a provider.
 func (s *AdminServer) HandleToggleBrain(w http.ResponseWriter, r *http.Request) {
+	if !requireRoutingWriter(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		respondError(w, "Missing provider ID", http.StatusBadRequest)
 		return
 	}
-
 	if s.Cognitive == nil || s.Cognitive.Config == nil {
 		respondError(w, "Cognitive system offline", http.StatusServiceUnavailable)
-		return
-	}
-
-	prov, ok := s.Cognitive.Config.Providers[id]
-	if !ok {
-		respondError(w, "Provider not found", http.StatusNotFound)
 		return
 	}
 
@@ -53,8 +56,25 @@ func (s *AdminServer) HandleToggleBrain(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	profileOverrideWriteMu.Lock()
+	defer profileOverrideWriteMu.Unlock()
+
+	prov, ok := s.Cognitive.ProviderSnapshot(id)
+	if !ok {
+		respondError(w, "Provider not found", http.StatusNotFound)
+		return
+	}
+	if prov.Enabled && !req.Enabled && s.rejectIfProviderBound(w, id) {
+		return
+	}
+	if _, ok := s.auditRoutingMutation(w, r, auditProviderToggled, "Cognitive provider toggled", map[string]any{
+		"provider_id": id, "enabled": req.Enabled, "previous_enabled": prov.Enabled,
+	}); !ok {
+		return
+	}
+
 	prov.Enabled = req.Enabled
-	s.Cognitive.Config.Providers[id] = prov
+	s.Cognitive.StoreProviderConfig(id, prov)
 
 	// Persist to YAML so toggle survives restart
 	if err := s.Cognitive.SaveConfig(); err != nil {
@@ -68,20 +88,16 @@ func (s *AdminServer) HandleToggleBrain(w http.ResponseWriter, r *http.Request) 
 
 // PUT /api/v1/brains/{id}/policy — update usage policy for a provider.
 func (s *AdminServer) HandleUpdateBrainPolicy(w http.ResponseWriter, r *http.Request) {
+	if !requireRoutingWriter(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		respondError(w, "Missing provider ID", http.StatusBadRequest)
 		return
 	}
-
 	if s.Cognitive == nil || s.Cognitive.Config == nil {
 		respondError(w, "Cognitive system offline", http.StatusServiceUnavailable)
-		return
-	}
-
-	prov, ok := s.Cognitive.Config.Providers[id]
-	if !ok {
-		respondError(w, "Provider not found", http.StatusNotFound)
 		return
 	}
 
@@ -93,6 +109,21 @@ func (s *AdminServer) HandleUpdateBrainPolicy(w http.ResponseWriter, r *http.Req
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, "Bad JSON", http.StatusBadRequest)
+		return
+	}
+
+	profileOverrideWriteMu.Lock()
+	defer profileOverrideWriteMu.Unlock()
+
+	prov, ok := s.Cognitive.ProviderSnapshot(id)
+	if !ok {
+		respondError(w, "Provider not found", http.StatusNotFound)
+		return
+	}
+	if _, ok := s.auditRoutingMutation(w, r, auditProviderPolicyUpdated, "Cognitive provider policy updated", map[string]any{
+		"provider_id": id, "usage_policy": req.UsagePolicy, "token_budget_profile": req.TokenBudgetProfile,
+		"max_output_tokens": req.MaxOutputTokens, "roles_allowed": req.RolesAllowed,
+	}); !ok {
 		return
 	}
 
@@ -109,7 +140,7 @@ func (s *AdminServer) HandleUpdateBrainPolicy(w http.ResponseWriter, r *http.Req
 		prov.RolesAllowed = req.RolesAllowed
 	}
 	prov = cognitive.NormalizeProviderTokenDefaults(prov)
-	s.Cognitive.Config.Providers[id] = prov
+	s.Cognitive.StoreProviderConfig(id, prov)
 
 	// Persist to YAML so policy survives restart
 	if err := s.Cognitive.SaveConfig(); err != nil {
@@ -129,6 +160,9 @@ func (s *AdminServer) HandleUpdateBrainPolicy(w http.ResponseWriter, r *http.Req
 
 // POST /api/v1/brains — add a new provider and hot-inject it into the running router.
 func (s *AdminServer) HandleAddBrain(w http.ResponseWriter, r *http.Request) {
+	if !requireRoutingWriter(w, r) {
+		return
+	}
 	if s.Cognitive == nil || s.Cognitive.Config == nil {
 		respondError(w, "Cognitive system offline", http.StatusServiceUnavailable)
 		return
@@ -152,12 +186,19 @@ func (s *AdminServer) HandleAddBrain(w http.ResponseWriter, r *http.Request) {
 		respondError(w, "raw api_key values are not accepted; use api_key_env or a deployment secret reference", http.StatusBadRequest)
 		return
 	}
-	if _, exists := s.Cognitive.Config.Providers[req.ID]; exists {
+
+	profileOverrideWriteMu.Lock()
+	defer profileOverrideWriteMu.Unlock()
+
+	if _, exists := s.Cognitive.ProviderSnapshot(req.ID); exists {
 		respondError(w, "provider id already exists", http.StatusConflict)
 		return
 	}
 
 	cfg := providerConfigFromBrainRequest(req, true)
+	if _, ok := s.auditRoutingMutation(w, r, auditProviderAdded, "Cognitive provider added", brainAuditFields(req.ID, cfg)); !ok {
+		return
+	}
 
 	if err := s.Cognitive.AddProvider(req.ID, cfg); err != nil {
 		log.Printf("AddProvider %s failed: %v", req.ID, err)
@@ -170,6 +211,9 @@ func (s *AdminServer) HandleAddBrain(w http.ResponseWriter, r *http.Request) {
 
 // PUT /api/v1/brains/{id} — update a provider's full configuration and hot-reload it.
 func (s *AdminServer) HandleUpdateBrain(w http.ResponseWriter, r *http.Request) {
+	if !requireRoutingWriter(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		respondError(w, "Missing provider ID", http.StatusBadRequest)
@@ -177,10 +221,6 @@ func (s *AdminServer) HandleUpdateBrain(w http.ResponseWriter, r *http.Request) 
 	}
 	if s.Cognitive == nil || s.Cognitive.Config == nil {
 		respondError(w, "Cognitive system offline", http.StatusServiceUnavailable)
-		return
-	}
-	if _, exists := s.Cognitive.Config.Providers[id]; !exists {
-		respondError(w, "Provider not found", http.StatusNotFound)
 		return
 	}
 
@@ -194,7 +234,22 @@ func (s *AdminServer) HandleUpdateBrain(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	profileOverrideWriteMu.Lock()
+	defer profileOverrideWriteMu.Unlock()
+
+	if _, exists := s.Cognitive.ProviderSnapshot(id); !exists {
+		respondError(w, "Provider not found", http.StatusNotFound)
+		return
+	}
 	cfg := providerConfigFromBrainRequest(req, false)
+	// A full update that leaves a bound provider non-executable (disabled
+	// or without a model) would strand the profiles routed to it.
+	if !providerConfigExecutable(cfg) && s.rejectIfProviderBound(w, id) {
+		return
+	}
+	if _, ok := s.auditRoutingMutation(w, r, auditProviderUpdated, "Cognitive provider updated", brainAuditFields(id, cfg)); !ok {
+		return
+	}
 
 	if err := s.Cognitive.UpdateProvider(id, cfg); err != nil {
 		log.Printf("UpdateProvider %s failed: %v", id, err)
@@ -207,6 +262,9 @@ func (s *AdminServer) HandleUpdateBrain(w http.ResponseWriter, r *http.Request) 
 
 // DELETE /api/v1/brains/{id} — remove a provider and its adapter.
 func (s *AdminServer) HandleDeleteBrain(w http.ResponseWriter, r *http.Request) {
+	if !requireRoutingWriter(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		respondError(w, "Missing provider ID", http.StatusBadRequest)
@@ -216,14 +274,24 @@ func (s *AdminServer) HandleDeleteBrain(w http.ResponseWriter, r *http.Request) 
 		respondError(w, "Cognitive system offline", http.StatusServiceUnavailable)
 		return
 	}
-	if _, exists := s.Cognitive.Config.Providers[id]; !exists {
+
+	profileOverrideWriteMu.Lock()
+	defer profileOverrideWriteMu.Unlock()
+
+	snapshot := s.Cognitive.ConfigSnapshot()
+	if _, exists := snapshot.Providers[id]; !exists {
 		respondError(w, "Provider not found", http.StatusNotFound)
 		return
 	}
-
 	// Guard: refuse to delete the last remaining provider
-	if len(s.Cognitive.Config.Providers) <= 1 {
+	if len(snapshot.Providers) <= 1 {
 		respondError(w, "Cannot delete the last provider — at least one must remain", http.StatusConflict)
+		return
+	}
+	if s.rejectIfProviderBound(w, id) {
+		return
+	}
+	if _, ok := s.auditRoutingMutation(w, r, auditProviderDeleted, "Cognitive provider deleted", map[string]any{"provider_id": id}); !ok {
 		return
 	}
 
@@ -237,7 +305,11 @@ func (s *AdminServer) HandleDeleteBrain(w http.ResponseWriter, r *http.Request) 
 }
 
 // POST /api/v1/brains/{id}/probe — live health check on a single provider.
+// Gated and audited because it causes outbound egress to the provider.
 func (s *AdminServer) HandleProbeBrain(w http.ResponseWriter, r *http.Request) {
+	if !requireRoutingWriter(w, r) {
+		return
+	}
 	id := r.PathValue("id")
 	if id == "" {
 		respondError(w, "Missing provider ID", http.StatusBadRequest)
@@ -248,9 +320,12 @@ func (s *AdminServer) HandleProbeBrain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	adapter, ok := s.Cognitive.Adapters[id]
+	adapter, ok := s.Cognitive.AdapterSnapshot(id)
 	if !ok {
 		respondError(w, "Provider not found or not initialized", http.StatusNotFound)
+		return
+	}
+	if _, ok := s.auditRoutingMutation(w, r, auditProviderProbed, "Cognitive provider probed", map[string]any{"provider_id": id}); !ok {
 		return
 	}
 
@@ -265,4 +340,18 @@ func (s *AdminServer) HandleProbeBrain(w http.ResponseWriter, r *http.Request) {
 		"alive":      alive,
 		"latency_ms": latency,
 	}})
+}
+
+// brainAuditFields describes a provider write for the audit record. It never
+// carries a secret or a secret reference.
+func brainAuditFields(id string, cfg cognitive.ProviderConfig) map[string]any {
+	return map[string]any{
+		"provider_id":   id,
+		"type":          cfg.Type,
+		"model_id":      cfg.ModelID,
+		"location":      cfg.Location,
+		"data_boundary": cfg.DataBoundary,
+		"usage_policy":  cfg.UsagePolicy,
+		"enabled":       cfg.Enabled,
+	}
 }
