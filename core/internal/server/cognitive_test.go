@@ -59,7 +59,7 @@ func TestHandleUpdateProvider_RejectsRawAPIKey(t *testing.T) {
 	s := newTestServer(cogOpt)
 
 	mux := setupMux(t, "PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
-	rr := doRequest(t, mux, "PUT", "/api/v1/cognitive/providers/production_gpt4", `{"api_key":"sk-live-secret"}`)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/cognitive/providers/production_gpt4", `{"api_key":"sk-live-secret"}`)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 	if got := s.Cognitive.Config.Providers["production_gpt4"].AuthKey; got != "" {
@@ -77,7 +77,7 @@ func TestHandleUpdateProvider_AcceptsAPIKeyEnvReference(t *testing.T) {
 	s := newTestServer(cogOpt)
 
 	mux := setupMux(t, "PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
-	rr := doRequest(t, mux, "PUT", "/api/v1/cognitive/providers/production_gpt4", `{"api_key_env":"OPENAI_API_KEY"}`)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/cognitive/providers/production_gpt4", `{"api_key_env":"OPENAI_API_KEY"}`)
 
 	assertStatus(t, rr, http.StatusOK)
 	if got := s.Cognitive.Config.Providers["production_gpt4"].AuthKeyEnv; got != "OPENAI_API_KEY" {

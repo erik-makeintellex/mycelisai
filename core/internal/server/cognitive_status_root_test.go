@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/mycelis/core/internal/cognitive"
@@ -83,21 +81,5 @@ func TestHandleCognitiveStatus_OmitsRootWhenUnset(t *testing.T) {
 	}
 	if got := resp.Profiles["chat"]; got.Source != "default" || got.ProviderID != "ollama" {
 		t.Fatalf("chat = %+v", got)
-	}
-}
-
-func TestHandleUpdateProfiles_MarksOperatorOverride(t *testing.T) {
-	cfg := rootStatusConfig()
-	router := &cognitive.Router{Config: cfg, ConfigPath: filepath.Join(t.TempDir(), "cognitive.yaml"), Adapters: map[string]cognitive.LLMProvider{}}
-	s := &AdminServer{Cognitive: router}
-
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/cognitive/profiles", strings.NewReader(`{"profiles":{"chat":"ollama"}}`))
-	http.HandlerFunc(s.HandleUpdateProfiles).ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d body=%s", rr.Code, rr.Body.String())
-	}
-	if cfg.Profiles["chat"] != "ollama" || cfg.ProfileSource("chat") != cognitive.ProfileSourceOverride {
-		t.Fatalf("chat = %q (%s), want ollama override", cfg.Profiles["chat"], cfg.ProfileSource("chat"))
 	}
 }

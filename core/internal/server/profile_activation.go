@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -65,11 +66,13 @@ func (s *AdminServer) applyMissionProfileProviders(p MissionProfile) {
 	if err := json.Unmarshal(p.RoleProviders, &roleProviders); err != nil {
 		return
 	}
+	// Runtime-only overrides: validated and applied under the router lock,
+	// never written to YAML or system_config. A role whose provider cannot
+	// run is skipped (and logged) instead of creating a misrouted profile.
 	for role, providerID := range roleProviders {
-		s.Cognitive.Config.SetProfileOverride(role, providerID)
-	}
-	if err := s.Cognitive.SaveConfig(); err != nil {
-		log.Printf("HandleActivateMissionProfile SaveConfig: %v", err)
+		if err := s.Cognitive.SetProfileOverride(role, providerID, cognitive.ProfileOriginRuntime); err != nil {
+			log.Printf("HandleActivateMissionProfile: skipped role %q: %v", role, err)
+		}
 	}
 }
 

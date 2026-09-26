@@ -25,6 +25,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/cognitive/matrix", s.HandleCognitiveConfig) // Alias: UI calls /matrix
 	mux.HandleFunc("GET /api/v1/cognitive/status", s.HandleCognitiveStatus)
 	mux.HandleFunc("PUT /api/v1/cognitive/profiles", s.HandleUpdateProfiles)
+	mux.HandleFunc("DELETE /api/v1/cognitive/profiles/{profile}/override", s.HandleClearProfileOverride)
 	mux.HandleFunc("PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
 	mux.HandleFunc("/api/v1/chat", s.HandleChat)
 

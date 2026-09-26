@@ -51,7 +51,19 @@ func (r *Router) ExecutionAvailability(profile string, explicitProvider string) 
 		SetupPath:         DefaultExecutionSetupPath,
 	}
 
-	resolution := r.resolveExecutionProvider(profile, explicitProvider)
+	if r == nil || r.Config == nil {
+		availability.Code = ExecutionRouterUnavailable
+		availability.Summary = "Soma cannot run because the cognitive router is offline."
+		return availability
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	resolution := r.resolveExecutionProviderLocked(profile, explicitProvider)
+	if !resolution.Available && strings.TrimSpace(explicitProvider) == "" {
+		if hint := profileRecoveryHint(r.Config, resolution.Profile, resolution.ProviderID, resolution.Code); hint != "" {
+			availability.RecommendedAction = hint
+		}
+	}
 	availability.Profile = resolution.Profile
 	availability.ProviderID = resolution.ProviderID
 	availability.ModelID = strings.TrimSpace(resolution.Provider.ModelID)
@@ -81,28 +93,59 @@ func (r *Router) EnsureDefaultProfileBindings() map[string]string {
 	if r == nil || r.Config == nil {
 		return nil
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.Config.Profiles == nil {
 		r.Config.Profiles = make(map[string]string)
 	}
 
 	rebound := make(map[string]string)
 	for _, profile := range defaultExecutionProfiles {
-		current := strings.TrimSpace(r.Config.Profiles[profile])
-		if r.providerConfiguredForExecution(current) {
-			continue
+		if fallbackID, ok := r.applyExplicitFallbackLocked(profile); ok {
+			rebound[profile] = fallbackID
 		}
-		fallbackID, _, ok := r.executionFallbackCandidate(profile, current, r.primaryBoundaryForProfile(current))
-		if !ok {
-			continue
-		}
-		r.Config.Profiles[profile] = fallbackID
-		markProfileSource(r.Config, profile, ProfileSourceFallback)
-		rebound[profile] = fallbackID
 	}
 	if len(rebound) == 0 {
 		return nil
 	}
 	return rebound
+}
+
+// applyExplicitFallbackLocked rebinds one profile whose bound provider is
+// not executable to its first explicit same-boundary ProfileFallbacks
+// candidate. The caller holds r.mu for writing.
+func (r *Router) applyExplicitFallbackLocked(profile string) (string, bool) {
+	current := strings.TrimSpace(r.Config.Profiles[profile])
+	if r.providerConfiguredForExecution(current) {
+		return "", false
+	}
+	fallbackID, _, ok := r.executionFallbackCandidate(profile, current, r.primaryBoundaryForProfile(current))
+	if !ok {
+		return "", false
+	}
+	r.Config.Profiles[profile] = fallbackID
+	markProfileSource(r.Config, profile, ProfileSourceFallback)
+	return fallbackID, true
+}
+
+// profileRecoveryHint names the misrouted profile and its remedies for a
+// profile-routed request whose provider cannot run. It never names an
+// endpoint or secret.
+func profileRecoveryHint(config *BrainConfig, profile, providerID, code string) string {
+	switch code {
+	case ExecutionProviderDisabled, ExecutionProviderMissing, ExecutionModelMissing, ExecutionProviderOffline:
+	default:
+		return ""
+	}
+	origin := config.ProfileOverrideOrigins[profile]
+	switch {
+	case origin == ProfileOriginEnv:
+		return fmt.Sprintf("Profile %s is pinned to provider %s by MYCELIS_PROFILE_%s_PROVIDER: remove or change it in .env.compose and recreate Core, or enable provider %s.", profile, providerID, strings.ToUpper(profile), providerID)
+	case origin != "" || config.ProfileSource(profile) == ProfileSourceOverride:
+		return fmt.Sprintf("Reset the %s override to root (DELETE /api/v1/cognitive/profiles/%s/override) or enable provider %s.", profile, profile, providerID)
+	default:
+		return fmt.Sprintf("Enable provider %s for profile %s, or point root_provider at an enabled provider.", providerID, profile)
+	}
 }
 
 func (r *Router) providerConfiguredForExecution(providerID string) bool {
@@ -120,6 +163,17 @@ func (r *Router) providerConfiguredForExecution(providerID string) bool {
 }
 
 func (r *Router) resolveExecutionProvider(profile string, explicitProvider string) executionProviderResolution {
+	if r == nil || r.Config == nil {
+		return r.resolveExecutionProviderLocked(profile, explicitProvider)
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.resolveExecutionProviderLocked(profile, explicitProvider)
+}
+
+// resolveExecutionProviderLocked is resolveExecutionProvider for a caller
+// that already holds r.mu (read or write).
+func (r *Router) resolveExecutionProviderLocked(profile string, explicitProvider string) executionProviderResolution {
 	resolution := executionProviderResolution{
 		Profile: strings.TrimSpace(profile),
 	}

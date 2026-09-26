@@ -4,11 +4,13 @@ import pytest
 
 from ops import db_upgrade
 
-# Accepted retained baselines: pre-G4, G4-complete, and C2a-complete (the retained stack).
-BASELINES = {"pre-g4": (False, False), "g4": (True, False), "c2a": (True, True)}
+# Accepted retained baselines: pre-G4, G4, C2a and ORG-complete (the retained stack).
+BASELINES = {"pre-g4": (False, False, False), "g4": (True, False, False),
+             "c2a": (True, True, False), "org": (True, True, True)}
 BLOCKS = ("-- BEGIN G4_E10_EXTENSION\nSELECT 'g4';\n-- END G4_E10_EXTENSION\n"
           "-- BEGIN C2A_TEAM_OWNERSHIP_EXTENSION\nSELECT 'c2a';\n-- END C2A_TEAM_OWNERSHIP_EXTENSION\n"
-          "-- BEGIN ORGANIZATIONS_EXTENSION\nSELECT 'org';\n-- END ORGANIZATIONS_EXTENSION\n")
+          "-- BEGIN ORGANIZATIONS_EXTENSION\nSELECT 'org';\n-- END ORGANIZATIONS_EXTENSION\n"
+          "-- BEGIN ROLE_SEED_RETIREMENT_EXTENSION\nSELECT 'role';\n-- END ROLE_SEED_RETIREMENT_EXTENSION\n")
 
 
 def result(ok=True):
@@ -22,13 +24,14 @@ def upgrade_fixture(tmp_path, monkeypatch):
     monkeypatch.setattr(db_upgrade, "BASE_SCHEMA_COMPATIBILITY_CHECKS", (("base", "base-check"),))
     monkeypatch.setattr(db_upgrade, "G4_SCHEMA_COMPATIBILITY_CHECKS", (("g4", "g4-check"),))
     monkeypatch.setattr(db_upgrade, "C2A_SCHEMA_COMPATIBILITY_CHECKS", (("c2a", "c2a-check"),))
+    monkeypatch.setattr(db_upgrade, "ORG_SCHEMA_COMPATIBILITY_CHECKS", (("org", "org-check"),))
     monkeypatch.setattr(db_upgrade, "SCHEMA_COMPATIBILITY_CHECKS", (("new", "new-check"),))
     return schema
 
 
 @pytest.mark.parametrize("baseline", BASELINES)
 def test_upgrade_runs_only_missing_bounded_extensions(upgrade_fixture, baseline):
-    g4_present, c2a_present = BASELINES[baseline]
+    g4_present, c2a_present, org_present = BASELINES[baseline]
     calls = []
     applied = False
     def run(sql):
@@ -36,7 +39,8 @@ def test_upgrade_runs_only_missing_bounded_extensions(upgrade_fixture, baseline)
         calls.append(sql)
         if sql.startswith("BEGIN;"):
             applied = True
-        states = {"new-check": applied, "g4-check": g4_present, "c2a-check": c2a_present}
+        states = {"new-check": applied, "g4-check": g4_present, "c2a-check": c2a_present,
+                  "org-check": org_present}
         return result(states.get(sql, True))
     assert db_upgrade.upgrade_retained(upgrade_fixture, run)
     transactions = [sql for sql in calls if sql.startswith("BEGIN;")]
@@ -45,20 +49,24 @@ def test_upgrade_runs_only_missing_bounded_extensions(upgrade_fixture, baseline)
     assert "HISTORICAL" not in transaction
     assert ("SELECT 'g4';" in transaction) == (not g4_present)
     assert ("SELECT 'c2a';" in transaction) == (not c2a_present)
-    assert "SELECT 'org';" in transaction
-    assert transaction.index("SELECT 'org';") > max(transaction.find("SELECT 'g4';"), transaction.find("SELECT 'c2a';"))
+    assert ("SELECT 'org';" in transaction) == (not org_present)
+    # ROLE is an idempotent exact-tuple DELETE and always runs last in the transaction.
+    assert transaction.index("SELECT 'role';") > max(transaction.find(s) for s in ("SELECT 'g4';", "SELECT 'c2a';", "SELECT 'org';"))
+    if not org_present:
+        assert transaction.index("SELECT 'org';") > max(transaction.find("SELECT 'g4';"), transaction.find("SELECT 'c2a';"))
     assert transaction.endswith("COMMIT;\n") and transaction.count("COMMIT;") == 1
-    assert db_upgrade.ORG_ABSENT_SQL in calls[:calls.index(transaction)]
+    assert (db_upgrade.ORG_ABSENT_SQL in calls[:calls.index(transaction)]) == (not org_present)
+    assert db_upgrade.ROLE_TABLE_SQL in calls[:calls.index(transaction)]
     assert calls[-1] == "new-check"
 
 
 @pytest.mark.parametrize("failure", ["base-check", db_upgrade.G4_ABSENT_SQL, db_upgrade.C2A_ABSENT_SQL,
-                                     db_upgrade.ORG_ABSENT_SQL])
+                                     db_upgrade.ORG_ABSENT_SQL, db_upgrade.ROLE_TABLE_SQL])
 def test_unknown_baseline_and_partial_upgrade_do_not_execute(upgrade_fixture, failure):
     calls = []
     def run(sql):
         calls.append(sql)
-        return result(sql not in (failure, "g4-check", "c2a-check", "new-check"))
+        return result(sql not in (failure, "g4-check", "c2a-check", "org-check", "new-check"))
     assert not db_upgrade.upgrade_retained(upgrade_fixture, run)
     assert not any(sql.startswith("BEGIN;") for sql in calls)
 
@@ -67,7 +75,7 @@ def test_partial_organizations_on_retained_c2a_stack_is_refused(upgrade_fixture)
     calls = []
     def run(sql):
         calls.append(sql)
-        return result(sql not in ("new-check", db_upgrade.ORG_ABSENT_SQL))
+        return result(sql not in ("new-check", "org-check", db_upgrade.ORG_ABSENT_SQL))
     assert not db_upgrade.upgrade_retained(upgrade_fixture, run)
     assert not any(sql.startswith("BEGIN;") for sql in calls)
 
