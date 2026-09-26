@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { WEB_SESSION_COOKIE, createForwardedWebIdentityHeaders, getWebAuthConfig, verifySessionToken } from '@/lib/webAuth';
 
+// Browser-supplied authority headers are never trusted. The proxy removes them
+// on every backend-bound request and sets only its own.
+const INBOUND_AUTHORITY_HEADERS = [
+    'authorization',
+    'x-mycelis-web-identity',
+    'x-mycelis-web-identity-signature',
+    'x-mycelis-qa-fixture-scope',
+];
+
 const PUBLIC_PATH_PREFIXES = [
     '/login',
     '/auth',
@@ -30,16 +39,21 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL('/access-denied', request.url));
     }
 
-    const apiKey = process.env.MYCELIS_API_KEY || '';
-    if (!apiKey || !isBackendProxyPath(request.nextUrl.pathname)) return NextResponse.next();
+    if (!isBackendProxyPath(request.nextUrl.pathname)) return NextResponse.next();
 
     const headers = new Headers(request.headers);
+    for (const name of INBOUND_AUTHORITY_HEADERS) headers.delete(name);
+    const apiKey = process.env.MYCELIS_API_KEY || '';
+    if (!apiKey) return NextResponse.next({ request: { headers } });
+
     headers.set('Authorization', `Bearer ${apiKey}`);
     if (session) {
-        const identityHeaders = await createForwardedWebIdentityHeaders(
-            session,
-            process.env.MYCELIS_WEB_IDENTITY_FORWARD_SECRET || config.sessionSecret,
-        );
+        // Without a usable forward secret a session would reach Core as the
+        // API-key owner. Fail closed instead of widening authority.
+        if (!config.forwardSecret) {
+            return NextResponse.json({ ok: false, error: 'auth_configuration', data: { missing: 'MYCELIS_WEB_IDENTITY_FORWARD_SECRET' } }, { status: 503 });
+        }
+        const identityHeaders = await createForwardedWebIdentityHeaders(session, config.forwardSecret);
         for (const [key, value] of Object.entries(identityHeaders)) {
             headers.set(key, value);
         }

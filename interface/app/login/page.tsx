@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { ArrowRight, Building2, KeyRound, ShieldCheck, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { ThemeSync } from "@/components/shell/ThemeSync";
-import { WEB_SESSION_COOKIE, getWebAuthConfig, googleConfigured, googleWorkspacePolicy, verifySessionToken } from "@/lib/webAuth";
+import { WEB_SESSION_COOKIE, getWebAuthConfig, googleConfigured, googleWorkspacePolicy, localLoginConfigured, verifySessionToken, safeNextPath } from "@/lib/webAuth";
 
 interface LoginPageProps {
     searchParams?: Promise<{ error?: string; next?: string }>;
@@ -16,10 +16,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     const config = getWebAuthConfig();
     const cookieStore = await cookies();
     const session = await verifySessionToken(cookieStore.get(WEB_SESSION_COOKIE)?.value, config.sessionSecret);
-    if (session) redirect(safeNext(params?.next) || "/dashboard");
+    if (session) redirect(safeNextPath(params?.next) || "/dashboard");
 
-    const next = safeNext(params?.next) || "/dashboard";
-    const localReady = Boolean(config.sessionSecret && config.localPassword);
+    const next = safeNextPath(params?.next) || "/dashboard";
+    const localReady = localLoginConfigured(config);
+    const setupIssues = config.setupIssues ?? [];
     const googleReady = Boolean(config.sessionSecret && googleConfigured(config));
     const googlePolicy = googleWorkspacePolicy(config);
     const errorText = errorMessage(params?.error, googlePolicy.displayDomains);
@@ -50,6 +51,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                         <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-cortex-primary">Access required</p>
                         <h2 className="mt-2 text-2xl font-semibold">Continue to Soma</h2>
                     </div>
+                    {setupIssues.length ? (
+                        <div role="status" className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                            <p className="font-semibold">Sign-in setup is incomplete. Set these in .env and restart:</p>
+                            <ul className="mt-2 list-disc space-y-1 pl-5">
+                                {setupIssues.map((issue) => <li key={issue}>{issue}</li>)}
+                            </ul>
+                        </div>
+                    ) : null}
                     {errorText ? (
                         <div role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                             <p>{errorText}</p>
@@ -67,7 +76,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                             <input name="username" autoComplete="username" defaultValue={config.localUsername} className="mt-2 w-full rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 text-cortex-text-main outline-none focus:border-cortex-primary" />
                         </label>
                         <label className="block">
-                            <span className="text-sm font-medium text-cortex-text-muted">Password or local API key</span>
+                            <span className="text-sm font-medium text-cortex-text-muted">Local admin password</span>
                             <input name="password" type="password" autoComplete="current-password" className="mt-2 w-full rounded-xl border border-cortex-border bg-cortex-bg px-4 py-3 text-cortex-text-main outline-none focus:border-cortex-primary" />
                         </label>
                         <button disabled={!localReady} type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cortex-primary px-4 py-3 font-semibold text-cortex-bg hover:bg-cortex-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
@@ -115,9 +124,6 @@ function TrustTile({ icon, title, body }: { icon: ReactNode; title: string; body
     );
 }
 
-function safeNext(value?: string): string {
-    return value && value.startsWith("/") && !value.startsWith("//") ? value : "";
-}
 
 function errorMessage(code: string | undefined, allowedDomains: string[]): string {
     if (code === "invalid") return "The local username or password was not accepted.";
@@ -131,6 +137,7 @@ function errorMessage(code: string | undefined, allowedDomains: string[]): strin
         const domains = allowedDomains.length ? ` Use ${allowedDomains.join(", ")}.` : "";
         return `That Google account is outside the allowed Workspace domain.${domains}`;
     }
-    if (code === "config") return "Authentication is not fully configured for this deployment.";
+    if (code === "config") return "Authentication is not fully configured for this deployment. Check the setup items listed here.";
+    if (code === "origin") return "That sign-in request came from another site and was rejected. Sign in from this page.";
     return "";
 }

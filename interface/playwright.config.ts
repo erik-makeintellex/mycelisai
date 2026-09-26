@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { STORAGE_STATE } from './e2e/global-setup';
@@ -12,9 +13,16 @@ const baseURL = `http://${baseUrlHost}:${interfacePort}`;
 const shouldManageWebServer = !process.env.PLAYWRIGHT_SKIP_WEBSERVER;
 const defaultWebServerCommand = `node ./scripts/playwright-webserver.mjs`;
 const webServerCommand = process.env.PLAYWRIGHT_UI_SERVER_COMMAND ?? defaultWebServerCommand;
-process.env.MYCELIS_WEB_SESSION_SECRET ||= 'playwright-web-session-secret';
+// Web secrets are distinct per run and never derived from MYCELIS_API_KEY. Values
+// from the environment or repo .env win; workers inherit the parent's values.
+process.env.MYCELIS_WEB_SESSION_SECRET ||= `playwright-session-${randomBytes(24).toString('base64url')}`;
+process.env.MYCELIS_WEB_IDENTITY_FORWARD_SECRET ||= `playwright-forward-${randomBytes(24).toString('base64url')}`;
 process.env.MYCELIS_LOCAL_ADMIN_USERNAME ||= 'admin';
-process.env.MYCELIS_LOCAL_ADMIN_PASSWORD ||= process.env.MYCELIS_API_KEY || 'playwright-admin';
+// A managed server accepts this plaintext password. When .env pins only
+// MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256, export MYCELIS_LOCAL_ADMIN_PASSWORD too.
+if (!process.env.MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256) {
+    process.env.MYCELIS_LOCAL_ADMIN_PASSWORD ||= `playwright-admin-${randomBytes(12).toString('base64url')}`;
+}
 
 function loadRepoEnv(envPath: string) {
     if (!fs.existsSync(envPath)) return;

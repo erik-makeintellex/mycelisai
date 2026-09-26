@@ -149,8 +149,8 @@ async function signInFromStaleWorkUrl(browser: Browser, testInfo: TestInfo, view
 async function submitLocalAdminSignIn(page: Page) {
   await page.getByLabel(/Local admin username/i).fill(process.env.MYCELIS_LOCAL_ADMIN_USERNAME || "admin");
   await page
-    .getByLabel(/Password or local API key/i)
-    .fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD || process.env.MYCELIS_API_KEY || "playwright-admin");
+    .getByLabel(/Local admin password/i)
+    .fill(process.env.MYCELIS_LOCAL_ADMIN_PASSWORD ?? "");
   await page.getByRole("button", { name: /Sign in as local admin/i }).click();
 }
 

@@ -1,5 +1,9 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { safeNextPath } from "./authRedirect";
+
+export { safeNextPath };
 
 export type WebUserRole = "admin" | "standard";
 
@@ -17,7 +21,10 @@ export interface WebSession {
 }
 
 export interface WebAuthConfig {
+    /** Empty when MYCELIS_WEB_SESSION_SECRET or the forward secret is missing, short or reused. */
     sessionSecret: string;
+    /** MYCELIS_WEB_IDENTITY_FORWARD_SECRET only; never falls back to another secret. */
+    forwardSecret: string;
     localUsername: string;
     localPassword: string;
     localPasswordSha256: string;
@@ -27,6 +34,8 @@ export interface WebAuthConfig {
     googleHostedDomain: string;
     allowedDomains: string[];
     adminEmails: string[];
+    /** Operator-facing setup problems. They name variables and never contain values. */
+    setupIssues: string[];
 }
 
 export interface GoogleWorkspacePolicy {
@@ -51,19 +60,108 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 let rootEnvCache: Record<string, string> | null = null;
 
+const MIN_SECRET_BYTES = 32;
+const DEV_KEY_HINT = "uv run inv auth.dev-key";
+
+// Secrets are read from exactly one variable each. There is no fallback chain:
+// a missing, short or reused secret disables the provider that needs it.
 export function getWebAuthConfig(): WebAuthConfig {
+    const issues: string[] = [];
+    // Trimmed like Core so both sides agree on length and distinctness.
+    const apiKeys = [envValue("MYCELIS_API_KEY").trim(), envValue("MYCELIS_BREAK_GLASS_API_KEY").trim()].filter(Boolean);
+    const rawSession = envValue("MYCELIS_WEB_SESSION_SECRET").trim();
+    const rawForward = envValue("MYCELIS_WEB_IDENTITY_FORWARD_SECRET").trim();
+    const sessionIssue = secretIssue("MYCELIS_WEB_SESSION_SECRET", rawSession, apiKeys);
+    const forwardIssue = secretIssue("MYCELIS_WEB_IDENTITY_FORWARD_SECRET", rawForward, apiKeys)
+        || (rawForward && rawForward === rawSession ? "MYCELIS_WEB_IDENTITY_FORWARD_SECRET must differ from MYCELIS_WEB_SESSION_SECRET." : "");
+    if (sessionIssue) issues.push(sessionIssue);
+    if (forwardIssue) issues.push(forwardIssue);
+    const sessionReady = !sessionIssue && !forwardIssue;
+
+    const reserved = [...apiKeys, rawSession, rawForward].filter(Boolean);
+    let localPassword = envValue("MYCELIS_LOCAL_ADMIN_PASSWORD");
+    let localPasswordSha256 = envValue("MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256").trim().toLowerCase();
+    if (localPassword && reserved.includes(localPassword)) {
+        issues.push("MYCELIS_LOCAL_ADMIN_PASSWORD must not reuse MYCELIS_API_KEY, MYCELIS_BREAK_GLASS_API_KEY or a web secret.");
+        localPassword = "";
+    }
+    if (localPasswordSha256 && (!/^[a-f0-9]{64}$/.test(localPasswordSha256) || reserved.some((value) => sha256HexSync(value) === localPasswordSha256))) {
+        issues.push("MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256 must be a 64-character hex SHA-256 of a password that is not an API key or web secret.");
+        localPasswordSha256 = "";
+    }
+    if (!localPassword && !localPasswordSha256 && !issues.some((issue) => issue.startsWith("MYCELIS_LOCAL_ADMIN_PASSWORD"))) {
+        issues.push("Set MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256 (preferred) or MYCELIS_LOCAL_ADMIN_PASSWORD to enable local sign-in. MYCELIS_API_KEY is no longer accepted as a password.");
+    }
+
     return {
-        sessionSecret: envValue("MYCELIS_WEB_SESSION_SECRET") || envValue("MYCELIS_API_KEY") || "",
+        sessionSecret: sessionReady ? rawSession : "",
+        forwardSecret: sessionReady ? rawForward : "",
         localUsername: envValue("MYCELIS_LOCAL_ADMIN_USERNAME") || "admin",
-        localPassword: envValue("MYCELIS_LOCAL_ADMIN_PASSWORD") || envValue("MYCELIS_API_KEY") || "",
-        localPasswordSha256: envValue("MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256") || "",
+        localPassword,
+        localPasswordSha256,
         googleClientId: envValue("MYCELIS_AUTH_GOOGLE_CLIENT_ID") || "",
         googleClientSecret: envValue("MYCELIS_AUTH_GOOGLE_CLIENT_SECRET") || "",
         googleRedirectUri: envValue("MYCELIS_AUTH_GOOGLE_REDIRECT_URI") || "",
         googleHostedDomain: envValue("MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN") || "",
         allowedDomains: splitList(envValue("MYCELIS_AUTH_ALLOWED_DOMAINS") || envValue("MYCELIS_AUTH_GOOGLE_HOSTED_DOMAIN") || ""),
         adminEmails: splitList(envValue("MYCELIS_AUTH_ADMIN_EMAILS") || ""),
+        setupIssues: issues,
     };
+}
+
+function secretIssue(name: string, value: string, apiKeys: string[]): string {
+    if (!value) return `Set ${name} (at least ${MIN_SECRET_BYTES} bytes; ${DEV_KEY_HINT} generates it).`;
+    if (encoder.encode(value).length < MIN_SECRET_BYTES) return `${name} must be at least ${MIN_SECRET_BYTES} bytes (${DEV_KEY_HINT}).`;
+    if (apiKeys.includes(value)) return `${name} must differ from MYCELIS_API_KEY and MYCELIS_BREAK_GLASS_API_KEY.`;
+    return "";
+}
+
+export function localLoginConfigured(config: WebAuthConfig): boolean {
+    return Boolean(config.sessionSecret && (config.localPassword || config.localPasswordSha256));
+}
+
+/** Constant-time local password check over SHA-256 digests. */
+export function verifyLocalPassword(password: string, config: WebAuthConfig): boolean {
+    const expectedHex = config.localPasswordSha256 || (config.localPassword ? sha256HexSync(config.localPassword) : "");
+    if (!expectedHex) return false;
+    const expected = Buffer.from(expectedHex, "hex");
+    const actual = createHash("sha256").update(password, "utf8").digest();
+    return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+/**
+ * CSRF guard for state-changing auth POSTs. A browser request is accepted only
+ * when its Origin matches the configured public origin or the server's own
+ * origin, and Fetch Metadata does not mark it cross-site.
+ */
+export function requestOriginAllowed(headers: Headers, serverOrigin: string): boolean {
+    if ((headers.get("sec-fetch-site") || "").toLowerCase() === "cross-site") return false;
+    const origin = headers.get("origin");
+    if (!origin) return true;
+    const allowed = new Set([webAuthBaseOrigin(serverOrigin), safeOrigin(serverOrigin)].filter(Boolean));
+    return allowed.has(origin.trim());
+}
+
+/**
+ * The origin this server was addressed at (scheme plus Host header), never the
+ * Origin header. NextURL rewrites loopback hosts to "localhost", so the Host
+ * header is used to keep 127.0.0.1 and localhost distinct.
+ */
+export function serverOrigin(request: { headers: Headers; nextUrl: URL }): string {
+    const host = (request.headers.get("host") || "").trim();
+    return (host && safeOrigin(`${request.nextUrl.protocol}//${host}`)) || request.nextUrl.origin;
+}
+
+function safeOrigin(value: string): string {
+    try {
+        return new URL(value).origin;
+    } catch {
+        return "";
+    }
+}
+
+function sha256HexSync(value: string): string {
+    return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
 export function googleConfigured(config = getWebAuthConfig()): boolean {
@@ -112,10 +210,13 @@ export async function createForwardedWebIdentityHeaders(session: WebSession, sec
 
 export async function verifySessionToken(token: string | undefined, secret: string): Promise<WebSession | null> {
     if (!token || !secret) return null;
-    const [payload, signature] = token.split(".");
-    if (!payload || !signature) return null;
-    if ((await sign(payload, secret)) !== signature) return null;
+    const parts = token.split(".");
+    if (parts.length !== 2) return null;
+    const [payload, signature] = parts;
+    if (!BASE64URL.test(payload) || !BASE64URL.test(signature)) return null;
     try {
+        // HMAC verify is constant time; there is no string comparison of signatures.
+        if (!(await verifySignature(payload, signature, secret))) return null;
         const session = JSON.parse(base64UrlDecodeString(payload)) as WebSession;
         if (!session.exp || session.exp < Math.floor(Date.now() / 1000)) return null;
         if (session.role !== "admin" && session.role !== "standard") return null;
@@ -168,9 +269,7 @@ export function decodeOAuthStateCookie(value: string | undefined): { state: stri
     try {
         const parsed = JSON.parse(decodeURIComponent(value)) as { state?: unknown; next?: unknown };
         const state = typeof parsed.state === "string" ? parsed.state : "";
-        const next = typeof parsed.next === "string" && parsed.next.startsWith("/") && !parsed.next.startsWith("//")
-            ? parsed.next
-            : "/dashboard";
+        const next = safeNextPath(typeof parsed.next === "string" ? parsed.next : "") || "/dashboard";
         return { state, next };
     } catch {
         return { state: "", next: "/dashboard" };
@@ -232,6 +331,15 @@ async function sign(payload: string, secret: string): Promise<string> {
     return base64UrlEncodeBytes(new Uint8Array(signature));
 }
 
+const BASE64URL = /^[A-Za-z0-9_-]+$/;
+
+async function verifySignature(payload: string, signature: string, secret: string): Promise<boolean> {
+    const subtle = webCryptoSubtle();
+    const key = await subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const bytes = base64UrlDecodeBytes(signature);
+    return subtle.verify("HMAC", key, bytes, encoder.encode(payload));
+}
+
 function webCryptoSubtle(): SubtleCrypto {
     if (globalThis.crypto?.subtle) return globalThis.crypto.subtle;
     throw new Error("Web Crypto is unavailable for Mycelis web auth");
@@ -251,9 +359,12 @@ function base64UrlEncodeBytes(bytes: Uint8Array): string {
 }
 
 function base64UrlDecodeString(value: string): string {
+    return decoder.decode(base64UrlDecodeBytes(value));
+}
+
+function base64UrlDecodeBytes(value: string): Uint8Array<ArrayBuffer> {
     const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
-    if (typeof atob !== "function") return Buffer.from(padded, "base64").toString("utf8");
+    if (typeof atob !== "function") return new Uint8Array(Buffer.from(padded, "base64"));
     const binary = atob(padded);
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    return decoder.decode(bytes);
+    return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
