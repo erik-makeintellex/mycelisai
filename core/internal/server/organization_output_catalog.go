@@ -12,7 +12,7 @@ func (s *AdminServer) listLocalOllamaModelIDs() []string {
 	if s.Cognitive == nil || s.Cognitive.Config == nil {
 		return nil
 	}
-	provider, ok := s.Cognitive.Config.Providers["ollama"]
+	provider, ok := s.Cognitive.ProviderSnapshot("ollama")
 	if !ok {
 		return nil
 	}

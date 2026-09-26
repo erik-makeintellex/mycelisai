@@ -27,6 +27,7 @@ func TestCognitiveMatrix(t *testing.T) {
 
 	// 2. Create Request
 	req, _ := http.NewRequest("GET", "/api/v1/cognitive/matrix", nil)
+	req = withCognitiveAdmin(req)
 	rr := httptest.NewRecorder()
 
 	// 3. Invoke Handler
@@ -74,7 +75,9 @@ func TestHandleUpdateProvider_AcceptsAPIKeyEnvReference(t *testing.T) {
 		},
 		map[string]cognitive.LLMProvider{},
 	)
-	s := newTestServer(cogOpt)
+	dbOpt, mock := withDirectDB(t)
+	s := newTestServer(cogOpt, dbOpt)
+	expectAudit(mock) // S6e: provider PUT is audited first
 
 	mux := setupMux(t, "PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
 	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/cognitive/providers/production_gpt4", `{"api_key_env":"OPENAI_API_KEY"}`)
@@ -115,7 +118,7 @@ func TestHandleCognitiveStatus_ExposesTypedMediaProviderContract(t *testing.T) {
 		},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil)
+	req := withCognitiveAdmin(httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil))
 	rr := httptest.NewRecorder()
 
 	http.HandlerFunc(s.HandleCognitiveStatus).ServeHTTP(rr, req)
@@ -165,7 +168,7 @@ func TestHandleCognitiveStatus_DoesNotExposeTextEnabledFalse(t *testing.T) {
 		},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil)
+	req := withCognitiveAdmin(httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil))
 	rr := httptest.NewRecorder()
 
 	http.HandlerFunc(s.HandleCognitiveStatus).ServeHTTP(rr, req)
@@ -205,7 +208,7 @@ func TestHandleCognitiveStatus_HostedMediaProviderReportsConfiguredWithoutHealth
 		},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil)
+	req := withCognitiveAdmin(httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil))
 	rr := httptest.NewRecorder()
 
 	http.HandlerFunc(s.HandleCognitiveStatus).ServeHTTP(rr, req)
@@ -246,7 +249,7 @@ func TestHandleCognitiveStatus_MediaProviderCanBeExplicitlyDisabled(t *testing.T
 		},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil)
+	req := withCognitiveAdmin(httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil))
 	rr := httptest.NewRecorder()
 
 	http.HandlerFunc(s.HandleCognitiveStatus).ServeHTTP(rr, req)

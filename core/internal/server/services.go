@@ -17,12 +17,23 @@ type ServiceStatus struct {
 
 // GET /api/v1/services/status — health snapshot of all system services.
 func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Request) {
-	services := s.buildServiceStatuses(r.Context())
+	services := s.buildServiceStatuses(r)
 	respondJSON(w, map[string]any{"ok": true, "data": services})
 }
 
-func (s *AdminServer) buildServiceStatuses(ctx context.Context) []ServiceStatus {
+// buildServiceStatuses takes the request (not just its context) so it can
+// gate any row that would otherwise leak provider endpoints or model URLs
+// (see the ollama row below) on cognitiveFullView, matching the F2 narrowing
+// already applied to /cognitive/status and /brains. A nil request is
+// treated as no identity, i.e. the narrowed view (fail closed).
+func (s *AdminServer) buildServiceStatuses(r *http.Request) []ServiceStatus {
 	var services []ServiceStatus
+	ctx := context.Background()
+	fullView := false
+	if r != nil {
+		ctx = r.Context()
+		fullView = cognitiveFullView(r)
+	}
 
 	// ── NATS ─────────────────────────────────────────────────────────────
 	natsStatus := ServiceStatus{Name: "nats"}
@@ -63,11 +74,15 @@ func (s *AdminServer) buildServiceStatuses(ctx context.Context) []ServiceStatus 
 		cogStatus.Detail = "Cognitive router not initialised"
 	} else {
 		availability := s.Cognitive.ExecutionAvailability("chat", "")
+		cfgSnapshot := s.Cognitive.ConfigSnapshot()
 		enabledCount := 0
-		totalCount := len(s.Cognitive.Config.Providers)
-		for _, p := range s.Cognitive.Config.Providers {
-			if p.Enabled {
-				enabledCount++
+		totalCount := 0
+		if cfgSnapshot != nil {
+			totalCount = len(cfgSnapshot.Providers)
+			for _, p := range cfgSnapshot.Providers {
+				if p.Enabled {
+					enabledCount++
+				}
 			}
 		}
 		if !availability.Available {
@@ -88,23 +103,30 @@ func (s *AdminServer) buildServiceStatuses(ctx context.Context) []ServiceStatus 
 	if s.Cognitive == nil || s.Cognitive.Config == nil {
 		ollamaStatus.Status = "offline"
 		ollamaStatus.Detail = "Cognitive router not initialised"
-	} else if cfg, ok := s.Cognitive.Config.Providers["ollama"]; !ok {
+	} else if cfg, ok := s.Cognitive.ProviderSnapshot("ollama"); !ok {
 		ollamaStatus.Status = "degraded"
 		ollamaStatus.Detail = "Ollama provider not configured"
 	} else if !cfg.Enabled {
 		ollamaStatus.Status = "degraded"
 		ollamaStatus.Detail = "Ollama provider disabled"
-	} else if s.Cognitive.Adapters == nil || s.Cognitive.Adapters["ollama"] == nil {
+	} else if _, ok := s.Cognitive.AdapterSnapshot("ollama"); !ok {
 		ollamaStatus.Status = "degraded"
 		ollamaStatus.Detail = "Ollama enabled but adapter not initialized"
 	} else {
 		ollamaStatus.Status = "online"
-		detail := "Model " + cfg.ModelID
-		if cfg.Endpoint != "" {
-			detail += " @ " + cfg.Endpoint
+		if fullView {
+			detail := "Model " + cfg.ModelID
+			if cfg.Endpoint != "" {
+				detail += " @ " + cfg.Endpoint
+			}
+			// Keep details compact to avoid noisy UI status cards.
+			ollamaStatus.Detail = strings.TrimSpace(detail)
+		} else {
+			// Non-admins (and admins without cognitive:read/write) never see
+			// the model id or endpoint here, matching the F2 narrowing on
+			// /cognitive/status and /brains.
+			ollamaStatus.Detail = "Ollama provider ready"
 		}
-		// Keep details compact to avoid noisy UI status cards.
-		ollamaStatus.Detail = strings.TrimSpace(detail)
 	}
 	services = append(services, ollamaStatus)
 

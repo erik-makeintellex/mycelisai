@@ -38,7 +38,7 @@ func serviceOnline(status map[string]ServiceStatus, name string) bool {
 }
 
 func (s *AdminServer) buildServiceInventoryAnswer(r *http.Request) string {
-	status := serviceStatusMap(s.buildServiceStatuses(r.Context()))
+	status := serviceStatusMap(s.buildServiceStatuses(r))
 	available := []string{"Soma workspace"}
 	if serviceOnline(status, "cognitive") || serviceOnline(status, "ollama") {
 		available = append(available, "Local AI engine")

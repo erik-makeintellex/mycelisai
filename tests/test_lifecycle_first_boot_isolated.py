@@ -207,6 +207,55 @@ def test_preflight_never_deletes_repository_root(monkeypatch, tmp_path):
     assert isolated.ROOT_DIR.exists()
 
 
+def test_compose_failure_surfaces_real_stderr_with_secrets_redacted(monkeypatch, tmp_path):
+    fixture = fixture_at(tmp_path / "mycelis-first-boot-case")
+    fixture.environment["MYCELIS_API_KEY"] = "s3cr3t-key"
+
+    monkeypatch.setattr(
+        isolated.subprocess, "run",
+        lambda *_a, **_k: subprocess.CompletedProcess([], 1, "", "FATAL: password authentication failed for s3cr3t-key"),
+    )
+
+    with pytest.raises(SystemExit, match="failed for .*password authentication failed") as excinfo:
+        isolated._compose(fixture, "up", "-d", "postgres")
+    assert "s3cr3t-key" not in str(excinfo.value)
+    assert "***" in str(excinfo.value)
+
+
+def test_run_proof_waits_for_real_postgres_readiness_before_schema_install(monkeypatch, tmp_path):
+    fixture = fixture_at(tmp_path / "mycelis-first-boot-case")
+    calls: list[str] = []
+
+    monkeypatch.setattr(isolated, "_compose", lambda _fixture, *args, **_kwargs: (
+        calls.append(args[0]) or subprocess.CompletedProcess(args, 0, "", "")
+    ))
+    monkeypatch.setattr(isolated, "_psql_exec", lambda _fixture, *args, **_kwargs: (
+        calls.append(f"psql:{args[0]}") or subprocess.CompletedProcess(args, 0, "1", "")
+    ))
+    readiness_calls = []
+    monkeypatch.setattr(
+        isolated, "wait_for_isolated_postgres_ready",
+        lambda **kwargs: readiness_calls.append(kwargs) or None,
+    )
+    retry_calls = []
+    monkeypatch.setattr(
+        isolated, "retry_transient",
+        lambda description, run, **kwargs: retry_calls.append(description) or run(),
+    )
+    monkeypatch.setattr(isolated, "assert_schema_compatible", lambda _psql: None)
+    monkeypatch.setattr(isolated, "assert_empty_user_state", lambda *_a: None)
+    monkeypatch.setattr(isolated, "assert_nats_empty", lambda _port: None)
+    monkeypatch.setattr(isolated, "_assert_http_ready", lambda _fixture: None)
+    monkeypatch.setattr(isolated, "_wait_until", lambda _label, _probe, timeout=120: None)
+    monkeypatch.setattr(isolated, "count_tables", lambda *_a: {"nodes": 1})
+
+    isolated._run_proof(fixture, False, ("groups",), ("nodes",))
+
+    assert len(readiness_calls) == 1
+    assert "pg_isready" in readiness_calls[0] and "select_one" in readiness_calls[0]
+    assert retry_calls == ["Isolated first-boot schema install"]
+
+
 def test_preflight_does_not_delete_unowned_lookalike_directory(monkeypatch, tmp_path):
     fixture = fixture_at(tmp_path / "mycelis-first-boot-case")
     (fixture.root / isolated.OWNER_MARKER).write_text("someone-else", encoding="utf-8")
