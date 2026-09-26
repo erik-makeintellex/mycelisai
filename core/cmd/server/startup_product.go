@@ -64,6 +64,7 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 
 	selection, registry := loadStartupRuntimeSelection()
 	services := startProductServices(ctx, core)
+	seedBuiltInConfigDocuments(ctx, core.SharedDB)
 	soma := startSomaRuntime(ctx, mux, core, selection, registry, services)
 	registerBootstrapRoutes(mux, services.Bootstrap)
 	startArchivistRuntime(ctx, mux, core.ObserverNC, services.Archivist)

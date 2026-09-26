@@ -282,14 +282,24 @@ Readiness, liveness, and dependency health routes.
 - Verified: 2026-09-25 lead merge gate: go test -race ./internal/codecontext, compose code-context contract, docs links, max-lines
 
 ### Area: ConfigDocuments
-- PRD: §Bounded Discovery And Outcome Templates L100, L102, L169-170 · Scoreboard: P0.3a
-- Owned paths: `core/config/documents/templates/*.yaml` (mycelis-ai-runtime) · Do-not-touch: `core/config/templates/**` (bundle-loader family), `core/pkg/protocol/**`, `core/internal/configdocuments/*.go` except `delivery_posture_content_test.go`
-- Seams: `ParseDocument`, `ValidateConfigDocument`, `CompileDocument`, `CompileOutcomeTemplateDocument`, `CanonicalConfigDocumentDigest`, `HandleCreateConfigDocument`, `HandleActivateConfigDocument`
-- Invariants: approvals stay at the PRD floor; content can never lower or grant approval; `ParseDocument` and the content tests strict-decode (the production `OutcomeTemplate` spec decode is non-strict); `question_limit` must ship at 1-4 and must not rely on the compile-time clamp; no raw secrets or `swarm.*` subjects in content
-- Authority: `POST /api/v1/config-documents` and `.../activate` -> `config_documents:write`, root admin only, default deny; negatives: anon 401, standard user 403
-- Proof: `uv run inv core.test --package=./internal/configdocuments --run=TestDeliveryPosture`
-- Pitfalls: the bundle loader FATALs at startup on any stray file under `core/config/templates/`, so reference content must stay under `core/config/documents/templates/`; `scope.kind: built_in` and `source.kind: built_in` are accepted from any caller today (`config_documents.go` validates shape only) — built-in provenance forgery stays open until S3b adds a bootstrap-only guard
-- Verified: 2026-09-25 lead merge gate: go test ./internal/configdocuments -run TestDeliveryPosture, docs links, k8s config parity, max-lines
+- PRD: §Bounded Discovery And Outcome Templates L22-23, L100, L102, L169-170 · Scoreboard: P0.3a
+- Owned paths: `core/config/documents/templates/*.yaml` (mycelis-ai-runtime) · `core/internal/configdocuments/{builtin_guard,builtin_seed}.go`, `core/cmd/server/startup_config_documents.go` (mycelis-core-authority, S3b lease) · Do-not-touch: `core/config/templates/**` (bundle-loader family), `core/pkg/protocol/**`
+- Seams: `ParseDocument`, `ValidateConfigDocument`, `CompileDocument`, `Store.StoreRevision`/`StoreRevisionTx`, `activateRevisionTx`, `guardPublicStore`, `guardPublicActivation`, `Store.SeedBuiltInRevisions`, `LoadBuiltInSeedDirectory`, `seedBuiltInConfigDocuments`, `respondConfigDocumentError`
+- Invariants: only `SeedBuiltInRevisions` (actor `system:bootstrap`) inserts or activates built-in scope or source; every public store (HTTP, Soma direct, Soma confirmed) returns `metadata.reserved_built_in_scope`/`_source` (400) and every public activate/rollback of a built-in revision returns `ErrBuiltInReserved` (403) after the row lock; public callers cannot use a `system:` actor; seeding is all-or-nothing, idempotent by (id, version, digest), touches only `(built_in, '')`, and never alters operator/workspace/organization rows; preview, dry-run and compile never write
+- Authority: `POST /api/v1/config-documents` and `.../activate|rollback` -> `config_documents:write`, root admin only, default deny; negatives: anon 401, standard user 403; built-in rows 400/403 for every caller
+- Proof: `uv run inv core.test --package=./internal/configdocuments`; `uv run inv core.test --package=./cmd/server --run='BuiltIn|Seed'`; lead: `uv run inv lifecycle.first-boot-proof --isolated --build` (4 built-in revisions + 4 activations, second boot adds 0 rows)
+- Pitfalls: the bundle loader FATALs on any stray file under `core/config/templates/`; a DB error during seeding stops Core (fail closed), and with the DB unavailable at startup, files are still validated and seeding is skipped with a WARN; Core refuses to start if any built-in row was not created by `system:bootstrap` (run the read-only precheck before redeploying a retained stack); changing a seeded file without bumping `metadata.version` is fatal; removing a file leaves its last activation (no deactivate action); an architecture test fails if `SeedBuiltInRevisions` is referenced outside `configdocuments` and `cmd/server`
+- Verified: 2026-09-25 lead merge gate: isolated first boot, TestSeedBuiltInRevisionsRealDB (real PG), security-qa GO, core.test, docs links, max-lines
+
+### Area: Governance posture approvals
+- PRD: §Bounded Discovery And Outcome Templates L100, L102, L169 · Scoreboard: P0.3a
+- Owned paths: `core/internal/governance/{policy,policy_posture}.go`, `core/internal/server/action_governance_posture.go`, `core/config/policy.yaml` + `charts/mycelis-core/config/policy.yaml` (identical pair) (mycelis-core-authority, S3b lease) · Do-not-touch: `buildApprovalPolicy` thresholds, `cognitive_council.go`
+- Seams: `governance.ValidatePolicyConfig`, `Engine.PostureRequiresApproval`, `Guard.PostureRequiresApproval`, `applyPostureApprovalFloor` (called once in `cognitive_chat_handler.go` right after `applyThreadOutcomeTemplateOrRespond`), `handleUpdatePolicy`
+- Invariants: `posture:<outcome-template-id>` groups hold only posture targets, only `REQUIRE_APPROVAL`, no condition, and an anchored `^...$` intent over planned tool names and capability ids (load and PUT reject anything else); the floor is monotone (it only sets `required`/`outcome_posture` and keeps an existing required reason); the posture id comes only from the server-compiled `WorkIntent.OutcomeTemplateSnapshot`; a nil guard makes posture-scoped work approval-required; NATS `Evaluate` is unchanged
+- Authority: `PUT /api/v1/governance/policy` -> 400 on an invalid posture group; approval `required` is not role-gated yet (`future_role_gate`, A2)
+- Proof: `uv run inv core.test --package=./internal/governance`; `uv run inv core.test --package=./internal/server --run='Posture|Governance'`; `uv run pytest tests/test_k8s_config_parity.py -q`
+- Pitfalls: a policy load failure is fail-open for NATS Gatekeeper (`loadGovernanceGuard`), fail-closed only for posture-scoped Soma work; `PUT /api/v1/governance/policy` has no in-handler root-admin scope check (A1/A2 follow-up); a posture floor applies only when a thread explicitly uses that template id, so a re-scoped copy with a new id carries no posture group
+- Verified: 2026-09-25 lead merge gate: isolated first boot, TestSeedBuiltInRevisionsRealDB (real PG), security-qa GO, core.test, docs links, max-lines
 
 ## IX. Governance & Policy Engine
 

@@ -20,7 +20,7 @@ func (s *Store) ActivateRevision(ctx context.Context, tenantID, recordID, actorI
 		return nil, fmt.Errorf("config documents: begin activation: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
-	result, err := activateRevisionTx(ctx, tx, tenantID, recordID, actorID, auditEventID, action)
+	result, err := activateRevisionTx(ctx, tx, tenantID, recordID, actorID, auditEventID, action, false)
 	if err != nil {
 		return nil, err
 	}
@@ -36,10 +36,12 @@ func (s *Store) ActivateRevisionTx(ctx context.Context, tx *sql.Tx, tenantID, re
 	if tx == nil {
 		return nil, fmt.Errorf("config documents: transaction is required")
 	}
-	return activateRevisionTx(ctx, tx, tenantID, recordID, actorID, auditEventID, action)
+	return activateRevisionTx(ctx, tx, tenantID, recordID, actorID, auditEventID, action, false)
 }
 
-func activateRevisionTx(ctx context.Context, tx *sql.Tx, tenantID, recordID, actorID, auditEventID string, action ActivationAction) (*ActivationResult, error) {
+// activateRevisionTx is the single activation path. allowBuiltIn is true only
+// for SeedBuiltInRevisions; every public caller passes false.
+func activateRevisionTx(ctx context.Context, tx *sql.Tx, tenantID, recordID, actorID, auditEventID string, action ActivationAction, allowBuiltIn bool) (*ActivationResult, error) {
 	tenantID, err := requiredValue("tenant_id", tenantID)
 	if err != nil {
 		return nil, err
@@ -55,6 +57,11 @@ func activateRevisionTx(ctx context.Context, tx *sql.Tx, tenantID, recordID, act
 	if action != ActivationActionActivate && action != ActivationActionRollback {
 		return nil, ErrInvalidActivationAction
 	}
+	if !allowBuiltIn {
+		if err := guardPublicActor(actorID); err != nil {
+			return nil, err
+		}
+	}
 	revision, err := scanRevision(tx.QueryRowContext(ctx, `
 		SELECT `+revisionColumns+`
 		FROM config_documents
@@ -66,6 +73,11 @@ func activateRevisionTx(ctx context.Context, tx *sql.Tx, tenantID, recordID, act
 	}
 	if err != nil {
 		return nil, fmt.Errorf("config documents: lock revision: %w", err)
+	}
+	if !allowBuiltIn {
+		if err := guardPublicActivation(*revision); err != nil {
+			return nil, err
+		}
 	}
 	if err := validateStoredRevision(*revision); err != nil {
 		return nil, err
