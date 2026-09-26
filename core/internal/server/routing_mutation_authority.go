@@ -13,9 +13,32 @@ import (
 // Routing mutation authority (S6d): every mutating /api/v1/brains route, the
 // provider probe (outbound egress), and every mission-profile write require
 // root admin + cognitive:write, and record an audit event before anything
-// changes. Mutations that can move execution routing also hold
-// profileOverrideWriteMu so they serialize with the S6c profile override
+// changes. Mutations that can move execution routing also hold the shared
+// routing-write mutex so they serialize with the S6c profile override
 // PUT/DELETE handlers.
+//
+// Routing-write mutex (S6e): profileOverrideWriteMu is the one process-wide
+// routing-write mutex. Every routing mutation acquires it through
+// lockRoutingWrite: brains toggle/policy/add/update/delete, profile override
+// PUT/DELETE, provider PUT (/cognitive/providers/{id}), and mission-profile
+// activation. Lock order, outermost first:
+//  1. profileOverrideWriteMu (lockRoutingWrite), held from validation
+//     through audit, DB tx + commit, runtime apply, and YAML save.
+//  2. The DB transaction and its row locks, begun only while 1 is held.
+//  3. cognitive.Router.mu, taken only inside the Router's locked accessors
+//     (ProviderSnapshot, ConfigSnapshot, ProfileRoutes, AdapterSnapshot,
+//     StoreProviderConfig, Add/Update/RemoveProvider) and released before
+//     each accessor returns.
+// Never take 1 while holding 2 or 3. The mutex is not reentrant: never call
+// a helper that locks it from inside a locked section. Readers never take 1;
+// they use the Router's accessors (3) only.
+
+// lockRoutingWrite acquires the shared routing-write mutex and returns its
+// release. Use: unlock := lockRoutingWrite(); defer unlock().
+func lockRoutingWrite() func() {
+	profileOverrideWriteMu.Lock()
+	return profileOverrideWriteMu.Unlock
+}
 
 const routingMutationAuditSource = "cognitive-routing-mutation"
 
@@ -33,6 +56,7 @@ const (
 	auditProviderPolicyUpdated = "cognitive_provider_policy_updated"
 	auditProviderAdded         = "cognitive_provider_added"
 	auditProviderUpdated       = "cognitive_provider_updated"
+	auditProviderConfigUpdated = "cognitive_provider_config_updated"
 	auditProviderDeleted       = "cognitive_provider_deleted"
 	auditProviderProbed        = "cognitive_provider_probed"
 	auditMissionProfileCreated = "mission_profile_created"
@@ -46,6 +70,21 @@ type providerBoundRejection struct {
 	Code              string   `json:"code"`
 	Profiles          []string `json:"profiles"`
 	RecommendedAction string   `json:"recommended_action"`
+}
+
+// cognitiveReadScope, like cognitive:write, unlocks the full cognitive view.
+const cognitiveReadScope = "cognitive:read"
+
+// cognitiveFullView reports whether the caller may see provider endpoints,
+// model URLs, config snapshots, and override detail: root admin holding
+// cognitive:read or cognitive:write. Everyone else, including a request with
+// no identity, gets the operational summary only (fail closed).
+func cognitiveFullView(r *http.Request) bool {
+	identity := IdentityFromContext(r.Context())
+	if identity == nil || identity.Role != "admin" {
+		return false
+	}
+	return hasScope(identity, cognitiveReadScope) || hasScope(identity, cognitiveWriteScope)
 }
 
 // requireRoutingWriter enforces root admin + cognitive:write. It writes

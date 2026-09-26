@@ -78,6 +78,11 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
+	if !cognitiveFullView(r) {
+		respondJSON(w, narrowCognitiveStatus(text, media.Status, routes, routeHealth, overlayError))
+		return
+	}
+
 	// Surface the effective root provider (root_provider/MYCELIS_ROOT_PROVIDER),
 	// its model id, and every profile's effective route (source, availability,
 	// code, override origin, probe result) so operators and live tests can
@@ -139,6 +144,17 @@ func (s *AdminServer) HandleCognitiveConfig(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// The config snapshot carries provider endpoints and override detail, so
+	// only root admin with cognitive:read or cognitive:write may read it (S6e).
+	if IdentityFromContext(r.Context()) == nil {
+		respondAPIError(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+	if !cognitiveFullView(r) {
+		respondAPIError(w, "Root admin with cognitive:read required", http.StatusForbidden)
+		return
+	}
+
 	// Return a locked snapshot of the config struct
 	respondJSON(w, s.Cognitive.ConfigSnapshot())
 }
@@ -181,8 +197,15 @@ func (s *AdminServer) HandleUpdateProvider(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	existing, ok := s.Cognitive.ProviderSnapshot(providerID)
-	if !ok {
+	// Serialize the read-modify-write with every other routing mutation so a
+	// stale snapshot can never undo a brains toggle or slip past the
+	// provider_bound check (lock order: routing_mutation_authority.go).
+	unlock := lockRoutingWrite()
+	defer unlock()
+
+	previous, existed := s.Cognitive.ProviderSnapshot(providerID)
+	existing := previous
+	if !existed {
 		// Create new provider
 		existing = cognitive.ProviderConfig{}
 	}
@@ -199,16 +222,29 @@ func (s *AdminServer) HandleUpdateProvider(w http.ResponseWriter, r *http.Reques
 	if req.APIKeyEnv != "" {
 		existing.AuthKeyEnv = req.APIKeyEnv
 	}
+	// Same rule as PUT /brains/{id}: an update that leaves a bound provider
+	// non-executable (disabled or blank model) would strand its profiles.
+	if existed && !providerConfigExecutable(existing) && s.rejectIfProviderBound(w, providerID) {
+		return
+	}
+	auditFields := brainAuditFields(providerID, existing)
+	auditFields["created"] = !existed
+	auditFields["endpoint_changed"] = existed && existing.Endpoint != previous.Endpoint
+	auditFields["auth_ref_changed"] = existed && existing.AuthKeyEnv != previous.AuthKeyEnv
+	if _, ok := s.auditRoutingMutation(w, r, auditProviderConfigUpdated, "Cognitive provider config updated", auditFields); !ok {
+		return
+	}
 	s.Cognitive.StoreProviderConfig(providerID, existing)
 
 	// Persist to YAML (AuthKey/AuthKeyEnv are json:"-" so won't leak)
 	if err := s.Cognitive.SaveConfig(); err != nil {
 		log.Printf("Failed to persist cognitive config: %v", err)
+		s.recordRoutingMutationFailure(r, auditProviderConfigUpdated, "Cognitive provider config applied but not persisted", map[string]any{"provider_id": providerID})
 		http.Error(w, "Failed to save config", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("Provider '%s' updated: endpoint=%s model=%s", providerID, existing.Endpoint, existing.ModelID)
+	log.Printf("Provider '%s' updated: model=%s", providerID, existing.ModelID)
 
 	// Return sanitized provider info (no secrets)
 	respondJSON(w, map[string]any{

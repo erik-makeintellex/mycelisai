@@ -33,6 +33,7 @@ const overrideCommittedNotApplied = "override_committed_not_applied"
 // and then apply out of order, leaving the in-memory binding pointing at a
 // provider the DB no longer names for that profile. One process-wide mutex
 // is sufficient: there is exactly one system_config table and one Router.
+// Acquire it only through lockRoutingWrite (routing_mutation_authority.go).
 var profileOverrideWriteMu sync.Mutex
 
 type profileOverrideEffective struct {
@@ -100,8 +101,8 @@ func (s *AdminServer) HandleUpdateProfiles(w http.ResponseWriter, r *http.Reques
 	// Serialized from here through the runtime apply below: validation,
 	// audit, tx/commit, and apply must all see and act on the same
 	// system_config snapshot as any concurrent PUT or DELETE.
-	profileOverrideWriteMu.Lock()
-	defer profileOverrideWriteMu.Unlock()
+	unlock := lockRoutingWrite()
+	defer unlock()
 
 	if err := s.Cognitive.ValidateProfileOverrides(overrides); err != nil {
 		respondProfileOverrideRejection(w, err)
@@ -193,8 +194,8 @@ func (s *AdminServer) HandleClearProfileOverride(w http.ResponseWriter, r *http.
 	// Serialized from here through the runtime apply below; see the PUT
 	// handler above for why. Holding it across the read of state and the
 	// clear keeps a concurrent PUT from committing in between.
-	profileOverrideWriteMu.Lock()
-	defer profileOverrideWriteMu.Unlock()
+	unlock := lockRoutingWrite()
+	defer unlock()
 
 	state := s.Cognitive.ProfileOverrideState(profile)
 	status := "noop"

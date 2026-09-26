@@ -24,7 +24,7 @@ func TestHandleListBrains_HappyPath(t *testing.T) {
 	s := newTestServer(cogOpt)
 
 	mux := setupMux(t, "GET /api/v1/brains", s.HandleListBrains)
-	rr := doRequest(t, mux, "GET", "/api/v1/brains", "")
+	rr := doAuthenticatedRequest(t, mux, "GET", "/api/v1/brains", "")
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -60,7 +60,7 @@ func TestHandleListBrains_HappyPath(t *testing.T) {
 func TestHandleListBrains_NilCognitive(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "GET /api/v1/brains", s.HandleListBrains)
-	rr := doRequest(t, mux, "GET", "/api/v1/brains", "")
+	rr := doAuthenticatedRequest(t, mux, "GET", "/api/v1/brains", "")
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp map[string]any
@@ -85,7 +85,7 @@ func TestHandleListBrains_DefaultsForEmptyFields(t *testing.T) {
 	s := newTestServer(cogOpt)
 
 	mux := setupMux(t, "GET /api/v1/brains", s.HandleListBrains)
-	rr := doRequest(t, mux, "GET", "/api/v1/brains", "")
+	rr := doAuthenticatedRequest(t, mux, "GET", "/api/v1/brains", "")
 
 	assertStatus(t, rr, http.StatusOK)
 

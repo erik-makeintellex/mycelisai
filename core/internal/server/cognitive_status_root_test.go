@@ -24,7 +24,7 @@ type statusRootResponse struct {
 func getCognitiveStatus(t *testing.T, s *AdminServer) statusRootResponse {
 	t.Helper()
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(s.HandleCognitiveStatus).ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil))
+	http.HandlerFunc(s.HandleCognitiveStatus).ServeHTTP(rr, withCognitiveAdmin(httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil)))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d body=%s", rr.Code, rr.Body.String())
 	}

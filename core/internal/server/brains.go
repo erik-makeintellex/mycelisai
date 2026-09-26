@@ -24,13 +24,31 @@ func (s *AdminServer) HandleListBrains(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entries := make([]BrainEntry, 0, len(cfg.Providers))
+	full := cognitiveFullView(r)
+	entries := make([]any, 0, len(cfg.Providers))
 	for id, prov := range cfg.Providers {
 		prov = cognitive.NormalizeProviderTokenDefaults(prov)
-		entries = append(entries, brainEntryFromProvider(id, prov, s.brainStatus(r.Context(), id, prov.Enabled)))
+		entry := brainEntryFromProvider(id, prov, s.brainStatus(r.Context(), id, prov.Enabled))
+		if full {
+			entries = append(entries, entry)
+			continue
+		}
+		entries = append(entries, brainSummary{ID: entry.ID, Type: entry.Type, Enabled: entry.Enabled,
+			Location: entry.Location, DataBoundary: entry.DataBoundary, Status: entry.Status})
 	}
 
 	respondJSON(w, map[string]any{"ok": true, "data": entries})
+}
+
+// brainSummary is the GET /api/v1/brains row for callers without the full
+// cognitive view (S6e): no endpoint, model, or policy detail.
+type brainSummary struct {
+	ID           string `json:"id"`
+	Type         string `json:"type"`
+	Enabled      bool   `json:"enabled"`
+	Location     string `json:"location"`
+	DataBoundary string `json:"data_boundary"`
+	Status       string `json:"status"`
 }
 
 // PUT /api/v1/brains/{id}/toggle — enable or disable a provider.
@@ -56,8 +74,8 @@ func (s *AdminServer) HandleToggleBrain(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	profileOverrideWriteMu.Lock()
-	defer profileOverrideWriteMu.Unlock()
+	unlock := lockRoutingWrite()
+	defer unlock()
 
 	prov, ok := s.Cognitive.ProviderSnapshot(id)
 	if !ok {
@@ -112,8 +130,8 @@ func (s *AdminServer) HandleUpdateBrainPolicy(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	profileOverrideWriteMu.Lock()
-	defer profileOverrideWriteMu.Unlock()
+	unlock := lockRoutingWrite()
+	defer unlock()
 
 	prov, ok := s.Cognitive.ProviderSnapshot(id)
 	if !ok {
@@ -187,8 +205,8 @@ func (s *AdminServer) HandleAddBrain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profileOverrideWriteMu.Lock()
-	defer profileOverrideWriteMu.Unlock()
+	unlock := lockRoutingWrite()
+	defer unlock()
 
 	if _, exists := s.Cognitive.ProviderSnapshot(req.ID); exists {
 		respondError(w, "provider id already exists", http.StatusConflict)
@@ -234,8 +252,8 @@ func (s *AdminServer) HandleUpdateBrain(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	profileOverrideWriteMu.Lock()
-	defer profileOverrideWriteMu.Unlock()
+	unlock := lockRoutingWrite()
+	defer unlock()
 
 	if _, exists := s.Cognitive.ProviderSnapshot(id); !exists {
 		respondError(w, "Provider not found", http.StatusNotFound)
@@ -275,8 +293,8 @@ func (s *AdminServer) HandleDeleteBrain(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	profileOverrideWriteMu.Lock()
-	defer profileOverrideWriteMu.Unlock()
+	unlock := lockRoutingWrite()
+	defer unlock()
 
 	snapshot := s.Cognitive.ConfigSnapshot()
 	if _, exists := snapshot.Providers[id]; !exists {

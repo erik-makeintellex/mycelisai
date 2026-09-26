@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/cognitive"
@@ -238,38 +237,68 @@ func TestProviderConfigExecutable_MatchesResolver(t *testing.T) {
 	}
 }
 
-// failedAfterCommitAudit matches an audit context JSON carrying the F2 fields.
-type failedAfterCommitAudit struct{}
+// commitFailedAudit matches an audit context JSON carrying the S6e F4
+// commit-failure fields.
+type commitFailedAudit struct{}
 
-func (failedAfterCommitAudit) Match(v driver.Value) bool {
+func (commitFailedAudit) Match(v driver.Value) bool {
 	b, ok := v.([]byte)
 	s := string(b)
 	return ok && strings.Contains(s, `"result_status":"failed_after_commit"`) &&
-		strings.Contains(s, `"mission_profile_id":"p-1"`) && strings.Contains(s, `"recovery_action"`) &&
+		strings.Contains(s, `"mission_profile_id":"p-1"`) &&
+		strings.Contains(s, `"code":"mission_profile_activation_commit_failed"`) &&
 		strings.Contains(s, `"action":"mission_profile_activated"`)
 }
 
-// F2: a provider disabled between the commit and the runtime apply yields
-// 500 mission_profile_routing_not_applied plus a failure audit event.
-func TestMissionProfileActivation_PostCommitFailureIsAudited(t *testing.T) {
+// S6e F4: activation now applies routing before committing is_active. When
+// the is_active commit fails after a successful apply, routing must revert
+// to the exact prior snapshot (byte-equal ConfigSnapshot, no profile flip)
+// and a failure audit must be recorded. Routing is applied before the commit,
+// so no post-commit routing failure (and no "routing not applied" state) can
+// occur.
+func TestMissionProfileActivation_CommitFailureRevertsRoutingAndAudits(t *testing.T) {
 	f := newRoutingFixture(t)
 	expectActivationLoad(f.mock, `{"coder":"ollama"}`)
 	expectAudit(f.mock)
-	f.mock.ExpectBegin()
-	f.mock.ExpectExec("UPDATE mission_profiles SET is_active=false").WillDelayFor(300 * time.Millisecond).WillReturnResult(sqlmock.NewResult(0, 1))
-	f.mock.ExpectExec("UPDATE mission_profiles SET is_active=true").WillReturnResult(sqlmock.NewResult(0, 1))
-	f.mock.ExpectCommit()
+	f.mock.ExpectBegin().WillReturnError(errors.New("db down"))
 	f.mock.ExpectExec("INSERT INTO log_entries").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "audit", routingMutationAuditSource, sqlmock.AnyArg(), sqlmock.AnyArg(), failedAfterCommitAudit{}).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "audit", routingMutationAuditSource, sqlmock.AnyArg(), sqlmock.AnyArg(), commitFailedAudit{}).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// An unserialized writer disables ollama inside the delayed commit.
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		p, _ := f.s.Cognitive.ProviderSnapshot("ollama")
-		p.Enabled = false
-		f.s.Cognitive.StoreProviderConfig("ollama", p)
-	}()
+	rr := doAuthenticatedRequest(t, f.mux, http.MethodPost, "/api/v1/mission-profiles/p-1/activate", "")
+	assertStatus(t, rr, http.StatusInternalServerError)
+
+	// Routing reverted to exactly its pre-apply snapshot: no profile flip.
+	if st := f.s.Cognitive.ProfileOverrideState("coder"); st.ProviderID != "vllm" || st.Origin != "" {
+		t.Fatalf("coder moved: %+v", st)
+	}
+	after := f.s.Cognitive.ConfigSnapshot()
+	if !reflect.DeepEqual(f.before.Profiles, after.Profiles) || !reflect.DeepEqual(f.before.ProfileOverrideOrigins, after.ProfileOverrideOrigins) {
+		t.Fatalf("routing not byte-equal to before: before=%v/%v after=%v/%v",
+			f.before.Profiles, f.before.ProfileOverrideOrigins, after.Profiles, after.ProfileOverrideOrigins)
+	}
+	if err := f.mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql (failure audit missing?): %v", err)
+	}
+}
+
+// S6e F4: an apply failure (routing rejected under the write lock, after the
+// request audit but before any DB transaction) must commit nothing: no
+// BeginTx call happens at all, and is_active never changes.
+func TestMissionProfileActivation_ApplyFailureCommitsNothing(t *testing.T) {
+	f := newRoutingFixture(t)
+	expectActivationLoad(f.mock, `{"coder":"ollama"}`)
+	f.mock.ExpectExec("INSERT INTO log_entries").WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sideEffectArg{
+		want: "audit",
+		fn: func() {
+			// Disable ollama between validation and apply, still inside the
+			// routing-write mutex this handler holds for the whole request.
+			p, _ := f.s.Cognitive.ProviderSnapshot("ollama")
+			p.Enabled = false
+			f.s.Cognitive.StoreProviderConfig("ollama", p)
+		},
+	}, routingMutationAuditSource, sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).WillReturnResult(sqlmock.NewResult(1, 1))
+
 	rr := doAuthenticatedRequest(t, f.mux, http.MethodPost, "/api/v1/mission-profiles/p-1/activate", "")
 	assertStatus(t, rr, http.StatusInternalServerError)
 	var got struct {
@@ -277,13 +306,15 @@ func TestMissionProfileActivation_PostCommitFailureIsAudited(t *testing.T) {
 		RecommendedAction string `json:"recommended_action"`
 	}
 	decodeOverrideData(t, rr, &got)
-	if got.Code != missionProfileRoutingNotApplied || got.RecommendedAction == "" {
+	if got.Code != missionProfileRoutingRejected || got.RecommendedAction == "" {
 		t.Fatalf("data = %+v", got)
 	}
 	if st := f.s.Cognitive.ProfileOverrideState("coder"); st.ProviderID != "vllm" || st.Origin != "" {
 		t.Fatalf("coder moved: %+v", st)
 	}
+	// No BeginTx/Exec/Commit was ever expected above, so ExpectationsWereMet
+	// also proves no DB write happened beyond the initial audit.
 	if err := f.mock.ExpectationsWereMet(); err != nil {
-		t.Fatalf("sql (failure audit missing?): %v", err)
+		t.Fatalf("sql: %v", err)
 	}
 }
