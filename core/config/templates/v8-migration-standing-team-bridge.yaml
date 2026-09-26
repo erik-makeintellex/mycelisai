@@ -162,34 +162,14 @@ teams:
           If asked for the secret codeword, reply with "BLUEBERRY".
         model: ""
         max_iterations: 10
-        tools:
-          - consult_council
-          - delegate_task
-          - create_team
-          - search_memory
-          - list_teams
-          - list_missions
-          - get_system_status
-          - list_available_tools
-          - list_catalogue
-          - web_search
-          - generate_image
-          - save_cached_image
-          - store_conversation_template
-          - instantiate_conversation_template
-          - remember
-          - recall
-          - broadcast
-          - publish_signal
-          - read_signals
-          - read_file
-          - write_file
-          - local_command
-          - research_for_blueprint
-          - generate_blueprint
-          - mcp:filesystem/*
-          - mcp:fetch/*
-          - mcp:brave-search/*
+        tools: [consult_council, delegate_task, create_team, search_memory, list_teams, list_missions,
+          get_system_status, list_available_tools, list_catalogue, web_search, generate_image,
+          save_cached_image, store_conversation_template, instantiate_conversation_template, remember,
+          recall, broadcast, publish_signal, read_signals, read_file, write_file, local_command,
+          research_for_blueprint, generate_blueprint, load_deployment_context, store_artifact,
+          store_inception_recipe, publish_exchange_item, temp_memory_read, temp_memory_write,
+          code_context.query, code_context.impact, code_context.explain, "mcp:filesystem/*", "mcp:fetch/*",
+          "mcp:brave-search/*"]
     inputs:
       - swarm.global.broadcast
       - swarm.global.input.user
@@ -318,6 +298,7 @@ teams:
           - read_signals
           - read_file
           - write_file
+          - web_search
           - mcp:filesystem/*
           - mcp:fetch/*
           - mcp:brave-search/*
@@ -369,6 +350,8 @@ teams:
           - local_command
           - publish_signal
           - read_signals
+          - list_available_tools
+          - web_search
           - mcp:filesystem/*
           - mcp:fetch/*
           - mcp:brave-search/*

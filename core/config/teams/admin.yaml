@@ -173,6 +173,15 @@ members:
       - local_command
       - research_for_blueprint
       - generate_blueprint
+      - load_deployment_context
+      - store_artifact
+      - store_inception_recipe
+      - publish_exchange_item
+      - temp_memory_read
+      - temp_memory_write
+      - code_context.query
+      - code_context.impact
+      - code_context.explain
       - mcp:filesystem/*
       - mcp:fetch/*
       - mcp:brave-search/*

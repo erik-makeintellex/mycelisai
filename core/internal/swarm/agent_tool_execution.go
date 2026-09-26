@@ -17,7 +17,9 @@ func (a *Agent) prepareToolCall(input string, toolCall *toolCallPayload, failedT
 		reinfer(toolCall.Name, fmt.Sprintf("Policy correction: the exact tool call %s has already failed %d times in this turn. Do not retry it. Choose a different tool or answer directly without tools.", fingerprint, failedToolCalls[fingerprint]))
 		return false
 	}
-	if !shouldCouncilPreflight(toolCall.Name) {
+	// Scope first: an undeclared call must be denied before any council
+	// contact, or its arguments would reach better-equipped council agents.
+	if !shouldCouncilPreflight(toolCall.Name) || !a.toolPermittedForPlanning(toolCall.Name) {
 		return true
 	}
 	member := councilPreflightMember(toolCall.Name)
@@ -56,6 +58,13 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand, PlanningOnly: planningOnly,
 	})
 	serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, toolCall.Name)
+	if IsToolNotPermitted(err) {
+		failedToolCalls[fingerprint]++
+		result.toolsUsed = result.toolsUsed[:len(result.toolsUsed)-1]
+		a.recordToolDenied(toolCall.Name, "lookup", false)
+		reinfer(toolCall.Name, toolDeniedFeedback(toolCall.Name))
+		return false
+	}
 	if err != nil {
 		failedToolCalls[fingerprint]++
 		log.Printf("Agent [%s] tool lookup failed: %v", a.Manifest.ID, err)
@@ -71,6 +80,13 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 		a.publishToolBusSignal(protocol.PayloadKindStatus, protocol.SourceKindMCP, map[string]any{"state": "invoked", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "arguments": toolCall.Arguments, "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
 	}
 	toolResult, err := a.toolExecutor.CallTool(toolCtx, serverID, toolCall.Name, toolCall.Arguments)
+	if IsToolNotPermitted(err) {
+		failedToolCalls[fingerprint]++
+		result.toolsUsed = result.toolsUsed[:len(result.toolsUsed)-1]
+		a.recordToolDenied(toolCall.Name, "execute", false)
+		reinfer(toolCall.Name, toolDeniedFeedback(toolCall.Name))
+		return false
+	}
 	if err != nil {
 		failedToolCalls[fingerprint]++
 		log.Printf("Agent [%s] tool call failed: %v", a.Manifest.ID, err)
@@ -204,6 +220,10 @@ func (a *Agent) executeRuntimeOwnedEntrypointReadback(i int, entrypoint string, 
 	serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, call.Name)
 	if err != nil {
 		failedToolCalls[fingerprint]++
+		if IsToolNotPermitted(err) {
+			a.recordToolDenied(call.Name, "lookup", true)
+			return "", err
+		}
 		if a.eventEmitter != nil && a.runID != "" {
 			go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolFailed, protocol.SeverityError, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": call.Name, "error": err.Error(), "phase": "lookup", "runtime_owned": true}) //nolint:errcheck
 		}

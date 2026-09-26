@@ -130,6 +130,8 @@ Capability permission groups support three configuration forms:
 
 Under the hood these still save as MCP tool-set scopes (`all`, `group`, and `host`). When the same tool-set name exists at multiple layers, scoped runtime resolution should prefer the group or host layer first, then fall back to the shared `all` layer. This lets operators keep a default capability posture while adding narrower MCP access for a project lane or a particular host.
 
+Connecting a capability here makes it available to request, not automatically usable: an agent can only call a tool its own team member declares (see `Teams`), so a newly connected server or capability still needs adding to a team's tools before agents on that team can use it, and any other call is refused without running.
+
 The Capabilities page opens as a focused readiness surface, not as one long MCP configuration document. Use the focus buttons to choose the current job: **Readiness** for web/search and compact origin posture, **Catalog** for the bounded, origin-filtered capability inventory, **Access** for sources/scopes/data, and **Inspect** for raw refs, provider bindings, workflow examples, and deeper technical evidence. Raw capability refs, output/write channels, provider bindings, and longer examples stay behind **Inspect capability details** or the **Inspect** focus.
 
 Inside **Access**, choose the job you are doing instead of scrolling one mixed setup page:

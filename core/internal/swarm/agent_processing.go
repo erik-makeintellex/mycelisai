@@ -242,7 +242,7 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 	sys += agentProfileContextDirective(a.Manifest)
 	sys += runtimeResponseDirective()
 	if a.internalTools != nil {
-		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
+		sys += a.internalTools.withoutUndeclaredToolLines(a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input), a.Manifest.Tools)
 	}
 	sys += a.buildToolsBlock(input)
 
