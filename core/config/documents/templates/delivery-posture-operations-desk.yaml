@@ -1,0 +1,56 @@
+apiVersion: mycelis.ai/v1
+kind: OutcomeTemplate
+metadata:
+  id: delivery-posture-operations-desk
+  name: Operations Desk
+  version: "1.0.0"
+  owner_id: mycelis
+  scope:
+    kind: built_in
+  enabled: true
+  source:
+    kind: built_in
+    ref: core/config/documents/templates/delivery-posture-operations-desk.yaml
+  governance:
+    risk_level: low
+    approval_posture: required
+spec:
+  intent_kind: operations_desk
+  defaults:
+    audience: The operator running the desk.
+    essential_behavior:
+      - Watch the connected systems named in scope.
+      - Summarize findings in a short, runbook-style note.
+    quality_bar: Fast, accurate, and read-only unless a change is explicitly approved.
+    delivery_form: runbook_note
+    constraints:
+      - No state-changing action runs without the operator's explicit approval.
+    acceptance_evidence:
+      - A short runbook-style summary of what was checked and found.
+  field_rules:
+    - field: target_outcome
+      unresolved_as: must_ask
+      question: What should this operations check watch or verify right now?
+      impact: 3
+    - field: audience
+      unresolved_as: can_infer
+    - field: essential_behavior
+      unresolved_as: can_infer
+    - field: quality_bar
+      unresolved_as: can_infer
+    - field: delivery_form
+      unresolved_as: can_infer
+    - field: constraints
+      unresolved_as: can_infer
+    - field: acceptance_evidence
+      unresolved_as: can_infer
+  question_limit: 2
+  output_contract:
+    shape: runbook_note
+    primary_deliverable: A short runbook-style summary of the checked systems.
+    retention: Retain the summary and any read-only evidence it cites.
+    validation:
+      - The summary states which systems were checked and what was found.
+    acceptance_criteria:
+      - No mutating action occurred without a separate, explicit approval.
+      - The summary is short enough to scan in under a minute.

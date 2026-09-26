@@ -46,6 +46,16 @@ There are two equivalent authoring paths:
 Preview never persists or activates a document. Store creates an immutable revision. Activate changes the selected revision atomically and records who requested it; rollback explicitly reactivates a chosen prior revision. Running or approved work keeps the resolved template version and digest, so changing a template later does not rewrite historical authority. Configuration documents contain secret references only; put secret values in `.env` or the configured secret backend.
 Conversation Templates remain separate: they render reusable non-executing asks that return to Soma chat. Use an Outcome Template when repeated work needs a stable delivery brief and validation shape.
 
+### Company delivery postures
+
+Four reference Outcome Templates ship as source content for common ways a company runs delivery work. Each one tunes how many questions Soma asks up front and what proof it expects back; none of them change how approvals work.
+- **Client Delivery Studio** — pick this for client-facing deliverables. It asks who the audience is and what format they expect, then proposes a client-ready package with reviewer notes retained alongside it.
+- **Product Delivery Team** — pick this for building or changing a working product increment. It asks what the increment must do and what evidence will show it works, then proposes a change package with its verification evidence attached.
+- **Operations Desk** — pick this for a fast, read-only status or runbook check. It asks only what to watch or verify, infers the rest, and returns a short summary; no state-changing action runs without a separate, explicit approval.
+- **Governed Enterprise** — pick this when a compliance reviewer must sign off before anything ships. It asks for the required evidence, constraints, and quality bar, then proposes an evidence pack with a compliance review note retained in full; a stated constraint such as "local-only engines" is recorded as advisory context for provider policy, not something the template itself enforces.
+
+These four ship as `built_in` reference content under `core/config/documents/templates/`. They are not yet loaded automatically at startup: a follow-up change will seed them as locked, copyable built-ins. Until then, an operator copies one into `MYCELIS_CONFIG_ROOT`, changes its scope to the operator's own organization and its source to the copied file, and previews, stores, and activates it through the same governed path as any other Outcome Template. Whichever posture is active, approvals always follow the standard governance floor described above — a posture can shape discovery and proof, but it can never loosen or skip an approval.
+
 ---
 
 ## AI Engines

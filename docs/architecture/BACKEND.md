@@ -269,6 +269,18 @@ Bootstrap, templates, resource registry, and deployment-context routes.
 ### Health
 Readiness, liveness, and dependency health routes.
 
+## Area Contracts
+
+### Area: ConfigDocuments
+- PRD: §Bounded Discovery And Outcome Templates L100, L102, L169-170 · Scoreboard: P0.3a
+- Owned paths: `core/config/documents/templates/*.yaml` (mycelis-ai-runtime) · Do-not-touch: `core/config/templates/**` (bundle-loader family), `core/pkg/protocol/**`, `core/internal/configdocuments/*.go` except `delivery_posture_content_test.go`
+- Seams: `ParseDocument`, `ValidateConfigDocument`, `CompileDocument`, `CompileOutcomeTemplateDocument`, `CanonicalConfigDocumentDigest`, `HandleCreateConfigDocument`, `HandleActivateConfigDocument`
+- Invariants: approvals stay at the PRD floor; content can never lower or grant approval; `ParseDocument` and the content tests strict-decode (the production `OutcomeTemplate` spec decode is non-strict); `question_limit` must ship at 1-4 and must not rely on the compile-time clamp; no raw secrets or `swarm.*` subjects in content
+- Authority: `POST /api/v1/config-documents` and `.../activate` -> `config_documents:write`, root admin only, default deny; negatives: anon 401, standard user 403
+- Proof: `uv run inv core.test --package=./internal/configdocuments --run=TestDeliveryPosture`
+- Pitfalls: the bundle loader FATALs at startup on any stray file under `core/config/templates/`, so reference content must stay under `core/config/documents/templates/`; `scope.kind: built_in` and `source.kind: built_in` are accepted from any caller today (`config_documents.go` validates shape only) — built-in provenance forgery stays open until S3b adds a bootstrap-only guard
+- Verified: 2026-09-25 lead merge gate: go test ./internal/configdocuments -run TestDeliveryPosture, docs links, k8s config parity, max-lines 2026-09-25
+
 ## IX. Governance & Policy Engine
 
 Deploy-owned identity posture is backend-owned: deploy-owned People & Access posture surfaced read-only, and settings PUT ignores/preserves those deploy-owned fields instead of persisting them.
