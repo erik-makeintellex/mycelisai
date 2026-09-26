@@ -105,6 +105,7 @@ services:
       DATA_DIR: ${DATA_DIR:-/data/artifacts}
       MYCELIS_WORKSPACE: ${MYCELIS_WORKSPACE:-/data/workspace}
       MYCELIS_WORKSPACE_REVEAL_DRY_RUN: ${MYCELIS_WORKSPACE_REVEAL_DRY_RUN:-1}
+      MYCELIS_CODE_CONTEXT_ROOTS: /repo
     depends_on:
       postgres:
         condition: service_healthy
@@ -117,6 +118,7 @@ services:
     volumes:
       - ./core/config:/core/config:ro
       - ${MYCELIS_OUTPUT_HOST_PATH:-./workspace/docker-compose/data}:/data
+      - ${MYCELIS_CODE_CONTEXT_HOST_ROOT:-./ops/code-context/empty-root}:/repo:ro
     healthcheck:
       test: ["CMD", "/server", "action", "GET", "/healthz"]
       interval: 10s
