@@ -9,7 +9,7 @@ import (
 
 func TestHandleUpdateAgentTypeAIEngine_SetsBinding(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                      "org-123",
 			Name:                    "Northstar Labs",
@@ -37,7 +37,7 @@ func TestHandleUpdateAgentTypeAIEngine_SetsBinding(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/ai-engine", s.handleUpdateAgentTypeAIEngine)
 
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/ai-engine", `{"profile_id":"high_reasoning"}`)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/ai-engine", `{"profile_id":"high_reasoning"}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp protocol.APIResponse
@@ -63,7 +63,7 @@ func TestHandleUpdateAgentTypeAIEngine_SetsBinding(t *testing.T) {
 
 func TestHandleUpdateAgentTypeAIEngine_RevertsToTeamDefault(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                      "org-123",
 			Name:                    "Northstar Labs",
@@ -92,7 +92,7 @@ func TestHandleUpdateAgentTypeAIEngine_RevertsToTeamDefault(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/ai-engine", s.handleUpdateAgentTypeAIEngine)
 
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/ai-engine", `{"use_team_default":true}`)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/ai-engine", `{"use_team_default":true}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp protocol.APIResponse
@@ -110,7 +110,7 @@ func TestHandleUpdateAgentTypeAIEngine_RevertsToTeamDefault(t *testing.T) {
 
 func TestHandleUpdateAgentTypeAIEngine_RejectsInvalidProfile(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                      "org-123",
 			Name:                    "Northstar Labs",
@@ -138,13 +138,13 @@ func TestHandleUpdateAgentTypeAIEngine_RejectsInvalidProfile(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/ai-engine", s.handleUpdateAgentTypeAIEngine)
 
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/ai-engine", `{"profile_id":"llama3.2"}`)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/ai-engine", `{"profile_id":"llama3.2"}`)
 	assertStatus(t, rr, http.StatusBadRequest)
 }
 
 func TestAgentTypeAIEngineInheritance_PersistsAcrossTeamUpdates(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                      "org-123",
 			Name:                    "Northstar Labs",
@@ -175,7 +175,7 @@ func TestAgentTypeAIEngineInheritance_PersistsAcrossTeamUpdates(t *testing.T) {
 	departmentMux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/ai-engine", s.handleUpdateDepartmentAIEngine)
 	departmentMux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
 
-	updateRR := doRequest(t, departmentMux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/ai-engine", `{"profile_id":"deep_planning"}`)
+	updateRR := doAuthenticatedRequest(t, departmentMux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/ai-engine", `{"profile_id":"deep_planning"}`)
 	assertStatus(t, updateRR, http.StatusOK)
 
 	homeRR := doRequest(t, departmentMux, "GET", "/api/v1/organizations/"+created.ID+"/home", "")

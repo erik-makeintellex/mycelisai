@@ -2580,4 +2580,21 @@ ALTER TABLE runtime_team_manifests
             AND ownership_revoked_at >= ownership_provisioned_at));
 -- END C2A_TEAM_OWNERSHIP_EXTENSION
 
+-- BEGIN ORGANIZATIONS_EXTENSION
+-- Durable AI Organization homes. qa_fixture_scope_id is authoritative and is
+-- never derived from document. Plain CREATE refuses a partial prior table.
+CREATE TABLE organizations (
+    id UUID PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'default',
+    name TEXT NOT NULL,
+    purpose TEXT NOT NULL DEFAULT '',
+    template_id TEXT NOT NULL DEFAULT '',
+    qa_fixture_scope_id TEXT NOT NULL DEFAULT '',
+    document JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_organizations_document_object CHECK (jsonb_typeof(document) = 'object'));
+CREATE INDEX idx_organizations_tenant_name ON organizations(tenant_id, name, id);
+-- END ORGANIZATIONS_EXTENSION
+
 COMMIT;

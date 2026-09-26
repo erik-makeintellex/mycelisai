@@ -130,7 +130,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		Runs:                runsManager,
 		Reactive:            reactiveEngine,
 		GroupBus:            NewGroupBusMonitor(),
-		Organizations:       NewOrganizationStore(),
+		Organizations:       NewOrganizationStore(db),
 		LoopProfiles:        NewLoopProfileStore(),
 		LoopResults:         NewLoopResultStore(),
 		LoopExecution:       NewLoopExecutionTracker(),

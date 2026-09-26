@@ -85,6 +85,7 @@ def test_real_failed_extension_rolls_back_all_schema_changes(database, tmp_path)
         db_upgrade.upgrade_retained(broken, database)
     assert database(db_upgrade.G4_ABSENT_SQL).stdout.strip() == "1"
     assert database(db_upgrade.C2A_ABSENT_SQL).stdout.strip() == "1"
+    assert database(db_upgrade.ORG_ABSENT_SQL).stdout.strip() == "1"
     assert database("SELECT row_to_json(m)::text FROM runtime_team_manifests m;").stdout.strip() == before
 
 

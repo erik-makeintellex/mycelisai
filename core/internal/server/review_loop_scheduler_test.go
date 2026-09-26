@@ -36,7 +36,7 @@ func testScheduledAgentTypeLoop(intervalSeconds int) LoopProfile {
 
 func TestLoopScheduler_ExecutesLoopOnInterval(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().Save(home.ID, testScheduledDepartmentLoop(5))
 
 	scheduler := NewLoopScheduler(s)
@@ -68,7 +68,7 @@ func TestLoopScheduler_ExecutesLoopOnInterval(t *testing.T) {
 
 func TestLoopScheduler_HandlesMultipleLoops(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().Save(home.ID, testScheduledDepartmentLoop(10))
 	s.loopProfileStore().Save(home.ID, testScheduledAgentTypeLoop(10))
 
@@ -94,7 +94,7 @@ func TestLoopScheduler_HandlesMultipleLoops(t *testing.T) {
 
 func TestLoopScheduler_PreventsOverlap(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	profile := testScheduledDepartmentLoop(1)
 
 	scheduler := NewLoopScheduler(s)
@@ -142,7 +142,7 @@ func TestLoopScheduler_PreventsOverlap(t *testing.T) {
 
 func TestLoopScheduler_RejectsInvalidConfig(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().Save(home.ID, LoopProfile{
 		ID:          "invalid-interval-review",
 		Name:        "Invalid Interval Review",

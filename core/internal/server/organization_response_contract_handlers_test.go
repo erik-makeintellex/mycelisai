@@ -9,7 +9,7 @@ import (
 
 func TestHandleUpdateResponseContract_StoresCuratedProfile(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                        "org-123",
 			Name:                      "Northstar Labs",
@@ -38,7 +38,7 @@ func TestHandleUpdateResponseContract_StoresCuratedProfile(t *testing.T) {
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/response-contract", s.handleUpdateResponseContract)
 	mux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
 
-	updateRR := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/response-contract", `{"profile_id":"warm_supportive"}`)
+	updateRR := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/response-contract", `{"profile_id":"warm_supportive"}`)
 	assertStatus(t, updateRR, http.StatusOK)
 
 	var updateResp protocol.APIResponse
@@ -76,7 +76,7 @@ func TestHandleUpdateResponseContract_StoresCuratedProfile(t *testing.T) {
 
 func TestHandleUpdateResponseContract_RejectsInvalidProfile(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                        "org-123",
 			Name:                      "Northstar Labs",
@@ -92,6 +92,6 @@ func TestHandleUpdateResponseContract_RejectsInvalidProfile(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/response-contract", s.handleUpdateResponseContract)
 
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/response-contract", `{"profile_id":"raw_prompt_override"}`)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/response-contract", `{"profile_id":"raw_prompt_override"}`)
 	assertStatus(t, rr, http.StatusBadRequest)
 }

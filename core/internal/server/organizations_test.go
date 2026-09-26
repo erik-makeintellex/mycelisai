@@ -112,7 +112,7 @@ func TestHandleCreateOrganization_FromTemplateAndGetHome(t *testing.T) {
 	mux.HandleFunc("POST /api/v1/organizations", s.handleCreateOrganization)
 
 	body := `{"name":"Northstar Labs","purpose":"Ship a focused AI engineering organization","start_mode":"template","template_id":"engineering-starter"}`
-	rr := doRequest(t, mux, "POST", "/api/v1/organizations", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/organizations", body)
 	assertStatus(t, rr, http.StatusCreated)
 
 	var resp protocol.APIResponse
