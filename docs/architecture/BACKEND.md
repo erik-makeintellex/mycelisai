@@ -269,6 +269,20 @@ Bootstrap, templates, resource registry, and deployment-context routes.
 ### Health
 Readiness, liveness, and dependency health routes.
 
+## Area Contracts
+
+Fixed-key blocks for development agents. Blocks cite the PRD and source; they never restate or override it.
+
+### Area: Work projections
+- PRD: §Information Architecture L321-326, §Outcome Vault L136-137, §API And Event Contracts L277-284 · Scoreboard: Result-first Outcome UI
+- Owned paths: `core/internal/server/work_running*.go`, `core/pkg/protocol/work_running.go` (mycelis-core-execution) · Do-not-touch: `core/internal/server/team_work_store.go`, `core/internal/server/teams_detail.go`, `core/internal/server/auth*.go`
+- Seams: `team_work_store_scan.go:scanTeamWorkItem`, `outcome_projects_store.go:scanOutcomeProject`, `protocol.OutcomeHealthForTeamWork`, `protocol.OutcomeHealthForProject`, `protocol.AggregateOutcomeHealth`, `protocol.IsWorkRunningVisible`, `groups_auth.go:requireRootAdminScope`
+- Invariants: read-only (no writes, events, NATS, or in-memory registry); durable `team_work_items` is the only work source; `archived`/`output_ready` never shown (SQL filter plus `IsWorkRunningVisible`); health only from `protocol.OutcomeHealth*`; one items query plus one `outcome_projects` query, item under the most recently updated non-archived referencing project, archived Outcomes never group work (SQL `status <> 'archived'` plus Go guard); any source failure is `503` naming the source, never a partial list
+- Authority: `GET /api/v1/work/running` -> root admin + `groups:read`, default deny; negatives: anon 401, standard 403, admin without scope 403
+- Proof: `uv run inv core.test --package=./internal/server --run='TestWorkRunning' --race`
+- Pitfalls: `work_item_refs` is JSONB, so match with `?| $1::text[]` and `pq.Array`, not per-item lookups; L2 no GIN index on `work_item_refs`, so the link query scans tenant projects (fine at current scale; add a GIN index via mycelis-schema before it grows); summary counts are Outcome Health, not review counts, so review stays in the Work review panel; UI blocked on U1 — `WorkRunningPanel.tsx`, `useWorkRunning.ts`, and the `panel=running` branch land only after U1 merges to `dev`
+- Verified: 2026-09-25 lead merge gate: TestWorkRunning -race, real-PG query probe (security-qa), docs links, max-lines
+
 ## IX. Governance & Policy Engine
 
 Deploy-owned identity posture is backend-owned: deploy-owned People & Access posture surfaced read-only, and settings PUT ignores/preserves those deploy-owned fields instead of persisting them.
