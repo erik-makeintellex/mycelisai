@@ -54,7 +54,7 @@ func (s *AdminServer) handleIntentNegotiate(w http.ResponseWriter, r *http.Reque
 		blueprint = bp
 	}
 
-	scope := buildScopeFromBlueprint(blueprint)
+	scope := buildScopeFromBlueprintFor(blueprint, userGovernanceProfileFromRequest(r))
 	auditEventID, _ := s.createAuditEvent(
 		protocol.TemplateChatToProposal, "negotiate",
 		fmt.Sprintf("Blueprint negotiation: %s", req.Intent),
@@ -64,7 +64,9 @@ func (s *AdminServer) handleIntentNegotiate(w http.ResponseWriter, r *http.Reque
 	proof, _ := s.createIntentProof(protocol.TemplateChatToProposal, req.Intent, scope, auditEventID)
 	var confirmToken *protocol.ConfirmToken
 	if proof != nil {
-		confirmToken, _ = s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal)
+		confirmToken, _ = s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal, confirmTokenMint{
+			Purpose: tokenPurposeMissionBlueprint, BindingDigest: blueprintDigest(blueprint), MintedBy: auditActorIDFromRequest(r),
+		})
 	}
 
 	templateSpec := protocol.TemplateRegistry[protocol.TemplateChatToProposal]

@@ -1,6 +1,7 @@
 package governance
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -205,17 +206,23 @@ func (g *Guard) UpdatePolicyConfig(cfg *PolicyConfig) {
 	g.Engine.Config = cfg
 }
 
-// ReplacePolicy persists cfg first and swaps it into memory only when persist
-// succeeds, so a failed write leaves the live policy unchanged. Concurrent
-// replacements are serialized so file and memory cannot diverge.
-func (g *Guard) ReplacePolicy(cfg *PolicyConfig, persist func() error) error {
+// ErrAuditUnavailable is returned by a ReplacePolicy apply callback when the
+// requested audit could not be written; nothing is changed.
+var ErrAuditUnavailable = errors.New("governance audit unavailable")
+
+// ReplacePolicy serializes replacements under applyMu. The apply callback
+// receives the live policy snapshot taken under that lock (so previous_digest
+// is never stale, A2b), writes the requested audit and persists the file; the
+// in-memory swap happens only when apply succeeds, so a failure leaves the live
+// policy unchanged and file and memory cannot diverge.
+func (g *Guard) ReplacePolicy(cfg *PolicyConfig, apply func(previous *PolicyConfig) error) error {
 	if cfg == nil {
 		return fmt.Errorf("policy config is required")
 	}
 	g.applyMu.Lock()
 	defer g.applyMu.Unlock()
-	if persist != nil {
-		if err := persist(); err != nil {
+	if apply != nil {
+		if err := apply(g.policySnapshot()); err != nil {
 			return err
 		}
 	}

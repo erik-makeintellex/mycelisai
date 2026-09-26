@@ -4,7 +4,8 @@ from pathlib import Path
 from .db_schema import (
     BASE_SCHEMA_COMPATIBILITY_CHECKS, C2A_SCHEMA_COMPATIBILITY_CHECKS,
     G4_SCHEMA_COMPATIBILITY_CHECKS, ORG_SCHEMA_COMPATIBILITY_CHECKS,
-    SCHEMA_COMPATIBILITY_CHECKS, TEAM_OWNERSHIP_COLUMNS,
+    SCHEMA_COMPATIBILITY_CHECKS, TEAM_OWNERSHIP_COLUMNS, TOKEN_SCHEMA_COMPATIBILITY_CHECKS,
+    CONFIRM_TOKEN_BINDING_COLUMNS,
 )
 
 BEGIN_MARKER = "-- BEGIN G4_E10_EXTENSION"
@@ -15,6 +16,8 @@ ORG_BEGIN_MARKER = "-- BEGIN ORGANIZATIONS_EXTENSION"
 ORG_END_MARKER = "-- END ORGANIZATIONS_EXTENSION"
 ROLE_BEGIN_MARKER = "-- BEGIN ROLE_SEED_RETIREMENT_EXTENSION"
 ROLE_END_MARKER = "-- END ROLE_SEED_RETIREMENT_EXTENSION"
+TOKEN_BEGIN_MARKER = "-- BEGIN CONFIRM_TOKEN_BINDING_EXTENSION"
+TOKEN_END_MARKER = "-- END CONFIRM_TOKEN_BINDING_EXTENSION"
 G4_ABSENT_SQL = (
     "SELECT 1 WHERE to_regclass('public.execution_effect_grants') IS NULL "
     "AND to_regclass('public.execution_effect_grant_state') IS NULL "
@@ -33,6 +36,14 @@ C2A_ABSENT_SQL = (
 ORG_ABSENT_SQL = "SELECT 1 WHERE to_regclass('public.organizations') IS NULL;"
 # The ROLE DELETE only needs the 006 system_config table; it never touches other rows.
 ROLE_TABLE_SQL = "SELECT 1 WHERE to_regclass('public.system_config') IS NOT NULL;"
+_token_columns = ",".join("'" + column + "'" for column in CONFIRM_TOKEN_BINDING_COLUMNS)
+# Any prior binding column or purpose constraint (partial or foreign) is refused.
+TOKEN_ABSENT_SQL = (
+    "SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM information_schema.columns "
+    "WHERE table_schema='public' AND table_name='confirm_tokens' "
+    f"AND column_name IN ({_token_columns})) AND NOT EXISTS (SELECT 1 FROM pg_constraint "
+    "WHERE conrelid=to_regclass('public.confirm_tokens') AND conname='chk_confirm_tokens_purpose');"
+)
 
 
 def extension_sql(path: Path, begin=BEGIN_MARKER, end=END_MARKER) -> str:
@@ -56,7 +67,8 @@ def _extension_blocks(path: Path) -> dict[str, str]:
     """Parse every boundary, in canonical order, before any SQL runs."""
     text = path.read_text(encoding="utf-8")
     markers = (("G4/E10", BEGIN_MARKER, END_MARKER), ("C2a", C2A_BEGIN_MARKER, C2A_END_MARKER),
-               ("ORG", ORG_BEGIN_MARKER, ORG_END_MARKER), ("ROLE", ROLE_BEGIN_MARKER, ROLE_END_MARKER))
+               ("ORG", ORG_BEGIN_MARKER, ORG_END_MARKER), ("ROLE", ROLE_BEGIN_MARKER, ROLE_END_MARKER),
+               ("TOKEN", TOKEN_BEGIN_MARKER, TOKEN_END_MARKER))
     positions = [text.find(marker) for _, begin, end in markers for marker in (begin, end)]
     if -1 in positions or positions != sorted(positions):
         raise SystemExit("Canonical schema has no unique ordered upgrade boundary.")
@@ -65,7 +77,7 @@ def _extension_blocks(path: Path) -> dict[str, str]:
 
 
 def upgrade_retained(path: Path, run_sql) -> bool:
-    """Upgrade pre-G4, G4, C2a or ORG-complete baselines; refuse partial extensions."""
+    """Upgrade pre-G4, G4, C2a, ORG or ROLE-complete baselines; refuse partial extensions."""
     if not _compatible(run_sql, BASE_SCHEMA_COMPATIBILITY_CHECKS):
         return False
     if _compatible(run_sql, SCHEMA_COMPATIBILITY_CHECKS):
@@ -81,12 +93,16 @@ def upgrade_retained(path: Path, run_sql) -> bool:
         return False
     if not _passes(run_sql, ROLE_TABLE_SQL):
         return False
+    token_present = org_present and _compatible(run_sql, TOKEN_SCHEMA_COMPATIBILITY_CHECKS)
+    if not token_present and not _passes(run_sql, TOKEN_ABSENT_SQL):
+        return False
     # Every boundary is validated before any mutation. One transaction covers
     # all missing extensions, so a later failure cannot leave a partial host.
     blocks = _extension_blocks(path)
     # ROLE is an idempotent exact-tuple DELETE, so it always joins the transaction.
     missing = [name for name, present in (("G4/E10", g4_present), ("C2a", c2a_present),
-                                          ("ORG", org_present), ("ROLE", False)) if not present]
+                                          ("ORG", org_present), ("ROLE", False),
+                                          ("TOKEN", token_present)) if not present]
     result = run_sql("BEGIN;\n" + "\n".join(blocks[name] for name in missing) + "COMMIT;\n")
     if result.returncode != 0:
         raise SystemExit("Additive schema upgrade failed; transaction rolled back.")

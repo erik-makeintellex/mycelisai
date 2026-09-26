@@ -150,3 +150,21 @@ SCHEMA_COMPATIBILITY_CHECKS += (
     ("legacy role seeds retired", "SELECT 1 FROM system_config "
      f"WHERE key='{ROLE_SEED_RETIREMENT_MARKER}';"),
 )
+
+# ROLE-complete is the baseline for the bounded CONFIRM_TOKEN_BINDING ALTER transaction.
+ROLE_SCHEMA_COMPATIBILITY_CHECKS = SCHEMA_COMPATIBILITY_CHECKS
+CONFIRM_TOKEN_BINDING_COLUMNS = ("purpose", "binding_digest", "minted_by")
+CONFIRM_TOKEN_PURPOSES = ("chat_action", "mission_blueprint", "group_mutation", "invocation")
+# Nullable, default-free text: legacy rows stay NULL and Core refuses them.
+TOKEN_SCHEMA_COMPATIBILITY_CHECKS = tuple(
+    (f"confirm_tokens {_column} column", "SELECT 1 FROM information_schema.columns WHERE table_schema='public' "
+     f"AND table_name='confirm_tokens' AND column_name='{_column}' AND data_type='text' "
+     "AND is_nullable='YES' AND column_default IS NULL;")
+    for _column in CONFIRM_TOKEN_BINDING_COLUMNS)
+_token_purposes = ", ".join(f"''{p}''::text" for p in CONFIRM_TOKEN_PURPOSES)
+TOKEN_SCHEMA_COMPATIBILITY_CHECKS += (
+    ("confirm_tokens purpose check", "SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.confirm_tokens') "
+     "AND conname='chk_confirm_tokens_purpose' AND contype='c' AND convalidated AND NOT condeferrable "
+     f"AND pg_get_constraintdef(oid)='CHECK (((purpose IS NULL) OR (purpose = ANY (ARRAY[{_token_purposes}]))))';"),
+)
+SCHEMA_COMPATIBILITY_CHECKS += TOKEN_SCHEMA_COMPATIBILITY_CHECKS

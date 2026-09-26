@@ -52,7 +52,9 @@ func capabilityForPlannedTool(name string) string {
 	}
 }
 
-func capabilityRiskForTool(name string, arguments map[string]any) string {
+// argumentToolRisk is the argument-aware risk of a registered tool; callers go
+// through capabilityRiskForTool, which fails closed for unregistered names.
+func argumentToolRisk(name string, arguments map[string]any) string {
 	trimmed := strings.TrimSpace(name)
 	if strings.HasPrefix(trimmed, "mcp:") {
 		return "medium"

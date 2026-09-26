@@ -22,7 +22,7 @@ Approval posture is shaped by:
 - capability risk
 - external data use
 - estimated cost
-- the delivery posture, when work uses a posture Outcome Template: a posture can only add an approval requirement (shown with the reason `outcome_posture`), never lower one, and if the governance policy cannot load, posture-shaped work requires approval. A posture-raised approval can only be confirmed by an admin; other approval reasons (capability risk, cost) are still confirmed by the proposer.
+- the delivery posture, when work uses a posture Outcome Template: a posture can only add an approval requirement (shown with the reason `outcome_posture`), never lower one, and if the governance policy cannot load, posture-shaped work requires approval. A posture-raised approval, a high-risk capability, or an estimated cost above 5.0 needs admin approval: the proposal says so, and only an admin with approval authority can confirm it (an admin may approve their own proposal; that is recorded). Other approvals (external data, medium risk, smaller cost) you confirm yourself.
 
 Current profile inputs include:
 - role
@@ -87,6 +87,10 @@ A governed proposal should show:
 You can then:
 - approve and execute
 - cancel before execution
+
+Only you can confirm your own proposal, unless it needs admin approval, in which case an admin confirms it. A proposal from a council member, and a mission blueprint you commit, follow the same rules as one from Soma: a large mission (more than 10 agents) or one using broadcast or external (MCP) tools needs admin approval. If a proposal expired, or was made before the latest governance update, ask Soma to propose it again. A mission blueprint must be committed exactly as proposed; to change it, negotiate again.
+
+Known gaps until the interface catches up: confirming a negotiated mission blueprint from its chat proposal card now correctly fails (it used to look successful without actually creating a mission) — negotiate the intent again and commit the blueprint from the Workspace canvas instead of the chat card; and the Workspace "Instantiate Swarm" button does not yet send a confirm token, so it is blocked.
 
 The system should preserve causality:
 - proposal first

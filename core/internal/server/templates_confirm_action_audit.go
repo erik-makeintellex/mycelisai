@@ -15,6 +15,7 @@ func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protoco
 		runResult = "started"
 		runMessage = "Execution run started for confirmed chat proposal"
 	}
+	authority := takeConfirmAuthority(proofID, scope)
 	auditID, _ := s.createAuditEvent(
 		protocol.TemplateChatToProposal, "confirm-action",
 		"Chat proposal confirmed and execution record created",
@@ -29,7 +30,9 @@ func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protoco
 			"approval_status":    "confirmed",
 			"intent_proof_id":    proofID,
 			"capability_used":    strings.Join(scope.CapabilityIDs, ","),
-			"approval_authority": confirmApprovalAuthority(scope),
+			"approval_authority": authority.Authority,
+			"approval_tier":      authority.Tier,
+			"self_approved":      authority.SelfApproved,
 		}, actorIdentity),
 	)
 	_, _ = s.createAuditEvent(

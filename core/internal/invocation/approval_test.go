@@ -180,3 +180,32 @@ func TestPGConfirmationRejectsTokenAndBindingDrift(t *testing.T) {
 		}
 	})
 }
+
+// A2b item 5: the invocation mint records purpose and principal; routing uses
+// the durable purpose, and a legacy NULL-purpose invocation token still
+// reaches its own fail-closed Confirm through the proof inference.
+func TestPGInvocationTokenRecordsPurposeAndRoutesLegacy(t *testing.T) {
+	f := newPGFixture(t)
+	proposal, err := f.store.Propose(t.Context(), f.userID, Proposal{GroupID: f.groupID, Counter: "ledger", Budget: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var purpose, mintedBy string
+	var digest sql.NullString
+	if err := f.db.QueryRowContext(t.Context(), `SELECT purpose, binding_digest, minted_by FROM confirm_tokens WHERE token=$1`,
+		proposal.ConfirmToken).Scan(&purpose, &digest, &mintedBy); err != nil {
+		t.Fatal(err)
+	}
+	if purpose != TokenPurpose || mintedBy != f.userID || digest.Valid {
+		t.Fatalf("mint not recorded: purpose=%q minted_by=%q digest=%v", purpose, mintedBy, digest)
+	}
+	for want, statement := range map[bool]string{
+		true:  `UPDATE confirm_tokens SET purpose=NULL WHERE token=$1`,
+		false: `UPDATE confirm_tokens SET purpose='chat_action' WHERE token=$1`,
+	} {
+		f.setState(t, statement, proposal.ConfirmToken)
+		if got, err := f.store.HandlesToken(t.Context(), proposal.ConfirmToken); err != nil || got != want {
+			t.Fatalf("%s: HandlesToken=%v err=%v, want %v", statement, got, err, want)
+		}
+	}
+}

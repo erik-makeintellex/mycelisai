@@ -13,7 +13,7 @@ from tests.test_db_team_ownership_upgrade import SCHEMA, database  # noqa: F401 
 ROLE_BLOCK_SHA256 = "ed1913d106f1f9340f2d96d0df611606b986608f64e780dc49b173e287692cba"
 ROLE_ROWS = "SELECT string_agg(key||'='||value, ',' ORDER BY key) FROM system_config WHERE key LIKE 'role.%';"
 MARKER = db_schema.ROLE_SEED_RETIREMENT_MARKER
-MARKER_CHECK = db_schema.SCHEMA_COMPATIBILITY_CHECKS[-1][1]
+MARKER_CHECK = db_schema.ROLE_SCHEMA_COMPATIBILITY_CHECKS[-1][1]
 MARKER_ROW = f"SELECT value FROM system_config WHERE key='{MARKER}';"
 
 
@@ -33,7 +33,9 @@ def test_role_block_follows_org_and_precedes_the_single_commit():
     role_begin = raw.index(db_upgrade.ROLE_BEGIN_MARKER.encode())
     role_end = raw.index(db_upgrade.ROLE_END_MARKER.encode())
     assert org_end < role_begin < role_end
-    assert raw[role_end:] == db_upgrade.ROLE_END_MARKER.encode() + b"\n\nCOMMIT;\n"
+    # The CONFIRM_TOKEN_BINDING block follows ROLE and owns the single COMMIT tail.
+    assert raw[role_end:].startswith(db_upgrade.ROLE_END_MARKER.encode() + b"\n\n"
+                                     + db_upgrade.TOKEN_BEGIN_MARKER.encode())
     # 013 (ON CONFLICT DO UPDATE) is the last historical role write; the block runs after it.
     assert raw[:role_begin].rindex(b"INSERT INTO system_config") < raw.index(b"-- END SOURCE: core/migrations/013_")
 
@@ -59,7 +61,8 @@ def test_role_block_deletes_only_exact_legacy_seed_tuples_once():
 
 def test_compatibility_check_is_the_one_shot_marker_after_org_snapshot():
     org = db_schema.ORG_SCHEMA_COMPATIBILITY_CHECKS
-    checks = db_schema.SCHEMA_COMPATIBILITY_CHECKS
+    checks = db_schema.ROLE_SCHEMA_COMPATIBILITY_CHECKS
+    assert db_schema.SCHEMA_COMPATIBILITY_CHECKS[:len(checks)] == checks
     assert checks[:len(org)] == org and len(checks) == len(org) + 1
     assert checks[-1][0] == "legacy role seeds retired"
     assert MARKER_CHECK == f"SELECT 1 FROM system_config WHERE key='{MARKER}';"
@@ -147,7 +150,7 @@ def test_real_first_retained_upgrade_removes_seeds_and_sets_marker(database, cap
     assert database(MARKER_ROW).stdout.strip() == ""
     providers = database("SELECT string_agg(id, ',' ORDER BY id) FROM llm_providers;").stdout
     assert db_upgrade.upgrade_retained(SCHEMA, database)
-    assert "upgrade complete (ROLE)" in capsys.readouterr().out
+    assert "upgrade complete (ROLE + TOKEN)" in capsys.readouterr().out
     assert database(ROLE_ROWS).stdout.strip() == ""
     assert database(MARKER_ROW).stdout.strip() == "1"
     assert database("SELECT value FROM system_config WHERE key='ui.theme';").stdout.strip() == "dark"
@@ -209,7 +212,7 @@ def test_real_compose_migrate_retires_seeds_on_org_complete_stack(database, monk
     monkeypatch.setattr(compose, "_run_compose_migration_file",
                         lambda *_: pytest.fail("compose.migrate replayed the installer on retained data"))
     compose._run_compose_migrations()
-    assert "Retained-schema upgrade complete (ROLE)" in capsys.readouterr().out
+    assert "Retained-schema upgrade complete (ROLE + TOKEN)" in capsys.readouterr().out
     assert database(ROLE_ROWS).stdout.strip() == ""
     compose._run_compose_migrations()
     assert "already appears compatible" in capsys.readouterr().out

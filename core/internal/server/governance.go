@@ -71,7 +71,7 @@ func (s *AdminServer) handleUpdatePolicy(w http.ResponseWriter, r *http.Request)
 		respondAPIError(w, "policy could not be encoded", http.StatusBadRequest)
 		return
 	}
-	_, previousDigest, _ := canonicalPolicy(s.Guard.GetPolicyConfig())
+	var previousDigest, auditID string // set under applyMu (A2b item 4)
 	auditCtx := func(status string) map[string]any {
 		return map[string]any{
 			"action":              "governance_policy_update",
@@ -82,12 +82,18 @@ func (s *AdminServer) handleUpdatePolicy(w http.ResponseWriter, r *http.Request)
 			"result_status":       status,
 		}
 	}
-	auditID := s.auditGovernance(r, "governance-policy", "Governance policy update requested", auditCtx("requested"))
-	if auditID == "" {
+	err = s.Guard.ReplacePolicy(&cfg, func(previous *governance.PolicyConfig) error {
+		_, previousDigest, _ = canonicalPolicy(previous)
+		if auditID = s.auditGovernance(r, "governance-policy", "Governance policy update requested", auditCtx("requested")); auditID == "" {
+			return governance.ErrAuditUnavailable
+		}
+		return writePolicyFileAtomic(defaultPolicyPath, data)
+	})
+	if errors.Is(err, governance.ErrAuditUnavailable) {
 		respondGovernanceError(w, http.StatusServiceUnavailable, "Audit is unavailable; the policy was not changed", governanceAuditUnavailableCode, "Restore the audit store and retry")
 		return
 	}
-	if err := s.Guard.ReplacePolicy(&cfg, func() error { return writePolicyFileAtomic(defaultPolicyPath, data) }); err != nil {
+	if err != nil {
 		log.Printf("governance: policy persist failed; live policy unchanged: %v", err)
 		s.auditGovernance(r, "governance-policy", "Governance policy update failed", auditCtx("failed"))
 		respondAPIError(w, "policy could not be persisted; the live policy was not changed", http.StatusInternalServerError)
