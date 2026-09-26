@@ -1,0 +1,56 @@
+apiVersion: mycelis.ai/v1
+kind: OutcomeTemplate
+metadata:
+  id: delivery-posture-governed-enterprise
+  name: Governed Enterprise
+  version: "1.0.0"
+  owner_id: mycelis
+  scope:
+    kind: built_in
+  enabled: true
+  source:
+    kind: built_in
+    ref: core/config/documents/templates/delivery-posture-governed-enterprise.yaml
+  governance:
+    risk_level: low
+    approval_posture: required
+spec:
+  intent_kind: governed_enterprise
+  defaults:
+    target_outcome: A reviewed proposal with an attached evidence pack, never a direct mutation.
+    audience: The compliance reviewer and the approving operator.
+    essential_behavior:
+      - Produce every change as a proposal, never as a direct action.
+      - Attach an evidence pack and a compliance review note to each proposal.
+  field_rules:
+    - field: acceptance_evidence
+      unresolved_as: must_ask
+      question: What evidence must the reviewer see attached to the proposal (logs, test results, a source citation)?
+      impact: 4
+    - field: constraints
+      unresolved_as: must_ask
+      question: Are there compliance or data-boundary constraints this work must respect, such as local-only engines?
+      impact: 3
+    - field: quality_bar
+      unresolved_as: must_ask
+      question: What quality bar must the reviewer confirm before this can be approved?
+      impact: 2
+    - field: target_outcome
+      unresolved_as: can_infer
+    - field: audience
+      unresolved_as: can_infer
+    - field: essential_behavior
+      unresolved_as: can_infer
+    - field: delivery_form
+      unresolved_as: can_defer
+  question_limit: 4
+  output_contract:
+    shape: evidence_pack
+    primary_deliverable: A reviewed proposal package with its evidence pack and compliance review note.
+    retention: Retain the proposal, the evidence pack, and the compliance review note together, in full.
+    validation:
+      - A compliance review note is attached before the proposal reaches the approving operator.
+      - Stated constraints, including any local-only engine requirement, are recorded against the proposal as advisory context for provider policy; this template does not itself enforce provider selection.
+    acceptance_criteria:
+      - The evidence pack supports every claim in the proposal.
+      - The compliance review note is retained alongside the proposal, not summarized away.
