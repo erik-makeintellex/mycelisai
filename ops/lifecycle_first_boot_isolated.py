@@ -17,7 +17,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import ROOT_DIR, docker_command, docker_host_path
-from .db_schema import SCHEMA_COMPATIBILITY_CHECKS
+from .lifecycle_first_boot_readiness import (
+    redact,
+    retry_transient,
+    secret_values,
+    wait_for_isolated_postgres_ready,
+)
+from .lifecycle_first_boot_state import assert_empty_user_state, assert_nats_empty, assert_schema_compatible, count_tables
 
 
 COMPOSE_SOURCE = ROOT_DIR / "docker-compose.yml"
@@ -176,8 +182,8 @@ def _compose(fixture: Fixture, *args: str, check: bool = True) -> subprocess.Com
     )
     result = subprocess.run(command, cwd=ROOT_DIR, env=_compose_environment(fixture), capture_output=True, text=True)
     if check and result.returncode != 0:
-        # Compose output can contain interpolation values; never print it here.
-        raise SystemExit(f"Isolated Compose {args[0]} failed for {fixture.project}; fixture retained at {fixture.root}.")
+        detail = redact(result.stderr.strip() or result.stdout.strip(), secret_values(fixture.environment))
+        raise SystemExit(f"Isolated Compose {args[0]} failed for {fixture.project}: {detail or '(no output captured)'}")
     return result
 
 
@@ -202,62 +208,15 @@ def _http_ok(url: str, *, api_key: str = "") -> bool:
         return response.status == 200
 
 
-def _postgres_ready(fixture: Fixture) -> bool:
-    result = _compose(fixture, "exec", "-T", "postgres", "pg_isready", "-U", "mycelis", "-d", "cortex", check=False)
-    return result.returncode == 0
+def _psql_exec(fixture: Fixture, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    return _compose(
+        fixture, "exec", "-T", "postgres", "psql", "-X", "-A", "-t",
+        "-v", "ON_ERROR_STOP=1", "-U", "mycelis", "-d", "cortex", *args, check=check,
+    )
 
 
 def _psql(fixture: Fixture, *args: str) -> str:
-    result = _compose(
-        fixture, "exec", "-T", "postgres", "psql", "-X", "-A", "-t",
-        "-v", "ON_ERROR_STOP=1", "-U", "mycelis", "-d", "cortex", *args,
-    )
-    return result.stdout.strip()
-
-
-def _count_tables(fixture: Fixture, tables: tuple[str, ...]) -> dict[str, int]:
-    names = tuple(dict.fromkeys(tables))
-    if not names or any(re.fullmatch(r"[a-z][a-z0-9_]*", name) is None for name in names):
-        raise SystemExit("Invalid first-boot table-count contract.")
-    sql = " UNION ALL ".join(f"SELECT '{name}', COUNT(*)::bigint FROM {name}" for name in names) + " ORDER BY 1;"
-    counts: dict[str, int] = {}
-    for line in _psql(fixture, "-c", sql).splitlines():
-        name, separator, value = line.partition("|")
-        if separator and value.isdecimal():
-            counts[name] = int(value)
-    if set(counts) != set(names):
-        raise SystemExit("Isolated first-boot proof did not receive every table count.")
-    return counts
-
-
-def _invocation_tables(fixture: Fixture) -> tuple[str, ...]:
-    sql = "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE '%invocation%' ORDER BY table_name;"
-    return tuple(name for name in _psql(fixture, "-c", sql).splitlines() if re.fullmatch(r"[a-z][a-z0-9_]*", name))
-
-
-def _assert_schema_compatible(fixture: Fixture) -> None:
-    for label, sql in SCHEMA_COMPATIBILITY_CHECKS:
-        if _psql(fixture, "-c", sql).strip() != "1":
-            raise SystemExit(f"Isolated first-boot schema compatibility failed: {label}.")
-    print("  [OK] Canonical schema compatibility")
-
-
-def _assert_empty_user_state(fixture: Fixture, tables: tuple[str, ...], label: str) -> None:
-    counts = _count_tables(fixture, tables + _invocation_tables(fixture))
-    dirty = {name: count for name, count in counts.items() if count}
-    if dirty:
-        raise SystemExit(f"Isolated first-boot {label} created user state: {dirty}.")
-    print(f"  [OK] Empty user state after {label}")
-
-
-def _assert_nats_empty(fixture: Fixture) -> None:
-    port = fixture.ports["MYCELIS_COMPOSE_NATS_MONITOR_PORT"]
-    url = f"http://127.0.0.1:{port}/jsz?streams=1"
-    with urllib.request.urlopen(url, timeout=5) as response:
-        payload = json.load(response)
-    if response.status != 200 or int(payload.get("streams", 0)) or int(payload.get("messages", 0)):
-        raise SystemExit("Isolated first-boot NATS retained streams or messages.")
-    print("  [OK] Empty fixture JetStream")
+    return _psql_exec(fixture, *args).stdout.strip()
 
 
 def _assert_http_ready(fixture: Fixture) -> None:
@@ -271,14 +230,29 @@ def _assert_http_ready(fixture: Fixture) -> None:
 
 def _run_proof(fixture: Fixture, build: bool, user_tables: tuple[str, ...], bootstrap_tables: tuple[str, ...]) -> None:
     _compose(fixture, "up", "-d", "postgres", "nats")
-    _wait_until("fixture PostgreSQL", lambda: _postgres_ready(fixture))
+    fixture_secrets = secret_values(fixture.environment)
+    # Postgres briefly stops/restarts internally after its own init phase; a lone
+    # pg_isready can see that temporary server, so require a real SELECT 1 and
+    # retry only transient exec failures on the schema-install exec after it.
+    wait_for_isolated_postgres_ready(
+        pg_isready=lambda: _compose(fixture, "exec", "-T", "postgres", "pg_isready", "-U", "mycelis", "-d", "cortex", check=False),
+        select_one=lambda: _psql_exec(fixture, "-c", "SELECT 1", check=False),
+        secrets=fixture_secrets,
+    )
+    print("  [OK] fixture PostgreSQL")
     _wait_until("fixture NATS monitor", lambda: _http_ok(
         f"http://127.0.0.1:{fixture.ports['MYCELIS_COMPOSE_NATS_MONITOR_PORT']}/healthz"
     ))
-    _psql(fixture, "-f", "/migrations/001_current_schema.sql")
-    _assert_schema_compatible(fixture)
-    _assert_empty_user_state(fixture, user_tables, "schema install")
-    _assert_nats_empty(fixture)
+    retry_transient(
+        "Isolated first-boot schema install",
+        lambda: _psql_exec(fixture, "-f", "/migrations/001_current_schema.sql", check=False),
+        secrets=fixture_secrets,
+    )
+    psql = lambda *a: _psql(fixture, *a)  # noqa: E731 - bound runner for the state-assertion module
+    nats_port = fixture.ports["MYCELIS_COMPOSE_NATS_MONITOR_PORT"]
+    assert_schema_compatible(psql)
+    assert_empty_user_state(psql, user_tables, "schema install")
+    assert_nats_empty(nats_port)
 
     if (fixture.root / "framework-runs.yml").exists():
         from .lifecycle_first_boot_framework import prepare_framework_fixture
@@ -289,16 +263,16 @@ def _run_proof(fixture: Fixture, build: bool, user_tables: tuple[str, ...], boot
         _compose(fixture, "build", "core", "interface")
     _compose(fixture, "up", "-d", "--no-build", "core", "interface")
     _assert_http_ready(fixture)
-    _assert_empty_user_state(fixture, user_tables, "first boot")
-    first_bootstrap = _count_tables(fixture, bootstrap_tables)
-    _assert_nats_empty(fixture)
+    assert_empty_user_state(psql, user_tables, "first boot")
+    first_bootstrap = count_tables(psql, bootstrap_tables)
+    assert_nats_empty(nats_port)
 
     _compose(fixture, "restart", "core", "interface")
     _assert_http_ready(fixture)
-    _assert_empty_user_state(fixture, user_tables, "restart")
-    if _count_tables(fixture, bootstrap_tables) != first_bootstrap:
+    assert_empty_user_state(psql, user_tables, "restart")
+    if count_tables(psql, bootstrap_tables) != first_bootstrap:
         raise SystemExit("Isolated first-boot bootstrap row counts changed after restart.")
-    _assert_nats_empty(fixture)
+    assert_nats_empty(nats_port)
     print("ISOLATED CLEAN FIRST-BOOT CHECKS PASSED; cleaning fixture...")
 
 
