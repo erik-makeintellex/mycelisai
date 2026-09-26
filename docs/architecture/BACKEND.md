@@ -338,3 +338,17 @@ Startup resolves config, policy, bootstrap bundles, DB, NATS, providers, MCP pos
 ### Graceful Shutdown
 
 Shutdown should stop HTTP, streams, NATS consumers, background workers, and local service resources cleanly. Use `uv run inv lifecycle.down` or the matching runtime task for operator control.
+
+## Area Contracts
+
+Fixed-key blocks for development agents. Blocks cite the PRD and source; they never restate or override it.
+
+### Area: Model routing
+- PRD: §Projects Teams And Capability Use L155 (model gateways are transport, Core owns provider eligibility/routing) · Scoreboard: root model provider
+- Owned paths: `core/internal/cognitive/root_provider.go`, `core/internal/cognitive/root_provider_test.go` (mycelis-ai-runtime) · Do-not-touch: `core/internal/cognitive/router.go`, `types.go`, `env_overrides.go` except the `RootProvider` fields/branches already wired
+- Seams: `BrainConfig.RootProvider`, `defaultExecutionProfiles`, `validateRootProvider`, `applyRootProviderDefaults`, `NewRouter`, `server/cognitive_status_config.go` root reporting, `ops/cognitive_root.py`
+- Invariants: an explicit `Profiles[profile]` binding (`cognitive.yaml`, DB `system_config` overlay, or `MYCELIS_PROFILE_<NAME>_PROVIDER`) always wins over `RootProvider`; an unset `RootProvider` changes nothing (today's per-profile-only behavior); `RootProvider` assigns exactly one provider outright rather than a fallback list, so it never enters the `profile_fallbacks` cross-boundary partition check, which still governs only actual `profile_fallbacks` entries; a `RootProvider` naming an unconfigured or disabled provider fails `NewRouter` closed (`invalid cognitive config: root_provider ...`), never a silent skip
+- Authority: none added; root selection is startup config, not a request-scoped authorization decision
+- Proof: `go -C core test ./internal/cognitive/... ./internal/server/...`; `uv run --no-sync pytest tests/test_cognitive_root.py -q`; `uv run inv cognitive.status`
+- Pitfalls: the GPU serving the hosted variant's root vLLM is shared with dev tooling's own local vLLM use, so concurrent heavy calls contend; the Playwright assertion that a running Core's reported `root_provider` matches configuration is not implemented yet (pending); a pre-existing issue — `tests/test_framework_worker_chart.py` and `tests/test_litellm_config_contract.py` import `yaml` and fail under a bare `pytest` invocation without the project's dependency environment
+- Verified: 2026-09-25 lead merge gate: go test ./internal/cognitive/... ./internal/server/..., core.test, cognitive pytest, docs links, max-lines

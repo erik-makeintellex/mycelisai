@@ -92,3 +92,30 @@ def test_status_requires_explicit_litellm_mode_for_gateway_options():
             Context(),
             litellm_endpoint="https://gateway.example.test/v1",
         )
+
+
+def test_status_prints_root_provider_before_windows_gate(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(cognitive, "is_windows", lambda: True)
+    monkeypatch.setattr(cognitive.cognitive_root, "ROOT_DIR", tmp_path)
+    config_dir = tmp_path / "core" / "config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "cognitive.yaml").write_text(
+        """
+root_provider: vllm
+providers:
+  vllm:
+    type: openai_compatible
+    endpoint: http://host.docker.internal:8000/v1
+    model_id: Qwen/Qwen2.5-Coder-14B-Instruct-AWQ
+    enabled: true
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(Exit, match="not supported on Windows hosts"):
+        cognitive.status.body(Context())
+
+    out = capsys.readouterr().out
+    assert "Root Provider" in out
+    assert "vllm" in out
+    assert "Qwen/Qwen2.5-Coder-14B-Instruct-AWQ" in out
