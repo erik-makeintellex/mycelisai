@@ -277,10 +277,17 @@ def validate_code_context_host_root(env_values: dict[str, str]):
         entries = list(host_root.iterdir())
     except OSError:
         entries = []
-    if any(entry.name.startswith(".env") and entry.is_file() for entry in entries):
+    template_suffixes = (".example", ".sample", ".template")
+    if any(
+        entry.is_file()
+        and entry.name.startswith(".env")
+        and not entry.name.endswith(template_suffixes)
+        for entry in entries
+    ):
         raise SystemExit(
-            "Invalid .env.compose MYCELIS_CODE_CONTEXT_HOST_ROOT: that directory has a .env* file at its "
-            "root. Point this at a dedicated worktree with no secrets, never a checkout that holds .env."
+            "Invalid .env.compose MYCELIS_CODE_CONTEXT_HOST_ROOT: that directory has a real .env* file "
+            "(not a .example/.sample/.template) at its root. Point this at a dedicated worktree with no "
+            "secrets, never a checkout that holds .env."
         )
 
 
