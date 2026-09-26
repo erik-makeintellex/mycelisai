@@ -107,50 +107,6 @@ func (s *AdminServer) generateConfirmToken(proofID string, templateID protocol.T
 	}, nil
 }
 
-// validateConfirmToken checks that a token exists, is not consumed, and not expired.
-// Returns the intent proof ID on success. Marks the token as consumed atomically.
-func (s *AdminServer) validateConfirmToken(token string) (string, error) {
-	db := s.getDB()
-	if db == nil {
-		return "", errDBUnavailable
-	}
-
-	tokenUUID, err := uuid.Parse(token)
-	if err != nil {
-		return "", errInvalidToken
-	}
-
-	var proofID string
-	var consumed bool
-	var expiresAt time.Time
-
-	err = db.QueryRow(
-		`SELECT intent_proof_id, consumed, expires_at FROM confirm_tokens WHERE token = $1`,
-		tokenUUID,
-	).Scan(&proofID, &consumed, &expiresAt)
-	if err != nil {
-		return "", errTokenNotFound
-	}
-
-	if consumed {
-		return "", errTokenConsumed
-	}
-	if time.Now().After(expiresAt) {
-		return "", errTokenExpired
-	}
-
-	_, err = db.Exec(
-		`UPDATE confirm_tokens SET consumed = TRUE, consumed_at = $1 WHERE token = $2 AND consumed = FALSE`,
-		time.Now(), tokenUUID,
-	)
-	if err != nil {
-		log.Printf("CE-1: confirm token consume failed: %v", err)
-		return "", err
-	}
-
-	return proofID, nil
-}
-
 // confirmIntentProof updates a proof's status to confirmed after successful commit.
 func (s *AdminServer) confirmIntentProof(proofID, missionID string) {
 	db := s.getDB()
@@ -199,18 +155,23 @@ func (s *AdminServer) consumeConfirmTokenTx(tx *sql.Tx, token string) (string, e
 		return "", err
 	}
 	if consumed {
-		return "", errTokenConsumed
+		return "", errTokenAlreadyUsed
 	}
 	if time.Now().After(expiresAt) {
 		return "", errTokenExpired
 	}
 
-	_, err = tx.Exec(
+	result, err := tx.Exec(
 		`UPDATE confirm_tokens SET consumed = TRUE, consumed_at = $1 WHERE token = $2 AND consumed = FALSE`,
 		time.Now(), tokenUUID,
 	)
 	if err != nil {
 		return "", err
+	}
+	// Two concurrent confirms can both read consumed=false; only the one whose
+	// update wins may execute (A2a C3).
+	if n, err := result.RowsAffected(); err != nil || n != 1 {
+		return "", errTokenAlreadyUsed
 	}
 
 	return proofID, nil

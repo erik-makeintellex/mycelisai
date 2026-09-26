@@ -26,7 +26,7 @@ func TestValidatePolicyConfigRejectsNonStricterPostureGroups(t *testing.T) {
 	}
 	for name, group := range cases {
 		t.Run(name, func(t *testing.T) {
-			cfg := &PolicyConfig{Groups: []PolicyGroup{group}, Defaults: DefaultConfig{DefaultAction: ActionAllow}}
+			cfg := &PolicyConfig{Groups: []PolicyGroup{group}, Defaults: DefaultConfig{DefaultAction: ActionDeny}}
 			if err := ValidatePolicyConfig(cfg); err == nil {
 				t.Fatalf("posture group %q accepted", name)
 			}

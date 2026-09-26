@@ -229,7 +229,7 @@ Configuration sources:
 - `cognitive/config/engine.yaml`: cognitive-engine shape and framework-neutral worker-runtime defaults
 - `core/config/cognitive.yaml`: provider profiles/routing
 - `core/config/homepage.yaml`: deployer branding/portal copy retained for authenticated entry surfaces
-- `core/config/policy.yaml`: governance
+- `core/config/policy.yaml`: governance; if missing or invalid, Core starts with governance `degraded` (fail-closed, shown in `/api/v1/services/status`): fix the file and restart, or admin `PUT /api/v1/governance/policy` to recover
 - `core/config/templates/*.yaml`: bootstrap bundles/templates
 - `core/config/teams/*.yaml`: standing team and legacy migration inputs
 - Helm values files: cluster deployment shape

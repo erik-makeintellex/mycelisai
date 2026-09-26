@@ -22,7 +22,7 @@ Approval posture is shaped by:
 - capability risk
 - external data use
 - estimated cost
-- the delivery posture, when work uses a posture Outcome Template: a posture can only add an approval requirement (shown with the reason `outcome_posture`), never lower one, and if the governance policy cannot load, posture-shaped work requires approval. Approval is not yet tied to a specific approver role.
+- the delivery posture, when work uses a posture Outcome Template: a posture can only add an approval requirement (shown with the reason `outcome_posture`), never lower one, and if the governance policy cannot load, posture-shaped work requires approval. A posture-raised approval can only be confirmed by an admin; other approval reasons (capability risk, cost) are still confirmed by the proposer.
 
 Current profile inputs include:
 - role
@@ -113,6 +113,7 @@ What exists now:
 - user-level governance profile
 - base audit trail and inspect-only activity view
 - a reviewable People & Access model that shows the layered product story for self-hosted release, self-hosted enterprise, and hosted admin control plane, plus identity posture and who controls shared Soma output specificity; that edition/auth posture is deploy-owned review state, not an ordinary user preference
+- posture-raised approvals require an admin to confirm: a non-admin who tries sees a clear "needs admin approval" blocker, nothing runs, and the proposal stays valid for an admin to confirm later
 
 What is still future work:
 - full multi-user IAM with SAML/OIDC federation, optional lifecycle sync, delegated enterprise admin flows, and hosted management-plane layering

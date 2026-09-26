@@ -128,7 +128,7 @@ func TestUpdatePolicyRejectsNonStricterPostureGroups(t *testing.T) {
 		`{"groups":[{"name":"p","targets":["posture:x-posture"],"rules":[{"intent":"^.*$","condition":"amount > 1","action":"REQUIRE_APPROVAL"}]}],"defaults":{"default_action":"ALLOW"}}`,
 		`{"groups":[{"name":"p","targets":["posture:x-posture","team:admin-core"],"rules":[{"intent":"^.*$","action":"REQUIRE_APPROVAL"}]}],"defaults":{"default_action":"ALLOW"}}`,
 	} {
-		rr := doRequest(t, http.HandlerFunc(s.handleUpdatePolicy), "PUT", "/api/v1/governance/policy", body)
+		rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleUpdatePolicy), "PUT", "/api/v1/governance/policy", body)
 		assertStatus(t, rr, http.StatusBadRequest)
 	}
 	if got := s.Guard.GetPolicyConfig(); len(got.Groups) != 1 || got.Groups[0].Name != "test-group" {

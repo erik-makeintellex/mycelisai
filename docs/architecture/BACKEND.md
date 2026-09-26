@@ -295,15 +295,15 @@ Fixed-key blocks for development agents. Blocks cite the PRD and source; they ne
 - Pitfalls: the bundle loader FATALs on any stray file under `core/config/templates/`; a DB error during seeding stops Core (fail closed), and with the DB unavailable at startup, files are still validated and seeding is skipped with a WARN; Core refuses to start if any built-in row was not created by `system:bootstrap` (run the read-only precheck before redeploying a retained stack); changing a seeded file without bumping `metadata.version` is fatal; removing a file leaves its last activation (no deactivate action); an architecture test fails if `SeedBuiltInRevisions` is referenced outside `configdocuments` and `cmd/server`
 - Verified: 2026-09-25 lead merge gate: isolated first boot, TestSeedBuiltInRevisionsRealDB (real PG), security-qa GO, core.test, docs links, max-lines
 
-### Area: Governance posture approvals
-- PRD: §Bounded Discovery And Outcome Templates L100, L102, L169 · Scoreboard: P0.3a
-- Owned paths: `core/internal/governance/{policy,policy_posture}.go`, `core/internal/server/action_governance_posture.go`, `core/config/policy.yaml` + `charts/mycelis-core/config/policy.yaml` (identical pair) (mycelis-core-authority, S3b lease) · Do-not-touch: `buildApprovalPolicy` thresholds, `cognitive_council.go`
-- Seams: `governance.ValidatePolicyConfig`, `Engine.PostureRequiresApproval`, `Guard.PostureRequiresApproval`, `applyPostureApprovalFloor` (called once in `cognitive_chat_handler.go` right after `applyThreadOutcomeTemplateOrRespond`), `handleUpdatePolicy`
-- Invariants: `posture:<outcome-template-id>` groups hold only posture targets, only `REQUIRE_APPROVAL`, no condition, and an anchored `^...$` intent over planned tool names and capability ids (load and PUT reject anything else); the floor is monotone (it only sets `required`/`outcome_posture` and keeps an existing required reason); the posture id comes only from the server-compiled `WorkIntent.OutcomeTemplateSnapshot`; a nil guard makes posture-scoped work approval-required; NATS `Evaluate` is unchanged
-- Authority: `PUT /api/v1/governance/policy` -> 400 on an invalid posture group; approval `required` is not role-gated yet (`future_role_gate`, A2)
-- Proof: `uv run inv core.test --package=./internal/governance`; `uv run inv core.test --package=./internal/server --run='Posture|Governance'`; `uv run pytest tests/test_k8s_config_parity.py -q`
-- Pitfalls: a policy load failure is fail-open for NATS Gatekeeper (`loadGovernanceGuard`), fail-closed only for posture-scoped Soma work; `PUT /api/v1/governance/policy` has no in-handler root-admin scope check (A1/A2 follow-up); a posture floor applies only when a thread explicitly uses that template id, so a re-scoped copy with a new id carries no posture group
-- Verified: 2026-09-25 lead merge gate: isolated first boot, TestSeedBuiltInRevisionsRealDB (real PG), security-qa GO, core.test, docs links, max-lines
+### Area: Governance authority
+- PRD: §Bounded Discovery And Outcome Templates L100, L102, L169; Core authority L155, L223 · Scoreboard: P0.3a, A2
+- Owned paths: `core/internal/governance/{guard,guard_degraded,policy,policy_posture}.go`, `core/internal/router/router.go` (Gatekeeper branch), `core/internal/server/governance*.go`, `core/internal/server/action_governance_posture.go`, `core/config/policy.yaml` + `charts/mycelis-core/config/policy.yaml` (identical pair) (mycelis-core-authority) · Do-not-touch: `buildApprovalPolicy` thresholds, `cognitive_council.go`, `auth.go`, `admin_routes.go`
+- Seams: `governance.ValidatePolicyConfig`, `governance.NewDegradedGuard`, `Guard.Degraded`, `Guard.ReplacePolicy`, `Guard.PostureRequiresApproval`, `applyPostureApprovalFloor` (called once in `cognitive_chat_handler.go`), `handleUpdatePolicy`, `resolveGuardApproval`, `requireApprover`, `confirmerMayApprove` (in `prepareConfirmedAction` before any effect), `withRoleGateStep`, `loadGovernanceGuardFrom`
+- Invariants: `ValidatePolicyConfig` (load and PUT) requires exact `ALLOW`/`DENY`/`REQUIRE_APPROVAL` actions and rejects empty or allow-only policies, and Intercept denies unknown actions; posture groups hold only posture targets, `REQUIRE_APPROVAL`, no condition, anchored intent; the floor is monotone; confirm tokens are purpose-bound (`consumeConfirmTokenFor`, wrong kind not consumed) and single-winner (`RowsAffected`==1, else 409); `loadGovernanceGuard` never returns nil (load failure = degraded guard: Gatekeeper denies all but heartbeats, posture work requires approval, services row `governance: degraded`); policy PUT and approval decisions are audit-first (no audit id -> 503, no change) and a PUT writes the file atomically before swapping memory; policy reads use a snapshot under the guard lock
+- Authority: governance routes need root admin + `governance:read` / `governance:write` / `approvals:decide`, and so does confirm-action for policy-raised approvals (`confirmerMayApprove`, blocker `approver_required`; rows in `docs/API_REFERENCE.md`); negatives: anon 401, standard 403, admin without the scope 403
+- Proof: `uv run inv core.test --package=./internal/governance --race`; `uv run inv core.test --package=./internal/router --race`; `uv run inv core.test --package=./internal/server --run='Governance|Approval|Posture|ServicesStatus' --race`; `uv run pytest tests/test_k8s_config_parity.py -q`
+- Pitfalls: the Gatekeeper is an observer: DENY stops Core's reaction, not NATS delivery; PUT persists to the in-container policy file, so a redeploy restores the shipped policy; confirm tokens are not principal-bound and capability-risk/cost approvals are proposer-confirmable (A2b); a posture floor applies only to that exact template id
+- Verified: pending A2a merge commit
 
 ### Area: Work projections
 - PRD: §Information Architecture L321-326, §Outcome Vault L136-137, §API And Event Contracts L277-284 · Scoreboard: Result-first Outcome UI
@@ -351,7 +351,7 @@ Deploy-owned identity posture is backend-owned: deploy-owned People & Access pos
 
 ### Guard - `governance/guard.go`
 
-The guard decides whether an action is allowed, blocked, or requires proposal/approval. It must be deterministic and auditable.
+The guard decides whether an action is allowed, blocked, or requires proposal/approval. It must be deterministic and auditable, and it fails closed: with no loaded policy it runs degraded (see Area: Governance authority).
 
 ### Default Rules (`core/config/policy.yaml`)
 
