@@ -9,6 +9,8 @@ A Workspace is the user-owned operating context in which you talk with Soma and 
 
 The default authenticated route is the Soma workspace at `/dashboard`.
 
+AI Organization homes created from a starter or an empty start are saved in the Mycelis database, so they survive a Core restart or redeploy together with their AI Engine, Response Style, and output-model routing choices. For now, only a root admin can create an AI Organization or change those settings; other signed-in users can still open and use existing ones. If the database is unreachable, organization pages show a storage-unavailable error instead of an empty list; see [System Status & Recovery](system-status-recovery.md).
+
 ## Outcome
 
 An Outcome is the durable product object created when meaningful work begins. It owns:

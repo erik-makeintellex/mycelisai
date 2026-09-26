@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -9,18 +11,29 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+// organizationsWriteScope gates organization create/update to root admin until
+// the A2 route-scope matrix supersedes it (owner decision, S1).
+const organizationsWriteScope = "organizations:write"
+
 func (s *AdminServer) handleListOrganizations(w http.ResponseWriter, r *http.Request) {
-	summaries := s.organizationStore().List()
+	summaries, err := s.organizationStore().List(r.Context())
+	if err != nil {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(summaries))
 }
 
-func (s *AdminServer) emitReviewLoopEvent(orgID string, eventKind ReviewLoopEventKind) {
-	if _, err := s.triggerReviewLoopsForEvent(orgID, eventKind); err != nil {
+func (s *AdminServer) emitReviewLoopEvent(ctx context.Context, orgID string, eventKind ReviewLoopEventKind) {
+	if _, err := s.triggerReviewLoopsForEvent(ctx, orgID, eventKind); err != nil {
 		log.Printf("[review-loop-event] organization=%s event=%s skipped error=%v", orgID, eventKind, err)
 	}
 }
 
 func (s *AdminServer) handleCreateOrganization(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, organizationsWriteScope); !ok {
+		return
+	}
 	var req OrganizationCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondAPIError(w, "invalid organization create request", http.StatusBadRequest)
@@ -68,15 +81,23 @@ func (s *AdminServer) handleCreateOrganization(w http.ResponseWriter, r *http.Re
 		if err := s.claimQAFixtureResourcesLocked(r.Context(), fixtureScopeID, []qaFixtureResource{{Kind: "organization", Ref: home.ID}}); err != nil {
 			return err
 		}
-		home = s.organizationStore().Save(home)
+		saved, err := s.organizationStore().Save(r.Context(), home)
+		if err != nil {
+			return err
+		}
+		home = saved
 		return nil
 	})
+	if errors.Is(err, ErrOrganizationConflict) || errors.Is(err, ErrOrganizationStoreUnavailable) {
+		respondOrganizationStoreError(w, err)
+		return
+	}
 	if err != nil {
 		respondAPIError(w, "Failed to bind organization cleanup ownership", http.StatusServiceUnavailable)
 		return
 	}
 	s.loopProfileStore().EnsureDefaults(home)
-	s.emitReviewLoopEvent(home.ID, ReviewLoopEventOrganizationCreated)
+	s.emitReviewLoopEvent(r.Context(), home.ID, ReviewLoopEventOrganizationCreated)
 	respondAPIJSON(w, http.StatusCreated, protocol.NewAPISuccess(home))
 }
 
@@ -87,9 +108,8 @@ func (s *AdminServer) handleGetOrganizationHome(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	home, ok := s.organizationStore().Get(id)
+	home, ok := s.loadOrganizationForRequest(w, r, id)
 	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
 	}
 
@@ -97,6 +117,9 @@ func (s *AdminServer) handleGetOrganizationHome(w http.ResponseWriter, r *http.R
 }
 
 func (s *AdminServer) handleUpdateOrganizationAIEngine(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, organizationsWriteScope); !ok {
+		return
+	}
 	id := strings.TrimSpace(r.PathValue("id"))
 	if id == "" {
 		respondAPIError(w, "organization id is required", http.StatusBadRequest)
@@ -115,21 +138,24 @@ func (s *AdminServer) handleUpdateOrganizationAIEngine(w http.ResponseWriter, r 
 		return
 	}
 
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, err := s.organizationStore().Update(r.Context(), id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home.AIEngineProfileID = string(profile.ID)
 		home.AIEngineSettingsSummary = profile.Summary
 		return normalizeOrganizationHome(home)
 	})
-	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
+	if err != nil {
+		respondOrganizationStoreError(w, err)
 		return
 	}
 
-	s.emitReviewLoopEvent(updated.ID, ReviewLoopEventOrganizationAIEngineChanged)
+	s.emitReviewLoopEvent(r.Context(), updated.ID, ReviewLoopEventOrganizationAIEngineChanged)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
 }
 
 func (s *AdminServer) handleUpdateResponseContract(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, organizationsWriteScope); !ok {
+		return
+	}
 	id := strings.TrimSpace(r.PathValue("id"))
 	if id == "" {
 		respondAPIError(w, "organization id is required", http.StatusBadRequest)
@@ -148,17 +174,17 @@ func (s *AdminServer) handleUpdateResponseContract(w http.ResponseWriter, r *htt
 		return
 	}
 
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, err := s.organizationStore().Update(r.Context(), id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home.ResponseContractProfileID = string(profile.ID)
 		home.ResponseContractSummary = profile.Summary
 		return normalizeOrganizationHome(home)
 	})
-	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
+	if err != nil {
+		respondOrganizationStoreError(w, err)
 		return
 	}
 
-	s.emitReviewLoopEvent(updated.ID, ReviewLoopEventResponseContractChanged)
+	s.emitReviewLoopEvent(r.Context(), updated.ID, ReviewLoopEventResponseContractChanged)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
 }
 
@@ -169,9 +195,8 @@ func (s *AdminServer) handleGetOrganizationOutputModelRouting(w http.ResponseWri
 		return
 	}
 
-	home, ok := s.organizationStore().Get(id)
+	home, ok := s.loadOrganizationForRequest(w, r, id)
 	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
 	}
 	home = normalizeOrganizationHome(home)
@@ -193,6 +218,9 @@ func (s *AdminServer) handleGetOrganizationOutputModelRouting(w http.ResponseWri
 }
 
 func (s *AdminServer) handleUpdateOrganizationOutputModelRouting(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, organizationsWriteScope); !ok {
+		return
+	}
 	id := strings.TrimSpace(r.PathValue("id"))
 	if id == "" {
 		respondAPIError(w, "organization id is required", http.StatusBadRequest)
@@ -240,7 +268,7 @@ func (s *AdminServer) handleUpdateOrganizationOutputModelRouting(w http.Response
 		})
 	}
 
-	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+	updated, err := s.organizationStore().Update(r.Context(), id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home = normalizeOrganizationHome(home)
 		home.OutputModelRoutingMode = string(routingMode)
 		home.DefaultOutputModelID = defaultModelID
@@ -248,11 +276,11 @@ func (s *AdminServer) handleUpdateOrganizationOutputModelRouting(w http.Response
 		home.OutputModelBindings = normalizedOrganizationOutputModelBindings(normalizedBindings, defaultModelID)
 		return normalizeOrganizationHome(home)
 	})
-	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
+	if err != nil {
+		respondOrganizationStoreError(w, err)
 		return
 	}
 
-	s.emitReviewLoopEvent(updated.ID, ReviewLoopEventOrganizationAIEngineChanged)
+	s.emitReviewLoopEvent(r.Context(), updated.ID, ReviewLoopEventOrganizationAIEngineChanged)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
 }

@@ -29,7 +29,7 @@ func TestHandleChat_PrependsWorkspaceContextForSelectedTeam(t *testing.T) {
 			"mock": cognitiveTestProvider{},
 		},
 	}
-	s.organizationStore().Save(OrganizationHomePayload{
+	seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:      "org-123",
 			Name:    "Northstar Labs",

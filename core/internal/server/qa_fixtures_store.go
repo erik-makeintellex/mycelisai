@@ -175,7 +175,7 @@ func (s *AdminServer) purgeQAFixtureScope(
 		return qaFixturePurgeResult{}, err
 	}
 
-	result.StoppedTeams, result.RemovedOrganizations = s.stopQAFixtureProducers(resources)
+	result.StoppedTeams = s.stopQAFixtureProducers(resources)
 	if err := s.deleteQAFixtureDurableResources(ctx, scope, resources, &result); err != nil {
 		_, _ = updateQAFixtureScopeStatus(ctx, db, scope.ID, "partial", false)
 		return qaFixturePurgeResult{}, err
@@ -204,10 +204,15 @@ func (s *AdminServer) deleteQAFixtureDurableResources(
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
-	if err := deleteQAFixtureDatabaseResources(ctx, tx, scope.TenantID, resources, result.DeletedRows); err != nil {
+	removedOrganizations, err := deleteQAFixtureDatabaseResources(ctx, tx, scope.TenantID, scope.ID, resources, result.DeletedRows)
+	if err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	result.RemovedOrganizations = removedOrganizations
+	return nil
 }
 
 type qaFixtureQuerier interface {

@@ -35,7 +35,7 @@ func TestHandleGetOrganizationOutputModelRouting_ListsInstalledAndPopularSelfHos
 			},
 		}
 	})
-	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+	created := seedOrganization(t, s, s.buildOrganizationHome(OrganizationCreateRequest{
 		Name:       "Northstar Labs",
 		Purpose:    "Ship a focused AI engineering organization",
 		StartMode:  OrganizationStartModeTemplate,
@@ -116,7 +116,7 @@ func TestHandleGetOrganizationOutputModelRouting_ListsInstalledAndPopularSelfHos
 
 func TestHandleUpdateOrganizationOutputModelRouting_AppliesDetectedRoleModels(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+	created := seedOrganization(t, s, s.buildOrganizationHome(OrganizationCreateRequest{
 		Name:       "Northstar Labs",
 		Purpose:    "Ship a focused AI engineering organization",
 		StartMode:  OrganizationStartModeTemplate,
@@ -136,7 +136,7 @@ func TestHandleUpdateOrganizationOutputModelRouting_AppliesDetectedRoleModels(t 
 			{"output_type_id":"vision_analysis","model_id":"llava:7b"}
 		]
 	}`
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/output-model-routing", body)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/output-model-routing", body)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp protocol.APIResponse

@@ -10,7 +10,7 @@ import (
 
 func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForImageRequests(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+	created := seedOrganization(t, s, s.buildOrganizationHome(OrganizationCreateRequest{
 		Name:       "Northstar Labs",
 		Purpose:    "Ship a focused AI engineering organization",
 		StartMode:  OrganizationStartModeTemplate,
@@ -83,7 +83,7 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForImageReque
 
 func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForMarketingRequests(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+	created := seedOrganization(t, s, s.buildOrganizationHome(OrganizationCreateRequest{
 		Name:       "Northstar Labs",
 		Purpose:    "Ship a focused AI engineering organization",
 		StartMode:  OrganizationStartModeTemplate,
@@ -153,7 +153,7 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForMarketingR
 
 func TestHandleTeamLeadGuidedAction_SplitsBroadRequestsIntoSmallTeamOrchestration(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+	created := seedOrganization(t, s, s.buildOrganizationHome(OrganizationCreateRequest{
 		Name:       "Northstar Labs",
 		Purpose:    "Ship a focused AI engineering organization",
 		StartMode:  OrganizationStartModeTemplate,
@@ -223,7 +223,7 @@ func TestHandleTeamLeadGuidedAction_SplitsBroadRequestsIntoSmallTeamOrchestratio
 
 func TestHandleTeamLeadGuidedAction_AddsExternalWorkflowContractForN8NRequests(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+	created := seedOrganization(t, s, s.buildOrganizationHome(OrganizationCreateRequest{
 		Name:       "Northstar Labs",
 		Purpose:    "Ship a focused AI engineering organization",
 		StartMode:  OrganizationStartModeTemplate,

@@ -10,7 +10,7 @@ import (
 
 func TestHandleTriggerLoop_ExecutesReviewLoopAndStoresResult(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().EnsureDefaults(home)
 
 	mux := http.NewServeMux()
@@ -63,10 +63,7 @@ func TestHandleTriggerLoop_ExecutesReviewLoopAndStoresResult(t *testing.T) {
 		t.Fatalf("expected one stored loop result, got %+v", listResp.Data)
 	}
 
-	after, ok := s.organizationStore().Get(home.ID)
-	if !ok {
-		t.Fatalf("expected organization to remain available after loop execution")
-	}
+	after := mustGetOrganization(t, s, home.ID)
 	if after.DepartmentCount != home.DepartmentCount || after.SpecialistCount != home.SpecialistCount || after.AIEngineProfileID != home.AIEngineProfileID {
 		t.Fatalf("expected read-only review loop to preserve organization state, before=%+v after=%+v", home, after)
 	}
@@ -74,7 +71,7 @@ func TestHandleTriggerLoop_ExecutesReviewLoopAndStoresResult(t *testing.T) {
 
 func TestHandleTriggerLoop_ResolvesAgentTypeOwner(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().EnsureDefaults(home)
 
 	mux := setupMux(t, "POST /api/v1/internal/organizations/{id}/loops/{loopId}/trigger", s.handleTriggerLoop)
@@ -98,7 +95,7 @@ func TestHandleTriggerLoop_ResolvesAgentTypeOwner(t *testing.T) {
 
 func TestHandleTriggerLoop_RejectsInvalidLoopProfile(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().Save(home.ID, LoopProfile{
 		ID:   "scheduled-review",
 		Name: "Scheduled review",

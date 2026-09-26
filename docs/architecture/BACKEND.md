@@ -226,6 +226,8 @@ SQL owns schema and migration contracts. Runtime tables cover identity, organiza
 
 ### Migration Index
 
+The `ORGANIZATIONS_EXTENSION` marker block in `001_current_schema.sql` (after C2A, before the single `COMMIT;`) adds the durable `organizations` table.
+
 Use migration files as the source of exact DDL truth. When API behavior or payload meaning changes, review [API Reference](../API_REFERENCE.md) and the affected migration docs/tests.
 
 ## VIII. API Surface
@@ -302,6 +304,16 @@ Fixed-key blocks for development agents. Blocks cite the PRD and source; they ne
 - Proof: `uv run inv core.test --package=./internal/server --run='TestWorkRunning' --race`
 - Pitfalls: `work_item_refs` is JSONB, so match with `?| $1::text[]` and `pq.Array`, not per-item lookups; L2 no GIN index on `work_item_refs`, so the link query scans tenant projects (fine at current scale; add a GIN index via mycelis-schema before it grows); summary counts are Outcome Health, not review counts, so review stays in the Work review panel; UI blocked on U1 — `WorkRunningPanel.tsx`, `useWorkRunning.ts`, and the `panel=running` branch land only after U1 merges to `dev`
 - Verified: 2026-09-25 lead merge gate: TestWorkRunning -race, real-PG query probe (security-qa), docs links, max-lines
+
+### Area: Organizations
+- PRD: §Projects Teams And Capability Use L141, §Outcome Vault L136, §Clean Deployment And First-Boot Contract L20-25 · Scoreboard: Current-schema convergence
+- Owned paths: `core/internal/server/organization_store*.go`, `organization_persistence_authz_test.go`, organization case of `qa_fixtures_purge.go` (core writer) · Do-not-touch: `core/internal/server/auth*.go`, `audit.go`, 001 G4/C2A block bytes
+- Seams: `organization_store.go:OrganizationStore`, `OrganizationRepository`, `respondOrganizationStoreError`, `organization_store_postgres.go:postgresOrganizationRepository`, `qa_fixtures_claims.go:withQAFixtureScopeLock`, `qa_fixtures_purge.go:deleteQAFixtureDatabaseResource` map, `organization_handlers.go:organizationsWriteScope`
+- Invariants: no in-memory fallback (nil DB -> every call `503`; memory repo exists only in `_test.go`); storage errors are `503`, never `404` or success; create is `INSERT` (duplicate id `409`), claim then insert inside the fixture fence; update is `SELECT ... FOR UPDATE` + write-back in one tx preserving `id`, `tenant_id`, `qa_fixture_scope_id`; every query filters `tenant_id='default'`; list order `name COLLATE "C", id`; purge deletes the row inside the purge tx
+- Authority: `POST /api/v1/organizations` and every `PATCH /api/v1/organizations/{id}/...` -> root admin + `organizations:write` (interim until A2); reads authenticated only; negatives: anon 401, standard 403, admin without scope 403, no row written
+- Proof: `uv run inv core.test --package=./internal/server --run='Test(Organization|QAFixture|ReviewLoop)' --race` with `MYCELIS_ORGANIZATION_STORE_TEST_DSN` on a disposable pg16 with 001 installed (absent DSN skips `TestOrganizationStoreRealDB_*`; skip is not proof); `uv run inv lifecycle.first-boot-proof --isolated --build`
+- Pitfalls: `QAFixtureScopeID` is `json:"-"`, so it is a column, never document data; non-UUID ids are `404` (no cast error); purge deletes only where `qa_fixture_scope_id` = the purging scope (a claimed org existing outside it fails the purge as unowned; an absent row no-ops so purges resume); a profile PATCH to a missing department/agent type aborts under the lock with no write; open for A2 (pre-S1): reads do not hide QA-fixture orgs, and `POST /api/v1/internal/organizations/{id}/loops/{loopId}/trigger` has no scope gate; the retained stack needs owner-approved `compose.migrate` before Core reads the table
+- Verified: 2026-09-25 lead merge gate: isolated first boot, 41 real-PG upgrade tests, 4 TestOrganizationStoreRealDB_* -race, security-qa GO, core.test, docs links, max-lines
 
 ## IX. Governance & Policy Engine
 

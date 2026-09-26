@@ -17,9 +17,8 @@ func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.
 		return
 	}
 
-	home, ok := s.organizationStore().Get(id)
+	home, ok := s.loadOrganizationForRequest(w, r, id)
 	if !ok {
-		respondAPIError(w, "organization not found", http.StatusNotFound)
 		return
 	}
 
@@ -35,7 +34,7 @@ func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.
 		return
 	}
 
-	s.emitReviewLoopEvent(home.ID, ReviewLoopEventTeamLeadActionCompleted)
+	s.emitReviewLoopEvent(r.Context(), home.ID, ReviewLoopEventTeamLeadActionCompleted)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(response))
 }
 
