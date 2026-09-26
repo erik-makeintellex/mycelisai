@@ -10,19 +10,25 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-// missionProfileRoutingNotApplied reports an activation whose is_active flag
-// committed but whose runtime routing apply failed afterward.
-const missionProfileRoutingNotApplied = "mission_profile_routing_not_applied"
+// missionProfileRoutingRejected reports an activation whose runtime routing
+// apply failed before anything was committed: is_active was never touched.
+const missionProfileRoutingRejected = "mission_profile_routing_rejected"
 
-// missionProfileActivationRecovery is the operator recovery for
-// missionProfileRoutingNotApplied.
-const missionProfileActivationRecovery = "The profile is marked active but routing did not change. " +
-	"Fix or re-enable the providers it names, then activate it again."
+// missionProfileActivationCommitFailed reports an activation whose runtime
+// routing apply succeeded but whose is_active commit then failed. Routing
+// is reverted to its exact prior bindings before this response is sent, so
+// nothing is left half-applied.
+const missionProfileActivationCommitFailed = "mission_profile_activation_commit_failed"
 
 // HandleActivateMissionProfile applies providers, subscriptions, and active DB state.
 // Root admin + cognitive:write, audited first, and all or nothing for routing:
-// every role->provider pair is validated before anything changes, and the
-// pairs are applied together as runtime-only overrides.
+// every role->provider pair is validated before anything changes. Ordering
+// (S6e F4): validate, take the shared routing-write mutex, snapshot the
+// prior bindings, apply routing, then commit is_active. A routing-apply
+// failure leaves the DB row untouched. A commit failure reverts routing to
+// the pre-apply snapshot and records a failure audit, so a partial
+// activation is never left active in memory with a stale DB row, or vice
+// versa.
 func (s *AdminServer) HandleActivateMissionProfile(w http.ResponseWriter, r *http.Request) {
 	if !requireRoutingWriter(w, r) {
 		return
@@ -38,8 +44,8 @@ func (s *AdminServer) HandleActivateMissionProfile(w http.ResponseWriter, r *htt
 
 	// Serialized with profile override PUT/DELETE and provider toggles so the
 	// validation below still holds when the overrides are applied.
-	profileOverrideWriteMu.Lock()
-	defer profileOverrideWriteMu.Unlock()
+	unlock := lockRoutingWrite()
+	defer unlock()
 
 	p, err := s.loadMissionProfileForActivation(r, id)
 	if err == sql.ErrNoRows {
@@ -69,27 +75,35 @@ func (s *AdminServer) HandleActivateMissionProfile(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if err := s.markMissionProfileActive(r, id); err != nil {
-		respondAPIError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
+	// Snapshot the prior bindings before any routing change, so a later
+	// commit failure can revert to exactly this state.
+	priorBindings := s.Cognitive.ConfigSnapshot()
+
 	if len(overrides) > 0 {
 		// Runtime-only overrides, re-validated and applied under one router
-		// write lock; never written to YAML or system_config.
+		// write lock; never written to YAML or system_config. Applied before
+		// the DB commit so a rejected apply never touches is_active.
 		if err := s.Cognitive.SetProfileOverrides(overrides, cognitive.ProfileOriginRuntime); err != nil {
-			log.Printf("HandleActivateMissionProfile: profile %s marked active but routing not applied: %v", id, err)
-			s.recordRoutingMutationFailure(r, auditMissionProfileActive, "Mission profile activation routing not applied", map[string]any{
-				"mission_profile_id": id, "mission_profile_name": p.Name, "role_providers": overrides,
-				"code": missionProfileRoutingNotApplied, "error": err.Error(), "recovery_action": missionProfileActivationRecovery,
-			})
+			log.Printf("HandleActivateMissionProfile: profile %s routing rejected, nothing committed: %v", id, err)
 			respondAPIJSON(w, http.StatusInternalServerError, protocol.APIResponse{
 				OK:    false,
-				Error: "mission profile marked active but its routing was not applied: " + err.Error(),
-				Data: map[string]any{"id": id, "code": missionProfileRoutingNotApplied,
-					"recommended_action": missionProfileActivationRecovery},
+				Error: "mission profile routing was rejected; nothing was changed: " + err.Error(),
+				Data: map[string]any{"id": id, "code": missionProfileRoutingRejected,
+					"recommended_action": "Fix or re-enable the providers it names, then activate it again."},
 			})
 			return
 		}
+	}
+
+	if err := s.markMissionProfileActive(r, id); err != nil {
+		log.Printf("HandleActivateMissionProfile: profile %s commit failed after routing apply, reverting: %v", id, err)
+		s.Cognitive.RestoreProfileBindings(priorBindings)
+		s.recordRoutingMutationFailure(r, auditMissionProfileActive, "Mission profile activation commit failed; routing reverted", map[string]any{
+			"mission_profile_id": id, "mission_profile_name": p.Name, "role_providers": overrides,
+			"code": missionProfileActivationCommitFailed, "error": err.Error(),
+		})
+		respondAPIError(w, "Database error", http.StatusInternalServerError)
+		return
 	}
 	s.applyMissionProfileSubscriptions(id, p)
 

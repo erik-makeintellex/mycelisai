@@ -49,3 +49,38 @@ func (s *AdminServer) cognitiveProfileRouteStatus(ctx context.Context) (cognitiv
 	}
 	return text, routes, health, overlayError
 }
+
+// Operational summary for callers without the full cognitive view (S6e):
+// see cognitiveFullView. Endpoints, model ids, provider ids, config
+// snapshots, db_row_present, and override-origin detail are omitted (the
+// keys are absent, not null).
+type cognitiveTextSummary struct {
+	Status            string `json:"status"`
+	Detail            string `json:"detail,omitempty"`
+	RecommendedAction string `json:"recommended_action,omitempty"`
+	SetupRequired     bool   `json:"setup_required,omitempty"`
+}
+
+type cognitiveProfileSummary struct {
+	Available bool   `json:"available"`
+	Code      string `json:"code"`
+	Reachable *bool  `json:"reachable"`
+}
+
+// narrowCognitiveStatus builds the non-admin GET /api/v1/cognitive/status body.
+func narrowCognitiveStatus(text cognitiveTextStatus, mediaStatus string, routes map[string]cognitive.ProfileRoute, health string, overlayError bool) map[string]any {
+	profiles := make(map[string]cognitiveProfileSummary, len(routes))
+	for name, route := range routes {
+		profiles[name] = cognitiveProfileSummary{Available: route.Available, Code: route.Code, Reachable: route.Reachable}
+	}
+	return map[string]any{
+		"text": cognitiveTextSummary{
+			Status: text.Status, Detail: text.Detail,
+			RecommendedAction: text.RecommendedAction, SetupRequired: text.SetupRequired,
+		},
+		"media":                map[string]string{"status": mediaStatus},
+		"profiles":             profiles,
+		"profile_route_health": health,
+		"overlay_error":        overlayError,
+	}
+}

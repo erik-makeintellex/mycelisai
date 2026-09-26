@@ -20,6 +20,11 @@ func plannedCallsNeedMediaGeneration(calls []protocol.PlannedToolCall) bool {
 	return false
 }
 
+// mediaGenerationPreflight reads s.Cognitive.Config.Media directly (not
+// through a locked accessor). Media provider config is populated once at
+// router construction/reload and is never mutated by a concurrent request
+// path (unlike Providers, which brains/profile writes mutate under the
+// shared routing write lock), so there is nothing here that needs locking.
 func (s *AdminServer) mediaGenerationPreflight(ctx context.Context, calls []protocol.PlannedToolCall) *cognitive.ExecutionAvailability {
 	if !plannedCallsNeedMediaGeneration(calls) {
 		return nil

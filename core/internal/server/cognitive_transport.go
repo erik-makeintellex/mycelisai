@@ -56,7 +56,7 @@ func applyBrainProvenance(s *AdminServer, chatPayload *protocol.ChatResponsePayl
 		ModelID:    agentResult.ModelUsed,
 	}
 	if s.Cognitive.Config != nil {
-		if pCfg, ok := s.Cognitive.Config.Providers[agentResult.ProviderID]; ok {
+		if pCfg, ok := s.Cognitive.ProviderSnapshot(agentResult.ProviderID); ok {
 			brain.ProviderName = agentResult.ProviderID
 			brain.Location = pCfg.Location
 			brain.DataBoundary = pCfg.DataBoundary

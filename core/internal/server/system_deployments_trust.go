@@ -45,7 +45,7 @@ type DeploymentTrustSource struct {
 // HandleDeploymentTrust returns the deploy/runtime trust snapshot shown in
 // System -> Deployments. It only reports non-secret posture values.
 func (s *AdminServer) HandleDeploymentTrust(w http.ResponseWriter, r *http.Request) {
-	services := s.buildServiceStatuses(r.Context())
+	services := s.buildServiceStatuses(r)
 	contract := ResolveDeploymentContract()
 	repoRoot := discoverDeploymentRoot()
 

@@ -211,6 +211,25 @@ func (r *Router) SetProfileOverride(profile, providerID, origin string) error {
 	return r.SetProfileOverrides(map[string]string{profile: providerID}, origin)
 }
 
+// RestoreProfileBindings resets Profiles, ProfileSources, and
+// ProfileOverrideOrigins to exactly the values in snapshot, byte-for-byte.
+// It is used to undo a runtime SetProfileOverrides call (for example a
+// mission-profile activation whose is_active commit failed afterward) when
+// the caller already holds the shared routing-write mutex; it does not
+// itself take that mutex, only the router lock, and it never touches
+// dbProfileRows or persisted YAML, since a runtime override never writes
+// either. A nil snapshot or nil r.Config is a no-op.
+func (r *Router) RestoreProfileBindings(snapshot *BrainConfig) {
+	if r == nil || r.Config == nil || snapshot == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Config.Profiles = copyMap(snapshot.Profiles)
+	r.Config.ProfileSources = copyMap(snapshot.ProfileSources)
+	r.Config.ProfileOverrideOrigins = copyMap(snapshot.ProfileOverrideOrigins)
+}
+
 // ClearProfileOverride drops profile's DB row mirror and any DB or runtime
 // override, then recomputes the binding exactly as NewRouter would (env,
 // root, YAML default, unbound, then the explicit same-boundary fallback). An
