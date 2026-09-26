@@ -269,6 +269,18 @@ Bootstrap, templates, resource registry, and deployment-context routes.
 ### Health
 Readiness, liveness, and dependency health routes.
 
+## Area Contracts
+
+### Area: Code Context
+- PRD: §P0.7c L370 · Scoreboard: P0.7c native code context maps
+- Owned paths: `core/internal/codecontext/**` (mycelis-core-authority) · `docker-compose.yml`, `.env.compose.example`, `ops/compose_env.py`, `ops/code-context/**` (mycelis-platform-ops) · Do-not-touch: `core/internal/server/code_context.go` routes (owned elsewhere)
+- Seams: `codecontext.sensitiveName`, `codecontext.pathAllowed`, `codecontext.confine`, `codecontext.resolveRoot`, `Service.rootAllowed`, `compose_env.validate_code_context_host_root`
+- Invariants: one `sensitiveName` exclusion (`.git`, `.env*`, keys/certs, and names containing credential/token/secret/kubeconfig/service-account, plus rc files) applies case-insensitively on walk, subpath, explain, and symlink targets; symlinks confine via `EvalSymlinks` to the resolved root; `RegisterSource` fails closed with zero configured roots; every blocked path returns one host-path-free `path_unavailable` message; `compose_env` rejects a `HOST_ROOT` whose `.git` is a directory (primary checkout) or that has a top-level `.env*`
+- Authority: `/api/v1/code-context/*` -> root admin + `code_context:read`/`write`, default deny; negatives: anon 401, standard 403; swarm `code_context.*` tools are NOT admin-gated (open finding, tracked below)
+- Proof: `go test ./internal/codecontext/...`; `uv run pytest tests/test_compose_code_context_contract.py -q`; `uv run inv quality.max-lines`
+- Pitfalls: the `token` name fragment over-excludes ordinary files (e.g. `templates_tokens.go`); inline secrets inside otherwise-allowed files are not redacted; the confine-then-read step has a TOCTOU window on the `:ro` mount; swarm `code_context.*` tools remain non-admin-gated pending A2's route-scope matrix follow-up
+- Verified: 2026-09-25 lead merge gate: go test -race ./internal/codecontext, compose code-context contract, docs links, max-lines 2026-09-25
+
 ## IX. Governance & Policy Engine
 
 Deploy-owned identity posture is backend-owned: deploy-owned People & Access posture surfaced read-only, and settings PUT ignores/preserves those deploy-owned fields instead of persisting them.
