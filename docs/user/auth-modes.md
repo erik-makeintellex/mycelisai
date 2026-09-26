@@ -8,13 +8,15 @@ Use this guide when enabling or reviewing login, local auth, break-glass recover
 Current self-hosted release authentication is deploy-owned:
 
 - `.env` is the local secret store
-- `MYCELIS_API_KEY` is the normal local admin credential
-- `MYCELIS_WEB_SESSION_SECRET` signs browser sessions for the Interface login boundary
-- `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` optionally separates Interface-to-Core identity forwarding from the browser session secret
+- `MYCELIS_API_KEY` is the normal local admin credential; Core accepts it only as an `Authorization: Bearer` header — there is no `?token=` query-parameter fallback
+- `MYCELIS_WEB_SESSION_SECRET` signs browser sessions for the Interface login boundary; `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` signs Interface-to-Core identity forwarding. Both are required, at least 32 bytes, trimmed, and must differ from each other and from `MYCELIS_API_KEY`/`MYCELIS_BREAK_GLASS_API_KEY`; neither ever falls back to an API key
+- `MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256` (preferred, a 64-character hex SHA-256 digest) or `MYCELIS_LOCAL_ADMIN_PASSWORD` is the local sign-in password; `MYCELIS_API_KEY` is never accepted as the password, and the login page shows a named setup error until one is set
 - `MYCELIS_LOCAL_ADMIN_USERNAME` and `MYCELIS_LOCAL_ADMIN_USER_ID` name that local principal
 - Settings shows access posture, but user chat cannot rewrite it
 
 The Interface always requires login, including Free Node deployments. Enterprise provider entries in Auth Providers are configuration contracts unless the deployment enables the matching adapter. Google Workspace OIDC is the first enabled SSO path: Google proves identity, while Mycelis still owns roles, organization membership, Soma access, approvals, capabilities, and audit visibility.
+
+Known follow-up: the Helm chart does not yet set `MYCELIS_WEB_SESSION_SECRET` or `MYCELIS_WEB_IDENTITY_FORWARD_SECRET`, so Interface sign-in stays disabled on a Kubernetes deployment until the chart is updated to supply them.
 
 Role boundary:
 
@@ -48,17 +50,24 @@ Use `federated` only when normal users are expected to authenticate through an e
 Use this for Free Node and simple self-hosted release.
 
 1. Generate or set `MYCELIS_API_KEY`.
-2. Set `MYCELIS_WEB_SESSION_SECRET`.
+2. Set `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` — both required, at least 32 bytes, and distinct from each other and from any API key. `uv run inv auth.dev-key` generates missing ones in `.env`.
 3. Set `MYCELIS_LOCAL_ADMIN_USERNAME`.
-4. Set either `MYCELIS_LOCAL_ADMIN_PASSWORD` or `MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256`; if neither is set, the local login falls back to `MYCELIS_API_KEY`.
+4. Set `MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256` (preferred: `printf '%s' 'your-password' | sha256sum`) or `MYCELIS_LOCAL_ADMIN_PASSWORD`. `MYCELIS_API_KEY` is never accepted as the password; if neither is set, `/login` shows a named setup error instead of falling back.
 5. Set `MYCELIS_LOCAL_ADMIN_USER_ID`.
 6. Keep `MYCELIS_IDENTITY_MODE=local_only`.
 7. Set `MYCELIS_PUBLIC_ORIGIN=https://...` or `MYCELIS_WEB_COOKIE_SECURE=true` for HTTPS production deployments; local HTTP proof leaves both unset.
-8. Optionally set `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` when Core and Interface should use a dedicated HMAC secret for audit identity propagation; otherwise both use `MYCELIS_WEB_SESSION_SECRET`.
-9. Run `uv run inv auth.posture` or `uv run inv auth.posture --compose`.
-10. Verify `/login` accepts the local owner and Settings -> People & Access shows local-only/self-hosted release posture.
+8. Run `uv run inv auth.posture` or `uv run inv auth.posture --compose`.
+9. Verify `/login` accepts the local owner and Settings -> People & Access shows local-only/self-hosted release posture.
 
-Do not reuse the same value for local admin and break-glass credentials.
+Do not reuse the same value for local admin, web secrets, and break-glass credentials.
+
+### Operator Upgrade Note (Access Hardening)
+
+Before redeploying a node that predates this hardening:
+
+1. Set `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` in `.env` if not already present (`uv run inv auth.dev-key` generates them); Compose now refuses to start Core/Interface without them.
+2. Set `MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256` (preferred) or `MYCELIS_LOCAL_ADMIN_PASSWORD` — local sign-in no longer accepts `MYCELIS_API_KEY` as the password.
+3. Restart Core and Interface. Because session verification is now stricter, every existing browser session was signed with the old fallback secret and stops working: everyone signs in again once. There is no data loss; this is a one-time re-authentication.
 
 ## Break-Glass Recovery
 

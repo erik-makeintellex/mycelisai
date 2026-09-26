@@ -5,6 +5,7 @@ import LoginPage from "@/app/login/page";
 const { authConfig } = vi.hoisted(() => ({
     authConfig: {
         sessionSecret: "session-secret",
+        forwardSecret: "forward-secret",
         localUsername: "admin",
         localPassword: "",
         localPasswordSha256: "",
@@ -14,6 +15,7 @@ const { authConfig } = vi.hoisted(() => ({
         googleHostedDomain: "",
         allowedDomains: [] as string[],
         adminEmails: [] as string[],
+        setupIssues: [] as string[],
     },
 }));
 
@@ -29,7 +31,8 @@ vi.mock("@/components/shell/ThemeSync", () => ({
     ThemeSync: () => null,
 }));
 
-vi.mock("@/lib/webAuth", () => ({
+vi.mock("@/lib/webAuth", async (importOriginal) => ({
+    safeNextPath: (await importOriginal<typeof import("@/lib/webAuth")>()).safeNextPath,
     WEB_SESSION_COOKIE: "mycelis_web_session",
     getWebAuthConfig: () => authConfig,
     googleConfigured: () => Boolean(authConfig.googleClientId && authConfig.googleClientSecret && authConfig.googleRedirectUri),
@@ -41,6 +44,7 @@ vi.mock("@/lib/webAuth", () => ({
             : (authConfig.googleHostedDomain ? [authConfig.googleHostedDomain] : []),
         domainLabel: authConfig.allowedDomains.join(", ") || authConfig.googleHostedDomain,
     }),
+    localLoginConfigured: () => Boolean(authConfig.sessionSecret && (authConfig.localPassword || authConfig.localPasswordSha256)),
     verifySessionToken: vi.fn(async () => null),
 }));
 
@@ -51,6 +55,17 @@ describe("LoginPage", () => {
         authConfig.googleRedirectUri = "";
         authConfig.googleHostedDomain = "";
         authConfig.allowedDomains = [];
+        authConfig.setupIssues = [];
+    });
+
+    it("names the variables to set when local sign-in is not configured", async () => {
+        authConfig.setupIssues = ["Set MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256 (preferred) or MYCELIS_LOCAL_ADMIN_PASSWORD to enable local sign-in."];
+
+        render(await LoginPage({ searchParams: Promise.resolve({ error: "config" }) }));
+
+        expect(screen.getByText(/Sign-in setup is incomplete/)).toBeTruthy();
+        expect(screen.getByText(/MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256/)).toBeTruthy();
+        expect(screen.getByRole("button", { name: /Sign in as local admin/ }).hasAttribute("disabled")).toBe(true);
     });
 
     it("shows provider-neutral guidance when enterprise SSO is not configured", async () => {

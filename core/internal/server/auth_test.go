@@ -123,7 +123,8 @@ func TestAuthMiddleware_CustomLocalAdminIdentityFromEnvironment(t *testing.T) {
 }
 
 func TestAuthMiddleware_UsesSignedForwardedWebIdentity(t *testing.T) {
-	t.Setenv("MYCELIS_WEB_SESSION_SECRET", "forward-secret")
+	t.Setenv("MYCELIS_WEB_SESSION_SECRET", "")
+	t.Setenv("MYCELIS_WEB_IDENTITY_FORWARD_SECRET", testForwardSecret)
 	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		identity := IdentityFromContext(r.Context())
 		if identity == nil {
@@ -156,14 +157,15 @@ func TestAuthMiddleware_UsesSignedForwardedWebIdentity(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/v1/user/me", nil)
 	req.Header.Set("Authorization", "Bearer test-key")
 	req.Header.Set(forwardedWebIdentityHeader, payload)
-	req.Header.Set(forwardedWebIdentitySignatureHeader, signForwardedWebIdentity(payload, "forward-secret"))
+	req.Header.Set(forwardedWebIdentitySignatureHeader, signForwardedWebIdentity(payload, testForwardSecret))
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	assertStatus(t, rr, http.StatusOK)
 }
 
 func TestAuthMiddleware_RejectsStaleForwardedWebIdentity(t *testing.T) {
-	t.Setenv("MYCELIS_WEB_SESSION_SECRET", "forward-secret")
+	t.Setenv("MYCELIS_WEB_SESSION_SECRET", "")
+	t.Setenv("MYCELIS_WEB_IDENTITY_FORWARD_SECRET", testForwardSecret)
 	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not receive stale forwarded identity")
 	}))
@@ -178,14 +180,15 @@ func TestAuthMiddleware_RejectsStaleForwardedWebIdentity(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/v1/user/me", nil)
 	req.Header.Set("Authorization", "Bearer test-key")
 	req.Header.Set(forwardedWebIdentityHeader, payload)
-	req.Header.Set(forwardedWebIdentitySignatureHeader, signForwardedWebIdentity(payload, "forward-secret"))
+	req.Header.Set(forwardedWebIdentitySignatureHeader, signForwardedWebIdentity(payload, testForwardSecret))
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	assertStatus(t, rr, http.StatusUnauthorized)
 }
 
 func TestAuthMiddleware_RejectsInvalidForwardedWebIdentity(t *testing.T) {
-	t.Setenv("MYCELIS_WEB_SESSION_SECRET", "forward-secret")
+	t.Setenv("MYCELIS_WEB_SESSION_SECRET", "")
+	t.Setenv("MYCELIS_WEB_IDENTITY_FORWARD_SECRET", testForwardSecret)
 	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("handler should not receive invalid forwarded identity")
 	}))
@@ -226,20 +229,10 @@ func TestActorIdentitySnapshotFromRequest(t *testing.T) {
 	}
 }
 
-func TestAuthMiddleware_QueryTokenFallback(t *testing.T) {
-	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		identity := IdentityFromContext(r.Context())
-		if identity == nil {
-			t.Error("Expected identity in context via query param")
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
+// TestAuthMiddleware_QueryTokenFallback was retired in Slice A1: tokens never
+// travel in URLs. See TestAuthMiddleware_RejectsQueryToken.
 
-	req, _ := http.NewRequest("GET", "/api/v1/stream?token=test-key", nil)
-	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
-	assertStatus(t, rr, http.StatusOK)
-}
+const testForwardSecret = "forward-secret-for-tests-0123456789abcdef"
 
 func encodeForwardedWebIdentityForTest(t *testing.T, payload forwardedWebIdentityPayload) string {
 	t.Helper()

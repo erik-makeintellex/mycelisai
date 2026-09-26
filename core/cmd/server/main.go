@@ -31,6 +31,10 @@ func main() {
 	if apiKey == "" {
 		log.Fatal("FATAL: MYCELIS_API_KEY not set. Server refuses to start without authentication.")
 	}
+	if err := resolveLocalAuthRuntimeConfig().secretConfigurationError(); err != nil {
+		// The error names the variable only; it never contains a secret value.
+		log.Fatalf("FATAL: %v. Server refuses to start.", err)
+	}
 
 	natsConfig, err := resolveNATSRuntimeConfig()
 	if err != nil {

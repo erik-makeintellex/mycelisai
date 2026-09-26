@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -244,5 +245,34 @@ func TestResolveLocalAuthRuntimeConfigReadsDeploymentContractPath(t *testing.T) 
 	}
 	if !found {
 		t.Fatalf("expected path-driven deployment-contract warning, got %#v", warnings)
+	}
+}
+
+func TestResolveLocalAuthRuntimeConfigForwardSecretMustBeDistinct(t *testing.T) {
+	apiKey := "runtime-api-key-0123456789abcdef012345"
+	breakGlass := "runtime-break-glass-0123456789abcdef0123"
+	cases := map[string]struct {
+		forward string
+		wantErr bool
+	}{
+		"unset":              {forward: "", wantErr: false},
+		"distinct":           {forward: "runtime-forward-secret-0123456789abcdef", wantErr: false},
+		"equals api key":     {forward: apiKey, wantErr: true},
+		"equals break-glass": {forward: breakGlass, wantErr: true},
+		"too short":          {forward: "short", wantErr: true},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("MYCELIS_API_KEY", apiKey)
+			t.Setenv("MYCELIS_BREAK_GLASS_API_KEY", breakGlass)
+			t.Setenv("MYCELIS_WEB_IDENTITY_FORWARD_SECRET", tc.forward)
+			err := resolveLocalAuthRuntimeConfig().secretConfigurationError()
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("secretConfigurationError() = %v, wantErr %v", err, tc.wantErr)
+			}
+			if err != nil && tc.forward != "" && strings.Contains(err.Error(), tc.forward) {
+				t.Fatal("configuration error must not echo the secret value")
+			}
+		})
 	}
 }

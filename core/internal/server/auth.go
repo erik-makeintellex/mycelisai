@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"strings"
@@ -21,6 +22,8 @@ const forwardedWebIdentityHeader = "X-Mycelis-Web-Identity"
 const forwardedWebIdentitySignatureHeader = "X-Mycelis-Web-Identity-Signature"
 const forwardedWebIdentityMaxAgeSeconds int64 = 10 * 60
 const forwardedWebIdentityClockSkewSeconds int64 = 2 * 60
+const forwardedWebIdentitySecretEnv = "MYCELIS_WEB_IDENTITY_FORWARD_SECRET"
+const minimumAuthSecretBytes = 32
 
 // RequestIdentity represents the authenticated caller.
 // Phase 0: single root user. Phase 1+ will resolve from JWT/session.
@@ -42,6 +45,7 @@ type localAuthIdentityConfig struct {
 	BreakGlassAPIKey   string
 	BreakGlassUserID   string
 	BreakGlassUsername string
+	ForwardSecret      string
 	DeploymentContract DeploymentContract
 }
 
@@ -63,6 +67,7 @@ func resolveLocalAuthIdentityConfig(primaryAPIKey string) localAuthIdentityConfi
 		BreakGlassAPIKey:   strings.TrimSpace(os.Getenv("MYCELIS_BREAK_GLASS_API_KEY")),
 		BreakGlassUserID:   envOrDefaultIdentity("MYCELIS_BREAK_GLASS_USER_ID", "00000000-0000-0000-0000-000000000001"),
 		BreakGlassUsername: envOrDefaultIdentity("MYCELIS_BREAK_GLASS_USERNAME", "recovery-admin"),
+		ForwardSecret:      forwardedWebIdentitySecret(),
 		DeploymentContract: ResolveDeploymentContract(),
 	}
 	return cfg
@@ -104,6 +109,9 @@ func (cfg localAuthIdentityConfig) identityForToken(token string) *RequestIdenti
 }
 
 func (cfg localAuthIdentityConfig) authConfigurationError() string {
+	if err := ValidateWebIdentityForwardSecret(cfg.PrimaryAPIKey, cfg.BreakGlassAPIKey, cfg.ForwardSecret); err != nil {
+		return err.Error()
+	}
 	if !cfg.DeploymentContract.RequiresBreakGlassRecovery() {
 		return ""
 	}
@@ -113,20 +121,38 @@ func (cfg localAuthIdentityConfig) authConfigurationError() string {
 	return ""
 }
 
+// forwardedWebIdentitySecret reads only MYCELIS_WEB_IDENTITY_FORWARD_SECRET.
+// There is deliberately no fallback to the session secret or the API key.
 func forwardedWebIdentitySecret() string {
-	if secret := strings.TrimSpace(os.Getenv("MYCELIS_WEB_IDENTITY_FORWARD_SECRET")); secret != "" {
-		return secret
-	}
-	return strings.TrimSpace(os.Getenv("MYCELIS_WEB_SESSION_SECRET"))
+	return strings.TrimSpace(os.Getenv(forwardedWebIdentitySecretEnv))
 }
 
-func signedForwardedWebIdentityFromRequest(r *http.Request) (*RequestIdentity, bool, bool) {
+// ValidateWebIdentityForwardSecret fails closed when a configured forward
+// secret is short or reuses an API credential. An unset secret is valid: every
+// forwarded-identity header is then rejected. Errors never echo secret values.
+func ValidateWebIdentityForwardSecret(primaryAPIKey, breakGlassAPIKey, forwardSecret string) error {
+	forward := strings.TrimSpace(forwardSecret)
+	if forward == "" {
+		return nil
+	}
+	if len(forward) < minimumAuthSecretBytes {
+		return errors.New("auth configuration error: MYCELIS_WEB_IDENTITY_FORWARD_SECRET must be at least 32 bytes (uv run inv auth.dev-key)")
+	}
+	for _, key := range []string{primaryAPIKey, breakGlassAPIKey} {
+		key = strings.TrimSpace(key)
+		if key != "" && subtle.ConstantTimeCompare([]byte(forward), []byte(key)) == 1 {
+			return errors.New("auth configuration error: MYCELIS_WEB_IDENTITY_FORWARD_SECRET must differ from MYCELIS_API_KEY and MYCELIS_BREAK_GLASS_API_KEY")
+		}
+	}
+	return nil
+}
+
+func signedForwardedWebIdentityFromRequest(r *http.Request, secret string) (*RequestIdentity, bool, bool) {
 	payload := strings.TrimSpace(r.Header.Get(forwardedWebIdentityHeader))
 	signature := strings.TrimSpace(r.Header.Get(forwardedWebIdentitySignatureHeader))
 	if payload == "" && signature == "" {
 		return nil, false, true
 	}
-	secret := forwardedWebIdentitySecret()
 	if payload == "" || signature == "" || secret == "" {
 		return nil, true, false
 	}
@@ -249,13 +275,11 @@ func AuthMiddleware(apiKey string, next http.Handler) http.Handler {
 			return
 		}
 
-		// Extract token: Authorization header first, query param fallback
+		// Extract token from the Authorization header only. Tokens never
+		// travel in URLs; SSE reaches Core through the BFF, which sets the header.
 		token := ""
 		if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
 			token = strings.TrimPrefix(auth, "Bearer ")
-		}
-		if token == "" {
-			token = r.URL.Query().Get("token")
 		}
 
 		if token == "" {
@@ -272,7 +296,7 @@ func AuthMiddleware(apiKey string, next http.Handler) http.Handler {
 			json.NewEncoder(w).Encode(map[string]string{"error": "invalid authentication token"})
 			return
 		}
-		if forwardedIdentity, attempted, ok := signedForwardedWebIdentityFromRequest(r); attempted {
+		if forwardedIdentity, attempted, ok := signedForwardedWebIdentityFromRequest(r, identityConfig.ForwardSecret); attempted {
 			if !ok {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)

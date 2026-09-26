@@ -4,6 +4,7 @@ import { GET } from "@/app/api/auth/google/start/route";
 
 const AUTH_ENV = [
   "MYCELIS_WEB_SESSION_SECRET",
+  "MYCELIS_WEB_IDENTITY_FORWARD_SECRET",
   "MYCELIS_API_KEY",
   "MYCELIS_AUTH_GOOGLE_CLIENT_ID",
   "MYCELIS_AUTH_GOOGLE_CLIENT_SECRET",
@@ -51,7 +52,8 @@ describe("Google auth start route", () => {
 
 function configureGoogleAuth() {
   for (const key of AUTH_ENV) previousEnv.set(key, process.env[key]);
-  process.env.MYCELIS_WEB_SESSION_SECRET = "session-secret";
+  process.env.MYCELIS_WEB_SESSION_SECRET = "test-session-secret-0123456789abcdef0123";
+  process.env.MYCELIS_WEB_IDENTITY_FORWARD_SECRET = "test-forward-secret-0123456789abcdef0123";
   process.env.MYCELIS_API_KEY = "";
   process.env.MYCELIS_AUTH_GOOGLE_CLIENT_ID = "google-client";
   process.env.MYCELIS_AUTH_GOOGLE_CLIENT_SECRET = "google-secret";

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { encodeOAuthStateCookie, getWebAuthConfig, googleConfigured, googleWorkspacePolicy, secureCookieEnabled, webAuthRedirectURL } from "@/lib/webAuth";
+import { encodeOAuthStateCookie, getWebAuthConfig, googleConfigured, googleWorkspacePolicy, secureCookieEnabled, webAuthRedirectURL, safeNextPath } from "@/lib/webAuth";
 
 const STATE_COOKIE = "mycelis_google_state";
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     if (workspacePolicy.hostedDomain) authURL.searchParams.set("hd", workspacePolicy.hostedDomain);
 
     const response = NextResponse.redirect(authURL);
-    response.cookies.set(STATE_COOKIE, encodeOAuthStateCookie(state, safeNext(request.nextUrl.searchParams.get("next")) || "/dashboard"), {
+    response.cookies.set(STATE_COOKIE, encodeOAuthStateCookie(state, safeNextPath(request.nextUrl.searchParams.get("next")) || "/dashboard"), {
         httpOnly: true,
         sameSite: "lax",
         secure: secureCookieEnabled(),
@@ -38,9 +38,6 @@ function redirectToLogin(request: NextRequest, error: string) {
     return NextResponse.redirect(url);
 }
 
-function safeNext(value: string | null): string {
-    return value && value.startsWith("/") && !value.startsWith("//") ? value : "";
-}
 
 function canonicalGoogleStartURL(request: NextRequest, redirectUri: string): URL | null {
     const redirectOrigin = new URL(redirectUri).origin;
