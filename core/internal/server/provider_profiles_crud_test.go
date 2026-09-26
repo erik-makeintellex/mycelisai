@@ -102,6 +102,7 @@ func TestHandleCreateMissionProfile_HappyPath(t *testing.T) {
 	s := newTestServer(dbOpt)
 
 	now := time.Now()
+	expectAudit(mock)
 	mock.ExpectQuery("INSERT INTO mission_profiles").
 		WillReturnRows(sqlmock.NewRows(profileColumns).
 			AddRow("p-new", "Research", "", []byte(`{"architect":"ollama"}`), []byte(`[]`),
@@ -114,7 +115,7 @@ func TestHandleCreateMissionProfile_HappyPath(t *testing.T) {
 	}`
 
 	mux := setupMux(t, "POST /api/v1/mission-profiles", s.HandleCreateMissionProfile)
-	rr := doRequest(t, mux, "POST", "/api/v1/mission-profiles", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mission-profiles", body)
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -134,6 +135,7 @@ func TestHandleCreateMissionProfile_MinimalBody(t *testing.T) {
 
 	now := time.Now()
 	// Minimal: only name provided; role_providers, subscriptions, context_strategy defaulted
+	expectAudit(mock)
 	mock.ExpectQuery("INSERT INTO mission_profiles").
 		WillReturnRows(sqlmock.NewRows(profileColumns).
 			AddRow("p-min", "Just a name", "", []byte(`{}`), []byte(`[]`),
@@ -141,7 +143,7 @@ func TestHandleCreateMissionProfile_MinimalBody(t *testing.T) {
 
 	body := `{"name": "Just a name"}`
 	mux := setupMux(t, "POST /api/v1/mission-profiles", s.HandleCreateMissionProfile)
-	rr := doRequest(t, mux, "POST", "/api/v1/mission-profiles", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mission-profiles", body)
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -158,7 +160,7 @@ func TestHandleCreateMissionProfile_MissingName(t *testing.T) {
 
 	body := `{"role_providers": {"chat":"ollama"}}`
 	mux := setupMux(t, "POST /api/v1/mission-profiles", s.HandleCreateMissionProfile)
-	rr := doRequest(t, mux, "POST", "/api/v1/mission-profiles", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mission-profiles", body)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -168,7 +170,7 @@ func TestHandleCreateMissionProfile_BadJSON(t *testing.T) {
 	s := newTestServer(dbOpt)
 
 	mux := setupMux(t, "POST /api/v1/mission-profiles", s.HandleCreateMissionProfile)
-	rr := doRequest(t, mux, "POST", "/api/v1/mission-profiles", "not-json")
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mission-profiles", "not-json")
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -176,7 +178,7 @@ func TestHandleCreateMissionProfile_BadJSON(t *testing.T) {
 func TestHandleCreateMissionProfile_NilDB(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "POST /api/v1/mission-profiles", s.HandleCreateMissionProfile)
-	rr := doRequest(t, mux, "POST", "/api/v1/mission-profiles", `{"name":"x"}`)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mission-profiles", `{"name":"x"}`)
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
@@ -184,12 +186,13 @@ func TestHandleCreateMissionProfile_DBError(t *testing.T) {
 	dbOpt, mock := withDirectDB(t)
 	s := newTestServer(dbOpt)
 
+	expectAudit(mock)
 	mock.ExpectQuery("INSERT INTO mission_profiles").
 		WillReturnError(fmt.Errorf("unique constraint violation"))
 
 	body := `{"name": "Duplicate"}`
 	mux := setupMux(t, "POST /api/v1/mission-profiles", s.HandleCreateMissionProfile)
-	rr := doRequest(t, mux, "POST", "/api/v1/mission-profiles", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mission-profiles", body)
 
 	assertStatus(t, rr, http.StatusInternalServerError)
 }
@@ -202,6 +205,7 @@ func TestHandleUpdateMissionProfile_HappyPath(t *testing.T) {
 	dbOpt, mock := withDirectDB(t)
 	s := newTestServer(dbOpt)
 
+	expectAudit(mock)
 	mock.ExpectExec("UPDATE mission_profiles").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -212,7 +216,7 @@ func TestHandleUpdateMissionProfile_HappyPath(t *testing.T) {
 	}`
 
 	mux := setupMux(t, "PUT /api/v1/mission-profiles/{id}", s.HandleUpdateMissionProfile)
-	rr := doRequest(t, mux, "PUT", "/api/v1/mission-profiles/p-1", body)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/mission-profiles/p-1", body)
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -234,12 +238,13 @@ func TestHandleUpdateMissionProfile_NotFound(t *testing.T) {
 	dbOpt, mock := withDirectDB(t)
 	s := newTestServer(dbOpt)
 
+	expectAudit(mock)
 	mock.ExpectExec("UPDATE mission_profiles").
 		WillReturnResult(sqlmock.NewResult(0, 0)) // 0 rows affected
 
 	body := `{"name": "Ghost"}`
 	mux := setupMux(t, "PUT /api/v1/mission-profiles/{id}", s.HandleUpdateMissionProfile)
-	rr := doRequest(t, mux, "PUT", "/api/v1/mission-profiles/ghost-id", body)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/mission-profiles/ghost-id", body)
 
 	assertStatus(t, rr, http.StatusNotFound)
 }
@@ -249,7 +254,7 @@ func TestHandleUpdateMissionProfile_BadJSON(t *testing.T) {
 	s := newTestServer(dbOpt)
 
 	mux := setupMux(t, "PUT /api/v1/mission-profiles/{id}", s.HandleUpdateMissionProfile)
-	rr := doRequest(t, mux, "PUT", "/api/v1/mission-profiles/p-1", "bad")
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/mission-profiles/p-1", "bad")
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -257,6 +262,6 @@ func TestHandleUpdateMissionProfile_BadJSON(t *testing.T) {
 func TestHandleUpdateMissionProfile_NilDB(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "PUT /api/v1/mission-profiles/{id}", s.HandleUpdateMissionProfile)
-	rr := doRequest(t, mux, "PUT", "/api/v1/mission-profiles/p-1", `{"name":"x"}`)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/mission-profiles/p-1", `{"name":"x"}`)
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }

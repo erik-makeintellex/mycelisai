@@ -121,7 +121,7 @@ ROOT_PAYLOAD = {
     "root_provider": "vllm",
     "root_provider_model": "Qwen/Qwen2.5-Coder-14B-Instruct-AWQ",
     "profiles": {
-        name: {"provider_id": "vllm", "source": "root"}
+        name: {"provider_id": "vllm", "source": "root", "available": True, "code": "available", "reachable": True}
         for name in cognitive_root.EXECUTION_PROFILES
     },
 }

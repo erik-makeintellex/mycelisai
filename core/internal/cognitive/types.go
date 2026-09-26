@@ -44,6 +44,16 @@ type BrainConfig struct {
 	// (ProfileSourceDefault/Root/Override/Fallback). It is never read from
 	// or persisted to cognitive.yaml.
 	ProfileSources map[string]string `yaml:"-" json:"profile_sources,omitempty"`
+	// ProfileOverrideOrigins records which store pinned each override:
+	// ProfileOriginEnv, ProfileOriginDB, or ProfileOriginRuntime. Env is
+	// applied after the DB, so env wins when both are set. Never persisted.
+	ProfileOverrideOrigins map[string]string `yaml:"-" json:"profile_override_origins,omitempty"`
+	// OverlayError is set when the DB overlay could not be read at startup,
+	// so DB role.* overrides may be missing. Startup still proceeds.
+	OverlayError bool `yaml:"-" json:"overlay_error,omitempty"`
+	// dbProfileRows mirrors the system_config role.* rows (read at startup or
+	// written since), including a row shadowed by an env override.
+	dbProfileRows map[string]string
 	// yamlProfileDefaults snapshots the cognitive.yaml profile bindings so
 	// persistence never writes a root-derived binding back as a default.
 	yamlProfileDefaults map[string]string

@@ -264,3 +264,51 @@ def managed_cache_env(
     if extra:
         env.update(extra)
     return env
+
+
+@lru_cache(maxsize=8)
+def main_checkout_root(checkout_root: Path | None = None) -> Path | None:
+    """Locate the primary checkout root from a linked git worktree.
+
+    Linked worktrees (`git worktree add`) do not carry their own `.env`/
+    `.env.compose` (gitignored, secret-adjacent), so tasks running there need
+    to find the main checkout's copies without ever duplicating them onto
+    disk. `git rev-parse --git-common-dir` always resolves to the primary
+    checkout's `.git` directory, even from a linked worktree. `checkout_root`
+    defaults to this module's `ROOT_DIR`; callers pass it explicitly so a
+    caller-local override (e.g. a monkeypatched `ROOT_DIR`) is honored.
+    """
+    checkout_root = checkout_root or ROOT_DIR
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--git-common-dir"],
+            cwd=str(checkout_root),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    common_dir = Path(result.stdout.strip())
+    if not common_dir.is_absolute():
+        common_dir = (checkout_root / common_dir).resolve()
+    root = common_dir.parent
+    return root if root != checkout_root and root.is_dir() else None
+
+
+def resolve_env_file(name: str, checkout_root: Path | None = None) -> Path | None:
+    """Find `name` (e.g. `.env`) in this checkout, else the main checkout's copy.
+
+    Never copies the file; callers load it in-process (e.g. `dotenv.load_dotenv`)
+    so secrets stay out of the worktree on disk. `checkout_root` defaults to this
+    module's `ROOT_DIR`; pass it explicitly to honor a caller-local override.
+    """
+    checkout_root = checkout_root or ROOT_DIR
+    local_path = checkout_root / name
+    if local_path.exists():
+        return local_path
+    root = main_checkout_root(checkout_root)
+    if root is None:
+        return None
+    candidate = root / name
+    return candidate if candidate.exists() else None

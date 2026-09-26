@@ -83,17 +83,15 @@ func markProfileSource(config *BrainConfig, profile, source string) {
 	config.ProfileSources[profile] = source
 }
 
-// SetProfileOverride binds profile to providerID as an operator override,
-// which wins over root_provider and the shipped defaults.
+// SetProfileOverride binds profile to providerID as a runtime operator
+// override on a config that is still being built. It is not safe for
+// concurrent use and does not validate: a running Router must use
+// Router.SetProfileOverride, which validates and holds the router lock.
 func (c *BrainConfig) SetProfileOverride(profile, providerID string) {
 	if c == nil {
 		return
 	}
-	if c.Profiles == nil {
-		c.Profiles = make(map[string]string)
-	}
-	c.Profiles[profile] = providerID
-	markProfileSource(c, profile, ProfileSourceOverride)
+	recordProfileOverride(c, profile, providerID, ProfileOriginRuntime)
 }
 
 // ProfileSource reports where profile's current binding came from. A bound
@@ -154,8 +152,9 @@ func applyRootProviderDefaults(config *BrainConfig) {
 		if config.ProfileSource(profile) == ProfileSourceOverride {
 			continue
 		}
-		config.Profiles[profile] = rootID
-		markProfileSource(config, profile, ProfileSourceRoot)
+		// The same recompute a governed override reset uses, so a reset
+		// and a restart produce the same binding.
+		recomputeProfileBinding(config, profile)
 		bound = append(bound, profile)
 	}
 	if len(bound) > 0 {
@@ -163,16 +162,19 @@ func applyRootProviderDefaults(config *BrainConfig) {
 	}
 }
 
-// persistableProfiles returns the profile map to write to cognitive.yaml:
-// a root-derived binding is written back as its shipped default (or
-// omitted), so unsetting root_provider later restores the defaults.
+// persistableProfiles returns the profile map to write to cognitive.yaml.
+// Only shipped defaults are written: a root-, override-, or fallback-derived
+// binding is written back as its cognitive.yaml default (or omitted), so
+// operator overrides live only in system_config role.* and env, and never
+// return from YAML as defaults after a restart.
 func (c *BrainConfig) persistableProfiles() map[string]string {
 	if c == nil || c.Profiles == nil {
 		return nil
 	}
 	out := make(map[string]string, len(c.Profiles))
 	for profile, providerID := range c.Profiles {
-		if c.ProfileSources[profile] == ProfileSourceRoot {
+		switch c.ProfileSources[profile] {
+		case ProfileSourceRoot, ProfileSourceOverride, ProfileSourceFallback:
 			if def, ok := c.yamlProfileDefaults[profile]; ok {
 				out[profile] = def
 			}
