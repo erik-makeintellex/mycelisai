@@ -7,6 +7,7 @@ import {
   requestSomaPromptHandoff,
   saveWorkerProfileDraftPrompt,
 } from "@/components/soma/somaPromptHandoff";
+import ConfigDocumentRecords from "./ConfigDocumentRecords";
 
 type ConfigIssue = {
   code?: string;
@@ -131,7 +132,9 @@ export default function WorkerProfileAuthoringPanel() {
   }
 
   return (
-    <section className="border-b border-cortex-border bg-cortex-surface/30 px-5 py-4">
+    <>
+      <ConfigDocumentRecords />
+      <section className="border-b border-cortex-border bg-cortex-surface/30 px-5 py-4">
       <div className="rounded-lg border border-cortex-border bg-cortex-panel p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="max-w-2xl">
@@ -220,6 +223,7 @@ export default function WorkerProfileAuthoringPanel() {
           </div>
         </div>
       </div>
-    </section>
+      </section>
+    </>
   );
 }

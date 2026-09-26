@@ -1,16 +1,17 @@
 package server
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
 
 func TestTriggerReviewLoopsForEvent_ExecutesMatchingProfilesAndStoresActivity(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().EnsureDefaults(home)
 
-	stats, err := s.triggerReviewLoopsForEvent(home.ID, ReviewLoopEventOrganizationCreated)
+	stats, err := s.triggerReviewLoopsForEvent(context.Background(), home.ID, ReviewLoopEventOrganizationCreated)
 	if err != nil {
 		t.Fatalf("triggerReviewLoopsForEvent returned error: %v", err)
 	}
@@ -34,7 +35,7 @@ func TestTriggerReviewLoopsForEvent_ExecutesMatchingProfilesAndStoresActivity(t 
 
 func TestTriggerReviewLoopsForEvent_SkipsBusyLoop(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().EnsureDefaults(home)
 
 	key := scheduledLoopExecutionKey(home.ID, DefaultDepartmentReviewLoopID)
@@ -43,7 +44,7 @@ func TestTriggerReviewLoopsForEvent_SkipsBusyLoop(t *testing.T) {
 	}
 	defer s.loopExecutionTracker().Finish(key)
 
-	stats, err := s.triggerReviewLoopsForEvent(home.ID, ReviewLoopEventTeamLeadActionCompleted)
+	stats, err := s.triggerReviewLoopsForEvent(context.Background(), home.ID, ReviewLoopEventTeamLeadActionCompleted)
 	if err != nil {
 		t.Fatalf("triggerReviewLoopsForEvent returned error: %v", err)
 	}
@@ -57,9 +58,9 @@ func TestTriggerReviewLoopsForEvent_SkipsBusyLoop(t *testing.T) {
 
 func TestTriggerReviewLoopsForEvent_RejectsUnknownEvent(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 
-	_, err := s.triggerReviewLoopsForEvent(home.ID, ReviewLoopEventKind("external_api_called"))
+	_, err := s.triggerReviewLoopsForEvent(context.Background(), home.ID, ReviewLoopEventKind("external_api_called"))
 	if err == nil || !strings.Contains(err.Error(), "allowed internal review events") {
 		t.Fatalf("expected unknown event rejection, got %v", err)
 	}
@@ -67,7 +68,7 @@ func TestTriggerReviewLoopsForEvent_RejectsUnknownEvent(t *testing.T) {
 
 func TestTriggerReviewLoopsForEvent_RecordsFailureActivity(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().Save(home.ID, LoopProfile{
 		ID:          "missing-owner-review",
 		Name:        "Department readiness review",
@@ -80,7 +81,7 @@ func TestTriggerReviewLoopsForEvent_RecordsFailureActivity(t *testing.T) {
 		EventTriggers: []ReviewLoopEventKind{ReviewLoopEventOrganizationCreated},
 	})
 
-	stats, err := s.triggerReviewLoopsForEvent(home.ID, ReviewLoopEventOrganizationCreated)
+	stats, err := s.triggerReviewLoopsForEvent(context.Background(), home.ID, ReviewLoopEventOrganizationCreated)
 	if err != nil {
 		t.Fatalf("triggerReviewLoopsForEvent returned error: %v", err)
 	}

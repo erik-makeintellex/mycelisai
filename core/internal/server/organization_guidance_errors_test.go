@@ -67,7 +67,7 @@ func TestNormalizeOrganizationHome_AgentTypeProfilesResolveInheritanceAndTypeBin
 
 func TestHandleTeamLeadGuidedAction_RejectsUnknownAction(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:            "org-123",
 			Name:          "Northstar Labs",
@@ -87,7 +87,7 @@ func TestHandleTeamLeadGuidedAction_RejectsUnknownAction(t *testing.T) {
 
 func TestHandleTeamLeadGuidedAction_RejectsMalformedRequest(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:            "org-123",
 			Name:          "Northstar Labs",
@@ -117,7 +117,7 @@ func TestHandleTeamLeadGuidedAction_ReturnsNotFoundForMissingOrganization(t *tes
 
 func TestHandleTeamLeadGuidedAction_TriggersEventDrivenReview(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                        "org-123",
 			Name:                      "Northstar Labs",

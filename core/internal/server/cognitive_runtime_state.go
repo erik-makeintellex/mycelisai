@@ -1,8 +1,10 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -56,7 +58,7 @@ func joinHumanList(items []string) string {
 	}
 }
 
-func (s *AdminServer) buildRuntimeStateAnswer(organizationID, teamID, teamName string) string {
+func (s *AdminServer) buildRuntimeStateAnswer(ctx context.Context, organizationID, teamID, teamName string) string {
 	var lines []string
 	lines = append(lines, "Current Mycelis runtime state:")
 
@@ -75,7 +77,10 @@ func (s *AdminServer) buildRuntimeStateAnswer(organizationID, teamID, teamName s
 	}
 	lines = append(lines, "- Runtime: "+joinHumanList(runtimeStatus)+".")
 
-	organizations := s.organizationStore().List()
+	organizations, err := s.organizationStore().List(ctx)
+	if err != nil {
+		log.Printf("[runtime-state] organization list unavailable: %v", err)
+	}
 	if len(organizations) > 0 {
 		orgNames := make([]string, 0, len(organizations))
 		for _, org := range organizations {
@@ -110,7 +115,7 @@ func (s *AdminServer) buildRuntimeStateAnswer(organizationID, teamID, teamName s
 
 	home, hasOrganization := OrganizationHomePayload{}, false
 	if trimmedOrgID := strings.TrimSpace(organizationID); trimmedOrgID != "" {
-		home, hasOrganization = s.organizationStore().Get(trimmedOrgID)
+		home, hasOrganization = s.lookupOrganizationBestEffort(ctx, trimmedOrgID, "runtime-state")
 	}
 	if hasOrganization {
 		orgLabel := normalizeChatWorkspaceName(home.Name)
@@ -146,7 +151,7 @@ func (s *AdminServer) respondRuntimeStateSummary(w http.ResponseWriter, r *http.
 	)
 
 	chatPayload := protocol.ChatResponsePayload{
-		Text:          s.buildRuntimeStateAnswer(organizationID, teamID, teamName),
+		Text:          s.buildRuntimeStateAnswer(r.Context(), organizationID, teamID, teamName),
 		AskClass:      protocol.AskClassDirectAnswer,
 		ResponseDepth: protocol.ResponseDepthStructuredSummary,
 		Provenance: &protocol.AnswerProvenance{

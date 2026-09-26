@@ -25,6 +25,7 @@ var serverTestHTTPPort int32 = 23000 + int32(time.Now().UnixNano()%5000)
 // Pass option functions to wire only the subsystems each test needs.
 func newTestServer(opts ...func(*AdminServer)) *AdminServer {
 	s := &AdminServer{}
+	withMemoryOrganizations(s)
 	for _, o := range opts {
 		o(s)
 	}

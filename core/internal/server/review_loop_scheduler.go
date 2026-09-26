@@ -117,9 +117,15 @@ func (ls *LoopScheduler) run(ctx context.Context) {
 func (ls *LoopScheduler) runDueLoopsAt(now time.Time) loopSchedulerTickStats {
 	stats := loopSchedulerTickStats{}
 	ls.runDueScheduleTriggersAt(now)
-	summaries := ls.server.organizationStore().List()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	summaries, err := ls.server.organizationStore().List(ctx)
+	if err != nil {
+		log.Printf("[review-loop-scheduler] organization list unavailable: %v", err)
+		return stats
+	}
 	for _, summary := range summaries {
-		home, ok := ls.server.organizationStore().Get(summary.ID)
+		home, ok := ls.server.lookupOrganizationBestEffort(ctx, summary.ID, "review-loop-scheduler")
 		if !ok {
 			continue
 		}

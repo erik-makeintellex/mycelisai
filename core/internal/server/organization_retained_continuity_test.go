@@ -33,7 +33,7 @@ func organizationArtifactColumns() []string {
 
 func TestHandleTeamLeadGuidedAction_AddsContinuityResumeContractForRetainedPackage(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+	created := seedOrganization(t, s, s.buildOrganizationHome(OrganizationCreateRequest{
 		Name:       "Northstar Labs",
 		Purpose:    "Ship a focused AI engineering organization",
 		StartMode:  OrganizationStartModeTemplate,
@@ -125,7 +125,7 @@ func TestHandleTeamLeadGuidedAction_ResumeRetainedPackageUsesLatestGroupOutputs(
 			s.Artifacts = artifacts.NewService(s.DB, "")
 		},
 	)
-	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+	created := seedOrganization(t, s, s.buildOrganizationHome(OrganizationCreateRequest{
 		Name:       "Northstar Labs",
 		Purpose:    "Ship a focused AI engineering organization",
 		StartMode:  OrganizationStartModeTemplate,

@@ -9,7 +9,7 @@ import (
 
 func TestHandleUpdateAgentTypeResponseContract_SetsBinding(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                        "org-123",
 			Name:                      "Northstar Labs",
@@ -37,7 +37,7 @@ func TestHandleUpdateAgentTypeResponseContract_SetsBinding(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/response-contract", s.handleUpdateAgentTypeResponseContract)
 
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/response-contract", `{"profile_id":"warm_supportive"}`)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/response-contract", `{"profile_id":"warm_supportive"}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp protocol.APIResponse
@@ -55,7 +55,7 @@ func TestHandleUpdateAgentTypeResponseContract_SetsBinding(t *testing.T) {
 
 func TestHandleUpdateAgentTypeResponseContract_RevertsToOrganizationOrTeamDefault(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                        "org-123",
 			Name:                      "Northstar Labs",
@@ -83,7 +83,7 @@ func TestHandleUpdateAgentTypeResponseContract_RevertsToOrganizationOrTeamDefaul
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/response-contract", s.handleUpdateAgentTypeResponseContract)
 
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/response-contract", `{"use_organization_or_team_default":true}`)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/response-contract", `{"use_organization_or_team_default":true}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp protocol.APIResponse
@@ -101,7 +101,7 @@ func TestHandleUpdateAgentTypeResponseContract_RevertsToOrganizationOrTeamDefaul
 
 func TestHandleUpdateAgentTypeResponseContract_RejectsInvalidProfile(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                        "org-123",
 			Name:                      "Northstar Labs",
@@ -129,13 +129,13 @@ func TestHandleUpdateAgentTypeResponseContract_RejectsInvalidProfile(t *testing.
 	mux := http.NewServeMux()
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/response-contract", s.handleUpdateAgentTypeResponseContract)
 
-	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/response-contract", `{"profile_id":"raw_prompt_override"}`)
+	rr := doAuthenticatedRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/departments/platform/agent-types/delivery-specialist/response-contract", `{"profile_id":"raw_prompt_override"}`)
 	assertStatus(t, rr, http.StatusBadRequest)
 }
 
 func TestAgentTypeResponseContractInheritance_PersistsAcrossOrganizationUpdates(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
-	created := s.organizationStore().Save(OrganizationHomePayload{
+	created := seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:                        "org-123",
 			Name:                      "Northstar Labs",
@@ -165,7 +165,7 @@ func TestAgentTypeResponseContractInheritance_PersistsAcrossOrganizationUpdates(
 	updateMux.HandleFunc("PATCH /api/v1/organizations/{id}/response-contract", s.handleUpdateResponseContract)
 	updateMux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
 
-	updateRR := doRequest(t, updateMux, "PATCH", "/api/v1/organizations/"+created.ID+"/response-contract", `{"profile_id":"warm_supportive"}`)
+	updateRR := doAuthenticatedRequest(t, updateMux, "PATCH", "/api/v1/organizations/"+created.ID+"/response-contract", `{"profile_id":"warm_supportive"}`)
 	assertStatus(t, updateRR, http.StatusOK)
 
 	homeRR := doRequest(t, updateMux, "GET", "/api/v1/organizations/"+created.ID+"/home", "")

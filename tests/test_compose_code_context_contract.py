@@ -66,12 +66,32 @@ def test_code_context_host_root_default_empty_root_passes():
     )
 
 
-def test_code_context_host_root_clean_worktree_passes(tmp_path):
-    worktree = tmp_path / "code-context-readonly"
+def _make_worktree(tmp_path, name="code-context-readonly"):
+    worktree = tmp_path / name
     worktree.mkdir()
     # A linked worktree's .git is a FILE (gitdir pointer), never a directory.
-    (worktree / ".git").write_text("gitdir: /elsewhere/.git/worktrees/code-context-readonly\n", encoding="utf-8")
+    (worktree / ".git").write_text(f"gitdir: /elsewhere/.git/worktrees/{name}\n", encoding="utf-8")
+    return worktree
+
+
+def test_code_context_host_root_clean_worktree_passes(tmp_path):
+    worktree = _make_worktree(tmp_path)
     (worktree / "README.md").write_text("fixture\n", encoding="utf-8")
+
+    compose_env.validate_code_context_host_root(
+        {"MYCELIS_CODE_CONTEXT_HOST_ROOT": str(worktree)}
+    )
+
+
+def test_code_context_host_root_allows_committed_env_templates(tmp_path):
+    # A real clean checkout tracks .env.example and .env.compose.example; those
+    # are templates, not secrets, and must not trip the guard (regression for
+    # the merged guard rejecting every clean checkout).
+    worktree = _make_worktree(tmp_path)
+    (worktree / ".env.example").write_text("MYCELIS_API_KEY=\n", encoding="utf-8")
+    (worktree / ".env.compose.example").write_text("MYCELIS_BOOTSTRAP_TEMPLATE_ID=\n", encoding="utf-8")
+    (worktree / ".env.sample").write_text("PLACEHOLDER=\n", encoding="utf-8")
+    (worktree / ".env.template").write_text("PLACEHOLDER=\n", encoding="utf-8")
 
     compose_env.validate_code_context_host_root(
         {"MYCELIS_CODE_CONTEXT_HOST_ROOT": str(worktree)}
@@ -94,10 +114,10 @@ def test_code_context_host_root_rejects_main_checkout(tmp_path):
     assert str(main_checkout) not in message
 
 
-def test_code_context_host_root_rejects_directory_with_dotenv(tmp_path):
-    unsafe_root = tmp_path / "checkout-with-env"
-    unsafe_root.mkdir()
-    (unsafe_root / ".env").write_text("MYCELIS_API_KEY=should-never-be-read\n", encoding="utf-8")
+@pytest.mark.parametrize("real_env_name", [".env", ".env.compose", ".env.local"])
+def test_code_context_host_root_rejects_real_env_files(tmp_path, real_env_name):
+    unsafe_root = _make_worktree(tmp_path, name=f"checkout-with-{real_env_name.lstrip('.')}")
+    (unsafe_root / real_env_name).write_text("MYCELIS_API_KEY=should-never-be-read\n", encoding="utf-8")
 
     with pytest.raises(SystemExit) as excinfo:
         compose_env.validate_code_context_host_root(
@@ -107,4 +127,21 @@ def test_code_context_host_root_rejects_directory_with_dotenv(tmp_path):
     message = str(excinfo.value)
     assert ".env" in message
     assert str(unsafe_root) not in message
+    assert "should-never-be-read" not in message
+
+
+def test_code_context_host_root_rejects_env_alongside_its_own_template(tmp_path):
+    # A template next to a real file must not mask the real secret file.
+    mixed_root = _make_worktree(tmp_path, name="checkout-with-mixed-env")
+    (mixed_root / ".env.example").write_text("MYCELIS_API_KEY=\n", encoding="utf-8")
+    (mixed_root / ".env").write_text("MYCELIS_API_KEY=should-never-be-read\n", encoding="utf-8")
+
+    with pytest.raises(SystemExit) as excinfo:
+        compose_env.validate_code_context_host_root(
+            {"MYCELIS_CODE_CONTEXT_HOST_ROOT": str(mixed_root)}
+        )
+
+    message = str(excinfo.value)
+    assert ".env" in message
+    assert str(mixed_root) not in message
     assert "should-never-be-read" not in message

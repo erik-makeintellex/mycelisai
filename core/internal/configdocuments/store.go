@@ -104,7 +104,9 @@ func storeRevision(ctx context.Context, queryer revisionQueryRower, tenantID, ac
 	if err != nil {
 		return nil, err
 	}
-	if issues := protocol.ValidateConfigDocument(document); len(issues) != 0 {
+	// New writes use the strict secret rules; stored rows revalidate with the
+	// stored rules so tightened detection cannot strand an active revision.
+	if issues := protocol.ValidateNewConfigDocument(document); len(issues) != 0 {
 		return nil, &ValidationError{Issues: issues}
 	}
 	digest, err := protocol.CanonicalConfigDocumentDigest(document)

@@ -226,6 +226,8 @@ SQL owns schema and migration contracts. Runtime tables cover identity, organiza
 
 ### Migration Index
 
+The `ORGANIZATIONS_EXTENSION` marker block in `001_current_schema.sql` (after C2A, before the single `COMMIT;`) adds the durable `organizations` table.
+
 Use migration files as the source of exact DDL truth. When API behavior or payload meaning changes, review [API Reference](../API_REFERENCE.md) and the affected migration docs/tests.
 
 ## VIII. API Surface
@@ -271,6 +273,8 @@ Readiness, liveness, and dependency health routes.
 
 ## Area Contracts
 
+Fixed-key blocks for development agents. Blocks cite the PRD and source; they never restate or override it.
+
 ### Area: Code Context
 - PRD: §P0.7c L370 · Scoreboard: P0.7c native code context maps
 - Owned paths: `core/internal/codecontext/**` (mycelis-core-authority) · `docker-compose.yml`, `.env.compose.example`, `ops/compose_env.py`, `ops/code-context/**` (mycelis-platform-ops) · Do-not-touch: `core/internal/server/code_context.go` routes (owned elsewhere)
@@ -300,6 +304,26 @@ Readiness, liveness, and dependency health routes.
 - Proof: `uv run inv core.test --package=./internal/governance`; `uv run inv core.test --package=./internal/server --run='Posture|Governance'`; `uv run pytest tests/test_k8s_config_parity.py -q`
 - Pitfalls: a policy load failure is fail-open for NATS Gatekeeper (`loadGovernanceGuard`), fail-closed only for posture-scoped Soma work; `PUT /api/v1/governance/policy` has no in-handler root-admin scope check (A1/A2 follow-up); a posture floor applies only when a thread explicitly uses that template id, so a re-scoped copy with a new id carries no posture group
 - Verified: 2026-09-25 lead merge gate: isolated first boot, TestSeedBuiltInRevisionsRealDB (real PG), security-qa GO, core.test, docs links, max-lines
+
+### Area: Work projections
+- PRD: §Information Architecture L321-326, §Outcome Vault L136-137, §API And Event Contracts L277-284 · Scoreboard: Result-first Outcome UI
+- Owned paths: `core/internal/server/work_running*.go`, `core/pkg/protocol/work_running.go` (mycelis-core-execution) · Do-not-touch: `core/internal/server/team_work_store.go`, `core/internal/server/teams_detail.go`, `core/internal/server/auth*.go`
+- Seams: `team_work_store_scan.go:scanTeamWorkItem`, `outcome_projects_store.go:scanOutcomeProject`, `protocol.OutcomeHealthForTeamWork`, `protocol.OutcomeHealthForProject`, `protocol.AggregateOutcomeHealth`, `protocol.IsWorkRunningVisible`, `groups_auth.go:requireRootAdminScope`
+- Invariants: read-only (no writes, events, NATS, or in-memory registry); durable `team_work_items` is the only work source; `archived`/`output_ready` never shown (SQL filter plus `IsWorkRunningVisible`); health only from `protocol.OutcomeHealth*`; one items query plus one `outcome_projects` query, item under the most recently updated non-archived referencing project, archived Outcomes never group work (SQL `status <> 'archived'` plus Go guard); any source failure is `503` naming the source, never a partial list
+- Authority: `GET /api/v1/work/running` -> root admin + `groups:read`, default deny; negatives: anon 401, standard 403, admin without scope 403
+- Proof: `uv run inv core.test --package=./internal/server --run='TestWorkRunning' --race`
+- Pitfalls: `work_item_refs` is JSONB, so match with `?| $1::text[]` and `pq.Array`, not per-item lookups; L2 no GIN index on `work_item_refs`, so the link query scans tenant projects (fine at current scale; add a GIN index via mycelis-schema before it grows); summary counts are Outcome Health, not review counts, so review stays in the Work review panel; UI blocked on U1 — `WorkRunningPanel.tsx`, `useWorkRunning.ts`, and the `panel=running` branch land only after U1 merges to `dev`
+- Verified: 2026-09-25 lead merge gate: TestWorkRunning -race, real-PG query probe (security-qa), docs links, max-lines
+
+### Area: Organizations
+- PRD: §Projects Teams And Capability Use L141, §Outcome Vault L136, §Clean Deployment And First-Boot Contract L20-25 · Scoreboard: Current-schema convergence
+- Owned paths: `core/internal/server/organization_store*.go`, `organization_persistence_authz_test.go`, organization case of `qa_fixtures_purge.go` (core writer) · Do-not-touch: `core/internal/server/auth*.go`, `audit.go`, 001 G4/C2A block bytes
+- Seams: `organization_store.go:OrganizationStore`, `OrganizationRepository`, `respondOrganizationStoreError`, `organization_store_postgres.go:postgresOrganizationRepository`, `qa_fixtures_claims.go:withQAFixtureScopeLock`, `qa_fixtures_purge.go:deleteQAFixtureDatabaseResource` map, `organization_handlers.go:organizationsWriteScope`
+- Invariants: no in-memory fallback (nil DB -> every call `503`; memory repo exists only in `_test.go`); storage errors are `503`, never `404` or success; create is `INSERT` (duplicate id `409`), claim then insert inside the fixture fence; update is `SELECT ... FOR UPDATE` + write-back in one tx preserving `id`, `tenant_id`, `qa_fixture_scope_id`; every query filters `tenant_id='default'`; list order `name COLLATE "C", id`; purge deletes the row inside the purge tx
+- Authority: `POST /api/v1/organizations` and every `PATCH /api/v1/organizations/{id}/...` -> root admin + `organizations:write` (interim until A2); reads authenticated only; negatives: anon 401, standard 403, admin without scope 403, no row written
+- Proof: `uv run inv core.test --package=./internal/server --run='Test(Organization|QAFixture|ReviewLoop)' --race` with `MYCELIS_ORGANIZATION_STORE_TEST_DSN` on a disposable pg16 with 001 installed (absent DSN skips `TestOrganizationStoreRealDB_*`; skip is not proof); `uv run inv lifecycle.first-boot-proof --isolated --build`
+- Pitfalls: `QAFixtureScopeID` is `json:"-"`, so it is a column, never document data; non-UUID ids are `404` (no cast error); purge deletes only where `qa_fixture_scope_id` = the purging scope (a claimed org existing outside it fails the purge as unowned; an absent row no-ops so purges resume); a profile PATCH to a missing department/agent type aborts under the lock with no write; open for A2 (pre-S1): reads do not hide QA-fixture orgs, and `POST /api/v1/internal/organizations/{id}/loops/{loopId}/trigger` has no scope gate; the retained stack needs owner-approved `compose.migrate` before Core reads the table
+- Verified: 2026-09-25 lead merge gate: isolated first boot, 41 real-PG upgrade tests, 4 TestOrganizationStoreRealDB_* -race, security-qa GO, core.test, docs links, max-lines
 
 ## IX. Governance & Policy Engine
 
@@ -336,3 +360,17 @@ Startup resolves config, policy, bootstrap bundles, DB, NATS, providers, MCP pos
 ### Graceful Shutdown
 
 Shutdown should stop HTTP, streams, NATS consumers, background workers, and local service resources cleanly. Use `uv run inv lifecycle.down` or the matching runtime task for operator control.
+
+## Area Contracts
+
+Fixed-key blocks for development agents. Blocks cite the PRD and source; they never restate or override it.
+
+### Area: Model routing
+- PRD: §Projects Teams And Capability Use L155 (model gateways are transport, Core owns provider eligibility/routing) · Scoreboard: root model provider
+- Owned paths: `core/internal/cognitive/root_provider.go`, `core/internal/cognitive/root_provider_test.go` (mycelis-ai-runtime) · Do-not-touch: `core/internal/cognitive/router.go`, `types.go`, `env_overrides.go` except the `RootProvider` fields/branches already wired
+- Seams: `BrainConfig.RootProvider`, `defaultExecutionProfiles`, `validateRootProvider`, `applyRootProviderDefaults`, `NewRouter`, `server/cognitive_status_config.go` root reporting, `ops/cognitive_root.py`
+- Invariants: an explicit `Profiles[profile]` binding (`cognitive.yaml`, DB `system_config` overlay, or `MYCELIS_PROFILE_<NAME>_PROVIDER`) always wins over `RootProvider`; an unset `RootProvider` changes nothing (today's per-profile-only behavior); `RootProvider` assigns exactly one provider outright rather than a fallback list, so it never enters the `profile_fallbacks` cross-boundary partition check, which still governs only actual `profile_fallbacks` entries; a `RootProvider` naming an unconfigured or disabled provider fails `NewRouter` closed (`invalid cognitive config: root_provider ...`), never a silent skip
+- Authority: none added; root selection is startup config, not a request-scoped authorization decision
+- Proof: `go -C core test ./internal/cognitive/... ./internal/server/...`; `uv run --no-sync pytest tests/test_cognitive_root.py -q`; `uv run inv cognitive.status`
+- Pitfalls: the GPU serving the hosted variant's root vLLM is shared with dev tooling's own local vLLM use, so concurrent heavy calls contend; the Playwright assertion that a running Core's reported `root_provider` matches configuration is not implemented yet (pending); a pre-existing issue — `tests/test_framework_worker_chart.py` and `tests/test_litellm_config_contract.py` import `yaml` and fail under a bare `pytest` invocation without the project's dependency environment
+- Verified: 2026-09-25 lead merge gate: go test ./internal/cognitive/... ./internal/server/..., core.test, cognitive pytest, docs links, max-lines

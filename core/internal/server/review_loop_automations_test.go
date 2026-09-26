@@ -10,7 +10,7 @@ import (
 
 func TestHandleListAutomations_ReturnsSafeReadableDefinitions(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().EnsureDefaults(home)
 	s.loopResultStore().Add(home.ID, ReviewLoopResult{
 		ID:              "result-1",
@@ -69,7 +69,7 @@ func TestHandleListAutomations_ReturnsSafeReadableDefinitions(t *testing.T) {
 
 func TestHandleListAutomations_FallsBackGracefullyWhenOwnerIsUnavailable(t *testing.T) {
 	s := newTestServer()
-	home := s.organizationStore().Save(testReviewLoopHome())
+	home := seedOrganization(t, s, testReviewLoopHome())
 	s.loopProfileStore().Save(home.ID, LoopProfile{
 		ID:          "missing-owner-review",
 		Name:        "Missing owner review",

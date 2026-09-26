@@ -11,7 +11,7 @@ import (
 func TestHandleCreateOrganization_StartEmpty(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
 
-	rr := doRequest(t, http.HandlerFunc(s.handleCreateOrganization), "POST", "/api/v1/organizations", `{"name":"Blank Canvas","purpose":"Shape a new AI Organization","start_mode":"empty"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleCreateOrganization), "POST", "/api/v1/organizations", `{"name":"Blank Canvas","purpose":"Shape a new AI Organization","start_mode":"empty"}`)
 	assertStatus(t, rr, http.StatusCreated)
 
 	var resp protocol.APIResponse
@@ -31,7 +31,7 @@ func TestHandleCreateOrganization_StartEmpty(t *testing.T) {
 func TestHandleCreateOrganization_TriggersEventDrivenReviews(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
 
-	rr := doRequest(t, http.HandlerFunc(s.handleCreateOrganization), "POST", "/api/v1/organizations", `{"name":"Northstar Labs","purpose":"Ship a focused AI engineering organization","start_mode":"template","template_id":"engineering-starter"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleCreateOrganization), "POST", "/api/v1/organizations", `{"name":"Northstar Labs","purpose":"Ship a focused AI engineering organization","start_mode":"template","template_id":"engineering-starter"}`)
 	assertStatus(t, rr, http.StatusCreated)
 
 	var resp protocol.APIResponse
@@ -60,7 +60,7 @@ func TestHandleListOrganizations_ReturnsCreatedSummaries(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
 
 	createBody := `{"name":"Atlas","purpose":"Resume me later","start_mode":"empty"}`
-	createRR := doRequest(t, http.HandlerFunc(s.handleCreateOrganization), "POST", "/api/v1/organizations", createBody)
+	createRR := doAuthenticatedRequest(t, http.HandlerFunc(s.handleCreateOrganization), "POST", "/api/v1/organizations", createBody)
 	assertStatus(t, createRR, http.StatusCreated)
 
 	rr := doRequest(t, http.HandlerFunc(s.handleListOrganizations), "GET", "/api/v1/organizations?view=summary", "")

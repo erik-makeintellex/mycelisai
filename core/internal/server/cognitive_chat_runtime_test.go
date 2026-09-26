@@ -16,7 +16,7 @@ import (
 
 func TestHandleChat_ReturnsDeterministicRuntimeStateSummaryWithoutNATS(t *testing.T) {
 	s := newTestServer()
-	s.organizationStore().Save(OrganizationHomePayload{
+	seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:   "org-1",
 			Name: "Acme Org",
@@ -80,7 +80,7 @@ func TestHandleChat_ReturnsDeterministicRuntimeStateSummaryWithoutNATS(t *testin
 
 func TestHandleChat_ReturnsDeterministicWorkspaceV8SummaryWithoutNATS(t *testing.T) {
 	s := newTestServer()
-	s.organizationStore().Save(OrganizationHomePayload{
+	seedOrganization(t, s, OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
 			ID:      "org-v8",
 			Name:    "Workspace V8 QA",
