@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
@@ -17,6 +18,22 @@ import (
 const cognitiveWriteScope = "cognitive:write"
 
 const cognitiveProfileAuditSource = "cognitive-profile-override"
+
+// overrideCommittedNotApplied is returned when a PUT's role.* rows commit to
+// the DB but the runtime apply fails afterward (for example a provider
+// disabled or removed between the pre-commit validation and the post-commit
+// apply). The row is durable at that point, so this is never reported as a
+// 400/409 rejection.
+const overrideCommittedNotApplied = "override_committed_not_applied"
+
+// profileOverrideWriteMu serializes every PUT and DELETE against
+// system_config role.* rows, held from validation through the runtime apply
+// (audit + tx + commit + apply). Without it, two concurrent requests can
+// each pass validation against a stale snapshot, commit their own DB rows,
+// and then apply out of order, leaving the in-memory binding pointing at a
+// provider the DB no longer names for that profile. One process-wide mutex
+// is sufficient: there is exactly one system_config table and one Router.
+var profileOverrideWriteMu sync.Mutex
 
 type profileOverrideEffective struct {
 	ProviderID string `json:"provider_id,omitempty"`
@@ -38,6 +55,15 @@ type profileOverrideRejection struct {
 	Profile string `json:"profile"`
 	Code    string `json:"code"`
 	Error   string `json:"error"`
+}
+
+// profileOverrideCommitted describes a PUT that committed its role.* rows
+// but failed to apply them to the running Router.
+type profileOverrideCommitted struct {
+	Profiles          []string `json:"profiles"`
+	Code              string   `json:"code"`
+	Error             string   `json:"error"`
+	RecommendedAction string   `json:"recommended_action"`
 }
 
 // PUT /api/v1/cognitive/profiles
@@ -70,6 +96,13 @@ func (s *AdminServer) HandleUpdateProfiles(w http.ResponseWriter, r *http.Reques
 	for profile, providerID := range req.Profiles {
 		overrides[profile] = strings.TrimSpace(providerID)
 	}
+
+	// Serialized from here through the runtime apply below: validation,
+	// audit, tx/commit, and apply must all see and act on the same
+	// system_config snapshot as any concurrent PUT or DELETE.
+	profileOverrideWriteMu.Lock()
+	defer profileOverrideWriteMu.Unlock()
+
 	if err := s.Cognitive.ValidateProfileOverrides(overrides); err != nil {
 		respondProfileOverrideRejection(w, err)
 		return
@@ -118,10 +151,12 @@ func (s *AdminServer) HandleUpdateProfiles(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if err := s.Cognitive.SetProfileOverrides(overrides, cognitive.ProfileOriginDB); err != nil {
-		// The provider changed between validation and commit. The row is
-		// durable and status reports the profile as unavailable.
+		// The provider changed between validation and commit. The role.*
+		// rows are durable at this point, so this is never a 400/409
+		// rejection: the request was not refused, it partially succeeded
+		// and needs operator recovery.
 		log.Printf("HandleUpdateProfiles: committed role.* rows but runtime apply failed: %v", err)
-		respondProfileOverrideRejection(w, err)
+		respondProfileOverrideCommittedNotApplied(w, names, err)
 		return
 	}
 	results := make([]profileOverrideResult, 0, len(names))
@@ -154,6 +189,13 @@ func (s *AdminServer) HandleClearProfileOverride(w http.ResponseWriter, r *http.
 		respondAPIError(w, "Database unavailable: profile overrides are stored in system_config", http.StatusServiceUnavailable)
 		return
 	}
+
+	// Serialized from here through the runtime apply below; see the PUT
+	// handler above for why. Holding it across the read of state and the
+	// clear keeps a concurrent PUT from committing in between.
+	profileOverrideWriteMu.Lock()
+	defer profileOverrideWriteMu.Unlock()
+
 	state := s.Cognitive.ProfileOverrideState(profile)
 	status := "noop"
 	if state.DBRowPresent || (state.Origin != "" && state.Origin != cognitive.ProfileOriginEnv) {
@@ -238,6 +280,32 @@ func respondProfileOverrideRejection(w http.ResponseWriter, err error) {
 		OK:    false,
 		Error: rejection.Message,
 		Data:  profileOverrideRejection{Profile: rejection.Profile, Code: rejection.Code, Error: rejection.Message},
+	})
+}
+
+// respondProfileOverrideCommittedNotApplied reports a PUT whose role.* rows
+// are durable in system_config but whose runtime apply failed afterward. It
+// is always a 500: the request neither succeeded (the router did not move)
+// nor was rejected (the row exists), and the client's request/response pair
+// alone cannot tell it apart from a normal rejection unless the status code
+// differs. The recovery hint names the DELETE reset route, which restores
+// the DB and the runtime binding to the same, restart-equivalent state.
+func respondProfileOverrideCommittedNotApplied(w http.ResponseWriter, profiles []string, err error) {
+	message := "profile override committed to system_config but the runtime apply failed"
+	if err != nil {
+		message += ": " + err.Error()
+	}
+	hint := "The role.* row(s) are durable. Reset the affected profile(s) with " +
+		"DELETE /api/v1/cognitive/profiles/{profile}/override, then retry the PUT."
+	respondAPIJSON(w, http.StatusInternalServerError, protocol.APIResponse{
+		OK:    false,
+		Error: message,
+		Data: profileOverrideCommitted{
+			Profiles:          profiles,
+			Code:              overrideCommittedNotApplied,
+			Error:             message,
+			RecommendedAction: hint,
+		},
 	})
 }
 
