@@ -304,14 +304,9 @@ def status(
     if litellm_endpoint or litellm_api_key_env or litellm_model:
         raise Exit("pass --litellm to use the external proxy preflight mode")
 
-    root = cognitive_root.effective_root_provider()
-    if root:
-        state = "enabled" if root["enabled"] else "DISABLED"
-        print(f"  Root Provider      : {root['provider_id']} ({state}, via {root['source']})")
-        print(f"    Model            : {root['model_id'] or '(not set)'}")
-        print(f"    Endpoint         : {root['endpoint'] or '(not set)'}")
-    else:
-        print("  Root Provider      : none configured (MYCELIS_ROOT_PROVIDER/root_provider unset)")
+    disagreements = cognitive_root.print_report()
+    if disagreements:
+        raise Exit("configured (env) and effective (Core) root provider disagree: " + "; ".join(disagreements))
 
     _require_supported_local_engine_host()
 

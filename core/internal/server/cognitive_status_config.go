@@ -113,12 +113,14 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	// Surface the effective root provider (root_provider/MYCELIS_ROOT_PROVIDER)
-	// and its configured model id so operators and live tests can confirm
-	// which provider unbound profiles resolve to, without exposing secrets.
+	// Surface the effective root provider (root_provider/MYCELIS_ROOT_PROVIDER),
+	// its model id, and every profile's effective provider with its source
+	// (override | root | default | fallback | unbound) so operators and live
+	// tests can prove what Core actually routes to, without exposing secrets.
 	response := map[string]any{
-		"text":  result["text"],
-		"media": result["media"],
+		"text":     result["text"],
+		"media":    result["media"],
+		"profiles": cfg.EffectiveProfileBindings(),
 	}
 	if rootID := strings.TrimSpace(cfg.RootProvider); rootID != "" {
 		response["root_provider"] = rootID
@@ -205,7 +207,7 @@ func (s *AdminServer) HandleUpdateProfiles(w http.ResponseWriter, r *http.Reques
 
 	// Update in-memory config
 	for profile, providerID := range req.Profiles {
-		s.Cognitive.Config.Profiles[profile] = providerID
+		s.Cognitive.Config.SetProfileOverride(profile, providerID)
 	}
 
 	// Persist to YAML

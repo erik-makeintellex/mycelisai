@@ -103,6 +103,10 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		config.Profiles = make(map[string]string)
 	}
 
+	// Tag the cognitive.yaml bindings as shipped defaults before any
+	// override source runs; root_provider may replace defaults only.
+	markLoadedProfilesAsDefault(&config)
+
 	// 2. Load from DB (Overlay)
 	if db != nil {
 		if err := loadFromDB(db, &config); err != nil {
@@ -129,10 +133,9 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		return nil, fmt.Errorf("invalid cognitive config: %w", err)
 	}
 
-	// 3.2 Bind every default execution profile that still has no explicit
-	// provider to the configured root provider. Explicit bindings from
-	// cognitive.yaml, the DB overlay, or MYCELIS_PROFILE_<NAME>_PROVIDER were
-	// already applied above and always win over the root default.
+	// 3.2 Bind every default execution profile to the root provider unless
+	// an operator override (DB overlay or MYCELIS_PROFILE_<NAME>_PROVIDER,
+	// tagged above) pins it. Root replaces the cognitive.yaml defaults.
 	applyRootProviderDefaults(&config)
 
 	// 3.5 Reject a cross-data-boundary ProfileFallbacks entry before any

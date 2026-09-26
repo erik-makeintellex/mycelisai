@@ -5,6 +5,8 @@ import subprocess
 import time
 from typing import Callable
 
+from . import cognitive_root
+
 COGNITIVE_STATUS_TIMEOUT_SECONDS = 12.0
 
 
@@ -244,7 +246,7 @@ def run_health(
         print(f"  [FAIL] {'Cognitive Engine':<18} {cognitive_url} [{cognitive_status}]")
         failures.append(f"Cognitive Engine: {cognitive_body}")
     else:
-        _append_cognitive_health_failures(cognitive_url, cognitive_body, failures)
+        _append_cognitive_health_failures(cognitive_url, cognitive_body, failures, env_values)
 
     if failures:
         print("\nIssues:")
@@ -255,7 +257,9 @@ def run_health(
     print("\nAll compose endpoints healthy.")
 
 
-def _append_cognitive_health_failures(url: str, body: str, failures: list[str]):
+def _append_cognitive_health_failures(
+    url: str, body: str, failures: list[str], env_values: dict[str, str] | None = None
+):
     try:
         payload = json.loads(body)
     except json.JSONDecodeError as exc:
@@ -275,3 +279,12 @@ def _append_cognitive_health_failures(url: str, body: str, failures: list[str]):
         )
     if media_state != "online":
         print(f"  [NOTE] {'Media Engine':<18} media={media_state}")
+    # Live check: Core's effective root must equal the configured (env) root.
+    configured = cognitive_root.configured_root_provider(env_values or {})
+    root_problems = cognitive_root.root_disagreements(configured, payload)
+    effective_root = payload.get("root_provider") or "none"
+    if root_problems:
+        print(f"  [FAIL] {'Root Provider':<18} effective={effective_root}")
+        failures.extend(f"Root Provider: {problem}" for problem in root_problems)
+    else:
+        print(f"  [OK] {'Root Provider':<18} effective={effective_root}")

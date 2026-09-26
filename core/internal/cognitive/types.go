@@ -28,19 +28,25 @@ type BrainConfig struct {
 	// silently rerouting to another provider.
 	ProfileFallbacks map[string][]string `yaml:"profile_fallbacks,omitempty" json:"profile_fallbacks,omitempty"`
 	Media            *MediaConfig        `yaml:"media,omitempty" json:"media,omitempty"`
-	// RootProvider is the default provider ID every execution profile
-	// (defaultExecutionProfiles) resolves to when it has no explicit
-	// per-profile binding in Profiles. It is set from cognitive.yaml
-	// (root_provider) or overridden by MYCELIS_ROOT_PROVIDER. An explicit
-	// Profiles[profile] entry — from YAML, the DB overlay, or
-	// MYCELIS_PROFILE_<NAME>_PROVIDER — always wins over RootProvider.
-	// Leaving RootProvider unset keeps today's behavior exactly: a profile
-	// with no explicit binding stays unbound and fails closed through the
-	// normal unavailable path (or an explicit ProfileFallbacks entry).
-	// A RootProvider that names a provider that is not configured or not
+	// RootProvider is the provider ID every execution profile
+	// (defaultExecutionProfiles) resolves to unless an operator override
+	// pins it. It is set from cognitive.yaml (root_provider) or overridden
+	// by MYCELIS_ROOT_PROVIDER. Precedence, highest first: an operator
+	// override (non-empty MYCELIS_PROFILE_<NAME>_PROVIDER, a DB
+	// system_config role.<name> overlay, or a runtime profile update), then
+	// RootProvider, then the profile defaults shipped in cognitive.yaml.
+	// Leaving RootProvider unset keeps today's behavior exactly. A
+	// RootProvider that names a provider that is not configured or not
 	// enabled is a hard config error at startup (see validateRootProvider),
 	// never a silent skip.
 	RootProvider string `yaml:"root_provider,omitempty" json:"root_provider,omitempty"`
+	// ProfileSources records where each Profiles binding came from
+	// (ProfileSourceDefault/Root/Override/Fallback). It is never read from
+	// or persisted to cognitive.yaml.
+	ProfileSources map[string]string `yaml:"-" json:"profile_sources,omitempty"`
+	// yamlProfileDefaults snapshots the cognitive.yaml profile bindings so
+	// persistence never writes a root-derived binding back as a default.
+	yamlProfileDefaults map[string]string
 }
 
 type ExecutionAvailability struct {

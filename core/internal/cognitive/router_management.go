@@ -114,7 +114,7 @@ func (r *Router) redactedConfigForPersistence() *BrainConfig {
 		return nil
 	}
 	out := &BrainConfig{
-		Profiles:         r.Config.Profiles,
+		Profiles:         r.Config.persistableProfiles(),
 		ProfileFallbacks: r.Config.ProfileFallbacks,
 		Media:            r.Config.Media,
 	}

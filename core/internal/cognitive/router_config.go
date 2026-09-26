@@ -83,6 +83,9 @@ func loadFromDB(db *sql.DB, config *BrainConfig) error {
 		}
 		profileName := strings.TrimPrefix(key, "role.")
 		config.Profiles[profileName] = providerID
+		if strings.TrimSpace(providerID) != "" {
+			markProfileSource(config, profileName, ProfileSourceOverride)
+		}
 	}
 
 	return nil
