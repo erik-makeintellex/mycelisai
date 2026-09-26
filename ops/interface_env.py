@@ -15,6 +15,7 @@ from .config import (
     ensure_managed_cache_dirs,
     is_windows,
     managed_cache_env,
+    resolve_env_file,
 )
 from .env_files import load_env_file
 from .interface_workspace import infer_native_backend_workspace_root
@@ -22,14 +23,25 @@ INTERFACE_DIR = ROOT_DIR / "interface"
 
 
 def _load_env():
-    """Load Interface env files while keeping root .env as the secret source."""
+    """Load Interface env files while keeping root .env as the secret source.
+
+    A linked git worktree has no local `.env`/`.env.compose` (gitignored), so
+    `resolve_env_file` falls back to the main checkout's copies; nothing is
+    duplicated onto disk, only loaded into this process's environment.
+    """
+    compose_path = resolve_env_file(".env.compose", checkout_root=ROOT_DIR)
+    env_path = resolve_env_file(".env", checkout_root=ROOT_DIR)
     try:
         from dotenv import load_dotenv
-        load_dotenv(str(ROOT_DIR / ".env.compose"), override=True)
-        load_dotenv(str(ROOT_DIR / ".env"), override=True)
+        if compose_path:
+            load_dotenv(str(compose_path), override=True)
+        if env_path:
+            load_dotenv(str(env_path), override=True)
     except ImportError:
-        load_env_file(ROOT_DIR / ".env.compose")
-        load_env_file(ROOT_DIR / ".env")
+        if compose_path:
+            load_env_file(compose_path)
+        if env_path:
+            load_env_file(env_path)
     # Root .env owns the Go Core HTTP port; Next.js must use INTERFACE_PORT.
     os.environ.pop("PORT", None)
 def _task_env(extra=None):
