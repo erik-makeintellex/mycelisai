@@ -2660,4 +2660,21 @@ INSERT INTO system_config (key, value) VALUES ('schema.deployment_context_taxono
     ON CONFLICT (key) DO NOTHING;
 -- END DEPLOYMENT_CONTEXT_TAXONOMY_EXTENSION
 
+-- BEGIN TOKEN_USAGE_LEDGER_EXTENSION
+CREATE TABLE IF NOT EXISTS token_usage_ledger (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'default',
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    execution_id TEXT NOT NULL,
+    execution_kind TEXT NOT NULL CHECK (execution_kind IN ('soma_turn','agent_turn','council_consult','draft','agentry','system')),
+    run_id TEXT NOT NULL DEFAULT '', team_id TEXT NOT NULL DEFAULT '', agent_id TEXT NOT NULL DEFAULT '',
+    provider_id TEXT NOT NULL, model_id TEXT NOT NULL, budget_class TEXT NOT NULL,
+    prompt_tokens INT NOT NULL DEFAULT 0, completion_tokens INT NOT NULL DEFAULT 0, total_tokens INT NOT NULL,
+    usage_reported BOOLEAN NOT NULL, outcome TEXT NOT NULL CHECK (outcome IN ('charged','refused_exhausted'))
+);
+CREATE INDEX IF NOT EXISTS idx_token_ledger_team_day ON token_usage_ledger(tenant_id, team_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_token_ledger_agent_day ON token_usage_ledger(tenant_id, agent_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_token_ledger_run ON token_usage_ledger(tenant_id, run_id) WHERE run_id <> '';
+-- END TOKEN_USAGE_LEDGER_EXTENSION
+
 COMMIT;

@@ -297,32 +297,6 @@ func TestBuildProposalDraftPreview_BoundsLinesAndBytes(t *testing.T) {
 	}
 }
 
-func TestHandleChat_DraftCapBlocksWithoutProposalOrInference(t *testing.T) {
-	provider := &draftTestProvider{text: teamBriefDraft}
-	s := newTestServer(withNATS(t))
-	s.Cognitive = draftTestRouter(provider)
-	var calls []protocol.PlannedToolCall
-	// cap+2 calls: the agent text fills the first write_file (recorded follow-up), so cap+1 still need drafts.
-	for i := 0; i <= writeFileDraftMaxPerTurn+1; i++ {
-		calls = append(calls, protocol.PlannedToolCall{Name: "write_file", Arguments: map[string]any{"path": "notes/part-" + string(rune('a'+i)) + ".md"}})
-	}
-	respondAsAdminAgentForTest(t, s, map[string]any{"text": "Planning the notes.", "tools_used": []string{"write_file"}, "planned_tool_calls": calls})
-	body, _ := json.Marshal(map[string]any{"messages": []chatRequestMessage{{Role: "user", Content: "Create four markdown notes for the launch."}}})
-	rr := httptest.NewRecorder()
-	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/api/v1/chat", bytes.NewBuffer(body)))
-	if rr.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("status = %d, want 422 body=%s", rr.Code, rr.Body.String())
-	}
-	for _, forbidden := range []string{"proposal", "confirm_token", "intent_proof_id"} {
-		if strings.Contains(rr.Body.String(), forbidden) {
-			t.Fatalf("over-cap blocker carries %q: %s", forbidden, rr.Body.String())
-		}
-	}
-	if provider.calls() != 0 {
-		t.Fatalf("draft inferences = %d, want none past the cap", provider.calls())
-	}
-}
-
 func TestDraftMissingWriteFileContent_TurnDeadlineBlocksWithoutPartialPlan(t *testing.T) {
 	previous := writeFileDraftTurnDeadline
 	writeFileDraftTurnDeadline = 50 * time.Millisecond

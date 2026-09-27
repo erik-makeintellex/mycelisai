@@ -93,8 +93,10 @@ func loadBuiltInSeedFile(dir, name string) (BuiltInSeedDocument, error) {
 	}
 	metadata := document.Metadata
 	switch {
-	case document.Kind != protocol.ConfigDocumentKindOutcomeTemplate:
-		return BuiltInSeedDocument{}, fmt.Errorf("built-in seed %s: kind %q is not seedable (OutcomeTemplate only)", name, document.Kind)
+	case document.Kind != protocol.ConfigDocumentKindOutcomeTemplate &&
+		(document.Kind != protocol.ConfigDocumentKindTokenBudgetPolicy || metadata.ID != protocol.TokenBudgetDefaultsDocumentID):
+		// B1: the token budget defaults document is the one non-template seed.
+		return BuiltInSeedDocument{}, fmt.Errorf("built-in seed %s: kind %q is not seedable (OutcomeTemplate or the token-budget-defaults TokenBudgetPolicy only)", name, document.Kind)
 	case metadata.Scope.Kind != protocol.ConfigDocumentScopeBuiltIn || metadata.Scope.Ref != "":
 		return BuiltInSeedDocument{}, fmt.Errorf("built-in seed %s: scope must be built_in with an empty ref", name)
 	case metadata.Source.Kind != protocol.ConfigDocumentSourceBuiltIn || metadata.Source.Ref != BuiltInSeedSourcePrefix+name:

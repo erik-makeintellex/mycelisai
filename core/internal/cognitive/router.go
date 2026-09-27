@@ -39,6 +39,9 @@ type Router struct {
 	windowTokens atomic.Int64 // tokens in current window
 
 	embedState embedAvailability // embedding probe verdict and negative cache
+
+	// Budgets enforces token budgets per execution (nil: not enforced).
+	Budgets *BudgetGovernor
 }
 
 // RecordTokens adds to the cumulative and windowed token counters.
@@ -246,9 +249,14 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 		Correlation: req.Correlation,
 	}
 
+	budget, err := r.budgetPreflight(ctx, req, providerID, providerCfg, &opts)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := adapter.Infer(ctx, req.Prompt, opts)
 	if err == nil && resp != nil {
 		r.finalizeInferenceResponse(providerID, resp)
+		r.budgetCharge(ctx, budget, resp)
 	}
 	if err != nil {
 		// Core fails closed on inference failure. It never re-routes a

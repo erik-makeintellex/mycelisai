@@ -23,6 +23,8 @@ type ProcessResult struct {
 	ModelUsed        string                           `json:"model_used,omitempty"`
 	Consultations    []protocol.ConsultationEntry     `json:"consultations,omitempty"`
 	ContextSources   []protocol.ContextSourceRef      `json:"context_sources,omitempty"`
+	ExecutionStatus  string                           `json:"execution_status,omitempty"` // "stopped_budget" on an honest budget stop
+	Partial          bool                             `json:"partial,omitempty"`          // Text is incomplete work cut off by a stop
 }
 
 func (a *Agent) processMessage(input string, priorHistory []cognitive.ChatMessage) string {
@@ -54,7 +56,11 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 	if requirement.active() {
 		req.Messages = append([]cognitive.ChatMessage{{Role: "system", Content: resultContractExecutionPrompt(requirement)}}, req.Messages...)
 	}
+	req.Meter = cognitive.NewExecutionMeter(a.executionKind(), req.Correlation)
 	resp, err := a.inferWithExecutionBounds(req, "initial", 1)
+	if stop := cognitive.AsTokenBudgetExhausted(err); stop != nil {
+		return budgetStopResult(stop, "", profile, "", "", nil)
+	}
 	if err != nil {
 		// Inference failure is a blocker. The runtime never substitutes its own
 		// package or content for the model's work.
@@ -99,6 +105,10 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 	if loop.resp != nil {
 		providerID = loop.resp.Provider
 		modelUsed = loop.resp.ModelUsed
+	}
+	if stop := req.Meter.Stop(); stop != nil {
+		a.logTurn("assistant", budgetStopSummary(stop, strings.TrimSpace(responseText) != ""), providerID, modelUsed, "", nil, "", "")
+		return budgetStopResult(stop, responseText, profile, providerID, modelUsed, loop.artifacts)
 	}
 	if issues := resultContractIssues(requirement, loop.artifacts, loop.toolEvidence); len(issues) > 0 {
 		summary := "The team exhausted its bounded correction attempts without satisfying the approved result contract: " + strings.Join(issues, "; ") + "."

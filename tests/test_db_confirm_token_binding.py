@@ -117,7 +117,7 @@ def test_role_complete_host_runs_role_token_and_taxonomy_only(capsys):
     assert db_upgrade.TOKEN_ABSENT_SQL in calls[:calls.index(body)]
     for marker in ("CREATE TABLE organizations", "execution_effect_grants", "fk_runtime_team_owner"):
         assert marker not in body
-    assert "upgrade complete (ROLE + TOKEN + TAXONOMY)" in capsys.readouterr().out
+    assert "upgrade complete (ROLE + TOKEN + TAXONOMY + LEDGER)" in capsys.readouterr().out
 
 
 def test_partial_token_binding_is_refused_before_any_sql():
@@ -230,7 +230,7 @@ def test_real_compose_migrate_binds_tokens_on_role_complete_stack(database, monk
     monkeypatch.setattr(compose, "_run_compose_migration_file",
                         lambda *_: pytest.fail("compose.migrate replayed the installer on retained data"))
     compose._run_compose_migrations()
-    assert "Retained-schema upgrade complete (ROLE + TOKEN + TAXONOMY)" in capsys.readouterr().out
+    assert "Retained-schema upgrade complete (ROLE + TOKEN + TAXONOMY + LEDGER)" in capsys.readouterr().out
     assert_contract(database)
     after = json.loads(database(TOKEN_ROW).stdout)
     assert {key: after[key] for key in before} == before and after["purpose"] is None

@@ -130,6 +130,7 @@ type ProviderConfig struct {
 	UsagePolicy        string   `yaml:"usage_policy" json:"usage_policy"`                                     // "local_first" | "allow_escalation" | "require_approval" | "disallowed"
 	TokenBudgetProfile string   `yaml:"token_budget_profile,omitempty" json:"token_budget_profile,omitempty"` // conservative | standard | extended | deep
 	MaxOutputTokens    int      `yaml:"max_output_tokens,omitempty" json:"max_output_tokens,omitempty"`       // bounded default output budget per provider
+	BudgetClass        string   `yaml:"budget_class,omitempty" json:"budget_class,omitempty"`                 // token budget class; unset derives from data_boundary
 	RolesAllowed       []string `yaml:"roles_allowed" json:"roles_allowed"`                                   // ["architect","coder"] or ["all"]
 	Enabled            bool     `yaml:"enabled" json:"enabled"`
 }
@@ -227,6 +228,7 @@ type InferRequest struct {
 	Prompt      string               `json:"prompt"`             // Legacy
 	Messages    []ChatMessage        `json:"messages,omitempty"`
 	Correlation InferenceCorrelation `json:"-"` // Internal authoritative execution scope; never accepted from API JSON.
+	Meter       *ExecutionMeter      `json:"-"` // Token budget meter for this execution; falls back to the ctx meter.
 }
 
 // InferenceCorrelation carries only identifiers already owned by the invoking

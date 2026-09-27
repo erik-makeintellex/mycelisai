@@ -1,0 +1,52 @@
+apiVersion: mycelis.ai/v1
+kind: TokenBudgetPolicy
+metadata:
+  id: token-budget-defaults
+  name: Token budget defaults
+  version: "1.0.0"
+  owner_id: mycelis
+  scope:
+    kind: built_in
+  enabled: true
+  source:
+    kind: built_in
+    ref: core/config/documents/templates/token-budget-defaults.yaml
+  governance:
+    risk_level: medium
+    approval_posture: required
+spec:
+  # Tokens are provider-reported prompt + completion. An execution is one agent
+  # turn, one drafting pass, one agentry run, or one system call; a run is every
+  # execution sharing a run id; days are UTC. Operator overrides are written only
+  # through /api/v1/cognitive/budgets/overrides.
+  global:
+    per_execution: 32000
+    per_run: 128000
+    per_team_day: 500000
+    per_agent_day: 250000
+    warn_pct: 80
+  classes:
+    local_large:
+      per_execution: 64000
+      per_run: 256000
+      per_team_day: 2000000
+      per_agent_day: 1000000
+      warn_pct: 80
+    local_small:
+      per_execution: 24000
+      per_run: 96000
+      per_team_day: 1000000
+      per_agent_day: 500000
+      warn_pct: 80
+    hosted_standard:
+      per_execution: 32000
+      per_run: 128000
+      per_team_day: 300000
+      per_agent_day: 150000
+      warn_pct: 80
+    hosted_premium:
+      per_execution: 24000
+      per_run: 96000
+      per_team_day: 150000
+      per_agent_day: 75000
+      warn_pct: 80

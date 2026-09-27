@@ -21,13 +21,13 @@ def _block(raw: bytes) -> str:
     return raw[raw.index(begin) + len(begin):raw.index(end)].decode()
 
 
-def test_taxonomy_block_follows_token_and_owns_the_single_commit():
+def test_taxonomy_block_follows_token_and_precedes_the_ledger():
     raw = SCHEMA.read_bytes()
     token_end = raw.index(db_upgrade.TOKEN_END_MARKER.encode())
     begin = raw.index(db_upgrade.TAXONOMY_BEGIN_MARKER.encode())
     end = raw.index(db_upgrade.TAXONOMY_END_MARKER.encode())
     assert token_end < begin < end
-    assert raw[end:] == db_upgrade.TAXONOMY_END_MARKER.encode() + b"\n\nCOMMIT;\n"
+    assert raw[end:].startswith(db_upgrade.TAXONOMY_END_MARKER.encode() + b"\n\n" + db_upgrade.LEDGER_BEGIN_MARKER.encode())
 
 
 def test_taxonomy_block_is_marker_gated_governed_only_and_additive():
@@ -44,7 +44,9 @@ def test_taxonomy_block_is_marker_gated_governed_only_and_additive():
 def test_taxonomy_checks_extend_the_token_complete_contract():
     token = db_schema.TOKEN_COMPLETE_SCHEMA_COMPATIBILITY_CHECKS
     checks = db_schema.SCHEMA_COMPATIBILITY_CHECKS
-    assert checks[:len(token)] == token and checks[len(token):] == db_schema.TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS
+    taxonomy_end = len(token) + len(db_schema.TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS)
+    assert checks[:len(token)] == token and checks[len(token):taxonomy_end] == db_schema.TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS
+    assert checks[:taxonomy_end] == db_schema.TAXONOMY_COMPLETE_SCHEMA_COMPATIBILITY_CHECKS
     assert any("is_nullable='YES'" in sql for _, sql in db_schema.TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS)
 
 
@@ -88,7 +90,7 @@ def test_real_retained_upgrade_rewrites_governed_rows_once(database, capsys):
     rows = _seed(database)
     assert database(MARKER_ROW).stdout.strip() == ""
     assert db_upgrade.upgrade_retained(SCHEMA, database)
-    assert "upgrade complete (ROLE + TAXONOMY)" in capsys.readouterr().out
+    assert "upgrade complete (ROLE + TAXONOMY + LEDGER)" in capsys.readouterr().out
     assert database(MARKER_ROW).stdout.strip() == "1"
     for table, row_id, seeded in rows:
         meta = _meta(database, table, row_id)
