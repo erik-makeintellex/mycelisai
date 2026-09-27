@@ -232,44 +232,19 @@ Use migration files as the source of exact DDL truth. When API behavior or paylo
 
 ## VIII. API Surface
 
-### Identity & Users
-User, local-admin, break-glass, and future enterprise auth endpoints.
-
-### Chat & Council
-Soma, council, and member chat/proposal routes.
-
-### Mission Orchestration
-Run, mission, proposal, approval, execution, and timeline routes.
-
-### Cognitive Engine
-Provider profile, health, discovery, and routing routes.
-
-### Telemetry & Trust
-Status, trust, event, and stream routes.
-
-### Memory & RAG
-Memory, semantic search, context, and continuity routes.
-
-### Governance & Proposals
-Policy, proposal, proof, and approval routes.
-
-### Teams
-Team, group, temporary workflow, and member routes.
-
-### MCP Management
-Connected Tools registry, library, install, activity, and health routes.
-
-### Agent Catalogue
-Agent/template catalogue and manifest routes.
-
-### Artifacts
-Generated output, file, media, and retained artifact routes.
-
-### Provisioning & Registry
-Bootstrap, templates, resource registry, and deployment-context routes.
-
-### Health
-Readiness, liveness, and dependency health routes.
+- **Identity & Users**: User, local-admin, break-glass, and future enterprise auth endpoints.
+- **Chat & Council**: Soma, council, and member chat/proposal routes.
+- **Mission Orchestration**: Run, mission, proposal, approval, execution, and timeline routes.
+- **Cognitive Engine**: Provider profile, health, discovery, and routing routes.
+- **Telemetry & Trust**: Status, trust, event, and stream routes.
+- **Memory & RAG**: Memory, semantic search, context, and continuity routes.
+- **Governance & Proposals**: Policy, proposal, proof, and approval routes.
+- **Teams**: Team, group, temporary workflow, and member routes; Exchange "Team handoffs" (`GET /api/v1/exchange/handoffs`).
+- **MCP Management**: Connected Tools registry, library, install, activity, and health routes.
+- **Agent Catalogue**: Agent/template catalogue and manifest routes.
+- **Artifacts**: Generated output, file, media, and retained artifact routes.
+- **Provisioning & Registry**: Bootstrap, templates, resource registry, and deployment-context routes.
+- **Health**: Readiness, liveness, and dependency health routes.
 
 ## Area Contracts
 
@@ -344,6 +319,16 @@ Fixed-key blocks for development agents. Blocks cite the PRD and source; they ne
 - Proof: `uv run inv core.test --package=./internal/server --run='Auth|Audit'`; `uv run --no-sync pytest tests/test_auth_tasks.py tests/test_compose_identity_contract.py -q`; `cd interface && npx vitest run __tests__/auth __tests__/lib/webAuth.test.ts __tests__/lib/proxyAuth.test.ts`
 - Pitfalls: a retained stack redeployed onto this hardening has no local-admin hash yet, so local login fails until an operator sets `MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256`/`_PASSWORD` (see auth-modes.md Operator Upgrade Note); upgrading in place invalidates sessions signed under the old fallback secret, so everyone re-authenticates once; `tests/test_compose_identity_contract.py` needs PyYAML (`import yaml`) and fails in a fresh worktree venv without it
 - Verified: 2026-09-25 lead merge gate: core.test, auth/compose pytest, typecheck, auth vitest 61, security-qa
+
+### Area: Team handoffs
+- PRD: §Projects Teams And Capability Use L129, L149; §API And Event Contracts L269-273 · Scoreboard: H1 team handoff
+- Owned paths: `core/internal/swarm/internal_tools_{handoff,registration_handoff,artifact_provenance,exchange}.go`, `core/internal/server/team_handoff*.go`, `core/internal/exchange/registries.go` (mycelis-core-execution) · Do-not-touch: `team_work_signal_*` (PH-B), Work-lane UI (U1)
+- Seams: `swarm.HandoffRecorder`, `SetHandoffRecorder`, `handoffLeadAuthority`, `exchangeActorForInvocation`, `attributeArtifact`, `swarm.HandoffCommandEnvelope`, `teamHandoffRecorder.RecordHandoff`/`ReadHandoffInput`, `sqlTeamHandoffStore.CommitHandoff`, `dispatchClaimedTeamHandoff`, `listTeamHandoffs`
+- Invariants: exchange actor, artifact provenance, and handoff source come only from `ToolInvocationContext` (args never; `role:"admin"` grants nothing); only designated leads (role `lead`/`team_lead`, never `admin-core`; not `isLeadAgent`) run `hand_off`/`read_handoff_input`; inputs must be `provenance=attributed` to the caller's team and run; target needs approved work (intent proof) on the same run; only Core's `provenance_sensitivity` counts (unknown = restricted -> `handoff_needs_approval`); HandoffNote, queued work item, event, `handoff_queued`, and `team_handoff` outbox row commit in one tx, and `handoff_sent` is written only after publish; ids derive from run/source/target/artifacts so replays return the same handoff; status stays `queued` until acceptance
+- Authority: `GET /api/v1/exchange/handoffs` -> root admin + `groups:read`, default deny; negatives: anon 401, standard 403, admin without scope 403; `organization.team.handoffs` has no agent writers and agents read only notes their team sent or received (`canReadItem`); input reads are scoped to the target team and listed artifacts
+- Proof: `uv run inv core.test --package=./internal/swarm --run='Handoff|HandOff|Exchange|StoreArtifact|Shipped|Coder' --race`; `uv run inv core.test --package=./internal/exchange --race`; `uv run inv core.test --package=./internal/server --run='Exchange|Handoff' --race`; `uv run pytest tests/test_k8s_config_parity.py -q`
+- Pitfalls: acceptance comes from the existing projection of the receiver's correlated "Team accepted work" signal; `handoff_consumed` output linking and Work-lane chain rendering are deferred (PH-B hook, U1); executing an approved out-of-run handoff via confirm-action is not built (Soma proposes, the blocker is honest); shipped leads are `prime-architect-agent` and `prime-development-agent` (`role: team_lead`, formerly architect/coder; a policy `role_providers` key on the old roles no longer matches them); runtime team leads must declare the tools; `read_file` is still workspace-wide; generated images still insert `agent_id='internal'`; the SQL store is sqlmock-proven only, real-PG proof is lead-run
+- Verified: pending lead merge (H1 worktree on dev b1893c9c)
 
 ## IX. Governance & Policy Engine
 

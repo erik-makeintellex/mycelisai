@@ -75,6 +75,36 @@ commands:
     context_assertions: [mutates_exchange, structured_payload_required]
     ui_visibility: {default_surface: soma_thread, operator_label: Work item}
     availability: {mode: builtin}
+  - id: exchange.hand_off
+    handler: hand_off
+    title: Hand off to a team
+    summary: Hand stored artifacts from one team to another team in the same approved run.
+    user_quote: "Hand this to the marketing team."
+    category: Exchange and handoff
+    capability_id: team_orchestration
+    input_schema_ref: internal_tool.hand_off.input
+    output_schema_ref: team_handoff_receipt.v1
+    scope: {default: team, roles: [team_lead]}
+    governance: {risk_class: medium-risk, approval_posture: governed, audit_required: true}
+    delivery: {output_kinds: [team_handoff], proof_required: true, recovery_posture: retry_handoff_dispatch}
+    context_assertions: [mutates_exchange, approved_run_required, lead_only]
+    ui_visibility: {default_surface: resources, operator_label: Team handoff}
+    availability: {mode: builtin}
+  - id: exchange.read_handoff_input
+    handler: read_handoff_input
+    title: Read handoff input
+    summary: Read one artifact another team handed to your team.
+    user_quote: "Open what research handed us."
+    category: Exchange and handoff
+    capability_id: team_orchestration
+    input_schema_ref: internal_tool.read_handoff_input.input
+    output_schema_ref: team_handoff_input.v1
+    scope: {default: team, roles: [team_lead]}
+    governance: {risk_class: low-risk, approval_posture: not_required, audit_required: true}
+    delivery: {output_kinds: [handoff_input], proof_required: true, recovery_posture: ask_source_team}
+    context_assertions: [scoped_read, lead_only]
+    ui_visibility: {default_surface: resources, operator_label: Handoff input}
+    availability: {mode: builtin}
   - id: planning.blueprint
     handler: generate_blueprint
     title: Generate blueprint

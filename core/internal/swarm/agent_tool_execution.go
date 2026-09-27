@@ -54,7 +54,7 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 	a.logTurn("tool_call", result.responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
 
 	toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
-		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, SourceKind: protocol.SourceKindSystem,
+		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, AgentRole: a.Manifest.Role, SourceKind: protocol.SourceKindSystem,
 		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand, PlanningOnly: planningOnly,
 	})
 	serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, toolCall.Name)
@@ -213,7 +213,7 @@ func (a *Agent) executeRuntimeOwnedEntrypointReadback(i int, entrypoint string, 
 	a.logTurn("tool_call", "Runtime-owned project-package entrypoint readback.", "", "", call.Name, call.Arguments, "", "")
 
 	toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
-		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, SourceKind: protocol.SourceKindSystem,
+		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, AgentRole: a.Manifest.Role, SourceKind: protocol.SourceKindSystem,
 		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand,
 		PlanningOnly: planningOnly, RuntimeOwned: true,
 	})

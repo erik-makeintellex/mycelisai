@@ -13,9 +13,12 @@ type toolInvocationContextKey struct{}
 // It is attached to context during agent execution and consumed by internal tools
 // when publishing governed product signals.
 type ToolInvocationContext struct {
-	RunID          string
-	TeamID         string
-	AgentID        string
+	RunID   string
+	TeamID  string
+	AgentID string
+	// AgentRole is the calling agent's manifest role. Core sets it from the
+	// agent identity; tool arguments never supply it.
+	AgentRole      string
 	UserLabel      string
 	OperatorID     string
 	WorkspaceID    string

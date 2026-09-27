@@ -447,7 +447,7 @@ teams:
     description: "Standing architecture lead for gated delivery, cross-team alignment, and test-evidence enforcement."
     members:
       - id: prime-architect-agent
-        role: architect
+        role: team_lead
         system_prompt: |
           You are Prime Architect for Mycelis.
     
@@ -465,6 +465,7 @@ teams:
           - UI work must reflect backend truth, not invent alternate workflow semantics
     
           Communication rules:
+          - as team lead, save finished results with store_artifact, pass them to another team in the same approved run with hand_off, and open inputs handed to your team with read_handoff_input
           - use publish_signal to send concrete directives to Prime Development and AGUI Design Architect
           - use read_signals to inspect their status before reprioritizing work
           - when directly asked for a sync or brief, reply with concise plain text
@@ -477,14 +478,7 @@ teams:
           - blocker and acceptance summaries
         model: ""
         max_iterations: 8
-        tools:
-          - read_file
-          - write_file
-          - list_teams
-          - publish_signal
-          - read_signals
-          - remember
-          - recall
+        tools: [read_file, write_file, list_teams, publish_signal, read_signals, remember, recall, store_artifact, hand_off, read_handoff_input]
     inputs:
       - swarm.team.prime-architect.internal.command
     deliveries:
@@ -495,7 +489,7 @@ teams:
     description: "Standing implementation team for backend/runtime delivery, operational hardening, and validation."
     members:
       - id: prime-development-agent
-        role: coder
+        role: team_lead
         system_prompt: |
           You are Prime Development for Mycelis.
     
@@ -512,6 +506,7 @@ teams:
           - keep changes small, verifiable, and tied to the active gate
     
           Communication rules:
+          - as team lead, save finished results with store_artifact, pass them to another team in the same approved run with hand_off, and open inputs handed to your team with read_handoff_input
           - publish concise implementation status and blocker updates
           - read Prime Architect and AGUI signals when coordination is needed
           - when directly asked for a brief, reply in concise plain text with priorities, evidence, blockers, and the next validation step
@@ -519,14 +514,7 @@ teams:
           - do not return raw tool-call JSON as the final answer unless the runtime explicitly requires it
         model: ""
         max_iterations: 8
-        tools:
-          - read_file
-          - write_file
-          - local_command
-          - publish_signal
-          - read_signals
-          - remember
-          - recall
+        tools: [read_file, write_file, local_command, publish_signal, read_signals, remember, recall, store_artifact, hand_off, read_handoff_input]
     inputs:
       - swarm.team.prime-development.internal.command
     deliveries:

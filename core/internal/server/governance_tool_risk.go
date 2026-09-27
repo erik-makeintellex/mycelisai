@@ -11,13 +11,13 @@ var registeredInternalToolRisk = map[string]string{
 	// read-only lookups
 	"get_system_status": "low", "list_available_tools": "low", "list_missions": "low", "list_teams": "low",
 	"list_catalogue": "low", "generate_blueprint": "low", "list_docs": "low", "list_exchange_channels": "low", "list_exchange_threads": "low",
-	"preview_config_document": "low", "read_doc": "low", "read_file": "low", "read_signals": "low",
+	"preview_config_document": "low", "read_doc": "low", "read_file": "low", "read_handoff_input": "low", "read_signals": "low",
 	"recall": "low", "recall_inception_recipes": "low", "search_docs": "low", "search_exchange_items": "low",
 	"search_memory": "low", "temp_memory_read": "low",
 	"code_context.query": "low", "code_context.explain": "low", "code_context.impact": "low",
 	// governed writes, orchestration, and external reads
 	"web_search": "medium", "research_for_blueprint": "medium", "consult_council": "medium",
-	"create_team": "medium", "delegate_task": "medium", "generate_image": "medium",
+	"create_team": "medium", "delegate_task": "medium", "hand_off": "medium", "generate_image": "medium",
 	"activate_config_document": "medium", "store_config_document": "medium", "create_exchange_thread": "medium",
 	"publish_exchange_item": "medium", "instantiate_conversation_template": "medium", "load_deployment_context": "medium",
 	"remember": "medium", "save_cached_image": "medium", "store_artifact": "medium", "store_conversation_template": "medium",

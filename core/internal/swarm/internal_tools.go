@@ -110,6 +110,7 @@ type InternalToolRegistry struct {
 	search      *searchcap.Service
 	codeContext *codecontext.Service
 	somaRef     *Soma
+	handoffs    HandoffRecorder
 	manifests   map[string]somacommands.Command
 }
 
@@ -189,6 +190,7 @@ func (r *InternalToolRegistry) ListCommandManifests() []somacommands.Command {
 func (r *InternalToolRegistry) registerAll() {
 	r.registerCoordinationTools()
 	r.registerExchangeAndPlanningTools()
+	r.registerHandoffTools()
 	r.registerDocsTools()
 	r.registerCodeContextTools()
 	r.registerMemoryAndArtifactTools()
