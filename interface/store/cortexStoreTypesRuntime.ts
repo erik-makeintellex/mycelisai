@@ -166,6 +166,18 @@ export interface TriggerExecution {
     executed_at: string;
 }
 
+/**
+ * Result of a mutating runtime-slice call (update/delete/activate). Never a
+ * bare boolean, so a caller (for example MissionProfilesPage) can keep an
+ * editor open on failure and map `code` through `lib/blockerCopy`.
+ */
+export interface MutationResult {
+    ok: boolean;
+    error: string | null;
+    code?: string;
+    httpStatus?: number;
+}
+
 export interface PolicyRule {
     intent: string;
     condition: string;

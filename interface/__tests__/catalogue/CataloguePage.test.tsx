@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { mockFetch } from '../setup';
 import type { CatalogueAgent } from '@/store/useCortexStore';
 
 type AgentCardProps = {
@@ -71,6 +72,10 @@ describe('CataloguePage', () => {
         window.history.replaceState({}, '', '/dashboard');
         window.sessionStorage.clear();
         vi.restoreAllMocks();
+        // CataloguePage renders ConfigDocumentRecords, which fetches
+        // /auth/session on mount; give it a real response so it can settle
+        // into the non-admin view instead of hitting an unmocked call.
+        mockFetch.mockResolvedValue({ ok: false, json: async () => ({}) });
         useCortexStore.setState({
             catalogueAgents: [],
             isFetchingCatalogue: false,

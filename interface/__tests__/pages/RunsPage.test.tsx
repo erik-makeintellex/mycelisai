@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { mockFetch } from '../setup';
 
 const routerPush = vi.fn();
 const fetchRecentRuns = vi.fn();
@@ -45,6 +46,7 @@ describe('RunsPage', () => {
         fetchRecentRuns.mockReset();
         toggleAdvancedMode.mockReset();
         searchParams.delete('status');
+        mockFetch.mockResolvedValue({ ok: true, json: async () => ({ data: { user: { role: 'admin' } } }) });
         storeState = {
             advancedMode: true,
             toggleAdvancedMode,
@@ -62,7 +64,7 @@ describe('RunsPage', () => {
         };
     });
 
-    it('shows the advanced gate when advanced mode is off', () => {
+    it('shows the advanced gate when advanced mode is off', async () => {
         storeState = {
             ...storeState,
             advancedMode: false,
@@ -70,16 +72,16 @@ describe('RunsPage', () => {
 
         render(<RunsPage />);
 
-        expect(screen.getByText('Run lists are in Admin tools')).toBeDefined();
+        expect(await screen.findByText('Run lists are in Admin tools')).toBeDefined();
         expect(screen.getByText(/inspect execution history across workflows/i)).toBeDefined();
         expect(screen.queryByText('run-alpha-123')).toBeNull();
     });
 
-    it('fetches runs on mount and exposes run detail links', () => {
+    it('fetches runs on mount and exposes run detail links', async () => {
         render(<RunsPage />);
 
+        expect(await screen.findByText('run-alpha-123')).toBeDefined();
         expect(fetchRecentRuns).toHaveBeenCalledTimes(1);
-        expect(screen.getByText('run-alpha-123')).toBeDefined();
         expect(screen.getByLabelText('Outcome health: Running')).toBeDefined();
 
         const row = screen.getByText('run-alpha-123').closest('a');
@@ -88,7 +90,7 @@ describe('RunsPage', () => {
         expect(row?.getAttribute('href')).toBe('/runs/run-alpha-123');
     });
 
-    it('renders empty state when no runs are available', () => {
+    it('renders empty state when no runs are available', async () => {
         storeState = {
             ...storeState,
             recentRuns: [],
@@ -96,11 +98,11 @@ describe('RunsPage', () => {
 
         render(<RunsPage />);
 
-        expect(screen.getByText('No runs yet')).toBeDefined();
+        expect(await screen.findByText('No runs yet')).toBeDefined();
         expect(screen.getByText(/Ask Soma for an outcome first/i)).toBeDefined();
     });
 
-    it('filters to active runs from the status query', () => {
+    it('filters to active runs from the status query', async () => {
         searchParams.set('status', 'running');
         storeState = {
             ...storeState,
@@ -117,7 +119,7 @@ describe('RunsPage', () => {
 
         render(<RunsPage />);
 
-        expect(screen.getByText('Active Runs')).toBeDefined();
+        expect(await screen.findByText('Active Runs')).toBeDefined();
         expect(screen.getByText('run-alpha-123')).toBeDefined();
         expect(screen.queryByText('run-complete-123')).toBeNull();
     });

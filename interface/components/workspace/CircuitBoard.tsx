@@ -134,7 +134,7 @@ export default function CircuitBoard() {
                                 : 'text-cortex-danger hover:text-cortex-danger/80'
                                 }`}
                         >
-                            <XCircle className="w-3 h-3" />
+                            <XCircle aria-hidden="true" className="w-3 h-3" />
                             {missionStatus === 'draft'
                                 ? 'Discard'
                                 : confirmTerminate
@@ -194,10 +194,10 @@ export default function CircuitBoard() {
                 {nodes.length === 0 && (
                     <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                         <div className="text-center text-cortex-text-muted">
-                            <Zap className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                            <p className="text-sm font-mono">Awaiting blueprint</p>
+                            <Zap aria-hidden="true" className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                            <p className="text-sm font-mono">No team plan yet</p>
                             <p className="text-xs font-mono mt-1 opacity-60">
-                                Negotiate an intent to generate a team DAG
+                                Describe the goal to Soma and it will draft a team plan here
                             </p>
                         </div>
                     </div>
@@ -209,17 +209,18 @@ export default function CircuitBoard() {
                         <button
                             onClick={instantiateMission}
                             disabled={isCommitting}
+                            aria-label="Launch teams"
                             className="flex items-center gap-2.5 px-6 py-3 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all duration-300 shadow-lg border border-cortex-success/40 bg-cortex-success/90 hover:bg-cortex-success hover:shadow-[0_0_25px_rgba(16,185,129,0.4)] text-cortex-bg disabled:opacity-60 disabled:cursor-wait"
                         >
                             {isCommitting ? (
                                 <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Instantiating...
+                                    <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" />
+                                    Launching...
                                 </>
                             ) : (
                                 <>
-                                    <Rocket className="w-4 h-4" />
-                                    Instantiate Swarm
+                                    <Rocket aria-hidden="true" className="w-4 h-4" />
+                                    Launch teams
                                 </>
                             )}
                         </button>

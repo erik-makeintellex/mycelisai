@@ -88,7 +88,7 @@ func TestProfileOverride_DBRowToUnusableProviderFailsClosed(t *testing.T) {
 		if got.Available || got.Code != wantCode || got.FallbackApplied {
 			t.Fatalf("%s availability = %+v, want fail-closed %s with no substitute", profile, got, wantCode)
 		}
-		if !strings.Contains(got.RecommendedAction, "Reset the "+profile+" override to root") || !strings.Contains(got.RecommendedAction, "enable provider") {
+		if !strings.Contains(got.AdminAction, "Reset the "+profile+" override to root") || !strings.Contains(got.AdminAction, "enable provider") || strings.Contains(got.RecommendedAction, "/api/") {
 			t.Fatalf("%s recommended_action = %q", profile, got.RecommendedAction)
 		}
 		if _, err := router.InferWithContract(context.Background(), InferRequest{Profile: profile, Prompt: "x"}); err == nil {

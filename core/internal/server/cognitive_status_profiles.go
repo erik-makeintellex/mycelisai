@@ -15,6 +15,9 @@ type cognitiveTextStatus struct {
 	Detail            string `json:"detail,omitempty"`
 	RecommendedAction string `json:"recommended_action,omitempty"`
 	SetupRequired     bool   `json:"setup_required,omitempty"`
+	// userDetail/userAction are the plain-language copy for the narrow
+	// (non-admin) view; empty means Detail/RecommendedAction are already safe.
+	userDetail, userAction string
 }
 
 // cognitiveProfileRouteStatus resolves and probes every profile route and
@@ -32,11 +35,13 @@ func (s *AdminServer) cognitiveProfileRouteStatus(ctx context.Context) (cognitiv
 	case !chat.Available:
 		availability := s.Cognitive.ExecutionAvailability(cognitive.DefaultExecutionProfileName, "")
 		text.Detail = availability.Summary
-		text.RecommendedAction = availability.RecommendedAction
+		text.RecommendedAction = firstNonEmptyString(availability.AdminAction, availability.RecommendedAction)
+		text.userAction = availability.RecommendedAction
 		text.SetupRequired = availability.SetupRequired
 	case chat.Reachable == nil:
 		text.Status = "configured"
 		text.Detail = "The chat profile routes to a provider that is not probed (hosted or gateway); live health is checked during inference."
+		text.userDetail = "Soma's AI engine is hosted, so its health is checked when you use it."
 	case *chat.Reachable:
 		text.Status = "online"
 		if provider, ok := s.Cognitive.ProviderSnapshot(chat.ProviderID); ok {
@@ -45,6 +50,8 @@ func (s *AdminServer) cognitiveProfileRouteStatus(ctx context.Context) (cognitiv
 	default:
 		text.Detail = "The chat profile's provider " + chat.ProviderID + " did not answer its health probe."
 		text.RecommendedAction = "Start or repair provider " + chat.ProviderID + ", or reset the chat profile to root."
+		text.userDetail = "The AI engine Soma uses for chat isn't answering."
+		text.userAction = cognitive.UserEngineSetupAction
 		text.SetupRequired = true
 	}
 	return text, routes, health, overlayError
@@ -75,8 +82,8 @@ func narrowCognitiveStatus(text cognitiveTextStatus, mediaStatus string, routes 
 	}
 	return map[string]any{
 		"text": cognitiveTextSummary{
-			Status: text.Status, Detail: text.Detail,
-			RecommendedAction: text.RecommendedAction, SetupRequired: text.SetupRequired,
+			Status: text.Status, Detail: firstNonEmptyString(text.userDetail, text.Detail),
+			RecommendedAction: firstNonEmptyString(text.userAction, text.RecommendedAction), SetupRequired: text.SetupRequired,
 		},
 		"media":                map[string]string{"status": mediaStatus},
 		"profiles":             profiles,

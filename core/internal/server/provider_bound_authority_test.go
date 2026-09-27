@@ -25,6 +25,10 @@ func decodeProviderBound(t *testing.T, f *routingFixture, method, path, body str
 	if got.Code != providerBoundCode || got.RecommendedAction == "" {
 		t.Fatalf("rejection = %+v", got)
 	}
+	// UX1: plain action; the API remedy stays in detail (admin-only route).
+	if strings.Contains(got.RecommendedAction, "/api/") || !strings.Contains(got.Detail, "/api/v1/cognitive/profiles") {
+		t.Fatalf("provider_bound copy = %+v", got)
+	}
 	return got
 }
 

@@ -3,14 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { useCortexStore, type ChatMessage } from "@/store/useCortexStore";
+import { useIsAdmin } from "@/lib/useIsAdmin";
 import ProposedActionDetails from "./ProposedActionDetails";
 import ProposalLifecycleProof from "./ProposalLifecycleProof";
 import {
+    adminApprovalWhoCanHelp,
+    approveButtonLabel,
     explainApprovalPosture,
     fallbackAffectedResources,
     fallbackExpectedResult,
     fallbackOperatorSummary,
+    isTeamPlanProposal,
     plainExecutionText,
+    requiresAdminApproval,
 } from "./proposedActionCopy";
 
 function primaryTeamLabel(proposal: ChatMessage["proposal"]): string {
@@ -73,6 +78,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const [approvalPending, setApprovalPending] = useState(false);
     const [approvalError, setApprovalError] = useState<string | null>(null);
     const detailsRef = useRef<HTMLDivElement>(null);
+    const { isAdmin } = useIsAdmin();
 
     useEffect(() => {
         if (!detailsOpen) return;
@@ -110,12 +116,26 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const runHelp = approvalRequired
         ? "Once you approve, I’ll start the work and stay here for questions or changes while it runs."
         : "This is ready to start. I’ll stay here for questions or changes while it runs.";
+    // The user must see what will be written before pressing Start/Approve.
+    // Absent field (older backend, or a non-write proposal) → render as
+    // today, with no preview section.
+    const draftPreviews = proposal.draft_previews ?? [];
+    const needsAdminApproval = requiresAdminApproval(proposal);
+    const whoCanHelp = adminApprovalWhoCanHelp(proposal, isAdmin);
+    // No working chat-approval path exists yet for a proposal that creates a
+    // team: see isTeamPlanProposal for why this can't safely retry via
+    // /intent/commit from here.
+    const teamPlanNeedsCanvas = isTeamPlanProposal(proposal);
 
     const approve = async () => {
         if (approvalPending || !canRunProposal) return;
         setApprovalPending(true);
         setApprovalError(null);
-        const result = await confirmProposal(proposal, approvalRequired ? "approve" : "start");
+        // No operatorReply here (live test L1): the button click already
+        // shows the user's intent. Echoing "approve"/"start" as a synthetic
+        // user chat message is only correct for the typed-reply path in
+        // MissionControlChat, which passes the user's real typed text.
+        const result = await confirmProposal(proposal);
         if (!result.ok) setApprovalError(result.error ?? "Soma could not start this proposal.");
         setApprovalPending(false);
     };
@@ -141,6 +161,11 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     <h3 className="mt-0.5 text-base font-semibold text-cortex-text-main">
                         {isActionable ? "I can start that." : lifecycleLabel}
                     </h3>
+                    {isActionable && needsAdminApproval ? (
+                        <span className="mt-1 inline-block rounded-full border border-cortex-warning/40 bg-cortex-warning/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-cortex-warning">
+                            Needs admin approval
+                        </span>
+                    ) : null}
                 </div>
                 {!isActionable ? <ProposalLifecycleProof lifecycle={renderedLifecycle} runId={message.run_id} running={explicitlyRunning} /> : null}
 
@@ -158,22 +183,63 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     </ul>
                 </div>
 
+                {isActionable && draftPreviews.length > 0 ? (
+                    <div className="space-y-2">
+                        {draftPreviews.map((draft) => (
+                            <div key={draft.path} className="rounded border border-cortex-border bg-cortex-bg/40 p-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                    <span className="font-mono text-cortex-text-main">{draft.path}</span>
+                                    {!draft.full_draft ? (
+                                        <span className="text-cortex-text-muted">Preview — first {draft.lines} lines</span>
+                                    ) : null}
+                                </div>
+                                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded bg-cortex-bg p-2 font-mono text-xs leading-5 text-cortex-text-main">
+                                    {draft.preview}
+                                </pre>
+                            </div>
+                        ))}
+                    </div>
+                ) : null}
+
                 {isActionable ? (
-                    canRunProposal ? (
-                        <div className="flex flex-wrap items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => void approve()}
-                                disabled={approvalPending}
-                                className="inline-flex items-center gap-2 rounded-lg bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90 disabled:cursor-wait disabled:opacity-60"
-                            >
-                                <Check className="h-4 w-4" />
-                                {approvalPending ? "Starting…" : approvalRequired ? "Approve" : "Start"}
-                            </button>
-                            <p className="text-sm font-medium leading-6 text-cortex-primary">
-                                Or reply “{approvalRequired ? "approve" : "start"}”. You can also ask a question or request a change.
+                    teamPlanNeedsCanvas ? (
+                        <div className="space-y-2">
+                            <p className="text-sm leading-6 text-cortex-text-muted">
+                                Launching a team plan from chat isn’t available yet. Open the Workspace canvas to launch this plan instead.
                             </p>
+                            <a
+                                href="/automations"
+                                className="inline-flex items-center gap-2 rounded-lg bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90"
+                            >
+                                Open Workspace
+                            </a>
                         </div>
+                    ) : canRunProposal ? (
+                        needsAdminApproval && !isAdmin ? (
+                            <p className="text-sm leading-6 text-cortex-text-muted">
+                                Waiting for an admin to approve. {whoCanHelp}
+                            </p>
+                        ) : (
+                            <div className="flex flex-wrap items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => void approve()}
+                                    disabled={approvalPending}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90 disabled:cursor-wait disabled:opacity-60"
+                                >
+                                    <Check className="h-4 w-4" />
+                                    {approvalPending ? "Starting…" : approveButtonLabel(proposal, approvalRequired, isAdmin)}
+                                </button>
+                                <p className="text-sm font-medium leading-6 text-cortex-primary">
+                                    Or reply “{approvalRequired ? "approve" : "start"}”. You can also ask a question or request a change.
+                                </p>
+                                {needsAdminApproval && isAdmin ? (
+                                    <p className="w-full text-xs leading-5 text-cortex-text-muted">
+                                        Approving this is recorded in history.
+                                    </p>
+                                ) : null}
+                            </div>
+                        )
                     ) : (
                         <p className="text-sm leading-6 text-red-300">
                             I cannot start this version yet. Ask me to regenerate the proposal before approving it.

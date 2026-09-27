@@ -40,7 +40,7 @@ func (s *AdminServer) handleIntentCommit(w http.ResponseWriter, r *http.Request)
 	}
 
 	if req.ConfirmToken == "" {
-		respondError(w, "confirm_token is required. No token = no commit.", http.StatusForbidden)
+		respondBlockerText(w, r, http.StatusForbidden, codeInvalidConfirmToken, missingTeamPlanApproval, "confirm_token is required. No token = no commit.", nil)
 		return
 	}
 	// A2b C1: the tier is judged on the stored scope and on a server-side
@@ -50,11 +50,11 @@ func (s *AdminServer) handleIntentCommit(w http.ResponseWriter, r *http.Request)
 	floor := buildScopeFromBlueprintFor(bp, userGovernanceProfileFromRequest(r))
 	proofID, authority, err := s.consumeProposerTokenFor(r, req.ConfirmToken, blueprintCommitPurpose, blueprintBinding(bp), floor)
 	if errors.Is(err, errApproverRequired) {
-		respondApproverRequired(w, r)
+		respondApproverRequired(w, r, "")
 		return
 	}
 	if err != nil {
-		respondConfirmTokenError(w, err, http.StatusForbidden)
+		respondConfirmTokenError(w, r, err, http.StatusForbidden)
 		return
 	}
 	s.commitAndActivateWithProof(w, bp, buildSensorConfigs(bp), proofID, authority)

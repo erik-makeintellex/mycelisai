@@ -55,4 +55,47 @@ describe('BrainsPage', () => {
             expect(screen.getByDisplayValue('2048')).toBeDefined();
         });
     });
+
+    it('explains a provider_bound 409 instead of silently snapping the toggle back', async () => {
+        await act(async () => {
+            render(<BrainsPage />);
+        });
+        await screen.findByText('Token Budget');
+
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            data: { code: 'provider_bound', profiles: ['chat', 'coder'] },
+        }, false));
+
+        const toggles = screen.getAllByRole('button').filter((el) => el.className.includes('rounded-full'));
+        fireEvent.click(toggles[0]);
+
+        expect(await screen.findByRole('alert')).toBeDefined();
+        expect(screen.getByText('This AI engine is in use')).toBeDefined();
+        expect(screen.getByText('Use default engine for chat')).toBeDefined();
+        expect(screen.getByText('Use default engine for coder')).toBeDefined();
+    });
+
+    it('resets a profile override and clears the blocker when "Use default engine" is clicked', async () => {
+        await act(async () => {
+            render(<BrainsPage />);
+        });
+        await screen.findByText('Token Budget');
+
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            data: { code: 'provider_bound', profiles: ['chat'] },
+        }, false));
+        const toggles = screen.getAllByRole('button').filter((el) => el.className.includes('rounded-full'));
+        fireEvent.click(toggles[0]);
+        await screen.findByRole('alert');
+
+        mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+        mockFetch.mockResolvedValueOnce(jsonResponse({ ok: true, data: [] }));
+
+        fireEvent.click(screen.getByText('Use default engine for chat'));
+
+        await waitFor(() => {
+            expect(screen.queryByRole('alert')).toBeNull();
+        });
+        expect(mockFetch).toHaveBeenCalledWith('/api/v1/cognitive/profiles/chat/override', { method: 'DELETE' });
+    });
 });

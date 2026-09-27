@@ -50,6 +50,40 @@ export function fallbackAffectedResources(proposal: ProposalData): string[] {
     return [];
 }
 
+// Deck top-10 #1: the proposal card reads `required_approver_role` and
+// shows "Needs admin approval" before the user ever clicks Approve, instead
+// of inviting a click that is certain to fail with a 403.
+
+export function requiresAdminApproval(proposal: ProposalData): boolean {
+    return proposal.required_approver_role === "admin";
+}
+
+export function approveButtonLabel(proposal: ProposalData, approvalRequired: boolean, isAdmin: boolean): string {
+    if (requiresAdminApproval(proposal) && isAdmin) return "Approve as admin";
+    return approvalRequired ? "Approve" : "Start";
+}
+
+/** "Who can help" line for a standard user who cannot approve this proposal. */
+export function adminApprovalWhoCanHelp(proposal: ProposalData, isAdmin: boolean): string | null {
+    if (!requiresAdminApproval(proposal) || isAdmin) return null;
+    return "Who can help: an admin can approve this.";
+}
+
+/**
+ * A proposal that creates a team currently has no working chat-approval
+ * path: the confirm token this card would send is purpose-bound to
+ * /intent/commit (Launch teams on the Workspace canvas), and
+ * /intent/confirm-action always rejects it with token_wrong_purpose. The
+ * chat proposal payload carries no MissionBlueprint to commit with directly
+ * (see ChatProposal in core/pkg/protocol/envelopes.go), so this card cannot
+ * safely retry the commit itself without inventing a blueprint. Until the
+ * backend attaches the negotiated blueprint to this proposal, point the
+ * user at the working canvas path instead of a guaranteed-failing click.
+ */
+export function isTeamPlanProposal(proposal: ProposalData): boolean {
+    return proposal.tools.includes("create_team");
+}
+
 export function explainApprovalPosture(proposal: ProposalData, approvalRequired: boolean, approvalMode: string): string {
     if (approvalRequired) {
         if (proposal.capability_ids?.includes("write_file")) return "This action will change your workspace, so Soma needs your approval before running it.";

@@ -116,7 +116,7 @@ func TestHandleChat_ReturnsStructuredTransportBlockerWhenAdminHasNoResponder(t *
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.Error != "Soma is currently unreachable from the workspace runtime." {
+	if resp.Error != "Soma can't be reached right now." {
 		t.Fatalf("error = %q", resp.Error)
 	}
 	data, ok := resp.Data.(map[string]any)
@@ -137,7 +137,7 @@ func TestBuildTransportChatBlocker_ClassifiesTimeout(t *testing.T) {
 	if blocker.Code != "transport_timeout" {
 		t.Fatalf("code = %q, want transport_timeout", blocker.Code)
 	}
-	if blocker.Summary != "Soma did not respond before the request deadline." {
+	if blocker.Summary != "Soma took too long to answer." {
 		t.Fatalf("summary = %q", blocker.Summary)
 	}
 }
@@ -173,7 +173,7 @@ func TestBuildTransportChatBlocker_ClassifiesBackpressure(t *testing.T) {
 	if blocker.Code != "transport_backpressure" {
 		t.Fatalf("code = %q, want transport_backpressure", blocker.Code)
 	}
-	if blocker.Summary != "Soma is overloaded right now and could not process the request." {
+	if blocker.Summary != "Soma is busy right now and couldn't take the request." {
 		t.Fatalf("summary = %q", blocker.Summary)
 	}
 }
@@ -187,7 +187,7 @@ func TestBuildTransportChatBlocker_ClassifiesNoResponders(t *testing.T) {
 	if blocker.Code != "transport_unavailable" {
 		t.Fatalf("code = %q, want transport_unavailable", blocker.Code)
 	}
-	if blocker.Summary != "Soma is currently unreachable from the workspace runtime." {
+	if blocker.Summary != "Soma can't be reached right now." {
 		t.Fatalf("summary = %q", blocker.Summary)
 	}
 }

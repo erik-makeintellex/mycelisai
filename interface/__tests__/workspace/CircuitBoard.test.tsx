@@ -96,8 +96,8 @@ describe('CircuitBoard', () => {
 
     it('shows empty state overlay when no nodes exist', () => {
         render(<CircuitBoard />);
-        expect(screen.getByText('Awaiting blueprint')).toBeDefined();
-        expect(screen.getByText('Negotiate an intent to generate a team DAG')).toBeDefined();
+        expect(screen.getByText('No team plan yet')).toBeDefined();
+        expect(screen.getByText('Describe the goal to Soma and it will draft a team plan here')).toBeDefined();
     });
 
     it('hides empty state overlay when nodes are present in Zustand store', () => {
@@ -123,6 +123,22 @@ describe('CircuitBoard', () => {
 
         render(<CircuitBoard />);
         expect(screen.getByTestId('react-flow')).toBeDefined();
-        expect(screen.queryByText('Awaiting blueprint')).toBeNull();
+        expect(screen.queryByText('No team plan yet')).toBeNull();
+    });
+
+    it('labels the launch button "Launch teams", not swarm/mission vocabulary', () => {
+        useCortexStore.setState({
+            blueprint: {
+                mission_id: 'mission-1',
+                intent: 'Ship the docs crew',
+                teams: [{ name: 'docs', role: 'writer', agents: [{ id: 'a1', role: 'writer' }] }],
+            },
+            missionStatus: 'draft',
+        });
+
+        render(<CircuitBoard />);
+        expect(screen.getByText('Launch teams')).toBeDefined();
+        expect(screen.queryByText(/instantiate/i)).toBeNull();
+        expect(screen.queryByText(/swarm/i)).toBeNull();
     });
 });

@@ -33,7 +33,7 @@ func (s *AdminServer) handleGetPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.Guard == nil || s.Guard.Degraded() {
-		respondGovernanceError(w, http.StatusServiceUnavailable, "Governance policy is unavailable", governancePolicyUnavailableCode, governancePolicyRecommendedAction)
+		respondBlocker(w, r, http.StatusServiceUnavailable, governancePolicyUnavailableCode, "", nil)
 		return
 	}
 	respondJSON(w, s.Guard.GetPolicyConfig())
