@@ -8,12 +8,12 @@ import (
 
 func TestDeterministicGovernedMutationResult_BuildsWriteFileProposalFromNaturalAtPath(t *testing.T) {
 	request := "Create a markdown file at generated/workbench-review/operator-note.md containing \"# Workbench Review\\n\\n- Open outputs near Soma.\""
-	result, ok := deterministicGovernedMutationResult(request, []string{"write_file"})
-	if !ok {
-		t.Fatal("expected deterministic governed mutation result")
+	if _, bypass := deterministicGovernedMutationResult(request, []string{"write_file"}); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
+	result := requestPlanResultForTest(request, []string{"write_file"})
 
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 	if len(calls) != 1 || calls[0].Name != "write_file" {
 		t.Fatalf("planned calls = %#v, want one write_file call", calls)
 	}
@@ -27,21 +27,20 @@ func TestDeterministicGovernedMutationResult_BuildsWriteFileProposalFromNaturalA
 
 func TestDeterministicGovernedMutationResult_BuildsWriteFileProposalFromDescribedContent(t *testing.T) {
 	request := "Create a file named business-owner-welcome.txt with a plain-language welcome note that explains where my generated outputs will appear."
-	result, ok := deterministicGovernedMutationResult(request, []string{"write_file"})
-	if !ok {
-		t.Fatal("expected deterministic governed mutation result")
+	if _, bypass := deterministicGovernedMutationResult(request, []string{"write_file"}); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
+	result := requestPlanResultForTest(request, []string{"write_file"})
 
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 	if len(calls) != 1 || calls[0].Name != "write_file" {
 		t.Fatalf("planned calls = %#v, want one write_file call", calls)
 	}
 	if calls[0].Arguments["path"] != "business-owner-welcome.txt" {
 		t.Fatalf("path = %#v, want named file target", calls[0].Arguments["path"])
 	}
-	content := fmt.Sprint(calls[0].Arguments["content"])
-	if !strings.Contains(content, "Welcome to Mycelis") || !strings.Contains(content, "open the file or open the containing folder") {
-		t.Fatalf("content = %#v, want synthesized business-owner output guidance", content)
+	if content, has := calls[0].Arguments["content"]; has {
+		t.Fatalf("content = %#v, want none until the model drafts it (no welcome template)", content)
 	}
 }
 
@@ -51,12 +50,12 @@ func TestDeterministicGovernedMutationResult_BuildsWriteFileProposalFromBusiness
 		"Put exactly \"# Business Owner Flow\n\nThe approval path must return output or one clear recovery action.\"",
 		"Return retained output and proof.",
 	}, " ")
-	result, ok := deterministicGovernedMutationResult(request, []string{"write_file"})
-	if !ok {
-		t.Fatal("expected deterministic governed mutation result")
+	if _, bypass := deterministicGovernedMutationResult(request, []string{"write_file"}); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
+	result := requestPlanResultForTest(request, []string{"write_file"})
 
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 	if len(calls) != 1 || calls[0].Name != "write_file" {
 		t.Fatalf("planned calls = %#v, want one write_file call", calls)
 	}

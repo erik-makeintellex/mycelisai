@@ -202,6 +202,9 @@ func (s *AdminServer) executePlannedToolCallsTx(ctx context.Context, tx *sql.Tx,
 	executor := swarm.NewCompositeToolExecutor(registry, mcpExec)
 	toolCtx := confirmedActionToolContext(ctx, auditUser, runID, scope.ConfigRequestBoundary)
 
+	if err := validateApprovedPlanBeforeExecution(scope.PlannedToolCalls); err != nil {
+		return nil, err
+	}
 	results := make([]plannedToolExecutionResult, 0, len(scope.PlannedToolCalls))
 	lastGeneratedImageArtifactID := ""
 	for _, planned := range scope.PlannedToolCalls {

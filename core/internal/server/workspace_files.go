@@ -94,8 +94,23 @@ func pathEscapesWorkspace(rel string) bool {
 	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
+// workspaceTextContentTypes pins reviewable text outputs to a readable type so the
+// sandboxed viewer never receives application/octet-stream for them; the host
+// MIME database is not consulted because slim container images often lack one.
+var workspaceTextContentTypes = map[string]string{
+	".md": "text/plain; charset=utf-8", ".markdown": "text/plain; charset=utf-8",
+	".txt": "text/plain; charset=utf-8", ".csv": "text/plain; charset=utf-8",
+	".log": "text/plain; charset=utf-8", ".yaml": "text/plain; charset=utf-8",
+	".yml": "text/plain; charset=utf-8", ".toml": "text/plain; charset=utf-8",
+	".xml": "text/plain; charset=utf-8", ".json": "application/json",
+}
+
 func workspaceFileContentType(target string) string {
-	if ct := mime.TypeByExtension(strings.ToLower(filepath.Ext(target))); ct != "" {
+	ext := strings.ToLower(filepath.Ext(target))
+	if ct, ok := workspaceTextContentTypes[ext]; ok {
+		return ct
+	}
+	if ct := mime.TypeByExtension(ext); ct != "" {
 		return ct
 	}
 	return "application/octet-stream"

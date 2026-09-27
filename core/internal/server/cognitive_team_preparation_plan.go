@@ -43,7 +43,7 @@ func inferTeamPreparationBriefPlanFromRequest(text string, teamCall protocol.Pla
 		Arguments: map[string]any{
 			"path":                path,
 			"content":             teamPreparationBriefMarkdown(trimmed, teamName, teamID, contract, evocation),
-			"validation":          "Retained team-evocation brief must identify research/council needs, role boundaries, output contract, proof gates, and the next Soma-mediated action before implementation.",
+			"validation":          "Retained request record must restate the operator request, the preparation still to do, role boundaries, output contract, and proof gates without claiming any preparation has run.",
 			"content_contract":    contract,
 			"team_evocation":      evocation,
 			"acceptance_criteria": confirmedActionStringSlice(contract["acceptance_criteria"]),
@@ -66,8 +66,8 @@ func teamPreparationBriefIsUseful(request string, contract, evocation map[string
 
 func teamPreparationBriefMarkdown(request, teamName, teamID string, contract, evocation map[string]any) string {
 	var b strings.Builder
-	b.WriteString("# Team Evocation Brief\n\n")
-	b.WriteString("Soma retained this preparation brief so complex work starts with research, council review, role clarity, and proof instead of a hardcoded domain template.\n\n")
+	b.WriteString("# Request record\n\n")
+	b.WriteString("Soma recorded this request for the team. No research, council review, or staffing has run yet; the team does that work after approval.\n\n")
 	b.WriteString("## Operator request\n\n")
 	b.WriteString(request)
 	b.WriteString("\n\n")
@@ -85,13 +85,13 @@ func teamPreparationBriefMarkdown(request, teamName, teamID string, contract, ev
 	b.WriteString("\n\n")
 	writeMarkdownList(&b, "Content types", confirmedActionStringSlice(contract["content_types"]))
 	writeMarkdownList(&b, "Expected outputs", confirmedActionStringSlice(contract["expected_outputs"]))
-	writeMarkdownList(&b, "Research and council preparation", confirmedActionStringSlice(contract["team_preparation"]))
+	writeMarkdownList(&b, "Preparation the team should do", confirmedActionStringSlice(contract["team_preparation"]))
 	writeMarkdownList(&b, "Suggested workstreams", confirmedActionStringSlice(evocation["suggested_workstreams"]))
 	writeMarkdownList(&b, "Recommended agent targets", confirmedActionStringSlice(evocation["agent_targets"]))
 	writeMarkdownList(&b, "Acceptance criteria", confirmedActionStringSlice(contract["acceptance_criteria"]))
 	writeMarkdownList(&b, "Proof required", confirmedActionStringSlice(contract["proof_required"]))
-	b.WriteString("## Next Soma-mediated action\n\n")
-	b.WriteString("Have Soma use this brief to research available context, confirm the implementation strategy, staff only the needed specialists, and then ask for approval before producing the final deliverable.\n")
+	b.WriteString("## Next step\n\n")
+	b.WriteString("The team should research available context, confirm the implementation strategy, and staff only the needed specialists before producing the final deliverable. Soma asks for approval before that work runs.\n")
 	return b.String()
 }
 

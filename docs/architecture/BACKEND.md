@@ -45,7 +45,7 @@ Teams coordinate agents for scoped work. Default team shaping should stay compac
 
 ### Internal Tool Registry - `swarm/internal_tools.go`
 
-Internal tools are governed runtime capabilities. Tool metadata must identify source, scope, and intended consumer.
+Internal tools are governed runtime capabilities. Tool metadata must identify source, scope, and intended consumer. Pitfalls: a handler that cannot do its work returns `error`, never failure text with a nil error, so the tool loop emits `tool.failed` and feeds the model `Tool <name> failed: ...` (storage, memory, search, catalogue, mission, team-list and image-store failures all follow this, and a `web_search` whose provider returns `status=blocked` is a `*WebSearchBlockedError` carrying the blocker code and next action); `mcp.ToolExecutorAdapter` turns an MCP `isError` result into `*mcp.ToolResultError` the same way, with the server text capped at 2 KB and obvious credentials redacted before it reaches events, the Exchange or HTTP; `delegate_task` uses a core NATS publish with no ack, so it reports the task as queued, not delivered; `write_file` writes only the `project-package.json` manifest for a package and never synthesizes `README.md`/`PROOF.md`; there is no runtime package fallback, so inference failure is the `provider_inference_failed` blocker and a contract left short is `result_contract_unsatisfied`.
 
 ### Composite And Scoped Tool Executors - `swarm/tool_executor.go`, `swarm/tool_scope.go`
 
@@ -140,7 +140,7 @@ Product signals must include enough metadata to identify source, scope, payload 
 
 ### 2. The ChatResponsePayload
 
-Chat responses normalize direct answers, proposals, execution results, blocker states, consultations, tools used, and trust/governance metadata for UI rendering.
+Chat responses normalize direct answers, proposals, execution results, blocker states, consultations, tools used, and trust/governance metadata for UI rendering. Pitfall: a planned `write_file` without explicit content (quoted `with content`/`containing`/`that says`/`put exactly`, or `prints` for `.py`) carries only its path until `draftMissingWriteFileContent` (`server/cognitive_write_file_draft.go`) runs one bounded model inference (`coder` for code files when available, else `chat`; 90s each; at most 3 drafts and 120s per turn, applied only when all succeed; no tools; after the outcome template resolves) before any audit, proof, or token; empty, timed-out, or request-echo drafts return a blocker (`empty_provider_output`, `provider_timeout`, or the availability code) and never a template, and `executePlannedToolCallsTx` refuses empty or legacy-template content with `empty_provider_output`. `deterministicGovernedMutationResult` now short-circuits only inline config store/activate; every other mutation reaches `requestChatAgent`, and an empty agent reply (`agentReplyIsEmpty`) or unavailable availability on a mutation turn is a blocker, never a proposal.
 
 ### 3. The APIResponse Envelope
 

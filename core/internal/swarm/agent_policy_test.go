@@ -28,7 +28,7 @@ func TestResponseSuggestsUnexecutedAction(t *testing.T) {
 		},
 		{
 			name: "ignores normal result response",
-			text: "Task delegated to team admin-core.",
+			text: "Task queued for team admin-core. Delivery and acceptance are not yet confirmed; the team's receipt and status report them.",
 			want: false,
 		},
 		{

@@ -218,8 +218,8 @@ func firstTeamEvocationBriefPath(text string) string {
 
 func teamResearchHandoffMarkdown(request, teamID, briefPath string, contract map[string]any) string {
 	var b strings.Builder
-	b.WriteString("# Research And Council Handoff\n\n")
-	b.WriteString("Soma retained this handoff so the research lane can prepare the evoked delivery team before implementation starts.\n\n")
+	b.WriteString("# Research request record\n\n")
+	b.WriteString("Soma recorded what the research lane should prepare before implementation starts. No research or council review has run yet.\n\n")
 	b.WriteString("## Operator request\n\n")
 	b.WriteString(request)
 	b.WriteString("\n\n")
@@ -236,7 +236,7 @@ func teamResearchHandoffMarkdown(request, teamID, briefPath string, contract map
 		"Name any specialist addition only when the needed capability, owned task, and removal point are clear.",
 	})
 	writeMarkdownList(&b, "Delivery lane responsibilities", []string{
-		"Use this handoff and the evocation brief as the execution contract context.",
+		"Use the research lane's findings and the request record as the execution contract context.",
 		"Produce the retained user-facing output package rather than another planning-only artifact.",
 		"Return direct launch/view references, proof notes, and repair requests through Soma.",
 	})
@@ -252,15 +252,15 @@ func teamResearchHandoffMarkdown(request, teamID, briefPath string, contract map
 func teamEvocationDelegationGoal(request string, contract map[string]any) string {
 	outputs := confirmedActionStringSlice(contract["expected_outputs"])
 	if len(outputs) == 0 {
-		return "Use the retained research/council handoff to produce the requested deliverable with proof."
+		return "Do the preparation listed in the research request record, then produce the requested deliverable with proof."
 	}
-	return fmt.Sprintf("Use the retained research/council handoff to produce %s for the operator request: %s", strings.Join(outputs, ", "), request)
+	return fmt.Sprintf("Do the preparation listed in the research request record, then produce %s for the operator request: %s", strings.Join(outputs, ", "), request)
 }
 
 func teamEvocationDelegationConstraints() []string {
 	return []string{
 		"Do not return another planning-only response as the final deliverable.",
-		"Research and council preparation is already retained in the handoff; read it and execute the delivery instead of repeating preparation unless the handoff names a concrete unresolved blocker.",
+		"The research request record lists preparation that has not run yet; do only the preparation it names, then execute the delivery.",
 		"Keep team-generated internal scratch separate from user-facing retained outputs.",
 		"Provide a direct launch, view, or open path for every user-facing deliverable.",
 		"Read every retained user-facing entrypoint back after writing it and validate the requested behavior before reporting completion.",
@@ -283,22 +283,21 @@ func projectPackageResultContract(teamID string, contract map[string]any, reques
 		requiredFiles = []string{"index.html", "game.js", "styles.css", "README.md", "PROOF.md", "project-package.json"}
 	}
 	result := map[string]any{
-		"kind":                      "project_package",
-		"entrypoint_required":       true,
-		"folder_required":           true,
-		"files_required":            requiredFiles,
-		"package_folder":            packageFolder,
-		"package_entrypoint":        packageEntrypoint,
-		"validation_required":       true,
-		"validation_mode":           "readback_against_exit_criteria",
-		"proof_ref_required":        true,
-		"repair_channel":            "soma",
-		"team_id":                   teamID,
-		"expected_outputs":          confirmedActionStringSlice(contract["expected_outputs"]),
-		"acceptance_criteria":       confirmedActionStringSlice(contract["acceptance_criteria"]),
-		"runtime_fallback_eligible": false,
-		"proof_required":            confirmedActionStringSlice(contract["proof_required"]),
-		"source_material_mode":      "internal_sources_hidden_until_requested",
+		"kind":                 "project_package",
+		"entrypoint_required":  true,
+		"folder_required":      true,
+		"files_required":       requiredFiles,
+		"package_folder":       packageFolder,
+		"package_entrypoint":   packageEntrypoint,
+		"validation_required":  true,
+		"validation_mode":      "readback_against_exit_criteria",
+		"proof_ref_required":   true,
+		"repair_channel":       "soma",
+		"team_id":              teamID,
+		"expected_outputs":     confirmedActionStringSlice(contract["expected_outputs"]),
+		"acceptance_criteria":  confirmedActionStringSlice(contract["acceptance_criteria"]),
+		"proof_required":       confirmedActionStringSlice(contract["proof_required"]),
+		"source_material_mode": "internal_sources_hidden_until_requested",
 	}
 	if title := extractRequestedPackageTitle(request); title != "" {
 		result["package_title"] = title

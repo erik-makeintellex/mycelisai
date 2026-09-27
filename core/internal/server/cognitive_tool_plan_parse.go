@@ -82,7 +82,7 @@ func inferWriteFileExecutionPlan(agentResult chatAgentResult, latestRequest stri
 		path := firstNonEmptyString(parsed.Arguments["path"], extractRequestedFilePath(latestRequest))
 		if path != "" {
 			parsed.Arguments["path"] = path
-			parsed.Arguments["content"] = inferWriteFileContent(agentResult, latestRequest, path)
+			parsed.Arguments["content"] = inferWriteFileContentFromAgentOutput(agentResult)
 			if writeFilePlanHasPathAndContent(parsed) {
 				return normalizePlannedToolCall(parsed), true
 			}
@@ -111,17 +111,16 @@ func inferWriteFileExecutionPlan(agentResult chatAgentResult, latestRequest stri
 	if path == "" {
 		path = defaultWriteFilePathForRequest(latestRequest)
 	}
-	content := inferWriteFileContent(agentResult, latestRequest, path)
-	if path == "" || content == "" {
+	if path == "" {
 		return protocol.PlannedToolCall{}, false
 	}
-	return protocol.PlannedToolCall{
-		Name: "write_file",
-		Arguments: map[string]any{
-			"path":    path,
-			"content": content,
-		},
-	}, true
+	// Missing content stays missing here; the proposal builder drafts it with
+	// the model or blocks (draftMissingWriteFileContent).
+	args := map[string]any{"path": path}
+	if content := inferWriteFileContentFromAgentOutput(agentResult); content != "" {
+		args["content"] = content
+	}
+	return protocol.PlannedToolCall{Name: "write_file", Arguments: args}, true
 }
 
 func writeFilePlanHasPathAndContent(call protocol.PlannedToolCall) bool {
