@@ -1,0 +1,14 @@
+History correction: this merge commit landed with a placeholder message. Its real description follows.
+
+Merge feature/memory-truth (M1): maintained memory works without an embedding model.
+- What changed: POST /api/v1/memory/deployment-context stores the source durably in one transaction, with `embedding_status` set to pending or unavailable, and leaves no orphan artifact. It returns 500 `deployment_context_save_failed` on a transaction error.
+- How it works:
+  - Recall: governed recall, `search_memory` and context injection use `memory.RecallGoverned`. That is PostgreSQL full-text ranking, or semantic search when an engine exists. It honors visibility, sensitivity and goal scope.
+  - Citations: answers carry `context_sources[]`. T1 later replaced the 4-word-phrase `used` rule with distinctive-token overlap.
+  - Taxonomy: renamed to `worklog_entry`/`worklog`, with the old diary values accepted as aliases. The schema block `schema.deployment_context_taxonomy_v2` does a marker-guarded rewrite.
+  - Backfill: `POST /api/v1/memory/deployment-context/backfill` needs root admin + `memory:write`, is audited, and uses SKIP LOCKED. Opportunistic backfill runs as well.
+  - Scope: agent writes of org-wide classes need confirmation. Forged `team_id`/`agent_id` args no longer widen scope.
+- Proof:
+  - 123 real-PG `test_db` tests and 31 targeted tests passed, all written first.
+  - Isolated first boot passed.
+  - Live probe J3 passed: the saved bakery facts were recalled and cited.
