@@ -192,8 +192,15 @@ func TestHandleChat_ExplicitQuotedContentIsNotDrafted(t *testing.T) {
 		t.Fatalf("status = %d body=%s", rr.Code, rr.Body.String())
 	}
 	payload := decodeChatPayloadForTest(t, rr.Body.Bytes())
-	if payload.Proposal == nil || len(payload.Proposal.DraftPreviews) != 0 {
-		t.Fatalf("explicit content must not be drafted: %+v", payload.Proposal)
+	// The content is not model-drafted (the provider is never called), but the
+	// operator must still see what will be written: explicit quoted content
+	// gets its own preview, matching the drafted-content path.
+	if payload.Proposal == nil || len(payload.Proposal.DraftPreviews) != 1 {
+		t.Fatalf("explicit content must still carry a preview: %+v", payload.Proposal)
+	}
+	preview := payload.Proposal.DraftPreviews[0]
+	if preview.Path != "workspace/notes/hello.txt" || preview.Preview != "hello from the operator" || !preview.FullDraft {
+		t.Fatalf("preview = %+v, want preview of the explicit content", preview)
 	}
 	if provider.calls() != 0 {
 		t.Fatalf("draft inferences = %d, want none for explicit content", provider.calls())
