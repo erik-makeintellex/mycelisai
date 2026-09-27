@@ -14,6 +14,7 @@ export default function InlineBlockerNotice({
     code,
     httpStatus,
     viewerIsAdmin = true,
+    reason,
     onRetry,
     retryLabel,
     onDismiss,
@@ -22,6 +23,7 @@ export default function InlineBlockerNotice({
     code?: string;
     httpStatus?: number;
     viewerIsAdmin?: boolean;
+    reason?: string;
     onRetry?: () => void;
     retryLabel?: string;
     onDismiss?: () => void;
@@ -29,7 +31,7 @@ export default function InlineBlockerNotice({
 }) {
     // blockerCopy() never resolves viewerIsAdmin itself (per the U1
     // contract); resolve it here so admins actually see the admin variant.
-    const copy = resolveBlockerCopy(blockerCopy({ code: code ?? "request_failed", httpStatus, viewerIsAdmin }), viewerIsAdmin);
+    const copy = resolveBlockerCopy(blockerCopy({ code: code ?? "request_failed", httpStatus, viewerIsAdmin, reason }), viewerIsAdmin);
     return (
         <div role="alert" className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3">
             <div className="flex items-start gap-2">

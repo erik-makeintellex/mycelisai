@@ -21,7 +21,7 @@ func (s *AdminServer) deploymentContextService() *deploymentcontext.Service {
 // durable context for Soma and downstream teams: keyword-searchable on save,
 // semantically searchable once an embedding engine embeds it.
 // This store is intentionally separate from Soma's ordinary remembered facts.
-// GET  /api/v1/memory/deployment-context
+// GET  /api/v1/memory/deployment-context[?include_archived=true]
 // POST /api/v1/memory/deployment-context
 func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Request) {
 	svc := s.deploymentContextService()
@@ -40,10 +40,15 @@ func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Req
 			}
 		}
 
-		entries, err := svc.List(r.Context(), limit)
+		includeArchived := r.URL.Query().Get("include_archived") == "true"
+		entries, err := svc.ListEntries(r.Context(), limit, includeArchived)
 		if err != nil {
 			respondError(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+		identity := IdentityFromContext(r.Context())
+		for i := range entries {
+			entries[i].CanManage = canManageMemoryEntry(identity, &entries[i])
 		}
 		semantic := "unavailable"
 		if svc.Cognitive.EmbeddingAvailable(r.Context()) {
@@ -101,6 +106,7 @@ func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Req
 			OutputSpecificity: req.OutputSpecificity,
 			ContentDomain:     req.ContentDomain,
 			TargetGoalSets:    req.TargetGoalSets,
+			ExtraMetadata:     map[string]any{"owner_user_id": auditActorIDFromRequest(r)},
 		})
 		var saveErr *deploymentcontext.SaveError
 		if errors.As(err, &saveErr) {

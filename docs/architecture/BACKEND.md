@@ -330,6 +330,16 @@ Fixed-key blocks for development agents. Blocks cite the PRD and source; they ne
 - Pitfalls: acceptance comes from the existing projection of the receiver's correlated "Team accepted work" signal; `handoff_consumed` output linking and Work-lane chain rendering are deferred (PH-B hook, U1); executing an approved out-of-run handoff via confirm-action is not built (Soma proposes, the blocker is honest); shipped leads are `prime-architect-agent` and `prime-development-agent` (`role: team_lead`, formerly architect/coder; a policy `role_providers` key on the old roles no longer matches them); runtime team leads must declare the tools; `read_file` is still workspace-wide; generated images still insert `agent_id='internal'`; the SQL store is sqlmock-proven only, real-PG proof is lead-run
 - Verified: pending lead merge (H1 worktree on dev b1893c9c)
 
+### Area: Saved memory lifecycle
+- PRD: §Information Architecture L329; §API And Event Contracts L273 (Deployment Context) · Scoreboard: M2 governed memory archive/delete
+- Owned paths: `core/internal/deploymentcontext/{lifecycle,list}.go`, `core/internal/server/deployment_context{,_lifecycle}.go`, `interface/components/resources/DeploymentContext*.tsx` (mycelis-ai-runtime) · Do-not-touch: cognitive router, adapters, budget ledger (B1)
+- Seams: `deploymentcontext.Service.Lookup`/`Archive`/`Restore`/`Delete`/`ListEntries`, `memory.recallScopeClauses`, `memoryLifecycleDenial`, `handleMemoryLifecycle`, `auditMemoryLifecycle`
+- Invariants: archive sets `lifecycle_state=archived` on the artifact and every chunk in one tx, and every recall leg filters `lifecycle_state='active'` in SQL (so prompts and `context_sources` never see it); delete removes artifact + chunks in one tx; the audit record is written before any change (none -> 503, nothing changes); the delete tombstone has no title or content; agents get no lifecycle tool
+- Authority: archive/restore/delete -> saver (by `owner_user_id`, legacy rows by `loaded_by`) for private/team entries; org-wide classes or `global` visibility -> root admin + `memory:write`; negatives: anon 401, non-owner 403 `memory_entry_not_owned`, org-wide non-admin 403 `admin_required`
+- Proof: `uv run inv core.test --package=./internal/deploymentcontext --race`; `uv run inv core.test --package=./internal/server --run='DeploymentContext|Lifecycle' --race` (real-PG legs need `MYCELIS_MEMORY_TEST_DSN` with the schema applied); `ops/live_journey_probe.py` J3d
+- Pitfalls: `can_manage` in GET only hides buttons, the server decides; admins cannot manage another user's private entry; the Go identifier and the wire code must stay `memory_entry_not_owned` (UI copy keys on it)
+- Verified: pending lead merge (M2 worktree on dev 91909e32)
+
 ## IX. Governance & Policy Engine
 
 Deploy-owned identity posture is backend-owned: deploy-owned People & Access posture surfaced read-only, and settings PUT ignores/preserves those deploy-owned fields instead of persisting them.

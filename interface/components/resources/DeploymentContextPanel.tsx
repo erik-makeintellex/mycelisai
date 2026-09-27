@@ -36,6 +36,9 @@ export type DeploymentContextEntry = {
     target_goal_sets?: string[];
     created_at: string;
     embedding_status?: string;
+    lifecycle_state?: string;
+    archived_at?: string;
+    can_manage?: boolean;
 };
 
 const INPUT_CLASS = "w-full rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main placeholder:text-cortex-text-muted/60 focus:outline-none focus:border-cortex-primary";
@@ -44,6 +47,8 @@ export default function DeploymentContextPanel() {
     const [entries, setEntries] = useState<DeploymentContextEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [listError, setListError] = useState<string | null>(null);
+    const [showArchived, setShowArchived] = useState(false);
+    const [viewerIsAdmin, setViewerIsAdmin] = useState(false);
     const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
     const [showMore, setShowMore] = useState(false);
     const [form, setForm] = useState<DeploymentContextForm>(() => defaultForm(false));
@@ -55,10 +60,10 @@ export default function DeploymentContextPanel() {
     );
     const update = (patch: Partial<DeploymentContextForm>) => setForm((current) => ({ ...current, ...patch }));
 
-    const loadEntries = async () => {
+    const loadEntries = async (archived = showArchived) => {
         setLoading(true);
         try {
-            const res = await fetch("/api/v1/memory/deployment-context?limit=12");
+            const res = await fetch(`/api/v1/memory/deployment-context?limit=12${archived ? "&include_archived=true" : ""}`);
             const payload = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(typeof payload?.error === "string" ? payload.error : "Saved context is unavailable.");
             setEntries(Array.isArray(payload.entries) ? payload.entries : []);
@@ -77,6 +82,7 @@ export default function DeploymentContextPanel() {
         fetch("/auth/session", { cache: "no-store" })
             .then((res) => (res.ok ? res.json() : null))
             .then((body) => {
+                if (!cancelled && body?.data?.user?.role === "admin") setViewerIsAdmin(true);
                 // Admin defaults apply only until the user picks a class.
                 if (!cancelled && body?.data?.user?.role === "admin" && !classTouched.current) {
                     const admin = defaultForm(true);
@@ -137,7 +143,7 @@ export default function DeploymentContextPanel() {
                                 Save notes or files Soma should use in later chats. Deliverables hold finished results; this holds reusable facts.
                             </p>
                         </div>
-                        <button onClick={loadEntries} className="inline-flex items-center gap-1.5 rounded-lg border border-cortex-border px-3 py-1.5 text-xs text-cortex-text-main hover:bg-cortex-bg">
+                        <button onClick={() => void loadEntries()} className="inline-flex items-center gap-1.5 rounded-lg border border-cortex-border px-3 py-1.5 text-xs text-cortex-text-main hover:bg-cortex-bg">
                             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
                             Refresh
                         </button>
@@ -207,7 +213,18 @@ export default function DeploymentContextPanel() {
                     </div>
                 </section>
 
-                <DeploymentContextSavedEntries entries={entries} loading={loading} error={listError} />
+                <DeploymentContextSavedEntries
+                    entries={entries}
+                    loading={loading}
+                    error={listError}
+                    viewerIsAdmin={viewerIsAdmin}
+                    showArchived={showArchived}
+                    onShowArchivedChange={(next) => {
+                        setShowArchived(next);
+                        void loadEntries(next);
+                    }}
+                    onChanged={() => loadEntries()}
+                />
             </div>
         </div>
     );

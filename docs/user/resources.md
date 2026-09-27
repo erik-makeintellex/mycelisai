@@ -236,6 +236,8 @@ After you save, the status line says exactly what Soma can do with the source. W
 
 When Soma answers with saved context, the reply shows a **Sources** line. A source marked **Used** shares wording with the answer that your request did not already contain; other injected sources are marked **Consulted**.
 
+To remove or correct saved context, use the buttons on a saved source. **Archive** hides it right away: Soma stops recalling and citing it, and it leaves the list. Turn on **Show archived** to see archived sources and **Restore** one. **Delete** asks "Delete permanently? Soma will no longer use this." and then erases the content for good; only a record that it was deleted stays in the activity log. You can change sources you saved for yourself or your team. Sources for the whole organization (including company knowledge) can only be changed by an admin. The buttons appear only on sources you can change.
+
 Operational behavior:
 - every load stores a durable document artifact and its chunks in one transaction, so a failed save leaves nothing behind; chunks are keyword-searchable (PostgreSQL full text) immediately and become semantically searchable once an embedding engine embeds them (right after the save, on a later save, or through the admin backfill)
 - each entry carries `knowledge_class`, visibility, sensitivity, trust, and provenance metadata
