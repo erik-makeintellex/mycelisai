@@ -27,6 +27,10 @@
 - **Budget:** at most 2 live agents (account rate limits), each with one targeted deliverable. Use Sonnet for well-specified work, and Opus for security, schema and authority. At most 3 browser sessions.
 - **U1:** `feature/u1-human-first-ui` is the owner's lane. Never edit U1's files; U1-owned UI changes go to the owner as a spec.
 
+## History Corrections
+- `202b803c` (D2 merge) and `9f6c8d98` (M1 merge) landed with the placeholder subject "…: unused" after a merge-script re-run. They were not rewritten, because active worktrees are based on them. Their full descriptions are attached as git notes (`git log --show-notes`; push with `git push origin refs/notes/*`). The slice commit `3e9bf74c` carries D2's detailed message. The merge script now refuses placeholder or short messages.
+- Merged remote branches that are safe to delete: `origin/feature/profile-route-health` (S6c) and `origin/feature/access-a1-hardening` (A1). `windows/*` refs are retained backups of the stale Windows checkout.
+
 ## SSO recovery
 
 - `COMPLETE`: Compose forwards Google OAuth and browser-origin/cookie configuration to Interface only. Independent configuration QA GO; 18 Python configuration/docs checks, 868 Interface tests, and isolated first-boot/restart/cleanup proof passed for the configuration repair.
