@@ -1,8 +1,43 @@
+import type { AgentNodeData } from '@/components/wiring/AgentNode';
 import type { CortexState } from '@/store/cortexStoreState';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { AgentManifest, MissionBlueprint, TeamsFilter } from '@/store/cortexStoreTypes';
 import { blueprintToGraph, solidifyNodes } from '@/store/cortexStoreUtils';
 import { blockerCopy } from '@/lib/blockerCopy';
+
+// Mirrors the backend's commit statuses (core/internal/server/mission_commit.go,
+// PH-D F12): a commit can persist a mission without fully activating it, and
+// the UI must say so rather than assume every team came online.
+interface CommitActivationCounts {
+    teams_spawned?: number;
+    teams_skipped?: number;
+    errors?: string[];
+}
+
+function describeCommitOutcome(
+    status: string,
+    teams: number,
+    agents: number,
+    activation: CommitActivationCounts | null | undefined,
+): { chatText: string; nodeStatus: AgentNodeData['status'] } {
+    if (status === 'partially_active') {
+        const running = (activation?.teams_spawned ?? 0) + (activation?.teams_skipped ?? 0);
+        return {
+            chatText: `Partly started (${running} of ${teams} team${teams === 1 ? '' : 's'}). ${agents} agent${agents === 1 ? '' : 's'} planned. Follow progress in Work.`,
+            nodeStatus: 'offline',
+        };
+    }
+    if (status === 'persisted_not_activated') {
+        return {
+            chatText: 'Saved, not started yet. Follow progress in Work once it starts.',
+            nodeStatus: 'offline',
+        };
+    }
+    return {
+        chatText: `Teams launched. ${teams} team${teams === 1 ? '' : 's'} with ${agents} agent${agents === 1 ? '' : 's'} are working. Follow progress in Work.`,
+        nodeStatus: 'online',
+    };
+}
 
 function buildClosedAgentEditorState() {
     return {
@@ -133,18 +168,24 @@ export function createCortexMissionDraftSlice(
 
                 const teams = data.teams ?? blueprint.teams.length;
                 const agents = data.agents ?? blueprint.teams.reduce((sum: number, t) => sum + t.agents.length, 0);
+                // The backend always reports what actually activated now
+                // (PH-D F12); default to 'active' only for a caller that
+                // predates the status field, never as a false assumption
+                // once it's present.
+                const status: string = typeof data.status === 'string' ? data.status : 'active';
+                const { chatText, nodeStatus } = describeCommitOutcome(status, teams, agents, data.activation);
                 set((s) => ({
                     isCommitting: false,
                     missionStatus: 'active',
                     activeMissionId: data.mission_id,
                     activeConfirmToken: null,
                     pendingProposal: null,
-                    nodes: solidifyNodes(s.nodes),
+                    nodes: solidifyNodes(s.nodes, nodeStatus),
                     chatHistory: [
                         ...s.chatHistory,
                         {
                             role: 'architect',
-                            content: `Teams launched. ${teams} team${teams === 1 ? '' : 's'} with ${agents} agent${agents === 1 ? '' : 's'} are working. Follow progress in Work.`,
+                            content: chatText,
                         },
                     ],
                 }));
