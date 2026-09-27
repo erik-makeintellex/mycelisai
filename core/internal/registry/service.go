@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -48,48 +49,36 @@ func (s *Service) RegisterTemplate(ctx context.Context, t ConnectorTemplate) err
 
 // --- Provisioning ---
 
-func (s *Service) InstallConnector(ctx context.Context, teamID uuid.UUID, templateID uuid.UUID, name string, config json.RawMessage) (*ActiveConnector, error) {
-	// 1. Fetch Template
+// Install errors. ErrConnectorDeploymentUnavailable is returned for every valid
+// install until a real connector deployer exists: nothing is recorded and no
+// "provisioning" row is ever written for work that will not happen.
+var (
+	ErrTemplateNotFound               = errors.New("connector template not found")
+	ErrInvalidConnectorConfig         = errors.New("invalid connector config")
+	ErrConnectorDeploymentUnavailable = errors.New("connector_deployment_unavailable")
+)
+
+// InstallConnector validates the template and config, then reports the honest
+// deployment blocker. It never inserts an active_connectors row.
+func (s *Service) InstallConnector(ctx context.Context, templateID uuid.UUID, config json.RawMessage) error {
 	var t ConnectorTemplate
 	err := s.DB.QueryRowContext(ctx, "SELECT id, config_schema, topic_template FROM connector_templates WHERE id=$1", templateID).
 		Scan(&t.ID, &t.ConfigSchema, &t.TopicTemplate)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrTemplateNotFound
+	}
 	if err != nil {
-		return nil, fmt.Errorf("template not found: %w", err)
+		return fmt.Errorf("load connector template: %w", err)
 	}
 
-	// 2. Validate Config against Schema
-	schemaLoader := gojsonschema.NewBytesLoader(t.ConfigSchema)
-	documentLoader := gojsonschema.NewBytesLoader(config)
-
-	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+	result, err := gojsonschema.Validate(gojsonschema.NewBytesLoader(t.ConfigSchema), gojsonschema.NewBytesLoader(config))
 	if err != nil {
-		return nil, fmt.Errorf("schema validation error: %w", err)
+		return fmt.Errorf("%w: %v", ErrInvalidConnectorConfig, err)
 	}
 	if !result.Valid() {
-		return nil, fmt.Errorf("invalid config: %v", result.Errors())
+		return fmt.Errorf("%w: %v", ErrInvalidConnectorConfig, result.Errors())
 	}
-
-	// 3. Create Record
-	ac := &ActiveConnector{
-		ID:         uuid.New(),
-		TeamID:     teamID,
-		TemplateID: templateID,
-		Name:       name,
-		Config:     config,
-		Status:     "provisioning",
-	}
-
-	_, err = s.DB.ExecContext(ctx,
-		"INSERT INTO active_connectors (id, team_id, template_id, name, config, status) VALUES ($1, $2, $3, $4, $5, $6)",
-		ac.ID, ac.TeamID, ac.TemplateID, ac.Name, ac.Config, ac.Status)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: Trigger actual K8s deployment (Phase 32 Part 2)
-	// For now, we simulate success
-	return ac, nil
+	return ErrConnectorDeploymentUnavailable
 }
 
 // --- Wiring ---

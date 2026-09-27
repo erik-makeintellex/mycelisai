@@ -37,7 +37,7 @@ Agents execute role-scoped reasoning and tool loops under provider, capability, 
 
 ### SensorAgent (Poll-Based) - `swarm/sensor_agent.go`
 
-Sensor agents ingest external or device-like signals. They must keep device/feed origin explicit before normalization into operator-facing channels.
+Sensor agents ingest external or device-like signals. They must keep device/feed origin explicit before normalization into operator-facing channels. `GET /api/v1/sensors` lists only running endpoint-backed sensors from `Soma.ListSensors` (`swarm/sensor_status.go`): `online` only after a real successful probe, `offline` after a failed one, `pending` before the first; a sensor with no endpoint is not listed, and no runtime or no sensors returns an empty list with `status` `runtime_unavailable` or `none_configured`. There is no built-in seed mission and no Gmail or weather implementation.
 
 ### Team - `swarm/team.go`
 
@@ -51,9 +51,9 @@ Internal tools are governed runtime capabilities. Tool metadata must identify so
 
 Composite execution must preserve bounded outputs, error normalization, and auditability. The composite is unscoped; every agent gets it only through `ScopedToolExecutor` (`Team.startLocked`, and `NewAgent` wraps any other executor), which enforces the declared `Tools` list on both `FindToolByName` and `CallTool`: names are trimmed then matched exactly and case-sensitively, `mcp:<server>/<tool>` and `mcp:<server>/*` grant MCP tools, a bare declared name may also match an installed MCP tool of that exact name, and `toolset:<name>` expands through the MCP tool-set registry (unresolved grants nothing). An empty or absent list grants nothing and skips the tool loop. The only base toolset is runtime-owned (`ToolInvocationContext.RuntimeOwned`): `consult_council` for council preflight and `read_file` for entrypoint readback; runtime-owned `write_file` still needs a declaration. Pitfall: council preflight runs only after the scope check passes, so an undeclared `local_command`/`create_team`/`delegate_task` never reaches the council. `CallTool` hands handlers the caller scope, and `create_team` refuses members whose tools fall outside it (`childToolsWithinCaller`). Echoed tool names are capped at 128 runes. Proposal-planning capture uses the same check. Runtime-context lines that cite a registered tool the agent did not declare are dropped (`withoutUndeclaredToolLines`), and `TestShippedAgentPromptToolsAreDeclared` requires every tool a shipped YAML prompt cites (and, for Soma's admin, the full lead protocol) to be declared. A denied call does not execute, feeds the model `Tool '<name>' is not permitted for this agent and was not executed. Use only your declared tools, or answer directly.` (internally `ToolNotPermittedError`: `tool "<name>" is not permitted for this agent`), and emits a `protocol.EventToolDenied` (`tool.denied`) mission event (`phase`: lookup, execute, or planning). Known gap (S7b): approved-plan execution (`cognitive_tool_plan.go`, `server/templates_execution.go`) and the operator MCP call route are not yet scoped to the originating agent's declared tools.
 
-### Blueprint Activation - `swarm/activation.go`, `converter.go`, `seeds.go`
+### Blueprint Activation - `swarm/activation.go`, `converter.go`
 
-Blueprint activation turns approved intent into teams, agents, events, and persisted run state.
+Blueprint activation turns approved intent into teams, agents, events, and persisted run state. The only commit path is the confirm-token-governed `POST /api/v1/intent/commit`; its `status` comes from `ActivationResult` (`active`, `partially_active`, or `persisted_not_activated`), never assumed.
 
 ## III. Cognitive Layer
 

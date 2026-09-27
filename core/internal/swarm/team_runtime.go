@@ -49,6 +49,7 @@ func (t *Team) startLocked() error {
 
 		if cfg, isSensor := t.sensorConfigs[manifest.ID]; isSensor {
 			sensor := NewSensorAgent(t.ctx, member, cfg, t.Manifest.ID, t.nc)
+			t.sensors = append(t.sensors, sensor)
 			go sensor.Start()
 			continue
 		}

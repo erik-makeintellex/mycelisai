@@ -45,6 +45,7 @@ type SensorAgent struct {
 	client   *http.Client
 	ctx      context.Context
 	cancel   context.CancelFunc
+	probe    sensorProbeState
 }
 
 // NewSensorAgent creates a sensor agent from a manifest and sensor config.
@@ -103,6 +104,7 @@ func (s *SensorAgent) poll() {
 
 	if s.Config.Endpoint != "" && s.Config.Type == SensorTypeHTTP {
 		data, err = s.fetchHTTP()
+		s.probe.record(err == nil, time.Now())
 		if err != nil {
 			log.Printf("SensorAgent [%s] poll error: %v", s.Manifest.ID, err)
 			// Publish error telemetry instead of dropping

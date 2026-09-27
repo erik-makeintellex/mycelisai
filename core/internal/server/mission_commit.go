@@ -60,32 +60,6 @@ func (s *AdminServer) handleIntentCommit(w http.ResponseWriter, r *http.Request)
 	s.commitAndActivateWithProof(w, bp, buildSensorConfigs(bp), proofID, authority)
 }
 
-// handleSymbioticSeed commits the built-in Symbiotic Sensors blueprint.
-func (s *AdminServer) handleSymbioticSeed(w http.ResponseWriter, r *http.Request) {
-	bp := swarm.SymbioticSeedBlueprint()
-	s.commitAndActivate(w, bp, swarm.SymbioticSeedSensorConfigs())
-}
-
-func (s *AdminServer) commitAndActivate(w http.ResponseWriter, bp *protocol.MissionBlueprint, sensorConfigs map[string]swarm.SensorConfig) {
-	missionID, totalAgents, ok := s.persistMissionBlueprint(w, bp)
-	if !ok {
-		return
-	}
-
-	activation := s.activateCommittedMission(bp, missionID.String(), sensorConfigs)
-	resp := CommitResponse{
-		Status:     "active",
-		MissionID:  missionID.String(),
-		Teams:      len(bp.Teams),
-		Agents:     totalAgents,
-		Activation: activation,
-	}
-	if activation != nil {
-		resp.RunID = activation.RunID
-	}
-	respondJSON(w, resp)
-}
-
 func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *protocol.MissionBlueprint, sensorConfigs map[string]swarm.SensorConfig, proofID string, authority confirmAuthority) {
 	missionID, totalAgents, ok := s.persistMissionBlueprint(w, bp)
 	if !ok {
@@ -102,7 +76,7 @@ func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *prot
 	)
 
 	resp := CommitResponse{
-		Status:        "active",
+		Status:        commitActivationStatus(len(bp.Teams), activation),
 		MissionID:     missionID.String(),
 		Teams:         len(bp.Teams),
 		Agents:        totalAgents,
@@ -203,4 +177,28 @@ func (s *AdminServer) activateCommittedMission(bp *protocol.MissionBlueprint, mi
 	log.Printf("Mission activated: %d teams spawned, %d skipped, %d sensors (run_id=%s)",
 		activation.TeamsSpawned, activation.TeamsSkipped, activation.SensorsSpawned, activation.RunID)
 	return activation
+}
+
+// Commit statuses report what the runtime actually activated (PH-D F12).
+const (
+	commitStatusActive                = "active"
+	commitStatusPartiallyActive       = "partially_active"
+	commitStatusPersistedNotActivated = "persisted_not_activated"
+)
+
+// commitActivationStatus derives the commit status from the activation counts:
+// active only when every team is running and nothing failed.
+func commitActivationStatus(teams int, activation *swarm.ActivationResult) string {
+	if activation == nil {
+		return commitStatusPersistedNotActivated
+	}
+	running := activation.TeamsSpawned + activation.TeamsSkipped
+	switch {
+	case running == 0:
+		return commitStatusPersistedNotActivated
+	case running < teams || len(activation.Errors) > 0:
+		return commitStatusPartiallyActive
+	default:
+		return commitStatusActive
+	}
 }
