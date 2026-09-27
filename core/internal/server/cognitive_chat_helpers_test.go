@@ -114,7 +114,7 @@ func TestBuildPlannedToolCalls_StartsComplexTeamEvocationBrief(t *testing.T) {
 		t.Fatalf("path = %q, want group-scoped team evocation brief", path)
 	}
 	content, _ := calls[1].Arguments["content"].(string)
-	if !strings.Contains(content, "Team Evocation Brief") || !strings.Contains(content, "hardcoded domain template") {
+	if !strings.Contains(content, "# Request record") || !strings.Contains(content, "No research, council review, or staffing has run yet") {
 		t.Fatalf("content does not look like a team evocation brief: %.120q", content)
 	}
 	brief := strings.Join([]string{content, strings.Join(confirmedActionStringSlice(calls[1].Arguments["proof_required"]), "\n")}, "\n")
@@ -150,7 +150,7 @@ func TestBuildPlannedToolCalls_PackageAskCreatesEvocationBrief(t *testing.T) {
 
 	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
 	content, _ := calls[1].Arguments["content"].(string)
-	if !strings.Contains(content, "Team Evocation Brief") || !strings.Contains(content, "Expected outputs") {
+	if !strings.Contains(content, "# Request record") || !strings.Contains(content, "Expected outputs") {
 		t.Fatalf("content = %.160q, want retained team evocation brief", content)
 	}
 	if calls[1].Arguments["package_kind"] != nil {
@@ -160,10 +160,10 @@ func TestBuildPlannedToolCalls_PackageAskCreatesEvocationBrief(t *testing.T) {
 
 func TestDeterministicGovernedMutationResult_BuildsWriteFileProposalWithoutAgent(t *testing.T) {
 	request := "Create a simple python file named workspace/logs/hello.py that prints hello world."
-	result, ok := deterministicGovernedMutationResult(request, []string{"write_file"})
-	if !ok {
-		t.Fatal("expected deterministic governed mutation result")
+	if _, bypass := deterministicGovernedMutationResult(request, []string{"write_file"}); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
+	result := requestPlanResultForTest(request, []string{"write_file"})
 	if !containsToolName(result.ToolsUsed, "write_file") {
 		t.Fatalf("tools_used = %#v, want write_file", result.ToolsUsed)
 	}
@@ -171,7 +171,7 @@ func TestDeterministicGovernedMutationResult_BuildsWriteFileProposalWithoutAgent
 		t.Fatalf("text = %q, want target path", result.Text)
 	}
 
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 	requirePlannedCallNames(t, calls, "write_file")
 	if calls[0].Arguments["path"] != "workspace/logs/hello.py" {
 		t.Fatalf("path = %#v, want workspace/logs/hello.py", calls[0].Arguments["path"])
@@ -188,15 +188,15 @@ func TestBuildPlannedToolCalls_TextOnlyFocusedTeamNoteDoesNotCreateTeamOrImage(t
 		t.Fatalf("mutTools = %#v, did not expect team/media tools", mutTools)
 	}
 
-	result, ok := deterministicGovernedMutationResult(request, mutTools)
-	if !ok {
-		t.Fatal("expected deterministic governed mutation result")
+	if _, bypass := deterministicGovernedMutationResult(request, mutTools); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
+	result := requestPlanResultForTest(request, mutTools)
 	if len(result.ToolsUsed) != 1 || result.ToolsUsed[0] != "write_file" {
 		t.Fatalf("tools_used = %#v, want write_file only", result.ToolsUsed)
 	}
 
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 	requirePlannedCallNames(t, calls, "write_file")
 	if calls[0].Arguments["path"] != "generated/team-focus-action-retry/note.md" {
 		t.Fatalf("path = %#v", calls[0].Arguments["path"])
@@ -245,15 +245,15 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationProposal(t *test
 		"Retain it at workspace/generated/first-demo-game-team-first-game with entrypoint workspace/generated/first-demo-game-team-first-game/index.html.",
 		"The package metadata must include files index.html and README.md plus validation notes from opening the browser game.",
 	}, " ")
-	result, ok := deterministicGovernedMutationResult(request, []string{"write_file", "generate_blueprint", "delegate"})
-	if !ok {
-		t.Fatal("expected deterministic governed mutation result")
+	if _, bypass := deterministicGovernedMutationResult(request, []string{"write_file", "generate_blueprint", "delegate"}); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
+	result := requestPlanResultForTest(request, []string{"write_file", "generate_blueprint", "delegate"})
 	if !containsToolName(result.ToolsUsed, "create_team") || !containsToolName(result.ToolsUsed, "write_file") {
 		t.Fatalf("tools_used = %#v, want create_team and write_file", result.ToolsUsed)
 	}
 
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
 	if calls[0].Arguments["name"] != "First Demo Game Team" {
 		t.Fatalf("team name = %#v, want First Demo Game Team", calls[0].Arguments["name"])
@@ -266,7 +266,7 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationProposal(t *test
 		t.Fatalf("handoff path = %#v, want team-owned preparation", calls[2].Arguments["path"])
 	}
 	content, _ := calls[1].Arguments["content"].(string)
-	if !strings.Contains(content, "Team Evocation Brief") || !strings.Contains(content, "research, council review") {
+	if !strings.Contains(content, "# Request record") || !strings.Contains(content, "research, council review") {
 		t.Fatalf("content = %.160q, want team evocation brief", content)
 	}
 }

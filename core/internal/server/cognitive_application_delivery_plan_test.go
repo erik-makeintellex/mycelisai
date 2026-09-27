@@ -68,14 +68,14 @@ func TestBuildPlannedToolCalls_OutcomeLanguageCreatesDeliveryTeam(t *testing.T) 
 			t.Fatalf("mutation tools = %#v, missing %q", mutationTools, want)
 		}
 	}
-	result, ok := deterministicGovernedMutationResult(request, mutationTools)
-	if !ok {
-		t.Fatal("natural complex deliverable must enter the governed proposal path")
+	if _, bypass := deterministicGovernedMutationResult(request, mutationTools); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
+	result := requestPlanResultForTest(request, mutationTools)
 	if strings.Contains(result.Text, "TEAM_EVOCATION.md") || !strings.Contains(result.Text, "/generated/package/index.html") {
 		t.Fatalf("proposal text = %q, want generated package target instead of planning brief", result.Text)
 	}
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
 
 	teamID := firstNonEmptyString(calls[0].Arguments["team_id"])
@@ -123,11 +123,11 @@ func TestBuildPlannedToolCalls_SVGWebPageStaysOnCodePackagePath(t *testing.T) {
 			t.Fatalf("mutation tools = %#v, SVG web page must not require %q", mutationTools, forbidden)
 		}
 	}
-	result, ok := deterministicGovernedMutationResult(request, mutationTools)
-	if !ok {
-		t.Fatal("SVG web page must enter the governed application delivery path")
+	if _, bypass := deterministicGovernedMutationResult(request, mutationTools); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	result := requestPlanResultForTest(request, mutationTools)
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 	requirePlannedCallNames(t, calls, "create_team", "write_file", "write_file", "delegate_task")
 	display := buildProposalDisplayContract(calls, request, result.ToolsUsed)
 	if display.WorkIntent == nil || display.WorkIntent.OutputContract == nil || display.WorkIntent.OutputContract.Shape != "app_package" {

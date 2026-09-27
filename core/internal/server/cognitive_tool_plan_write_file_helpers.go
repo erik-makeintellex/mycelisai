@@ -32,22 +32,19 @@ func inferWriteFilePlanFromRequest(text string) (protocol.PlannedToolCall, bool)
 		default:
 			content = value + "\n"
 		}
-	} else if strings.EqualFold(filepathExt(targetPath), ".py") {
-		content = "print(\"hello world\")\n"
 	}
 
-	if content == "" {
-		content = synthesizeRequestedFileContent(trimmed, targetPath)
+	// Without explicit content the plan carries only the target. The proposal
+	// builder drafts real content with the model (draftMissingWriteFileContent)
+	// or returns an honest blocker; Soma never fills a file from a template.
+	args := map[string]any{
+		"path":       targetPath,
+		"validation": textOutputValidationForRequest(trimmed, targetPath),
 	}
-
-	return protocol.PlannedToolCall{
-		Name: "write_file",
-		Arguments: map[string]any{
-			"path":       targetPath,
-			"content":    content,
-			"validation": textOutputValidationForRequest(trimmed, targetPath),
-		},
-	}, true
+	if content != "" {
+		args["content"] = content
+	}
+	return protocol.PlannedToolCall{Name: "write_file", Arguments: args}, true
 }
 
 func textOutputValidationForRequest(request, targetPath string) string {
@@ -58,24 +55,6 @@ func textOutputValidationForRequest(request, targetPath string) string {
 		return "Retained browser output must open locally and expose the requested interactive behavior."
 	}
 	return "Retained file output must reopen from the workspace and match the requested operator intent."
-}
-
-func synthesizeRequestedFileContent(request, targetPath string) string {
-	request = strings.TrimSpace(request)
-	ext := filepathExt(targetPath)
-	switch ext {
-	case ".md", ".markdown":
-		return "# Generated note\n\n" +
-			"Soma created this file from your request.\n\n" +
-			"## What you asked for\n\n" +
-			request + "\n"
-	default:
-		if strings.Contains(strings.ToLower(request), "where") && strings.Contains(strings.ToLower(request), "output") {
-			return "Welcome to Mycelis.\n\n" +
-				"Ask Soma for the work you want done. When Soma creates files, images, or other outputs, they appear in the latest output area with controls to open the file or open the containing folder. The run proof remains linked so you can review what happened later.\n"
-		}
-		return "Soma created this file from your request:\n\n" + request + "\n"
-	}
 }
 
 func extractRequestedFilePath(text string) string {
@@ -172,16 +151,6 @@ func inferWriteFilePlanFromArtifacts(artifacts []protocol.ChatArtifactRef, lates
 		}, true
 	}
 	return protocol.PlannedToolCall{}, false
-}
-
-func inferWriteFileContent(agentResult chatAgentResult, latestRequest, targetPath string) string {
-	if content := inferWriteFileContentFromAgentOutput(agentResult); content != "" {
-		return content
-	}
-	if targetPath == "" || strings.TrimSpace(latestRequest) == "" {
-		return ""
-	}
-	return synthesizeRequestedFileContent(latestRequest, targetPath)
 }
 
 func inferWriteFileContentFromAgentOutput(agentResult chatAgentResult) string {

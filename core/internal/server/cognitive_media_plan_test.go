@@ -9,9 +9,11 @@ import (
 
 func TestBuildPlannedToolCalls_ComicTeamIncludesSpecialistsAndMediaDeliverable(t *testing.T) {
 	request := "Create a team to write a comic book page. We need an artist, someone who comes up with characters, and someone who writes the lines. Generate a comic image using local ComfyUI."
-	result, ok := deterministicGovernedMutationResult(request, []string{"create_team", "generate_image", "save_cached_image"})
-	if !ok || !strings.Contains(result.Text, "/media") {
-		t.Fatalf("deterministic proposal = %#v, ok=%v, want group media target", result, ok)
+	if _, bypass := deterministicGovernedMutationResult(request, []string{"create_team", "generate_image", "save_cached_image"}); bypass {
+		t.Fatal("media team request must reach Soma's agent, not a deterministic proposal")
+	}
+	if result := requestPlanResultForTest(request, []string{"create_team", "generate_image", "save_cached_image"}); !strings.Contains(result.Text, "/media") {
+		t.Fatalf("planned target = %q, want group media target", result.Text)
 	}
 	calls := buildPlannedToolCalls(chatAgentResult{}, request, []string{"create_team", "generate_image", "save_cached_image"})
 	requirePlannedCallNames(t, calls, "create_team", "generate_image", "save_cached_image")
