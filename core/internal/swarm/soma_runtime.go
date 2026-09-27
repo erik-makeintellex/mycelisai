@@ -48,6 +48,9 @@ func (s *Soma) startBootTeam(manifest *TeamManifest, toolDescs map[string]string
 	effective := s.applyProviderPolicy(manifest)
 	team := NewTeam(effective, s.nc, s.brain, s.toolExecutor)
 	team.spawnDigest = digest
+	// Only standing manifests reach here with a reserved ID (merge drops
+	// restored ones), so this is the one place a team becomes Core-owned.
+	team.coreOwned = IsReservedTeamID(manifest.ID)
 	s.configureTeam(team, toolDescs)
 	if err := team.Start(); err != nil {
 		team.Stop()
@@ -83,6 +86,10 @@ func (s *Soma) mergeDurableTeamManifests(standing []*TeamManifest) []*TeamManife
 	}
 	for _, manifest := range restored {
 		if manifest == nil || strings.TrimSpace(manifest.ID) == "" {
+			continue
+		}
+		if IsReservedTeamID(manifest.ID) {
+			s.recordRestorationDegradation(manifest.ID, ErrReservedTeamID.Error())
 			continue
 		}
 		if _, exists := seen[manifest.ID]; exists {
@@ -155,6 +162,9 @@ func (s *Soma) spawnTeam(ctx context.Context, manifest *TeamManifest) (bool, err
 	}
 	if manifest == nil || strings.TrimSpace(manifest.ID) == "" {
 		return false, fmt.Errorf("spawn team: team identity is required: %w", ErrRuntimeTeamInvalid)
+	}
+	if IsReservedTeamID(manifest.ID) {
+		return false, fmt.Errorf("spawn team %s: %w: %w", strings.TrimSpace(manifest.ID), ErrRuntimeTeamInvalid, ErrReservedTeamID)
 	}
 	s.spawnMu.Lock()
 	defer s.spawnMu.Unlock()

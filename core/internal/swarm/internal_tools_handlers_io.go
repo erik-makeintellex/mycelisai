@@ -90,6 +90,9 @@ func (r *InternalToolRegistry) handleReadFile(ctx context.Context, args map[stri
 	if err != nil {
 		return "", err
 	}
+	if err := r.confineTeamRead(ctx, path, safePath); err != nil {
+		return "", err
+	}
 	data, err := os.ReadFile(safePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read %s: %w", safePath, err)

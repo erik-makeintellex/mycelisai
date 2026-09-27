@@ -130,6 +130,9 @@ func (s *AdminServer) HandleCancelAction(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	if !s.cancellerMayCancelOrRespond(w, r, db, proofUUID) {
+		return
+	}
 	result, err := db.Exec(`UPDATE intent_proofs SET status = 'cancelled' WHERE id = $1`, proofUUID)
 	if err != nil {
 		respondAPIError(w, "failed to cancel proposal", http.StatusInternalServerError)

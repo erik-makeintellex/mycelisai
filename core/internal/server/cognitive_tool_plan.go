@@ -7,9 +7,23 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+// buildPlannedToolCalls marks calls the model chose (its tool_call text or
+// captured planned calls) as agent origin and everything Core inferred from
+// the request as core origin; scopePlannedCallsOrRespond enforces both (S7b).
 func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
+	planned := assemblePlannedToolCalls(agentResult, latestRequest, mutTools)
+	for i := range planned {
+		if planned[i].Origin != protocol.PlannedCallOriginAgent {
+			planned[i].Origin = protocol.PlannedCallOriginCore
+		}
+	}
+	return planned
+}
+
+func assemblePlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
 	var planned []protocol.PlannedToolCall
 	parsedCall, hasParsedCall := parsePlannedToolCall(agentResult.Text)
+	parsedCall.Origin = protocol.PlannedCallOriginAgent
 	if configCalls, ok := explicitConfigMutationPlan(agentResult, latestRequest); ok {
 		return configCalls
 	}
@@ -45,6 +59,7 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 	}
 	if len(agentResult.PlannedToolCalls) > 0 {
 		for _, call := range agentResult.PlannedToolCalls {
+			call.Origin = protocol.PlannedCallOriginAgent
 			planned = append(planned, normalizePlannedToolCall(call))
 		}
 		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
