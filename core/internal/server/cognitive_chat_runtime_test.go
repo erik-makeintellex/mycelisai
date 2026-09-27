@@ -183,7 +183,7 @@ func TestHandleChat_ReturnsDeterministicTeamRosterSummary(t *testing.T) {
 	}
 }
 
-func TestHandleChat_UsesProposalModeForMutationIntentWithoutReadableText(t *testing.T) {
+func TestHandleChat_EmptyProviderOutputOnMutationReturnsBlocker(t *testing.T) {
 	wireNATS := withNATS(t)
 	s := newTestServer(wireNATS)
 	s.Cognitive = &cognitive.Router{
@@ -224,41 +224,15 @@ func TestHandleChat_UsesProposalModeForMutationIntentWithoutReadableText(t *test
 
 	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	if rr.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusBadGateway, rr.Body.String())
 	}
-
-	var resp protocol.APIResponse
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
+	for _, forbidden := range []string{"proposal", "confirm_token", "intent_proof_id"} {
+		if strings.Contains(rr.Body.String(), forbidden) {
+			t.Fatalf("empty provider output must not mint %q: %s", forbidden, rr.Body.String())
+		}
 	}
-	if !resp.OK {
-		t.Fatalf("expected ok=true, got error=%q", resp.Error)
-	}
-
-	data, err := json.Marshal(resp.Data)
-	if err != nil {
-		t.Fatalf("marshal response data: %v", err)
-	}
-	var envelope protocol.CTSEnvelope
-	if err := json.Unmarshal(data, &envelope); err != nil {
-		t.Fatalf("decode envelope: %v", err)
-	}
-	if envelope.Mode != protocol.ModeProposal {
-		t.Fatalf("mode = %q, want %q", envelope.Mode, protocol.ModeProposal)
-	}
-	if envelope.TemplateID != protocol.TemplateChatToProposal {
-		t.Fatalf("template = %q, want %q", envelope.TemplateID, protocol.TemplateChatToProposal)
-	}
-
-	var payload protocol.ChatResponsePayload
-	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
-		t.Fatalf("decode payload: %v", err)
-	}
-	if payload.Proposal == nil {
-		t.Fatal("expected proposal payload")
-	}
-	if payload.Text == "" {
-		t.Fatal("expected non-empty proposal text fallback")
+	if !strings.Contains(rr.Body.String(), emptyProviderOutputCode) {
+		t.Fatalf("body = %s, want %s blocker", rr.Body.String(), emptyProviderOutputCode)
 	}
 }
