@@ -63,7 +63,7 @@ func TestDeploymentContextLifecycle_AuditFailureChangesNothing(t *testing.T) {
 		s := &AdminServer{DB: db, Artifacts: artifacts.NewService(db, t.TempDir()), Mem: memory.NewServiceWithDB(db), Cognitive: newDeploymentContextBrain()}
 		rr := lifecycleCall(t, lifecycleMux(s), adaOwner, action, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 		assertStatus(t, rr, http.StatusServiceUnavailable)
-		if code := blockerCode(t, rr); code != codeServiceUnavailable {
+		if code := lifecycleBlockerCode(t, rr); code != codeServiceUnavailable {
 			t.Fatalf("%s: code %q", action, code)
 		}
 		// sqlmock fails on any statement after the failed audit insert.

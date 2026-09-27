@@ -49,7 +49,7 @@ func lifecycleCall(t *testing.T, h http.Handler, who *RequestIdentity, action, i
 	return doAuthenticatedRequestAs(t, h, method, path, "", who)
 }
 
-func blockerCode(t *testing.T, rr *httptest.ResponseRecorder) string {
+func lifecycleBlockerCode(t *testing.T, rr *httptest.ResponseRecorder) string {
 	t.Helper()
 	var body map[string]any
 	assertJSON(t, rr, &body)
@@ -132,14 +132,14 @@ func TestDeploymentContextLifecycleRealDB_AuthorityNegatives(t *testing.T) {
 		for _, who := range []*RequestIdentity{bobOther, adminWithWrite} {
 			rr := lifecycleCall(t, h, who, action, private)
 			assertStatus(t, rr, http.StatusForbidden)
-			if code := blockerCode(t, rr); code != codeMemoryEntryNotOwned {
+			if code := lifecycleBlockerCode(t, rr); code != codeMemoryEntryNotOwned {
 				t.Fatalf("%s by %s on a private entry: code %q", action, who.Username, code)
 			}
 		}
 		for _, who := range []*RequestIdentity{adaOwner, bobOther, adminNoMemory} {
 			rr := lifecycleCall(t, h, who, action, org)
 			assertStatus(t, rr, http.StatusForbidden)
-			if code := blockerCode(t, rr); code != codeAdminRequired {
+			if code := lifecycleBlockerCode(t, rr); code != codeAdminRequired {
 				t.Fatalf("%s by %s on an org-wide entry: code %q", action, who.Username, code)
 			}
 		}
@@ -160,7 +160,7 @@ func TestDeploymentContextLifecycleRealDB_AuthorityNegatives(t *testing.T) {
 	assertStatus(t, lifecycleCall(t, h, adminWithWrite, "delete", org), http.StatusOK)
 	rr := lifecycleCall(t, h, adaOwner, "archive", "00000000-0000-0000-0000-000000000000")
 	assertStatus(t, rr, http.StatusNotFound)
-	if code := blockerCode(t, rr); code != codeMemoryEntryNotFound {
+	if code := lifecycleBlockerCode(t, rr); code != codeMemoryEntryNotFound {
 		t.Fatalf("unknown entry code %q", code)
 	}
 }
@@ -176,7 +176,7 @@ func TestDeploymentContextLifecycleRealDB_AuditUnavailableChangesNothing(t *test
 	for _, action := range []string{"archive", "delete"} {
 		rr := lifecycleCall(t, blocked, adaOwner, action, private)
 		assertStatus(t, rr, http.StatusServiceUnavailable)
-		if code := blockerCode(t, rr); code != codeServiceUnavailable {
+		if code := lifecycleBlockerCode(t, rr); code != codeServiceUnavailable {
 			t.Fatalf("%s without audit: code %q", action, code)
 		}
 	}
