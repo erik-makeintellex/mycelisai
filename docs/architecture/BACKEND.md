@@ -99,7 +99,7 @@ Run and conversation events can be summarized, embedded, and stored for continui
 
 ### Pipeline 5: Governance & Zero-Trust Actuation
 
-Mutating or protected actions flow through policy checks, proposals, approvals, proof envelopes, and persistent mission events.
+Mutating or protected actions flow through policy checks, proposals, approvals, proof envelopes, and persistent mission events. Proof truth (PH-B): "verified" means Core re-read the output. `execution_output_readback.go:readbackWorkspaceOutput` is the one shared readback (workspace boundary, exists, non-empty, not a request echo, optional expected digest; the checksum is always of the disk bytes). Confirm-action (`attachConfirmActionOutputProofs`, `applyConfirmActionReadbackFailure`) is `verified` only when every workspace output passes, else `unverified` with `output_readback_<status>` and a degraded proof. Async team results without a runtime validation plan (`readbackTeamOutputRefs`, `recordCompletionProof`) record `proof_quality=unverified` on pass and degrade with `output_<status>` plus a failed proof on any failing ref; only runtime validation records `verified`. Proof: `go test -race ./internal/server -run 'Readback|ReadsBack|Unverified|TeamResultProof|ClaimedRef'`.
 
 ### Pipeline 6: SSE Real-Time Streaming
 

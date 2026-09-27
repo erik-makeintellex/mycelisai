@@ -132,13 +132,18 @@ func confirmActionResponseData(proofID, contractID, proofArtifactID, runID, audi
 }
 
 func confirmActionResponseDataForStatus(proofID, contractID, proofArtifactID, runID, auditID string, runStatus runs.RunStatus, scope *protocol.ScopeValidation, results []plannedToolExecutionResult, teamWorkRefs []confirmActionTeamWorkRef, outcomeProject *protocol.OutcomeProject) map[string]any {
-	verified := runStatus == runs.StatusCompleted
+	summary := buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, runID, auditID, scope, results)
+	completed := runStatus == runs.StatusCompleted
+	verified := completed && summary.Proof.Verified != nil && *summary.Proof.Verified
 	executionState := "running"
 	if verified {
 		executionState = "verified"
+	} else if completed {
+		executionState = "unverified" // run completed; output readback failed
 	}
-	summary := buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, runID, auditID, scope, results)
-	if !verified {
+	if !completed {
+		summary.AuditRecovery.Degradation = nil
+		summary.AuditRecovery.Blocker = ""
 		summary.Execution.Status = protocol.ExecutionStatusRunning
 		summary.Execution.Summary = "Soma started the approved work. Completion proof will appear after the delegated team returns retained output."
 		summary.Proof.ProofID = ""
@@ -187,6 +192,10 @@ func confirmActionFailureResponseData(proofID, contractID, proofArtifactID, runI
 func (s *AdminServer) persistConfirmActionSuccessProof(ctx context.Context, proofID, contractID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult) string {
 	artifactID := uuid.NewString()
 	summary := buildConfirmActionExecutionSummary(proofID, contractID, artifactID, runID, auditID, scope, results)
+	if summary.Proof.Verified == nil || !*summary.Proof.Verified {
+		// Readback failed: persist a degraded proof (proof_quality=failed).
+		return s.recordConfirmActionProofArtifact(ctx, artifactID, proofID, contractID, runID, auditID, protocol.ProofArtifactStatusDegraded, summary, summary.Outputs, summary.AuditRecovery.Degradation)
+	}
 	return s.recordConfirmActionProofArtifact(ctx, artifactID, proofID, contractID, runID, auditID, protocol.ProofArtifactStatusSuccess, summary, summary.Outputs, nil)
 }
 
