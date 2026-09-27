@@ -129,6 +129,8 @@ func TestExecutionOutputsFromArtifactsUsesWorkspaceViewerForSavedMedia(t *testin
 }
 
 func TestBuildConfirmActionExecutionSummaryNamesTeamDeliverable(t *testing.T) {
+	root := useTestWorkspace(t)
+	writeWorkspaceTestFile(t, root, "generated/game/index.html", "<!doctype html><title>Game</title><main>Arrow keys move the runner; collect three keys to open the door.</main>")
 	summary := visibilityConfirmActionSummary(
 		visibilityScopeValidation("create_team", "write_file"),
 		visibilityCreateTeamResult("game-team", "Game Team"),
@@ -147,6 +149,8 @@ func TestBuildConfirmActionExecutionSummaryNamesTeamDeliverable(t *testing.T) {
 }
 
 func TestBuildConfirmActionExecutionSummaryNamesTeamMediaDeliverable(t *testing.T) {
+	root := useTestWorkspace(t)
+	writeWorkspaceTestFile(t, root, "saved-media/comic-page.png", "\x89PNG\r\n\x1a\ncomic-page-bytes")
 	summary := visibilityConfirmActionSummary(
 		visibilityScopeValidation("create_team", "generate_image", "save_cached_image"),
 		visibilityCreateTeamResult("comic-team", "Comic Team"),

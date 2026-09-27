@@ -79,7 +79,9 @@ type TrustProofQuality string
 const (
 	TrustProofQualityProposed TrustProofQuality = "proposed"
 	TrustProofQualityVerified TrustProofQuality = "verified"
-	TrustProofQualityFailed   TrustProofQuality = "failed"
+	// Unverified: Core read the output back but no validation plan checked it.
+	TrustProofQualityUnverified TrustProofQuality = "unverified"
+	TrustProofQualityFailed     TrustProofQuality = "failed"
 )
 
 type ExecutionRetentionClass string
