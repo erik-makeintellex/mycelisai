@@ -18,6 +18,7 @@ const DECK_CODES = [
     'transport_unavailable',
     'provider_timeout',
     'empty_provider_output',
+    'connector_deployment_unavailable',
 ];
 
 describe('blockerCopy', () => {
@@ -104,6 +105,14 @@ describe('blockerCopy', () => {
             expect(copy.whatHappened.toLowerCase()).toContain('add the content yourself');
         },
     );
+
+    it('maps connector_deployment_unavailable to a plain-language copy with a next action', () => {
+        const copy = blockerCopy({ code: 'connector_deployment_unavailable', httpStatus: 501, viewerIsAdmin: false });
+        expect(copy.title).toBe("Connector installs aren't available yet");
+        expect(copy.nextAction.label).toBeTruthy();
+        expect(copy.nextAction.href).toBeTruthy();
+        expect(copy.whatHappened).not.toMatch(/501|api\//i);
+    });
 
     it('maps transport_unavailable to the team-service copy, not a generic/auth message', () => {
         const copy = blockerCopy({ code: 'transport_unavailable', httpStatus: 503, viewerIsAdmin: false });

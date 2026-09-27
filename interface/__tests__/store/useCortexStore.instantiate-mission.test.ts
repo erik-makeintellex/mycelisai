@@ -17,7 +17,7 @@ describe('useCortexStore instantiateMission (Launch teams)', () => {
         mockFetch.mockResolvedValue({
             ok: true,
             status: 200,
-            json: async () => ({ mission_id: 'mission-1', teams: 1, agents: 2 }),
+            json: async () => ({ mission_id: 'mission-1', teams: 1, agents: 2, status: 'active' }),
         });
 
         await useCortexStore.getState().instantiateMission();
@@ -37,7 +37,7 @@ describe('useCortexStore instantiateMission (Launch teams)', () => {
         mockFetch.mockResolvedValue({
             ok: true,
             status: 200,
-            json: async () => ({ mission_id: 'mission-1', teams: 1, agents: 2 }),
+            json: async () => ({ mission_id: 'mission-1', teams: 1, agents: 2, status: 'active' }),
         });
 
         await useCortexStore.getState().instantiateMission();
@@ -47,6 +47,51 @@ describe('useCortexStore instantiateMission (Launch teams)', () => {
         const lastChat = useCortexStore.getState().chatHistory.at(-1);
         expect(lastChat?.content).toContain('Teams launched');
         expect(lastChat?.content).not.toMatch(/instantiated|ACTIVE|swarm/i);
+        const agentNode = useCortexStore.getState().nodes.find((n) => n.type === 'agentNode');
+        expect(agentNode?.data?.status).toBe('online');
+    });
+
+    it('reports a partial start honestly (never "active") when only some teams activated', async () => {
+        mockFetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                mission_id: 'mission-1',
+                teams: 3,
+                agents: 5,
+                status: 'partially_active',
+                activation: { teams_spawned: 1, teams_skipped: 1, sensors_spawned: 0, errors: ['team-3: spawn failed'] },
+            }),
+        });
+
+        await useCortexStore.getState().instantiateMission();
+
+        const lastChat = useCortexStore.getState().chatHistory.at(-1);
+        expect(lastChat?.content).toContain('Partly started (2 of 3 team');
+        expect(lastChat?.content).not.toMatch(/Teams launched/);
+        const agentNode = useCortexStore.getState().nodes.find((n) => n.type === 'agentNode');
+        expect(agentNode?.data?.status).not.toBe('online');
+    });
+
+    it('reports "Saved, not started yet" when the mission persisted but nothing activated', async () => {
+        mockFetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                mission_id: 'mission-1',
+                teams: 1,
+                agents: 2,
+                status: 'persisted_not_activated',
+                activation: null,
+            }),
+        });
+
+        await useCortexStore.getState().instantiateMission();
+
+        const lastChat = useCortexStore.getState().chatHistory.at(-1);
+        expect(lastChat?.content).toContain('Saved, not started yet');
+        const agentNode = useCortexStore.getState().nodes.find((n) => n.type === 'agentNode');
+        expect(agentNode?.data?.status).not.toBe('online');
     });
 
     it('maps a missing-token 403 (invalid_confirm_token) through blockerCopy instead of showing raw backend text', async () => {
