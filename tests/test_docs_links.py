@@ -195,8 +195,11 @@ def test_product_architecture_library_has_one_prd_and_scoped_supporting_docs():
 
     assert active_files == [
         "G4_E10_DURABLE_INVOCATION.md",
+        "MARKET_POSITION_AND_WORKFLOW_TARGETS.md",
         "MYCELIS_CANONICAL_PRD.md",
         "POST_G4_DELIVERY_AND_GUI_PLAN.md",
+        "README.md",
+        "TRUTHFUL_DELIVERY_AND_NEXT_ARCHITECTURE.md",
     ]
     packet = (architecture_library / active_files[0]).read_text()
     assert "Product authority remains the [canonical PRD]" in packet

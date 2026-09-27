@@ -315,7 +315,7 @@ Failure is normal. The system must answer:
 - what requires operator attention
 - what uncertainty is exposed
 
-No raw backend stack traces should reach the default UI. Backend failures, MCP timeouts, provider outages, malformed outputs, and unavailable tools should render as Operational Alert Cards with plain choices such as Retry, Adjust, Connect, Skip, Keep partial result, or Open details.
+No raw backend stack traces should reach the default UI. Backend failures, MCP timeouts, provider outages, malformed outputs, and unavailable tools should render as Operational Alert Cards with plain choices such as Retry, Adjust, Connect, Skip, Keep partial result, or Open details. The truthfulness invariant is absolute: no placeholder, templated, or synthesized content ever stands in for real model or tool output, and no tool failure is ever reported as success; when real execution cannot complete, the only honest response is a normalized blocker or a degraded state (see the [truthful delivery doc](TRUTHFUL_DELIVERY_AND_NEXT_ARCHITECTURE.md)).
 Confidence provenance is an emerging layer. The architecture should prepare for validation source, evidence strength, cross-model agreement, review lineage, and proof quality without overbuilding scores before the MVP journey works.
 
 ## Information Architecture
@@ -380,6 +380,6 @@ Non-goals for MVP:
 Visible UI changes require functional tests plus live user-experience review of density, scroll ownership, reachable fields, overlap, card size, copy, and fit to the Soma workspace concept.
 Required proof lanes: focused unit/component tests, Go runtime/persistence tests, docs-link proof, repeatable Playwright, headed browser proof for actual user experience, post-merge `dev` integration proof, clean `dev` release preflight, and post-promotion smoke/health proof.
 
-This PRD is the canonical architecture/product document. Supporting docs stay bounded: `README.md` for repo entry, `.state/V8_DEV_STATE.md` for live implementation state, `docs/README.md` and `docs/user/*` for operator help, `docs/API_REFERENCE.md` for API behavior, `docs/TESTING.md` for validation, `docs/architecture/{OPERATIONS,BACKEND,FRONTEND}.md` for implementation support, and owned subsystem READMEs for local operation.
+This PRD is the canonical architecture/product document. Supporting docs stay bounded: `README.md` for repo entry, `.state/V8_DEV_STATE.md` for live implementation state, `docs/README.md` and `docs/user/*` for operator help, `docs/API_REFERENCE.md` for API behavior, `docs/TESTING.md` for validation, `docs/architecture/{OPERATIONS,BACKEND,FRONTEND}.md` for implementation support, owned subsystem READMEs for local operation, `docs/architecture-library/MARKET_POSITION_AND_WORKFLOW_TARGETS.md` for competitive positioning and workflow-quality targets, and `docs/architecture-library/TRUTHFUL_DELIVERY_AND_NEXT_ARCHITECTURE.md` for the truthfulness invariant, placeholder-audit status, and planned memory/handoff/budget architecture.
 
 Promote current architecture truth here; delete obsolete doctrine and let Git history preserve the past.
