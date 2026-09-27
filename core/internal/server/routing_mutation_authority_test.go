@@ -131,7 +131,7 @@ func TestRoutingMutationAuthority_RejectsAnonymousStandardAndUnscopedAdmin(t *te
 					rr = doAuthenticatedRequestAs(t, f.mux, route.method, route.path, route.body, caller.identity)
 				}
 				assertStatus(t, rr, caller.want)
-				if strings.Contains(rr.Body.String(), `"data"`) {
+				if denialLeaksData(rr.Body.String()) {
 					t.Fatalf("rejected call leaked data: %s", rr.Body.String())
 				}
 				f.assertRoutingUnchanged(t)
@@ -159,7 +159,7 @@ func TestRoutingMutationAuthority_AuditFailureChangesNothing(t *testing.T) {
 			f.mock.ExpectExec("INSERT INTO log_entries").WillReturnError(errors.New("audit down"))
 			rr := doAuthenticatedRequest(t, f.mux, route.method, route.path, route.body)
 			assertStatus(t, rr, http.StatusServiceUnavailable)
-			if !strings.Contains(rr.Body.String(), "Audit unavailable") {
+			if !strings.Contains(rr.Body.String(), codeServiceUnavailable) || !strings.Contains(rr.Body.String(), "Audit unavailable") {
 				t.Fatalf("body = %s", rr.Body.String())
 			}
 			f.assertRoutingUnchanged(t)

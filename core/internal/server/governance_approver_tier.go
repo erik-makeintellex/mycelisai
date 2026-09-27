@@ -53,8 +53,7 @@ func respondConfirmerNotProposer(w http.ResponseWriter, r *http.Request) {
 	if r == nil || IdentityFromContext(r.Context()) == nil {
 		status = http.StatusUnauthorized
 	}
-	respondGovernanceError(w, status, errConfirmerNotProposer.Error(), codeConfirmerNotProposer,
-		"Ask the person who proposed this to confirm it, or ask an admin. The proposal is still valid.")
+	respondBlocker(w, r, status, codeConfirmerNotProposer, errConfirmerNotProposer.Error(), nil)
 }
 
 // Approval tiers (A2b item 1, owner Q1-A/Q2-A). The tier is evaluated at

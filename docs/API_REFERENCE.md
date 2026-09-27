@@ -27,6 +27,8 @@ Unknown fields and supplied identity/binding/credential fields are rejected. Res
 
 ## Endpoints
 
+Shared blocker codes (UX1): a default-deny 403 on any root-admin route (every caller of `requireRootAdminScope`) returns `data.code=admin_required`; when the caller is an admin but lacks the required scope, `data.required_scope` names it. A mutation whose audit event cannot be recorded (no DB, or the audit write fails) returns 503 `data.code=service_unavailable` and changes nothing. Soma/council chat and team-service transport failures return `data.code=transport_unavailable` (unreachable) or `transport_timeout`/`transport_backpressure` for the other transport failure modes; none of these change any state. A tier-2 `approver_required` blocker (`/api/v1/intent/confirm-action`, `/api/v1/intent/commit`) may include `data.approval_reason` (`policy`, `capability_risk`, or `cost`) naming why an admin is needed; it is omitted when the reason is not known. Every code above keeps a non-admin `recommended_action` free of API paths, env var names, and internal scope strings; the admin variant may name them.
+
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
 | **Interface Auth** | | |

@@ -223,7 +223,7 @@ func (s *AdminServer) buildServiceStatuses(r *http.Request) []ServiceStatus {
 	}
 
 	// Governance policy: degraded (fail-closed) when no policy is loaded.
-	services = append(services, s.governanceServiceStatus())
+	services = append(services, s.governanceServiceStatus(viewerIsAdmin(r)))
 
 	return services
 }

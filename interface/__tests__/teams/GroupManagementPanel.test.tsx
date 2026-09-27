@@ -25,6 +25,26 @@ describe("GroupManagementPanel", () => {
     window.localStorage.clear();
   });
 
+  it("shows an admin-managed blocker on a 403, never 'Nothing here yet'", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 403, json: async () => ({ error: "Root admin role required" }) });
+
+    render(<GroupManagementPanel />);
+
+    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(screen.getByText("Groups are managed by admins")).toBeDefined();
+    expect(screen.queryByText("Nothing here yet.")).toBeNull();
+    expect(screen.queryByTestId("groups-error")).toBeNull();
+  });
+
+  it("keeps the generic error state for a 503 (its own honest state, distinct from access-denied)", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 503, json: async () => ({ error: "Service unavailable" }) });
+
+    render(<GroupManagementPanel />);
+
+    await waitFor(() => expect(screen.getByTestId("groups-error")).toBeDefined());
+    expect(screen.queryByText("Groups are managed by admins")).toBeNull();
+  });
+
   it("shows approval-required state with confirm token", async () => {
     installApprovalCreateFetch();
     render(<GroupManagementPanel />);

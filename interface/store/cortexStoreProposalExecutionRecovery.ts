@@ -6,9 +6,19 @@ export type ConfirmFailureBody = {
     error?: string;
     data?: {
         run_id?: string;
+        code?: string;
+        recommended_action?: string;
         execution_summary?: ExecutionSummaryData;
     };
 };
+
+/** Codes where the backend keeps the confirm token and the proposal valid:
+ * the caller must not fail the proposal or clear the token for these. */
+export const TOKEN_KEPT_CODES = ['approver_required', 'confirmer_not_proposer'] as const;
+
+export function isTokenKeptCode(code: string | undefined | null): boolean {
+    return code != null && (TOKEN_KEPT_CODES as readonly string[]).includes(code);
+}
 
 export function recoveryTextFromExecutionSummary(summary: ExecutionSummaryData | undefined) {
     const auditRecovery = summary?.audit_recovery && typeof summary.audit_recovery === 'object'

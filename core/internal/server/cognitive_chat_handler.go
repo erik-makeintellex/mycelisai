@@ -101,7 +101,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		respondAPIJSON(w, http.StatusServiceUnavailable, protocol.APIResponse{
 			OK:    false,
 			Error: availability.Summary,
-			Data:  availability,
+			Data:  availabilityForViewer(r, availability),
 		})
 		return
 	}
@@ -110,8 +110,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	// No raw LLM fallback: agents must always operate within their context
 	// (system prompt, tools, input/output rules).
 	if s.NC == nil {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"Swarm offline — Admin agent unavailable. Start the organism first."}`, http.StatusServiceUnavailable)
+		respondBlocker(w, r, http.StatusServiceUnavailable, codeTeamServiceOffline, "NATS is not connected; the admin agent is unreachable", nil)
 		return
 	}
 
@@ -135,7 +134,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		agentResult, err = s.requestChatAgent(r.Context(), subject, req.Messages)
 		if err != nil {
 			log.Printf("Chat via Admin agent failed: %v", err)
-			respondChatTransportBlocker(w, "Soma", err)
+			respondChatTransportBlocker(w, r, "Soma", err)
 			return
 		}
 	}

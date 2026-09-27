@@ -244,6 +244,46 @@ describe('useCortexStore mission chat failures', () => {
         expect(useCortexStore.getState().missionChat.at(-1)?.content).not.toContain('consult_council requires');
     });
 
+    it('maps a coded transport_unavailable 503 to the team-service copy, not an auth failure', async () => {
+        mockFetch.mockResolvedValue({
+            ok: false,
+            status: 503,
+            text: async () => JSON.stringify({
+                ok: false,
+                error: 'Soma is currently unreachable from the workspace runtime.',
+                data: { available: false, code: 'transport_unavailable' },
+            }),
+        });
+
+        await useCortexStore.getState().sendMissionChat('hello');
+
+        expect(useCortexStore.getState().activeMode).toBe('blocker');
+        expect(useCortexStore.getState().missionChatFailure).toMatchObject({
+            code: 'transport_unavailable',
+            title: "Soma's team service isn't running",
+        });
+        expect(useCortexStore.getState().missionChatFailure?.summary).not.toMatch(/unauthorized|not authorized|auth failure/i);
+    });
+
+    it('maps a coded service_unavailable 503 to the activity-log copy', async () => {
+        mockFetch.mockResolvedValue({
+            ok: false,
+            status: 503,
+            text: async () => JSON.stringify({
+                ok: false,
+                error: 'Audit is unavailable; the request was not processed.',
+                data: { available: false, code: 'service_unavailable' },
+            }),
+        });
+
+        await useCortexStore.getState().sendMissionChat('hello');
+
+        expect(useCortexStore.getState().missionChatFailure).toMatchObject({
+            code: 'service_unavailable',
+        });
+        expect(useCortexStore.getState().missionChatFailure?.summary).toContain('activity log is unavailable');
+    });
+
     it('normalizes plain transport failure text into a blocker instead of surfacing it', async () => {
         mockFetch.mockResolvedValue({
             ok: false,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { blockerCopy } from "@/lib/blockerCopy";
 import { CreateGroupPane } from "./CreateGroupPane";
 import { GroupCommunicationPanel } from "./GroupCommunicationPanel";
 import { GroupConfigPane } from "./GroupConfigPane";
@@ -31,6 +32,7 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
     draft,
     notice,
     error,
+    accessDenied,
     approvalPrompt,
     refreshing,
     saving,
@@ -99,6 +101,32 @@ export function GroupWorkspacePanels(props: GroupWorkspacePanelsProps) {
     window.addEventListener("popstate", restoreRouteState);
     return () => window.removeEventListener("popstate", restoreRouteState);
   }, [onSelectGroup]);
+
+  if (accessDenied) {
+    const copy = blockerCopy({ code: "admin_required", httpStatus: 403, viewerIsAdmin: false, reason: "groups" });
+    return (
+      <section
+        className="flex h-full min-h-0 flex-col items-center justify-center gap-3 rounded-2xl border border-cortex-border bg-cortex-surface p-6 text-center"
+        data-testid="groups-workspace"
+      >
+        <div role="alert" className="max-w-md">
+          <h2 className="text-base font-semibold text-cortex-text-main">{copy.title}</h2>
+          <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{copy.whatHappened}</p>
+          {copy.whoCanHelp ? (
+            <p className="mt-2 text-sm text-cortex-text-muted">{copy.whoCanHelp}</p>
+          ) : null}
+          {copy.nextAction.href ? (
+            <a
+              href={copy.nextAction.href}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg hover:bg-cortex-primary/90"
+            >
+              {copy.nextAction.label}
+            </a>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

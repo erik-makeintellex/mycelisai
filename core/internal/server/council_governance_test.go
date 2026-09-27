@@ -74,7 +74,7 @@ func TestCouncilChatUnresolvedTemplateFailsClosed(t *testing.T) {
 	rr := councilMutation(t, s, councilTemplateThread("retained-browser-app", "workspace-1"))
 	assertStatus(t, rr, http.StatusConflict)
 	if !strings.Contains(rr.Body.String(), codeCouncilTemplateUnresolved) ||
-		!strings.Contains(rr.Body.String(), "through Soma in its organization") {
+		!strings.Contains(rr.Body.String(), "from Soma in its organization") {
 		t.Fatalf("expected normalized blocker, got %s", rr.Body.String())
 	}
 	if mock.ExpectationsWereMet() == nil {

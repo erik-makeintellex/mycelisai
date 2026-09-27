@@ -17,6 +17,7 @@ import { extractTeamWorkRefs, teamWorkMessage, type TeamWorkConfirmationRef } fr
 import {
     failureThreadEvent,
     isMediaDependencyFailure,
+    isTokenKeptCode,
     mediaDependencyRecoveryCopy,
     recoveryTextFromExecutionSummary,
     type ConfirmFailureBody,
@@ -231,13 +232,19 @@ export function createCortexProposalExecutionSlice(
                 const failureRunId = trimToNonEmpty(parsedBody?.data?.run_id);
                 const failureExecutionSummary = parsedBody?.data?.execution_summary;
                 const recovery = recoveryTextFromExecutionSummary(failureExecutionSummary);
+                const blockerCode = parsedBody?.data?.code;
+                const tokenKept = isTokenKeptCode(blockerCode);
                 const failure = buildMissionChatFailure({
                     assistantName: get().assistantName,
                     targetId: 'admin',
                     message: recovery.whatFailed ?? errMsg,
                     statusCode: res.status,
+                    code: blockerCode,
                 });
-                const mediaRecovery = isMediaDependencyFailure([
+                // Media-dependency text recovery only applies to unclassified
+                // failures; a governance code from `lib/blockerCopy` already
+                // has plain-language copy and must not be overwritten by it.
+                const mediaRecovery = !blockerCode && isMediaDependencyFailure([
                     errMsg,
                     recovery.whatFailed,
                     recovery.safeContinuation,
@@ -247,8 +254,8 @@ export function createCortexProposalExecutionSlice(
                     : null;
                 const failureWithRecovery = {
                     ...failure,
-                    summary: mediaRecovery?.summary ?? recovery.whatFailed ?? failure.summary,
-                    recommendedAction: mediaRecovery?.recommendedAction ?? recovery.safeContinuation ?? failure.recommendedAction,
+                    summary: mediaRecovery?.summary ?? (blockerCode ? failure.summary : recovery.whatFailed) ?? failure.summary,
+                    recommendedAction: mediaRecovery?.recommendedAction ?? (blockerCode ? failure.recommendedAction : recovery.safeContinuation) ?? failure.recommendedAction,
                     diagnostics: mediaRecovery?.diagnostics ?? recovery.diagnostics ?? failure.diagnostics,
                 };
                 if (res.status === 502 || res.status === 503 || mediaRecovery) {
@@ -256,29 +263,35 @@ export function createCortexProposalExecutionSlice(
                 } else {
                     console.error('[CE-1] Confirm action failed:', errMsg);
                 }
+                // Codes where the backend keeps the confirm token and the
+                // proposal valid (approver_required, confirmer_not_proposer)
+                // must not be marked failed or have their token cleared: the
+                // same proposal can still be approved.
+                const lifecycle = tokenKept ? 'active' : 'failed';
+                const nextMode = tokenKept ? 'proposal' : 'blocker';
                 set((s) => ({
                     missionChatError: failureWithRecovery.summary,
                     missionChatFailure: failureWithRecovery,
-                    activeMode: 'blocker',
-                    activeRunId: failureRunId ?? null,
+                    activeMode: nextMode,
+                    activeRunId: tokenKept ? s.activeRunId : (failureRunId ?? null),
                     missionChat: [
-                        ...updateProposalLifecycle(s.missionChat, intentProofId, 'failed', {
-                            mode: 'blocker',
+                        ...updateProposalLifecycle(s.missionChat, intentProofId, lifecycle, {
+                            mode: nextMode,
                             run_id: failureRunId ?? undefined,
                         }),
                         {
                             role: 'council',
                             content: failureWithRecovery.summary,
                             source_node: 'admin',
-                            mode: 'blocker',
+                            mode: nextMode,
                             run_id: failureRunId ?? undefined,
                             execution_summary: failureExecutionSummary,
                             thread_events: [failureThreadEvent({ runId: failureRunId, recovery })],
                             timestamp: new Date().toISOString(),
                         },
                     ],
-                    pendingProposal: null,
-                    activeConfirmToken: null,
+                    pendingProposal: tokenKept ? s.pendingProposal : null,
+                    activeConfirmToken: tokenKept ? s.activeConfirmToken : null,
                 }));
                 return { ok: false, runId: failureRunId ?? null, error: failureWithRecovery.summary };
             } catch (err) {

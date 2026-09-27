@@ -239,8 +239,8 @@ func TestDurablePurposeRoutesTokens(t *testing.T) {
 		}
 	}
 	rr := httptest.NewRecorder()
-	respondConfirmTokenError(rr, errTokenPurposeUnknown, http.StatusBadRequest)
-	if rr.Code != http.StatusConflict || !strings.Contains(rr.Body.String(), "propose this again") {
+	respondConfirmTokenError(rr, nil, errTokenPurposeUnknown, http.StatusBadRequest)
+	if rr.Code != http.StatusConflict || !strings.Contains(rr.Body.String(), "propose it again") {
 		t.Fatalf("NULL purpose must be 409 with re-propose guidance: %d %s", rr.Code, rr.Body.String())
 	}
 }

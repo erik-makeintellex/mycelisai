@@ -204,7 +204,7 @@ func confirmedConfigMutationPlan(scope *protocol.ScopeValidation) (bool, error) 
 func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, string, *protocol.ScopeValidation, string, bool) {
 	tok, err := s.consumeConfirmTokenTx(tx, token)
 	if err != nil {
-		respondConfirmTokenError(w, err, http.StatusBadRequest)
+		respondConfirmTokenError(w, r, err, http.StatusBadRequest)
 		return "", "", nil, "", false
 	}
 	proofID := tok.ProofID

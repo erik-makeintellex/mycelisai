@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { mockFetch } from '../setup';
 import ProposedActionBlock from '@/components/dashboard/ProposedActionBlock';
 import { useCortexStore, type ChatMessage } from '@/store/useCortexStore';
 
@@ -119,7 +120,9 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
         fireEvent.click(screen.getByRole('button', { name: /^approve$/i }));
-        await waitFor(() => expect(useCortexStore.getState().confirmProposal).toHaveBeenCalledWith(buildMessage().proposal, 'approve'));
+        // Live test L1: the button click must not echo "approve"/"start" as
+        // a synthetic user chat message, so no second argument is passed.
+        await waitFor(() => expect(useCortexStore.getState().confirmProposal).toHaveBeenCalledWith(buildMessage().proposal));
         expect(screen.queryByRole('button', { name: /adjust/i })).toBeNull();
         expect(screen.getByRole('button', { name: /^details$/i })).toBeDefined();
     });
@@ -341,5 +344,87 @@ describe('ProposedActionBlock', () => {
 
         expect(screen.queryByRole('button', { name: /cannot run yet/i })).toBeNull();
         expect(screen.getByText(/cannot start this version yet/i)).toBeDefined();
+    });
+
+    describe('required_approver_role (deck top-10 #1)', () => {
+        it('shows "Needs admin approval" and no Approve button for a standard user', async () => {
+            mockFetch.mockResolvedValue({ ok: true, json: async () => ({ data: { user: { role: 'standard' } } }) });
+            render(<ProposedActionBlock message={buildMessage({
+                proposal: { ...buildMessage().proposal!, required_approver_role: 'admin' },
+            })} />);
+
+            await waitFor(() => expect(screen.getByText('Needs admin approval')).toBeDefined());
+            expect(screen.queryByRole('button', { name: /approve/i })).toBeNull();
+            expect(screen.getByText(/an admin can approve this/i)).toBeDefined();
+        });
+
+        it('lets an admin approve, labeled "Approve as admin", with a self-approval audit note', async () => {
+            mockFetch.mockResolvedValue({ ok: true, json: async () => ({ data: { user: { role: 'admin' } } }) });
+            render(<ProposedActionBlock message={buildMessage({
+                proposal: { ...buildMessage().proposal!, required_approver_role: 'admin' },
+            })} />);
+
+            const button = await screen.findByRole('button', { name: 'Approve as admin' });
+            expect(button).toBeDefined();
+            expect(screen.getByText(/recorded in history/i)).toBeDefined();
+        });
+
+        it('shows the normal Approve button when no admin approval is required', async () => {
+            mockFetch.mockResolvedValue({ ok: true, json: async () => ({ data: { user: { role: 'standard' } } }) });
+            render(<ProposedActionBlock message={buildMessage()} />);
+
+            expect(await screen.findByRole('button', { name: 'Approve' })).toBeDefined();
+            expect(screen.queryByText('Needs admin approval')).toBeNull();
+        });
+    });
+
+    describe('draft_previews (D2 contract)', () => {
+        it('shows the drafted file preview before Approve, with a "first N lines" label when truncated', () => {
+            render(<ProposedActionBlock message={buildMessage({
+                proposal: {
+                    ...buildMessage().proposal!,
+                    tools: ['write_file'],
+                    draft_previews: [
+                        { path: 'workspace/logs/hello_world.py', preview: 'print("hello")\nprint("world")', full_draft: false, lines: 2, bytes: 30 },
+                    ],
+                },
+            })} />);
+
+            expect(screen.getByText('workspace/logs/hello_world.py')).toBeDefined();
+            expect(screen.getByText('Preview — first 2 lines')).toBeDefined();
+            expect(screen.getByText((_, el) => el?.tagName === 'PRE' && el.textContent === 'print("hello")\nprint("world")')).toBeDefined();
+        });
+
+        it('omits the "first N lines" label when the preview is the full draft', () => {
+            render(<ProposedActionBlock message={buildMessage({
+                proposal: {
+                    ...buildMessage().proposal!,
+                    tools: ['write_file'],
+                    draft_previews: [
+                        { path: 'workspace/logs/short.py', preview: 'pass', full_draft: true, lines: 1, bytes: 4 },
+                    ],
+                },
+            })} />);
+
+            expect(screen.getByText('workspace/logs/short.py')).toBeDefined();
+            expect(screen.queryByText(/Preview — first/)).toBeNull();
+        });
+
+        it('renders as today when draft_previews is absent', () => {
+            render(<ProposedActionBlock message={buildMessage()} />);
+            expect(screen.queryByText(/Preview — first/)).toBeNull();
+        });
+    });
+
+    describe('team-plan proposals (create_team)', () => {
+        it('points to the Workspace canvas instead of a guaranteed-failing Approve click', () => {
+            render(<ProposedActionBlock message={buildMessage({
+                proposal: { ...buildMessage().proposal!, tools: ['create_team'] },
+            })} />);
+
+            expect(screen.queryByRole('button', { name: /approve/i })).toBeNull();
+            expect(screen.getByText(/isn.t available yet/i)).toBeDefined();
+            expect(screen.getByRole('link', { name: 'Open Workspace' }).getAttribute('href')).toBe('/automations');
+        });
     });
 });

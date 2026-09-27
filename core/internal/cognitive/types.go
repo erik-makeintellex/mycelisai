@@ -64,12 +64,16 @@ type ExecutionAvailability struct {
 	Code              string `json:"code,omitempty"`
 	Summary           string `json:"summary"`
 	RecommendedAction string `json:"recommended_action,omitempty"`
-	Profile           string `json:"profile,omitempty"`
-	ProviderID        string `json:"provider_id,omitempty"`
-	ModelID           string `json:"model_id,omitempty"`
-	SetupRequired     bool   `json:"setup_required,omitempty"`
-	SetupPath         string `json:"setup_path,omitempty"`
-	FallbackApplied   bool   `json:"fallback_applied,omitempty"`
+	// AdminAction is the admin-only remedy (it may name API paths or env
+	// vars). It is never serialized; the server swaps it into
+	// RecommendedAction for admin viewers only (UX1).
+	AdminAction     string `json:"-"`
+	Profile         string `json:"profile,omitempty"`
+	ProviderID      string `json:"provider_id,omitempty"`
+	ModelID         string `json:"model_id,omitempty"`
+	SetupRequired   bool   `json:"setup_required,omitempty"`
+	SetupPath       string `json:"setup_path,omitempty"`
+	FallbackApplied bool   `json:"fallback_applied,omitempty"`
 }
 
 // MediaProviderConfig describes the media provider backing Soma's image/voice outputs.

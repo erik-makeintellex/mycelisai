@@ -61,7 +61,7 @@ func TestProviderUpdateAuthority_AuditFailureChangesNothing(t *testing.T) {
 		f.mock.ExpectExec("INSERT INTO log_entries").WillReturnError(errors.New("audit down"))
 		rr := doAuthenticatedRequest(t, f.mux, http.MethodPut, providerPutPath+"ollama", `{"endpoint":"http://127.0.0.1:7/v1"}`)
 		assertStatus(t, rr, http.StatusServiceUnavailable)
-		if !strings.Contains(rr.Body.String(), "Audit unavailable") {
+		if !strings.Contains(rr.Body.String(), codeServiceUnavailable) || !strings.Contains(rr.Body.String(), "Audit unavailable") {
 			t.Fatalf("body = %s", rr.Body.String())
 		}
 		f.assertRoutingUnchanged(t)

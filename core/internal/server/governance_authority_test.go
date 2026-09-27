@@ -93,7 +93,7 @@ func TestGovernanceAuthorityMatrixDenials(t *testing.T) {
 				}
 				assertStatus(t, rr, want)
 				body := rr.Body.String()
-				if strings.Contains(body, `"data"`) || strings.Contains(body, "req-1") || strings.Contains(body, "test-group") {
+				if denialLeaksData(body) || strings.Contains(body, "req-1") || strings.Contains(body, "test-group") {
 					t.Fatalf("denial leaked data: %s", body)
 				}
 				if s.Guard.GetPolicyConfig() != before {
@@ -278,7 +278,7 @@ func TestDegradedPolicyRecoversAfterValidPut(t *testing.T) {
 	if !strings.Contains(body, governancePolicyUnavailableCode) || !strings.Contains(body, "recommended_action") || strings.Contains(body, "raw-path") {
 		t.Fatalf("unexpected degraded body: %s", body)
 	}
-	row := s.governanceServiceStatus()
+	row := s.governanceServiceStatus(true)
 	if row.Status != "degraded" || !strings.HasPrefix(row.Detail, governance.PolicyUnavailableCode) || strings.Contains(row.Detail, "raw-path") {
 		t.Fatalf("unexpected degraded status row: %+v", row)
 	}
@@ -287,7 +287,7 @@ func TestDegradedPolicyRecoversAfterValidPut(t *testing.T) {
 	}
 
 	assertStatus(t, putPolicy(t, s, `{"groups":[],"defaults":{"default_action":"DENY"}}`), http.StatusOK)
-	if s.Guard.Degraded() || s.governanceServiceStatus().Status != "online" {
+	if s.Guard.Degraded() || s.governanceServiceStatus(true).Status != "online" {
 		t.Fatal("valid PUT must restore online governance")
 	}
 	assertStatus(t, doAuthenticatedRequest(t, http.HandlerFunc(s.handleGetPolicy), "GET", "/api/v1/governance/policy", ""), http.StatusOK)

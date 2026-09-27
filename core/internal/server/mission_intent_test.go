@@ -170,7 +170,7 @@ func TestIntentCommitTamperedBlueprintIs409AndNotConsumed(t *testing.T) {
 	encoded, _ := json.Marshal(body)
 	rr := doAuthenticatedRequestAs(t, http.HandlerFunc(s.handleIntentCommit), "POST", "/api/v1/intent/commit", string(encoded), standardUserIdentity())
 	assertStatus(t, rr, http.StatusConflict)
-	if !strings.Contains(rr.Body.String(), codeBlueprintMismatch) || !strings.Contains(rr.Body.String(), "Negotiate again") {
+	if !strings.Contains(rr.Body.String(), codeBlueprintMismatch) || !strings.Contains(rr.Body.String(), "update the plan") {
 		t.Fatalf("expected blueprint_mismatch, got %s", rr.Body.String())
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
