@@ -116,6 +116,7 @@ else:
 for aid in (arch, gone):
     if aid: call("DELETE", f"{MEM}/{aid}")
 
+
 # J4: name-only surfaces (placeholder audit PH-D)
 s, _, raw = call("GET", "/api/v1/sensors")
 blob = raw.decode("utf-8", "replace").lower()

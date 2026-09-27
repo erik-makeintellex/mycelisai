@@ -73,6 +73,7 @@ func normalizePlannedToolCall(call protocol.PlannedToolCall) protocol.PlannedToo
 func inferWriteFileExecutionPlan(agentResult chatAgentResult, latestRequest string) (protocol.PlannedToolCall, bool) {
 	if parsed, ok := parsePlannedToolCall(agentResult.Text); ok && strings.EqualFold(strings.TrimSpace(parsed.Name), "write_file") {
 		parsed = normalizePlannedToolCall(parsed)
+		parsed.Origin = protocol.PlannedCallOriginAgent // the model chose this call (S7b)
 		if writeFilePlanHasPathAndContent(parsed) {
 			return parsed, true
 		}

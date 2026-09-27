@@ -29,12 +29,16 @@ type TeamManifest struct {
 	Members     []protocol.AgentManifest `json:"members" yaml:"members"`
 	Inputs      []string                 `json:"inputs" yaml:"inputs"`
 	Deliveries  []string                 `json:"deliveries" yaml:"deliveries"`
+	// SharedPaths are workspace-relative folders this team's agents may read
+	// besides groups/<team id> (read_file confinement, S7b).
+	SharedPaths []string                 `json:"shared_paths,omitempty" yaml:"shared_paths,omitempty"`
 	Schedule    *protocol.ScheduleConfig `json:"schedule,omitempty" yaml:"schedule,omitempty"`
 }
 
 // Team represents a running instance of a TeamManifest.
 type Team struct {
 	Manifest            *TeamManifest
+	coreOwned           bool // set only by the standing boot registry (core_owned_teams.go)
 	nc                  *nats.Conn
 	brain               *cognitive.Router
 	toolExecutor        MCPToolExecutor

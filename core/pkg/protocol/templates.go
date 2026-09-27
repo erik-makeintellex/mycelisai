@@ -103,6 +103,10 @@ type ScopeValidation struct {
 	ExternalDataUse       bool                           `json:"external_data_use,omitempty"`
 	EstimatedCost         float64                        `json:"estimated_cost,omitempty"`
 	GovernanceProfile     *GovernanceProfileSnapshot     `json:"governance_profile,omitempty"`
+	// OriginTeamID/OriginAgentID name the agent whose reply produced the plan;
+	// agent-origin calls execute only within that agent's declared tools (S7b).
+	OriginTeamID  string `json:"origin_team_id,omitempty"`
+	OriginAgentID string `json:"origin_agent_id,omitempty"`
 }
 
 // ConfigDocumentRequestBoundary binds confirmed storage to its originating request.
@@ -119,7 +123,15 @@ type PlannedToolCall struct {
 	Name      string         `json:"name"`
 	ToolRef   string         `json:"tool_ref,omitempty"`
 	Arguments map[string]any `json:"arguments,omitempty"`
+	// Origin is set by Core only: PlannedCallOriginAgent for a call the model
+	// chose, PlannedCallOriginCore for one Core inferred from the request.
+	Origin string `json:"origin,omitempty"`
 }
+
+const (
+	PlannedCallOriginAgent = "agent"
+	PlannedCallOriginCore  = "core"
+)
 
 // ── Answer Provenance ───────────────────────────────────────────────
 

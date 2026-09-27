@@ -203,12 +203,13 @@ func TestHandleCancelAction(t *testing.T) {
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt)
 
+	expectCancelOwner(mock, "test-user-001")
 	mock.ExpectExec("UPDATE intent_proofs SET status = 'cancelled'").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("INSERT INTO log_entries").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	rr := doRequest(t, http.HandlerFunc(s.HandleCancelAction), "POST", "/api/v1/intent/cancel-action", `{"intent_proof_id":"11111111-1111-1111-1111-111111111111"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleCancelAction), "POST", "/api/v1/intent/cancel-action", `{"intent_proof_id":"11111111-1111-1111-1111-111111111111"}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp protocol.APIResponse
