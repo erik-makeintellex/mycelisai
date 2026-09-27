@@ -193,5 +193,32 @@ describe('useCortexStore data fetch', () => {
 
             expect(useCortexStore.getState().sensorFeeds).toEqual([]);
         });
+
+        it('accepts a pending sensor: a real probe that has not reported in yet', async () => {
+            const sensors = [
+                { id: 's2', type: 'webhook', status: 'pending', last_seen: '', label: 'New Ingress' },
+            ];
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({ sensors }),
+            });
+
+            await useCortexStore.getState().fetchSensors();
+
+            expect(useCortexStore.getState().sensorFeeds).toEqual(sensors);
+            expect(useCortexStore.getState().sensorFeeds[0].status).toBe('pending');
+        });
+
+        it('reports an honest empty list when no real agents are probing, never fabricated feeds', async () => {
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({ sensors: [] }),
+            });
+
+            await useCortexStore.getState().fetchSensors();
+
+            expect(useCortexStore.getState().sensorFeeds).toEqual([]);
+            expect(useCortexStore.getState().isFetchingSensors).toBe(false);
+        });
     });
 });

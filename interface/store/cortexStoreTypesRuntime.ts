@@ -22,7 +22,9 @@ export interface CTSEnvelope {
 export interface SensorNode {
     id: string;
     type: string;
-    status: 'online' | 'offline' | 'degraded';
+    // Sensors come only from real running agents with probe state; `pending`
+    // covers a probe that hasn't reported in yet (never a placeholder online).
+    status: 'online' | 'offline' | 'degraded' | 'pending';
     last_seen: string;
     label: string;
 }

@@ -1,7 +1,17 @@
 import type { Edge, Node } from 'reactflow';
+import type { AgentNodeData } from '@/components/wiring/AgentNode';
 import type { StreamSignal } from '@/store/cortexStoreTypes';
 
-export function solidifyNodes(nodes: Node[]): Node[] {
+/**
+ * Clears the draft ("ghost") styling once a blueprint stops being a draft,
+ * and sets each agent node's status to the caller's real status — never a
+ * blind 'online'. A caller editing an already-running mission can keep the
+ * 'online' default; a caller that just committed a blueprint must pass the
+ * status the backend actually reported (see the commit `status` handling
+ * in cortexStoreMissionDraftSlice.ts), so a partially-activated or
+ * unactivated mission never renders as if every agent came online.
+ */
+export function solidifyNodes(nodes: Node[], agentStatus: AgentNodeData['status'] = 'online'): Node[] {
     return nodes.map((node) => {
         if (!node.className?.includes('ghost-draft')) return node;
 
@@ -14,7 +24,7 @@ export function solidifyNodes(nodes: Node[]): Node[] {
             };
         }
         if (node.type === 'agentNode') {
-            solidNode.data = { ...node.data, status: 'online' };
+            solidNode.data = { ...node.data, status: agentStatus };
         }
         return solidNode;
     });
