@@ -1,0 +1,12 @@
+History correction: this merge commit landed with a placeholder message. Its real description follows.
+
+Merge feature/deliverable-truth (D2 + PH-A): deliverables tell the truth.
+- What changed: requested files with no explicit content are drafted by the model at proposal time and previewed in the proposal as `draft_previews`. The hard-coded placeholder synthesizer is removed.
+- How it works:
+  - Drafting uses the coder/chat profile with a 90s timeout and no tools. Each turn allows at most 3 drafts and 120s in total.
+  - Empty drafts, request-echo drafts, timeouts and an unavailable engine all return honest blockers (`provider_timeout`, `empty_provider_output`, or the availability codes), and no confirm token is minted.
+  - Execution validates the whole plan before any step runs, and refuses empty or template content.
+  - Every proposal comes from real model output.
+  - Text outputs are served as `text/plain`, so the sandboxed viewer renders them.
+- Proof: security QA was CONDITIONAL, then a fix round (draft cap, plan preflight) made it GO. targeted `-race` 176 passed. Live probe J2 passed afterwards.
+- Slice commit: 3e9bf74c.
