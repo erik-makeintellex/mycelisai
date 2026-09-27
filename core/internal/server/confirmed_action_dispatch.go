@@ -132,6 +132,8 @@ func (s *AdminServer) dispatchOneConfirmedAction(ctx context.Context) error {
 		return s.dispatchClaimedTeamWorkValidation(ctx, item)
 	case teamWorkSteeringDispatchKind:
 		return s.dispatchClaimedTeamWorkSteering(ctx, item)
+	case teamHandoffDispatchKind:
+		return s.dispatchClaimedTeamHandoff(ctx, item)
 	default:
 		err := fmt.Errorf("unsupported dispatch kind %q", item.DispatchKind)
 		_ = s.DispatchOutbox.MarkFailed(ctx, item.ID, err)

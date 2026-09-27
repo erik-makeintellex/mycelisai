@@ -14,7 +14,7 @@ func (r *InternalToolRegistry) handleListExchangeChannels(ctx context.Context, a
 	if r.exchange == nil {
 		return "", fmt.Errorf("managed exchange not available")
 	}
-	ctx = exchange.WithActor(ctx, exchange.Actor{Role: defaultExchangeRole(args)})
+	ctx = exchange.WithActor(ctx, exchangeActorForInvocation(ctx, args))
 	channels, err := r.exchange.ListChannels(ctx)
 	if err != nil {
 		return "", err
@@ -27,7 +27,7 @@ func (r *InternalToolRegistry) handleListExchangeThreads(ctx context.Context, ar
 	if r.exchange == nil {
 		return "", fmt.Errorf("managed exchange not available")
 	}
-	ctx = exchange.WithActor(ctx, exchange.Actor{Role: defaultExchangeRole(args)})
+	ctx = exchange.WithActor(ctx, exchangeActorForInvocation(ctx, args))
 	channel, _ := args["channel"].(string)
 	status, _ := args["status"].(string)
 	limit := 20
@@ -46,7 +46,7 @@ func (r *InternalToolRegistry) handleSearchExchangeItems(ctx context.Context, ar
 	if r.exchange == nil {
 		return "", fmt.Errorf("managed exchange not available")
 	}
-	ctx = exchange.WithActor(ctx, exchange.Actor{Role: defaultExchangeRole(args)})
+	ctx = exchange.WithActor(ctx, exchangeActorForInvocation(ctx, args))
 	query, _ := args["query"].(string)
 	if strings.TrimSpace(query) == "" {
 		return "", fmt.Errorf("search_exchange_items requires 'query'")
@@ -82,7 +82,7 @@ func (r *InternalToolRegistry) handleCreateExchangeThread(ctx context.Context, a
 			}
 		}
 	}
-	ctx = exchange.WithActor(ctx, exchange.Actor{Role: defaultExchangeRole(map[string]any{"created_by": createdBy, "role": args["role"]})})
+	ctx = exchange.WithActor(ctx, exchangeActorForInvocation(ctx, args))
 	thread, err := r.exchange.CreateThread(ctx, exchange.CreateThreadInput{
 		ChannelName:   channel,
 		ThreadType:    threadType,
@@ -111,7 +111,8 @@ func (r *InternalToolRegistry) handlePublishExchangeItem(ctx context.Context, ar
 	if strings.TrimSpace(channel) == "" || strings.TrimSpace(schemaID) == "" || payload == nil {
 		return "", fmt.Errorf("publish_exchange_item requires 'channel', 'schema_id', and 'payload'")
 	}
-	ctx = exchange.WithActor(ctx, exchange.Actor{Role: defaultExchangeRole(map[string]any{"created_by": createdBy, "role": args["role"]})})
+	actor := exchangeActorForInvocation(ctx, args)
+	ctx = exchange.WithActor(ctx, actor)
 	var threadID *uuid.UUID
 	if raw := stringValue(args["thread_id"]); raw != "" {
 		parsed, err := uuid.Parse(raw)
@@ -129,8 +130,9 @@ func (r *InternalToolRegistry) handlePublishExchangeItem(ctx context.Context, ar
 		ThreadID:    threadID,
 		Visibility:  stringValue(args["visibility"]),
 		SensitivityClass: stringValue(args["sensitivity_class"]),
-		SourceRole:  stringValue(args["source_role"]),
-		SourceTeam:  stringValue(args["source_team"]),
+		// Source role and team are provenance: identity only, never args.
+		SourceRole:  actor.Role,
+		SourceTeam:  actor.Team,
 		TargetRole:  stringValue(args["target_role"]),
 		TargetTeam:  stringValue(args["target_team"]),
 		AllowedConsumers: stringSlice(args["allowed_consumers"]),
@@ -175,11 +177,23 @@ func boolValue(v any) bool {
 	return b
 }
 
-func defaultExchangeRole(args map[string]any) string {
-	for _, key := range []string{"role", "created_by"} {
-		if value := stringValue(args[key]); strings.TrimSpace(value) != "" {
-			return value
-		}
+// exchangeActorForInvocation derives the exchange actor from the calling
+// agent's authoritative identity. Tool arguments such as role or created_by
+// are display-only and are never consulted, so a model cannot claim admin.
+// Soma (the admin-core team) and operator-confirmed actions act as soma;
+// Core-owned calls without an agent identity also act as soma.
+func exchangeActorForInvocation(ctx context.Context, _ map[string]any) exchange.Actor {
+	inv, ok := ToolInvocationContextFromContext(ctx)
+	if !ok || strings.TrimSpace(inv.AgentID) == "" {
+		return exchange.Actor{Role: "soma"}
 	}
-	return "soma"
+	team := strings.TrimSpace(inv.TeamID)
+	switch {
+	case isSomaTeam(team), team == "" && strings.TrimSpace(inv.OperatorID) != "":
+		return exchange.Actor{Role: "soma"}
+	case handoffLeadAuthority(inv):
+		return exchange.Actor{Role: "team_lead", Team: team}
+	default:
+		return exchange.Actor{Role: "specialist", Team: team}
+	}
 }

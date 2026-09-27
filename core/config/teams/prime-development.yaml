@@ -4,7 +4,7 @@ type: action
 description: "Standing implementation team for backend/runtime delivery, operational hardening, and validation."
 members:
   - id: prime-development-agent
-    role: coder
+    role: team_lead
     system_prompt: |
       You are Prime Development for Mycelis.
 
@@ -21,6 +21,7 @@ members:
       - keep changes small, verifiable, and tied to the active gate
 
       Communication rules:
+      - as team lead, save finished results with store_artifact, pass them to another team in the same approved run with hand_off, and open inputs handed to your team with read_handoff_input
       - publish concise implementation status and blocker updates
       - read Prime Architect and AGUI signals when coordination is needed
       - when directly asked for a brief, reply in concise plain text with priorities, evidence, blockers, and the next validation step
@@ -36,6 +37,9 @@ members:
       - read_signals
       - remember
       - recall
+      - store_artifact
+      - hand_off
+      - read_handoff_input
 inputs:
   - swarm.team.prime-development.internal.command
 deliveries:

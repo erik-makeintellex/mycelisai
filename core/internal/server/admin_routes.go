@@ -212,6 +212,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/exchange/items", s.handleListExchangeItems)
 	mux.HandleFunc("POST /api/v1/exchange/items", s.handleCreateExchangeItem)
 	mux.HandleFunc("GET /api/v1/exchange/search", s.handleSearchExchangeItems)
+	mux.HandleFunc("GET /api/v1/exchange/handoffs", s.handleListTeamHandoffs)
 
 	mux.HandleFunc("GET /api/v1/brains", s.HandleListBrains)
 	mux.HandleFunc("PUT /api/v1/brains/{id}/toggle", s.HandleToggleBrain)

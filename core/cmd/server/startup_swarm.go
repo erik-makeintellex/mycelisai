@@ -176,6 +176,9 @@ func wireAdminServices(ctx context.Context, mux *http.ServeMux, core *coreRuntim
 	adminSrv.Inception = services.Inception
 	adminSrv.MCPToolSets = services.MCPToolSets
 	adminSrv.Capabilities = services.Capabilities
+	if services.InternalTools != nil {
+		services.InternalTools.SetHandoffRecorder(adminSrv.TeamHandoffRecorder())
+	}
 	adminSrv.RegisterRoutes(mux)
 	adminSrv.StartLoopScheduler(ctx)
 	startTriggerEngine(ctx, core.SharedDB, core.NC, adminSrv, services.EventStore, services.RunsManager)

@@ -53,7 +53,7 @@ func shouldAvoidToolsForDirectDraft(toolName string) bool {
 		"research_for_blueprint", "generate_blueprint", "load_deployment_context", "promote_deployment_context", "remember", "recall",
 		"store_artifact", "list_missions",
 		"list_available_tools", "list_catalogue", "publish_signal",
-		"broadcast", "create_team":
+		"broadcast", "create_team", "hand_off", "read_handoff_input":
 		return true
 	default:
 		return false

@@ -70,13 +70,13 @@ func TestRegistry_LoadStandingPrimeTeamManifests(t *testing.T) {
 			input:       "swarm.team.prime-architect.internal.command",
 			deliveries:  []string{"swarm.team.prime-architect.signal.status"},
 			memberIDs:   []string{"prime-architect-agent"},
-			memberRoles: []string{"architect"},
+			memberRoles: []string{"team_lead"},
 		},
 		"prime-development": {
 			input:       "swarm.team.prime-development.internal.command",
 			deliveries:  []string{"swarm.team.prime-development.signal.status"},
 			memberIDs:   []string{"prime-development-agent"},
-			memberRoles: []string{"coder"},
+			memberRoles: []string{"team_lead"},
 		},
 		"agui-design-architect": {
 			input:       "swarm.team.agui-design-architect.internal.command",

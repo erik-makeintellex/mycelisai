@@ -190,6 +190,11 @@ func canReadItem(actor Actor, channel *Channel, item *ExchangeItem) bool {
 	if item == nil || !canReadChannel(actor, channel) {
 		return false
 	}
+	// Handoff notes are visible only to the sending and receiving teams.
+	if channel.Type == "handoff" {
+		team := strings.TrimSpace(strings.ToLower(actor.Team))
+		return team != "" && (team == strings.ToLower(item.SourceTeam) || team == strings.ToLower(item.TargetTeam))
+	}
 	switch item.SensitivityClass {
 	case "admin_only":
 		return false

@@ -192,6 +192,8 @@ When the request includes private services, credentials, production systems, cus
 
 Exchange is the handoff review surface for evidence moving between Soma, teams, tools, and retained outputs. The default view should answer what was handed off most recently and whether it needs review. Work threads and source lanes remain available as focused tabs for advanced review, but the page should not force users to compare channels, threads, and items in three dense columns.
 
+Team handoffs: when one team's lead hands a saved result to another team working on the same approved request, the handoff is recorded with its sending team, receiving team, inputs, and status (Queued, Accepted, Read, Completed, or Needs attention). It says Queued until the receiving team is actually notified and picks it up, never "delivered" early. Only the two teams involved see the note, and only the receiving lead can open the inputs. A handoff to a team outside the approved work, or of restricted material, is not sent; Soma proposes it for your approval instead.
+
 What you can inspect:
 - recent handoffs and normalized outputs that another team or Soma may use next
 - active work threads for planning, review, escalation, and learning

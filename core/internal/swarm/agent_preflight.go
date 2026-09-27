@@ -101,7 +101,7 @@ func (a *Agent) runCouncilPreflight(userMember string, userInput string, call *t
 	// Preflight is a Core-owned step, so consult_council runs as a
 	// runtime-owned base tool even when the agent does not declare it.
 	runtimeCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
-		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, SourceKind: protocol.SourceKindSystem,
+		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, AgentRole: a.Manifest.Role, SourceKind: protocol.SourceKindSystem,
 		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand,
 		RuntimeOwned: true,
 	})
