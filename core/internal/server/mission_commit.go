@@ -67,6 +67,8 @@ func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *prot
 	}
 
 	activation := s.activateCommittedMission(bp, missionID.String(), sensorConfigs)
+	status := commitActivationStatus(len(bp.Teams), activation)
+	s.persistMissionStatus(missionID.String(), status)
 	s.confirmIntentProof(proofID, missionID.String())
 	auditEventID, _ := s.createAuditEvent(
 		protocol.TemplateChatToProposal, "commit",
@@ -76,7 +78,7 @@ func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *prot
 	)
 
 	resp := CommitResponse{
-		Status:        commitActivationStatus(len(bp.Teams), activation),
+		Status:        status,
 		MissionID:     missionID.String(),
 		Teams:         len(bp.Teams),
 		Agents:        totalAgents,
@@ -177,6 +179,20 @@ func (s *AdminServer) activateCommittedMission(bp *protocol.MissionBlueprint, mi
 	log.Printf("Mission activated: %d teams spawned, %d skipped, %d sensors (run_id=%s)",
 		activation.TeamsSpawned, activation.TeamsSkipped, activation.SensorsSpawned, activation.RunID)
 	return activation
+}
+
+// persistMissionStatus overwrites the row inserted by persistMissionBlueprint
+// with the real post-activation status (PH-D follow-up, T1): the insert has
+// to happen before activation runs, so the initial "active" placeholder is
+// never the value a reader sees once activation completes.
+func (s *AdminServer) persistMissionStatus(missionID, status string) {
+	db := s.getDB()
+	if db == nil {
+		return
+	}
+	if _, err := db.Exec(`UPDATE missions SET status = $1 WHERE id = $2`, status, missionID); err != nil {
+		log.Printf("intent/commit: update mission status: %v", err)
+	}
 }
 
 // Commit statuses report what the runtime actually activated (PH-D F12).
