@@ -211,13 +211,19 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithInlineToolCall(t *tes
 
 func TestExecutePlannedToolCalls_UsesMCPToolRef(t *testing.T) {
 	fakeMCP := &fakeProposalMCPExecutor{serverID: uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")}
+	soma := planScopeSoma([]string{"mcp:filesystem/*"}, nil)
+	soma.SetMCPServerNames(map[uuid.UUID]string{fakeMCP.serverID: "filesystem"})
 	s := newTestServer(func(s *AdminServer) {
 		s.MCPToolExecutor = fakeMCP
+		s.Soma = soma
 	})
 	scope := &protocol.ScopeValidation{
-		Tools: []string{"mcp:filesystem/read_text_file"},
+		Tools:         []string{"mcp:filesystem/read_text_file"},
+		OriginTeamID:  somaOriginTeamID,
+		OriginAgentID: somaOriginAgentID,
 		PlannedToolCalls: []protocol.PlannedToolCall{
 			{
+				Origin:  protocol.PlannedCallOriginAgent, // MCP calls are agent-chosen and scoped (S7b)
 				ToolRef: "mcp:filesystem/read_text_file",
 				Arguments: map[string]any{
 					"path": "workspace/logs/mcp_direct_payload_20260515030724.md",

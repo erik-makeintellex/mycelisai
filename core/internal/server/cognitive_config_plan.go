@@ -24,6 +24,7 @@ func explicitConfigMutationPlan(
 				break
 			}
 		}
+		call.Name, call.ToolRef, call.Origin = tool, "", protocol.PlannedCallOriginCore // Core chose the tool
 		if tool == "store_config_document" && hasInlineDocument {
 			call.Arguments = map[string]any{"content": content, "format": format}
 		}

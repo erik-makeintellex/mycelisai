@@ -58,7 +58,9 @@ func (s *AdminServer) plannedMCPToolExecutor() swarm.MCPToolExecutor {
 	return nil
 }
 
-func (s *AdminServer) resolveApprovedToolCall(ctx context.Context, executor *swarm.CompositeToolExecutor, mcpExec swarm.MCPToolExecutor, planned protocol.PlannedToolCall) (uuid.UUID, string, error) {
+// resolveApprovedToolCall resolves a planned call; a server found by its ref
+// name is recorded in verified (when non-nil) for the S7b scope re-check.
+func (s *AdminServer) resolveApprovedToolCall(ctx context.Context, executor *swarm.CompositeToolExecutor, mcpExec swarm.MCPToolExecutor, planned protocol.PlannedToolCall, verified map[uuid.UUID]string) (uuid.UUID, string, error) {
 	toolName := strings.TrimSpace(planned.Name)
 	toolRef := strings.TrimSpace(planned.ToolRef)
 	if ref := mcp.ParseToolRef(toolRef); ref != nil {
@@ -74,6 +76,9 @@ func (s *AdminServer) resolveApprovedToolCall(ctx context.Context, executor *swa
 				return uuid.Nil, "", err
 			}
 			if srv != nil {
+				if verified != nil {
+					verified[srv.ID] = ref.ServerName
+				}
 				return srv.ID, ref.ToolName, nil
 			}
 		}

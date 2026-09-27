@@ -48,11 +48,6 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 	fingerprint := toolCallFingerprint(toolCall)
 	log.Printf("Agent [%s] tool_call [%d/%d]: %s", a.Manifest.ID, i+1, iterationLimit, toolCall.Name)
 	result.toolsUsed = append(result.toolsUsed, toolCall.Name)
-	if a.eventEmitter != nil && a.runID != "" {
-		go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolInvoked, protocol.SeverityInfo, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": toolCall.Name, "iteration": i + 1}) //nolint:errcheck
-	}
-	a.logTurn("tool_call", result.responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
-
 	toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
 		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, AgentRole: a.Manifest.Role, SourceKind: protocol.SourceKindSystem,
 		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand, PlanningOnly: planningOnly,
@@ -65,6 +60,12 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 		reinfer(toolCall.Name, toolDeniedFeedback(toolCall.Name))
 		return false
 	}
+	// Invocation evidence is written only after the scope check (S7b), so a
+	// denied call leaves tool.denied and no tool.invoked or tool_call turn.
+	if a.eventEmitter != nil && a.runID != "" {
+		go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolInvoked, protocol.SeverityInfo, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": toolCall.Name, "iteration": i + 1}) //nolint:errcheck
+	}
+	a.logTurn("tool_call", result.responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
 	if err != nil {
 		failedToolCalls[fingerprint]++
 		log.Printf("Agent [%s] tool lookup failed: %v", a.Manifest.ID, err)
@@ -207,23 +208,23 @@ func (a *Agent) executeRuntimeOwnedEntrypointReadback(i int, entrypoint string, 
 	call := &toolCallPayload{Name: "read_file", Arguments: map[string]any{"path": entrypoint}}
 	fingerprint := toolCallFingerprint(call)
 	result.toolsUsed = append(result.toolsUsed, call.Name)
-	if a.eventEmitter != nil && a.runID != "" {
-		go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolInvoked, protocol.SeverityInfo, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": call.Name, "iteration": i + 1, "runtime_owned": true}) //nolint:errcheck
-	}
-	a.logTurn("tool_call", "Runtime-owned project-package entrypoint readback.", "", "", call.Name, call.Arguments, "", "")
-
 	toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
 		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, AgentRole: a.Manifest.Role, SourceKind: protocol.SourceKindSystem,
 		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand,
 		PlanningOnly: planningOnly, RuntimeOwned: true,
 	})
 	serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, call.Name)
+	if IsToolNotPermitted(err) {
+		failedToolCalls[fingerprint]++
+		a.recordToolDenied(call.Name, "lookup", true)
+		return "", err
+	}
+	if a.eventEmitter != nil && a.runID != "" {
+		go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolInvoked, protocol.SeverityInfo, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": call.Name, "iteration": i + 1, "runtime_owned": true}) //nolint:errcheck
+	}
+	a.logTurn("tool_call", "Runtime-owned project-package entrypoint readback.", "", "", call.Name, call.Arguments, "", "")
 	if err != nil {
 		failedToolCalls[fingerprint]++
-		if IsToolNotPermitted(err) {
-			a.recordToolDenied(call.Name, "lookup", true)
-			return "", err
-		}
 		if a.eventEmitter != nil && a.runID != "" {
 			go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolFailed, protocol.SeverityError, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": call.Name, "error": err.Error(), "phase": "lookup", "runtime_owned": true}) //nolint:errcheck
 		}

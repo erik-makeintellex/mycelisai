@@ -175,6 +175,10 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	plannedToolCalls = filterOptionalMediaGenerationPlan(latestUserText, plannedToolCalls)
 	var draftPreviews []protocol.ProposalDraftPreview
 	if isMutation {
+		var inScope bool
+		if plannedToolCalls, inScope = s.scopePlannedCallsOrRespond(w, r, somaOriginTeamID, somaOriginAgentID, plannedToolCalls); !inScope {
+			return
+		}
 		if !s.resolveThreadConfigurationMutationsOrRespond(
 			w, r, sessionID, req.Messages, latestUserText, req.OrganizationID, req.TeamID,
 			auditActorIDFromRequest(r), &plannedToolCalls,
@@ -238,6 +242,8 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 			ConfigRequestBoundary: configDocumentRequestBoundary(req.OrganizationID, req.TeamID, auditActorIDFromRequest(r)),
 			Approval:              approval,
 			GovernanceProfile:     profile.snapshot(),
+			OriginTeamID:          somaOriginTeamID,
+			OriginAgentID:         somaOriginAgentID,
 		}
 		if approval != nil {
 			scope.CapabilityIDs = approval.CapabilityIDs

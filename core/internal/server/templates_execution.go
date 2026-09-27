@@ -205,6 +205,10 @@ func (s *AdminServer) executePlannedToolCallsTx(ctx context.Context, tx *sql.Tx,
 	if err := validateApprovedPlanBeforeExecution(scope.PlannedToolCalls); err != nil {
 		return nil, err
 	}
+	guard, err := s.newApprovedPlanToolGuard(toolCtx, executor, scope)
+	if err != nil {
+		return nil, err
+	}
 	results := make([]plannedToolExecutionResult, 0, len(scope.PlannedToolCalls))
 	lastGeneratedImageArtifactID := ""
 	for _, planned := range scope.PlannedToolCalls {
@@ -220,7 +224,7 @@ func (s *AdminServer) executePlannedToolCallsTx(ctx context.Context, tx *sql.Tx,
 			}
 			planned.Arguments["artifact_id"] = lastGeneratedImageArtifactID
 		}
-		serverID, resolvedToolName, err := s.resolveApprovedToolCall(toolCtx, executor, mcpExec, planned)
+		serverID, resolvedToolName, err := s.resolveApprovedToolCall(toolCtx, executor, mcpExec, planned, guard.names)
 		if err != nil {
 			return results, err
 		}
@@ -240,7 +244,7 @@ func (s *AdminServer) executePlannedToolCallsTx(ctx context.Context, tx *sql.Tx,
 				}
 			}
 			var callErr error
-			output, callErr = executor.CallTool(toolCtx, serverID, resolvedToolName, planned.Arguments)
+			output, callErr = guard.executorFor(planned).CallTool(toolCtx, serverID, resolvedToolName, planned.Arguments)
 			if callErr != nil {
 				return callErr
 			}

@@ -150,6 +150,12 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	isMutation, mutTools, plannedToolCalls := executableMutationPlan(isMutation, agentResult, latestUserText, mutTools)
+	if isMutation {
+		var inScope bool
+		if plannedToolCalls, inScope = s.scopePlannedCallsOrRespond(w, r, teamID, memberID, plannedToolCalls); !inScope {
+			return
+		}
+	}
 	if !isMutation && strings.TrimSpace(agentResult.Text) == "" && len(agentResult.Artifacts) == 0 {
 		respondStructuredChatBlocker(w, agentResult)
 		return
@@ -195,6 +201,8 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 			PlannedToolCalls:  plannedToolCalls,
 			Approval:          approval,
 			GovernanceProfile: profile.snapshot(),
+			OriginTeamID:      teamID,
+			OriginAgentID:     memberID,
 		}
 		if approval != nil {
 			scope.CapabilityIDs = approval.CapabilityIDs
