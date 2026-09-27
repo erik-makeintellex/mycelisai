@@ -285,3 +285,4 @@ Central architect sync path and utility task surfaces.
 - **Always pinning** dependencies in `charts/`.
 - **Prefer repo-managed caches** under `workspace/tool-cache` for Invoke-driven work so local validation does not silently refill `C:`.
 - **Do not land implementation drift against the docs stack.** Review and update README, state, testing/ops docs, API reference, and owning canonical or user docs whenever the slice changes their meaning.
+- `ops/live_journey_probe.py`: live user-journey probe against a running stack. It covers ask; deliverable preview → confirm → readback content; memory save → recall → citation; honest sensors; real web search. It checks outcomes, not labels, and is the delivery metric in `.state/V8_DEV_STATE.md`. Run: `uv run python ops/live_journey_probe.py`.

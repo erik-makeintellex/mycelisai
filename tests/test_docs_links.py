@@ -194,6 +194,7 @@ def test_product_architecture_library_has_one_prd_and_scoped_supporting_docs():
     active_files = sorted(path.name for path in architecture_library.iterdir() if path.is_file())
 
     assert active_files == [
+        "B1_TOKEN_BUDGETS_CONTRACT.md",
         "G4_E10_DURABLE_INVOCATION.md",
         "MARKET_POSITION_AND_WORKFLOW_TARGETS.md",
         "MYCELIS_CANONICAL_PRD.md",
