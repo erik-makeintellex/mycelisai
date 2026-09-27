@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { MessageSquareText } from "lucide-react";
 import { requestSomaOutputContinuation } from "@/components/soma/outputContinuation";
 import type { DeploymentContextEntry } from "./DeploymentContextPanel";
+import DeploymentContextEntryActions from "./DeploymentContextEntryActions";
 import { KNOWLEDGE_CLASS_OPTIONS, SOURCE_KIND_OPTIONS, VISIBILITY_OPTIONS, optionLabel } from "./DeploymentContextOptions";
 
 // How Soma can find each saved source today, from the stored chunk rows.
@@ -16,10 +17,18 @@ export default function DeploymentContextSavedEntries({
     entries,
     loading,
     error = null,
+    viewerIsAdmin = false,
+    showArchived = false,
+    onShowArchivedChange,
+    onChanged,
 }: {
     entries: DeploymentContextEntry[];
     loading: boolean;
     error?: string | null;
+    viewerIsAdmin?: boolean;
+    showArchived?: boolean;
+    onShowArchivedChange?: (next: boolean) => void;
+    onChanged?: () => void | Promise<void>;
 }) {
     const askSomaWithContext = (entry: DeploymentContextEntry) => {
         requestSomaOutputContinuation(
@@ -42,7 +51,15 @@ export default function DeploymentContextSavedEntries({
                         Durable source material Soma can recall separately from chat memory and generated output files.
                     </p>
                 </div>
-                <span className="text-[11px] font-mono text-cortex-text-muted">{entries.length} entries</span>
+                <div className="flex flex-shrink-0 items-center gap-3">
+                    {onShowArchivedChange ? (
+                        <label className="inline-flex items-center gap-1.5 text-xs text-cortex-text-muted">
+                            <input type="checkbox" checked={showArchived} onChange={(e) => onShowArchivedChange(e.target.checked)} />
+                            Show archived
+                        </label>
+                    ) : null}
+                    <span className="text-[11px] font-mono text-cortex-text-muted">{entries.length} entries</span>
+                </div>
             </div>
 
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5" role="region" aria-label="Loaded governed context list">
@@ -65,7 +82,11 @@ export default function DeploymentContextSavedEntries({
                                         {entry.source_label} · {optionLabel(SOURCE_KIND_OPTIONS, entry.source_kind)}
                                     </p>
                                 </div>
-                                <SearchStatus status={entry.embedding_status} />
+                                {entry.lifecycle_state === "archived" ? (
+                                    <span className="whitespace-nowrap rounded bg-cortex-bg px-2 py-1 text-[10px] font-semibold text-cortex-text-muted">Archived</span>
+                                ) : (
+                                    <SearchStatus status={entry.embedding_status} />
+                                )}
                             </div>
                             <p className="text-sm leading-relaxed text-cortex-text-main">{entry.content_preview}</p>
                             <div className="flex flex-wrap gap-2 text-[10px] font-mono text-cortex-text-muted">
@@ -79,14 +100,19 @@ export default function DeploymentContextSavedEntries({
                                 ))}
                                 <Badge>{entry.chunk_count} chunks</Badge>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => askSomaWithContext(entry)}
-                                className="inline-flex items-center gap-1.5 rounded border border-cortex-primary/40 px-2.5 py-1.5 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/10"
-                            >
-                                <MessageSquareText className="h-3.5 w-3.5" />
-                                Ask Soma with this
-                            </button>
+                            {entry.lifecycle_state === "archived" ? (
+                                <p className="text-xs text-cortex-text-muted">Archived: Soma does not use this until you restore it.</p>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => askSomaWithContext(entry)}
+                                    className="inline-flex items-center gap-1.5 rounded border border-cortex-primary/40 px-2.5 py-1.5 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/10"
+                                >
+                                    <MessageSquareText className="h-3.5 w-3.5" />
+                                    Ask Soma with this
+                                </button>
+                            )}
+                            {onChanged ? <DeploymentContextEntryActions entry={entry} viewerIsAdmin={viewerIsAdmin} onChanged={onChanged} /> : null}
                         </article>
                     ))
                 )}

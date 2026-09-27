@@ -3,6 +3,8 @@
 
 Use this runbook for human validation of the delivered Mycelis experience. It applies to same-machine development review, another browser or device, and release deployment certification.
 
+> Automated user agents follow the precise API + GUI companion: [Agent Acceptance Runbook](AGENT_ACCEPTANCE_RUNBOOK.md).
+
 ## Purpose
 
 Acceptance proves the Trusted Outcome Journey through the address a user actually opens:

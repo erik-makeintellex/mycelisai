@@ -116,4 +116,11 @@ type Entry struct {
 	TargetGoalSets   []string  `json:"target_goal_sets,omitempty"`
 	CreatedAt        time.Time `json:"created_at"`
 	EmbeddingStatus  string    `json:"embedding_status"`
+	LifecycleState   string    `json:"lifecycle_state"`
+	ArchivedAt       string    `json:"archived_at,omitempty"`
+	LoadedBy         string    `json:"loaded_by,omitempty"`
+	// CanManage is set by the API for the viewer: archive, restore, delete.
+	CanManage   bool   `json:"can_manage"`
+	OwnerUserID string `json:"-"`
+	TeamID      string `json:"-"`
 }

@@ -65,6 +65,12 @@ const ADMIN_REQUIRED_BY_REASON: Record<string, CopyTemplate> = {
         nextAction: { label: 'Back to my profile', href: '/settings?tab=profile', intent: 'back' },
         whoCanHelp: 'Who can help: an admin.',
     },
+    memory: {
+        title: 'Organization memory is managed by admins',
+        whatHappened: 'Items saved for the whole organization can only be archived or deleted by an admin. Nothing was changed.',
+        nextAction: { label: 'OK', intent: 'dismiss' },
+        whoCanHelp: 'Who can help: an admin.',
+    },
     default: {
         title: 'This area is for admins',
         whatHappened: 'It holds settings and information that only admins manage.',
@@ -188,6 +194,21 @@ const CODE_COPY: Record<string, CopyTemplate> = {
         whatHappened: 'Nothing was installed. Connector deployment has not shipped yet, so nothing was recorded.',
         nextAction: { label: 'Use MCP servers or providers instead', href: '/settings?tab=tools', intent: 'open' },
         whoCanHelp: 'An admin can check System Status for updates.',
+    },
+    memory_entry_not_owned: {
+        title: 'Only the person who saved this can change it',
+        whatHappened: 'Ask them to archive or delete it. Nothing was changed.',
+        nextAction: { label: 'OK', intent: 'dismiss' },
+    },
+    memory_entry_not_found: {
+        title: 'This saved item no longer exists',
+        whatHappened: 'It may already have been deleted. Refresh the list.',
+        nextAction: { label: 'Refresh', intent: 'retry' },
+    },
+    memory_change_failed: {
+        title: "The change didn't save",
+        whatHappened: 'Nothing was changed. Try again in a moment.',
+        nextAction: { label: 'Try again', intent: 'retry' },
     },
     request_failed: REQUEST_FAILED,
 };

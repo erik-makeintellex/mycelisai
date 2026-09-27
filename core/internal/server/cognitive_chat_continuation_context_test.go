@@ -99,6 +99,7 @@ func TestHandleChat_PrependsContinuationContextForOutputReply(t *testing.T) {
 func TestHandleChat_ClassifiesOutputContinuationIntent(t *testing.T) {
 	wireNATS := withNATS(t)
 	s := newTestServer(wireNATS)
+	s.Soma = shippedSomaForTest(t)
 	s.Cognitive = &cognitive.Router{
 		Config: &cognitive.BrainConfig{
 			Profiles: map[string]string{"chat": "mock"},

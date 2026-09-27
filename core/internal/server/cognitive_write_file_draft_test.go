@@ -72,6 +72,9 @@ func draftTestRouter(provider cognitive.LLMProvider) *cognitive.Router {
 // tests exercise the real agent path instead of a deterministic bypass.
 func respondAsAdminAgentForTest(t *testing.T, s *AdminServer, reply map[string]any) {
 	t.Helper()
+	if s.Soma == nil {
+		s.Soma = shippedSomaForTest(t) // the admin agent's declared tools scope its plans
+	}
 	payload, _ := json.Marshal(reply)
 	if _, err := s.NC.Subscribe("swarm.council.admin.request", func(msg *nats.Msg) { _ = msg.Respond(payload) }); err != nil {
 		t.Fatalf("subscribe admin agent: %v", err)

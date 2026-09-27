@@ -121,6 +121,9 @@ func (r *InternalToolRegistry) handleCreateTeam(ctx context.Context, args map[st
 	if candidate == nil {
 		return "", fmt.Errorf("create_team requires 'team_id'")
 	}
+	if IsReservedTeamID(candidate.ID) { // refused whether or not the Core team is loaded
+		return "", fmt.Errorf("create_team %q: %w", candidate.ID, ErrReservedTeamID)
+	}
 	for _, m := range r.somaRef.ListTeams() {
 		if m != nil && m.ID == candidate.ID {
 			workspaceFolder, err := ensureRuntimeTeamWorkspace(candidate.ID)

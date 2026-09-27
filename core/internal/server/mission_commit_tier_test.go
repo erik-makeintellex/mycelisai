@@ -42,6 +42,7 @@ func expectCommitSuccess(mock sqlmock.Sqlmock, bp *protocol.MissionBlueprint, au
 		}
 	}
 	mock.ExpectCommit()
+	mock.ExpectExec("UPDATE missions SET status").WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE intent_proofs SET status = 'confirmed'").WillReturnResult(sqlmock.NewResult(0, 1))
 	a := sqlmock.AnyArg()
 	mock.ExpectExec("INSERT INTO log_entries").WithArgs(a, a, a, a, a, a, a, auditContextCapture{audits}).WillReturnResult(sqlmock.NewResult(0, 1))

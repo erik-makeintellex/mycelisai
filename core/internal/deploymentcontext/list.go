@@ -10,6 +10,12 @@ import (
 )
 
 func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
+	return s.ListEntries(ctx, limit, false)
+}
+
+// ListEntries lists governed entries, newest first. Archived entries are
+// included only when includeArchived is set; deleted entries no longer exist.
+func (s *Service) ListEntries(ctx context.Context, limit int, includeArchived bool) ([]Entry, error) {
 	if s == nil || s.Artifacts == nil || s.Artifacts.DB == nil {
 		return nil, fmt.Errorf("deployment context store unavailable")
 	}
@@ -31,9 +37,10 @@ func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
 			FROM context_vectors v WHERE v.metadata->>'artifact_id' = a.id::text
 		) c ON true
 		WHERE COALESCE(a.metadata->>'knowledge_store', '') = 'governed_context_store'
+		  AND ($2 OR COALESCE(a.metadata->>'lifecycle_state', 'active') = 'active')
 		ORDER BY a.created_at DESC
 		LIMIT $1
-	`, limit)
+	`, limit, includeArchived)
 	if err != nil {
 		return nil, fmt.Errorf("list deployment context entries: %w", err)
 	}
@@ -66,6 +73,7 @@ func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
 			TrustClass:       "user_provided",
 			SourceKind:       "user_document",
 			SourceLabel:      "operator provided",
+			LifecycleState:   LifecycleActive,
 		}
 
 		if len(metaJSON) > 0 {
@@ -82,6 +90,11 @@ func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
 				entry.ContentLength = intMeta(meta, "content_length", entry.ContentLength)
 				entry.ContentDomain = stringMeta(meta, "content_domain", entry.ContentDomain)
 				entry.TargetGoalSets = stringSliceMeta(meta, "target_goal_sets")
+				entry.LifecycleState = stringMeta(meta, "lifecycle_state", LifecycleActive)
+				entry.ArchivedAt = stringMeta(meta, "archived_at", "")
+				entry.LoadedBy = stringMeta(meta, "loaded_by", "")
+				entry.OwnerUserID = stringMeta(meta, "owner_user_id", "")
+				entry.TeamID = stringMeta(meta, "team_id", "")
 			}
 		}
 
