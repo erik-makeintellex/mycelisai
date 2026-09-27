@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
+import { mockFetch } from '../setup';
 
 // Mock next/dynamic — resolve the loader and flush microtask queue
 vi.mock('next/dynamic', () => ({
@@ -36,12 +37,14 @@ describe('Memory Page (app/memory/page.tsx)', () => {
     beforeEach(() => {
         mockSearchParams.delete('advanced');
         mockAdvancedMode.mockReturnValue(true);
+        mockFetch.mockResolvedValue({ ok: true, json: async () => ({ data: { user: { role: 'admin' } } }) });
     });
 
     it('mounts without crashing', async () => {
         await act(async () => {
             render(<MemoryRoute />);
         });
+        await screen.findByTestId('memory-route-content');
         expect(document.body.innerHTML.length).toBeGreaterThan(0);
     });
 
@@ -50,7 +53,7 @@ describe('Memory Page (app/memory/page.tsx)', () => {
             render(<MemoryRoute />);
         });
 
-        expect(screen.getByTestId('memory-route-content')).toBeDefined();
+        expect(await screen.findByTestId('memory-route-content')).toBeDefined();
         expect(screen.getByText('Memory')).toBeDefined();
     });
 
@@ -59,7 +62,7 @@ describe('Memory Page (app/memory/page.tsx)', () => {
             render(<MemoryRoute />);
         });
 
-        expect(screen.getByTestId('memory-route-content')).toBeDefined();
+        expect(await screen.findByTestId('memory-route-content')).toBeDefined();
         expect(screen.getByText('Recent Work')).toBeDefined();
         expect(screen.getByText('Search Memory')).toBeDefined();
         expect(screen.getByText('Details')).toBeDefined();
@@ -71,6 +74,6 @@ describe('Memory Page (app/memory/page.tsx)', () => {
             render(<MemoryRoute />);
         });
 
-        expect(screen.getByText(/Memory is in Admin tools/i)).toBeDefined();
+        expect(await screen.findByText(/Memory is in Admin tools/i)).toBeDefined();
     });
 });

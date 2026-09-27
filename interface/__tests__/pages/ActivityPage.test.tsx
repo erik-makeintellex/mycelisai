@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import ActivityPage from "@/app/(app)/activity/page";
 import { useCortexStore } from "@/store/useCortexStore";
+import { mockFetch } from "../setup";
 
 const mockSearchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
@@ -12,6 +13,7 @@ vi.mock("next/navigation", () => ({
 describe("ActivityPage", () => {
   beforeEach(() => {
     mockSearchParams.delete("advanced");
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ data: { user: { role: "admin" } } }) });
     useCortexStore.setState({
       advancedMode: true,
       recentRuns: [
@@ -73,12 +75,12 @@ describe("ActivityPage", () => {
     });
   });
 
-  it("shows the advanced gate when advanced mode is off", () => {
+  it("shows the advanced gate when advanced mode is off", async () => {
     useCortexStore.setState({ advancedMode: false });
 
     render(<ActivityPage />);
 
-    expect(screen.getByText("Activity review is in Admin tools")).toBeDefined();
+    expect(await screen.findByText("Activity review is in Admin tools")).toBeDefined();
     expect(screen.getByText(/deeper run lists, bus signals, and operator diagnostics/i)).toBeDefined();
     expect(screen.queryByText("Progress, runs, and bus review")).toBeNull();
   });
@@ -87,7 +89,7 @@ describe("ActivityPage", () => {
     render(<ActivityPage />);
 
     expect(
-      screen.getByRole("heading", { name: "Progress, runs, and bus review" }),
+      await screen.findByRole("heading", { name: "Progress, runs, and bus review" }),
     ).toBeDefined();
     expect(screen.getByText("Active workflows")).toBeDefined();
     expect(screen.getByText("Recent runs")).toBeDefined();

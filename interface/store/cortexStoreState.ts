@@ -30,6 +30,7 @@ import type {
     MissionProfile,
     MissionProfileCreate,
     MissionRun,
+    MutationResult,
     MissionStatus,
     PendingApproval,
     PolicyConfig,
@@ -186,7 +187,10 @@ export interface CortexGovernanceOpsContract {
     teamRoster: TeamDetail[];
     isFetchingTeamRoster: boolean;
     policyConfig: PolicyConfig | null;
+    policyError: { code?: string; httpStatus?: number } | null;
     pendingApprovals: PendingApproval[];
+    approvalsError: { code?: string; httpStatus?: number } | null;
+    resolveApprovalError: { code?: string; httpStatus?: number } | null;
     isFetchingPolicy: boolean;
     isFetchingApprovals: boolean;
     auditLog: AuditLogEntry[];
@@ -264,9 +268,9 @@ export interface CortexProfilesSettingsContract {
     updateTheme: (theme: 'aero-light' | 'midnight-cortex' | 'system') => Promise<boolean>;
     fetchMissionProfiles: () => Promise<void>;
     createMissionProfile: (p: MissionProfileCreate) => Promise<MissionProfile | null>;
-    updateMissionProfile: (id: string, p: MissionProfileCreate) => Promise<void>;
-    deleteMissionProfile: (id: string) => Promise<void>;
-    activateMissionProfile: (id: string) => Promise<void>;
+    updateMissionProfile: (id: string, p: MissionProfileCreate) => Promise<MutationResult>;
+    deleteMissionProfile: (id: string) => Promise<MutationResult>;
+    activateMissionProfile: (id: string) => Promise<MutationResult>;
     fetchContextSnapshots: () => Promise<void>;
     createContextSnapshot: (name: string) => Promise<ContextSnapshot | null>;
 }

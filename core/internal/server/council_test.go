@@ -228,7 +228,7 @@ func TestHandleCouncilChat_ReturnsStructuredTransportBlockerWhenMemberHasNoRespo
 	if resp.OK {
 		t.Fatal("expected ok=false when council responder is missing")
 	}
-	if resp.Error != "Council member council-architect is currently unreachable from the workspace runtime." {
+	if resp.Error != "Council member council-architect can't be reached right now." {
 		t.Fatalf("error = %q", resp.Error)
 	}
 

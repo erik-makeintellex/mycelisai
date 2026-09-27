@@ -107,7 +107,7 @@ func TestCognitiveProfileAuthority_RejectsAnonymousStandardAndUnscopedAdmin(t *t
 					rr = doAuthenticatedRequestAs(t, mux, route.method, route.path, route.body, caller.identity)
 				}
 				assertStatus(t, rr, caller.want)
-				if strings.Contains(rr.Body.String(), `"data"`) {
+				if denialLeaksData(rr.Body.String()) {
 					t.Fatalf("rejected call leaked data: %s", rr.Body.String())
 				}
 				if err := mock.ExpectationsWereMet(); err != nil {

@@ -28,7 +28,7 @@ func TestWorkRunning_ScopeDeniedDefaultDeny(t *testing.T) {
 			if code != http.StatusForbidden {
 				t.Fatalf("status = %d body=%s", code, body)
 			}
-			if strings.Contains(body, `"data"`) || strings.Contains(body, "work_item_id") {
+			if denialLeaksData(body) || strings.Contains(body, "work_item_id") {
 				t.Fatalf("denial leaked data: %s", body)
 			}
 			wrMet(t, mock) // denied before any read
@@ -42,7 +42,7 @@ func TestWorkRunning_AnonymousUnauthorized(t *testing.T) {
 	mux := setupMux(t, "GET /api/v1/work/running", s.HandleWorkRunning)
 	rr := doRequest(t, mux, http.MethodGet, "/api/v1/work/running", "")
 	assertStatus(t, rr, http.StatusUnauthorized)
-	if strings.Contains(rr.Body.String(), `"data"`) {
+	if denialLeaksData(rr.Body.String()) {
 		t.Fatalf("anonymous denial leaked data: %s", rr.Body.String())
 	}
 	wrMet(t, mock)

@@ -2,6 +2,7 @@ import type { CortexState } from '@/store/cortexStoreState';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { AgentManifest, MissionBlueprint, TeamsFilter } from '@/store/cortexStoreTypes';
 import { blueprintToGraph, solidifyNodes } from '@/store/cortexStoreUtils';
+import { blockerCopy } from '@/lib/blockerCopy';
 
 function buildClosedAgentEditorState() {
     return {
@@ -91,7 +92,10 @@ export function createCortexMissionDraftSlice(
 > {
     return {
         instantiateMission: async () => {
-            const { blueprint } = get();
+            // "Launch teams": commits the exact negotiated blueprint together
+            // with the confirm token Soma issued when it was negotiated.
+            // Without a token the backend refuses the commit outright.
+            const { blueprint, activeConfirmToken } = get();
             if (!blueprint) return;
 
             set({ isCommitting: true, error: null });
@@ -100,44 +104,58 @@ export function createCortexMissionDraftSlice(
                 const res = await fetch('/api/v1/intent/commit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(blueprint),
+                    body: JSON.stringify({ ...blueprint, confirm_token: activeConfirmToken ?? '' }),
                 });
 
-                const data = await res.json();
+                const data = await res.json().catch(() => ({}));
 
-                if (data.error) {
+                if (!res.ok || data.error) {
+                    // The backend always sends a code now, including for a
+                    // missing token (invalid_confirm_token on 403); no
+                    // client-side guessing needed.
+                    const code: string | undefined = data?.data?.code;
+                    const copy = code ? blockerCopy({ code, httpStatus: res.status, viewerIsAdmin: false }) : null;
                     set((s) => ({
                         isCommitting: false,
-                        error: data.error,
+                        error: copy?.whatHappened ?? data.error ?? 'Team plan could not launch.',
                         chatHistory: [
                             ...s.chatHistory,
-                            { role: 'architect', content: `Commit failed: ${data.error}` },
+                            {
+                                role: 'architect',
+                                content: copy
+                                    ? `${copy.title}. ${copy.whatHappened}`
+                                    : "Team plan needs a fresh approval. Soma has to propose this plan before it can launch. Nothing launched.",
+                            },
                         ],
                     }));
                     return;
                 }
 
+                const teams = data.teams ?? blueprint.teams.length;
+                const agents = data.agents ?? blueprint.teams.reduce((sum: number, t) => sum + t.agents.length, 0);
                 set((s) => ({
                     isCommitting: false,
                     missionStatus: 'active',
                     activeMissionId: data.mission_id,
+                    activeConfirmToken: null,
+                    pendingProposal: null,
                     nodes: solidifyNodes(s.nodes),
                     chatHistory: [
                         ...s.chatHistory,
                         {
                             role: 'architect',
-                            content: `Mission **${data.mission_id}** instantiated. ${data.teams} teams, ${data.agents} agents now ACTIVE.`,
+                            content: `Teams launched. ${teams} team${teams === 1 ? '' : 's'} with ${agents} agent${agents === 1 ? '' : 's'} are working. Follow progress in Work.`,
                         },
                     ],
                 }));
             } catch (err) {
-                const msg = err instanceof Error ? err.message : 'Commit failed';
+                const msg = err instanceof Error ? err.message : 'Team plan could not launch.';
                 set((s) => ({
                     isCommitting: false,
                     error: msg,
                     chatHistory: [
                         ...s.chatHistory,
-                        { role: 'architect', content: `Error: ${msg}` },
+                        { role: 'architect', content: `Team plan could not launch: ${msg}` },
                     ],
                 }));
             }

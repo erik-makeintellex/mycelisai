@@ -3,419 +3,13 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
     Brain, Globe, Server, RefreshCw, AlertTriangle, CheckCircle,
-    XCircle, Power, Plus, Pencil, Trash2, Wifi, WifiOff, Loader2, X,
+    XCircle, Power, Plus, Pencil, Trash2, Wifi, WifiOff, Loader2,
 } from "lucide-react";
 import RemoteEnableModal from "./RemoteEnableModal";
+import InlineBlockerNotice from "@/components/shared/InlineBlockerNotice";
+import ProviderForm from "@/components/settings/BrainsPageProviderForm";
+import { blankForm, Modal, TOKEN_BUDGET_PRESETS, type BrainEntry, type ProviderFormData } from "@/components/settings/BrainsPageFormShared";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface BrainEntry {
-    id: string;
-    type: string;
-    endpoint?: string;
-    model_id: string;
-    location: string;
-    data_boundary: string;
-    usage_policy: string;
-    token_budget_profile: string;
-    max_output_tokens: number;
-    roles_allowed: string[];
-    enabled: boolean;
-    status: string;
-}
-
-interface ProviderFormData {
-    id: string;
-    type: string;
-    endpoint: string;
-    model_id: string;
-    api_key: string;
-    location: string;
-    data_boundary: string;
-    usage_policy: string;
-    token_budget_profile: string;
-    max_output_tokens: number;
-    roles_allowed: string[];
-    enabled: boolean;
-}
-
-// ── Type presets ──────────────────────────────────────────────────────────────
-
-const PROVIDER_PRESETS: Record<string, Partial<ProviderFormData>> = {
-    ollama: {
-        type: "openai_compatible",
-        endpoint: "http://localhost:11434/v1",
-        location: "local",
-        data_boundary: "local_only",
-        usage_policy: "local_first",
-        roles_allowed: ["all"],
-    },
-    vllm: {
-        type: "openai_compatible",
-        endpoint: "http://localhost:8000/v1",
-        location: "local",
-        data_boundary: "local_only",
-        usage_policy: "local_first",
-        roles_allowed: ["all"],
-    },
-    lmstudio: {
-        type: "openai_compatible",
-        endpoint: "http://localhost:1234/v1",
-        location: "local",
-        data_boundary: "local_only",
-        usage_policy: "local_first",
-        roles_allowed: ["all"],
-    },
-    openai: {
-        type: "openai",
-        endpoint: "https://api.openai.com/v1",
-        location: "remote",
-        data_boundary: "leaves_org",
-        usage_policy: "require_approval",
-        token_budget_profile: "extended",
-        max_output_tokens: 2048,
-        roles_allowed: ["all"],
-    },
-    anthropic: {
-        type: "anthropic",
-        endpoint: "",
-        location: "remote",
-        data_boundary: "leaves_org",
-        usage_policy: "require_approval",
-        token_budget_profile: "extended",
-        max_output_tokens: 2048,
-        roles_allowed: ["all"],
-    },
-    google: {
-        type: "google",
-        endpoint: "",
-        location: "remote",
-        data_boundary: "leaves_org",
-        usage_policy: "require_approval",
-        token_budget_profile: "extended",
-        max_output_tokens: 2048,
-        roles_allowed: ["all"],
-    },
-    custom: {
-        type: "openai_compatible",
-        endpoint: "",
-        location: "local",
-        data_boundary: "local_only",
-        usage_policy: "local_first",
-        roles_allowed: ["all"],
-    },
-};
-
-const PRESET_LABELS: Record<string, string> = {
-    ollama: "Ollama",
-    vllm: "vLLM",
-    lmstudio: "LM Studio",
-    openai: "OpenAI",
-    anthropic: "Anthropic",
-    google: "Google",
-    custom: "Custom",
-};
-
-const COUNCIL_ROLES = ["all", "architect", "coder", "creative", "sentry", "admin"];
-const TOKEN_BUDGET_PRESETS: Record<string, { label: string; tokens: number; description: string }> = {
-    conservative: { label: "Conservative", tokens: 512, description: "Short, low-cost responses." },
-    standard: { label: "Standard", tokens: 1024, description: "Balanced default for everyday agentry." },
-    extended: { label: "Extended", tokens: 2048, description: "Longer reasoning or coding responses." },
-    deep: { label: "Deep", tokens: 4096, description: "Heavy output budget for complex work." },
-};
-
-const blankForm = (): ProviderFormData => ({
-    id: "",
-    type: "openai_compatible",
-    endpoint: "",
-    model_id: "",
-    api_key: "",
-    location: "local",
-    data_boundary: "local_only",
-    usage_policy: "local_first",
-    token_budget_profile: "standard",
-    max_output_tokens: 1024,
-    roles_allowed: ["all"],
-    enabled: true,
-});
-
-// ── Provider form (shared between add and edit) ───────────────────────────────
-
-function ProviderForm({
-    form,
-    onChange,
-    isEdit,
-    probeResult,
-    probing,
-    onProbe,
-    showPresets,
-}: {
-    form: ProviderFormData;
-    onChange: (f: ProviderFormData) => void;
-    isEdit: boolean;
-    probeResult: "alive" | "dead" | null;
-    probing: boolean;
-    onProbe?: () => void;
-    showPresets: boolean;
-}) {
-    const field = (key: keyof ProviderFormData, label: string, node: React.ReactNode) => (
-        <div className="space-y-1">
-            <label className="text-[10px] uppercase tracking-wider text-cortex-text-muted">{label}</label>
-            {node}
-        </div>
-    );
-
-    const inputCls = "w-full bg-cortex-bg border border-cortex-border rounded px-2.5 py-1.5 text-xs text-cortex-text-main focus:outline-none focus:ring-1 focus:ring-cortex-primary placeholder:text-cortex-text-muted/50";
-
-    const toggleRole = (role: string) => {
-        const cur = form.roles_allowed;
-        if (role === "all") {
-            onChange({ ...form, roles_allowed: ["all"] });
-            return;
-        }
-        const without = cur.filter((r) => r !== "all" && r !== role);
-        const next = cur.includes(role) ? without : [...without, role];
-        onChange({ ...form, roles_allowed: next.length ? next : ["all"] });
-    };
-
-    return (
-        <div className="space-y-3">
-            {/* Preset selector — add mode only */}
-            {showPresets && (
-                <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-cortex-text-muted">Quick Preset</label>
-                    <div className="flex flex-wrap gap-1.5">
-                        {Object.entries(PRESET_LABELS).map(([key, label]) => (
-                            <button
-                                key={key}
-                                type="button"
-                                onClick={() => {
-                                    const preset = PROVIDER_PRESETS[key];
-                                    const suggestedId = key === "custom" ? "" : key;
-                                    onChange({ ...blankForm(), ...preset, id: form.id || suggestedId });
-                                }}
-                                className="px-2 py-0.5 rounded text-[10px] border border-cortex-border text-cortex-text-muted hover:border-cortex-primary hover:text-cortex-primary transition-colors"
-                            >
-                                {label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-                {/* ID */}
-                {field("id", "Provider ID", (
-                    <input
-                        value={form.id}
-                        onChange={(e) => onChange({ ...form, id: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") })}
-                        placeholder="e.g. my-ollama"
-                        disabled={isEdit}
-                        className={`${inputCls} ${isEdit ? "opacity-50 cursor-not-allowed" : ""}`}
-                    />
-                ))}
-                {/* Type */}
-                {field("type", "Provider Type", (
-                    <input
-                        value={form.type}
-                        onChange={(e) => onChange({ ...form, type: e.target.value })}
-                        placeholder="openai_compatible"
-                        className={inputCls}
-                    />
-                ))}
-                {/* Endpoint */}
-                {field("endpoint", "Endpoint URL", (
-                    <input
-                        value={form.endpoint}
-                        onChange={(e) => onChange({ ...form, endpoint: e.target.value })}
-                        placeholder="http://localhost:11434/v1"
-                        className={inputCls}
-                    />
-                ))}
-                {/* Model ID */}
-                {field("model_id", "Model ID", (
-                    <input
-                        value={form.model_id}
-                        onChange={(e) => onChange({ ...form, model_id: e.target.value })}
-                        placeholder="llama3:8b"
-                        className={inputCls}
-                    />
-                ))}
-                {/* API Key */}
-                {field("api_key", isEdit ? "API Key (blank = keep existing)" : "API Key", (
-                    <input
-                        type="password"
-                        value={form.api_key}
-                        onChange={(e) => onChange({ ...form, api_key: e.target.value })}
-                        placeholder={isEdit ? "leave blank to keep existing" : "optional"}
-                        className={inputCls}
-                    />
-                ))}
-                {/* Usage Policy */}
-                {field("usage_policy", "Usage Policy", (
-                    <select
-                        value={form.usage_policy}
-                        onChange={(e) => onChange({ ...form, usage_policy: e.target.value })}
-                        className={inputCls}
-                    >
-                        <option value="local_first">Local First</option>
-                        <option value="allow_escalation">Allow Escalation</option>
-                        <option value="require_approval">Require Approval</option>
-                        <option value="disallowed">Disallowed</option>
-                    </select>
-                ))}
-                {field("token_budget_profile", "Token Budget", (
-                    <select
-                        value={form.token_budget_profile}
-                        onChange={(e) => {
-                            const profile = e.target.value;
-                            const preset = TOKEN_BUDGET_PRESETS[profile];
-                            onChange({
-                                ...form,
-                                token_budget_profile: profile,
-                                max_output_tokens: preset ? preset.tokens : form.max_output_tokens,
-                            });
-                        }}
-                        className={inputCls}
-                    >
-                        {Object.entries(TOKEN_BUDGET_PRESETS).map(([value, preset]) => (
-                            <option key={value} value={value}>{preset.label}</option>
-                        ))}
-                    </select>
-                ))}
-                {field("max_output_tokens", "Max Output Tokens", (
-                    <input
-                        type="number"
-                        min={128}
-                        step={128}
-                        value={form.max_output_tokens}
-                        onChange={(e) => onChange({ ...form, max_output_tokens: Number(e.target.value) || 0 })}
-                        className={inputCls}
-                    />
-                ))}
-                {/* Location */}
-                {field("location", "Location", (
-                    <select
-                        value={form.location}
-                        onChange={(e) => {
-                            const loc = e.target.value;
-                            onChange({
-                                ...form,
-                                location: loc,
-                                data_boundary: loc === "remote" ? "leaves_org" : "local_only",
-                            });
-                        }}
-                        className={inputCls}
-                    >
-                        <option value="local">Local</option>
-                        <option value="remote">Remote</option>
-                    </select>
-                ))}
-                {/* Data Boundary */}
-                {field("data_boundary", "Data Boundary", (
-                    <select
-                        value={form.data_boundary}
-                        onChange={(e) => onChange({ ...form, data_boundary: e.target.value })}
-                        className={inputCls}
-                    >
-                        <option value="local_only">Local Only</option>
-                        <option value="leaves_org">Leaves Org</option>
-                    </select>
-                ))}
-            </div>
-
-            <p className="text-[11px] leading-5 text-cortex-text-muted">
-                Safe defaults follow common operational ranges: 512 for conservative, 1024 for standard, 2048 for extended, and 4096 for deep output budgets.
-            </p>
-
-            {/* Roles */}
-            <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider text-cortex-text-muted">Roles Allowed</label>
-                <div className="flex flex-wrap gap-1.5">
-                    {COUNCIL_ROLES.map((role) => {
-                        const active = form.roles_allowed.includes(role);
-                        return (
-                            <button
-                                key={role}
-                                type="button"
-                                onClick={() => toggleRole(role)}
-                                className={`px-2 py-0.5 rounded text-[10px] border transition-colors ${
-                                    active
-                                        ? "border-cortex-primary text-cortex-primary bg-cortex-primary/10"
-                                        : "border-cortex-border text-cortex-text-muted hover:border-cortex-primary/50"
-                                }`}
-                            >
-                                {role}
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Enabled toggle */}
-            <label className="flex items-center gap-2 cursor-pointer text-xs text-cortex-text-muted select-none">
-                <div
-                    onClick={() => onChange({ ...form, enabled: !form.enabled })}
-                    className={`w-8 h-4 rounded-full relative transition-colors border cursor-pointer ${
-                        form.enabled
-                            ? "bg-cortex-success/20 border-cortex-success/40"
-                            : "bg-cortex-bg border-cortex-border"
-                    }`}
-                >
-                    <div className={`absolute top-0 w-4 h-4 rounded-full shadow-sm transition-all ${
-                        form.enabled ? "right-0 bg-cortex-success" : "left-0 bg-cortex-text-muted"
-                    }`} />
-                </div>
-                Enable on save
-            </label>
-
-            {/* Test connection (edit only) */}
-            {isEdit && onProbe && (
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={onProbe}
-                        disabled={probing}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-cortex-border text-xs text-cortex-text-muted hover:border-cortex-primary hover:text-cortex-primary transition-colors disabled:opacity-50"
-                    >
-                        {probing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wifi className="w-3 h-3" />}
-                        Test Connection
-                    </button>
-                    {probeResult === "alive" && (
-                        <span className="flex items-center gap-1 text-cortex-success text-xs">
-                            <CheckCircle className="w-3 h-3" /> Online
-                        </span>
-                    )}
-                    {probeResult === "dead" && (
-                        <span className="flex items-center gap-1 text-red-400 text-xs">
-                            <WifiOff className="w-3 h-3" /> Unreachable
-                        </span>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ── Modal wrapper ─────────────────────────────────────────────────────────────
-
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-cortex-surface border border-cortex-border rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-cortex-border">
-                    <h3 className="text-sm font-semibold text-cortex-text-main">{title}</h3>
-                    <button onClick={onClose} className="p-1 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main transition-colors">
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-                <div className="p-5">{children}</div>
-            </div>
-        </div>
-    );
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
 
 export default function BrainsPage() {
     const [brains, setBrains] = useState<BrainEntry[]>([]);
@@ -444,6 +38,12 @@ export default function BrainsPage() {
     const [rowProbing, setRowProbing] = useState<string | null>(null);
     const [rowProbeResult, setRowProbeResult] = useState<Record<string, "alive" | "dead">>({});
 
+    // Toggle/policy blockers: an engine in use (409 provider_bound) or an
+    // audit-unavailable policy change must explain what happened instead of
+    // the control silently snapping back with no message.
+    const [toggleBlocker, setToggleBlocker] = useState<{ code: string; httpStatus?: number; boundProfiles: string[] } | null>(null);
+    const [policyBlocker, setPolicyBlocker] = useState<{ code: string; httpStatus?: number } | null>(null);
+
     const fetchBrains = useCallback(async () => {
         setLoading(true);
         try {
@@ -468,24 +68,50 @@ export default function BrainsPage() {
 
     const doToggle = async (id: string, enabled: boolean) => {
         try {
-            await fetch(`/api/v1/brains/${id}/toggle`, {
+            const res = await fetch(`/api/v1/brains/${id}/toggle`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ enabled }),
             });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                const code: string = body?.data?.code ?? (res.status === 409 ? "provider_bound" : "request_failed");
+                const boundProfiles: string[] = Array.isArray(body?.data?.profiles) ? body.data.profiles : [];
+                setToggleBlocker({ code, httpStatus: res.status, boundProfiles });
+                return;
+            }
+            setToggleBlocker(null);
             fetchBrains();
-        } catch { /* ignore */ }
+        } catch {
+            setToggleBlocker({ code: "request_failed", boundProfiles: [] });
+        }
+    };
+
+    const resetProfileOverride = async (profile: string) => {
+        try {
+            await fetch(`/api/v1/cognitive/profiles/${profile}/override`, { method: "DELETE" });
+        } catch { /* the banner stays open so the admin can retry */ }
+        setToggleBlocker(null);
+        fetchBrains();
     };
 
     const updatePolicy = async (id: string, policy: string) => {
         try {
-            await fetch(`/api/v1/brains/${id}/policy`, {
+            const res = await fetch(`/api/v1/brains/${id}/policy`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ usage_policy: policy }),
             });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                setPolicyBlocker({ code: body?.data?.code ?? "request_failed", httpStatus: res.status });
+                return;
+            }
+            setPolicyBlocker(null);
             fetchBrains();
-        } catch { /* ignore */ }
+        } catch {
+            setPolicyBlocker({ code: "request_failed" });
+        }
     };
 
     // ── Add provider ────────────────────────────────────────────────────────
@@ -657,6 +283,29 @@ export default function BrainsPage() {
                     </button>
                 </div>
             </div>
+
+            {/* Toggle blocker (e.g. provider_bound): explain, don't snap back silently */}
+            {toggleBlocker && (
+                <InlineBlockerNotice code={toggleBlocker.code} httpStatus={toggleBlocker.httpStatus} onDismiss={() => setToggleBlocker(null)}>
+                    {toggleBlocker.boundProfiles.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                            {toggleBlocker.boundProfiles.map((profile) => (
+                                <button
+                                    key={profile}
+                                    onClick={() => resetProfileOverride(profile)}
+                                    className="rounded border border-cortex-primary/30 bg-cortex-primary/10 px-2 py-1 text-xs text-cortex-primary hover:bg-cortex-primary/20"
+                                >
+                                    Use default engine for {profile}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </InlineBlockerNotice>
+            )}
+
+            {policyBlocker && (
+                <InlineBlockerNotice code={policyBlocker.code} httpStatus={policyBlocker.httpStatus} onDismiss={() => setPolicyBlocker(null)} />
+            )}
 
             {/* Table */}
             <div className="rounded-lg border border-cortex-border overflow-hidden">

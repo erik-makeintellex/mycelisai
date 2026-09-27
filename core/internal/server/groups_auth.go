@@ -30,12 +30,15 @@ func requireRootAdminScope(w http.ResponseWriter, r *http.Request, requiredScope
 		respondAPIError(w, "Authentication required", http.StatusUnauthorized)
 		return nil, false
 	}
+	// Both denials are code admin_required (UX1); only an admin viewer is
+	// told which permission is missing.
 	if identity.Role != "admin" {
-		respondAPIError(w, "Root admin role required", http.StatusForbidden)
+		respondBlocker(w, r, http.StatusForbidden, codeAdminRequired, "", nil)
 		return nil, false
 	}
 	if !hasScope(identity, requiredScope) {
-		respondAPIError(w, "Missing required scope: "+requiredScope, http.StatusForbidden)
+		respondBlocker(w, r, http.StatusForbidden, codeAdminRequired, "Missing required scope: "+requiredScope,
+			map[string]string{"required_scope": requiredScope})
 		return nil, false
 	}
 	return identity, true

@@ -162,7 +162,7 @@ func (s *AdminServer) maybeRequireGroupApproval(w http.ResponseWriter, r *http.R
 
 	if token := strings.TrimSpace(req.ConfirmToken); token != "" {
 		if _, err := s.consumeConfirmTokenFor(token, groupMutationPurpose(op, groupID)); err != nil {
-			respondConfirmTokenError(w, err, http.StatusBadRequest)
+			respondConfirmTokenError(w, r, err, http.StatusBadRequest)
 			return true
 		}
 		return false
