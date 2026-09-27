@@ -36,46 +36,64 @@ type writeFileDraftBlocker struct {
 	Availability cognitive.ExecutionAvailability
 }
 
-// draftMissingWriteFileContent fills every planned write_file call whose content
-// is missing or only echoes the request with one bounded model inference (no
-// tools). It returns previews for the proposal, or a blocker when any draft
-// fails. It never substitutes template content.
+// draftMissingWriteFileContent drafts real content, with one bounded model
+// inference (no tools), for every planned write_file call whose content is
+// missing or only echoes the request. It never substitutes template content.
+//
+// It then returns a proposal preview for every planned write_file call that
+// has a path, whatever the source of its final content: freshly drafted here,
+// already written by the agent itself, or explicit content quoted by the
+// operator. The preview must always equal the content that will be executed,
+// so the operator never approves content they have not seen (regardless of
+// where that content came from). A blocker is returned instead when any draft
+// fails.
 func (s *AdminServer) draftMissingWriteFileContent(ctx context.Context, planned []protocol.PlannedToolCall, request string) ([]protocol.ProposalDraftPreview, *writeFileDraftBlocker) {
 	explicit := requestHasExplicitWriteFileContent(request)
-	var targets []int
+	var previewTargets []int
+	var draftTargets []int
 	for i, call := range planned {
 		if !strings.EqualFold(strings.TrimSpace(call.Name), "write_file") || strings.TrimSpace(call.ToolRef) != "" {
 			continue
 		}
-		existing := firstNonEmptyString(call.Arguments["content"])
-		if firstNonEmptyString(call.Arguments["path"]) == "" || (existing != "" && (explicit || !writeFileContentIsRequestEcho(existing, request))) {
+		if firstNonEmptyString(call.Arguments["path"]) == "" {
 			continue
 		}
-		targets = append(targets, i)
+		previewTargets = append(previewTargets, i)
+		existing := firstNonEmptyString(call.Arguments["content"])
+		if existing != "" && (explicit || !writeFileContentIsRequestEcho(existing, request)) {
+			continue
+		}
+		draftTargets = append(draftTargets, i)
 	}
-	if len(targets) > writeFileDraftMaxPerTurn {
+	if len(draftTargets) > writeFileDraftMaxPerTurn {
 		return nil, &writeFileDraftBlocker{Status: http.StatusUnprocessableEntity, Availability: cognitive.ExecutionAvailability{
 			Code:              emptyProviderOutputCode,
-			Summary:           fmt.Sprintf("Soma can draft up to %d files per request, and this request needs %d, so nothing was proposed.", writeFileDraftMaxPerTurn, len(targets)),
+			Summary:           fmt.Sprintf("Soma can draft up to %d files per request, and this request needs %d, so nothing was proposed.", writeFileDraftMaxPerTurn, len(draftTargets)),
 			RecommendedAction: fmt.Sprintf("Ask for %d or fewer files at a time, or include the text you want in your request.", writeFileDraftMaxPerTurn),
 		}}
 	}
 	turnCtx, cancel := context.WithTimeout(ctx, writeFileDraftTurnDeadline)
 	defer cancel()
-	// Drafts are applied only after every draft succeeds, so a failure never
-	// leaves a partially drafted plan behind.
-	contents := make([]string, len(targets))
-	for n, i := range targets {
+	// Drafts are computed for every target before any is applied, so a later
+	// failure never leaves a partially drafted plan behind.
+	drafted := make([]string, len(draftTargets))
+	for n, i := range draftTargets {
 		content, blocker := s.draftWriteFileContent(turnCtx, firstNonEmptyString(planned[i].Arguments["path"]), request)
 		if blocker != nil {
 			return nil, blocker
 		}
-		contents[n] = content
+		drafted[n] = content
 	}
-	previews := make([]protocol.ProposalDraftPreview, 0, len(targets))
-	for n, i := range targets {
-		planned[i].Arguments["content"] = contents[n]
-		previews = append(previews, buildProposalDraftPreview(firstNonEmptyString(planned[i].Arguments["path"]), contents[n]))
+	for n, i := range draftTargets {
+		planned[i].Arguments["content"] = drafted[n]
+	}
+	previews := make([]protocol.ProposalDraftPreview, 0, len(previewTargets))
+	for _, i := range previewTargets {
+		content := firstNonEmptyString(planned[i].Arguments["content"])
+		if content == "" {
+			continue
+		}
+		previews = append(previews, buildProposalDraftPreview(firstNonEmptyString(planned[i].Arguments["path"]), content))
 	}
 	return previews, nil
 }
