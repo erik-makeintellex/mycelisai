@@ -167,7 +167,7 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 	if err != nil || updated == nil {
 		log.Printf("Agent [%s] re-inference failed: %v", a.Manifest.ID, err)
 		if len(result.toolEvidence) > 0 {
-			result.runtimeRecoveryAllowed = true
+			result.inferenceStopped = true
 		}
 		return false
 	}
