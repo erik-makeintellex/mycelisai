@@ -259,7 +259,8 @@ func (s *AdminServer) profileOverrideResult(profile string, changed bool, remain
 	if remainingOrigin == cognitive.ProfileOriginEnv {
 		result.RecommendedAction = "The profile is still pinned by MYCELIS_PROFILE_" + strings.ToUpper(profile) + "_PROVIDER; edit .env.compose and recreate Core to return it to root."
 	} else if !availability.Available {
-		result.RecommendedAction = availability.RecommendedAction
+		// Admin-only route: the admin remedy is the useful one.
+		result.RecommendedAction = firstNonEmptyString(availability.AdminAction, availability.RecommendedAction)
 	}
 	return result
 }

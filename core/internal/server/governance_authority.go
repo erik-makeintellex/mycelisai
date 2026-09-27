@@ -24,9 +24,8 @@ const (
 
 	maxPolicyBodyBytes = 1 << 20
 
-	governancePolicyUnavailableCode   = "governance_policy_unavailable"
-	governancePolicyRecommendedAction = "Fix core/config/policy.yaml and restart Core, or PUT a valid policy as an admin"
-	governanceAuditUnavailableCode    = "governance_audit_unavailable"
+	governancePolicyUnavailableCode = "governance_policy_unavailable"
+	governanceAuditUnavailableCode  = "governance_audit_unavailable"
 )
 
 // requireApprover gates approval decisions to root admins with approvals:decide.
@@ -43,10 +42,10 @@ func respondGovernanceError(w http.ResponseWriter, status int, msg, code, action
 }
 
 // governanceServiceStatus is the services/status row. Detail is fixed text and
-// never carries raw load errors or policy content.
-func (s *AdminServer) governanceServiceStatus() ServiceStatus {
+// never carries raw load errors or policy content; only admins read the fix.
+func (s *AdminServer) governanceServiceStatus(admin bool) ServiceStatus {
 	if s.Guard == nil || s.Guard.Degraded() {
-		return ServiceStatus{Name: "governance", Status: "degraded", Detail: governance.PolicyUnavailableCode + ": " + governancePolicyRecommendedAction}
+		return ServiceStatus{Name: "governance", Status: "degraded", Detail: governanceLockDetail(admin)}
 	}
 	return ServiceStatus{Name: "governance", Status: "online", Detail: "Governance policy loaded"}
 }
@@ -201,27 +200,26 @@ func confirmerMayApprove(w http.ResponseWriter, r *http.Request, scope *protocol
 		recordConfirmAuthority(r, scope, tok)
 		return true
 	}
-	respondApproverRequired(w, r)
+	_, reason := approverTier(scope)
+	respondApproverRequired(w, r, reason)
 	return false
 }
 
 // respondApproverRequired writes the normalized tier-2 blocker. Nothing ran and
-// the token was not consumed, so an approver can confirm it later.
-func respondApproverRequired(w http.ResponseWriter, r *http.Request) {
+// the token was not consumed, so an approver can confirm it later. reason is
+// the approverTier reason (policy | capability_risk | cost) or "" if unknown.
+func respondApproverRequired(w http.ResponseWriter, r *http.Request, reason string) {
 	identity := IdentityFromContext(r.Context())
 	status := http.StatusForbidden
 	if identity == nil {
 		status = http.StatusUnauthorized
 	}
-	const (
-		whatFailed = "This work needs admin approval. It was raised by an organization governance policy, a high-risk capability, or a cost above the approval limit, so only an admin with approval authority can confirm it."
-		nextStep   = "Ask an admin to review and confirm this proposal. Nothing ran and the proposal is still valid."
-	)
+	whatFailed, nextStep := approverRequiredCopy(reason, viewerIsAdmin(r))
 	retryable := true
 	summary := protocol.ExecutionSummary{
 		Intent:        protocol.ExecutionIntent{Resolved: "Confirm governed proposal"},
 		Understanding: protocol.ExecutionUnderstanding{Summary: whatFailed},
-		Execution:     protocol.ExecutionState{Shape: protocol.ExecutionShapeGuidedProposal, Status: protocol.ExecutionStatusBlocked, Summary: "Waiting for an admin approver"},
+		Execution:     protocol.ExecutionState{Shape: protocol.ExecutionShapeGuidedProposal, Status: protocol.ExecutionStatusBlocked, Summary: "Waiting for an admin to approve"},
 		AuditRecovery: protocol.AuditRecovery{
 			ApprovalStatus: "approver_required",
 			RecoveryState:  "awaiting_approver",
@@ -230,13 +228,13 @@ func respondApproverRequired(w http.ResponseWriter, r *http.Request) {
 			Degradation: &protocol.ExecutionDegradation{
 				Code:              "approver_required",
 				WhatFailed:        whatFailed,
-				TrustedState:      "Nothing was executed or written.",
+				TrustedState:      "Nothing ran and nothing was changed.",
 				SafeContinuation:  nextStep,
 				RequiresAttention: true,
 			},
 		},
 	}
-	respondAPIJSON(w, status, protocol.APIResponse{OK: false, Error: "Needs admin approval", Data: map[string]any{
+	data := map[string]any{
 		"code":               "approver_required",
 		"blocker":            "needs_admin_approval",
 		"recommended_action": nextStep,
@@ -244,5 +242,9 @@ func respondApproverRequired(w http.ResponseWriter, r *http.Request) {
 		"confirmed":          false,
 		"execution_state":    "blocked",
 		"execution_summary":  summary,
-	}})
+	}
+	if reason != "" {
+		data["approval_reason"] = reason
+	}
+	respondAPIJSON(w, status, protocol.APIResponse{OK: false, Error: "Needs admin approval", Data: data})
 }

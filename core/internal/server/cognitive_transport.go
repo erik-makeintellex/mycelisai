@@ -86,46 +86,41 @@ func respondStructuredChatBlocker(w http.ResponseWriter, agentResult chatAgentRe
 	})
 }
 
+// buildTransportChatBlocker classifies a chat transport failure. Summary and
+// RecommendedAction are user-safe; AdminAction names the runtime to inspect.
 func buildTransportChatBlocker(targetLabel string, err error) (int, cognitive.ExecutionAvailability) {
 	lower := strings.ToLower(strings.TrimSpace(err.Error()))
+	blocker := func(code, summary, action, adminAction string) cognitive.ExecutionAvailability {
+		return cognitive.ExecutionAvailability{Available: false, Code: code, Summary: fmt.Sprintf(summary, targetLabel),
+			RecommendedAction: action, AdminAction: adminAction}
+	}
+	const askAdmin = " If it keeps happening, ask an admin to check that Soma's services are running."
 	switch {
 	case errors.Is(err, context.DeadlineExceeded) || strings.Contains(lower, "deadline exceeded") || strings.Contains(lower, "timeout"):
-		return http.StatusGatewayTimeout, cognitive.ExecutionAvailability{
-			Available:         false,
-			Code:              "transport_timeout",
-			Summary:           fmt.Sprintf("%s did not respond before the request deadline.", targetLabel),
-			RecommendedAction: "Retry once. If the timeout repeats, inspect NATS connectivity and the target agent runtime.",
-		}
+		return http.StatusGatewayTimeout, blocker("transport_timeout", "%s took too long to answer.",
+			"Try again."+askAdmin,
+			"Retry once. If the timeout repeats, inspect NATS connectivity and the target agent runtime.")
 	case strings.Contains(lower, "outbound buffer limit exceeded"):
-		return http.StatusServiceUnavailable, cognitive.ExecutionAvailability{
-			Available:         false,
-			Code:              "transport_backpressure",
-			Summary:           fmt.Sprintf("%s is overloaded right now and could not process the request.", targetLabel),
-			RecommendedAction: "Retry once. If this repeats, inspect NATS backpressure and recent swarm traffic.",
-		}
+		return http.StatusServiceUnavailable, blocker("transport_backpressure", "%s is busy right now and couldn't take the request.",
+			"Wait a moment, then try again."+askAdmin,
+			"Retry once. If this repeats, inspect NATS backpressure and recent agent traffic.")
 	case errors.Is(err, nats.ErrNoResponders) || strings.Contains(lower, "no responders") || strings.Contains(lower, "not connected") || strings.Contains(lower, "connection closed") || strings.Contains(lower, "disconnected"):
-		return http.StatusServiceUnavailable, cognitive.ExecutionAvailability{
-			Available:         false,
-			Code:              "transport_unavailable",
-			Summary:           fmt.Sprintf("%s is currently unreachable from the workspace runtime.", targetLabel),
-			RecommendedAction: "Inspect NATS connectivity and confirm the target agent runtime is online before retrying.",
-		}
+		return http.StatusServiceUnavailable, blocker("transport_unavailable", "%s can't be reached right now.",
+			"Try again in a moment."+askAdmin,
+			"Inspect NATS connectivity and confirm the target agent runtime is online before retrying.")
 	default:
-		return http.StatusBadGateway, cognitive.ExecutionAvailability{
-			Available:         false,
-			Code:              "transport_unavailable",
-			Summary:           fmt.Sprintf("%s could not complete the request because the agent runtime did not respond cleanly.", targetLabel),
-			RecommendedAction: "Retry once. If it persists, inspect NATS connectivity and recent runtime logs.",
-		}
+		return http.StatusBadGateway, blocker("transport_unavailable", "%s didn't finish the request.",
+			"Try again."+askAdmin,
+			"Retry once. If it persists, inspect NATS connectivity and recent runtime logs.")
 	}
 }
 
-func respondChatTransportBlocker(w http.ResponseWriter, targetLabel string, err error) {
+func respondChatTransportBlocker(w http.ResponseWriter, r *http.Request, targetLabel string, err error) {
 	status, availability := buildTransportChatBlocker(targetLabel, err)
 	respondAPIJSON(w, status, protocol.APIResponse{
 		OK:    false,
 		Error: availability.Summary,
-		Data:  availability,
+		Data:  availabilityForViewer(r, availability),
 	})
 }
 
@@ -134,8 +129,9 @@ func (s *AdminServer) chatExecutionAvailability() cognitive.ExecutionAvailabilit
 		return cognitive.ExecutionAvailability{
 			Available:         false,
 			Code:              cognitive.ExecutionRouterUnavailable,
-			Summary:           "Soma does not have an available cognitive engine right now.",
-			RecommendedAction: "Open Settings and verify that at least one AI Engine is enabled and reachable for Soma.",
+			Summary:           cognitive.SummaryRouterUnavailable,
+			RecommendedAction: cognitive.UserEngineSetupAction,
+			AdminAction:       cognitive.AdminEngineSetupAction,
 			Profile:           "chat",
 			SetupRequired:     true,
 			SetupPath:         cognitive.DefaultExecutionSetupPath,

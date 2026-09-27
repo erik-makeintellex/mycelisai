@@ -90,6 +90,8 @@ export interface ProposalData {
     approval_required?: boolean;
     approval_reason?: string;
     approval_mode?: string;
+    /** "admin" when only an admin can approve this proposal (deck top-10 #1). */
+    required_approver_role?: string;
     capability_risk?: string;
     capability_ids?: string[];
     external_data_use?: boolean;
@@ -102,6 +104,19 @@ export interface ProposalData {
     nats_subjects?: string[];
     work_intent?: WorkIntentData;
     execution_mode?: WorkExecutionMode;
+    /** A bounded preview (first ~20 lines, at most ~1.5KB) of a drafted
+     * write_file target, so the user sees what will be written before
+     * pressing Start/Approve. Display only — the full draft lives in the
+     * planned write_file arguments. */
+    draft_previews?: ProposalDraftPreview[];
+}
+
+export interface ProposalDraftPreview {
+    path: string;
+    preview: string;
+    full_draft: boolean;
+    lines: number;
+    bytes: number;
 }
 
 export interface ConfirmProposalResult {

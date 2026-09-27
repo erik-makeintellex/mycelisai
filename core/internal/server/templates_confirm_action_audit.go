@@ -7,7 +7,9 @@ import (
 )
 
 func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protocol.ScopeValidation, auditUser string, actorIdentity map[string]any, pendingTeamWork bool) string {
-	executionState := "verified"
+	// The audit records run completion only; output verification lives in the
+	// confirm-action proof artifact after Core reads the outputs back.
+	executionState := "completed"
 	runResult := "completed"
 	runMessage := "Execution run completed for confirmed chat proposal"
 	if pendingTeamWork {

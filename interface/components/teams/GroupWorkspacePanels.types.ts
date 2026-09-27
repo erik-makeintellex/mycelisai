@@ -34,6 +34,9 @@ export type GroupWorkspacePanelsProps = {
   draft: GroupDraft;
   notice: string | null;
   error: string | null;
+  /** A 401/403 loading `/api/v1/groups`: render the admin-managed blocker
+   * instead of an empty rail (never "Nothing here yet" for a denied user). */
+  accessDenied: boolean;
   approvalPrompt: ApprovalPrompt | null;
   refreshing: boolean;
   saving: boolean;

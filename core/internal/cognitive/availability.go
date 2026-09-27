@@ -46,14 +46,15 @@ func (r *Router) ExecutionAvailability(profile string, explicitProvider string) 
 	availability := ExecutionAvailability{
 		Available:         false,
 		Profile:           strings.TrimSpace(profile),
-		RecommendedAction: "Open Settings and verify that at least one AI Engine is enabled and reachable for Soma.",
+		RecommendedAction: UserEngineSetupAction,
+		AdminAction:       AdminEngineSetupAction,
 		SetupRequired:     true,
 		SetupPath:         DefaultExecutionSetupPath,
 	}
 
 	if r == nil || r.Config == nil {
 		availability.Code = ExecutionRouterUnavailable
-		availability.Summary = "Soma cannot run because the cognitive router is offline."
+		availability.Summary = SummaryRouterUnavailable
 		return availability
 	}
 	r.mu.RLock()
@@ -61,7 +62,7 @@ func (r *Router) ExecutionAvailability(profile string, explicitProvider string) 
 	resolution := r.resolveExecutionProviderLocked(profile, explicitProvider)
 	if !resolution.Available && strings.TrimSpace(explicitProvider) == "" {
 		if hint := profileRecoveryHint(r.Config, resolution.Profile, resolution.ProviderID, resolution.Code); hint != "" {
-			availability.RecommendedAction = hint
+			availability.AdminAction = hint
 		}
 	}
 	availability.Profile = resolution.Profile
@@ -74,6 +75,7 @@ func (r *Router) ExecutionAvailability(profile string, explicitProvider string) 
 	if resolution.Available {
 		availability.SetupRequired = false
 		availability.RecommendedAction = ""
+		availability.AdminAction = ""
 		availability.SetupPath = ""
 		if resolution.FallbackApplied {
 			availability.SetupRequired = true
@@ -130,7 +132,8 @@ func (r *Router) applyExplicitFallbackLocked(profile string) (string, bool) {
 
 // profileRecoveryHint names the misrouted profile and its remedies for a
 // profile-routed request whose provider cannot run. It never names an
-// endpoint or secret.
+// endpoint or secret, but it may name an API path or env var, so it is
+// admin-only text (AdminAction, route health).
 func profileRecoveryHint(config *BrainConfig, profile, providerID, code string) string {
 	switch code {
 	case ExecutionProviderDisabled, ExecutionProviderMissing, ExecutionModelMissing, ExecutionProviderOffline:
@@ -180,7 +183,7 @@ func (r *Router) resolveExecutionProviderLocked(profile string, explicitProvider
 
 	if r == nil || r.Config == nil {
 		resolution.Code = ExecutionRouterUnavailable
-		resolution.Summary = "Soma cannot run because the cognitive router is offline."
+		resolution.Summary = SummaryRouterUnavailable
 		return resolution
 	}
 
@@ -197,7 +200,7 @@ func (r *Router) resolveExecutionProviderLocked(profile string, explicitProvider
 			fallbackID, fallbackProvider, ok := r.executionFallbackCandidate(resolution.Profile, "", r.primaryBoundaryForProfile(""))
 			if !ok {
 				resolution.Code = ExecutionNoProviders
-				resolution.Summary = "Soma does not have any available AI Engines configured for chat."
+				resolution.Summary = "Soma has no AI engine set up for chat yet."
 				return resolution
 			}
 			resolution.ProviderID = fallbackID
@@ -230,7 +233,7 @@ func (r *Router) resolveExecutionProviderLocked(profile string, explicitProvider
 	resolution.ProviderID = requestedProviderID
 	if !ok {
 		resolution.Code = ExecutionProviderMissing
-		resolution.Summary = "Soma is routed to an AI Engine provider that is not configured."
+		resolution.Summary = "The AI engine Soma uses for this task isn't set up."
 		return resolution
 	}
 
@@ -248,13 +251,13 @@ func (r *Router) resolveExecutionProviderLocked(profile string, explicitProvider
 	switch {
 	case !provider.Enabled:
 		resolution.Code = ExecutionProviderDisabled
-		resolution.Summary = "Soma is routed to an AI Engine that is configured but disabled."
+		resolution.Summary = "The AI engine Soma uses for this task is turned off."
 	case strings.TrimSpace(provider.ModelID) == "":
 		resolution.Code = ExecutionModelMissing
-		resolution.Summary = "Soma is routed to an AI Engine without a model configured."
+		resolution.Summary = "The AI engine Soma uses for this task has no model selected."
 	default:
 		resolution.Code = ExecutionProviderOffline
-		resolution.Summary = "Soma is routed to an AI Engine that is not available at runtime."
+		resolution.Summary = "The AI engine Soma uses for this task isn't running."
 	}
 	return resolution
 }

@@ -123,7 +123,7 @@ func buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, ru
 		capabilities = capabilityUseFromPlannedCalls(scope.PlannedToolCalls, scope.Tools, scope.RiskLevel)
 	}
 	outputs := executionOutputsFromToolResults(results)
-	outputs = attachConfirmActionOutputProofs(outputs, proofArtifactID, runID, contractID, results)
+	outputs, readback := attachConfirmActionOutputProofs(outputs, proofArtifactID, runID, contractID, results, confirmActionRequestEchoes(scope))
 	understandingSummary := "Confirmed proposal execution completed."
 	executionStateSummary := "Soma executed the confirmed proposal and recorded durable proof."
 	hasTeamDeliverable := hasDeliverableToolResult(results)
@@ -166,7 +166,7 @@ func buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, ru
 		}
 	}
 
-	return &protocol.ExecutionSummary{
+	summary := &protocol.ExecutionSummary{
 		ContractID:    contractID,
 		ProofID:       proofArtifactID,
 		WorkIntent:    scopeWorkIntent(scope),
@@ -201,6 +201,9 @@ func buildConfirmActionExecutionSummary(proofID, contractID, proofArtifactID, ru
 		},
 		NextStep: nextStep,
 	}
+	// Verified only when every claimed workspace output read back from disk.
+	applyConfirmActionReadbackFailure(summary, readback, runID)
+	return summary
 }
 
 func scopeWorkIntent(scope *protocol.ScopeValidation) *protocol.WorkIntent {

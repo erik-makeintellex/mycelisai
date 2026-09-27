@@ -66,11 +66,12 @@ func artifactMetadataJSON(metadata any) string {
 
 func (r *InternalToolRegistry) insertArtifact(ctx context.Context, artType, title, contentType, content, metaJSON string) (string, error) {
 	var artifactID string
+	agentID, metaJSON := attributeArtifact(ctx, metaJSON)
 	err := r.db.QueryRowContext(ctx, `
 		INSERT INTO artifacts (agent_id, artifact_type, title, content_type, content, metadata, status)
-		VALUES ('internal', $1, $2, $3, $4, $5, 'pending')
+		VALUES ($1, $2, $3, $4, $5, $6, 'pending')
 		RETURNING id
-	`, artType, title, contentType, content, metaJSON).Scan(&artifactID)
+	`, agentID, artType, title, contentType, content, metaJSON).Scan(&artifactID)
 	return artifactID, err
 }
 
@@ -174,7 +175,7 @@ func publishArtifactToExchange(ctx context.Context, svc *exchange.Service, artif
 		ArtifactID:     parsedID,
 		ArtifactType:   artType,
 		Title:          title,
-		AgentID:        "internal",
+		AgentID:        artifactExchangeAgentID(ctx),
 		RunID:          runID,
 		RunClass:       runClass,
 		NoRunReason:    noRunReason,

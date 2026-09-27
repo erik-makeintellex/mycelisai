@@ -99,7 +99,7 @@ func (s *AdminServer) finalizeTeamWorkValidation(
 		return err
 	}
 	if finalResult {
-		if err := s.markRunCompletedTx(tx, item.RunID, item.IntentProofID); err != nil {
+		if err := s.markRunCompletedTx(tx, item.RunID, item.IntentProofID, protocol.TrustProofQualityVerified); err != nil { // finalResult requires a passed runtime validation
 			return err
 		}
 	}

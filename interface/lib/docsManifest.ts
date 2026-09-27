@@ -72,6 +72,8 @@ export const DOC_MANIFEST: DocSection[] = [
         docs: [
             { slug: "mycelis-canonical-prd", label: "Mycelis Canonical PRD", path: "docs/architecture-library/MYCELIS_CANONICAL_PRD.md", description: "Single source for product thesis, UX, runtime architecture, governance, operator-provisioned team ownership, outcomes, capabilities, recovery, MVP scope, P0 delivery, and release gates" },
             { slug: "g4-e10-invocation", label: "G4/E10 Invocation Contract", path: "docs/architecture-library/G4_E10_DURABLE_INVOCATION.md", description: "Bounded counting-capability authority, durable ownership, uncertainty, and acceptance gates; review status is recorded in the packet" },
+            { slug: "market-position-workflow-targets", label: "Market Position & Workflow Targets", path: "docs/architecture-library/MARKET_POSITION_AND_WORKFLOW_TARGETS.md", description: "Positioning versus Paperclip, what to borrow, the interop option, and the 12-workflow modern-UX target model with current scores" },
+            { slug: "truthful-delivery-next-architecture", label: "Truthful Delivery & Next Architecture", path: "docs/architecture-library/TRUTHFUL_DELIVERY_AND_NEXT_ARCHITECTURE.md", description: "The truthfulness invariant, placeholder-audit status, the live journey probe, and the planned memory/handoff/budget architecture" },
             { slug: "arch-backend", label: "Backend", path: "docs/architecture/BACKEND.md", description: "Go packages, APIs, DB schema, NATS, and execution pipelines" },
             { slug: "arch-frontend", label: "Frontend", path: "docs/architecture/FRONTEND.md", description: "Routes, components, Zustand, and design system" },
         ],

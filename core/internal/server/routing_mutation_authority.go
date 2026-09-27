@@ -70,6 +70,7 @@ type providerBoundRejection struct {
 	Code              string   `json:"code"`
 	Profiles          []string `json:"profiles"`
 	RecommendedAction string   `json:"recommended_action"`
+	Detail            string   `json:"detail,omitempty"`
 }
 
 // cognitiveReadScope, like cognitive:write, unlocks the full cognitive view.
@@ -109,7 +110,7 @@ func (s *AdminServer) auditRoutingMutation(w http.ResponseWriter, r *http.Reques
 	}
 	auditID, err := s.createAuditEvent(protocol.TemplateChatToProposal, routingMutationAuditSource, message, attachActorIdentity(ctx, r))
 	if err != nil || strings.TrimSpace(auditID) == "" {
-		respondAPIError(w, "Audit unavailable: routing not changed", http.StatusServiceUnavailable)
+		respondBlocker(w, r, http.StatusServiceUnavailable, codeServiceUnavailable, "Audit unavailable: routing not changed", nil)
 		return "", false
 	}
 	return auditID, true
@@ -163,16 +164,19 @@ func (s *AdminServer) rejectIfProviderBound(w http.ResponseWriter, providerID st
 	if len(bound) == 0 {
 		return false
 	}
-	message := "provider " + providerID + " is bound to execution profiles: " + strings.Join(bound, ", ")
+	// Admin-only route (cognitive:write), so the API remedy sits in detail
+	// and the headline stays plain (UX1).
+	message := "This AI engine is in use for these task types: " + strings.Join(bound, ", ") + "."
 	respondAPIJSON(w, http.StatusConflict, protocol.APIResponse{
 		OK:    false,
 		Error: message,
 		Data: providerBoundRejection{
-			ProviderID: providerID,
-			Code:       providerBoundCode,
-			Profiles:   bound,
-			RecommendedAction: "Re-point these profiles with PUT /api/v1/cognitive/profiles or reset them with " +
-				"DELETE /api/v1/cognitive/profiles/{profile}/override, then retry.",
+			ProviderID:        providerID,
+			Code:              providerBoundCode,
+			Profiles:          bound,
+			RecommendedAction: "Choose another engine for these task types, or switch them back to the default engine, then turn this one off.",
+			Detail: "provider " + providerID + " is bound to execution profiles. Re-point them with PUT /api/v1/cognitive/profiles " +
+				"or reset them with DELETE /api/v1/cognitive/profiles/{profile}/override, then retry.",
 		},
 	})
 	return true

@@ -127,7 +127,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		s.completeConfirmedActionWorkerRun(r.Context(), runID, results)
 	}
 	if !pendingTeamWork {
-		if err := s.markRunCompletedTx(tx, runID, proofID); err != nil {
+		if err := s.markRunCompletedTx(tx, runID, proofID, confirmActionProofQuality(scope, results)); err != nil {
 			log.Printf("CE-1: confirm-action run completion failed: %v", err)
 			failAction(fmt.Errorf("finalize execution record: %w", err))
 			return
@@ -204,7 +204,7 @@ func confirmedConfigMutationPlan(scope *protocol.ScopeValidation) (bool, error) 
 func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, string, *protocol.ScopeValidation, string, bool) {
 	tok, err := s.consumeConfirmTokenTx(tx, token)
 	if err != nil {
-		respondConfirmTokenError(w, err, http.StatusBadRequest)
+		respondConfirmTokenError(w, r, err, http.StatusBadRequest)
 		return "", "", nil, "", false
 	}
 	proofID := tok.ProofID

@@ -93,6 +93,27 @@ describe('cortexStoreUtils', () => {
         expect(solid[1].data?.status).toBe('online');
     });
 
+    it('solidifies nodes with the caller-supplied real status instead of always claiming online', () => {
+        const nodes: Node[] = [
+            {
+                id: 'agent-0-0',
+                type: 'agentNode',
+                position: { x: 0, y: 0 },
+                className: 'ghost-draft',
+                data: { status: 'offline' },
+            },
+        ];
+
+        // A partially-activated or unactivated commit must not paint every
+        // node online: the caller passes the real status it got back.
+        const offline = solidifyNodes(nodes, 'offline');
+        expect(offline[0].className).toBe('');
+        expect(offline[0].data?.status).toBe('offline');
+
+        const errored = solidifyNodes(nodes, 'error');
+        expect(errored[0].data?.status).toBe('error');
+    });
+
     it('dispatches thought and error signals to matching nodes', () => {
         const nodes: Node[] = [
             { id: 'agent-a', position: { x: 0, y: 0 }, data: { label: 'agent-a', status: 'online' } },

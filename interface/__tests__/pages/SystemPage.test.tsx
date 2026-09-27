@@ -46,26 +46,33 @@ describe('System Page (V8.1 advanced diagnostics)', () => {
         }
         mockAdvancedMode.mockReturnValue(true);
         mockToggleAdvancedMode.mockReset();
-        // Mock fetch for health checks
-        vi.spyOn(global, 'fetch').mockResolvedValue({
-            ok: true,
-            json: async () => ({ goroutines: 42, heap_alloc_mb: 18.5, sys_mem_mb: 52.0, llm_tokens_sec: 3.2, timestamp: new Date().toISOString() }),
-        } as Response);
+        // Mock fetch for health checks, and /auth/session as an admin so
+        // AdvancedModeRoute's admin_required gate lets this admin-only page render.
+        vi.spyOn(global, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+            const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+            if (url.includes('/auth/session')) {
+                return { ok: true, json: async () => ({ data: { user: { role: 'admin' } } }) } as Response;
+            }
+            return {
+                ok: true,
+                json: async () => ({ goroutines: 42, heap_alloc_mb: 18.5, sys_mem_mb: 52.0, llm_tokens_sec: 3.2, timestamp: new Date().toISOString() }),
+            } as Response;
+        });
     });
 
     it('renders page title', async () => {
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText('System')).toBeDefined();
+        expect(await screen.findByText('System')).toBeDefined();
     });
 
     it('renders Admin tools badge', async () => {
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText('Admin tools')).toBeDefined();
+        expect(await screen.findByText('Admin tools')).toBeDefined();
     });
 
     it('renders all tabs', async () => {
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText('Runtime Health')).toBeDefined();
+        expect(await screen.findByText('Runtime Health')).toBeDefined();
         expect(screen.getByText('Event Bus')).toBeDefined();
         expect(screen.getByText('Storage')).toBeDefined();
         expect(screen.getByText('Services')).toBeDefined();
@@ -73,32 +80,32 @@ describe('System Page (V8.1 advanced diagnostics)', () => {
 
     it('defaults to Runtime Health tab', async () => {
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText('LIVE')).toBeDefined();
+        expect(await screen.findByText('LIVE')).toBeDefined();
     });
 
     it('deep-links to services tab via search param', async () => {
         mockSearchParams.set('tab', 'services');
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText('Services')).toBeDefined();
+        expect(await screen.findByText('Services')).toBeDefined();
     });
 
     it('shows the advanced gate when advanced mode is off', async () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText(/System diagnostics are in Admin tools/i)).toBeDefined();
+        expect(await screen.findByText(/System diagnostics are in Admin tools/i)).toBeDefined();
     });
 
     it('lets an operator open Admin tools from the gate', async () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => { render(<SystemPage />); });
-        fireEvent.click(screen.getByRole('link', { name: /Open admin tools/i }));
+        fireEvent.click(await screen.findByRole('link', { name: /Open admin tools/i }));
         expect(mockToggleAdvancedMode).toHaveBeenCalledOnce();
     });
 
     it('shows lifecycle commands through the supported invoke contract', async () => {
         mockSearchParams.set('tab', 'services');
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText('uv run inv lifecycle.up --build --frontend')).toBeDefined();
+        expect(await screen.findByText('uv run inv lifecycle.up --build --frontend')).toBeDefined();
         expect(screen.getByText('uv run inv lifecycle.down')).toBeDefined();
         expect(screen.getByText('uv run inv lifecycle.first-boot-proof')).toBeDefined();
         expect(screen.queryByText(/uvx inv lifecycle/i)).toBeNull();

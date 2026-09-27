@@ -76,7 +76,9 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 	if err := r.nc.Publish(fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID), payload); err != nil {
 		return "", fmt.Errorf("failed to publish task to team %s: %w", teamID, err)
 	}
-	return fmt.Sprintf("Task delegated to team %s.", teamID), nil
+	// Core NATS publish is fire-and-forget: it proves the command reached the
+	// bus client, not that the team received or accepted it.
+	return fmt.Sprintf("Task queued for team %s. Delivery and acceptance are not yet confirmed; the team's receipt and status report them.", teamID), nil
 }
 
 func (r *InternalToolRegistry) resolveDelegationTeam(ask protocol.TeamAsk) (string, error) {
@@ -264,7 +266,7 @@ func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[
 
 func (r *InternalToolRegistry) handleListTeams(_ context.Context, _ map[string]any) (string, error) {
 	if r.somaRef == nil {
-		return "Soma not available — cannot list teams.", nil
+		return "", fmt.Errorf("list_teams unavailable: Soma is not available")
 	}
 	type teamSummary struct {
 		ID      string `json:"id"`

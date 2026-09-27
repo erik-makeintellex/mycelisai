@@ -91,16 +91,29 @@ export function createCortexRuntimeSlice(
                     body: JSON.stringify(profile),
                 });
                 if (!res.ok) {
-                    console.error('[PROFILES] Update failed:', await res.text());
-                    return;
+                    const text = await res.text();
+                    let code: string | undefined;
+                    let recommendedAction: string | undefined;
+                    try {
+                        const parsed = JSON.parse(text) as { data?: { code?: string; recommended_action?: string }; error?: string };
+                        code = parsed.data?.code;
+                        recommendedAction = parsed.data?.recommended_action ?? parsed.error;
+                    } catch {
+                        recommendedAction = text || undefined;
+                    }
+                    console.error('[PROFILES] Update failed:', text);
+                    return { ok: false, error: recommendedAction ?? 'Update failed', code, httpStatus: res.status };
                 }
                 const body = await res.json();
                 const updated: MissionProfile = body.data;
                 set((s) => ({
                     missionProfiles: s.missionProfiles.map((item) => (item.id === id ? updated : item)),
                 }));
+                return { ok: true, error: null };
             } catch (err) {
+                const message = err instanceof Error ? err.message : 'Update failed';
                 console.error('[PROFILES] Update error:', err);
+                return { ok: false, error: message };
             }
         },
 
@@ -108,15 +121,28 @@ export function createCortexRuntimeSlice(
             try {
                 const res = await fetch(`/api/v1/mission-profiles/${id}`, { method: 'DELETE' });
                 if (!res.ok) {
-                    console.error('[PROFILES] Delete failed:', await res.text());
-                    return;
+                    const text = await res.text();
+                    let code: string | undefined;
+                    let recommendedAction: string | undefined;
+                    try {
+                        const parsed = JSON.parse(text) as { data?: { code?: string; recommended_action?: string }; error?: string };
+                        code = parsed.data?.code;
+                        recommendedAction = parsed.data?.recommended_action ?? parsed.error;
+                    } catch {
+                        recommendedAction = text || undefined;
+                    }
+                    console.error('[PROFILES] Delete failed:', text);
+                    return { ok: false, error: recommendedAction ?? 'Delete failed', code, httpStatus: res.status };
                 }
                 set((s) => ({
                     missionProfiles: s.missionProfiles.filter((item) => item.id !== id),
                     activeProfileId: s.activeProfileId === id ? null : s.activeProfileId,
                 }));
+                return { ok: true, error: null };
             } catch (err) {
+                const message = err instanceof Error ? err.message : 'Delete failed';
                 console.error('[PROFILES] Delete error:', err);
+                return { ok: false, error: message };
             }
         },
 
@@ -124,8 +150,18 @@ export function createCortexRuntimeSlice(
             try {
                 const res = await fetch(`/api/v1/mission-profiles/${id}/activate`, { method: 'POST' });
                 if (!res.ok) {
-                    console.error('[PROFILES] Activate failed:', await res.text());
-                    return;
+                    const text = await res.text();
+                    let code: string | undefined;
+                    let recommendedAction: string | undefined;
+                    try {
+                        const parsed = JSON.parse(text) as { data?: { code?: string; recommended_action?: string }; error?: string };
+                        code = parsed.data?.code;
+                        recommendedAction = parsed.data?.recommended_action ?? parsed.error;
+                    } catch {
+                        recommendedAction = text || undefined;
+                    }
+                    console.error('[PROFILES] Activate failed:', text);
+                    return { ok: false, error: recommendedAction ?? 'Activate failed', code, httpStatus: res.status };
                 }
                 const body = await res.json();
                 const activated: MissionProfile = body.data;
@@ -137,8 +173,11 @@ export function createCortexRuntimeSlice(
                             : item.auto_start ? item : { ...item, is_active: false }
                     ),
                 }));
+                return { ok: true, error: null };
             } catch (err) {
+                const message = err instanceof Error ? err.message : 'Activate failed';
                 console.error('[PROFILES] Activate error:', err);
+                return { ok: false, error: message };
             }
         },
 

@@ -26,7 +26,7 @@ describe("CouncilCallErrorCard", () => {
             />
         );
 
-        expect(screen.getByText("Operational alert")).toBeDefined();
+        expect(screen.getByRole("alert")).toBeDefined();
         expect(screen.getByText("Council member timeout")).toBeDefined();
         expect(screen.getByText(/did not respond before the request deadline/i)).toBeDefined();
     });
@@ -201,5 +201,107 @@ describe("CouncilCallErrorCard", () => {
 
         fireEvent.click(screen.getByText("Open Resources"));
         expect(assign).toHaveBeenCalledWith("/resources?section=capabilities");
+    });
+
+    it("uses role=alert and hides icons from the accessibility tree", () => {
+        const { container } = render(
+            <CouncilCallErrorCard
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "admin",
+                    message: "request timeout",
+                })}
+                onRetry={vi.fn()}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        expect(screen.getByRole("alert")).toBeDefined();
+        const icons = container.querySelectorAll("svg");
+        expect(icons.length).toBeGreaterThan(0);
+        icons.forEach((icon) => expect(icon.getAttribute("aria-hidden")).toBe("true"));
+    });
+
+    it("wires the Details button to the details panel via aria-controls/id", () => {
+        render(
+            <CouncilCallErrorCard
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "admin",
+                    message: "request timeout",
+                })}
+                onRetry={vi.fn()}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        const detailsButton = screen.getByText("Details").closest("button")!;
+        const controlsId = detailsButton.getAttribute("aria-controls");
+        expect(controlsId).toBeTruthy();
+        fireEvent.click(detailsButton);
+        expect(document.getElementById(controlsId!)).not.toBeNull();
+    });
+
+    it("hides Retry for a non-retryable blocker such as token_already_used", () => {
+        const onRetry = vi.fn();
+        render(
+            <CouncilCallErrorCard
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "admin",
+                    message: "this proposal was already confirmed",
+                    statusCode: 409,
+                    code: "token_already_used",
+                })}
+                onRetry={onRetry}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText("Already approved")).toBeDefined();
+        expect(screen.queryByText("Retry")).toBeNull();
+    });
+
+    it("shows Retry for a retryable governance code such as approver_required", () => {
+        render(
+            <CouncilCallErrorCard
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "admin",
+                    message: "needs admin approval",
+                    statusCode: 403,
+                    code: "approver_required",
+                })}
+                onRetry={vi.fn()}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText("Waiting for an admin to approve")).toBeDefined();
+        expect(screen.getByText("Retry")).toBeDefined();
+    });
+
+    it("shows the code in Details when the failure carries a governance code", () => {
+        render(
+            <CouncilCallErrorCard
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "admin",
+                    message: "needs admin approval",
+                    statusCode: 403,
+                    code: "approver_required",
+                })}
+                onRetry={vi.fn()}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        fireEvent.click(screen.getByText("Details"));
+        expect(screen.getByText("Code: approver_required")).toBeDefined();
     });
 });

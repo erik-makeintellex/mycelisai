@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -17,8 +18,99 @@ func (p *teamWorkSignalProjection) recordAsyncCompletionProof(
 	payloadKind protocol.SignalPayloadKind,
 	outputRefs []protocol.TeamOutputRef,
 	finalResult bool,
+	readback *teamOutputReadback,
 ) (string, error) {
-	return p.recordCompletionProof(ctx, exec, item, payloadKind, outputRefs, finalResult, nil)
+	return p.recordCompletionProof(ctx, exec, item, payloadKind, outputRefs, finalResult, nil, readback)
+}
+
+// teamOutputReadback is Core's own readback of the refs a team result claims.
+type teamOutputReadback struct {
+	ByRef  map[string]outputReadback
+	Failed *outputReadback
+}
+
+func (r *teamOutputReadback) failureCode() string {
+	if r == nil || r.Failed == nil {
+		return ""
+	}
+	if r.Failed.Status == outputReadbackMismatch {
+		return "output_digest_mismatch"
+	}
+	return "output_" + r.Failed.Status
+}
+
+func readbackTeamOutputRefs(item protocol.TeamWorkItem, refs []protocol.TeamOutputRef, claimed map[string]string) *teamOutputReadback {
+	readback := &teamOutputReadback{ByRef: map[string]outputReadback{}}
+	echoes := []string{item.Objective}
+	if item.WorkIntent != nil {
+		echoes = append(echoes, item.WorkIntent.Objective)
+	}
+	echoes = normalizeStringSlice(echoes)
+	for _, ref := range refs {
+		key := teamOutputRefKey(ref)
+		storage, entrypoint := strings.TrimSpace(ref.StorageRef), strings.TrimSpace(ref.Entrypoint)
+		var result outputReadback
+		switch {
+		case storage != "" && teamOutputRefIsWorkspacePath(storage):
+			result = readbackWorkspaceOutput(storage, claimed[key], echoes)
+			if result.verified() && result.Folder && entrypoint != "" {
+				if entry := readbackWorkspaceOutput(teamWorkEntrypointPath(ref), "", echoes); !entry.verified() {
+					result = entry
+				}
+			}
+		case storage == "" && entrypoint != "" && teamOutputRefIsWorkspacePath(entrypoint):
+			result = readbackWorkspaceOutput(entrypoint, claimed[key], echoes)
+		default:
+			result = outputReadback{Path: firstNonEmptyString(storage, entrypoint, ref.OutputID), Status: outputReadbackUnresolvable,
+				Detail: "the output ref names no workspace path Core can read back"}
+		}
+		readback.ByRef[key] = result
+		if readback.Failed == nil && !result.verified() && result.Status != outputReadbackUnresolvable {
+			failed := result
+			readback.Failed = &failed
+		}
+	}
+	return readback
+}
+
+func teamReadbackStatuses(readback *teamOutputReadback) []map[string]any {
+	statuses := make([]map[string]any, 0, len(readback.ByRef))
+	for _, result := range readback.ByRef {
+		statuses = append(statuses, map[string]any{"path": result.Path, "status": result.Status, "sha256": result.Checksum, "bytes": result.Bytes})
+	}
+	sort.Slice(statuses, func(i, j int) bool { return fmt.Sprint(statuses[i]["path"]) < fmt.Sprint(statuses[j]["path"]) })
+	return statuses
+}
+
+func teamOutputRefIsWorkspacePath(value string) bool {
+	return !strings.Contains(value, "://") && !strings.HasPrefix(value, "/api/")
+}
+
+func applyTeamOutputReadback(outputs []protocol.ExecutionOutput, refs []protocol.TeamOutputRef, readback *teamOutputReadback) {
+	if readback == nil {
+		return
+	}
+	byOutput := map[string]outputReadback{}
+	for _, ref := range refs {
+		if result, ok := readback.ByRef[teamOutputRefKey(ref)]; ok {
+			byOutput[firstNonEmptyString(ref.OutputID, ref.Label)] = result
+		}
+	}
+	for i := range outputs {
+		result, ok := byOutput[outputs[i].ID]
+		if !ok || outputs[i].Proof == nil {
+			continue
+		}
+		proof := outputs[i].Proof
+		proof.PathBoundaryStatus = firstNonEmptyString(result.PathBoundary, outputReadbackNotApplicable)
+		proof.ReadbackStatus = result.Status
+		if result.Checksum != "" {
+			proof.Checksum, proof.ChecksumAlgorithm, proof.Bytes = result.Checksum, "sha256", result.Bytes
+		}
+		if !result.verified() {
+			proof.RecoveryHint = result.Detail
+		}
+	}
 }
 
 type completionValidationEvidence struct {
@@ -35,7 +127,7 @@ func (p *teamWorkSignalProjection) recordRuntimeCompletionProof(
 	finalResult bool,
 	validation completionValidationEvidence,
 ) (string, error) {
-	return p.recordCompletionProof(ctx, exec, item, protocol.PayloadKindResult, outputRefs, finalResult, &validation)
+	return p.recordCompletionProof(ctx, exec, item, protocol.PayloadKindResult, outputRefs, finalResult, &validation, nil)
 }
 
 func (p *teamWorkSignalProjection) recordCompletionProof(
@@ -46,8 +138,11 @@ func (p *teamWorkSignalProjection) recordCompletionProof(
 	outputRefs []protocol.TeamOutputRef,
 	finalResult bool,
 	validation *completionValidationEvidence,
+	readback *teamOutputReadback,
 ) (string, error) {
-	if payloadKind != protocol.PayloadKindResult || item.State != protocol.TeamWorkStateOutputReady || len(outputRefs) == 0 {
+	readbackFailed := readback.failureCode() != ""
+	readyState := item.State == protocol.TeamWorkStateOutputReady || (readbackFailed && item.State == protocol.TeamWorkStateDegraded)
+	if payloadKind != protocol.PayloadKindResult || !readyState || len(outputRefs) == 0 {
 		return "", nil
 	}
 	if strings.TrimSpace(item.ContractID) == "" && strings.TrimSpace(item.IntentProofID) == "" {
@@ -65,15 +160,30 @@ func (p *teamWorkSignalProjection) recordCompletionProof(
 		}
 		outputs[i].Proof.ProofID = proofID
 	}
+	applyTeamOutputReadback(outputs, outputRefs, readback)
+	status := protocol.ProofArtifactStatusSuccess
+	evidenceStrength := protocol.TrustEvidenceStrengthRetainedOutput
+	// Without a runtime validation plan Core has only read the refs back, so
+	// the proof stays unverified; only runtime validation earns verified.
+	proofQuality := protocol.TrustProofQualityUnverified
+	var degradation any
 	validationSource := protocol.TrustValidationSourceRetainedOutput
-	validationScope := "retained files, package containment, referenced local assets, and static interaction contract"
-	runtimeValidation := "not_required"
+	validationScope := "Core readback of each claimed output ref: exists inside the workspace, readable, non-empty, not a request echo, and matching any declared digest; no runtime validation plan"
+	runtimeValidation := "not_planned"
 	reviewEvent := "team_signal_result"
 	if validation != nil {
 		validationSource = protocol.TrustValidationSourceRuntimeOutput
 		validationScope = "digest-bound browser load, page errors, local assets, and approved primary interaction"
 		runtimeValidation = "passed"
 		reviewEvent = "runtime_output_validation"
+		proofQuality = protocol.TrustProofQualityVerified
+	}
+	if readbackFailed {
+		status, evidenceStrength, proofQuality = protocol.ProofArtifactStatusDegraded, protocol.TrustEvidenceStrengthDegraded, protocol.TrustProofQualityFailed
+		degradation = map[string]any{
+			"code": readback.failureCode(), "what_failed": readback.Failed.Detail, "path": readback.Failed.Path,
+			"readback_status": readback.Failed.Status, "requires_attention": true,
+		}
 	}
 	payload := map[string]any{
 		"team_id": item.TeamID, "work_item_id": item.WorkItemID, "run_id": item.RunID,
@@ -81,6 +191,9 @@ func (p *teamWorkSignalProjection) recordCompletionProof(
 		"expected_outputs": item.ExpectedOutputs, "expected_proof": item.ExpectedProof,
 		"output_refs": outputRefs, "validation_scope": validationScope,
 		"runtime_validation": runtimeValidation,
+	}
+	if readback != nil {
+		payload["readback_statuses"] = teamReadbackStatuses(readback)
 	}
 	if validation != nil {
 		payload["validation_ref"] = validation.ValidationRef
@@ -93,12 +206,13 @@ func (p *teamWorkSignalProjection) recordCompletionProof(
 		ContractID:       item.ContractID,
 		IntentProofID:    item.IntentProofID,
 		RunID:            item.RunID,
-		Status:           protocol.ProofArtifactStatusSuccess,
+		Status:           status,
 		ProofClass:       protocol.ExecutionProofClassRunAudit,
 		ValidationSource: validationSource,
-		EvidenceStrength: protocol.TrustEvidenceStrengthRetainedOutput,
-		ProofQuality:     protocol.TrustProofQualityVerified,
+		EvidenceStrength: evidenceStrength,
+		ProofQuality:     proofQuality,
 		OutputRefs:       outputs,
+		Degradation:      degradation,
 		AuditRefs:        auditRefsForAsyncCompletion(item, outputRefs),
 		ReviewLineage: []map[string]string{{
 			"event":        reviewEvent,

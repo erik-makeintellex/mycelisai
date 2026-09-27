@@ -22,7 +22,9 @@ export interface CTSEnvelope {
 export interface SensorNode {
     id: string;
     type: string;
-    status: 'online' | 'offline' | 'degraded';
+    // Sensors come only from real running agents with probe state; `pending`
+    // covers a probe that hasn't reported in yet (never a placeholder online).
+    status: 'online' | 'offline' | 'degraded' | 'pending';
     last_seen: string;
     label: string;
 }
@@ -164,6 +166,18 @@ export interface TriggerExecution {
     approval_state?: ScheduleHandoffApprovalState;
     handoff_payload?: Record<string, unknown>;
     executed_at: string;
+}
+
+/**
+ * Result of a mutating runtime-slice call (update/delete/activate). Never a
+ * bare boolean, so a caller (for example MissionProfilesPage) can keep an
+ * editor open on failure and map `code` through `lib/blockerCopy`.
+ */
+export interface MutationResult {
+    ok: boolean;
+    error: string | null;
+    code?: string;
+    httpStatus?: number;
 }
 
 export interface PolicyRule {

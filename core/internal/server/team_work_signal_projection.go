@@ -90,6 +90,7 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	}
 	item.State = projectedState
 	var validationDispatch *teamWorkValidationDispatchPayload
+	var readback *teamOutputReadback
 	validationIssue := ""
 	if payloadKind == protocol.PayloadKindResult && item.State == protocol.TeamWorkStateOutputReady {
 		prepared, prepareErr := prepareTeamWorkValidation(item, candidateOutputRefs)
@@ -99,6 +100,13 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 		} else if prepared != nil {
 			item.State = protocol.TeamWorkStateReviewing
 			validationDispatch = prepared
+		} else if len(incomingOutputRefs) > 0 {
+			// No runtime plan: Core reads each claimed ref back before recording proof.
+			readback = readbackTeamOutputRefs(item, incomingOutputRefs, claimedSignalOutputDigests(item, env, payload))
+			if code := readback.failureCode(); code != "" {
+				item.State = protocol.TeamWorkStateDegraded
+				validationIssue = code
+			}
 		}
 	}
 	item.NeedsOperator = item.State == protocol.TeamWorkStateNeedsOperator || item.State == protocol.TeamWorkStateDegraded
@@ -132,7 +140,7 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 	if err != nil {
 		return err
 	}
-	proofArtifactID, err := p.recordAsyncCompletionProof(ctx, tx, item, payloadKind, incomingOutputRefs, finalResult)
+	proofArtifactID, err := p.recordAsyncCompletionProof(ctx, tx, item, payloadKind, incomingOutputRefs, finalResult, readback)
 	if err != nil {
 		return err
 	}
@@ -160,7 +168,7 @@ func (p *teamWorkSignalProjection) project(ctx context.Context, subject string, 
 		}
 	}
 	if finalResult {
-		if err := p.server.markRunCompletedTx(tx, item.RunID, item.IntentProofID); err != nil {
+		if err := p.server.markRunCompletedTx(tx, item.RunID, item.IntentProofID, protocol.TrustProofQualityUnverified); err != nil { // no runtime plan: readback only
 			return fmt.Errorf("complete linked execution run: %w", err)
 		}
 	}

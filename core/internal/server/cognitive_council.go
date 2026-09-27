@@ -46,7 +46,7 @@ func (s *AdminServer) isCouncilMember(memberID string) (teamID string, role stri
 // Returns all addressable council members from standing teams.
 func (s *AdminServer) HandleListCouncilMembers(w http.ResponseWriter, r *http.Request) {
 	if s.Soma == nil {
-		respondAPIError(w, "Swarm offline", http.StatusServiceUnavailable)
+		respondBlocker(w, r, http.StatusServiceUnavailable, codeTeamServiceOffline, "Soma runtime is not attached", nil)
 		return
 	}
 
@@ -100,14 +100,14 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		respondAPIJSON(w, http.StatusServiceUnavailable, protocol.APIResponse{
 			OK:    false,
 			Error: availability.Summary,
-			Data:  availability,
+			Data:  availabilityForViewer(r, availability),
 		})
 		return
 	}
 
 	// NATS must be available
 	if s.NC == nil {
-		respondAPIError(w, "Swarm offline — council agents unavailable. Start the organism first.", http.StatusServiceUnavailable)
+		respondBlocker(w, r, http.StatusServiceUnavailable, codeTeamServiceOffline, "NATS is not connected; council agents are unreachable", nil)
 		return
 	}
 
@@ -123,7 +123,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 	agentResult, err := s.requestChatAgent(r.Context(), subject, req.Messages)
 	if err != nil {
 		log.Printf("Council chat with %s failed: %v", memberID, err)
-		respondChatTransportBlocker(w, fmt.Sprintf("Council member %s", memberID), err)
+		respondChatTransportBlocker(w, r, fmt.Sprintf("Council member %s", memberID), err)
 		return
 	}
 
@@ -314,8 +314,7 @@ func (s *AdminServer) applyCouncilOutcomeTemplateOrRespond(w http.ResponseWriter
 	messages []chatRequestMessage, latestUserText, teamID string, display *proposalDisplayContract) bool {
 	if _, err := s.applyThreadOutcomeTemplate(r.Context(), "", messages, latestUserText, "", teamID,
 		auditActorIDFromRequest(r), display); err != nil {
-		respondGovernanceError(w, http.StatusConflict, err.Error(), codeCouncilTemplateUnresolved,
-			"Apply this Outcome Template through Soma in its organization")
+		respondBlocker(w, r, http.StatusConflict, codeCouncilTemplateUnresolved, err.Error(), nil)
 		return false
 	}
 	return true

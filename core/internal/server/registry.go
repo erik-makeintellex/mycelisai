@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -65,8 +66,7 @@ func (s *AdminServer) handleInstallConnector(w http.ResponseWriter, r *http.Requ
 	}
 	teamIDStr := path[prefixLen : prefixLen+36]
 
-	teamID, err := uuid.Parse(teamIDStr)
-	if err != nil {
+	if _, err := uuid.Parse(teamIDStr); err != nil {
 		http.Error(w, "Invalid Team UUID", http.StatusBadRequest)
 		return
 	}
@@ -81,14 +81,27 @@ func (s *AdminServer) handleInstallConnector(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	ac, err := s.Registry.InstallConnector(r.Context(), teamID, req.TemplateID, req.Name, req.Config)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError) // 500 or 400? Validation error vs DB error
-		return
-	}
+	respondInstallConnectorError(w, s.Registry.InstallConnector(r.Context(), req.TemplateID, req.Config))
+}
 
-	w.WriteHeader(http.StatusCreated)
-	respondJSON(w, ac)
+// respondInstallConnectorError maps install outcomes to normalized envelopes.
+// A valid install is a 501 connector_deployment_unavailable blocker: no
+// deployer exists, so nothing is recorded and nothing claims to provision.
+func respondInstallConnectorError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, registry.ErrConnectorDeploymentUnavailable):
+		respondGovernanceError(w, http.StatusNotImplemented,
+			"Connector deployment is not available yet; nothing was installed.",
+			"connector_deployment_unavailable", "Use MCP servers or configured providers for external data until connector deployment ships.")
+	case errors.Is(err, registry.ErrTemplateNotFound):
+		respondAPIError(w, "connector template not found", http.StatusNotFound)
+	case errors.Is(err, registry.ErrInvalidConnectorConfig):
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+	case err != nil:
+		respondAPIError(w, "connector install failed", http.StatusInternalServerError)
+	default:
+		respondAPIError(w, "connector install returned no outcome", http.StatusInternalServerError)
+	}
 }
 
 // GET /api/v1/teams/{id}/wiring

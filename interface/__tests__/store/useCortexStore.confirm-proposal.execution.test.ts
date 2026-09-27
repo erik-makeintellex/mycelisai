@@ -275,6 +275,77 @@ describe('useCortexStore confirm proposal execution', () => {
         });
     });
 
+    it('shows a degradation card with blockerCopy when the run completed but readback could not verify it', async () => {
+        useCortexStore.setState({
+            pendingProposal: {
+                intent: 'Write the launch note',
+                teams: 1,
+                agents: 1,
+                tools: ['write_file'],
+                risk_level: 'medium',
+                confirm_token: 'ct-unverified',
+                intent_proof_id: 'ip-unverified',
+            },
+            activeConfirmToken: 'ct-unverified',
+            missionChat: [{
+                role: 'council',
+                content: 'Proposed execution path',
+                mode: 'proposal',
+                proposal: {
+                    intent: 'Write the launch note',
+                    teams: 1,
+                    agents: 1,
+                    tools: ['write_file'],
+                    risk_level: 'medium',
+                    confirm_token: 'ct-unverified',
+                    intent_proof_id: 'ip-unverified',
+                },
+                proposal_status: 'active',
+            }],
+            missionChatError: null,
+            activeMode: 'proposal',
+            activeRunId: null,
+        });
+        mockFetch
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    data: {
+                        run_id: 'run-unverified',
+                        verified: false,
+                        run_status: 'completed',
+                        execution_state: 'unverified',
+                        execution_summary: {
+                            execution: { shape: 'guided_proposal', status: 'completed' },
+                            proof: { verified: false },
+                            audit_recovery: {
+                                recovery_state: 'unverified',
+                                degradation: { code: 'output_readback_missing' },
+                            },
+                        },
+                    },
+                }),
+            })
+            .mockResolvedValueOnce({ ok: true, json: async () => ([]) });
+
+        const result = await useCortexStore.getState().confirmProposal();
+
+        expect(result).toEqual({ ok: true, runId: 'run-unverified' });
+        // Never a plain "recorded" or verified-looking state: it must carry
+        // the real blockerCopy-derived degradation text.
+        expect(useCortexStore.getState().missionChat[0]).toMatchObject({
+            proposal_status: 'executed',
+            run_id: 'run-unverified',
+        });
+        const receipt = useCortexStore.getState().missionChat.at(-1);
+        expect(receipt).toMatchObject({
+            ui_response_state: { kind: 'degraded_execution', tone: 'warning' },
+            thread_events: [{ kind: 'attention_required', tone: 'warning', status: 'unverified' }],
+        });
+        expect(receipt?.content).toContain("Couldn't confirm the file");
+        expect(receipt?.content).not.toMatch(/Result verified|Approval recorded\./);
+    });
+
     it('does not run proposals that are missing executable proof linkage', async () => {
         const renderedProposal = {
             intent: 'Create this visible file',

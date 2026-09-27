@@ -97,7 +97,7 @@ func (executor *resultContractToolExecutor) writeFile(path string, name string, 
 		"message": "completed:" + name,
 		"artifact": protocol.ChatArtifactRef{
 			Type: "project_package", Title: title, ContentType: "application/vnd.mycelis.project+json",
-			SavedPath: folder, Entrypoint: entrypoint, Folder: folder, Files: projectPackageSupportFileNames(args),
+			SavedPath: folder, Entrypoint: entrypoint, Folder: folder, Files: projectPackageWrittenFiles(folder, path),
 		},
 	}), nil
 }

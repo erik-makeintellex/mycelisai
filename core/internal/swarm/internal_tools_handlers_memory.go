@@ -39,8 +39,7 @@ func (r *InternalToolRegistry) handleStoreArtifact(ctx context.Context, args map
 	}
 	artifactID, err := r.insertArtifact(ctx, artType, title, contentType, content, artifactMetadataJSON(metadata))
 	if err != nil {
-		log.Printf("store_artifact: %v", err)
-		return fmt.Sprintf("Failed to store artifact: %v", err), nil
+		return "", fmt.Errorf("store_artifact failed to persist the artifact: %w", err)
 	}
 	if r.exchange != nil {
 		publishArtifactToExchange(ctx, r.exchange, artifactID, artType, title)
@@ -65,8 +64,7 @@ func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[stri
 		VALUES ($1, $2, $3, $4, NULLIF($5,''), $6, NULLIF($7,''), $8, NOW())
 	`, category, content, memContext, scope.TenantID, scope.TeamID, scope.AgentID, scope.RunID, scope.Visibility)
 	if err != nil {
-		log.Printf("remember: RDBMS insert failed: %v", err)
-		return fmt.Sprintf("Failed to store memory: %v", err), nil
+		return "", fmt.Errorf("remember failed to persist the memory: %w", err)
 	}
 
 	storeMemoryVector(ctx, r.brain, r.mem, category, content, memContext, scope)

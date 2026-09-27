@@ -1,4 +1,4 @@
-import type { ModuleBindingData, ProposalData, TeamExpressionData, WorkIntentData } from '@/store/cortexStoreTypes';
+import type { ModuleBindingData, ProposalData, ProposalDraftPreview, TeamExpressionData, WorkIntentData } from '@/store/cortexStoreTypes';
 
 function uniqueStrings(values: string[]): string[] {
     const seen = new Set<string>();
@@ -125,6 +125,26 @@ function normalizeWorkIntent(raw: unknown): WorkIntentData | undefined {
     return hasValue ? workIntent : undefined;
 }
 
+function normalizeDraftPreviews(raw: unknown): ProposalDraftPreview[] | undefined {
+    if (!Array.isArray(raw)) return undefined;
+    const previews: ProposalDraftPreview[] = [];
+    for (const item of raw) {
+        if (!item || typeof item !== 'object') continue;
+        const rec = item as Record<string, unknown>;
+        const path = typeof rec.path === 'string' ? rec.path.trim() : '';
+        const preview = typeof rec.preview === 'string' ? rec.preview : '';
+        if (!path || !preview) continue;
+        previews.push({
+            path,
+            preview,
+            full_draft: rec.full_draft === true,
+            lines: typeof rec.lines === 'number' ? rec.lines : 0,
+            bytes: typeof rec.bytes === 'number' ? rec.bytes : 0,
+        });
+    }
+    return previews.length > 0 ? previews : undefined;
+}
+
 export function normalizeProposalData(raw: unknown): ProposalData | undefined {
     if (!raw || typeof raw !== 'object') return undefined;
     const rec = raw as Record<string, unknown>;
@@ -153,6 +173,7 @@ export function normalizeProposalData(raw: unknown): ProposalData | undefined {
         approval_required: typeof approval?.approval_required === 'boolean' ? Boolean(approval.approval_required) : undefined,
         approval_reason: typeof approval?.approval_reason === 'string' ? String(approval.approval_reason) : undefined,
         approval_mode: typeof approval?.approval_mode === 'string' ? String(approval.approval_mode) : undefined,
+        required_approver_role: typeof approval?.required_approver_role === 'string' ? String(approval.required_approver_role) : undefined,
         capability_risk: typeof approval?.capability_risk === 'string' ? String(approval.capability_risk) : undefined,
         capability_ids: Array.isArray(approval?.capability_ids) ? (approval.capability_ids as string[]) : undefined,
         external_data_use: typeof approval?.external_data_use === 'boolean' ? Boolean(approval.external_data_use) : undefined,
@@ -165,5 +186,6 @@ export function normalizeProposalData(raw: unknown): ProposalData | undefined {
         nats_subjects: natsSubjects,
         work_intent: workIntent,
         execution_mode: pickString(rec, 'execution_mode', 'executionMode') as ProposalData['execution_mode'],
+        draft_previews: normalizeDraftPreviews(rec.draft_previews ?? rec.draftPreviews),
     };
 }

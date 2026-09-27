@@ -55,12 +55,21 @@ export function createCortexGovernanceSystemSlice(
                 const res = await fetch('/api/v1/governance/policy');
                 if (res.ok) {
                     const data = await res.json();
-                    set({ policyConfig: data, isFetchingPolicy: false });
+                    set({ policyConfig: data, policyError: null, isFetchingPolicy: false });
                 } else {
-                    set({ isFetchingPolicy: false });
+                    // Never collapse a non-OK response to a fake empty/DENY
+                    // policy: keep policyConfig null and surface the code so
+                    // the UI can show a real blocker instead of an editor
+                    // that looks like the real (empty) policy.
+                    const body = await res.json().catch(() => ({}));
+                    set({
+                        policyConfig: null,
+                        policyError: { code: body?.data?.code, httpStatus: res.status },
+                        isFetchingPolicy: false,
+                    });
                 }
             } catch {
-                set({ isFetchingPolicy: false });
+                set({ policyConfig: null, policyError: { httpStatus: undefined }, isFetchingPolicy: false });
             }
         },
 
@@ -72,10 +81,14 @@ export function createCortexGovernanceSystemSlice(
                     body: JSON.stringify(config),
                 });
                 if (res.ok) {
-                    set({ policyConfig: config });
+                    set({ policyConfig: config, policyError: null });
+                } else {
+                    const body = await res.json().catch(() => ({}));
+                    set({ policyError: { code: body?.data?.code, httpStatus: res.status } });
                 }
             } catch (err) {
                 console.error('[Governance] Update failed:', err);
+                set({ policyError: { httpStatus: undefined } });
             }
         },
 
@@ -85,12 +98,16 @@ export function createCortexGovernanceSystemSlice(
                 const res = await fetch('/api/v1/governance/pending');
                 if (res.ok) {
                     const data = await res.json();
-                    set({ pendingApprovals: Array.isArray(data) ? data : [], isFetchingApprovals: false });
+                    set({ pendingApprovals: Array.isArray(data) ? data : [], approvalsError: null, isFetchingApprovals: false });
                 } else {
-                    set({ pendingApprovals: [], isFetchingApprovals: false });
+                    // A 403/503 is not "zero pending requests": don't render
+                    // "All Clear" for a blocker. Keep the list untouched and
+                    // surface the error instead.
+                    const body = await res.json().catch(() => ({}));
+                    set({ approvalsError: { code: body?.data?.code, httpStatus: res.status }, isFetchingApprovals: false });
                 }
             } catch {
-                set({ pendingApprovals: [], isFetchingApprovals: false });
+                set({ approvalsError: { httpStatus: undefined }, isFetchingApprovals: false });
             }
         },
 
@@ -120,10 +137,18 @@ export function createCortexGovernanceSystemSlice(
                 if (res.ok) {
                     set((s) => ({
                         pendingApprovals: s.pendingApprovals.filter((item) => item.id !== id),
+                        resolveApprovalError: null,
                     }));
+                } else {
+                    // Nothing changed: keep the card in the queue and tell
+                    // the admin why, instead of the card just staying put
+                    // with no explanation.
+                    const body = await res.json().catch(() => ({}));
+                    set({ resolveApprovalError: { code: body?.data?.code, httpStatus: res.status } });
                 }
             } catch (err) {
                 console.error('[Governance] Resolve failed:', err);
+                set({ resolveApprovalError: { httpStatus: undefined } });
             }
         },
 

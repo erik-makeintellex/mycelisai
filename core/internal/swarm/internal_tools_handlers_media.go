@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -161,7 +160,7 @@ func (r *InternalToolRegistry) finishGeneratedImage(ctx context.Context, prompt,
 	if r.db != nil {
 		err := r.db.QueryRowContext(ctx, `INSERT INTO artifacts (agent_id, artifact_type, title, content_type, content, metadata, status) VALUES ('internal', 'image', $1, 'image/png', $2, $3, 'completed') RETURNING id`, title, b64Content, metaJSON).Scan(&artifactID)
 		if err != nil {
-			log.Printf("generate_image: failed to store artifact: %v", err)
+			return "", fmt.Errorf("generate_image could not store the generated image: %w", err)
 		}
 	}
 	if r.exchange != nil && strings.TrimSpace(artifactID) != "" {
@@ -181,6 +180,10 @@ func (r *InternalToolRegistry) finishGeneratedImage(ctx context.Context, prompt,
 				Tags:           []string{"artifact", "image", "generated"},
 			})
 		}
+	}
+	if artifactID == "" {
+		// No artifact store: the image is returned inline only and cannot be saved later.
+		return mustJSON(map[string]any{"message": fmt.Sprintf("Image generated for: \"%s\" (size: %s). It was not cached because no artifact store is available, so it cannot be saved later.", prompt, size), "artifact": map[string]any{"type": "image", "title": title, "content_type": "image/png", "content": b64Content, "cached": false}}), nil
 	}
 	return mustJSON(map[string]any{"message": fmt.Sprintf("Image generated for: \"%s\" (size: %s). Cached for 60 minutes unless saved.", prompt, size), "artifact": map[string]any{"id": artifactID, "type": "image", "title": title, "content_type": "image/png", "content": b64Content, "cached": true, "expires_at": expiresAt}}), nil
 }

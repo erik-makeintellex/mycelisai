@@ -37,15 +37,20 @@ export default function ConfigDocumentRecords() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/auth/session", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body) => {
+    (async () => {
+      try {
+        // `await` tolerates a non-promise return (e.g. an unmocked fetch in
+        // tests resolving to `undefined`) instead of throwing synchronously
+        // on `.then`, so this defaults to the non-admin view on any failure.
+        const res = await fetch("/auth/session", { cache: "no-store" });
+        const body = res?.ok ? await res.json().catch(() => null) : null;
         if (!cancelled) setIsAdmin(body?.data?.user?.role === "admin");
-      })
-      .catch(() => undefined)
-      .finally(() => {
+      } catch {
+        if (!cancelled) setIsAdmin(false);
+      } finally {
         if (!cancelled) setCheckedSession(true);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };

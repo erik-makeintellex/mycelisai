@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mycelis/core/internal/memory"
+	"github.com/mycelis/core/internal/swarm"
 )
 
 // GET /api/v1/memory/search?q=<text>&limit=5
@@ -134,65 +135,53 @@ func (s *AdminServer) HandleListSitReps(w http.ResponseWriter, r *http.Request) 
 }
 
 // GET /api/v1/sensors
-// Returns the sensor library: configured zero-compute feeds + dynamic agents.
+// Lists only running endpoint-backed SensorAgents with their real probe state.
+// No runtime or no configured sensors yields an empty list and an honest status.
 func (s *AdminServer) HandleSensors(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	type SensorNode struct {
-		ID       string `json:"id"`
-		Type     string `json:"type"`
-		Status   string `json:"status"`
-		LastSeen string `json:"last_seen"`
-		Label    string `json:"label"`
-	}
-
-	now := time.Now().Format(time.RFC3339)
-
-	// Base sensor library: configured zero-compute peripherals.
-	// These are external data integrations, not swarm agents.
-	sensors := []SensorNode{
-		{ID: "sensor-gmail-inbox", Type: "email", Status: "online", LastSeen: now, Label: "Gmail Inbox"},
-		{ID: "sensor-gmail-sent", Type: "email", Status: "online", LastSeen: now, Label: "Gmail Sent"},
-		{ID: "sensor-weather-local", Type: "weather", Status: "online", LastSeen: now, Label: "Local Weather"},
-		{ID: "sensor-weather-forecast", Type: "weather", Status: "degraded", LastSeen: now, Label: "5-Day Forecast"},
-		{ID: "sensor-pg-primary", Type: "database", Status: "online", LastSeen: now, Label: "PostgreSQL Primary"},
-		{ID: "sensor-nats-bus", Type: "messaging", Status: "online", LastSeen: now, Label: "NATS JetStream"},
-		{ID: "sensor-ollama-health", Type: "llm", Status: "online", LastSeen: now, Label: "Ollama LLM Health"},
-	}
-
-	// Merge dynamic agents from recent log activity (if available)
-	if s.Mem != nil {
-		rows, err := s.Mem.ListRecent(20)
-		if err == nil {
-			seen := make(map[string]bool)
-			for _, sn := range sensors {
-				seen[sn.ID] = true
-			}
-			for _, entry := range rows {
-				if entry.Source != "" && !seen[entry.Source] {
-					seen[entry.Source] = true
-					sensorType := entry.Intent
-					if sensorType == "" {
-						sensorType = "agent"
-					}
-					sensors = append(sensors, SensorNode{
-						ID:       entry.Source,
-						Type:     sensorType,
-						Status:   "online",
-						LastSeen: entry.Timestamp.Format(time.RFC3339),
-						Label:    entry.Source,
-					})
-				}
-			}
+	nodes, status := []SensorNode{}, sensorsStatusRuntimeUnavailable
+	if s.Soma != nil {
+		nodes = sensorNodesFromSnapshots(s.Soma.ListSensors())
+		status = sensorsStatusOK
+		if len(nodes) == 0 {
+			status = sensorsStatusNoneConfigured
 		}
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"sensors": sensors,
-		"count":   len(sensors),
-	})
+	json.NewEncoder(w).Encode(map[string]any{"sensors": nodes, "count": len(nodes), "status": status})
+}
+
+// Top-level /api/v1/sensors status (PH-D F10). Sensors are listed only from
+// running endpoint-backed SensorAgents with their real probe state.
+const (
+	sensorsStatusOK                 = "ok"
+	sensorsStatusNoneConfigured     = "none_configured"
+	sensorsStatusRuntimeUnavailable = "runtime_unavailable"
+)
+
+// SensorNode is one row of GET /api/v1/sensors.
+type SensorNode struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Status   string `json:"status"`
+	LastSeen string `json:"last_seen"`
+	Label    string `json:"label"`
+	TeamID   string `json:"team_id,omitempty"`
+}
+
+// sensorNodesFromSnapshots maps probed state to rows. last_seen is the last
+// successful probe, or empty when the sensor has never answered.
+func sensorNodesFromSnapshots(snaps []swarm.SensorSnapshot) []SensorNode {
+	nodes := make([]SensorNode, 0, len(snaps))
+	for _, snap := range snaps {
+		node := SensorNode{ID: snap.ID, Type: snap.Role, Status: snap.Status, Label: snap.ID, TeamID: snap.TeamID}
+		if !snap.LastSuccessAt.IsZero() {
+			node.LastSeen = snap.LastSuccessAt.UTC().Format(time.RFC3339)
+		}
+		nodes = append(nodes, node)
+	}
+	return nodes
 }

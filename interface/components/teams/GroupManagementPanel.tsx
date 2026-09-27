@@ -42,6 +42,7 @@ export default function GroupManagementPanel({
   const [includeInternalOutputs, setIncludeInternalOutputs] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [approvalPrompt, setApprovalPrompt] = useState<ApprovalPrompt | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,12 +69,20 @@ export default function GroupManagementPanel({
   const loadGroups = useCallback(async () => {
     setRefreshing(true);
     setError(null);
+    setAccessDenied(false);
     try {
       const [groupsRes, monitorRes, lifecycleRes] = await Promise.all([
         fetch("/api/v1/groups", { cache: "no-store" }),
         fetch("/api/v1/groups/monitor", { cache: "no-store" }),
         fetch("/api/v1/groups/lifecycle", { cache: "no-store" }),
       ]);
+      if (groupsRes.status === 401 || groupsRes.status === 403) {
+        // A denied user isn't "zero groups": render the admin-managed
+        // blocker instead of an empty rail reading "Nothing here yet".
+        setAccessDenied(true);
+        setGroups([]);
+        return;
+      }
       if (!groupsRes.ok) throw new Error("Could not load groups.");
       const nextGroups = await getData<Group[]>(groupsRes);
       setGroups(nextGroups);
@@ -300,6 +309,7 @@ export default function GroupManagementPanel({
       draft={draft}
       notice={notice}
       error={error}
+      accessDenied={accessDenied}
       approvalPrompt={approvalPrompt}
       refreshing={refreshing}
       saving={saving}

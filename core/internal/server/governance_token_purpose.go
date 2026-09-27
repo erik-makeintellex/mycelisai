@@ -30,6 +30,7 @@ const (
 	codeTokenAlreadyUsed     = "token_already_used"
 	codeTokenPurposeUnknown  = "token_purpose_unknown"
 	codeBlueprintMismatch    = "blueprint_mismatch"
+	codeInvalidConfirmToken  = "invalid_confirm_token"
 )
 
 var (
@@ -214,25 +215,22 @@ func confirmTokenErrorCode(err error) string {
 	case errors.Is(err, errBlueprintMismatch):
 		return codeBlueprintMismatch
 	}
-	return "invalid_confirm_token"
+	return codeInvalidConfirmToken
 }
 
 // respondConfirmTokenError answers a rejected token: 409 when it was already
 // used, 403 when the confirmer is not the proposer, otherwise invalidStatus.
 // Codes are normalized; nothing was consumed unless this caller won the token.
-func respondConfirmTokenError(w http.ResponseWriter, err error, invalidStatus int) {
-	status, action := invalidStatus, ""
-	switch confirmTokenErrorCode(err) {
-	case codeTokenAlreadyUsed:
-		status, action = http.StatusConflict, "Refresh the conversation; this proposal was already confirmed"
+// The copy is plain (blockerCopies); the technical reason is admin-only detail.
+func respondConfirmTokenError(w http.ResponseWriter, r *http.Request, err error, invalidStatus int) {
+	status, code := invalidStatus, confirmTokenErrorCode(err)
+	switch code {
+	case codeTokenAlreadyUsed, codeTokenPurposeUnknown, codeBlueprintMismatch:
+		status = http.StatusConflict
 	case codeConfirmerNotProposer:
-		status, action = http.StatusForbidden, "Ask the person who proposed this to confirm it, or ask an admin. The proposal is still valid."
-	case codeTokenPurposeUnknown:
-		status, action = http.StatusConflict, "Ask Soma to propose this again"
-	case codeBlueprintMismatch:
-		status, action = http.StatusConflict, "Negotiate again, or commit the proposed blueprint unchanged"
+		status = http.StatusForbidden
 	}
-	respondGovernanceError(w, status, "invalid confirm_token: "+err.Error(), confirmTokenErrorCode(err), action)
+	respondBlocker(w, r, status, code, "invalid confirm_token: "+err.Error(), nil)
 }
 
 // blueprintDigest binds a mission_blueprint token to the negotiated blueprint

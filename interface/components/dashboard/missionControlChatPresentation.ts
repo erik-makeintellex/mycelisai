@@ -6,27 +6,28 @@ function operationalKey(message: ChatMessage) {
     return message.run_id ?? event.run_id ?? event.team_id ?? null;
 }
 
-/** Keep durable machine history in state while showing only the latest update per work item. */
+/**
+ * Keep durable machine history in state while showing only the latest
+ * thread-state update per work item (run_id/team_id), across the whole
+ * conversation.
+ *
+ * Live test L1: this used to compact only within one contiguous run of
+ * "system"-role messages, so a "council" role card, or a user message
+ * inserted between an earlier "running" update and a later "completed" one
+ * for the same run, kept the stale running card on screen alongside the
+ * completed result. Deduplicating globally by key collapses the running
+ * card into the completed state regardless of what role or message sits
+ * between them.
+ */
 export function presentMissionChat(messages: ChatMessage[]) {
-    const hiddenIndexes = new Set<number>();
-    let blockStart = 0;
+    const lastIndexByKey = new Map<string, number>();
+    messages.forEach((message, index) => {
+        const key = operationalKey(message);
+        if (key) lastIndexByKey.set(key, index);
+    });
 
-    const compactBlock = (start: number, end: number) => {
-        const latestByWork = new Map<string, number>();
-        for (let index = start; index < end; index += 1) {
-            const key = operationalKey(messages[index]);
-            if (!key) continue;
-            const previous = latestByWork.get(key);
-            if (previous !== undefined) hiddenIndexes.add(previous);
-            latestByWork.set(key, index);
-        }
-    };
-
-    for (let index = 0; index <= messages.length; index += 1) {
-        if (index < messages.length && messages[index].role === "system") continue;
-        compactBlock(blockStart, index);
-        blockStart = index + 1;
-    }
-
-    return messages.filter((_, index) => !hiddenIndexes.has(index));
+    return messages.filter((message, index) => {
+        const key = operationalKey(message);
+        return !key || lastIndexByKey.get(key) === index;
+    });
 }
