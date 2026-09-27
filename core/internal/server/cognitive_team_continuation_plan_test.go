@@ -50,21 +50,21 @@ func TestDeterministicGovernedMutationResult_BuildsTeamEvocationContinuation(t *
 	}, " ")
 	mutTools := inferMutationToolsFromText(request)
 
-	result, ok := deterministicGovernedMutationResult(request, mutTools)
-	if !ok {
-		t.Fatal("expected deterministic governed mutation result")
+	if _, bypass := deterministicGovernedMutationResult(request, mutTools); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
+	result := requestPlanResultForTest(request, mutTools)
 	if !containsToolName(result.ToolsUsed, "write_file") || !containsToolName(result.ToolsUsed, "delegate_task") {
 		t.Fatalf("tools_used = %#v, want write_file and delegate_task", result.ToolsUsed)
 	}
 
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 	requirePlannedCallNames(t, calls, "write_file", "delegate_task")
 	if calls[0].Arguments["path"] != "groups/mixed-output-team-b8066/planning/RESEARCH_COUNCIL_HANDOFF.md" {
 		t.Fatalf("handoff path = %#v", calls[0].Arguments["path"])
 	}
 	content, _ := calls[0].Arguments["content"].(string)
-	for _, want := range []string{"Research And Council Handoff", "Delivery lane responsibilities", "openable browser game package"} {
+	for _, want := range []string{"Research request record", "No research or council review has run yet", "Delivery lane responsibilities", "openable browser game package"} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("handoff content missing %q: %.200q", want, content)
 		}

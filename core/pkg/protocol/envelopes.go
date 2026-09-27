@@ -118,6 +118,19 @@ type ChatProposal struct {
 	ExecutionMode     string                     `json:"execution_mode,omitempty"`
 	Approval          *ApprovalPolicy            `json:"approval,omitempty"`
 	GovernanceProfile *GovernanceProfileSnapshot `json:"governance_profile,omitempty"`
+	// DraftPreviews shows the model-drafted file content the operator approves.
+	// The full draft lives in the planned write_file arguments; this is display only.
+	DraftPreviews []ProposalDraftPreview `json:"draft_previews,omitempty"`
+}
+
+// ProposalDraftPreview is a bounded view (first 20 lines, at most 1.5KB) of a
+// drafted file. FullDraft is true when Preview contains the whole draft.
+type ProposalDraftPreview struct {
+	Path      string `json:"path"`
+	Preview   string `json:"preview"`
+	FullDraft bool   `json:"full_draft"`
+	Lines     int    `json:"lines"`
+	Bytes     int    `json:"bytes"`
 }
 
 // ConsultationEntry records one council consultation. Member is the agent ID,

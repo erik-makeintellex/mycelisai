@@ -23,8 +23,8 @@ func TestBuildPlannedToolCalls_TeamWatchRegisterUsesRequestedMarkdownTarget(t *t
 		t.Fatalf("watch register should not become a project package: %#v", calls[1].Arguments)
 	}
 	content, _ := calls[1].Arguments["content"].(string)
-	if !strings.Contains(content, "groups/temp-app-builder-qa/generated/first-game") {
-		t.Fatalf("content = %q, want watched folder retained", content)
+	if content != "" {
+		t.Fatalf("content = %q, want none until the model drafts it (no request-echo template)", content)
 	}
 }
 
@@ -34,19 +34,19 @@ func TestBuildPlannedToolCalls_ReactionFilePrefersLastWriteTarget(t *testing.T) 
 		"Create a retained steward reaction file at groups/standing-app-steward-qa/watch/STEWARD_REACTION.md.",
 		"The reaction should say what remains trusted and what needs review.",
 	}, " ")
-	result, ok := deterministicGovernedMutationResult(request, []string{"write_file"})
-	if !ok {
-		t.Fatal("expected deterministic governed mutation result")
+	if _, bypass := deterministicGovernedMutationResult(request, []string{"write_file"}); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	result := requestPlanResultForTest(request, []string{"write_file"})
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 
 	requirePlannedCallNames(t, calls, "write_file")
 	if calls[0].Arguments["path"] != "groups/standing-app-steward-qa/watch/STEWARD_REACTION.md" {
 		t.Fatalf("path = %#v", calls[0].Arguments["path"])
 	}
 	content, _ := calls[0].Arguments["content"].(string)
-	if !strings.Contains(content, "TRANSACTION_REPORT.md") {
-		t.Fatalf("content = %q, want source transaction retained", content)
+	if content != "" {
+		t.Fatalf("content = %q, want none until the model drafts it (no request-echo template)", content)
 	}
 }
 
@@ -56,18 +56,18 @@ func TestBuildPlannedToolCalls_ReactionFileKeepsTargetWhenSourceReportComesLater
 		"Review generated game folder groups/temp-game-builder-qa/generated/first-game and playtest report workspace/logs/game-proof/PLAYTEST_REPORT.json.",
 		"Write a steward reaction with one next requested change.",
 	}, " ")
-	result, ok := deterministicGovernedMutationResult(request, []string{"write_file"})
-	if !ok {
-		t.Fatal("expected deterministic governed mutation result")
+	if _, bypass := deterministicGovernedMutationResult(request, []string{"write_file"}); bypass {
+		t.Fatal("non-config mutation must reach Soma's agent, not a deterministic proposal")
 	}
-	calls := buildPlannedToolCalls(result, request, result.ToolsUsed)
+	result := requestPlanResultForTest(request, []string{"write_file"})
+	calls := buildPlannedToolCalls(chatAgentResult{}, request, result.ToolsUsed)
 
 	requirePlannedCallNames(t, calls, "write_file")
 	if calls[0].Arguments["path"] != "groups/standing-game-steward-qa/watch/STEWARD_REACTION.md" {
 		t.Fatalf("path = %#v", calls[0].Arguments["path"])
 	}
 	content, _ := calls[0].Arguments["content"].(string)
-	if !strings.Contains(content, "PLAYTEST_REPORT.json") {
-		t.Fatalf("content = %q, want source playtest report retained", content)
+	if content != "" {
+		t.Fatalf("content = %q, want none until the model drafts it (no request-echo template)", content)
 	}
 }

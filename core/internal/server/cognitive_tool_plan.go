@@ -13,10 +13,6 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 	if configCalls, ok := explicitConfigMutationPlan(agentResult, latestRequest); ok {
 		return configCalls
 	}
-	if crossTeamCalls, ok := inferContentMarketingCrossTeamPlanFromRequest(latestRequest); ok {
-		planned = append(planned, crossTeamCalls...)
-		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
-	}
 	if continuationCalls, ok := inferTeamEvocationContinuationPlanFromRequest(latestRequest); ok {
 		planned = append(planned, continuationCalls...)
 		return ensureWriteFileExecutionPlan(planned, agentResult, latestRequest, mutTools)
@@ -99,49 +95,13 @@ func ensureWriteFileExecutionPlan(planned []protocol.PlannedToolCall, agentResul
 	return planned
 }
 
+// deterministicGovernedMutationResult short-circuits the model only for saved
+// configuration changes whose document source was supplied inline. Every other
+// mutation request goes to Soma's agent, so no proposal is built from keyword
+// heuristics alone.
 func deterministicGovernedMutationResult(latestRequest string, mutTools []string) (chatAgentResult, bool) {
 	planned := buildPlannedToolCalls(chatAgentResult{}, latestRequest, mutTools)
-	if result, ok := deterministicConfigMutationResult(planned, mutTools); ok {
-		return result, true
-	}
-	if len(planned) == 0 || !plannedCallsHaveWritableOutput(planned) || !plannedCallsAreDeterministicProposalSafe(planned) {
-		return chatAgentResult{}, false
-	}
-	tools := toolsForPlannedCalls(planned, mutTools)
-	target := firstPlannedOutputTarget(planned)
-	if target == "" {
-		return chatAgentResult{}, false
-	}
-	return chatAgentResult{
-		Text:      fmt.Sprintf("Soma can create `%s` through a governed proposal. Review the plan before execution.", target),
-		ToolsUsed: tools,
-	}, true
-}
-func plannedCallsHaveWritableOutput(planned []protocol.PlannedToolCall) bool {
-	for _, call := range planned {
-		if strings.EqualFold(strings.TrimSpace(call.Name), "write_file") {
-			return true
-		}
-		if strings.EqualFold(strings.TrimSpace(call.Name), "generate_image") {
-			return true
-		}
-		if strings.EqualFold(strings.TrimSpace(call.Name), "save_cached_image") {
-			return true
-		}
-	}
-	return false
-}
-
-func plannedCallsAreDeterministicProposalSafe(planned []protocol.PlannedToolCall) bool {
-	for _, call := range planned {
-		switch strings.TrimSpace(call.Name) {
-		case "create_team", "delegate_task", "generate_image", "save_cached_image", "write_file":
-			continue
-		default:
-			return false
-		}
-	}
-	return true
+	return deterministicConfigMutationResult(planned, mutTools)
 }
 
 func countUserChatMessages(messages []chatRequestMessage) int {
