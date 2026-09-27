@@ -18,7 +18,7 @@ func TestSeedBuiltInConfigDocumentsValidatesShippedFilesWithoutDatabase(t *testi
 	if err != nil {
 		t.Fatalf("seed without DB: %v", err)
 	}
-	if !strings.Contains(message, "skipped (database unavailable); 4 file(s) validated") {
+	if !strings.Contains(message, "skipped (database unavailable); 5 file(s) validated") {
 		t.Fatalf("message = %q", message)
 	}
 }

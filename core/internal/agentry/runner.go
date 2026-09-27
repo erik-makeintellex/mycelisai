@@ -30,6 +30,10 @@ func NewRunner(brain *cognitive.Router) *Runner {
 func (r *Runner) Run(ctx context.Context, manifest protocol.AgentManifest, input string) (*protocol.ProofEnvelope, error) {
 	var lastDraft string
 	var failureLogs []string
+	// One Run is one metered execution: drafts, retries and semantic
+	// verification share its token budget. A budget stop returns no envelope.
+	correlation := cognitive.InferenceCorrelation{AgentID: manifest.ID}
+	ctx = cognitive.WithExecutionMeter(ctx, cognitive.NewExecutionMeter(cognitive.ExecutionKindAgentry, correlation))
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		// Step 1: Draft
@@ -44,8 +48,9 @@ func (r *Runner) Run(ctx context.Context, manifest protocol.AgentManifest, input
 		}
 
 		req := cognitive.InferRequest{
-			Profile: manifest.Model,
-			Prompt:  fullPrompt,
+			Profile:     manifest.Model,
+			Prompt:      fullPrompt,
+			Correlation: correlation,
 		}
 		if req.Profile == "" {
 			req.Profile = "chat"

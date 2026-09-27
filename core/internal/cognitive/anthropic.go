@@ -68,6 +68,10 @@ type anthropicResponse struct {
 	Content []struct {
 		Text string `json:"text"`
 	} `json:"content"`
+	Usage struct {
+		InputTokens  int `json:"input_tokens"`
+		OutputTokens int `json:"output_tokens"`
+	} `json:"usage"`
 	Error *struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
@@ -131,9 +135,13 @@ func (a *AnthropicAdapter) Infer(ctx context.Context, prompt string, opts InferO
 	}
 
 	return &InferResponse{
-		Text:      result.Content[0].Text,
-		ModelUsed: a.model,
-		Provider:  "anthropic",
+		Text:               result.Content[0].Text,
+		ModelUsed:          a.model,
+		Provider:           "anthropic",
+		UpstreamResponseID: result.ID,
+		PromptTokens:       result.Usage.InputTokens,
+		CompletionTokens:   result.Usage.OutputTokens,
+		TokensUsed:         result.Usage.InputTokens + result.Usage.OutputTokens,
 	}, nil
 }
 

@@ -222,7 +222,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		}
 		var draftBlocker *writeFileDraftBlocker
 		if draftPreviews, draftBlocker = s.draftMissingWriteFileContent(r.Context(), plannedToolCalls, latestUserText); draftBlocker != nil {
-			respondWriteFileDraftBlocker(w, draftBlocker)
+			respondWriteFileDraftBlocker(w, r, draftBlocker)
 			return
 		}
 		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)

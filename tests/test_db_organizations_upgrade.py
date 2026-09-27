@@ -108,7 +108,7 @@ def test_real_compose_migrate_upgrades_retained_c2a_stack(database, monkeypatch,
     monkeypatch.setattr(compose, "_run_compose_migration_file",
                         lambda *_: pytest.fail("compose.migrate replayed the installer on retained data"))
     compose._run_compose_migrations()
-    assert "Retained-schema upgrade complete (ORG + ROLE + TOKEN + TAXONOMY)" in capsys.readouterr().out
+    assert "Retained-schema upgrade complete (ORG + ROLE + TOKEN + TAXONOMY + LEDGER)" in capsys.readouterr().out
     assert_contract(database)
     after = json.loads(database(MANIFEST_ROW).stdout)
     assert {key: after[key] for key in before} == before

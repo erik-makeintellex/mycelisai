@@ -76,7 +76,11 @@ func applyBrainProvenance(s *AdminServer, chatPayload *protocol.ChatResponsePayl
 func respondStructuredChatBlocker(w http.ResponseWriter, agentResult chatAgentResult) {
 	blocker := buildChatBlocker(agentResult, "Soma could not produce a readable reply for that request.")
 	status := http.StatusBadGateway
-	if blocker.Code != emptyProviderOutputCode {
+	switch blocker.Code {
+	case emptyProviderOutputCode:
+	case cognitive.TokenBudgetExhaustedCode:
+		status = http.StatusTooManyRequests // honest budget stop, never an approval request
+	default:
 		status = http.StatusServiceUnavailable
 	}
 	respondAPIJSON(w, status, protocol.APIResponse{

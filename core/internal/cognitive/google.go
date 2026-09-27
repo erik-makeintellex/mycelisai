@@ -80,6 +80,12 @@ type googleResponse struct {
 		FinishReason string `json:"finishReason"`
 	} `json:"candidates"`
 
+	UsageMetadata struct {
+		PromptTokenCount     int `json:"promptTokenCount"`
+		CandidatesTokenCount int `json:"candidatesTokenCount"`
+		TotalTokenCount      int `json:"totalTokenCount"`
+	} `json:"usageMetadata"`
+
 	Error *struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
@@ -150,10 +156,20 @@ func (g *GoogleAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 		return nil, fmt.Errorf("google returned empty content parts")
 	}
 
+	// totalTokenCount is authoritative: it can include thinking tokens that
+	// neither prompt nor candidates count.
+	usage := result.UsageMetadata
+	total := usage.TotalTokenCount
+	if total <= 0 {
+		total = usage.PromptTokenCount + usage.CandidatesTokenCount
+	}
 	return &InferResponse{
-		Text:      result.Candidates[0].Content.Parts[0].Text,
-		ModelUsed: g.model,
-		Provider:  "google",
+		Text:             result.Candidates[0].Content.Parts[0].Text,
+		ModelUsed:        g.model,
+		Provider:         "google",
+		PromptTokens:     usage.PromptTokenCount,
+		CompletionTokens: usage.CandidatesTokenCount,
+		TokensUsed:       total,
 	}, nil
 }
 

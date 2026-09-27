@@ -27,6 +27,10 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/v1/cognitive/profiles", s.HandleUpdateProfiles)
 	mux.HandleFunc("DELETE /api/v1/cognitive/profiles/{profile}/override", s.HandleClearProfileOverride)
 	mux.HandleFunc("PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
+	mux.HandleFunc("GET /api/v1/cognitive/budgets", s.HandleGetTokenBudgets)
+	mux.HandleFunc("GET /api/v1/cognitive/budgets/usage", s.HandleGetTokenBudgetUsage)
+	mux.HandleFunc("PUT /api/v1/cognitive/budgets/overrides/{level}/{ref}", s.HandlePutTokenBudgetOverride)
+	mux.HandleFunc("DELETE /api/v1/cognitive/budgets/overrides/{level}/{ref}", s.HandleDeleteTokenBudgetOverride)
 	mux.HandleFunc("/api/v1/chat", s.HandleChat)
 
 	mux.HandleFunc("POST /api/v1/council/{member}/chat", s.HandleCouncilChat)

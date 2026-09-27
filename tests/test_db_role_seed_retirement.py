@@ -150,7 +150,7 @@ def test_real_first_retained_upgrade_removes_seeds_and_sets_marker(database, cap
     assert database(MARKER_ROW).stdout.strip() == ""
     providers = database("SELECT string_agg(id, ',' ORDER BY id) FROM llm_providers;").stdout
     assert db_upgrade.upgrade_retained(SCHEMA, database)
-    assert "upgrade complete (ROLE + TOKEN + TAXONOMY)" in capsys.readouterr().out
+    assert "upgrade complete (ROLE + TOKEN + TAXONOMY + LEDGER)" in capsys.readouterr().out
     assert database(ROLE_ROWS).stdout.strip() == ""
     assert database(MARKER_ROW).stdout.strip() == "1"
     assert database("SELECT value FROM system_config WHERE key='ui.theme';").stdout.strip() == "dark"
@@ -212,7 +212,7 @@ def test_real_compose_migrate_retires_seeds_on_org_complete_stack(database, monk
     monkeypatch.setattr(compose, "_run_compose_migration_file",
                         lambda *_: pytest.fail("compose.migrate replayed the installer on retained data"))
     compose._run_compose_migrations()
-    assert "Retained-schema upgrade complete (ROLE + TOKEN + TAXONOMY)" in capsys.readouterr().out
+    assert "Retained-schema upgrade complete (ROLE + TOKEN + TAXONOMY + LEDGER)" in capsys.readouterr().out
     assert database(ROLE_ROWS).stdout.strip() == ""
     compose._run_compose_migrations()
     assert "already appears compatible" in capsys.readouterr().out

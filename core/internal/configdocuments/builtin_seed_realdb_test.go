@@ -41,7 +41,7 @@ func openSeedRealDB(t *testing.T) *sql.DB {
 }
 
 func seedRealDBIDs() []string {
-	ids := []string{seedRealDBNewID}
+	ids := []string{seedRealDBNewID, protocol.TokenBudgetDefaultsDocumentID}
 	for _, name := range deliveryPostureFiles {
 		ids = append(ids, strings.TrimSuffix(name, ".yaml"))
 	}
@@ -131,12 +131,12 @@ func TestSeedBuiltInRevisionsRealDB(t *testing.T) {
 	operatorBefore := snapshotOperatorRow(t, db, operatorID)
 	baseline := countSeedRows(t, db)
 
-	// (1) first seed: exactly 4 revisions + 4 activations at built_in scope.
+	// (1) first seed: exactly 5 revisions + 5 activations at built_in scope (4 templates + token-budget-defaults).
 	result, err := store.SeedBuiltInRevisions(ctx, deliveryPostureDir)
 	if err != nil {
 		t.Fatalf("first seed: %v", err)
 	}
-	if result.Inserted != 4 || result.Activated != 4 {
+	if result.Inserted != 5 || result.Activated != 5 {
 		t.Fatalf("first seed result = %#v", result)
 	}
 	for _, seed := range loadSeeds(t, deliveryPostureDir) {
@@ -161,13 +161,13 @@ func TestSeedBuiltInRevisionsRealDB(t *testing.T) {
 		}
 	}
 	afterFirst := countSeedRows(t, db)
-	if want := (seedTableCounts{baseline.documents + 4, baseline.activations + 4, baseline.history + 4}); afterFirst != want {
+	if want := (seedTableCounts{baseline.documents + 5, baseline.activations + 5, baseline.history + 5}); afterFirst != want {
 		t.Fatalf("after first seed counts = %+v, want %+v", afterFirst, want)
 	}
 
 	// (2) reseed writes nothing.
 	result, err = store.SeedBuiltInRevisions(ctx, deliveryPostureDir)
-	if err != nil || result.Inserted != 0 || result.Activated != 0 || result.Unchanged != 4 {
+	if err != nil || result.Inserted != 0 || result.Activated != 0 || result.Unchanged != 5 {
 		t.Fatalf("reseed = %#v, %v", result, err)
 	}
 	if got := countSeedRows(t, db); got != afterFirst {

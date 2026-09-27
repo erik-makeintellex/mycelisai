@@ -85,6 +85,9 @@ def test_current_schema_matches_immutable_dev_manifest():
     from ops.db_upgrade import BEGIN_MARKER, END_MARKER, C2A_BEGIN_MARKER, C2A_END_MARKER
     from ops.db_upgrade import ORG_BEGIN_MARKER, ORG_END_MARKER, ROLE_BEGIN_MARKER, ROLE_END_MARKER
     from ops.db_upgrade import TOKEN_BEGIN_MARKER, TOKEN_END_MARKER, TAXONOMY_BEGIN_MARKER, TAXONOMY_END_MARKER
+    from ops.db_upgrade import LEDGER_BEGIN_MARKER, LEDGER_END_MARKER
+    # The LEDGER block is pinned in test_db_token_usage_ledger.py; strip it first.
+    raw = raw[:raw.index(LEDGER_BEGIN_MARKER.encode())] + raw[raw.index(LEDGER_END_MARKER.encode()) + len(LEDGER_END_MARKER):].lstrip(b"\n")
     taxonomy_start = raw.index(TAXONOMY_BEGIN_MARKER.encode())
     taxonomy_end = raw.index(TAXONOMY_END_MARKER.encode()) + len(TAXONOMY_END_MARKER)
     # The TAXONOMY block is pinned in test_db_deployment_context_taxonomy.py; strip it first.

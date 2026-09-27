@@ -65,6 +65,7 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 	selection, registry := loadStartupRuntimeSelection()
 	services := startProductServices(ctx, core)
 	seedBuiltInConfigDocuments(ctx, core.SharedDB)
+	server.InstallTokenBudgets(ctx, core.CogRouter, core.SharedDB)
 	soma := startSomaRuntime(ctx, mux, core, selection, registry, services)
 	registerBootstrapRoutes(mux, services.Bootstrap)
 	startArchivistRuntime(ctx, mux, core.ObserverNC, services.Archivist)
@@ -115,6 +116,7 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 	if invocationRegistryErr != nil {
 		adminSrv.InvocationAdmissionUnavailable = true
 	}
+	adminSrv.WireTokenBudgetWarnings()
 	wireAdminServices(ctx, mux, core, adminSrv, services)
 	server.StartInvocationRecovery(ctx, adminSrv)
 	if core.SharedDB != nil {

@@ -48,6 +48,9 @@ func guardPublicStore(actorID string, document protocol.ConfigDocument) error {
 	if err := guardPublicActor(actorID); err != nil {
 		return err
 	}
+	if document.Kind == protocol.ConfigDocumentKindTokenBudgetPolicy {
+		return ErrTokenBudgetPolicyReserved
+	}
 	if issues := builtInStoreIssues(document); len(issues) != 0 {
 		return &ValidationError{Issues: issues}
 	}
@@ -67,6 +70,9 @@ func guardPublicActivation(revision RevisionRecord) error {
 	metadata := revision.Document.Metadata
 	if metadata.Scope.Kind == protocol.ConfigDocumentScopeBuiltIn || metadata.Source.Kind == protocol.ConfigDocumentSourceBuiltIn {
 		return fmt.Errorf("%w: revision %s of %q is built-in", ErrBuiltInReserved, revision.RecordID, metadata.ID)
+	}
+	if revision.Document.Kind == protocol.ConfigDocumentKindTokenBudgetPolicy {
+		return ErrTokenBudgetPolicyReserved
 	}
 	return nil
 }

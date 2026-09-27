@@ -6,6 +6,7 @@ from .db_schema import (
     G4_SCHEMA_COMPATIBILITY_CHECKS, ORG_SCHEMA_COMPATIBILITY_CHECKS,
     SCHEMA_COMPATIBILITY_CHECKS, TEAM_OWNERSHIP_COLUMNS, TOKEN_SCHEMA_COMPATIBILITY_CHECKS,
     CONFIRM_TOKEN_BINDING_COLUMNS, DEPLOYMENT_CONTEXT_TAXONOMY_MARKER, TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS,
+    LEDGER_SCHEMA_COMPATIBILITY_CHECKS,
 )
 
 BEGIN_MARKER = "-- BEGIN G4_E10_EXTENSION"
@@ -20,6 +21,8 @@ TOKEN_BEGIN_MARKER = "-- BEGIN CONFIRM_TOKEN_BINDING_EXTENSION"
 TOKEN_END_MARKER = "-- END CONFIRM_TOKEN_BINDING_EXTENSION"
 TAXONOMY_BEGIN_MARKER = "-- BEGIN DEPLOYMENT_CONTEXT_TAXONOMY_EXTENSION"
 TAXONOMY_END_MARKER = "-- END DEPLOYMENT_CONTEXT_TAXONOMY_EXTENSION"
+LEDGER_BEGIN_MARKER = "-- BEGIN TOKEN_USAGE_LEDGER_EXTENSION"
+LEDGER_END_MARKER = "-- END TOKEN_USAGE_LEDGER_EXTENSION"
 G4_ABSENT_SQL = (
     "SELECT 1 WHERE to_regclass('public.execution_effect_grants') IS NULL "
     "AND to_regclass('public.execution_effect_grant_state') IS NULL "
@@ -56,6 +59,9 @@ TAXONOMY_READY_SQL = (
     f"AND NOT EXISTS (SELECT 1 FROM system_config WHERE key='{DEPLOYMENT_CONTEXT_TAXONOMY_MARKER}' AND value<>'1');"
 )
 
+# Any prior token_usage_ledger relation (partial or foreign) is refused.
+LEDGER_ABSENT_SQL = "SELECT 1 WHERE to_regclass('public.token_usage_ledger') IS NULL;"
+
 
 def extension_sql(path: Path, begin=BEGIN_MARKER, end=END_MARKER) -> str:
     text = path.read_text(encoding="utf-8")
@@ -80,7 +86,8 @@ def _extension_blocks(path: Path) -> dict[str, str]:
     markers = (("G4/E10", BEGIN_MARKER, END_MARKER), ("C2a", C2A_BEGIN_MARKER, C2A_END_MARKER),
                ("ORG", ORG_BEGIN_MARKER, ORG_END_MARKER), ("ROLE", ROLE_BEGIN_MARKER, ROLE_END_MARKER),
                ("TOKEN", TOKEN_BEGIN_MARKER, TOKEN_END_MARKER),
-               ("TAXONOMY", TAXONOMY_BEGIN_MARKER, TAXONOMY_END_MARKER))
+               ("TAXONOMY", TAXONOMY_BEGIN_MARKER, TAXONOMY_END_MARKER),
+               ("LEDGER", LEDGER_BEGIN_MARKER, LEDGER_END_MARKER))
     positions = [text.find(marker) for _, begin, end in markers for marker in (begin, end)]
     if -1 in positions or positions != sorted(positions):
         raise SystemExit("Canonical schema has no unique ordered upgrade boundary.")
@@ -89,7 +96,7 @@ def _extension_blocks(path: Path) -> dict[str, str]:
 
 
 def upgrade_retained(path: Path, run_sql) -> bool:
-    """Upgrade pre-G4 through TOKEN-complete baselines; refuse partial extensions."""
+    """Upgrade pre-G4 through TAXONOMY-complete baselines; refuse partial extensions."""
     if not _compatible(run_sql, BASE_SCHEMA_COMPATIBILITY_CHECKS):
         return False
     if _compatible(run_sql, SCHEMA_COMPATIBILITY_CHECKS):
@@ -111,6 +118,9 @@ def upgrade_retained(path: Path, run_sql) -> bool:
     taxonomy_present = token_present and _compatible(run_sql, TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS)
     if not taxonomy_present and not _passes(run_sql, TAXONOMY_READY_SQL):
         return False
+    ledger_present = taxonomy_present and _compatible(run_sql, LEDGER_SCHEMA_COMPATIBILITY_CHECKS)
+    if not ledger_present and not _passes(run_sql, LEDGER_ABSENT_SQL):
+        return False
     # Every boundary is validated before any mutation. One transaction covers
     # all missing extensions, so a later failure cannot leave a partial host.
     blocks = _extension_blocks(path)
@@ -118,7 +128,8 @@ def upgrade_retained(path: Path, run_sql) -> bool:
     missing = [name for name, present in (("G4/E10", g4_present), ("C2a", c2a_present),
                                           ("ORG", org_present), ("ROLE", False),
                                           ("TOKEN", token_present),
-                                          ("TAXONOMY", taxonomy_present)) if not present]
+                                          ("TAXONOMY", taxonomy_present),
+                                          ("LEDGER", ledger_present)) if not present]
     result = run_sql("BEGIN;\n" + "\n".join(blocks[name] for name in missing) + "COMMIT;\n")
     if result.returncode != 0:
         raise SystemExit("Additive schema upgrade failed; transaction rolled back.")

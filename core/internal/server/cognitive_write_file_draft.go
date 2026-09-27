@@ -16,12 +16,10 @@ import (
 // It is a variable only so tests can shorten it.
 var writeFileDraftTimeout = 90 * time.Second
 
-// writeFileDraftMaxPerTurn and writeFileDraftTurnDeadline bound all drafting in
-// one chat turn. Variables only so tests can shorten them.
-var (
-	writeFileDraftMaxPerTurn   = 3
-	writeFileDraftTurnDeadline = 120 * time.Second
-)
+// writeFileDraftTurnDeadline bounds all drafting in one chat turn; how many
+// drafts fit is decided by the token budget. A variable only so tests can
+// shorten it.
+var writeFileDraftTurnDeadline = 120 * time.Second
 
 const writeFileDraftTimeoutCode = "provider_timeout"
 
@@ -34,6 +32,7 @@ const writeFileDraftSystemPrompt = "You write the complete contents of exactly o
 type writeFileDraftBlocker struct {
 	Status       int
 	Availability cognitive.ExecutionAvailability
+	Budget       *cognitive.TokenBudgetExhaustedError // set for a token budget stop (429)
 }
 
 // draftMissingWriteFileContent drafts real content, with one bounded model
@@ -65,15 +64,13 @@ func (s *AdminServer) draftMissingWriteFileContent(ctx context.Context, planned 
 		}
 		draftTargets = append(draftTargets, i)
 	}
-	if len(draftTargets) > writeFileDraftMaxPerTurn {
-		return nil, &writeFileDraftBlocker{Status: http.StatusUnprocessableEntity, Availability: cognitive.ExecutionAvailability{
-			Code:              emptyProviderOutputCode,
-			Summary:           fmt.Sprintf("Soma can draft up to %d files per request, and this request needs %d, so nothing was proposed.", writeFileDraftMaxPerTurn, len(draftTargets)),
-			RecommendedAction: fmt.Sprintf("Ask for %d or fewer files at a time, or include the text you want in your request.", writeFileDraftMaxPerTurn),
-		}}
-	}
 	turnCtx, cancel := context.WithTimeout(ctx, writeFileDraftTurnDeadline)
 	defer cancel()
+	// The whole drafting pass is one metered draft execution charged to Soma.
+	turnCtx = cognitive.WithExecutionMeter(turnCtx, cognitive.NewExecutionMeter(cognitive.ExecutionKindDraft, writeFileDraftCorrelation))
+	if blocker := s.writeFileDraftBudgetPreflight(turnCtx, planned, draftTargets); blocker != nil {
+		return nil, blocker
+	}
 	// Drafts are computed for every target before any is applied, so a later
 	// failure never leaves a partially drafted plan behind.
 	drafted := make([]string, len(draftTargets))
@@ -114,13 +111,17 @@ func (s *AdminServer) draftWriteFileContent(ctx context.Context, path, request s
 	defer cancel()
 	prompt := fmt.Sprintf("File to write: %s (%s).\nRequest: %s\nWrite the full contents of %s now.", path, writeFileKindLabel(path), strings.TrimSpace(request), name)
 	resp, err := s.Cognitive.InferWithContract(draftCtx, cognitive.InferRequest{
-		Profile: profile,
-		Prompt:  prompt,
+		Profile:     profile,
+		Prompt:      prompt,
+		Correlation: writeFileDraftCorrelation,
 		Messages: []cognitive.ChatMessage{
 			{Role: "system", Content: writeFileDraftSystemPrompt},
 			{Role: "user", Content: prompt},
 		},
 	})
+	if stop := cognitive.AsTokenBudgetExhausted(err); stop != nil {
+		return "", draftBudgetBlocker(stop, "Soma stopped drafting "+name+" because it reached its token budget, so nothing was proposed.")
+	}
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(draftCtx.Err(), context.DeadlineExceeded) {
 			return "", draftBlocker(http.StatusGatewayTimeout, writeFileDraftTimeoutCode, name,
@@ -163,7 +164,11 @@ func withDraftPreviews(proposal *protocol.ChatProposal, previews []protocol.Prop
 	return proposal
 }
 
-func respondWriteFileDraftBlocker(w http.ResponseWriter, blocker *writeFileDraftBlocker) {
+func respondWriteFileDraftBlocker(w http.ResponseWriter, r *http.Request, blocker *writeFileDraftBlocker) {
+	if blocker.Budget != nil {
+		respondTokenBudgetBlocker(w, r, blocker.Budget, blocker.Availability.Summary)
+		return
+	}
 	respondAPIJSON(w, blocker.Status, protocol.APIResponse{
 		OK:    false,
 		Error: blocker.Availability.Summary,

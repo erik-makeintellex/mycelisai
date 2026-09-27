@@ -130,7 +130,7 @@ func validateConfigDocument(document ConfigDocument, mode configDocumentSecretMo
 	if document.APIVersion != ConfigDocumentAPIVersionV1 {
 		add("config.unsupported_api_version", "apiVersion", fmt.Sprintf("unsupported apiVersion %q", document.APIVersion))
 	}
-	if document.Kind != ConfigDocumentKindOutcomeTemplate && document.Kind != ConfigDocumentKindWorkerProfile && document.Kind != ConfigDocumentKindCodeContextSource {
+	if document.Kind != ConfigDocumentKindOutcomeTemplate && document.Kind != ConfigDocumentKindWorkerProfile && document.Kind != ConfigDocumentKindCodeContextSource && document.Kind != ConfigDocumentKindTokenBudgetPolicy {
 		add("config.unsupported_kind", "kind", fmt.Sprintf("unsupported config document kind %q", document.Kind))
 	}
 
@@ -173,6 +173,9 @@ func validateConfigDocument(document ConfigDocument, mode configDocumentSecretMo
 		}
 		if document.Kind == ConfigDocumentKindCodeContextSource {
 			issues = append(issues, ValidateCodeContextSourceSpec(document.Spec)...)
+		}
+		if document.Kind == ConfigDocumentKindTokenBudgetPolicy {
+			issues = append(issues, ValidateTokenBudgetPolicySpec(document.Spec)...)
 		}
 	}
 

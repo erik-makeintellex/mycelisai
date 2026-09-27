@@ -182,3 +182,20 @@ TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS = (
      f"WHERE key='{DEPLOYMENT_CONTEXT_TAXONOMY_MARKER}' AND value='1';"),
 )
 SCHEMA_COMPATIBILITY_CHECKS += TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS
+
+# TAXONOMY-complete is the baseline for the additive token usage ledger (B1).
+TAXONOMY_COMPLETE_SCHEMA_COMPATIBILITY_CHECKS = SCHEMA_COMPATIBILITY_CHECKS
+_ledger_columns = ("execution_id", "execution_kind", "run_id", "team_id", "agent_id", "provider_id", "model_id",
+                   "budget_class", "prompt_tokens", "completion_tokens", "total_tokens", "usage_reported", "outcome")
+LEDGER_SCHEMA_COMPATIBILITY_CHECKS = (
+    ("token_usage_ledger table", "SELECT 1 FROM information_schema.columns WHERE table_schema='public' "
+     "AND table_name='token_usage_ledger' AND column_name IN ("
+     + ",".join(f"'{c}'" for c in _ledger_columns) + f") HAVING count(*)={len(_ledger_columns)};"),
+    ("token_usage_ledger execution_kind check", "SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.token_usage_ledger') "
+     "AND contype='c' AND pg_get_constraintdef(oid) LIKE '%execution_kind%soma_turn%agent_turn%council_consult%draft%agentry%system%';"),
+    ("token_usage_ledger outcome check", "SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('public.token_usage_ledger') "
+     "AND contype='c' AND pg_get_constraintdef(oid) LIKE '%outcome%charged%refused_exhausted%';"),
+) + tuple(
+    (f"{_index} index", f"SELECT 1 WHERE to_regclass('public.{_index}') IS NOT NULL;")
+    for _index in ("idx_token_ledger_team_day", "idx_token_ledger_agent_day", "idx_token_ledger_run"))
+SCHEMA_COMPATIBILITY_CHECKS += LEDGER_SCHEMA_COMPATIBILITY_CHECKS

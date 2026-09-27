@@ -143,7 +143,7 @@ func teamAgentResponsePayload(result ProcessResult) []byte {
 		if action := strings.TrimSpace(result.Availability.RecommendedAction); action != "" {
 			recoveryOptions = append(recoveryOptions, action)
 		}
-		responsePayload, err := json.Marshal(map[string]any{
+		payload := map[string]any{
 			"text":               result.Text,
 			"tools_used":         result.ToolsUsed,
 			"planned_tool_calls": result.PlannedToolCalls,
@@ -158,7 +158,11 @@ func teamAgentResponsePayload(result ProcessResult) []byte {
 			"details":            summary,
 			"degradation_state":  degradationState,
 			"recovery_options":   recoveryOptions,
-		})
+		}
+		if result.ExecutionStatus != "" {
+			payload["execution_status"], payload["partial"] = result.ExecutionStatus, result.Partial
+		}
+		responsePayload, err := json.Marshal(payload)
 		if err == nil {
 			return responsePayload
 		}
