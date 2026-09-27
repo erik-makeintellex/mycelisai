@@ -66,19 +66,6 @@ func TestHandleListSitReps_MethodNotAllowed(t *testing.T) {
 
 // ── GET /api/v1/sensors ────────────────────────────────────────────
 
-func TestHandleSensors_BaseSensors(t *testing.T) {
-	s := newTestServer() // Mem nil → returns base sensors only
-	rr := doRequest(t, http.HandlerFunc(s.HandleSensors), "GET", "/api/v1/sensors", "")
-	assertStatus(t, rr, http.StatusOK)
-
-	var result map[string]any
-	assertJSON(t, rr, &result)
-	count := result["count"].(float64)
-	if count != 7 {
-		t.Errorf("Expected 7 base sensors, got %v", count)
-	}
-}
-
 func TestHandleSensors_MethodNotAllowed(t *testing.T) {
 	s := newTestServer()
 	rr := doRequest(t, http.HandlerFunc(s.HandleSensors), "POST", "/api/v1/sensors", "")

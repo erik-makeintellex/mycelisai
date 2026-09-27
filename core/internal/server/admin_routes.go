@@ -128,7 +128,6 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/internal/organizations/{id}/loops/{loopId}/trigger", s.handleTriggerLoop)
 	mux.HandleFunc("GET /api/v1/internal/organizations/{id}/loops/results", s.handleListLoopResults)
 	mux.HandleFunc("GET /api/v1/intent/proof/{id}", s.handleGetIntentProof)
-	mux.HandleFunc("POST /api/v1/intent/seed/symbiotic", s.handleSymbioticSeed)
 	mux.HandleFunc("GET /api/v1/trust/execution-contracts", s.HandleListExecutionContracts)
 	mux.HandleFunc("GET /api/v1/trust/execution-contracts/{id}", s.HandleGetExecutionContract)
 	mux.HandleFunc("GET /api/v1/trust/proof-artifacts", s.HandleListProofArtifacts)
