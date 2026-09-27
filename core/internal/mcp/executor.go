@@ -36,8 +36,38 @@ func (a *ToolExecutorAdapter) CallTool(ctx context.Context, serverID uuid.UUID, 
 	if err != nil {
 		return "", err
 	}
+	if err := CallToolResultError(toolName, result); err != nil {
+		return "", err
+	}
 	return formatCallToolResult(result), nil
 }
+
+// ToolResultError is an MCP tool result the server itself marked isError.
+// The call reached the server, but the tool failed; callers must treat it as
+// a tool failure, never as output.
+type ToolResultError struct {
+	Tool    string
+	Message string
+}
+
+func (e *ToolResultError) Error() string {
+	return fmt.Sprintf("MCP tool %s reported an error: %s", e.Tool, e.Message)
+}
+
+// CallToolResultError returns a *ToolResultError when the MCP server flagged
+// the result with isError, carrying the redacted, capped text as the reason.
+func CallToolResultError(toolName string, result *mcplib.CallToolResult) error {
+	if result == nil || !result.IsError {
+		return nil
+	}
+	message := strings.TrimSpace(formatCallToolResult(result))
+	if message == "" || message == noTextOutput {
+		message = "no error detail returned"
+	}
+	return &ToolResultError{Tool: toolName, Message: redactToolErrorText(message)}
+}
+
+const noTextOutput = "(no text output)"
 
 // formatCallToolResult extracts text content from an MCP CallToolResult.
 func formatCallToolResult(result *mcplib.CallToolResult) string {
@@ -51,7 +81,7 @@ func formatCallToolResult(result *mcplib.CallToolResult) string {
 		}
 	}
 	if len(parts) == 0 {
-		return "(no text output)"
+		return noTextOutput
 	}
 	return strings.Join(parts, "\n")
 }

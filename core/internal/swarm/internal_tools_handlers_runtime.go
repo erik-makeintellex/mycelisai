@@ -10,7 +10,7 @@ import (
 
 func (r *InternalToolRegistry) handleListMissions(ctx context.Context, _ map[string]any) (string, error) {
 	if r.db == nil {
-		return "Database not available — cannot list missions.", nil
+		return "", fmt.Errorf("list_missions unavailable: database not available")
 	}
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT m.id, m.directive, COALESCE(m.status, 'active'),
@@ -22,7 +22,7 @@ func (r *InternalToolRegistry) handleListMissions(ctx context.Context, _ map[str
 		ORDER BY m.created_at DESC LIMIT 20
 	`)
 	if err != nil {
-		return fmt.Sprintf("Query failed: %v", err), nil
+		return "", fmt.Errorf("list_missions query failed: %w", err)
 	}
 	defer rows.Close()
 	type missionRow struct {
@@ -35,9 +35,13 @@ func (r *InternalToolRegistry) handleListMissions(ctx context.Context, _ map[str
 	var missions []missionRow
 	for rows.Next() {
 		var m missionRow
-		if err := rows.Scan(&m.ID, &m.Intent, &m.Status, &m.Teams, &m.Agents); err == nil {
-			missions = append(missions, m)
+		if err := rows.Scan(&m.ID, &m.Intent, &m.Status, &m.Teams, &m.Agents); err != nil {
+			return "", fmt.Errorf("list_missions read failed: %w", err)
 		}
+		missions = append(missions, m)
+	}
+	if err := rows.Err(); err != nil {
+		return "", fmt.Errorf("list_missions read failed: %w", err)
 	}
 	if missions == nil {
 		missions = []missionRow{}
@@ -138,11 +142,11 @@ func appendResearchSection(sb *strings.Builder, heading string, content string, 
 
 func (r *InternalToolRegistry) handleListCatalogue(ctx context.Context, _ map[string]any) (string, error) {
 	if r.catalogue == nil {
-		return "Agent catalogue not available.", nil
+		return "", fmt.Errorf("list_catalogue unavailable: agent catalogue not available")
 	}
 	agents, err := r.catalogue.List(ctx)
 	if err != nil {
-		return fmt.Sprintf("Catalogue query failed: %v", err), nil
+		return "", fmt.Errorf("list_catalogue query failed: %w", err)
 	}
 	return mustJSON(agents), nil
 }
