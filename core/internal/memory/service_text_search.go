@@ -76,7 +76,10 @@ func recallScopeClauses(opts SemanticSearchOptions, args []any, nextArg int) ([]
 	if tenantID == "" {
 		tenantID = "default"
 	}
-	clauses := []string{fmt.Sprintf("COALESCE(metadata->>'tenant_id', 'default') = $%d", nextArg)}
+	// Archived governed rows never reach recall, citations or prompts;
+	// deleted rows no longer exist.
+	clauses := []string{fmt.Sprintf("COALESCE(metadata->>'tenant_id', 'default') = $%d", nextArg),
+		"COALESCE(metadata->>'lifecycle_state', 'active') = 'active'"}
 	args = append(args, tenantID)
 	nextArg++
 	if runID := strings.TrimSpace(opts.RunID); runID != "" {

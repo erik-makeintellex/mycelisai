@@ -80,6 +80,43 @@ record("J3b2 brand voice followed (sign-off)", "counter" in (p.get("text") or ""
 cs = p.get("context_sources") or (d.get("data") or {}).get("context_sources") or []
 record("J3c answer cites the source", any(("Juniper" in (c.get("title") or "")) and c.get("used") for c in cs), f"context_sources={json.dumps(cs)[:220]}")
 
+# J3d: archive/restore/delete of saved memory (M2). Throwaway entries carry a timestamp; leftovers from an
+# interrupted run are deleted first, and both entries are gone at the end (idempotent, no rows accumulate).
+MEM = "/api/v1/memory/deployment-context"
+def mem_entries(archived=True):
+    s, _, raw = call("GET", f"{MEM}?limit=100" + ("&include_archived=true" if archived else ""))
+    return s, js(raw).get("entries") or []
+for e in mem_entries()[1]:
+    if (e.get("title") or "").startswith("Probe J3d "): call("DELETE", f"{MEM}/{e['artifact_id']}")
+ts = int(time.time())
+def throwaway(label):
+    s, _, raw = call("POST", MEM, {"title": f"Probe J3d {label} {ts}", "knowledge_class": "customer_context", "visibility": "global",
+        "source_kind": "user_note", "content": f"Weekend special promo note {ts}: two-line promo idea, the weekend special cardamom knot."})
+    return js(raw).get("artifact_id") if s in (200, 201) else None
+def promo_cites(aid):
+    _, d, p = chat("Write a two-line promo for our weekend special.")
+    cs = p.get("context_sources") or (d.get("data") or {}).get("context_sources") or []
+    return any(c.get("artifact_id") == aid for c in cs)
+arch, gone = throwaway("archive"), throwaway("delete")
+if arch and gone:
+    cited_before = promo_cites(arch)
+    s1, _, _ = call("POST", f"{MEM}/{arch}/archive")
+    cited_archived = promo_cites(arch)
+    record("J3d1 archived entry is not cited", s1 == 200 and cited_before and not cited_archived,
+           f"archive http={s1} cited before={cited_before} while archived={cited_archived}")
+    s2, _, _ = call("POST", f"{MEM}/{arch}/restore")
+    cited_restored = promo_cites(arch)
+    record("J3d2 restored entry is cited again", s2 == 200 and cited_restored, f"restore http={s2} cited={cited_restored}")
+    s3, _, raw3 = call("DELETE", f"{MEM}/{gone}")
+    listed = [e.get("artifact_id") for e in mem_entries()[1]]
+    record("J3d3 deleted entry is gone from the list", s3 == 200 and gone not in listed,
+           f"delete http={s3} chunks_removed={(js(raw3).get('data') or {}).get('chunks_removed')} still listed={gone in listed}")
+else:
+    record("J3d memory archive/restore/delete", False, f"could not save throwaway entries archive={arch} delete={gone}")
+for aid in (arch, gone):
+    if aid: call("DELETE", f"{MEM}/{aid}")
+
+
 # J4: name-only surfaces (placeholder audit PH-D)
 s, _, raw = call("GET", "/api/v1/sensors")
 blob = raw.decode("utf-8", "replace").lower()

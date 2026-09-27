@@ -36,7 +36,7 @@ func TestHandleDeploymentContext_GetListsEntries(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "title", "content", "metadata", "created_at", "chunks", "embedded"}).
 		AddRow("ctx-1", "Deployment Brief", "Service topology and MCP security settings.", meta, time.Now(), 2, 1)
 	mock.ExpectQuery(`SELECT a.id::text,\s+a.title,\s+a.content,\s+a.metadata,\s+a.created_at,\s+c.chunks,\s+c.embedded\s+FROM artifacts a`).
-		WithArgs(12).
+		WithArgs(12, false).
 		WillReturnRows(rows)
 
 	rr := doRequest(t, http.HandlerFunc(s.HandleDeploymentContext), http.MethodGet, "/api/v1/memory/deployment-context?limit=12", "")
