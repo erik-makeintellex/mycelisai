@@ -84,6 +84,9 @@ func projectedNextActionForItem(item protocol.TeamWorkItem, payload map[string]a
 	if item.State == protocol.TeamWorkStateDegraded && item.DegradationState == "result_contract_unsatisfied" {
 		return normalizedGeneratedPackageFailure(item.DegradationState).Recovery
 	}
+	if item.State == protocol.TeamWorkStateDegraded && strings.HasPrefix(item.DegradationState, "output_") {
+		return "Core could not read back the claimed output. Ask Soma to have the team regenerate it and return a readable retained file."
+	}
 	return stringField(payload, "next_action")
 }
 
@@ -92,7 +95,7 @@ func projectedRecoveryOptionsForItem(item protocol.TeamWorkItem, payload map[str
 		return nil
 	}
 	switch item.DegradationState {
-	case "missing_retained_output", "invalid_deliverable_shape", "incomplete_deliverable_files", "unverified_primary_interaction", "validation_plan_incomplete", "runtime_validation_failed", "runtime_validation_unavailable", "runtime_validation_deadline", "runtime_validation_stale", "result_contract_unsatisfied":
+	case "output_missing", "output_empty", "output_unreadable", "output_echo_only", "output_out_of_bounds", "output_digest_mismatch", "missing_retained_output", "invalid_deliverable_shape", "incomplete_deliverable_files", "unverified_primary_interaction", "validation_plan_incomplete", "runtime_validation_failed", "runtime_validation_unavailable", "runtime_validation_deadline", "runtime_validation_stale", "result_contract_unsatisfied":
 		nextAction := strings.TrimSpace(projectedNextActionForItem(item, payload))
 		if nextAction != "" {
 			return []string{nextAction}

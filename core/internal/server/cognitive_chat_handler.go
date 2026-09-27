@@ -162,7 +162,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isMutation, mutTools := mergeMutationTools(agentResult.ToolsUsed, requestMutationTools)
-	if agentResult.Availability != nil && !agentResult.Availability.Available && (!isMutation || agentResult.Availability.Code != emptyProviderOutputCode) {
+	if (agentResult.Availability != nil && !agentResult.Availability.Available) || (isMutation && agentReplyIsEmpty(agentResult)) {
 		respondStructuredChatBlocker(w, agentResult)
 		return
 	}
@@ -173,6 +173,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		plannedToolCalls = revisionCalls
 	}
 	plannedToolCalls = filterOptionalMediaGenerationPlan(latestUserText, plannedToolCalls)
+	var draftPreviews []protocol.ProposalDraftPreview
 	if isMutation {
 		if !s.resolveThreadConfigurationMutationsOrRespond(
 			w, r, sessionID, req.Messages, latestUserText, req.OrganizationID, req.TeamID,
@@ -211,7 +212,6 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	if isMutation {
 		effectiveTools := toolsForPlannedCalls(plannedToolCalls, mutTools)
-		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
 		display := buildProposalDisplayContractForTeam(plannedToolCalls, latestUserText, effectiveTools, focusedTeamID)
 		display.WorkIntent = inheritRevisionWorkIntent(display.WorkIntent, continuationContext, latestUserText)
 		if !s.applyThreadOutcomeTemplateOrRespond(
@@ -220,6 +220,12 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		) {
 			return
 		}
+		var draftBlocker *writeFileDraftBlocker
+		if draftPreviews, draftBlocker = s.draftMissingWriteFileContent(r.Context(), plannedToolCalls, latestUserText); draftBlocker != nil {
+			respondWriteFileDraftBlocker(w, draftBlocker)
+			return
+		}
+		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
 		approval = applyApproverTier(applyPostureApprovalFloor(approval, display.WorkIntent, s.Guard, effectiveTools))
 		scope := &protocol.ScopeValidation{
 			Tools:                 effectiveTools,
@@ -276,7 +282,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 			token = confirmToken.Token
 		}
 		chatPayload.ToolsUsed = chatResponseTools(isMutation, agentResult.ToolsUsed, effectiveTools)
-		chatPayload.Proposal = buildMutationChatProposal(effectiveTools, proofID, token, focusedTeamID, []string{"admin"}, approval, profile.snapshot(), display)
+		chatPayload.Proposal = withDraftPreviews(buildMutationChatProposal(effectiveTools, proofID, token, focusedTeamID, []string{"admin"}, approval, profile.snapshot(), display), draftPreviews)
 		chatPayload.ExecutionSummary = buildProposalExecutionSummary(latestUserText, plannedToolCalls, effectiveTools, display, proofID, contractID, auditEventID, approval)
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{

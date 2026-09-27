@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/mycelis/core/internal/mcp"
 )
 
 // mockMCPExecutor simulates an MCP tool executor for testing.
 type mockMCPExecutor struct {
 	tools map[string]uuid.UUID // tool name → server ID
+	calls []string
 }
 
 func (m *mockMCPExecutor) FindToolByName(_ context.Context, name string) (uuid.UUID, string, error) {
@@ -21,29 +21,24 @@ func (m *mockMCPExecutor) FindToolByName(_ context.Context, name string) (uuid.U
 }
 
 func (m *mockMCPExecutor) CallTool(_ context.Context, _ uuid.UUID, toolName string, _ map[string]any) (string, error) {
+	m.calls = append(m.calls, toolName)
 	return "result:" + toolName, nil
 }
 
-func TestScopedToolExecutor_AllowAll(t *testing.T) {
-	// No mcp: refs → allowAll = true, all MCP tools permitted
+func TestScopedToolExecutor_NoMCPRefsDeniesMCP(t *testing.T) {
+	// Previously zero mcp: refs meant every MCP tool was allowed.
 	fsServerID := uuid.New()
-	mock := &mockMCPExecutor{tools: map[string]uuid.UUID{"read_file": fsServerID}}
-	composite := NewCompositeToolExecutor(nil, mock)
-	scoped := NewScopedToolExecutor(composite, nil, map[uuid.UUID]string{fsServerID: "filesystem"})
+	mock := &mockMCPExecutor{tools: map[string]uuid.UUID{"list_dir": fsServerID}}
+	scoped := NewScopedToolExecutor(NewCompositeToolExecutor(nil, mock), []string{"remember"}, map[uuid.UUID]string{fsServerID: "filesystem"})
 
-	if !scoped.allowAll {
-		t.Fatal("expected allowAll=true when no mcp refs")
+	if _, _, err := scoped.FindToolByName(context.Background(), "list_dir"); !IsToolNotPermitted(err) {
+		t.Fatalf("list_dir without an mcp: entry: err = %v, want not permitted", err)
 	}
-
-	serverID, toolName, err := scoped.FindToolByName(context.Background(), "read_file")
-	if err != nil {
-		t.Fatalf("FindToolByName: %v", err)
+	if _, err := scoped.CallTool(context.Background(), fsServerID, "list_dir", nil); !IsToolNotPermitted(err) {
+		t.Fatalf("direct CallTool of undeclared MCP tool: err = %v, want not permitted", err)
 	}
-	if serverID != fsServerID {
-		t.Errorf("got serverID=%v, want %v", serverID, fsServerID)
-	}
-	if toolName != "read_file" {
-		t.Errorf("got toolName=%q, want read_file", toolName)
+	if len(mock.calls) != 0 {
+		t.Fatalf("undeclared MCP tool executed: %v", mock.calls)
 	}
 }
 
@@ -53,22 +48,13 @@ func TestScopedToolExecutor_FilteredAllow(t *testing.T) {
 		"read_file":  fsServerID,
 		"write_file": fsServerID,
 	}}
-	composite := NewCompositeToolExecutor(nil, mock)
+	scoped := NewScopedToolExecutor(NewCompositeToolExecutor(nil, mock), []string{"mcp:filesystem/read_file"}, map[uuid.UUID]string{fsServerID: "filesystem"})
 
-	// Allow only read_file from filesystem
-	refs := []mcp.ToolRef{{ServerName: "filesystem", ToolName: "read_file"}}
-	scoped := NewScopedToolExecutor(composite, refs, map[uuid.UUID]string{fsServerID: "filesystem"})
-
-	// read_file should be allowed
-	_, _, err := scoped.FindToolByName(context.Background(), "read_file")
-	if err != nil {
+	if _, _, err := scoped.FindToolByName(context.Background(), "read_file"); err != nil {
 		t.Fatalf("read_file should be allowed: %v", err)
 	}
-
-	// write_file should be denied
-	_, _, err = scoped.FindToolByName(context.Background(), "write_file")
-	if err == nil {
-		t.Fatal("write_file should be denied but was allowed")
+	if _, _, err := scoped.FindToolByName(context.Background(), "write_file"); !IsToolNotPermitted(err) {
+		t.Fatalf("write_file: err = %v, want not permitted", err)
 	}
 }
 
@@ -79,44 +65,16 @@ func TestScopedToolExecutor_WildcardAllow(t *testing.T) {
 		"write_file": fsServerID,
 		"list_dir":   fsServerID,
 	}}
-	composite := NewCompositeToolExecutor(nil, mock)
-
-	// Allow all filesystem tools via wildcard
-	refs := []mcp.ToolRef{{ServerName: "filesystem", ToolName: "*"}}
-	scoped := NewScopedToolExecutor(composite, refs, map[uuid.UUID]string{fsServerID: "filesystem"})
+	scoped := NewScopedToolExecutor(NewCompositeToolExecutor(nil, mock), []string{" mcp:filesystem/* "}, map[uuid.UUID]string{fsServerID: "filesystem"})
 
 	for _, tool := range []string{"read_file", "write_file", "list_dir"} {
-		_, _, err := scoped.FindToolByName(context.Background(), tool)
+		serverID, _, err := scoped.FindToolByName(context.Background(), tool)
 		if err != nil {
-			t.Errorf("%s should be allowed via wildcard: %v", tool, err)
+			t.Fatalf("%s should be allowed via wildcard: %v", tool, err)
 		}
-	}
-}
-
-func TestScopedToolExecutor_InternalToolsAlwaysPass(t *testing.T) {
-	// Internal tools should always pass regardless of MCP refs
-	internalReg := NewInternalToolRegistry(InternalToolDeps{})
-	// The registry auto-registers built-in tools; use one that exists
-	// or add a mock via the tools map directly.
-	internalReg.tools["consult_council"] = &InternalTool{
-		Name:        "consult_council",
-		Description: "test",
-		Handler:     func(ctx context.Context, args map[string]any) (string, error) { return "ok", nil },
-	}
-
-	composite := NewCompositeToolExecutor(internalReg, nil)
-
-	// Scoped with specific mcp refs (not allowAll)
-	refs := []mcp.ToolRef{{ServerName: "filesystem", ToolName: "read_file"}}
-	scoped := NewScopedToolExecutor(composite, refs, nil)
-
-	// Internal tool should still pass
-	serverID, _, err := scoped.FindToolByName(context.Background(), "consult_council")
-	if err != nil {
-		t.Fatalf("internal tool should pass: %v", err)
-	}
-	if serverID != InternalServerID {
-		t.Errorf("expected InternalServerID, got %v", serverID)
+		if _, err := scoped.CallTool(context.Background(), serverID, tool, nil); err != nil {
+			t.Fatalf("%s call via wildcard: %v", tool, err)
+		}
 	}
 }
 
@@ -129,20 +87,14 @@ func TestScopedToolExecutor_ExplicitMCPAllowlistPrefersMCPNameCollision(t *testi
 		Handler:     func(ctx context.Context, args map[string]any) (string, error) { return "internal", nil },
 	}
 	mock := &mockMCPExecutor{tools: map[string]uuid.UUID{"read_file": fsServerID}}
-	composite := NewCompositeToolExecutor(internalReg, mock)
-
-	refs := []mcp.ToolRef{{ServerName: "filesystem", ToolName: "*"}}
-	scoped := NewScopedToolExecutor(composite, refs, map[uuid.UUID]string{fsServerID: "filesystem"})
+	scoped := NewScopedToolExecutor(NewCompositeToolExecutor(internalReg, mock), []string{"mcp:filesystem/*"}, map[uuid.UUID]string{fsServerID: "filesystem"})
 
 	serverID, toolName, err := scoped.FindToolByName(context.Background(), "read_file")
 	if err != nil {
 		t.Fatalf("read_file should resolve to allowed MCP tool: %v", err)
 	}
-	if serverID != fsServerID {
-		t.Fatalf("serverID = %v, want MCP filesystem server %v", serverID, fsServerID)
-	}
-	if toolName != "read_file" {
-		t.Fatalf("toolName = %q, want read_file", toolName)
+	if serverID != fsServerID || toolName != "read_file" {
+		t.Fatalf("got (%v, %q), want MCP filesystem read_file", serverID, toolName)
 	}
 }
 
@@ -153,25 +105,39 @@ func TestScopedToolExecutor_DeniedDifferentServer(t *testing.T) {
 		"read_file":    fsServerID,
 		"create_issue": ghServerID,
 	}}
-	composite := NewCompositeToolExecutor(nil, mock)
-
-	// Only allow filesystem tools
-	refs := []mcp.ToolRef{{ServerName: "filesystem", ToolName: "*"}}
 	serverNames := map[uuid.UUID]string{fsServerID: "filesystem", ghServerID: "github"}
-	scoped := NewScopedToolExecutor(composite, refs, serverNames)
+	scoped := NewScopedToolExecutor(NewCompositeToolExecutor(nil, mock), []string{"mcp:filesystem/*"}, serverNames)
 
-	// github tool should be denied
-	_, _, err := scoped.FindToolByName(context.Background(), "create_issue")
-	if err == nil {
-		t.Fatal("create_issue (github) should be denied when only filesystem is allowed")
+	if _, _, err := scoped.FindToolByName(context.Background(), "create_issue"); !IsToolNotPermitted(err) {
+		t.Fatalf("create_issue (github): err = %v, want not permitted", err)
+	}
+	if _, err := scoped.CallTool(context.Background(), ghServerID, "create_issue", nil); !IsToolNotPermitted(err) {
+		t.Fatalf("direct github CallTool: err = %v, want not permitted", err)
+	}
+}
+
+func TestScopedToolExecutor_BareDeclaredMCPToolName(t *testing.T) {
+	// Blueprint agents may declare an installed MCP tool by its exact name.
+	ghServerID := uuid.New()
+	mock := &mockMCPExecutor{tools: map[string]uuid.UUID{"create_issue": ghServerID, "delete_repo": ghServerID}}
+	scoped := NewScopedToolExecutor(NewCompositeToolExecutor(nil, mock), []string{"create_issue"}, map[uuid.UUID]string{ghServerID: "github"})
+
+	serverID, _, err := scoped.FindToolByName(context.Background(), "create_issue")
+	if err != nil || serverID != ghServerID {
+		t.Fatalf("declared bare MCP name: (%v, %v)", serverID, err)
+	}
+	if _, _, err := scoped.FindToolByName(context.Background(), "delete_repo"); !IsToolNotPermitted(err) {
+		t.Fatalf("delete_repo: err = %v, want not permitted", err)
+	}
+	if _, _, err := scoped.FindToolByName(context.Background(), "Create_Issue"); !IsToolNotPermitted(err) {
+		t.Fatalf("case-changed name: err = %v, want not permitted", err)
 	}
 }
 
 func TestScopedToolExecutor_CallToolDelegates(t *testing.T) {
 	fsServerID := uuid.New()
 	mock := &mockMCPExecutor{tools: map[string]uuid.UUID{"read_file": fsServerID}}
-	composite := NewCompositeToolExecutor(nil, mock)
-	scoped := NewScopedToolExecutor(composite, nil, nil)
+	scoped := NewScopedToolExecutor(NewCompositeToolExecutor(nil, mock), []string{"mcp:filesystem/read_file"}, map[uuid.UUID]string{fsServerID: "filesystem"})
 
 	result, err := scoped.CallTool(context.Background(), fsServerID, "read_file", nil)
 	if err != nil {

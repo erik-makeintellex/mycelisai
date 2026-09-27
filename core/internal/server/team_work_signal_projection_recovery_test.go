@@ -101,6 +101,8 @@ func TestTeamWorkSignalProjection_ResultContractRecoveryReplacesStaleRecovery(t 
 }
 
 func TestTeamWorkSignalProjection_OutputReadyClearsStaleRecovery(t *testing.T) {
+	root := useTestWorkspace(t)
+	writeWorkspaceTestFile(t, root, "groups/research-team/generated/release-proof.md", "# Release proof\n\nAll twelve release checks passed on the staging build with no regressions.")
 	opt, mock := withDB(t)
 	s := newTestServer(opt)
 	now := time.Now().UTC()

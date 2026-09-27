@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	mcplib "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/pkg/protocol"
@@ -127,32 +128,71 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, fmt.Sprintf(`{"error":"tool call failed: %s"}`, err.Error()), http.StatusBadGateway)
 		return
 	}
+	s.finishMCPToolCall(w, r, serverID, serverName, toolName, args, result)
+}
+
+// finishMCPToolCall records and returns a completed MCP call. A result the MCP
+// server flagged isError is a tool failure: it is retained as a failed
+// exchange item and answered with 502, never as completed output.
+func (s *AdminServer) finishMCPToolCall(w http.ResponseWriter, r *http.Request, serverID uuid.UUID, serverName, toolName string, args map[string]any, result *mcplib.CallToolResult) {
+	ctx := r.Context()
+	toolErr := mcp.CallToolResultError(toolName, result)
 	summary := fmt.Sprintf("%s returned output.", toolName)
-	if text := strings.TrimSpace(extractMCPResultSummary(result)); text != "" {
+	if toolErr != nil {
+		summary = toolErr.Error()
+	} else if text := strings.TrimSpace(extractMCPResultSummary(result)); text != "" {
 		summary = text
 	}
 	var exchangeItemID string
 	if s.Exchange != nil {
-		item, _ := s.Exchange.PublishMCPResult(ctx, exchange.MCPNormalizationInput{
-			ServerID:       serverID.String(),
-			ServerName:     serverName,
-			ToolName:       toolName,
-			Summary:        summary,
-			ResultPreview:  summary,
-			TargetRole:     "soma",
-			Status:         "completed",
-			Result:         map[string]any{"arguments": args, "result": result},
-			RunClass:       string(protocol.ExecutionRunClassNoRun),
-			NoRunReason:    "Direct MCP tool call did not supply a run id.",
-			RetentionClass: string(protocol.ExecutionRetentionClassRetained),
-		})
+		var retained any = result
+		if toolErr != nil {
+			// The raw result would repeat the unredacted error text.
+			retained = map[string]any{"is_error": true, "error": summary}
+		}
+		item, _ := s.Exchange.PublishMCPResult(ctx, mcpToolCallExchangeInput(serverID, serverName, toolName, summary, toolErr != nil, args, retained))
 		if item != nil {
 			exchangeItemID = item.ID.String()
 		}
 	}
-
+	if toolErr != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		_ = json.NewEncoder(w).Encode(mcpToolCallFailureBody(toolErr, exchangeItemID))
+		return
+	}
 	executionSummary := buildMCPToolCallExecutionSummary(serverName, toolName, summary, exchangeItemID)
 	respondJSON(w, mcpToolCallResponse(result, executionSummary, exchangeItemID))
+}
+
+func mcpToolCallExchangeInput(serverID uuid.UUID, serverName, toolName, summary string, failed bool, args map[string]any, result any) exchange.MCPNormalizationInput {
+	status := "completed"
+	if failed {
+		status = "failed"
+	}
+	return exchange.MCPNormalizationInput{
+		ServerID:       serverID.String(),
+		ServerName:     serverName,
+		ToolName:       toolName,
+		Summary:        summary,
+		ResultPreview:  summary,
+		TargetRole:     "soma",
+		Status:         status,
+		Result:         map[string]any{"arguments": args, "result": result},
+		RunClass:       string(protocol.ExecutionRunClassNoRun),
+		NoRunReason:    "Direct MCP tool call did not supply a run id.",
+		RetentionClass: string(protocol.ExecutionRetentionClassRetained),
+	}
+}
+
+// mcpToolCallFailureBody carries only the redacted, capped error, never the
+// raw MCP result, which would repeat the unredacted server text.
+func mcpToolCallFailureBody(toolErr error, exchangeItemID string) map[string]any {
+	body := map[string]any{"error": "tool call failed: " + toolErr.Error(), "is_error": true}
+	if strings.TrimSpace(exchangeItemID) != "" {
+		body["exchange_item_id"] = exchangeItemID
+	}
+	return body
 }
 
 func decodeMCPToolCallArguments(reader io.Reader) (map[string]any, error) {

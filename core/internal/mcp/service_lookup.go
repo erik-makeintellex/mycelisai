@@ -70,6 +70,7 @@ func (s *Service) FindToolByName(ctx context.Context, name string) (*ToolDef, *S
 		FROM mcp_tools t
 		JOIN mcp_servers s ON s.id = t.server_id
 		WHERE t.name = $1
+		ORDER BY s.name, s.id, t.id
 		LIMIT 1
 	`, name)
 

@@ -103,7 +103,7 @@ Soma responses can include:
 1. **Primary answer**: markdown text, code blocks, links, and tables. Table-like data should render as a real table, not as pasted aligned text. Compact labels such as `Quick answer`, `Summary`, or `Decision brief` may appear only to clarify answer depth.
 2. **Inline generated outputs**: images, audio, video, code, charts, briefs, data, documents, and media previews.
 3. **Output package**: a retained file/app/package with `Open file`, `Open folder`, proof, and Resources re-entry.
-4. **Proposal quote**: a result-first summary and short work list for actions that execute or change something. Soma keeps the conversation open so you can ask a question or change direction before and during the work. Select the primary **Approve** or **Start** action, or reply `approve`, `go ahead`, or `start` in the normal composer to begin; reply `cancel` to cancel; otherwise tell Soma what to change. Internal routing stays under `Details`.
+4. **Proposal quote**: a result-first summary and short work list for actions that execute or change something. Soma keeps the conversation open so you can ask a question or change direction before and during the work. Select the primary **Approve** or **Start** action, or reply `approve`, `go ahead`, or `start` in the normal composer to begin; reply `cancel` to cancel; otherwise tell Soma what to change. Internal routing stays under `Details`. When you ask for a file without giving its exact text, Soma drafts the content first and the proposal shows a preview of that draft, so you approve the real content; the saved file matches the draft you approved. If Soma cannot produce a real draft, or its AI engine returns nothing, it tells you so instead of proposing, and never saves a filler file.
 5. **Recovery/blocker card**: a compact trust boundary in the thread, with what failed, what remains trusted, what is not trusted, and what can safely happen next behind `Details and proof`.
 6. **Action-state card**: the current status, route, capability use, or next step for structured Soma work.
 
@@ -193,7 +193,7 @@ If you ask `what is your current state` or `what teams currently exist`, Soma sh
 
 ## Recovery
 
-If execution fails, Soma should recover inline without making you retype the request. Recovery cards should avoid raw `500`, raw `tool_call` JSON, and raw runtime envelopes in the main conversation.
+If execution fails, Soma should recover inline without making you retype the request. A tool that fails, including a connected MCP server that refuses a request, is reported to Soma as a failure and shown as failed, never as completed. Recovery cards should avoid raw `500`, raw `tool_call` JSON, and raw runtime envelopes in the main conversation.
 
 When the fix lives on another Mycelis page, Soma should include a direct link in the chat reply, such as `System Status`, `Settings`, or `Resources setup`, instead of only telling you to review an alert. When the fix is a configuration change Soma can safely prepare, the reply should also say that you can tell Soma what to change; Soma must still use the governed proposal/approval path before altering configuration, credentials, tools, providers, teams, or recurring behavior.
 

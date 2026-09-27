@@ -52,7 +52,7 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 			wantResponseDepth:    protocol.ResponseDepthExecutionProposal,
 			wantProposalTool:     "write_file",
 			wantRouteHintApplied: false,
-			wantBypassAgent:      true,
+			wantBypassAgent:      false,
 		},
 		{
 			name: "rephrased mutation after answer still routes to proposal",
@@ -65,7 +65,7 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 			wantResponseDepth:    protocol.ResponseDepthExecutionProposal,
 			wantProposalTool:     "write_file",
 			wantRouteHintApplied: false,
-			wantBypassAgent:      true,
+			wantBypassAgent:      false,
 		},
 		{
 			name: "clean first turn mutation routes to proposal",
@@ -76,7 +76,7 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 			wantResponseDepth:    protocol.ResponseDepthExecutionProposal,
 			wantProposalTool:     "write_file",
 			wantRouteHintApplied: false,
-			wantBypassAgent:      true,
+			wantBypassAgent:      false,
 		},
 	}
 
@@ -239,6 +239,7 @@ func TestHandleChat_UsesFocusedTeamForSelectedTeamProposal(t *testing.T) {
 		},
 	}
 
+	respondAsAdminAgentForTest(t, s, map[string]any{"text": "```python\nprint('hello world')\n```"})
 	reqBody := bytes.NewBufferString(`{"team_id":"marketing-team","messages":[{"role":"user","content":"Write a new python file named workspace/logs/focused_team_mutation_test.py that prints hello world."}]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
 	rr := httptest.NewRecorder()

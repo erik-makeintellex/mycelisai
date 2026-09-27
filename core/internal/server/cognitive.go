@@ -33,7 +33,7 @@ const directAnswerRetryRoutePrefix = "[DIRECT ANSWER RETRY]"
 var (
 	namedFilePattern     = regexp.MustCompile("(?i)(?:named|called|at path|path|at)\\s+[`'\"]?([^`'\"\\s]+)[`'\"]?")
 	printsPattern        = regexp.MustCompile("(?i)prints?\\s+[`'\"]?([^`'\".]+(?:\\s+[^`'\".]+)*)[`'\"]?")
-	quotedContentPattern = regexp.MustCompile("(?i)(?:with content|containing|that says)\\s+[`'\"]([^`'\"]+)[`'\"]")
+	quotedContentPattern = regexp.MustCompile("(?i)(?:with content|containing|that says|put exactly)\\s+[`'\"]([^`'\"]+)[`'\"]")
 )
 
 type chatRequestMessage struct {
@@ -153,7 +153,6 @@ func inferMutationToolsFromText(text string) []string {
 	var tools []string
 
 	tools = append(tools, teamEvocationContinuationMutationTools(text, lower)...)
-	tools = append(tools, contentMarketingCrossTeamMutationTools(text, lower)...)
 	if requestRequiresDeliveryTeam(lower) {
 		tools = append(tools, "write_file", "generate_blueprint", "delegate")
 	}

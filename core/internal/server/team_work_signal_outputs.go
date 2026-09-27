@@ -23,6 +23,34 @@ func projectedSignalOutputRefs(item protocol.TeamWorkItem, env protocol.SignalEn
 	return refs
 }
 
+// claimedSignalOutputDigests maps each claimed output ref (by teamOutputRefKey)
+// to the digest the team declared for it, so Core can compare it on disk.
+func claimedSignalOutputDigests(item protocol.TeamWorkItem, env protocol.SignalEnvelope, payload map[string]any) map[string]string {
+	claimed := map[string]string{}
+	entries := []map[string]any{}
+	for _, key := range []string{"output_refs", "outputs", "artifacts"} {
+		values, _ := payload[key].([]any)
+		for _, value := range values {
+			if data, ok := value.(map[string]any); ok {
+				entries = append(entries, data)
+			}
+		}
+	}
+	if hasInlineOutputRefPayload(payload) {
+		entries = append(entries, payload)
+	}
+	for _, data := range entries {
+		digest := firstNonEmptyString(stringField(data, "content_digest"), stringField(data, "digest"), stringField(data, "checksum"), stringField(data, "sha256"))
+		if strings.TrimSpace(digest) == "" {
+			continue
+		}
+		if ref, ok := outputRefFromMap(item, env, data); ok {
+			claimed[teamOutputRefKey(ref)] = digest
+		}
+	}
+	return claimed
+}
+
 func hasInlineOutputRefPayload(payload map[string]any) bool {
 	for _, key := range []string{
 		"output_id", "id", "artifact_id", "storage_ref", "folder", "path",

@@ -6,8 +6,8 @@
 # - Cap values only move downward as files are decomposed.
 # - Remove the cap entry once a file reaches 385 lines or less.
 
-charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml=562
-core/config/templates/v8-migration-standing-team-bridge.yaml=562
+charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml=545
+core/config/templates/v8-migration-standing-team-bridge.yaml=545
 interface/app/(app)/system/page.tsx=469
 interface/components/automations/TriggerRulesTab.tsx=502
 interface/components/matrix/MatrixGrid.tsx=388

@@ -341,7 +341,7 @@ The schema compatibility probe must verify the current `001_current_schema.sql` 
 ## CI Pipelines
 GitHub Actions remain manual-only through `workflow_dispatch` and are hosted corroboration after local source proof, not the first place to find ordinary development failures. Manual hosted lanes: `CI` has selectable repo/core/interface/browser/Helm lanes plus `browser_spec`; `Source API Proof` runs hosted pgvector PostgreSQL/NATS against `api.delivery-proof`; `Full Release Candidate` chains source gates, authenticated browser proof, optional source API proof, Helm packaging, optional images, and binaries; `Dev Build`, `Release Packaging`, and `Release Core Binaries` remain narrower explicit lanes. Hosted workflow maintenance uses Node 24-capable action majors, Node.js 24 for Interface lanes/container builds, checksum-verified pinned Helm 3 instead of `azure/setup-helm@v4`, and self-hosted runners new enough for Node 24 actions.
 
-Primary local gates (`pytest` discovery is bounded to `tests`, `agents/tests`, and `sdk/python/tests`; generated workspace/tool-cache contents are never test sources):
+Primary local gates (`pytest` discovery is bounded to `tests`, `agents/tests`, and `sdk/python/tests`; generated workspace/tool-cache contents are never test sources; a linked worktree with `MYCELIS_PROJECT_CACHE_ROOT` unset defaults to the main checkout's `workspace/tool-cache` via `ops/config.py`'s `default_project_cache_root`, so `core.test` finds Playwright browsers there instead of failing on a fresh worktree):
 - `uv run inv ci.test`
 - `uv run inv ci.baseline`
 - `uv run inv ci.service-check`

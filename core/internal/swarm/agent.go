@@ -50,7 +50,8 @@ func (a *Agent) trackSubscription(subscription *nats.Subscription) {
 	a.lifecycleMu.Unlock()
 }
 
-// NewAgent creates a new Agent instance with lifecycle context.
+// NewAgent creates a new Agent instance with lifecycle context. The tool
+// executor is always scoped to the manifest's declared tools.
 func NewAgent(ctx context.Context, manifest protocol.AgentManifest, teamID string, nc *nats.Conn, brain *cognitive.Router, toolExec MCPToolExecutor) *Agent {
 	agentCtx, cancel := context.WithCancel(ctx)
 	return &Agent{
@@ -58,7 +59,7 @@ func NewAgent(ctx context.Context, manifest protocol.AgentManifest, teamID strin
 		TeamID:       teamID,
 		nc:           nc,
 		brain:        brain,
-		toolExecutor: toolExec,
+		toolExecutor: scopeToolExecutor(toolExec, manifest.Tools),
 		ctx:          agentCtx,
 		cancel:       cancel,
 	}

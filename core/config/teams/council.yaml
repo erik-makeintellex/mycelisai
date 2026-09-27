@@ -80,6 +80,7 @@ members:
       - read_signals
       - read_file
       - write_file
+      - web_search
       - mcp:filesystem/*
       - mcp:fetch/*
       - mcp:brave-search/*
@@ -131,6 +132,8 @@ members:
       - local_command
       - publish_signal
       - read_signals
+      - list_available_tools
+      - web_search
       - mcp:filesystem/*
       - mcp:fetch/*
       - mcp:brave-search/*

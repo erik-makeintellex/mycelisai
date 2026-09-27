@@ -24,9 +24,10 @@ type agentToolLoopResult struct {
 	artifacts     []protocol.ChatArtifactRef
 	consultations []protocol.ConsultationEntry
 	toolEvidence  []successfulToolEvidence
-	// runtimeRecoveryAllowed means the agent made concrete retained-output
-	// progress, then the cognitive loop failed before satisfying proof.
-	runtimeRecoveryAllowed bool
+	// inferenceStopped means re-inference failed after the agent made
+	// retained-output progress; the loop ends and the contract gate reports
+	// what is still missing.
+	inferenceStopped bool
 }
 
 func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string, planningOnly bool, requirement *teamResultRequirement) agentToolLoopResult {
@@ -57,7 +58,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			log.Printf("Agent [%s] re-inference after tool feedback failed: %v", a.Manifest.ID, inferErr)
 			result.responseText = feedback
 			if len(result.toolEvidence) > 0 {
-				result.runtimeRecoveryAllowed = true
+				result.inferenceStopped = true
 			}
 			return false
 		}
@@ -137,7 +138,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 				if err != nil || updated == nil {
 					log.Printf("Agent [%s] result-contract correction failed: %v", a.Manifest.ID, err)
 					if len(result.toolEvidence) > 0 {
-						result.runtimeRecoveryAllowed = true
+						result.inferenceStopped = true
 					}
 					break
 				}
@@ -186,6 +187,13 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 			}
 			continue
 		}
+		if planningOnly && blocksProposalPlanningTool(toolCall.Name) && !a.toolPermittedForPlanning(toolCall.Name) {
+			a.recordToolDenied(toolCall.Name, "planning", false)
+			if !reinferWithToolFeedback(toolCall.Name, toolDeniedFeedback(toolCall.Name)) {
+				break
+			}
+			continue
+		}
 		if planningOnly && blocksProposalPlanningTool(toolCall.Name) {
 			log.Printf("Agent [%s] proposal-planning tool captured without execution: %s", a.Manifest.ID, toolCall.Name)
 			result.toolsUsed = append(result.toolsUsed, toolCall.Name)
@@ -212,7 +220,7 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 				contractCorrections = 0
 				delete(unsafeCorrectionUsed, "unsafe:"+strings.TrimSpace(toolCall.Name))
 			}
-			if result.runtimeRecoveryAllowed {
+			if result.inferenceStopped {
 				break
 			}
 			continue
@@ -225,10 +233,6 @@ func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, 
 		if entrypoint := currentProjectPackageEntrypointReadback(requirement, result.artifacts, result.toolEvidence); entrypoint != "" {
 			completedToolCalls[toolCallFingerprint(&toolCallPayload{Name: "read_file", Arguments: map[string]any{"path": entrypoint}})] = true
 		}
-	}
-
-	if a.completeProjectPackageRuntimeFallback(input, requirement, &result, planningOnly) {
-		result.artifacts = reconcileToolBackedArtifacts(result.artifacts, result.toolEvidence, input)
 	}
 	return result
 }

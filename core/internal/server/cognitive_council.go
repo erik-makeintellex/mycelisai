@@ -145,7 +145,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 	}
 
 	isMutation, mutTools := mergeMutationTools(agentResult.ToolsUsed, requestMutationTools)
-	if agentResult.Availability != nil && !agentResult.Availability.Available && (!isMutation || agentResult.Availability.Code != emptyProviderOutputCode) {
+	if (agentResult.Availability != nil && !agentResult.Availability.Available) || (isMutation && agentReplyIsEmpty(agentResult)) {
 		respondStructuredChatBlocker(w, agentResult)
 		return
 	}
@@ -154,6 +154,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		respondStructuredChatBlocker(w, agentResult)
 		return
 	}
+	var draftPreviews []protocol.ProposalDraftPreview
 
 	// Wrap response in CTS envelope with trust score, provenance, and tool metadata
 	chatPayload := protocol.ChatResponsePayload{
@@ -174,13 +175,18 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 	if isMutation {
 		effectiveTools := toolsForPlannedCalls(plannedToolCalls, mutTools)
 		chatPayload.ToolsUsed = effectiveTools
-		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
 		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, effectiveTools)
 		// A2b item 2: council runs the same posture seams as Soma chat, before
 		// anything is audited or minted. An unresolvable template fails closed.
 		if !s.applyCouncilOutcomeTemplateOrRespond(w, r, req.Messages, latestUserText, teamID, &display) {
 			return
 		}
+		var draftBlocker *writeFileDraftBlocker
+		if draftPreviews, draftBlocker = s.draftMissingWriteFileContent(r.Context(), plannedToolCalls, latestUserText); draftBlocker != nil {
+			respondWriteFileDraftBlocker(w, draftBlocker)
+			return
+		}
+		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
 		approval = applyApproverTier(applyPostureApprovalFloor(approval, display.WorkIntent, s.Guard, effectiveTools))
 		scope := &protocol.ScopeValidation{
 			Tools:             effectiveTools,
@@ -230,7 +236,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		if confirmToken != nil {
 			token = confirmToken.Token
 		}
-		chatPayload.Proposal = buildMutationChatProposal(effectiveTools, proofID, token, teamID, []string{memberID}, approval, profile.snapshot(), display)
+		chatPayload.Proposal = withDraftPreviews(buildMutationChatProposal(effectiveTools, proofID, token, teamID, []string{memberID}, approval, profile.snapshot(), display), draftPreviews)
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",

@@ -55,10 +55,9 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 	}
 	resp, err := a.inferWithExecutionBounds(req, "initial", 1)
 	if err != nil {
+		// Inference failure is a blocker. The runtime never substitutes its own
+		// package or content for the model's work.
 		log.Printf("Agent [%s] brain freeze: %v", a.Manifest.ID, err)
-		if fallback, ok := a.tryInitialProjectPackageRuntimeFallback(input, requirement, planningOnly); ok {
-			return fallback
-		}
 		availability := a.brain.ExecutionAvailability(profile, a.Manifest.Provider)
 		availability.Available = false
 		availability.Code = "provider_inference_failed"
@@ -85,11 +84,6 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 	loop := a.runToolLoop(input, priorHistory, &req, resp, profile, planningOnly, requirement)
 	loop.artifacts = reconcileToolBackedArtifacts(loop.artifacts, loop.toolEvidence, input)
 	loop.artifacts = dedupeAgentArtifacts(loop.artifacts)
-	if len(resultContractIssues(requirement, loop.artifacts, loop.toolEvidence)) > 0 &&
-		a.completeProjectPackageRuntimeFallback(input, requirement, &loop, planningOnly) {
-		loop.artifacts = reconcileToolBackedArtifacts(loop.artifacts, loop.toolEvidence, input)
-		loop.artifacts = dedupeAgentArtifacts(loop.artifacts)
-	}
 	responseText := stripToolCallJSON(loop.responseText)
 	if strings.TrimSpace(responseText) == "" && len(loop.plannedCalls) > 0 {
 		responseText = "Soma prepared the requested governed action for approval."
@@ -242,7 +236,7 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 	sys += agentProfileContextDirective(a.Manifest)
 	sys += runtimeResponseDirective()
 	if a.internalTools != nil {
-		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
+		sys += a.internalTools.withoutUndeclaredToolLines(a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input), a.Manifest.Tools)
 	}
 	sys += a.buildToolsBlock(input)
 

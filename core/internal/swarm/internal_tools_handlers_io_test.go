@@ -9,14 +9,10 @@ import (
 	"testing"
 )
 
-func TestHandleWriteFileCreatesProjectPackageSupportFiles(t *testing.T) {
-	workspaceRoot := t.TempDir()
-	t.Setenv("MYCELIS_WORKSPACE", workspaceRoot)
-
-	registry := NewInternalToolRegistry(InternalToolDeps{})
-	output, err := registry.handleWriteFile(context.Background(), map[string]any{
-		"path":               "workspace/generated/game/index.html",
-		"content":            "<!doctype html><html><body>Game</body></html>",
+func projectPackageWriteArgs(path, content string) map[string]any {
+	return map[string]any{
+		"path":               path,
+		"content":            content,
 		"package_kind":       "project_package",
 		"package_title":      "Playable Game",
 		"package_folder":     "workspace/generated/game",
@@ -24,53 +20,42 @@ func TestHandleWriteFileCreatesProjectPackageSupportFiles(t *testing.T) {
 		"package_files":      []any{"index.html", "README.md", "PROOF.md", "project-package.json"},
 		"package_usage":      "Use arrow keys or WASD to move. Press R to restart.",
 		"validation":         "Browser opened, movement and restart verified.",
-	})
+	}
+}
+
+// write_file writes only the manifest on its own. README.md and PROOF.md are
+// never synthesized, and the model's validation claim is not recorded as proof.
+func TestHandleWriteFileWritesOnlyManifestForProjectPackage(t *testing.T) {
+	workspaceRoot := t.TempDir()
+	t.Setenv("MYCELIS_WORKSPACE", workspaceRoot)
+
+	registry := NewInternalToolRegistry(InternalToolDeps{})
+	output, err := registry.handleWriteFile(context.Background(), projectPackageWriteArgs("workspace/generated/game/index.html", "<!doctype html><html><body>Game</body></html>"))
 	if err != nil {
 		t.Fatalf("handleWriteFile returned error: %v", err)
 	}
-	if !strings.Contains(output, "Project package support files written: 3") {
-		t.Fatalf("output = %q, want support file count", output)
-	}
 	message, artifacts, ok := extractToolOutputArtifacts(output)
-	if !ok || !strings.Contains(message, "Project package support files written: 3") {
+	if !ok || !strings.Contains(message, "Package manifest written") {
 		t.Fatalf("structured write output = %q", output)
 	}
 	if len(artifacts) != 1 || artifacts[0].Type != "project_package" || artifacts[0].Entrypoint != "workspace/generated/game/index.html" {
 		t.Fatalf("write artifacts = %#v", artifacts)
 	}
-
-	for _, rel := range []string{
-		"generated/game/index.html",
-		"generated/game/README.md",
-		"generated/game/PROOF.md",
-		"generated/game/project-package.json",
-	} {
-		if _, err := os.Stat(filepath.Join(workspaceRoot, filepath.FromSlash(rel))); err != nil {
-			t.Fatalf("expected package file %s: %v", rel, err)
+	if got := strings.Join(artifacts[0].Files, ","); got != "index.html,project-package.json" {
+		t.Fatalf("artifact files = %s, want only the files this call wrote", got)
+	}
+	if artifacts[0].Validation != "" {
+		t.Fatalf("artifact validation = %q, want no unverified claim", artifacts[0].Validation)
+	}
+	for _, rel := range []string{"README.md", "PROOF.md", "validation-notes.md"} {
+		if _, err := os.Stat(filepath.Join(workspaceRoot, "generated", "game", rel)); !os.IsNotExist(err) {
+			t.Fatalf("%s was synthesized (stat err %v)", rel, err)
 		}
 	}
-
 	entrypointBytes, err := os.ReadFile(filepath.Join(workspaceRoot, "generated", "game", "index.html"))
-	if err != nil {
-		t.Fatalf("read entrypoint: %v", err)
+	if err != nil || !strings.Contains(string(entrypointBytes), "<title>Playable Game</title>") {
+		t.Fatalf("entrypoint = %q, %v; want normalized title", entrypointBytes, err)
 	}
-	if !strings.Contains(string(entrypointBytes), "<title>Playable Game</title>") {
-		t.Fatalf("entrypoint title was not normalized: %q", entrypointBytes)
-	}
-
-	readme, err := os.ReadFile(filepath.Join(workspaceRoot, "generated", "game", "README.md"))
-	if err != nil {
-		t.Fatalf("read README: %v", err)
-	}
-	readmeText := string(readme)
-	if !strings.Contains(readmeText, "Browser opened") ||
-		!strings.Contains(readmeText, "workspace/generated/game/index.html") ||
-		!strings.Contains(readmeText, "## Included files") ||
-		!strings.Contains(readmeText, "project-package.json") ||
-		!strings.Contains(readmeText, "## Recovery") {
-		t.Fatalf("README content = %q", readme)
-	}
-
 	manifestBytes, err := os.ReadFile(filepath.Join(workspaceRoot, "generated", "game", "project-package.json"))
 	if err != nil {
 		t.Fatalf("read manifest: %v", err)
@@ -82,10 +67,35 @@ func TestHandleWriteFileCreatesProjectPackageSupportFiles(t *testing.T) {
 	if manifest["title"] != "Playable Game" || manifest["kind"] != "project_package" || manifest["entrypoint"] != "workspace/generated/game/index.html" {
 		t.Fatalf("manifest = %#v, want title, kind, and entrypoint", manifest)
 	}
+	if _, claimed := manifest["validation"]; claimed {
+		t.Fatalf("manifest carries a validation claim: %#v", manifest)
+	}
 	if open, ok := manifest["open"].(map[string]any); !ok || !strings.Contains(open["resources_url"].(string), "/resources?tab=workspace&path=workspace/generated/game") {
 		t.Fatalf("manifest open hints = %#v", manifest["open"])
 	}
-	if recovery, ok := manifest["recovery"].(map[string]any); !ok || !strings.Contains(recovery["hint"].(string), "Resources") {
-		t.Fatalf("manifest recovery hints = %#v", manifest["recovery"])
+}
+
+func TestHandleWriteFileKeepsModelAuthoredSupportFiles(t *testing.T) {
+	workspaceRoot := t.TempDir()
+	t.Setenv("MYCELIS_WORKSPACE", workspaceRoot)
+	registry := NewInternalToolRegistry(InternalToolDeps{})
+
+	if _, err := registry.handleWriteFile(context.Background(), projectPackageWriteArgs("workspace/generated/game/README.md", "# Model README")); err != nil {
+		t.Fatalf("README write: %v", err)
+	}
+	modelManifest := `{"title":"Model manifest"}`
+	if _, err := registry.handleWriteFile(context.Background(), projectPackageWriteArgs("workspace/generated/game/project-package.json", modelManifest)); err != nil {
+		t.Fatalf("manifest write: %v", err)
+	}
+	if _, err := registry.handleWriteFile(context.Background(), projectPackageWriteArgs("workspace/generated/game/index.html", "<!doctype html><title>x</title>")); err != nil {
+		t.Fatalf("entrypoint write: %v", err)
+	}
+	readme, _ := os.ReadFile(filepath.Join(workspaceRoot, "generated", "game", "README.md"))
+	if string(readme) != "# Model README" {
+		t.Fatalf("README = %q, want the model's bytes", readme)
+	}
+	manifest, _ := os.ReadFile(filepath.Join(workspaceRoot, "generated", "game", "project-package.json"))
+	if string(manifest) != modelManifest {
+		t.Fatalf("manifest = %q, want the model-authored manifest kept", manifest)
 	}
 }

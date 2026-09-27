@@ -107,7 +107,10 @@ func (s *AdminServer) ensureExecutionContractTx(ctx context.Context, tx *sql.Tx,
 	})
 }
 
-func (s *AdminServer) markRunCompletedTx(tx *sql.Tx, runID, proofID string) error {
+// markRunCompletedTx completes the run and records its real proof state:
+// proof_quality is verified, unverified, or failed, and execution_state is
+// "verified" only when proof_quality is verified.
+func (s *AdminServer) markRunCompletedTx(tx *sql.Tx, runID, proofID string, proofQuality protocol.TrustProofQuality) error {
 	if tx == nil {
 		return errDBUnavailable
 	}
@@ -129,7 +132,8 @@ func (s *AdminServer) markRunCompletedTx(tx *sql.Tx, runID, proofID string) erro
 
 	payload, _ := json.Marshal(map[string]any{
 		"proof_id":        proofID,
-		"execution_state": "verified",
+		"execution_state": runCompletionExecutionState(proofQuality),
+		"proof_quality":   string(runCompletionProofQuality(proofQuality)),
 		"run_status":      runs.StatusCompleted,
 	})
 	_, err = tx.Exec(
@@ -198,6 +202,9 @@ func (s *AdminServer) executePlannedToolCallsTx(ctx context.Context, tx *sql.Tx,
 	executor := swarm.NewCompositeToolExecutor(registry, mcpExec)
 	toolCtx := confirmedActionToolContext(ctx, auditUser, runID, scope.ConfigRequestBoundary)
 
+	if err := validateApprovedPlanBeforeExecution(scope.PlannedToolCalls); err != nil {
+		return nil, err
+	}
 	results := make([]plannedToolExecutionResult, 0, len(scope.PlannedToolCalls))
 	lastGeneratedImageArtifactID := ""
 	for _, planned := range scope.PlannedToolCalls {

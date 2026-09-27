@@ -76,7 +76,9 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 	if err := r.nc.Publish(fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID), payload); err != nil {
 		return "", fmt.Errorf("failed to publish task to team %s: %w", teamID, err)
 	}
-	return fmt.Sprintf("Task delegated to team %s.", teamID), nil
+	// Core NATS publish is fire-and-forget: it proves the command reached the
+	// bus client, not that the team received or accepted it.
+	return fmt.Sprintf("Task queued for team %s. Delivery and acceptance are not yet confirmed; the team's receipt and status report them.", teamID), nil
 }
 
 func (r *InternalToolRegistry) resolveDelegationTeam(ask protocol.TeamAsk) (string, error) {
@@ -133,6 +135,9 @@ func (r *InternalToolRegistry) handleCreateTeam(ctx context.Context, args map[st
 		return "", err
 	}
 	manifest := buildRuntimeTeamManifest(args)
+	if err := childToolsWithinCaller(ctx, manifest); err != nil {
+		return "", err
+	}
 	if err := r.somaRef.SpawnTeamContext(ctx, manifest); err != nil {
 		return "", fmt.Errorf("create_team failed: %w", err)
 	}
@@ -229,7 +234,7 @@ func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[
 		return "", fmt.Errorf("search_memory requires 'query'")
 	}
 	if r.brain == nil || r.mem == nil {
-		return "Memory search unavailable — cognitive engine or memory service offline.", nil
+		return "", fmt.Errorf("search_memory unavailable: cognitive engine or memory service offline")
 	}
 	limit := 5
 	if l, ok := args["limit"].(float64); ok && l > 0 {
@@ -242,7 +247,7 @@ func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[
 	}
 	vec, err := r.brain.Embed(ctx, query, "")
 	if err != nil {
-		return "Embedding failed — no embed provider available.", nil
+		return "", fmt.Errorf("search_memory embedding failed: %w", err)
 	}
 	results, err := r.mem.SemanticSearchWithOptions(ctx, vec, memory.SemanticSearchOptions{
 		Limit:               limit,
@@ -256,14 +261,14 @@ func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[
 		AllowLegacyUnscoped: scope.TeamID == "" && scope.AgentID == "",
 	})
 	if err != nil {
-		return fmt.Sprintf("Search failed: %v", err), nil
+		return "", fmt.Errorf("search_memory failed: %w", err)
 	}
 	return mustJSON(results), nil
 }
 
 func (r *InternalToolRegistry) handleListTeams(_ context.Context, _ map[string]any) (string, error) {
 	if r.somaRef == nil {
-		return "Soma not available — cannot list teams.", nil
+		return "", fmt.Errorf("list_teams unavailable: Soma is not available")
 	}
 	type teamSummary struct {
 		ID      string `json:"id"`

@@ -173,7 +173,7 @@ func (s *AdminServer) dispatchClaimedConfirmedActionLocked(ctx context.Context, 
 	}
 	if !confirmedActionHasPendingTeamWork(results) {
 		s.completeConfirmedActionWorkerRun(ctx, item.RunID, results)
-		if err := s.completeAsyncDispatchRun(ctx, item); err != nil {
+		if err := s.completeAsyncDispatchRun(ctx, item, confirmActionProofQuality(payload.Scope, results)); err != nil {
 			return s.retryOrFailConfirmedDispatch(ctx, item, payload, err)
 		}
 	}
@@ -218,13 +218,13 @@ func plannedDispatchVisibilityResults(scope *protocol.ScopeValidation) []planned
 	return results
 }
 
-func (s *AdminServer) completeAsyncDispatchRun(ctx context.Context, item *dispatchoutbox.Item) error {
+func (s *AdminServer) completeAsyncDispatchRun(ctx context.Context, item *dispatchoutbox.Item, proofQuality protocol.TrustProofQuality) error {
 	tx, err := s.getDB().BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	if err := s.markRunCompletedTx(tx, item.RunID, item.IntentProofID); err != nil {
+	if err := s.markRunCompletedTx(tx, item.RunID, item.IntentProofID, proofQuality); err != nil {
 		return err
 	}
 	return tx.Commit()

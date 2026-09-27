@@ -127,40 +127,33 @@ func (r *InternalToolRegistry) handleWriteFile(_ context.Context, args map[strin
 	if err := os.WriteFile(safePath, []byte(content), 0o644); err != nil {
 		return "", fmt.Errorf("failed to write %s: %w", safePath, err)
 	}
-	supportCount, err := writeProjectPackageSupportFiles(path, args)
+	manifestPath, err := writeProjectPackageManifest(path, args)
 	if err != nil {
 		return "", err
 	}
-	if supportCount > 0 {
-		message := fmt.Sprintf("File written: %s (%d bytes). Project package support files written: %d.", safePath, len(content), supportCount)
+	if manifestPath != "" {
 		title := strings.TrimSpace(stringValue(args["package_title"]))
 		if title == "" {
 			title = "Generated project package"
 		}
-		folder := strings.TrimSpace(stringValue(args["package_folder"]))
-		if folder == "" {
-			folder = filepath.Dir(normalizeWorkspaceRelativePath(path))
-		}
+		folder := projectPackageFolder(path, args)
 		entrypoint := strings.TrimSpace(stringValue(args["package_entrypoint"]))
 		if entrypoint == "" {
 			entrypoint = path
 		}
-		validation := strings.TrimSpace(firstProjectPackageString(args, "validation", "validation_summary"))
-		if validation == "" {
-			validation = "Open the entrypoint in a browser and review the retained output."
-		}
+		// Files lists only what this call wrote. Declared files that were never
+		// written stay missing until a real write_file creates them.
 		return mustJSON(map[string]any{
-			"message": message,
+			"message": fmt.Sprintf("File written: %s (%d bytes). Package manifest written: %s.", safePath, len(content), manifestPath),
 			"artifact": protocol.ChatArtifactRef{
 				Type:        "project_package",
 				Title:       title,
 				ContentType: "application/vnd.mycelis.project+json",
-				Content:     projectPackageSupportFileContent("project-package.json", args, path),
+				Content:     projectPackageManifestContent(args, path),
 				SavedPath:   folder,
 				Entrypoint:  entrypoint,
 				Folder:      folder,
-				Files:       projectPackageSupportFileNames(args),
-				Validation:  validation,
+				Files:       projectPackageWrittenFiles(folder, path),
 			},
 		}), nil
 	}

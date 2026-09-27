@@ -11,6 +11,8 @@ import (
 )
 
 func TestTeamWorkSignalProjection_ResultPersistsOutputRefs(t *testing.T) {
+	root := useTestWorkspace(t)
+	writeWorkspaceTestFile(t, root, "groups/research-team/generated/prototype/index.html", "<!doctype html><title>Prototype</title><main>Playable prototype with a start button and a live score counter.</main>")
 	opt, mock := withDB(t)
 	s := newTestServer(opt)
 	now := time.Now().UTC()
@@ -47,6 +49,8 @@ func TestTeamWorkSignalProjection_ResultPersistsOutputRefs(t *testing.T) {
 }
 
 func TestTeamWorkSignalProjection_ResultPersistsNormalizedOutputRefs(t *testing.T) {
+	root := useTestWorkspace(t)
+	writeWorkspaceTestFile(t, root, "groups/media-team/media/comic-page.png", "\x89PNG\r\n\x1a\ncomic-page-bytes")
 	opt, mock := withDB(t)
 	s := newTestServer(opt)
 	now := time.Now().UTC()
