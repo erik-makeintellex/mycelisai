@@ -32,6 +32,26 @@ func (f fakeMemoryProvider) Embed(_ context.Context, _ string, _ string) ([]floa
 	return f.embedVec, nil
 }
 
+// expectNarrowEngineDeploymentSave expects an M1 save whose engine returns
+// 2-dim vectors: the atomic insert, the chunk marked failed_dimension (never
+// stored as a vector), and the artifact status refresh.
+func expectNarrowEngineDeploymentSave(mock sqlmock.Sqlmock, agentID, title, content, artifactID string) {
+	mock.ExpectBegin()
+	mock.ExpectQuery("INSERT INTO artifacts").
+		WithArgs(agentID, title, "text/markdown", content, sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow(artifactID, time.Now()))
+	mock.ExpectQuery("INSERT INTO context_vectors").WithArgs(content, sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("11111111-1111-1111-1111-111111111111"))
+	mock.ExpectCommit()
+	mock.ExpectExec(`UPDATE context_vectors SET metadata = metadata \|\| '\{"embedding_status": "failed_dimension"\}'`).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectBegin()
+	mock.ExpectExec("SELECT id FROM artifacts").WithArgs("{" + artifactID + "}").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("UPDATE artifacts a SET metadata").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "status", "embedded"}).AddRow(artifactID, "failed_dimension", 0))
+	mock.ExpectCommit()
+}
+
 func newFakeBrain(provider fakeMemoryProvider) *cognitive.Router {
 	return &cognitive.Router{
 		Config: &cognitive.BrainConfig{
@@ -60,8 +80,9 @@ func TestHandleSearchMemory_UsesInvocationTeamScope(t *testing.T) {
 	nowRows := sqlmock.NewRows([]string{"id", "content", "metadata", "score", "created_at"}).
 		AddRow("vec-1", "team memory", `{"team_id":"alpha","visibility":"team"}`, 0.88, time.Now())
 
-	mock.ExpectQuery("SELECT id, content, metadata, 1 - \\(embedding <=> \\$1::vector\\) AS score, created_at").
-		WithArgs(sqlmock.AnyArg(), "default", "alpha", "lead-alpha", 5).
+	// The 2-dim fake engine cannot serve the 768-dim store, so recall is keyword.
+	mock.ExpectQuery(`SELECT id, content, metadata, ts_rank_cd\(`).
+		WithArgs("default", "alpha", "lead-alpha", "planning memory", 5).
 		WillReturnRows(nowRows)
 
 	registry := NewInternalToolRegistry(InternalToolDeps{
@@ -163,18 +184,7 @@ func TestHandleLoadDeploymentContext_PersistsArtifactAndVectors(t *testing.T) {
 	t.Cleanup(func() { db.Close() })
 
 	mem := memory.NewServiceWithDB(db)
-	mock.ExpectQuery("INSERT INTO artifacts").
-		WithArgs(
-			sqlmock.AnyArg(), sqlmock.AnyArg(),
-			"lead-alpha", sqlmock.AnyArg(),
-			sqlmock.AnyArg(), "Operator Notes", "text/markdown",
-			"Mycelis should keep MCP web access reviewable.", sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), "approved",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", time.Now()))
-	mock.ExpectExec("INSERT INTO context_vectors").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	expectNarrowEngineDeploymentSave(mock, "lead-alpha", "Operator Notes", "Mycelis should keep MCP web access reviewable.", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
 	registry := NewInternalToolRegistry(InternalToolDeps{
 		Brain: newFakeBrain(fakeMemoryProvider{embedVec: []float64{0.1, 0.2}}),
@@ -216,18 +226,7 @@ func TestHandlePromoteDeploymentContext_PromotesCustomerContextToCompanyKnowledg
 		WithArgs("ctx-1").
 		WillReturnRows(sqlmock.NewRows([]string{"title", "content", "metadata"}).
 			AddRow("Customer Deployment Brief", "Use reviewed MCP web access only.", []byte(sourceMeta)))
-	mock.ExpectQuery("INSERT INTO artifacts").
-		WithArgs(
-			sqlmock.AnyArg(), sqlmock.AnyArg(),
-			"lead-alpha", sqlmock.AnyArg(),
-			sqlmock.AnyArg(), "Approved Deployment Guidance", "text/markdown",
-			"Use reviewed MCP web access only.", sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), "approved",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", time.Now()))
-	mock.ExpectExec("INSERT INTO context_vectors").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	expectNarrowEngineDeploymentSave(mock, "lead-alpha", "Approved Deployment Guidance", "Use reviewed MCP web access only.", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 
 	registry := NewInternalToolRegistry(InternalToolDeps{
 		Brain: newFakeBrain(fakeMemoryProvider{embedVec: []float64{0.1, 0.2}}),
@@ -263,8 +262,9 @@ func TestBuildContext_IncludesDeploymentContextRecall(t *testing.T) {
 	t.Cleanup(func() { db.Close() })
 
 	mem := memory.NewServiceWithDB(db)
-	mock.ExpectQuery("SELECT id, content, metadata, 1 - \\(embedding <=> \\$1::vector\\) AS score, created_at").
-		WithArgs(sqlmock.AnyArg(), "default", "customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "reflection_synthesis", "alpha", "lead-alpha", 5).
+	// The 2-dim fake engine cannot serve the 768-dim store, so recall is keyword.
+	mock.ExpectQuery(`SELECT id, content, metadata, ts_rank_cd\(`).
+		WithArgs("default", "customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "reflection_synthesis", "alpha", "lead-alpha", "Summarize our MCP security posture.", 5).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "content", "metadata", "score", "created_at"}).
 			AddRow("vec-ctx", "[customer_context] secure web access via MCP policy gates", `{"artifact_title":"Security Brief","source_label":"operator brief","visibility":"global","knowledge_class":"customer_context"}`, 0.93, time.Now()).
 			AddRow("vec-company", "[company_knowledge] approved deployment playbook", `{"artifact_title":"Deployment Playbook","source_label":"approved company guide","visibility":"global","knowledge_class":"company_knowledge"}`, 0.9, time.Now()).

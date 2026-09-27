@@ -35,10 +35,12 @@ func resolveMemoryScope(ctx context.Context, args map[string]any) memoryScope {
 	if value := strings.TrimSpace(stringValue(args["tenant_id"])); value != "" {
 		scope.TenantID = value
 	}
-	if value := strings.TrimSpace(stringValue(args["team_id"])); value != "" {
+	// Model-supplied ids only fill gaps: they never replace the runtime's
+	// invocation identity, so forged args cannot widen recall or write scope.
+	if value := strings.TrimSpace(stringValue(args["team_id"])); value != "" && scope.TeamID == "" {
 		scope.TeamID = value
 	}
-	if value := strings.TrimSpace(stringValue(args["agent_id"])); value != "" {
+	if value := strings.TrimSpace(stringValue(args["agent_id"])); value != "" && scope.AgentID == "" {
 		scope.AgentID = value
 	}
 	if value := strings.TrimSpace(stringValue(args["run_id"])); value != "" {

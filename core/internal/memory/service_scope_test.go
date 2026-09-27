@@ -51,11 +51,11 @@ func TestTextSearchWithOptions_TeamScoped(t *testing.T) {
 
 	svc := NewServiceWithDB(db)
 	now := time.Now()
-	rows := sqlmock.NewRows([]string{"id", "content", "metadata", "created_at"}).
-		AddRow("vec-1", "latest research memory", `{"team_id":"alpha","visibility":"team","type":"agent_memory"}`, now)
+	rows := sqlmock.NewRows([]string{"id", "content", "metadata", "score", "created_at"}).
+		AddRow("vec-1", "latest research memory", `{"team_id":"alpha","visibility":"team","type":"agent_memory"}`, 0.4, now)
 
-	mock.ExpectQuery("SELECT id, content, metadata, created_at").
-		WithArgs("default", "agent_memory", "alpha", "%latest%", "%research%", 3).
+	mock.ExpectQuery(`SELECT id, content, metadata, ts_rank_cd\(`).
+		WithArgs("default", "agent_memory", "alpha", "latest research", 3).
 		WillReturnRows(rows)
 
 	results, err := svc.TextSearchWithOptions(context.Background(), "latest research", SemanticSearchOptions{
@@ -71,8 +71,8 @@ func TestTextSearchWithOptions_TeamScoped(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("results len = %d, want 1", len(results))
 	}
-	if results[0].Score <= 0 {
-		t.Fatalf("Score = %v, want positive fallback relevance", results[0].Score)
+	if results[0].Score <= 0 || results[0].RetrievalMode != RecallModeKeyword {
+		t.Fatalf("hit = %+v, want positive keyword rank", results[0])
 	}
 	if results[0].Metadata["team_id"] != "alpha" {
 		t.Fatalf("team_id = %v, want alpha", results[0].Metadata["team_id"])

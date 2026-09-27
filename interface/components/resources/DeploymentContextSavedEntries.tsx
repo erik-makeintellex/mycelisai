@@ -2,13 +2,24 @@ import type { ReactNode } from "react";
 import { MessageSquareText } from "lucide-react";
 import { requestSomaOutputContinuation } from "@/components/soma/outputContinuation";
 import type { DeploymentContextEntry } from "./DeploymentContextPanel";
+import { KNOWLEDGE_CLASS_OPTIONS, SOURCE_KIND_OPTIONS, VISIBILITY_OPTIONS, optionLabel } from "./DeploymentContextOptions";
+
+// How Soma can find each saved source today, from the stored chunk rows.
+const SEARCH_STATUS: Record<string, { label: string; tone: string }> = {
+    embedded: { label: "Keyword + meaning search", tone: "bg-cortex-success/10 text-cortex-success" },
+    pending: { label: "Keyword search", tone: "bg-cortex-warning/10 text-cortex-warning" },
+    failed_dimension: { label: "Keyword search (engine mismatch)", tone: "bg-cortex-warning/10 text-cortex-warning" },
+    not_indexed: { label: "Not searchable", tone: "bg-cortex-danger/10 text-cortex-danger" },
+};
 
 export default function DeploymentContextSavedEntries({
     entries,
     loading,
+    error = null,
 }: {
     entries: DeploymentContextEntry[];
     loading: boolean;
+    error?: string | null;
 }) {
     const askSomaWithContext = (entry: DeploymentContextEntry) => {
         requestSomaOutputContinuation(
@@ -35,6 +46,9 @@ export default function DeploymentContextSavedEntries({
             </div>
 
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5" role="region" aria-label="Loaded governed context list">
+                {error ? (
+                    <p role="alert" className="rounded-lg border border-cortex-danger/40 bg-cortex-danger/10 px-3 py-2 text-xs text-cortex-danger">{error}</p>
+                ) : null}
                 {loading ? (
                     <p className="animate-pulse text-xs font-mono text-cortex-text-muted">Loading deployment context...</p>
                 ) : entries.length === 0 ? (
@@ -48,17 +62,15 @@ export default function DeploymentContextSavedEntries({
                                 <div>
                                     <h3 className="text-sm font-semibold text-cortex-text-main">{entry.title}</h3>
                                     <p className="mt-1 text-[11px] text-cortex-text-muted">
-                                        {entry.source_label} · {entry.source_kind.replaceAll("_", " ")}
+                                        {entry.source_label} · {optionLabel(SOURCE_KIND_OPTIONS, entry.source_kind)}
                                     </p>
                                 </div>
-                                <span className="rounded bg-cortex-primary/10 px-2 py-1 text-[10px] font-mono uppercase text-cortex-primary">
-                                    {entry.vector_count} vectors
-                                </span>
+                                <SearchStatus status={entry.embedding_status} />
                             </div>
                             <p className="text-sm leading-relaxed text-cortex-text-main">{entry.content_preview}</p>
                             <div className="flex flex-wrap gap-2 text-[10px] font-mono text-cortex-text-muted">
-                                <Badge>{entry.knowledge_class.replaceAll("_", " ")}</Badge>
-                                <Badge>{entry.visibility}</Badge>
+                                <Badge>{optionLabel(KNOWLEDGE_CLASS_OPTIONS, entry.knowledge_class)}</Badge>
+                                <Badge>{optionLabel(VISIBILITY_OPTIONS, entry.visibility)}</Badge>
                                 <Badge>{entry.sensitivity_class}</Badge>
                                 <Badge>{entry.trust_class}</Badge>
                                 {entry.content_domain ? <Badge>{entry.content_domain.replaceAll("_", " ")}</Badge> : null}
@@ -81,6 +93,11 @@ export default function DeploymentContextSavedEntries({
             </div>
         </section>
     );
+}
+
+function SearchStatus({ status }: { status?: string }) {
+    const known = SEARCH_STATUS[status ?? ""] ?? { label: "Search status unknown", tone: "bg-cortex-bg text-cortex-text-muted" };
+    return <span className={`whitespace-nowrap rounded px-2 py-1 text-[10px] font-semibold ${known.tone}`}>{known.label}</span>;
 }
 
 function Badge({ children }: { children: ReactNode }) {

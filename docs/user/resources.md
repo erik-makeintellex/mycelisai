@@ -220,8 +220,8 @@ Deployment Context is the governed intake surface for files, notes, private/user
 It is not the same as team working files, generated outputs, or team-shared execution memory. Team working files are current Outcome inputs/support material, generated outputs live in Deliverables, and team continuity belongs in `AGENT_MEMORY`; Deployment Context is for governed source material you want Soma to reuse later. It is also not the same as Soma reading Mycelis help docs: curated docs lookup is read-only and citable.
 
 Typical inputs:
-- private records or diary/journal notes the user explicitly wants Soma to use
-- finance, legal, health, household, or business references tied to target goal sets
+- private records or work log notes the user explicitly wants Soma to use
+- finance, legal, health & safety, household, or business references tied to target goal sets
 - customer deployment notes
 - architecture briefs
 - provider and MCP constraints
@@ -230,11 +230,17 @@ Typical inputs:
 - approved company-authored playbooks or guidance
 - reflection/synthesis observations such as distilled lessons, inferred patterns, contradictions, shifts in user trajectory, and meta-observations about what is changing over time
 
+The form asks for three things by default: **Title**, **Content** (paste or upload), and **Who can use this** (Whole organization, My team, or Only me). Admins save as **Company knowledge** by default and everyone else as **Customer / project context**; the other classification fields sit behind **More options** with plain labels (for example *Work log entry*, *Health & safety*, *Lessons & retrospectives*).
+
+After you save, the status line says exactly what Soma can do with the source. Without an embedding engine it reads "Saved. Soma can recall this by keywords; semantic search needs an embedding engine." If the save fails, a red **Not saved** message appears above the Save button, nothing is stored, and the list reloads. Each saved source shows its search status: *Keyword search*, *Keyword + meaning search*, or *Not searchable*.
+
+When Soma answers with saved context, the reply shows a **Sources** line. A source marked **Used** shares wording with the answer that your request did not already contain; other injected sources are marked **Consulted**.
+
 Operational behavior:
-- every load creates a durable document artifact plus vector-backed chunks in governed context lanes within the shared recall substrate
+- every load stores a durable document artifact and its chunks in one transaction, so a failed save leaves nothing behind; chunks are keyword-searchable (PostgreSQL full text) immediately and become semantically searchable once an embedding engine embeds them (right after the save, on a later save, or through the admin backfill)
 - each entry carries `knowledge_class`, visibility, sensitivity, trust, and provenance metadata
 - uploaded text files are read into the same governed intake contract as pasted content
-- `knowledge_class=user_private_context` is for private user-owned records, diary entries, finance notes, and other sensitive references; it defaults to private visibility, restricted sensitivity, and explicit goal-set metadata
+- `knowledge_class=user_private_context` (shown as *Restricted (only you)*) is for private user-owned records, work log entries, finance notes, and other sensitive references; it defaults to private visibility, restricted sensitivity, and explicit goal-set metadata
 - `knowledge_class=customer_context` is for operator/customer-provided material
 - `knowledge_class=company_knowledge` is for approved company-authored guidance only
 - `knowledge_class=soma_operating_context` is for root-admin or delegated-owner guidance that shapes shared Soma behavior across users
@@ -246,6 +252,8 @@ Operational behavior:
 - Soma and governed teams can recall allowed context during planning and answer generation without treating it as raw unrestricted web input
 - private user context is only intended to enter agent work when its visibility/scope and target goal sets match the user’s request; it is not company knowledge and should not be promoted silently
 - use `source_kind=web_research` or a stricter trust/sensitivity class when the content came from external sources
+- worker agents only receive customer/project context and company knowledge (restricted rows only from their own team), and goal-scoped sources never enter ambient recall unless the goal set matches
+- an agent may save company knowledge or Soma operating guidance only inside an operator-confirmed action; otherwise it gets the `context_class_requires_approval` blocker
 
 Key outcome:
 Operators should be able to answer "what governed context did we intentionally load into Soma, which store did it enter, what target goals can use it, and under what trust boundary?" from one surface.

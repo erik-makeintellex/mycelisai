@@ -3,7 +3,6 @@ package server
 import (
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/artifacts"
@@ -25,31 +24,19 @@ func TestHandleDeploymentContext_PostNormalizesAdminSomaDefaults(t *testing.T) {
 		Cognitive: newDeploymentContextBrain(),
 	}
 
-	now := time.Now()
-	mock.ExpectQuery("INSERT INTO artifacts").
-		WithArgs(
-			sqlmock.AnyArg(), sqlmock.AnyArg(),
-			"soma", sqlmock.AnyArg(),
-			artifacts.ArtifactType("document"), "Soma Identity Guidance", "text/markdown",
-			"Keep shared Soma behavior steady and concise.", sqlmock.AnyArg(), sqlmock.AnyArg(),
-			metadataContains{
-				"knowledge_class":    "soma_operating_context",
-				"source_kind":        "user_note",
-				"source_label":       "admin guidance",
-				"visibility":         "global",
-				"sensitivity_class":  "restricted",
-				"trust_class":        "trusted_internal",
-				"soma_context_kind":  "identity",
-				"output_specificity": "balanced",
-				"tags":               []string{"shared-output-specificity", "soma-operating-context"},
-			},
-			sqlmock.AnyArg(), "approved",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
-			AddRow("cccccccc-cccc-cccc-cccc-cccccccccccc", now))
-	mock.ExpectExec("INSERT INTO context_vectors").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	expectAtomicDeploymentSave(mock, "soma", "Soma Identity Guidance",
+		"Keep shared Soma behavior steady and concise.",
+		metadataContains{
+			"knowledge_class":    "soma_operating_context",
+			"source_kind":        "user_note",
+			"source_label":       "admin guidance",
+			"visibility":         "global",
+			"sensitivity_class":  "restricted",
+			"trust_class":        "trusted_internal",
+			"soma_context_kind":  "identity",
+			"output_specificity": "balanced",
+			"tags":               []string{"shared-output-specificity", "soma-operating-context"},
+		}, "cccccccc-cccc-cccc-cccc-cccccccccccc")
 
 	body := `{
 		"knowledge_class": "soma_operating_context",
@@ -106,31 +93,19 @@ func TestHandleDeploymentContext_PostStoresUserPrivateGoalContext(t *testing.T) 
 		Cognitive: newDeploymentContextBrain(),
 	}
 
-	now := time.Now()
-	mock.ExpectQuery("INSERT INTO artifacts").
-		WithArgs(
-			sqlmock.AnyArg(), sqlmock.AnyArg(),
-			"admin", sqlmock.AnyArg(),
-			artifacts.ArtifactType("document"), "Personal Finance Notes", "text/markdown",
-			"Q2 savings goals and invoice timing.", sqlmock.AnyArg(), sqlmock.AnyArg(),
-			metadataContains{
-				"knowledge_class":   "user_private_context",
-				"source_kind":       "finance_record",
-				"source_label":      "private user content",
-				"visibility":        "private",
-				"sensitivity_class": "restricted",
-				"trust_class":       "user_provided",
-				"content_domain":    "finance",
-				"target_goal_sets":  []string{"tax-planning", "cash-flow"},
-				"tags":              []string{"finance", "user-private-context"},
-			},
-			sqlmock.AnyArg(), "approved",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
-			AddRow("dddddddd-dddd-dddd-dddd-dddddddddddd", now))
-	mock.ExpectExec("INSERT INTO context_vectors").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	expectAtomicDeploymentSave(mock, "admin", "Personal Finance Notes",
+		"Q2 savings goals and invoice timing.",
+		metadataContains{
+			"knowledge_class":   "user_private_context",
+			"source_kind":       "finance_record",
+			"source_label":      "private user content",
+			"visibility":        "private",
+			"sensitivity_class": "restricted",
+			"trust_class":       "user_provided",
+			"content_domain":    "finance",
+			"target_goal_sets":  []string{"tax-planning", "cash-flow"},
+			"tags":              []string{"finance", "user-private-context"},
+		}, "dddddddd-dddd-dddd-dddd-dddddddddddd")
 
 	body := `{
 		"knowledge_class": "user_private_context",
@@ -180,32 +155,20 @@ func TestHandleDeploymentContext_PostStoresReflectionSynthesisDefaults(t *testin
 		Cognitive: newDeploymentContextBrain(),
 	}
 
-	now := time.Now()
-	mock.ExpectQuery("INSERT INTO artifacts").
-		WithArgs(
-			sqlmock.AnyArg(), sqlmock.AnyArg(),
-			"admin", sqlmock.AnyArg(),
-			artifacts.ArtifactType("document"), "Investor Workflow Shift", "text/markdown",
-			"The user trajectory shifted toward investor-ready team-managed media output demos.", sqlmock.AnyArg(), sqlmock.AnyArg(),
-			metadataContains{
-				"knowledge_class":   "reflection_synthesis",
-				"source_kind":       "synthesis_note",
-				"source_label":      "reflection synthesis",
-				"visibility":        "private",
-				"sensitivity_class": "restricted",
-				"trust_class":       "trusted_internal",
-				"content_domain":    "reflection",
-				"reflection_kind":   "synthesis_note",
-				"target_goal_sets":  []string{"investor-review"},
-				"tags":              []string{"reflection-synthesis-memory", "synthesis_note"},
-			},
-			sqlmock.AnyArg(), "approved",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
-			AddRow("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee", now))
-	mock.ExpectExec("INSERT INTO context_vectors").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	expectAtomicDeploymentSave(mock, "admin", "Investor Workflow Shift",
+		"The user trajectory shifted toward investor-ready team-managed media output demos.",
+		metadataContains{
+			"knowledge_class":   "reflection_synthesis",
+			"source_kind":       "synthesis_note",
+			"source_label":      "reflection synthesis",
+			"visibility":        "private",
+			"sensitivity_class": "restricted",
+			"trust_class":       "trusted_internal",
+			"content_domain":    "reflection",
+			"reflection_kind":   "synthesis_note",
+			"target_goal_sets":  []string{"investor-review"},
+			"tags":              []string{"reflection-synthesis-memory", "synthesis_note"},
+		}, "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")
 
 	body := `{
 		"knowledge_class": "reflection_synthesis",

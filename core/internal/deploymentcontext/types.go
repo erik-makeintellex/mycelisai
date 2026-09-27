@@ -10,7 +10,36 @@ const (
 	KnowledgeClassSomaOperating    = "soma_operating_context"
 	KnowledgeClassUserPrivate      = "user_private_context"
 	KnowledgeClassReflection       = "reflection_synthesis"
+
+	// Chunk and entry embedding states. Pending rows are keyword-searchable
+	// now and embedded later by backfill.
+	EmbeddingStatusPending         = "pending"
+	EmbeddingStatusEmbedded        = "embedded"
+	EmbeddingStatusFailedDimension = "failed_dimension"
+
+	BackfillStatusComplete    = "complete"
+	BackfillStatusPartial     = "partial"
+	BackfillStatusUnavailable = "unavailable"
+
+	// SaveFailedCode is the normalized code for a save whose transaction failed.
+	SaveFailedCode = "deployment_context_save_failed"
 )
+
+// SaveError is a storage failure: nothing was stored.
+type SaveError struct {
+	Code string
+	Err  error
+}
+
+func (e *SaveError) Error() string { return "store deployment context: " + e.Err.Error() }
+func (e *SaveError) Unwrap() error { return e.Err }
+
+// BackfillResult reports one backfill run.
+type BackfillResult struct {
+	Embedded  int    `json:"embedded"`
+	Remaining int    `json:"remaining"`
+	Status    string `json:"status"`
+}
 
 type IngestRequest struct {
 	KnowledgeClass    string
@@ -65,6 +94,9 @@ type IngestResult struct {
 	ContentDomain    string    `json:"content_domain,omitempty"`
 	TargetGoalSets   []string  `json:"target_goal_sets,omitempty"`
 	CreatedAt        time.Time `json:"created_at"`
+	EmbeddingStatus  string    `json:"embedding_status"`
+	RetrievalModes   []string  `json:"retrieval_modes"`
+	StatusMessage    string    `json:"status_message"`
 }
 
 type Entry struct {
@@ -83,4 +115,5 @@ type Entry struct {
 	ContentDomain    string    `json:"content_domain,omitempty"`
 	TargetGoalSets   []string  `json:"target_goal_sets,omitempty"`
 	CreatedAt        time.Time `json:"created_at"`
+	EmbeddingStatus  string    `json:"embedding_status"`
 }

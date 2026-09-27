@@ -26,7 +26,8 @@ Mycelis now governs actions through three linked layers:
    - channel write recorded
 
 This governance model also applies to durable context loading:
-- user-uploaded private records, diary entries, finance notes, and other sensitive references belong in `user_private_context` with private/restricted defaults and explicit target goal sets
+- user-uploaded private records, work log entries, finance notes, and other sensitive references belong in `user_private_context` with private/restricted defaults and explicit target goal sets
+- an agent may write `company_knowledge` or `soma_operating_context` only inside an operator-confirmed invocation; unconfirmed or planning-only writes return the `context_class_requires_approval` blocker, and model-supplied `team_id`/`agent_id` arguments never widen the runtime's recall or write scope
 - customer-provided deployment material belongs in the separate `customer_context` pgvector lane
 - approved company-authored guidance belongs in `company_knowledge`
 - admin-authored shared Soma guidance belongs in `soma_operating_context`

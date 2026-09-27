@@ -163,6 +163,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/capabilities/refresh", s.HandleRefreshCapabilities)
 	mux.HandleFunc("GET /api/v1/memory/sitreps", s.HandleListSitReps)
 	mux.HandleFunc("/api/v1/memory/deployment-context", s.HandleDeploymentContext)
+	mux.HandleFunc("POST /api/v1/memory/deployment-context/backfill", s.HandleDeploymentContextBackfill)
 	mux.HandleFunc("/api/v1/memory/temp", s.HandleTempMemory)
 	mux.HandleFunc("GET /api/v1/sensors", s.HandleSensors)
 	mux.HandleFunc("GET /api/v1/comms/providers", s.HandleCommsProviders)

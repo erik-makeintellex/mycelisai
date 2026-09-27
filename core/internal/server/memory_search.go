@@ -12,15 +12,11 @@ import (
 )
 
 // GET /api/v1/memory/search?q=<text>&limit=5
-// Embeds the query text, then performs cosine similarity search against context_vectors.
+// Recalls context_vectors through memory.RecallGoverned: semantic when an
+// embedding engine works, PostgreSQL full-text ranking otherwise.
 func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if s.Cognitive == nil {
-		http.Error(w, `{"error":"Cognitive engine offline — cannot embed query"}`, http.StatusServiceUnavailable)
 		return
 	}
 
@@ -54,32 +50,8 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	// 1. Embed the query text
-	vec, err := s.Cognitive.Embed(r.Context(), query, "")
-	if err != nil {
-		respondJSON(w, map[string]any{
-			"query": query,
-			"scope": map[string]any{
-				"tenant_id":  "default",
-				"team_id":    teamID,
-				"agent_id":   agentID,
-				"run_id":     runID,
-				"visibility": visibility,
-				"types":      searchTypes,
-			},
-			"results": []memory.VectorResult{},
-			"count":   0,
-			"degraded": map[string]any{
-				"code":               "embedding_unavailable",
-				"summary":            "Semantic memory search is unavailable because no embedding provider is available.",
-				"recommended_action": "Configure an embedding-capable AI engine before relying on vector memory recall.",
-			},
-		})
-		return
-	}
-
-	// 2. Semantic search
-	results, err := s.Mem.SemanticSearchWithOptions(r.Context(), vec, memory.SemanticSearchOptions{
+	// Semantic when an embedding engine works, PostgreSQL keyword ranking otherwise.
+	results, mode, err := s.Mem.RecallGoverned(r.Context(), s.Cognitive, query, memory.SemanticSearchOptions{
 		Limit:               limit,
 		TenantID:            "default",
 		TeamID:              teamID,
@@ -96,7 +68,7 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondJSON(w, map[string]any{
+	response := map[string]any{
 		"query": query,
 		"scope": map[string]any{
 			"tenant_id":  "default",
@@ -106,9 +78,18 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 			"visibility": visibility,
 			"types":      searchTypes,
 		},
-		"results": results,
-		"count":   len(results),
-	})
+		"results":        results,
+		"count":          len(results),
+		"retrieval_mode": mode,
+	}
+	if mode == memory.RecallModeKeyword {
+		response["degraded"] = map[string]any{
+			"code":               "embedding_unavailable",
+			"summary":            "Semantic memory search is unavailable, so results are ranked by keywords.",
+			"recommended_action": "Configure an embedding-capable AI engine to add semantic recall.",
+		}
+	}
+	respondJSON(w, response)
 }
 
 // GET /api/v1/memory/sitreps?team_id=<uuid>&limit=10

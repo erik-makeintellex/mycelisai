@@ -2,19 +2,24 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/mycelis/core/internal/deploymentcontext"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func (s *AdminServer) deploymentContextService() *deploymentcontext.Service {
 	return deploymentcontext.NewService(s.Artifacts, s.Mem, s.Cognitive)
 }
 
-// HandleDeploymentContext manages governed deployment knowledge that should
-// become durable pgvector-backed context for Soma and downstream teams.
+// HandleDeploymentContext manages governed deployment knowledge that becomes
+// durable context for Soma and downstream teams: keyword-searchable on save,
+// semantically searchable once an embedding engine embeds it.
 // This store is intentionally separate from Soma's ordinary remembered facts.
 // GET  /api/v1/memory/deployment-context
 // POST /api/v1/memory/deployment-context
@@ -40,9 +45,14 @@ func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Req
 			respondError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		semantic := "unavailable"
+		if svc.Cognitive.EmbeddingAvailable(r.Context()) {
+			semantic = "available"
+		}
 		respondJSON(w, map[string]any{
-			"entries": entries,
-			"count":   len(entries),
+			"entries":         entries,
+			"count":           len(entries),
+			"semantic_search": semantic,
 		})
 	case http.MethodPost:
 		if err := svc.Ready(); err != nil {
@@ -92,6 +102,14 @@ func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Req
 			ContentDomain:     req.ContentDomain,
 			TargetGoalSets:    req.TargetGoalSets,
 		})
+		var saveErr *deploymentcontext.SaveError
+		if errors.As(err, &saveErr) {
+			log.Printf("deployment context save failed: %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "Saving failed, so nothing was stored. Try again.", "code": saveErr.Code})
+			return
+		}
 		if err != nil {
 			respondError(w, err.Error(), http.StatusBadRequest)
 			return
@@ -102,4 +120,39 @@ func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Req
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// HandleDeploymentContextBackfill embeds pending governed chunks when an
+// embedding engine is available. Root admin with memory:write only; audited.
+// POST /api/v1/memory/deployment-context/backfill
+func (s *AdminServer) HandleDeploymentContextBackfill(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, "memory:write"); !ok {
+		return
+	}
+	svc := s.deploymentContextService()
+	if err := svc.Ready(); err != nil {
+		respondAPIError(w, err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+	limit := 50
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 && parsed <= 100 {
+			limit = parsed
+		}
+	}
+	result, err := svc.BackfillEmbeddings(r.Context(), limit)
+	if err != nil {
+		log.Printf("deployment context backfill failed: %v", err)
+		respondAPIError(w, "Backfill failed; pending entries stay keyword-searchable.", http.StatusInternalServerError)
+		return
+	}
+	auditID, _ := s.createAuditEvent(protocol.TemplateChatToProposal, "deployment-context-backfill",
+		fmt.Sprintf("Deployment context backfill: %d embedded, %d remaining (%s)", result.Embedded, result.Remaining, result.Status),
+		attachActorIdentity(map[string]any{
+			"actor": "operator", "user": auditUserLabelFromRequest(r), "action": "deployment_context_backfill",
+			"result_status": result.Status, "embedded": result.Embedded, "remaining": result.Remaining,
+		}, r))
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]any{
+		"embedded": result.Embedded, "remaining": result.Remaining, "status": result.Status, "audit_event_id": auditID,
+	}))
 }

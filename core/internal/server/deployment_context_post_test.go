@@ -3,7 +3,6 @@ package server
 import (
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/artifacts"
@@ -25,20 +24,9 @@ func TestHandleDeploymentContext_PostStoresArtifactAndVectors(t *testing.T) {
 		Cognitive: newDeploymentContextBrain(),
 	}
 
-	now := time.Now()
-	mock.ExpectQuery("INSERT INTO artifacts").
-		WithArgs(
-			sqlmock.AnyArg(), sqlmock.AnyArg(),
-			"soma", sqlmock.AnyArg(),
-			artifacts.ArtifactType("document"), "Deployment Brief", "text/markdown",
-			"Service topology and MCP security settings.", sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), "approved",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
-			AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", now))
-	mock.ExpectExec("INSERT INTO context_vectors").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	expectAtomicDeploymentSave(mock, "soma", "Deployment Brief",
+		"Service topology and MCP security settings.",
+		sqlmock.AnyArg(), "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
 	body := `{
 		"title": "Deployment Brief",
@@ -84,20 +72,9 @@ func TestHandleDeploymentContext_PostStoresAdminShapedSomaContext(t *testing.T) 
 		Cognitive: newDeploymentContextBrain(),
 	}
 
-	now := time.Now()
-	mock.ExpectQuery("INSERT INTO artifacts").
-		WithArgs(
-			sqlmock.AnyArg(), sqlmock.AnyArg(),
-			"soma", sqlmock.AnyArg(),
-			artifacts.ArtifactType("document"), "Soma Output Contract", "text/markdown",
-			"Keep investor-facing responses concise and executive by default.", sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), "approved",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
-			AddRow("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", now))
-	mock.ExpectExec("INSERT INTO context_vectors").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	expectAtomicDeploymentSave(mock, "soma", "Soma Output Contract",
+		"Keep investor-facing responses concise and executive by default.",
+		sqlmock.AnyArg(), "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 
 	body := `{
 		"knowledge_class": "soma_operating_context",

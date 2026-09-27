@@ -9,20 +9,27 @@ import (
 
 // BuildContext generates a live system state block for injection into an agent's system prompt.
 func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamInputs, teamDeliveries []string, currentInput string) string {
+	text, _ := r.BuildContextWithSources(agentID, teamID, role, teamInputs, teamDeliveries, currentInput)
+	return text
+}
+
+// BuildContextWithSources is BuildContext plus the governed context sources
+// it injected, so the reply can cite them.
+func (r *InternalToolRegistry) BuildContextWithSources(agentID, teamID, role string, teamInputs, teamDeliveries []string, currentInput string) (string, []ContextSource) {
 	var sb strings.Builder
 	sb.WriteString("\n\n## Runtime Context (Live System State)\n")
 	sb.WriteString(fmt.Sprintf("Timestamp: %s\n\n", time.Now().Format(time.RFC3339)))
 	r.writeAgentTopology(&sb, agentID, teamID, teamInputs, teamDeliveries)
 	if !r.isLeadAgent(agentID, teamID, role) {
-		r.writeDeploymentContext(&sb, agentID, teamID, currentInput)
+		sources := r.writeDeploymentContext(&sb, agentID, teamID, currentInput, false)
 		writeScopedWorkerProtocol(&sb)
-		return sb.String()
+		return sb.String(), sources
 	}
 	r.writeTeamRoster(&sb)
 	r.writeCognitiveStatus(&sb)
 	r.writeMCPServers(&sb)
 	r.writeRecalledMemory(&sb, agentID, currentInput)
-	r.writeDeploymentContext(&sb, agentID, teamID, currentInput)
+	sources := r.writeDeploymentContext(&sb, agentID, teamID, currentInput, true)
 	r.writeLeadTempMemory(&sb, agentID, teamID, role)
 	sb.WriteString("### Memory Boundaries\n")
 	sb.WriteString("- **SOMA_MEMORY**: Soma-owned continuity and durable orchestrator facts. Use `recall`, `search_memory`, and reviewed `remember` only for classified Soma continuity; admin-shaped `soma_operating_context` is a governed sublane, not casual chat memory.\n")
@@ -36,7 +43,7 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamIn
 	sb.WriteString("2. If the user provides customer docs, deployment notes, or research that should shape future reasoning -> `load_deployment_context` with `knowledge_class=customer_context`\n")
 	sb.WriteString("3. If approved company content should become durable organizational knowledge -> `load_deployment_context` with `knowledge_class=company_knowledge`\n")
 	sb.WriteString("4. If the root admin or delegated owner provides durable shared Soma guidance or shared output-specificity changes -> `load_deployment_context` with `knowledge_class=soma_operating_context`\n")
-	sb.WriteString("5. If the user provides private records, diary, finance, or other sensitive references for a target goal set -> `load_deployment_context` with `knowledge_class=user_private_context`, private/restricted defaults, and explicit `target_goal_sets`\n")
+	sb.WriteString("5. If the user provides private records, work logs, finance, or other sensitive references for a target goal set -> `load_deployment_context` with `knowledge_class=user_private_context`, private/restricted defaults, and explicit `target_goal_sets`\n")
 	sb.WriteString("6. If the interaction reveals a durable lesson, inferred pattern, contradiction, user-trajectory shift, or meta-observation -> publish a managed exchange `LearningCandidate` to `organization.learning.candidates`; include `classification`, `memory_layer=REFLECTION_MEMORY`, `confidence`, `review_required`, `tags`, `continuity_key`, and `created_at`. Do not write it directly to memory.\n")
 	sb.WriteString("7. Check if specialist knowledge is needed -> `consult_council`\n")
 	sb.WriteString("8. Check if actionable work should be delegated -> `delegate_task`\n")
@@ -54,7 +61,7 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamIn
 	sb.WriteString("5. Report actions taken and outcomes clearly to the user\n")
 	sb.WriteString("6. For in-flight planning or continuity, checkpoint state via `temp_memory_write` and reload with `temp_memory_read`\n")
 	sb.WriteString("7. Generated images are ephemeral cache by default (60m). Persist only on user request via `save_cached_image`\n")
-	return sb.String()
+	return sb.String(), sources
 }
 
 func writeScopedWorkerProtocol(sb *strings.Builder) {

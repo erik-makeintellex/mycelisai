@@ -2622,4 +2622,42 @@ ALTER TABLE confirm_tokens ADD COLUMN purpose TEXT, ADD COLUMN binding_digest TE
 ALTER TABLE confirm_tokens ADD CONSTRAINT chk_confirm_tokens_purpose CHECK (purpose IS NULL OR purpose IN ('chat_action', 'mission_blueprint', 'group_mutation', 'invocation'));
 -- END CONFIRM_TOKEN_BINDING_EXTENSION
 
+-- BEGIN DEPLOYMENT_CONTEXT_TAXONOMY_EXTENSION
+-- Rename stored governed-context taxonomy values once per database:
+-- diary_entry -> worklog_entry (source_kind, reflection_kind, tags) and
+-- diary -> worklog (content_domain, tags). Only governed_context_store rows in
+-- artifacts and context_vectors change, and only those keys. The marker is
+-- written in the same transaction, so a later run never rewrites anything.
+UPDATE artifacts SET metadata = metadata
+    || CASE WHEN metadata->>'source_kind' = 'diary_entry' THEN '{"source_kind": "worklog_entry"}'::jsonb ELSE '{}'::jsonb END
+    || CASE WHEN metadata->>'reflection_kind' = 'diary_entry' THEN '{"reflection_kind": "worklog_entry"}'::jsonb ELSE '{}'::jsonb END
+    || CASE WHEN metadata->>'content_domain' = 'diary' THEN '{"content_domain": "worklog"}'::jsonb ELSE '{}'::jsonb END
+    || CASE WHEN jsonb_typeof(metadata->'tags') = 'array' AND metadata->'tags' ?| ARRAY['diary', 'diary_entry']
+        THEN jsonb_build_object('tags', (SELECT jsonb_agg(tag ORDER BY pos) FROM (SELECT DISTINCT ON (tag) tag, pos FROM (
+            SELECT CASE el WHEN '"diary"' THEN '"worklog"'::jsonb WHEN '"diary_entry"' THEN '"worklog_entry"'::jsonb ELSE el END AS tag, pos
+            FROM jsonb_array_elements(metadata->'tags') WITH ORDINALITY AS t(el, pos)) renamed ORDER BY tag, pos) deduped))
+        ELSE '{}'::jsonb END
+WHERE COALESCE(metadata->>'knowledge_store', '') = 'governed_context_store'
+    AND (metadata->>'source_kind' = 'diary_entry' OR metadata->>'reflection_kind' = 'diary_entry'
+        OR metadata->>'content_domain' = 'diary'
+        OR (jsonb_typeof(metadata->'tags') = 'array' AND metadata->'tags' ?| ARRAY['diary', 'diary_entry']))
+    AND NOT EXISTS (SELECT 1 FROM system_config WHERE key = 'schema.deployment_context_taxonomy_v2');
+UPDATE context_vectors SET metadata = metadata
+    || CASE WHEN metadata->>'source_kind' = 'diary_entry' THEN '{"source_kind": "worklog_entry"}'::jsonb ELSE '{}'::jsonb END
+    || CASE WHEN metadata->>'reflection_kind' = 'diary_entry' THEN '{"reflection_kind": "worklog_entry"}'::jsonb ELSE '{}'::jsonb END
+    || CASE WHEN metadata->>'content_domain' = 'diary' THEN '{"content_domain": "worklog"}'::jsonb ELSE '{}'::jsonb END
+    || CASE WHEN jsonb_typeof(metadata->'tags') = 'array' AND metadata->'tags' ?| ARRAY['diary', 'diary_entry']
+        THEN jsonb_build_object('tags', (SELECT jsonb_agg(tag ORDER BY pos) FROM (SELECT DISTINCT ON (tag) tag, pos FROM (
+            SELECT CASE el WHEN '"diary"' THEN '"worklog"'::jsonb WHEN '"diary_entry"' THEN '"worklog_entry"'::jsonb ELSE el END AS tag, pos
+            FROM jsonb_array_elements(metadata->'tags') WITH ORDINALITY AS t(el, pos)) renamed ORDER BY tag, pos) deduped))
+        ELSE '{}'::jsonb END
+WHERE COALESCE(metadata->>'knowledge_store', '') = 'governed_context_store'
+    AND (metadata->>'source_kind' = 'diary_entry' OR metadata->>'reflection_kind' = 'diary_entry'
+        OR metadata->>'content_domain' = 'diary'
+        OR (jsonb_typeof(metadata->'tags') = 'array' AND metadata->'tags' ?| ARRAY['diary', 'diary_entry']))
+    AND NOT EXISTS (SELECT 1 FROM system_config WHERE key = 'schema.deployment_context_taxonomy_v2');
+INSERT INTO system_config (key, value) VALUES ('schema.deployment_context_taxonomy_v2', '1')
+    ON CONFLICT (key) DO NOTHING;
+-- END DEPLOYMENT_CONTEXT_TAXONOMY_EXTENSION
+
 COMMIT;

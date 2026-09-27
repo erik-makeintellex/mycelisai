@@ -4,15 +4,17 @@ import pytest
 
 from ops import db_upgrade
 
-# Accepted retained baselines: pre-G4, G4, C2a, ORG/ROLE-complete (the retained stack), TOKEN.
-BASELINES = {"pre-g4": (False, False, False, False), "g4": (True, False, False, False),
-             "c2a": (True, True, False, False), "org": (True, True, True, False),
-             "token": (True, True, True, True)}
+# Accepted retained baselines: pre-G4, G4, C2a, ORG/ROLE-complete, TOKEN (the retained stack), TAXONOMY.
+BASELINES = {"pre-g4": (False, False, False, False, False), "g4": (True, False, False, False, False),
+             "c2a": (True, True, False, False, False), "org": (True, True, True, False, False),
+             "token": (True, True, True, True, False), "taxonomy": (True, True, True, True, True)}
 BLOCKS = ("-- BEGIN G4_E10_EXTENSION\nSELECT 'g4';\n-- END G4_E10_EXTENSION\n"
           "-- BEGIN C2A_TEAM_OWNERSHIP_EXTENSION\nSELECT 'c2a';\n-- END C2A_TEAM_OWNERSHIP_EXTENSION\n"
           "-- BEGIN ORGANIZATIONS_EXTENSION\nSELECT 'org';\n-- END ORGANIZATIONS_EXTENSION\n"
           "-- BEGIN ROLE_SEED_RETIREMENT_EXTENSION\nSELECT 'role';\n-- END ROLE_SEED_RETIREMENT_EXTENSION\n"
-          "-- BEGIN CONFIRM_TOKEN_BINDING_EXTENSION\nSELECT 'token';\n-- END CONFIRM_TOKEN_BINDING_EXTENSION\n")
+          "-- BEGIN CONFIRM_TOKEN_BINDING_EXTENSION\nSELECT 'token';\n-- END CONFIRM_TOKEN_BINDING_EXTENSION\n"
+          "-- BEGIN DEPLOYMENT_CONTEXT_TAXONOMY_EXTENSION\nSELECT 'taxonomy';\n"
+          "-- END DEPLOYMENT_CONTEXT_TAXONOMY_EXTENSION\n")
 
 
 def result(ok=True):
@@ -28,13 +30,14 @@ def upgrade_fixture(tmp_path, monkeypatch):
     monkeypatch.setattr(db_upgrade, "C2A_SCHEMA_COMPATIBILITY_CHECKS", (("c2a", "c2a-check"),))
     monkeypatch.setattr(db_upgrade, "ORG_SCHEMA_COMPATIBILITY_CHECKS", (("org", "org-check"),))
     monkeypatch.setattr(db_upgrade, "TOKEN_SCHEMA_COMPATIBILITY_CHECKS", (("token", "token-check"),))
+    monkeypatch.setattr(db_upgrade, "TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS", (("taxonomy", "taxonomy-check"),))
     monkeypatch.setattr(db_upgrade, "SCHEMA_COMPATIBILITY_CHECKS", (("new", "new-check"),))
     return schema
 
 
 @pytest.mark.parametrize("baseline", BASELINES)
 def test_upgrade_runs_only_missing_bounded_extensions(upgrade_fixture, baseline):
-    g4_present, c2a_present, org_present, token_present = BASELINES[baseline]
+    g4_present, c2a_present, org_present, token_present, taxonomy_present = BASELINES[baseline]
     calls = []
     applied = False
     def run(sql):
@@ -43,7 +46,8 @@ def test_upgrade_runs_only_missing_bounded_extensions(upgrade_fixture, baseline)
         if sql.startswith("BEGIN;"):
             applied = True
         states = {"new-check": applied, "g4-check": g4_present, "c2a-check": c2a_present,
-                  "org-check": org_present, "token-check": token_present}
+                  "org-check": org_present, "token-check": token_present,
+                  "taxonomy-check": taxonomy_present}
         return result(states.get(sql, True))
     assert db_upgrade.upgrade_retained(upgrade_fixture, run)
     transactions = [sql for sql in calls if sql.startswith("BEGIN;")]
@@ -65,17 +69,24 @@ def test_upgrade_runs_only_missing_bounded_extensions(upgrade_fixture, baseline)
     if not token_present:
         assert transaction.index("SELECT 'token';") > transaction.index("SELECT 'role';")
     assert (db_upgrade.TOKEN_ABSENT_SQL in calls[:calls.index(transaction)]) == (not token_present)
+    # TAXONOMY is a marker-gated one-shot rewrite: it runs last, only when its marker is missing.
+    assert ("SELECT 'taxonomy';" in transaction) == (not taxonomy_present)
+    if not taxonomy_present:
+        assert transaction.index("SELECT 'taxonomy';") > transaction.index("SELECT 'role';")
+        assert transaction.index("SELECT 'taxonomy';") > transaction.find("SELECT 'token';")
+    assert (db_upgrade.TAXONOMY_READY_SQL in calls[:calls.index(transaction)]) == (not taxonomy_present)
     assert calls[-1] == "new-check"
 
 
 @pytest.mark.parametrize("failure", ["base-check", db_upgrade.G4_ABSENT_SQL, db_upgrade.C2A_ABSENT_SQL,
                                      db_upgrade.ORG_ABSENT_SQL, db_upgrade.ROLE_TABLE_SQL,
-                                     db_upgrade.TOKEN_ABSENT_SQL])
+                                     db_upgrade.TOKEN_ABSENT_SQL, db_upgrade.TAXONOMY_READY_SQL])
 def test_unknown_baseline_and_partial_upgrade_do_not_execute(upgrade_fixture, failure):
     calls = []
     def run(sql):
         calls.append(sql)
-        return result(sql not in (failure, "g4-check", "c2a-check", "org-check", "token-check", "new-check"))
+        return result(sql not in (failure, "g4-check", "c2a-check", "org-check", "token-check",
+                                  "taxonomy-check", "new-check"))
     assert not db_upgrade.upgrade_retained(upgrade_fixture, run)
     assert not any(sql.startswith("BEGIN;") for sql in calls)
 

@@ -2,6 +2,9 @@ package deploymentcontext
 
 import "strings"
 
+// taxonomyAliases maps retired stored values to their renamed form.
+var taxonomyAliases = map[string]string{"diary_entry": "worklog_entry", "diary": "worklog"}
+
 func normalizeSourceKind(raw string) string {
 	switch strings.TrimSpace(strings.ToLower(raw)) {
 	case "workspace_file":
@@ -12,8 +15,8 @@ func normalizeSourceKind(raw string) string {
 		return "user_note"
 	case "user_record":
 		return "user_record"
-	case "diary_entry":
-		return "diary_entry"
+	case "worklog_entry", "diary_entry": // diary_entry is a write alias
+		return "worklog_entry"
 	case "finance_record":
 		return "finance_record"
 	case "lesson":
@@ -52,8 +55,8 @@ func normalizeContentDomain(raw string) string {
 	switch strings.TrimSpace(strings.ToLower(raw)) {
 	case "private_records":
 		return "private_records"
-	case "diary":
-		return "diary"
+	case "worklog", "diary": // diary is a write alias
+		return "worklog"
 	case "finance":
 		return "finance"
 	case "health":
@@ -152,6 +155,9 @@ func normalizeTags(tags []string) []string {
 	out := make([]string, 0, len(tags))
 	for _, raw := range tags {
 		tag := strings.TrimSpace(strings.ToLower(raw))
+		if renamed, ok := taxonomyAliases[tag]; ok {
+			tag = renamed
+		}
 		if tag == "" {
 			continue
 		}

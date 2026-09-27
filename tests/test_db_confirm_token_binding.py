@@ -53,7 +53,9 @@ def test_token_block_follows_role_and_precedes_the_single_commit():
     token_begin = raw.index(db_upgrade.TOKEN_BEGIN_MARKER.encode())
     token_end = raw.index(db_upgrade.TOKEN_END_MARKER.encode())
     assert role_end < token_begin < token_end
-    assert raw[token_end:] == db_upgrade.TOKEN_END_MARKER.encode() + b"\n\nCOMMIT;\n"
+    # The DEPLOYMENT_CONTEXT_TAXONOMY block follows TOKEN and owns the single COMMIT tail.
+    assert raw[token_end:].startswith(db_upgrade.TOKEN_END_MARKER.encode() + b"\n\n"
+                                      + db_upgrade.TAXONOMY_BEGIN_MARKER.encode())
     assert re.findall(rb"^COMMIT;$", raw, re.MULTILINE) == [b"COMMIT;"]
 
 
@@ -72,7 +74,8 @@ def test_token_block_is_only_two_plain_confirm_token_alters():
 
 def test_compatibility_snapshot_ends_with_exact_token_checks():
     role = db_schema.ROLE_SCHEMA_COMPATIBILITY_CHECKS
-    checks = db_schema.SCHEMA_COMPATIBILITY_CHECKS
+    checks = db_schema.TOKEN_COMPLETE_SCHEMA_COMPATIBILITY_CHECKS
+    assert db_schema.SCHEMA_COMPATIBILITY_CHECKS[:len(checks)] == checks
     assert checks[:len(role)] == role and checks[len(role):] == TOKEN_CHECKS
     assert not any("chk_confirm_tokens_purpose" in sql or "table_name='confirm_tokens' AND column_name" in sql
                    for _, sql in role)
@@ -104,7 +107,7 @@ def _stubbed(*, token_present=False, token_absent=True):
     return run, calls
 
 
-def test_role_complete_host_runs_role_and_token_only(capsys):
+def test_role_complete_host_runs_role_token_and_taxonomy_only(capsys):
     run, calls = _stubbed()
     assert db_upgrade.upgrade_retained(SCHEMA, run)
     transactions = [sql for sql in calls if sql.startswith("BEGIN;")]
@@ -114,7 +117,7 @@ def test_role_complete_host_runs_role_and_token_only(capsys):
     assert db_upgrade.TOKEN_ABSENT_SQL in calls[:calls.index(body)]
     for marker in ("CREATE TABLE organizations", "execution_effect_grants", "fk_runtime_team_owner"):
         assert marker not in body
-    assert "upgrade complete (ROLE + TOKEN)" in capsys.readouterr().out
+    assert "upgrade complete (ROLE + TOKEN + TAXONOMY)" in capsys.readouterr().out
 
 
 def test_partial_token_binding_is_refused_before_any_sql():
@@ -227,7 +230,7 @@ def test_real_compose_migrate_binds_tokens_on_role_complete_stack(database, monk
     monkeypatch.setattr(compose, "_run_compose_migration_file",
                         lambda *_: pytest.fail("compose.migrate replayed the installer on retained data"))
     compose._run_compose_migrations()
-    assert "Retained-schema upgrade complete (ROLE + TOKEN)" in capsys.readouterr().out
+    assert "Retained-schema upgrade complete (ROLE + TOKEN + TAXONOMY)" in capsys.readouterr().out
     assert_contract(database)
     after = json.loads(database(TOKEN_ROW).stdout)
     assert {key: after[key] for key in before} == before and after["purpose"] is None

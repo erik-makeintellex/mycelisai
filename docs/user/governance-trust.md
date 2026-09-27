@@ -35,7 +35,8 @@ That profile is read when Soma plans work, chooses an execution path, and decide
 
 This same model also applies to governed deployment knowledge:
 - loading customer-provided deployment material into the separate context store is a governed action
-- loading approved company-authored knowledge is stricter than loading customer context
+- loading approved company-authored knowledge is stricter than loading customer context; an agent can save company knowledge or Soma operating guidance only after you confirm the action
+- when saved context shapes an answer, the reply's **Sources** line says which sources were **Used** and which were only **Consulted**
 - team-shared execution memory belongs in scoped `AGENT_MEMORY`; loading a governed document does not silently make it team memory
 - external/web research used as future context should stay explicitly classified and reviewable
 
@@ -54,7 +55,7 @@ This keeps low-risk answer work lightweight while forcing higher-risk mutations 
 Examples:
 - ordinary direct explanation -> usually stays `answer`
 - load customer deployment brief into `customer_context` -> governed, medium-risk by default
-- load private user diary/finance/record material into `user_private_context` -> governed, high-risk by default, private/restricted unless explicitly scoped otherwise
+- load private user work log/finance/record material into `user_private_context` -> governed, high-risk by default, private/restricted unless explicitly scoped otherwise
 - load approved company-authored rollout playbook into `company_knowledge` -> governed, higher-risk and more likely to require approval
 - promote a distilled pattern or contradiction into `reflection_synthesis` -> governed and review-shaped rather than a casual memory write
 - web-fed research promoted into durable context -> governed and shaped by external-data rules

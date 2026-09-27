@@ -8,6 +8,15 @@ export interface ChatConsultation {
     summary: string;
 }
 
+/** Governed context injected for a reply; used only when the reply shares its wording. */
+export interface ChatContextSource {
+    artifact_id: string;
+    title: string;
+    knowledge_class: string;
+    retrieval_mode: string;
+    used: boolean;
+}
+
 export interface ChatArtifactRef {
     id?: string;
     type: string;
@@ -177,6 +186,7 @@ export interface ChatMessage {
     thread_event?: SomaThreadEvent;
     thread_events?: SomaThreadEvent[];
     continuation_intent?: ChatContinuationIntent;
+    context_sources?: ChatContextSource[];
 }
 
 export interface MissionChatContinuationContext {
@@ -249,6 +259,7 @@ export interface CTSChatEnvelope {
         brain?: BrainProvenance;
         execution_summary?: ExecutionSummaryData;
         continuation_intent?: ChatContinuationIntent;
+        context_sources?: ChatContextSource[];
         proposal?: {
             intent: string;
             tools: string[];
