@@ -111,7 +111,7 @@ func (s *AdminServer) buildTeamMissionLookup() map[string]teamMissionInfo {
 		SELECT t.name, m.id, m.directive
 		FROM teams t
 		JOIN missions m ON m.id = t.mission_id
-		WHERE m.status = 'active'
+		WHERE m.status IN ('active', 'partially_active')
 	`)
 	if err != nil {
 		log.Printf("buildTeamMissionLookup: %v", err)
